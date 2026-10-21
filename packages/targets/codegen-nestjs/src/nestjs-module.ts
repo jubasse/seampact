@@ -1,13 +1,13 @@
 import { ExportNames, operationLocation, type Refusal } from "@seampact/codegen-core";
 import {
   largestBodyLimit,
-  type NodeServerOptions,
   operationIdentifier,
   responseSettingsOf,
 } from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
+import type { NestjsOptions } from "./nestjs-options.js";
 
-// The `nestjs` module of one api: the boundary built from its route table, the fixed exports of ADR 0016
+// The `nestjs` module of one api: the boundary built from its route table and reply mode, the fixed exports of ADR 0016
 // "Registration", and the composite decorator of each operation, named by the operation.
 
 const NESTJS_MODULE = "nestjs";
@@ -50,7 +50,7 @@ function operationSource(operationId: string, docsModule: string | undefined): s
 
 export function nestjsModuleSource(
   ir: ContractIR,
-  options: NodeServerOptions,
+  options: NestjsOptions,
   refusals: Refusal[],
   docsModule?: string,
 ): string {
@@ -80,9 +80,9 @@ export function nestjsModuleSource(
     'export { MAX_CHECKED_ERROR_BODY_BYTES } from "./node-server/outgoing-verdict.js";',
     'export { MAX_RENDERED_ISSUES } from "./node-server/contract-error.js";',
     "",
-    `const boundary = createNestBoundary<SeampactHooks>(CONTRACT_API, ${JSON.stringify(responseSettingsOf(options))});`,
+    `const boundary = createNestBoundary<SeampactHooks>(CONTRACT_API, ${JSON.stringify({ ...responseSettingsOf(options), reply: options.reply })});`,
     "",
-    "/** The api's dynamic module: `SeampactModule.forRoot(hooks)`. */",
+    "/** The api's dynamic module: `SeampactModule.forRoot(hooks, { logger })`. */",
     "export const SeampactModule = boundary.SeampactModule;",
     "/** Overrides the `responses` mode on a controller or a method. */",
     "export const responses = boundary.responses;",

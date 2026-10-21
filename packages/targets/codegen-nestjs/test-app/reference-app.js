@@ -1,6 +1,6 @@
 // A NestJS app around the generated `tasks` boundary, for the live boundary test: every operation bound on one
-// controller, hooks and handler answers driven by a scenario the test sets, an app filter, app middleware, CORS and
-// routes of the app's own. Plain JavaScript, as a loosely typed app would write its hooks; copied next to the
+// controller, hooks and handler answers driven by a scenario the test sets, an app filter, a global app pipe and
+// interceptor, app middleware, CORS and routes of the app's own. Plain JavaScript, as a loosely typed app would write its hooks; copied next to the
 // compiled generated tree, so it imports the generated modules by relative path. Decorators are applied by call.
 import "reflect-metadata";
 import { gzipSync } from "node:zlib";
@@ -16,7 +16,8 @@ import {
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
-import { NestFactory } from "@nestjs/core";
+import { APP_INTERCEPTOR, ApplicationConfig, NestFactory } from "@nestjs/core";
+import { catchError, map, of, tap, throwError } from "rxjs";
 import * as TasksNest from "../generated/server/tasks/nestjs.js";
 
 export const ALLOWED_ORIGIN = "https://app.example";
@@ -54,6 +55,7 @@ export const scenario = {};
 
 export function resetScenario() {
   scenario.answers = {};
+  scenario.interceptor = {};
   scenario.authenticate = authenticateByBearer;
   scenario.decide = () => ({ allow: true });
   calls.scopeIds.length = 0;
@@ -180,6 +182,69 @@ class RecordingGuard {
   }
 }
 
+// What the app's global interceptor does, set by the test in `scenario.interceptor`: record its phases, map a
+// result, replace an error, fail after the handler, or answer without calling the handler.
+class RecordingInterceptor {
+  intercept(execution, next) {
+    const behaviour = scenario.interceptor;
+    const operation = execution.getHandler().name;
+
+    if (!TasksNest.isContractRoute(execution)) return next.handle();
+
+    if (behaviour.answer !== undefined) return of(behaviour.answer);
+
+    if (behaviour.record) calls.events.push(`interceptor before ${operation}`);
+
+    return next.handle().pipe(
+      tap((value) => {
+        if (behaviour.record) calls.events.push(`interceptor after ${JSON.stringify(value)}`);
+
+        if (behaviour.failAfter) throw new Error("interceptor failure");
+      }),
+      map((value) => (behaviour.map === undefined ? value : behaviour.map(value))),
+      catchError((error) => {
+        if (behaviour.record) calls.events.push(`interceptor error ${error.constructor.name}`);
+
+        return throwError(() => behaviour.replaceError ?? error);
+      }),
+    );
+  }
+}
+
+// A global app pipe that returns another value for every custom param, the contract input included.
+class TamperingPipe {
+  transform(value, metadata) {
+    if (metadata.type !== "custom") return value;
+
+    calls.events.push("app pipe custom");
+
+    return { tampered: true };
+  }
+}
+
+// A cache interceptor as `@nestjs/cache-manager`'s: it keys GET requests by URL, unless told to skip contract routes.
+function cacheInterceptor(skipsContractRoutes) {
+  return class AppCacheInterceptor {
+    trackBy(execution) {
+      if (skipsContractRoutes && TasksNest.isContractRoute(execution)) return undefined;
+
+      const request = execution.switchToHttp().getRequest();
+
+      return request.method === "GET" ? request.originalUrl : undefined;
+    }
+
+    intercept(_execution, next) {
+      return next.handle();
+    }
+  };
+}
+
+class LateGuard {
+  canActivate() {
+    return true;
+  }
+}
+
 class PassThroughInterceptor {
   intercept(_execution, next) {
     return next.handle();
@@ -188,9 +253,11 @@ class PassThroughInterceptor {
 
 class ControllerWideInterceptor extends PassThroughInterceptor {}
 
+class AppModuleInterceptor extends PassThroughInterceptor {}
+
 // Every operation bound on one controller class; `aboveComposite` lists the app decorators written above an
-// operation's composite.
-function tasksController(aboveComposite = {}) {
+// operation's composite, and `withoutInput` the operations whose method declares no input param.
+function tasksController(aboveComposite = {}, withoutInput = []) {
   class TasksController {}
 
   for (const operation of TASK_OPERATIONS) {
@@ -204,7 +271,7 @@ function tasksController(aboveComposite = {}) {
       configurable: true,
     });
 
-    TasksNest[operation].input()(prototype, operation, 0);
+    if (!withoutInput.includes(operation)) TasksNest[operation].input()(prototype, operation, 0);
     decorateMethod(
       prototype,
       operation,
@@ -234,8 +301,17 @@ class OwnController {
   echo(body) {
     return body;
   }
+
+  hello() {
+    return { hello: "world" };
+  }
 }
 
+Get("own/hello")(
+  OwnController.prototype,
+  "hello",
+  Object.getOwnPropertyDescriptor(OwnController.prototype, "hello"),
+);
 Get("own/boom")(
   OwnController.prototype,
   "boom",
@@ -318,19 +394,9 @@ const recordingLogger = {
   },
 };
 
-/** Boots an app that imports the api's module twice, with two hook objects; resolves once initialised. */
-export async function bootTwice() {
-  class TwiceModule {}
-
-  Module({
-    imports: [
-      TasksNest.SeampactModule.forRoot(hooks),
-      TasksNest.SeampactModule.forRoot({ ...hooks }),
-    ],
-    controllers: [TasksController],
-  })(TwiceModule);
-
-  const app = await NestFactory.create(TwiceModule, { rawBody: true, logger: recordingLogger });
+// Initialises and closes an app of the given module; resolves once initialised, rejects with its boot problems.
+async function bootOnce(module) {
+  const app = await NestFactory.create(module, { rawBody: true, logger: recordingLogger });
 
   try {
     await app.init();
@@ -339,33 +405,89 @@ export async function bootTwice() {
   }
 }
 
-/** Boots an app whose controller carries a controller interceptor, and a route interceptor on `health`; resolves
- * once initialised. */
-export async function bootWithAppInterceptors() {
-  const InterceptedController = tasksController({
-    health: [UseInterceptors(PassThroughInterceptor)],
+function moduleOf(imports, controllers, providers = []) {
+  class BootModule {}
+
+  Module({ imports, controllers, providers })(BootModule);
+
+  return BootModule;
+}
+
+function controllerOf(aboveComposite = {}, withoutInput = []) {
+  const BootController = tasksController(aboveComposite, withoutInput);
+
+  Controller()(BootController);
+
+  return BootController;
+}
+
+/** Boots an app with a cache interceptor on `health`, one that skips contract routes or not. */
+export function bootWithCacheInterceptor(skipsContractRoutes) {
+  const controller = controllerOf({
+    health: [UseInterceptors(cacheInterceptor(skipsContractRoutes))],
   });
 
-  Controller()(InterceptedController);
-  UseInterceptors(new ControllerWideInterceptor())(InterceptedController);
+  return bootOnce(moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controller]));
+}
 
-  class InterceptedModule {}
+/** Boots an app whose `health` method declares no input param. */
+export function bootWithoutInputParam() {
+  return bootOnce(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controllerOf({}, ["health"])]),
+  );
+}
 
-  Module({
-    imports: [TasksNest.SeampactModule.forRoot(hooks)],
-    controllers: [InterceptedController],
-  })(InterceptedModule);
+/** Boots an app with a module whose `configure`, after seampact's, appends a guard to `health`. */
+export function bootWithLateGuard() {
+  const controller = controllerOf();
 
-  const app = await NestFactory.create(InterceptedModule, {
-    rawBody: true,
-    logger: recordingLogger,
-  });
+  class LateGuardModule {
+    configure() {
+      const health = controller.prototype.health;
+      const guards = Reflect.getMetadata("__guards__", health) ?? [];
 
-  try {
-    await app.init();
-  } finally {
-    await app.close();
+      Reflect.defineMetadata("__guards__", [...guards, LateGuard], health);
+    }
   }
+
+  Module({})(LateGuardModule);
+
+  return bootOnce(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks), LateGuardModule], [controller]),
+  );
+}
+
+/** Boots an app with the given `forRoot` options. */
+export function bootWithModuleOptions(moduleOptions) {
+  return bootOnce(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks, moduleOptions)], [controllerOf()]),
+  );
+}
+
+/** Boots an app that imports the api's module twice, with two hook objects. */
+export function bootTwice() {
+  return bootOnce(
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks), TasksNest.SeampactModule.forRoot({ ...hooks })],
+      [TasksController],
+    ),
+  );
+}
+
+/** Boots an app whose controller carries a controller interceptor, a route interceptor on `health`, and whose app
+ * module provides a global interceptor. */
+export function bootWithAppInterceptors() {
+  const controller = controllerOf({ health: [UseInterceptors(PassThroughInterceptor)] });
+
+  UseInterceptors(new ControllerWideInterceptor())(controller);
+
+  return bootOnce(
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks)],
+      [controller],
+      [{ provide: APP_INTERCEPTOR, useClass: AppModuleInterceptor }],
+    ),
+  );
 }
 
 /** Boots the app on a free port with the documented setup 1 (`rawBody: true`). */
@@ -382,9 +504,15 @@ export async function startReferenceApp() {
   });
   app.useBodyParser("json", { limit: TasksNest.LARGEST_BODY_LIMIT, strict: false });
   app.useGlobalFilters(TasksNest.preRoutingFilter);
+  app.useGlobalPipes(new TamperingPipe());
+  app.useGlobalInterceptors(new RecordingInterceptor());
   await app.listen(0, "127.0.0.1");
 
   const { port } = app.getHttpServer().address();
+  const globalInterceptors = app
+    .get(ApplicationConfig)
+    .getGlobalInterceptors()
+    .map((interceptor) => interceptor.constructor.name);
 
-  return { host: "127.0.0.1", port, close: () => app.close() };
+  return { host: "127.0.0.1", port, globalInterceptors, close: () => app.close() };
 }

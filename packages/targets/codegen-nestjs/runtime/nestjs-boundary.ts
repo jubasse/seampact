@@ -1,11 +1,12 @@
 // The NestJS placement of the shared request checks (ADR 0016): the module middleware, the per-operation composite
-// and input decorators, the guard, the handler wrapper, the narrow filter, the dynamic module with its boot check (the
-// framework-route check included), and the exported helpers. Each api's generated module calls `createNestBoundary`
+// and input decorators, the guard, the input pipe, the handler wrapper, the opt-in reply interceptor, the narrow
+// filter, the dynamic module with its boot check (the framework-route check included), and the exported helpers. Each api's generated module calls `createNestBoundary`
 // once with its route table.
 import { ServerResponse } from "node:http";
 import {
   type ArgumentsHost,
   applyDecorators,
+  type CallHandler,
   type CanActivate,
   Catch,
   createParamDecorator,
@@ -20,15 +21,18 @@ import {
   Injectable,
   type MiddlewareConsumer,
   Module,
+  type NestInterceptor,
   type NestModule,
   NotFoundException,
   type OnApplicationBootstrap,
   Patch,
+  type PipeTransform,
   Post,
   Put,
   RequestMethod,
   Res,
   SetMetadata,
+  type Type,
   UnauthorizedException,
   UseFilters,
   UseGuards,
@@ -37,13 +41,21 @@ import {
 } from "@nestjs/common";
 import {
   type AbstractHttpAdapter,
+  APP_INTERCEPTOR,
+  ApplicationConfig,
   BaseExceptionFilter,
   DiscoveryModule,
   DiscoveryService,
   HttpAdapterHost,
   Reflector,
 } from "@nestjs/core";
-import { authorizeRequest, type CheckState } from "./node-server/access-checks.js";
+import { ExecutionContextHost } from "@nestjs/core/internal";
+import { mergeMap, type Observable } from "rxjs";
+import {
+  type AccessGrant,
+  authorizeRequest,
+  type CheckState,
+} from "./node-server/access-checks.js";
 import {
   basePathClaimsOf,
   claimsBasePathAlone,
@@ -55,7 +67,6 @@ import {
   type BoundaryHooks,
   bootProblemsMessage,
   enforcedHookBootProblems,
-  type HooksArgument,
   type RegisteredHooks,
   resolvedHooks,
 } from "./node-server/boundary-hooks.js";
@@ -105,12 +116,33 @@ import {
   pathnameOf,
   reportedRequest,
 } from "./node-server/node-request.js";
+import {
+  loggerProblems,
+  type RuntimeLogger,
+  runtimeLog,
+  useRuntimeLogger,
+} from "./node-server/runtime-logger.js";
 import { type PlatformFixes, transportRefusal } from "./node-server/transport-checks.js";
+
+/** Who writes a contract route's reply after step 10: the handler wrapper, or the seampact reply interceptor. */
+export type ReplyMode = "handler" | "interceptor";
 
 export interface NestBoundaryOptions {
   readonly responses: ResponsesMode;
   readonly bodyValidation: boolean;
+  readonly reply: ReplyMode;
 }
+
+/** The options of `SeampactModule.forRoot(hooks, options)`. */
+export interface SeampactModuleOptions {
+  /** Where the boundary writes its warnings and unexpected failures; the console when absent. */
+  readonly logger?: RuntimeLogger;
+}
+
+type ModuleArguments<Hooks> =
+  Partial<Hooks> extends Hooks
+    ? [hooks?: Hooks, options?: SeampactModuleOptions]
+    : [hooks: Hooks, options?: SeampactModuleOptions];
 
 type ContractMethod = (this: unknown, ...args: unknown[]) => unknown;
 
@@ -125,6 +157,8 @@ interface DiscoveredContractMethod {
   readonly name: string;
   readonly method: object;
   readonly metadata: OperationMetadata;
+  /** The interceptors the module of the controller instantiated, by the class a decorator bound. */
+  readonly injectables: ReadonlyMap<unknown, { readonly instance: unknown }>;
 }
 
 // NestJS's own metadata keys and route param types, read through `Reflector` (public decorators write them).
@@ -138,6 +172,10 @@ const RESPONSE_PARAM_TYPE = 1;
 const NEXT_PARAM_TYPE = 2;
 const OPERATION_METADATA = "seampact:operation";
 const RESPONSE_INDEX_METADATA = "seampact:responseIndex";
+const INTERCEPTOR_REPLY: ReplyMode = "interceptor";
+const LOGGER_OPTION = "logger";
+// Marks every api's reply interceptor, so an api's boot check never names another api's as an app interceptor.
+const REPLY_INTERCEPTOR_MARK = Symbol.for("seampact.nestjs.reply-interceptor");
 const EXPRESS_PLATFORM = "express";
 const NOT_FOUND = 404;
 const TOO_MANY_REQUESTS = 429;
@@ -263,6 +301,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   options: NestBoundaryOptions,
 ) {
   const HOOKS = Symbol(`seampact:${api.id}:hooks`);
+  const MODULE_OPTIONS = Symbol(`seampact:${api.id}:options`);
   const RESPONSES_METADATA = `seampact:${api.id}:responses`;
   const bodyGlue = expressBodyGlue(api);
   const reflector = new Reflector();
@@ -337,7 +376,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     request: { readonly method: string; readonly path: string },
   ): Promise<void> {
     if (isUnderPrefix(api, request.path)) {
-      console.error(
+      runtimeLog.error(
         `seampact: ${request.method} ${request.path} reached a contract route under another path; a global prefix differs from the contract's empty mount. Exclude the contract routes with setGlobalPrefix's 'exclude' option.`,
       );
       await writeContractReply(
@@ -352,6 +391,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     await respondNotServed(response, hooks, api, request);
   }
 
+  // Steps 2 to 5: the access checks, after every app guard of the route (`moveContractGuardLast`).
   @Injectable()
   class ContractGuard implements CanActivate {
     async canActivate(execution: ExecutionContext): Promise<boolean> {
@@ -383,21 +423,62 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         ]) ?? context.mode;
       const request: ExpressRequest = execution.switchToHttp().getRequest();
       const state = checkState(context, request);
-      const grant = await authorizeRequest(state);
 
-      context.grant = grant;
-
-      const validated = await validateRequestInput(state, grant);
-
-      context.input = await checkRestrictedInput(state, grant, validated);
+      context.checkState = state;
+      context.grant = await authorizeRequest(state);
 
       return true;
     }
   }
 
+  // Steps 6 to 8 on the operation's input param. NestJS runs a param's own pipes after the global, controller and
+  // route pipes, so the value an app pipe returns is ignored and the handler receives exactly this pipe's output.
+  @Injectable()
+  class ContractInputPipe implements PipeTransform {
+    async transform(): Promise<unknown> {
+      const context = requireContext();
+      const { state, grant } = guardedRequest(context);
+      const validated = await validateRequestInput(state, grant);
+      const input = await checkRestrictedInput(state, grant, validated);
+
+      context.input = input;
+      context.inputChecked = true;
+
+      return input;
+    }
+  }
+
+  const contractInputPipe = new ContractInputPipe();
+
+  // What the guard recorded; a route that skipped it fails closed.
+  function guardedRequest(context: BoundaryContext): { state: CheckState; grant: AccessGrant } {
+    const { checkState: state, grant } = context;
+
+    if (context.api.id !== api.id || state === undefined || grant === undefined) {
+      throw unexpectedError(
+        context.route,
+        new Error(`seampact: the guard of '${context.route.id}' did not run.`),
+      );
+    }
+
+    return { state, grant };
+  }
+
+  // The method and step 10 never run on an input steps 6 to 8 did not check.
+  function requireCheckedInput(context: BoundaryContext): void {
+    if (context.inputChecked === true) return;
+
+    throw unexpectedError(
+      context.route,
+      new Error(
+        `seampact: '${context.route.id}' reached its handler without the input pipe; declare its @${context.route.id}.input() parameter, and skip contract routes with isContractRoute(context) in an interceptor that answers without next.handle().`,
+      ),
+    );
+  }
+
   // Replaces the controller method in place (`applyDecorators` ignores a returned descriptor): on its own operation's
-  // request it runs the idempotency claim or replay, the method, step 10 and the write, and returns no value, so
-  // NestJS needs no interceptor on the route. Anywhere else it is the method itself.
+  // request it runs the idempotency claim or replay and the method, then, in the default reply mode, step 10 and the
+  // write, and returns no value, so NestJS needs no interceptor on the route. Anywhere else it is the method itself.
   const contractHandler =
     (id: string): MethodDecorator =>
     (_target, _key, descriptor) => {
@@ -423,23 +504,23 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       Reflect.set(descriptor, "value", wrapped);
     };
 
+  // In the interceptor mode the result goes back up NestJS's interceptors, and the reply interceptor writes it.
   async function serveContractRequest(
     context: BoundaryContext,
     wrapped: object,
     args: readonly unknown[],
     callMethod: () => unknown,
-  ): Promise<undefined> {
+  ): Promise<unknown> {
     const response = handledResponse(context, wrapped, args);
-    const grant = context.grant;
+    const { state, grant } = guardedRequest(context);
 
-    if (grant === undefined)
-      throw unexpectedError(context.route, new Error("seampact: the guard did not run"));
+    requireCheckedInput(context);
 
-    const state = checkState(context, response.req);
     const started = await beginIdempotency(state, grant, context.input);
 
     if (started?.outcome === "replay") {
       await writeContractReply(response, context, started.reply);
+      context.replyWritten = true;
 
       return undefined;
     }
@@ -447,12 +528,67 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     if (started?.outcome === "started") context.idempotencyKey = started.key;
 
     const result: unknown = await callMethod();
-    const reply = await handlerReply(state, grant, context.input, result);
 
-    await writeContractReply(response, context, reply);
+    if (options.reply === INTERCEPTOR_REPLY) return result;
+
+    await writeHandlerReply(context, response, result);
 
     return undefined;
   }
+
+  // Step 10 on the handler's result, or on the value the app's interceptors mapped it to, then the write.
+  async function writeHandlerReply(
+    context: BoundaryContext,
+    response: ServerResponse,
+    result: unknown,
+  ): Promise<void> {
+    const { state, grant } = guardedRequest(context);
+    const reply = await handlerReply(state, grant, context.input, result);
+
+    await writeContractReply(response, context, reply);
+    context.replyWritten = true;
+  }
+
+  // Step 10 and the write in the interceptor mode, outermost among the app's interceptors (an `APP_INTERCEPTOR`),
+  // so every global, controller and route mapping is the value checked. The response stays marked as handled, so
+  // NestJS writes nothing after it.
+  @Injectable()
+  class ContractReplyInterceptor implements NestInterceptor {
+    readonly [REPLY_INTERCEPTOR_MARK] = true;
+
+    intercept(execution: ExecutionContext, next: CallHandler): Observable<unknown> {
+      const context = boundaryContext.getStore();
+
+      if (context?.api.id !== api.id || !isContractRoute(execution)) return next.handle();
+
+      const response: ServerResponse = execution.switchToHttp().getResponse();
+
+      return next
+        .handle()
+        .pipe(mergeMap((value: unknown) => replyFromInterceptor(context, response, value)));
+    }
+  }
+
+  async function replyFromInterceptor(
+    context: BoundaryContext,
+    response: ServerResponse,
+    value: unknown,
+  ): Promise<undefined> {
+    if (context.replyWritten === true) return undefined;
+
+    if (context.inputChecked !== true) {
+      runtimeLog.error(
+        `seampact: an app interceptor answered '${context.route.id}' without calling next.handle(); skip contract routes with isContractRoute(context).`,
+      );
+    }
+
+    requireCheckedInput(context);
+    await writeHandlerReply(context, response, value);
+
+    return undefined;
+  }
+
+  const replyInterceptor = new ContractReplyInterceptor();
 
   // The response NestJS passes at the index the composite marked with `Res()`.
   function handledResponse(
@@ -480,6 +616,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
     for (const wrapper of discovery.getControllers()) {
       const instance: unknown = wrapper.instance;
+      const injectables = wrapper.host?.injectables ?? new Map();
 
       if (!isPlainObject(instance) && typeof instance !== "object") continue;
 
@@ -494,7 +631,9 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
         const metadata = reflector.get<OperationMetadata | undefined>(OPERATION_METADATA, method);
 
-        if (metadata?.api === api.id) discovered.push({ prototype, name, method, metadata });
+        if (metadata?.api === api.id) {
+          discovered.push({ prototype, name, method, metadata, injectables });
+        }
       }
     }
 
@@ -514,9 +653,31 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     }
   }
 
-  // The method writes the reply before NestJS's interceptors see the result, so a route or controller interceptor
-  // of the app observes that reply and the value it maps is dropped: said once per route at boot.
-  function warnIgnoredInterceptorMappings(methods: readonly DiscoveredContractMethod[]): void {
+  // In the default reply mode the wrapper writes the reply before NestJS's interceptors see the result, so an app
+  // interceptor observes that reply and the value it maps is dropped: said once for the app's global interceptors and
+  // once per route for its controller and route ones. In the interceptor mode only a global one placed before the
+  // reply interceptor sees the written reply.
+  function warnIgnoredInterceptorMappings(
+    methods: readonly DiscoveredContractMethod[],
+    config: ApplicationConfig,
+  ): void {
+    if (options.reply === INTERCEPTOR_REPLY) {
+      warnInterceptorsOutsideReply(config);
+
+      return;
+    }
+
+    const globalInterceptors = [
+      ...appInterceptors(config.getGlobalInterceptors()).map(interceptorName),
+      ...config.getGlobalRequestInterceptors().map((wrapper) => String(wrapper.name)),
+    ];
+
+    if (globalInterceptors.length > 0) {
+      runtimeLog.warn(
+        `seampact: the app's global interceptors ${globalInterceptors.join(", ")} run on every contract route of the api '${api.id}'; they observe the reply seampact wrote and a value they map is ignored. Shape the reply in the handler, or generate the api with the target option reply: interceptor.`,
+      );
+    }
+
     for (const { prototype, method, metadata } of methods) {
       const interceptors = [
         ...metadataList(INTERCEPTORS_METADATA, prototype.constructor),
@@ -527,10 +688,164 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
       const route = routeOf(metadata.id);
 
-      console.warn(
+      runtimeLog.warn(
         `seampact: the route ${methodOf(route).toUpperCase()} ${route.path} of '${metadata.id}' carries the app interceptors ${interceptors.map(interceptorName).join(", ")}; they observe the reply seampact wrote and a value they map is ignored. Shape the reply in the handler instead.`,
       );
     }
+  }
+
+  // NestJS adds `APP_INTERCEPTOR` providers in module scanning order, the app module's before an imported one's.
+  function warnInterceptorsOutsideReply(config: ApplicationConfig): void {
+    const globalInterceptors = config.getGlobalInterceptors();
+    const before = appInterceptors(
+      globalInterceptors.slice(0, Math.max(globalInterceptors.indexOf(replyInterceptor), 0)),
+    );
+
+    if (before.length === 0) return;
+
+    runtimeLog.warn(
+      `seampact: the app's global interceptors ${before.map(interceptorName).join(", ")} run outside the reply interceptor of the api '${api.id}'; on its contract routes they observe the reply seampact wrote and a value they map is ignored. Register them with app.useGlobalInterceptors(...), which places them inside it.`,
+    );
+  }
+
+  function replyInterceptorProblems(config: ApplicationConfig): BootProblem[] {
+    if (options.reply !== INTERCEPTOR_REPLY) return [];
+
+    if (config.getGlobalInterceptors().includes(replyInterceptor)) return [];
+
+    return [
+      {
+        problem: "the reply interceptor is not among the app's global interceptors",
+        fix: "import the api's SeampactModule.forRoot(...) in the app module, not in a lazily loaded module",
+      },
+    ];
+  }
+
+  // An interceptor that answers from a cache never calls the handler, so steps 6 to 8, the idempotency claim and
+  // step 10 would not run for this caller. Probed through `trackBy` (`@nestjs/cache-manager`'s API, duck-typed) with
+  // a request of the route's method and path: a key means a hit can answer the route.
+  function cacheProblems(
+    methods: readonly DiscoveredContractMethod[],
+    config: ApplicationConfig,
+  ): BootProblem[] {
+    const problems: BootProblem[] = [];
+
+    for (const discovered of methods) {
+      const interceptors = [
+        ...config.getGlobalInterceptors(),
+        ...boundInterceptors(discovered, discovered.prototype.constructor),
+        ...boundInterceptors(discovered, discovered.method),
+      ];
+
+      for (const interceptor of interceptors) {
+        const problem = cacheProbeProblem(discovered, interceptor);
+
+        if (problem !== undefined) problems.push(problem);
+      }
+    }
+
+    return problems;
+  }
+
+  function cacheProbeProblem(
+    { prototype, method, metadata }: DiscoveredContractMethod,
+    interceptor: unknown,
+  ): BootProblem | undefined {
+    const trackBy: unknown =
+      typeof interceptor === "object" && interceptor !== null
+        ? Reflect.get(interceptor, "trackBy")
+        : undefined;
+    const controller: unknown = prototype.constructor;
+
+    if (typeof trackBy !== "function" || typeof method !== "function") return undefined;
+
+    if (!isConstructor(controller)) return undefined;
+
+    const route = routeOf(metadata.id);
+    const routeName = `${methodOf(route).toUpperCase()} ${route.path}`;
+    const fix = `return undefined from ${interceptorName(interceptor)}'s trackBy when isContractRoute(context) is true, or remove it from the route`;
+    const execution = new ExecutionContextHost(
+      [probeRequest(route), {}, undefined],
+      controller,
+      method,
+    );
+
+    execution.setType("http");
+
+    try {
+      const key: unknown = Reflect.apply(trackBy, interceptor, [execution]);
+
+      if (key === undefined || key === null) return undefined;
+
+      return {
+        operation: metadata.id,
+        problem: `the app interceptor ${interceptorName(interceptor)} can answer ${routeName} from its cache, without the contract's input checks and reply`,
+        fix,
+      };
+    } catch (failure) {
+      return {
+        operation: metadata.id,
+        problem: `the trackBy of the app interceptor ${interceptorName(interceptor)} threw on ${routeName}: ${failure instanceof Error ? failure.message : String(failure)}`,
+        fix,
+      };
+    }
+  }
+
+  // The interceptors a decorator bound on a controller or a method: an instance, or the class NestJS instantiated in
+  // the controller's module. A request-scoped one has no instance before a request and is not probed.
+  function boundInterceptors(discovered: DiscoveredContractMethod, target: object): unknown[] {
+    return metadataList(INTERCEPTORS_METADATA, target).map((binding) =>
+      typeof binding === "function" ? discovered.injectables.get(binding)?.instance : binding,
+    );
+  }
+
+  // NestJS appends route guards in decorator order; `moveContractGuardLast` puts the seampact guard last, and a
+  // module that edits the guard list after it would let an app guard run after the access checks.
+  function guardLastProblems({ name, method, metadata }: DiscoveredContractMethod): BootProblem[] {
+    const guards = metadataList(GUARDS_METADATA, method);
+    const index = guards.indexOf(ContractGuard);
+
+    if (index === guards.length - 1 && guards.lastIndexOf(ContractGuard) === index) return [];
+
+    const after = guards.slice(index + 1).filter((guard) => guard !== ContractGuard);
+
+    return [
+      {
+        operation: metadata.id,
+        problem: `the seampact guard is not the last guard of ${name}()${after.length === 0 ? "" : `: ${after.map(interceptorName).join(", ")} run after it`}`,
+        fix: "set the route's guards with decorators on the method, not by editing its guard metadata after the app starts",
+      },
+    ];
+  }
+
+  // Without the input param no pipe runs steps 6 to 8, and the wrapper answers 500 on every request.
+  function inputParamProblems({
+    prototype,
+    name,
+    metadata,
+  }: DiscoveredContractMethod): BootProblem[] {
+    const parameters: unknown = Reflect.getMetadata(
+      ROUTE_ARGS_METADATA,
+      prototype.constructor,
+      name,
+    );
+    const declared = (isPlainObject(parameters) ? Object.values(parameters) : []).some(
+      (parameter) =>
+        isPlainObject(parameter) &&
+        parameter.factory === inputFactory &&
+        Array.isArray(parameter.pipes) &&
+        parameter.pipes.includes(contractInputPipe),
+    );
+
+    if (declared) return [];
+
+    return [
+      {
+        operation: metadata.id,
+        problem: `${name}() has no input parameter, so its input is never validated`,
+        fix: `add the parameter \`@${metadata.id}.input() input\`, typed with the operation's generated input type`,
+      },
+    ];
   }
 
   @Catch(ContractError, UnauthorizedException, ForbiddenException, TooManyRequestsRefusal)
@@ -587,10 +902,13 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         markResponseHandled,
       );
 
-    return Object.assign(composite, { input: inputDecorator });
+    return Object.assign(composite, { input });
   };
 
-  const inputDecorator = createParamDecorator(() => boundaryContext.getStore()?.input);
+  // The value NestJS extracts is ignored: the input pipe validates the request the guard recorded.
+  const inputFactory = (): undefined => undefined;
+  const inputDecorator = createParamDecorator(inputFactory);
+  const input = (): ParameterDecorator => inputDecorator(contractInputPipe);
 
   @Module({})
   class SeampactModule implements NestModule, OnApplicationBootstrap {
@@ -598,12 +916,22 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     @Inject(HOOKS) private readonly hooks!: BoundaryHooks;
     @Inject(DiscoveryService) private readonly discovery!: DiscoveryService;
     @Inject(HttpAdapterHost) private readonly adapterHost!: HttpAdapterHost;
+    @Inject(ApplicationConfig) private readonly applicationConfig!: ApplicationConfig;
+    @Inject(MODULE_OPTIONS) private readonly moduleOptions!: SeampactModuleOptions;
 
-    static forRoot(...[hooks]: HooksArgument<Hooks>): DynamicModule {
+    static forRoot(...[hooks, moduleOptions = {}]: ModuleArguments<Hooks>): DynamicModule {
+      useRuntimeLogger(moduleOptions.logger);
+
       return {
         module: SeampactModule,
         imports: [DiscoveryModule],
-        providers: [{ provide: HOOKS, useValue: resolvedHooks(hooks) }],
+        providers: [
+          { provide: HOOKS, useValue: resolvedHooks(hooks) },
+          { provide: MODULE_OPTIONS, useValue: moduleOptions },
+          ...(options.reply === INTERCEPTOR_REPLY
+            ? [{ provide: APP_INTERCEPTOR, useValue: replyInterceptor }]
+            : []),
+        ],
       };
     }
 
@@ -614,7 +942,6 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       const contractMethods = discoveredContractMethods(this.discovery);
 
       moveContractGuardLast(contractMethods);
-      warnIgnoredInterceptorMappings(contractMethods);
 
       // Claimed before any api's boot check runs, so each check sees every api's routes.
       const adapter: object | undefined = this.adapterHost.httpAdapter;
@@ -633,9 +960,16 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     }
 
     onApplicationBootstrap(): void {
+      const contractMethods = discoveredContractMethods(this.discovery);
+
+      warnIgnoredInterceptorMappings(contractMethods, this.applicationConfig);
+
       const problems = [
         ...enforcedHookBootProblems(api, this.hooks),
-        ...this.handlerProblems(),
+        ...moduleOptionsProblems(this.moduleOptions),
+        ...this.handlerProblems(contractMethods),
+        ...replyInterceptorProblems(this.applicationConfig),
+        ...cacheProblems(contractMethods, this.applicationConfig),
         ...this.platformProblems(),
         ...this.repeatedRegistrationProblems(),
         ...this.frameworkRouteProblems(),
@@ -644,15 +978,19 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
     }
 
-    private handlerProblems(): BootProblem[] {
+    private handlerProblems(contractMethods: readonly DiscoveredContractMethod[]): BootProblem[] {
       const bound = new Set<string>();
       const problems: BootProblem[] = [];
 
-      for (const { prototype, name, method, metadata } of discoveredContractMethods(
-        this.discovery,
-      )) {
+      for (const discovered of contractMethods) {
+        const { prototype, name, method, metadata } = discovered;
+
         bound.add(metadata.id);
-        problems.push(...writerProblems(metadata.id, prototype, name, method));
+        problems.push(
+          ...writerProblems(metadata.id, prototype, name, method),
+          ...inputParamProblems(discovered),
+          ...guardLastProblems(discovered),
+        );
       }
 
       for (const route of api.routes) {
@@ -827,7 +1165,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       const httpAdapter = platform.adapterHost?.httpAdapter;
 
       if (httpAdapter === undefined) {
-        console.error(
+        runtimeLog.error(
           `seampact: the pre-routing filter of api '${api.id}' ran before its SeampactModule started; import SeampactModule.forRoot(...) in the app module.`,
           exception,
         );
@@ -859,7 +1197,59 @@ function metadataList(key: string, target: object): readonly unknown[] {
   return Array.isArray(list) ? list : [];
 }
 
-// An interceptor is bound as its class or as an instance.
+// The interceptors of the app, without any api's reply interceptor.
+function appInterceptors(interceptors: readonly unknown[]): unknown[] {
+  return interceptors.filter(
+    (interceptor) =>
+      typeof interceptor !== "object" ||
+      interceptor === null ||
+      !Reflect.has(interceptor, REPLY_INTERCEPTOR_MARK),
+  );
+}
+
+// A class NestJS can name as the controller of an execution context.
+function isConstructor(value: unknown): value is Type {
+  return typeof value === "function" && typeof value.prototype === "object";
+}
+
+// The request a cache interceptor's `trackBy` reads at boot: the route's method, and its path with each param
+// written as its name.
+function probeRequest(route: ContractRoute): object {
+  const path = route.path.replace(/\{([^}]+)\}/g, "$1");
+
+  return {
+    method: methodOf(route).toUpperCase(),
+    url: path,
+    originalUrl: path,
+    path,
+    headers: {},
+    query: {},
+    params: {},
+  };
+}
+
+function moduleOptionsProblems(moduleOptions: unknown): BootProblem[] {
+  if (!isPlainObject(moduleOptions)) {
+    return [
+      {
+        problem: "the options of SeampactModule.forRoot are not an object",
+        fix: "pass `{ logger }` as forRoot's second argument, or leave it out",
+      },
+    ];
+  }
+
+  return [
+    ...Object.keys(moduleOptions)
+      .filter((key) => key !== LOGGER_OPTION)
+      .map((key) => ({
+        problem: `'${key}' is not an option of SeampactModule.forRoot`,
+        fix: `remove '${key}'; forRoot takes \`{ ${LOGGER_OPTION} }\``,
+      })),
+    ...loggerProblems(moduleOptions[LOGGER_OPTION]),
+  ];
+}
+
+// An interceptor or a guard is bound as its class or as an instance.
 function interceptorName(interceptor: unknown): string {
   if (typeof interceptor === "function") return interceptor.name;
 

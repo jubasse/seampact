@@ -38,6 +38,40 @@ describe("the generated reference boundary compiles", () => {
     });
   });
 
+  test("parseOptions accepts reply and refuses an unknown value", () => {
+    expect(nestjsTarget.parseOptions({})).toMatchObject({ options: { reply: "handler" } });
+    expect(nestjsTarget.parseOptions({ reply: "interceptor" })).toMatchObject({
+      options: { reply: "interceptor", responses: "strict" },
+    });
+    expect(nestjsTarget.parseOptions({ reply: "filter", extra: true })).toMatchObject({
+      status: "refused",
+      refusals: [
+        { code: "options.unknown", message: expect.stringContaining("'reply'") },
+        { code: "options.reply.invalid" },
+      ],
+    });
+  });
+
+  test.each(["handler", "interceptor"])(
+    "the generated module passes the %s reply mode to the boundary",
+    async (reply) => {
+      const outcome = await nestjsTarget.generate({
+        ir: readGoldenIr("tasks"),
+        options: { reply },
+        links: await referenceLinks(PROJECT, "tasks"),
+        artefacts: new Set(["boundary", "index"]),
+      });
+      const nestjsModule =
+        outcome.status === "generated"
+          ? outcome.files.find((file) => file.path.split("/").at(-1) === "nestjs.ts")
+          : undefined;
+
+      expect(nestjsModule?.contents).toMatch(
+        new RegExp(`createNestBoundary<SeampactHooks>\\(CONTRACT_API, \\{[^}]*reply: "${reply}"`),
+      );
+    },
+  );
+
   test.each([
     ["tasks", "concurrency.handler", "updateTask"],
     ["tasks", "owner.handler", "getDraft"],
@@ -112,8 +146,8 @@ describe("an api with only public operations asks for no hooks", () => {
 
       expect(errors.publicTasks).toEqual([]);
       expect(errors.guardedService).toHaveLength(1);
-      // forRoot takes the hooks as its one argument.
-      expect(errors.guardedService[0]).toContain("Expected 1 arguments");
+      // forRoot takes the hooks, then its options.
+      expect(errors.guardedService[0]).toContain("Expected 1-2 arguments");
     },
     GENERATE_TIMEOUT_MILLISECONDS + TYPE_CHECK_TIMEOUT_MILLISECONDS,
   );
