@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { parse } from "yaml";
-import { useTarballs } from "./consumer-project.ts";
+import { useTarballs, withTargetOptions } from "./consumer-project.ts";
 
 const directories: string[] = [];
 
@@ -49,4 +49,35 @@ test("writes the settings when the app has no pnpm-workspace.yaml", () => {
     allowBuilds: { esbuild: true },
     overrides: { "@seampact/spec": "file:./vendor/seampact/spec.tgz" },
   });
+});
+
+test("writes each target option into every entry's options, read as YAML", () => {
+  const entries = [
+    "  - id: server",
+    '    use: "@seampact/codegen-nestjs"',
+    "    options:",
+    "      bodyValidation: true",
+    "  # The variant entry.",
+    "  - id: variant",
+    '    use: "@seampact/codegen-nestjs"',
+  ].join("\n");
+  const written = withTargetOptions(entries, [
+    { key: "reply", value: "interceptor" },
+    { key: "catchAll", value: "false" },
+  ]);
+
+  expect(parse(written)).toEqual([
+    {
+      id: "server",
+      use: "@seampact/codegen-nestjs",
+      options: { bodyValidation: true, reply: "interceptor", catchAll: false },
+    },
+    {
+      id: "variant",
+      use: "@seampact/codegen-nestjs",
+      options: { reply: "interceptor", catchAll: false },
+    },
+  ]);
+  expect(written).toContain("# The variant entry.");
+  expect(written.startsWith("  - id: server")).toBe(true);
 });

@@ -5,7 +5,14 @@ import { parseArgs } from "node:util";
 import { REPO_ROOT } from "../golden/repo-root.ts";
 import { currentCommit, type PackedTarballs, packOnce, prepareProject } from "./bench-project.ts";
 import { isMemoryServers, MEMORY_SERVERS, type MemoryOptions, memoryPair } from "./memory.ts";
-import { type BenchPair, benchPairs, selectPairs, withoutBodyValidation } from "./pairs.ts";
+import { parseTargetOptions, type TargetOption } from "../consumers/consumer-project.ts";
+import {
+  type BenchPair,
+  benchPairs,
+  selectPairs,
+  withoutBodyValidation,
+  withRunSettings,
+} from "./pairs.ts";
 import {
   defaultParallelism,
   placementForSlot,
@@ -32,7 +39,7 @@ const EXIT_FAILED = 1;
 const EXIT_USAGE = 2;
 
 const USAGE =
-  "usage: node scripts/bench/cli.ts (--all | --target <overlay> --validators <id>) [--check] [--body-off] [--latency] [--thorough] [--parallel <n>] [--profile] [--route <ids>] [--duration <s>] [--warmup <s>] [--repeats <n>] [--connections <n>] [--out <dir>] [--work <dir>] [--fresh] [--compare <results.json>] [--ratio] [--memory [--requests <n>] [--batches <n>] [--servers seampact|baseline|both]]";
+  "usage: node scripts/bench/cli.ts (--all | --target <overlay> --validators <id>) [--check] [--body-off] [--latency] [--thorough] [--parallel <n>] [--profile] [--route <ids>] [--target-option <key>=<value>]... [--app-interceptor] [--duration <s>] [--warmup <s>] [--repeats <n>] [--connections <n>] [--out <dir>] [--work <dir>] [--fresh] [--compare <results.json>] [--ratio] [--memory [--requests <n>] [--batches <n>] [--servers seampact|baseline|both]]";
 const CONSUMERS_ROOT = join(REPO_ROOT, "scripts/consumers");
 const DEFAULT_OUT = join(REPO_ROOT, ".bench-output/latest");
 // Outside /tmp: a full run fills the inodes of a tmpfs.
@@ -64,6 +71,8 @@ interface Invocation {
   readonly profile: boolean;
   readonly fresh: boolean;
   readonly bodyOff: boolean;
+  readonly targetOptions: readonly TargetOption[];
+  readonly appInterceptor: boolean;
   readonly parallel: number;
   readonly out: string;
   readonly work: string;
@@ -101,6 +110,8 @@ function parseInvocation(argv: string[]): Invocation | string {
         requests: { type: "string", default: String(DEFAULT_MEMORY_REQUESTS) },
         batches: { type: "string", default: String(DEFAULT_MEMORY_BATCHES) },
         servers: { type: "string", default: "both" },
+        "target-option": { type: "string", multiple: true, default: [] },
+        "app-interceptor": { type: "boolean", default: false },
       },
     });
 
@@ -146,6 +157,9 @@ function parseInvocation(argv: string[]): Invocation | string {
     if (modes.length > 1) return "pass one of --check, --profile, --ratio and --memory";
 
     const routeIds = values.route === undefined ? DEFAULT_ROUTES : values.route.split(",");
+    const targetOptions = parseTargetOptions(values["target-option"]);
+
+    if (typeof targetOptions === "string") return targetOptions;
 
     return {
       all: values.all,
@@ -155,6 +169,8 @@ function parseInvocation(argv: string[]): Invocation | string {
       profile: values.profile,
       fresh: values.fresh,
       bodyOff: values.thorough || values["body-off"],
+      targetOptions,
+      appInterceptor: values["app-interceptor"],
       parallel,
       out: resolve(values.out ?? DEFAULT_OUT),
       work: resolve(values.work ?? DEFAULT_WORK),
@@ -236,7 +252,7 @@ function selectedPairs(invocation: Invocation) {
     all: invocation.all,
     ...(invocation.target === undefined ? {} : { target: invocation.target }),
     ...(invocation.validators === undefined ? {} : { validators: invocation.validators }),
-  });
+  }).map((pair) => withRunSettings(pair, invocation));
 }
 
 // A measuring run reports each pair with the generated server's outgoing body check on, and with `--body-off` also off.

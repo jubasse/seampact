@@ -7,6 +7,7 @@ import { BaseExceptionFilter, NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
+import { useBenchAppInterceptor } from "../src/bench-app-interceptor.mjs";
 import { ConsumerModule } from "../src/consumer-module.mjs";
 
 export interface RunningServer {
@@ -39,6 +40,7 @@ export async function startServer(): Promise<RunningServer> {
     limit: Math.max(TasksNest.LARGEST_BODY_LIMIT, TasksServiceNest.LARGEST_BODY_LIMIT),
   });
   app.useGlobalFilters(new PreRoutingFilter(app.getHttpAdapter()));
+  useBenchAppInterceptor(app);
   await app.listen(0, HOST);
 
   return {

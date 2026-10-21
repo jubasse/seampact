@@ -40,6 +40,18 @@ describe("checkTarballContents", () => {
     expect(() => checkTarballContents(join(empty, "p.tgz"))).toThrow("@seampact/demo");
   });
 
+  test("accepts a data package whose files list no dist", () => {
+    const root = mkdtempSync(join(tmpdir(), "bench-tarball-"));
+    const manifest = { name: "@seampact/pack-demo", files: ["pack.yaml"] };
+
+    mkdirSync(join(root, "package"));
+    writeFileSync(join(root, "package/package.json"), JSON.stringify(manifest));
+    writeFileSync(join(root, "package/pack.yaml"), "");
+    execFileSync("tar", ["czf", join(root, "p.tgz"), "-C", root, "package"]);
+
+    expect(() => checkTarballContents(join(root, "p.tgz"))).not.toThrow();
+  });
+
   test("refuses a package without its declared entry file", () => {
     expect(() =>
       checkTarballContents(tarballWith({ "package.json": MANIFEST, "dist/other.js": "" })),

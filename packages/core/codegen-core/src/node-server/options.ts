@@ -35,6 +35,8 @@ export function responseSettingsOf(options: NodeServerOptions): ResponseSettings
 /** What a target's placement lets its entry's `options` name beyond the options every Node server target takes. */
 export interface AcceptedNodeServerOptions {
   readonly compression: boolean;
+  /** The keys the target parses itself; accepted here and listed in the unknown-key refusal. */
+  readonly targetKeys?: readonly string[];
 }
 
 const RESPONSES_KEY = "responses";
@@ -55,8 +57,8 @@ const DEFAULT_NODE_SERVER_OPTIONS: NodeServerOptions = {
 
 /**
  * Accepts `{}`, `responses: strict | warn`, `bodyValidation: true | false`, `frameworkEtag: strip | keep`, `catchAll: true | false` and, where
- * accepted, `compression: off` or `compression: { thresholdBytes: <whole number> }`; any other key or value is
- * refused.
+ * accepted, `compression: off` or `compression: { thresholdBytes: <whole number> }`; the target's own keys are left to
+ * it; any other key or value is refused.
  */
 export function parseNodeServerOptions(
   raw: unknown,
@@ -82,6 +84,7 @@ export function parseNodeServerOptions(
     FRAMEWORK_ETAG_KEY,
     CATCH_ALL_KEY,
     ...(accepted.compression ? [COMPRESSION_KEY] : []),
+    ...(accepted.targetKeys ?? []),
   ];
   const refusals = Object.keys(raw)
     .filter((key) => !knownKeys.includes(key))

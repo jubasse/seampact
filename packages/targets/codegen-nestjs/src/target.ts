@@ -5,21 +5,58 @@ import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
 import { nestjsDocsModuleSource } from "./nestjs-docs-module.js";
 import { nestjsModuleSource } from "./nestjs-module.js";
+import {
+  DEFAULT_REPLY_MODE,
+  parseNestjsOptions,
+  type ReplyMode,
+  withoutReplyOption,
+} from "./nestjs-options.js";
 
 // The NestJS target, as the CLI loads it. Its placement is a checked source of this package one directory above both
 // `src` and `dist`, and the `nestjs` module of each api. It reads the validator
-// styles the compatibility matrix records for it, Standard Schema and class-validator.
-export const target: Target = nodeServerTarget({
-  packageName: packageJson.name,
-  packageVersion: packageJson.version,
-  format,
-  placement: {
-    runtimeModule: "nestjs-boundary",
-    runtimeSourceUrl: new URL("../runtime/nestjs-boundary.ts", import.meta.url),
-    frameworkModule: "nestjs",
-    frameworkSource: nestjsModuleSource,
-    nativeDocs: { docsModule: "nestjs-docs", docsSource: nestjsDocsModuleSource },
+// styles the compatibility matrix records for it, Standard Schema and class-validator. Its own option `reply` picks
+// the Node server target whose `nestjs` module passes that reply mode to the boundary.
+function nestjsTargetOf(reply: ReplyMode): Target {
+  return nodeServerTarget({
+    packageName: packageJson.name,
+    packageVersion: packageJson.version,
+    format,
+    placement: {
+      runtimeModule: "nestjs-boundary",
+      runtimeSourceUrl: new URL("../runtime/nestjs-boundary.ts", import.meta.url),
+      frameworkModule: "nestjs",
+      frameworkSource: (ir, options, refusals, docsModule) =>
+        nestjsModuleSource(ir, { ...options, reply }, refusals, docsModule),
+      nativeDocs: { docsModule: "nestjs-docs", docsSource: nestjsDocsModuleSource },
+    },
+    validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
+    frameworkDocsOffFix: "remove the `SwaggerModule.setup` call",
+  });
+}
+
+const TARGETS_BY_REPLY_MODE: Readonly<Record<ReplyMode, Target>> = {
+  handler: nestjsTargetOf("handler"),
+  interceptor: nestjsTargetOf("interceptor"),
+};
+
+export const target: Target = {
+  metadata: TARGETS_BY_REPLY_MODE[DEFAULT_REPLY_MODE].metadata,
+  parseOptions: parseNestjsOptions,
+  generate: async (request) => {
+    const parsed = parseNestjsOptions(request.options);
+
+    if (parsed.status === "refused") return parsed;
+
+    return TARGETS_BY_REPLY_MODE[parsed.options.reply].generate({
+      ...request,
+      options: withoutReplyOption(request.options),
+    });
   },
-  validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
-  frameworkDocsOffFix: "remove the `SwaggerModule.setup` call",
-});
+  describe: (ir, rawOptions) => {
+    const parsed = parseNestjsOptions(rawOptions);
+
+    if (parsed.status === "refused") return parsed;
+
+    return TARGETS_BY_REPLY_MODE[parsed.options.reply].describe(ir, withoutReplyOption(rawOptions));
+  },
+};

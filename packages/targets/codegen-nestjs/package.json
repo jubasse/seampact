@@ -1,6 +1,6 @@
 {
   "name": "@seampact/codegen-nestjs",
-  "description": "Generates the NestJS boundary around your controllers: a decorator per operation, the access and validation guard, a handler wrapper that writes the checked reply, an input decorator, the error filter and a boot check, validating with zod.",
+  "description": "Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, an input decorator whose pipe validates, a handler wrapper or opt-in reply interceptor that writes the checked reply, the error filter and a boot check, validating with zod.",
   "version": "0.0.0",
   "private": true,
   "type": "module",

@@ -39,6 +39,7 @@ export async function memoryPair(
       kind,
       baselineFramework: pair.baselineFramework,
       validators: pair.validators,
+      appInterceptor: pair.appInterceptor,
       nodeArguments: ["--expose-gc"],
     });
 

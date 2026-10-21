@@ -52,6 +52,9 @@ function pinOrKill(child: ChildProcess, cpu: number): void {
   }
 }
 
+// The value of `BENCH_APP_INTERCEPTOR` the NestJS servers read to register their no-op app interceptor.
+const APP_INTERCEPTOR_ON = "1";
+
 // One server of a pair, running in a forked child of the bench project so its memory and CPU are its own.
 export class ServerProcess {
   readonly baseUrl: string;
@@ -67,6 +70,8 @@ export class ServerProcess {
     readonly kind: ServerKind;
     readonly baselineFramework: string;
     readonly validators: string;
+    /** Both servers register one global no-op app interceptor. */
+    readonly appInterceptor: boolean;
     readonly nodeArguments?: readonly string[];
     /** The core every thread of the server is pinned to. */
     readonly cpu?: number;
@@ -80,6 +85,7 @@ export class ServerProcess {
         env: {
           ...process.env,
           BENCH_VALIDATORS: options.validators,
+          BENCH_APP_INTERCEPTOR: options.appInterceptor ? APP_INTERCEPTOR_ON : "",
           // The overlay's compiler settings (NestJS decorators) apply to the bench sources too.
           TSX_TSCONFIG_PATH: join(options.projectDirectory, "bench/tsconfig.json"),
         },

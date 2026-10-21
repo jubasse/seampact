@@ -16,6 +16,8 @@ import {
   Res,
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+// The consumer overlay's, which the bench project is assembled on.
+import { useBenchAppInterceptor } from "../../../src/bench-app-interceptor.mjs";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { type BaselineReply, type BaselineRequest, runBaselineRoute } from "../route-work.mjs";
 
@@ -160,6 +162,7 @@ export async function startServer(): Promise<RunningServer> {
   });
 
   app.useBodyParser("json", { strict: false, limit: BODY_LIMIT_BYTES });
+  useBenchAppInterceptor(app);
   await app.listen(0, HOST);
 
   return {
