@@ -44,6 +44,8 @@ export type NextPageRule =
       readonly evidence: readonly ("more" | "totalPages" | "total" | "next")[];
     };
 
+type PagedRule = Extract<NextPageRule, { readonly position: "page" | "offset" }>;
+
 /** The pages of an infinite query, as the libraries hold them. */
 export interface PagedData<Item> {
   readonly pages: readonly { readonly body: { readonly items: readonly Item[] } }[];
@@ -131,27 +133,45 @@ export function nextPageRequest(
   }
 
   const position = numberOf(memberOf(request, rule.member)) ?? rule.base;
-  const limit = numberOf(rule.limit && memberOf(request, rule.limit)) ?? rule.defaultLimit;
-  const step = rule.position === "page" ? 1 : (limit ?? numberOf(facts.limit));
+  const limit = servedLimit(rule, request, facts);
+  const step = rule.position === "page" ? 1 : limit;
 
-  if (step === undefined) return undefined;
+  if (step === undefined || step <= 0) return undefined;
 
-  const next = position + step;
   const linked = numberOf(linkParam(facts.next, rule.member));
 
   return hasNextPage(rule, facts, position, limit)
-    ? withMember(request, rule.member, linked ?? next)
+    ? withMember(request, rule.member, linked ?? position + step)
     : undefined;
+}
+
+// The page size the server served: its `limit` fact (a clamped limit differs from the asked one), else the
+// request's limit, else the operation's default, else the count of the page's items.
+function servedLimit(
+  rule: PagedRule,
+  request: object | undefined,
+  facts: Readonly<Record<string, unknown>>,
+): number | undefined {
+  const requestLimit =
+    rule.limit === undefined ? undefined : numberOf(memberOf(request, rule.limit));
+  const items = facts.items;
+
+  return (
+    numberOf(facts.limit) ??
+    requestLimit ??
+    rule.defaultLimit ??
+    (Array.isArray(items) ? items.length : undefined)
+  );
 }
 
 // The first fact the style gives decides; no fact ends the list.
 function hasNextPage(
-  rule: Extract<NextPageRule, { position: "page" | "offset" }>,
+  rule: PagedRule,
   facts: Readonly<Record<string, unknown>>,
   position: number,
   limit: number | undefined,
 ): boolean {
-  const pagesRead = rule.position === "page" ? position - rule.base + 1 : undefined;
+  const pagesRead = pagesReadThrough(rule, position, limit);
 
   for (const evidence of rule.evidence) {
     const fact = facts[evidence];
@@ -167,7 +187,7 @@ function hasNextPage(
         return (
           typeof fact === "number" &&
           limit !== undefined &&
-          recordsRead(pagesRead, position, limit) < fact
+          recordsRead(rule, position, limit) < fact
         );
       case "next":
         return typeof fact === "string" && fact !== "";
@@ -177,8 +197,19 @@ function hasNextPage(
   return false;
 }
 
-function recordsRead(pagesRead: number | undefined, offset: number, limit: number): number {
-  return pagesRead === undefined ? offset + limit : pagesRead * limit;
+// The pages read up to this one: a page list counts from its base, an offset list divides by the page size.
+function pagesReadThrough(
+  rule: PagedRule,
+  position: number,
+  limit: number | undefined,
+): number | undefined {
+  if (rule.position === "page") return position - rule.base + 1;
+
+  return limit === undefined || limit <= 0 ? undefined : Math.floor(position / limit) + 1;
+}
+
+function recordsRead(rule: PagedRule, position: number, limit: number): number {
+  return rule.position === "page" ? (position - rule.base + 1) * limit : position + limit;
 }
 
 /** Every item of an infinite query's pages, in order. */
@@ -210,8 +241,11 @@ export function withIdempotencyKey(
  */
 export class IdempotencyKeys {
   private readonly keys = new WeakMap<object, string>();
+  private readonly draw: () => string;
 
-  constructor(private readonly draw: () => string) {}
+  constructor(draw: () => string) {
+    this.draw = draw;
+  }
 
   keyFor(attempt: object): string {
     const kept = this.keys.get(attempt);
