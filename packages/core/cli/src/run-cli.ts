@@ -2,10 +2,13 @@ import { parseArgs } from "node:util";
 import { type CliIo, EXIT_USAGE, printProblems } from "./cli-io.js";
 import type { CliProblem } from "./cli-problem.js";
 import {
+  type BundleCommandOptions,
+  bundleCommand,
   checkCommand,
   compileCommand,
   configLocation,
   diffCommand,
+  explainCommand,
   generateCommand,
   lintCommand,
 } from "./commands/index.js";
@@ -32,10 +35,18 @@ const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
     "diff",
     '  diff --against <path> [--config <path>]  Classify the changes since the IRs at <path> (an IR file, or a directory of <api>.ir.json that "compile --out <dir>" writes).',
   ],
+  [
+    "explain",
+    "  explain <api>.<operationId> [--config <path>]  Print one operation whole, each line commented with the derivation and the file and line it comes from; the api may be left out when the sources hold one.",
+  ],
+  [
+    "bundle",
+    "  bundle (--out <dir> | --tarball <file> | --npm-package <dir>) [--source <name>] [--name <name>] [--version <version>] [--config <path>]\n                                           Write the bundle of a `path` source (the config's only one, or --source) and print its integrity; the contract name and version default to the workspace's package.json.",
+  ],
 ]);
 
 // The commands and flags of the CLI design that are not available yet; each answers with exit code 2.
-const WAITING_COMMANDS: ReadonlySet<string> = new Set(["init", "bundle", "explain"]);
+const WAITING_COMMANDS: ReadonlySet<string> = new Set(["init"]);
 const WAITING_FLAGS: ReadonlySet<string> = new Set([
   "--watch",
   "--strict",
@@ -83,6 +94,10 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
   if (command === "lint") return runLint(rest, io);
 
   if (command === "diff") return runDiff(rest, io);
+
+  if (command === "bundle") return runBundle(rest, io);
+
+  if (command === "explain") return runExplain(rest, io);
 
   return usageError(io, `Unknown command '${command}'.`);
 }
@@ -138,22 +153,101 @@ async function runDiff(args: readonly string[], io: CliIo): Promise<number> {
   return diffCommand(configLocation(io.cwd, stringOption(parsed.values.config)), against, io);
 }
 
+async function runExplain(args: readonly string[], io: CliIo): Promise<number> {
+  const parsed = parseCommandArgs(args, { config: { type: "string" } }, ONE_POSITIONAL);
+
+  if (parsed.status === "refused") return usageError(io, parsed.message);
+
+  const [operation] = parsed.positionals;
+
+  if (operation === undefined || parsed.positionals.length > 1)
+    return usageError(io, "`explain` takes one operation, as `<api>.<operationId>`.");
+
+  return explainCommand(configLocation(io.cwd, stringOption(parsed.values.config)), operation, io);
+}
+
+const BUNDLE_OUTPUT_FLAGS = ["out", "tarball", "npm-package"] as const;
+
+async function runBundle(args: readonly string[], io: CliIo): Promise<number> {
+  const parsed = parseCommandArgs(args, {
+    config: { type: "string" },
+    source: { type: "string" },
+    out: { type: "string" },
+    tarball: { type: "string" },
+    "npm-package": { type: "string" },
+    name: { type: "string" },
+    version: { type: "string" },
+  });
+
+  if (parsed.status === "refused") return usageError(io, parsed.message);
+
+  const { values } = parsed;
+  const given = BUNDLE_OUTPUT_FLAGS.flatMap((flag) => {
+    const path = stringOption(values[flag]);
+
+    return path === undefined ? [] : [bundleOutput(flag, path)];
+  });
+  const [output] = given;
+
+  if (output === undefined || given.length > 1)
+    return usageError(
+      io,
+      "`bundle` needs exactly one of `--out`, `--tarball` and `--npm-package`.",
+    );
+
+  const name = stringOption(values.name);
+  const version = stringOption(values.version);
+  const source = stringOption(values.source);
+  const options: BundleCommandOptions = {
+    output,
+    contract: {
+      ...(name === undefined ? {} : { name }),
+      ...(version === undefined ? {} : { version }),
+    },
+    ...(source === undefined ? {} : { source }),
+  };
+
+  return bundleCommand(configLocation(io.cwd, stringOption(values.config)), options, io);
+}
+
+function bundleOutput(
+  flag: (typeof BUNDLE_OUTPUT_FLAGS)[number],
+  path: string,
+): BundleCommandOptions["output"] {
+  if (flag === "out") return { directory: path };
+
+  return flag === "tarball" ? { tarball: path } : { npmPackage: path };
+}
+
 type OptionSpec = Record<string, { type: "string" | "boolean" }>;
 
 type ParsedArgs =
-  | { status: "parsed"; values: Record<string, string | boolean | undefined> }
+  | {
+      status: "parsed";
+      values: Record<string, string | boolean | undefined>;
+      positionals: string[];
+    }
   | { status: "refused"; message: string };
 
-function parseCommandArgs(args: readonly string[], options: OptionSpec): ParsedArgs {
+// Whether a command takes positional arguments besides its options.
+type Positionals = "none" | "one";
+
+const ONE_POSITIONAL: Positionals = "one";
+
+function parseCommandArgs(
+  args: readonly string[],
+  options: OptionSpec,
+  positionals: Positionals = "none",
+): ParsedArgs {
   try {
-    const { values } = parseArgs({
+    const parsed = parseArgs({
       args: [...args],
       options,
       strict: true,
-      allowPositionals: false,
+      allowPositionals: positionals !== "none",
     });
 
-    return { status: "parsed", values: { ...values } };
+    return { status: "parsed", values: { ...parsed.values }, positionals: parsed.positionals };
   } catch (error) {
     const code = errorCode(error);
 

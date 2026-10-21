@@ -7,6 +7,9 @@ The `seampact` command. It reads the app config, `seampact.config.yaml` (ADR 001
 - `seampact check [--config <path>]` runs `generate` in memory and compares each file and document with the committed ones, naming each file that differs: `checks.generated` for generated files, `checks.openapi` for documents (`error` by default, `warning` reports and passes, `disabled` skips), `checks.matrix` for untested framework versions. Every source is compiled, and a bundle source goes through the pinned-bundle check. It writes nothing.
 - `seampact lint [--config <path>]` runs the core lint rules over each `path` source.
 - `seampact diff --against <path> [--config <path>]` classifies the changes since the IRs at `<path>` (an IR file, or a directory of `<api>.ir.json` files as `compile --out` writes them), with the app config's `diff.gate` and `diff.exempt`.
+- `seampact explain <api>.<operationId> [--config <path>]` prints one operation as YAML, each line commented with the derivation that produced it and the file and line that caused it; the api may be left out when the sources hold one. Members it does not show yet are listed in a last comment.
+- `seampact bundle (--out <dir> | --tarball <file> | --npm-package <dir>) [--source <name>] [--name <name>] [--version <version>] [--config <path>]` compiles a `path` source (the app config's only one, or `--source`) and writes its bundle (ADR 0011): a directory, a reproducible tarball for a release asset, or a directory with npm's `package.json` ready to publish. It prints the integrity value to pin. The contract's name and version come from the `package.json` at the workspace root unless `--name` and `--version` are given.
+- `seampact init` is not available yet.
 
 Exit codes: 0 when everything was written or checked, 1 on a refusal, a compile error, a drift at `error`, a lint error or a failed diff gate, 2 on a usage error.
 

@@ -10,6 +10,7 @@ import {
   loadFsReader,
   localSourcePolicy,
   localSourceRefusalReason,
+  type PipelineResult,
   printDiagnostics,
 } from "@seampact/compiler";
 import type { LintDeclared } from "@seampact/lint";
@@ -112,12 +113,7 @@ async function compileSource(name: string, directory: string, run: SourceRun): P
 
   if (entry === undefined) {
     compiled.failed = true;
-    compiled.problems.push({
-      code: "config.source.no-workspace",
-      message: `The directory ${directory} holds neither \`${WORKSPACE_ENTRY}\` nor \`${SINGLE_API_ENTRY}\`.`,
-      fix: `Point the source's \`path\` at the contract directory: the one holding \`${WORKSPACE_ENTRY}\`, or \`${SINGLE_API_ENTRY}\` for a single api.`,
-      where: `source '${name}'`,
-    });
+    compiled.problems.push(noWorkspaceProblem(name, directory));
 
     return;
   }
@@ -143,18 +139,8 @@ async function compileSource(name: string, directory: string, run: SourceRun): P
 
   const result = outcome.compiled;
   const label = io.diagnosticFileLabel;
-  const printed = [
-    printedDiagnostics(result.diagnostics, labelledLocations(result.locations, label)),
-    ...result.apis.map((api) =>
-      printedDiagnostics(api.diagnostics, labelledLocations(api.locations, label)),
-    ),
-  ].filter((text) => text !== "");
 
-  if (printed.length > 0) io.stderr(`In source '${name}' (${directory}):\n${printed.join("\n")}\n`);
-
-  const diagnostics = [...result.diagnostics, ...result.apis.flatMap((api) => api.diagnostics)];
-
-  if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) compiled.failed = true;
+  if (printSourceDiagnostics(io, { name, directory }, result)) compiled.failed = true;
 
   for (const api of result.apis) {
     if (api.ir === undefined) continue;
@@ -175,8 +161,40 @@ function fetchOptions(baseDirectory: string, run: SourceRun): BundleFetchOptions
   return { baseDirectory, localSources: run.localSources };
 }
 
+// A `path` source whose directory holds no contract entry file.
+export function noWorkspaceProblem(name: string, directory: string): CliProblem {
+  return {
+    code: "config.source.no-workspace",
+    message: `The directory ${directory} holds neither \`${WORKSPACE_ENTRY}\` nor \`${SINGLE_API_ENTRY}\`.`,
+    fix: `Point the source's \`path\` at the contract directory: the one holding \`${WORKSPACE_ENTRY}\`, or \`${SINGLE_API_ENTRY}\` for a single api.`,
+    where: `source '${name}'`,
+  };
+}
+
+// Prints a compiled source's diagnostics on stderr under the source's name; true when one is an error.
+export function printSourceDiagnostics(
+  io: CliIo,
+  source: { readonly name: string; readonly directory: string },
+  result: PipelineResult,
+): boolean {
+  const label = io.diagnosticFileLabel;
+  const printed = [
+    printedDiagnostics(result.diagnostics, labelledLocations(result.locations, label)),
+    ...result.apis.map((api) =>
+      printedDiagnostics(api.diagnostics, labelledLocations(api.locations, label)),
+    ),
+  ].filter((text) => text !== "");
+
+  if (printed.length > 0)
+    io.stderr(`In source '${source.name}' (${source.directory}):\n${printed.join("\n")}\n`);
+
+  const diagnostics = [...result.diagnostics, ...result.apis.flatMap((api) => api.diagnostics)];
+
+  return diagnostics.some((diagnostic) => diagnostic.severity === "error");
+}
+
 // The failure's file is named when its message does not already hold it.
-function bundleProblem(failure: BundleSourceFailure, where: string): CliProblem {
+export function bundleProblem(failure: BundleSourceFailure, where: string): CliProblem {
   const file =
     failure.file === undefined || failure.message.includes(failure.file)
       ? ""

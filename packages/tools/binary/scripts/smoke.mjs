@@ -1,5 +1,5 @@
 // Runs one binary on the smoke apps and compares it with the reference the Node CLI produced on Linux: the IR
-// files byte for byte, and the answers of the commands both carry. The apps are copied outside the repository,
+// files and each app's bundle byte for byte, and the answers of the commands both carry. The apps are copied outside the repository,
 // so a pack can only come from the packs embedded in the binary.
 // Usage: node scripts/smoke.mjs <binary> <reference-dir> [--label <name>]
 // Env: SMOKE_ENV='{"TZ":"Asia/Kolkata","LOG_TOKENS":"1"}' extra environment for the binary.
@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   BINARY_REFUSED_COMMANDS,
-  irFileNames,
+  comparedFileNames,
   runSmokeApp,
   SMOKE_APPS,
   writeSmokeApp,
@@ -55,12 +55,10 @@ function withoutRefusedCommands(referenceSteps) {
       .join("\n");
   }
 
-  for (const step of ["init", "bundle", "explain"]) {
-    if (steps[step] === undefined) continue;
-
-    steps[step].stderr = steps[step].stderr.replace(
-      "Use `seampact compile`, `generate`, `check`, `lint` or `diff`.",
-      "Use `seampact compile`, `lint` or `diff`.",
+  if (steps.init !== undefined) {
+    steps.init.stderr = steps.init.stderr.replace(
+      "Use `seampact compile`, `generate`, `check`, `lint`, `diff`, `explain` or `bundle`.",
+      "Use `seampact compile`, `lint`, `diff`, `explain` or `bundle`.",
     );
   }
 
@@ -72,7 +70,7 @@ for (const app of SMOKE_APPS) {
 
   writeSmokeApp(app, directory);
 
-  const { steps, irFiles } = runSmokeApp({ executable: binary, environment, app, directory });
+  const { steps, writtenFiles } = runSmokeApp({ executable: binary, environment, app, directory });
 
   const referenceSteps = JSON.parse(
     readFileSync(join(referenceDirectory, app.name, "steps.json"), "utf8"),
@@ -83,12 +81,12 @@ for (const app of SMOKE_APPS) {
     `${app.name}: command answers differ from the Node CLI:\n${JSON.stringify(steps)}\n${JSON.stringify(withoutRefusedCommands(referenceSteps))}`,
   );
 
-  for (const file of irFileNames) {
+  for (const file of comparedFileNames()) {
     const reference = readFileSync(join(referenceDirectory, app.name, file));
 
     check(
-      Buffer.compare(irFiles[file], reference) === 0,
-      `${app.name}/${file} differs from the Node CLI IR`,
+      Buffer.compare(writtenFiles[file], reference) === 0,
+      `${app.name}/${file} differs from the Node CLI's`,
     );
   }
 }

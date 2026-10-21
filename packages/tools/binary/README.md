@@ -1,8 +1,8 @@
 # @seampact/binary
 
-The standalone compiler binary (ADR 0010): the seampact CLI as a Node single executable application (SEA) on Node 24.21.0, for linux x64 and arm64 (glibc), macOS x64 and arm64 and Windows x64. It runs `compile`, `lint` (core rules) and `diff` with the first-party packs embedded, and needs no Node.js or `node_modules`.
+The standalone compiler binary (ADR 0010): the seampact CLI as a Node single executable application (SEA) on Node 24.21.0, for linux x64 and arm64 (glibc), macOS x64 and arm64 and Windows x64. It runs `compile`, `lint` (core rules), `diff`, `bundle` and `explain` with the first-party packs embedded, and needs no Node.js or `node_modules`.
 
-`generate` and `check` need a codegen target, so they are refused by name (`binary.generate-unavailable`, `binary.check-unavailable`): use the npm CLI or the ecosystem plugin. The binary's `help` lists only its own commands. `init`, `bundle` and `explain` answer as the Node CLI does today.
+`generate` and `check` need a codegen target, so they are refused by name (`binary.generate-unavailable`, `binary.check-unavailable`): use the npm CLI or the ecosystem plugin. The binary's `help` lists only its own commands. `init` answers as the Node CLI does today.
 
 ## Build
 
@@ -10,7 +10,7 @@ From this directory, on Linux, with Node 24.21.0 (the `.nvmrc` pin), `gpg`, `cur
 
 1. `pnpm build` bundles `src/main.ts` with esbuild (CommonJS), writes the SEA blob, downloads the five official Node 24.21.0 archives, verifies the signed `SHASUMS256.txt.asc` with gpg against `node-release-keys.asc` (the keys of nodejs/release-keys, keep it in step with that list) and each archive against it, strips the Authenticode signature of `node.exe`, and injects the blob with `postject`. Output: `dist/bin/seampact-<platform>` (unsigned).
 2. `pnpm reference` compiles the smoke apps with the Node CLI and writes `dist/reference`.
-3. `node scripts/smoke.mjs dist/bin/seampact-linux-x64 dist/reference` runs a binary on the same apps (copied outside the repository, so packs come from the binary) and compares the IR byte for byte and the command answers with the reference.
+3. `node scripts/smoke.mjs dist/bin/seampact-linux-x64 dist/reference` runs a binary on the same apps (copied outside the repository, so packs come from the binary) and compares the IR and the bundle tarball byte for byte and the command answers with the reference.
 4. On a macOS runner: `codesign --force --sign -` then `codesign --verify --strict` (hosted runners run an unsigned binary, so only this gate proves the signature).
 5. `node scripts/manifest.mjs write <dir>` writes `SHA256SUMS` after signing.
 

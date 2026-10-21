@@ -27,7 +27,11 @@ export interface BundleWriteOptions extends BundleBuildOptions {
 }
 
 export type BundleWriteResult =
-  | { readonly ok: true; readonly manifest: BundleManifest }
+  | {
+      readonly ok: true;
+      readonly manifest: BundleManifest;
+      readonly compiled: PipelineResult;
+    }
   | {
       readonly ok: false;
       readonly failures: readonly BundleFailure[];
@@ -59,7 +63,7 @@ export function writeBundle(options: BundleWriteOptions): BundleWriteResult {
     mkdirSync(dirname(output.tarball), { recursive: true });
     writeFileSync(output.tarball, bundleTarball(built.contents));
 
-    return { ok: true, manifest: built.contents.manifest };
+    return { ok: true, manifest: built.contents.manifest, compiled: built.compiled };
   }
 
   const directory = directoryOf(output);
@@ -80,7 +84,7 @@ export function writeBundle(options: BundleWriteOptions): BundleWriteResult {
       },
     );
 
-  return { ok: true, manifest: built.contents.manifest };
+  return { ok: true, manifest: built.contents.manifest, compiled: built.compiled };
 }
 
 function directoryOf(output: Exclude<BundleOutput, { readonly tarball: string }>): string {

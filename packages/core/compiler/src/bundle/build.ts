@@ -12,8 +12,9 @@ import {
   compareBundlePaths,
 } from "@seampact/spec/bundle";
 import compilerPackage from "../../package.json" with { type: "json" };
+import { finalizeIsRecord } from "../finalize/record.js";
 import { finalizeSerializeIr } from "../finalize/serialize.js";
-import type { LoadReader } from "../load/index.js";
+import { type LoadReader, loadWorkspace } from "../load/index.js";
 import { LOAD_MAX_FILE_BYTES } from "../load/limits.js";
 import { PACK_FILE, packageNameOf, packVendoredDirectory } from "../load/pack-files.js";
 import type { LoadText } from "../load/reader.js";
@@ -38,7 +39,12 @@ export interface BundleBuildOptions {
 }
 
 export type BundleBuildResult =
-  | { readonly ok: true; readonly contents: BundleContents }
+  | {
+      readonly ok: true;
+      readonly contents: BundleContents;
+      /** The compilation, whose diagnostics hold the warnings. */
+      readonly compiled: PipelineResult;
+    }
   | {
       readonly ok: false;
       readonly failures: readonly BundleFailure[];
@@ -53,9 +59,15 @@ const COMPILER: BundleNamedVersion = {
   version: compilerPackage.version,
 };
 
+const textEncoder = new TextEncoder();
+
 /** The bundle of the workspace `options.entry` names, or every reason it cannot be made. */
 export function buildBundle(options: BundleBuildOptions): BundleBuildResult {
   const recording = recordingReader(options.reader);
+  const importsFailure = workspaceImportsFailure(recording.reader, options.entry);
+
+  if (importsFailure !== undefined) return { ok: false, failures: [importsFailure] };
+
   const compiled = compileWorkspace({ reader: recording.reader, entry: options.entry });
   const errorCount = [
     ...compiled.diagnostics,
@@ -65,7 +77,7 @@ export function buildBundle(options: BundleBuildOptions): BundleBuildResult {
   if (errorCount > 0) return { ok: false, failures: [compileFailure(errorCount)], compiled };
 
   const contract = contractOf(options);
-  const sources = sourceFiles(options.reader, recording.texts, compiled.files);
+  const sources = sourceFiles(options.reader, recording, compiled.files);
   const irs = irFiles(compiled);
   const labels = labelFailures(contract.value, irs.packs);
   const failures = [...contract.failures, ...sources.failures, ...irs.failures, ...labels];
@@ -91,27 +103,63 @@ export function buildBundle(options: BundleBuildOptions): BundleBuildResult {
       },
       files,
     },
+    compiled,
+  };
+}
+
+// The bundle format has no place for the pinned bundles `workspace.imports` reads (ADR 0011), so a workspace
+// declaring any is refused before it is compiled.
+function workspaceImportsFailure(reader: LoadReader, entry: string): BundleFailure | undefined {
+  const imports = loadWorkspace({ reader, entry }).workspace.config?.imports;
+
+  if (!finalizeIsRecord(imports)) return undefined;
+
+  const names = Object.keys(imports);
+
+  if (names.length === 0) return undefined;
+
+  return {
+    code: "bundle.imports-unsupported",
+    message: `The workspace imports ${names.map(quote).join(", ")} from pinned bundles (workspace.imports); a bundle cannot carry the bundles it imports.`,
+    fix: "Bundle a workspace that compiles every api it relays to, without workspace.imports.",
+    file: entry,
   };
 }
 
 interface RecordingReader {
   readonly reader: LoadReader;
-  /** The text of every file the load stage read, by root-relative path. */
-  readonly texts: ReadonlyMap<string, string>;
+  /** The text the load stage read for a file it lists, undefined when it read none. */
+  textOf(file: string): string | undefined;
 }
 
 // The reader the compilation uses, keeping each text it returns: the bundle carries the very text the IR was
-// compiled from, never a second read.
+// compiled from, never a second read: a file read again (the imports check, then the compilation) gets the text
+// read first. The load stage lists a file under the path it named (a pack's
+// `node_modules/<name>/...`) but reads it under its real path (the pack's directory behind a node_modules
+// symlink): a listed file's text is looked up under both.
 function recordingReader(reader: LoadReader): RecordingReader {
   const texts = new Map<string, string>();
 
   return {
-    texts,
+    textOf(file) {
+      const named = texts.get(file);
+
+      if (named !== undefined) return named;
+
+      const real = reader.realPath(file);
+
+      return real === undefined ? undefined : texts.get(real);
+    },
     reader: {
       ascent: reader.ascent,
       listDir: (dir) => reader.listDir(dir),
       realPath: (file) => reader.realPath(file),
       readText(file, maxBytes): LoadText | undefined {
+        const first = texts.get(file);
+
+        if (first !== undefined && textEncoder.encode(first).length <= maxBytes)
+          return { text: first };
+
         const read = reader.readText(file, maxBytes);
 
         if (read !== undefined && "text" in read) texts.set(file, read.text);
@@ -182,13 +230,19 @@ function contractOf(options: BundleBuildOptions): Gathered<BundleNamedVersion> {
   ]
     .filter((member) => member !== undefined)
     .join(" and ");
+  const missingFlags = [
+    name === undefined ? "--name" : undefined,
+    version === undefined ? "--version" : undefined,
+  ]
+    .filter((flag) => flag !== undefined)
+    .join(" and ");
 
   return {
     failures: [
       {
         code: "bundle.contract-missing",
         message: `The contract has no ${missing}: ${fromPackage.problem ?? "the workspace root package.json gives none"}, and none was passed.`,
-        fix: `Add "name" and "version" to the package.json at the workspace root, or pass the contract ${missing}.`,
+        fix: `Add "name" and "version" to the package.json at the workspace root, or pass ${missingFlags}.`,
         file: PACKAGE_MANIFEST,
       },
     ],
@@ -240,7 +294,7 @@ interface GatheredFiles {
 
 function sourceFiles(
   reader: LoadReader,
-  texts: ReadonlyMap<string, string>,
+  recording: RecordingReader,
   loaded: readonly string[],
 ): GatheredFiles {
   const files = new Map<string, Uint8Array>();
@@ -249,7 +303,7 @@ function sourceFiles(
   const packDirectories = new Map<string, string | BundleFailure>();
 
   for (const source of loaded) {
-    const text = texts.get(source);
+    const text = recording.textOf(source);
 
     // The load stage also lists the files it looked for and did not find (or could not read): the compilation
     // succeeded without them.
@@ -270,10 +324,15 @@ function sourceFiles(
     }
 
     pathByFold.set(bundlePathFold(placed), placed);
-    files.set(placed, new TextEncoder().encode(text));
+    files.set(placed, new TextEncoder().encode(withLfLineEnds(text)));
   }
 
   return { files, failures: dedupeFailures(failures) };
+}
+
+// A checkout with CRLF line ends (git's autocrlf on Windows) gives the bundle bytes of its LF checkout.
+function withLfLineEnds(text: string): string {
+  return text.replaceAll("\r\n", "\n");
 }
 
 // The portable-path rule, and the room a tarball header has for a path.

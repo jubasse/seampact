@@ -97,11 +97,37 @@ rmSync(dist, { recursive: true, force: true });
 mkdirSync(join(dist, "bin"), { recursive: true });
 mkdirSync(cache, { recursive: true });
 
+// A specifier ending in `?text` is bundled as the file's text: a pack's package.json embedded as the npm package's
+// bytes, so the binary's bundle vendors the same file as the Node CLI's.
+const TEXT_IMPORT_SUFFIX = "?text";
+const TEXT_IMPORT_NAMESPACE = "text-import";
+// esbuild takes Go regular expressions: no `u` flag.
+const textImportPlugin = {
+  name: TEXT_IMPORT_NAMESPACE,
+  setup(pluginBuild) {
+    pluginBuild.onResolve({ filter: /\?text$/ }, async (args) => {
+      const resolved = await pluginBuild.resolve(args.path.slice(0, -TEXT_IMPORT_SUFFIX.length), {
+        kind: args.kind,
+        resolveDir: args.resolveDir,
+      });
+
+      if (resolved.errors.length > 0) return { errors: resolved.errors };
+
+      return { path: resolved.path, namespace: TEXT_IMPORT_NAMESPACE };
+    });
+    pluginBuild.onLoad({ filter: /.*/, namespace: TEXT_IMPORT_NAMESPACE }, (args) => ({
+      contents: readFileSync(args.path, "utf8"),
+      loader: "text",
+    }));
+  },
+};
+
 // 1. Bundle (CommonJS: the Node 24 SEA entry is a script) and check the Node API surface.
 const result = await build({
   absWorkingDir: root,
   entryPoints: [join(root, "src/main.ts")],
   loader: { ".yaml": "text" },
+  plugins: [textImportPlugin],
   define: { "import.meta.url": JSON.stringify(IMPORT_META_URL_STAND_IN) },
   outfile: join(dist, "bundle.cjs"),
   bundle: true,

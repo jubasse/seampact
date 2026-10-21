@@ -26,7 +26,14 @@ targets:
   - { id: server, use: seampact-smoke-target, apis: [${APIS.join(", ")}] }
 `;
 
-export const irFileNames = APIS.map((api) => `${api}.ir.json`);
+const irFileNames = APIS.map((api) => `${api}.ir.json`);
+const BUNDLE_FILE = "contract.seampact.tgz";
+
+// The files both runs write and the smoke compares byte for byte: each IR file and the bundle tarball, which is
+// reproducible (ADR 0011) and vendors the same pack files whether the pack is linked or embedded.
+export function comparedFileNames() {
+  return [...irFileNames, BUNDLE_FILE];
+}
 
 // Writes the app (config and a copy of the contract) into `directory`.
 export function writeSmokeApp(app, directory) {
@@ -45,15 +52,16 @@ const APP_STEPS = [
   ["compile", "--out", IR_DIRECTORY],
   ["lint"],
   ["diff", "--against", IR_DIRECTORY],
+  ["bundle", "--tarball", BUNDLE_FILE, "--name", "@seampact-smoke/contract", "--version", "1.0.0"],
 ];
-const GLOBAL_STEPS = [["help"], ["init"], ["bundle"], ["explain"]];
+const GLOBAL_STEPS = [["help"], ["init"], ["explain", "tasks.updateTask"]];
 
 // The commands the binary refuses by name (`binary-refusals.ts`); the Node CLI lists them in `help` and in the
 // not-available fix, so the smoke derives the binary's expected answer from the reference.
 export const BINARY_REFUSED_COMMANDS = ["generate", "check"];
 
 // Runs every shared step with `executable` (`prefixArguments` first) in the app directory; the result holds the
-// answers and the bytes of each IR file `compile` wrote.
+// answers and the bytes of each compared file.
 export function runSmokeApp({ executable, prefixArguments = [], environment, app, directory }) {
   const answer = (commandArguments) => {
     const run = spawnSync(executable, [...prefixArguments, ...commandArguments], {
@@ -77,11 +85,14 @@ export function runSmokeApp({ executable, prefixArguments = [], environment, app
     for (const step of GLOBAL_STEPS) steps[step.join(" ")] = answer(step);
   }
 
-  const irFiles = Object.fromEntries(
-    irFileNames.map((file) => [file, readFileSync(join(directory, IR_DIRECTORY, file))]),
+  const writtenFiles = Object.fromEntries(
+    comparedFileNames().map((file) => [
+      file,
+      readFileSync(join(directory, file === BUNDLE_FILE ? "" : IR_DIRECTORY, file)),
+    ]),
   );
 
-  return { steps, irFiles };
+  return { steps, writtenFiles };
 }
 
 function withoutDirectory(text, directory) {
