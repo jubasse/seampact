@@ -6,5 +6,6 @@ export { checkCommand } from "./check-command.js";
 export { compileCommand } from "./compile-command.js";
 export { type ConfigLocation, configLocation } from "./config-location.js";
 export { diffCommand } from "./diff-command.js";
+export { explainCommand } from "./explain-command.js";
 export { generateCommand } from "./generate-command.js";
 export { lintCommand } from "./lint-command.js";
