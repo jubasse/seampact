@@ -6,7 +6,8 @@ export type IndexedModule =
 const MODULE_SUFFIX = ".js";
 
 // The source of an api's `index.ts`. `module` is a path without extension relative to the index. A role whose names
-// repeat another module's goes under a namespace named by its role; a module with internals lists its public names.
+// repeat another module's goes under a namespace named by its role; a module with internals lists its public names,
+// an empty list writing no line.
 export function apiIndexSource(modules: readonly IndexedModule[]): string {
   const lines = modules.map(indexLine);
 
@@ -18,8 +19,12 @@ function indexLine(indexed: IndexedModule): string {
 
   if ("typeNames" in indexed) {
     const lines = [
-      `export type { ${indexed.typeNames.join(", ")} } from "${specifier}";`,
-      `export { ${indexed.valueNames.join(", ")} } from "${specifier}";`,
+      ...(indexed.typeNames.length === 0
+        ? []
+        : [`export type { ${indexed.typeNames.join(", ")} } from "${specifier}";`]),
+      ...(indexed.valueNames.length === 0
+        ? []
+        : [`export { ${indexed.valueNames.join(", ")} } from "${specifier}";`]),
     ];
 
     return lines.join("\n");

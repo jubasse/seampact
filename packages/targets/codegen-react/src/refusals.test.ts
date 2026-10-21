@@ -68,3 +68,19 @@ test("the reference generates its runtime, queries, hooks and index", async () =
     "query-runtime.ts",
   ]);
 });
+
+test("without hooks and itemsOf the index re-exports the queries and the runtime types only", async () => {
+  const outcome = await target.generate({
+    ir,
+    options: { query: "tanstack" },
+    links: clientLink("result"),
+    artefacts: new Set(["queries"]),
+  });
+
+  if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+  const index = outcome.files.find((file) => file.path === "index.ts")?.contents ?? "";
+
+  expect(index).not.toContain("hooks");
+  expect(index).not.toMatch(/export \{\s*\}/);
+});
