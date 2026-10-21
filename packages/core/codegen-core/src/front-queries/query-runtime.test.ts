@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { type NextPageRule, nextPageRequest } from "../../front-runtime/query-runtime.js";
+import {
+  type NextPageRule,
+  nextPageRequest,
+  withSignal,
+} from "../../front-runtime/query-runtime.js";
 
 const PAGE_PARAM = { in: "query", key: "page" } as const;
 const OFFSET_PARAM = { in: "query", key: "offset" } as const;
@@ -212,5 +216,29 @@ describe("an offset list", () => {
     };
 
     expect(nextPageRequest(rule, undefined, pageOf({ more: true }))).toBeUndefined();
+  });
+});
+
+describe("the call options of a query", () => {
+  test("keep the caller's signal beside the library's", () => {
+    const callerAbort = new AbortController();
+    const libraryAbort = new AbortController();
+    const call = withSignal({ timeoutMs: 500, signal: callerAbort.signal }, libraryAbort.signal);
+
+    expect(call.timeoutMs).toBe(500);
+    expect(call.signal.aborted).toBe(false);
+
+    callerAbort.abort();
+
+    expect(call.signal.aborted).toBe(true);
+  });
+
+  test("take the library's signal when the caller gives none", () => {
+    const libraryAbort = new AbortController();
+    const call = withSignal(undefined, libraryAbort.signal);
+
+    libraryAbort.abort();
+
+    expect(call.signal.aborted).toBe(true);
   });
 });

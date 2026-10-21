@@ -1,6 +1,6 @@
 // The front runtime the generated queries call (ADR 0021 "The shared query plan and front runtime"), copied as is
 // beside them: it normalises a request into a key, builds the next page's request from the page facts, holds one
-// idempotency key per mutation attempt chain, and turns a client result's headers into a plain record. It imports
+// idempotency key per mutation attempt chain, combines the abort signals, and turns a client result's headers into a plain record. It imports
 // no Node built-in and no framework.
 
 /** Response headers as a plain record of lower-case names: a `Headers` object is not serialisable. */
@@ -210,6 +210,20 @@ function pagesReadThrough(
 
 function recordsRead(rule: PagedRule, position: number, limit: number): number {
   return rule.position === "page" ? (position - rule.base + 1) * limit : position + limit;
+}
+
+/** The caller's call options with the library's abort signal, combined with the caller's own signal if any. */
+export function withSignal<Call extends object>(
+  call: Call | undefined,
+  signal: AbortSignal,
+): Call & { readonly signal: AbortSignal };
+export function withSignal(call: object | undefined, signal: AbortSignal): object {
+  const callerSignal = isRecord(call) ? call.signal : undefined;
+
+  return {
+    ...call,
+    signal: callerSignal instanceof AbortSignal ? AbortSignal.any([signal, callerSignal]) : signal,
+  };
 }
 
 /** Every item of an infinite query's pages, in order. */

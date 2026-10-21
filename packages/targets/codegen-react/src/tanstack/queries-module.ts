@@ -52,6 +52,7 @@ export function queriesModuleSource(
       : ["withPlainHeaders"]),
     ...(hasIdempotency ? ["IdempotencyKeys", "idempotencyKeyGenerator", "withIdempotencyKey"] : []),
     "keyRequest",
+    ...(hasQuery ? ["withSignal"] : []),
     ...(hasInfinite ? ["type NextPageRule", "nextPageRequest"] : []),
     "type ClientResult",
     "type WithPlainHeaders",
@@ -89,14 +90,16 @@ function operationTypesSource(
   const errorComment = throwsErrors
     ? "a declared error or an unexpected answer as the client's `ContractError`, or the client's rejection"
     : "the client's rejection (network failure, timeout or abort); declared errors are data";
+  // The operation id types a thrown `ContractError` only; data errors leave it out, as an unused type parameter.
+  const idParameter = throwsErrors ? "Id extends string, " : "";
   const members = operations.map(
     ({ operationId, names }) =>
-      `${propertyKey(names.base)}: OperationTypes<${JSON.stringify(operationId)}, Client[${JSON.stringify(names.base)}]>;`,
+      `${propertyKey(names.base)}: OperationTypes<${throwsErrors ? `${JSON.stringify(operationId)}, ` : ""}Client[${JSON.stringify(names.base)}]>;`,
   );
 
   return [
     "type MethodResult<Method> = Method extends (...args: never) => Promise<infer Result> ? Result : never;",
-    `/** What a query reads from one client method: its request, call options, data (headers as a plain record) and error (${errorComment}). */\nexport interface OperationTypes<Id extends string, Method extends (...args: never) => Promise<ClientResult>> {\nrequest: Parameters<Method>[0];\ncall: NonNullable<Parameters<Method>[1]>;\ndata: ${data};\nerror: ${error};\n}`,
+    `/** What a query reads from one client method: its request, call options, data (headers as a plain record) and error (${errorComment}). */\nexport interface OperationTypes<${idParameter}Method extends (...args: never) => Promise<ClientResult>> {\nrequest: Parameters<Method>[0];\ncall: NonNullable<Parameters<Method>[1]>;\ndata: ${data};\nerror: ${error};\n}`,
     "/** Any operation's types. */\nexport interface AnyOperationTypes {\nrequest: unknown;\ncall: unknown;\ndata: unknown;\nerror: unknown;\n}",
     `/** The types of each operation, read from the client. */\nexport interface ${api}Operations {\n${members.join("\n")}\n}`,
   ].join("\n\n");
@@ -248,7 +251,7 @@ function staleTimeMember(operation: QueryOperation, options: ReactQueryOptions):
 function querySource(operation: QueryOperation, api: string, options: ReactQueryOptions): string {
   const { names } = operation;
   const types = operationType(operation, api);
-  const call = `await client.${names.base}(request, { ...call, signal })`;
+  const call = `await client.${names.base}(request, withSignal(call, signal))`;
 
   return `${propertyKey(names.options)}<Selected = ${types}["data"]>(request: ${types}["request"], ${optionsParameter(operation, `QueryCallerOptions<${types}, Selected>`)}) {
 const { call, ...callerOptions } = options;
@@ -272,7 +275,7 @@ function infiniteSource(
   if (infinite === undefined) return "";
 
   const types = operationType(operation, api);
-  const call = `await client.${names.base}(pageParam, { ...call, signal })`;
+  const call = `await client.${names.base}(pageParam, withSignal(call, signal))`;
 
   return `${propertyKey(infinite.options)}<Selected = InfiniteData<${types}["data"], ${types}["request"]>>(request: ${types}["request"], ${optionsParameter(operation, `InfiniteQueryCallerOptions<${types}, Selected>`)}) {
 const { call, ...callerOptions } = options;
