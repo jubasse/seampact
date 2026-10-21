@@ -24,3 +24,4 @@ The ADRs cite product decisions by id (`A<n>`); [`decisions.md`](decisions.md) s
 | [0018](adr/0018-express-target.md) | the Express server target |
 | [0019](adr/0019-adonis-target.md) | the AdonisJS server target |
 | [0020](adr/0020-hono-target.md) | the Hono server target and the Web-standard adapter |
+| [0021](adr/0021-front-query-targets.md) | the front query targets and the React target |
