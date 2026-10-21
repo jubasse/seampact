@@ -52,13 +52,9 @@ const APP_STEPS = [
   ["compile", "--out", IR_DIRECTORY],
   ["lint"],
   ["diff", "--against", IR_DIRECTORY],
-];
-const GLOBAL_STEPS = [
-  ["help"],
-  ["init"],
-  ["explain", "tasks.updateTask"],
   ["bundle", "--tarball", BUNDLE_FILE, "--name", "@seampact-smoke/contract", "--version", "1.0.0"],
 ];
+const GLOBAL_STEPS = [["help"], ["init"], ["explain", "tasks.updateTask"]];
 
 // The commands the binary refuses by name (`binary-refusals.ts`); the Node CLI lists them in `help` and in the
 // not-available fix, so the smoke derives the binary's expected answer from the reference.
