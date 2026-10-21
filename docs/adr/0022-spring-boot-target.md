@@ -40,8 +40,8 @@ class TasksController implements TasksEndpoints {
 
 Codegen emits, per api, under the target entry's `out` and the `package` option:
 
-- **Per operation, a composed annotation** named by the operation in Pascal case (`@UpdateTask`). It carries `@RequestMapping` with the method and the full contract path, and the operation id and access kind as attributes that the boot check, the security matchers and `nativeDocs` read. It also carries `@ResponseStatus` with the first declared success status, for springdoc only; the reply path writes every status. `@AliasFor` exposes nothing that changes the route.
-- **The boundary filter**, a `FilterRegistrationBean` ordered before Spring Security's filter chain. It is registered for the `REQUEST` and `ASYNC` dispatches and runs step 1:
+- **Per operation, a composed annotation** named by the operation in Pascal case (`@UpdateTask`). It carries `@RequestMapping` with the method and the full contract path, and the operation id and access kind as attributes that the boot check, the security matchers and `nativeDocs` read. It carries no `@ResponseStatus`: when a method that has one returns `null`, Spring marks the request handled and runs no return value handler (`ServletInvocableHandlerMethod`), so the reply handler would never see it. Under `nativeDocs`, springdoc reads the statuses from `@ApiResponse`. `@AliasFor` exposes nothing that changes the route.
+- **The boundary filter**, a `FilterRegistrationBean` at order `OrderedFilter.REQUEST_WRAPPER_FILTER_MAX_ORDER - 10001` (`-10001`): after Boot's `CharacterEncodingFilter` and observation filter, before its request-wrapper filters (`HiddenHttpMethodFilter` at `-10000`, `FormContentFilter` at `-9900`) and Spring Security's chain (`-100`). It is registered for the `REQUEST` and `ASYNC` dispatches and runs step 1:
   - the request context;
   - the raw-path match of "Routes" below;
   - the media type;
@@ -53,7 +53,7 @@ Codegen emits, per api, under the target entry's `out` and the `package` option:
   - step 6 on the decoded body;
   - restricted input fields, sort keys and principal bindings;
   - then the idempotency claim or replay.
-  A refusal or a replay is written by the boundary, and `preHandle` returns `false`. It runs on the `REQUEST` dispatch only, since Spring calls `preHandle` again on an `ASYNC` dispatch (spike). It first checks that the handler method Spring chose carries the operation that the raw path matched ("Routes").
+  A refusal or a replay is written by the boundary, and `preHandle` returns `false`. It runs its steps on the `REQUEST` dispatch only, since Spring calls `preHandle` again on an `ASYNC` dispatch (spike). It first checks that the handler Spring chose is a `HandlerMethod` carrying the operation that the raw path matched ("Routes"). On a contract route, any other handler (a router function, an app `HttpRequestHandler`) answers 500, and so does a contract handler reached on a `FORWARD` or `INCLUDE` dispatch, which the filter does not see.
 - **The argument resolver**, a `HandlerMethodArgumentResolver` that hands the validated input record to the method. It claims parameters of the api's generated input types only, and answers 500 when the interceptor did not validate the input.
 - **The reply handler**, a `HandlerMethodReturnValueHandler` placed first in `RequestMappingHandlerAdapter`'s list. It runs step 10 on the value of a method carrying a composed annotation, and writes the reply.
 - **The exception resolver**, a `HandlerExceptionResolver` placed first with `extendHandlerExceptionResolvers`.
@@ -74,12 +74,12 @@ Patterns use `PathPatternParser` syntax with positional variable names (`/v1/tas
 
 Spring orders patterns by specificity, so `/v1/tasks/search` wins over `/v1/tasks/{p1}` whatever the declaration order.
 
-The filter matches the raw request target: `getRequestURI()` without the context path and the servlet path, against the contract templates. The interceptor then compares the operation of the handler method Spring chose with that match. Tomcat decodes and normalizes the path before routing, so the two can differ:
+The filter matches the raw request target against the contract templates: `getRequestURI()` without the `mount` read at boot (the context path, then the servlet path), stripped as a raw prefix, never through the decoded `getServletPath()`. The interceptor then compares the operation of the handler method Spring chose with that match. Tomcat decodes and normalizes the path before routing, so the two can differ:
 
 - `/v1/tasks/%73earch` reaches the `search` method while the raw path matches `{p1}`. The interceptor answers the path's `notFound` 404 before any check, as on Hono.
 - A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the filter, before Spring Security, on every Node target's terms (ADR 0016 "Errors raised before routing"). This covers a trailing slash, `//`, a dot segment (`x/../7`, `%2e%2e`), a percent-encoded static segment, and a segment holding a `;` path parameter, which Tomcat strips before routing.
 - `catchAll: false` leaves those paths to the app. A base path shared with another api of the app is left to the app.
-- `%2F` in a segment, a `\`, and a malformed percent-encoding never reach a filter: Tomcat answers its own 400 page. These are outside the boundary and listed in Consequences.
+- `%2F` in a segment, a `\`, and a malformed percent-encoding never reach a filter: Tomcat answers its own 400 page. These are outside the boundary and listed in Consequences. The docs tell users not to loosen the Tomcat connector's `relaxedPathChars` and `encodedSolidusHandling`, which change what reaches the raw-path match.
 
 Other methods:
 
@@ -106,7 +106,7 @@ The exception resolver answers, in the api's format:
 - `AuthenticationException` and Spring Security's `AccessDeniedException`, with the role of their status (401, 403), when an app component throws them inside the MVC dispatch;
 - `CsrfException`, with the `csrfInvalid` role.
 
-It returns `null` for every other exception, so the app's own `@ExceptionHandler` methods, `@ControllerAdvice` classes and Spring's resolvers answer, untouched. Their reply is checked below. A refusal whose status the operation does not declare is a 500. An app's own advice renders a contract error with the exported `renderContractError(request, response, exception)`.
+It returns `null` for every other exception, so the app's own `@ExceptionHandler` methods, `@ControllerAdvice` classes and Spring's resolvers answer, untouched. Their reply is checked below. An exception that no resolver answers leaves `DispatcherServlet` and reaches the boundary filter ("The outgoing response check"). A refusal whose status the operation does not declare is a 500. An app's own advice renders a contract error with the exported `renderContractError(request, response, exception)`.
 
 ### The outgoing response check
 
@@ -121,27 +121,32 @@ The filter wraps the response of each contract route in a checking wrapper. Ever
 On an `ASYNC` dispatch, Spring passes its own `LifecycleHttpServletResponse` down the chain rather than the wrapper. The filter therefore finds the wrapper through a request attribute, and completes the check when the last dispatch returns without starting another (spike). The verdict rules, the `responses` modes, `bodyValidation` and the completion of the idempotency record are ADR 0016's:
 
 - **A declared success** passes chunk by chunk.
-  - The wrapper flushes when the writer flushes. Spring Framework 7 ignores `flush()` on a `StreamingResponseBody`'s stream unless the Spring property `spring.http.response.flush.enabled` is `true`, with or without the wrapper (spike).
-  - The target does not set that property. The download docs show it.
+  - The wrapper flushes when the writer flushes. Spring Framework 7 ignores `flush()` on a `StreamingResponseBody`'s stream unless the flag `spring.http.response.flush.enabled` is `true`, with or without the wrapper (spike). Since Framework 7.0.6 it is a `SpringProperties` flag, read by `ServletServerHttpResponse`: a JVM system property (`-D`) or a classpath `spring.properties`, never Boot's `application.properties`.
+  - The target does not set that flag. The download docs show both ways to set it.
 - **An undeclared status** is a violation as soon as the first byte or the commit shows it; nothing has reached the client.
-- **A declared error** is held up to `MAX_CHECKED_ERROR_BODY_BYTES = 65536` and checked for the api's format and a listed code. A body in `gzip` or `deflate` is decoded first.
-- **`sendError`** on a contract route never reaches the container's error page or Boot's `/error`:
-  - 401, 403 and 429 answer their role's reply in the api's format when the operation declares that status;
+- **A declared error** is held up to `MAX_CHECKED_ERROR_BODY_BYTES = 65536` and checked for the api's format and a listed code. A body in `gzip` or `deflate` is decoded first. A `br` error body, which the JDK cannot decode, is a violation; ADR 0016 decodes it, a parity gap listed in Consequences.
+- **`sendError`, and an empty refusal**: a 401, 403 or 429 set with `setStatus` that ends with no body byte is mapped like `sendError`. Under `strict`, neither reaches the container's error page or Boot's `/error`:
+  - 401, 403 and 429 answer their role's reply in the api's format when the operation declares that status, keeping the headers already set (`WWW-Authenticate`);
   - any other status is checked as an error without a body, a violation.
-  This covers Spring Security's default `HttpStatusEntryPoint` and `AccessDeniedHandlerImpl`, its firewall's `RequestRejectedException` handler, and Spring MVC's 405, 406 and 415.
+  `sendError` covers Spring Security's `AccessDeniedHandlerImpl`, its firewall's `RequestRejectedException` handler, and Spring MVC's 405, 406 and 415. The empty refusal covers `HttpStatusEntryPoint`, and the resource server's `BearerTokenAuthenticationEntryPoint` and `BearerTokenAccessDeniedHandler`, which call `setStatus` only.
+- **A reply the boundary did not author.** The interceptor marks the requests it admits, the reply handler the replies it writes, and the exception resolver every exception it sees, those it leaves to the app's resolvers included. On a contract route:
+  - a success status (a 2xx or a 304) that the reply handler did not write is a violation as soon as its first byte or the commit shows it: a handler that wrote to the response itself, or a router function, an actuator endpoint or an app `HandlerMapping` that took the route;
+  - once the interceptor admitted the request, a reply that completes with neither the reply handler's nor the exception resolver's mark is a violation. The reply handler treats a `null` value as a violation.
 - **An ETag** that the boundary did not set is stripped, and a 304 that it did not write is a violation (`frameworkEtag: strip`, the default). An app's `ShallowEtagHeaderFilter` ordered inside the boundary filter is therefore stripped; one ordered before it fails the boot check.
+
+An exception that escapes `chain.doFilter`, on the `REQUEST` or the `ASYNC` dispatch of a contract route, is caught by the filter and never reaches the container. Before the commit, the filter writes the api's 500 and calls `onUnexpectedError` with it; after the commit, it fails as a stream does below. The filter is therefore not registered for the `ERROR` dispatch.
 
 Under `strict` a violation is replaced by the api's 500 when the response is not committed, and `onUnexpectedError` is called. A failure after the commit (a stream whose writer throws after its first bytes) cannot be replaced: it is logged, `onUnexpectedError` is called and the connection is closed. Under `warn` the reply goes out as written, and the violation is logged once.
 
-The limits are those of ADR 0016: a writer that bypasses the response (the raw socket) is not seen. A reply that an app filter ordered before the boundary filter writes is not seen either; the boot check refuses such a filter only for `ShallowEtagHeaderFilter` and Spring Security's chain.
+The limits are those of ADR 0016: a writer that bypasses the response (the raw socket) is not seen. A reply that an app filter ordered before the boundary filter writes is not seen either; the boot check refuses such a filter only for `ShallowEtagHeaderFilter`, `FormContentFilter`, `HiddenHttpMethodFilter` and Spring Security's chain.
 
 ### Errors raised before the boundary
 
 Before the boundary filter, only the container and filters ordered before it run:
 
 - Tomcat's own 400 for the raw paths of "Routes".
-- The boot check refuses Spring Security's chain ordered before the boundary filter: its `spring.security.filter.order` must be greater than the boundary's order, `-200`.
-- An app filter ordered before the boundary writes unchecked. The README says to order such filters after it, or to skip contract routes with `isContractRoute(request)`.
+- The boot check refuses Spring Security's chain ordered before the boundary filter: its `spring.security.filter.order` must be greater than the boundary's order, `-10001`. It refuses a `FormContentFilter` or a `HiddenHttpMethodFilter` ordered before it, since the first reads a form-typed `PUT`, `PATCH` or `DELETE` body whole, past the route's limit, and the second changes `getMethod()`.
+- An app filter ordered before the boundary must not read the body, change the method or write: its reply goes out unchecked. The README says to order such filters after it, or to skip contract routes with `isContractRoute(request)`.
 
 Between the filter and the interceptor, Spring Security refuses through its entry point, access-denied handler and CSRF handling. The generated handlers ("Native security layers") render those refusals in the api's format; without them, `sendError` is mapped as above.
 
@@ -168,7 +173,7 @@ Step 6 decodes path, query, headers and the held body to a Jackson 3 `JsonNode` 
 3. **Bean Validation checks the record** with the boundary's own `ValidatorFactory` (Hibernate Validator 9, `ParameterMessageInterpolator`, the copied `Field<T>` value extractor), never the app's `Validator` bean. Records carry the standard constraints whose meaning is the contract's: `@Min`, `@Max`, `@DecimalMin` and `@DecimalMax` with `inclusive`, `@Size` on arrays and maps, `@NotNull`. Generated constraints with their validators in the copied runtime carry the rules of pass 1, so a developer's own `@Valid` on a record checks the same rules.
 4. **Issues are joined.** A violation's property path (`subs[1].dueAt`) maps to the wire pointer (`/subs/1/due_at`) through a table generated per record. `rule` is the contract keyword, read from the constraint's annotation type, never its message. Issues are bounded by `MAX_RENDERED_ISSUES = 100`.
 
-The app needs a Jakarta Validation provider on its runtime classpath (`spring-boot-starter-validation`); without one, the boot check fails, naming the starter.
+The app needs a Jakarta Validation provider on its runtime classpath (`spring-boot-starter-validation`); without one, the boot check fails, naming the starter. The generated validator covers only the rules whose Jakarta meaning differs, so pass 3's value rules and the generated constraints run on that provider.
 
 ### Query and bounded values
 
@@ -219,15 +224,16 @@ The configuration class is picked up by component scan when the `package` option
 
 ### The boot check
 
-The boot check runs in a `SmartInitializingSingleton`, before the server starts (spike). It reads `RequestMappingHandlerMapping` and the context, lists every problem at once with the operation id, the name and the fix, and throws, so the app does not start:
+The boot check runs in a `SmartInitializingSingleton`, before the server starts (spike). It reads `RequestMappingHandlerMapping`, every `HandlerMapping` bean ordered before it (`RouterFunctionMapping` at `-1`, the actuator's at `-100`, the app's own) and the context, lists every problem at once with the operation id, the name and the fix, and throws, so the app does not start:
 
 - the hook problems of ADR 0016's list;
 - a contract operation without a bound handler (no mapped method carries its composed annotation), or with two;
+- a mapping ordered before `RequestMappingHandlerMapping` that serves a contract method and path, which would take the route from the contract handler; a mapping that cannot list its routes is left to the run-time rule of "A reply the boundary did not author";
 - a mapping that no composed annotation registered and that `frameworkRoutes` does not allow-list (FR-25):
   - springdoc's paths read from its own properties (`springdoc.api-docs.path`, `/v3/api-docs` and `/v3/api-docs.yaml` by default, and the UI's paths) are accepted while `frameworkDocs` is `keep` (ADR 0011 "Which OpenAPI documents exist");
-  - Boot's error path (`server.error.path`, `/error`) is accepted as the container's error target, which contract routes never reach;
+  - Boot's error path (`server.error.path`, `/error`) is accepted as the container's error target; a contract route reaches it only under `warn`, by a `sendError` the boundary let through;
 - a `mount` that differs from `server.servlet.context-path` followed by `spring.mvc.servlet.path`, both read from the environment;
-- the boundary filter not ordered before Spring Security's chain, or a `ShallowEtagHeaderFilter` ordered before it;
+- the boundary filter not ordered before Spring Security's chain, or a `ShallowEtagHeaderFilter`, `FormContentFilter` or `HiddenHttpMethodFilter` ordered before it;
 - a servlet container other than Tomcat ("Refused by name or waiting"), a reactive application, or no Jakarta Validation provider;
 - a Spring Boot major other than 4, read from `SpringBootVersion`; `generate` already refuses 3.x from the build's resolved version.
 
@@ -281,7 +287,7 @@ The target consumes no link (ADR 0009 "The provider seam"): it generates its own
 
 At compile and run time:
 
-- Spring Framework 7 (`spring-webmvc`), Spring Boot 4 (`FilterRegistrationBean`, configuration properties, `SpringBootVersion`) and Jakarta Servlet 6.1;
+- Spring Framework 7.0.6 or later (`spring-webmvc`), the matrix's floor for the flush flag of "The outgoing response check", Spring Boot 4 (`FilterRegistrationBean`, configuration properties, `SpringBootVersion`) and Jakarta Servlet 6.1;
 - Jakarta Validation 3.1 with a provider;
 - Jackson 3 (`tools.jackson.core:jackson-databind`) and `jackson-annotations`;
 - `seampact-hooks`;
@@ -291,7 +297,7 @@ The boundary runtime is copied into `spring.runtime` with the generated header, 
 
 ### Refused by name or waiting
 
-`generate` refuses by name, with its code and fix, every input the delivered PRs do not serve ([A47](../decisions.md#a47)), each with the PR that brings it:
+`generate` refuses by name, with its code and fix, every input the delivered PRs do not serve ([A47](../decisions.md#a47)), each with the PR that brings it. It reads only the operations the target entry's `operations` filter keeps (ADR 0011): a form that no kept operation carries is neither generated nor refused.
 
 | Waits for | What |
 |---|---|
@@ -307,7 +313,7 @@ The workflow `p6-spring-boot.yml` has five jobs:
 
 - `changes`;
 - `compiler-binary` (Node), which builds the linux-x64 binary;
-- `build`, a matrix in `eclipse-temurin` containers, whose first step fails when `node`, `npm` or `npx` is found. It builds the app with each plugin from the reference contract's bundle, served over https by `java Serve.java`, on JDK 21 and 25, plus one local-YAML row per build tool on JDK 25;
+- `build`, a matrix in `eclipse-temurin` containers, whose first step fails when `node`, `npm` or `npx` is found. It builds the app with each plugin from the reference contract's bundle, served over https by `java Serve.java` and filtered by the entry's `operations` ("Core-path operations" below), on JDK 21 and 25, plus one local-YAML row per build tool on JDK 25;
 - `http-suite`, which starts `java -jar` and runs the `default`, `hand-written` and `boot` profiles, plus `pack:spring` from spring-3, through the suite's CLI (ADR 0015 "Suite profiles"), with the boot profile run as `command: java`;
 - `spring-boot`, the aggregate, failing on any failed or cancelled job.
 
@@ -320,14 +326,21 @@ The proof is:
 
 Suite cases that wait for a later PR carry a refusal naming that PR; the list is empty at spring-4.
 
+**Core-path operations.** Until spring-3, the app config's spring-boot entries keep, with their `operations.include`, the reference contract's operations free of paging, idempotency, cache headers, ETags and signatures, so `generate` refuses none of them:
+
+- `tasks`: `health`, `getChannel`, `getDraft`, `getTask`, `getTasksBatch` and `searchTasks`, whose idempotency is exempt;
+- `tasksService`: `getTask`.
+
+spring-3 widens the filter to the forms it brings, and spring-4 drops it. No other fixture is added.
+
 ### Delivery
 
 | PR | Delivers |
 |---|---|
-| spring-1 | the generator in `jvm/seampact-spring-boot` (Kotlin, Palantir JavaPoet pinned): `SpringBootTarget.generate(ir, entry)`, the options, types, records with redacted `toString()`, interfaces, composed annotations, results and exceptions; `SpringBootOptionsTest` and `SpringBootGoldenTest`, whose golden is compiled by `javac` on 21 and 25 against Spring Boot 4 |
-| spring-2 | the filter, interceptor, argument resolver, reply handler, exception resolver, outgoing check, hook beans and boot check; the sample app; the suite CLI; the Gradle rows of the workflow |
-| spring-3 | paging, idempotency replay, throttle, cache and ETag headers, signed routes, absolute URLs, the `pack:spring` profile, `GeneratedRedactionTest` |
-| spring-4 | the Spring Security beans and customizer, form, multipart, download and redirect bodies, `nativeDocs`, `frameworkDocs: off`, `SecurityRefusalsTest` |
+| spring-1 | the generator in `jvm/seampact-spring-boot` (Kotlin, Palantir JavaPoet pinned): `SpringBootTarget.generate(ir, entry)`, the options, types, records with redacted `toString()`, interfaces, composed annotations, results and exceptions; `SpringBootOptionsTest` and `SpringBootGoldenTest`, whose golden is compiled by `javac` on 21 and 25 against Spring Boot 4, and whose redaction case checks the `toString()` of one golden record of each kind of "Redaction" |
+| spring-2 | the filter, interceptor, argument resolver, reply handler, exception resolver, outgoing check, hook beans and boot check; the sample app; the suite CLI; the Gradle rows of the workflow, on the core-path operations |
+| spring-3 | paging, idempotency replay, throttle, cache and ETag headers, signed routes, absolute URLs, the `pack:spring` profile, `GeneratedRedactionTest`; the entries' filter widened to these forms |
+| spring-4 | the Spring Security beans and customizer, form, multipart, download and redirect bodies, `nativeDocs`, `frameworkDocs: off`, `SecurityRefusalsTest`; the filter dropped |
 
 ## Spike
 
@@ -364,20 +377,23 @@ Requests were sent raw with Python's `http.client` and sockets.
 | default `toString()` of a record | every component shown |
 | dependency tree | springdoc 3.1.1 brought Jackson 2.21 `jackson-databind` |
 
+Read from the sources after the spike, not run: Spring Security 7.1.1's `HttpStatusEntryPoint`, `BearerTokenAuthenticationEntryPoint` and `BearerTokenAccessDeniedHandler` call `setStatus` without `sendError`; Boot 4.1.1 orders `HiddenHttpMethodFilter` at `-10000`, `FormContentFilter` (on by default) at `-9900`, `RouterFunctionMapping` at `-1` and the actuator's handler mappings at `-100`; `ServletInvocableHandlerMethod` skips the return value handlers on a `null` value when the method carries `@ResponseStatus`. The spike's `-200` order is replaced by `-10001` for that reason.
+
 One run's first request to a non-contract streamed route failed inside Tomcat (a header `NullPointerException` during the async dispatch, with the flush property on). It was outside the boundary and did not recur.
 
 ## Consequences
 
 - An app keeps its controllers, its Jackson mapper, its validator, its advice and its Spring Security chain. On contract routes the boundary's checks and reply win, and its own routes are unchanged.
 - The check order holds in Spring without app setup: Spring's binding and `@Valid` never decide a contract input.
-- Every reply on a contract route is checked, from whichever writer, streams and asynchronous dispatches included. A Spring Security refusal that the app did not wire to the generated handlers still answers in the api's format for 401 and 403.
-- Streamed downloads stream at the writer's pace only with Spring's flush property set; the boundary neither sets nor needs it.
-- Tomcat's own 400 for `%2F`, `\` and malformed percent-encodings stays outside the api's format; the Node targets pass such a value to step 6 instead.
+- Every reply on a contract route is checked, from whichever writer, streams and asynchronous dispatches included. A Spring Security refusal that the app did not wire to the generated handlers, by `sendError` or by an empty `setStatus` (the resource server's defaults), still answers in the api's format for 401 and 403.
+- Streamed downloads stream at the writer's pace only with Spring's flush flag set (`-D` or `spring.properties`); the boundary neither sets nor needs it.
+- Tomcat's own 400 for `%2F`, `\` and malformed percent-encodings stays outside the api's format; the Node targets pass such a value to step 6 instead. Loosening `relaxedPathChars` or `encodedSolidusHandling` is not supported.
+- A `br` error body is a violation here, where ADR 0016 decodes it.
 - A trailing slash, `//`, a dot segment or a `;` path parameter under a base path answers the api's 404, as on the Node targets.
 - Security matchers follow the servlet path; an app that sets `spring.mvc.servlet.path` needs no change.
 - Bean Validation annotations stay on the records, with seampact's own constraints where Jakarta's meaning differs, so a developer's `@Valid` agrees with the boundary.
 - Boot 3.x apps cannot use the target in 1.0.
-- ADR 0012's spring-boot row names a `ResponseBodyAdvice` and a `@ControllerAdvice`. This ADR places a first return value handler and a first exception resolver instead, for the reasons in Options.
+- ADR 0012's spring-boot row is amended: a first return value handler and a first exception resolver replace its `ResponseBodyAdvice` and `@ControllerAdvice`, for the reasons in Options, and the composed annotation carries no `@ResponseStatus`.
 
 ## Traceability
 
