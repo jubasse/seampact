@@ -34,10 +34,12 @@ fun sha256Of(file: File): String = HexFormat.of().formatHex(MessageDigest.getIns
 
 // The manifest's hash of each asset; exactly the five assets, each once.
 fun manifestHashes(manifest: File): Map<String, String> {
-    val hashes = manifest.readLines().filter { it.isNotEmpty() }.associate { line ->
+    val hashes = linkedMapOf<String, String>()
+    for (line in manifest.readLines().filter { it.isNotEmpty() }) {
         val asset = line.substringAfter("  ", missingDelimiterValue = "")
         if (asset !in classifierByAssetName) throw GradleException("$manifest lists '$asset', which is not a release binary.")
-        asset to line.substringBefore("  ")
+        if (asset in hashes) throw GradleException("$manifest lists '$asset' twice.")
+        hashes[asset] = line.substringBefore("  ")
     }
     val missing = classifierByAssetName.keys - hashes.keys
     if (missing.isNotEmpty()) throw GradleException("$manifest lists no hash for ${missing.joinToString(", ")}.")

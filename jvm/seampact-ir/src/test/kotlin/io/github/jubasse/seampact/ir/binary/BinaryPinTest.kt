@@ -84,6 +84,16 @@ class BinaryPinTest {
     }
 
     @Test
+    fun aManifestListingABinaryTwiceIsRefused() {
+        val sums = BinaryPlatform.entries.joinToString("\n", postfix = "\n") { "${"a".repeat(64)}  ${it.assetName}" } +
+            "${"b".repeat(64)}  seampact-linux-x64\n"
+
+        val read = BinaryPins.fromSha256Sums("1.2.3", sums)
+
+        assertEquals(BinaryFailureCode.PIN_INVALID, (read as BinaryPinsRead.Refused).failure.code)
+    }
+
+    @Test
     fun overridesWithoutAHashAreRefused() {
         val embedded = BinaryPins("1.0.0", BinaryPlatform.entries.associateWith { "e".repeat(64) })
 

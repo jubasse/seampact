@@ -42,6 +42,9 @@ public data class BinaryPins(val version: String, val sha256ByPlatform: Map<Bina
                 val assetName = line.substringAfter("  ", missingDelimiterValue = "")
                 val platform = BinaryPlatform.ofAssetName(assetName)
                     ?: return refused(BinaryFailureCode.PIN_INVALID, "${BinaryPlatform.MANIFEST_FILE_NAME} lists '$assetName', no binary of the release.")
+                if (platform.classifier in hashes) {
+                    return refused(BinaryFailureCode.PIN_INVALID, "${BinaryPlatform.MANIFEST_FILE_NAME} lists '$assetName' twice.")
+                }
                 hashes[platform.classifier] = hash
             }
 

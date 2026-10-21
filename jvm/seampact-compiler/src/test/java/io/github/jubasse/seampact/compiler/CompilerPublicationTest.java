@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -51,6 +52,20 @@ class CompilerPublicationTest {
         BuildResult result = publish(binaries, work.resolve("repository")).buildAndFail();
 
         assertTrue(result.getOutput().contains("seampact-darwin-arm64' has the SHA-256"), result.getOutput());
+        assertTrue(Files.notExists(work.resolve("repository/io/github/jubasse/seampact-compiler")));
+    }
+
+    @Test
+    void refusesAManifestListingABinaryTwice() throws IOException, NoSuchAlgorithmException {
+        Path binaries = writeStubBinaries();
+        Files.writeString(
+                binaries.resolve(BinaryPlatform.MANIFEST_FILE_NAME),
+                "0".repeat(64) + "  seampact-linux-x64\n",
+                StandardOpenOption.APPEND);
+
+        BuildResult result = publish(binaries, work.resolve("repository")).buildAndFail();
+
+        assertTrue(result.getOutput().contains("lists 'seampact-linux-x64' twice"), result.getOutput());
         assertTrue(Files.notExists(work.resolve("repository/io/github/jubasse/seampact-compiler")));
     }
 
