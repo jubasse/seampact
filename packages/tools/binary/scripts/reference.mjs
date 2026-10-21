@@ -1,4 +1,4 @@
-// Writes the reference output the smoke compares against: the IR of each smoke app, compiled by the Node CLI
+// Writes the reference output the smoke compares against: the IR and the bundle of each smoke app, made by the Node CLI
 // (the CLI entry bundled for Node, packs resolved from the repository's node_modules).
 // Usage: node scripts/reference.mjs <out-dir>
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -34,7 +34,7 @@ for (const app of SMOKE_APPS) {
 
   writeSmokeApp(app, appDirectory);
 
-  const { steps, irFiles } = runSmokeApp({
+  const { steps, writtenFiles } = runSmokeApp({
     executable: process.execPath,
     prefixArguments: [nodeCli],
     environment: process.env,
@@ -50,7 +50,7 @@ for (const app of SMOKE_APPS) {
   mkdirSync(join(out, app.name), { recursive: true });
   writeFileSync(join(out, app.name, "steps.json"), `${JSON.stringify(steps, null, 2)}\n`);
 
-  for (const [file, bytes] of Object.entries(irFiles))
+  for (const [file, bytes] of Object.entries(writtenFiles))
     writeFileSync(join(out, app.name, file), bytes);
 
   console.log(`reference: ${app.name} ok`);
