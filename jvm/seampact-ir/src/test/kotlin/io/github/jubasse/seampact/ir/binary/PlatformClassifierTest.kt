@@ -44,18 +44,40 @@ class PlatformClassifierTest {
     }
 
     @Test
-    fun muslIsDetectedByItsLoader() {
+    fun theLibcIsTheOneTheJvmHasMapped() {
+        val work = Files.createTempDirectory("seampact-libc-")
+        try {
+            // A glibc host with the musl package installed: the loader sits under /lib, the JVM maps glibc.
+            val library = Files.createDirectory(work.resolve("lib"))
+            Files.createFile(library.resolve("ld-musl-x86_64.so.1"))
+            val glibcMaps = Files.writeString(work.resolve("glibc-maps"), mapsLine("/usr/lib/x86_64-linux-gnu/libc.so.6"))
+            val muslMaps = Files.writeString(work.resolve("musl-maps"), mapsLine("/lib/ld-musl-x86_64.so.1"))
+            val alpineLibcMaps = Files.writeString(work.resolve("alpine-maps"), mapsLine("/lib/libc.musl-x86_64.so.1"))
+
+            assertEquals(HostLibc.GLIBC, HostPlatform.linuxLibc(glibcMaps, library))
+            assertEquals(HostLibc.MUSL, HostPlatform.linuxLibc(muslMaps, work.resolve("no-lib")))
+            assertEquals(HostLibc.MUSL, HostPlatform.linuxLibc(alpineLibcMaps, work.resolve("no-lib")))
+        } finally {
+            work.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun withoutProcTheMuslLoaderUnderLibDecides() {
         val library = Files.createTempDirectory("seampact-lib-")
+        val noMaps = library.resolve("no-maps")
         try {
             Files.createFile(library.resolve("libc.so.6"))
-            assertEquals(HostLibc.GLIBC, HostPlatform.linuxLibc(library))
+            assertEquals(HostLibc.GLIBC, HostPlatform.linuxLibc(noMaps, library))
 
             Files.createFile(library.resolve("ld-musl-x86_64.so.1"))
-            assertEquals(HostLibc.MUSL, HostPlatform.linuxLibc(library))
+            assertEquals(HostLibc.MUSL, HostPlatform.linuxLibc(noMaps, library))
         } finally {
             library.toFile().deleteRecursively()
         }
     }
+
+    private fun mapsLine(file: String): String = "7f0000000000-7f0000001000 r-xp 00000000 08:01 1234 $file\n"
 
     @Test
     fun theAssetNamesAreTheReleaseBinaries() {

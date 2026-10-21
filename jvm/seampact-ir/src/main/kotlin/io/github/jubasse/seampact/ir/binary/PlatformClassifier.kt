@@ -13,20 +13,41 @@ public enum class HostLibc(public val label: String) {
 /** The host as the JVM reports it: `os.name`, `os.arch` and, on Linux, the C library. */
 public data class HostPlatform(val osName: String, val osArch: String, val libc: HostLibc) {
     public companion object {
-        // musl's dynamic loader, `/lib/ld-musl-<arch>.so.1`, is present on every musl system (Alpine and others).
+        // The JVM's own memory map names the C library it runs on. Without `/proc`, musl's dynamic loader,
+        // `/lib/ld-musl-<arch>.so.1`, present on every musl system (Alpine and others), is the fallback sign.
+        private const val PROCESS_MAPS = "/proc/self/maps"
         private const val LIBRARY_DIRECTORY = "/lib"
         private const val MUSL_LOADER_PREFIX = "ld-musl-"
+        private val MUSL_MAPPED_NAMES = listOf(MUSL_LOADER_PREFIX, "libc.musl-")
+        private const val GLIBC_MAPPED_NAME = "libc.so.6"
 
         /** The running JVM's host. */
         public fun current(): HostPlatform {
             val osName = System.getProperty("os.name")
-            val libc = if (osName.startsWith(LINUX)) linuxLibc(Path.of(LIBRARY_DIRECTORY)) else HostLibc.NONE
+            val libc = if (osName.startsWith(LINUX)) linuxLibc(Path.of(PROCESS_MAPS), Path.of(LIBRARY_DIRECTORY)) else HostLibc.NONE
 
             return HostPlatform(osName, System.getProperty("os.arch"), libc)
         }
 
-        /** musl when [libraryDirectory] holds an `ld-musl-*` loader, glibc otherwise. */
-        public fun linuxLibc(libraryDirectory: Path): HostLibc {
+        /**
+         * The libc the JVM has mapped, read from [processMaps]: musl when a mapped file is musl's loader or libc,
+         * glibc when it is `libc.so.6`. When [processMaps] is unreadable or names neither, musl when
+         * [libraryDirectory] holds an `ld-musl-*` loader, glibc otherwise.
+         */
+        public fun linuxLibc(processMaps: Path, libraryDirectory: Path): HostLibc =
+            mappedLibc(processMaps) ?: libcFromLibraryDirectory(libraryDirectory)
+
+        private fun mappedLibc(processMaps: Path): HostLibc? {
+            if (!Files.isReadable(processMaps)) return null
+
+            val mappedFiles = Files.readAllLines(processMaps).map { line -> line.substringAfterLast('/') }
+            if (mappedFiles.any { file -> MUSL_MAPPED_NAMES.any { file.startsWith(it) } }) return HostLibc.MUSL
+            if (mappedFiles.any { file -> file.startsWith(GLIBC_MAPPED_NAME) }) return HostLibc.GLIBC
+
+            return null
+        }
+
+        private fun libcFromLibraryDirectory(libraryDirectory: Path): HostLibc {
             if (!Files.isDirectory(libraryDirectory)) return HostLibc.GLIBC
 
             val hasMuslLoader = Files.list(libraryDirectory).use { entries ->
