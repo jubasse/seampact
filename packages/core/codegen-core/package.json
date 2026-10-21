@@ -6,6 +6,7 @@
   "type": "module",
   "files": [
     "dist",
+    "front-runtime",
     "native-docs-runtime",
     "node-server-runtime"
   ],

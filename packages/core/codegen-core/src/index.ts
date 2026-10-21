@@ -1,6 +1,6 @@
 // The API the code generators are written against: target definitions, link descriptors, refusals, and the
 // steps around a target's generate (IR support and link checks, header, formatting, file writer), and the
-// helpers targets share (IR locations, located refusals, planned names, property keys).
+// helpers targets share (IR locations, located refusals, planned names, property keys, the front query plan).
 export { apiIndexSource, type IndexedModule } from "./api-index.js";
 export { compareCodeUnits } from "./code-unit-order.js";
 export { defineTarget } from "./define-target.js";
@@ -32,6 +32,21 @@ export {
   type HookBootCheck,
   type TunableBootCheck,
 } from "./framework-route-check.js";
+export {
+  FRONT_RUNTIME_MODULE,
+  frontRuntimeFile,
+  NEXT_PAGE_EVIDENCE,
+  type NextPageEvidence,
+  type NextPageRule,
+  planQueries,
+  type QueryForm,
+  type QueryNames,
+  type QueryOperation,
+  type QueryPlan,
+  type QueryPlanOutcome,
+  type QueryPlanSettings,
+  type RequestMember,
+} from "./front-queries/index.js";
 export { type GenerateWarning, warnLeftToHandler } from "./generate-warning.js";
 export { importSpecifier, relativeModuleSpecifier } from "./import-specifier.js";
 export { below, type IrLocation, operationLocation, schemaLocation } from "./ir-location.js";

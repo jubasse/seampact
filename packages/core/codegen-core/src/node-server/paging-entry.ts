@@ -151,7 +151,8 @@ export function pagingEntry(
   };
 }
 
-function positionRoleOf(style: PagingStyle): PagingRequestRole | undefined {
+/** The request role that carries a style's position, undefined for a position kind this version does not know. */
+export function positionRoleOf(style: PagingStyle): PagingRequestRole | undefined {
   const roleName = Object.hasOwn(POSITION_ROLES, style.position)
     ? POSITION_ROLES[style.position]
     : undefined;
