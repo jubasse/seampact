@@ -2,6 +2,7 @@
 // steps around a target's generate (IR support and link checks, header, formatting, file writer), and the
 // helpers targets share (IR locations, located refusals, planned names, property keys, the front query plan).
 export { apiIndexSource, type IndexedModule } from "./api-index.js";
+export { type ClientFilledHeaders, clientFilledHeadersOf } from "./client-filled-headers.js";
 export { compareCodeUnits } from "./code-unit-order.js";
 export { defineTarget } from "./define-target.js";
 export type {

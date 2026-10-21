@@ -1,5 +1,6 @@
 import type { ContractIR, Operation } from "@seampact/spec/ir";
 import { deriveName } from "@seampact/spec/naming";
+import { clientFilledHeadersOf } from "../client-filled-headers.js";
 import type { ClientDescriptor } from "../descriptors.js";
 import type { GenerateWarning } from "../generate-warning.js";
 import { below, type IrLocation, operationLocation } from "../ir-location.js";
@@ -152,22 +153,16 @@ function planOperation(
     form === "query" && settings.infinite
       ? nextPageOf(ir, operation, location, warnings)
       : undefined;
-  const idempotencyHeader =
-    operation.idempotency !== undefined && "header" in operation.idempotency
-      ? operation.idempotency.header
-      : undefined;
-  const filledHeaders = [
-    ...(idempotencyHeader === undefined ? [] : [idempotencyHeader]),
-    ...(operation.deadlineHeader === undefined ? [] : [operation.deadlineHeader]),
-  ];
+  const filled = clientFilledHeadersOf(operation);
+  const idempotencyHeader = filled.idempotency?.header;
 
   return {
     operationId: operation.id,
     form,
     names: queryNames(base, form, nextPage !== undefined),
     ...(operation.resource === undefined ? {} : { resource: operation.resource.type }),
-    filledHeaderKeys: filledHeaders.map((header) => header.toLowerCase()),
-    needsTimeout: operation.deadlineHeader !== undefined && operation.budgetMs === undefined,
+    filledHeaderKeys: filled.filledHeaderKeys,
+    needsTimeout: filled.needsTimeout,
     ...(idempotencyHeader === undefined
       ? {}
       : { idempotencyHeaderKey: idempotencyHeader.toLowerCase() }),
