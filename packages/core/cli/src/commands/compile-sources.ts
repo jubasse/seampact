@@ -123,7 +123,7 @@ async function compileSource(name: string, directory: string, run: SourceRun): P
   }
 
   const outcome = await compileWorkspaceWithImports({
-    reader: loadFsReader(directory),
+    reader: (run.io.sourceReader ?? loadFsReader)(directory),
     entry,
     fetch: fetchOptions(directory, run),
   });

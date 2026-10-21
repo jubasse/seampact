@@ -1,3 +1,4 @@
+import type { LoadReader } from "@seampact/compiler";
 import { type CliProblem, formatProblem } from "./cli-problem.js";
 
 // What a command reads and writes besides files: the working directory and the two output streams.
@@ -7,6 +8,9 @@ export interface CliIo {
   stderr(text: string): void;
   // Today as `YYYY-MM-DD`, the diff's only time input; the system date when absent.
   today?(): string;
+  // The reader a contract source is loaded through, given the source directory; the file system when absent. The
+  // standalone binary sets it to serve its embedded first-party packs when none is installed (ADR 0010).
+  sourceReader?(directory: string): LoadReader;
 }
 
 export const EXIT_SUCCESS = 0;

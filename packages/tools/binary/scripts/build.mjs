@@ -1,4 +1,5 @@
-// Builds the five SEA binaries from one Linux host (ADR 0010).
+// Builds the five SEA binaries from one Linux host (ADR 0010). They are unsigned: the macOS ones are re-signed
+// on a macOS runner, and `manifest.mjs` hashes the final files.
 // Usage: node scripts/build.mjs   (needs Node 24.21.0, gpg, curl, tar, unzip, xz)
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -12,6 +13,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { builtinModules } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -20,11 +22,15 @@ import { securityDirectory, stripSignature } from "./pe.mjs";
 
 const NODE_VERSION = "24.21.0";
 const SENTINEL = "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2";
-const ALLOWED_BUILTINS = new Set(["fs", "path", "crypto", "process"]);
-// `yaml` imports `buffer` for its YAML 1.1 binary tag: the module is loaded at start-up but the
-// call is never reached by the core schema; Buffer is a global in Node, so this is tolerated
-// (yaml only, in both checks) and recorded in the README. Only module imports are checked.
-const TOLERATED = new Map([["buffer", "/yaml/dist/"]]);
+// The bundle may require Node built-ins only: every package is bundled in, nothing is looked up in node_modules.
+const BUILTINS = new Set(builtinModules);
+const isBuiltin = (name) => BUILTINS.has(name.replace(/^node:/, ""));
+// ajv writes `require("ajv/dist/runtime/...")` into the source text of a standalone validator; the CLI compiles
+// its validators in memory, so the text is never run.
+const TOLERATED_REQUIRE_TEXT = "ajv/dist/runtime/";
+// The bundle is CommonJS, which has no `import.meta`. Only the code of `generate` reads it (the runtime files
+// of the node-server target), and the binary refuses `generate`.
+const IMPORT_META_URL_STAND_IN = "file:///seampact-binary/main.cjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = join(root, "dist");
@@ -36,29 +42,29 @@ const targets = [
     id: "linux-x64",
     archive: "linux-x64.tar.xz",
     exe: "bin/node",
-    out: "seampact-spike-linux-x64",
+    out: "seampact-linux-x64",
   },
   {
     id: "linux-arm64",
     archive: "linux-arm64.tar.xz",
     exe: "bin/node",
-    out: "seampact-spike-linux-arm64",
+    out: "seampact-linux-arm64",
   },
   {
     id: "darwin-x64",
     archive: "darwin-x64.tar.xz",
     exe: "bin/node",
-    out: "seampact-spike-darwin-x64",
+    out: "seampact-darwin-x64",
     macho: true,
   },
   {
     id: "darwin-arm64",
     archive: "darwin-arm64.tar.xz",
     exe: "bin/node",
-    out: "seampact-spike-darwin-arm64",
+    out: "seampact-darwin-arm64",
     macho: true,
   },
-  { id: "win32-x64", archive: "win-x64.zip", exe: "node.exe", out: "seampact-spike-win32-x64.exe" },
+  { id: "win32-x64", archive: "win-x64.zip", exe: "node.exe", out: "seampact-win32-x64.exe" },
 ];
 
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { stdio: "inherit", ...opts });
@@ -81,6 +87,8 @@ mkdirSync(cache, { recursive: true });
 const result = await build({
   absWorkingDir: root,
   entryPoints: [join(root, "src/main.ts")],
+  loader: { ".yaml": "text" },
+  define: { "import.meta.url": JSON.stringify(IMPORT_META_URL_STAND_IN) },
   outfile: join(dist, "bundle.cjs"),
   bundle: true,
   platform: "node",
@@ -92,42 +100,22 @@ const result = await build({
 });
 const used = new Set();
 
-for (const [file, input] of Object.entries(result.metafile.inputs)) {
+for (const input of Object.values(result.metafile.inputs)) {
   for (const imp of input.imports) {
-    if (!imp.external) continue;
-    const name = imp.path.replace(/^node:/, "");
-    const via = TOLERATED.get(name);
-
-    if (via && file.includes(via)) continue;
-    used.add(name);
+    if (imp.external) used.add(imp.path.replace(/^node:/, ""));
   }
 }
 
-const extra = [...used].filter((name) => !ALLOWED_BUILTINS.has(name));
+const extra = [...used].filter((name) => !isBuiltin(name));
 
-if (extra.length > 0) fail(`Node APIs beyond fs, path, crypto and process: ${extra.join(", ")}`);
+if (extra.length > 0) fail(`imports that are not Node built-ins: ${extra.join(", ")}`);
 const bundleText = readFileSync(join(dist, "bundle.cjs"), "utf8");
-// esbuild marks each module with a `// <path>` comment line: the tolerated import must sit in
-// the section of its allowed package.
-const sectionOf = (index) => {
-  const marks = [...bundleText.slice(0, index).matchAll(/^\/\/ (\S.*)$/gm)];
+const required = [...bundleText.matchAll(/require\(\s*["'`]([^"'`]+)["'`]\s*\)/g)]
+  .map((match) => match[1])
+  .filter((name) => !isBuiltin(name) && !name.startsWith(TOLERATED_REQUIRE_TEXT));
 
-  return marks.length > 0 ? marks[marks.length - 1][1] : "";
-};
-
-const dynamic = [...bundleText.matchAll(/require\(\s*["'`]([^"'`]+)["'`]\s*\)/g)]
-  .map((m) => [m[1].replace(/^node:/, ""), m.index])
-  .filter(([name, index]) => {
-    if (ALLOWED_BUILTINS.has(name)) return false;
-    const via = TOLERATED.get(name);
-
-    return !(via && `/${sectionOf(index)}`.includes(via));
-  })
-  .map(([name]) => name);
-
-if (dynamic.length > 0)
-  fail(`bundle requires beyond fs, path, crypto and process: ${dynamic.join(", ")}`);
-console.log(`build: bundle ok, builtins used: ${[...used].sort().join(", ")}`);
+if (required.length > 0) fail(`bundle requires beyond Node built-ins: ${required.join(", ")}`);
+console.log(`build: bundle ok, built-ins used: ${[...used].sort().join(", ")}`);
 
 // 2. SEA blob: code cache and snapshot off (cross-platform), warning disabled. The paths are
 // relative to dist/ (cwd of the blob step) so the blob does not depend on the checkout directory.
@@ -217,7 +205,6 @@ const expected = new Map(
 
 // 4. Inject into each platform's binary.
 const postject = join(root, "node_modules/.bin/postject");
-const manifest = [];
 const sizes = [];
 
 for (const t of targets) {
@@ -268,12 +255,10 @@ for (const t of targets) {
   sizes.push(
     `${t.out} ${statSync(out).size} gzip-9 ${gzipSync(readFileSync(out), { level: 9 }).length}`,
   );
-  manifest.push(`${sha256(out)}  ${t.out}`);
   console.log(`build: ${t.id} done`);
 }
 
 writeFileSync(join(dist, "sizes.txt"), `${sizes.join("\n")}\n`);
-writeFileSync(join(dist, "bin", "SHA256SUMS"), `${manifest.join("\n")}\n`);
 const seconds = ((Date.now() - started) / 1000).toFixed(1);
 
 writeFileSync(join(dist, "build-seconds.txt"), `${seconds}\n`);
