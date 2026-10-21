@@ -1,6 +1,7 @@
 // The consumer case of an app's own NestJS layers around the generated `tasks` boundary: a passport JWT guard as a
 // global `APP_GUARD` and at route level above and below the composite, `ClassSerializerInterceptor` and a recording
-// interceptor, a global `ValidationPipe` and a recording `@Catch()` filter. The JWT strategy keeps the validated user
+// interceptor registered with `useGlobalInterceptors`, a global `ValidationPipe` that validates custom decorators and
+// a recording `@Catch()` filter. The JWT strategy keeps the validated user
 // in an app request store, as `nestjs-cls` apps do, which the `user` authenticate hook reads.
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { ServerResponse } from "node:http";
@@ -13,6 +14,7 @@ import {
   Controller,
   type ExceptionFilter,
   type ExecutionContext,
+  type INestApplication,
   Inject,
   Injectable,
   Module,
@@ -21,7 +23,7 @@ import {
   UseGuards,
   ValidationPipe,
 } from "@nestjs/common";
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE, Reflector } from "@nestjs/core";
+import { APP_FILTER, APP_GUARD, APP_PIPE, Reflector } from "@nestjs/core";
 import { AuthGuard, PassportModule, PassportStrategy } from "@nestjs/passport";
 import type { AuthenticateRequest, AuthenticateResult } from "@seampact/hooks";
 import { ExtractJwt, Strategy } from "passport-jwt";
@@ -43,8 +45,10 @@ export const APP_JWT_SECRET = "seampact-app-layers-secret";
 /** What the app's layers and the authenticate hook saw, in request order; the test empties it. */
 export const appLayerEvents: string[] = [];
 
-/** The body the app's interceptor maps every result to, which must never reach the wire. */
-export const MAPPED_BY_APP = { mappedBy: "app" };
+/** The body the app's interceptor maps the `health` result to, which reaches the wire in the interceptor mode only. */
+export const MAPPED_BY_APP = { status: "mapped by app" };
+
+const HEALTH_HANDLER = "health";
 
 /** The status the app's filter answers, which no operation declares. */
 export const APP_FILTER_STATUS = 418;
@@ -105,9 +109,15 @@ class RecordingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     appLayerEvents.push(`interceptor before ${context.getHandler().name}`);
 
+    const handler = context.getHandler().name;
+
     return next.handle().pipe(
       tap((value: unknown) => appLayerEvents.push(`interceptor after ${String(value)}`)),
-      map(() => MAPPED_BY_APP),
+      map((value: unknown) =>
+        handler === HEALTH_HANDLER && isHandlerResult(value)
+          ? { ...value, body: MAPPED_BY_APP }
+          : value,
+      ),
       catchError((error: unknown) => {
         appLayerEvents.push(`interceptor error ${errorText(error)}`);
 
@@ -120,7 +130,12 @@ class RecordingInterceptor implements NestInterceptor {
 @Injectable()
 class RecordingValidationPipe extends ValidationPipe {
   constructor() {
-    super({ whitelist: true, forbidNonWhitelisted: true, transform: true });
+    super({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      validateCustomDecorators: true,
+    });
   }
 
   override transform(value: unknown, metadata: ArgumentMetadata) {
@@ -143,6 +158,18 @@ class RecordingAppFilter implements ExceptionFilter {
     response.setHeader("content-type", "application/json");
     response.end(JSON.stringify({ caughtBy: "app" }));
   }
+}
+
+function isHandlerResult(value: unknown): value is { readonly status: number } {
+  return typeof value === "object" && value !== null && typeof Reflect.get(value, "status") === "number";
+}
+
+/** The app's global interceptors, registered as `main.ts` would, inside the seampact reply interceptor. */
+export function useAppInterceptors(app: INestApplication): void {
+  app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(app.get(Reflector)),
+    new RecordingInterceptor(),
+  );
 }
 
 function errorText(error: unknown): string {
@@ -211,8 +238,6 @@ class AppLayersChannelsController implements TasksNest.ChannelsEndpoints {
   providers: [
     AppJwtStrategy,
     { provide: APP_GUARD, useClass: AppGlobalJwtGuard },
-    { provide: APP_INTERCEPTOR, useClass: ClassSerializerInterceptor },
-    { provide: APP_INTERCEPTOR, useClass: RecordingInterceptor },
     { provide: APP_PIPE, useClass: RecordingValidationPipe },
     { provide: APP_FILTER, useClass: RecordingAppFilter },
   ],

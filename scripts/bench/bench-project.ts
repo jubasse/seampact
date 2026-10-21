@@ -69,7 +69,7 @@ export function prepareProject(options: {
   const directory = join(options.workDirectory, options.pair.id);
   const commit = currentCommit();
 
-  const sourceKey = cacheKey(commit);
+  const sourceKey = cacheKey(commit, options.pair);
 
   if (!options.fresh && isProjectOfKey(directory, sourceKey)) {
     cpSync(BENCH_SOURCES, join(directory, BENCH_DIRECTORY), { recursive: true });
@@ -85,6 +85,7 @@ export function prepareProject(options: {
     validators: validatorChoice(options.pair.validators),
     directory,
     commit,
+    targetOptions: options.pair.targetOptions,
     extras: {
       sourceDirectory: BENCH_SOURCES,
       into: BENCH_DIRECTORY,
@@ -135,9 +136,12 @@ function switchBodyValidationOff(directory: string): void {
 }
 
 // What a project is built from: the commit plus every uncommitted change (tracked diff and untracked file
-// contents) under the packages, the consumer template and overlays, and the bench sources.
-function cacheKey(commit: string): string {
-  const hash = createHash("sha256").update(commit);
+// contents) under the packages, the consumer template and overlays, and the bench sources, and the pair's run
+// settings.
+function cacheKey(commit: string, pair: BenchPair): string {
+  const hash = createHash("sha256")
+    .update(commit)
+    .update(JSON.stringify({ targetOptions: pair.targetOptions, appInterceptor: pair.appInterceptor }));
   const git = (args: string[]) =>
     execFileSync("git", args, { cwd: REPO_ROOT, maxBuffer: 256 * 1024 * 1024 });
 

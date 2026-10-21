@@ -122,6 +122,7 @@ export async function startServers(
       kind,
       baselineFramework: pair.baselineFramework,
       validators: pair.validators,
+      appInterceptor: pair.appInterceptor,
       ...(placement === undefined ? {} : { cpu: placement.serverCpu }),
     });
   const seampact = await start("seampact");

@@ -2,7 +2,9 @@ name: NestJS consumer
 
 # Builds and packs the seampact packages, then installs them from the tarballs into the NestJS test consumer,
 # generates the NestJS boundary of both reference apis, typechecks, boots NestJS on Express and runs
-# `reference slice answers` against it, once per validator style of the compatibility matrix (ADR 0016).
+# `reference slice answers` against it, once per validator style of the compatibility matrix (ADR 0016), and once
+# more on zod with the reply interceptor (target option `reply: interceptor`), since validation is the same pipe in
+# both reply modes.
 
 on:
   push:
@@ -26,6 +28,12 @@ jobs:
       matrix:
         target: [nestjs]
         validators: [zod, yup, class-validator]
+        reply: [handler]
+        # A new value of `reply`, so a fourth job rather than an extra key on the zod one.
+        include:
+          - target: nestjs
+            validators: zod
+            reply: interceptor
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -36,5 +44,5 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} from packed tarballs
-        run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
+      - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} with reply ${{ matrix.reply }} from packed tarballs
+        run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --target-option "reply=${{ matrix.reply }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}-${{ matrix.reply }}"

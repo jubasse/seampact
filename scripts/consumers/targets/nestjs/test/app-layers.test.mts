@@ -1,6 +1,6 @@
 // Boots the consumer case of an app's own NestJS layers (`src/app-layers-module.mts`) and checks what each layer
 // observes around the generated boundary: the order of guards, interceptors and pipes against the contract's checks,
-// and that the reply on a contract route stays the contract's.
+// and that the reply on a contract route stays the contract's, in the reply mode the consumer was generated with.
 import "reflect-metadata";
 import { createHmac, randomUUID } from "node:crypto";
 import type { AddressInfo } from "node:net";
@@ -15,7 +15,9 @@ import {
   appLayerEvents,
   MAPPED_BY_APP,
   openAppRequestStore,
+  useAppInterceptors,
 } from "../src/app-layers-module.mjs";
+import { REPLY_MODE } from "../src/reply-mode.mjs";
 import { loadScriptReply } from "../src/suite-control.mjs";
 import { USER_ID } from "./credentials.mjs";
 
@@ -71,6 +73,7 @@ beforeAll(async () => {
   });
   app.useBodyParser("json", { strict: false, limit: TasksNest.LARGEST_BODY_LIMIT });
   app.use(openAppRequestStore);
+  useAppInterceptors(app);
   await app.listen(0, HOST);
   baseUrl = `http://${HOST}:${portOf(app.getHttpServer().address())}`;
 });
@@ -122,7 +125,7 @@ describe("app guards", () => {
 });
 
 describe("app interceptors and pipes", () => {
-  test("app interceptors run after the contract checks and see no value after the reply", async () => {
+  test("app interceptors run after the access checks, around the input checks", async () => {
     const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks`, { headers: SIGNED_IN });
 
     expect(reply.status).toBe(200);
@@ -131,18 +134,19 @@ describe("app interceptors and pipes", () => {
       `authenticate ${USER_ID}`,
       "interceptor before listTasks",
       "pipe custom",
-      "interceptor after undefined",
+      // In the handler mode the reply is written before the interceptors' post-phase.
+      `interceptor after ${REPLY_MODE === "handler" ? "undefined" : "[object Object]"}`,
     ]);
   });
 
-  test("a response-transforming interceptor leaves the contract body as projected", async () => {
+  test("a response-transforming interceptor maps the reply in the interceptor mode only", async () => {
     const reply = await send("GET", "/v1/health");
 
-    expect(reply.body).not.toEqual(MAPPED_BY_APP);
-    expect(reply.body).toEqual({ status: "ok" });
+    expect(reply.status).toBe(200);
+    expect(reply.body).toEqual(REPLY_MODE === "handler" ? { status: "ok" } : MAPPED_BY_APP);
   });
 
-  test("a schemaInvalid refusal reaches no app interceptor and no app pipe", async () => {
+  test("a schemaInvalid refusal passes through an app interceptor's catchError and answers the contract's 400", async () => {
     const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
       headers: { ...SIGNED_IN, "idempotency-key": randomUUID() },
       body: { title: "", unknownMember: true },
@@ -150,10 +154,17 @@ describe("app interceptors and pipes", () => {
 
     expect(reply.status).toBe(400);
     expect(reply.body).toMatchObject({ code: "api.schema_invalid" });
-    expect(appLayerEvents).toEqual([`passport ${USER_ID}`, `authenticate ${USER_ID}`]);
+    expect(appLayerEvents.slice(0, 4)).toEqual([
+      `passport ${USER_ID}`,
+      `authenticate ${USER_ID}`,
+      "interceptor before createTask",
+      "pipe custom",
+    ]);
+    expect(appLayerEvents[4]).toMatch(/^interceptor error ContractError/);
+    expect(appLayerEvents).toHaveLength(5);
   });
 
-  test("the app's ValidationPipe leaves the contract input untouched", async () => {
+  test("the app's ValidationPipe with validateCustomDecorators leaves the contract input untouched", async () => {
     const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
       headers: { ...SIGNED_IN, "idempotency-key": randomUUID() },
       body: { title: "Plan the release", effort: 2 },

@@ -70,6 +70,7 @@ async function profileRoute(
     kind: "seampact",
     baselineFramework: pair.baselineFramework,
     validators: pair.validators,
+    appInterceptor: pair.appInterceptor,
   });
   const file = join(invocation.out, `${pair.id}-${routeId}.cpuprofile`);
 

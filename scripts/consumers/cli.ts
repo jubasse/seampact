@@ -9,6 +9,8 @@ import {
   assembleConsumer,
   prepareConsumerDirectory,
   TARGET_ID,
+  parseTargetOptions,
+  type TargetOption,
   useTarballs,
   VENDOR_DIRECTORY,
 } from "./consumer-project.ts";
@@ -23,19 +25,21 @@ import {
 // Builds and packs the seampact packages, assembles a test consumer from the template and a target overlay, and
 // installs, generates, typechecks and tests it as a user would (ADR 0011 "Unpublished installs for test
 // consumers"). The first failing step ends the run with its exit code.
-// node scripts/consumers/cli.ts --target <id> [--validators <id>] [--dir <path>]
+// node scripts/consumers/cli.ts --target <id> [--validators <id>] [--target-option <key>=<value>]... [--dir <path>]
+// A target option is written into the target's config entries; one the target does not know fails `generate`, named.
 
 const EXIT_OK = 0;
 const EXIT_FAILED = 1;
 const EXIT_USAGE = 2;
 
 const USAGE =
-  "usage: node scripts/consumers/cli.ts --target <id> [--validators <id>] [--dir <path>]";
+  "usage: node scripts/consumers/cli.ts --target <id> [--validators <id>] [--target-option <key>=<value>]... [--dir <path>]";
 const CONSUMERS_ROOT = join(REPOSITORY_ROOT, "scripts/consumers");
 
 interface RunOptions {
   readonly target: string;
   readonly validators: string;
+  readonly targetOptions: readonly TargetOption[];
   readonly directory: string;
 }
 
@@ -46,6 +50,7 @@ function parseOptions(argv: string[]): RunOptions | string {
       options: {
         target: { type: "string" },
         validators: { type: "string", default: DEFAULT_VALIDATOR_CHOICE },
+        "target-option": { type: "string", multiple: true, default: [] },
         dir: { type: "string" },
       },
     });
@@ -60,27 +65,38 @@ function parseOptions(argv: string[]): RunOptions | string {
       return `--validators '${values.validators}' is not a validator choice: use one of ${knownValidatorChoices()}.`;
     }
 
+    const targetOptions = parseTargetOptions(values["target-option"]);
+
+    if (typeof targetOptions === "string") return targetOptions;
+
     return {
       target: values.target,
       validators: values.validators,
-      directory: resolve(values.dir ?? defaultDirectory(values.target, values.validators)),
+      targetOptions,
+      directory: resolve(
+        values.dir ?? defaultDirectory(values.target, values.validators, targetOptions),
+      ),
     };
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
   }
 }
 
-// The default validators keep the target's directory; another choice gets its own.
-function defaultDirectory(target: string, validators: string): string {
-  const name =
-    validators === DEFAULT_VALIDATOR_CHOICE
-      ? `test-seampact-${target}`
-      : `test-seampact-${target}-${validators}`;
+// The default validators without target options keep the target's directory; another choice gets its own.
+function defaultDirectory(
+  target: string,
+  validators: string,
+  targetOptions: readonly TargetOption[],
+): string {
+  const suffixes = [
+    ...(validators === DEFAULT_VALIDATOR_CHOICE ? [] : [validators]),
+    ...targetOptions.map(({ key, value }) => `${key}-${value}`),
+  ];
 
-  return join(homedir(), "Dev", name);
+  return join(homedir(), "Dev", ["test-seampact", target, ...suffixes].join("-"));
 }
 
-function runConsumer({ target, validators, directory }: RunOptions): void {
+function runConsumer({ target, validators, targetOptions, directory }: RunOptions): void {
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: REPOSITORY_ROOT })
     .toString()
     .trim();
@@ -95,6 +111,7 @@ function runConsumer({ target, validators, directory }: RunOptions): void {
       validators: validatorChoice(validators),
       directory,
       commit,
+      targetOptions,
     });
   });
 

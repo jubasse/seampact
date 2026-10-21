@@ -8,7 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { parse, stringify } from "yaml";
+import { isMap, isSeq, parse, parseDocument, stringify } from "yaml";
 import type { ValidatorChoice } from "./validator-choice.ts";
 
 // The file that marks a directory as a consumer this script made, holding the monorepo commit it was built from.
@@ -82,9 +82,35 @@ export interface ConsumerExtras {
   readonly dependencies: Readonly<Record<string, string>>;
 }
 
+/** A `key=value` pair written into the `options` of every config entry of the target overlay. */
+export interface TargetOption {
+  readonly key: string;
+  /** Read as YAML, so `true` is a boolean. */
+  readonly value: string;
+}
+
+const TARGET_OPTION = /^([A-Za-z][A-Za-z0-9]*)=(.+)$/;
+
+/** The target options of `--target-option <key>=<value>` flags, or the message naming the malformed one. */
+export function parseTargetOptions(written: readonly string[]): TargetOption[] | string {
+  const targetOptions: TargetOption[] = [];
+
+  for (const flag of written) {
+    const [, key, value] = TARGET_OPTION.exec(flag) ?? [];
+
+    if (key === undefined || value === undefined) {
+      return `--target-option '${flag}' is not <key>=<value>: write it as reply=interceptor.`;
+    }
+
+    targetOptions.push({ key, value });
+  }
+
+  return targetOptions;
+}
+
 // The template with the chosen validators, the target overlay copied over it after its base overlay (their config
-// and package entries merged), the extras if any, and the reference contract. A pair the target refuses fails at
-// `generate`.
+// and package entries merged, with the target options), the extras if any, and the reference contract. A pair or an
+// option the target refuses fails at `generate`, naming it.
 export function assembleConsumer(options: {
   readonly consumersRoot: string;
   readonly repositoryRoot: string;
@@ -93,6 +119,7 @@ export function assembleConsumer(options: {
   readonly directory: string;
   readonly commit: string;
   readonly extras?: ConsumerExtras;
+  readonly targetOptions?: readonly TargetOption[];
 }): void {
   const { consumersRoot, directory } = options;
 
@@ -107,8 +134,10 @@ export function assembleConsumer(options: {
   cpSync(join(consumersRoot, "template"), directory, { recursive: true });
   useValidators(options.validators, directory);
 
-  const overlayEntries =
+  const linkedEntries =
     options.validators.package === undefined ? withoutValidatorsLinks : keepAsWritten;
+  const overlayEntries = (entries: string) =>
+    withTargetOptions(linkedEntries(entries), options.targetOptions ?? []);
 
   for (const overlay of overlays) {
     cpSync(overlay, directory, {
@@ -212,6 +241,33 @@ function appendConfigEntries(
   const entries = readFileSync(entriesFile, "utf8").trimEnd();
 
   writeFileSync(configFile, `${config}\n${adapt(entries)}\n`);
+}
+
+/** The overlay's config entries, a YAML list, with each target option set in every entry's `options`. */
+export function withTargetOptions(entries: string, targetOptions: readonly TargetOption[]): string {
+  if (targetOptions.length === 0) return entries;
+
+  const document = parseDocument(entries);
+
+  if (!isSeq(document.contents)) {
+    throw new Error("consumers: an overlay's config entries must be a YAML list of target entries.");
+  }
+
+  for (const entry of document.contents.items) {
+    if (!isMap(entry)) throw new Error("consumers: each overlay config entry must be a map.");
+
+    for (const { key, value } of targetOptions) entry.setIn(["options", key], parse(value));
+  }
+
+  // The template's list is indented under `targets`, and the YAML writer starts at the margin.
+  const indent = /^[ ]*/.exec(entries)?.[0] ?? "";
+
+  return document
+    .toString()
+    .trimEnd()
+    .split("\n")
+    .map((line) => (line === "" ? line : `${indent}${line}`))
+    .join("\n");
 }
 
 function keepAsWritten(entries: string): string {
