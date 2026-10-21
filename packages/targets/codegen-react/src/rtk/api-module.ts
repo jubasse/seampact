@@ -70,8 +70,10 @@ export function apiModuleSource(
   ].join("\n\n");
 }
 
+// Distributed over the failure union, so a value narrowed to one operation keeps its operation's failure type.
 const TO_CONTRACT_ERROR = `/** The client's \`ContractError\` of a \`contract\` failure, as the client would have thrown it (headers as a plain record). */
-export function toContractError<Operation extends string, Failure>(failure: ContractFailure<Operation, Failure>): ContractError<Operation, Failure> {
+export function toContractError<Failure extends ContractFailure<string, unknown>>(failure: Failure): Failure extends ContractFailure<infer Operation extends string, infer Declared> ? ContractError<Operation, Declared> : never;
+export function toContractError(failure: ContractFailure<string, unknown>): ContractError<string, unknown> {
 return new ContractError(failure.operation, failure.failure);
 }`;
 
