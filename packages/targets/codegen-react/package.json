@@ -29,7 +29,17 @@
   },
   "peerDependencies": {
     "@seampact/codegen-core": "workspace:*",
-    "@seampact/spec": "workspace:*"
+    "@seampact/spec": "workspace:*",
+    "@tanstack/react-query": ">=5.90 <6",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   },
   "dependencies": {
     "prettier": "3.9.10"
