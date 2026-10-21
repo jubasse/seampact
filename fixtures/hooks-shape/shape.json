@@ -94,7 +94,9 @@
     {
       "name": "AuthenticateHook",
       "kind": "hook",
-      "methods": [{ "name": "authenticate", "parameters": ["request"], "returns": "AuthenticateResult" }]
+      "methods": [
+        { "name": "authenticate", "parameters": ["request"], "returns": "AuthenticateResult" }
+      ]
     },
     {
       "name": "Decision",
@@ -227,7 +229,9 @@
     {
       "name": "ResolveScopeHook",
       "kind": "hook",
-      "methods": [{ "name": "resolveScope", "parameters": ["request"], "returns": "ScopeResolution" }]
+      "methods": [
+        { "name": "resolveScope", "parameters": ["request"], "returns": "ScopeResolution" }
+      ]
     },
     {
       "name": "IdempotencyClaim",
