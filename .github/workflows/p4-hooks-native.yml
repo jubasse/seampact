@@ -1,0 +1,121 @@
+name: Native hooks packages
+
+# The native hooks packages (ADR 0010): the Java package `seampact-hooks` checked against the shared shape manifest on
+# Java 21 and 25 (A13), and the TypeScript package checked against the same manifest. On a pull request they run only
+# when the change touches the packages, the manifest, the toolchain pins or this workflow; `hooks-native` is the one
+# check to require.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hooks-native-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      hooks-native: ${{ steps.detect.outputs.hooks-native }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history, so the pull request can be compared with its base.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect a change to the native hooks packages or their manifest
+        id: detect
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "hooks-native=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # The hooks packages, the shape manifest, the npm hooks sources, the workspace and toolchain pins and this workflow.
+          watched='^(jvm/|php/hooks/|fixtures/hooks-shape/|packages/runtime/hooks/'
+          watched+='|\.github/workflows/p4-hooks-native\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
+          # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
+          # quote, a backslash, a tab or a non-ASCII byte, still matches.
+          changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')
+          # An empty diff runs every job rather than none.
+          if [ -z "$changed" ] || grep -Eq "$watched" <<< "$changed"; then
+            echo "hooks-native=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "hooks-native=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  typescript:
+    needs: changes
+    if: needs.changes.outputs.hooks-native == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check the npm hooks types against the shape manifest
+        run: pnpm vitest run packages/runtime/hooks
+
+  java:
+    needs: changes
+    if: needs.changes.outputs.hooks-native == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [21, 25]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Both JDKs are installed: Gradle runs on the last one, and the tests run on the matrix one, which the
+      # toolchain detection finds without a download.
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Check seampact-hooks on Java ${{ matrix.test-jdk }}
+        working-directory: jvm
+        run: ./gradlew :seampact-hooks:check -PtestJdk=${{ matrix.test-jdk }}
+
+  # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
+  hooks-native:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, typescript, java]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail when a needed job failed or was cancelled
+        shell: bash
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          set -euo pipefail
+          for result in $RESULTS; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              echo "A native hooks job ended in $result (results: $RESULTS)."
+              exit 1
+            fi
+          done
