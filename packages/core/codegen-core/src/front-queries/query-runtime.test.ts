@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 import {
+  keyStartsWith,
+  MountedKeys,
   type NextPageRule,
   nextPageRequest,
+  PageRequests,
+  settleAsData,
+  settleForStore,
   withSignal,
 } from "../../front-runtime/query-runtime.js";
 
@@ -240,5 +245,78 @@ describe("the call options of a query", () => {
     libraryAbort.abort();
 
     expect(call.signal.aborted).toBe(true);
+  });
+});
+
+describe("the plain values a store keeps", () => {
+  const headers = new Headers({ "Content-Type": "application/json" });
+
+  test("a success is data with its headers as a plain record", async () => {
+    const outcome = await settleForStore("listTasks", Promise.resolve({ ok: true, headers }));
+
+    expect(outcome).toEqual({
+      data: { ok: true, headers: { "content-type": "application/json" } },
+    });
+  });
+
+  test("a declared error is a contract value naming the operation", async () => {
+    const failed = { ok: false, code: "api.rate_limited", headers };
+    const outcome = await settleForStore("createTask", Promise.resolve(failed));
+
+    expect(outcome.error).toEqual({
+      kind: "contract",
+      operation: "createTask",
+      failure: {
+        ok: false,
+        code: "api.rate_limited",
+        headers: { "content-type": "application/json" },
+      },
+    });
+  });
+
+  test("a rejection keeps its name and message, an error answer stays data under errors: data", async () => {
+    const aborted = Promise.reject(new DOMException("The call was aborted.", "AbortError"));
+
+    expect((await settleForStore("listTasks", aborted)).error).toEqual({
+      kind: "rejection",
+      name: "AbortError",
+      message: "The call was aborted.",
+    });
+    expect((await settleAsData(Promise.resolve({ ok: false, headers }))).data).toEqual({
+      ok: false,
+      headers: { "content-type": "application/json" },
+    });
+  });
+});
+
+describe("keys and pages a library without filters or page params needs", () => {
+  test("a key starts with its resource prefix, a record member compared by its members", () => {
+    const prefix = ["tasks", { resource: "task" }];
+
+    expect(keyStartsWith(["tasks", { resource: "task" }, "listTasks", {}], prefix)).toBe(true);
+    expect(keyStartsWith(["tasks", { resource: "channel" }, "listChannels"], prefix)).toBe(false);
+    expect(keyStartsWith("tasks", prefix)).toBe(false);
+  });
+
+  test("a mounted key counts its mounts and leaves on the last cleanup", () => {
+    const mounted = new MountedKeys<"task">();
+    const removeFirst = mounted.add("task", "$inf$key");
+    const removeSecond = mounted.add("task", "$inf$key");
+
+    removeFirst();
+    expect(mounted.keysOf("task")).toEqual(["$inf$key"]);
+    removeSecond();
+    expect(mounted.keysOf("task")).toEqual([]);
+  });
+
+  test("the next page's request follows the request a page was read with, an unknown page refused", () => {
+    const rule: NextPageRule = { position: "cursor", member: { in: "query", key: "cursor" } };
+    const pages = new PageRequests<{ query?: Record<string, unknown> } | undefined>();
+    const first = pages.remember(pageOf({ nextCursor: "c2" }), { query: { limit: 5 } });
+
+    expect(pages.nextAfter(rule, first)).toEqual({ query: { limit: 5, cursor: "c2" } });
+    expect(() => pages.nextAfter(rule, pageOf({ nextCursor: "c3" }))).toThrow(
+      "did not read itself",
+    );
   });
 });

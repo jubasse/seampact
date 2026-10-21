@@ -1,7 +1,7 @@
 // The front runtime the generated queries call (ADR 0021 "The shared query plan and front runtime"), copied as is
 // beside them: it normalises a request into a key, builds the next page's request from the page facts, holds one
-// idempotency key per mutation attempt chain, combines the abort signals, and turns a client result's headers into a plain record. It imports
-// no Node built-in and no framework.
+// idempotency key per mutation attempt chain, combines the abort signals, turns a client result's headers into a
+// plain record and a call's outcome into the plain values a store keeps. It imports no Node built-in and no framework.
 
 /** Response headers as a plain record of lower-case names: a `Headers` object is not serialisable. */
 export type PlainHeaders = Readonly<Record<string, string>>;
@@ -60,6 +60,8 @@ const REQUEST_MEMBERS: Readonly<Record<RequestMember["in"], string>> = {
   header: HEADERS_MEMBER,
 };
 const LINK_BASE = "http://link.invalid";
+// The name of a rejection that is not an `Error`.
+const REJECTION_NAME = "Error";
 
 /** The result with its headers as a plain record of lower-case names. */
 export function withPlainHeaders<Result extends ClientResult>(
@@ -224,6 +226,140 @@ export function withSignal(call: object | undefined, signal: AbortSignal): objec
     ...call,
     signal: callerSignal instanceof AbortSignal ? AbortSignal.any([signal, callerSignal]) : signal,
   };
+}
+
+/** A declared error or an unexpected answer as a plain value a store keeps, with `toContractError` its class back. */
+export interface ContractFailure<Operation extends string, Failure> {
+  readonly kind: "contract";
+  readonly operation: Operation;
+  readonly failure: Failure;
+}
+
+/** A network failure, a timeout or an abort as a plain value a store keeps. */
+export interface PlainRejection {
+  readonly kind: "rejection";
+  readonly name: string;
+  readonly message: string;
+}
+
+/** A call's outcome as a store keeps it: its data, or its failure as a plain value. */
+export type StoreOutcome<Data, Failure> =
+  | { readonly data: Data; readonly error?: undefined }
+  | { readonly error: Failure; readonly data?: undefined };
+
+/** The success with plain headers as data; a declared error, an unexpected answer or a rejection as a plain error. */
+export function settleForStore<Operation extends string, Result extends ClientResult>(
+  operation: Operation,
+  pending: Promise<Result>,
+): Promise<
+  StoreOutcome<
+    WithPlainHeaders<SuccessOf<Result>>,
+    ContractFailure<Operation, WithPlainHeaders<FailureOf<Result>>> | PlainRejection
+  >
+>;
+export async function settleForStore(
+  operation: string,
+  pending: Promise<ClientResult>,
+): Promise<StoreOutcome<object, ContractFailure<string, object> | PlainRejection>> {
+  try {
+    const result = await pending;
+
+    if (result.ok) return { data: withPlainHeaders(result) };
+
+    return { error: { kind: "contract", operation, failure: withPlainHeaders(result) } };
+  } catch (rejection) {
+    return { error: plainRejection(rejection) };
+  }
+}
+
+/** The whole result with plain headers as data, a declared error included; only a rejection as a plain error. */
+export function settleAsData<Result extends ClientResult>(
+  pending: Promise<Result>,
+): Promise<StoreOutcome<WithPlainHeaders<Result>, PlainRejection>>;
+export async function settleAsData(
+  pending: Promise<ClientResult>,
+): Promise<StoreOutcome<object, PlainRejection>> {
+  try {
+    return { data: withPlainHeaders(await pending) };
+  } catch (rejection) {
+    return { error: plainRejection(rejection) };
+  }
+}
+
+/** A rejection as a plain value: the name and message of the thrown error. */
+export function plainRejection(rejection: unknown): PlainRejection {
+  if (rejection instanceof Error) {
+    return { kind: "rejection", name: rejection.name, message: rejection.message };
+  }
+
+  return { kind: "rejection", name: REJECTION_NAME, message: String(rejection) };
+}
+
+/** Whether a key starts with the members of `prefix`: equal strings, or records with equal members. */
+export function keyStartsWith(key: unknown, prefix: readonly unknown[]): boolean {
+  if (!Array.isArray(key) || key.length < prefix.length) return false;
+
+  return prefix.every((member, index) => sameKeyMember(key[index], member));
+}
+
+function sameKeyMember(actual: unknown, expected: unknown): boolean {
+  if (!isRecord(expected)) return actual === expected;
+
+  return (
+    isRecord(actual) &&
+    Object.keys(actual).length === Object.keys(expected).length &&
+    Object.entries(expected).every(([member, value]) => actual[member] === value)
+  );
+}
+
+/** The keys of the mounted queries of each resource, counted, so a write revalidates the ones its filter skips. */
+export class MountedKeys<Resource extends string> {
+  private readonly counts = new Map<Resource, Map<string, number>>();
+
+  /** Records a mounted key and returns the function that removes it, for an effect's cleanup. */
+  add(resource: Resource, key: string): () => void {
+    const keys = this.counts.get(resource) ?? new Map<string, number>();
+
+    keys.set(key, (keys.get(key) ?? 0) + 1);
+    this.counts.set(resource, keys);
+
+    return () => {
+      const count = keys.get(key) ?? 0;
+
+      if (count <= 1) keys.delete(key);
+      else keys.set(key, count - 1);
+    };
+  }
+
+  keysOf(resource: Resource): string[] {
+    return [...(this.counts.get(resource)?.keys() ?? [])];
+  }
+}
+
+/**
+ * The request each page of an infinite query was read with, by the page's data, for a library that hands the next
+ * page's key builder the previous page only.
+ */
+export class PageRequests<Request extends object | undefined> {
+  private readonly requests = new WeakMap<object, Request>();
+
+  /** Keeps the request `page` was read with and returns the page. */
+  remember<Page extends object>(page: Page, request: Request): Page {
+    this.requests.set(page, request);
+
+    return page;
+  }
+
+  /** The request of the page after `page`, or undefined when no next-page fact says a page follows. */
+  nextAfter(rule: NextPageRule, page: object): Request | undefined {
+    if (!this.requests.has(page)) {
+      throw new Error(
+        "The infinite query holds a page it did not read itself (a fallback or a restored cache), so the next page's request is unknown: load the first page through the generated infinite hook.",
+      );
+    }
+
+    return nextPageRequest(rule, this.requests.get(page), page);
+  }
 }
 
 /** Every item of an infinite query's pages, in order. */
