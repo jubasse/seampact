@@ -15,6 +15,7 @@ export const PACKED_PACKAGES: readonly string[] = [
   "packages/targets/codegen-yup",
   "packages/targets/codegen-class-validator",
   "packages/targets/codegen-fetch",
+  "packages/targets/codegen-react",
   "packages/targets/codegen-nestjs",
   "packages/targets/codegen-express",
   "packages/targets/codegen-fastify",

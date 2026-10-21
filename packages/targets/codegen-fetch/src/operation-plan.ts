@@ -1,5 +1,7 @@
 import {
   below,
+  type ClientFilledHeaders,
+  clientFilledHeadersOf,
   type IrLocation,
   type Refusal,
   refuseInconsistentIr,
@@ -79,11 +81,8 @@ export function planOperation(
 ): PlannedOperation {
   refuseOperationForms(operation, location, refusals);
 
-  const idempotency = idempotencyPlan(operation, location, refusals);
-  const filledHeaders = [
-    ...(idempotency === undefined ? [] : [idempotency.header]),
-    ...(operation.deadlineHeader === undefined ? [] : [operation.deadlineHeader]),
-  ];
+  const filled = clientFilledHeadersOf(operation);
+  const idempotency = idempotencyPlan(operation, filled, location, refusals);
   const plan: OperationPlan = {
     method: methodOf(operation, location, refusals),
     path: operation.path,
@@ -108,11 +107,7 @@ export function planOperation(
     refuseNonSimpleType(param, "path", below(location, "params", "path", index), refusals);
   });
 
-  return {
-    plan,
-    filledHeaderKeys: filledHeaders.map((header) => header.toLowerCase()),
-    needsTimeout: operation.deadlineHeader !== undefined && operation.budgetMs === undefined,
-  };
+  return { plan, filledHeaderKeys: filled.filledHeaderKeys, needsTimeout: filled.needsTimeout };
 }
 
 function refuseOperationForms(
@@ -285,8 +280,10 @@ function refuseHeaderTaggedUnion(
   );
 }
 
+// The client fills a derived key; an unknown kind is refused, an exemption fills nothing.
 function idempotencyPlan(
   operation: Operation,
+  filled: ClientFilledHeaders,
   location: IrLocation,
   refusals: Refusal[],
 ): OperationPlan["idempotency"] {
@@ -294,13 +291,13 @@ function idempotencyPlan(
 
   if (idempotency === undefined || idempotency.kind === "exempt") return undefined;
 
-  if (idempotency.kind !== "derived" || !("header" in idempotency)) {
+  if (filled.idempotency === undefined) {
     refusals.push(refuseUnknownValueAt(below(location, "idempotency", "kind"), idempotency.kind));
 
     return undefined;
   }
 
-  return { header: idempotency.header, replayHeader: idempotency.replayHeader };
+  return { header: filled.idempotency.header, replayHeader: filled.idempotency.replayHeader };
 }
 
 function isDerivedNotModified(response: Response): boolean {

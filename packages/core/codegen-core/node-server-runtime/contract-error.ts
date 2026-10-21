@@ -30,14 +30,18 @@ export interface ContractReply {
 
 /** A declared error code of the operation, raised by a check step and rendered by the filter. */
 export class ContractError extends Error {
-  constructor(
-    readonly code: string,
-    readonly params?: unknown,
-    /** Set on an unexpected failure: the cause handed to `onUnexpectedError`. */
-    readonly unexpectedCause?: unknown,
-  ) {
+  readonly code: string;
+  readonly params?: unknown;
+  /** Set on an unexpected failure: the cause handed to `onUnexpectedError`. */
+  readonly unexpectedCause?: unknown;
+
+  // Plain fields, not parameter properties: a Vite app's `erasableSyntaxOnly` refuses those.
+  constructor(code: string, params?: unknown, unexpectedCause?: unknown) {
     super(`seampact contract error ${code}`);
     this.name = "ContractError";
+    this.code = code;
+    this.params = params;
+    this.unexpectedCause = unexpectedCause;
   }
 }
 
