@@ -175,6 +175,19 @@ const DIRECTORY_CASES: readonly DirectoryCase[] = [
     failure: { code: "bundle.file-size", files: [SOURCE_FILE] },
   },
   {
+    id: "manifest-size-rounded",
+    description:
+      "A source size written with a fraction past double precision: every reader rounds it to the size, as JSON.parse does.",
+    tamper: (files) =>
+      editManifestText(files, (manifest) =>
+        manifest.replace(
+          new RegExp(`("path": "${SOURCE_FILE}",[^}]*"size": )(\\d+)`),
+          (_match, prefix: string, size: string) =>
+            `${prefix}${Number(size) - 1}.99999999999999999999`,
+        ),
+      ),
+  },
+  {
     id: "file-added",
     description: "A file the manifest does not list.",
     tamper: (files) => files.set("sources/extra.yaml", text("x: 1\n")),

@@ -1,5 +1,6 @@
 package io.github.jubasse.seampact.ir.bundle
 
+import java.math.BigInteger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Base64
@@ -65,6 +66,20 @@ class TamperedBundleTest {
 
         check(result is BundleVerifyResult.Refused)
         assertEquals(listOf(BundleFailureCode.FILE_UNLISTED to "sources/extra.yaml"), result.failures.map { it.code to it.file })
+    }
+
+    @Test
+    fun aSizePastTheLongRangeDoesNotWrapToTheFileSize() {
+        // 2^64 + 53: its low 64 bits are the source's 53 bytes; read as JSON.parse reads it, it is far larger.
+        val manifest = directory.resolve(BUNDLE_MANIFEST_FILE)
+        val sourceSize = Files.size(directory.resolve("sources/api.yaml"))
+        val wrapping = BigInteger.TWO.pow(Long.SIZE_BITS).add(BigInteger.valueOf(sourceSize))
+        Files.writeString(manifest, Files.readString(manifest).replace("\"size\": $sourceSize", "\"size\": $wrapping"))
+
+        val result = BundleVerifier.verify(directory, integrity, BundleChannel.RELEASE)
+
+        check(result is BundleVerifyResult.Refused) { "the bundle was verified: $result" }
+        assertEquals(listOf(BundleFailureCode.FILE_SIZE to "sources/api.yaml"), result.failures.map { it.code to it.file })
     }
 
     @Test

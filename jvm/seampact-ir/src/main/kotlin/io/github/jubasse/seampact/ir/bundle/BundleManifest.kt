@@ -1,5 +1,6 @@
 package io.github.jubasse.seampact.ir.bundle
 
+import io.github.jubasse.seampact.ir.model.irNumberOf
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -51,7 +52,9 @@ public data class BundleManifest(
 
         private fun JsonObject.string(name: String): String = getValue(name).jsonPrimitive.content
 
-        // The schema made it an integer; `1.0` is one too.
-        private fun JsonObject.long(name: String): Long = getValue(name).jsonPrimitive.content.toBigDecimal().toLong()
+        // The schema made it an integer-valued number. It is read as the correctly rounded double, as JSON.parse
+        // reads it, so every verifier compares the same value; one past the Long range saturates and fails its check.
+        private fun JsonObject.long(name: String): Long =
+            checkNotNull(irNumberOf(getValue(name).jsonPrimitive.content)) { "bundle: the schema let a non-number through at '$name'." }.toLong()
     }
 }

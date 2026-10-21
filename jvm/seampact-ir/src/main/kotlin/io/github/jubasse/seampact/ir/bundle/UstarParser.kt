@@ -82,7 +82,8 @@ internal class UstarParser(private val archive: ByteArray) {
         val size = pax.size ?: octal(header, SIZE) ?: return archiveInvalid("an entry's size is not octal digits", path)
 
         val dataStart = offset + BLOCK_BYTES
-        if (dataStart + size > archive.size) return archiveInvalid("it ends inside an entry", path)
+        // Subtracted, not added: a pax size near Long.MAX_VALUE would overflow the sum.
+        if (size > archive.size - dataStart) return archiveInvalid("it ends inside an entry", path)
 
         // Within the archive, so within an Int.
         val dataEnd = dataStart + size.toInt()

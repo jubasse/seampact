@@ -246,6 +246,39 @@
       }
     },
     {
+      "id": "manifest-size-rounded",
+      "description": "A source size written with a fraction past double precision: every reader rounds it to the size, as JSON.parse does.",
+      "channel": "release",
+      "pin": "sha256-mtw1LkRCB5fNlvCLQKDoVPotLMCs1ll2u6TKMmQzo6g=",
+      "files": [
+        {
+          "path": "ir/t.json",
+          "base64": "ewogICJhcGkiOiB7CiAgICAiY29tcGF0IjogewogICAgICAicG9saWN5IjogIm5vbmUiCiAgICB9LAogICAgImRvY3MiOiB7fSwKICAgICJkb2N1bWVudHMiOiB7fSwKICAgICJleHRlbnNpb25zIjoge30sCiAgICAiaWQiOiAidCIsCiAgICAia2luZCI6ICJwcm9kdWN0IiwKICAgICJtYXR1cml0eSI6ICJleHBlcmltZW50YWwiLAogICAgIm5hbWUiOiB7CiAgICAgICJyb2xlIjogInNjaGVtYSIsCiAgICAgICJzZWdtZW50cyI6IFsKICAgICAgICAidCIKICAgICAgXQogICAgfSwKICAgICJvcmlnaW4iOiB7CiAgICAgICJsYXllciI6ICJhcGkiLAogICAgICAicG9pbnRlciI6ICIvYXBpIgogICAgfSwKICAgICJwYXRoVmVyc2lvbiI6IHsKICAgICAgIm9yaWdpbiI6IHsKICAgICAgICAibGF5ZXIiOiAiYXBpIiwKICAgICAgICAicG9pbnRlciI6ICIvYXBpL3ZlcnNpb24iCiAgICAgIH0sCiAgICAgICJ2YWx1ZSI6ICJwcmVmaXgiCiAgICB9LAogICAgInN1cmZhY2VzIjoge30sCiAgICAidmVyc2lvbiI6IHsKICAgICAgImtpbmQiOiAicGF0aCIsCiAgICAgICJudW1iZXIiOiAxCiAgICB9LAogICAgIndpcmUiOiB7CiAgICAgICJpbnQ2NCI6ICJzdHJpbmciLAogICAgICAib3V0cHV0RW51bXMiOiAiZW51bSIsCiAgICAgICJ1cmxzIjogInJlbGF0aXZlIgogICAgfQogIH0sCiAgImJ1Y2tldHMiOiB7fSwKICAiY29udmVudGlvbnMiOiB7CiAgICAicGFnaW5nLmRlZmF1bHQiOiB7CiAgICAgICJvcmlnaW4iOiB7CiAgICAgICAgImxheWVyIjogInBhY2s6QGFjbWUvcGFjay1hIiwKICAgICAgICAicG9pbnRlciI6ICIvY29udmVudGlvbnMvcGFnaW5nL2RlZmF1bHQiCiAgICAgIH0sCiAgICAgICJ2YWx1ZSI6ICJjdXJzb3IiCiAgICB9CiAgfSwKICAiZW51bXMiOiB7fSwKICAiZXJyb3JzIjoge30sCiAgImV4dGVuc2lvbktleXMiOiB7fSwKICAiZmVhdHVyZXMiOiBbXSwKICAiZm9ybWF0cyI6IHt9LAogICJoZWFkZXJzIjoge30sCiAgImlkZW50aXRpZXMiOiB7fSwKICAiaXJSZXZpc2lvbiI6IDYsCiAgImlyVmVyc2lvbiI6IDEsCiAgImtpbmRzIjogW10sCiAgImxpbnQiOiB7CiAgICAiYWxsb3dzIjogW10sCiAgICAicnVsZXMiOiB7fQogIH0sCiAgIm5hdHVyZXMiOiB7fSwKICAib3BlcmF0aW9ucyI6IFtdLAogICJwYWNrcyI6IFsKICAgIHsKICAgICAgIm5hbWUiOiAiQGFjbWUvcGFjay1hIiwKICAgICAgInZlcnNpb24iOiAiMS4yLjAiCiAgICB9CiAgXSwKICAicGFnaW5ncyI6IHt9LAogICJyaWdodHMiOiB7fSwKICAicnVsZXMiOiB7fSwKICAic2NhbGFycyI6IHt9LAogICJzY2hlbWFzIjoge30sCiAgInNjaGVtZXMiOiB7fSwKICAic2NvcGVzIjoge30sCiAgInNlcnZpY2VzIjoge30KfQo="
+        },
+        {
+          "path": "seampact-bundle.json",
+          "base64": "ewogICJhcGlzIjogWwogICAgewogICAgICAiZmlsZSI6ICJpci90Lmpzb24iLAogICAgICAiaXJSZXZpc2lvbiI6IDYsCiAgICAgICJpclZlcnNpb24iOiAxLAogICAgICAibmFtZSI6ICJ0IgogICAgfQogIF0sCiAgImNvbXBpbGVyIjogewogICAgIm5hbWUiOiAiQHNlYW1wYWN0L2NvbXBpbGVyIiwKICAgICJ2ZXJzaW9uIjogIjAuMC4wIgogIH0sCiAgImNvbnRyYWN0IjogewogICAgIm5hbWUiOiAiQGFjbWUvY29udHJhY3QiLAogICAgInZlcnNpb24iOiAiMy4xLjAiCiAgfSwKICAiZmlsZXMiOiBbCiAgICB7CiAgICAgICJwYXRoIjogImlyL3QuanNvbiIsCiAgICAgICJzaGEyNTYiOiAiNjMwMzdjZjBkOWQ0NzRjYTk5MzIyNmE0MGZiNGY5MzQ2ODg2MDBhMzlmNGJiYzEwYjNhNDQ4NjkzMDlhNjQ4MyIsCiAgICAgICJzaXplIjogMTM2MQogICAgfSwKICAgIHsKICAgICAgInBhdGgiOiAic291cmNlcy8ucGFja3MvQGFjbWUvcGFjay1hQDEuMi4wL2xpYi9wYWNrLnlhbWwiLAogICAgICAic2hhMjU2IjogIjk5NGU4MTI0N2Y3MDIzM2VkMTliYTAyNDM1OTk4OTUxYjA1NWZlYzc1YjIwMDE2ZmVjY2RjOWMxM2FhYTM2MzAiLAogICAgICAic2l6ZSI6IDExMAogICAgfSwKICAgIHsKICAgICAgInBhdGgiOiAic291cmNlcy8ucGFja3MvQGFjbWUvcGFjay1hQDEuMi4wL3BhY2thZ2UuanNvbiIsCiAgICAgICJzaGEyNTYiOiAiODg2NmQzZmMzODkxMzZlNjVkNzljYWFjZmFkMDBiMTE3YWJiMzQxYTcyZTAwMGU2ODJkYTZjMWE0MDY4N2IzMiIsCiAgICAgICJzaXplIjogOTEKICAgIH0sCiAgICB7CiAgICAgICJwYXRoIjogInNvdXJjZXMvYXBpLnlhbWwiLAogICAgICAic2hhMjU2IjogIjgyYjRkM2Q4MmMxZTNhOWM3M2UxODlkNmE5OGMzZWM5NTgzZmYyY2E5MGM1MjgyMWI4MmQyM2EyYTdhNDQyZDAiLAogICAgICAic2l6ZSI6IDUyLjk5OTk5OTk5OTk5OTk5OTk5OTk5CiAgICB9CiAgXSwKICAiZm9ybWF0VmVyc2lvbiI6IDEsCiAgImludGVncml0eSI6ICJzaGEyNTYtbXR3MUxrUkNCNWZObHZDTFFLRG9WUG90TE1DczFsbDJ1NlRLTW1Rem82Zz0iLAogICJwYWNrcyI6IFsKICAgIHsKICAgICAgIm5hbWUiOiAiQGFjbWUvcGFjay1hIiwKICAgICAgInZlcnNpb24iOiAiMS4yLjAiCiAgICB9CiAgXQp9Cg=="
+        },
+        {
+          "path": "sources/.packs/@acme/pack-a@1.2.0/lib/pack.yaml",
+          "base64": "cGFjazogeyBuYW1lOiAnQGFjbWUvcGFjay1hJywgdmVyc2lvbjogMS4yLjAgfQpyaWdodHM6CiAgci5vbmU6IHt9CmNvbnZlbnRpb25zOgogIHBhZ2luZzogeyBkZWZhdWx0OiBjdXJzb3IgfQo="
+        },
+        {
+          "path": "sources/.packs/@acme/pack-a@1.2.0/package.json",
+          "base64": "eyJuYW1lIjoiQGFjbWUvcGFjay1hIiwidmVyc2lvbiI6IjEuMi4wIiwic2VhbXBhY3QiOnsicm9sZSI6InBhY2siLCJwYWNrIjoibGliL3BhY2sueWFtbCJ9fQ=="
+        },
+        {
+          "path": "sources/api.yaml",
+          "base64": "YXBpOiB7IG5hbWU6IHQsIHZlcnNpb246IDEgfQpwYWNrczogWydAYWNtZS9wYWNrLWEnXQo="
+        }
+      ],
+      "expected": {
+        "ok": true,
+        "integrity": "sha256-mtw1LkRCB5fNlvCLQKDoVPotLMCs1ll2u6TKMmQzo6g=",
+        "failures": []
+      }
+    },
+    {
       "id": "file-added",
       "description": "A file the manifest does not list.",
       "channel": "release",
