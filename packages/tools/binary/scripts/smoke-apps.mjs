@@ -106,6 +106,9 @@ function editorSchemaFiles(editorDirectory) {
 }
 
 function withoutDirectory(text, directory) {
-  // A Windows path prints its separators as backslashes.
-  return text.split(directory).join("<app>").replaceAll("<app>\\", "<app>/");
+  // A Windows path prints its separators as backslashes, in every segment under the app directory.
+  return text
+    .split(directory)
+    .join("<app>")
+    .replace(/<app>[^\s'"]*/g, (appPath) => appPath.replaceAll("\\", "/"));
 }
