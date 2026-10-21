@@ -207,6 +207,7 @@ test("5: an unmount aborts the request", async () => {
       signal.addEventListener("abort", () => reject(signal.reason));
     });
   };
+
   const view = await render(<TaskList Tasks={tasksHooksFor(inject("userToken"), hanging)} />, {
     wrapper: providerOf(quietQueryClient()),
   });
@@ -232,6 +233,7 @@ test("6: a dropped first answer and one retry send one idempotency key, the seco
 
     throw new TypeError("The first answer was dropped on its way back.");
   };
+
   const Tasks = tasksHooksFor(inject("userToken"), dropFirstAnswer);
   const { result } = await renderHook(() => Tasks.useCreateTask({ retry: 1, retryDelay: 0 }), {
     wrapper: providerOf(quietQueryClient()),

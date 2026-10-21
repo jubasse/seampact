@@ -154,7 +154,7 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 | AdonisJS | 6, 7 | zod, yup, VineJS |
 | Hono | 4 | zod, yup |
 
-Clients: typed `fetch` client. Hooks for the frontends (React, Vue, Angular): planned.
+Clients: typed `fetch` client, and TanStack Query 5 options and hooks for React 19 over it. SWR and RTK Query for React, Vue and Angular: planned.
 
 Java and PHP: planned.
 

@@ -31,6 +31,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-fetch` | `packages/targets/codegen-fetch` | target | Generates a typed fetch client with one method per operation, returning its success and error responses as typed results. |
 | `@seampact/codegen-hono` | `packages/targets/codegen-hono` | target | Generates a registerRoutes function per api that adds each contract route to a Hono 4 app with its access, validation and reply checks around your handler map, validating with zod. |
 | `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, an input decorator whose pipe validates, a handler wrapper or opt-in reply interceptor that writes the checked reply, the error filter and a boot check, validating with zod. |
+| `@seampact/codegen-react` | `packages/targets/codegen-react` | target | Generates TanStack Query options factories and React hooks over the typed fetch client, with keys, invalidation and paging read from the contract. |
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
 | `@seampact/codegen-yup` | `packages/targets/codegen-yup` | target | Generates Standard Schema yup validators per schema and direction, and one input validator per operation. |
 | `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
@@ -61,7 +62,8 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/codegen-core`
 
-- `packages/core/codegen-core/src`: The API the code generators are written against: target definitions, link descriptors, refusals, and the steps around a target's generate (IR support and link checks, header, formatting, file writer), and the helpers targets share (IR locations, located refusals, planned names, property keys).
+- `packages/core/codegen-core/src`: The API the code generators are written against: target definitions, link descriptors, refusals, and the steps around a target's generate (IR support and link checks, header, formatting, file writer), and the helpers targets share (IR locations, located refusals, planned names, property keys, the front query plan).
+- `packages/core/codegen-core/src/front-queries`: The framework-neutral query plan the front targets render (ADR 0021): per operation its form, export names, key, resource, call options and next-page rule, and the front runtime each front target copies into its output.
 - `packages/core/codegen-core/src/node-server`: The shared server boundary every Node and Web-standard server target generates (ADR 0016, ADR 0020): the framework-neutral runtime copied into the generated tree, the emitters of the route table, handler interfaces and hook types, the target options parser, the path segments a router cannot read, and the assembly of one api's boundary files around a target's placement.
 - `packages/core/codegen-core/src/validators`: The validator-neutral half of every validators target: the module layout and export names, the descriptor, the shared wire checks, and the plan of each schema and operation input with every refusal, which a target renders in its own library.
 
@@ -157,6 +159,11 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-nestjs`
 
 - `packages/targets/codegen-nestjs/src`: The NestJS server target: the boundary around the app's controllers for each api, placing the shared Node request checks of codegen-core in NestJS's middleware, guard, input pipe, a handler wrapper or reply interceptor and filter, validating with zod.
+
+### `@seampact/codegen-react`
+
+- `packages/targets/codegen-react/src`: The React target: TanStack Query options factories and hooks per api over the linked fetch client, from the shared query plan, with the front runtime copied beside them.
+- `packages/targets/codegen-react/src/tanstack`: The TanStack Query renderer of the react target: the server-safe `queries.ts` and the `"use client"` `hooks.ts` of each api, from the shared query plan.
 
 ### `@seampact/codegen-ts`
 
