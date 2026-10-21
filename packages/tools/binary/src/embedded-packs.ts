@@ -14,11 +14,7 @@ import type { EmbeddedPackage } from "./embedded-pack-reader.js";
 
 const PACK_FILE_NAME = "pack.yaml";
 
-function embeddedPackage(
-  name: string,
-  manifestText: string,
-  packText: string,
-): EmbeddedPackage {
+function embeddedPackage(name: string, manifestText: string, packText: string): EmbeddedPackage {
   return {
     name,
     files: { "package.json": manifestText, [PACK_FILE_NAME]: packText },

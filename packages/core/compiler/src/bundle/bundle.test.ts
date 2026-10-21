@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { expect, test } from "vitest";
 import { loadFsReader, loadMemoryReader } from "../load/reader.js";
@@ -80,7 +87,10 @@ test("a pack reached through a node_modules symlink is vendored", () => {
   const pack = join(root, "packs", "pack-a");
   const entries = Object.entries(PACK_CONTRACT);
 
-  writeFiles(contract, Object.fromEntries(entries.filter(([file]) => !file.startsWith(packPrefix))));
+  writeFiles(
+    contract,
+    Object.fromEntries(entries.filter(([file]) => !file.startsWith(packPrefix))),
+  );
   writeFiles(
     pack,
     Object.fromEntries(
