@@ -1,7 +1,7 @@
 // The apps the reference run and the smoke run the CLI on: the reference contract, and one contract per first-party
 // pack that has a golden contract (it names its pack, which the binary resolves from the packs it embeds).
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -29,11 +29,12 @@ targets:
 const irFileNames = APIS.map((api) => `${api}.ir.json`);
 const BUNDLE_FILE = "contract.seampact.tgz";
 
-// The files both runs write and the smoke compares byte for byte: each IR file and the bundle tarball, which is
-// reproducible (ADR 0011) and vendors the same pack files whether the pack is linked or embedded.
-export function comparedFileNames() {
-  return [...irFileNames, BUNDLE_FILE];
-}
+// The files both runs write and the smoke compares byte for byte: each IR file, the bundle tarball, which is
+// reproducible (ADR 0011) and vendors the same pack files whether the pack is linked or embedded, and the editor
+// schemas `compile --editor-schemas` writes, keyed under this prefix.
+export const EDITOR_SCHEMAS_PREFIX = "editor-schemas/";
+
+const EDITOR_SCHEMAS_DIRECTORY = join(CONTRACT_DIRECTORY, ".seampact", "schemas");
 
 // Writes the app (config and a copy of the contract) into `directory`.
 export function writeSmokeApp(app, directory) {
@@ -50,6 +51,7 @@ const IR_DIRECTORY = "ir";
 // directory replaced since it differs between runs.
 const APP_STEPS = [
   ["compile", "--out", IR_DIRECTORY],
+  ["compile", "--editor-schemas"],
   ["lint"],
   ["diff", "--against", IR_DIRECTORY],
   ["bundle", "--tarball", BUNDLE_FILE, "--name", "@seampact-smoke/contract", "--version", "1.0.0"],
@@ -85,14 +87,22 @@ export function runSmokeApp({ executable, prefixArguments = [], environment, app
     for (const step of GLOBAL_STEPS) steps[step.join(" ")] = answer(step);
   }
 
-  const writtenFiles = Object.fromEntries(
-    comparedFileNames().map((file) => [
-      file,
-      readFileSync(join(directory, file === BUNDLE_FILE ? "" : IR_DIRECTORY, file)),
-    ]),
-  );
+  const writtenFiles = Object.fromEntries([
+    ...irFileNames.map((file) => [file, readFileSync(join(directory, IR_DIRECTORY, file))]),
+    [BUNDLE_FILE, readFileSync(join(directory, BUNDLE_FILE))],
+    ...editorSchemaFiles(join(directory, EDITOR_SCHEMAS_DIRECTORY)),
+  ]);
 
   return { steps, writtenFiles };
+}
+
+// Every file the editor schemas directory holds, in name order; none when the command wrote no directory.
+function editorSchemaFiles(editorDirectory) {
+  if (!existsSync(editorDirectory)) return [];
+
+  return readdirSync(editorDirectory)
+    .sort()
+    .map((file) => [`${EDITOR_SCHEMAS_PREFIX}${file}`, readFileSync(join(editorDirectory, file))]);
 }
 
 function withoutDirectory(text, directory) {

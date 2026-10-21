@@ -1,5 +1,5 @@
 // Runs one binary on the smoke apps and compares it with the reference the Node CLI produced on Linux: the IR
-// files and each app's bundle byte for byte, and the answers of the commands both carry. The apps are copied outside the repository,
+// files, each app's bundle and its editor schemas byte for byte, and the answers of the commands both carry. The apps are copied outside the repository,
 // so a pack can only come from the packs embedded in the binary.
 // Usage: node scripts/smoke.mjs <binary> <reference-dir> [--label <name>]
 // Env: SMOKE_ENV='{"TZ":"Asia/Kolkata","LOG_TOKENS":"1"}' extra environment for the binary.
@@ -8,6 +8,7 @@ import {
   appendFileSync,
   existsSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -18,7 +19,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   BINARY_REFUSED_COMMANDS,
-  comparedFileNames,
+  EDITOR_SCHEMAS_PREFIX,
   runSmokeApp,
   SMOKE_APPS,
   writeSmokeApp,
@@ -90,14 +91,35 @@ for (const app of SMOKE_APPS) {
     `${app.name}: command answers differ from the Node CLI:\n${JSON.stringify(steps)}\n${JSON.stringify(withoutRefusedCommands(referenceSteps))}`,
   );
 
-  for (const file of comparedFileNames()) {
+  const referenceFiles = referenceFileNames(join(referenceDirectory, app.name));
+
+  check(
+    JSON.stringify(Object.keys(writtenFiles).sort()) === JSON.stringify(referenceFiles),
+    `${app.name}: the binary wrote ${Object.keys(writtenFiles).length} files, the Node CLI ${referenceFiles.length}`,
+  );
+  check(
+    referenceFiles.some((file) => file.startsWith(EDITOR_SCHEMAS_PREFIX)),
+    `${app.name}: compile --editor-schemas wrote no editor schema`,
+  );
+
+  for (const file of referenceFiles) {
     const reference = readFileSync(join(referenceDirectory, app.name, file));
 
     check(
-      Buffer.compare(writtenFiles[file], reference) === 0,
+      writtenFiles[file] !== undefined && Buffer.compare(writtenFiles[file], reference) === 0,
       `${app.name}/${file} differs from the Node CLI's`,
     );
   }
+}
+
+// The files the Node CLI wrote for one app, with forward slashes, sorted; `steps.json` holds its answers.
+function referenceFileNames(appReference) {
+  return readdirSync(appReference, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => join(entry.parentPath, entry.name).slice(appReference.length + 1))
+    .map((file) => file.replaceAll("\\", "/"))
+    .filter((file) => file !== "steps.json")
+    .sort();
 }
 
 for (const command of BINARY_REFUSED_COMMANDS) {

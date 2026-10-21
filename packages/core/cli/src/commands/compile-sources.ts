@@ -19,6 +19,7 @@ import type { ContractIR, SourceMap } from "@seampact/spec/ir";
 import type { CliIo } from "../cli-io.js";
 import type { CliProblem } from "../cli-problem.js";
 import type { LoadedAppConfig } from "../config/index.js";
+import { type EditorDeclaration, editorDeclarations } from "../editor-schemas/index.js";
 import { SINGLE_API_ENTRY, sourceEntryFile, WORKSPACE_ENTRY } from "./workspace-api-names.js";
 
 export interface CompiledApi {
@@ -27,6 +28,8 @@ export interface CompiledApi {
   ir: ContractIR;
   // What `lint` reads besides the IR; absent for an api taken from a bundle, which no compiler ran on.
   lintInput?: { declared: readonly LintDeclared[]; locations: SourceMap["locations"] };
+  // What the api declares, located by the workspace's own file names; absent for an api taken from a bundle.
+  declarations?: readonly EditorDeclaration[];
 }
 
 export interface CompiledSources {
@@ -153,6 +156,7 @@ async function compileSource(name: string, directory: string, run: SourceRun): P
         declared: api.declared ?? [],
         locations: labelledLocations(api.locations, label),
       },
+      declarations: editorDeclarations(api),
     });
   }
 }
