@@ -201,28 +201,37 @@ function withoutValidatorsEntry(config: string): string {
     .join("\n");
 }
 
-// The target's overlay after its bases, the deepest first: each overlay names at most one base, and the chain may
-// not come back to an overlay it already holds.
+// The target's overlay after its bases, each base's own chain first and in the order `overlay.base` lists them. An
+// overlay reached twice is kept once, at its first place; a chain may not come back to an overlay on its current path.
 export function overlayChain(targetsRoot: string, target: string): string[] {
   const chain: string[] = [];
-  let current: string | undefined = target;
 
-  while (current !== undefined) {
-    if (chain.includes(current)) {
-      throw new Error(
-        `consumers: the overlay bases form a cycle: ${[...chain, current].join(" -> ")}; make one overlay of the chain name no ${OVERLAY_BASE_FILE}.`,
-      );
-    }
+  addOverlayAfterBases(targetsRoot, target, [], chain);
 
-    chain.push(current);
-    current = overlayBase(targetsRoot, current);
-  }
-
-  return chain.reverse().map((overlay) => join(targetsRoot, overlay));
+  return chain.map((overlay) => join(targetsRoot, overlay));
 }
 
-// The target id an overlay's `overlay.base` names, if any.
-function overlayBase(targetsRoot: string, target: string): string | undefined {
+function addOverlayAfterBases(
+  targetsRoot: string,
+  overlay: string,
+  path: readonly string[],
+  chain: string[],
+): void {
+  if (path.includes(overlay)) {
+    throw new Error(
+      `consumers: the overlay bases form a cycle: ${[...path, overlay].join(" -> ")}; make one overlay of the chain name no ${OVERLAY_BASE_FILE}.`,
+    );
+  }
+
+  for (const base of overlayBases(targetsRoot, overlay)) {
+    addOverlayAfterBases(targetsRoot, base, [...path, overlay], chain);
+  }
+
+  if (!chain.includes(overlay)) chain.push(overlay);
+}
+
+// The target ids an overlay's `overlay.base` names, one per line, in order; none without the file.
+function overlayBases(targetsRoot: string, target: string): string[] {
   const overlay = join(targetsRoot, target);
 
   if (!existsSync(overlay)) {
@@ -233,17 +242,22 @@ function overlayBase(targetsRoot: string, target: string): string | undefined {
 
   const baseFile = join(overlay, OVERLAY_BASE_FILE);
 
-  if (!existsSync(baseFile)) return undefined;
+  if (!existsSync(baseFile)) return [];
 
-  const base = readFileSync(baseFile, "utf8").trim();
+  const bases = readFileSync(baseFile, "utf8")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
 
-  if (!TARGET_ID.test(base)) {
-    throw new Error(
-      `consumers: ${baseFile} must name one target overlay id (${TARGET_ID.source}), not '${base}'.`,
-    );
+  for (const base of bases) {
+    if (!TARGET_ID.test(base)) {
+      throw new Error(
+        `consumers: ${baseFile} must name target overlay ids (${TARGET_ID.source}), one per line, not '${base}'.`,
+      );
+    }
   }
 
-  return base;
+  return bases;
 }
 
 // The template config ends with its `targets` list, so the overlay's items extend it.

@@ -1,9 +1,11 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { parse } from "yaml";
-import { overlayChain, useTarballs, withTargetOptions } from "./consumer-project.ts";
+import { REPO_ROOT } from "../golden/repo-root.ts";
+import { assembleConsumer, overlayChain, useTarballs, withTargetOptions } from "./consumer-project.ts";
+import { validatorChoice } from "./validator-choice.ts";
 
 const directories: string[] = [];
 
@@ -82,8 +84,8 @@ test("writes each target option into every entry's options, read as YAML", () =>
   expect(written.startsWith("  - id: server")).toBe(true);
 });
 
-// A targets directory holding one overlay per entry, each with the base it names, if any.
-function targetsWith(bases: Record<string, string | undefined>): string {
+// A targets directory holding one overlay per entry, each with the base or bases it names, if any.
+function targetsWith(bases: Record<string, string | readonly string[] | undefined>): string {
   const root = mkdtempSync(join(tmpdir(), "consumer-overlays-"));
 
   directories.push(root);
@@ -91,7 +93,7 @@ function targetsWith(bases: Record<string, string | undefined>): string {
   for (const [overlay, base] of Object.entries(bases)) {
     mkdirSync(join(root, overlay));
 
-    if (base !== undefined) writeFileSync(join(root, overlay, "overlay.base"), `${base}\n`);
+    if (base !== undefined) writeFileSync(join(root, overlay, "overlay.base"), `${[base].flat().join("\n")}\n`);
   }
 
   return root;
@@ -125,4 +127,49 @@ test("a base that names no overlay is refused with the known targets", () => {
   expect(() => overlayChain(root, "front")).toThrow(
     "consumers: no overlay for target 'missing'; known targets: front.",
   );
+});
+
+test("an overlay naming several bases lists them in order, each chain before the overlay", () => {
+  const root = targetsWith({ hono: undefined, front: undefined, "front-fetch": ["hono", "front"] });
+
+  expect(overlayChain(root, "front-fetch")).toEqual(
+    ["hono", "front", "front-fetch"].map((overlay) => join(root, overlay)),
+  );
+});
+
+test("an overlay reached through two paths is listed once, at its first place", () => {
+  const root = targetsWith({
+    hono: undefined,
+    front: "hono",
+    react: ["hono", "front"],
+    "react-tanstack": ["hono", "react"],
+  });
+
+  expect(overlayChain(root, "react-tanstack")).toEqual(
+    ["hono", "front", "react", "react-tanstack"].map((overlay) => join(root, overlay)),
+  );
+});
+
+test("a cycle through the second base is refused, naming the path", () => {
+  const root = targetsWith({ hono: undefined, front: "react", react: ["hono", "front"] });
+
+  expect(() => overlayChain(root, "react")).toThrow("cycle: react -> front -> react");
+});
+
+test("the front overlay alone adds no server entry, so its Vitest config runs the browser project only", () => {
+  const directory = join(mkdtempSync(join(tmpdir(), "consumer-front-")), "app");
+
+  directories.push(join(directory, ".."));
+
+  assembleConsumer({
+    consumersRoot: join(REPO_ROOT, "scripts/consumers"),
+    repositoryRoot: REPO_ROOT,
+    target: "front",
+    validators: validatorChoice("zod"),
+    directory,
+    commit: "test",
+  });
+
+  expect(existsSync(join(directory, "vitest.config.mts"))).toBe(true);
+  expect(existsSync(join(directory, "test/server.mts"))).toBe(false);
 });

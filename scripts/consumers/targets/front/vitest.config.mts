@@ -14,7 +14,8 @@ import "./test/front/provided.mjs";
 
 const SERVER_ENTRY = new URL("./test/server.mts", import.meta.url);
 
-// The paths the page sends to the server: each api's base path and the http suite's control routes.
+// The paths the page sends to the server: the base paths of the reference contract (`fixtures/reference`, copied into
+// every consumer) and the http suite's control routes. A contract with another base path needs its path added here.
 const PROXIED_PATHS = ["^/v1/", "^/internal/", "^/__seampact/"];
 
 interface RunningServer {

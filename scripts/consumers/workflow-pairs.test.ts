@@ -16,6 +16,9 @@ const CONSUMER_WORKFLOWS = [
   "validators-2.yml",
 ];
 
+// The workflows that run a front consumer: not a server pair, so only the matrix axes are checked.
+const FRONT_CONSUMER_WORKFLOWS = ["p6-react.yml"];
+
 // The server target package and framework major each consumer target id tests, from the matrix's tested majors.
 const CONSUMER_TARGETS: ReadonlyMap<string, string> = new Map(
   offeredValidatorPairs().map((pair) => [pair.consumer, `${pair.target}@${pair.frameworkMajor}`]),
@@ -110,5 +113,19 @@ describe("consumer workflows", () => {
       .sort();
 
     expect(workflowPairs).toEqual(offeredPairs);
+  });
+});
+
+describe("front consumer workflows", () => {
+  it("pass both matrix axes to the consumer run", () => {
+    for (const file of FRONT_CONSUMER_WORKFLOWS) {
+      const document: WorkflowDocument = parse(
+        readFileSync(join(WORKFLOWS_DIRECTORY, file), "utf8"),
+      );
+
+      for (const [jobId, job] of Object.entries(document.jobs)) {
+        if (job.strategy?.matrix !== undefined) assertRunPassesEveryAxis(file, jobId, job);
+      }
+    }
   });
 });
