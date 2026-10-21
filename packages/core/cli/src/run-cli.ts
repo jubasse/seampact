@@ -2,6 +2,8 @@ import { parseArgs } from "node:util";
 import { type CliIo, EXIT_USAGE, printProblems } from "./cli-io.js";
 import type { CliProblem } from "./cli-problem.js";
 import {
+  type BundleCommandOptions,
+  bundleCommand,
   checkCommand,
   compileCommand,
   configLocation,
@@ -32,10 +34,14 @@ const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
     "diff",
     '  diff --against <path> [--config <path>]  Classify the changes since the IRs at <path> (an IR file, or a directory of <api>.ir.json that "compile --out <dir>" writes).',
   ],
+  [
+    "bundle",
+    "  bundle (--out <dir> | --tarball <file> | --npm-package <dir>) [--source <name>] [--name <name>] [--version <version>] [--config <path>]\n                                           Write the bundle of a `path` source (the config's only one, or --source) and print its integrity; the contract name and version default to the workspace's package.json.",
+  ],
 ]);
 
 // The commands and flags of the CLI design that are not available yet; each answers with exit code 2.
-const WAITING_COMMANDS: ReadonlySet<string> = new Set(["init", "bundle", "explain"]);
+const WAITING_COMMANDS: ReadonlySet<string> = new Set(["init", "explain"]);
 const WAITING_FLAGS: ReadonlySet<string> = new Set([
   "--watch",
   "--strict",
@@ -83,6 +89,8 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
   if (command === "lint") return runLint(rest, io);
 
   if (command === "diff") return runDiff(rest, io);
+
+  if (command === "bundle") return runBundle(rest, io);
 
   return usageError(io, `Unknown command '${command}'.`);
 }
@@ -136,6 +144,59 @@ async function runDiff(args: readonly string[], io: CliIo): Promise<number> {
   if (against === undefined) return usageError(io, "`diff` needs `--against <path>`.");
 
   return diffCommand(configLocation(io.cwd, stringOption(parsed.values.config)), against, io);
+}
+
+const BUNDLE_OUTPUT_FLAGS = ["out", "tarball", "npm-package"] as const;
+
+async function runBundle(args: readonly string[], io: CliIo): Promise<number> {
+  const parsed = parseCommandArgs(args, {
+    config: { type: "string" },
+    source: { type: "string" },
+    out: { type: "string" },
+    tarball: { type: "string" },
+    "npm-package": { type: "string" },
+    name: { type: "string" },
+    version: { type: "string" },
+  });
+
+  if (parsed.status === "refused") return usageError(io, parsed.message);
+
+  const { values } = parsed;
+  const given = BUNDLE_OUTPUT_FLAGS.flatMap((flag) => {
+    const path = stringOption(values[flag]);
+
+    return path === undefined ? [] : [bundleOutput(flag, path)];
+  });
+  const [output] = given;
+
+  if (output === undefined || given.length > 1)
+    return usageError(
+      io,
+      "`bundle` needs exactly one of `--out`, `--tarball` and `--npm-package`.",
+    );
+
+  const name = stringOption(values.name);
+  const version = stringOption(values.version);
+  const source = stringOption(values.source);
+  const options: BundleCommandOptions = {
+    output,
+    contract: {
+      ...(name === undefined ? {} : { name }),
+      ...(version === undefined ? {} : { version }),
+    },
+    ...(source === undefined ? {} : { source }),
+  };
+
+  return bundleCommand(configLocation(io.cwd, stringOption(values.config)), options, io);
+}
+
+function bundleOutput(
+  flag: (typeof BUNDLE_OUTPUT_FLAGS)[number],
+  path: string,
+): BundleCommandOptions["output"] {
+  if (flag === "out") return { directory: path };
+
+  return flag === "tarball" ? { tarball: path } : { npmPackage: path };
 }
 
 type OptionSpec = Record<string, { type: "string" | "boolean" }>;
