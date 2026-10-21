@@ -241,6 +241,8 @@ With `springSecurity` on, the target generates Spring Security 7 beans in their 
 - An `AuthenticationEntryPoint`, an `AccessDeniedHandler` and the CSRF refusal (a `CsrfException` in that handler, the `csrfInvalid` role). Each answers in the api's format with the role of the operation the request matches. The app wires them in its own chain (`exceptionHandling`, `httpBasic`, `oauth2ResourceServer`); the README shows it.
 - Opt-in, with `springSecurity: { matchers: true }` (A42): a `Customizer<HttpSecurity>` bean. Spring Security 7 applies it to every `HttpSecurity` before the app's own rules (spike). It permits the public and optional-auth routes, and keeps the optional-auth routes with `onRefused: anonymous` out of the resource server's bearer filter through a `BearerTokenResolver` that returns no token on them.
 
+Spring Security answers the hooks as application code, with no adapter package in 1.0 (ADR 0012 "Optional adapters"). The interceptor runs after the filter chain, so an authenticate hook reads the `Authentication` from `SecurityContextHolder`, and a decider delegates to the app's `AuthorizationManager` or `PermissionEvaluator` bean; the README shows both. On an optional-auth route with `onRefused: anonymous`, the app either excludes the route from the bearer filter with the matchers above or verifies the token inside its authenticate hook.
+
 Spring Security still refuses before the boundary. Its refusals reach the client in the api's format through the generated handlers, or through the `sendError` mapping above.
 
 ### Native access instead of hooks
@@ -270,6 +272,10 @@ The target imposes no wire shape (A36). Each feature that adds behaviour beyond 
 | `Pageable` and `Page` | never by default | the contract's `springPage` paging style |
 
 The error format is the api's declared format; `ProblemDetail` is used only when the api declares `application/problem+json`.
+
+### Links and the client
+
+The target consumes no link (ADR 0009 "The provider seam"): it generates its own types and validators in Java, since no JVM provider exists in 1.0. A link on its entry fails `generate` with `link.kind.not-consumed`, naming the entry and the link. It generates no client: the consumer's suite drives the routes over HTTP, and a Java client waits for a consumer that needs one.
 
 ### What the generated code depends on
 
