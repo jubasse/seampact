@@ -141,7 +141,9 @@ function switchBodyValidationOff(directory: string): void {
 function cacheKey(commit: string, pair: BenchPair): string {
   const hash = createHash("sha256")
     .update(commit)
-    .update(JSON.stringify({ targetOptions: pair.targetOptions, appInterceptor: pair.appInterceptor }));
+    .update(
+      JSON.stringify({ targetOptions: pair.targetOptions, appInterceptor: pair.appInterceptor }),
+    );
   const git = (args: string[]) =>
     execFileSync("git", args, { cwd: REPO_ROOT, maxBuffer: 256 * 1024 * 1024 });
 
