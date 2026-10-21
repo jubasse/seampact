@@ -15,6 +15,12 @@ return error instanceof ContractError;
 export const METHOD_RESULT_TYPE =
   "type MethodResult<Method> = Method extends (...args: never) => Promise<infer Result> ? Result : never;";
 
+/** The specifiers a queries module imports the client and the runtime from. */
+export interface QueriesImports {
+  readonly client: string;
+  readonly runtime: string;
+}
+
 /** Which forms the plan's operations take, so a module imports only what it uses. */
 export interface PlanForms {
   readonly query: boolean;
@@ -154,9 +160,4 @@ function keyMemberSources(operation: QueryOperation, api: string): string[] {
     plain,
     `${propertyKey(names.infinite.key)}: (${request}) => [${keyPrefix(operation)}, ${id}, "infinite", keyRequest(request, ${filled})] as const,`,
   ];
-}
-
-/** The number of members a key has before its request: the root, the resource if any, the operation id. */
-export function keyRequestIndex(operation: QueryOperation): number {
-  return operation.resource === undefined ? 2 : 3;
 }

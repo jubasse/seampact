@@ -9,12 +9,12 @@ import {
   operationType,
   operationTypesSource,
   planForms,
+  type QueriesImports,
   REQUIRED_CALL_TYPE,
   resourceTypeSource,
   resultExpression,
   settingsTypeSource,
 } from "../shared/operation-sources.js";
-import type { QueriesImports } from "../tanstack/queries-module.js";
 
 // The server-safe `queries.ts` of one api for SWR (ADR 0021 "SWR"): the types each operation reads from the client
 // and `create<Api>Queries`, which returns `keys` and, per operation, the `{ key, fetcher }` pair `preload`, an

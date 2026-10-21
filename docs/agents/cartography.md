@@ -31,7 +31,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-fetch` | `packages/targets/codegen-fetch` | target | Generates a typed fetch client with one method per operation, returning its success and error responses as typed results. |
 | `@seampact/codegen-hono` | `packages/targets/codegen-hono` | target | Generates a registerRoutes function per api that adds each contract route to a Hono 4 app with its access, validation and reply checks around your handler map, validating with zod. |
 | `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, an input decorator whose pipe validates, a handler wrapper or opt-in reply interceptor that writes the checked reply, the error filter and a boot check, validating with zod. |
-| `@seampact/codegen-react` | `packages/targets/codegen-react` | target | Generates TanStack Query options factories and React hooks over the typed fetch client, with keys, invalidation and paging read from the contract. |
+| `@seampact/codegen-react` | `packages/targets/codegen-react` | target | Generates TanStack Query or SWR options and React hooks, or an RTK Query api, over the typed fetch client, with keys, invalidation and paging read from the contract. |
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
 | `@seampact/codegen-yup` | `packages/targets/codegen-yup` | target | Generates Standard Schema yup validators per schema and direction, and one input validator per operation. |
 | `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
@@ -163,7 +163,10 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/codegen-react`
 
-- `packages/targets/codegen-react/src`: The React target: TanStack Query options factories and hooks per api over the linked fetch client, from the shared query plan, with the front runtime copied beside them.
+- `packages/targets/codegen-react/src`: The React target: TanStack Query or SWR options and hooks, or an RTK Query api, per api over the linked fetch client, from the shared query plan, with the front runtime copied beside them.
+- `packages/targets/codegen-react/src/rtk`: The RTK Query renderer of the react target: the `api.ts` of each api over `createApi` and `fakeBaseQuery`, with plain store errors, from the shared query plan.
+- `packages/targets/codegen-react/src/shared`: The source parts the react target's query libraries share: the operation types read from the client, the `isContractError` guard, the resource union, the next-page constants and the `keys` object.
+- `packages/targets/codegen-react/src/swr`: The SWR renderer of the react target: the server-safe `queries.ts` (keys and `{ key, fetcher }` pairs) and the `"use client"` `hooks.ts` of each api, from the shared query plan.
 - `packages/targets/codegen-react/src/tanstack`: The TanStack Query renderer of the react target: the server-safe `queries.ts` and the `"use client"` `hooks.ts` of each api, from the shared query plan.
 
 ### `@seampact/codegen-ts`

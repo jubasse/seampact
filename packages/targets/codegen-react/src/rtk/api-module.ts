@@ -7,6 +7,7 @@ import {
   nextPageConstants,
   operationType,
   planForms,
+  type QueriesImports,
 } from "../shared/operation-sources.js";
 
 // The `api.ts` of one api for RTK Query (ADR 0021 "RTK Query"): `create<Api>Api(client, settings?)` over `createApi`
@@ -19,12 +20,6 @@ const HOOKS_MODULE = "@reduxjs/toolkit/query/react";
 const CORE_MODULE = "@reduxjs/toolkit/query";
 const CLIENT_DIRECTIVE = '"use client";';
 
-/** The names the api module imports from the client and the runtime, by the module specifier. */
-export interface ApiImports {
-  readonly client: string;
-  readonly runtime: string;
-}
-
 /** Whether the module carries RTK's React hooks. */
 export type RtkHooks = "hooks" | "noHooks";
 
@@ -34,7 +29,7 @@ export function apiModuleSource(
   options: ReactQueryOptions,
   reducerPath: string,
   hooks: RtkHooks,
-  imports: ApiImports,
+  imports: QueriesImports,
 ): string {
   const api = plan.apiName;
   const forms = planForms(plan);

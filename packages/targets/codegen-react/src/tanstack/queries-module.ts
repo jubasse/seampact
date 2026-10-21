@@ -9,6 +9,7 @@ import {
   operationType,
   operationTypesSource,
   planForms,
+  type QueriesImports,
   REQUIRED_CALL_TYPE,
   resourceTypeSource,
   resultExpression,
@@ -19,12 +20,6 @@ import {
 // operation reads from the client, the caller option types, and `create<Api>Queries`, which returns `keys` and an
 // options factory per operation. It holds no `"use client"` and imports no hook, so a server component prefetches
 // with it.
-
-/** The names the queries module imports from the client and the runtime, by the module specifier. */
-export interface QueriesImports {
-  readonly client: string;
-  readonly runtime: string;
-}
 
 const TANSTACK_MODULE = "@tanstack/react-query";
 
