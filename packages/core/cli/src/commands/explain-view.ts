@@ -309,6 +309,8 @@ function responseValue(response: Operation["responses"][number]): unknown {
   };
 }
 
+const NOT_IN_REGISTRY = "not in the error registry";
+
 // The operation's codes with the status the registry gives each, by status; equal statuses keep the IR's order.
 function errorLines(ir: ContractIR, operation: Operation, where: Where): ViewLine[] {
   const statusOf = (code: string) => ir.errors[code]?.http.status;
@@ -317,17 +319,44 @@ function errorLines(ir: ContractIR, operation: Operation, where: Where): ViewLin
     .map((error, index) => ({ error, index, status: statusOf(error.code) }))
     .sort((left, right) => (left.status ?? 0) - (right.status ?? 0) || left.index - right.index)
     .map(({ error, status }) => ({
-      text: `  - ${flow({ status: status ?? "unknown", code: error.code })}`,
+      text: `  - ${flow({ status: status ?? NOT_IN_REGISTRY, code: error.code })}`,
       comment: where(error),
     }));
 }
 
+// Nested members the view leaves out, by the list they sit in; the members it renders or only comments are absent.
+const NESTED_RENDERED: Readonly<Record<string, ReadonlySet<string>>> = {
+  params: new Set(["name", "type", "required", "origin", "derivedFrom"]),
+  errors: new Set(["code", "origin", "derivedFrom"]),
+  "responses.headers": new Set(["name"]),
+};
+
+function nestedNotShown(operation: Operation): string[] {
+  const lists: Record<string, readonly unknown[]> = {
+    params: [...operation.params.path, ...operation.params.query, ...operation.params.header],
+    errors: operation.errors,
+    "responses.headers": operation.responses.flatMap((response) => response.headers),
+  };
+
+  return Object.entries(lists).flatMap(([list, items]) => {
+    const rendered = NESTED_RENDERED[list] ?? new Set<string>();
+    const members = items.flatMap((item) => (isRecord(item) ? Object.entries(item) : []));
+    const left = members
+      .filter(([member, value]) => !rendered.has(member) && !isEmptyValue(value))
+      .map(([member]) => `${list}.${member}`);
+
+    return [...new Set(left)];
+  });
+}
+
 function notShownLine(operation: Operation): ViewLine[] {
-  const notShown = Object.entries(operation)
-    .filter(([member]) => !RENDERED.has(member) && !SHOWN_THROUGH_OTHERS.has(member))
-    .filter(([, value]) => !isEmptyValue(value))
-    .map(([member]) => member)
-    .sort();
+  const notShown = [
+    ...Object.entries(operation)
+      .filter(([member]) => !RENDERED.has(member) && !SHOWN_THROUGH_OTHERS.has(member))
+      .filter(([, value]) => !isEmptyValue(value))
+      .map(([member]) => member),
+    ...nestedNotShown(operation),
+  ].sort();
 
   return notShown.length === 0 ? [] : [{ text: `# not shown yet: ${notShown.join(", ")}` }];
 }
@@ -346,7 +375,7 @@ function typeText(type: unknown): string {
 
   if (type.kind === "ref") return String(type.schema);
 
-  if (type.kind === "scalar") return String(type.scalar ?? type.type);
+  if (type.kind === "scalar") return String(type.format ?? type.scalar ?? type.type);
 
   if (type.kind === "enum") return String(type.enum);
 

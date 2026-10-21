@@ -39,7 +39,12 @@ export interface BundleBuildOptions {
 }
 
 export type BundleBuildResult =
-  | { readonly ok: true; readonly contents: BundleContents }
+  | {
+      readonly ok: true;
+      readonly contents: BundleContents;
+      /** The compilation, whose diagnostics hold the warnings. */
+      readonly compiled: PipelineResult;
+    }
   | {
       readonly ok: false;
       readonly failures: readonly BundleFailure[];
@@ -53,6 +58,8 @@ const COMPILER: BundleNamedVersion = {
   name: compilerPackage.name,
   version: compilerPackage.version,
 };
+
+const textEncoder = new TextEncoder();
 
 /** The bundle of the workspace `options.entry` names, or every reason it cannot be made. */
 export function buildBundle(options: BundleBuildOptions): BundleBuildResult {
@@ -96,6 +103,7 @@ export function buildBundle(options: BundleBuildOptions): BundleBuildResult {
       },
       files,
     },
+    compiled,
   };
 }
 
@@ -149,7 +157,7 @@ function recordingReader(reader: LoadReader): RecordingReader {
       readText(file, maxBytes): LoadText | undefined {
         const first = texts.get(file);
 
-        if (first !== undefined && new TextEncoder().encode(first).length <= maxBytes)
+        if (first !== undefined && textEncoder.encode(first).length <= maxBytes)
           return { text: first };
 
         const read = reader.readText(file, maxBytes);

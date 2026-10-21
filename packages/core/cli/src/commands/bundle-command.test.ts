@@ -81,3 +81,19 @@ test("bundle refuses a missing or a second output, and an unclear source, by nam
 
   expect(unknown.err).toMatch(/^bundle\.source\.unknown: /);
 });
+
+test("bundle prints the compile warnings of the source and still writes the bundle", async () => {
+  const app = makeApp("sources:\n  a: { path: ./a }\n", []);
+  const apiFile = join(app, "a", "tasks-service", "api.yaml");
+
+  writeFileSync(
+    apiFile,
+    readFileSync(apiFile, "utf8").replace("prefix: /internal/v{version}", "prefix: ''"),
+  );
+
+  const bundled = await run(app, ["bundle", "--out", "out", ...CONTRACT]);
+
+  expect(bundled.exitCode).toBe(EXIT_SUCCESS);
+  expect(bundled.err).toMatch(/In source 'a'[\s\S]*warning/);
+  expect(bundled.out).toMatch(/^integrity: sha256-/m);
+});

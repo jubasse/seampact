@@ -63,6 +63,8 @@ export async function bundleCommand(
     );
   }
 
+  printSourceDiagnostics(io, choice.source, written.compiled);
+
   const { contract, apis, integrity } = written.manifest;
 
   io.stdout(

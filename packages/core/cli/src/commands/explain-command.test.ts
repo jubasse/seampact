@@ -61,3 +61,15 @@ test("explain names the api it needs and the operation it cannot find", async ()
     /^explain\.operation\.unknown: The api 'tasks' has no operation 'nope'/,
   );
 });
+
+test("explain prints a scalar's format and lists the nested members it does not render", async () => {
+  const app = makeApp("sources:\n  a: { path: ./a }\n", []);
+  const explained = await explain(app, "tasks.updateTask");
+  const lines = explained.out.split("\n");
+
+  expect(lines.some((line) => line.includes("path.taskId: { type: uuid"))).toBe(true);
+
+  const notShown = lines.find((line) => line.startsWith("# not shown yet:"));
+
+  expect(notShown).toContain("errors.roles");
+});
