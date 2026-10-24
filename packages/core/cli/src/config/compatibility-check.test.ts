@@ -358,3 +358,42 @@ test("warns on an untested React major from the shipped matrix, naming the teste
     "react 18.3.1 is installed, and the target '@seampact/codegen-react' is tested on react 19 only.",
   ]);
 });
+
+function reactConfig(root: string, entry: TargetEntry) {
+  return {
+    file: join(root, "app/seampact.config.yaml"),
+    outDir: join(root, "app"),
+    sources: new Map(),
+    entries: [{ entry, root: join(root, "app/src/generated") }],
+    checks: { matrix: "error" as const },
+  };
+}
+
+test("reads only the query library the entry's `query` option selects", () => {
+  const root = writeConfigTree({
+    "app/seampact.config.yaml": "",
+    "app/node_modules/react/package.json": JSON.stringify({ version: "19.0.0" }),
+    "app/node_modules/swr/package.json": JSON.stringify({ version: "2.3.0" }),
+  });
+  const targets = new Map([
+    ["front", stubTarget("@seampact/codegen-react", [{ id: "queries", defaultOn: true }])],
+  ]);
+  const entry = (query: string): TargetEntry => ({
+    id: "front",
+    use: "@seampact/codegen-react",
+    api: "tasks",
+    options: { query },
+  });
+
+  expect(checkAppCompatibility(reactConfig(root, entry("swr")), targets)).toEqual({
+    problems: [],
+    warnings: [],
+  });
+
+  const tanstack = checkAppCompatibility(reactConfig(root, entry("tanstack")), targets);
+
+  expect(tanstack.problems.map((problem) => problem.code)).toEqual([
+    "config.matrix.framework-missing",
+  ]);
+  expect(tanstack.problems[0]?.message).toContain("The library '@tanstack/react-query'");
+});

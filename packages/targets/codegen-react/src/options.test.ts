@@ -1,5 +1,6 @@
+import { clientTargetCompatibility } from "@seampact/spec/compatibility";
 import { expect, test } from "vitest";
-import { parseReactQueryOptions } from "./options.js";
+import { parseReactQueryOptions, QUERY_LIBRARIES } from "./options.js";
 
 function refusalCodes(raw: unknown): string[] {
   const outcome = parseReactQueryOptions(raw);
@@ -77,4 +78,15 @@ test("`staleTime: contract` is refused with SWR and RTK, `keys.root` with RTK", 
     "options.staleTime.unsupported",
     "options.keys.root.unsupported",
   ]);
+});
+
+test("every query library the compatibility matrix selects by is a `query` value", () => {
+  const selectorValues = clientTargetCompatibility("@seampact/codegen-react").libraries?.map(
+    (library) => library.selectedBy?.value,
+  );
+
+  expect(selectorValues?.every((value) => QUERY_LIBRARIES.some((each) => each === value))).toBe(
+    true,
+  );
+  expect(new Set(selectorValues)).toEqual(new Set(QUERY_LIBRARIES));
 });

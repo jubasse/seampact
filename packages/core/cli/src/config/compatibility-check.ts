@@ -69,7 +69,7 @@ export function checkAppCompatibility(
     const libraries: InstalledVersion[] = [];
 
     for (const library of librariesInUse(entry, targets, record)) {
-      const readLibrary = readInstalledVersion(root, library.package, "validatorLibrary", where);
+      const readLibrary = readInstalledVersion(root, library.package, "library", where);
 
       if (readLibrary.status === "refused") problems.push(readLibrary.problem);
       else libraries.push(readLibrary.installed);
