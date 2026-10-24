@@ -1,11 +1,12 @@
-import type { QueryOperation, QueryPlan } from "@seampact/codegen-core";
+import type { QueryOperation, QueryPlan, Refusal } from "@seampact/codegen-core";
 import { propertyKey } from "@seampact/codegen-core";
 import type { ReactQueryOptions } from "../options.js";
 import {
-  METHOD_RESULT_TYPE,
+  CLIENT_DIRECTIVE,
   nextPageConstantName,
   nextPageConstants,
   operationType,
+  operationTypesSource,
   planForms,
   type QueriesImports,
 } from "../shared/operation-sources.js";
@@ -14,11 +15,14 @@ import {
 // and `fakeBaseQuery`, an endpoint per operation whose `queryFn` calls the client with RTK's signal, resource types
 // as tags. The store holds plain values only: a failure is returned as a plain `{ error }` discriminated by `kind`,
 // and `toContractError` turns a `contract` one back into the client's class. RTK's hooks unsubscribe on unmount and
-// never abort a request, and a mutation over `fakeBaseQuery` has no retry: each call draws a new idempotency key.
+// never abort a request, and a mutation over `fakeBaseQuery` has no retry: each call draws a new idempotency key. A
+// mutation invalidates its resource's tags on success only; the infinite query of an operation is its `<op>Pages`
+// endpoint (`use<Op>PagesInfiniteQuery`). An endpoint whose method requires a timeout takes `{ request, call }`, its
+// cache key read from the request alone; an optional timeout has no place in RTK's hooks and is not passed.
 
 const HOOKS_MODULE = "@reduxjs/toolkit/query/react";
 const CORE_MODULE = "@reduxjs/toolkit/query";
-const CLIENT_DIRECTIVE = '"use client";';
+const PAGES_SUFFIX = "Pages";
 
 /** Whether the module carries RTK's React hooks. */
 export type RtkHooks = "hooks" | "noHooks";
@@ -46,15 +50,22 @@ export function apiModuleSource(
   ];
   const clientNames = ["type Client", ...(throwsErrors ? ["ContractError"] : [])];
   const withHooks = hooks === "hooks";
+  const rtkNames = [
+    "createApi",
+    ...(plan.operations.some((operation) => operation.form === "query" && operation.needsTimeout)
+      ? ["defaultSerializeQueryArgs"]
+      : []),
+    "fakeBaseQuery",
+  ];
 
   return [
     ...(withHooks && options.useClientDirective === "on" ? [CLIENT_DIRECTIVE] : []),
     [
-      `import { createApi, fakeBaseQuery } from "${withHooks ? HOOKS_MODULE : CORE_MODULE}";`,
+      `import { ${rtkNames.join(", ")} } from "${withHooks ? HOOKS_MODULE : CORE_MODULE}";`,
       `import { ${clientNames.join(", ")} } from "${imports.client}";`,
       `import { ${runtimeNames.join(", ")} } from "${imports.runtime}";`,
     ].join("\n"),
-    operationTypesSource(plan, throwsErrors),
+    operationTypesSource(api, plan.operations, options.errors, "storeWide"),
     failureTypeSource(plan, throwsErrors),
     ...(throwsErrors ? [TO_CONTRACT_ERROR] : []),
     ...(forms.timeout ? [TIMED_ARG_TYPE] : []),
@@ -77,23 +88,6 @@ export interface TimedArg<Operation extends AnyOperationTypes> {
 readonly request: Operation["request"];
 readonly call: Omit<Operation["call"], "signal">;
 }`;
-
-function operationTypesSource(plan: QueryPlan, throwsErrors: boolean): string {
-  const data = throwsErrors
-    ? "WithPlainHeaders<SuccessOf<MethodResult<Method>>>"
-    : "WithPlainHeaders<MethodResult<Method>>";
-  const members = plan.operations.map(
-    ({ names }) =>
-      `${propertyKey(names.base)}: OperationTypes<Client[${JSON.stringify(names.base)}]>;`,
-  );
-
-  return [
-    METHOD_RESULT_TYPE,
-    `/** What an endpoint reads from one client method: its request, call options and data (headers as a plain record). */\nexport interface OperationTypes<Method extends (...args: never) => Promise<ClientResult>> {\nrequest: Parameters<Method>[0];\ncall: NonNullable<Parameters<Method>[1]>;\ndata: ${data};\n}`,
-    "/** Any operation's types. */\nexport interface AnyOperationTypes {\nrequest: unknown;\ncall: unknown;\ndata: unknown;\n}",
-    `/** The types of each operation, read from the client. */\nexport interface ${plan.apiName}Operations {\n${members.join("\n")}\n}`,
-  ].join("\n\n");
-}
 
 // `fakeBaseQuery` types one error for the whole api: the union over the operations, discriminated by `kind`.
 function failureTypeSource(plan: QueryPlan, throwsErrors: boolean): string {
@@ -177,10 +171,24 @@ function settled(operation: QueryOperation, call: string, options: ReactQueryOpt
     : `settleForStore(${JSON.stringify(operation.operationId)}, ${call})`;
 }
 
-function tagsMember(operation: QueryOperation, member: "providesTags" | "invalidatesTags"): string {
+function providesTagsMember(operation: QueryOperation): string {
   return operation.resource === undefined
     ? ""
-    : `\n${member}: [${JSON.stringify(operation.resource)}],`;
+    : `\nprovidesTags: [${JSON.stringify(operation.resource)}],`;
+}
+
+// RTK invalidates on a rejected mutation too, and every returned `{ error }` is one: a failed write refreshes nothing.
+function invalidatesTagsMember(operation: QueryOperation): string {
+  return operation.resource === undefined
+    ? ""
+    : `\ninvalidatesTags: (_result, error) => (error === undefined ? [${JSON.stringify(operation.resource)}] : []),`;
+}
+
+// A timed endpoint's cache key is its request's: two timeouts for one request are one entry.
+function cacheKeyMember(operation: QueryOperation): string {
+  return operation.needsTimeout
+    ? "\nserializeQueryArgs: ({ queryArgs, endpointDefinition, endpointName }) => defaultSerializeQueryArgs({ queryArgs: queryArgs.request, endpointDefinition, endpointName }),"
+    : "";
 }
 
 function querySource(operation: QueryOperation, api: string, options: ReactQueryOptions): string {
@@ -189,7 +197,7 @@ function querySource(operation: QueryOperation, api: string, options: ReactQuery
   const call = `client.${names.base}(${requestOf(operation, "arg")}, ${callOf(operation, "arg")})`;
 
   return `${propertyKey(names.base)}: build.query<${types}["data"], ${argType(operation, types)}>({
-queryFn: (arg, { signal }) => ${settled(operation, call, options)},${tagsMember(operation, "providesTags")}
+queryFn: (arg, { signal }) => ${settled(operation, call, options)},${providesTagsMember(operation)}${cacheKeyMember(operation)}
 }),`;
 }
 
@@ -208,13 +216,39 @@ function infiniteSource(
   const firstRequest = requestOf(operation, "queryArg");
   const call = `client.${names.base}(pageParam ?? ${firstRequest}, ${callOf(operation, "queryArg")})`;
 
-  return `${propertyKey(infinite.key)}: build.infiniteQuery<${types}["data"], ${argType(operation, types)}, ${types}["request"] | null>({
+  return `${propertyKey(pagesEndpointName(operation))}: build.infiniteQuery<${types}["data"], ${argType(operation, types)}, ${types}["request"] | null>({
 infiniteQueryOptions: {
 initialPageParam: null,
 getNextPageParam: (lastPage, _pages, lastPageParam, _pageParams, queryArg) => nextPageRequest(${nextPageConstantName(operation)}, lastPageParam ?? ${firstRequest}, lastPage),
 },
-queryFn: ({ queryArg, pageParam }, { signal }) => ${settled(operation, call, options)},${tagsMember(operation, "providesTags")}
+queryFn: ({ queryArg, pageParam }, { signal }) => ${settled(operation, call, options)},${providesTagsMember(operation)}${cacheKeyMember(operation)}
 }),`;
+}
+
+/** Each `<op>Pages` endpoint whose name is already another operation's endpoint, refused by name. */
+export function refusePagesEndpointCollisions(plan: QueryPlan): Refusal[] {
+  const endpointNames = new Set(plan.operations.map((operation) => operation.names.base));
+
+  return plan.operations.flatMap((operation) => {
+    const pages = pagesEndpointName(operation);
+
+    if (operation.names.infinite === undefined || !endpointNames.has(pages)) return [];
+
+    return [
+      {
+        code: "names.collision",
+        message: `The RTK Query endpoint '${pages}', the infinite query of the operation '${operation.operationId}', is already the endpoint of another operation.`,
+        fix: "Rename one of the two operations in the contract so that their generated names differ, or set 'infinite: off'.",
+        member: "",
+        operation: operation.operationId,
+      },
+    ];
+  });
+}
+
+/** The endpoint of an operation's infinite query: `<op>Pages`, so RTK names its hook `use<Op>PagesInfiniteQuery`. */
+export function pagesEndpointName(operation: QueryOperation): string {
+  return `${operation.names.base}${PAGES_SUFFIX}`;
 }
 
 function mutationSource(
@@ -230,7 +264,7 @@ function mutationSource(
       ? request
       : `withIdempotencyKey(${request}, ${JSON.stringify(operation.idempotencyHeaderKey)}, drawIdempotencyKey)`;
   const call = `client.${names.base}(${keyed}, ${callOf(operation, "arg")})`;
-  const tags = options.invalidate === "resource" ? tagsMember(operation, "invalidatesTags") : "";
+  const tags = options.invalidate === "resource" ? invalidatesTagsMember(operation) : "";
 
   return `${propertyKey(names.base)}: build.mutation<${types}["data"], ${argType(operation, types)}>({
 queryFn: (arg, { signal }) => ${settled(operation, call, options)},${tags}

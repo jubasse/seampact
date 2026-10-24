@@ -247,7 +247,11 @@ export type StoreOutcome<Data, Failure> =
   | { readonly data: Data; readonly error?: undefined }
   | { readonly error: Failure; readonly data?: undefined };
 
-/** The success with plain headers as data; a declared error, an unexpected answer or a rejection as a plain error. */
+/**
+ * The success with plain headers as data; a declared error, an unexpected answer or a rejection as a plain error.
+ * It reads a `result`-style client: a thrown value is a rejection, so a `throw`-style client's `ContractError`
+ * would lose its type here (the react target refuses that client by name).
+ */
 export function settleForStore<Operation extends string, Result extends ClientResult>(
   operation: Operation,
   pending: Promise<Result>,

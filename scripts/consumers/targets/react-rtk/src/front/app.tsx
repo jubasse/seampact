@@ -69,7 +69,7 @@ export function TaskList(props: { readonly Tasks: TasksApi }): ReactNode {
 }
 
 export function InfiniteTaskList(props: { readonly Tasks: TasksApi }): ReactNode {
-  const tasks = props.Tasks.useListTasksInfiniteInfiniteQuery({
+  const tasks = props.Tasks.useListTasksPagesInfiniteQuery({
     path: { channelId: GENERAL_CHANNEL_ID },
   });
 

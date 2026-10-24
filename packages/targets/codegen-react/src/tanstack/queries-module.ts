@@ -67,7 +67,7 @@ export function queriesModuleSource(
       `import { ${clientNames.join(", ")} } from "${imports.client}";`,
       `import { ${runtimeNames.join(", ")} } from "${imports.runtime}";`,
     ].join("\n"),
-    operationTypesSource(api, operations, throwsErrors),
+    operationTypesSource(api, operations, options.errors, "perOperation"),
     ...(throwsErrors ? [CONTRACT_ERROR_GUARD] : []),
     callerOptionTypesSource({ hasQuery, hasInfinite, hasMutation }),
     settingsTypeSource(api),

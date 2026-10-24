@@ -42,15 +42,22 @@ export function planForms(plan: QueryPlan): PlanForms {
   };
 }
 
+/** Where a library keeps an operation's error: in each operation's `error` member, or in one store-wide type. */
+export type ErrorMember = "perOperation" | "storeWide";
+
 /**
  * `OperationTypes`, `AnyOperationTypes` and `<Api>Operations`: per operation its request, call options, data
- * (headers as a plain record) and error, read from the client method.
+ * (headers as a plain record) and, unless the library keeps one store-wide error type, its error, read from the
+ * client method.
  */
 export function operationTypesSource(
   api: string,
   operations: readonly QueryOperation[],
-  throwsErrors: boolean,
+  errors: ReactQueryOptions["errors"],
+  errorMember: ErrorMember,
 ): string {
+  const throwsErrors = errors === "throw";
+  const perOperation = errorMember === "perOperation";
   const data = throwsErrors
     ? "WithPlainHeaders<SuccessOf<MethodResult<Method>>>"
     : "WithPlainHeaders<MethodResult<Method>>";
@@ -60,20 +67,28 @@ export function operationTypesSource(
   const errorComment = throwsErrors
     ? "a declared error or an unexpected answer as the client's `ContractError`, or the client's rejection"
     : "the client's rejection (network failure, timeout or abort); declared errors are data";
+  const comment = perOperation
+    ? `What a query reads from one client method: its request, call options, data (headers as a plain record) and error (${errorComment}).`
+    : "What an endpoint reads from one client method: its request, call options and data (headers as a plain record).";
   // The operation id types a thrown `ContractError` only; data errors leave it out, as an unused type parameter.
-  const idParameter = throwsErrors ? "Id extends string, " : "";
+  const typesId = throwsErrors && perOperation;
+  const idParameter = typesId ? "Id extends string, " : "";
+  const errorLines = perOperation ? `error: ${error};\n` : "";
   const members = operations.map(
     ({ operationId, names }) =>
-      `${propertyKey(names.base)}: OperationTypes<${throwsErrors ? `${JSON.stringify(operationId)}, ` : ""}Client[${JSON.stringify(names.base)}]>;`,
+      `${propertyKey(names.base)}: OperationTypes<${typesId ? `${JSON.stringify(operationId)}, ` : ""}Client[${JSON.stringify(names.base)}]>;`,
   );
 
   return [
     METHOD_RESULT_TYPE,
-    `/** What a query reads from one client method: its request, call options, data (headers as a plain record) and error (${errorComment}). */\nexport interface OperationTypes<${idParameter}Method extends (...args: never) => Promise<ClientResult>> {\nrequest: Parameters<Method>[0];\ncall: NonNullable<Parameters<Method>[1]>;\ndata: ${data};\nerror: ${error};\n}`,
-    "/** Any operation's types. */\nexport interface AnyOperationTypes {\nrequest: unknown;\ncall: unknown;\ndata: unknown;\nerror: unknown;\n}",
+    `/** ${comment} */\nexport interface OperationTypes<${idParameter}Method extends (...args: never) => Promise<ClientResult>> {\nrequest: Parameters<Method>[0];\ncall: NonNullable<Parameters<Method>[1]>;\ndata: ${data};\n${errorLines}}`,
+    `/** Any operation's types. */\nexport interface AnyOperationTypes {\nrequest: unknown;\ncall: unknown;\ndata: unknown;\n${perOperation ? "error: unknown;\n" : ""}}`,
     `/** The types of each operation, read from the client. */\nexport interface ${api}Operations {\n${members.join("\n")}\n}`,
   ].join("\n\n");
 }
+
+/** The directive that marks a module with hooks for a React Server Components toolchain. */
+export const CLIENT_DIRECTIVE = '"use client";';
 
 export const REQUIRED_CALL_TYPE =
   '/** Options whose `call` is required: the client method requires a timeout. */\nexport type WithRequiredCall<Options extends { readonly call?: unknown }> = Options & { readonly call: NonNullable<Options["call"]> };';
@@ -110,8 +125,13 @@ export function settingsTypeSource(api: string): string {
   return `/** The factory settings: \`idempotencyKey\` replaces \`crypto.randomUUID\` as the idempotency key generator. */\nexport interface ${api}QueriesSettings {\nreadonly idempotencyKey?: () => string;\n}`;
 }
 
+/** The operation's base name in constant case, as in `LIST_TASKS`. */
+export function constantCaseOf(operation: QueryOperation): string {
+  return operation.names.base.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase();
+}
+
 export function nextPageConstantName(operation: QueryOperation): string {
-  return `${operation.names.base.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase()}_PAGES`;
+  return `${constantCaseOf(operation)}_PAGES`;
 }
 
 /** The next-page rule of each infinite query, as a module constant. */

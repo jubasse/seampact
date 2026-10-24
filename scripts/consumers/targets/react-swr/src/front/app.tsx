@@ -44,16 +44,12 @@ export function InfiniteTaskList(props: {
   readonly Tasks: TasksHooks;
   readonly config?: InfiniteCallerConfig<TasksOperations["listTasks"]>;
 }): ReactNode {
-  const tasks = props.Tasks.useListTasksInfinite(
-    { path: { channelId: GENERAL_CHANNEL_ID } },
-    props.config,
-  );
+  const request = { path: { channelId: GENERAL_CHANNEL_ID } };
+  const tasks = props.Tasks.useListTasksInfinite(request, props.config);
 
   if (tasks.error !== undefined) return <p role="alert">{tasks.error.message}</p>;
 
   if (tasks.data === undefined) return <p>Loading</p>;
-
-  const lastPage = tasks.data.at(-1);
 
   return (
     <section>
@@ -62,7 +58,7 @@ export function InfiniteTaskList(props: {
           <li key={task.taskId}>{task.title}</li>
         ))}
       </ul>
-      {lastPage?.body.nextCursor !== undefined ? (
+      {props.Tasks.listTasksInfiniteOptions(request).hasNextPage(tasks.data) ? (
         <button
           type="button"
           disabled={tasks.isValidating}

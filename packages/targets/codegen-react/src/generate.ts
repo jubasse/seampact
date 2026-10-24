@@ -12,7 +12,7 @@ import {
   type Refusal,
 } from "@seampact/codegen-core";
 import type { ReactQueryOptions } from "./options.js";
-import { apiModuleSource } from "./rtk/api-module.js";
+import { apiModuleSource, refusePagesEndpointCollisions } from "./rtk/api-module.js";
 import { hooksModuleSource as swrHooksModuleSource } from "./swr/hooks-module.js";
 import { queriesModuleSource as swrQueriesModuleSource } from "./swr/queries-module.js";
 import { hooksModuleSource as tanstackHooksModuleSource } from "./tanstack/hooks-module.js";
@@ -58,6 +58,10 @@ export function generateReactQueries(
   if (planned.status === "refused") return planned;
 
   const { plan } = planned;
+  const collisions = options.query === "rtk" ? refusePagesEndpointCollisions(plan) : [];
+
+  if (collisions.length > 0) return { status: "refused", refusals: collisions };
+
   const clientSpecifier = (fromFile: string) =>
     importSpecifier(links.client, client.exports.Client, fromFile);
   const library = {

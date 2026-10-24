@@ -3,6 +3,7 @@ import { propertyKey } from "@seampact/codegen-core";
 import type { ReactQueryOptions } from "../options.js";
 import {
   CONTRACT_ERROR_GUARD,
+  constantCaseOf,
   keysObjectSource,
   nextPageConstantName,
   nextPageConstants,
@@ -51,13 +52,14 @@ export function queriesModuleSource(
       `import { ${clientNames.join(", ")} } from "${imports.client}";`,
       `import { ${runtimeNames.join(", ")} } from "${imports.runtime}";`,
     ].join("\n"),
-    operationTypesSource(api, operations, throwsErrors),
+    operationTypesSource(api, operations, options.errors, "perOperation"),
     ...(throwsErrors ? [CONTRACT_ERROR_GUARD] : []),
     callerConfigTypesSource(forms),
     settingsTypeSource(api),
     resourceTypeSource(plan),
     `const ROOT = ${JSON.stringify(root)};`,
     ...nextPageConstants(operations),
+    ...pageRequestsConstants(plan),
     factorySource(plan, options, forms.idempotency),
   ].join("\n\n");
 }
@@ -98,22 +100,15 @@ function factorySource(
   hasIdempotency: boolean,
 ): string {
   const api = plan.apiName;
-  const pageRequests = plan.operations.flatMap((operation) =>
-    operation.names.infinite === undefined
-      ? []
-      : [
-          `const ${pageRequestsName(operation)} = new PageRequests<${operationType(operation, api)}["request"]>();`,
-        ],
-  );
   const members = plan.operations.flatMap((operation) => memberSources(operation, api, options));
   const idempotency = hasIdempotency
     ? ["const drawIdempotencyKey = idempotencyKeyGenerator(settings.idempotencyKey);"]
     : [];
   const settingsParameter = hasIdempotency ? "settings" : "_settings";
-  const setup = [...idempotency, ...pageRequests].join("\n");
+  const setup = idempotency.join("\n");
 
   return `/**
- * The api's keys and, per operation, the \`{ key, fetcher }\` of its query, the \`{ getKey, fetcher }\` of its
+ * The api's keys and, per operation, the \`{ key, fetcher }\` of its query, the \`{ getKey, fetcher, hasNextPage }\` of its
  * infinite query or the \`{ key, fetcher }\` of its mutation over \`client\`, for \`preload\`, a \`fallback\` and the
  * hooks. SWR passes no abort signal: a query's request runs to its end.
  */
@@ -131,7 +126,18 @@ export type ${api}Queries = ReturnType<typeof create${api}Queries>;`;
 }
 
 function pageRequestsName(operation: QueryOperation): string {
-  return `${operation.names.base}PageRequests`;
+  return `${constantCaseOf(operation)}_PAGE_REQUESTS`;
+}
+
+// At module scope: a page is one object whoever read it, so every factory over one SWR cache finds its request.
+function pageRequestsConstants(plan: QueryPlan): string[] {
+  return plan.operations.flatMap((operation) =>
+    operation.names.infinite === undefined
+      ? []
+      : [
+          `/** The request each page of the infinite query of \`${operation.names.base}\` was read with. */\nconst ${pageRequestsName(operation)} = new PageRequests<${operationType(operation, plan.apiName)}["request"]>();`,
+        ],
+  );
 }
 
 function memberSources(
@@ -193,9 +199,15 @@ const next = ${pages}.nextAfter(${nextPageConstantName(operation)}, previousPage
 
 return next === undefined ? null : pageKey(next);
 };
+const hasNextPage = (pages: readonly ${types}["data"][] | undefined): boolean => {
+const lastPage = pages?.at(-1);
+
+return lastPage !== undefined && ${pages}.nextAfter(${nextPageConstantName(operation)}, lastPage) !== undefined;
+};
 
 return {
 getKey,
+hasNextPage,
 fetcher: async ([, pageRequest]: PageKey<${types}>): Promise<${types}["data"]> => ${pages}.remember(${resultExpression(operation, call, options)}, pageRequest),
 };
 }`;

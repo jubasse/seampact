@@ -1,7 +1,7 @@
 import type { QueryOperation, QueryPlan } from "@seampact/codegen-core";
 import { propertyKey } from "@seampact/codegen-core";
 import type { ReactQueryOptions } from "../options.js";
-import { operationType, planForms } from "../shared/operation-sources.js";
+import { CLIENT_DIRECTIVE, operationType, planForms } from "../shared/operation-sources.js";
 
 // The `hooks.ts` of one api for SWR (ADR 0021 "SWR"): `create<Api>Hooks` returns the members of
 // `create<Api>Queries` plus `use<Op>(request | null, config?)` over `useSWR`, `use<Op>Infinite` over `useSWRInfinite`
@@ -9,8 +9,6 @@ import { operationType, planForms } from "../shared/operation-sources.js";
 // `mutate` with a filter on the resource key; SWR's filters skip infinite keys, so the hooks record the key of each
 // mounted infinite query by resource and revalidate those by key. SWR passes no abort signal, and `useSWRMutation`
 // has no retry: each `trigger` draws a new idempotency key.
-
-const CLIENT_DIRECTIVE = '"use client";';
 
 /** The source of `hooks.ts`; `imports` holds the specifiers of the client, the queries module and the runtime. */
 export function hooksModuleSource(

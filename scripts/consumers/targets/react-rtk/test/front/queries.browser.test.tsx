@@ -121,19 +121,27 @@ test("3: under invalidate: off the list stays as it was after a create, through 
   list.unsubscribe();
 });
 
-test("4: a throttled user sees api.rate_limited with its retryAfterMs", async () => {
+test("4: a throttled user sees api.rate_limited with its retryAfterMs, and the failed write refreshes nothing", async () => {
   await loadScript({});
 
-  const Tasks = tasksApiFor(inject("throttledUserToken"));
+  const { send, sent } = recordingFetch();
+  const Tasks = tasksApiFor(inject("throttledUserToken"), send);
 
-  await render(<CreateTask Tasks={Tasks} title="One too many" />, {
-    wrapper: providerOf(storeFor(Tasks)),
-  });
+  await render(
+    <>
+      <TaskList Tasks={Tasks} />
+      <CreateTask Tasks={Tasks} title="One too many" />
+    </>,
+    { wrapper: providerOf(storeFor(Tasks)) },
+  );
+  await expect.element(page.getByText("Write the slice test")).toBeInTheDocument();
   await page.getByRole("button", { name: "Create" }).click();
 
   await expect
     .element(page.getByRole("alert"))
     .toHaveTextContent(`api.rate_limited retry after ${inject("throttleRetryAfterMs")} ms`);
+  await wait(QUIET_MS);
+  expect(listRequests(sent)).toHaveLength(1);
 });
 
 test("4: the store keeps the declared error as a plain value, which toContractError turns back", async () => {
