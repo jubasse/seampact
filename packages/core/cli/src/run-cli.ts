@@ -8,13 +8,20 @@ import {
   compileCommand,
   configLocation,
   diffCommand,
+  EDITOR_SCHEMAS_POLICIES,
+  type EditorSchemasPolicy,
   explainCommand,
   generateCommand,
+  initCommand,
   lintCommand,
 } from "./commands/index.js";
 import { errorCode } from "./error-code.js";
 
 const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
+  [
+    "init",
+    "  init [--blank] [--editor-schemas[=ignore|commit|none]] [--no-modelines] [--no-ignore-files]\n                                           Write a new project here: seampact.config.yaml and contract/api.yaml, a small example (--blank: the api header alone), with its modeline and editor schemas, git-ignored by default.\n  init --modelines [--config <path>] [--editor-schemas[=ignore|commit|none]] [--no-ignore-files]\n                                           Write or correct the modeline of every contract file of the app config's `path` sources, and their editor schemas.",
+  ],
   [
     "compile",
     "  compile [--config <path>] [--out <dir>] [--editor-schemas]\n                                           Compile the contract sources the app config's targets use; --editor-schemas writes each contract's editor schemas, which check declared names (to workspace.editorSchemas, .seampact/schemas by default).",
@@ -45,8 +52,7 @@ const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
   ],
 ]);
 
-// The commands and flags of the CLI design that are not available yet; each answers with exit code 2.
-const WAITING_COMMANDS: ReadonlySet<string> = new Set(["init"]);
+// The flags of the CLI design that are not available yet; each answers with exit code 2.
 const WAITING_FLAGS: ReadonlySet<string> = new Set(["--watch", "--strict", "--source-map"]);
 
 const HELP_ARGUMENTS: ReadonlySet<string> = new Set(["help", "--help", "-h"]);
@@ -72,13 +78,13 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
     return EXIT_USAGE;
   }
 
-  if (WAITING_COMMANDS.has(command)) return notAvailable(io, `The command '${command}'`);
-
   const waitingFlag = rest.find((argument) =>
     WAITING_FLAGS.has(argument.split("=")[0] ?? argument),
   );
 
   if (waitingFlag !== undefined) return notAvailable(io, `The flag '${waitingFlag}'`);
+
+  if (command === "init") return runInit(rest, io);
 
   if (command === "compile") return runCompile(rest, io);
 
@@ -95,6 +101,75 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
   if (command === "explain") return runExplain(rest, io);
 
   return usageError(io, `Unknown command '${command}'.`);
+}
+
+const EDITOR_SCHEMAS_FLAG = "--editor-schemas";
+const DEFAULT_EDITOR_SCHEMAS_POLICY: EditorSchemasPolicy = "ignore";
+
+async function runInit(args: readonly string[], io: CliIo): Promise<number> {
+  // A bare `--editor-schemas` asks for the default policy.
+  const withPolicy = args.map((argument) =>
+    argument === EDITOR_SCHEMAS_FLAG
+      ? `${EDITOR_SCHEMAS_FLAG}=${DEFAULT_EDITOR_SCHEMAS_POLICY}`
+      : argument,
+  );
+  const parsed = parseCommandArgs(withPolicy, {
+    config: { type: "string" },
+    blank: { type: "boolean" },
+    modelines: { type: "boolean" },
+    "editor-schemas": { type: "string" },
+    "no-modelines": { type: "boolean" },
+    "no-ignore-files": { type: "boolean" },
+  });
+
+  if (parsed.status === "refused") return usageError(io, parsed.message);
+
+  const { values } = parsed;
+  const policy = stringOption(values["editor-schemas"]) ?? DEFAULT_EDITOR_SCHEMAS_POLICY;
+  const editorSchemas = EDITOR_SCHEMAS_POLICIES.find((each) => each === policy);
+
+  if (editorSchemas === undefined)
+    return usageError(
+      io,
+      `\`--editor-schemas\` takes ${EDITOR_SCHEMAS_POLICIES.join(", ")}, not '${policy}'.`,
+    );
+
+  const ignoreFiles = values["no-ignore-files"] === true ? "skip" : "write";
+
+  if (values.modelines === true) {
+    if (values.blank === true || values["no-modelines"] === true)
+      return usageError(
+        io,
+        "`init --modelines` writes no new project: drop `--blank` and `--no-modelines`.",
+      );
+
+    return initCommand(
+      {
+        kind: "modelines",
+        location: configLocation(io.cwd, stringOption(values.config)),
+        editorSchemas,
+        ignoreFiles,
+      },
+      io,
+    );
+  }
+
+  if (values.config !== undefined)
+    return usageError(
+      io,
+      "`init` writes its config in the working directory; `--config` goes with `--modelines`.",
+    );
+
+  return initCommand(
+    {
+      kind: "new-project",
+      content: values.blank === true ? "blank" : "example",
+      editorSchemas,
+      modelines: values["no-modelines"] === true ? "skip" : "write",
+      ignoreFiles,
+    },
+    io,
+  );
 }
 
 async function runCompile(args: readonly string[], io: CliIo): Promise<number> {

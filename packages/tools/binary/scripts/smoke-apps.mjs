@@ -47,6 +47,13 @@ export function writeSmokeApp(app, directory) {
 
 const IR_DIRECTORY = "ir";
 
+// The runs of `init` in an empty folder: the project it writes, then `compile` on it; the smoke compares every file
+// the run leaves.
+export const INIT_RUNS = [
+  { name: "init", steps: [["init"], ["compile"], ["init", "--modelines"]] },
+  { name: "init-blank", steps: [["init", "--blank"], ["compile"]] },
+];
+
 // What the commands the binary shares with the Node CLI answer: exit code and both streams, with the app's
 // directory replaced since it differs between runs.
 const APP_STEPS = [
@@ -65,19 +72,7 @@ export const BINARY_REFUSED_COMMANDS = ["generate", "check"];
 // Runs every shared step with `executable` (`prefixArguments` first) in the app directory; the result holds the
 // answers and the bytes of each compared file.
 export function runSmokeApp({ executable, prefixArguments = [], environment, app, directory }) {
-  const answer = (commandArguments) => {
-    const run = spawnSync(executable, [...prefixArguments, ...commandArguments], {
-      cwd: directory,
-      env: environment,
-      encoding: "utf8",
-    });
-
-    return {
-      status: run.status,
-      stdout: withoutDirectory(run.stdout, directory),
-      stderr: withoutDirectory(run.stderr, directory),
-    };
-  };
+  const answer = answerIn({ executable, prefixArguments, environment, directory });
 
   const steps = {};
 
@@ -94,6 +89,45 @@ export function runSmokeApp({ executable, prefixArguments = [], environment, app
   ]);
 
   return { steps, writtenFiles };
+}
+
+// Runs one `init` run with `executable` in `directory`, created empty; the result holds the answers and the bytes
+// of every file the run leaves, by path relative to the directory.
+export function runInit({ executable, prefixArguments = [], environment, run, directory }) {
+  mkdirSync(directory, { recursive: true });
+
+  const answer = answerIn({ executable, prefixArguments, environment, directory });
+  const steps = {};
+
+  for (const step of run.steps) steps[step.join(" ")] = answer(step);
+
+  const writtenFiles = Object.fromEntries(
+    readdirSync(directory, { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => join(entry.parentPath, entry.name))
+      .map((file) => [file.slice(directory.length + 1).replaceAll("\\", "/"), readFileSync(file)])
+      .sort(([left], [right]) => (left < right ? -1 : 1)),
+  );
+
+  return { steps, writtenFiles };
+}
+
+// One command's answer in `directory`: exit code and both streams, the directory replaced since it differs
+// between runs.
+function answerIn({ executable, prefixArguments, environment, directory }) {
+  return (commandArguments) => {
+    const run = spawnSync(executable, [...prefixArguments, ...commandArguments], {
+      cwd: directory,
+      env: environment,
+      encoding: "utf8",
+    });
+
+    return {
+      status: run.status,
+      stdout: withoutDirectory(run.stdout, directory),
+      stderr: withoutDirectory(run.stderr, directory),
+    };
+  };
 }
 
 // Every file the editor schemas directory holds, in name order; none when the command wrote no directory.

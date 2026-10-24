@@ -57,7 +57,7 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/cli`
 
 - `packages/core/cli/src`: The seampact command line: `runCli`, its commands, and the app config reader they share.
-- `packages/core/cli/src/commands`: The commands the CLI runs, `compile`, `generate`, `check`, `lint`, `diff`, `bundle` and `explain`, and the steps between the app config and the target packages: the sources compiled, the IR filtered per entry, the link checks and the link set.
+- `packages/core/cli/src/commands`: The commands the CLI runs, `init`, `compile`, `generate`, `check`, `lint`, `diff`, `bundle` and `explain`, and the steps between the app config and the target packages: the sources compiled, the IR filtered per entry, the link checks and the link set.
 - `packages/core/cli/src/config`: The app config and the monorepo root config as the CLI reads them: the YAML readers and their refusals, the root an app belongs to, the OpenAPI documents an app and a root write, the target packages an app names, resolved from the app's own project, the artefacts each entry generates and the compatibility matrix check.
 - `packages/core/cli/src/editor-schemas`: The workspace's editor schemas that `compile --editor-schemas` writes: the authoring schemas with each name position listing the declared names (grammar section 3).
 

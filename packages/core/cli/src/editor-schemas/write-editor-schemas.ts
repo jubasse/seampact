@@ -1,8 +1,9 @@
-import { lstat, mkdir, realpath, rename, writeFile } from "node:fs/promises";
+import { mkdir, realpath, rename, writeFile } from "node:fs/promises";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { type LoadReader, loadWorkspace } from "@seampact/compiler";
 import type { CliProblem } from "../cli-problem.js";
 import { isStrictlyInside } from "../config/path-containment.js";
+import { isSymbolicLink } from "../symbolic-link.js";
 import { type EditorDeclaration, editorNames } from "./editor-names.js";
 import { type EditorSchemaFile, editorSchemaFiles } from "./specialise.js";
 
@@ -104,16 +105,6 @@ async function realTargetDirectory(directory: string): Promise<string | undefine
 
     missing.unshift(basename(existing));
     existing = parent;
-  }
-}
-
-async function isSymbolicLink(path: string): Promise<boolean> {
-  try {
-    return (await lstat(path)).isSymbolicLink();
-  } catch (error) {
-    if (isNotFound(error)) return false;
-
-    throw error;
   }
 }
 

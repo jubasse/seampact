@@ -14,11 +14,12 @@ export function configLocation(cwd: string, configOption: string | undefined): C
   return { file, displayName: displayPath(cwd, file) };
 }
 
-// Relative to the working directory when the file is inside it, absolute otherwise.
-function displayPath(cwd: string, file: string): string {
+// Relative to the working directory when the file is inside it, absolute otherwise. A relative path prints with
+// forward slashes on every platform, the form a config file writes.
+export function displayPath(cwd: string, file: string): string {
   const fromCwd = relative(cwd, file);
   const isInsideCwd =
     fromCwd !== "" && !isAbsolute(fromCwd) && fromCwd !== ".." && !fromCwd.startsWith(`..${sep}`);
 
-  return isInsideCwd ? fromCwd : file;
+  return isInsideCwd ? fromCwd.split(sep).join("/") : file;
 }
