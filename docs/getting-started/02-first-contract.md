@@ -1,6 +1,6 @@
 # Write the contract
 
-The contract describes one collection, `notes`, with four operations. Run the commands in the app folder. Create `contract/api.yaml`.
+The contract describes one collection, `notes`, with four operations. Run the commands in the app folder. Replace `contract/api.yaml`, which `init` wrote, with this one, and keep its first line, the editor modeline.
 
 ```yaml
 api:

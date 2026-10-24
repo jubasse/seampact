@@ -31,15 +31,16 @@ Around the compiler, the other core packages read the IR: `openapi` writes the O
 
 ## 2. Folders and groups
 
-Rule (ADR 0009, section "Repository layout"): npm packages live at `packages/<group>/<name>`, the directory named after the package name suffix, in one pnpm workspace. The groups are `core`, `targets`, `packs` and `runtime`.
+Rule (ADR 0009, section "Repository layout"): npm packages live at `packages/<group>/<name>`, the directory named after the package name suffix, in one pnpm workspace. The groups are `core`, `targets`, `packs`, `runtime` and `tools`.
 
 | Path | What it holds |
 |---|---|
 | `packages/core/*` | Exists today: `cli`, `codegen-core`, `compiler`, `diff`, `lint`, `openapi`, `spec`. Role `core` in the package manifest. |
-| `packages/targets/` | Later group: one generator per framework or language, for example `targets/codegen-zod` for `@seampact/codegen-zod`. Not created yet. |
-| `packages/packs/` | Later group: data-only convention packs (ADR 0008), for example `packs/pack-hal`. Not created yet. |
-| `packages/runtime/` | Later group: the hooks, helper and adapter packages that generated code depends on at run time (ADR 0009, section "Package roles"). Not created yet. |
-| `jvm/` | One Gradle build, one subproject per artifact. |
+| `packages/targets/` | One generator per framework or language, for example `targets/codegen-zod` for `@seampact/codegen-zod`. |
+| `packages/packs/` | Data-only convention packs (ADR 0008), for example `packs/pack-hal`. |
+| `packages/runtime/` | The hooks, helper and adapter packages that generated code depends on at run time (ADR 0009, section "Package roles"). |
+| `packages/tools/` | Repository-side tools: `binary` (the standalone compiler, ADR 0010) and `http-suite`. |
+| `jvm/` | One Gradle build, one subproject per artifact: `seampact-ir` (IR reader, bundle verifier, binary runner), `seampact-hooks`, `seampact-compiler` (the binary as Maven classifier artefacts). |
 | `php/` | One directory per Composer package, `php/<name>`, each with its own `composer.json`. |
 | `fixtures/` | Test inputs and expected outputs, shared by the tests (`loader`, `validate`, `passes`, `reference`, `draft`). |
 | `scripts/` | Repository tooling: `cartography`, `checklist`, `hooks`, `ir-models` (Kotlin and PHP models), `package-rules`, `workspace`. |
@@ -106,7 +107,7 @@ A pack is data only: YAML files with the same structure as the convention and de
 5. For a format pack, add its presets to `docs/grammar/15-first-party-pack-presets.md` (ADR 0008 points to ADR 0002 section 15 for the presets).
 6. A pack that needs a code-level rule ships a separate lint plugin package; the pack never depends on it (ADR 0008, section "A pack is data only").
 
-Not decided yet: the pack scaffold (file names inside the package) and how first-party packs are embedded in the standalone binary beyond the statement in ADR 0008 that they are.
+First-party packs are embedded in the standalone binary; a test checks that `EMBEDDED_PACKS` covers every `packages/packs/*`. Not decided yet: the pack scaffold (file names inside the package).
 
 ## 4. Before you open a PR
 

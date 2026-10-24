@@ -21,6 +21,7 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 |---|---|
 | `config.source.no-workspace` | The `path` folder holds neither `workspace.yaml` nor `api.yaml`. Point it at the contract folder. |
 | `config.source.local` | Local sources are refused (`allowLocal: false` or `SEAMPACT_ALLOW_LOCAL=false`). Use a pinned `package`, `release` or `git` source. |
+| `config.source.maven-unpinned` | A `maven` source names a dynamic or snapshot version. Name a release, such as `1.4.0`, and pin its `integrity`. |
 | `config.source.duplicate` | The same source name is in the app config and in the root config. Keep one. |
 
 ## Targets and apis

@@ -17,6 +17,35 @@
 - **Safe changes.** `seampact check` and `seampact diff` catch drift and breaking changes in CI.
 - **Your tools keep working.** Swagger, Ajv and VineJS stay in place.
 
+## What it generates
+
+From one YAML contract:
+
+| Output | What you get |
+|---|---|
+| Types | One TypeScript type per schema, request and reply. |
+| Validators | zod, yup, class-validator, VineJS or Ajv schemas that check every input. |
+| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS or Hono. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
+| Built-in rules | Paging, rate limits, idempotency keys, ETags, CSRF, signed requests and field rights, declared in the contract and enforced at the boundary. You plug in the stores and decisions. |
+| Errors | One error format, RFC 9457 `problem+json` by default, with typed error codes per route. |
+| Clients | A typed `fetch` client, and TanStack Query, SWR or RTK Query hooks for React. |
+| Docs | OpenAPI 3.1 documents, and on NestJS and Fastify your framework's own Swagger kept in line with the contract. |
+| Editor support | Schemas that complete and check the contract's names as you type. |
+
+From the CLI:
+
+| Command | What it does |
+|---|---|
+| `seampact init` | Starts a project: a config and an example contract. |
+| `seampact generate` | Writes the code above into `__generated__`. |
+| `seampact check` | Fails CI when generated files or documents differ from the contract. |
+| `seampact diff` | Classifies the changes between two versions and fails on a breaking one. |
+| `seampact lint` | Reports contract mistakes before you generate. |
+| `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
+| `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
+
+Next: Spring Boot, Laravel, Symfony, Vue, Angular, MSW mocks.
+
 ## Example
 
 The contract:
@@ -133,14 +162,159 @@ export const notesEndpoints: NotesHono.NotesEndpoints = {
 
 </details>
 
-And the client:
+The validators, from the same `Note` schema. Pick one per app:
+
+<details open><summary>zod</summary>
 
 ```ts
-const client = NotesClient.createClient({ baseUrl: "http://localhost:3000" });
+export const NoteSchema = z.object({
+  // …
+  title: z
+    .string()
+    .refine((value) => codePointLength(value) >= 1, {
+      error: "Expected at least 1 character.",
+      params: { rule: "minLength" },
+    })
+    .refine((value) => codePointLength(value) <= 100, {
+      error: "Expected at most 100 characters.",
+      params: { rule: "maxLength" },
+    }),
+  // …
+});
+```
+
+</details>
+
+<details><summary>yup</summary>
+
+```ts
+export const NoteSchema = yup
+  .object({
+    // …
+    title: yup
+      .string()
+      .strict()
+      .test({
+        name: "minLength",
+        message: "Expected at least 1 character.",
+        test: (value) => value === undefined || codePointLength(value) >= 1,
+      })
+      .test({
+        name: "maxLength",
+        message: "Expected at most 100 characters.",
+        test: (value) => value === undefined || codePointLength(value) <= 100,
+      })
+      .defined(),
+    // …
+  })
+  .noUnknown()
+  .default(undefined);
+```
+
+</details>
+
+<details><summary>class-validator (NestJS)</summary>
+
+```ts
+export class NoteDto {
+  // …
+  @IsString()
+  @contract.MinLength(1, "Expected at least 1 character.")
+  @contract.MaxLength(100, "Expected at most 100 characters.")
+  title!: string;
+  // …
+}
+```
+
+</details>
+
+<details><summary>VineJS (AdonisJS)</summary>
+
+A data tree the target reads at runtime to build the VineJS schema.
+
+```ts
+export const NoteSchema = vineStandardSchema({
+  kind: "object",
+  unknownKeys: "strip",
+  fields: [
+    // …
+    {
+      key: "title",
+      optional: false,
+      type: {
+        kind: "scalar",
+        base: "string",
+        checks: [
+          { rule: "minLength", limit: 1, message: "Expected at least 1 character." },
+          { rule: "maxLength", limit: 100, message: "Expected at most 100 characters." },
+        ],
+      },
+    },
+    // …
+  ],
+});
+```
+
+</details>
+
+<details><summary>Ajv JSON Schema (Fastify)</summary>
+
+A plain JSON Schema; `seampactMessages` is the keyword that carries the contract's messages.
+
+```ts
+export const NoteSchema = ajvStandardSchema({
+  type: "object",
+  properties: {
+    // …
+    title: {
+      type: "string",
+      minLength: 1,
+      maxLength: 100,
+      seampactMessages: {
+        minLength: "Expected at least 1 character.",
+        maxLength: "Expected at most 100 characters.",
+      },
+    },
+    // …
+  },
+  required: ["noteId", "title", "createdAt"],
+});
+```
+
+</details>
+
+Planned: Spring Bean Validation for Spring Boot, validation rules for Laravel.
+
+And the client:
+
+<details open><summary>fetch</summary>
+
+```ts
+const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
 const reply = await client.getNote({ path: { noteId } });
 
 if (reply.ok) console.log(reply.body.title);
 ```
+
+</details>
+
+<details><summary>TanStack Query (React)</summary>
+
+```tsx
+const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
+const Notes = createNotesHooks(client);
+
+function NoteTitle(props: { noteId: string }) {
+  const note = Notes.useGetNote({ path: { noteId: props.noteId } });
+
+  if (note.isPending) return <p>Loading</p>;
+  if (note.isError) return <p>{note.error.message}</p>;
+
+  return <h1>{note.data.body.title}</h1>;
+}
+```
+
+</details>
 
 The full walk-through is in [Get started](docs/getting-started/README.md).
 
@@ -156,7 +330,7 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 
 Clients: typed `fetch` client, and for React 19 over it TanStack Query 5 options and hooks, SWR 2 keys, fetchers and hooks, or an RTK Query 2 api. Vue and Angular: planned.
 
-Java and PHP: planned.
+Java (Spring Boot 4) and PHP (Laravel, Symfony): planned.
 
 ## Get started
 
@@ -175,10 +349,12 @@ Every page is listed in [docs/README.md](docs/README.md).
 ## Roadmap
 
 - [x] Node servers: NestJS, Express, Fastify, AdonisJS, Hono
-- [x] CLI: `generate`, `check`, `lint`, `diff`
-- [ ] Frontend: React and Vue hooks, Angular, MSW mocks
+- [x] CLI: `init`, `generate`, `check`, `lint`, `diff`, `bundle`, `explain`, editor schemas (`compile --editor-schemas`)
+- [x] Frontend: React hooks (TanStack Query, SWR, RTK Query)
+- [ ] Frontend: Vue, Angular, MSW mocks
 - [ ] Java: Spring Boot. PHP: Laravel, Symfony, API Platform
-- [ ] Standalone binary, docs site, 1.0 on npm
+- [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm
+- [ ] Example apps per stack pairing, and an `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
 - Later: Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Python, Go, .NET, Rust ([full list](docs/roadmap.md))
 
 ## Contributing

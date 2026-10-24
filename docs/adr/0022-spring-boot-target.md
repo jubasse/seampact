@@ -74,7 +74,7 @@ Patterns use `PathPatternParser` syntax with positional variable names (`/v1/tas
 
 Spring orders patterns by specificity, so `/v1/tasks/search` wins over `/v1/tasks/{p1}` whatever the declaration order.
 
-The filter matches the raw request target against the contract templates: `getRequestURI()` without the `mount` read at boot (the context path, then the servlet path), stripped as a raw prefix, never through the decoded `getServletPath()`. The interceptor then compares the operation of the handler method Spring chose with that match. Tomcat decodes and normalizes the path before routing, so the two can differ:
+The filter matches the raw request target against the contract templates: `getRequestURI()` without the request's own `getContextPath()`, read on each request, then without the servlet path, stripped as a raw prefix, never through the decoded `getServletPath()`. Behind a proxy, `ForwardedHeaderFilter` applies `X-Forwarded-Prefix` to the context path of each request, so routing stays right; the boot check still compares `mount` with the configured paths. The interceptor then compares the operation of the handler method Spring chose with that match. Tomcat decodes and normalizes the path before routing, so the two can differ:
 
 - `/v1/tasks/%73earch` reaches the `search` method while the raw path matches `{p1}`. The interceptor answers the path's `notFound` 404 before any check, as on Hono.
 - A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the filter, before Spring Security, on every Node target's terms (ADR 0016 "Errors raised before routing"). This covers a trailing slash, `//`, a dot segment (`x/../7`, `%2e%2e`), a percent-encoded static segment, and a segment holding a `;` path parameter, which Tomcat strips before routing.
@@ -184,7 +184,7 @@ The app needs a Jakarta Validation provider on its runtime classpath (`spring-bo
   - No app-wide parser limit is involved, and the target exports no limit constant.
 - **Paging.** The paging roles, `overLimit` included, are validated in step 6, before any `Pageable` is built (ADR 0012 obligations). `Pageable` and `Page` appear only for the `springPage` style of the `pack:spring` profile (ADR 0008), never as a default shape.
 - **Keys.** The throttle bucket key and the idempotency key are fixed-size SHA-256 digests with the same bytes, hex and base64url text as the Node targets, so keys and ETags are equal across targets. The idempotency key is derived as ADR 0012 obligations say, never from the credentials.
-- **Absolute URLs.** Under `api.wire.urls: absolute`, every URL starts with the configured public origin, the property `seampact.<api>.public-origin`. The boot check fails without it, and the request `Host` and forwarded headers are never read.
+- **Absolute URLs.** Under `api.wire.urls: absolute`, every URL starts with the configured public origin, the property `seampact.<api>.public-origin`. The boot check fails without it, and the request `Host` and forwarded headers are never read. The origin is a scheme, host and port, and stays as configured behind a proxy.
 
 ### Redaction
 
@@ -221,6 +221,8 @@ An operation's property wins over the api's property, which wins over the target
 Hooks are beans: authenticate hooks, deciders, scope resolvers and the idempotency store implement the `seampact-hooks` interfaces, narrowed by the generated request records, and `onUnexpectedError` is an optional bean of a generated functional interface. A decider bean names the rights and rules it serves; two beans claiming one name fail the boot check, and no default hook exists (ADR 0012 "Registration and per-right overrides"). The request context is a request attribute under a generated name (ADR 0012 "Open tenancy").
 
 The configuration class is picked up by component scan when the `package` option is under the app's own package, or by `@Import(TasksSeampactConfiguration.class)`; registering it twice is deduplicated by Spring. A non-servlet application (WebFlux) fails the start, naming the fix, instead of skipping the boundary silently. Two apis are two configuration classes, each with its own filter, interceptor and boot check.
+
+The registration uses no `@Profile` or `@ConditionalOnProperty` to change behaviour: AOT and native builds fix conditions at build, so they behave as the JVM build does. Run-time settings are the `seampact.<api>.*` properties above.
 
 ### The boot check
 
@@ -391,6 +393,7 @@ One run's first request to a non-contract streamed route failed inside Tomcat (a
 - A `br` error body is a violation here, where ADR 0016 decodes it.
 - A trailing slash, `//`, a dot segment or a `;` path parameter under a base path answers the api's 404, as on the Node targets.
 - Security matchers follow the servlet path; an app that sets `spring.mvc.servlet.path` needs no change.
+- Behind a reverse proxy, the app sets `server.forward-headers-strategy`: `framework` (`ForwardedHeaderFilter`, which applies `X-Forwarded-Prefix` by default in Boot 4.1) or `native` (Tomcat's `RemoteIpValve`, no prefix). The edge proxy removes the forwarded headers a caller sends, so none is forged. The Spring guide says both.
 - Bean Validation annotations stay on the records, with seampact's own constraints where Jakarta's meaning differs, so a developer's `@Valid` agrees with the boundary.
 - Boot 3.x apps cannot use the target in 1.0.
 - ADR 0012's spring-boot row is amended: a first return value handler and a first exception resolver replace its `ResponseBodyAdvice` and `@ControllerAdvice`, for the reasons in Options, and the composed annotation carries no `@ResponseStatus`.

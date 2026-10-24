@@ -208,7 +208,7 @@ Each target's own ADR states, besides its placement above:
 - laravel: the rule mapping of ADR 0003's Consequences (`present` for a required string, whole-number integers, objects preserved, `TrimStrings` and `ConvertEmptyStringsToNull` excluded) and the `failedValidation()` re-render from 422 to the `schemaInvalid` 400.
 - spring-boot, laravel, symfony and api-platform: `toString()` of a generated record and PHP's `var_dump` and `print_r` (`__debugInfo()`, `#[\SensitiveParameter]` on constructors) never show a `sensitive` value.
 - angular: `HttpClient`'s XSRF support (`withXsrfConfiguration`) set from the contract's CSRF header name.
-- fastify: when no validator is linked, one generated Ajv validator over the whole request with the boundary's own options, in step 6's single pass, never Fastify's per-part route `schema` (ADR 0009); adonis: with the VineJS link, which waits after the slice's zod link (ADR 0019), strict input as a generated rule, since VineJS drops unknown keys.
+- fastify: when no validator is linked, one generated Ajv validator over the whole request with the boundary's own options, in step 6's single pass, never Fastify's per-part route `schema` (ADR 0009); adonis: with no validator link, a generated VineJS validator (ADR 0019), strict input as a generated rule, since VineJS drops unknown keys. Ajv runs with `multipleOfPrecision: 12` and `ownProperties: true`, and its schemas are compiled at module load.
 
 ### Failures inside hooks
 

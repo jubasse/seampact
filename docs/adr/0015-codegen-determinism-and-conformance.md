@@ -93,6 +93,8 @@ A profile selects how the suite reads responses and which cases apply. Cases are
 | `adapter:<name>` | each adapter (`nestjs-casl`, `laravel-spatie`) | the adapter answers the decide hook from library state seeded through the control routes; runs the rights, restricted-field, sort-key and scope cases |
 | `boot` | every server target and adapter | the boot tests |
 
+A pack profile reads with the shape the step expects (item, page or error), from the IR operation; it reports a case it refuses by name.
+
 A server target is done when the `default`, `hand-written` and `boot` profiles pass, plus the profile of every format pack it claims (A17). An adapter is done when its own profile and `boot` pass.
 
 ### The validator agreement table

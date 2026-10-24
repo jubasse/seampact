@@ -113,6 +113,22 @@ npx tsc -p .
 
 You see no output.
 
+## Behind a reverse proxy and in Docker
+
+Trust only your proxy's addresses, not a hop count, so `request.ip` and `request.protocol` are the caller's:
+
+```ts
+const app = Fastify({ trustProxy: ["127.0.0.1", "10.0.0.0/8"] });
+```
+
+The client address your hooks get is `request.ip`, so it follows this setting.
+
+The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Register the plugin without a prefix: another prefix is refused at boot.
+
+Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
+
+Check your variables at start with `@fastify/env`; they are ready after `await app.register(...)`. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
+
 ## Wiring reference
 
 Every server target takes four options: `bodyValidation` (check request bodies, off by default), `frameworkEtag` (`strip` by default removes an ETag the framework adds to a reply your code wrote outside the contract; `keep` leaves it), `catchAll` (`true` by default answers the api's 404 for a path under its base path that no route serves, or a method it does not serve; `false` leaves those requests to your app) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it. When you register the api, `logger: { warn, error }` sends the messages seampact writes (such as that log) to your logger instead of `console`; the logger is shared by the whole generated api, so the last registration wins. Fastify also takes `compression`: when `@fastify/compress` is registered, replies of 1024 bytes or more are compressed; `compression: off` never compresses them, and `compression: { thresholdBytes: 4096 }` moves the threshold.
