@@ -9,6 +9,7 @@ import java.net.InetSocketAddress
 import java.net.http.HttpClient
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 import java.security.KeyStore
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
@@ -46,6 +47,8 @@ class ReleaseFetchTest {
         server.createContext("/to-http") { it.redirect("http://127.0.0.1:${server.address.port}/good") }
         server.createContext("/loop") { it.redirect("/loop") }
         server.createContext("/missing") { it.answer(404, ByteArray(0)) }
+        server.createContext("/drip") { it.drip() }
+        server.createContext("/to-opaque") { it.redirect("https:elsewhere") }
         server.start()
 
         client = HttpClient.newBuilder().sslContext(context).followRedirects(HttpClient.Redirect.NEVER).build()
@@ -80,9 +83,22 @@ class ReleaseFetchTest {
         assertEquals(listOf("bundle.archive-invalid"), codes(fetcher().fetch(release("/tampered"), workspace, LocalSourcePolicy.ALLOW)))
         assertEquals(listOf("bundle.release-failed"), codes(fetcher().fetch(release("/to-http"), workspace, LocalSourcePolicy.ALLOW)))
         assertEquals(listOf("bundle.release-failed"), codes(fetcher().fetch(release("/loop"), workspace, LocalSourcePolicy.ALLOW)))
+        assertEquals(listOf("bundle.release-failed"), codes(fetcher().fetch(release("/to-opaque"), workspace, LocalSourcePolicy.ALLOW)))
         assertEquals(listOf("bundle.release-failed"), codes(fetcher().fetch(release("/missing"), workspace, LocalSourcePolicy.ALLOW)))
         assertEquals(listOf("bundle.release-url"), codes(fetcher().fetch(BundleSource.Release("http://example.com/b.tgz", null), workspace, LocalSourcePolicy.ALLOW)))
         assertIs<BundleVerifyResult.Verified>(fetcher().fetch(release("/to-good"), workspace, LocalSourcePolicy.ALLOW))
+    }
+
+    @Test
+    fun theDeadlineCoversTheWholeBody() {
+        val started = System.nanoTime()
+        val slow = BundleFetcher(workspace.resolve("cache"), emptyMap(), ::resolveArtefact, client, Duration.ofSeconds(1))
+        val refused = assertIs<BundleVerifyResult.Refused>(slow.fetch(release("/drip"), workspace, LocalSourcePolicy.ALLOW))
+        val elapsed = Duration.ofNanos(System.nanoTime() - started)
+
+        assertEquals(listOf("bundle.release-failed"), refused.failures.map { it.code.code })
+        assertTrue("took over 1000 ms" in refused.failures.single().message, refused.failures.single().message)
+        assertTrue(elapsed < Duration.ofSeconds(4), "stopped at the deadline, not at the end of the body ($elapsed)")
     }
 
     @Test
@@ -103,6 +119,10 @@ class ReleaseFetchTest {
         val missing = BundleSource.MavenArtefact("com.acme:none:1.0.0", "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
         assertEquals(listOf("bundle.artefact-unreadable"), codes(fetcher().fetch(missing, workspace, LocalSourcePolicy.ALLOW)))
 
+        val local = BundleSource.MavenArtefact("$LOCAL_GROUP:contract:1.0.0", BundleFixture.integrity)
+        assertIs<BundleVerifyResult.Verified>(fetcher().fetch(local, workspace, LocalSourcePolicy.ALLOW))
+        assertEquals(listOf("bundle.source-local"), codes(fetcher().fetch(local, workspace, LocalSourcePolicy.REFUSE)), "refused even when cached")
+
         val npm = BundleSource.Package("@acme/contract", "1.0.0", BundleFixture.integrity)
         assertEquals(listOf("bundle.package-unsupported"), codes(fetcher().fetch(npm, workspace, LocalSourcePolicy.ALLOW)))
     }
@@ -110,12 +130,12 @@ class ReleaseFetchTest {
     // The build's resolver, stood in by a directory holding `<artifactId>-<version>.tgz`.
     private fun fetcher() = BundleFetcher(workspace.resolve("cache"), emptyMap(), ::resolveArtefact, client)
 
-    private fun resolveArtefact(coordinates: String): Path {
-        val (_, artifactId, version) = coordinates.split(":")
+    private fun resolveArtefact(coordinates: String): ResolvedArtefact {
+        val (groupId, artifactId, version) = coordinates.split(":")
         val file = workspace.resolve("$artifactId-$version.tgz")
         if (Files.notExists(file)) throw FileNotFoundException("no artefact $coordinates in the test repository")
 
-        return file
+        return ResolvedArtefact(file, fromLocalRepository = groupId == LOCAL_GROUP)
     }
 
     private fun url(path: String) = "https://127.0.0.1:${server.address.port}$path"
@@ -127,6 +147,22 @@ class ReleaseFetchTest {
     private fun HttpExchange.answer(status: Int, body: ByteArray) {
         sendResponseHeaders(status, if (body.isEmpty()) -1 else body.size.toLong())
         responseBody.use { it.write(body) }
+    }
+
+    // Headers at once, then one byte a second for eight seconds, until the client goes away.
+    private fun HttpExchange.drip() {
+        sendResponseHeaders(200, DRIP_BYTES.toLong())
+        try {
+            responseBody.use { body ->
+                repeat(DRIP_BYTES) {
+                    body.write(0)
+                    body.flush()
+                    Thread.sleep(1000)
+                }
+            }
+        } catch (error: java.io.IOException) {
+            close()
+        }
     }
 
     private fun HttpExchange.redirect(location: String) {
@@ -152,5 +188,9 @@ class ReleaseFetchTest {
 
     private companion object {
         val PASSWORD = "seampact-test".toCharArray()
+        const val DRIP_BYTES = 8
+
+        // The group the test resolver serves as if from `mavenLocal()`.
+        const val LOCAL_GROUP = "local.acme"
     }
 }

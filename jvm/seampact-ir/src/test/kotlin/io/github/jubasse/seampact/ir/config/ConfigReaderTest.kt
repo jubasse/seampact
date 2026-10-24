@@ -61,6 +61,13 @@ class ConfigReaderTest {
             config.sources.getValue("published"),
         )
         assertEquals(listOf("config.schema"), refused("sources: { published: { maven: 'com.acme:tasks-contract' } }\n").map { it.code })
+        for (coordinates in listOf("..:..:1.0.0", ".:-:1.0.0")) {
+            assertEquals(listOf("config.schema"), refused("sources: { published: { maven: '$coordinates' } }\n").map { it.code }, coordinates)
+        }
+        for (version in listOf("+", "1.+", "latest.release", "[1.0,2.0)", "1.0-SNAPSHOT")) {
+            val problems = refused("sources: { published: { maven: 'com.acme:tasks-contract:$version' } }\n")
+            assertEquals(listOf("config.source.maven-unpinned"), problems.map { it.code }, version)
+        }
     }
 
     @Test
@@ -124,6 +131,20 @@ class ConfigReaderTest {
         assertEquals(listOf("config.yaml.syntax"), refused("outDir: !!binary aGk=\n").map { it.code })
         assertEquals(listOf("config.yaml.syntax"), refused("checks: &self { nested: *self }\n").map { it.code })
     }
+
+    @Test
+    fun refusesAliasExpansionPastTheNodeClisBudget() {
+        assertEquals(listOf("config.yaml.syntax"), refused(doublingAliases(6)).map { it.code })
+        assertEquals(
+            "Excessive alias count indicates a resource exhaustion attack.",
+            refused(doublingAliases(6)).single().message,
+        )
+        assertEquals(setOf("config.schema"), refused(doublingAliases(5)).map { it.code }.toSet())
+    }
+
+    // `checks.l0` holds two strings, each next level two aliases of the one before, under keys the schema refuses.
+    private fun doublingAliases(levels: Int): String =
+        "checks:\n  l0: &l0 [x, x]\n" + (1 until levels).joinToString("") { "  l$it: &l$it [*l${it - 1}, *l${it - 1}]\n" }
 
     @Test
     fun refusesARootConfigAMissingFileAndAHugeOne() {

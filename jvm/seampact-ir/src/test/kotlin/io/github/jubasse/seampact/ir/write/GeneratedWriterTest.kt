@@ -108,6 +108,21 @@ class GeneratedWriterTest {
         assertEquals(listOf("writer.path.outside"), refusedCodes(GeneratedFile("linked/A.java", "")))
     }
 
+    @Test
+    fun refusesALinkInPlaceOfAGeneratedFileOrOfTheManifest() {
+        write(GeneratedFile("A.java", "class A {}\n"))
+        val target = Files.writeString(workspace.resolve("target.java"), "class A {}\n")
+
+        Files.delete(out.resolve("A.java"))
+        Files.createSymbolicLink(out.resolve("A.java"), target)
+        assertEquals(listOf("writer.file.not-generated"), refusedCodes(GeneratedFile("A.java", "class A {}\n")))
+
+        Files.delete(out.resolve("A.java"))
+        val manifest = Files.move(out.resolve(MANIFEST_FILE_NAME), workspace.resolve("manifest.json"))
+        Files.createSymbolicLink(out.resolve(MANIFEST_FILE_NAME), manifest)
+        assertEquals(listOf("writer.manifest.not-regular"), refusedCodes(GeneratedFile("A.java", "class A {}\n")))
+    }
+
     private fun write(vararg files: GeneratedFile) {
         assertIs<PlanOutcome.Planned>(GeneratedWriter.write(out, "server", files.toList(), HandEditPolicy.REFUSE))
     }

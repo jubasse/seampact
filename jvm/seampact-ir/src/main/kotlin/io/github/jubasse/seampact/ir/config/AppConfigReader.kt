@@ -111,7 +111,8 @@ private fun resolveAppConfig(tree: ConfigTree, directory: Path, config: JsonObje
         AppConfigEntry(entry.deepCopy(), outDir.resolve(entry.stringAt("out") ?: entry.requiredStringAt("id")).normalize())
     }
 
-    val problems = duplicateIdProblems(tree, entries) +
+    val problems = unpinnedMavenProblems(tree, config["sources"] as? JsonObject ?: JsonObject(emptyMap())) +
+        duplicateIdProblems(tree, entries) +
         outsideOutDirProblems(tree, outDir, entries) +
         overlappingOutProblems(tree, entries) +
         switchedOffAllowListProblems(tree, entries) +

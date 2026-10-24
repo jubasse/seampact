@@ -88,7 +88,12 @@ internal fun parseConfigText(text: String, displayName: String): ConfigFileRead 
 
     val positions = HashMap<String, ConfigPosition>()
     val problems = mutableListOf<ConfigProblem>()
-    val value = if (root == null) JsonNull else YamlTreeBuilder(displayName, positions, problems).build(root, emptyList())
+    val value = try {
+        if (root == null) JsonNull else YamlTreeBuilder(displayName, positions, problems).build(root, emptyList())
+    } catch (error: ExcessiveAliasesException) {
+        val at = if (error.path.isEmpty()) "" else " ${formatKeyPath(error.path)}"
+        return refusedWith(syntaxProblem("Excessive alias count indicates a resource exhaustion attack.", "$displayName$at"))
+    }
 
     if (problems.isNotEmpty()) return ConfigFileRead.Refused(problems)
 
@@ -109,6 +114,14 @@ private fun sentenceOf(text: String): String {
     return if (capitalized.endsWith(".")) capitalized else "$capitalized."
 }
 
+// `yaml`'s default `maxAliasCount`, so one config reads the same in both runners.
+private const val MAX_ALIAS_COUNT = 100L
+
+// `count` starts at one: `yaml` counts the anchor itself as a use.
+private class AliasData(var count: Long = 1L, var aliasCount: Long = 0L)
+
+private class ExcessiveAliasesException(val path: KeyPath) : RuntimeException("excessive aliases")
+
 private class YamlTreeBuilder(
     private val displayName: String,
     private val positions: MutableMap<String, ConfigPosition>,
@@ -117,8 +130,17 @@ private class YamlTreeBuilder(
     // The collections being built, by identity: an alias inside the collection it names has no JSON value.
     private val open = Collections.newSetFromMap(IdentityHashMap<Node, Boolean>())
 
+    // Each anchored node's value, the path it was first read at, and its alias budget data (`yaml`'s rule).
+    private val anchoredValues = IdentityHashMap<Node, JsonElement>()
+    private val firstPaths = IdentityHashMap<Node, KeyPath>()
+    private val aliasData = IdentityHashMap<Node, AliasData>()
+
     fun build(node: Node, path: KeyPath): JsonElement {
+        val anchoredValue = anchoredValues[node]
+        if (anchoredValue != null) return aliasValue(node, anchoredValue, path)
+
         positions.putIfAbsent(formatKeyPath(path), positionOf(node))
+        firstPaths.putIfAbsent(node, path)
 
         if (!open.add(node)) {
             problems += syntaxProblem("An alias refers to the collection that holds it; a config value cannot hold itself.", whereOf(node))
@@ -126,9 +148,36 @@ private class YamlTreeBuilder(
         }
 
         try {
-            return buildOpen(node, path)
+            val value = buildOpen(node, path)
+            if (node.anchor.isPresent) anchoredValues[node] = value
+
+            return value
         } finally {
             open.remove(node)
+        }
+    }
+
+    // An alias is the anchored value itself, never a copy, under the Node CLI's `yaml` budget: each use of an anchor
+    // counts its uses times the aliases its value holds, and past MAX_ALIAS_COUNT the config is refused.
+    private fun aliasValue(anchored: Node, value: JsonElement, path: KeyPath): JsonElement {
+        val data = aliasData.getOrPut(anchored) { AliasData() }
+        data.count += 1
+        if (data.aliasCount == 0L) data.aliasCount = aliasCountOf(anchored, firstPaths.getValue(anchored))
+        if (data.count * data.aliasCount > MAX_ALIAS_COUNT) throw ExcessiveAliasesException(path)
+
+        return value
+    }
+
+    private fun aliasCountOf(node: Node, path: KeyPath): Long {
+        if (firstPaths[node] != path) return aliasData[node]?.let { it.count * it.aliasCount } ?: 0L
+
+        return when (node) {
+            is SequenceNode -> node.value.withIndex().maxOfOrNull { (index, item) -> aliasCountOf(item, path + index) } ?: 0L
+            is MappingNode -> node.value.maxOfOrNull { tuple ->
+                val key = (tuple.keyNode as? ScalarNode)?.value ?: ""
+                maxOf(aliasCountOf(tuple.keyNode, path), aliasCountOf(tuple.valueNode, path + key))
+            } ?: 0L
+            else -> 1L
         }
     }
 

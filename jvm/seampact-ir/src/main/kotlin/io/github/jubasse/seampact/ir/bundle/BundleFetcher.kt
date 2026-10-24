@@ -5,12 +5,19 @@ import java.io.IOException
 import java.net.http.HttpClient
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
+
+/**
+ * A Maven artefact the build resolved: its local [file], and whether it came from a local repository
+ * (`mavenLocal()`, a `file:` repository), which counts as a local source (ADR 0011).
+ */
+public data class ResolvedArtefact(val file: Path, val fromLocalRepository: Boolean)
 
 /** Resolves a Maven artefact through the build's own repositories to its local file (the plugin's resolver). */
 public fun interface MavenArtefactResolver {
-    /** The local file of [coordinates], `groupId:artifactId:version`; an [IOException] when it cannot be resolved. */
+    /** The file of [coordinates], `groupId:artifactId:version`; an [IOException] when it cannot be resolved. */
     @Throws(IOException::class)
-    public fun resolve(coordinates: String): Path
+    public fun resolve(coordinates: String): ResolvedArtefact
 }
 
 /**
@@ -25,6 +32,7 @@ public class BundleFetcher(
     private val environment: Map<String, String>,
     private val mavenArtefacts: MavenArtefactResolver,
     private val httpClient: HttpClient = releaseHttpClient(),
+    private val releaseDeadline: Duration = DOWNLOAD_DEADLINE,
 ) {
     private val cache = BundleCache(cacheDirectory)
 
@@ -41,6 +49,19 @@ public class BundleFetcher(
         }
         if (problem != null) return refused(problem)
 
+        // The channel only tells an npm package root apart; a Maven artefact is a tarball, checked as a release one.
+        // Under refused local sources a Maven artefact is resolved before any cache read, so one that comes from a
+        // local repository is refused even when its bundle is cached, as a local git repository is.
+        val artefact = if (source is BundleSource.MavenArtefact && localSources == LocalSourcePolicy.REFUSE) {
+            when (val resolved = resolveArtefact(source)) {
+                is ArtefactResolution.Failed -> return refused(resolved.failure)
+                is ArtefactResolution.Resolved -> resolved.artefact
+            }
+        } else {
+            null
+        }
+        if (source is BundleSource.MavenArtefact && artefact?.fromLocalRepository == true) return refused(localArtefact(source, artefact))
+
         val channel = if (source is BundleSource.Git) BundleChannel.GIT else BundleChannel.RELEASE
         val entry = source.integrity?.let(cache::entryOf)
         if (entry != null && Files.exists(entry)) return readCacheEntry(entry, source.integrity, channel)
@@ -48,7 +69,7 @@ public class BundleFetcher(
         val fetched = when (source) {
             is BundleSource.Release -> fetchRelease(source)
             is BundleSource.Git -> fetchGitBundle(source, baseDirectory, localSources, environment)
-            is BundleSource.MavenArtefact -> extractArtefact(source)
+            is BundleSource.MavenArtefact -> extractArtefact(source, artefact)
             is BundleSource.Package -> return refused(packageUnsupported(source))
         }
 
@@ -64,17 +85,16 @@ public class BundleFetcher(
         }
     }
 
-    private fun fetchRelease(source: BundleSource.Release): Fetched = when (val download = downloadReleaseTarball(source, httpClient)) {
+    private fun fetchRelease(source: BundleSource.Release): Fetched = when (val download = downloadReleaseTarball(source, httpClient, releaseDeadline)) {
         is Download.Failed -> Fetched.Failed(download.failure)
         is Download.Bytes -> extracted(download.bytes)
     }
 
     // The build resolves the artefact through its own repositories; its bytes are checked like a downloaded tarball.
-    private fun extractArtefact(source: BundleSource.MavenArtefact): Fetched {
-        val tarball = try {
-            mavenArtefacts.resolve(source.coordinates)
-        } catch (error: IOException) {
-            return Fetched.Failed(artefactUnreadable(source, error))
+    private fun extractArtefact(source: BundleSource.MavenArtefact, resolvedBefore: ResolvedArtefact?): Fetched {
+        val tarball = resolvedBefore?.file ?: when (val resolved = resolveArtefact(source)) {
+            is ArtefactResolution.Failed -> return Fetched.Failed(resolved.failure)
+            is ArtefactResolution.Resolved -> resolved.artefact.file
         }
         val size = try {
             Files.size(tarball)
@@ -100,6 +120,18 @@ public class BundleFetcher(
         }
 
         return extracted(bytes)
+    }
+
+    private sealed interface ArtefactResolution {
+        data class Resolved(val artefact: ResolvedArtefact) : ArtefactResolution
+
+        data class Failed(val failure: BundleFailure) : ArtefactResolution
+    }
+
+    private fun resolveArtefact(source: BundleSource.MavenArtefact): ArtefactResolution = try {
+        ArtefactResolution.Resolved(mavenArtefacts.resolve(source.coordinates))
+    } catch (error: IOException) {
+        ArtefactResolution.Failed(artefactUnreadable(source, error))
     }
 
     private fun extracted(tarball: ByteArray): Fetched = when (val extraction = BundleTarball.extract(tarball)) {
@@ -135,6 +167,13 @@ public class BundleFetcher(
             BundleFailureCode.PACKAGE_UNSUPPORTED,
             "The bundle source ${source.describe()} is an npm package; a JVM build does not read the npm registry yet, it comes once a JVM app needs it.",
             "Use the same bundle as a release asset (`release: { url }`), a git tag (`git: { url, tag, directory }`) or a Maven artefact (`maven`), with the same integrity.",
+        )
+
+        fun localArtefact(source: BundleSource.MavenArtefact, artefact: ResolvedArtefact): BundleFailure = BundleFailure(
+            BundleFailureCode.SOURCE_LOCAL,
+            "The ${source.describe()} resolved from a local repository (${artefact.file}), and local sources are refused here.",
+            "Resolve the artefact from a shared repository: remove `mavenLocal()` or the `file:` repository from the build's repositories for this build.",
+            source.coordinates,
         )
 
         fun artefactUnreadable(source: BundleSource.MavenArtefact, error: IOException): BundleFailure = BundleFailure(

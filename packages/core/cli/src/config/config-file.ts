@@ -82,7 +82,23 @@ export async function parseConfigFile(
 
   if (reservedProblems.length > 0) return { status: "refused", problems: reservedProblems };
 
-  return { status: "parsed", parsed, value: parsed.document.toJS() };
+  return parsedValue(parsed);
+}
+
+// `toJS` refuses an alias expansion past `yaml`'s budget with a `ReferenceError`; it is a YAML problem of the file.
+function parsedValue(parsed: ParsedConfig): ParseConfigOutcome {
+  try {
+    return { status: "parsed", parsed, value: parsed.document.toJS() };
+  } catch (error) {
+    if (!(error instanceof ReferenceError)) throw error;
+
+    return refusedWith({
+      code: "config.yaml.syntax",
+      message: yamlErrorSentence(error.message),
+      fix: "Correct the YAML at that position.",
+      where: parsed.displayName,
+    });
+  }
 }
 
 // The value checked against `schema`; the key problems come first, and the schema errors they cover are dropped.

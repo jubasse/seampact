@@ -27,8 +27,11 @@ function sourceForm(required: readonly string[], allowed: readonly string[]): Js
 const NPM_PACKAGE_NAME_PATTERN = "^(?:@[a-z0-9~-][a-z0-9._~-]*/)?[a-z0-9~-][a-z0-9._~-]*$";
 const NPM_PACKAGE_NAME_LENGTH_MAX = 214;
 
-// A Maven artefact's `groupId:artifactId:version`, the coordinate a JVM build resolves through its repositories.
-const MAVEN_COORDINATE_PATTERN = "^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+:[A-Za-z0-9_.+-]+$";
+// A Maven artefact's `groupId:artifactId:version`, the coordinate a JVM build resolves through its repositories: no
+// segment starts with a dot or a dash, so none names a parent directory of a repository layout. The version also
+// takes the characters of Gradle's dynamic versions and Maven's ranges, which the readers refuse by name.
+const MAVEN_COORDINATE_PATTERN =
+  "^[A-Za-z0-9_][A-Za-z0-9_.-]*:[A-Za-z0-9_][A-Za-z0-9_.-]*:[A-Za-z0-9_+\\[(][A-Za-z0-9_.+\\[\\](),-]*$";
 
 // One contract source: a workspace directory or one of the bundle forms (ADR 0011 "The app config"); the `maven`
 // form is read by the JVM plugins only (ADR 0010 "The contract bundle as a Maven artefact").

@@ -1,10 +1,15 @@
 package io.github.jubasse.seampact.ir.bundle
 
 import java.io.ByteArrayOutputStream
-import java.io.IOException
-import java.io.InputStream
 import java.net.URI
 import java.net.URISyntaxException
+import java.nio.ByteBuffer
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Flow
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -18,10 +23,9 @@ import java.time.Instant
 
 private const val HTTPS_SCHEME = "https"
 private const val REDIRECTS_MAX = 5
-private val DOWNLOAD_DEADLINE: Duration = Duration.ofSeconds(60)
+internal val DOWNLOAD_DEADLINE: Duration = Duration.ofSeconds(60)
 private const val HTTP_OK = 200
 private val REDIRECT_STATUSES = setOf(301, 302, 303, 307, 308)
-private const val READ_CHUNK_BYTES = 64 * 1024
 
 private const val RELEASE_FIX = "Check the release URL and that the asset is reachable over HTTPS, then run again."
 
@@ -36,11 +40,11 @@ internal fun releaseSourceProblem(source: BundleSource.Release): BundleFailure? 
     if (httpsUri(source.url) == null) notHttpsUrl(source.url) else null
 
 /** The tarball bytes the source's URL serves, or why they could not be fetched. */
-internal fun downloadReleaseTarball(source: BundleSource.Release, client: HttpClient): Download {
+internal fun downloadReleaseTarball(source: BundleSource.Release, client: HttpClient, limit: Duration): Download {
     val uri = httpsUri(source.url) ?: return Download.Failed(notHttpsUrl(source.url))
-    val deadline = Instant.now().plus(DOWNLOAD_DEADLINE)
+    val deadline = Instant.now().plus(limit)
 
-    return download(client, uri, REDIRECTS_MAX, deadline)
+    return download(client, uri, REDIRECTS_MAX, deadline, limit)
 }
 
 /** The client of the release channel: redirects are followed by hand, each one checked. */
@@ -63,31 +67,39 @@ private fun notHttpsUrl(text: String): BundleFailure = BundleFailure(
     "Name the bundle tarball by its https: URL.",
 )
 
-private fun download(client: HttpClient, uri: URI, redirectsLeft: Int, deadline: Instant): Download {
+private fun download(client: HttpClient, uri: URI, redirectsLeft: Int, deadline: Instant, limit: Duration): Download {
     val remaining = Duration.between(Instant.now(), deadline)
-    if (remaining.isNegative || remaining.isZero) return releaseFailed(uri, "took over ${DOWNLOAD_DEADLINE.toMillis()} ms")
+    if (remaining.isNegative || remaining.isZero) return releaseFailed(uri, "took over ${limit.toMillis()} ms")
 
+    // The future completes once the whole body is read, so the deadline bounds the body too; past it the
+    // exchange is cancelled.
     val request = HttpRequest.newBuilder(uri).timeout(remaining).GET().build()
+    val exchange = client.sendAsync(request, ::cappedBody)
     val response = try {
-        client.send(request, HttpResponse.BodyHandlers.ofInputStream())
-    } catch (error: HttpTimeoutException) {
-        return releaseFailed(uri, "took over ${DOWNLOAD_DEADLINE.toMillis()} ms")
-    } catch (error: IOException) {
-        return releaseFailed(uri, "failed: ${error.message ?: error.javaClass.simpleName}")
+        exchange.get(remaining.toMillis(), TimeUnit.MILLISECONDS)
+    } catch (error: TimeoutException) {
+        exchange.cancel(true)
+        return releaseFailed(uri, "took over ${limit.toMillis()} ms")
+    } catch (error: ExecutionException) {
+        val cause = error.cause ?: error
+        if (cause is HttpTimeoutException) return releaseFailed(uri, "took over ${limit.toMillis()} ms")
+
+        return releaseFailed(uri, "failed: ${cause.message ?: cause.javaClass.simpleName}")
     }
 
-    response.body().use { body ->
-        val status = response.statusCode()
-        val location = response.headers().firstValue("location").orElse(null)
+    val status = response.statusCode()
+    val location = response.headers().firstValue("location").orElse(null)
+    if (status in REDIRECT_STATUSES && location != null) return redirected(client, uri, location, redirectsLeft, deadline, limit)
+    if (status != HTTP_OK) return releaseFailed(uri, "answered HTTP $status")
 
-        if (status in REDIRECT_STATUSES && location != null) return redirected(client, uri, location, redirectsLeft, deadline)
-        if (status != HTTP_OK) return releaseFailed(uri, "answered HTTP $status")
-
-        return readCapped(body, uri)
+    return when (val body = response.body()) {
+        is CappedBody.Read -> Download.Bytes(body.bytes)
+        is CappedBody.OverCap -> Download.Failed(tooLarge(body.received))
+        CappedBody.Discarded -> releaseFailed(uri, "answered HTTP $status")
     }
 }
 
-private fun redirected(client: HttpClient, from: URI, location: String, redirectsLeft: Int, deadline: Instant): Download {
+private fun redirected(client: HttpClient, from: URI, location: String, redirectsLeft: Int, deadline: Instant, limit: Duration): Download {
     if (redirectsLeft == 0) return releaseFailed(from, "redirected more than $REDIRECTS_MAX times")
 
     val target = try {
@@ -95,32 +107,61 @@ private fun redirected(client: HttpClient, from: URI, location: String, redirect
     } catch (error: IllegalArgumentException) {
         null
     }
-    if (target?.scheme?.lowercase() != HTTPS_SCHEME) {
+    if (target?.scheme?.lowercase() != HTTPS_SCHEME || target.host == null) {
         return releaseFailed(from, "redirected to ${quoted(printableUrl(location))}, which is not an https: URL")
     }
 
-    return download(client, target, redirectsLeft - 1, deadline)
+    return download(client, target, redirectsLeft - 1, deadline, limit)
 }
 
-private fun readCapped(body: InputStream, uri: URI): Download {
-    val bytes = ByteArrayOutputStream()
-    val chunk = ByteArray(READ_CHUNK_BYTES)
-    var received = 0L
+private sealed interface CappedBody {
+    class Read(val bytes: ByteArray) : CappedBody
 
-    try {
-        while (true) {
-            val read = body.read(chunk)
-            if (read == -1) break
+    data class OverCap(val received: Long) : CappedBody
 
-            received += read
-            if (received > BUNDLE_ARCHIVE_BYTES_MAX) return Download.Failed(tooLarge(received))
-            bytes.write(chunk, 0, read)
-        }
-    } catch (error: IOException) {
-        return releaseFailed(uri, "failed: ${error.message ?: error.javaClass.simpleName}")
+    data object Discarded : CappedBody
+}
+
+// The body of a 200 answer up to the archive cap, the exchange cancelled past it; any other answer's body discarded.
+private fun cappedBody(info: HttpResponse.ResponseInfo): HttpResponse.BodySubscriber<CappedBody> =
+    if (info.statusCode() == HTTP_OK) CappedBodySubscriber() else HttpResponse.BodySubscribers.replacing(CappedBody.Discarded)
+
+private class CappedBodySubscriber : HttpResponse.BodySubscriber<CappedBody> {
+    private val result = CompletableFuture<CappedBody>()
+    private val bytes = ByteArrayOutputStream()
+    private var received = 0L
+    private lateinit var subscription: Flow.Subscription
+
+    override fun getBody(): CompletionStage<CappedBody> = result
+
+    override fun onSubscribe(subscription: Flow.Subscription) {
+        this.subscription = subscription
+        subscription.request(Long.MAX_VALUE)
     }
 
-    return Download.Bytes(bytes.toByteArray())
+    override fun onNext(item: List<ByteBuffer>) {
+        if (result.isDone) return
+
+        for (buffer in item) {
+            received += buffer.remaining()
+            if (received > BUNDLE_ARCHIVE_BYTES_MAX) {
+                subscription.cancel()
+                result.complete(CappedBody.OverCap(received))
+                return
+            }
+            val chunk = ByteArray(buffer.remaining())
+            buffer.get(chunk)
+            bytes.write(chunk)
+        }
+    }
+
+    override fun onError(throwable: Throwable) {
+        result.completeExceptionally(throwable)
+    }
+
+    override fun onComplete() {
+        result.complete(CappedBody.Read(bytes.toByteArray()))
+    }
 }
 
 private fun releaseFailed(uri: URI, what: String): Download = Download.Failed(

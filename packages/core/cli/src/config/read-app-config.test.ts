@@ -208,6 +208,25 @@ test("refuses a package source that is not an npm package name", async () => {
   expect(scoped).toMatchObject({ status: "read" });
 });
 
+test("refuses alias expansion past the YAML budget as a YAML problem", async () => {
+  const doubling = (levels: number) =>
+    `checks:\n  l0: &l0 [x, x]\n${Array.from({ length: levels - 1 }, (_, index) => `  l${index + 1}: &l${index + 1} [*l${index}, *l${index}]\n`).join("")}`;
+
+  expect(await readConfigText(doubling(6))).toMatchObject({
+    status: "refused",
+    problems: [
+      {
+        code: "config.yaml.syntax",
+        message: "Excessive alias count indicates a resource exhaustion attack.",
+      },
+    ],
+  });
+  const withinBudget = await readConfigText(doubling(5));
+
+  expect(withinBudget.status).toBe("refused");
+  expect(JSON.stringify(withinBudget)).not.toContain("config.yaml.syntax");
+});
+
 test("reads a Maven artefact source and refuses a coordinate without a version", async () => {
   const read = await readConfigText(
     "sources:\n  contracts: { maven: 'com.acme:tasks-contract:1.0.0', integrity: sha256-x }\ntargets:\n  - { id: t, use: x, api: a }\n",
@@ -219,6 +238,26 @@ test("reads a Maven artefact source and refuses a coordinate without a version",
   expect(read).toMatchObject({ status: "read" });
   expect(refused).toMatchObject({ status: "refused", problems: [{ code: "config.schema" }] });
 });
+
+test.each(["..:..:1.0.0", ".:-:1.0.0"])("refuses the Maven coordinate %s", async (coordinate) => {
+  const outcome = await readConfigText(`sources:\n  contracts: { maven: '${coordinate}' }\n`);
+
+  expect(outcome).toMatchObject({ status: "refused", problems: [{ code: "config.schema" }] });
+});
+
+test.each(["+", "1.+", "latest.release", "[1.0,2.0)", "1.0-SNAPSHOT"])(
+  "refuses the unpinned Maven version %s by name",
+  async (version) => {
+    const outcome = await readConfigText(
+      `sources:\n  contracts: { maven: 'com.acme:tasks-contract:${version}' }\n`,
+    );
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      problems: [{ code: "config.source.maven-unpinned" }],
+    });
+  },
+);
 
 const ROOT_FILES = {
   "seampact.config.yaml":

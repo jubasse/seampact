@@ -18,6 +18,7 @@ import {
   validateConfig,
   whereOf,
 } from "./config-file.js";
+import { unpinnedMavenProblems } from "./maven-source.js";
 import { isStrictlyInside } from "./path-containment.js";
 import { type ResolvedSource, resolvedSources } from "./resolved-source.js";
 
@@ -112,6 +113,7 @@ function resolveRootConfig(
     return { name, directory: appDirectory, file: join(appDirectory, APP_CONFIG_FILE_NAME) };
   });
   const problems = [
+    ...unpinnedMavenProblems(parsed, config.sources),
     ...appPlacementProblems(parsed, directory, apps),
     ...duplicateAppProblems(parsed, apps),
     ...unknownMergedAppProblems(parsed, config, directory, apps),
