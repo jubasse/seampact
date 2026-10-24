@@ -1,7 +1,7 @@
 // Runs the shared http suite's `default`, `hand-written` and `boot` profiles against the Spring Boot consumer's
 // jars (ADR 0015 "Suite profiles") and writes one report per profile. The jars and the report directory come from
 // the environment: SEAMPACT_SPRING_JAR, SEAMPACT_SPRING_ALLOW_LISTED_JAR and SEAMPACT_SPRING_REPORTS.
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import {
@@ -28,6 +28,9 @@ const jar = requiredEnvironment("SEAMPACT_SPRING_JAR");
 const allowListedJar = requiredEnvironment("SEAMPACT_SPRING_ALLOW_LISTED_JAR");
 const reportDirectory = requiredEnvironment("SEAMPACT_SPRING_REPORTS");
 const credentials = readCredentials();
+
+// The boot processes run in the report directory, so it exists before any profile writes there.
+mkdirSync(reportDirectory, { recursive: true });
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name];
