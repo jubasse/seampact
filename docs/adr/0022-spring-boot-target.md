@@ -158,6 +158,7 @@ Generated value types:
 - sealed interfaces for unions, with an `Unknown` arm only on input readers;
 - enums;
 - `Optional<T>` for an optional member, a plain reference for a required nullable one, and `seampact-hooks`'s `Field<T>` for three-state members, so `{}` and an explicit `null` stay apart (CHK-158).
+- `OffsetDateTime` for a `date-time`, kept with the offset it was sent with: the boundary's own mapper does not adjust it to the context time zone, which Jackson 3 does by default.
 
 Wire names that differ from the Java member name are carried by `@JsonProperty`, which Jackson 3 keeps in `com.fasterxml.jackson.annotation`.
 
@@ -303,13 +304,13 @@ The boundary runtime is copied into `spring.runtime` with the generated header, 
 
 | Waits for | What |
 |---|---|
-| spring-3 | paging styles; idempotency replay, throttle, cache and ETag headers; signed routes; `api.wire.urls: absolute`; the `pack:spring` profile |
+| spring-3 | paging styles; idempotency replay, throttle, cache and ETag headers; version tokens (concurrency); rule proofs in the body; restricted input fields; signed routes and opaque values; `api.wire.urls: absolute`; the `pack:spring` profile |
 | spring-4 | form, multipart, download and redirect bodies (ADR 0012 bodies table, a multipart body counted on the raw stream as it arrives); `nativeDocs`; `frameworkDocs: off`; the Spring Security beans and customizer |
 | after 1.0 | Spring Boot 3.x (refused, not waiting); WebFlux; servlet containers other than Tomcat, which Boot 4 also supports (Jetty) but no consumer proves; asynchronous handler signatures; `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs |
 
 ### The consumer and the proof
 
-The sample app lives in `scripts/consumers/targets/spring-boot/`. It holds the developer's controllers and hook doubles, which answer from the suite script, and three control routes: `/__seampact/script`, `hook-calls` and `log-lines`, the last fed by a Logback appender. It reads the template's credentials from the shared JSON. A Gradle and a Maven build root each copy it to `$RUNNER_TEMP` and take the seampact modules and the compiler from `mavenLocal()` (ADR 0011 "Unpublished installs").
+The sample app lives in `scripts/consumers/targets/spring-boot/`. It holds the developer's controllers and hook doubles, which answer from the suite script, and three control routes: `/__seampact/script`, `hook-calls` and `log-lines`, the last fed by a Logback appender. It reads the template's credentials from the shared JSON. A Gradle and a Maven build root each copy it to `$RUNNER_TEMP`; the Gradle root takes the plugin and `seampact-hooks` from the repository's `jvm/` build, included by path, and the compiler binary the workflow built. The `allow-listed-framework-route` boot variant runs on a second jar, built from a config that allow-lists its route.
 
 The workflow `p6-spring-boot.yml` has five jobs:
 
@@ -341,7 +342,7 @@ spring-3 widens the filter to the forms it brings, and spring-4 drops it. No oth
 |---|---|
 | spring-1 | the generator in `jvm/seampact-spring-boot` (Kotlin, Palantir JavaPoet pinned): `SpringBootTarget.generate(ir, entry)`, the options, types, records with redacted `toString()`, interfaces, composed annotations, results and exceptions; `SpringBootOptionsTest` and `SpringBootGoldenTest`, whose golden is compiled by `javac` on 21 and 25 against Spring Boot 4, and whose redaction case checks the `toString()` of one golden record of each kind of "Redaction" |
 | spring-2 | the filter, interceptor, argument resolver, reply handler, exception resolver, outgoing check, hook beans and boot check; the sample app; the suite CLI; the Gradle rows of the workflow, on the core-path operations |
-| spring-3 | paging, idempotency replay, throttle, cache and ETag headers, signed routes, absolute URLs, the `pack:spring` profile, `GeneratedRedactionTest`; the entries' filter widened to these forms |
+| spring-3 | paging, idempotency replay, throttle, cache and ETag headers, concurrency, rule proofs, restricted input fields, signed routes, absolute URLs, the `pack:spring` profile, `GeneratedRedactionTest`; the entries' filter widened to these forms |
 | spring-4 | the Spring Security beans and customizer, form, multipart, download and redirect bodies, `nativeDocs`, `frameworkDocs: off`, `SecurityRefusalsTest`; the filter dropped |
 
 ## Spike
