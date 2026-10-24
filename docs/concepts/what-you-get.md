@@ -21,5 +21,6 @@ By default a response is the bare payload and an error is an RFC 9457 `applicati
 
 - Generate business logic, persistence, an authentication check or an authorization decision.
 - Provide a server framework, or a TypeScript API to write contracts: YAML is the only way to declare one. An importer from an existing OpenAPI document is planned for v3.
+- Read environment variables or config files: the generated code takes the backend URL and every setting as an argument, and your app owns its config and secrets.
 - Impose right names, roles, a permission model, a tenancy scheme, a wire format or a code style.
 - Model WebSocket, Server-Sent Events, gRPC or GraphQL. The IR leaves room for them; see [ADR 0014](../adr/0014-room-for-real-time-and-rpc.md).

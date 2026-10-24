@@ -168,6 +168,20 @@ npx tsc --noEmit
 
 You see no output.
 
+## Behind a reverse proxy and in Docker
+
+Trust only your proxy's addresses in `config/app.ts`, so `request.ip()` is the caller's:
+
+```ts
+export const http = defineConfig({
+  trustProxy: proxyAddr.compile(["10.0.0.0/8"]),
+});
+```
+
+The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Call `registerRoutes` outside any `router.group()` with a prefix: a contract route under a prefix answers a 500 and reports why.
+
+`start/env.ts` checks your variables when the app boots. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
+
 ## What changes for AdonisJS 6
 
 Nothing in this page: the same generated code and the same files run on AdonisJS 6. Only the starter you create differs.

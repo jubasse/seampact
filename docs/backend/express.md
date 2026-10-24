@@ -79,6 +79,18 @@ npx tsc -p .
 
 You see no output.
 
+## Behind a reverse proxy and in Docker
+
+Trust only your proxy's addresses, never `true`, so `req.ip` and `req.protocol` are the caller's:
+
+```ts
+app.set("trust proxy", ["loopback", "10.0.0.0/8"]);
+```
+
+The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Mount the generated router at the app's root: mounted under a path, it answers a 500 and logs why.
+
+Check your variables once at start, with your validator, and stop when one is missing. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
+
 ## Express 4
 
 Install `express@4` and `@types/express@4` instead. The generated code and the handlers are the same.

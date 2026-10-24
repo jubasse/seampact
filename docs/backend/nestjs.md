@@ -89,6 +89,20 @@ npx tsc -p .
 
 You see no output.
 
+## Behind a reverse proxy and in Docker
+
+Trust only your proxy's addresses on the Express platform, so `req.ip` is the caller's:
+
+```ts
+const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+app.set("trust proxy", ["loopback", "10.0.0.0/8"]);
+```
+
+The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. With `setGlobalPrefix`, exclude the contract routes: a contract route under the prefix answers a 500 and logs why.
+
+Check your variables at boot with `ConfigModule.forRoot({ validate })`. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
+
 ## Wiring reference
 
 Every server target takes four options: `bodyValidation` (check request bodies, off by default), `frameworkEtag` (`strip` by default removes an ETag the framework adds to a reply your code wrote outside the contract; `keep` leaves it), `catchAll` (`true` by default answers the api's 404 for a path under its base path that no route serves, or a method it does not serve; `false` leaves those requests to your app) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it.
