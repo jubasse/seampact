@@ -31,7 +31,7 @@ test.each(RULES_MODES.flatMap((rules) => GOLDEN_IRS.map((name) => [rules, name])
 
     for (const file of outcome.files) {
       await expect(file.contents).toMatchFileSnapshot(
-        `./__snapshots__/${rules}/${name}/${file.path}.snap`,
+        `../rules-snapshots/${rules}/${name}/${file.path}.snap`,
       );
     }
   },
