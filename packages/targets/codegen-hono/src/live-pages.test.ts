@@ -2,10 +2,10 @@ import {
   answerPage,
   type BootedPages,
   bootPages,
-  laravelOffsetChannels,
-  objectOf,
   PAGE_CHANNEL as CHANNEL,
   PAGE_CHANNELS as CHANNELS,
+  laravelOffsetChannels,
+  objectOf,
   packIr,
   projectDirectory,
   queryRole,
@@ -337,8 +337,6 @@ describe("pages under the Spring pack", () => {
 
     expect(JSON.parse(reply.text)).toEqual({ data: CHANNELS, meta: { total: 5, lastPage: 3 } });
     expect(reply.headers["x-total-count"]).toBe("5");
-    expect(reply.headers.link).toBe(
-      '<?size=2&page=2>; rel="next", <?size=2&page=0>; rel="prev"',
-    );
+    expect(reply.headers.link).toBe('<?size=2&page=2>; rel="next", <?size=2&page=0>; rel="prev"');
   });
 });
