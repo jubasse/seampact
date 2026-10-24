@@ -1,6 +1,6 @@
 {
   "name": "@seampact/codegen-react",
-  "description": "Generates TanStack Query or SWR options and React hooks, or an RTK Query api, over the typed fetch client, with keys, invalidation and paging read from the contract.",
+  "description": "Generates TanStack Query or SWR options and React hooks, an RTK Query api, or plain fetch hooks with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract.",
   "version": "0.0.0",
   "private": true,
   "type": "module",

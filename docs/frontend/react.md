@@ -1,6 +1,6 @@
 # React
 
-seampact writes React hooks over the typed `fetch` client, for TanStack Query 5, SWR 2 or RTK Query 2. Pick one with the `query` option.
+seampact writes React hooks over the typed `fetch` client, for TanStack Query 5, SWR 2 or RTK Query 2, or with no query library. Pick one with the `query` option.
 
 ## Add the targets
 
@@ -20,7 +20,7 @@ targets:
     link: { client: client }
 ```
 
-Install the library you picked: `@tanstack/react-query` 5, `swr` 2, or `@reduxjs/toolkit` 2.6 or later with `react-redux` 9. Then run `npx seampact generate`.
+Install the library you picked: `@tanstack/react-query` 5, `swr` 2, or `@reduxjs/toolkit` 2.6 or later with `react-redux` 9. `query: fetch` needs nothing but React. Then run `npx seampact generate`.
 
 ## Use the hooks
 
@@ -44,13 +44,13 @@ A declared error is thrown as a `ContractError`. `isContractError(error)` tells 
 
 | Option | Values | Default |
 |---|---|---|
-| `query` | `tanstack`, `swr`, `rtk` | required |
+| `query` | `tanstack`, `swr`, `rtk`, `fetch` (no library) | required |
 | `errors` | `throw`, `data` (the whole reply as data) | `throw` |
-| `invalidate` | `resource`, `off` | `resource` |
+| `invalidate` | `resource`, `off` (not with `fetch`) | `resource` |
 | `staleTime` | `off`, `contract` (freshness from the contract's `cache`; TanStack Query only) | `off` |
-| `infinite` | `on`, `off` | `on` |
+| `infinite` | `on`, `off` (not with `fetch`) | `on` |
 | `useClientDirective` | `on`, `off` (the `"use client"` line on hook files) | `on` |
-| `keys.root` | a name (not with RTK Query) | the api id |
+| `keys.root` | a name (not with RTK Query or `fetch`) | the api id |
 
 ## SWR and RTK Query
 
@@ -58,6 +58,27 @@ A declared error is thrown as a `ContractError`. `isContractError(error)` tells 
 - RTK Query's hooks never abort a request on unmount. A mutation has no retry.
 - RTK Query keeps errors as plain values in the store, with a `kind`: `contract` (a declared error or an unexpected answer) or `rejection` (network failure, timeout, abort). `toContractError(error)`, exported by the api's `api.ts`, turns a `contract` one back into a `ContractError`.
 - `staleTime: contract` is refused with both: set the library's own freshness setting instead.
+
+## Without a query library
+
+With `query: fetch`, the hooks use React's own state and effects. This is not the client's `fetch` style: that one names the client, this one the hooks over it.
+
+```tsx
+const Notes = createNotesHooks(client);
+
+const notes = Notes.useListNotes({});       // { data, error, isLoading, refetch }
+const create = Notes.useCreateNote({ retry: 1 }); // { mutate, isPending, error, data }
+
+await create.mutate({ body: { title: "New note" } });
+```
+
+- Pass `null` as the request to skip a read.
+- A read stops when the component unmounts or its request changes.
+- There is no cache. A write does not refresh other hooks: call `refetch`.
+- `mutate` never throws. It resolves to the data, or to `undefined` when it failed; the error is then in `error`, a `ContractError` for a declared error.
+- `retry` sends a failed write again with the same idempotency key, so the server runs it once. A declared error is not retried.
+- There is no infinite hook: a paged list gets its plain hook, with no warning. Change the request to read the next page.
+- `staleTime`, `invalidate`, `infinite`, `keys.root` and the `itemsOf` artefact need a query library: `generate` refuses them with `query: fetch`.
 
 `errors: data` needs a client with `errorStyle: result`, which is the client's default.
 
