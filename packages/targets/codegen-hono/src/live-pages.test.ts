@@ -165,10 +165,10 @@ describe("pages under the Laravel pack", () => {
     expect(JSON.parse(reply.text)).toEqual({
       data: CHANNELS,
       links: {
-        first: "/v1/channels?per_page=2&page=1",
-        last: "/v1/channels?per_page=2&page=3",
-        prev: "/v1/channels?per_page=2&page=1",
-        next: "/v1/channels?per_page=2&page=3",
+        first: "?per_page=2&page=1",
+        last: "?per_page=2&page=3",
+        prev: "?per_page=2&page=1",
+        next: "?per_page=2&page=3",
       },
       meta: {
         current_page: 2,
@@ -228,7 +228,7 @@ describe("pages under the Laravel pack", () => {
     expect(JSON.parse(reply.text)).toEqual({
       items: expect.any(Array),
       complete: false,
-      next: `/v1/channels/${CHANNEL}/tasks?since=t2`,
+      next: "?since=t2",
     });
   });
 });
@@ -260,8 +260,8 @@ describe("pages on offset and after/before cursor positions", () => {
       offset: 5,
       from: 6,
       to: 7,
-      next: "/v1/channels?limit=10&offset=15",
-      previous: "/v1/channels?limit=10&offset=0",
+      next: "?limit=10&offset=15",
+      previous: "?limit=10&offset=0",
     });
   });
 
@@ -271,7 +271,7 @@ describe("pages on offset and after/before cursor positions", () => {
     const reply = await positions.send("/v1/channels?offset=15&limit=10");
 
     expect(JSON.parse(reply.text).next).toBeUndefined();
-    expect(reply.headers.link).toBe('</v1/channels?limit=10&offset=5>; rel="prev"');
+    expect(reply.headers.link).toBe('<?limit=10&offset=5>; rel="prev"');
   });
 
   test("a total that is not a record count is a 500", async () => {
@@ -290,8 +290,8 @@ describe("pages on offset and after/before cursor positions", () => {
     expect(reply.status).toBe(200);
     expect(JSON.parse(reply.text)).toEqual({
       items: expect.any(Array),
-      next: `/v1/channels/${CHANNEL}/tasks?limit=2&after=c3`,
-      previous: `/v1/channels/${CHANNEL}/tasks?limit=2&before=c2`,
+      next: "?limit=2&after=c3",
+      previous: "?limit=2&before=c2",
     });
   });
 
@@ -338,7 +338,7 @@ describe("pages under the Spring pack", () => {
     expect(JSON.parse(reply.text)).toEqual({ data: CHANNELS, meta: { total: 5, lastPage: 3 } });
     expect(reply.headers["x-total-count"]).toBe("5");
     expect(reply.headers.link).toBe(
-      '</v1/channels?size=2&page=2>; rel="next", </v1/channels?size=2&page=0>; rel="prev"',
+      '<?size=2&page=2>; rel="next", <?size=2&page=0>; rel="prev"',
     );
   });
 });

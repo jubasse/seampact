@@ -13,6 +13,9 @@ import { target as expressTarget } from "./index.js";
 const APP_SOURCE = new URL("../test-app/reference-app.js", import.meta.url);
 // Generating and compiling both apis outruns vitest's default 10 s hook limit on a loaded machine.
 const SETUP_TIMEOUT_MILLISECONDS = 120_000;
+// The URL a client calls when a reverse proxy strips `/api` before the request reaches the app.
+const PUBLIC_PAGE_URL = "https://public.example/api/v1/channels?offset=5&limit=10";
+const NEXT_RELATION = /<([^>]*)>; rel="next"/;
 
 describe("an offset page under Express", () => {
   let offsetPages: BootedPages;
@@ -45,11 +48,23 @@ describe("an offset page under Express", () => {
       offset: 5,
       from: 6,
       to: 7,
-      next: "/v1/channels?limit=10&offset=15",
-      previous: "/v1/channels?limit=10&offset=0",
+      next: "?limit=10&offset=15",
+      previous: "?limit=10&offset=0",
     });
     expect(reply.headers.link).toBe(
-      '</v1/channels?limit=10&offset=15>; rel="next", </v1/channels?limit=10&offset=0>; rel="prev"',
+      '<?limit=10&offset=15>; rel="next", <?limit=10&offset=0>; rel="prev"',
+    );
+  });
+
+  test("behind a prefix-stripping proxy the next link resolves under the public prefix", async () => {
+    answerPage(offsetPages, "listChannels", { total: 30 });
+
+    const reply = await offsetPages.send("/v1/channels?offset=5&limit=10");
+    const nextTarget = NEXT_RELATION.exec(String(reply.headers.link))?.[1];
+
+    expect(nextTarget).toBeDefined();
+    expect(new URL(nextTarget ?? "", PUBLIC_PAGE_URL).href).toBe(
+      "https://public.example/api/v1/channels?limit=10&offset=15",
     );
   });
 });
