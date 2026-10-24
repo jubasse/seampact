@@ -27,7 +27,7 @@ public final class ApiPayloadTooLargeError extends TasksContractException {
 
     @Override
     public String toString() {
-        return "ApiPayloadTooLargeError[code=" + code() + ", params=" + params() + "]";
+        return "ApiPayloadTooLargeError[code=" + this.code() + ", params=" + this.params() + "]";
     }
 
     public ApiPayloadTooLargeParams params() {

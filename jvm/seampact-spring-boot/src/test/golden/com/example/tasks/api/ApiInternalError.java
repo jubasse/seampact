@@ -19,6 +19,6 @@ public final class ApiInternalError extends TasksContractException {
 
     @Override
     public String toString() {
-        return "ApiInternalError[code=" + code() + "]";
+        return "ApiInternalError[code=" + this.code() + "]";
     }
 }

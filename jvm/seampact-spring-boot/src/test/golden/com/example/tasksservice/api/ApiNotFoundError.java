@@ -19,6 +19,6 @@ public final class ApiNotFoundError extends TasksServiceContractException {
 
     @Override
     public String toString() {
-        return "ApiNotFoundError[code=" + code() + "]";
+        return "ApiNotFoundError[code=" + this.code() + "]";
     }
 }

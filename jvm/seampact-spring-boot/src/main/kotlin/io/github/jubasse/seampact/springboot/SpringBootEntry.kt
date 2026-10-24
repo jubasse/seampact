@@ -33,7 +33,7 @@ internal fun checkEntry(entry: SpringBootEntry, options: SpringBootOptions, refu
             code = "link.kind.not-consumed",
             message = "The entry '${entry.id}' links '$kind' to '$provider', but the spring-boot target consumes no link: it generates its own types and validators.",
             fix = "Remove the '$kind' link from the entry '${entry.id}'.",
-            member = "/link/$kind",
+            member = IrPlace.ROOT.below("link", kind).member,
         )
     }
 
@@ -75,7 +75,7 @@ private fun checkArtefact(artefact: String, value: JsonElement, refusals: Mutabl
             refusals += waitingEntryMember("artefact.nativeDocs", member, "The 'nativeDocs' artefact", Delivery.SPRING_4)
         }
         ACCESS_HOOKS -> if (value == JsonPrimitive(false)) {
-            refusals += waitingEntryMember("artefact.accessHooks", member, "'accessHooks: false' (native access)", Delivery.SPRING_4)
+            refusals += waitingEntryMember("artefact.accessHooks", member, "'accessHooks: false' (native access)", Delivery.CONSUMER)
         }
         else -> refusals += SpringBootRefusal(
             code = "artefact.unknown",

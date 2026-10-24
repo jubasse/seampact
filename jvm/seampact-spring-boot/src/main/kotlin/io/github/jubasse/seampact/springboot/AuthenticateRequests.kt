@@ -31,7 +31,7 @@ internal fun authenticateRequestTypes(layout: JavaLayout, identityId: IdentityId
     val optionalString = ParameterizedTypeName.get(JavaTypes.OPTIONAL, JavaTypes.STRING)
 
     val credentials = credentialSchemes(identity).mapNotNull { scheme ->
-        memberNames.claim(scheme, null, at)?.let { RecordComponent(it, optionalString, redacted = true) }
+        memberNames.claim(scheme, null, IrPlace.ROOT.below("schemes", scheme))?.let { RecordComponent(it, optionalString, redacted = true) }
     }
 
     val requestComponents = listOf(

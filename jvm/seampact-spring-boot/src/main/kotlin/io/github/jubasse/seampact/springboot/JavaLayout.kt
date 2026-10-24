@@ -98,7 +98,11 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
 
         for (identityId in kept.identities) {
             val place = IrPlace.ROOT.below("identities", identityId)
-            val segments = segmentsOf(identityId, NameSource.NAME) ?: continue
+            val segments = segmentsOf(identityId, NameSource.NAME)
+            if (segments == null) {
+                refusals.inconsistent("identity.no-segment", "The identity '$identityId' yields no name segment", place)
+                continue
+            }
             val names = IdentityNames(
                 request = ClassName.get(operationsPackage, javaIdentifier(segments + listOf("authenticate", "request"), NamingRole.SCHEMA)),
                 credentials = ClassName.get(operationsPackage, javaIdentifier(segments + "credentials", NamingRole.SCHEMA)),
@@ -111,7 +115,17 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
         val endpointsClaimed = HashSet<ClassName>()
         for ((index, operation) in kept.operations) {
             val place = IrPlace.ofOperation(index, operation.id).below("name")
-            val names = operationNamesOf(operation)
+            val owner = endpointsOwner(operation)
+            if (owner == null) {
+                refusals.inconsistent(
+                    "endpoints.owner.no-segment",
+                    "The operation '${operation.id}' has no resource or surface that yields a name segment for its endpoints interface",
+                    IrPlace.ofOperation(index, operation.id).below("surface"),
+                )
+                continue
+            }
+
+            val names = operationNamesOf(operation, owner)
             operationNames[operation.id] = names
 
             if (endpointsClaimed.add(names.endpoints)) claim(names.endpoints, "the endpoints interface '${names.endpoints.simpleName()}'", place, refusals)
@@ -133,7 +147,7 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
 
     fun identity(identityId: IdentityId): IdentityNames? = identityNames[identityId]
 
-    private fun operationNamesOf(operation: Operation): OperationNames {
+    private fun operationNamesOf(operation: Operation, endpointsOwner: List<String>): OperationNames {
         val segments = operation.name.segments
         val inOperations = { role: NamingRole -> ClassName.get(operationsPackage, javaIdentifier(segments, role)) }
 
@@ -146,16 +160,16 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
             result = ClassName.get(operationsPackage, javaIdentifier(segments + "result", NamingRole.SCHEMA)),
             errors = inOperations(NamingRole.ERRORS),
             annotation = ClassName.get(springPackage, javaIdentifier(segments, NamingRole.SCHEMA)),
-            endpoints = ClassName.get(operationsPackage, javaIdentifier(endpointsOwner(operation), NamingRole.ENDPOINTS)),
+            endpoints = ClassName.get(operationsPackage, javaIdentifier(endpointsOwner, NamingRole.ENDPOINTS)),
         )
     }
 
     // A resource's operations share one interface; one without a resource joins its surface's, as on the Node targets.
-    private fun endpointsOwner(operation: Operation): List<String> {
+    private fun endpointsOwner(operation: Operation): List<String>? {
         val resourceType = operation.resource?.type
         if (resourceType != null) segmentsOf(resourceType, NameSource.NAME)?.let { return it }
 
-        return ir.api.surfaces[operation.surface]?.name?.segments ?: segmentsOf(operation.surface, NameSource.NAME) ?: listOf("api")
+        return ir.api.surfaces[operation.surface]?.name?.segments ?: segmentsOf(operation.surface, NameSource.NAME)
     }
 
     private fun typeIdentifier(name: Name, place: IrPlace, refusals: Refusals): String? {

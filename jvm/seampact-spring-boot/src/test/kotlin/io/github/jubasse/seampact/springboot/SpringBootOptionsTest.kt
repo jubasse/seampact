@@ -3,6 +3,7 @@ package io.github.jubasse.seampact.springboot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -96,7 +97,7 @@ class SpringBootOptionsTest {
             springBootVersion = "3.5.6",
             artefacts = options("""{ "bootCheck": { "hooks": "warn" }, "nativeDocs": true, "accessHooks": false, "openapi": true }"""),
             frameworkDocs = "off",
-            link = mapOf("validators" to "zod"),
+            link = mapOf("validators" to "zod", "a/b" to "zod"),
         )
         val refusals = mutableListOf<SpringBootRefusal>()
 
@@ -106,6 +107,7 @@ class SpringBootOptionsTest {
             listOf(
                 "framework.version.unsupported" to "/springBootVersion",
                 "link.kind.not-consumed" to "/link/validators",
+                "link.kind.not-consumed" to "/link/a~1b",
                 "artefact.nativeDocs.unsupported" to "/artefacts/nativeDocs",
                 "artefact.accessHooks.unsupported" to "/artefacts/accessHooks",
                 "artefact.unknown" to "/artefacts/openapi",
@@ -114,5 +116,7 @@ class SpringBootOptionsTest {
             ),
             refusals.map { it.code to it.member },
         )
+        val accessHooks = refusals.single { it.code == "artefact.accessHooks.unsupported" }
+        assertTrue(accessHooks.message.endsWith("it waits for an app that needs it."), accessHooks.message)
     }
 }

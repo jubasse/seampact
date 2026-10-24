@@ -19,6 +19,6 @@ public final class ApiUnsupportedMediaTypeError extends TasksContractException {
 
     @Override
     public String toString() {
-        return "ApiUnsupportedMediaTypeError[code=" + code() + "]";
+        return "ApiUnsupportedMediaTypeError[code=" + this.code() + "]";
     }
 }

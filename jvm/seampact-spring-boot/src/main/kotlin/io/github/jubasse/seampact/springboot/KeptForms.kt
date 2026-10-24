@@ -85,7 +85,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
                 val delivery = if (input.media.value in SPRING_4_MEDIA) Delivery.SPRING_4 else Delivery.AFTER_1_0
                 refusals.waiting("input.media", "A '${input.media.value}' body", at.below("input", "media"), delivery)
             }
-            if (!input.proofs.isNullOrEmpty()) refusals.waiting("input.proofs", "Rule proof fields in the body", at.below("input", "proofs"), Delivery.LATER)
+            if (!input.proofs.isNullOrEmpty()) refusals.waiting("input.proofs", "Rule proof fields in the body", at.below("input", "proofs"), Delivery.SPRING_3)
             readType(input.schema, at.below("input", "schema"))
         }
 
@@ -99,7 +99,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
     private fun checkOperationForms(operation: Operation, at: IrPlace) {
         if (operation.paging != null) refusals.waiting("paging", "Paging", at.below("paging"), Delivery.SPRING_3)
         if (operation.cache != null) refusals.waiting("cache", "Cache and ETag headers", at.below("cache"), Delivery.SPRING_3)
-        if (operation.concurrency != null) refusals.waiting("concurrency", "A version token (concurrency)", at.below("concurrency"), Delivery.LATER)
+        if (operation.concurrency != null) refusals.waiting("concurrency", "A version token (concurrency)", at.below("concurrency"), Delivery.SPRING_3)
 
         when (val idempotency = operation.idempotency) {
             null, is ExemptIdempotency -> Unit
@@ -191,7 +191,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
             }
             is ScalarTypeUse -> readScalar(type, at)
             is FileTypeUse -> refusals.waiting("type.file", "A file value", at, Delivery.SPRING_4)
-            is OpaqueTypeUse -> refusals.waiting("type.opaque", "An opaque value", at, Delivery.AFTER_1_0)
+            is OpaqueTypeUse -> refusals.waiting("type.opaque", "An opaque value", at, Delivery.SPRING_3)
             is TypeUse.Unknown -> refusals.unknownValue(at.below("kind"), type.kind)
         }
     }

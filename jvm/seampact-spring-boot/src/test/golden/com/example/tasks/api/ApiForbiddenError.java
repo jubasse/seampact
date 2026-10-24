@@ -27,7 +27,7 @@ public final class ApiForbiddenError extends TasksContractException {
 
     @Override
     public String toString() {
-        return "ApiForbiddenError[code=" + code() + ", params=" + params() + "]";
+        return "ApiForbiddenError[code=" + this.code() + ", params=" + this.params() + "]";
     }
 
     public ApiForbiddenParams params() {

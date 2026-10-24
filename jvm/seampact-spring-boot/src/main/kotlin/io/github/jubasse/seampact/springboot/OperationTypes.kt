@@ -10,7 +10,8 @@ import io.github.jubasse.seampact.ir.model.Response
 import io.github.jubasse.seampact.ir.model.ResponseShape
 import javax.lang.model.element.Modifier
 
-// Header parameters that carry a credential or its CSRF companion: printed redacted, like the credentials record.
+// Header parameters that carry a credential or its CSRF companion: printed redacted, like the credentials record, as
+// is a parameter of a sensitive scalar.
 private val CREDENTIAL_DERIVATION_PREFIXES = listOf("identity.", "csrf.")
 
 private const val STATUS_ARM_PREFIX = "Status"
@@ -38,7 +39,9 @@ internal class OperationTypes(
         addParams(names.query, "query", "query", operation.params.query)
         addParams(names.headers, "headers", "header", operation.params.header)
 
-        operation.input?.let { input -> components += RecordComponent("body", mapper.memberType(input.schema, Presence.REQUIRED)) }
+        operation.input?.let { input ->
+            components += RecordComponent("body", mapper.memberType(input.schema, Presence.REQUIRED), redacted = input.schema.isSensitive())
+        }
 
         return parts + generatedRecord(names.input, components, layout).build()
     }
@@ -54,7 +57,8 @@ internal class OperationTypes(
                 name = name,
                 type = mapper.memberType(param.type, Presence.of(optional = !param.required, nullable = param.type.isNullable())),
                 wireName = param.name,
-                redacted = CREDENTIAL_DERIVATION_PREFIXES.any { derivation.startsWith(it) },
+                redacted = CREDENTIAL_DERIVATION_PREFIXES.any { derivation.startsWith(it) } || param.type.isSensitive(),
+                writtenAsString = param.type.isDecimal(),
             )
         }
     }
@@ -71,7 +75,7 @@ internal class OperationTypes(
             if (response.derivedFrom?.derivation == ETAG_DERIVATION) continue
 
             val arm = names.result.nestedClass(STATUS_ARM_PREFIX + response.status)
-            val components = listOfNotNull(responseBody(response)?.let { RecordComponent("body", it) })
+            val components = listOfNotNull(responseBody(response)?.let { RecordComponent("body", it, redacted = response.body?.isSensitive() == true) })
             result.addType(generatedRecord(arm, components, layout).addModifiers(Modifier.STATIC).addSuperinterface(names.result).build())
             result.addPermittedSubclass(arm)
         }

@@ -13,7 +13,7 @@ import io.github.jubasse.seampact.ir.naming.NamingRole
 import io.github.jubasse.seampact.ir.naming.segmentsOf
 import javax.lang.model.element.Modifier
 
-/** A final record per object schema, its members in declaration order, `sensitive` ones redacted. */
+/** A final record per object schema, its members in declaration order, sensitive ones redacted. */
 internal fun objectRecord(className: ClassName, schema: ObjectSchema, mapper: TypeMapper, layout: JavaLayout, refusals: Refusals): TypeSpec {
     val at = IrPlace.ROOT.below("schemas", schema.id)
     val names = MemberNames(at, refusals)
@@ -24,17 +24,22 @@ internal fun objectRecord(className: ClassName, schema: ObjectSchema, mapper: Ty
             name = name,
             type = mapper.memberType(property.type, Presence.of(property.optional, property.nullable)),
             wireName = property.name,
-            redacted = property.sensitive,
+            redacted = property.sensitive || property.type.isSensitive(),
+            writtenAsString = property.type.isDecimal(),
         )
     }
 
     return generatedRecord(className, components, layout).build()
 }
 
-/** A public record with the canonical constructor of [components] and its redacted `toString()`. */
+/**
+ * A public record with the canonical constructor of [components] and its redacted `toString()`. `NON_ABSENT` keeps an
+ * absent optional member absent on the wire whatever the app's mapper includes.
+ */
 internal fun generatedRecord(className: ClassName, components: List<RecordComponent>, layout: JavaLayout): TypeSpec.Builder =
     TypeSpec.recordBuilder(className)
         .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(AnnotationSpec.builder(JavaTypes.JSON_INCLUDE).addMember("value", "\$T.Include.NON_ABSENT", JavaTypes.JSON_INCLUDE).build())
         .recordConstructor(recordConstructor(components))
         .addMethod(redactedToString(className.simpleName(), components, layout.redaction))
 

@@ -19,6 +19,6 @@ public final class ApiDeadlineExceededError extends TasksServiceContractExceptio
 
     @Override
     public String toString() {
-        return "ApiDeadlineExceededError[code=" + code() + "]";
+        return "ApiDeadlineExceededError[code=" + this.code() + "]";
     }
 }

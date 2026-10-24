@@ -19,6 +19,6 @@ public final class ApiCsrfInvalidError extends TasksContractException {
 
     @Override
     public String toString() {
-        return "ApiCsrfInvalidError[code=" + code() + "]";
+        return "ApiCsrfInvalidError[code=" + this.code() + "]";
     }
 }

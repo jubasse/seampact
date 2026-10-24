@@ -1,7 +1,14 @@
 package io.github.jubasse.seampact.springboot
 
+import io.github.jubasse.seampact.ir.model.ArrayTypeUse
 import io.github.jubasse.seampact.ir.model.ContractIR
+import io.github.jubasse.seampact.ir.model.CredentialIdentity
+import io.github.jubasse.seampact.ir.model.IdentityAccess
 import io.github.jubasse.seampact.ir.model.ObjectSchema
+import io.github.jubasse.seampact.ir.model.Refinements
+import io.github.jubasse.seampact.ir.model.ScalarType
+import io.github.jubasse.seampact.ir.model.ScalarTypeUse
+import io.github.jubasse.seampact.ir.model.TypeUse
 import io.github.jubasse.seampact.ir.read.IrReader
 import io.github.jubasse.seampact.ir.read.IrSupport
 import java.nio.file.Files
@@ -110,7 +117,101 @@ class SpringBootGoldenTest {
         for (code in listOf("paging.unsupported", "idempotency.unsupported", "cache.unsupported", "signature.unsupported")) {
             assertTrue(code in codes, "expected $code among $codes")
         }
-        assertTrue(refused.refusals.all { it.message.contains("spring-") || it.message.contains("no release") }, refused.message)
+        assertTrue(refused.refusals.all { it.message.contains("spring-") || it.message.contains("waits for") }, refused.message)
+        for (code in listOf("concurrency.unsupported", "input.proofs.unsupported", "type.opaque.unsupported")) {
+            val refusal = refused.refusals.firstOrNull { it.code == code }
+            assertTrue(refusal != null && refusal.message.contains("spring-3"), "expected $code naming spring-3 among ${refused.message}")
+        }
+    }
+
+    // One Task property added or changed by [change], generated with the core operations.
+    private fun taskWith(change: (ObjectSchema) -> ObjectSchema): ContractIR {
+        val ir = coreView(apis.first())
+        val task = ir.schemas.getValue("Task") as ObjectSchema
+
+        return ir.copy(schemas = ir.schemas + ("Task" to change(task)))
+    }
+
+    private fun generatedType(ir: ContractIR, simpleName: String): String =
+        SpringBootTarget.generate(ir, entry(apis.first().packageName)).single { it.path.endsWith("/$simpleName.java") }.contents
+
+    private fun refusalsOf(ir: ContractIR): List<SpringBootRefusal> =
+        assertFailsWith<SpringBootRefusedException> { SpringBootTarget.generate(ir, entry(apis.first().packageName)) }.refusals
+
+    private fun ObjectSchema.withProperty(name: String, type: TypeUse): ObjectSchema {
+        val title = properties.single { it.name == "title" }
+
+        return copy(properties = properties + title.copy(name = name, type = type))
+    }
+
+    @Test
+    fun readsEveryAccessorThroughThisSoAContextualKeywordMemberCompiles() {
+        val title = (coreView(apis.first()).schemas.getValue("Task") as ObjectSchema).properties.single { it.name == "title" }
+        val task = generatedType(taskWith { it.withProperty("yield", title.type) }, "Task")
+
+        assertTrue(task.contains("this.yield()") && !Regex("""[^.]\byield\(\)""").containsMatchIn(task), task)
+    }
+
+    @Test
+    fun redactsSensitiveScalarsInParamsAndArrayItems() {
+        val secret = ScalarTypeUse(type = ScalarType.STRING, refinements = Refinements(), sensitive = true)
+        val withSecrets = taskWith { it.withProperty("secrets", ArrayTypeUse(items = secret)) }
+        val ir = withSecrets.copy(
+            operations = withSecrets.operations.map { operation ->
+                if (operation.id != "getTask") return@map operation
+                val path = operation.params.path.map { if (it.name == "taskId") it.copy(type = secret) else it }
+                operation.copy(params = operation.params.copy(path = path))
+            },
+        )
+
+        assertTrue(generatedType(ir, "Task").contains("secrets=\" + TasksRedaction.REDACTED"), generatedType(ir, "Task"))
+        assertTrue(generatedType(ir, "GetTaskPath").contains("taskId=\" + TasksRedaction.REDACTED"), generatedType(ir, "GetTaskPath"))
+    }
+
+    @Test
+    fun writesADecimalAsABigDecimalKeptAStringOnTheWire() {
+        val decimal = ScalarTypeUse(type = ScalarType.STRING, format = "decimal", refinements = Refinements())
+        val task = generatedType(taskWith { it.withProperty("amount", decimal) }, "Task")
+
+        assertTrue(task.contains("@JsonFormat(shape = JsonFormat.Shape.STRING) @NotNull BigDecimal amount"), task)
+    }
+
+    @Test
+    fun keepsAbsentMembersAbsentWhateverTheAppsMapper() {
+        assertTrue(generatedType(coreView(apis.first()), "Task").contains("@JsonInclude(JsonInclude.Include.NON_ABSENT)\npublic record Task("))
+    }
+
+    @Test
+    fun refusesAnIdentityWithNoNameSegment() {
+        val ir = coreView(apis.first())
+        val renamed = "_"
+        val renamedIr = ir.copy(
+            identities = ir.identities - "user" + (renamed to (ir.identities.getValue("user") as CredentialIdentity).copy(id = renamed)),
+            operations = ir.operations.map { operation ->
+                val access = operation.access
+                if (access is IdentityAccess && access.identity == "user") operation.copy(access = access.copy(identity = renamed)) else operation
+            },
+        )
+
+        assertTrue(refusalsOf(renamedIr).any { it.code == "identity.no-segment" && it.member == "/identities/_" })
+    }
+
+    @Test
+    fun pointsACredentialMemberRefusalAtItsScheme() {
+        val ir = coreView(apis.first())
+        val user = ir.identities.getValue("user") as CredentialIdentity
+        val clashing = user.copy(schemes = user.schemes.copy(read = user.schemes.read + "Bearer"))
+
+        val collision = refusalsOf(ir.copy(identities = ir.identities + ("user" to clashing))).single { it.code == "name.collision" }
+        assertEquals("/schemes/Bearer", collision.member)
+    }
+
+    @Test
+    fun refusesAnOperationWhoseEndpointsHaveNoOwnerName() {
+        val ir = coreView(apis.first())
+        val ownerless = ir.copy(operations = ir.operations.map { if (it.id == "health") it.copy(resource = null, surface = "_") else it })
+
+        assertTrue(refusalsOf(ownerless).any { it.code == "endpoints.owner.no-segment" && it.operation == "health" })
     }
 
     private fun rewriteGolden(generated: Map<String, String>) {

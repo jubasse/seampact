@@ -1,10 +1,12 @@
 package com.example.tasks.api.schemas;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.NotNull;
 
+@JsonInclude(JsonInclude.Include.NON_ABSENT)
 public record IssuesItem(@NotNull String pointer, @NotNull String rule) {
     @Override
     public String toString() {
-        return "IssuesItem[pointer=" + pointer() + ", rule=" + rule() + "]";
+        return "IssuesItem[pointer=" + this.pointer() + ", rule=" + this.rule() + "]";
     }
 }

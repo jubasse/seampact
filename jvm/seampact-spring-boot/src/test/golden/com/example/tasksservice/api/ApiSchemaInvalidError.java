@@ -27,7 +27,7 @@ public final class ApiSchemaInvalidError extends TasksServiceContractException {
 
     @Override
     public String toString() {
-        return "ApiSchemaInvalidError[code=" + code() + ", params=" + params() + "]";
+        return "ApiSchemaInvalidError[code=" + this.code() + ", params=" + this.params() + "]";
     }
 
     public ApiSchemaInvalidParams params() {

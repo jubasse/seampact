@@ -29,6 +29,8 @@ internal object JavaTypes {
     val LOCAL_DATE: ClassName = ClassName.get("java.time", "LocalDate")
     val FIELD: ClassName = ClassName.get("io.github.jubasse.seampact.hooks", "Field")
     val JSON_PROPERTY: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "JsonProperty")
+    val JSON_FORMAT: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "JsonFormat")
+    val JSON_INCLUDE: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "JsonInclude")
 
     val NOT_NULL: ClassName = ClassName.get("jakarta.validation.constraints", "NotNull")
     val VALID: ClassName = ClassName.get("jakarta.validation", "Valid")
@@ -110,11 +112,7 @@ internal class TypeMapper(private val layout: JavaLayout) {
             ScalarType.STRING -> STRING_FORMAT_TYPES[type.format] ?: JavaTypes.STRING
             ScalarType.BOOLEAN -> if (boxed) TypeName.BOOLEAN.box() else TypeName.BOOLEAN
             ScalarType.INTEGER -> if (boxed) TypeName.LONG.box() else TypeName.LONG
-            ScalarType.NUMBER -> when {
-                type.format == DECIMAL -> JavaTypes.BIG_DECIMAL
-                boxed -> TypeName.DOUBLE.box()
-                else -> TypeName.DOUBLE
-            }
+            ScalarType.NUMBER -> if (boxed) TypeName.DOUBLE.box() else TypeName.DOUBLE
             else -> JavaTypes.OBJECT
         }
         val bounds = boundAnnotations(type.refinements, integer = type.type == ScalarType.INTEGER)
@@ -151,12 +149,31 @@ internal class TypeMapper(private val layout: JavaLayout) {
         val MAX_CLASS: ClassName = ClassName.get("jakarta.validation.constraints", "Max")
         val DECIMAL_MIN_CLASS: ClassName = ClassName.get("jakarta.validation.constraints", "DecimalMin")
         val DECIMAL_MAX_CLASS: ClassName = ClassName.get("jakarta.validation.constraints", "DecimalMax")
-        // Portable string formats with a java.time or java.util type; any other format stays a String, checked by
-        // the generated structural validator.
-        val STRING_FORMAT_TYPES: Map<String?, ClassName> =
-            mapOf("uuid" to JavaTypes.UUID, "date-time" to JavaTypes.OFFSET_DATE_TIME, "date" to JavaTypes.LOCAL_DATE)
-        const val DECIMAL = "decimal"
+        // Portable string formats with a java.time, java.util or java.math type; any other format stays a String,
+        // checked by the generated structural validator. A decimal keeps its string wire shape (see isDecimal).
+        val STRING_FORMAT_TYPES: Map<String?, ClassName> = mapOf(
+            "uuid" to JavaTypes.UUID,
+            "date-time" to JavaTypes.OFFSET_DATE_TIME,
+            "date" to JavaTypes.LOCAL_DATE,
+            DECIMAL_FORMAT to JavaTypes.BIG_DECIMAL,
+        )
     }
+}
+
+private const val DECIMAL_FORMAT = "decimal"
+
+/** Whether a type use, or the items of an array of it, is a decimal: a `BigDecimal` written as a JSON string. */
+internal fun TypeUse.isDecimal(): Boolean = when (this) {
+    is ScalarTypeUse -> type == ScalarType.STRING && format == DECIMAL_FORMAT
+    is ArrayTypeUse -> items.isDecimal()
+    else -> false
+}
+
+/** Whether a type use, or the items of an array of it, is a use of a scalar declared sensitive (ADR 0022 "Redaction"). */
+internal fun TypeUse.isSensitive(): Boolean = when (this) {
+    is ScalarTypeUse -> sensitive == true
+    is ArrayTypeUse -> items.isSensitive()
+    else -> false
 }
 
 /** Whether a type use, written as a parameter or an item, may be JSON null. */
@@ -168,15 +185,22 @@ internal fun TypeUse.isNullable(): Boolean = when (this) {
     else -> false
 }
 
-/** One component of a generated record. [redacted] members print as the redaction constant in `toString()`. */
+/**
+ * One component of a generated record. [redacted] members print as the redaction constant in `toString()`;
+ * [writtenAsString] members (decimals) keep a JSON string on the wire.
+ */
 internal data class RecordComponent(
     val name: String,
     val type: TypeName,
     val wireName: String? = null,
     val redacted: Boolean = false,
+    val writtenAsString: Boolean = false,
 )
 
-/** The canonical constructor's parameters, each with `@JsonProperty` when its wire name differs from the Java name. */
+/**
+ * The canonical constructor's parameters, each with `@JsonProperty` when its wire name differs from the Java name and
+ * `@JsonFormat(shape = STRING)` when it is written as a string.
+ */
 internal fun recordConstructor(components: List<RecordComponent>): MethodSpec {
     val constructor = MethodSpec.constructorBuilder()
 
@@ -184,6 +208,9 @@ internal fun recordConstructor(components: List<RecordComponent>): MethodSpec {
         val parameter = ParameterSpec.builder(component.type, component.name)
         if (component.wireName != null && component.wireName != component.name) {
             parameter.addAnnotation(AnnotationSpec.builder(JavaTypes.JSON_PROPERTY).addMember("value", "\$S", component.wireName).build())
+        }
+        if (component.writtenAsString) {
+            parameter.addAnnotation(AnnotationSpec.builder(JavaTypes.JSON_FORMAT).addMember("shape", "\$T.Shape.STRING", JavaTypes.JSON_FORMAT).build())
         }
         constructor.addParameter(parameter.build())
     }
@@ -193,7 +220,8 @@ internal fun recordConstructor(components: List<RecordComponent>): MethodSpec {
 
 /**
  * The generated `toString()` of a record or exception (ADR 0022 "Redaction"): the record's own form,
- * `Name[a=1, b=2]` read through the accessors, with every [RecordComponent.redacted] value printed as the api's
+ * `Name[a=1, b=2]` read through the accessors (qualified by `this`, so a contextual keyword such as `yield` stays a
+ * call), with every [RecordComponent.redacted] value printed as the api's
  * redaction constant.
  */
 internal fun redactedToString(typeName: String, components: List<RecordComponent>, redaction: ClassName): MethodSpec {
@@ -205,7 +233,7 @@ internal fun redactedToString(typeName: String, components: List<RecordComponent
         if (component.redacted) {
             body.add("\$S + \$T.REDACTED + ", pendingText, redaction)
         } else {
-            body.add("\$S + \$N() + ", pendingText, component.name)
+            body.add("\$S + this.\$N() + ", pendingText, component.name)
         }
         pendingText = ""
     }

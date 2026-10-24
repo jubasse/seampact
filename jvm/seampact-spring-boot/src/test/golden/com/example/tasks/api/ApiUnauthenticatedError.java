@@ -19,6 +19,6 @@ public final class ApiUnauthenticatedError extends TasksContractException {
 
     @Override
     public String toString() {
-        return "ApiUnauthenticatedError[code=" + code() + "]";
+        return "ApiUnauthenticatedError[code=" + this.code() + "]";
     }
 }

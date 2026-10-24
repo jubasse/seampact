@@ -1,18 +1,21 @@
 package com.example.tasks.api;
 
 import com.example.tasks.api.schemas.ApiSchemaInvalidParams;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
 public sealed interface GetDraftErrors extends GetDraftResult permits GetDraftErrors.ApiSchemaInvalid, GetDraftErrors.ApiUnauthenticated, GetDraftErrors.ApiNotFound, GetDraftErrors.ApiInternal {
+    @JsonInclude(JsonInclude.Include.NON_ABSENT)
     record ApiSchemaInvalid(
             @Valid @NotNull ApiSchemaInvalidParams params) implements GetDraftErrors {
         @Override
         public String toString() {
-            return "ApiSchemaInvalid[params=" + params() + "]";
+            return "ApiSchemaInvalid[params=" + this.params() + "]";
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_ABSENT)
     record ApiUnauthenticated() implements GetDraftErrors {
         @Override
         public String toString() {
@@ -20,6 +23,7 @@ public sealed interface GetDraftErrors extends GetDraftResult permits GetDraftEr
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_ABSENT)
     record ApiNotFound() implements GetDraftErrors {
         @Override
         public String toString() {
@@ -27,6 +31,7 @@ public sealed interface GetDraftErrors extends GetDraftResult permits GetDraftEr
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_ABSENT)
     record ApiInternal() implements GetDraftErrors {
         @Override
         public String toString() {
