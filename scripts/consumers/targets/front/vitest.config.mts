@@ -1,7 +1,8 @@
 // The front consumer's Vitest projects: a browser project on Playwright Chromium for `test/front`, and, when the base
 // overlay provides a server entry (`test/server.mts`), the node project of the server's own tests. With a server,
 // the config starts it before Vite reads `server.proxy`, proxies the apis' base paths and the control routes to it,
-// so the page calls the api on its own origin, and provides its URL and the credentials to the browser tests.
+// so the page calls the api on its own origin, and provides its URL and the credentials to the browser tests. It also
+// proxies `/api/` to the server with the prefix stripped, as a reverse proxy in front of a deployed app does.
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { HOOK_CALLS_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
@@ -17,6 +18,9 @@ const SERVER_ENTRY = new URL("./test/server.mts", import.meta.url);
 // The paths the page sends to the server: the base paths of the reference contract (`fixtures/reference`, copied into
 // every consumer) and the http suite's control routes. A contract with another base path needs its path added here.
 const PROXIED_PATHS = ["^/v1/", "^/internal/", "^/__seampact/"];
+
+// The prefix a page calls the api under when the proxy strips it before the server sees the path.
+const STRIPPED_PREFIX = "/api";
 
 interface RunningServer {
   readonly baseUrl: string;
@@ -52,6 +56,7 @@ function browserProject(running: RunningServer | undefined): TestProjectInlineCo
       },
       provide: {
         serverBaseUrl: running?.baseUrl ?? "",
+        strippedPrefix: STRIPPED_PREFIX,
         controlRoutes: { script: SCRIPT_ROUTE, hookCalls: HOOK_CALLS_ROUTE },
         userToken: USER_TOKEN,
         throttledUserToken: THROTTLED_USER_TOKEN,
@@ -61,8 +66,23 @@ function browserProject(running: RunningServer | undefined): TestProjectInlineCo
   };
 }
 
-function proxyTo(target: string): Record<string, { target: string; changeOrigin: boolean }> {
-  return Object.fromEntries(PROXIED_PATHS.map((path) => [path, { target, changeOrigin: true }]));
+interface ProxyRule {
+  readonly target: string;
+  readonly changeOrigin: boolean;
+  readonly rewrite?: (path: string) => string;
+}
+
+function proxyTo(target: string): Record<string, ProxyRule> {
+  const strippingRule: ProxyRule = {
+    target,
+    changeOrigin: true,
+    rewrite: (path) => path.slice(STRIPPED_PREFIX.length),
+  };
+
+  return {
+    ...Object.fromEntries(PROXIED_PATHS.map((path) => [path, { target, changeOrigin: true }])),
+    [`^${STRIPPED_PREFIX}/`]: strippingRule,
+  };
 }
 
 // The base overlay's server entry imports the generated `.js` specifiers of `.ts` files, which tsx resolves.

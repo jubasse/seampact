@@ -1,5 +1,6 @@
 // The generated fetch client in a browser page, against the real server through the same-origin proxy: a list
 // with its Link header page fact, a create, a declared error, an abort, and the control routes of the same server.
+// A client on a relative base URL also reaches it through a proxy that strips that prefix.
 import { expect, inject, test } from "vitest";
 import { createClient } from "../../generated/client/tasks/index.js";
 import { loadScript, recordedHookCalls } from "./control.mjs";
@@ -32,6 +33,44 @@ test("a list renders its items and reads the next cursor from the Link header", 
   expect(await recordedHookCalls()).toContainEqual(
     expect.objectContaining({ operation: expect.stringContaining("listTasks") }),
   );
+});
+
+test("a relative baseUrl behind a prefix-stripping proxy lists, follows the next page and writes", async () => {
+  await loadScript({});
+
+  const client = createClient({
+    baseUrl: inject("strippedPrefix"),
+    headers: { authorization: `Bearer ${inject("userToken")}` },
+  });
+
+  const firstPage = await client.listTasks({ path: { channelId: CHANNEL_ID } });
+
+  if (!firstPage.ok) throw new Error(`listTasks answered ${firstPage.status}`);
+
+  // The server writes its own path in the Link header; the client reads only the cursor from its query.
+  expect(firstPage.body.next).toBe(`/v1/channels/${CHANNEL_ID}/tasks?cursor=page-2`);
+  const { nextCursor } = firstPage.body;
+
+  if (nextCursor === undefined) throw new Error("listTasks answered no next cursor");
+
+  const lastPage = await client.listTasks({
+    path: { channelId: CHANNEL_ID },
+    query: { cursor: nextCursor },
+  });
+
+  if (!lastPage.ok) throw new Error(`listTasks answered ${lastPage.status}`);
+
+  expect(lastPage.body.nextCursor).toBeUndefined();
+
+  const created = await client.createTask({
+    path: { channelId: CHANNEL_ID },
+    body: { title: "Behind the proxy" },
+  });
+
+  if (!created.ok) throw new Error(`createTask answered ${created.status}`);
+
+  expect(created.status).toBe(201);
+  expect(created.body.title).toBe("Behind the proxy");
 });
 
 test("a create answers the created task", async () => {
