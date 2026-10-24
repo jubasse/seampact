@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import {
   loadSuiteCases,
+  refusalsOf,
+  reportFileOf,
   runBootSuite,
   runSuite,
   type SuiteCase,
@@ -13,6 +15,7 @@ import {
   type SuiteProfile,
   type SuiteReport,
   suiteReportOf,
+  testEachCase,
   writeSuiteReport,
 } from "../../../../../packages/tools/http-suite/src/index.ts";
 import { type RunningApp, startSpringApp } from "./spring-app.ts";
@@ -59,29 +62,6 @@ function readCredentials(): SuiteCredentials {
   };
 }
 
-function refusalsOf(cases: readonly SuiteCase[]): Record<string, string> {
-  return Object.fromEntries(
-    cases.flatMap((suiteCase) => {
-      const reason = SPRING_SUITE_REFUSALS[suiteCase.id];
-
-      return reason === undefined ? [] : [[suiteCase.id, reason]];
-    }),
-  );
-}
-
-function reportFileOf(profile: SuiteProfile): string {
-  return join(reportDirectory, `http-suite-${profile}.json`);
-}
-
-function testEachCase(cases: readonly SuiteCase[], report: () => SuiteReport | undefined): void {
-  test.each(cases.map((suiteCase) => [suiteCase.id, suiteCase.title]))("%s: %s", (id) => {
-    const result = report()?.cases.find((caseResult) => caseResult.id === id);
-
-    expect(result?.failures).toEqual([]);
-    expect(result?.outcome).toBe(Object.hasOwn(SPRING_SUITE_REFUSALS, id) ? "refused" : "passed");
-  });
-}
-
 function describeHttpProfile(profile: SuiteProfile): void {
   describe(`http suite, ${profile} profile`, () => {
     const cases = loadSuiteCases(profile);
@@ -96,22 +76,22 @@ function describeHttpProfile(profile: SuiteProfile): void {
         profile,
         credentials,
         cases,
-        refusals: refusalsOf(cases),
+        refusals: refusalsOf(cases, SPRING_SUITE_REFUSALS),
       });
-      writeSuiteReport(report, reportFileOf(profile));
+      writeSuiteReport(report, reportFileOf(reportDirectory, profile));
     }, SUITE_TIMEOUT_MS);
 
     afterAll(async () => {
       await app?.close();
     });
 
-    testEachCase(cases, () => report);
+    testEachCase(cases, () => report, SPRING_SUITE_REFUSALS, test);
   });
 }
 
 // The allow-listed variant needs the route in the config, so it boots the second jar; the other cases boot the first.
 async function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport> {
-  const refusals = refusalsOf(cases);
+  const refusals = refusalsOf(cases, SPRING_SUITE_REFUSALS);
   const onMainJar = await runBootSuite({
     target: TARGET,
     cases,
@@ -125,7 +105,7 @@ async function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport>
   const onAllowListedJar = await runBootSuite({
     target: TARGET,
     cases: allowListedCases,
-    refusals: refusalsOf(allowListedCases),
+    refusals: refusalsOf(allowListedCases, SPRING_SUITE_REFUSALS),
     command: "java",
     args: ["-jar", allowListedJar],
     cwd: reportDirectory,
@@ -169,8 +149,8 @@ describe("http suite, boot profile", () => {
 
   beforeAll(async () => {
     report = await runBootProfile(cases);
-    writeSuiteReport(report, reportFileOf("boot"));
+    writeSuiteReport(report, reportFileOf(reportDirectory, "boot"));
   }, SUITE_TIMEOUT_MS);
 
-  testEachCase(cases, () => report);
+  testEachCase(cases, () => report, SPRING_SUITE_REFUSALS, test);
 });

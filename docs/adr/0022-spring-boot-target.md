@@ -316,7 +316,7 @@ The workflow `p6-spring-boot.yml` has five jobs:
 
 - `changes`;
 - `compiler-binary` (Node), which builds the linux-x64 binary;
-- `build`, a matrix in `eclipse-temurin` containers, whose first step fails when `node`, `npm` or `npx` is found. It builds the app with each plugin from the reference contract's bundle, served over https by `java Serve.java` and filtered by the entry's `operations` ("Core-path operations" below), on JDK 21 and 25, plus one local-YAML row per build tool on JDK 25;
+- `build`, a matrix in `eclipse-temurin` containers, whose first step fails when `node`, `npm` or `npx` is found. It builds the app with each plugin from the reference contract as a local `path` source, filtered by the entry's `operations` ("Core-path operations" below), on JDK 21 and 25; the rows that take the contract's bundle, served over https by `java Serve.java`, come with plugins-3;
 - `http-suite`, which starts `java -jar` and runs the `default`, `hand-written` and `boot` profiles, plus `pack:spring` from spring-3, through the suite's CLI (ADR 0015 "Suite profiles"), with the boot profile run as `command: java`;
 - `spring-boot`, the aggregate, failing on any failed or cancelled job.
 
