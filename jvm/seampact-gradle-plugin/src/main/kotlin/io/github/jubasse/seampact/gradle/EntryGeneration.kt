@@ -15,18 +15,22 @@ import io.github.jubasse.seampact.ir.write.HeaderOutcome
 import io.github.jubasse.seampact.ir.write.HeaderSource
 import io.github.jubasse.seampact.ir.write.PlanOutcome
 import io.github.jubasse.seampact.ir.write.withGeneratedHeader
+import io.github.jubasse.seampact.springboot.FrameworkRoute
 import io.github.jubasse.seampact.springboot.SpringBootEntry
 import io.github.jubasse.seampact.springboot.SpringBootRefusedException
 import io.github.jubasse.seampact.springboot.SpringBootTarget
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 private const val WAITS_CODE = "config.key.waits"
 private const val NO_DOCUMENTS = "none"
 
 /**
  * The app config's forms this plugin release does not serve yet, each refused by name with what brings it: seampact's
- * OpenAPI documents (written by the pinned binary in a later release), the compatibility matrix (`checks.matrix`,
- * `allowUntested`) and the boot check's `frameworkRoutes`.
+ * OpenAPI documents (written by the pinned binary in a later release) and the compatibility matrix (`checks.matrix`,
+ * `allowUntested`).
  */
 internal fun waitingForms(config: AppConfig): List<ConfigProblem> {
     if (config.entries.isEmpty()) return emptyList()
@@ -47,13 +51,21 @@ internal fun waitingForms(config: AppConfig): List<ConfigProblem> {
         if ("allowUntested" in entry.entry) {
             problems += waits("`allowUntested`", "the compatibility check of a later plugin release", "entry '${entry.id}' allowUntested")
         }
-        if ("frameworkRoutes" in entry.entry) {
-            problems += waits("`frameworkRoutes`", "the boot check of the spring-boot boundary runtime", "entry '${entry.id}' frameworkRoutes")
-        }
     }
 
     return problems
 }
+
+// The entry's `frameworkRoutes`, already checked against the app config schema.
+private fun frameworkRoutesOf(entry: AppConfigEntry): List<FrameworkRoute> =
+    (entry.entry["frameworkRoutes"] as? JsonArray).orEmpty().map { item ->
+        val route = item.jsonObject
+        FrameworkRoute(
+            path = route.getValue("path").jsonPrimitive.content,
+            reason = route.getValue("reason").jsonPrimitive.content,
+            method = route["method"]?.jsonPrimitive?.content,
+        )
+    }
 
 private fun waits(what: String, bringer: String, where: String) =
     ConfigProblem(WAITS_CODE, "$what is not available yet; it comes with $bringer.", "Remove it from the config for now.", where)
@@ -138,6 +150,7 @@ private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, springBo
         artefacts = entry.artefacts,
         frameworkDocs = entry.frameworkDocs,
         link = entry.link,
+        frameworkRoutes = frameworkRoutesOf(entry),
     )
     val files = mutableListOf<GeneratedFile>()
     val problems = mutableListOf<ConfigProblem>()

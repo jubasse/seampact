@@ -1,0 +1,5 @@
+The Spring Boot consumer (ADR 0022 "The consumer and the proof"): a Spring Boot 4 app built by the Gradle plugin from the reference contract's core-path operations, its controllers, hook doubles and control routes, and the suite run that checks it with the shared http suite.
+
+- `assemble.sh <dir> [allow-listed]` copies the app, its Gradle build root, the Gradle wrapper and the reference contract into `<dir>`; `allow-listed` takes the config of the `allow-listed-framework-route` boot variant.
+- In `<dir>`: `./gradlew bootJar -PseampactJvm=<repo>/jvm -PseampactBinary=<binary> [-PjavaVersion=25]` builds `build/libs/consumer.jar`; the plugin and `seampact-hooks` come from the repository's `jvm/` build, included by path.
+- From the repository root, with `SEAMPACT_SPRING_JAR`, `SEAMPACT_SPRING_ALLOW_LISTED_JAR` and `SEAMPACT_SPRING_REPORTS` set: `pnpm vitest run --config scripts/consumers/targets/spring-boot/suite/vitest.config.ts` runs the `default`, `hand-written` and `boot` profiles and a forwarded-prefix check, and writes one report per profile. `suite/suite-refusals.ts` lists the cases that wait for a later release.

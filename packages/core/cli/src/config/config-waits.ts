@@ -25,8 +25,6 @@ const ENTRY_KEY_WAITS: Readonly<Record<string, string>> = {
   access: SERVER_ENTRY_BRINGER,
 };
 
-const NATIVE_RUNNER_BRINGER = "the native runners, Gradle, Maven and Composer (p6)";
-
 // A module link only arises across the apps of a monorepo, and no app links across apps yet.
 const MODULE_LINK_BRINGER = "links across the apps of a monorepo, once an app needs one";
 
@@ -45,10 +43,9 @@ function targetEntryWaits(entry: unknown, index: number): ConfigWait[] {
   const artefactWaits = Object.hasOwn(entry, "artefacts")
     ? artefactSwitchWaits(entry.artefacts, [...path, "artefacts"])
     : [];
-  const useWaits = typeof entry.use === "string" ? nativeUseWaits(entry.use, [...path, "use"]) : [];
   const linkWaits = isRecord(entry.link) ? moduleLinkWaits(entry.link, [...path, "link"]) : [];
 
-  return [...keyWaits, ...artefactWaits, ...useWaits, ...linkWaits];
+  return [...keyWaits, ...artefactWaits, ...linkWaits];
 }
 
 // Every artefact switch is read but the boot check's `handlers`.
@@ -64,17 +61,6 @@ function artefactSwitchWaits(artefacts: unknown, path: KeyPath): ConfigWait[] {
       what: `the boot check switch '${key}'`,
       bringer,
     }));
-}
-
-// A Maven `group:artifact` coordinate or a Composer `vendor/name`; npm names never hold a colon, and an unscoped
-// npm name never holds a slash.
-function nativeUseWaits(use: string, path: KeyPath): ConfigWait[] {
-  const isMavenCoordinate = use.includes(":");
-  const isComposerPackage = !use.startsWith("@") && !use.startsWith(".") && use.includes("/");
-
-  if (!isMavenCoordinate && !isComposerPackage) return [];
-
-  return [{ path, what: `the native target '${use}'`, bringer: NATIVE_RUNNER_BRINGER }];
 }
 
 function moduleLinkWaits(link: Record<string, unknown>, path: KeyPath): ConfigWait[] {

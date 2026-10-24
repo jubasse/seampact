@@ -1,0 +1,41 @@
+package com.example.tasksservice.api.spring.runtime;
+
+import io.github.jubasse.seampact.hooks.ResolvedScope;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * One contract request as the boundary's pieces share it through a request attribute: the matched route, the held
+ * body and response, what the steps resolved, and the marks of who wrote the reply (ADR 0022 "A reply the boundary
+ * did not author").
+ */
+final class BoundaryExchange {
+    final ContractTable.RouteMatch match;
+    final String contractPath;
+    final CheckingResponse response;
+    final List<ResolvedScope<?, ?>> scopes = new ArrayList<>();
+
+    byte[] body;
+    Object principal;
+    Object input;
+    boolean admitted;
+    boolean boundaryWrote;
+    boolean exceptionSeen;
+    Optional<String> violation = Optional.empty();
+
+    BoundaryExchange(ContractTable.RouteMatch match, String contractPath, CheckingResponse response) {
+        this.match = match;
+        this.contractPath = contractPath;
+        this.response = response;
+    }
+
+    ContractRoute route() {
+        return match.route();
+    }
+
+    Map<String, String> pathParams() {
+        return match.pathParams();
+    }
+}

@@ -8,9 +8,12 @@ import {
   type SuiteCase,
   type SuiteProfile,
   type SuiteReport,
+  refusalsOf as sharedRefusalsOf,
+  reportFileOf as sharedReportFileOf,
+  testEachCase as sharedTestEachCase,
   writeSuiteReport,
 } from "@seampact/http-suite";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, test } from "vitest";
 import {
   FOREIGN_SERVICE_JWT,
   SERVICE_JWT,
@@ -34,18 +37,12 @@ export const TARGET_PROFILES: readonly SuiteProfile[] = ["default", "hand-writte
 const SUITE_TIMEOUT_MS = 180_000;
 
 export function reportFileOf(profile: SuiteProfile): string {
-  return join(CONSUMER_ROOT, "reports", `http-suite-${profile}.json`);
+  return sharedReportFileOf(join(CONSUMER_ROOT, "reports"), profile);
 }
 
 /** The refusals of the cases a run holds; a refusal no profile's case takes fails the default profile's test. */
 export function refusalsOf(cases: readonly SuiteCase[]): Record<string, string> {
-  return Object.fromEntries(
-    cases.flatMap((suiteCase) => {
-      const reason = SUITE_REFUSALS[suiteCase.id];
-
-      return reason === undefined ? [] : [[suiteCase.id, reason]];
-    }),
-  );
+  return sharedRefusalsOf(cases, SUITE_REFUSALS);
 }
 
 /** One test per case of the report: passed, or refused by name for a known target bug. */
@@ -53,12 +50,7 @@ export function testEachCase(
   cases: readonly SuiteCase[],
   report: () => SuiteReport | undefined,
 ): void {
-  test.each(cases.map((suiteCase) => [suiteCase.id, suiteCase.title]))("%s: %s", (id) => {
-    const result = report()?.cases.find((caseResult) => caseResult.id === id);
-
-    expect(result?.failures).toEqual([]);
-    expect(result?.outcome).toBe(Object.hasOwn(SUITE_REFUSALS, id) ? "refused" : "passed");
-  });
+  sharedTestEachCase(cases, report, SUITE_REFUSALS, test);
 }
 
 /** Runs an HTTP profile of the suite against the server the overlay starts and writes its report. */

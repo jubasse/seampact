@@ -428,11 +428,6 @@ test.each([
     "'handlers'",
   ],
   [
-    "a native target",
-    "targets:\n  - { id: server, use: 'com.acme:server', api: a }\n",
-    "native target",
-  ],
-  [
     "a module link",
     `${SERVER_ENTRY_HEAD}    link: { validators: { module: x } }\n`,
     "explicit module specifier",

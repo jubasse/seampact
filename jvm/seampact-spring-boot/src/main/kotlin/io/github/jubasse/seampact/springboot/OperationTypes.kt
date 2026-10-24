@@ -14,7 +14,7 @@ import javax.lang.model.element.Modifier
 // is a parameter of a sensitive scalar.
 private val CREDENTIAL_DERIVATION_PREFIXES = listOf("identity.", "csrf.")
 
-private const val STATUS_ARM_PREFIX = "Status"
+internal const val STATUS_ARM_PREFIX = "Status"
 
 /** The Java types of one operation: its input records, its result and its typed error result. */
 internal class OperationTypes(

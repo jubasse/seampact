@@ -33,6 +33,13 @@ export {
 export { CASES_DIRECTORY, loadSuiteCases } from "./load-cases.js";
 export type { SentRequest } from "./operation-match.js";
 export { type PackProfile, packProfileName, packProfileOf } from "./pack-profile.js";
+export {
+  caseProblems,
+  type DefineCaseTest,
+  refusalsOf,
+  reportFileOf,
+  testEachCase,
+} from "./profile-run.js";
 export { STRIPE_V1_SCHEME, signRequestBody } from "./request-signature.js";
 export {
   authenticateHookName,

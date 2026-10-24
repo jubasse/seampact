@@ -43,7 +43,7 @@ internal data class OperationNames(
 )
 
 /** The class names of one identity's authenticate request and its credentials. */
-internal data class IdentityNames(val request: ClassName, val credentials: ClassName)
+internal data class IdentityNames(val request: ClassName, val credentials: ClassName, val hook: ClassName)
 
 /**
  * Every Java name the target writes for one api, computed once (ADR 0022 "Placement"): schema types under
@@ -59,6 +59,13 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
 
     val contractException: ClassName = ClassName.get(operationsPackage, "${apiTypeName}ContractException")
     val redaction: ClassName = ClassName.get(operationsPackage, "${apiTypeName}Redaction")
+    val runtimePackage: String = "$springPackage.runtime"
+    val contractTable: ClassName = ClassName.get(springPackage, "${apiTypeName}ContractTable")
+    val binding: ClassName = ClassName.get(springPackage, "${apiTypeName}SeampactBinding")
+    val configuration: ClassName = ClassName.get(springPackage, "${apiTypeName}SeampactConfiguration")
+
+    /** A class of the copied runtime. */
+    fun runtime(simpleName: String): ClassName = ClassName.get(runtimePackage, simpleName)
 
     private val schemaClasses = LinkedHashMap<SchemaId, ClassName>()
     private val enumClasses = LinkedHashMap<EnumId, ClassName>()
@@ -106,8 +113,10 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
             val names = IdentityNames(
                 request = ClassName.get(operationsPackage, javaIdentifier(segments + listOf("authenticate", "request"), NamingRole.SCHEMA)),
                 credentials = ClassName.get(operationsPackage, javaIdentifier(segments + "credentials", NamingRole.SCHEMA)),
+                hook = ClassName.get(operationsPackage, javaIdentifier(segments + listOf("authenticate", "hook"), NamingRole.SCHEMA)),
             )
             claim(names.request, "the authenticate request of identity '$identityId'", place, refusals)
+            claim(names.hook, "the authenticate hook of identity '$identityId'", place, refusals)
             claim(names.credentials, "the credentials of identity '$identityId'", place, refusals)
             identityNames[identityId] = names
         }
