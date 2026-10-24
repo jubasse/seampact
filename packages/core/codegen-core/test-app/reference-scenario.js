@@ -42,10 +42,19 @@ export function resetScenario() {
   scenario.answers = {};
   scenario.authenticate = authenticateByBearer;
   scenario.decide = () => ({ allow: true });
+  scenario.trustsProxy = false;
   calls.scopeIds.length = 0;
   calls.handled.length = 0;
   calls.unexpected.length = 0;
   calls.loggedErrors.length = 0;
+}
+
+/**
+ * The app's trust-proxy setting, as the function form Express, Fastify and Adonis take: the test turns it on with
+ * `scenario.trustsProxy`, so one booted app serves a request with and without a trusted proxy.
+ */
+export function trustsProxy() {
+  return scenario.trustsProxy;
 }
 
 /** Thrown by a handler to make the app's error handler write a reply, with the framework's own send, Node's

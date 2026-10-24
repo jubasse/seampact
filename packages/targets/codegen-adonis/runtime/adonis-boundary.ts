@@ -258,7 +258,6 @@ function decodedBody(route: ContractRoute, raw: string | null): unknown {
 function undecodedRequestOf(ctx: HttpContext): ContractRequest {
   const { method, path, rawQuery } = requestLine(ctx);
   const raw = ctx.request.raw();
-  const remoteAddress = ctx.request.request.socket.remoteAddress;
 
   return {
     method,
@@ -269,7 +268,8 @@ function undecodedRequestOf(ctx: HttpContext): ContractRequest {
     // The received bytes as far as Adonis keeps them: the decoded string, re-encoded as UTF-8. Without it the step
     // 1 check counts zero bytes, and a body present then fails closed (`stepOneRefusal`).
     rawBody: raw === null ? NO_RAW_BODY : Buffer.from(raw, UTF8),
-    ...(remoteAddress === undefined ? {} : { clientAddress: remoteAddress }),
+    // Adonis resolves the address under the app's `http.trustProxy` setting.
+    clientAddress: ctx.request.ip(),
   };
 }
 

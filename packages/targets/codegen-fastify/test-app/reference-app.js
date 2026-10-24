@@ -14,6 +14,7 @@ import {
   handlers,
   hooks,
   resetScenario,
+  trustsProxy,
 } from "./reference-scenario.js";
 
 export * from "./reference-scenario.js";
@@ -99,6 +100,7 @@ export async function startReferenceApp() {
   resetScenario();
 
   const app = Fastify({
+    trustProxy: trustsProxy,
     frameworkErrors(error, request, reply) {
       if (TasksFastify.renderPreRoutingError(request, reply, error)) return;
 

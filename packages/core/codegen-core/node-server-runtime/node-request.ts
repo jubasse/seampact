@@ -36,6 +36,8 @@ export const DEFAULT_METHOD = "GET";
 /** The request as Express hands it on. */
 export interface ExpressRequest extends IncomingMessage {
   originalUrl?: string;
+  /** The client address Express resolves, under the app's `trust proxy` setting. */
+  ip?: string | undefined;
   body?: unknown;
   rawBody?: unknown;
 }
@@ -67,8 +69,14 @@ export function reportedRequest(request: ExpressRequest): ReportedRequest {
   return { method: request.method ?? DEFAULT_METHOD, path: pathnameOf(request) };
 }
 
-/** The request as the shared checks read it. */
-export function contractRequest(request: ExpressRequest): ContractRequest {
+/**
+ * The request as the shared checks read it. `clientAddress` is the address the framework resolved under the app's
+ * trust-proxy setting: Express's `req.ip` by default, Fastify passes its own `request.ip`.
+ */
+export function contractRequest(
+  request: ExpressRequest,
+  clientAddress: string | undefined = request.ip,
+): ContractRequest {
   const { path, rawQuery } = requestTarget(request);
 
   return {
@@ -78,9 +86,7 @@ export function contractRequest(request: ExpressRequest): ContractRequest {
     headers: request.headers,
     body: request.body,
     ...(Buffer.isBuffer(request.rawBody) ? { rawBody: request.rawBody } : {}),
-    ...(request.socket.remoteAddress === undefined
-      ? {}
-      : { clientAddress: request.socket.remoteAddress }),
+    ...(clientAddress === undefined ? {} : { clientAddress }),
   };
 }
 

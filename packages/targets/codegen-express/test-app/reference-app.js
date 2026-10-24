@@ -15,6 +15,7 @@ import {
   handlers,
   hooks,
   resetScenario,
+  trustsProxy,
 } from "./reference-scenario.js";
 
 export * from "./reference-scenario.js";
@@ -79,6 +80,8 @@ export async function startReferenceApp() {
   resetScenario();
 
   const app = express();
+
+  app.set("trust proxy", trustsProxy);
 
   app.use((request, response, next) => {
     if (request.headers.origin === ALLOWED_ORIGIN) {

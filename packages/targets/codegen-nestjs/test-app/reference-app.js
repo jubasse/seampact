@@ -61,6 +61,8 @@ export function resetScenario() {
   scenario.interceptor = {};
   scenario.authenticate = authenticateByBearer;
   scenario.decide = () => ({ allow: true });
+  // The app's `trust proxy` setting, read per request, so one app serves a request with and without a trusted proxy.
+  scenario.trustsProxy = false;
   calls.scopeIds.length = 0;
   calls.handled.length = 0;
   calls.unexpected.length = 0;
@@ -552,6 +554,7 @@ export async function startReferenceApp() {
 
   const app = await NestFactory.create(ReferenceModule, { rawBody: true, logger: recordingLogger });
 
+  app.set("trust proxy", () => scenario.trustsProxy);
   app.enableCors({ origin: ALLOWED_ORIGIN });
   app.use((_request, response, next) => {
     response.setHeader("strict-transport-security", "max-age=63072000");
