@@ -1,6 +1,8 @@
 package io.github.jubasse.seampact.ir.config
 
 import java.math.BigInteger
+import java.util.Collections
+import java.util.IdentityHashMap
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlinx.serialization.json.JsonArray
@@ -112,9 +114,25 @@ private class YamlTreeBuilder(
     private val positions: MutableMap<String, ConfigPosition>,
     private val problems: MutableList<ConfigProblem>,
 ) {
+    // The collections being built, by identity: an alias inside the collection it names has no JSON value.
+    private val open = Collections.newSetFromMap(IdentityHashMap<Node, Boolean>())
+
     fun build(node: Node, path: KeyPath): JsonElement {
         positions.putIfAbsent(formatKeyPath(path), positionOf(node))
 
+        if (!open.add(node)) {
+            problems += syntaxProblem("An alias refers to the collection that holds it; a config value cannot hold itself.", whereOf(node))
+            return JsonNull
+        }
+
+        try {
+            return buildOpen(node, path)
+        } finally {
+            open.remove(node)
+        }
+    }
+
+    private fun buildOpen(node: Node, path: KeyPath): JsonElement {
         if (node.tag !in READ_TAGS) {
             problems += syntaxProblem("The tag '${node.tag.value}' is not one a config reads.", whereOf(node))
             return JsonNull

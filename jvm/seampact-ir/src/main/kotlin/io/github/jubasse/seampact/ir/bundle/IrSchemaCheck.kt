@@ -8,6 +8,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -81,7 +82,7 @@ private fun withDiscriminatorsAsConditions(fileName: String, schema: JsonElement
 
 private fun asConditions(fileName: String, union: JsonObject, definitions: JsonObject): JsonObject {
     val tagMember = union.getValue("discriminator").jsonObject.getValue("propertyName").jsonPrimitive.content
-    val variants = union.getValue("oneOf") as JsonArray
+    val variants = union.getValue("oneOf").jsonArray
 
     val conditions = variants.map { variant ->
         val reference = variant.jsonObject.getValue("\$ref").jsonPrimitive.content

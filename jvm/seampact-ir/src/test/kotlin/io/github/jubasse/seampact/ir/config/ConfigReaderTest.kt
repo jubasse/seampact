@@ -117,6 +117,7 @@ class ConfigReaderTest {
         assertEquals(listOf("config.yaml.syntax"), refused("outDir: a\noutDir: b\n").map { it.code })
         assertEquals(listOf("config.key.reserved"), refused("__proto__: {}\n").map { it.code })
         assertEquals(listOf("config.yaml.syntax"), refused("outDir: !!binary aGk=\n").map { it.code })
+        assertEquals(listOf("config.yaml.syntax"), refused("checks: &self { nested: *self }\n").map { it.code })
     }
 
     @Test
