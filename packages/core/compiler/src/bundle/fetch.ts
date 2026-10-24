@@ -1,10 +1,6 @@
 import { existsSync, rmSync } from "node:fs";
 import type { BundleManifest } from "@seampact/spec/bundle";
-import type {
-  BundleSource,
-  MavenBundleSource,
-  ReleaseBundleSource,
-} from "@seampact/spec/config";
+import type { BundleSource, MavenBundleSource, ReleaseBundleSource } from "@seampact/spec/config";
 import type { ContractIR } from "@seampact/spec/ir";
 import { bundleCacheDirectory, bundleCacheEntry, storeBundleCacheEntry } from "./cache.js";
 import type { BundleSourceFailure } from "./fetch-failure.js";
