@@ -11,6 +11,25 @@ export type ResolveTargetOutcome =
   | { status: "resolved"; target: Target }
   | { status: "refused"; problem: CliProblem };
 
+// A Maven `group:artifact` coordinate or a Composer `vendor/name`; npm names never hold a colon, and an unscoped
+// npm name never holds a slash.
+function isNativeTargetUse(use: string): boolean {
+  const isMavenCoordinate = use.includes(":");
+  const isComposerPackage = !use.startsWith("@") && !use.startsWith(".") && use.includes("/");
+
+  return isMavenCoordinate || isComposerPackage;
+}
+
+// A native target belongs to its build plugin (ADR 0009); `compile` still reads the entry's api for it.
+function nativeTargetProblem(use: string, where: string): CliProblem {
+  return {
+    code: "config.target.native",
+    message: `The target '${use}' is a native target: the app's Gradle or Maven plugin generates it, not the Node CLI.`,
+    fix: "Run the app's build plugin to generate it; the Node CLI only compiles the contract for it (`seampact compile`).",
+    where,
+  };
+}
+
 // Loads the target package `use` names from the app's own project, starting at the config file's directory and
 // never at the CLI's install (ADR 0009 "Target resolution from the app config"). The package's main module exports
 // the value `defineTarget` returns under the name `target`.
@@ -19,6 +38,9 @@ export async function resolveTarget(
   use: string,
   where: string,
 ): Promise<ResolveTargetOutcome> {
+  if (isNativeTargetUse(use))
+    return { status: "refused", problem: nativeTargetProblem(use, where) };
+
   const resolved = resolveFromConfig(configFile, use, where);
 
   if (typeof resolved !== "string") return { status: "refused", problem: resolved };
