@@ -39,15 +39,21 @@ public sealed interface BinaryPinResolution {
 public object BinaryPinning {
     private const val OVERRIDE_SOURCE = "The binary version override"
 
-    public fun pin(embedded: BinaryPins, override: BinaryOverride?, host: HostPlatform): BinaryPinResolution {
-        if (override is BinaryOverride.LocalPath) return localFile(override)
-
+    /** [embedded] is null when the plugin was built without a release `SHA256SUMS`: only an override pins then. */
+    public fun pin(embedded: BinaryPins?, override: BinaryOverride?, host: HostPlatform): BinaryPinResolution {
         val pins = when (override) {
+            is BinaryOverride.LocalPath -> return localFile(override)
             is BinaryOverride.Version -> when (val read = BinaryPins.pinsOf(override.version, override.sha256ByClassifier, OVERRIDE_SOURCE)) {
                 is BinaryPinsRead.Read -> read.pins
                 is BinaryPinsRead.Refused -> return BinaryPinResolution.Refused(read.failure)
             }
-            else -> embedded
+            null -> embedded ?: return BinaryPinResolution.Refused(
+                BinaryFailure(
+                    BinaryFailureCode.PIN_MISSING,
+                    "This build plugin embeds no compiler pin: it was built without a release SHA256SUMS, so it has no binary to run.",
+                    "Pin the binary in the build file: a release version with the SHA-256 of each platform, or a path to your own build with its SHA-256.",
+                ),
+            )
         }
 
         return when (val classification = PlatformClassifier.classify(host)) {

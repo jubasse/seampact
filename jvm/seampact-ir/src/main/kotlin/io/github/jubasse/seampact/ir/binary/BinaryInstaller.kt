@@ -37,6 +37,7 @@ public object BinaryInstaller {
     private const val COPY_BUFFER_BYTES = 1024 * 1024
     private const val POSIX_VIEW = "posix"
     private val OWNER_ONLY_DIRECTORY = PosixFilePermissions.fromString("rwx------")
+    private val OWNER_ONLY_EXECUTABLE = PosixFilePermissions.fromString("rwx------")
     private val WRITE_BY_OTHER_USERS = setOf(PosixFilePermission.GROUP_WRITE, PosixFilePermission.OTHERS_WRITE)
 
     public fun install(resolved: Path, pin: BinaryPin, cacheDirectory: Path): BinaryInstall {
@@ -56,7 +57,7 @@ public object BinaryInstaller {
         val partial = Files.createTempFile(directory, BINARY_NAME, TEMPORARY_SUFFIX)
         try {
             Files.copy(resolved, partial, StandardCopyOption.REPLACE_EXISTING)
-            check(partial.toFile().setExecutable(true)) { "binary: '$partial' could not be made executable." }
+            makeOwnerOnlyExecutable(partial)
 
             // The copy is hashed, not the source again: a file changed during the copy is caught here.
             val copiedSha256 = sha256Of(partial)
@@ -83,6 +84,16 @@ public object BinaryInstaller {
         } catch (_: FileAlreadyExistsException) {
             // Another build created it in between; it is checked like any existing entry.
         }
+    }
+
+    // The copy replaces the temporary file with one of the umask's permissions, which may let the group write it.
+    private fun makeOwnerOnlyExecutable(file: Path) {
+        if (supportsPosix(file)) {
+            Files.setPosixFilePermissions(file, OWNER_ONLY_EXECUTABLE)
+            return
+        }
+
+        check(file.toFile().setExecutable(true)) { "binary: '$file' could not be made executable." }
     }
 
     private fun unsafeCacheEntry(directory: Path, installed: Path): BinaryFailure? {

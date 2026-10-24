@@ -3,6 +3,7 @@ package io.github.jubasse.seampact.springboot
 import com.palantir.javapoet.JavaFile
 import com.palantir.javapoet.TypeSpec
 import io.github.jubasse.seampact.ir.model.ContractIR
+import io.github.jubasse.seampact.ir.read.IrSupport
 
 /** One file the target writes: [path] is a POSIX path relative to the entry's output root, [contents] its text. */
 public data class GeneratedFile(val path: String, val contents: String)
@@ -13,6 +14,12 @@ public data class GeneratedFile(val path: String, val contents: String)
  * writer's (ADR 0015 "The generated header").
  */
 public object SpringBootTarget {
+    /** The `use` of a target entry this target generates (ADR 0011 "The app config"). */
+    public const val USE: String = "io.github.jubasse:seampact-spring-boot"
+
+    /** The IR kinds and features this target reads: a build plugin reads each api's IR with it (`IrReader.read`). */
+    public val IR_SUPPORT: IrSupport = IrSupport.ofModel(kinds = listOf("httpOperation"))
+
     /**
      * The Java files of one api: its types, the endpoints interfaces, the composed annotations, the results and the
      * exceptions, sorted by path.

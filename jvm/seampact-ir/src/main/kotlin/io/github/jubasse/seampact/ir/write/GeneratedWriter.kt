@@ -16,7 +16,10 @@ public class PlannedWrite internal constructor(
     internal val files: List<PlannedFile>,
     public val unchanged: List<String>,
     public val removable: List<String>,
-)
+) {
+    /** The paths a commit writes: each planned file whose bytes differ from the file on disk, or that is missing. */
+    public val changed: List<String> get() = files.map { it.path }.filter { it !in unchanged }
+}
 
 internal class PlannedFile(val path: String, val bytes: ByteArray, val sha256: String)
 
