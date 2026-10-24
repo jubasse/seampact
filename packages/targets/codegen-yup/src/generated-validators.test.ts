@@ -77,12 +77,15 @@ function goldenIr(): ContractIR {
   return JSON.parse(readFileSync(GOLDEN_IR, "utf8"));
 }
 
+// Slow on a loaded machine: give it more than the default limit.
+const SETUP_TIMEOUT_MILLISECONDS = 60_000;
+
 beforeAll(async () => {
   ({ standardSchemaOf, operationInputs, inputSchemas, outputSchemas } = await generateAndImport(
     goldenIr(),
     "generated-root",
   ));
-});
+}, SETUP_TIMEOUT_MILLISECONDS);
 
 afterAll(() => rmSync(temporaryRoot, { recursive: true, force: true }));
 

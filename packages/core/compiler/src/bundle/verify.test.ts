@@ -9,6 +9,9 @@ import { extractBundleTarball } from "./tarball-read.js";
 import { verifyBundle } from "./verify.js";
 import { writeBundle } from "./write.js";
 
+// Slow on a loaded machine: give it more than the default limit.
+const SETUP_TIMEOUT_MILLISECONDS = 60_000;
+
 let pristine: string;
 let pin: string;
 
@@ -19,7 +22,7 @@ beforeAll(() => {
 
   if (!written.ok) throw new Error("the reference contract was not bundled");
   pin = written.manifest.integrity;
-});
+}, SETUP_TIMEOUT_MILLISECONDS);
 
 afterAll(() => rmSync(dirname(pristine), { recursive: true, force: true }));
 

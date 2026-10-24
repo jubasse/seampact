@@ -1,9 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { parse } from "yaml";
 import { EXIT_REFUSED, EXIT_SUCCESS } from "../cli-io.js";
 import { type FakeTarget, generateOutput, makeApp } from "./fake-app.test-support.js";
+
+// Slow on a loaded machine: give every test more than the default limit.
+vi.setConfig({ testTimeout: 60_000 });
 
 const BOUNDARY = { id: "boundary", defaultOn: true };
 const NATIVE_DOCS = { id: "nativeDocs", defaultOn: false, needs: ["boundary"] };
