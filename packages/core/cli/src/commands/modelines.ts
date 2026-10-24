@@ -20,15 +20,22 @@ export function modelineOf(file: string, schemaDirectory: string, kind: Authorin
   return `${MODELINE_PREFIX} $schema=${directory === "" ? schema : `${directory}/${schema}`}`;
 }
 
-/** The text with `modeline` as its first line: it replaces a modeline already there, else comes before the text. */
+const BYTE_ORDER_MARK = "\uFEFF";
+const LINE_END = /\r?\n/;
+
+/**
+ * The text with `modeline` as its first line, after a byte order mark: it replaces a modeline already there, else
+ * comes before the text. The inserted line ends as the first line does, and the rest is kept byte for byte.
+ */
 export function withModeline(text: string, modeline: string): string {
-  const lineEnd = text.includes("\r\n") ? "\r\n" : "\n";
+  const mark = text.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : "";
+  const body = text.slice(mark.length);
+  const firstLineEnd = LINE_END.exec(body);
 
-  if (!text.startsWith(MODELINE_PREFIX)) return `${modeline}${lineEnd}${text}`;
+  if (!body.startsWith(MODELINE_PREFIX))
+    return `${mark}${modeline}${firstLineEnd?.[0] ?? "\n"}${body}`;
 
-  const firstLineEnd = text.indexOf(lineEnd);
-
-  return firstLineEnd === -1 ? `${modeline}${lineEnd}` : `${modeline}${text.slice(firstLineEnd)}`;
+  return `${mark}${modeline}${firstLineEnd === null ? "" : body.slice(firstLineEnd.index)}`;
 }
 
 /** A file of the workspace that gets no modeline, and why. */
