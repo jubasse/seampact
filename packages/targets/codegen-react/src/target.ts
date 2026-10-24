@@ -1,4 +1,5 @@
 import { defineTarget, type Target } from "@seampact/codegen-core";
+import { clientTargetCompatibility } from "@seampact/spec/compatibility";
 import { IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
@@ -29,7 +30,7 @@ export const target: Target = defineTarget<ReactQueryOptions, ReactArtefact, "cl
       { id: HOOKS_ARTEFACT, defaultOn: true, needs: [QUERIES_ARTEFACT] },
       { id: ITEMS_OF_ARTEFACT, defaultOn: false, needs: [QUERIES_ARTEFACT] },
     ],
-    consumes: { client: { styles: ["fetch"] } },
+    consumes: { client: { styles: clientTargetCompatibility(packageJson.name).clientStyles } },
     provides: {},
   },
   format,

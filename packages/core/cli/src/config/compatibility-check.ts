@@ -1,8 +1,8 @@
 import type { Target } from "@seampact/codegen-core";
 import { OWN_VALIDATORS_ARTEFACT } from "@seampact/codegen-core/node-server";
 import {
+  ALL_TARGETS,
   type LibrarySupport,
-  SERVER_TARGETS,
   supportedMajorsOf,
   type TargetCompatibility,
 } from "@seampact/spec/compatibility";
@@ -22,7 +22,7 @@ import { installFix } from "./package-manager.js";
 import type { LoadedAppConfig } from "./read-app-config.js";
 
 // The compatibility matrix check (ADR 0009 "Artefacts and the compatibility matrix", ADR 0011 "The app config"):
-// each server target entry against the framework major installed in the app, before anything is generated.
+// each target entry against the framework major installed in the app, before anything is generated.
 // Validator pairs are checked by codegen-core's link check.
 
 export interface CompatibilityOutcome {
@@ -47,7 +47,7 @@ export interface CompatibilityInput {
 export function checkAppCompatibility(
   config: LoadedAppConfig,
   targets: ReadonlyMap<string, Target>,
-  matrix: readonly TargetCompatibility[] = SERVER_TARGETS,
+  matrix: readonly TargetCompatibility[] = ALL_TARGETS,
 ): CompatibilityOutcome {
   const entries = config.entries.map(({ entry }) => entry);
   const outputRoots = new Map(config.entries.map(({ entry, root }) => [entry.id, root]));
@@ -282,7 +282,16 @@ function librariesInUse(
 
   if (selection.status === "refused") return [];
 
-  return (record.libraries ?? []).filter((library) => selection.artefacts.has(library.artefact));
+  return (record.libraries ?? []).filter(
+    (library) => selection.artefacts.has(library.artefact) && isSelected(entry, library),
+  );
+}
+
+// A library with a selector is imported only when the entry's option has that value.
+function isSelected(entry: TargetEntry, library: LibrarySupport): boolean {
+  if (library.selectedBy === undefined) return true;
+
+  return entry.options?.[library.selectedBy.option] === library.selectedBy.value;
 }
 
 // The library the target's own validators import, when the entry writes them: no linked validators provider, and the

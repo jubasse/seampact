@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { Target } from "@seampact/codegen-core";
-import type { TargetCompatibility } from "@seampact/spec/compatibility";
+import { ALL_TARGETS, type TargetCompatibility } from "@seampact/spec/compatibility";
 import type { MatrixCheckLevel, TargetEntry } from "@seampact/spec/config";
 import { afterEach, expect, test } from "vitest";
 import {
@@ -335,4 +335,26 @@ test("reads no own validators library when the entry links a validators provider
   };
 
   expect(ownValidatorsCheck(entry, false)).toEqual({ problems: [], warnings: [] });
+});
+
+test("warns on an untested React major from the shipped matrix, naming the tested one", () => {
+  const entry: TargetEntry = {
+    id: "front",
+    use: "@seampact/codegen-react",
+    api: "tasks",
+    options: { query: "swr" },
+  };
+  const outcome = checkCompatibility({
+    entries: [entry],
+    targets: new Map<string, Target>([["front", stubTarget("@seampact/codegen-react")]]),
+    installedVersions: new Map([["front", { packageName: "react", version: "18.3.1", major: 18 }]]),
+    installedLibraries: new Map([["front", [{ packageName: "swr", version: "2.3.0", major: 2 }]]]),
+    matrix: ALL_TARGETS,
+    level: "warning",
+  });
+
+  expect(outcome.problems).toEqual([]);
+  expect(outcome.warnings.map((warning) => warning.message)).toEqual([
+    "react 18.3.1 is installed, and the target '@seampact/codegen-react' is tested on react 19 only.",
+  ]);
 });

@@ -1,5 +1,7 @@
 import { expect, test } from "vitest";
 import {
+  CLIENT_TARGETS,
+  clientTargetCompatibility,
   FIRST_PARTY_PROVIDERS,
   firstPartyPackagesOfStyle,
   offeredValidatorPairs,
@@ -191,4 +193,26 @@ test("the nestjs and fastify targets record the docs library their nativeDocs ar
       testedMajors: [9],
     },
   ]);
+});
+
+test("the react client row names its fetch link style, React 19 and each query library's tested majors", () => {
+  const react = clientTargetCompatibility("@seampact/codegen-react");
+
+  expect(react.clientStyles).toEqual(["fetch"]);
+  expect(react.framework.id).toBe("react");
+  expect(supportedMajorsOf(react)).toEqual([19]);
+  expect(
+    react.libraries?.map((library) => `${library.package}@${library.testedMajors.join()}`),
+  ).toEqual(["@tanstack/react-query@5", "swr@2", "@reduxjs/toolkit@2", "react-redux@9"]);
+  expect(firstPartyPackagesOfStyle("fetch")).toEqual(["@seampact/codegen-fetch"]);
+});
+
+test("a client target is not a server target and offers no validator pair", () => {
+  expect(() => serverTargetCompatibility("@seampact/codegen-react")).toThrow(/not a server target/);
+  expect(() => clientTargetCompatibility("@seampact/codegen-hono")).toThrow(/not a client target/);
+  expect(
+    offeredValidatorPairs().some((pair) =>
+      CLIENT_TARGETS.some((target) => target.package === pair.target),
+    ),
+  ).toBe(false);
 });
