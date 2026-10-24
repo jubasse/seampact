@@ -34,9 +34,9 @@ internal data class SchemaViolation(
  * validator, so no schema is ported by hand. Every `$ref` resolves inside the set: the validator never fetches a
  * remote resource. Building the set compiles the schemas, so each set is built once per process.
  */
-internal class SpecSchemas(resourceDirectory: String, private val idDirectory: String, fileNames: List<String>) {
+internal class SpecSchemas(private val idDirectory: String, textByFileName: Map<String, String>) {
     private val registry: SchemaRegistry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12) { builder ->
-        val contents = fileNames.associate { "$idDirectory/$it" to resourceText("$resourceDirectory/$it") }
+        val contents = textByFileName.mapKeys { (fileName, _) -> "$idDirectory/$fileName" }
         builder.schemaLoader { loader ->
             loader.fetchRemoteResources(false)
             loader.resourceLoaders { resources -> resources.resources(contents) }
@@ -60,6 +60,10 @@ internal class SpecSchemas(resourceDirectory: String, private val idDirectory: S
         return errors.map(::violationOf)
     }
 }
+
+/** The text of each of [fileNames] under [resourceDirectory] of the jar. */
+internal fun schemaResources(resourceDirectory: String, fileNames: List<String>): Map<String, String> =
+    fileNames.associateWith { resourceText("$resourceDirectory/$it") }
 
 private fun resourceText(path: String): String {
     val stream = SpecSchemas::class.java.classLoader.getResourceAsStream(path)

@@ -2,6 +2,7 @@ package io.github.jubasse.seampact.ir.config
 
 import io.github.jubasse.seampact.ir.schema.SchemaViolation
 import io.github.jubasse.seampact.ir.schema.SpecSchemas
+import io.github.jubasse.seampact.ir.schema.schemaResources
 
 // A config value checked against `app.schema.json` or `root.schema.json` of `@seampact/spec`, through the pinned
 // JSON Schema validator, so the schema is never ported by hand. Each error becomes the problem `config.schema`
@@ -11,7 +12,10 @@ internal const val APP_SCHEMA = "app.schema.json"
 internal const val ROOT_SCHEMA = "root.schema.json"
 
 private val CONFIG_SCHEMAS by lazy {
-    SpecSchemas("io/github/jubasse/seampact/ir/config", "https://seampact.dev/schemas/config", listOf(APP_SCHEMA, ROOT_SCHEMA))
+    SpecSchemas(
+        "https://seampact.dev/schemas/config",
+        schemaResources("io/github/jubasse/seampact/ir/config", listOf(APP_SCHEMA, ROOT_SCHEMA)),
+    )
 }
 
 private const val SCHEMA_FIX = "Correct the value as the config schema states (ADR 0011 'The app config')."
