@@ -63,20 +63,29 @@ A declared error is thrown as a `ContractError`. `isContractError(error)` tells 
 
 With `query: fetch`, the hooks use React's own state and effects. This is not the client's `fetch` style: that one names the client, this one the hooks over it.
 
+Create the hooks once, outside your components:
+
 ```tsx
 const Notes = createNotesHooks(client);
 
-const notes = Notes.useListNotes({});       // { data, error, isLoading, refetch }
-const create = Notes.useCreateNote({ retry: 1 }); // { mutate, isPending, error, data }
+function NoteList() {
+  const notes = Notes.useListNotes({}); // { data, error, isLoading, refetch }
+  const create = Notes.useCreateNote({ retry: 1 }); // { mutate, isPending, error, data }
 
-await create.mutate({ body: { title: "New note" } });
+  const add = async () => {
+    const { error } = await create.mutate({ body: { title: "New note" } });
+
+    if (!error) notes.refetch();
+  };
+}
 ```
 
 - Pass `null` as the request to skip a read.
 - A read stops when the component unmounts or its request changes.
 - There is no cache. A write does not refresh other hooks: call `refetch`.
-- `mutate` never throws. It resolves to the data, or to `undefined` when it failed; the error is then in `error`, a `ContractError` for a declared error.
-- `retry` sends a failed write again with the same idempotency key, so the server runs it once. A declared error is not retried.
+- `mutate` never throws. Each call resolves to its own `{ data }` or `{ error }`, a `ContractError` for a declared error. The hook's `data`, `error` and `isPending` show the latest call.
+- `retry` sends a failed write again with the same idempotency key, so the server runs it once. It takes a whole count (0 or more); another value makes the hook throw. A declared error is not retried.
+- A write is not aborted when the component unmounts.
 - There is no infinite hook: a paged list gets its plain hook, with no warning. Change the request to read the next page.
 - `staleTime`, `invalidate`, `infinite`, `keys.root` and the `itemsOf` artefact need a query library: `generate` refuses them with `query: fetch`.
 

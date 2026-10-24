@@ -124,7 +124,7 @@ test("5: a request change aborts the previous read and sends the new one", async
   expect(signals[1]?.aborted).toBe(false);
 });
 
-test("6: a dropped first answer and one retry send one idempotency key, the second answer replayed", async () => {
+test("6: a dropped first answer and one retry send one idempotency key, the second answer replayed, hooks built in render", async () => {
   await loadScript({});
 
   const { send, sent } = recordingFetch();
@@ -140,15 +140,17 @@ test("6: a dropped first answer and one retry send one idempotency key, the seco
     throw new TypeError("The first answer was dropped on its way back.");
   };
 
-  const Tasks = tasksHooksFor(inject("userToken"), dropFirstAnswer);
-  const { result } = await renderHook(() => Tasks.useCreateTask({ retry: 1 }));
+  // The hooks built in render: the re-render of the first attempt must not change the key of its retry.
+  const { result } = await renderHook(() =>
+    tasksHooksFor(inject("userToken"), dropFirstAnswer).useCreateTask({ retry: 1 }),
+  );
 
   const created = await result.current.mutate({ ...LIST_REQUEST, body: { title: "Write once" } });
   const keys = sent
     .filter((request) => request.method === "POST")
     .map((request) => request.idempotencyKey);
 
-  expect(created?.replayed).toBe(true);
+  expect(created.data?.replayed).toBe(true);
   expect(keys).toHaveLength(2);
   expect(keys[0]).not.toBeNull();
   expect(keys[1]).toBe(keys[0]);
@@ -191,7 +193,10 @@ test("8: errors: data returns declared errors as data, headers as a plain record
   const Tasks = createDataTasksHooks(clientFor(inject("throttledUserToken")));
   const { result } = await renderHook(() => Tasks.useCreateTask());
 
-  const answer = await result.current.mutate({ ...LIST_REQUEST, body: { title: "One too many" } });
+  const { data: answer } = await result.current.mutate({
+    ...LIST_REQUEST,
+    body: { title: "One too many" },
+  });
 
   if (answer === undefined || answer.ok || answer.unexpected) {
     throw new Error(`createTask answered ${JSON.stringify(answer)}`);

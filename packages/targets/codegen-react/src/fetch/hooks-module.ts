@@ -27,18 +27,21 @@ export interface QueryCallerOptions<Operation extends AnyOperationTypes> {
 readonly call?: Operation["call"];
 }`;
 
-const MUTATION_STATE_TYPES = `/**
- * What a mutation hook returns: \`mutate\` sends a request and resolves to its data, or to undefined when it failed,
- * its error then in \`error\`; it never rejects.
+const MUTATION_STATE_TYPES = `/** What one \`mutate\` call resolves to: its data, or its error. */
+export type MutateOutcome<Data, Failure> = { readonly data: Data; readonly error: undefined } | { readonly data: undefined; readonly error: Failure };
+
+/**
+ * What a mutation hook returns: \`mutate\` sends a request and resolves to its own outcome, never rejecting; the state
+ * shows the latest call.
  */
 export interface MutationState<Request, Data, Failure> {
-readonly mutate: (request: Request) => Promise<Data | undefined>;
+readonly mutate: (request: Request) => Promise<MutateOutcome<Data, Failure>>;
 readonly isPending: boolean;
 readonly error: Failure | undefined;
 readonly data: Data | undefined;
 }
 
-/** The caller's mutation hook options: \`retry\` sends a rejected write again that many times, with the same idempotency key. */
+/** The caller's mutation hook options: \`retry\`, a whole count, sends a rejected write again that many times, with the same idempotency key. */
 export interface MutationCallerOptions<Operation extends AnyOperationTypes> {
 readonly call?: Operation["call"];
 readonly retry?: number;
@@ -99,8 +102,9 @@ const current = snapshot.requestKey === requestKey ? snapshot : { requestKey, da
 return { data: current.data, error: current.error, isLoading: current.isLoading, refetch };
 }`;
 
-// One attempt object per `mutate`, passed to each retry, so the fetcher keeps one idempotency key; only the latest
-// `mutate` writes the state.
+// One fetcher and one attempt object per `mutate`, read once and passed to each retry, so the retries keep one
+// idempotency key even when the hooks are built again in render; only the latest `mutate` writes the state, and
+// every call resolves to its own outcome.
 const USE_FETCH_MUTATION_SOURCE = `interface MutationSnapshot<Data> {
 readonly data: Data | undefined;
 readonly error: Error | undefined;
@@ -108,9 +112,14 @@ readonly isPending: boolean;
 }
 
 function useFetchMutation<Request, Data>(
+hookName: string,
 fetcher: (request: Request, attempt: object) => Promise<Data>,
 retry: number,
 ): MutationState<Request, Data, Error> {
+if (!Number.isInteger(retry) || retry < 0) {
+throw new Error(\`\${hookName}: the option retry is \${retry}, not a whole count of retries; pass 0 or more.\`);
+}
+
 const latestFetcher = useRef(fetcher);
 const latestMutate = useRef(0);
 const [snapshot, setSnapshot] = useState<MutationSnapshot<Data>>({ data: undefined, error: undefined, isPending: false });
@@ -120,8 +129,9 @@ latestFetcher.current = fetcher;
 });
 
 const mutate = useCallback(
-async (request: Request): Promise<Data | undefined> => {
+async (request: Request): Promise<MutateOutcome<Data, Error>> => {
 const mutateNumber = latestMutate.current + 1;
+const fetcher = latestFetcher.current;
 const attempt = {};
 const settle = (next: MutationSnapshot<Data>) => {
 if (latestMutate.current === mutateNumber) setSnapshot(next);
@@ -132,19 +142,18 @@ setSnapshot({ data: undefined, error: undefined, isPending: true });
 
 for (let retriesLeft = retry; ; retriesLeft -= 1) {
 try {
-const data = await latestFetcher.current(request, attempt);
+const data = await fetcher(request, attempt);
 
 settle({ data, error: undefined, isPending: false });
 
-return data;
+return { data, error: undefined };
 } catch (rejection) {
 const error = asError(rejection);
 
-// Written so that a NaN \`retry\` sends no retry either.
-if (!(retriesLeft > 0) || !isRetryable(error)) {
+if (retriesLeft <= 0 || !isRetryable(error)) {
 settle({ data: undefined, error, isPending: false });
 
-return undefined;
+return { data: undefined, error };
 }
 }
 }
@@ -226,7 +235,7 @@ function hookSource(operation: QueryOperation, api: string): string {
 
   if (operation.form === "mutation") {
     return `${propertyKey(names.hook)}: (${optionsParameter(operation, `MutationCallerOptions<${types}>`)}): MutationState<${types}["request"], ${types}["data"], ${types}["error"]> =>
-useFetchMutation((request: ${types}["request"], attempt: object) => queries.${names.options}(${read}call).fetcher(request, attempt), ${read}retry ?? 0),`;
+useFetchMutation(${JSON.stringify(names.hook)}, (request: ${types}["request"], attempt: object) => queries.${names.options}(${read}call).fetcher(request, attempt), ${read}retry ?? 0),`;
   }
 
   const filled = JSON.stringify(operation.filledHeaderKeys);
