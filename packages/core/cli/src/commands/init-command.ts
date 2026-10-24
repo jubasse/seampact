@@ -1,12 +1,19 @@
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, sep } from "node:path";
-import { loadFsReader, loadWorkspace } from "@seampact/compiler";
+import {
+  loadFsReader,
+  loadWorkspace,
+  localSourcePolicy,
+  localSourceRefusalReason,
+} from "@seampact/compiler";
 import { APP_CONFIG_FILE_NAME } from "@seampact/spec/config";
 import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, printProblems } from "../cli-io.js";
 import type { CliProblem } from "../cli-problem.js";
+import { findRootConfig } from "../config/find-root-config.js";
 import { readAppConfig } from "../config/index.js";
+import { isStrictlyInside } from "../config/path-containment.js";
 import { DEFAULT_EDITOR_SCHEMAS_DIRECTORY, writeEditorSchemas } from "../editor-schemas/index.js";
+import { isPathTaken } from "../symbolic-link.js";
 import { compileCommand, planSourcesEditorSchemas } from "./compile-command.js";
 import { compileSources } from "./compile-sources.js";
 import { type ConfigLocation, configLocation, displayPath } from "./config-location.js";
@@ -70,42 +77,106 @@ async function initNewProject(
   const configFile = join(io.cwd, APP_CONFIG_FILE_NAME);
   const sourceDirectory = join(io.cwd, STARTER_SOURCE_DIRECTORY);
   const contractFile = join(sourceDirectory, STARTER_CONTRACT_FILE);
-  const existing = [configFile, sourceDirectory].filter((path) => existsSync(path));
+  const existing: string[] = [];
+
+  for (const path of [configFile, sourceDirectory]) {
+    if (await isPathTaken(path)) existing.push(path);
+  }
 
   if (existing.length > 0) return refuse(io, [fileExistsProblem(io, existing)]);
 
+  const localRefusal = await localSourcesRefusal(configFile);
+
+  if (localRefusal !== undefined) return refuse(io, [localRefusal]);
+
   const ignore = await plannedIgnore(io.cwd, options, [DEFAULT_IGNORE_ENTRY]);
+
+  if (ignore?.change === "link") return refuse(io, [ignoreFileLinkProblem(io, ignore.file)]);
+
   const schemaDirectory =
     options.editorSchemas === "none"
       ? join(io.cwd, INSTALLED_AUTHORING_SCHEMAS)
       : join(sourceDirectory, DEFAULT_EDITOR_SCHEMAS_DIRECTORY);
   const contract = starterContract(options.content);
-
-  await writeFile(configFile, starterConfig(options.content));
-  io.stdout(`Created ${displayPath(io.cwd, configFile)}.\n`);
-  await mkdir(sourceDirectory, { recursive: true });
-  await writeFile(
+  const written = await writeStarter(io, {
+    configFile,
+    config: starterConfig(options.content),
+    sourceDirectory,
     contractFile,
-    options.modelines === "write"
-      ? withModeline(contract, modelineOf(contractFile, schemaDirectory, "api"))
-      : contract,
-  );
-  io.stdout(`Created ${displayPath(io.cwd, contractFile)}.\n`);
+    contract:
+      options.modelines === "write"
+        ? withModeline(contract, modelineOf(contractFile, schemaDirectory, "api"))
+        : contract,
+    editorSchemas: options.editorSchemas,
+  });
 
-  if (options.editorSchemas !== "none") {
+  if (written !== EXIT_SUCCESS) return written;
+
+  await writeIgnore(io, ignore);
+  io.stdout("Run `seampact compile` after each change to the contract.\n");
+
+  return EXIT_SUCCESS;
+}
+
+interface StarterWrite {
+  readonly configFile: string;
+  readonly config: string;
+  readonly sourceDirectory: string;
+  readonly contractFile: string;
+  readonly contract: string;
+  readonly editorSchemas: EditorSchemasPolicy;
+}
+
+// Writes the config, the contract and its editor schemas; when a step fails, removes what it wrote, which did not
+// exist before, so the folder is left as it was.
+async function writeStarter(io: CliIo, starter: StarterWrite): Promise<number> {
+  const removeWritten = async () => {
+    await rm(starter.configFile, { force: true });
+    await rm(starter.sourceDirectory, { recursive: true, force: true });
+    io.stderr(
+      `Removed ${displayPath(io.cwd, starter.configFile)} and ${displayPath(io.cwd, starter.sourceDirectory)}: init left nothing behind.\n`,
+    );
+  };
+
+  try {
+    await writeFile(starter.configFile, starter.config);
+    io.stdout(`Created ${displayPath(io.cwd, starter.configFile)}.\n`);
+    await mkdir(starter.sourceDirectory);
+    await writeFile(starter.contractFile, starter.contract);
+    io.stdout(`Created ${displayPath(io.cwd, starter.contractFile)}.\n`);
+
+    if (starter.editorSchemas === "none") return EXIT_SUCCESS;
+
     const compiled = await compileCommand(
       configLocation(io.cwd, undefined),
       { irOutDir: undefined, editorSchemas: "write" },
       io,
     );
 
-    if (compiled !== EXIT_SUCCESS) return compiled;
+    if (compiled !== EXIT_SUCCESS) await removeWritten();
+
+    return compiled;
+  } catch (error) {
+    await removeWritten();
+
+    throw error;
   }
+}
 
-  await writeIgnore(io, ignore);
-  io.stdout("Run `seampact compile` after each change to the contract.\n");
+// The refusal of local sources that would stop the starter's `path` source: `SEAMPACT_ALLOW_LOCAL=false`, or
+// `allowLocal: false` in a root config listing this folder.
+async function localSourcesRefusal(configFile: string): Promise<CliProblem | undefined> {
+  const discovery = await findRootConfig(configFile, APP_CONFIG_FILE_NAME);
+  const rootAllowLocal =
+    discovery.status === "found" && discovery.listed ? discovery.root.allowLocal : undefined;
 
-  return EXIT_SUCCESS;
+  if (localSourcePolicy(rootAllowLocal, process.env) === "allow") return undefined;
+
+  return {
+    code: "init.local-sources-refused",
+    message: `The starter contract is a local folder, and local sources are refused here (${localSourceRefusalReason(process.env)}); nothing was written.`,
+    fix: "Run `seampact init` where local sources are allowed, or write the app config yourself with a `package` source.",
+  };
 }
 
 async function initModelines(
@@ -148,11 +219,19 @@ async function initModelines(
 
     edits.push(...(await modelineEdits(source.directory, schemaDirectory, io)));
 
-    if (plan !== undefined)
+    if (plan === undefined) continue;
+
+    if (isStrictlyInside(appRoot, plan.directory))
       ignoreEntries.push(ignoreEntry(appRoot, source.directory, plan.directory));
+    else
+      io.stdout(
+        `The editor schemas of source '${name}' are outside ${displayPath(io.cwd, appRoot)}, so its .gitignore does not list them.\n`,
+      );
   }
 
   const ignore = await plannedIgnore(appRoot, options, ignoreEntries);
+
+  if (ignore?.change === "link") return refuse(io, [ignoreFileLinkProblem(io, ignore.file)]);
 
   for (const edit of edits) {
     await writeFile(edit.file, edit.text);
@@ -232,7 +311,7 @@ async function plannedIgnore(
 }
 
 async function writeIgnore(io: CliIo, ignore: GitIgnoreChange | undefined): Promise<void> {
-  if (ignore === undefined || ignore.change === "unchanged") return;
+  if (ignore === undefined || ignore.change === "unchanged" || ignore.change === "link") return;
 
   await writeFile(ignore.file, ignore.text);
   io.stdout(
@@ -245,6 +324,14 @@ function fileExistsProblem(io: CliIo, existing: readonly string[]): CliProblem {
     code: "init.file-exists",
     message: `\`seampact init\` writes a new project here, and ${existing.map((path) => displayPath(io.cwd, path)).join(" and ")} ${existing.length === 1 ? "already exists" : "already exist"}; nothing was written.`,
     fix: "Run `seampact init` in a folder without them, or run `seampact init --modelines` to add the modelines to the contracts of an existing app config.",
+  };
+}
+
+function ignoreFileLinkProblem(io: CliIo, file: string): CliProblem {
+  return {
+    code: "init.ignore-file-link",
+    message: `${displayPath(io.cwd, file)} is a symbolic link, and adding the editor schemas to it would change its target; nothing was written.`,
+    fix: "Run `seampact init` with `--no-ignore-files` and add `.seampact/` to the link's target yourself.",
   };
 }
 

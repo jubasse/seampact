@@ -1,7 +1,17 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, EXIT_USAGE } from "../cli-io.js";
 import { runCli } from "../run-cli.js";
 import {
@@ -10,7 +20,10 @@ import {
   trackTemporaryDirectory,
 } from "./fake-app.test-support.js";
 
-afterEach(removeTemporaryDirectories);
+afterEach(() => {
+  removeTemporaryDirectories();
+  vi.unstubAllEnvs();
+});
 
 async function run(
   directory: string,
@@ -40,8 +53,8 @@ function text(directory: string, file: string): string {
   return readFileSync(join(directory, file), "utf8");
 }
 
-const CONTRACT = "contracts/api.yaml";
-const NODE_SCHEMA = "contracts/.seampact/schemas/node.schema.json";
+const CONTRACT = "contract/api.yaml";
+const NODE_SCHEMA = "contract/.seampact/schemas/node.schema.json";
 
 test("init writes a project whose example contract compiles, with its modeline, editor schemas and ignore entry", async () => {
   const app = emptyDirectory();
@@ -82,7 +95,7 @@ test("init refuses by name when a file it would write exists, and writes nothing
 
   expect(init.exitCode).toBe(EXIT_REFUSED);
   expect(init.err).toMatch(/^init\.file-exists: .*seampact\.config\.yaml already exists/);
-  expect(existsSync(join(app, "contracts"))).toBe(false);
+  expect(existsSync(join(app, "contract"))).toBe(false);
   expect(existsSync(join(app, ".gitignore"))).toBe(false);
 });
 
@@ -108,7 +121,7 @@ test("--editor-schemas=none points the modeline at the installed spec and writes
   expect(text(app, CONTRACT).split("\n")[0]).toBe(
     "# yaml-language-server: $schema=../node_modules/@seampact/spec/schemas/authoring/api.schema.json",
   );
-  expect(existsSync(join(app, "contracts/.seampact"))).toBe(false);
+  expect(existsSync(join(app, "contract/.seampact"))).toBe(false);
   expect(existsSync(join(app, ".gitignore"))).toBe(false);
 });
 
@@ -177,4 +190,86 @@ test("init flags that do not go together are usage errors", async () => {
   }
 
   expect(existsSync(join(app, "seampact.config.yaml"))).toBe(false);
+});
+
+test("a dangling link where the config goes is refused by name, and nothing is written through it", async () => {
+  const app = emptyDirectory();
+  const elsewhere = emptyDirectory();
+
+  symlinkSync(join(elsewhere, "seampact.config.yaml"), join(app, "seampact.config.yaml"));
+
+  const init = await run(app, ["init"]);
+
+  expect(init.exitCode).toBe(EXIT_REFUSED);
+  expect(init.err).toMatch(/^init\.file-exists: /);
+  expect(readdirSync(elsewhere)).toEqual([]);
+  expect(readdirSync(app)).toEqual(["seampact.config.yaml"]);
+});
+
+test("an existing contract folder is refused, whatever it holds", async () => {
+  const app = emptyDirectory();
+
+  mkdirSync(join(app, "contract"));
+  writeFileSync(join(app, "contract", "workspace.yaml"), "workspace: {}\n");
+
+  const init = await run(app, ["init"]);
+
+  expect(init.err).toMatch(/^init\.file-exists: .*contract already exists/);
+  expect(existsSync(join(app, "seampact.config.yaml"))).toBe(false);
+});
+
+test("a .gitignore that is a symbolic link is refused by name before any write", async () => {
+  const app = emptyDirectory();
+  const elsewhere = emptyDirectory();
+
+  writeFileSync(join(elsewhere, "ignored"), "dist\n");
+  symlinkSync(join(elsewhere, "ignored"), join(app, ".gitignore"));
+
+  const init = await run(app, ["init"]);
+
+  expect(init.exitCode).toBe(EXIT_REFUSED);
+  expect(init.err).toMatch(/^init\.ignore-file-link: /);
+  expect(readFileSync(join(elsewhere, "ignored"), "utf8")).toBe("dist\n");
+  expect(readdirSync(app)).toEqual([".gitignore"]);
+  expect(lstatSync(join(app, ".gitignore")).isSymbolicLink()).toBe(true);
+});
+
+test("init refuses by name where local sources are refused, and writes nothing", async () => {
+  const app = emptyDirectory();
+
+  vi.stubEnv("SEAMPACT_ALLOW_LOCAL", "false");
+
+  const init = await run(app, ["init"]);
+
+  expect(init.exitCode).toBe(EXIT_REFUSED);
+  expect(init.err).toMatch(/^init\.local-sources-refused: .*SEAMPACT_ALLOW_LOCAL=false/);
+  expect(readdirSync(app)).toEqual([]);
+});
+
+test("init --modelines refuses an app config without a path source", async () => {
+  const app = emptyDirectory();
+
+  writeFileSync(
+    join(app, "seampact.config.yaml"),
+    "sources:\n  notes: { package: '@acme/notes', version: 1.0.0 }\n",
+  );
+
+  const init = await run(app, ["init", "--modelines"]);
+
+  expect(init.exitCode).toBe(EXIT_REFUSED);
+  expect(init.err).toMatch(/^init\.modelines\.no-source: /);
+});
+
+test("a failure after the first write removes what init wrote", async () => {
+  const parent = emptyDirectory();
+  const app = join(parent, "app");
+
+  mkdirSync(app);
+  writeFileSync(join(parent, "seampact.config.yaml"), "apps: [app\n");
+
+  const init = await run(app, ["init"]);
+
+  expect(init.exitCode).toBe(EXIT_REFUSED);
+  expect(init.err).toContain("init left nothing behind");
+  expect(readdirSync(app)).toEqual([]);
 });

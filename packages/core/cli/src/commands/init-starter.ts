@@ -1,7 +1,7 @@
 // What `seampact init` writes in a new project: the app config and a contract that compiles as written.
 
-/** The `path` source the starter config names, and the folder of its contract. */
-export const STARTER_SOURCE_DIRECTORY = "contracts";
+/** The folder of the starter contract, as the getting-started guide names it. */
+export const STARTER_SOURCE_DIRECTORY = "contract";
 
 /** The contract's single api file: the entry of a workspace without `workspace.yaml` (grammar section 1). */
 export const STARTER_CONTRACT_FILE = "api.yaml";
@@ -12,17 +12,20 @@ export type StarterContent = "example" | "blank";
 const EXAMPLE_API = "notes";
 const BLANK_API = "api";
 
+// The source is named after its api, as the getting-started guide writes it.
 export function starterConfig(content: StarterContent): string {
-  return `# Where the contracts are and what seampact generates from them.
+  const api = content === "blank" ? BLANK_API : EXAMPLE_API;
+
+  return `# Where the contract is and what seampact generates from it.
 outDir: src/__generated__
 sources:
-  ${STARTER_SOURCE_DIRECTORY}:
+  ${api}:
     path: ./${STARTER_SOURCE_DIRECTORY}
 targets:
   # The TypeScript types of the api (npm package @seampact/codegen-ts). Add a server or a client target beside it.
   - id: types
     use: "@seampact/codegen-ts"
-    apis: [${content === "blank" ? BLANK_API : EXAMPLE_API}]
+    apis: [${api}]
 `;
 }
 

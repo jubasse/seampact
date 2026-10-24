@@ -20,7 +20,7 @@ import { errorCode } from "./error-code.js";
 const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
   [
     "init",
-    "  init [--blank] [--editor-schemas[=ignore|commit|none]] [--no-modelines] [--no-ignore-files]\n                                           Write a new project here: seampact.config.yaml and contracts/api.yaml, a small example (--blank: the api header alone), with its modeline and editor schemas, git-ignored by default.\n  init --modelines [--config <path>] [--editor-schemas[=ignore|commit|none]] [--no-ignore-files]\n                                           Write or correct the modeline of every contract file of the app config's `path` sources, and their editor schemas.",
+    "  init [--blank] [--editor-schemas[=ignore|commit|none]] [--no-modelines] [--no-ignore-files]\n                                           Write a new project here: seampact.config.yaml and contract/api.yaml, a small example (--blank: the api header alone), with its modeline and editor schemas, git-ignored by default.\n  init --modelines [--config <path>] [--editor-schemas[=ignore|commit|none]] [--no-ignore-files]\n                                           Write or correct the modeline of every contract file of the app config's `path` sources, and their editor schemas.",
   ],
   [
     "compile",
