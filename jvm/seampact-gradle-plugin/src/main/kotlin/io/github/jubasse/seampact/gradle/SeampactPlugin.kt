@@ -4,6 +4,7 @@ package io.github.jubasse.seampact.gradle
 
 import io.github.jubasse.seampact.ir.binary.BinaryPin
 import io.github.jubasse.seampact.ir.binary.BinaryPinResolution
+import io.github.jubasse.seampact.ir.config.AppConfigReader
 import io.github.jubasse.seampact.ir.config.LocalSourcePolicy
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -40,7 +41,7 @@ public class SeampactPlugin : Plugin<Project> {
 
         fun SeampactTask.readApp() {
             group = TASK_GROUP
-            configFile.from(project.layout.projectDirectory.file(io.github.jubasse.seampact.ir.config.AppConfigReader.FILE_NAME))
+            configFile.from(project.layout.projectDirectory.file(AppConfigReader.FILE_NAME))
             this.dslTree.set(dslTree)
             pathSources.from(layout.map { it.pathSources })
             allowLocalVariable.set(project.providers.environmentVariable(LocalSourcePolicy.ALLOW_LOCAL_VARIABLE))
@@ -59,6 +60,8 @@ public class SeampactPlugin : Plugin<Project> {
         val generate = project.tasks.register(GENERATE_TASK, SeampactGenerateTask::class.java) { task ->
             task.description = "Generates the seampact target entries of the app config into the main Java sources."
             task.readApp()
+            // In one build, the check compares the files on disk before a generate rewrites them.
+            task.mustRunAfter(CHECK_TASK)
             task.entryRoots.from(layout.map { it.entryRoots })
         }
         val check = project.tasks.register(CHECK_TASK, SeampactCheckTask::class.java) { task ->

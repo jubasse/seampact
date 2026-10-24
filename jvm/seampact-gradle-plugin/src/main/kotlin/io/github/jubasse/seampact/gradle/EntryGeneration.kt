@@ -139,7 +139,7 @@ private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, springBo
                 is HeaderOutcome.Refused -> problems += finished.refusals.map { it.toProblem("entry '${entry.id}' api '${api.api}'") }
             }
         } catch (refused: IrRefusedException) {
-            problems += refused.refusals.map { it.toProblem(entry.id, api.api) }
+            problems += refused.refusals.map { it.toProblem("entry '${entry.id}' api '${api.api}'") }
         } catch (refused: SpringBootRefusedException) {
             problems += refused.refusals.map { it.toProblem(entry.id, api.api) }
         }

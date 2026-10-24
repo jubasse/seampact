@@ -102,7 +102,7 @@ internal class ContractApis(
             configFile.writeText(compileConfig(name, directory).toString())
             collectCompiled(name, BinaryRunner.compile(installed, configFile, SpringBootTarget.IR_SUPPORT), apis, problems)
         } catch (refused: IrRefusedException) {
-            problems += refused.refusals.map { ConfigProblem(it.code.code, it.message, "Use a contract the spring-boot target reads, or update the plugin.", "source '$name' ${it.member}") }
+            problems += refused.refusals.map { it.toProblem("source '$name'") }
         } catch (malformed: IrMalformedException) {
             problems += ConfigProblem("binary.ir-unreadable", malformed.message.orEmpty(), "Report the binary version: its IR does not read.", "source '$name'")
         } finally {

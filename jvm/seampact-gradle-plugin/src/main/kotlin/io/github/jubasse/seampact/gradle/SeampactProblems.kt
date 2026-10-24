@@ -33,11 +33,11 @@ internal fun SpringBootRefusal.toProblem(entryId: String, api: String): ConfigPr
     return ConfigProblem(code, message, fix, "entry '$entryId' api '$api'$operationPart $member")
 }
 
-internal fun IrRefusal.toProblem(entryId: String, api: String): ConfigProblem = ConfigProblem(
+internal fun IrRefusal.toProblem(where: String): ConfigProblem = ConfigProblem(
     code.code,
     message,
     "Use a contract this release of the spring-boot target reads, or update the plugin.",
-    "entry '$entryId' api '$api' $member",
+    "$where $member",
 )
 
 /** The text the build prints for [problems]: one block per problem, its code and place, its message and fix. */
