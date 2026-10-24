@@ -140,7 +140,8 @@ return data;
 } catch (rejection) {
 const error = asError(rejection);
 
-if (retriesLeft <= 0 || !isRetryable(error)) {
+// Written so that a NaN \`retry\` sends no retry either.
+if (!(retriesLeft > 0) || !isRetryable(error)) {
 settle({ data: undefined, error, isPending: false });
 
 return undefined;
