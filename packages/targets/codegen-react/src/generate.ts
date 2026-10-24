@@ -11,6 +11,8 @@ import {
   type QueryPlan,
   type Refusal,
 } from "@seampact/codegen-core";
+import { hooksModuleSource as fetchHooksModuleSource } from "./fetch/hooks-module.js";
+import { queriesModuleSource as fetchQueriesModuleSource } from "./fetch/queries-module.js";
 import type { ReactQueryOptions } from "./options.js";
 import { apiModuleSource, refusePagesEndpointCollisions } from "./rtk/api-module.js";
 import { hooksModuleSource as swrHooksModuleSource } from "./swr/hooks-module.js";
@@ -41,7 +43,8 @@ const RTK_RUNTIME_TYPE_NAMES = [...RUNTIME_TYPE_NAMES, "ContractFailure", "Plain
 const ITEMS_OF = "itemsOf";
 
 // Per api: the front runtime, the library's modules and an index re-exporting them; or every refusal at once.
-// TanStack Query and SWR get `queries.ts` and `hooks.ts` unless the artefact is off, RTK Query one `api.ts`.
+// TanStack Query, SWR and plain fetch get `queries.ts` and `hooks.ts` unless the artefact is off, RTK Query one
+// `api.ts`.
 export function generateReactQueries(
   input: GenerateInput<ReactQueryOptions, ReactArtefact, "client">,
 ): GenerateOutcome {
@@ -49,7 +52,10 @@ export function generateReactQueries(
 
   const { ir, links, options } = input;
   const client = links.client.descriptor;
-  const refusals = refuseUnsupportedForms(options, client.errorStyle);
+  const refusals = [
+    ...refuseUnsupportedForms(options, client.errorStyle),
+    ...refuseUnsupportedArtefacts(options, input.artefacts),
+  ];
 
   if (refusals.length > 0) return { status: "refused", refusals };
 
@@ -100,14 +106,7 @@ function queriesAndHooksFiles(
     queries: `./${QUERIES_MODULE}${MODULE_SUFFIX}`,
     runtime: RUNTIME_SPECIFIER,
   };
-  const queries =
-    options.query === "swr"
-      ? swrQueriesModuleSource(plan, options, root, queriesImports)
-      : tanstackQueriesModuleSource(plan, options, root, queriesImports);
-  const hooks =
-    options.query === "swr"
-      ? () => swrHooksModuleSource(plan, options, hooksImports)
-      : () => tanstackHooksModuleSource(plan, options, hooksImports);
+  const { queries, hooks } = librarySources(plan, options, root, queriesImports, hooksImports);
   const indexed: IndexedModule[] = [
     ...(library.withHooks ? [{ module: HOOKS_MODULE }] : []),
     { module: QUERIES_MODULE },
@@ -119,6 +118,33 @@ function queriesAndHooksFiles(
     ...(library.withHooks ? [{ path: hooksFile, contents: `${hooks()}\n` }] : []),
     { path: `${INDEX_MODULE}${MODULE_EXTENSION}`, contents: apiIndexSource(indexed) },
   ];
+}
+
+function librarySources(
+  plan: QueryPlan,
+  options: ReactQueryOptions,
+  root: string,
+  queriesImports: { readonly client: string; readonly runtime: string },
+  hooksImports: { readonly client: string; readonly queries: string; readonly runtime: string },
+): { readonly queries: string; readonly hooks: () => string } {
+  if (options.query === "swr") {
+    return {
+      queries: swrQueriesModuleSource(plan, options, root, queriesImports),
+      hooks: () => swrHooksModuleSource(plan, options, hooksImports),
+    };
+  }
+
+  if (options.query === "fetch") {
+    return {
+      queries: fetchQueriesModuleSource(plan, options, queriesImports),
+      hooks: () => fetchHooksModuleSource(plan, options, hooksImports),
+    };
+  }
+
+  return {
+    queries: tanstackQueriesModuleSource(plan, options, root, queriesImports),
+    hooks: () => tanstackHooksModuleSource(plan, options, hooksImports),
+  };
 }
 
 function rtkFiles(
@@ -183,4 +209,22 @@ function refuseUnsupportedForms(
   }
 
   return refusals;
+}
+
+// `itemsOf` flattens an infinite query's pages, which plain fetch has not.
+function refuseUnsupportedArtefacts(
+  options: ReactQueryOptions,
+  artefacts: ReadonlySet<ReactArtefact>,
+): Refusal[] {
+  if (options.query !== "fetch" || !artefacts.has(ITEMS_OF_ARTEFACT)) return [];
+
+  return [
+    {
+      code: "artefacts.itemsOf.unsupported",
+      message:
+        "The artefact 'itemsOf' flattens the pages of an infinite query, and 'query: fetch' has no infinite query.",
+      fix: "Turn 'itemsOf' off, or choose a query library: tanstack, swr, rtk.",
+      member: "",
+    },
+  ];
 }
