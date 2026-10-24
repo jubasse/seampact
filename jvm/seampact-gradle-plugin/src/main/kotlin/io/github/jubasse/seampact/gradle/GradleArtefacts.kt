@@ -43,9 +43,20 @@ internal class GradleBundleArtefacts(
         val file = matching.singleOrNull()
             ?: throw IOException("the build resolved ${matching.size} files named $fileName for ${bundleArtefactNotation(coordinates)}")
 
-        return ResolvedArtefact(file, fromLocalRepository = moduleCacheRoots.none { file.startsWith(it) })
+        return ResolvedArtefact(file, fromLocalRepository = isFromLocalRepository(file, moduleCacheRoots))
     }
 }
+
+/** Whether Gradle took [file] from a local repository: it lies outside each of Gradle's module caches. */
+internal fun isFromLocalRepository(file: Path, moduleCacheRoots: List<Path>): Boolean {
+    val normalized = file.toAbsolutePath().normalize()
+
+    return moduleCacheRoots.none { normalized.startsWith(it.toAbsolutePath().normalize()) }
+}
+
+/** The task input that tells where each resolved bundle came from: `<file name> local` or `<file name> remote`. */
+internal fun bundleOrigins(files: Set<Path>, moduleCacheRoots: List<Path>): List<String> =
+    files.map { "${it.fileName} ${if (isFromLocalRepository(it, moduleCacheRoots)) "local" else "remote"}" }.sorted()
 
 /** The binary artefact's one file, resolved by the build. */
 internal fun resolvedSingleFile(files: FileCollection): Path = try {

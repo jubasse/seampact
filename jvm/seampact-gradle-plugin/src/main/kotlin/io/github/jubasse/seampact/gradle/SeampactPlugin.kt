@@ -31,13 +31,17 @@ public class SeampactPlugin : Plugin<Project> {
 
         val gradleUserHome = project.gradle.gradleUserHomeDir.toPath()
         val seampactCache = gradleUserHome.resolve(CACHE_DIRECTORY)
-        val moduleCacheRoots = listOfNotNull(gradleUserHome, project.providers.environmentVariable(READ_ONLY_CACHE_VARIABLE).orNull?.let(Path::of))
-            .map { it.resolve(MODULE_CACHE_DIRECTORY).toAbsolutePath().normalize().toString() }
+        val userHomeCache = gradleUserHome.resolve(MODULE_CACHE_DIRECTORY).toAbsolutePath().normalize().toString()
+        val moduleCacheRoots: Provider<List<String>> = project.providers.environmentVariable(READ_ONLY_CACHE_VARIABLE)
+            .map { listOf(userHomeCache, Path.of(it).resolve(MODULE_CACHE_DIRECTORY).toAbsolutePath().normalize().toString()) }
+            .orElse(listOf(userHomeCache))
 
         // Created when the first task is configured, after the build file set the DSL, and only for what the
         // layout needs: a bundle-only app never resolves the binary (ADR 0010 "Lazy").
         val binaryArtefact by lazy { if (layout.get().needsBinary) binaryConfiguration(project, extension) else emptyList() }
         val mavenBundles by lazy { layout.get().mavenSources.let { if (it.isEmpty()) emptyList() else bundleConfiguration(project, it) } }
+        // A lenient view for the origin input: a resolution failure is reported by the task, with its source.
+        val mavenBundleViews by lazy { mavenBundles.map { configuration -> configuration.incoming.artifactView { it.isLenient = true }.files } }
 
         fun SeampactTask.readApp() {
             group = TASK_GROUP
@@ -55,6 +59,11 @@ public class SeampactPlugin : Plugin<Project> {
             this.binaryArtefact.from(binaryArtefact)
             this.mavenBundles.from(mavenBundles)
             this.moduleCacheRoots.set(moduleCacheRoots)
+            mavenBundleOrigins.set(
+                project.files(mavenBundleViews).elements.zip(moduleCacheRoots) { files, roots ->
+                    bundleOrigins(files.map { it.asFile.toPath() }.toSet(), roots.map { Path.of(it) })
+                },
+            )
         }
 
         val generate = project.tasks.register(GENERATE_TASK, SeampactGenerateTask::class.java) { task ->
@@ -67,6 +76,7 @@ public class SeampactPlugin : Plugin<Project> {
         val check = project.tasks.register(CHECK_TASK, SeampactCheckTask::class.java) { task ->
             task.description = "Checks the pinned bundles and that the generated files match what seampactGenerate writes."
             task.readApp()
+            task.buildDirectory.set(project.layout.buildDirectory.map { it.asFile.absolutePath })
         }
 
         project.pluginManager.withPlugin(JAVA_PLUGIN) { wireIntoJava(project, generate, check) }

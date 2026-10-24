@@ -77,6 +77,13 @@ public abstract class SeampactTask : DefaultTask() {
     @get:Internal
     public abstract val moduleCacheRoots: ListProperty<String>
 
+    /**
+     * Where each `maven` bundle was resolved from, local or remote repository: an input, so an output cached on a
+     * machine that resolved it remotely is never reused where a local repository serves it under `allowLocal: false`.
+     */
+    @get:Input
+    public abstract val mavenBundleOrigins: ListProperty<String>
+
     internal fun runSettings(): RunSettings = RunSettings(
         appDirectory = Path.of(appDirectory.get()),
         dslTree = dslTree.orNull,

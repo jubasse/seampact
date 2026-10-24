@@ -6,18 +6,26 @@ import io.github.jubasse.seampact.ir.write.PlanOutcome
 import io.github.jubasse.seampact.ir.write.PlannedWrite
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * `seampactCheck`, run by `check`: plans every entry as `seampactGenerate` does, in memory, with each bundle source
  * through the pinned-bundle check (its integrity printed), then compares the files a run would write with those on
  * disk at the `checks.generated` level (ADR 0011 `checks`, ADR 0015): drift at `error` fails, at `warning` is
- * printed, `disabled` is not looked for. Nothing is written.
+ * printed, `disabled` is not looked for. An `outDir` under the build directory is not committed, so its files are
+ * not compared. Nothing is written.
  */
 @DisableCachingByDefault(because = "It checks the files on disk and writes nothing.")
 public abstract class SeampactCheckTask : SeampactTask() {
+    /** The project's build directory: an `outDir` under it is never committed, so its drift is not compared. */
+    @get:Internal
+    public abstract val buildDirectory: Property<String>
+
     @TaskAction
     public fun check() {
         val prepared = when (val run = prepareRun(runSettings())) {
@@ -29,9 +37,29 @@ public abstract class SeampactCheckTask : SeampactTask() {
             logger.lifecycle("seampact: source '${bundle.source}' passes the pinned-bundle check, integrity ${bundle.integrity}.")
         }
 
-        val level = checkLevel(prepared.config)
+        val outDir = prepared.config.outDir.toAbsolutePath().normalize()
+        if (outDir.startsWith(Path.of(buildDirectory.get()).toAbsolutePath().normalize())) {
+            // A refused entry still fails the check: generate would refuse it too.
+            val refusals = prepared.plans.filterIsInstance<EntryPlan.Refused>().flatMap { it.problems }
+            if (refusals.isNotEmpty()) throw SeampactRefusedException(refusals)
+
+            logger.lifecycle("seampact: checks.generated is not compared: outDir $outDir is under the build directory, so its files are not committed.")
+            return
+        }
+
         val errors = mutableListOf<ConfigProblem>()
         val warnings = mutableListOf<ConfigProblem>()
+        collectDrift(prepared, errors, warnings)
+
+        val ignored = ignoredWarnings(prepared.config)
+        warnings.filter { it.code !in ignored }.forEach { logger.warn("seampact warning: ${problemsText(listOf(it))}") }
+        if (errors.isNotEmpty()) throw SeampactRefusedException(errors)
+
+        logger.lifecycle("seampact: the generated files match the files on disk.")
+    }
+
+    private fun collectDrift(prepared: PreparedRun.Prepared, errors: MutableList<ConfigProblem>, warnings: MutableList<ConfigProblem>) {
+        val level = checkLevel(prepared.config)
         for (plan in prepared.plans) {
             when (val drift = entryDrift(plan)) {
                 is EntryDrift.Unreadable -> errors += drift.problems
@@ -41,12 +69,6 @@ public abstract class SeampactCheckTask : SeampactTask() {
                 }
             }
         }
-
-        val ignored = ignoredWarnings(prepared.config)
-        warnings.filter { it.code !in ignored }.forEach { logger.warn("seampact warning: ${problemsText(listOf(it))}") }
-        if (errors.isNotEmpty()) throw SeampactRefusedException(errors)
-
-        logger.lifecycle("seampact: the generated files match the files on disk.")
     }
 
     private sealed interface EntryDrift {

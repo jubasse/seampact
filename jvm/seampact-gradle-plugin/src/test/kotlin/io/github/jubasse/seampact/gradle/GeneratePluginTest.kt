@@ -4,15 +4,12 @@ import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
-import kotlin.io.path.appendText
 import kotlin.io.path.exists
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 // The plugin end to end on the reference contract: the generated sources compile with the app, a second run is
-// up to date, a cleaned build takes them from the build cache, the configuration cache is reused, and
-// `seampactCheck` passes until a generated file is edited by hand.
+// up to date, a cleaned build takes them from the build cache, and the configuration cache is reused.
 class GeneratePluginTest {
     @TempDir
     lateinit var directory: Path
@@ -38,14 +35,5 @@ class GeneratePluginTest {
         val cleaned = app.run("clean", "compileJava", *cached)
         assertEquals(TaskOutcome.FROM_CACHE, cleaned.task(":seampactGenerate")?.outcome)
 
-        val checked = app.run("check", *cached)
-        assertEquals(TaskOutcome.SUCCESS, checked.task(":seampactCheck")?.outcome)
-        assertTrue("the generated files match" in checked.output)
-
-        val generated = directory.resolve("build/generated/sources/seampact/main/server/com/example/tasks/api/TasksEndpoints.java")
-        generated.appendText("// edited\n")
-        val drifted = app.fail("seampactCheck", *cached)
-        assertTrue("check.generated.drift" in drifted.output, drifted.output)
-        assertFalse("Configuration cache problems" in drifted.output, "a task run alone stores its configuration cache")
     }
 }

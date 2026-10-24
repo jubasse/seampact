@@ -68,9 +68,21 @@ internal fun planEntries(config: AppConfig, apis: List<SourceApi>, springBootVer
     config.entries.map { entry ->
         when (val generated = generateEntry(entry, apis, springBootVersion, pluginVersion)) {
             is EntryFiles.Refused -> EntryPlan.Refused(entry.id, generated.problems)
-            is EntryFiles.Generated -> EntryPlan.Planned(entry.id, GeneratedWriter.plan(entry.root, entry.id, generated.files, HandEditPolicy.REFUSE))
+            is EntryFiles.Generated -> EntryPlan.Planned(entry.id, withGradleFixes(GeneratedWriter.plan(entry.root, entry.id, generated.files, HandEditPolicy.REFUSE)))
         }
     }
+
+private const val HAND_EDIT_CODE = "writer.file.edited"
+private const val GRADLE_HAND_EDIT_FIX =
+    "Restore the file or delete it, then run `gradle seampactGenerate`; hand-written code goes next to the generated files, not in them."
+
+// The writer's hand-edit fix, in the Gradle plugin's own terms.
+private fun withGradleFixes(outcome: PlanOutcome): PlanOutcome = when (outcome) {
+    is PlanOutcome.Planned -> outcome
+    is PlanOutcome.Refused -> PlanOutcome.Refused(
+        outcome.refusals.map { if (it.code == HAND_EDIT_CODE) it.copy(fix = GRADLE_HAND_EDIT_FIX) else it },
+    )
+}
 
 /** One entry's plan: the writer's plan of its files, or the problems that keep it from generating. */
 internal sealed interface EntryPlan {
