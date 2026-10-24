@@ -32,7 +32,7 @@ Set `rules: seampact-consistent` to get the contract's exact checks instead. Eve
 
 The error body names the same rule in both modes: `minLength`, `format`, `pattern`, and so on.
 
-With the default `rules: native`, each library differs from the contract in a few places.
+With the default `rules: native`, each library differs from the contract in a few places. Set `rules: seampact-consistent` to get the contract's checks on every one of them.
 
 ### zod
 
@@ -44,8 +44,8 @@ With the default `rules: native`, each library differs from the contract in a fe
 ### yup
 
 - Lengths count UTF-16 units: an emoji counts 2, so `maxLength: 1` refuses "😀".
-- `uuid` also checks the version and variant digits.
-- `date-time` does not check the calendar: `2026-02-30T00:00:00Z` passes. It also accepts second 60, hour 24 and an offset without a colon, and refuses a lowercase `t` or `z`.
+- `uuid` also checks the version and variant digits, and refuses version 7 and the max UUID `ffffffff-ffff-ffff-ffff-ffffffffffff`.
+- `date-time` checks only the digit layout: it accepts an empty string, month 13, hour 99, second 60, `2026-02-30`, an offset like `+01` or `+0100`, and more than 9 fraction digits. It refuses a lowercase `t` or `z`.
 - A number with a wrong type also reports its range issues.
 - `multipleOf` has no yup rule: it stays the contract's check.
 
@@ -53,5 +53,5 @@ With the default `rules: native`, each library differs from the contract in a fe
 
 - Lengths skip the variation selectors U+FE0E and U+FE0F: "❤️" counts 1.
 - `uuid` also checks the version and variant digits.
-- `date-time` does not check the calendar, and accepts second 60 and a space instead of `T`.
+- `date-time` does not check the calendar, and accepts second 60, a space instead of `T` and more than 9 fraction digits.
 - `exclusiveMinimum` and `exclusiveMaximum` have no class-validator rule: they stay the contract's checks. So do the checks on each item of a list, which report the item's position.
