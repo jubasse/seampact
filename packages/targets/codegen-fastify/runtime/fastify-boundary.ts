@@ -540,7 +540,7 @@ export function createFastifyBoundary<
     const read = readBodies.get(request.raw);
 
     return {
-      ...contractRequest(request.raw),
+      ...contractRequest(request.raw, request.ip),
       body: request.body,
       ...(read?.raw === undefined ? {} : { rawBody: read.raw }),
     };
@@ -749,7 +749,7 @@ export function createFastifyBoundary<
       await validateRequestInput({
         api,
         route,
-        request: contractRequest(request.raw),
+        request: contractRequest(request.raw, request.ip),
         pathParams,
         hooks,
         isFrameworkDenial: isStatusDenial,

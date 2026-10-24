@@ -4,6 +4,8 @@ import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  CLIENT_ADDRESS_CASES,
+  clientAddressesTheHookSees,
   emitProject,
   generateReferenceProject,
   problemBody,
@@ -57,6 +59,7 @@ interface ReferenceAppModule {
       (input: unknown, controller: Record<string, (...args: unknown[]) => unknown>) => unknown
     >;
     authenticate: (request: unknown) => unknown;
+    trustsProxy: boolean;
     decide: (request: { name: string; purpose: { direction?: string } }) => unknown;
     interceptor: {
       record?: boolean;
@@ -229,6 +232,21 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
   });
 
   describe("hooks that answer outside their contract", () => {
+    test.each(CLIENT_ADDRESS_CASES)(
+      "behind $proxy the hooks see the client address the framework resolves",
+      async ({ trustsProxy, address }) => {
+        const { reply, seen } = await clientAddressesTheHookSees(
+          app.scenario,
+          trustsProxy,
+          (forwarded) =>
+            send("GET", `/v1/channels/${CHANNEL}`, { headers: { ...BEARER, ...forwarded } }),
+        );
+
+        expect(reply.status).toBe(200);
+        expect(seen).toEqual([expect.stringMatching(address)]);
+      },
+    );
+
     test("a decider failure on a restricted input field is a 500 reported to the hook", async () => {
       app.scenario.decide = (request) =>
         request.purpose.direction === "input" ? { nothing: true } : { allow: true };

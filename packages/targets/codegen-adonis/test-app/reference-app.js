@@ -49,6 +49,9 @@ export function resetScenario() {
   scenario.answers = {};
   scenario.authenticate = authenticateByBearer;
   scenario.decide = () => ({ allow: true });
+  // The app's `http.trustProxy` setting, read per request, so one app serves a request with and without a trusted
+  // proxy.
+  scenario.trustsProxy = false;
   calls.handled.length = 0;
   calls.rawBodies.length = 0;
   calls.unexpected.length = 0;
@@ -301,7 +304,14 @@ export async function startReferenceApp(major) {
 
   app.rcContents({ providers: [() => import("@adonisjs/core/providers/app_provider")] });
   app.useConfig({
-    app: { appKey: APP_KEY, http: defineHttpConfig({ etag: true, generateRequestId: true }) },
+    app: {
+      appKey: APP_KEY,
+      http: defineHttpConfig({
+        etag: true,
+        generateRequestId: true,
+        trustProxy: () => scenario.trustsProxy,
+      }),
+    },
     logger: defineLoggerConfig({
       default: "app",
       loggers: { app: { enabled: false, name: "live-boundary", level: "error" } },

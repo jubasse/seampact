@@ -4,6 +4,8 @@ import { request as httpRequest, type IncomingHttpHeaders } from "node:http";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  CLIENT_ADDRESS_CASES,
+  clientAddressesTheHookSees,
   emitProject,
   problemBody,
   projectDirectory,
@@ -45,6 +47,8 @@ interface ReferenceAppModule {
   };
   readonly scenario: {
     answers: Record<string, (input: unknown) => unknown>;
+    authenticate: (request: unknown) => unknown;
+    trustsProxy: boolean;
   };
   readonly AppReply: new (
     status: number,
@@ -164,6 +168,21 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
   });
 
   describe("replies on contract routes", () => {
+    test.each(CLIENT_ADDRESS_CASES)(
+      "behind $proxy the hooks see the client address the framework resolves",
+      async ({ trustsProxy, address }) => {
+        const { reply, seen } = await clientAddressesTheHookSees(
+          app.scenario,
+          trustsProxy,
+          (forwarded) =>
+            send("GET", `/v1/channels/${CHANNEL}`, { headers: { ...BEARER, ...forwarded } }),
+        );
+
+        expect(reply.status).toBe(200);
+        expect(seen).toEqual([expect.stringMatching(address)]);
+      },
+    );
+
     test("a boundary reply carries no AdonisJS ETag or request id, and keeps the app's headers", async () => {
       const reply = await send("GET", `/v1/channels/${CHANNEL}`, { headers: BEARER });
 

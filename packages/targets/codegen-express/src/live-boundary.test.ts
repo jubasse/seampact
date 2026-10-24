@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   besideTasksOnSharedBasePaths,
+  CLIENT_ADDRESS_CASES,
+  clientAddressesTheHookSees,
   copyTestApp,
   emitProject,
   generateReferenceProject,
@@ -69,6 +71,7 @@ interface ReferenceAppModule {
   readonly scenario: {
     answers: Record<string, (input: unknown) => unknown>;
     authenticate: (request: unknown) => unknown;
+    trustsProxy: boolean;
     decide: (request: {
       name: string;
       proof?: unknown;
@@ -475,6 +478,21 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     expect(app.calls.unexpected.map(reportedMessage)).toEqual([app.APP_RENDERED_ERROR]);
     expect(app.mountedRouterUnexpected.map(reportedMessage)).not.toContain(app.APP_RENDERED_ERROR);
   });
+
+  test.each(CLIENT_ADDRESS_CASES)(
+    "behind $proxy the hooks see the client address the framework resolves",
+    async ({ trustsProxy, address }) => {
+      const { reply, seen } = await clientAddressesTheHookSees(
+        app.scenario,
+        trustsProxy,
+        (forwarded) =>
+          send("GET", `/v1/channels/${CHANNEL}`, { headers: { ...BEARER, ...forwarded } }),
+      );
+
+      expect(reply.status).toBe(200);
+      expect(seen).toEqual([expect.stringMatching(address)]);
+    },
+  );
 
   describe("with the router nested in a parent router", () => {
     let nestedServer: Awaited<ReturnType<ReferenceAppModule["startNestedRouterApp"]>>;

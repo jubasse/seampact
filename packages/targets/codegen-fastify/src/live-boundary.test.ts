@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import {
   besideTasksOnSharedBasePaths,
+  CLIENT_ADDRESS_CASES,
+  clientAddressesTheHookSees,
   copyTestApp,
   emitProject,
   generateReferenceProject,
@@ -41,7 +43,11 @@ interface ReferenceAppModule {
     readonly unexpected: unknown[];
     readonly loggedErrors: string[];
   };
-  readonly scenario: { answers: Record<string, (input: unknown) => unknown> };
+  readonly scenario: {
+    answers: Record<string, (input: unknown) => unknown>;
+    authenticate: (request: unknown) => unknown;
+    trustsProxy: boolean;
+  };
   readonly AppReply: new (
     status: number,
     contentType: string,
@@ -340,6 +346,21 @@ describe("the app's own routes keep Fastify's behaviour", () => {
 });
 
 describe("the contract's checks", () => {
+  test.each(CLIENT_ADDRESS_CASES)(
+    "behind $proxy the hooks see the client address the framework resolves",
+    async ({ trustsProxy, address }) => {
+      const { reply, seen } = await clientAddressesTheHookSees(
+        app.scenario,
+        trustsProxy,
+        (forwarded) =>
+          send("GET", `/v1/channels/${CHANNEL}`, { headers: { ...BEARER, ...forwarded } }),
+      );
+
+      expect(reply.status).toBe(200);
+      expect(seen).toEqual([expect.stringMatching(address)]);
+    },
+  );
+
   test("the same body with its members reordered replays the first reply", async () => {
     const headers = writeHeaders();
     const path = `/v1/channels/${CHANNEL}/tasks`;

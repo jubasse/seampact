@@ -143,7 +143,7 @@ function pageSlots(
     ...facts,
     limit,
     totalPages,
-    self: pageUrl(state, withoutQueryMembers(state.request.rawQuery, [])),
+    self: pageUrl(withoutQueryMembers(state.request.rawQuery, [])),
   };
 
   if (paging.position === "page" || paging.position === "offset") {
@@ -184,7 +184,7 @@ function numberedPageSlots(
   const positionAt = (index: number): string =>
     String(isPagePosition ? paging.base + index : index * limit);
   const urlWithPosition = (position: string): string =>
-    pageUrl(state, withQueryMember(state.request.rawQuery, paging.positionParam, position));
+    pageUrl(withQueryMember(state.request.rawQuery, paging.positionParam, position));
   const urlAt = (index: number): string => urlWithPosition(positionAt(index));
   // An offset the client chose need not fall on a page start: the next page starts one limit further.
   const nextUrl = isPagePosition ? urlAt(pageIndex + 1) : urlWithPosition(String(nextOffset));
@@ -213,10 +213,7 @@ function pagePreviousUrl(
   const position =
     paging.position === "page" ? paging.base + Math.floor(previousOffset / limit) : previousOffset;
 
-  return pageUrl(
-    state,
-    withQueryMember(state.request.rawQuery, paging.positionParam, String(position)),
-  );
+  return pageUrl(withQueryMember(state.request.rawQuery, paging.positionParam, String(position)));
 }
 
 // A cursor or since position: the URLs carry the tokens the handler returned.
@@ -231,26 +228,26 @@ function tokenPageSlots(
   ];
   const withoutPosition = withoutQueryMembers(state.request.rawQuery, positionParams);
   const urlWith = (param: string, token: unknown): string | undefined =>
-    typeof token === "string"
-      ? pageUrl(state, withQueryMember(withoutPosition, param, token))
-      : undefined;
+    typeof token === "string" ? pageUrl(withQueryMember(withoutPosition, param, token)) : undefined;
 
   if (paging.position === "since") {
     return {
-      first: pageUrl(state, withoutPosition),
+      first: pageUrl(withoutPosition),
       next: urlWith(paging.positionParam, facts.nextSince),
     };
   }
 
   return {
-    first: pageUrl(state, withoutPosition),
+    first: pageUrl(withoutPosition),
     next: urlWith(paging.positionParam, facts.nextCursor),
     previous: urlWith(paging.beforeParam ?? paging.positionParam, facts.previousCursor),
   };
 }
 
-function pageUrl(state: CheckState, query: string): string {
-  return query === "" ? state.request.path : `${state.request.path}?${query}`;
+// A query-only reference (RFC 3986): it resolves against the URL the client called, so it keeps a path prefix a
+// reverse proxy stripped. An empty query is `?`, since an empty reference would keep the called query.
+function pageUrl(query: string): string {
+  return `?${query}`;
 }
 
 function isRecordCount(value: unknown): boolean {
