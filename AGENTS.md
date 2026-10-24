@@ -19,7 +19,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Gates
 
-- During work: the affected tests (`pnpm vitest run <paths>`), `pnpm typecheck`, `pnpm lint`.
+- During work: the affected tests (`pnpm vitest run <paths>`), `pnpm typecheck`, `pnpm lint`, and `pnpm exec biome check <touched files>` (`pnpm lint` does not check format); for `jvm/`, `./gradlew :<module>:check` there.
 - A test failure is a flake only once that test passes alone (name it in the hand-back); otherwise it is a failure.
 - Stop on a classifier refusal and report it; never work around it.
 

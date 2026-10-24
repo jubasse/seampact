@@ -93,6 +93,8 @@ Casing joins the segments, then appends the suffix words:
 
 An identifier whose first segment starts with a digit gets a leading `_`, in every role. A declared schema name starts with a letter, but an error code may start with a digit (`1042`, `404-gone`, ADR 0002 section 4), and so do the types derived from it: its params type and its exception give `_1042Params` and `_404GoneError`. A member or enum member gives `_2fa`, `_2FA`. The suffix words stay last, so `suffixes` renames them as for any other name.
 
+The `Status` and `ErrorCode` keys of generated code follow the same rule: a status takes its IANA reason phrase in PascalCase (`NotFound`); an error code takes the whole code (`ApiNotFound` for `api.not-found`).
+
 ### 5. Reserved words and shadowed names
 
 After casing, an identifier that collides with a reserved word or a shadowed name of the target language gets a trailing `_` (`List_`, `class_`, `Error_`). One rule for every language keeps it predictable and visibly an escape. The casings of section 4, the suffix words of section 1 and this escape are defaults, not conventions imposed on the consumer ([A36](../decisions.md#a36)): a target may offer options for its own language, applied after the shared algorithm and recorded in the target's options, so generation stays deterministic; the shared vectors test the defaults. Every target offers at least:

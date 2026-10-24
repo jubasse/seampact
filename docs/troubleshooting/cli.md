@@ -7,6 +7,7 @@
 | `init.modelines.no-source` | `init --modelines` edits the contract files of `path` sources only. Add `{ path: ./contract }` to `sources`. |
 | `init.ignore-file-link` | `.gitignore` is a symbolic link, and `init` does not write through links. Run `seampact init --no-ignore-files`, then add `.seampact/` to the link's target yourself. |
 | `init.local-sources-refused` | The starter contract is a local folder, and `SEAMPACT_ALLOW_LOCAL=false` or a root config's `allowLocal: false` refuses local sources. Run `init` where they are allowed, or write the app config yourself with a `package` source. |
+| `binary.generate-unavailable`, `binary.check-unavailable` | The standalone binary has no code generator. Run `generate` and `check` with the npm CLI, or with the Gradle, Maven or Composer plugin. |
 | `lint.no-source` | `lint` reads the contract, so it needs a source with a `path`. Add `{ path: ./contract }` to `sources`. |
 | `diff.against.invalid` | `--against` takes a folder of `<api>.ir.json` files (made by `seampact compile --out`) or one IR file. |
 | `compile.editor-schemas.outside` | `--editor-schemas` writes only below the workspace root, through no symbolic link. Name a relative directory in `workspace.editorSchemas` (default `.seampact/schemas`), and replace a symlinked directory or schema file by a real one. |
@@ -14,5 +15,8 @@
 | `diff.policy.breaking` | The change breaks clients and `compat.policy` is `additive-only`. Make the change additive, or set `compat: { policy: none }` for a release that breaks on purpose. See [Diff](../features/diff.md). |
 | `diff.maturity.stable` | A stable operation takes additive changes only. Revert the change, or add a successor operation and deprecate this one. |
 | `diff.api.name.differs`, `diff.api.version.differs` | The baseline is another api or another path version. Diff against a baseline of the same api and version. |
+| `explain.api.needed`, `explain.api.ambiguous`, `explain.api.unknown` | Name the operation as `<api>.<operationId>`, or `<source>/<api>.<operationId>` when two sources hold the api. |
+| `explain.operation.unknown` | Name one of the api's operation ids, as the IR and the OpenAPI document spell them. |
+| `bundle.source.none`, `bundle.source.ambiguous`, `bundle.source.unknown`, `bundle.source.not-local` | `bundle` packs a `path` source. With several, name one with `--source <name>`. Bundle in the repository that holds the contract. For the other `bundle.` codes, see [Bundle errors](bundle.md). |
 
-The commands exit with 1 when they report an error and 0 when they do not.
+The commands exit with 1 when they report an error, 2 on a usage error (an unknown command or option, or a command the binary does not carry), and 0 otherwise.

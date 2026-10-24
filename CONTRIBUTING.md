@@ -4,6 +4,10 @@
 
 Requirements: Node 24 (see `.nvmrc`) and pnpm 12 (pinned by `packageManager`; `corepack enable` selects it).
 
+For `jvm/`: JDK 21 and 25. Gradle runs through `jvm/gradlew` on the newest, `-PtestJdk=21` or `25` picks the test JDK, and the foojay resolver provides a missing one.
+
+The front consumer tests download Playwright's Chromium headless shell on their first run, into `~/.cache/ms-playwright`.
+
 ```sh
 pnpm install --frozen-lockfile
 ```
@@ -18,7 +22,7 @@ It runs typecheck, lint, the format check and the tests, and fails on any error.
 
 ## Conventions
 
-- Git flow: never commit directly on `develop` or `main`; both are protected and require the `ci` check.
+- Git flow: never commit directly on `develop` or `main`; both are protected. The required checks include `ci`, `native-ir`, `hooks-native`, `binary` and `p6-react`.
 - Dependencies are pinned to exact versions; GitHub Actions are pinned by commit SHA with the version in a comment.
 - Add a changeset (`pnpm changeset`) for a change that affects a package's version. Releases are cut from `release/<version>`.
 - Toolchain choices are recorded in `docs/adr/0001-toolchain.md`.

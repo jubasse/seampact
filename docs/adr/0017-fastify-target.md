@@ -13,7 +13,7 @@ Three Fastify behaviours shape the placement. Each route runs its own lifecycle 
 - Plugin scope: an encapsulated plugin, or one wrapped with `fastify-plugin` that shares its hooks, parser and error handler with the app. Choice: encapsulated; its parser, error handler and hooks act on contract routes only, and the app's own routes are unchanged ([A36](../decisions.md#a36)).
 - Reply path: `reply.hijack()` with the shared writer on `reply.raw`, or `reply.send` with the buffer the boundary renders. Choice: `reply.hijack()`; `reply.send` would run the app's `onSend` hooks on contract replies, where `@fastify/etag` adds an ETag and a 304 the contract does not declare. The spike below shows that the app's `onResponse` hooks, request logging included, still run after a hijack, so the `reply.send` fallback is not needed.
 - Step 10: an `onSend` hook, as ADR 0012's table first said, or the shared outgoing response check on `reply.raw`. Choice: `reply.raw`; an `onSend` hook never runs for a hijacked reply and sees a stream as one object, while the check on the raw response sees every reply, chunk by chunk, with the one implementation every Node target shares.
-- Validation without a linked validator: the Ajv fallback of ADR 0012 "Target obligations", or a refusal. Choice: refused in the slice ([A47](../decisions.md#a47)); the zod link serves the slice.
+- Validation without a linked validator: the Ajv fallback of ADR 0012 "Target obligations", or a refusal. Choice: the Ajv fallback. With no `validators` link, Fastify generates Ajv, and a link always wins. Ajv runs with `multipleOfPrecision: 12` and `ownProperties: true`, and its schemas are compiled at module load.
 
 ## Decisions
 

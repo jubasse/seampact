@@ -31,6 +31,7 @@
 
 ## Frontend
 
+- [React](frontend/react.md): TanStack Query hooks over the fetch client.
 - [Expo and React Native](frontend/mobile.md): the client and the React hooks on a phone.
 
 ## Configuration
@@ -50,6 +51,7 @@
 - [Sharing contracts](features/sharing-contracts.md): publish a contract to other repositories.
 - [Lint](features/lint.md): run lint, change a rule level, allow a case, write a rule.
 - [Convention packs](features/convention-packs.md): add a pack, what each brings.
+- [Editor support](features/editor-support.md): checks and completion in your editor.
 
 ## Concepts
 
@@ -62,13 +64,15 @@
 - [Config errors](troubleshooting/config.md): `config.*`.
 - [Monorepo and OpenAPI errors](troubleshooting/config-root.md): `config.root.*`, `config.apps.*`, `config.openapi.*`.
 - [Link errors](troubleshooting/link.md): `link.*`.
+- [Bundle errors](troubleshooting/bundle.md): `bundle.*`.
+- [Target option errors](troubleshooting/generate.md): `options.*`, `paging.*`.
 - [Check errors](troubleshooting/check.md): `check.*`, `writer.*`.
 - [Contract file errors](troubleshooting/load.md): `seampact/load/*`.
 - [Contract key errors](troubleshooting/validate.md): `seampact/validate/*`.
 - [Contract content errors](troubleshooting/tree.md): `seampact/tree/*`.
 - [Access and error code errors](troubleshooting/access-and-errors.md): `seampact/access/*`, `seampact/derive/*`.
 - [Boot errors](troubleshooting/boot.md): the server refuses to start.
-- [CLI errors](troubleshooting/cli.md): `cli.*`, `lint.*`, `diff.*`.
+- [CLI errors](troubleshooting/cli.md): `cli.*`, `lint.*`, `diff.*`, `explain.*`, `binary.*`.
 
 ## Project
 

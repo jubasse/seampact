@@ -77,6 +77,7 @@ Before 1.0 a breaking change is allowed with its release note (A8); from 1.0 it 
 
 - The TypeScript types, the Kotlin model and the PHP model are generated from the one IR JSON Schema; no hand-written model exists (FR-40). CI regenerates the native models and fails on any difference with the committed ones.
 - The golden IR of the reference contract is the shared test fixture of every reader; it changes in an IR change PR, or in a compiler change that writes other values in the same format; a format change takes the IR change path.
+- Derivation ids (`derivedFrom.derivation`, such as `cache.etag`) are part of the IR contract: stable, renamed only in an IR change PR.
 - The compatibility diff of contracts (FR-13) compares two IRs of the same `irVersion`. Comparing IRs of two `irVersion` values is refused with both named; a consumer recompiles the older contract first.
 
 ## Consequences

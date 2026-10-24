@@ -18,6 +18,8 @@ npx seampact check
 
 To see what a contract edit breaks for clients, ask for `npx seampact diff --against baseline` (see [diff](../features/diff.md)).
 
+To show an agent one operation whole, with where each part comes from, give it `npx seampact explain notes.getNote`.
+
 The agent writes the handlers. The compiler tells it where they no longer match the generated interfaces, so `npx tsc -p .` is a fourth check.
 
 Each message has a rule id such as `check.generated.drift`. Look it up in [troubleshooting](../troubleshooting/README.md).
