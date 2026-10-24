@@ -1,6 +1,7 @@
 import type { QueryOperation, QueryPlan } from "@seampact/codegen-core";
 import { propertyKey } from "@seampact/codegen-core";
 import type { ReactQueryOptions } from "../options.js";
+import { CLIENT_DIRECTIVE } from "../shared/operation-sources.js";
 
 // The `hooks.ts` of one api for TanStack Query (ADR 0021 "The generated API"): `create<Api>Hooks` returns the
 // members of `create<Api>Queries` plus a `use*` hook over each options factory. It starts with `"use client"` unless
@@ -8,7 +9,6 @@ import type { ReactQueryOptions } from "../options.js";
 // signal to a mutation.
 
 const TANSTACK_MODULE = "@tanstack/react-query";
-const CLIENT_DIRECTIVE = '"use client";';
 
 /** The source of `hooks.ts`; `imports` holds the specifiers of the client and the queries module. */
 export function hooksModuleSource(

@@ -8,11 +8,15 @@ import {
   type IndexedModule,
   importSpecifier,
   planQueries,
+  type QueryPlan,
   type Refusal,
 } from "@seampact/codegen-core";
 import type { ReactQueryOptions } from "./options.js";
-import { hooksModuleSource } from "./tanstack/hooks-module.js";
-import { queriesModuleSource } from "./tanstack/queries-module.js";
+import { apiModuleSource, refusePagesEndpointCollisions } from "./rtk/api-module.js";
+import { hooksModuleSource as swrHooksModuleSource } from "./swr/hooks-module.js";
+import { queriesModuleSource as swrQueriesModuleSource } from "./swr/queries-module.js";
+import { hooksModuleSource as tanstackHooksModuleSource } from "./tanstack/hooks-module.js";
+import { queriesModuleSource as tanstackQueriesModuleSource } from "./tanstack/queries-module.js";
 
 export const QUERIES_ARTEFACT = "queries";
 export const HOOKS_ARTEFACT = "hooks";
@@ -25,14 +29,19 @@ export type ReactArtefact =
 
 const QUERIES_MODULE = "queries";
 const HOOKS_MODULE = "hooks";
+const RTK_API_MODULE = "api";
 const INDEX_MODULE = "index";
 const MODULE_EXTENSION = ".ts";
 const MODULE_SUFFIX = ".js";
 const OPTIONS_LOCATION = "";
-const NEXT_LIBRARIES_RELEASE = "a later release of @seampact/codegen-react";
+const RUNTIME_SPECIFIER = `./${FRONT_RUNTIME_MODULE}${MODULE_SUFFIX}`;
+const RUNTIME_TYPE_NAMES = ["PlainHeaders", "WithPlainHeaders"];
+// RTK Query's error is a plain value whose types the app reads.
+const RTK_RUNTIME_TYPE_NAMES = [...RUNTIME_TYPE_NAMES, "ContractFailure", "PlainRejection"];
+const ITEMS_OF = "itemsOf";
 
-// Per api: the front runtime, `queries.ts`, `hooks.ts` unless the artefact is off, and an index re-exporting them;
-// or every refusal at once.
+// Per api: the front runtime, the library's modules and an index re-exporting them; or every refusal at once.
+// TanStack Query and SWR get `queries.ts` and `hooks.ts` unless the artefact is off, RTK Query one `api.ts`.
 export function generateReactQueries(
   input: GenerateInput<ReactQueryOptions, ReactArtefact, "client">,
 ): GenerateOutcome {
@@ -49,67 +58,111 @@ export function generateReactQueries(
   if (planned.status === "refused") return planned;
 
   const { plan } = planned;
-  const queriesFile = `${QUERIES_MODULE}${MODULE_EXTENSION}`;
-  const hooksFile = `${HOOKS_MODULE}${MODULE_EXTENSION}`;
+  const collisions = options.query === "rtk" ? refusePagesEndpointCollisions(plan) : [];
+
+  if (collisions.length > 0) return { status: "refused", refusals: collisions };
+
   const clientSpecifier = (fromFile: string) =>
     importSpecifier(links.client, client.exports.Client, fromFile);
-  const withHooks = input.artefacts.has(HOOKS_ARTEFACT);
-  const files: GeneratedFile[] = [
-    frontRuntimeFile(),
-    {
-      path: queriesFile,
-      contents: `${queriesModuleSource(plan, options, options.keysRoot ?? ir.api.id, {
-        client: clientSpecifier(queriesFile),
-        runtime: `./${FRONT_RUNTIME_MODULE}${MODULE_SUFFIX}`,
-      })}\n`,
-    },
-    ...(withHooks
-      ? [
-          {
-            path: hooksFile,
-            contents: `${hooksModuleSource(plan, options, {
-              client: clientSpecifier(hooksFile),
-              queries: `./${QUERIES_MODULE}${MODULE_SUFFIX}`,
-            })}\n`,
-          },
-        ]
-      : []),
-    {
-      path: `${INDEX_MODULE}${MODULE_EXTENSION}`,
-      contents: apiIndexSource(indexedModules(withHooks, input.artefacts.has(ITEMS_OF_ARTEFACT))),
-    },
-  ];
+  const library = {
+    withHooks: input.artefacts.has(HOOKS_ARTEFACT),
+    withItemsOf: input.artefacts.has(ITEMS_OF_ARTEFACT),
+    clientSpecifier,
+  };
+  const files =
+    options.query === "rtk"
+      ? rtkFiles(plan, options, ir.api.id, library)
+      : queriesAndHooksFiles(plan, options, options.keysRoot ?? ir.api.id, library);
 
-  return { status: "generated", files, warnings: planned.warnings };
+  return { status: "generated", files: [frontRuntimeFile(), ...files], warnings: planned.warnings };
 }
 
-function indexedModules(withHooks: boolean, withItemsOf: boolean): IndexedModule[] {
-  return [
-    ...(withHooks ? [{ module: HOOKS_MODULE }] : []),
+interface LibraryFiles {
+  readonly withHooks: boolean;
+  readonly withItemsOf: boolean;
+  readonly clientSpecifier: (fromFile: string) => string;
+}
+
+function queriesAndHooksFiles(
+  plan: QueryPlan,
+  options: ReactQueryOptions,
+  root: string,
+  library: LibraryFiles,
+): GeneratedFile[] {
+  const queriesFile = `${QUERIES_MODULE}${MODULE_EXTENSION}`;
+  const hooksFile = `${HOOKS_MODULE}${MODULE_EXTENSION}`;
+  const queriesImports = {
+    client: library.clientSpecifier(queriesFile),
+    runtime: RUNTIME_SPECIFIER,
+  };
+  const hooksImports = {
+    client: library.clientSpecifier(hooksFile),
+    queries: `./${QUERIES_MODULE}${MODULE_SUFFIX}`,
+    runtime: RUNTIME_SPECIFIER,
+  };
+  const queries =
+    options.query === "swr"
+      ? swrQueriesModuleSource(plan, options, root, queriesImports)
+      : tanstackQueriesModuleSource(plan, options, root, queriesImports);
+  const hooks =
+    options.query === "swr"
+      ? () => swrHooksModuleSource(plan, options, hooksImports)
+      : () => tanstackHooksModuleSource(plan, options, hooksImports);
+  const indexed: IndexedModule[] = [
+    ...(library.withHooks ? [{ module: HOOKS_MODULE }] : []),
     { module: QUERIES_MODULE },
-    {
-      module: FRONT_RUNTIME_MODULE,
-      typeNames: ["PlainHeaders", "WithPlainHeaders"],
-      valueNames: withItemsOf ? ["itemsOf"] : [],
-    },
+    runtimeModule(RUNTIME_TYPE_NAMES, library.withItemsOf),
+  ];
+
+  return [
+    { path: queriesFile, contents: `${queries}\n` },
+    ...(library.withHooks ? [{ path: hooksFile, contents: `${hooks()}\n` }] : []),
+    { path: `${INDEX_MODULE}${MODULE_EXTENSION}`, contents: apiIndexSource(indexed) },
   ];
 }
 
-// SWR and RTK Query come with the next release; `errors: data` needs a client that returns its errors.
+function rtkFiles(
+  plan: QueryPlan,
+  options: ReactQueryOptions,
+  reducerPath: string,
+  library: LibraryFiles,
+): GeneratedFile[] {
+  const apiFile = `${RTK_API_MODULE}${MODULE_EXTENSION}`;
+  const source = apiModuleSource(
+    plan,
+    options,
+    reducerPath,
+    library.withHooks ? "hooks" : "noHooks",
+    {
+      client: library.clientSpecifier(apiFile),
+      runtime: RUNTIME_SPECIFIER,
+    },
+  );
+  const indexed: IndexedModule[] = [
+    { module: RTK_API_MODULE },
+    runtimeModule(RTK_RUNTIME_TYPE_NAMES, library.withItemsOf),
+  ];
+
+  return [
+    { path: apiFile, contents: `${source}\n` },
+    { path: `${INDEX_MODULE}${MODULE_EXTENSION}`, contents: apiIndexSource(indexed) },
+  ];
+}
+
+function runtimeModule(typeNames: readonly string[], withItemsOf: boolean): IndexedModule {
+  return {
+    module: FRONT_RUNTIME_MODULE,
+    typeNames: [...typeNames],
+    valueNames: withItemsOf ? [ITEMS_OF] : [],
+  };
+}
+
+// `errors: data` needs a client that returns its errors.
 function refuseUnsupportedForms(
   options: ReactQueryOptions,
   errorStyle: "result" | "throw",
 ): Refusal[] {
   const refusals: Refusal[] = [];
-
-  if (options.query !== "tanstack") {
-    refusals.push({
-      code: "options.query.unsupported",
-      message: `The query library '${options.query}' is not generated yet; this release generates 'tanstack'.`,
-      fix: `Set 'query: tanstack', or update to ${NEXT_LIBRARIES_RELEASE} that generates '${options.query}'.`,
-      member: `${OPTIONS_LOCATION}/query`,
-    });
-  }
 
   if (errorStyle === "throw" && options.errors === "data") {
     refusals.push({

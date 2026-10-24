@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { expect, inject, test } from "vitest";
 import { page } from "vitest/browser";
 import { render, renderHook } from "vitest-browser-react";
-import { createClient } from "../../generated/client/tasks/index.js";
 import { createTasksHooks as createDataTasksHooks } from "../../generated/queriesData/tasks/index.js";
 import { createTasksQueries as createPlainTasksQueries } from "../../generated/queriesPlain/tasks/index.js";
 import {
@@ -17,44 +16,16 @@ import {
 } from "../../src/front/app.js";
 import { loadScript } from "./control.mjs";
 import "./provided.mjs";
+import {
+  clientFor,
+  listRequests,
+  QUIET_MS,
+  recordingFetch,
+  scriptedPage,
+  wait,
+} from "./requests.mjs";
 
 const LIST_REQUEST = { path: { channelId: GENERAL_CHANNEL_ID } };
-const IDEMPOTENCY_HEADER = "idempotency-key";
-const QUIET_MS = 300;
-
-interface SentRequest {
-  readonly url: string;
-  readonly method: string;
-  readonly idempotencyKey: string | null;
-}
-
-// A fetch that records each request it sends to the server.
-function recordingFetch(): { readonly send: typeof fetch; readonly sent: SentRequest[] } {
-  const sent: SentRequest[] = [];
-  const send: typeof fetch = (input, init) => {
-    sent.push({
-      url: String(input),
-      method: init?.method ?? "GET",
-      idempotencyKey: new Headers(init?.headers).get(IDEMPOTENCY_HEADER),
-    });
-
-    return fetch(input, init);
-  };
-
-  return { send, sent };
-}
-
-function listRequests(sent: readonly SentRequest[]): SentRequest[] {
-  return sent.filter((request) => request.method === "GET" && request.url.includes("/tasks"));
-}
-
-function clientFor(token: string, send: typeof fetch = fetch) {
-  return createClient({
-    baseUrl: window.location.origin,
-    headers: { authorization: `Bearer ${token}` },
-    fetch: send,
-  });
-}
 
 function providerOf(queryClient: QueryClient) {
   return function Provider(props: { readonly children?: ReactNode }): ReactNode {
@@ -66,26 +37,6 @@ function quietQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-}
-
-function scriptedPage(titles: readonly string[], nextCursor?: string) {
-  return {
-    status: 200,
-    body: {
-      items: titles.map((title, index) => ({
-        taskId: `30000000-0000-4000-8000-00000000000${index}`,
-        title,
-        state: "open",
-        version: 1,
-        createdAt: "2026-10-18T09:00:00.000Z",
-      })),
-      ...(nextCursor === undefined ? {} : { nextCursor }),
-    },
-  };
-}
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 test("1: a list renders", async () => {

@@ -64,7 +64,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [front-fetch, react-tanstack]
+        target: [front-fetch, react-tanstack, react-swr, react-rtk]
         validators: [zod]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

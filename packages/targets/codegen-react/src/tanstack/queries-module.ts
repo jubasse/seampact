@@ -1,25 +1,27 @@
-import type { NextPageRule, QueryOperation, QueryPlan } from "@seampact/codegen-core";
+import type { QueryOperation, QueryPlan } from "@seampact/codegen-core";
 import { propertyKey } from "@seampact/codegen-core";
 import type { ReactQueryOptions } from "../options.js";
+import {
+  CONTRACT_ERROR_GUARD,
+  keysObjectSource,
+  nextPageConstantName,
+  nextPageConstants,
+  operationType,
+  operationTypesSource,
+  planForms,
+  type QueriesImports,
+  REQUIRED_CALL_TYPE,
+  resourceTypeSource,
+  resultExpression,
+  settingsTypeSource,
+} from "../shared/operation-sources.js";
 
 // The server-safe `queries.ts` of one api for TanStack Query (ADR 0021 "The generated API"): the types each
 // operation reads from the client, the caller option types, and `create<Api>Queries`, which returns `keys` and an
 // options factory per operation. It holds no `"use client"` and imports no hook, so a server component prefetches
 // with it.
 
-/** The names the queries module imports from the client and the runtime, by the module specifier. */
-export interface QueriesImports {
-  readonly client: string;
-  readonly runtime: string;
-}
-
 const TANSTACK_MODULE = "@tanstack/react-query";
-
-// `instanceof ContractError` would widen a query error's `Error` member to `ContractError<any, any>`.
-const CONTRACT_ERROR_GUARD = `/** Narrows a query or mutation error to the client's \`ContractError\` of its operation, keeping its failure type. */
-export function isContractError<Thrown>(error: Thrown): error is Extract<Thrown, ContractError<string, unknown>> {
-return error instanceof ContractError;
-}`;
 
 /** The source of `queries.ts`. */
 export function queriesModuleSource(
@@ -30,12 +32,12 @@ export function queriesModuleSource(
 ): string {
   const api = plan.apiName;
   const operations = plan.operations;
-  const hasMutation = operations.some((operation) => operation.form === "mutation");
-  const hasQuery = operations.some((operation) => operation.form === "query");
-  const hasInfinite = operations.some((operation) => operation.names.infinite !== undefined);
-  const hasIdempotency = operations.some(
-    (operation) => operation.idempotencyHeaderKey !== undefined,
-  );
+  const {
+    mutation: hasMutation,
+    query: hasQuery,
+    infinite: hasInfinite,
+    idempotency: hasIdempotency,
+  } = planForms(plan);
   const throwsErrors = options.errors === "throw";
 
   const tanstackNames = [
@@ -65,43 +67,14 @@ export function queriesModuleSource(
       `import { ${clientNames.join(", ")} } from "${imports.client}";`,
       `import { ${runtimeNames.join(", ")} } from "${imports.runtime}";`,
     ].join("\n"),
-    operationTypesSource(api, operations, throwsErrors),
+    operationTypesSource(api, operations, options.errors, "perOperation"),
     ...(throwsErrors ? [CONTRACT_ERROR_GUARD] : []),
     callerOptionTypesSource({ hasQuery, hasInfinite, hasMutation }),
-    `/** The factory settings: \`idempotencyKey\` replaces \`crypto.randomUUID\` as the idempotency key generator. */\nexport interface ${api}QueriesSettings {\nreadonly idempotencyKey?: () => string;\n}`,
-    `/** The resource types the keys of the api sit under. */\nexport type ${api}Resource = ${resourceUnion(plan.resources)};`,
+    settingsTypeSource(api),
+    resourceTypeSource(plan),
     `const ROOT = ${JSON.stringify(root)};`,
-    ...operations.flatMap((operation) => nextPageConstant(operation)),
+    ...nextPageConstants(operations),
     factorySource(plan, options, hasIdempotency),
-  ].join("\n\n");
-}
-
-function operationTypesSource(
-  api: string,
-  operations: readonly QueryOperation[],
-  throwsErrors: boolean,
-): string {
-  const data = throwsErrors
-    ? "WithPlainHeaders<SuccessOf<MethodResult<Method>>>"
-    : "WithPlainHeaders<MethodResult<Method>>";
-  const error = throwsErrors
-    ? "ContractError<Id, FailureOf<MethodResult<Method>>> | Error"
-    : "Error";
-  const errorComment = throwsErrors
-    ? "a declared error or an unexpected answer as the client's `ContractError`, or the client's rejection"
-    : "the client's rejection (network failure, timeout or abort); declared errors are data";
-  // The operation id types a thrown `ContractError` only; data errors leave it out, as an unused type parameter.
-  const idParameter = throwsErrors ? "Id extends string, " : "";
-  const members = operations.map(
-    ({ operationId, names }) =>
-      `${propertyKey(names.base)}: OperationTypes<${throwsErrors ? `${JSON.stringify(operationId)}, ` : ""}Client[${JSON.stringify(names.base)}]>;`,
-  );
-
-  return [
-    "type MethodResult<Method> = Method extends (...args: never) => Promise<infer Result> ? Result : never;",
-    `/** What a query reads from one client method: its request, call options, data (headers as a plain record) and error (${errorComment}). */\nexport interface OperationTypes<${idParameter}Method extends (...args: never) => Promise<ClientResult>> {\nrequest: Parameters<Method>[0];\ncall: NonNullable<Parameters<Method>[1]>;\ndata: ${data};\nerror: ${error};\n}`,
-    "/** Any operation's types. */\nexport interface AnyOperationTypes {\nrequest: unknown;\ncall: unknown;\ndata: unknown;\nerror: unknown;\n}",
-    `/** The types of each operation, read from the client. */\nexport interface ${api}Operations {\n${members.join("\n")}\n}`,
   ].join("\n\n");
 }
 
@@ -127,30 +100,10 @@ function callerOptionTypesSource(forms: {
           `/** The caller's mutation options; its \`onSuccess\` runs after the generated invalidation. */\nexport type MutationCallerOptions<Operation extends AnyOperationTypes, OnMutateResult = unknown> = Omit<UseMutationOptions<Operation["data"], Operation["error"], Operation["request"], OnMutateResult>, "mutationFn"> & {\n${call};\n};`,
         ]
       : []),
-    '/** Options whose `call` is required: the client method requires a timeout. */\nexport type WithRequiredCall<Options extends { readonly call?: unknown }> = Options & { readonly call: NonNullable<Options["call"]> };',
+    REQUIRED_CALL_TYPE,
   ];
 
   return sources.join("\n\n");
-}
-
-function resourceUnion(resources: readonly string[]): string {
-  return resources.length === 0
-    ? "never"
-    : resources.map((type) => JSON.stringify(type)).join(" | ");
-}
-
-function nextPageConstantName(operation: QueryOperation): string {
-  return `${operation.names.base.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase()}_PAGES`;
-}
-
-function nextPageConstant(operation: QueryOperation): string[] {
-  if (operation.nextPage === undefined || operation.names.infinite === undefined) return [];
-
-  const rule: NextPageRule = operation.nextPage;
-
-  return [
-    `/** How the infinite query of \`${operation.names.base}\` builds its next page's request. */\nconst ${nextPageConstantName(operation)}: NextPageRule = ${JSON.stringify(rule)};`,
-  ];
 }
 
 function factorySource(
@@ -159,7 +112,6 @@ function factorySource(
   hasIdempotency: boolean,
 ): string {
   const api = plan.apiName;
-  const keyMembers = plan.operations.flatMap((operation) => keySources(operation, api));
   const members = plan.operations.flatMap((operation) => memberSources(operation, api, options));
   const idempotency = hasIdempotency
     ? "const idempotencyKeys = new IdempotencyKeys(idempotencyKeyGenerator(settings.idempotencyKey));\n\n"
@@ -171,11 +123,7 @@ function factorySource(
  * \`useQuery\`, \`useSuspenseQuery\`, \`prefetchQuery\` and the other TanStack Query entry points.
  */
 export function create${api}Queries(client: Client, ${settingsParameter}: ${api}QueriesSettings = {}) {
-${idempotency}const keys = {
-all: [ROOT] as const,
-resource: (type: ${api}Resource) => [ROOT, { resource: type }] as const,
-${keyMembers.join("\n")}
-};
+${idempotency}${keysObjectSource(plan)}
 
 return {
 keys,
@@ -185,29 +133,6 @@ ${members.join(",\n\n")},
 
 /** What \`create${api}Queries\` returns. */
 export type ${api}Queries = ReturnType<typeof create${api}Queries>;`;
-}
-
-function keyPrefix(operation: QueryOperation): string {
-  return operation.resource === undefined
-    ? "ROOT"
-    : `ROOT, { resource: ${JSON.stringify(operation.resource)} }`;
-}
-
-function keySources(operation: QueryOperation, api: string): string[] {
-  if (operation.form !== "query") return [];
-
-  const { names } = operation;
-  const request = `request: ${api}Operations[${JSON.stringify(names.base)}]["request"]`;
-  const filled = JSON.stringify(operation.filledHeaderKeys);
-  const id = JSON.stringify(operation.operationId);
-  const plain = `${propertyKey(names.base)}: (${request}) => [${keyPrefix(operation)}, ${id}, keyRequest(request, ${filled})] as const,`;
-
-  if (names.infinite === undefined) return [plain];
-
-  return [
-    plain,
-    `${propertyKey(names.infinite.key)}: (${request}) => [${keyPrefix(operation)}, ${id}, "infinite", keyRequest(request, ${filled})] as const,`,
-  ];
 }
 
 function memberSources(
@@ -227,21 +152,6 @@ function memberSources(
 // The caller options parameter: optional with a default, or required when the method requires a timeout.
 function optionsParameter(operation: QueryOperation, type: string): string {
   return operation.needsTimeout ? `options: WithRequiredCall<${type}>` : `options: ${type} = {}`;
-}
-
-function operationType(operation: QueryOperation, api: string): string {
-  return `${api}Operations[${JSON.stringify(operation.names.base)}]`;
-}
-
-// The client call's result as the query data: the success or a thrown error, or the whole result.
-function resultExpression(
-  operation: QueryOperation,
-  call: string,
-  options: ReactQueryOptions,
-): string {
-  if (options.errors === "data") return `withPlainHeaders(${call})`;
-
-  return `successOrThrow(${call}, (failure) => new ContractError(${JSON.stringify(operation.operationId)}, failure))`;
 }
 
 function staleTimeMember(operation: QueryOperation, options: ReactQueryOptions): string {

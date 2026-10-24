@@ -1,0 +1,31 @@
+  # An RTK Query api over the fetch client, with the opt-in `itemsOf`.
+  - id: queries
+    use: "@seampact/codegen-react"
+    apis: [tasks, tasksService]
+    options:
+      query: rtk
+    artefacts:
+      itemsOf: true
+    link:
+      client: client
+  # The same api without the refresh after a write and without hooks: `createApi` from the core entry.
+  - id: queriesPlain
+    use: "@seampact/codegen-react"
+    apis: [tasks]
+    options:
+      query: rtk
+      invalidate: "off"
+    artefacts:
+      hooks: false
+    link:
+      client: client
+  # Declared errors returned as data, with no "use client" line.
+  - id: queriesData
+    use: "@seampact/codegen-react"
+    apis: [tasks]
+    options:
+      query: rtk
+      errors: data
+      useClientDirective: "off"
+    link:
+      client: client
