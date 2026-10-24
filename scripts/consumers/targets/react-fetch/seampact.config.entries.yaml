@@ -1,0 +1,28 @@
+  # Plain fetch hooks over the fetch client: React state and effects, no query library.
+  - id: queries
+    use: "@seampact/codegen-react"
+    apis: [tasks, tasksService]
+    options:
+      query: fetch
+    link:
+      client: client
+  # The same fetchers without hooks, as a server component reads its data.
+  - id: queriesPlain
+    use: "@seampact/codegen-react"
+    apis: [tasks]
+    options:
+      query: fetch
+    artefacts:
+      hooks: false
+    link:
+      client: client
+  # Declared errors returned as data, with no "use client" line.
+  - id: queriesData
+    use: "@seampact/codegen-react"
+    apis: [tasks]
+    options:
+      query: fetch
+      errors: data
+      useClientDirective: "off"
+    link:
+      client: client

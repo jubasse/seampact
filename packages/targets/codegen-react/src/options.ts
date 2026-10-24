@@ -3,7 +3,8 @@ import { below, type ParseOptionsOutcome, type Refusal } from "@seampact/codegen
 // The react target's options (ADR 0021 "Options, artefacts and their defaults"): the query library, which is
 // required, and the switches that turn off each behaviour shaping the app's cache or data.
 
-export const QUERY_LIBRARIES = ["tanstack", "swr", "rtk"] as const;
+// `fetch` is no library: hooks built on React's own state and effects, with no cache.
+export const QUERY_LIBRARIES = ["tanstack", "swr", "rtk", "fetch"] as const;
 
 export type QueryLibrary = (typeof QUERY_LIBRARIES)[number];
 
@@ -46,6 +47,9 @@ const OPTIONS_LOCATION = { member: "" };
 // The libraries `staleTime: contract` has no per-query place in (ADR 0021 "SWR", "RTK Query").
 const NO_STALE_TIME: readonly QueryLibrary[] = ["swr", "rtk"];
 const RTK: QueryLibrary = "rtk";
+const FETCH: QueryLibrary = "fetch";
+// The options only a query library's cache gives a meaning to (ADR 0021 "Plain fetch").
+const CACHE_ONLY_SWITCHES: readonly SwitchKey[] = ["staleTime", "invalidate", "infinite"];
 
 /** Parses the options, every unknown key or value, a missing `query` and each unsupported pair refused by name. */
 export function parseReactQueryOptions(raw: unknown): ParseOptionsOutcome<ReactQueryOptions> {
@@ -67,14 +71,45 @@ export function parseReactQueryOptions(raw: unknown): ParseOptionsOutcome<ReactQ
   const switches = switchValues(raw, refusals);
   const keysRoot = keysRootOf(raw, refusals);
 
-  if (query !== undefined) refuseUnsupportedPairs(query, switches, keysRoot, refusals);
+  if (query === FETCH) refuseCacheOptions(raw, keysRoot, refusals);
+  else if (query !== undefined) refuseUnsupportedPairs(query, switches, keysRoot, refusals);
 
   if (refusals.length > 0 || query === undefined) return refused(refusals);
 
+  // Plain fetch has no cache to refresh and no infinite hook.
+  const librarySwitches: SwitchValues =
+    query === FETCH ? { ...switches, invalidate: "off", infinite: "off" } : switches;
+
   return {
     status: "parsed",
-    options: { query, ...switches, ...(keysRoot === undefined ? {} : { keysRoot }) },
+    options: { query, ...librarySwitches, ...(keysRoot === undefined ? {} : { keysRoot }) },
   };
+}
+
+// With `query: fetch` there is no cache: freshness, invalidation, infinite queries and keys are refused when set.
+function refuseCacheOptions(
+  raw: Readonly<Record<string, unknown>>,
+  keysRoot: string | undefined,
+  refusals: Refusal[],
+): void {
+  for (const key of CACHE_ONLY_SWITCHES.filter((each) => Object.hasOwn(raw, each))) {
+    refusals.push({
+      code: `options.${key}.unsupported`,
+      message: `The option '${key}' needs a query library's cache, which 'query: fetch' has not.`,
+      fix: `Drop '${key}', or choose a query library: ${QUERY_LIBRARIES.filter((each) => each !== FETCH).join(", ")}.`,
+      member: below(OPTIONS_LOCATION, key).member,
+    });
+  }
+
+  if (keysRoot === undefined) return;
+
+  refusals.push({
+    code: "options.keys.root.unsupported",
+    message:
+      "The option 'keys.root' has no meaning with 'query: fetch': plain fetch hooks have no keys.",
+    fix: "Drop 'keys.root'.",
+    member: below(OPTIONS_LOCATION, KEYS_KEY, ROOT_KEY).member,
+  });
 }
 
 function queryLibraryOf(

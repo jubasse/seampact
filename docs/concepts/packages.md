@@ -2,7 +2,7 @@
 
 You install the core, then only the generators your project uses. Installing the CLI pulls no code generator.
 
-Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codegen-yup`, `codegen-class-validator`, `codegen-fetch`, `codegen-react` (TanStack Query, SWR, RTK Query), `codegen-nestjs`, `codegen-express`, `codegen-fastify`, `codegen-adonis` and `codegen-hono`, with the signed-webhook and in-memory idempotency helpers. Every other package below is planned for 1.0 unless a row says it comes later.
+Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codegen-yup`, `codegen-class-validator`, `codegen-fetch`, `codegen-react` (TanStack Query, SWR, RTK Query, or no library), `codegen-nestjs`, `codegen-express`, `codegen-fastify`, `codegen-adonis` and `codegen-hono`, with the signed-webhook and in-memory idempotency helpers. Every other package below is planned for 1.0 unless a row says it comes later.
 
 ## Core (npm)
 
@@ -24,7 +24,7 @@ Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codege
 | validators | `@seampact/codegen-zod`, `@seampact/codegen-yup` or `@seampact/codegen-class-validator` |
 | a typed `fetch` client | `@seampact/codegen-fetch` |
 | a server boundary | `@seampact/codegen-nestjs`, `@seampact/codegen-fastify`, `@seampact/codegen-express` or `@seampact/codegen-adonis`, plus `@seampact/hooks` unless the target vendors its types |
-| React hooks (TanStack Query, SWR or RTK Query) | `@seampact/codegen-react` |
+| React hooks (TanStack Query, SWR, RTK Query or no library) | `@seampact/codegen-react` |
 | an Angular or Vue client (planned) | `@seampact/codegen-angular` or `@seampact/codegen-vue` |
 | a Web-standard server boundary (Hono 4) | `@seampact/codegen-hono` |
 | mock handlers for tests and local work (planned) | `@seampact/codegen-msw` |

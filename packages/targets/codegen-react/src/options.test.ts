@@ -80,13 +80,40 @@ test("`staleTime: contract` is refused with SWR and RTK, `keys.root` with RTK", 
   ]);
 });
 
-test("every query library the compatibility matrix selects by is a `query` value", () => {
+test("`query: fetch` refuses the cache options by name and parses without refresh or infinite queries", () => {
+  expect(
+    refusalCodes({
+      query: "fetch",
+      staleTime: "off",
+      invalidate: "resource",
+      infinite: "on",
+      keys: { root: "tasks" },
+    }),
+  ).toEqual([
+    "options.staleTime.unsupported",
+    "options.invalidate.unsupported",
+    "options.infinite.unsupported",
+    "options.keys.root.unsupported",
+  ]);
+  expect(parseReactQueryOptions({ query: "fetch", errors: "data" })).toEqual({
+    status: "parsed",
+    options: {
+      query: "fetch",
+      errors: "data",
+      invalidate: "off",
+      staleTime: "off",
+      infinite: "off",
+      useClientDirective: "on",
+    },
+  });
+});
+
+test("the compatibility matrix selects a library for every `query` value but `fetch`", () => {
   const selectorValues = clientTargetCompatibility("@seampact/codegen-react").libraries?.map(
     (library) => library.selectedBy?.value,
   );
 
-  expect(selectorValues?.every((value) => QUERY_LIBRARIES.some((each) => each === value))).toBe(
-    true,
+  expect(new Set(selectorValues)).toEqual(
+    new Set(QUERY_LIBRARIES.filter((library) => library !== "fetch")),
   );
-  expect(new Set(selectorValues)).toEqual(new Set(QUERY_LIBRARIES));
 });

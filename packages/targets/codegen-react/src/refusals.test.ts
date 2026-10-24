@@ -27,12 +27,13 @@ function clientLink(errorStyle: ClientDescriptor["errorStyle"]): GenerateRequest
 async function refusalCodes(
   options: object,
   errorStyle: ClientDescriptor["errorStyle"] = "result",
+  artefacts: ReadonlySet<string> = new Set(["queries", "hooks"]),
 ) {
   const outcome = await target.generate({
     ir,
     options,
     links: clientLink(errorStyle),
-    artefacts: new Set(["queries", "hooks"]),
+    artefacts,
   });
 
   return outcome.status === "refused" ? outcome.refusals.map((refusal) => refusal.code) : [];
@@ -74,7 +75,7 @@ test("the reference generates its runtime, queries, hooks and index", async () =
   ]);
 });
 
-test("SWR generates queries and hooks, RTK Query one api module, each beside the runtime and an index", async () => {
+test("SWR and plain fetch generate queries and hooks, RTK Query one api module, each beside the runtime and an index", async () => {
   const pathsOf = async (query: string) => {
     const outcome = await target.generate({
       ir,
@@ -90,6 +91,18 @@ test("SWR generates queries and hooks, RTK Query one api module, each beside the
 
   expect(await pathsOf("swr")).toEqual(["hooks.ts", "index.ts", "queries.ts", "query-runtime.ts"]);
   expect(await pathsOf("rtk")).toEqual(["api.ts", "index.ts", "query-runtime.ts"]);
+  expect(await pathsOf("fetch")).toEqual([
+    "hooks.ts",
+    "index.ts",
+    "queries.ts",
+    "query-runtime.ts",
+  ]);
+});
+
+test("plain fetch refuses `itemsOf` by name: it has no infinite query", async () => {
+  expect(
+    await refusalCodes({ query: "fetch" }, "result", new Set(["queries", "hooks", "itemsOf"])),
+  ).toEqual(["artefacts.itemsOf.unsupported"]);
 });
 
 test("without hooks and itemsOf the index re-exports the queries and the runtime types only", async () => {
