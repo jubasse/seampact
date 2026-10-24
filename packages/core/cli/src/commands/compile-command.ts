@@ -96,13 +96,13 @@ async function writeIrFiles(
   io.stdout(`Wrote ${apis.length} IR file(s) to ${directory}.\n`);
 }
 
-interface PlannedEditorSchemas {
+export interface PlannedEditorSchemas {
   readonly problems: CliProblem[];
   readonly plans: { readonly name: string; readonly plan: EditorSchemasPlan }[];
 }
 
 // Each `path` source gets the editor schemas of its workspace; a bundle source holds no file anyone edits.
-async function planSourcesEditorSchemas(
+export async function planSourcesEditorSchemas(
   config: Pick<LoadedAppConfig, "sources">,
   names: readonly string[],
   apis: readonly CompiledApi[],
