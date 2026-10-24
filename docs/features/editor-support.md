@@ -2,6 +2,8 @@
 
 Your editor can check contract keys and the names you declare, and complete them as you type.
 
+`seampact init` sets this up in a new project. In an existing one, `npx seampact init --modelines` writes the first line below in every contract file, and the schemas.
+
 Run once after a checkout, and again after you declare a new name:
 
 ```sh

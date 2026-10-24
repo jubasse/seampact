@@ -1,6 +1,6 @@
 # Generate the code and run it
 
-The config tells seampact where the contract is and what to generate. Create `seampact.config.yaml` in the app folder.
+The config tells seampact where the contract is and what to generate. Replace `seampact.config.yaml`, which `init` wrote, with this one.
 
 ```yaml
 outDir: src/__generated__

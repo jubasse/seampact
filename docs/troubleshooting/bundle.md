@@ -8,6 +8,7 @@ A bundle is a contract packed to share. See [Sharing a contract](../features/sha
 |---|---|
 | `bundle.integrity-mismatch`, `bundle.pin-missing`, `bundle.pin-mismatch` | The bundle is not the one you pinned. Pin the `integrity` the publisher printed, or ask the publisher whether the release changed. |
 | `bundle.manifest-*`, `bundle.file-*`, `bundle.too-*`, `bundle.ir-*` | The bundle is damaged or was written by another seampact version. Download it again. If it still fails, rebuild it with `seampact bundle`. |
+| `bundle.maven-jvm-only` | The npm CLI does not read `maven` sources. Run `generate` and `check` with the Gradle or Maven plugin, or use a `package`, `release` or `git` source. |
 
 ## Downloading it
 

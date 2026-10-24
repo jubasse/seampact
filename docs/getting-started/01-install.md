@@ -2,10 +2,10 @@
 
 Create the app and install seampact from your checkout.
 
-Create the folder and the `contract` and `src` folders in it.
+Create the folder and the `src` folder in it.
 
 ```sh
-mkdir -p ~/src/notes-app/contract ~/src/notes-app/src
+mkdir -p ~/src/notes-app/src
 cd ~/src/notes-app
 ```
 
@@ -43,6 +43,14 @@ cd ~/src/notes-app && pnpm install
 ```
 
 You see `install-into: 27 packages and packs in .../vendor/seampact`, then pnpm installs them.
+
+Start the project.
+
+```sh
+npx seampact init
+```
+
+`init` writes `seampact.config.yaml`, a small example contract in `contract/api.yaml`, the editor schemas in `contract/.seampact/schemas`, and `.seampact/` in `.gitignore`. You see `Created .gitignore.` among its lines. `npx seampact init --blank` writes the api header alone instead of the example.
 
 Create `tsconfig.json`. NestJS decorators need `experimentalDecorators`.
 

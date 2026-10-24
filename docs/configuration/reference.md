@@ -26,7 +26,8 @@ One entry per name. Write the keys of one form.
 | `release.url` | string | none | A contract published as a release asset. |
 | `git.url`, `git.tag` | string | none | A contract in a git repository, at a tag. |
 | `git.directory` | string | the repository root | The folder of the contract in the repository. |
-| `integrity` | string | none | The `sha256-` hash of the bundle. For `package`, `release` and `git`. |
+| `maven` | string | none | A contract published as a Maven artefact, `<groupId>:<artifactId>:<version>`, with a release version (no `+`, range, `latest.*` or `-SNAPSHOT`). Read by the Gradle and Maven plugins only. Under `allowLocal: false`, an artefact from `mavenLocal()` or a `file:` repository counts as local. |
+| `integrity` | string | none | The `sha256-` hash of the bundle. For `package`, `release`, `git` and `maven`. |
 
 ## Target entries
 
