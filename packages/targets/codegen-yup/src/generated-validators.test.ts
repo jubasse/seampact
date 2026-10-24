@@ -495,13 +495,17 @@ describe("a required opaque member: absent is refused, null is valid", () => {
 });
 
 describe("native rules", () => {
-  test("yup's own max counts UTF-16 units, so 200 emoji are too long a title", async () => {
-    const native = await generateAndImport(goldenIr(), "native-root", "native");
-    const emojiTitle = createTaskInput({ title: "\u{1F600}".repeat(200) });
+  test(
+    "yup's own max counts UTF-16 units, so 200 emoji are too long a title",
+    async () => {
+      const native = await generateAndImport(goldenIr(), "native-root", "native");
+      const emojiTitle = createTaskInput({ title: "\u{1F600}".repeat(200) });
 
-    expect(await rules(native.operationInputs.CreateTaskInputSchema, emojiTitle)).toEqual([
-      "maxLength",
-    ]);
-    expect(await rules(operationInputs.CreateTaskInputSchema, emojiTitle)).toEqual([]);
-  });
+      expect(await rules(native.operationInputs.CreateTaskInputSchema, emojiTitle)).toEqual([
+        "maxLength",
+      ]);
+      expect(await rules(operationInputs.CreateTaskInputSchema, emojiTitle)).toEqual([]);
+    },
+    SETUP_TIMEOUT_MILLISECONDS,
+  );
 });

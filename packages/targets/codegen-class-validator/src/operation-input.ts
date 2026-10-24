@@ -1,7 +1,6 @@
 import type {
   BodyPlan,
   FieldPlan,
-  ModuleSource,
   ObjectPlan,
   OperationInputPlan,
   RulesMode,
