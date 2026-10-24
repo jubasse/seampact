@@ -162,6 +162,10 @@
             }
           }
         },
+        "maven": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+:[A-Za-z0-9_.+-]+$"
+        },
         "integrity": {
           "type": "string",
           "pattern": "^sha256-"
@@ -185,6 +189,9 @@
                 "required": ["git"]
               },
               {
+                "required": ["maven"]
+              },
+              {
                 "required": ["integrity"]
               }
             ]
@@ -202,6 +209,9 @@
               },
               {
                 "required": ["git"]
+              },
+              {
+                "required": ["maven"]
               }
             ]
           }
@@ -221,6 +231,9 @@
               },
               {
                 "required": ["git"]
+              },
+              {
+                "required": ["maven"]
               }
             ]
           }
@@ -240,6 +253,31 @@
               },
               {
                 "required": ["release"]
+              },
+              {
+                "required": ["maven"]
+              }
+            ]
+          }
+        },
+        {
+          "required": ["maven"],
+          "not": {
+            "anyOf": [
+              {
+                "required": ["path"]
+              },
+              {
+                "required": ["package"]
+              },
+              {
+                "required": ["version"]
+              },
+              {
+                "required": ["release"]
+              },
+              {
+                "required": ["git"]
               }
             ]
           }

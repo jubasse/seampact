@@ -41,15 +41,22 @@ public object EntryView {
         }
 
     /**
-     * The sources the JVM entries use (ADR 0011: a source no entry uses is never resolved): each source a
-     * `<source>/<api>` names and, when an api is named alone, every source, since only a source's IR tells its apis.
+     * The sources the JVM entries use (ADR 0011: a source no entry uses is never resolved), as the Node CLI's
+     * `sourcesHoldingRefs`: each source a `<source>/<api>` names and, for an api named alone, each source that may
+     * hold it: a `path` source whose `workspace.yaml` lists it or cannot be read (its compile then says why), and
+     * every bundle source, whose apis only its manifest tells.
      */
     public fun usedSources(config: AppConfig): List<String> {
         val refs = config.entries.flatMap { it.apiRefs }.map(::parseApiRef)
         val named = refs.mapNotNull { it.source }.toSet()
-        val anyAlone = refs.any { it.source == null }
+        val bareApis = refs.filter { it.source == null }.map { it.api }.toSet()
 
-        return config.sources.keys.filter { anyAlone || it in named }
+        return config.sources.filter { (name, source) -> name in named || (bareApis.isNotEmpty() && mayHoldAny(source, bareApis)) }.keys.toList()
+    }
+
+    private fun mayHoldAny(source: ConfigSource, apis: Set<String>): Boolean = when (source) {
+        is ConfigSource.Bundle -> true
+        is ConfigSource.Local -> workspaceApiNames(source.directory)?.any { it in apis } ?: true
     }
 
     /** The view of [entry] over the apis of its sources. */

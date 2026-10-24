@@ -6,16 +6,24 @@ import java.net.http.HttpClient
 import java.nio.file.Files
 import java.nio.file.Path
 
+/** Resolves a Maven artefact through the build's own repositories to its local file (the plugin's resolver). */
+public fun interface MavenArtefactResolver {
+    /** The local file of [coordinates], `groupId:artifactId:version`; an [IOException] when it cannot be resolved. */
+    @Throws(IOException::class)
+    public fun resolve(coordinates: String): Path
+}
+
 /**
  * A bundle source fetched from its channel and put through the pinned-bundle check, so its IR is read with no
  * compiler run (ADR 0011, as the Node runner's `fetch.ts`): a release asset over HTTPS, a git tag with the system
- * `git`, or a tarball the build resolved as a Maven artefact (ADR 0010). A fetched bundle is cached by its pinned
+ * `git`, or a Maven artefact the build resolves through [mavenArtefacts] (ADR 0010). A fetched bundle is cached by its pinned
  * integrity under [cacheDirectory] once it passed, and the check runs again on every cache read. A `package`
  * source is the Node runner's: it is refused by name, since no JVM consumer needs the npm registry yet.
  */
 public class BundleFetcher(
     private val cacheDirectory: Path,
     private val environment: Map<String, String>,
+    private val mavenArtefacts: MavenArtefactResolver,
     private val httpClient: HttpClient = releaseHttpClient(),
 ) {
     private val cache = BundleCache(cacheDirectory)
@@ -61,10 +69,15 @@ public class BundleFetcher(
         is Download.Bytes -> extracted(download.bytes)
     }
 
-    // The build resolved the artefact through its own repositories; its bytes are checked like a downloaded tarball.
+    // The build resolves the artefact through its own repositories; its bytes are checked like a downloaded tarball.
     private fun extractArtefact(source: BundleSource.MavenArtefact): Fetched {
+        val tarball = try {
+            mavenArtefacts.resolve(source.coordinates)
+        } catch (error: IOException) {
+            return Fetched.Failed(artefactUnreadable(source, error))
+        }
         val size = try {
-            Files.size(source.tarball)
+            Files.size(tarball)
         } catch (error: IOException) {
             return Fetched.Failed(artefactUnreadable(source, error))
         }
@@ -81,7 +94,7 @@ public class BundleFetcher(
         }
 
         val bytes = try {
-            Files.readAllBytes(source.tarball)
+            Files.readAllBytes(tarball)
         } catch (error: IOException) {
             return Fetched.Failed(artefactUnreadable(source, error))
         }
@@ -121,14 +134,14 @@ public class BundleFetcher(
         fun packageUnsupported(source: BundleSource.Package): BundleFailure = BundleFailure(
             BundleFailureCode.PACKAGE_UNSUPPORTED,
             "The bundle source ${source.describe()} is an npm package; a JVM build does not read the npm registry yet, it comes once a JVM app needs it.",
-            "Use the same bundle as a release asset (`release: { url }`), a git tag (`git: { url, tag, directory }`) or a Maven artefact, with the same integrity.",
+            "Use the same bundle as a release asset (`release: { url }`), a git tag (`git: { url, tag, directory }`) or a Maven artefact (`maven`), with the same integrity.",
         )
 
         fun artefactUnreadable(source: BundleSource.MavenArtefact, error: IOException): BundleFailure = BundleFailure(
             BundleFailureCode.ARTEFACT_UNREADABLE,
-            "The ${source.describe()} resolved to ${source.tarball}, which cannot be read: ${error.message ?: error.javaClass.simpleName}.",
-            "Check that the build resolves the artefact to its bundle tarball, then run again.",
-            source.tarball.toString(),
+            "The ${source.describe()} cannot be resolved or read: ${error.message ?: error.javaClass.simpleName}.",
+            "Check that the build's repositories hold the artefact and that it is the bundle tarball, then run again.",
+            source.coordinates,
         )
     }
 }

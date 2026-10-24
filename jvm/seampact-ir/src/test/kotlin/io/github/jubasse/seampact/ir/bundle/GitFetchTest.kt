@@ -56,7 +56,7 @@ class GitFetchTest {
     private fun source() = BundleSource.Git(repository.toString(), "v1", "dist/bundle", BundleFixture.integrity)
 
     private fun fetch(source: BundleSource.Git, policy: LocalSourcePolicy): BundleVerifyResult =
-        BundleFetcher(workspace.resolve("cache"), System.getenv()).fetch(source, workspace, policy)
+        BundleFetcher(workspace.resolve("cache"), System.getenv(), { error("no Maven artefact in this test") }).fetch(source, workspace, policy)
 
     private fun codes(result: BundleVerifyResult): List<String> = assertIs<BundleVerifyResult.Refused>(result).failures.map { it.code.code }
 

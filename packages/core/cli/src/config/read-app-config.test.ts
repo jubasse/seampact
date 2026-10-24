@@ -208,6 +208,18 @@ test("refuses a package source that is not an npm package name", async () => {
   expect(scoped).toMatchObject({ status: "read" });
 });
 
+test("reads a Maven artefact source and refuses a coordinate without a version", async () => {
+  const read = await readConfigText(
+    "sources:\n  contracts: { maven: 'com.acme:tasks-contract:1.0.0', integrity: sha256-x }\ntargets:\n  - { id: t, use: x, api: a }\n",
+  );
+  const refused = await readConfigText(
+    "sources:\n  contracts: { maven: 'com.acme:tasks-contract' }\ntargets:\n  - { id: t, use: x, api: a }\n",
+  );
+
+  expect(read).toMatchObject({ status: "read" });
+  expect(refused).toMatchObject({ status: "refused", problems: [{ code: "config.schema" }] });
+});
+
 const ROOT_FILES = {
   "seampact.config.yaml":
     "apps: [apps/api]\nallowLocal: false\nsources:\n  shared: { path: ./contracts }\n",

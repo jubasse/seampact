@@ -103,7 +103,7 @@ private fun oneOfSentences(path: KeyPath): Pair<String, String> {
 
     return when {
         first == "sources" -> Pair(
-            "A source takes one form: 'path', 'package' with 'version', 'release' or 'git'; 'integrity' goes with a bundle form only.",
+            "A source takes one form: 'path', 'package' with 'version', 'release', 'git' or 'maven'; 'integrity' goes with a bundle form only.",
             "Keep the keys of one form (ADR 0011 'The app config').",
         )
         path.lastOrNull() == BOOT_CHECK_ARTEFACT -> Pair(

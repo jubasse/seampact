@@ -306,7 +306,7 @@ function oneOfSentences(path: KeyPath): { message: string; fix: string } {
   if (first === "sources") {
     return {
       message:
-        "A source takes one form: 'path', 'package' with 'version', 'release' or 'git'; 'integrity' goes with a bundle form only.",
+        "A source takes one form: 'path', 'package' with 'version', 'release', 'git' or 'maven'; 'integrity' goes with a bundle form only.",
       fix: "Keep the keys of one form (ADR 0011 'The app config').",
     };
   }

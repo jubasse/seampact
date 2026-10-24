@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpsConfigurator
 import com.sun.net.httpserver.HttpsServer
 import io.github.jubasse.seampact.ir.config.LocalSourcePolicy
+import java.io.FileNotFoundException
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
 import java.nio.file.Files
@@ -95,19 +96,27 @@ class ReleaseFetchTest {
 
     @Test
     fun checksAMavenArtefactTheBuildResolvedAndRefusesAPackage() {
-        val tarball = workspace.resolve("contract-1.0.0.tgz")
-        Files.write(tarball, BundleFixture.tarball)
-        val artefact = BundleSource.MavenArtefact("com.acme:contract:1.0.0", tarball, BundleFixture.integrity)
+        Files.write(workspace.resolve("contract-1.0.0.tgz"), BundleFixture.tarball)
+        val artefact = BundleSource.MavenArtefact("com.acme:contract:1.0.0", BundleFixture.integrity)
         assertIs<BundleVerifyResult.Verified>(fetcher().fetch(artefact, workspace, LocalSourcePolicy.ALLOW))
 
-        val missing = artefact.copy(tarball = workspace.resolve("none.tgz"), integrity = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+        val missing = BundleSource.MavenArtefact("com.acme:none:1.0.0", "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
         assertEquals(listOf("bundle.artefact-unreadable"), codes(fetcher().fetch(missing, workspace, LocalSourcePolicy.ALLOW)))
 
         val npm = BundleSource.Package("@acme/contract", "1.0.0", BundleFixture.integrity)
         assertEquals(listOf("bundle.package-unsupported"), codes(fetcher().fetch(npm, workspace, LocalSourcePolicy.ALLOW)))
     }
 
-    private fun fetcher() = BundleFetcher(workspace.resolve("cache"), emptyMap(), client)
+    // The build's resolver, stood in by a directory holding `<artifactId>-<version>.tgz`.
+    private fun fetcher() = BundleFetcher(workspace.resolve("cache"), emptyMap(), ::resolveArtefact, client)
+
+    private fun resolveArtefact(coordinates: String): Path {
+        val (_, artifactId, version) = coordinates.split(":")
+        val file = workspace.resolve("$artifactId-$version.tgz")
+        if (Files.notExists(file)) throw FileNotFoundException("no artefact $coordinates in the test repository")
+
+        return file
+    }
 
     private fun url(path: String) = "https://127.0.0.1:${server.address.port}$path"
 

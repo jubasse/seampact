@@ -19,6 +19,7 @@ import {
   referenceBuildOptions,
   temporaryDirectory,
 } from "./bundle.test-support.js";
+import { fetchBundle } from "./fetch.js";
 import { writeBundle } from "./write.js";
 
 function filesUnder(directory: string): string[] {
@@ -238,4 +239,14 @@ test("a directory output must be new or empty", () => {
     ok: false,
     failures: [{ code: "bundle.output-not-empty", file: output }],
   });
+});
+
+test("refuses a Maven artefact source by name, naming the channels the Node CLI reads", async () => {
+  const fetched = await fetchBundle(
+    { maven: "com.acme:tasks-contract:1.0.0", integrity: "sha256-x" },
+    { baseDirectory: ".", localSources: "allow" },
+  );
+
+  expect(fetched).toMatchObject({ ok: false, failures: [{ code: "bundle.maven-jvm-only" }] });
+  expect(JSON.stringify(fetched)).toContain("com.acme:tasks-contract:1.0.0");
 });

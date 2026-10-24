@@ -153,8 +153,10 @@ private fun configSourceOf(directory: Path, source: JsonObject): ConfigSource {
     val integrity = source.stringAt("integrity")
     val release = source["release"] as? JsonObject
     val git = source["git"] as? JsonObject
+    val maven = source.stringAt("maven")
 
     val bundle = when {
+        maven != null -> BundleSource.MavenArtefact(maven, integrity)
         release != null -> BundleSource.Release(release.requiredStringAt("url"), integrity)
         git != null -> BundleSource.Git(git.requiredStringAt("url"), git.requiredStringAt("tag"), git.stringAt("directory"), integrity)
         else -> BundleSource.Package(source.requiredStringAt("package"), source.requiredStringAt("version"), integrity)

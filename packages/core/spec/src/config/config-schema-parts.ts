@@ -9,10 +9,10 @@ export const NON_EMPTY_STRING: JsonSchema = { type: "string", minLength: 1 };
 
 export const NAME_LIST: JsonSchema = { type: "array", items: NON_EMPTY_STRING, uniqueItems: true };
 
-const SOURCE_KEYS = ["path", "package", "version", "release", "git", "integrity"] as const;
+const SOURCE_KEYS = ["path", "package", "version", "release", "git", "maven", "integrity"] as const;
 
-// One source form, with no key of another: `path`, or `package` with `version`, `release` or `git` with an optional
-// `integrity`.
+// One source form, with no key of another: `path`, or `package` with `version`, `release`, `git` or `maven` with an
+// optional `integrity`.
 function sourceForm(required: readonly string[], allowed: readonly string[]): JsonSchema {
   const others = SOURCE_KEYS.filter((key) => !allowed.includes(key));
 
@@ -27,7 +27,11 @@ function sourceForm(required: readonly string[], allowed: readonly string[]): Js
 const NPM_PACKAGE_NAME_PATTERN = "^(?:@[a-z0-9~-][a-z0-9._~-]*/)?[a-z0-9~-][a-z0-9._~-]*$";
 const NPM_PACKAGE_NAME_LENGTH_MAX = 214;
 
-// One contract source: a workspace directory or one of the three bundle forms (ADR 0011 "The app config").
+// A Maven artefact's `groupId:artifactId:version`, the coordinate a JVM build resolves through its repositories.
+const MAVEN_COORDINATE_PATTERN = "^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+:[A-Za-z0-9_.+-]+$";
+
+// One contract source: a workspace directory or one of the bundle forms (ADR 0011 "The app config"); the `maven`
+// form is read by the JVM plugins only (ADR 0010 "The contract bundle as a Maven artefact").
 export const SOURCE_SCHEMA: JsonSchema = {
   type: "object",
   additionalProperties: false,
@@ -51,6 +55,7 @@ export const SOURCE_SCHEMA: JsonSchema = {
       required: ["url", "tag"],
       properties: { url: NON_EMPTY_STRING, tag: NON_EMPTY_STRING, directory: NON_EMPTY_STRING },
     },
+    maven: { type: "string", pattern: MAVEN_COORDINATE_PATTERN },
     integrity: { type: "string", pattern: "^sha256-" },
   },
   oneOf: [
@@ -58,6 +63,7 @@ export const SOURCE_SCHEMA: JsonSchema = {
     sourceForm(["package", "version"], ["package", "version", "integrity"]),
     sourceForm(["release"], ["release", "integrity"]),
     sourceForm(["git"], ["git", "integrity"]),
+    sourceForm(["maven"], ["maven", "integrity"]),
   ],
 };
 

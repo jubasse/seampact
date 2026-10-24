@@ -15,6 +15,7 @@ export const BUNDLE_FETCH_FAILURE_CODES = [
   "bundle.git-failed",
   "bundle.source-local",
   "bundle.cache-invalid",
+  "bundle.maven-jvm-only",
   "bundle.import-api-missing",
 ] as const;
 
@@ -30,6 +31,8 @@ export function bundleSourceText(source: BundleSource): string {
   if ("package" in source) return `package '${source.package}' version ${source.version}`;
 
   if ("release" in source) return `release '${source.release.url}'`;
+
+  if ("maven" in source) return `Maven artefact '${source.maven}'`;
 
   const directory =
     source.git.directory === undefined ? "" : `, directory '${source.git.directory}'`;

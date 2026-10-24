@@ -1,7 +1,5 @@
 package io.github.jubasse.seampact.ir.bundle
 
-import java.nio.file.Path
-
 /**
  * Where a bundle comes from (ADR 0011 "Channels", ADR 0010 "The contract bundle as a Maven artefact"), with the
  * [integrity] the config or the build file pins; a missing pin fails the check and prints the value to pin.
@@ -32,10 +30,10 @@ public sealed interface BundleSource {
     }
 
     /**
-     * A bundle tarball the build resolved as the Maven artefact [coordinates] (`group:artifact:version`) through its
-     * own repositories, at [tarball].
+     * A bundle tarball published as the Maven artefact [coordinates] (`groupId:artifactId:version`), which the build
+     * resolves through its own repositories ([MavenArtefactResolver]).
      */
-    public data class MavenArtefact(val coordinates: String, val tarball: Path, override val integrity: String?) : BundleSource {
+    public data class MavenArtefact(val coordinates: String, override val integrity: String?) : BundleSource {
         override fun describe(): String = "Maven artefact '$coordinates'"
     }
 }

@@ -52,10 +52,15 @@ class ConfigReaderTest {
     }
 
     @Test
-    fun resolvesPathSourcesAgainstTheConfigDirectory() {
-        val config = read("sources: { local: { path: ../contract } }\n")
+    fun resolvesPathSourcesAgainstTheConfigDirectoryAndReadsAMavenSource() {
+        val config = read("sources:\n  local: { path: ../contract }\n  published: { maven: 'com.acme:tasks-contract:1.0.0', integrity: sha256-x }\n")
 
         assertEquals(ConfigSource.Local(workspace.resolve("contract")), config.sources.getValue("local"))
+        assertEquals(
+            ConfigSource.Bundle(BundleSource.MavenArtefact("com.acme:tasks-contract:1.0.0", "sha256-x")),
+            config.sources.getValue("published"),
+        )
+        assertEquals(listOf("config.schema"), refused("sources: { published: { maven: 'com.acme:tasks-contract' } }\n").map { it.code })
     }
 
     @Test

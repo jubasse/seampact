@@ -1,6 +1,10 @@
 import { existsSync, rmSync } from "node:fs";
 import type { BundleManifest } from "@seampact/spec/bundle";
-import type { BundleSource, ReleaseBundleSource } from "@seampact/spec/config";
+import type {
+  BundleSource,
+  MavenBundleSource,
+  ReleaseBundleSource,
+} from "@seampact/spec/config";
 import type { ContractIR } from "@seampact/spec/ir";
 import { bundleCacheDirectory, bundleCacheEntry, storeBundleCacheEntry } from "./cache.js";
 import type { BundleSourceFailure } from "./fetch-failure.js";
@@ -44,6 +48,8 @@ export async function fetchBundle(
   source: BundleSource,
   options: BundleFetchOptions,
 ): Promise<BundleFetchResult> {
+  if ("maven" in source) return { ok: false, failures: [mavenJvmOnly(source)] };
+
   if ("package" in source) {
     const directory = installedBundlePackage(source, options.baseDirectory);
 
@@ -86,6 +92,15 @@ export async function fetchBundle(
   } finally {
     fetched.remove();
   }
+}
+
+// A Maven artefact is resolved through a JVM build's own repositories (ADR 0010), which the Node CLI has not.
+function mavenJvmOnly(source: MavenBundleSource): BundleSourceFailure {
+  return {
+    code: "bundle.maven-jvm-only",
+    message: `The bundle source Maven artefact '${source.maven}' is read by the Gradle and Maven plugins only; the Node CLI does not resolve Maven artefacts.`,
+    fix: "Point this source at the same bundle as a release URL (`release: { url }`), a git tag (`git: { url, tag, directory }`) or an npm package (`package`, `version`), with the same integrity.",
+  };
 }
 
 // The codes of the pinned-bundle check's step 3 (`bundle.ir-version`, `bundle.ir-revision`...).
