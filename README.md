@@ -48,7 +48,9 @@ Next: Spring Boot, Laravel, Symfony, Vue, Angular, MSW mocks.
 
 ## Example
 
-The contract:
+### Contract
+
+One YAML file describes the API:
 
 ```yaml
 schemas:
@@ -73,7 +75,11 @@ surfaces:
         ops: { get: {} }
 ```
 
-One contract. The handler in your framework:
+---
+
+### Backend
+
+The handler you write, typed by the contract, in your framework:
 
 <details open><summary>NestJS</summary>
 
@@ -162,7 +168,11 @@ export const notesEndpoints: NotesHono.NotesEndpoints = {
 
 </details>
 
-The validators, from the same `Note` schema. Pick one per app:
+---
+
+### Schemas
+
+The validators generated from the same `Note` schema. Pick one per app:
 
 <details open><summary>zod</summary>
 
@@ -285,7 +295,11 @@ export const NoteSchema = ajvStandardSchema({
 
 Planned: Spring Bean Validation for Spring Boot, validation rules for Laravel.
 
-And the client:
+---
+
+### Frontend
+
+The typed client, for any framework or none:
 
 <details open><summary>fetch</summary>
 
@@ -298,7 +312,13 @@ if (reply.ok) console.log(reply.body.title);
 
 </details>
 
-<details><summary>TanStack Query (React)</summary>
+---
+
+### Query
+
+Hooks over that client for React. SWR and RTK Query work the same way: see [React](docs/frontend/react.md).
+
+<details open><summary>TanStack Query (React)</summary>
 
 ```tsx
 const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });

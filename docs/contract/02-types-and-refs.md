@@ -26,6 +26,7 @@ enums:
 - Types are `string`, `integer`, `number`, `boolean`, `object` and `array`.
 - A property is optional unless it is in `required`. In `query`, `headers` and `id`, a name ending with `?` is optional.
 - `nullable: true` lets the value be `null`. Optional and nullable are two different things.
+- `minLength` and `maxLength` count characters (Unicode code points), as JSON Schema does: `"😀"` is one character. Every generated validator and server counts the same way.
 - A schema name starts with a capital letter. Use the name wherever a schema fits: `item: Note`, `input: CreateNote`, `noteId: NoteId`.
 - An enum needs a `reason`. It says why the values are local.
 
