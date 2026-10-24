@@ -407,8 +407,9 @@ Every page is listed in [docs/README.md](docs/README.md).
 ## Roadmap
 
 - [x] Node servers: NestJS, Express, Fastify, AdonisJS, Hono
-- [x] CLI: `generate`, `check`, `lint`, `diff`, `bundle`, `explain`, editor schemas (`compile --editor-schemas`)
-- [ ] Frontend: React hooks (TanStack Query done; SWR and RTK Query next), Vue, Angular, MSW mocks
+- [x] CLI: `init`, `generate`, `check`, `lint`, `diff`, `bundle`, `explain`, editor schemas (`compile --editor-schemas`)
+- [x] Frontend: React hooks (TanStack Query, SWR, RTK Query)
+- [ ] Frontend: Vue, Angular, MSW mocks
 - [ ] Java: Spring Boot. PHP: Laravel, Symfony, API Platform
 - [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm
 - Later: Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Python, Go, .NET, Rust ([full list](docs/roadmap.md))
