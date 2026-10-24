@@ -354,7 +354,7 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [ ] Frontend: Vue, Angular, MSW mocks
 - [ ] Java: Spring Boot. PHP: Laravel, Symfony, API Platform
 - [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm
-- [ ] Example apps per stack pairing, and an `init` wizard that creates a whole working project from pinned templates
+- [ ] Example apps per stack pairing, and an `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
 - Later: Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Python, Go, .NET, Rust ([full list](docs/roadmap.md))
 
 ## Contributing
