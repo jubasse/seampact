@@ -107,3 +107,16 @@ test("without hooks and itemsOf the index re-exports the queries and the runtime
   expect(index).not.toContain("hooks");
   expect(index).not.toMatch(/export \{\s*\}/);
 });
+
+test("a missing client link is refused, naming the fetch client provider", async () => {
+  const outcome = await target.generate({
+    ir,
+    options: { query: "tanstack" },
+    links: {},
+    artefacts: new Set(["queries"]),
+  });
+
+  expect(
+    outcome.status === "refused" ? outcome.refusals.map((refusal) => refusal.fix) : [],
+  ).toEqual(["Link `@seampact/codegen-fetch` in the target's `link` entry."]);
+});

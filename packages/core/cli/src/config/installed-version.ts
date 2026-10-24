@@ -20,10 +20,11 @@ export type InstalledVersionOutcome =
   | { status: "refused"; problem: CliProblem };
 
 /** What the generated code imports the package as, which the problems name it by. */
-export type InstalledPackageRole = "framework" | "validatorLibrary";
+export type InstalledPackageRole = "framework" | "library" | "validatorLibrary";
 
 const ROLE_LABELS: Readonly<Record<InstalledPackageRole, string>> = {
   framework: "framework package",
+  library: "library",
   validatorLibrary: "validator library",
 };
 

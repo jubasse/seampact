@@ -1,11 +1,13 @@
-// The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers of each link kind, and per server target the framework majors it is tested on or refuses and the validator styles it accepts.
+// The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers of each link kind, per server target the framework majors it is tested on or refuses and the validator styles it accepts, and per client target the framework and query library majors it is tested on and the client link styles it reads.
 // One file with no relative import, so the repository scripts that Node runs from source can import it.
 
 export type ProviderKind = "validators" | "types" | "client";
 
 export type ValidatorStyle = "standard-schema" | "class-validator";
 
-export type ProviderStyle = ValidatorStyle | "typescript" | "fetch";
+export type ClientStyle = "fetch";
+
+export type ProviderStyle = ValidatorStyle | "typescript" | ClientStyle;
 
 export interface FirstPartyProvider {
   // The id a tool selects the provider by, such as the consumer and bench `--validators <id>`.
@@ -49,6 +51,13 @@ export interface LibrarySupport {
   readonly package: string;
   readonly artefact: string;
   readonly testedMajors: readonly number[];
+  // A library only some option values import, such as the query library of a client target; absent, every entry of the target imports it.
+  readonly selectedBy?: LibrarySelector;
+}
+
+export interface LibrarySelector {
+  readonly option: string;
+  readonly value: string;
 }
 
 export interface TargetCompatibility {
@@ -57,6 +66,12 @@ export interface TargetCompatibility {
   readonly libraries?: readonly LibrarySupport[];
   readonly validatorStyles: readonly ValidatorStyle[];
   readonly ownValidators: readonly OwnValidator[];
+}
+
+// A client target consumes a `client` link instead of providing validators, so it accepts no validator style.
+export interface ClientTargetCompatibility extends TargetCompatibility {
+  // The styles of the `client` link the target reads.
+  readonly clientStyles: readonly ClientStyle[];
 }
 
 // One offered combination of a target, a framework major and a validator provider.
@@ -163,6 +178,69 @@ export const SERVER_TARGETS: readonly TargetCompatibility[] = [
     ownValidators: [],
   },
 ];
+
+export const CLIENT_TARGETS: readonly ClientTargetCompatibility[] = [
+  {
+    package: "@seampact/codegen-react",
+    framework: {
+      id: "react",
+      package: "react",
+      tested: [{ major: 19, consumer: "react-tanstack" }],
+      incompatible: [],
+    },
+    libraries: [
+      {
+        id: "tanstack-query",
+        package: "@tanstack/react-query",
+        artefact: "queries",
+        testedMajors: [5],
+        selectedBy: { option: "query", value: "tanstack" },
+      },
+      {
+        id: "swr",
+        package: "swr",
+        artefact: "queries",
+        testedMajors: [2],
+        selectedBy: { option: "query", value: "swr" },
+      },
+      {
+        id: "reduxjs-toolkit",
+        package: "@reduxjs/toolkit",
+        artefact: "queries",
+        testedMajors: [2],
+        selectedBy: { option: "query", value: "rtk" },
+      },
+      {
+        id: "react-redux",
+        package: "react-redux",
+        artefact: "queries",
+        testedMajors: [9],
+        selectedBy: { option: "query", value: "rtk" },
+      },
+    ],
+    validatorStyles: [],
+    ownValidators: [],
+    clientStyles: ["fetch"],
+  },
+];
+
+// Every target the matrix records, servers then clients.
+export const ALL_TARGETS: readonly TargetCompatibility[] = [...SERVER_TARGETS, ...CLIENT_TARGETS];
+
+// The matrix entry of a client target package, or an error naming the recorded ones.
+export function clientTargetCompatibility(targetPackage: string): ClientTargetCompatibility {
+  const entry = CLIENT_TARGETS.find((target) => target.package === targetPackage);
+
+  if (entry === undefined) {
+    const recordedPackages = CLIENT_TARGETS.map((target) => target.package).join(", ");
+
+    throw new Error(
+      `compatibility: '${targetPackage}' is not a client target of the matrix; recorded: ${recordedPackages}.`,
+    );
+  }
+
+  return entry;
+}
 
 // The matrix entry of a server target package, or an error naming the recorded ones.
 export function serverTargetCompatibility(targetPackage: string): TargetCompatibility {
