@@ -16,7 +16,19 @@ public data class SpringBootEntry(
     val artefacts: JsonObject = JsonObject(emptyMap()),
     val frameworkDocs: String? = null,
     val link: Map<String, String> = emptyMap(),
+    val frameworkRoutes: List<FrameworkRoute> = emptyList(),
 )
+
+/** One framework route the boot check accepts outside the contract (ADR 0011 `frameworkRoutes`, FR-25). */
+public data class FrameworkRoute(val path: String, val reason: String, val method: String? = null) {
+    internal fun toJson(): JsonObject = JsonObject(
+        buildMap {
+            put("path", JsonPrimitive(path))
+            put("reason", JsonPrimitive(reason))
+            method?.let { put("method", JsonPrimitive(it.uppercase(java.util.Locale.ROOT))) }
+        },
+    )
+}
 
 private const val SUPPORTED_SPRING_BOOT_MAJOR = 4
 private const val BOOT_CHECK = "bootCheck"
@@ -69,8 +81,10 @@ private fun checkArtefact(artefact: String, value: JsonElement, refusals: Mutabl
     val member = "/artefacts/$artefact"
 
     when (artefact) {
-        // The boot check that reads it comes with the boundary runtime; its value is validated by the app config schema.
-        BOOT_CHECK -> Unit
+        // Its value is validated by the app config schema; the boot check reads it from the contract table.
+        BOOT_CHECK -> if ((value as? JsonObject)?.get("hooks") == JsonPrimitive("warn")) {
+            refusals += waitingEntryMember("artefact.bootCheck.hooks.warn", "$member/hooks", "'bootCheck.hooks: warn' (start with hooks missing)", Delivery.CONSUMER)
+        }
         NATIVE_DOCS -> if (value == JsonPrimitive(true)) {
             refusals += waitingEntryMember("artefact.nativeDocs", member, "The 'nativeDocs' artefact", Delivery.SPRING_4)
         }
