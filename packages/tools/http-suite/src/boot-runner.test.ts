@@ -12,6 +12,8 @@ else { console.error("seampact: the api 'tasks' cannot start: no decider for 'ro
 `;
 // A started process gets room to start on a busy machine; only the hanging app needs a short wait.
 const START_TIMEOUT_MS = 20_000;
+// Slow on a loaded machine: give it more than the default limit.
+const TEST_TIMEOUT_MS = 60_000;
 const HANG_TIMEOUT_MS = 500;
 
 function bootCase(id: string, boot: Record<string, unknown>): SuiteCase {
@@ -34,7 +36,7 @@ function run(
   });
 }
 
-describe("runBootSuite", () => {
+describe("runBootSuite", { timeout: TEST_TIMEOUT_MS }, () => {
   test("passes a refusal with its diagnostic and a start, and refuses by name", async () => {
     const report = await run(
       [

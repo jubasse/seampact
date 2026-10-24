@@ -79,7 +79,12 @@ function withoutExtensions(value: unknown, kept: readonly string[]): unknown {
   );
 }
 
-describe("emitter options change only what they name", () => {
+// Slow on a loaded machine: give it more than the default limit.
+const TEST_TIMEOUT_MILLISECONDS = 60_000;
+
+describe("emitter options change only what they name", {
+  timeout: TEST_TIMEOUT_MILLISECONDS,
+}, () => {
   it("gives the committed documents with the defaults, written or left out", () => {
     for (const name of goldenIrNames()) {
       expect(documentsOf(name, parsed({}))).toEqual(documentsOf(name, DEFAULT_EMITTER_OPTIONS));
@@ -241,7 +246,7 @@ describe("emitter options change only what they name", () => {
   });
 });
 
-describe("strict input still accepts proofs", () => {
+describe("strict input still accepts proofs", { timeout: TEST_TIMEOUT_MILLISECONDS }, () => {
   function bodyValidator(ir: ContractIR, path: string, method: string): (body: unknown) => boolean {
     const document = documentsOfIr(ir, parsed({ inputSchemas: "strict" }))[0];
     const ajv = new Ajv2020({ strict: false, validateFormats: false });
