@@ -29,9 +29,10 @@ final class ErrorReplies {
         slots.put("nature", catalog.path("nature").asString());
         if (catalog.path("title").isString()) slots.put("title", catalog.path("title").asString());
 
-        JsonNode rendered = render(format.path("error").path("body"), slots, writeNulls);
+        JsonNode bodyTemplate = format.path("error").path("body");
+        JsonNode rendered = render(bodyTemplate, slots, writeNulls);
         if (rendered instanceof ObjectNode body
-                && MERGE_PARAMS.equals(format.path("error").path("merge").asString())
+                && MERGE_PARAMS.equals(bodyTemplate.path("merge").asString())
                 && params instanceof ObjectNode paramMembers) {
             paramMembers.properties().forEach(member -> body.set(member.getKey(), member.getValue()));
         }
