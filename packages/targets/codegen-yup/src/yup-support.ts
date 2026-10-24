@@ -59,8 +59,23 @@ function issue(error: ValidationError, path: readonly string[], rule: string): I
 return { message: error.message, path, code: "custom", params: { rule } };
 }
 
-function contractRule(type: string | undefined): string {
-switch (type) {
+// yup names \`min\` and \`max\` alike on a string, a number and an array: the value tells the contract rule, and
+// \`moreThan\` or \`lessThan\` leaves its \`more\` or \`less\` param on a number.
+const SIZE_RULES = {
+min: { string: "minLength", array: "minItems", inclusive: "minimum", exclusive: "exclusiveMinimum", exclusiveParam: "more" },
+max: { string: "maxLength", array: "maxItems", inclusive: "maximum", exclusive: "exclusiveMaximum", exclusiveParam: "less" },
+} as const;
+
+function sizeRule(error: ValidationError, rules: (typeof SIZE_RULES)[keyof typeof SIZE_RULES]): string {
+if (typeof error.value === "string") return rules.string;
+
+if (typeof error.value !== "number") return rules.array;
+
+return error.params?.[rules.exclusiveParam] === undefined ? rules.inclusive : rules.exclusive;
+}
+
+function contractRule(error: ValidationError): string {
+switch (error.type) {
 case "optionality":
 return "required";
 case "typeError":
@@ -68,11 +83,16 @@ case "nullable":
 case "integer":
 return "type";
 case "min":
-return "minItems";
+return sizeRule(error, SIZE_RULES.min);
 case "max":
-return "maxItems";
+return sizeRule(error, SIZE_RULES.max);
+case "uuid":
+case "datetime":
+return "format";
+case "matches":
+return "pattern";
 default:
-return type ?? "invalid";
+return error.type ?? "invalid";
 }
 }
 
@@ -85,7 +105,7 @@ const keys: unknown = error.params?.keys;
 return (Array.isArray(keys) ? keys : []).map((key) => issue(error, [...path, String(key)], UNKNOWN_KEYS_RULE));
 }
 
-return [issue(error, path, contractRule(error.type))];
+return [issue(error, path, contractRule(error))];
 }
 
 // Validates without casting: every leaf schema is strict, so a value of another type is an issue, never converted.

@@ -1,6 +1,7 @@
 import { propertyKey } from "@seampact/codegen-core";
 import type {
   FieldPlan,
+  RulesMode,
   ScalarBase,
   ScalarCheck,
   ScalarPlan,
@@ -8,8 +9,10 @@ import type {
 } from "@seampact/codegen-core/validators";
 import { CONSTRAINTS_IMPORT } from "./layout.js";
 
-// How a module refers to a DTO class and records the library names its decorators use, so it imports them.
+// How a module refers to a DTO class and records the library names its decorators use, so it imports them, and
+// which rules it renders.
 export interface DtoRenderContext {
+  readonly rules: RulesMode;
   referToDto(schemaId: string, validatorExportName: string): string;
   validator(name: string): string;
   transformer(name: string): string;
@@ -143,7 +146,11 @@ function scalarDecorators(plan: ScalarPlan, context: DtoRenderContext): string[]
   return [
     `@${context.validator(base.name)}(${base.options})`,
     ...(plan.base === "integer" ? [`@${CONTRACT}.SafeInteger()`] : []),
-    ...plan.checks.map((check) => scalarCheckDecorator(check, context)),
+    ...plan.checks.map((check) =>
+      context.rules === "native"
+        ? nativeCheckDecorator(check, context)
+        : scalarCheckDecorator(check, context),
+    ),
   ];
 }
 
@@ -169,6 +176,34 @@ function scalarCheckDecorator(check: ScalarCheck, context: DtoRenderContext): st
     case "multipleOf":
       return `@${CONTRACT}.MultipleOf(${JSON.stringify(check.integerStep)}, ${JSON.stringify(check.message)})`;
   }
+}
+
+// class-validator's own decorators wherever it has one; the adapter names each by its contract rule. It has no
+// exclusive bound, so those stay contract constraints. `IsDivisibleBy` reads its divisor as an integer: it takes the
+// plan's exact integer step.
+function nativeCheckDecorator(check: ScalarCheck, context: DtoRenderContext): string {
+  switch (check.rule) {
+    case "format":
+      return check.format === "uuid"
+        ? `@${context.validator("IsUUID")}("all", ${messageOption(check.message)})`
+        : `@${context.validator("IsRFC3339")}(${messageOption(check.message)})`;
+    case "minLength":
+      return `@${context.validator("MinLength")}(${check.limit}, ${messageOption(check.message)})`;
+    case "maxLength":
+      return `@${context.validator("MaxLength")}(${check.limit}, ${messageOption(check.message)})`;
+    case "minimum":
+      return `@${context.validator("Min")}(${check.literal})`;
+    case "maximum":
+      return `@${context.validator("Max")}(${check.literal})`;
+    case "multipleOf":
+      return `@${context.validator("IsDivisibleBy")}(${check.integerStep}, ${messageOption(check.message)})`;
+    default:
+      return scalarCheckDecorator(check, context);
+  }
+}
+
+function messageOption(message: string): string {
+  return `{ message: ${JSON.stringify(message)} }`;
 }
 
 function itemCheck(check: ScalarCheck): string {

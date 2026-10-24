@@ -3,18 +3,8 @@ import { z } from "zod";
 
 export const GetTaskInputSchema = z.object({
   path: z.object({
-    channelId: z
-      .string()
-      .regex(
-        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-        { error: "Expected a UUID: 8-4-4-4-12 hex digits." },
-      ),
-    taskId: z
-      .string()
-      .regex(
-        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-        { error: "Expected a UUID: 8-4-4-4-12 hex digits." },
-      ),
+    channelId: z.uuid({ error: "Expected a UUID: 8-4-4-4-12 hex digits." }),
+    taskId: z.uuid({ error: "Expected a UUID: 8-4-4-4-12 hex digits." }),
   }),
   query: z.strictObject({}),
   headers: z.object({

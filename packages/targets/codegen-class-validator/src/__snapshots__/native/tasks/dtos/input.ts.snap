@@ -8,6 +8,10 @@ import {
   IsIn,
   IsInt,
   IsString,
+  IsUUID,
+  MaxLength,
+  Min,
+  MinLength,
 } from "class-validator";
 import * as contract from "../constraints.js";
 
@@ -15,32 +19,32 @@ export class ApiEmptyBodyDto {}
 
 export class ArchiveTaskDto {
   @IsString()
-  @contract.MinLength(1, "Expected at least 1 character.")
-  @contract.MaxLength(500, "Expected at most 500 characters.")
+  @MinLength(1, { message: "Expected at least 1 character." })
+  @MaxLength(500, { message: "Expected at most 500 characters." })
   reason!: string;
 
   @IsInt()
   @contract.SafeInteger()
-  @contract.Minimum(1)
+  @Min(1)
   expectedVersion!: number;
 }
 
 export class AssignTaskInputDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   userId!: string;
 }
 
 export class CreateTaskDto {
   @IsString()
-  @contract.MinLength(1, "Expected at least 1 character.")
-  @contract.MaxLength(200, "Expected at most 200 characters.")
+  @MinLength(1, { message: "Expected at least 1 character." })
+  @MaxLength(200, { message: "Expected at most 200 characters." })
   title!: string;
 
   @contract.ValidateIfPresent()
   @IsInt()
   @contract.SafeInteger()
-  @contract.Minimum(0)
+  @Min(0)
   effort?: number;
 }
 
@@ -82,7 +86,7 @@ export class RolesParamsDto {
 export class TaskQueryDto {
   @contract.ValidateIfPresent()
   @IsString()
-  @contract.MaxLength(200, "Expected at most 200 characters.")
+  @MaxLength(200, { message: "Expected at most 200 characters." })
   text?: string;
 
   @contract.ValidateIfPresent()
@@ -95,8 +99,8 @@ export class TaskQueryDto {
 export class UpdatePreferencesDto {
   @contract.ValidateIfPresent()
   @IsString()
-  @contract.MinLength(2, "Expected at least 2 characters.")
-  @contract.MaxLength(35, "Expected at most 35 characters.")
+  @MinLength(2, { message: "Expected at least 2 characters." })
+  @MaxLength(35, { message: "Expected at most 35 characters." })
   locale?: string;
 
   @contract.ValidateIfPresent()
@@ -107,8 +111,8 @@ export class UpdatePreferencesDto {
 export class UpdateTaskDto {
   @contract.ValidateIfPresent()
   @IsString()
-  @contract.MinLength(1, "Expected at least 1 character.")
-  @contract.MaxLength(200, "Expected at most 200 characters.")
+  @MinLength(1, { message: "Expected at least 1 character." })
+  @MaxLength(200, { message: "Expected at most 200 characters." })
   title?: string;
 
   @contract.ValidateIfPresent()
@@ -118,11 +122,11 @@ export class UpdateTaskDto {
   @contract.ValidateIfPresent()
   @IsInt()
   @contract.SafeInteger()
-  @contract.Minimum(0)
+  @Min(0)
   effort?: number;
 
   @IsInt()
   @contract.SafeInteger()
-  @contract.Minimum(1)
+  @Min(1)
   expectedVersion!: number;
 }

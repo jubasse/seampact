@@ -4,7 +4,6 @@ import {
   type GenerateInput,
   type GenerateOutcome,
   type IndexedModule,
-  type NoOptions,
   type SchemaDirection,
   withoutRepeats,
 } from "@seampact/codegen-core";
@@ -17,6 +16,7 @@ import {
   planValidators,
   SCHEMA_MODULES,
   SCHEMA_NAMESPACES,
+  type ValidatorsOptions,
   WIRE_CHECKS_MODULE,
   WIRE_CHECKS_SOURCE,
 } from "@seampact/codegen-core/validators";
@@ -43,7 +43,7 @@ interface PlannedModule {
 // copied runtime they share, or every refusal at once: a form the slice does not use is refused by name, never
 // approximated (A47).
 export function generateValidators(
-  input: GenerateInput<NoOptions, ValidatorsArtefact, never>,
+  input: GenerateInput<ValidatorsOptions, ValidatorsArtefact, never>,
 ): GenerateOutcome {
   if (!input.artefacts.has(VALIDATORS_ARTEFACT)) return { status: "generated", files: [] };
 
@@ -57,7 +57,7 @@ export function generateValidators(
 
   const { plan } = planned;
   const modules: PlannedModule[] = DIRECTIONS.flatMap((direction) => {
-    const dtos = dtoModuleSource(direction, plan.schemaModules[direction]);
+    const dtos = dtoModuleSource(direction, plan.schemaModules[direction], input.options.rules);
 
     return [
       { module: DTO_MODULES[direction], ...dtos },
@@ -71,7 +71,7 @@ export function generateValidators(
 
   modules.push({
     module: OPERATION_INPUT_MODULE,
-    ...operationInputModuleSource(plan.operationInputs),
+    ...operationInputModuleSource(plan.operationInputs, input.options.rules),
   });
 
   const files: GeneratedFile[] = modules.flatMap(({ module, source, libraryImports }) => {

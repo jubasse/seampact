@@ -5,6 +5,11 @@ import {
   IsInt,
   IsObject,
   IsString,
+  IsUUID,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
   ValidateNested,
 } from "class-validator";
 import * as adapter from "../class-validator-schema.js";
@@ -13,11 +18,11 @@ import * as inputDtos from "../dtos/input.js";
 
 export class ArchiveTaskRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   channelId!: string;
 
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   taskId!: string;
 }
 
@@ -69,11 +74,11 @@ export const ArchiveTaskInputSchema = adapter.requestSchema(
 
 export class AssignTaskRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   channelId!: string;
 
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   taskId!: string;
 }
 
@@ -125,7 +130,7 @@ export const AssignTaskInputSchema = adapter.requestSchema(
 
 export class CreateTaskRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   channelId!: string;
 }
 
@@ -177,7 +182,7 @@ export const CreateTaskInputSchema = adapter.requestSchema(
 
 export class DeleteDraftRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   draftId!: string;
 }
 
@@ -224,7 +229,7 @@ export const DeleteDraftInputSchema = adapter.requestSchema(
 
 export class GetChannelRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   channelId!: string;
 }
 
@@ -260,7 +265,7 @@ export const GetChannelInputSchema = adapter.requestSchema(
 
 export class GetDraftRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   draftId!: string;
 }
 
@@ -326,11 +331,11 @@ export const GetPreferencesInputSchema = adapter.requestSchema(
 
 export class GetTaskRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   channelId!: string;
 
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   taskId!: string;
 }
 
@@ -367,7 +372,7 @@ export const GetTaskInputSchema = adapter.requestSchema(GetTaskRequestDto, {
 
 export class GetTasksBatchRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   channelId!: string;
 }
 
@@ -427,8 +432,8 @@ export class ListChannelsRequestQueryDto {
   @contract.ValidateIfPresent()
   @IsInt()
   @contract.SafeInteger()
-  @contract.Minimum(1)
-  @contract.Maximum(100)
+  @Min(1)
+  @Max(100)
   limit?: number;
 }
 
@@ -457,7 +462,7 @@ export const ListChannelsInputSchema = adapter.requestSchema(
 
 export class ListTasksRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   channelId!: string;
 }
 
@@ -469,8 +474,8 @@ export class ListTasksRequestQueryDto {
   @contract.ValidateIfPresent()
   @IsInt()
   @contract.SafeInteger()
-  @contract.Minimum(1)
-  @contract.Maximum(50)
+  @Min(1)
+  @Max(50)
   limit?: number;
 
   @contract.ValidateIfPresent()
@@ -545,11 +550,11 @@ export const PaymentsInputSchema = adapter.requestSchema(PaymentsRequestDto, {
 
 export class PurgeTaskRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   channelId!: string;
 
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   taskId!: string;
 }
 
@@ -570,8 +575,8 @@ export class PurgeTaskRequestHeadersDto {
 
 export class PurgeTaskRequestBodyDto extends inputDtos.ApiEmptyBodyDto {
   @IsString()
-  @contract.MinLength(1, "Expected at least 1 character.")
-  @contract.MaxLength(512, "Expected at most 512 characters.")
+  @MinLength(1, { message: "Expected at least 1 character." })
+  @MaxLength(512, { message: "Expected at most 512 characters." })
   reauthToken!: string;
 }
 
@@ -605,7 +610,7 @@ export const PurgeTaskInputSchema = adapter.requestSchema(PurgeTaskRequestDto, {
 
 export class SearchTasksRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   channelId!: string;
 }
 
@@ -691,11 +696,11 @@ export const UpdatePreferencesInputSchema = adapter.requestSchema(
 
 export class UpdateTaskRequestPathDto {
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   channelId!: string;
 
   @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
+  @IsUUID("all", { message: "Expected a UUID: 8-4-4-4-12 hex digits." })
   taskId!: string;
 }
 

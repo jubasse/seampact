@@ -5,17 +5,21 @@ import {
   IS_DATE_TIME,
   IS_INTEGER_MULTIPLE,
   type ObjectPlan,
+  type RulesMode,
   type ScalarBase,
   type ScalarCheck,
   type ScalarPlan,
+  type StringFormat,
   type TypePlan,
   type UnknownKeys,
   UUID_LAYOUT,
   type WireCheck,
 } from "@seampact/codegen-core/validators";
 
-// How a module refers to a schema validator and to a generated check, so it can import what it uses.
+// How a module refers to a schema validator and to a generated check, so it can import what it uses, and which
+// rules it renders.
 export interface ZodRenderContext {
+  readonly rules: RulesMode;
   referToSchema(schemaId: string, exportName: string): string;
   wireCheck(check: WireCheck): string;
 }
@@ -76,9 +80,50 @@ export function fieldMembers(fields: readonly FieldPlan[], context: ZodRenderCon
 }
 
 function scalarValidator(plan: ScalarPlan, context: ZodRenderContext): string {
+  if (context.rules === "native") return nativeScalarValidator(plan, context);
+
   const checks = plan.checks.map((check) => scalarCheck(check, context));
 
   return `${BASE_VALIDATORS[plan.base]}${checks.join("")}`;
+}
+
+// zod's own string formats, which report `invalid_format`: the boundary reads it as the `format` rule.
+const NATIVE_FORMAT_VALIDATORS: Readonly<Record<StringFormat, (message: string) => string>> = {
+  uuid: (message) => `z.uuid({ error: ${JSON.stringify(message)} })`,
+  "date-time": (message) => `z.iso.datetime({ offset: true, error: ${JSON.stringify(message)} })`,
+};
+
+// zod's own rules wherever zod has one: a format is the base validator, and every other check but `pattern` is a
+// method whose issue code names the contract rule. A pattern stays a refinement, since zod reports a `.regex` as a
+// format issue; the test is the same.
+function nativeScalarValidator(plan: ScalarPlan, context: ZodRenderContext): string {
+  const format = plan.checks.find((check) => check.rule === "format");
+  const base =
+    format?.rule === "format"
+      ? NATIVE_FORMAT_VALIDATORS[format.format](format.message)
+      : BASE_VALIDATORS[plan.base];
+  const checks = plan.checks
+    .filter((check) => check.rule !== "format")
+    .map((check) => nativeScalarCheck(check, context));
+
+  return `${base}${checks.join("")}`;
+}
+
+function nativeScalarCheck(check: ScalarCheck, context: ZodRenderContext): string {
+  switch (check.rule) {
+    case "minLength":
+      return `.min(${check.limit}, ${errorOption(check.message)})`;
+    case "maxLength":
+      return `.max(${check.limit}, ${errorOption(check.message)})`;
+    case "multipleOf":
+      return `.multipleOf(${check.literal}, ${errorOption(check.message)})`;
+    default:
+      return scalarCheck(check, context);
+  }
+}
+
+function errorOption(message: string): string {
+  return `{ error: ${JSON.stringify(message)} }`;
 }
 
 // String lengths count Unicode code points through the generated counter: zod's own `min` and `max` count UTF-16

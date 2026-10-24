@@ -22,7 +22,7 @@ test.each(RULES_MODES.flatMap((rules) => GOLDEN_IRS.map((name) => [rules, name])
   async (rules, name) => {
     const outcome = await target.generate({
       ir: readGoldenIr(name),
-      options: {},
+      options: { rules },
       links: {},
       artefacts: new Set(["validators"]),
     });

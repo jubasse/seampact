@@ -9,28 +9,12 @@ export const GetTaskInputSchema = standardSchemaOf(
         channelId: yup
           .string()
           .strict()
-          .test({
-            name: "format",
-            message: "Expected a UUID: 8-4-4-4-12 hex digits.",
-            test: (value) =>
-              value === undefined ||
-              /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-                value,
-              ),
-          })
+          .uuid("Expected a UUID: 8-4-4-4-12 hex digits.")
           .defined(),
         taskId: yup
           .string()
           .strict()
-          .test({
-            name: "format",
-            message: "Expected a UUID: 8-4-4-4-12 hex digits.",
-            test: (value) =>
-              value === undefined ||
-              /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-                value,
-              ),
-          })
+          .uuid("Expected a UUID: 8-4-4-4-12 hex digits.")
           .defined(),
       })
       .noUnknown()

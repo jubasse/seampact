@@ -1,5 +1,5 @@
 // The validator-neutral half of every validators target: the module layout and export names, the descriptor,
-// the shared wire checks, and the plan of each schema and operation input with every refusal, which a target
+// the `rules` option, the shared wire checks, and the plan of each schema and operation input with every refusal, which a target
 // renders in its own library.
 
 export { indexFile } from "./index-file.js";
@@ -16,6 +16,12 @@ export {
 } from "./layout.js";
 export { type ModuleSource, moduleContents, modulePath } from "./module-source.js";
 export type { BodyPlan, OperationInputPlan } from "./operation-input-plan.js";
+export {
+  parseValidatorsOptions,
+  RULES_MODES,
+  type RulesMode,
+  type ValidatorsOptions,
+} from "./rules-option.js";
 export type { SchemaPlan, SchemasById } from "./schema-plan.js";
 export type {
   FieldPlan,
@@ -32,7 +38,6 @@ export {
   planValidatorsCollectingRefusals,
   type ValidatorsPlan,
 } from "./validators-plan.js";
-export { planValidatorsWithinWireNames, type WireNameLimit } from "./wire-name-check.js";
 export {
   CODE_POINT_LENGTH,
   IS_DATE_TIME,
@@ -41,3 +46,4 @@ export {
   WIRE_CHECKS_SOURCE,
   type WireCheck,
 } from "./wire-checks.js";
+export { planValidatorsWithinWireNames, type WireNameLimit } from "./wire-name-check.js";

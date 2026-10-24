@@ -1,9 +1,4 @@
-import type {
-  GeneratedFile,
-  GenerateInput,
-  GenerateOutcome,
-  NoOptions,
-} from "@seampact/codegen-core";
+import type { GeneratedFile, GenerateInput, GenerateOutcome } from "@seampact/codegen-core";
 import {
   indexFile,
   type ModuleSource,
@@ -12,6 +7,7 @@ import {
   OPERATION_INPUT_MODULE,
   planValidators,
   SCHEMA_MODULES,
+  type ValidatorsOptions,
   WIRE_CHECKS_MODULE,
   WIRE_CHECKS_SOURCE,
 } from "@seampact/codegen-core/validators";
@@ -26,7 +22,7 @@ export type ValidatorsArtefact = typeof VALIDATORS_ARTEFACT;
 // The schema validators of each direction, the operation input validators and the code point counter they
 // share, or every refusal at once: a form the slice does not use is refused by name, never approximated (A47).
 export function generateValidators(
-  input: GenerateInput<NoOptions, ValidatorsArtefact, never>,
+  input: GenerateInput<ValidatorsOptions, ValidatorsArtefact, never>,
 ): GenerateOutcome {
   if (!input.artefacts.has(VALIDATORS_ARTEFACT)) return { status: "generated", files: [] };
 
@@ -36,9 +32,18 @@ export function generateValidators(
 
   const { plan } = planned;
   const modules: { module: string; source: ModuleSource }[] = [
-    { module: SCHEMA_MODULES.input, source: schemaModuleSource(plan.schemaModules.input) },
-    { module: SCHEMA_MODULES.output, source: schemaModuleSource(plan.schemaModules.output) },
-    { module: OPERATION_INPUT_MODULE, source: operationInputModuleSource(plan.operationInputs) },
+    {
+      module: SCHEMA_MODULES.input,
+      source: schemaModuleSource(plan.schemaModules.input, input.options.rules),
+    },
+    {
+      module: SCHEMA_MODULES.output,
+      source: schemaModuleSource(plan.schemaModules.output, input.options.rules),
+    },
+    {
+      module: OPERATION_INPUT_MODULE,
+      source: operationInputModuleSource(plan.operationInputs, input.options.rules),
+    },
   ];
 
   const files: GeneratedFile[] = modules.flatMap(({ module, source }) => {

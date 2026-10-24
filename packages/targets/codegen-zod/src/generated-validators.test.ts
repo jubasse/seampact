@@ -22,29 +22,42 @@ const temporaryRoot = mkdtempSync(join(tmpdir(), "seampact-codegen-zod-run-"));
 let operationInputs: Record<string, SafeParser>;
 let outputSchemas: Record<string, ObjectValidator>;
 
-// Generates the reference validators into a project that resolves `zod` to this package's copy, then imports them.
-beforeAll(async () => {
+interface GeneratedValidators {
+  operationInputs: Record<string, SafeParser>;
+  outputSchemas: Record<string, ObjectValidator>;
+}
+
+// Generates the reference validators of one rules mode into the project, which resolves `zod` to this package's copy,
+// then imports them.
+async function generatedValidators(rules: string): Promise<GeneratedValidators> {
   const ir: ContractIR = JSON.parse(readFileSync(GOLDEN_IR, "utf8"));
   const outcome = await target.generate({
     ir,
-    options: {},
+    options: { rules },
     links: {},
     artefacts: new Set(["validators"]),
   });
 
   if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
 
-  const outDir = join(temporaryRoot, "generated");
+  const outDir = join(temporaryRoot, rules);
   const written = await writeGeneratedFiles(outDir, "@seampact/codegen-zod", outcome.files);
 
   if (written.status !== "written") throw new Error(JSON.stringify(written.refusals));
 
+  return {
+    operationInputs: await import(join(outDir, "operations/input.ts")),
+    outputSchemas: await import(join(outDir, "schemas/output.ts")),
+  };
+}
+
+// The contract's own checks are under test here: `seampact-consistent` renders them.
+beforeAll(async () => {
   mkdirSync(join(temporaryRoot, "node_modules"));
   symlinkSync(ZOD_PACKAGE, join(temporaryRoot, "node_modules", "zod"), "dir");
   writeFileSync(join(temporaryRoot, "package.json"), '{ "type": "module" }\n');
 
-  operationInputs = await import(join(outDir, "operations/input.ts"));
-  outputSchemas = await import(join(outDir, "schemas/output.ts"));
+  ({ operationInputs, outputSchemas } = await generatedValidators("seampact-consistent"));
 });
 
 afterAll(() => rmSync(temporaryRoot, { recursive: true, force: true }));
@@ -148,7 +161,7 @@ describe("pattern: a sort value is one of the declared keys or its descending fo
 describe("the custom checks of the generated validators", () => {
   test("every refine names its contract rule in params.rule", () => {
     const sources = ["operations/input.ts", "schemas/output.ts"].map((file) =>
-      readFileSync(join(temporaryRoot, "generated", file), "utf8"),
+      readFileSync(join(temporaryRoot, "seampact-consistent", file), "utf8"),
     );
     const refines = sources.flatMap((source) => source.match(/\.refine\([\s\S]*?\}\)/g) ?? []);
 
@@ -180,5 +193,17 @@ describe("a nullable opaque property", () => {
     });
 
     expect(outcome.status === "generated" ? [] : outcome.refusals).toEqual([]);
+  });
+});
+
+describe("native rules", () => {
+  test("zod's own uuid check refuses a version digit the contract accepts", async () => {
+    const native = await generatedValidators("native");
+    const versionZero = getChannelInput("12345678-1234-0234-8234-123456789ABC");
+
+    expect(native.operationInputs.GetChannelInputSchema?.safeParse(versionZero).success).toBe(
+      false,
+    );
+    expect(inputValidator("GetChannelInputSchema").safeParse(versionZero).success).toBe(true);
   });
 });

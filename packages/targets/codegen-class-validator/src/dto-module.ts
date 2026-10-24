@@ -1,5 +1,10 @@
 import type { SchemaDirection } from "@seampact/codegen-core";
-import type { ModuleSource, SchemaPlan, UnknownKeys } from "@seampact/codegen-core/validators";
+import type {
+  ModuleSource,
+  RulesMode,
+  SchemaPlan,
+  UnknownKeys,
+} from "@seampact/codegen-core/validators";
 import { type DtoRenderContext, fieldDeclaration } from "./dto-field.js";
 import { CONSTRAINTS_IMPORT, dtoClassName } from "./layout.js";
 import { LibraryImports } from "./library-imports.js";
@@ -21,9 +26,11 @@ const DIRECTION_POLICIES: Readonly<Record<SchemaDirection, UnknownKeys>> = {
 export function dtoModuleSource(
   direction: SchemaDirection,
   plans: readonly SchemaPlan[],
+  rules: RulesMode,
 ): DtoModuleSource {
   const imports = new LibraryImports();
   const context: DtoRenderContext = {
+    rules,
     referToDto: (_schemaId, exportName) => dtoClassName(exportName),
     validator: (name) => imports.validator(name),
     transformer: (name) => imports.transformer(name),
