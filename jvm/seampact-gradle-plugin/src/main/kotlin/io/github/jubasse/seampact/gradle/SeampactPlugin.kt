@@ -33,8 +33,10 @@ public class SeampactPlugin : Plugin<Project> {
         val moduleCacheRoots = listOfNotNull(gradleUserHome, project.providers.environmentVariable(READ_ONLY_CACHE_VARIABLE).orNull?.let(Path::of))
             .map { it.resolve(MODULE_CACHE_DIRECTORY).toAbsolutePath().normalize().toString() }
 
-        val binaryArtefact = project.files(layout.map { if (it.needsBinary) binaryConfiguration(project, extension) else emptyList<Any>() })
-        val mavenBundles = project.files(layout.map { if (it.mavenSources.isEmpty()) emptyList<Any>() else bundleConfiguration(project, it.mavenSources) })
+        // Created when the first task is configured, after the build file set the DSL, and only for what the
+        // layout needs: a bundle-only app never resolves the binary (ADR 0010 "Lazy").
+        val binaryArtefact by lazy { if (layout.get().needsBinary) binaryConfiguration(project, extension) else emptyList() }
+        val mavenBundles by lazy { layout.get().mavenSources.let { if (it.isEmpty()) emptyList() else bundleConfiguration(project, it) } }
 
         fun SeampactTask.readApp() {
             group = TASK_GROUP

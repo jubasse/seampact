@@ -7,6 +7,7 @@ import java.nio.file.Path
 import kotlin.io.path.appendText
 import kotlin.io.path.exists
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 // The plugin end to end on the reference contract: the generated sources compile with the app, a second run is
@@ -44,6 +45,7 @@ class GeneratePluginTest {
         val generated = directory.resolve("build/generated/sources/seampact/main/server/com/example/tasks/api/TasksEndpoints.java")
         generated.appendText("// edited\n")
         val drifted = app.fail("seampactCheck", *cached)
-        assertTrue("writer.file.edited" in drifted.output || "check.generated.drift" in drifted.output, drifted.output)
+        assertTrue("check.generated.drift" in drifted.output, drifted.output)
+        assertFalse("Configuration cache problems" in drifted.output, "a task run alone stores its configuration cache")
     }
 }

@@ -2,6 +2,7 @@
 // golden tree is compiled by javac of the test JDK against Spring Boot 4, then its records' redaction is checked.
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -39,6 +40,10 @@ kotlin {
         jvmTarget = JvmTarget.fromTarget(bytecodeJavaVersion.toString())
         freeCompilerArgs.add("-Xjdk-release=$bytecodeJavaVersion")
         allWarningsAsErrors = true
+        // The Gradle plugin loads this module on the Kotlin its lowest supported Gradle embeds (8.14: Kotlin 2.0).
+        apiVersion = KotlinVersion.KOTLIN_2_0
+        languageVersion = KotlinVersion.KOTLIN_2_0
+        freeCompilerArgs.add("-Xsuppress-version-warnings")
     }
 }
 

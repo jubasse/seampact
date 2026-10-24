@@ -3,6 +3,7 @@
 // compiler binary, and generates the spring-boot target into the main Java sources.
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
     `java-gradle-plugin`
@@ -69,6 +70,10 @@ kotlin {
         jvmTarget = JvmTarget.fromTarget(bytecodeJavaVersion.toString())
         freeCompilerArgs.add("-Xjdk-release=$bytecodeJavaVersion")
         allWarningsAsErrors = true
+        // Gradle loads the plugin on the Kotlin it embeds; 8.14, the lowest supported, embeds Kotlin 2.0.
+        apiVersion = KotlinVersion.KOTLIN_2_0
+        languageVersion = KotlinVersion.KOTLIN_2_0
+        freeCompilerArgs.add("-Xsuppress-version-warnings")
     }
 }
 
