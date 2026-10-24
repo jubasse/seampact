@@ -2,6 +2,7 @@ import {
   type BodyPlan,
   type ModuleSource,
   type OperationInputPlan,
+  type RulesMode,
   SCHEMA_MODULES,
 } from "@seampact/codegen-core/validators";
 import { ModuleRendering, type YupRenderContext } from "./module-rendering.js";
@@ -15,10 +16,11 @@ const INPUT_SCHEMAS_NAMESPACE = "inputSchemas";
 // The yup input validator of each planned operation, a Standard Schema over a `yup.object` of its request members.
 export function operationInputModuleSource(
   plans: readonly OperationInputPlan[],
+  rules: RulesMode,
 ): ModuleSource & { supportNames: ReadonlySet<string> } {
   let usesInputSchemas = false;
 
-  const rendering = new ModuleRendering((_schemaId, exportName) => {
+  const rendering = new ModuleRendering(rules, (_schemaId, exportName) => {
     usesInputSchemas = true;
 
     return `${INPUT_SCHEMAS_NAMESPACE}.${exportName}`;

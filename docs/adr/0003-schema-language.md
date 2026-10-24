@@ -6,7 +6,7 @@ Status: accepted
 
 Every body, parameter, header, principal, error param and rule param of a contract is described by a schema. The schema language belongs to seampact, not to a validator ([lesson 6](../decisions.md#lesson-6)): no zod, class-validator, Bean Validation, Laravel or Symfony idiom may reach the contract or the IR, and every target maps the IR's schemas onto its own validator and type system (FR-3). The base is a stated subset of JSON Schema 2020-12, with these additions: direction, tagged unions, optional versus nullable, portable formats, marks, portable refinements, deterministic names and parsed examples.
 
-The subset has one test: every server target (TypeScript with zod, yup or class-validator, Java with Bean Validation, PHP with Laravel and Symfony validation) and every client target must accept and reject exactly the same payloads for a schema (SCN-028, SM-9). A keyword that one of them cannot check natively and exactly is either refused or given a precise, portable meaning here.
+The subset has one test: every server target (TypeScript with zod, yup or class-validator, Java with Bean Validation, PHP with Laravel and Symfony validation) and every client target must accept and reject exactly the same payloads for a schema (SCN-028, SM-9). A keyword that one of them cannot check natively and exactly is either refused or given a precise, portable meaning here. A JavaScript validator target guarantees this verdict under `rules: seampact-consistent`; by default (`rules: native`) it renders the library's own rule wherever the library has one, so the library behaves as its users know it, and its documentation lists where that differs from the meaning here.
 
 [A30](../decisions.md#a30) applies: a schema describes the payload only. Envelopes, page shapes and error bodies are wire formats chosen by the contract's conventions (ADR 0002 section 13), never fields of a contract schema.
 
@@ -72,7 +72,7 @@ Every keyword of the 2020-12 vocabularies, kept or refused. A refused keyword is
 | `enum` | kept, by reference | `enum: <EnumName>` or a narrowing (section 7); inline value lists are refused because enums live in one catalogue, where each is declared once with its values, source and fallback (FR-29) |
 | `multipleOf` | kept on `integer` and decimal | refused on `number`, where binary floating point makes the check differ between targets |
 | `maximum`, `exclusiveMaximum`, `minimum`, `exclusiveMinimum` | kept | portable range checks (number values only, as in 2020-12) |
-| `maxLength`, `minLength` | kept | counted in Unicode code points in every target, as JSON Schema says (a JavaScript target must not count UTF-16 units) |
+| `maxLength`, `minLength` | kept | counted in Unicode code points, as JSON Schema says. A validator target counts them so under `rules: seampact-consistent`; its default, `rules: native`, uses the library's own rule and count (yup counts UTF-16 units), and each validator page lists these differences |
 | `pattern` | kept, portable subset | section 9 |
 | `maxItems`, `minItems` | kept | |
 | `uniqueItems` | refused | no native, exact check in Bean Validation or class-validator, and "equal" differs for objects; no consumer |

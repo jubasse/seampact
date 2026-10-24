@@ -44,11 +44,16 @@ interface GeneratedModules {
   outputSchemas: Record<string, ObjectValidator>;
 }
 
-// Generates the validators of an IR into a project that resolves `yup` to this package's copy, then imports them.
-async function generateAndImport(ir: ContractIR, name: string): Promise<GeneratedModules> {
+// Generates the validators of an IR in one rules mode into a project that resolves `yup` to this package's copy,
+// then imports them.
+async function generateAndImport(
+  ir: ContractIR,
+  name: string,
+  rules: string,
+): Promise<GeneratedModules> {
   const outcome = await target.generate({
     ir,
-    options: {},
+    options: { rules },
     links: {},
     artefacts: new Set(["validators"]),
   });
@@ -80,10 +85,12 @@ function goldenIr(): ContractIR {
 // Slow on a loaded machine: give it more than the default limit.
 const SETUP_TIMEOUT_MILLISECONDS = 60_000;
 
+// The contract's own checks are under test here: `seampact-consistent` renders them.
 beforeAll(async () => {
   ({ standardSchemaOf, operationInputs, inputSchemas, outputSchemas } = await generateAndImport(
     goldenIr(),
     "generated-root",
+    "seampact-consistent",
   ));
 }, SETUP_TIMEOUT_MILLISECONDS);
 
@@ -433,7 +440,7 @@ describe("numbers: the safe integer range and finiteness the zod validators enfo
 
     effort.type = { kind: "scalar", type: "number", refinements: {} };
 
-    const generated = await generateAndImport(ir, "number-root");
+    const generated = await generateAndImport(ir, "number-root", "seampact-consistent");
     const body = JSON.parse('{ "title": "t", "effort": 1e999 }');
 
     expect(
@@ -485,4 +492,20 @@ describe("a required opaque member: absent is refused, null is valid", () => {
 
     expect(await rules(validator, paymentEvent({ data: null }))).not.toContain("required");
   });
+});
+
+describe("native rules", () => {
+  test(
+    "yup's own max counts UTF-16 units, so 200 emoji are too long a title",
+    async () => {
+      const native = await generateAndImport(goldenIr(), "native-root", "native");
+      const emojiTitle = createTaskInput({ title: "\u{1F600}".repeat(200) });
+
+      expect(await rules(native.operationInputs.CreateTaskInputSchema, emojiTitle)).toEqual([
+        "maxLength",
+      ]);
+      expect(await rules(operationInputs.CreateTaskInputSchema, emojiTitle)).toEqual([]);
+    },
+    SETUP_TIMEOUT_MILLISECONDS,
+  );
 });

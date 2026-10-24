@@ -51,20 +51,19 @@ let constraints: {
 // Generating and compiling outruns vitest's default 10 s hook limit on a loaded machine.
 const SETUP_TIMEOUT_MILLISECONDS = 60_000;
 
-// Generates the reference validators into a project that resolves the libraries to this package's copies and
-// compiles legacy decorators, then imports them after `reflect-metadata`, as a NestJS app does.
-beforeAll(async () => {
+// Generates the reference validators of one rules mode into the project and returns their directory.
+async function generateInto(rules: string): Promise<string> {
   const ir: ContractIR = JSON.parse(readFileSync(GOLDEN_IR, "utf8"));
   const outcome = await target.generate({
     ir,
-    options: {},
+    options: { rules },
     links: {},
     artefacts: new Set(["validators"]),
   });
 
   if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
 
-  const outDir = join(temporaryRoot, "generated");
+  const outDir = join(temporaryRoot, rules);
   const written = await writeGeneratedFiles(
     outDir,
     "@seampact/codegen-class-validator",
@@ -72,6 +71,15 @@ beforeAll(async () => {
   );
 
   if (written.status !== "written") throw new Error(JSON.stringify(written.refusals));
+
+  return outDir;
+}
+
+// Generates the reference validators into a project that resolves the libraries to this package's copies and
+// compiles legacy decorators, then imports them after `reflect-metadata`, as a NestJS app does. The contract's own
+// checks are under test here: `seampact-consistent` renders them.
+beforeAll(async () => {
+  const outDir = await generateInto("seampact-consistent");
 
   mkdirSync(join(temporaryRoot, "node_modules"));
 
@@ -390,4 +398,22 @@ describe("a subclass of a DTO keeps its checks (A45)", () => {
       "/title minLength",
     ]);
   });
+});
+
+describe("native rules", () => {
+  test(
+    "class-validator's own date-time check accepts a day the calendar does not have",
+    async () => {
+      const nativeSchemas = await import(join(await generateInto("native"), "schemas/output.ts"));
+      const thirtiethOfFebruary = task({ taskId: CHANNEL_ID, createdAt: "2026-02-30T00:00:00Z" });
+
+      expect(await verdict(exported(nativeSchemas, "TaskSchema"), thirtiethOfFebruary)).toBe(
+        "valid",
+      );
+      expect(await verdict(exported(outputSchemas, "TaskSchema"), thirtiethOfFebruary)).toEqual([
+        "/createdAt format",
+      ]);
+    },
+    SETUP_TIMEOUT_MILLISECONDS,
+  );
 });

@@ -7,12 +7,17 @@ import {
   ARRAY_MIN_SIZE,
   IS_ARRAY,
   IS_BOOLEAN,
+  IS_DIVISIBLE_BY,
   IS_IN,
   IS_INT,
   IS_NUMBER,
   IS_OBJECT,
+  IS_RFC_3339,
   IS_STRING,
+  IS_UUID,
   MATCHES,
+  MAX,
+  MIN,
   type ValidationError,
   ValidationTypes,
   validate,
@@ -62,7 +67,8 @@ const TYPE_RULE = "type";
 const UNKNOWN_KEYS_RULE = "unknownKeys";
 const UNKNOWN_VALUE_CONSTRAINT = "unknownValue";
 
-// The rule of each class-validator constraint the generated DTOs use; a custom constraint is named after its rule.
+// The rule of each class-validator constraint the generated DTOs use; a custom constraint is named after its rule,
+// and so are `minLength` and `maxLength`.
 const CONSTRAINT_RULES: ReadonlyMap<string, string> = new Map([
   [IS_STRING, TYPE_RULE],
   [IS_INT, TYPE_RULE],
@@ -74,6 +80,11 @@ const CONSTRAINT_RULES: ReadonlyMap<string, string> = new Map([
   [UNKNOWN_VALUE_CONSTRAINT, TYPE_RULE],
   [IS_IN, "enum"],
   [MATCHES, "pattern"],
+  [IS_UUID, "format"],
+  [IS_RFC_3339, "format"],
+  [MIN, "minimum"],
+  [MAX, "maximum"],
+  [IS_DIVISIBLE_BY, "multipleOf"],
   [ARRAY_MIN_SIZE, "minItems"],
   [ARRAY_MAX_SIZE, "maxItems"],
   [ValidationTypes.WHITELIST, UNKNOWN_KEYS_RULE],

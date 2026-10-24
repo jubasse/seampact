@@ -113,9 +113,44 @@ function fieldValidator(field: FieldPlan, context: YupRenderContext): string {
 }
 
 function scalarValidator(plan: ScalarPlan, context: YupRenderContext): string {
-  const checks = plan.checks.map((check) => scalarCheck(check, plan.base, context));
+  const checks = plan.checks.map((check) =>
+    context.rules === "native"
+      ? nativeScalarCheck(check, plan.base, context)
+      : scalarCheck(check, plan.base, context),
+  );
 
   return `${BASE_VALIDATORS[plan.base]}${checks.join("")}`;
+}
+
+// yup's own rules wherever yup has one; the support module names each yup test by its contract rule. yup has no
+// multiple-of rule, so that check stays generated.
+function nativeScalarCheck(
+  check: ScalarCheck,
+  base: ScalarBase,
+  context: YupRenderContext,
+): string {
+  switch (check.rule) {
+    case "format":
+      return check.format === "uuid"
+        ? `.uuid(${JSON.stringify(check.message)})`
+        : `.datetime({ allowOffset: true, message: ${JSON.stringify(check.message)} })`;
+    case "minLength":
+      return `.min(${check.limit}, ${JSON.stringify(check.message)})`;
+    case "maxLength":
+      return `.max(${check.limit}, ${JSON.stringify(check.message)})`;
+    case "pattern":
+      return `.matches(new RegExp(${JSON.stringify(check.normalized)}, "u"), ${JSON.stringify(check.message)})`;
+    case "minimum":
+      return `.min(${check.literal}, ${JSON.stringify(boundMessage(check.rule, check.literal))})`;
+    case "maximum":
+      return `.max(${check.literal}, ${JSON.stringify(boundMessage(check.rule, check.literal))})`;
+    case "exclusiveMinimum":
+      return `.moreThan(${check.literal}, ${JSON.stringify(boundMessage(check.rule, check.literal))})`;
+    case "exclusiveMaximum":
+      return `.lessThan(${check.literal}, ${JSON.stringify(boundMessage(check.rule, check.literal))})`;
+    case "multipleOf":
+      return scalarCheck(check, base, context);
+  }
 }
 
 // String lengths count Unicode code points through the generated counter: a JavaScript length counts UTF-16
@@ -148,28 +183,28 @@ function scalarCheck(check: ScalarCheck, base: ScalarBase, context: YupRenderCon
       return numericTest(
         base,
         check.rule,
-        `Expected at least ${check.literal}.`,
+        boundMessage(check.rule, check.literal),
         `value >= ${check.literal}`,
       );
     case "maximum":
       return numericTest(
         base,
         check.rule,
-        `Expected at most ${check.literal}.`,
+        boundMessage(check.rule, check.literal),
         `value <= ${check.literal}`,
       );
     case "exclusiveMinimum":
       return numericTest(
         base,
         check.rule,
-        `Expected more than ${check.literal}.`,
+        boundMessage(check.rule, check.literal),
         `value > ${check.literal}`,
       );
     case "exclusiveMaximum":
       return numericTest(
         base,
         check.rule,
-        `Expected less than ${check.literal}.`,
+        boundMessage(check.rule, check.literal),
         `value < ${check.literal}`,
       );
     case "multipleOf":
@@ -180,6 +215,19 @@ function scalarCheck(check: ScalarCheck, base: ScalarBase, context: YupRenderCon
         `${context.wireCheck(IS_INTEGER_MULTIPLE)}(value, ${JSON.stringify(check.integerStep)})`,
       );
   }
+}
+
+type BoundRule = "minimum" | "maximum" | "exclusiveMinimum" | "exclusiveMaximum";
+
+const BOUND_WORDS: Readonly<Record<BoundRule, string>> = {
+  minimum: "at least",
+  maximum: "at most",
+  exclusiveMinimum: "more than",
+  exclusiveMaximum: "less than",
+};
+
+function boundMessage(rule: BoundRule, literal: string): string {
+  return `Expected ${BOUND_WORDS[rule]} ${literal}.`;
 }
 
 function numericTest(

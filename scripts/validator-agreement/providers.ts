@@ -235,6 +235,9 @@ interface ProviderTarget {
   // Where the validators land below the generated root: a provider writes at the root, a server target below
   // `validators/`.
   validatorsDirectory: string;
+  // A provider renders the contract's own checks under `rules: seampact-consistent`, which every provider agrees on;
+  // its default renders the library's native rules.
+  options: object;
   linksFor(ir: object): object;
 }
 
@@ -255,6 +258,7 @@ async function providerTarget(providerId: string): Promise<ProviderTarget> {
     libraries,
     target: await packageTarget(packageName),
     validatorsDirectory: own ? OWN_VALIDATORS_DIRECTORY : "",
+    options: own ? {} : { rules: "seampact-consistent" },
     linksFor: (ir) => (typesTarget === undefined ? {} : typesLinkOf(typesTarget, ir)),
   };
 }
@@ -294,7 +298,7 @@ function typesLinkOf(typesTarget: Target, ir: object): object {
 function generateValidators(provider: ProviderTarget, ir: object): Promise<Outcome> {
   return provider.target.generate({
     ir,
-    options: {},
+    options: provider.options,
     links: provider.linksFor(ir),
     artefacts: new Set(["validators"]),
   });

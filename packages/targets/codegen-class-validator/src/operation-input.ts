@@ -1,9 +1,9 @@
 import type {
   BodyPlan,
   FieldPlan,
-  ModuleSource,
   ObjectPlan,
   OperationInputPlan,
+  RulesMode,
   UnknownKeys,
 } from "@seampact/codegen-core/validators";
 import { type DtoRenderContext, fieldDeclaration, nestedDtoDeclaration } from "./dto-field.js";
@@ -30,11 +30,15 @@ const PART_POLICIES = {
 
 // The request DTO of each planned operation, `{ path, query, headers, body }` as the operation declares them,
 // and its input adapter.
-export function operationInputModuleSource(plans: readonly OperationInputPlan[]): DtoModuleSource {
+export function operationInputModuleSource(
+  plans: readonly OperationInputPlan[],
+  rules: RulesMode,
+): DtoModuleSource {
   const imports = new LibraryImports();
   let usesInputDtos = false;
 
   const context: DtoRenderContext = {
+    rules,
     referToDto(_schemaId, exportName) {
       usesInputDtos = true;
 

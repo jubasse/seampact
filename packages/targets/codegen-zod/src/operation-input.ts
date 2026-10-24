@@ -2,6 +2,7 @@ import {
   type BodyPlan,
   type ModuleSource,
   type OperationInputPlan,
+  type RulesMode,
   SCHEMA_MODULES,
   type WireCheck,
 } from "@seampact/codegen-core/validators";
@@ -17,11 +18,15 @@ import {
 const INPUT_SCHEMAS_NAMESPACE = "inputSchemas";
 
 // The zod input validator of each planned operation, a `z.object` of its request members.
-export function operationInputModuleSource(plans: readonly OperationInputPlan[]): ModuleSource {
+export function operationInputModuleSource(
+  plans: readonly OperationInputPlan[],
+  rules: RulesMode,
+): ModuleSource {
   const wireChecks = new Set<WireCheck>();
   let usesInputSchemas = false;
 
   const context: ZodRenderContext = {
+    rules,
     referToSchema(_schemaId, exportName) {
       usesInputSchemas = true;
 
