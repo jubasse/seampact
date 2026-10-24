@@ -240,6 +240,8 @@ export class NoteDto {
 
 <details><summary>VineJS (AdonisJS)</summary>
 
+The target builds the VineJS schema from this shape when the app starts.
+
 ```ts
 export const NoteSchema = vineStandardSchema({
   kind: "object",
@@ -305,6 +307,8 @@ export const NoteSchema = vineStandardSchema({
 
 <details><summary>Ajv JSON Schema (Fastify)</summary>
 
+A plain JSON Schema; `seampactMessages` is the keyword that carries the contract's messages.
+
 ```ts
 export const NoteSchema = ajvStandardSchema({
   type: "object",
@@ -344,7 +348,7 @@ And the client:
 <details open><summary>fetch</summary>
 
 ```ts
-const client = NotesClient.createClient({ baseUrl: "http://localhost:3000" });
+const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
 const reply = await client.getNote({ path: { noteId } });
 
 if (reply.ok) console.log(reply.body.title);
@@ -355,7 +359,8 @@ if (reply.ok) console.log(reply.body.title);
 <details><summary>TanStack Query (React)</summary>
 
 ```tsx
-const Notes = createNotesHooks(NotesClient.createClient({ baseUrl: "http://localhost:3000" }));
+const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
+const Notes = createNotesHooks(client);
 
 function NoteTitle(props: { noteId: string }) {
   const note = Notes.useGetNote({ path: { noteId: props.noteId } });

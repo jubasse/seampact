@@ -8,7 +8,7 @@ Run once after a checkout, and again after you declare a new name:
 npx seampact compile --editor-schemas
 ```
 
-It writes schemas to `.seampact/schemas` in the contract folder (set `workspace.editorSchemas` to change it). Add that folder to `.gitignore`.
+It writes schemas to `.seampact/schemas` in the workspace root (set `workspace.editorSchemas` to change it). Add that folder to `.gitignore`.
 
 Point each file at its schema on its first line, with a path relative to the file:
 

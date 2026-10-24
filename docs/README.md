@@ -32,6 +32,7 @@
 ## Frontend
 
 - [React](frontend/react.md): TanStack Query hooks over the fetch client.
+- [Point the client at your backend](frontend/backend-url.md): the backend URL per environment, Docker included.
 - [Expo and React Native](frontend/mobile.md): the client and the React hooks on a phone.
 
 ## Configuration

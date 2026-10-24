@@ -25,13 +25,14 @@ Install `@tanstack/react-query` 5, then run `npx seampact generate`.
 ## Use the hooks
 
 ```tsx
-const Notes = createNotesHooks(createClient({ baseUrl: window.location.origin }));
+const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
+const Notes = createNotesHooks(client);
 
 const notes = Notes.useListNotes({});
 const create = Notes.useCreateNote();
 ```
 
-Wrap your app in TanStack's `QueryClientProvider`. After a write, the hooks refresh the queries of the same resource.
+`VITE_API_URL` holds your backend URL: see [Point the client at your backend](backend-url.md). Wrap your app in TanStack's `QueryClientProvider`. After a write, the hooks refresh the queries of the same resource.
 
 A list whose paging style tells the next page also gets `use<Op>Infinite`, for example `useListNotesInfinite`.
 
