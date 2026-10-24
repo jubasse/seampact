@@ -66,7 +66,7 @@ A relative `baseUrl` such as `/api` works in the browser, not in Node: there is 
 
 ## Expo
 
-Write `process.env.EXPO_PUBLIC_API_URL` exactly like this: Expo does not replace a destructured or bracketed read. A URL that changes after release needs a remote config fetched at start.
+Write `process.env.EXPO_PUBLIC_API_URL` exactly like this: Expo does not replace a destructured or bracketed read. A URL that changes after release needs a remote config fetched at start. The client setup on a phone: [Expo and React Native](mobile.md).
 
 ## Docker: one image for every environment
 
