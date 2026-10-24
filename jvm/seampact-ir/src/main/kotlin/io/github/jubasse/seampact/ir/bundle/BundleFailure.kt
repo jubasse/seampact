@@ -2,7 +2,9 @@ package io.github.jubasse.seampact.ir.bundle
 
 /**
  * The failure codes of the archive reader and the pinned-bundle check (ADR 0011), the codes of
- * `@seampact/spec/bundle`: a native verifier reports the same code for the same bundle.
+ * `@seampact/spec/bundle`: a native verifier reports the same code for the same bundle. The fetch codes after them
+ * are those of the Node runner's `fetch-failure.ts`, plus the JVM's own (`package-unsupported`,
+ * `artefact-unreadable`).
  */
 public enum class BundleFailureCode(public val code: String) {
     MANIFEST_MISSING("bundle.manifest-missing"),
@@ -30,6 +32,16 @@ public enum class BundleFailureCode(public val code: String) {
     ARCHIVE_ENTRY_DUPLICATE("bundle.archive-entry-duplicate"),
     ARCHIVE_TOO_MANY_ENTRIES("bundle.archive-too-many-entries"),
     ARCHIVE_EXTRACTED_TOO_LARGE("bundle.archive-extracted-too-large"),
+    RELEASE_URL("bundle.release-url"),
+    RELEASE_FAILED("bundle.release-failed"),
+    GIT_URL("bundle.git-url"),
+    GIT_TAG("bundle.git-tag"),
+    GIT_DIRECTORY("bundle.git-directory"),
+    GIT_FAILED("bundle.git-failed"),
+    SOURCE_LOCAL("bundle.source-local"),
+    CACHE_INVALID("bundle.cache-invalid"),
+    PACKAGE_UNSUPPORTED("bundle.package-unsupported"),
+    ARTEFACT_UNREADABLE("bundle.artefact-unreadable"),
 }
 
 /**
