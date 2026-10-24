@@ -21,8 +21,8 @@ public object SpringBootTarget {
     public val IR_SUPPORT: IrSupport = IrSupport.ofModel(kinds = listOf("httpOperation"))
 
     /**
-     * The Java files of one api: its types, the endpoints interfaces, the composed annotations, the results and the
-     * exceptions, sorted by path.
+     * The Java files of one api: its types, the endpoints interfaces, the composed annotations, the results, the
+     * exceptions, the boundary's registration and contract table, and the copied boundary runtime, sorted by path.
      *
      * @throws SpringBootRefusedException an option, an entry member or an IR form this release does not serve
      */
@@ -37,11 +37,12 @@ public object SpringBootTarget {
         val layout = JavaLayout(ir, options.packageName, kept, refusals)
         refusals.throwIfAny()
 
-        val types = javaTypes(layout, refusals)
+        val types = javaTypes(layout, refusals) + boundaryTypes(layout, options, entry)
         refusals.throwIfAny()
 
-        return types
-            .map { (packageName, type) -> javaFile(packageName, type, options) }
+        val runtime = runtimeFiles(layout.runtimePackage)
+
+        return (types.map { (packageName, type) -> javaFile(packageName, type, options) } + runtime)
             .sortedBy { it.path }
     }
 
@@ -83,6 +84,15 @@ public object SpringBootTarget {
 
         return types
     }
+
+    // The Spring placement of the api's boundary: its contract table, binding, registration and hook interfaces.
+    private fun boundaryTypes(layout: JavaLayout, options: SpringBootOptions, entry: SpringBootEntry): List<Pair<String, TypeSpec>> =
+        authenticateHookTypes(layout).map { layout.operationsPackage to it } +
+            listOf(
+                layout.springPackage to contractTableType(layout, options, entry),
+                layout.springPackage to bindingType(layout),
+                layout.springPackage to configurationType(layout),
+            )
 
     private fun javaFile(packageName: String, type: TypeSpec, options: SpringBootOptions): GeneratedFile {
         val contents = JavaFile.builder(packageName, type)
