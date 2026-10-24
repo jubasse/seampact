@@ -1,7 +1,8 @@
 name: JVM core
 
 # The JVM path to the IR (ADR 0010, ADR 0011): the bundle reader and verifier on the shared bundle vectors, the
-# pinned standalone binary and its runner, and the compiler's classifier publication, on Java 21 and 25 (A13). A
+# bundle channels, the app config reader and each entry's IR view, the generated-file writer, the pinned standalone
+# binary and its runner, and the compiler's classifier publication, on Java 21 and 25 (A13). A
 # Node job builds the linux x64 binary; the Java job runs with Node removed from the runner and compiles the
 # reference contract with that binary, whose IR must equal the golden IR byte for byte. On a pull request they run
 # only when the change touches a watched path; `jvm-core` is the one check to require.
@@ -43,10 +44,10 @@ jobs:
             echo "jvm-core=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # The JVM modules, the bundle schema and vectors, the reference contract and its golden IR, the binary
-          # package, the workspace and toolchain pins and this workflow.
-          watched='^(jvm/|packages/core/spec/schemas/bundle/|packages/core/spec/vectors/bundle/|fixtures/reference/'
-          watched+='|fixtures/golden/reference/|packages/tools/binary/|\.github/workflows/p6-jvm-core\.yml$'
+          # The JVM modules, the bundle, config and IR schemas, the bundle vectors, the reference contract and the
+          # golden IR, the binary package, the workspace and toolchain pins and this workflow.
+          watched='^(jvm/|packages/core/spec/schemas/(bundle|config|ir)/|packages/core/spec/vectors/bundle/'
+          watched+='|fixtures/reference/|fixtures/golden/|packages/tools/binary/|\.github/workflows/p6-jvm-core\.yml$'
           watched+='|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.

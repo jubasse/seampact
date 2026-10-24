@@ -25,6 +25,7 @@ export {
   type GitBundleSource,
   HOOK_BOOT_CHECK_LEVELS,
   type HookBootCheckLevel,
+  type MavenBundleSource,
   type OperationsFilter,
   type PackageBundleSource,
   type PathSource,

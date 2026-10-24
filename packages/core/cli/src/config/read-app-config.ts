@@ -23,6 +23,7 @@ import {
 } from "./config-file.js";
 import { findConfigWaits } from "./config-waits.js";
 import { findRootConfig } from "./find-root-config.js";
+import { unpinnedMavenProblems } from "./maven-source.js";
 import { isInsideOrEqual, isStrictlyInside } from "./path-containment.js";
 import type { LoadedRootConfig } from "./read-root-config.js";
 import { type ResolvedSource, resolvedSources } from "./resolved-source.js";
@@ -142,6 +143,7 @@ function resolveAppConfig(file: string, parsed: ParsedConfig, config: AppConfig)
   }));
 
   const problems = [
+    ...unpinnedMavenProblems(parsed, config.sources),
     ...duplicateIdProblems(parsed, targets),
     ...outsideOutDirProblems(parsed, outDir, entries),
     ...overlappingOutProblems(parsed, entries),

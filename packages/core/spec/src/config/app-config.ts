@@ -65,7 +65,11 @@ export interface PathSource {
 
 // A pinned contract bundle (ADR 0011 "Channels"); `integrity` is optional so that pinning is a copy of the value
 // the check prints.
-export type BundleSource = PackageBundleSource | ReleaseBundleSource | GitBundleSource;
+export type BundleSource =
+  | PackageBundleSource
+  | ReleaseBundleSource
+  | GitBundleSource
+  | MavenBundleSource;
 
 // An npm package installed in the app's project, resolved from the config file's directory.
 export interface PackageBundleSource {
@@ -83,6 +87,13 @@ export interface ReleaseBundleSource {
 // A bundle directory in a git repository at a tag; the repository root when `directory` is absent.
 export interface GitBundleSource {
   git: { url: string; tag: string; directory?: string };
+  integrity?: string;
+}
+
+// A bundle tarball published as a Maven artefact, `groupId:artifactId:version`, which a JVM build resolves through its
+// own repositories (ADR 0010); the Node CLI refuses it by name.
+export interface MavenBundleSource {
+  maven: string;
   integrity?: string;
 }
 

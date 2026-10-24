@@ -1,5 +1,6 @@
 // seampact-ir (ADR 0010): the IR model generated from the IR JSON Schema, the native naming, the reader, the
-// contract bundle reader and verifier (ADR 0011) and the pinned standalone compiler binary.
+// contract bundle reader, verifier and channels (ADR 0011), the pinned standalone compiler binary, the app config
+// reader with each target entry's IR view, and the generated-file writer (ADR 0015).
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -18,21 +19,32 @@ val testJdk: String? = providers.gradleProperty("testJdk").orNull
 
 val repositoryRoot = rootProject.projectDir.parentFile
 
-// The bundle manifest's JSON Schema, copied into the jar beside the bundle reader, so the schema stays the one
-// source of the manifest's shape.
-val copyBundleManifestSchema = tasks.register<Sync>("copyBundleManifestSchema") {
-    from(repositoryRoot.resolve("packages/core/spec/schemas/bundle/manifest.schema.json")) {
+// The JSON Schemas of `@seampact/spec` this module validates against, copied into the jar beside their readers, so
+// each schema stays the one source of its shape: the bundle manifest, the app and root configs, the IR.
+val copySpecSchemas = tasks.register<Sync>("copySpecSchemas") {
+    val schemas = repositoryRoot.resolve("packages/core/spec/schemas")
+    from(schemas.resolve("bundle/manifest.schema.json")) {
         into("io/github/jubasse/seampact/ir/bundle")
     }
-    into(layout.buildDirectory.dir("generated/bundle-schema"))
+    from(schemas.resolve("ir")) {
+        include("*.schema.json")
+        into("io/github/jubasse/seampact/ir/bundle/ir-schema")
+    }
+    from(schemas.resolve("config")) {
+        include("*.schema.json")
+        into("io/github/jubasse/seampact/ir/config")
+    }
+    into(layout.buildDirectory.dir("generated/spec-schemas"))
 }
 
 sourceSets.main {
-    resources.srcDir(copyBundleManifestSchema)
+    resources.srcDir(copySpecSchemas)
 }
 
 dependencies {
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.snakeyaml.engine)
+    implementation(libs.json.schema.validator)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)

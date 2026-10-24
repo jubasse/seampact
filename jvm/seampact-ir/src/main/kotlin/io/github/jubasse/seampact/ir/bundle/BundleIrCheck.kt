@@ -12,9 +12,10 @@ import kotlinx.serialization.json.JsonPrimitive
 
 // Step 3 of the pinned-bundle check, for one api: the IR file is UTF-8 JSON with no reserved key, declares the
 // irVersion and irRevision the manifest lists, is of a version this reader reads at its exact irRevision (before
-// 1.0, ADR 0005), with the lists it reads well-formed, then decodes into the IR model generated from the IR JSON
-// Schema, which keeps unknown members, tags and values as the open schema does. Kinds, features and must-act
-// unknowns are a target's question (`IrReader.read` with its own support), not the bundle's.
+// 1.0, ADR 0005), with the lists it reads well-formed, validates against the open IR JSON Schema with no must-act
+// unknown (`IrSchemaCheck.kt`), then decodes into the IR model generated from the IR JSON Schema, which keeps
+// unknown members, tags and values as the open schema does. Kinds and features are a target's question
+// (`IrReader.read` with its own support), not the bundle's.
 
 private const val FIX = "Rebuild the bundle with a compiler of this IR revision, or use the seampact release that reads it."
 
@@ -60,6 +61,11 @@ internal fun checkBundleIr(api: BundleApi, bytes: ByteArray): BundleIrCheck {
 
     val support = supportFailure(api, document)
     if (support != null) return refused(support)
+
+    val schemaProblems = irSchemaProblems(document)
+    if (schemaProblems.isNotEmpty()) {
+        return refused(BundleFailure(BundleFailureCode.IR_INVALID, irSchemaMessage(api.file, schemaProblems), FIX, api.file))
+    }
 
     return decoded(api, document)
 }
