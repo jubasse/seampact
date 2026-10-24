@@ -96,6 +96,7 @@ jobs:
         with:
           name: reference
           path: packages/tools/binary/dist/reference/
+          include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
 

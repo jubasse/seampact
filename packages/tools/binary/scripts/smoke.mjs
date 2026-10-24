@@ -94,7 +94,13 @@ for (const run of INIT_RUNS) {
     directory: join(scratch, run.name),
   });
 
-  compareWithReference(run.name, steps, writtenFiles);
+  const referenceFiles = compareWithReference(run.name, steps, writtenFiles);
+
+  check(
+    referenceFiles.includes(".gitignore") &&
+      referenceFiles.some((file) => file.includes("/.seampact/schemas/")),
+    `${run.name}: the reference holds no .gitignore or editor schema`,
+  );
 }
 
 // Checks the binary's answers and files against the Node CLI's for one run; returns the reference's file names.
