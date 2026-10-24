@@ -54,7 +54,7 @@ export function queriesModuleSource(
       : ["withPlainHeaders"]),
     ...(hasIdempotency ? ["IdempotencyKeys", "idempotencyKeyGenerator", "withIdempotencyKey"] : []),
     "keyRequest",
-    ...(hasQuery ? ["withSignal"] : []),
+    ...(hasQuery ? ["runWithSignal"] : []),
     ...(hasInfinite ? ["type NextPageRule", "nextPageRequest"] : []),
     "type ClientResult",
     "type WithPlainHeaders",
@@ -161,7 +161,7 @@ function staleTimeMember(operation: QueryOperation, options: ReactQueryOptions):
 function querySource(operation: QueryOperation, api: string, options: ReactQueryOptions): string {
   const { names } = operation;
   const types = operationType(operation, api);
-  const call = `await client.${names.base}(request, withSignal(call, signal))`;
+  const call = `await runWithSignal(call, signal, (callWithSignal) => client.${names.base}(request, callWithSignal))`;
 
   return `${propertyKey(names.options)}<Selected = ${types}["data"]>(request: ${types}["request"], ${optionsParameter(operation, `QueryCallerOptions<${types}, Selected>`)}) {
 const { call, ...callerOptions } = options;
@@ -185,7 +185,7 @@ function infiniteSource(
   if (infinite === undefined) return "";
 
   const types = operationType(operation, api);
-  const call = `await client.${names.base}(pageParam, withSignal(call, signal))`;
+  const call = `await runWithSignal(call, signal, (callWithSignal) => client.${names.base}(pageParam, callWithSignal))`;
 
   return `${propertyKey(infinite.options)}<Selected = InfiniteData<${types}["data"], ${types}["request"]>>(request: ${types}["request"], ${optionsParameter(operation, `InfiniteQueryCallerOptions<${types}, Selected>`)}) {
 const { call, ...callerOptions } = options;

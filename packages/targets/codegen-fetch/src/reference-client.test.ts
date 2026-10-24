@@ -714,6 +714,20 @@ describe("the generated reference client answers a stub server", () => {
     }
   });
 
+  test("a platform without URLSearchParams.get is refused when the client is created", () => {
+    const { get } = URLSearchParams.prototype;
+
+    Object.assign(URLSearchParams.prototype, { get: undefined });
+
+    try {
+      expect(() =>
+        createResultClient({ baseUrl: "http://api.test", idempotencyKey: () => "key" }),
+      ).toThrow(/URLSearchParams\.get.*0\.84/);
+    } finally {
+      Object.assign(URLSearchParams.prototype, { get });
+    }
+  });
+
   test("a next link target reads its cursor without URL.canParse", async () => {
     const { canParse } = URL;
     const fake = createResultClient({
@@ -893,7 +907,10 @@ describe("the generated reference client answers a stub server", () => {
   test("a Hermes-like runtime works through the injected key generator and refuses by name without it", async () => {
     const { any, timeout } = AbortSignal;
     const { canParse } = URL;
+    const callerSignal = new AbortController().signal;
+    const signalsSeen: (AbortSignal | null | undefined)[] = [];
     const hermesFetch: typeof fetch = async (_input, init) => {
+      signalsSeen.push(init?.signal);
       sent.push({ url: new URL(String(_input)), headers: new Headers(init?.headers) });
 
       return new Response("[]", {
@@ -918,7 +935,7 @@ describe("the generated reference client answers a stub server", () => {
       });
       const page = await call(hermes, "listTasks")(
         { path: { channelId: "c1" }, headers: user() },
-        { signal: new AbortController().signal, timeoutMs: 5000 },
+        { signal: callerSignal, timeoutMs: 5000 },
       );
 
       expect(page).toMatchObject({ ok: true, body: { nextCursor: "c2" } });

@@ -1,6 +1,6 @@
 # Expo and React Native
 
-An Expo or React Native app calls your API with the generated `fetch` client, and with the React hooks over it (TanStack Query, SWR or RTK Query). Both run on Hermes.
+An Expo or React Native app calls your API with the generated `fetch` client, and with the React hooks over it (TanStack Query, SWR or RTK Query). Both are written for Hermes, and need React Native 0.84 or later (earlier versions lack `URLSearchParams.get`, which paging reads; `createClient` refuses to start without it).
 
 Capacitor and Ionic apps are web apps: use the React, Angular or Vue targets.
 
@@ -25,6 +25,10 @@ Use a device address, not `localhost`, when you test on a phone: your machine's 
 ## Idempotency keys
 
 Hermes has no `crypto.randomUUID`. A contract with an idempotent operation makes `createClient` refuse to start, and says so: pass a key generator.
+
+```sh
+npx expo install expo-crypto
+```
 
 ```ts
 import { randomUUID } from "expo-crypto";
@@ -73,6 +77,7 @@ SWR and RTK Query hooks are used the same way, with their own provider.
 | `fetch`, `Headers`, `Response`, `AbortController` | provided by React Native | used; a missing `fetch` is refused at creation, pass `fetch` |
 | `crypto.randomUUID` | missing | refused at creation, pass `idempotencyKey` |
 | `AbortSignal.timeout`, `AbortSignal.any` | missing | an `AbortController` stands in |
+| `URLSearchParams.get` | React Native 0.84 and later | needed for paging; refused at creation otherwise |
 | `URL.canParse` | missing | not used |
 | `TextEncoder`, `FormData`, `Blob`, `structuredClone`, `ReadableStream` | not needed | not used |
 
@@ -80,4 +85,4 @@ An injected `fetch` also works, for example `expo/fetch`.
 
 ## Tested and not tested
 
-A unit test runs the generated client and the hook runtime in Node with those globals removed, the way Hermes lacks them. There is no Expo app in CI: the real `URL` and `URLSearchParams` of React Native, and the hooks inside a running app, are not tested.
+A unit test runs the generated client and the hook runtime in Node with those globals removed, the way Hermes lacks them. No Expo app runs in CI: the real `URL` and `URLSearchParams` of React Native, and the hooks inside a running app, are not tested.

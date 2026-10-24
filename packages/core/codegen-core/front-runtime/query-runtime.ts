@@ -214,26 +214,42 @@ function recordsRead(rule: PagedRule, position: number, limit: number): number {
   return rule.position === "page" ? (position - rule.base + 1) * limit : position + limit;
 }
 
-/** The caller's call options with the library's abort signal, combined with the caller's own signal if any. */
-export function withSignal<Call extends object>(
+/**
+ * Runs a call with the library's abort signal, combined with the caller's own signal if any, and releases what the
+ * combination holds on the caller's signal once the call settled.
+ */
+export function runWithSignal<Call extends object, Result>(
   call: Call | undefined,
   signal: AbortSignal,
-): Call & { readonly signal: AbortSignal };
-export function withSignal(call: object | undefined, signal: AbortSignal): object {
+  run: (call: Call & { readonly signal: AbortSignal }) => Promise<Result>,
+): Promise<Result>;
+export async function runWithSignal(
+  call: object | undefined,
+  signal: AbortSignal,
+  run: (call: object) => Promise<unknown>,
+): Promise<unknown> {
   const callerSignal = isRecord(call) ? call.signal : undefined;
+  const combined =
+    callerSignal instanceof AbortSignal
+      ? anySignal([signal, callerSignal])
+      : { signal, release: () => undefined };
 
-  return {
-    ...call,
-    signal: callerSignal instanceof AbortSignal ? anySignal([signal, callerSignal]) : signal,
-  };
+  try {
+    return await run({ ...call, signal: combined.signal });
+  } finally {
+    combined.release();
+  }
 }
 
-// `AbortSignal.any` is missing on some platforms (React Native's Hermes): an `AbortController` stands in there.
-// Both signals belong to one query, so the listeners die with them.
-function anySignal(signals: AbortSignal[]): AbortSignal {
-  if (typeof AbortSignal.any === "function") return AbortSignal.any(signals);
+// `AbortSignal.any` is missing on some platforms (React Native's Hermes): an `AbortController` stands in there,
+// and its listeners on the given signals are removed by `release`.
+function anySignal(signals: AbortSignal[]): { signal: AbortSignal; release: () => void } {
+  if (typeof AbortSignal.any === "function") {
+    return { signal: AbortSignal.any(signals), release: () => undefined };
+  }
 
   const controller = new AbortController();
+  const releases: (() => void)[] = [];
 
   for (const signal of signals) {
     if (signal.aborted) {
@@ -241,10 +257,18 @@ function anySignal(signals: AbortSignal[]): AbortSignal {
       break;
     }
 
-    signal.addEventListener("abort", () => controller.abort(signal.reason), { once: true });
+    const onAbort = () => controller.abort(signal.reason);
+
+    signal.addEventListener("abort", onAbort, { once: true });
+    releases.push(() => signal.removeEventListener("abort", onAbort));
   }
 
-  return controller.signal;
+  return {
+    signal: controller.signal,
+    release: () => {
+      for (const release of releases) release();
+    },
+  };
 }
 
 /** A declared error or an unexpected answer as a plain value a store keeps, with `toContractError` its class back. */

@@ -5,9 +5,9 @@ import {
   type NextPageRule,
   nextPageRequest,
   PageRequests,
+  runWithSignal,
   settleAsData,
   settleForStore,
-  withSignal,
 } from "../../front-runtime/query-runtime.js";
 
 const PAGE_PARAM = { in: "query", key: "page" } as const;
@@ -224,51 +224,114 @@ describe("an offset list", () => {
   });
 });
 
+const REASON = new Error("stopped");
+
+async function withoutAbortSignalAny<Result>(run: () => Promise<Result>): Promise<Result> {
+  const { any } = AbortSignal;
+
+  Object.assign(AbortSignal, { any: undefined });
+
+  try {
+    return await run();
+  } finally {
+    Object.assign(AbortSignal, { any });
+  }
+}
+
 describe("the call options of a query", () => {
-  test("keep the caller's signal beside the library's", () => {
+  test("keep the caller's signal beside the library's", async () => {
     const callerAbort = new AbortController();
     const libraryAbort = new AbortController();
-    const call = withSignal({ timeoutMs: 500, signal: callerAbort.signal }, libraryAbort.signal);
 
-    expect(call.timeoutMs).toBe(500);
-    expect(call.signal.aborted).toBe(false);
-
-    callerAbort.abort();
-
-    expect(call.signal.aborted).toBe(true);
-  });
-
-  test.each(["caller", "library"] as const)(
-    "a platform without AbortSignal.any still follows the %s abort",
-    (aborting) => {
-      const callerAbort = new AbortController();
-      const libraryAbort = new AbortController();
-
-      const { any } = AbortSignal;
-
-      Object.assign(AbortSignal, { any: undefined });
-
-      try {
-        const call = withSignal({ signal: callerAbort.signal }, libraryAbort.signal);
-
+    await runWithSignal(
+      { timeoutMs: 500, signal: callerAbort.signal },
+      libraryAbort.signal,
+      async (call) => {
+        expect(call.timeoutMs).toBe(500);
         expect(call.signal.aborted).toBe(false);
 
-        (aborting === "caller" ? callerAbort : libraryAbort).abort();
+        callerAbort.abort();
 
         expect(call.signal.aborted).toBe(true);
-      } finally {
-        Object.assign(AbortSignal, { any });
-      }
-    },
-  );
+      },
+    );
+  });
 
-  test("take the library's signal when the caller gives none", () => {
+  test("take the library's signal when the caller gives none", async () => {
     const libraryAbort = new AbortController();
-    const call = withSignal(undefined, libraryAbort.signal);
 
-    libraryAbort.abort();
+    await runWithSignal(undefined, libraryAbort.signal, async (call) => {
+      libraryAbort.abort();
 
-    expect(call.signal.aborted).toBe(true);
+      expect(call.signal.aborted).toBe(true);
+    });
+  });
+
+  describe("on a platform without AbortSignal.any", () => {
+    test.each(["caller", "library"] as const)("follow the %s abort and its reason", (aborting) =>
+      withoutAbortSignalAny(() => {
+        const callerAbort = new AbortController();
+        const libraryAbort = new AbortController();
+
+        return runWithSignal({ signal: callerAbort.signal }, libraryAbort.signal, async (call) => {
+          expect(call.signal.aborted).toBe(false);
+
+          (aborting === "caller" ? callerAbort : libraryAbort).abort(REASON);
+
+          expect(call.signal.aborted).toBe(true);
+          expect(call.signal.reason).toBe(REASON);
+        });
+      }),
+    );
+
+    test.each(["caller", "library"] as const)(
+      "an already aborted %s signal aborts the call",
+      (aborted) =>
+        withoutAbortSignalAny(() => {
+          const callerAbort = new AbortController();
+          const libraryAbort = new AbortController();
+
+          (aborted === "caller" ? callerAbort : libraryAbort).abort(REASON);
+
+          return runWithSignal(
+            { signal: callerAbort.signal },
+            libraryAbort.signal,
+            async (call) => {
+              expect(call.signal.aborted).toBe(true);
+              expect(call.signal.reason).toBe(REASON);
+            },
+          );
+        }),
+    );
+
+    test("leave no listener on a caller signal that outlives many calls", () =>
+      withoutAbortSignalAny(async () => {
+        const callerAbort = new AbortController();
+        let listening = 0;
+
+        const add = callerAbort.signal.addEventListener.bind(callerAbort.signal);
+        const remove = callerAbort.signal.removeEventListener.bind(callerAbort.signal);
+
+        callerAbort.signal.addEventListener = (...parameters: Parameters<typeof add>) => {
+          listening += 1;
+          add(...parameters);
+        };
+
+        callerAbort.signal.removeEventListener = (...parameters: Parameters<typeof remove>) => {
+          listening -= 1;
+          remove(...parameters);
+        };
+
+        for (let call = 0; call < 100; call += 1) {
+          await runWithSignal(
+            { signal: callerAbort.signal },
+            new AbortController().signal,
+            async () => undefined,
+          );
+        }
+
+        expect(listening).toBe(0);
+      }));
   });
 });
 

@@ -225,7 +225,9 @@ export async function callOperationOrThrow<Success, Operation extends string>(
 
 /**
  * Refuses, when the client is created, a config that a call would fail on: no fetch on the platform and none
- * given, or an operation with a generated idempotency key, no `crypto.randomUUID` and no generator given.
+ * given, an operation with a generated idempotency key, no `crypto.randomUUID` and no generator given, or an
+ * operation reading a next cursor from a `Link` target on a platform whose `URLSearchParams` has no `get` (React
+ * Native before 0.84).
  */
 export function checkClientConfig(
   config: ClientConfig,
@@ -237,6 +239,12 @@ export function checkClientConfig(
     );
   }
 
+  if (readsLinkParams(plans) && typeof globalThis.URLSearchParams?.prototype?.get !== "function") {
+    throw new TypeError(
+      "This platform has no URLSearchParams.get to read the next cursor of a Link header: use React Native 0.84 or later, or a URLSearchParams polyfill such as react-native-url-polyfill.",
+    );
+  }
+
   const generatesKeys = Object.values(plans).some((plan) => plan.idempotency !== undefined);
 
   if (generatesKeys && config.idempotencyKey === undefined && platformRandomUuid() === undefined) {
@@ -244,6 +252,15 @@ export function checkClientConfig(
       "This platform has no crypto.randomUUID to generate idempotency keys: pass a generator as `idempotencyKey` in the client config.",
     );
   }
+}
+
+function readsLinkParams(plans: Readonly<Record<string, OperationPlan>>): boolean {
+  return Object.values(plans).some((plan) =>
+    plan.successes.some(
+      (success) =>
+        success.shape === "page" && success.facts.some((fact) => fact.source.from === "linkParam"),
+    ),
+  );
 }
 
 function platformRandomUuid(): (() => string) | undefined {
@@ -704,14 +721,19 @@ function endOfToken(link: string, start: number, stops: string): number {
   return position;
 }
 
-// `URL.canParse` is missing on some platforms (Hermes), so an unparsable target is caught instead.
+// `URL.canParse` is missing on some platforms (Hermes), so an unparsable target is caught instead. A missing
+// `URLSearchParams.get` is refused when the client is created, never caught here.
 function queryParamOf(target: string, param: string): string | undefined {
+  let parsed: URL;
+
   try {
-    return new URL(target, LINK_BASE).searchParams.get(param) ?? undefined;
+    parsed = new URL(target, LINK_BASE);
   } catch {
     // A target the URL parser refuses carries no cursor: the page is the last one for this client.
     return undefined;
   }
+
+  return parsed.searchParams.get(param) ?? undefined;
 }
 
 function errorAnswer(plan: OperationPlan, response: Response, body: unknown): Answer | undefined {
