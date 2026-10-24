@@ -16,4 +16,4 @@ You see the `validators` folder rewritten. On NestJS, Express and Hono, a server
 
 Fastify and AdonisJS can skip it: leave out the `validators` entry and the link, and the server validates with the framework's own library, Ajv on Fastify and VineJS on AdonisJS. Install `ajv` or `@vinejs/vine` in your app.
 
-The generated schemas use a few helpers where the library's own rule means something else. For example, zod's and yup's `.min()` and `.max()` count UTF-16 units, so `"😀"` has length 2; the contract counts characters, so the generated code checks the length with a helper. This keeps the client, the server and the OpenAPI document in agreement.
+The generated schemas use a few helpers where the library's own rule counts differently from the contract. For example, yup's `.min()` and `.max()` count UTF-16 units, so `"😀"` has length 2, while the contract counts characters; the generated yup code checks the length with a helper. This keeps the client, the server and the OpenAPI document in agreement.
