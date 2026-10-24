@@ -1,11 +1,20 @@
-// Writes the reference output the smoke compares against: the IR, the bundle and the editor schemas of each smoke app, made by the Node CLI
+// Writes the reference output the smoke compares against: the IR, the bundle and the editor schemas of each smoke app,
+// and every file each `init` run leaves, made by the Node CLI
 // (the CLI entry bundled for Node, packs resolved from the repository's node_modules).
 // Usage: node scripts/reference.mjs <out-dir>
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
-import { repositoryRoot, runSmokeApp, SMOKE_APPS, writeSmokeApp } from "./smoke-apps.mjs";
+import {
+  INIT_RUNS,
+  repositoryRoot,
+  runInit,
+  runSmokeApp,
+  SMOKE_APPS,
+  writeSmokeApp,
+} from "./smoke-apps.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const out = resolve(process.argv[2] ?? join(root, "dist/reference"));
@@ -47,13 +56,40 @@ for (const app of SMOKE_APPS) {
     process.exit(1);
   }
 
-  mkdirSync(join(out, app.name), { recursive: true });
-  writeFileSync(join(out, app.name, "steps.json"), `${JSON.stringify(steps, null, 2)}\n`);
+  writeReference(app.name, steps, writtenFiles);
+}
 
-  for (const [file, bytes] of Object.entries(writtenFiles)) {
-    mkdirSync(dirname(join(out, app.name, file)), { recursive: true });
-    writeFileSync(join(out, app.name, file), bytes);
+// Outside the repository, as the binary's smoke runs them: init writes a new project with no config above it.
+const initRoot = mkdtempSync(join(tmpdir(), "seampact-reference-init-"));
+
+for (const run of INIT_RUNS) {
+  const { steps, writtenFiles } = runInit({
+    executable: process.execPath,
+    prefixArguments: [nodeCli],
+    environment: process.env,
+    run,
+    directory: join(initRoot, run.name),
+  });
+  const failed = Object.entries(steps).find(([, answer]) => answer.status !== 0);
+
+  if (failed !== undefined) {
+    console.error(`reference: ${run.name}: '${failed[0]}' failed\n${failed[1].stderr}`);
+    process.exit(1);
   }
 
-  console.log(`reference: ${app.name} ok`);
+  writeReference(run.name, steps, writtenFiles);
+}
+
+rmSync(initRoot, { recursive: true, force: true });
+
+function writeReference(name, steps, writtenFiles) {
+  mkdirSync(join(out, name), { recursive: true });
+  writeFileSync(join(out, name, "steps.json"), `${JSON.stringify(steps, null, 2)}\n`);
+
+  for (const [file, bytes] of Object.entries(writtenFiles)) {
+    mkdirSync(dirname(join(out, name, file)), { recursive: true });
+    writeFileSync(join(out, name, file), bytes);
+  }
+
+  console.log(`reference: ${name} ok`);
 }

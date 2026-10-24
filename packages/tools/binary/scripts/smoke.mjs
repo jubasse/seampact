@@ -1,5 +1,6 @@
 // Runs one binary on the smoke apps and compares it with the reference the Node CLI produced on Linux: the IR
-// files, each app's bundle and its editor schemas byte for byte, and the answers of the commands both carry. The apps are copied outside the repository,
+// files, each app's bundle and its editor schemas, and every file of each `init` run, byte for byte, and the answers of
+// the commands both carry. The apps are copied outside the repository,
 // so a pack can only come from the packs embedded in the binary.
 // Usage: node scripts/smoke.mjs <binary> <reference-dir> [--label <name>]
 // Env: SMOKE_ENV='{"TZ":"Asia/Kolkata","LOG_TOKENS":"1"}' extra environment for the binary.
@@ -20,6 +21,8 @@ import { join, resolve } from "node:path";
 import {
   BINARY_REFUSED_COMMANDS,
   EDITOR_SCHEMAS_PREFIX,
+  INIT_RUNS,
+  runInit,
   runSmokeApp,
   SMOKE_APPS,
   writeSmokeApp,
@@ -65,13 +68,6 @@ function withoutRefusedCommands(referenceSteps) {
       .join("\n");
   }
 
-  if (steps.init !== undefined) {
-    steps.init.stderr = steps.init.stderr.replace(
-      "Use `seampact compile`, `generate`, `check`, `lint`, `diff`, `explain` or `bundle`.",
-      "Use `seampact compile`, `lint`, `diff`, `explain` or `bundle`.",
-    );
-  }
-
   return steps;
 }
 
@@ -82,34 +78,53 @@ for (const app of SMOKE_APPS) {
 
   const { steps, writtenFiles } = runSmokeApp({ executable: binary, environment, app, directory });
 
-  const referenceSteps = JSON.parse(
-    readFileSync(join(referenceDirectory, app.name, "steps.json"), "utf8"),
-  );
+  const referenceFiles = compareWithReference(app.name, steps, writtenFiles);
 
-  check(
-    JSON.stringify(steps) === JSON.stringify(withoutRefusedCommands(referenceSteps)),
-    `${app.name}: command answers differ from the Node CLI:\n${JSON.stringify(steps)}\n${JSON.stringify(withoutRefusedCommands(referenceSteps))}`,
-  );
-
-  const referenceFiles = referenceFileNames(join(referenceDirectory, app.name));
-
-  check(
-    JSON.stringify(Object.keys(writtenFiles).sort()) === JSON.stringify(referenceFiles),
-    `${app.name}: the binary wrote ${Object.keys(writtenFiles).length} files, the Node CLI ${referenceFiles.length}`,
-  );
   check(
     referenceFiles.some((file) => file.startsWith(EDITOR_SCHEMAS_PREFIX)),
     `${app.name}: compile --editor-schemas wrote no editor schema`,
   );
+}
+
+for (const run of INIT_RUNS) {
+  const { steps, writtenFiles } = runInit({
+    executable: binary,
+    environment,
+    run,
+    directory: join(scratch, run.name),
+  });
+
+  compareWithReference(run.name, steps, writtenFiles);
+}
+
+// Checks the binary's answers and files against the Node CLI's for one run; returns the reference's file names.
+function compareWithReference(name, steps, writtenFiles) {
+  const referenceSteps = JSON.parse(
+    readFileSync(join(referenceDirectory, name, "steps.json"), "utf8"),
+  );
+
+  check(
+    JSON.stringify(steps) === JSON.stringify(withoutRefusedCommands(referenceSteps)),
+    `${name}: command answers differ from the Node CLI:\n${JSON.stringify(steps)}\n${JSON.stringify(withoutRefusedCommands(referenceSteps))}`,
+  );
+
+  const referenceFiles = referenceFileNames(join(referenceDirectory, name));
+
+  check(
+    JSON.stringify(Object.keys(writtenFiles).sort()) === JSON.stringify(referenceFiles),
+    `${name}: the binary wrote ${Object.keys(writtenFiles).length} files, the Node CLI ${referenceFiles.length}`,
+  );
 
   for (const file of referenceFiles) {
-    const reference = readFileSync(join(referenceDirectory, app.name, file));
+    const reference = readFileSync(join(referenceDirectory, name, file));
 
     check(
       writtenFiles[file] !== undefined && Buffer.compare(writtenFiles[file], reference) === 0,
-      `${app.name}/${file} differs from the Node CLI's`,
+      `${name}/${file} differs from the Node CLI's`,
     );
   }
+
+  return referenceFiles;
 }
 
 // The files the Node CLI wrote for one app, with forward slashes, sorted; `steps.json` holds its answers.
