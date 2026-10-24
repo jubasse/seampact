@@ -10,7 +10,6 @@ import io.github.jubasse.seampact.ir.model.ScalarType
 import io.github.jubasse.seampact.ir.model.ScalarTypeUse
 import io.github.jubasse.seampact.ir.model.TypeUse
 import io.github.jubasse.seampact.ir.read.IrReader
-import io.github.jubasse.seampact.ir.read.IrSupport
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
@@ -44,7 +43,7 @@ class SpringBootGoldenTest {
     private fun referenceIr(file: String): ContractIR {
         val text = repositoryRoot.resolve("fixtures/golden/reference").resolve(file).readText()
 
-        return IrReader.read(text, IrSupport.ofModel(kinds = listOf("httpOperation")))
+        return IrReader.read(text, SpringBootTarget.IR_SUPPORT)
     }
 
     // What the entry's `operations.include` keeps; the IR view of a build plugin does the same.

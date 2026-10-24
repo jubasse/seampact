@@ -16,7 +16,10 @@ public class PlannedWrite internal constructor(
     internal val files: List<PlannedFile>,
     public val unchanged: List<String>,
     public val removable: List<String>,
-)
+) {
+    /** The paths a commit writes: each planned file whose bytes differ from the file on disk, or that is missing. */
+    public val changed: List<String> get() = files.map { it.path }.filter { it !in unchanged }
+}
 
 internal class PlannedFile(val path: String, val bytes: ByteArray, val sha256: String)
 
@@ -31,8 +34,9 @@ public sealed interface PlanOutcome {
 public data class WrittenFiles(val written: List<String>, val unchanged: List<String>, val removed: List<String>)
 
 private const val BYTE_ORDER_MARK = "﻿"
+// Each runner names its own way to generate again; no JVM runner overwrites a hand edit.
 private const val HAND_EDIT_FIX =
-    "Move the hand-written code next to the generated files, then delete the edited file and generate again, or generate with the force option to overwrite it."
+    "Move the hand-written code next to the generated files, then delete the edited file and generate again."
 
 /**
  * Writes a target's files into its output directory (ADR 0015 "Writing files"), as the Node writer

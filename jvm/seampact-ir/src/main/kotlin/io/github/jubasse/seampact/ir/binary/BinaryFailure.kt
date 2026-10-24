@@ -8,6 +8,9 @@ public enum class BinaryFailureCode(public val code: String) {
     HASH_MISMATCH("binary.hash-mismatch"),
     CACHE_UNSAFE("binary.cache-unsafe"),
     COMPILE_TIMEOUT("binary.compile-timeout"),
+
+    /** The build plugin could not resolve the pinned release artefact through the build's repositories. */
+    ARTEFACT_UNRESOLVED("binary.artefact-unresolved"),
 }
 
 /** One named reason, its fix and, when two values differ, both of them. */

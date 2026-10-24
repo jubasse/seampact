@@ -135,6 +135,19 @@ class BinaryPinTest {
     }
 
     @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun anInstalledBinaryIsOwnerOnlyWhateverTheUmaskAndIsReusedByTheNextBuild() {
+        val pin = BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub))
+
+        val first = BinaryInstaller.install(stub, pin, work.resolve("cache"))
+        val second = BinaryInstaller.install(stub, pin, work.resolve("cache"))
+
+        check(first is BinaryInstall.Installed)
+        assertEquals("rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(first.binary.path)))
+        assertTrue(second is BinaryInstall.Installed, "$second")
+    }
+
+    @Test
     fun theManifestGivesThePinsAndTheirPropertiesRoundTrip() {
         val sums = BinaryPlatform.entries.mapIndexed { index, platform -> "${index.toString().repeat(64)}  ${platform.assetName}" }
             .joinToString("\n", postfix = "\n")
@@ -186,6 +199,15 @@ class BinaryPinTest {
         assertEquals(BinaryPin.Artifact(BinaryPlatform.LINUX_X64, "1.0.0", "0".repeat(64)), pinned.pin)
         assertEquals("io.github.jubasse:seampact-compiler:1.0.0:linux-x86_64@exe", (pinned.pin as BinaryPin.Artifact).coordinates)
         assertEquals(BinaryFailureCode.PLATFORM_UNSUPPORTED, (musl as BinaryPinResolution.Refused).failure.code)
+        assertEquals(BinaryPin.LocalFile(stub, "f".repeat(64)), (ownBuild as BinaryPinResolution.Pinned).pin)
+    }
+
+    @Test
+    fun aPluginWithoutEmbeddedPinsRunsOnlyAnOverride() {
+        val unpinned = BinaryPinning.pin(null, null, linuxHost)
+        val ownBuild = BinaryPinning.pin(null, BinaryOverride.LocalPath(stub, "f".repeat(64)), linuxHost)
+
+        assertEquals(BinaryFailureCode.PIN_MISSING, (unpinned as BinaryPinResolution.Refused).failure.code)
         assertEquals(BinaryPin.LocalFile(stub, "f".repeat(64)), (ownBuild as BinaryPinResolution.Pinned).pin)
     }
 }
