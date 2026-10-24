@@ -17,6 +17,35 @@
 - **Safe changes.** `seampact check` and `seampact diff` catch drift and breaking changes in CI.
 - **Your tools keep working.** Swagger, Ajv and VineJS stay in place.
 
+## What it generates
+
+From one YAML contract:
+
+| Output | What you get |
+|---|---|
+| Types | One TypeScript type per schema, request and reply. |
+| Validators | zod, yup, class-validator, VineJS or Ajv schemas that check every input. |
+| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS or Hono. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
+| Built-in rules | Paging, rate limits, idempotency keys, ETags, CSRF, signed requests and field rights, declared in the contract and enforced at the boundary. You plug in the stores and decisions. |
+| Errors | One error format, RFC 9457 `problem+json` by default, with typed error codes per route. |
+| Clients | A typed `fetch` client, and TanStack Query, SWR or RTK Query hooks for React. |
+| Docs | OpenAPI 3.1 documents, and on NestJS and Fastify your framework's own Swagger kept in line with the contract. |
+| Editor support | Schemas that complete and check the contract's names as you type. |
+
+From the CLI:
+
+| Command | What it does |
+|---|---|
+| `seampact init` | Starts a project: a config and an example contract. |
+| `seampact generate` | Writes the code above into `__generated__`. |
+| `seampact check` | Fails CI when generated files or documents differ from the contract. |
+| `seampact diff` | Classifies the changes between two versions and fails on a breaking one. |
+| `seampact lint` | Reports contract mistakes before you generate. |
+| `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
+| `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
+
+Next: Spring Boot, Laravel, Symfony, Vue, Angular, MSW mocks.
+
 ## Example
 
 The contract:
@@ -139,12 +168,7 @@ The validators, from the same `Note` schema. Pick one per app:
 
 ```ts
 export const NoteSchema = z.object({
-  noteId: z
-    .string()
-    .regex(
-      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-      { error: "Expected a UUID: 8-4-4-4-12 hex digits." },
-    ),
+  // …
   title: z
     .string()
     .refine((value) => codePointLength(value) >= 1, {
@@ -155,12 +179,7 @@ export const NoteSchema = z.object({
       error: "Expected at most 100 characters.",
       params: { rule: "maxLength" },
     }),
-  createdAt: z
-    .string()
-    .refine(isDateTime, {
-      error: "Expected an RFC 3339 date-time with a time offset.",
-      params: { rule: "format" },
-    }),
+  // …
 });
 ```
 
@@ -171,19 +190,7 @@ export const NoteSchema = z.object({
 ```ts
 export const NoteSchema = yup
   .object({
-    noteId: yup
-      .string()
-      .strict()
-      .test({
-        name: "format",
-        message: "Expected a UUID: 8-4-4-4-12 hex digits.",
-        test: (value) =>
-          value === undefined ||
-          /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-            value,
-          ),
-      })
-      .defined(),
+    // …
     title: yup
       .string()
       .strict()
@@ -198,15 +205,7 @@ export const NoteSchema = yup
         test: (value) => value === undefined || codePointLength(value) <= 100,
       })
       .defined(),
-    createdAt: yup
-      .string()
-      .strict()
-      .test({
-        name: "format",
-        message: "Expected an RFC 3339 date-time with a time offset.",
-        test: (value) => value === undefined || isDateTime(value),
-      })
-      .defined(),
+    // …
   })
   .noUnknown()
   .default(undefined);
@@ -218,21 +217,12 @@ export const NoteSchema = yup
 
 ```ts
 export class NoteDto {
-  @IsString()
-  @contract.Format("uuid", "Expected a UUID: 8-4-4-4-12 hex digits.")
-  noteId!: string;
-
+  // …
   @IsString()
   @contract.MinLength(1, "Expected at least 1 character.")
   @contract.MaxLength(100, "Expected at most 100 characters.")
   title!: string;
-
-  @IsString()
-  @contract.Format(
-    "date-time",
-    "Expected an RFC 3339 date-time with a time offset.",
-  )
-  createdAt!: string;
+  // …
 }
 ```
 
@@ -240,30 +230,14 @@ export class NoteDto {
 
 <details><summary>VineJS (AdonisJS)</summary>
 
-The target builds the VineJS schema from this shape when the app starts.
+A data tree the target reads at runtime to build the VineJS schema.
 
 ```ts
 export const NoteSchema = vineStandardSchema({
   kind: "object",
   unknownKeys: "strip",
   fields: [
-    {
-      key: "noteId",
-      optional: false,
-      type: {
-        kind: "scalar",
-        base: "string",
-        checks: [
-          {
-            rule: "format",
-            format: "uuid",
-            message: "Expected a UUID: 8-4-4-4-12 hex digits.",
-            layout:
-              "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
-          },
-        ],
-      },
-    },
+    // …
     {
       key: "title",
       optional: false,
@@ -271,34 +245,12 @@ export const NoteSchema = vineStandardSchema({
         kind: "scalar",
         base: "string",
         checks: [
-          {
-            rule: "minLength",
-            limit: 1,
-            message: "Expected at least 1 character.",
-          },
-          {
-            rule: "maxLength",
-            limit: 100,
-            message: "Expected at most 100 characters.",
-          },
+          { rule: "minLength", limit: 1, message: "Expected at least 1 character." },
+          { rule: "maxLength", limit: 100, message: "Expected at most 100 characters." },
         ],
       },
     },
-    {
-      key: "createdAt",
-      optional: false,
-      type: {
-        kind: "scalar",
-        base: "string",
-        checks: [
-          {
-            rule: "format",
-            format: "date-time",
-            message: "Expected an RFC 3339 date-time with a time offset.",
-          },
-        ],
-      },
-    },
+    // …
   ],
 });
 ```
@@ -313,11 +265,7 @@ A plain JSON Schema; `seampactMessages` is the keyword that carries the contract
 export const NoteSchema = ajvStandardSchema({
   type: "object",
   properties: {
-    noteId: {
-      type: "string",
-      format: "uuid",
-      seampactMessages: { format: "Expected a UUID: 8-4-4-4-12 hex digits." },
-    },
+    // …
     title: {
       type: "string",
       minLength: 1,
@@ -327,13 +275,7 @@ export const NoteSchema = ajvStandardSchema({
         maxLength: "Expected at most 100 characters.",
       },
     },
-    createdAt: {
-      type: "string",
-      format: "date-time",
-      seampactMessages: {
-        format: "Expected an RFC 3339 date-time with a time offset.",
-      },
-    },
+    // …
   },
   required: ["noteId", "title", "createdAt"],
 });
@@ -412,6 +354,7 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [ ] Frontend: Vue, Angular, MSW mocks
 - [ ] Java: Spring Boot. PHP: Laravel, Symfony, API Platform
 - [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm
+- [ ] Example apps per stack pairing, and an `init` wizard that creates a whole working project from pinned templates
 - Later: Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Python, Go, .NET, Rust ([full list](docs/roadmap.md))
 
 ## Contributing

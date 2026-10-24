@@ -11,3 +11,5 @@ In this order, each step reusing what the one before built:
 7. Rust: Axum and Actix Web.
 8. Front extras: an axios client variant and Angular reactive-form validators.
 9. Much later: Ruby on Rails, Svelte and SvelteKit, Solid. Until then Rails apps read the OpenAPI document, and Svelte and Solid apps use the TypeScript client and zod.
+10. Example apps, one per stack pairing (for example NestJS with React, Spring Boot with Vue), each from one contract and kept green by CI.
+11. Project wizard and starter templates: `seampact init` asks which server framework, validator, client and query library you want, as `create-vite` does, and creates a whole working project (server, client, contract, config) from pinned templates; the same choices work as flags for CI (`--server nestjs --client react --query tanstack`).

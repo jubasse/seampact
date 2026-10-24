@@ -1,5 +1,30 @@
 # What seampact generates, and what it leaves to you
 
+From one YAML contract:
+
+| Output | What you get |
+|---|---|
+| Types | One TypeScript type per schema, request and reply. |
+| Validators | zod, yup, class-validator, VineJS or Ajv schemas that check every input. |
+| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS or Hono. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
+| Built-in rules | Paging, rate limits, idempotency keys, ETags, CSRF, signed requests and field rights, declared in the contract and enforced at the boundary. You plug in the stores and decisions. |
+| Errors | One error format, RFC 9457 `problem+json` by default, with typed error codes per route. |
+| Clients | A typed `fetch` client, and TanStack Query, SWR or RTK Query hooks for React. |
+| Docs | OpenAPI 3.1 documents, and on NestJS and Fastify your framework's own Swagger kept in line with the contract. |
+| Editor support | Schemas that complete and check the contract's names as you type. |
+
+From the CLI:
+
+| Command | What it does |
+|---|---|
+| `seampact init` | Starts a project: a config and an example contract. |
+| `seampact generate` | Writes the code above into `__generated__`. |
+| `seampact check` | Fails CI when generated files or documents differ from the contract. |
+| `seampact diff` | Classifies the changes between two versions and fails on a breaking one. |
+| `seampact lint` | Reports contract mistakes before you generate. |
+| `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
+| `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
+
 Declare API semantics once. Derive framework-native boundaries from them.
 
 seampact is a contract system for HTTP APIs. You describe an API in plain YAML files: its endpoints, schemas, errors, who may call each route and what each route requires. seampact compiles them into a canonical intermediate representation (IR), and everything else is derived from it: an OpenAPI 3.1 document, lint, a compatibility diff between two versions, and generated code for the frameworks you use.
