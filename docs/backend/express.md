@@ -87,7 +87,11 @@ Trust only your proxy's addresses, never `true`, so `req.ip` and `req.protocol` 
 app.set("trust proxy", ["loopback", "10.0.0.0/8"]);
 ```
 
+The client address your hooks get is `req.ip`, so it follows this setting.
+
 The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Mount the generated router at the app's root: mounted under a path, it answers a 500 and logs why.
+
+Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
 
 Check your variables once at start, with your validator, and stop when one is missing. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
 

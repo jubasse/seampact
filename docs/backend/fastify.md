@@ -121,7 +121,11 @@ Trust only your proxy's addresses, not a hop count, so `request.ip` and `request
 const app = Fastify({ trustProxy: ["127.0.0.1", "10.0.0.0/8"] });
 ```
 
+The client address your hooks get is `request.ip`, so it follows this setting.
+
 The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Register the plugin without a prefix: another prefix is refused at boot.
+
+Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
 
 Check your variables at start with `@fastify/env`; they are ready after `await app.register(...)`. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
 

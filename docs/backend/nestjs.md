@@ -99,7 +99,11 @@ const app = await NestFactory.create<NestExpressApplication>(AppModule);
 app.set("trust proxy", ["loopback", "10.0.0.0/8"]);
 ```
 
+The client address your hooks get is Express's `req.ip`, so it follows this setting.
+
 The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. With `setGlobalPrefix`, exclude the contract routes: a contract route under the prefix answers a 500 and logs why.
+
+Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
 
 Check your variables at boot with `ConfigModule.forRoot({ validate })`. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
 

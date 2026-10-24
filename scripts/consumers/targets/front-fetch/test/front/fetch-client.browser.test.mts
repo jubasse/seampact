@@ -47,8 +47,20 @@ test("a relative baseUrl behind a prefix-stripping proxy lists, follows the next
 
   if (!firstPage.ok) throw new Error(`listTasks answered ${firstPage.status}`);
 
-  // The server writes its own path in the Link header; the client reads only the cursor from its query.
-  expect(firstPage.body.next).toBe(`/v1/channels/${CHANNEL_ID}/tasks?cursor=page-2`);
+  // The Link header holds a query-only reference, so it resolves against the URL the page called, prefix included.
+  const { next } = firstPage.body;
+
+  expect(next).toBe("?cursor=page-2");
+
+  if (next === undefined) throw new Error("listTasks answered no next link");
+
+  const calledUrl = `${window.location.origin}${inject("strippedPrefix")}/v1/channels/${CHANNEL_ID}/tasks`;
+  const followed = await fetch(new URL(next, calledUrl), {
+    headers: { authorization: `Bearer ${inject("userToken")}` },
+  });
+
+  expect(followed.status).toBe(200);
+
   const { nextCursor } = firstPage.body;
 
   if (nextCursor === undefined) throw new Error("listTasks answered no next cursor");

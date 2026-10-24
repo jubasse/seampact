@@ -113,7 +113,7 @@ COPY dist/ /usr/share/nginx/html/
 
 Run it with `-e API_UPSTREAM=http://backend:3000`. At start, the image replaces `${API_UPSTREAM}` and keeps nginx's own `$host`. The trailing `/` of `proxy_pass` removes `/api`. The `X-Forwarded-*` headers give the backend the caller's address and scheme. `index.html` is revalidated on each visit, so a new deploy shows at once. ([nginx image docs](https://hub.docker.com/_/nginx))
 
-The browser and the api share one origin, so there is no CORS to set up. Paging works too: the backend's `Link` header holds its own paths, without `/api`, and the client reads only the cursor from them.
+The browser and the api share one origin, so there is no CORS to set up. Paging works too: page links are query-only (`?page=2`), so they resolve against the URL the client called, `/api` included.
 
 In development, the Vite dev server does the same:
 

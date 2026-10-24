@@ -96,9 +96,11 @@ You see no output.
 
 ## Behind a reverse proxy and in Docker
 
-Hono has no trust-proxy setting. Behind a proxy, `getConnInfo` gives the proxy's address: in `clientAddress`, read the last `X-Forwarded-For` entry instead, and only when the request comes from your proxy.
+Hono has no trust-proxy setting. Behind a proxy, `getConnInfo` gives the proxy's address: in `clientAddress`, read the last `X-Forwarded-For` entry instead, and only when the request comes from your proxy. Your hooks get the address it returns.
 
 The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Call `registerRoutes` on an app without `basePath()`: a base path is refused at boot.
+
+Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
 
 Check your variables once at start, with your validator, and stop when one is missing. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
 

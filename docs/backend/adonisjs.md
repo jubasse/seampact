@@ -178,7 +178,11 @@ export const http = defineConfig({
 });
 ```
 
+The client address your hooks get is `request.ip()`, so it follows this setting. AdonisJS 6 trusts loopback proxies by default.
+
 The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Call `registerRoutes` outside any `router.group()` with a prefix: a contract route under a prefix answers a 500 and reports why.
+
+Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
 
 `start/env.ts` checks your variables when the app boots. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
 
