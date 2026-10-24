@@ -224,8 +224,27 @@ export function withSignal(call: object | undefined, signal: AbortSignal): objec
 
   return {
     ...call,
-    signal: callerSignal instanceof AbortSignal ? AbortSignal.any([signal, callerSignal]) : signal,
+    signal: callerSignal instanceof AbortSignal ? anySignal([signal, callerSignal]) : signal,
   };
+}
+
+// `AbortSignal.any` is missing on some platforms (React Native's Hermes): an `AbortController` stands in there.
+// Both signals belong to one query, so the listeners die with them.
+function anySignal(signals: AbortSignal[]): AbortSignal {
+  if (typeof AbortSignal.any === "function") return AbortSignal.any(signals);
+
+  const controller = new AbortController();
+
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort(signal.reason);
+      break;
+    }
+
+    signal.addEventListener("abort", () => controller.abort(signal.reason), { once: true });
+  }
+
+  return controller.signal;
 }
 
 /** A declared error or an unexpected answer as a plain value a store keeps, with `toContractError` its class back. */

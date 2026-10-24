@@ -238,6 +238,30 @@ describe("the call options of a query", () => {
     expect(call.signal.aborted).toBe(true);
   });
 
+  test.each(["caller", "library"] as const)(
+    "a platform without AbortSignal.any still follows the %s abort",
+    (aborting) => {
+      const callerAbort = new AbortController();
+      const libraryAbort = new AbortController();
+
+      const { any } = AbortSignal;
+
+      Object.assign(AbortSignal, { any: undefined });
+
+      try {
+        const call = withSignal({ signal: callerAbort.signal }, libraryAbort.signal);
+
+        expect(call.signal.aborted).toBe(false);
+
+        (aborting === "caller" ? callerAbort : libraryAbort).abort();
+
+        expect(call.signal.aborted).toBe(true);
+      } finally {
+        Object.assign(AbortSignal, { any });
+      }
+    },
+  );
+
   test("take the library's signal when the caller gives none", () => {
     const libraryAbort = new AbortController();
     const call = withSignal(undefined, libraryAbort.signal);

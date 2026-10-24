@@ -890,6 +890,51 @@ describe("the generated reference client answers a stub server", () => {
     expect(removed).toHaveBeenCalledWith("abort", expect.any(Function));
   });
 
+  test("a Hermes-like runtime works through the injected key generator and refuses by name without it", async () => {
+    const { any, timeout } = AbortSignal;
+    const { canParse } = URL;
+    const hermesFetch: typeof fetch = async (_input, init) => {
+      sent.push({ url: new URL(String(_input)), headers: new Headers(init?.headers) });
+
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json", link: '</x?cursor=c2>; rel="next"' },
+      });
+    };
+
+    vi.stubGlobal("crypto", undefined);
+    Object.assign(AbortSignal, { any: undefined, timeout: undefined });
+    Object.assign(URL, { canParse: undefined });
+
+    try {
+      expect(() => createResultClient({ baseUrl: "http://api.test", fetch: hermesFetch })).toThrow(
+        /crypto\.randomUUID.*idempotencyKey/,
+      );
+
+      const hermes = createResultClient({
+        baseUrl: "http://api.test",
+        fetch: hermesFetch,
+        idempotencyKey: () => "expo-key",
+      });
+      const page = await call(hermes, "listTasks")(
+        { path: { channelId: "c1" }, headers: user() },
+        { signal: new AbortController().signal, timeoutMs: 5000 },
+      );
+
+      expect(page).toMatchObject({ ok: true, body: { nextCursor: "c2" } });
+
+      await call(
+        hermes,
+        "createTask",
+      )({ path: { channelId: "c1" }, headers: user(), body: { title: "x" } });
+      expect(lastSent().headers.get("idempotency-key")).toBe("expo-key");
+    } finally {
+      vi.unstubAllGlobals();
+      Object.assign(AbortSignal, { any, timeout });
+      Object.assign(URL, { canParse });
+    }
+  });
+
   test("the deadline header on tasksService", async () => {
     const before = Date.now();
     const answer = await call(service, "getTask")(

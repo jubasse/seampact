@@ -31,7 +31,7 @@
 
 ## Frontend
 
-- [Mobile and Capacitor](frontend/mobile.md): what mobile apps use today.
+- [Expo and React Native](frontend/mobile.md): the client and the React hooks on a phone.
 
 ## Configuration
 
