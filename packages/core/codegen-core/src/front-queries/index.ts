@@ -7,9 +7,11 @@ export { refuseUnsupportedClientErrorStyle } from "./client-error-style.js";
 export {
   AS_ERROR_SOURCE,
   callerOptionsParameter,
+  cellsMutationSource,
   isRetryableSource,
   MUTATE_OUTCOME_TYPE,
   mutationCallerOptionsSource,
+  type ReactiveCells,
   retryCheckSource,
 } from "./fetch-mode-sources.js";
 export { type FetchQueriesOptions, fetchQueriesModuleSource } from "./fetch-queries-module.js";

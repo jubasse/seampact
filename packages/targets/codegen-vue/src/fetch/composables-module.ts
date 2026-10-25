@@ -1,6 +1,7 @@
 import {
   AS_ERROR_SOURCE,
   callerOptionsParameter,
+  cellsMutationSource,
   isRetryableSource,
   MUTATE_OUTCOME_TYPE,
   mutationCallerOptionsSource,
@@ -10,7 +11,6 @@ import {
   type QueryOperation,
   type QueryPlan,
   REQUIRED_CALL_TYPE,
-  retryCheckSource,
 } from "@seampact/codegen-core";
 import type { VueQueryOptions } from "../options.js";
 
@@ -134,58 +134,12 @@ abortReading();
 return { data, error, isLoading, refetch: read };
 }`;
 
-// One fetcher and one attempt object per `mutate`, passed to each retry, so the retries keep one idempotency key;
-// only the latest `mutate` writes the refs, and every call resolves to its own outcome. A write is not aborted when
-// the scope is disposed.
-const USE_FETCH_MUTATION_SOURCE = `function useFetchMutation<Request, Data>(
-composableName: string,
-fetcher: (request: Request, attempt: object) => Promise<Data>,
-retry: number,
-): MutationState<Request, Data, Error> {
-${retryCheckSource("composableName")}
-
-const data = shallowRef<Data | undefined>(undefined);
-const error = shallowRef<Error | undefined>(undefined);
-const isPending = shallowRef(false);
-let latestMutate = 0;
-
-const mutate = async (request: Request): Promise<MutateOutcome<Data, Error>> => {
-const mutateNumber = latestMutate + 1;
-const attempt = {};
-const settle = (nextData: Data | undefined, nextError: Error | undefined) => {
-if (latestMutate !== mutateNumber) return;
-
-data.value = nextData;
-error.value = nextError;
-isPending.value = false;
-};
-
-latestMutate = mutateNumber;
-data.value = undefined;
-error.value = undefined;
-isPending.value = true;
-
-for (let retriesLeft = retry; ; retriesLeft -= 1) {
-try {
-const answer = await fetcher(request, attempt);
-
-settle(answer, undefined);
-
-return { data: answer, error: undefined };
-} catch (rejection) {
-const failure = asError(rejection);
-
-if (retriesLeft <= 0 || !isRetryable(failure)) {
-settle(undefined, failure);
-
-return { data: undefined, error: failure };
-}
-}
-}
-};
-
-return { mutate, isPending, error, data };
-}`;
+const USE_FETCH_MUTATION_SOURCE = cellsMutationSource({
+  functionName: "useFetchMutation",
+  memberNameParameter: "composableName",
+  cellConstructor: "shallowRef",
+  write: (cell, value) => `${cell}.value = ${value};`,
+});
 
 /** The source of `composables.ts`; `imports` holds the specifiers of the client, the queries module and the runtime. */
 export function composablesModuleSource(
