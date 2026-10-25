@@ -19,7 +19,7 @@ final class PageReply {
     private static final String BEFORE_ROLE = "before";
     private static final String AFTER_ROLE = "after";
     private static final String CLAMP = "clamp";
-    private static final String NOT_RULE = "not";
+    private static final String EXCLUSIVE_CURSORS_RULE = "exclusiveCursors";
     private static final String NULL_ABSENT = "null";
     private static final String PAGE = "page";
     private static final String OFFSET = "offset";
@@ -65,7 +65,7 @@ final class PageReply {
         String beforeParam = roleName(style, BEFORE_ROLE);
         if (afterParam == null || beforeParam == null) return;
 
-        if (query.has(afterParam) && query.has(beforeParam)) issues.add(new InputIssue("query", InputIssue.below("", beforeParam), NOT_RULE));
+        if (query.has(afterParam) && query.has(beforeParam)) issues.add(new InputIssue("query", InputIssue.below("", beforeParam), EXCLUSIVE_CURSORS_RULE));
     }
 
     /** The page of [handlerPage] (its facts; [items] already projected), rendered for [status]. */

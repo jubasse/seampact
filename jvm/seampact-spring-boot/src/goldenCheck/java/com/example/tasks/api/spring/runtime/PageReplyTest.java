@@ -28,7 +28,7 @@ class PageReplyTest {
 
     @Test
     void afterAndBeforeBothSentIsOneNotIssueAtBefore() {
-        assertEquals(List.of(new InputIssue("query", "/before", "not")), issuesOf("{\"after\": \"a\", \"before\": \"b\"}"));
+        assertEquals(List.of(new InputIssue("query", "/before", "exclusiveCursors")), issuesOf("{\"after\": \"a\", \"before\": \"b\"}"));
     }
 
     @Test
