@@ -63,3 +63,4 @@ AdonisJS's own VineJS validators take `rules` on the server target, `@seampact/c
 - Lengths count UTF-16 units: an emoji counts 2, so `maxLength: 1` refuses "😀".
 - `uuid` also checks the version and variant digits. `00000000-0000-9000-8000-000000000000` is refused.
 - `date-time`, `exclusiveMinimum`, `exclusiveMaximum` and `multipleOf` have no VineJS rule: they stay the contract's checks.
+- Under the native rules, an issue's message may be VineJS's own text; the rule name is the same in both modes.

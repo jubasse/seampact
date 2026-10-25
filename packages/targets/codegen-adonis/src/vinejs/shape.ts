@@ -41,7 +41,7 @@ export type ShapeCheck =
   | (Extract<ScalarCheck, { rule: "format" }> & { readonly layout: string })
   | (ScalarCheck & { readonly native: true });
 
-// The contract rules VineJS has a rule of its own for: `minLength`, `maxLength`, `regex`, `uuid`, `min` and `max`.
+// The contract rules VineJS has a rule of its own for: `minLength`, `maxLength`, `pattern`, `minimum`, `maximum`, and the `uuid` format.
 // `date-time` has no string rule, exclusive bounds and `multipleOf` none at all: their contract checks stay.
 const VINE_NATIVE_RULES: ReadonlySet<ScalarCheck["rule"]> = new Set([
   "minLength",

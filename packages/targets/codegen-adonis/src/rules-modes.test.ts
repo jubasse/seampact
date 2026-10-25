@@ -20,7 +20,7 @@ function ownValidatorsOf(rules: RulesMode): OwnValidators {
 }
 
 // Every VineJS validator file of each rules mode, kept as a reviewed snapshot: the validators of
-// `seampact-consistent` are the output from before the option existed.
+// `seampact-consistent` are the output from before the option existed, every module but the support file.
 test.each(RULES_MODES)(
   "the %s VineJS validators of the reference contract match their snapshot",
   async (rules) => {
@@ -65,6 +65,14 @@ describe("VineJS's own rules differ from the contract where the validator page s
 
     expect(await issueRules("native", "AssignTaskInputSchema", value)).toEqual(["format"]);
     expect(await issueRules("seampact-consistent", "AssignTaskInputSchema", value)).toEqual([]);
+  });
+
+  test("an integer with a native minimum refuses 2^53 under both modes", async () => {
+    const value = { title: "Task", effort: 2 ** 53 };
+    const native = await issueRules("native", "CreateTaskSchema", value);
+
+    expect(native).not.toEqual([]);
+    expect(await issueRules("seampact-consistent", "CreateTaskSchema", value)).toEqual(native);
   });
 
   test("a native rule reads with the plan's message and rule name", async () => {

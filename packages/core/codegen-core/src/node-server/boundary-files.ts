@@ -16,7 +16,7 @@ import type {
   SourceFormat,
   Target,
 } from "../target.js";
-import { parseValidatorsOptions, type ValidatorsOptions } from "../validators/rules-option.js";
+import { DEFAULT_VALIDATORS_OPTIONS, type ValidatorsOptions } from "../validators/rules-option.js";
 import { type NativeDocsContract, readNativeDocsDocument } from "./native-docs-reader.js";
 import { nativeDocsRuntimeFile } from "./native-docs-runtime-file.js";
 import { type NodeServerOptions, parseNodeServerOptions } from "./options.js";
@@ -220,7 +220,7 @@ export function nodeServerBoundaryFiles(
           input.ir,
           placement,
           input.options.rules === undefined
-            ? defaultValidatorsOptions()
+            ? DEFAULT_VALIDATORS_OPTIONS
             : { rules: input.options.rules },
         )
       : undefined;
@@ -263,17 +263,6 @@ function ignoredValidatorsArtefact(): GenerateWarning {
     message: `The '${OWN_VALIDATORS_ARTEFACT}' artefact is listed and a validators link is given: the linked validators are used and none are written.`,
     fix: `Drop '${OWN_VALIDATORS_ARTEFACT}' from the artefacts, or drop the validators link to write the target's own validators.`,
   };
-}
-
-// The options of the validator targets with nothing written, so the own validators default as they do.
-function defaultValidatorsOptions(): ValidatorsOptions {
-  const parsed = parseValidatorsOptions({});
-
-  if (parsed.status === "refused") {
-    throw new Error("The validator options refuse an empty object; their defaults are broken.");
-  }
-
-  return parsed.options;
 }
 
 function ignoredRulesOption(): GenerateWarning {

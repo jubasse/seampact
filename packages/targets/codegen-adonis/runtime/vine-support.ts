@@ -332,7 +332,11 @@ function isSafeBound(check: ShapeCheck): boolean {
 type VineNumber = ReturnType<typeof vine.number>;
 
 function withNativeBound(schema: VineNumber, check: ShapeCheck): VineNumber {
-  if (!("literal" in check)) return schema;
+  if (!("literal" in check)) {
+    throw new Error(
+      `codegen-adonis: the native bound '${check.rule}' has no literal; this is a renderer bug.`,
+    );
+  }
 
   return check.rule === "minimum"
     ? schema.min(Number(check.literal))
