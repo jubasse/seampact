@@ -36,7 +36,7 @@ class SpringBootGoldenTest {
     private class GoldenApi(val irFile: String, val packageName: String, val operations: Set<String>)
 
     private val apis = listOf(
-        GoldenApi("tasks.ir.json", "com.example.tasks.api", setOf("health", "getChannel", "getDraft", "getTask", "getTasksBatch", "searchTasks")),
+        GoldenApi("tasks.ir.json", "com.example.tasks.api", setOf("health", "getChannel", "getDraft", "deleteDraft", "getPreferences", "updatePreferences", "getTask", "createTask", "updateTask", "assignTask", "archiveTask", "purgeTask", "getTasksBatch", "listChannels", "listTasks", "searchTasks", "payments")),
         GoldenApi("tasksService.ir.json", "com.example.tasksservice.api", setOf("getTask")),
     )
 
@@ -106,20 +106,23 @@ class SpringBootGoldenTest {
         assertTrue(collision.message.contains("schema 'Channel'") && collision.message.contains("schema 'Task'"), collision.message)
     }
 
+    // A sort key reaches Spring Data as the Java member of the item it names, since the entity's property is that member.
     @Test
-    fun refusesTheFormsOfTheWholeReferenceContractByName() {
-        val refused = assertFailsWith<SpringBootRefusedException> {
-            SpringBootTarget.generate(referenceIr("tasks.ir.json"), entry("com.example.tasks.api"))
-        }
+    fun mapsTheSpringPageSortKeysToTheItemsJavaMembers() {
+        val packSpringText = repositoryRoot.resolve("fixtures/golden/pack-spring/tasks.ir.json").readText()
+        val snakeCaseSortKey = packSpringText.replace("\"createdAt\"", "\"created_at\"")
+        val generated = SpringBootTarget.generate(IrReader.read(snakeCaseSortKey, SpringBootTarget.IR_SUPPORT), entry("com.example.tasks.api"))
 
-        val codes = refused.refusals.map { it.code }.toSet()
-        for (code in listOf("paging.unsupported", "idempotency.unsupported", "cache.unsupported", "signature.unsupported")) {
-            assertTrue(code in codes, "expected $code among $codes")
-        }
-        assertTrue(refused.refusals.all { it.message.contains("spring-") || it.message.contains("waits for") }, refused.message)
-        for (code in listOf("concurrency.unsupported", "input.proofs.unsupported", "type.opaque.unsupported")) {
-            val refusal = refused.refusals.firstOrNull { it.code == code }
-            assertTrue(refusal != null && refusal.message.contains("spring-3"), "expected $code naming spring-3 among ${refused.message}")
+        val binding = generated.single { it.path.endsWith("SeampactBinding.java") }.contents
+        assertTrue("Map.entry(\"created_at\", \"createdAt\")" in binding, binding)
+    }
+
+    @Test
+    fun generatesTheWholeReferenceContract() {
+        for (api in apis) {
+            val ir = referenceIr(api.irFile)
+            assertEquals(ir.operations.map { it.id }.toSet(), api.operations, "the golden view of ${api.irFile} keeps every operation")
+            SpringBootTarget.generate(ir, entry(api.packageName))
         }
     }
 

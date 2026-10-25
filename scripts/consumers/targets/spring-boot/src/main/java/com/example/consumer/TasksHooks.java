@@ -51,6 +51,10 @@ final class TasksHooks {
     @Component
     @SkippedUnder("missing-decider")
     static final class TasksDecider implements Decider {
+        private static final String THROTTLE_RULE = "throttle";
+        private static final String ROLES_RIGHT = "roles";
+        private static final String RATE_LIMITED = "api.rate_limited";
+
         @Override
         public Set<String> names() {
             return Set.of(EVERY_NAME);
@@ -60,9 +64,53 @@ final class TasksHooks {
         public Decision<Denial> decide(RequirementCall request) {
             SuiteControl.recordHookCall("decide:" + request.name(), API, request.operation().id());
 
-            Optional<String> denied = SuiteControl.scriptedDecision(request.name(), Purposes.nameOf(request.purpose()));
+            assertRolesRequestComplete(request);
 
-            return denied.<Decision<Denial>>map(code -> new Decision.Denied<>(Denial.of(code))).orElseGet(Decision.Allowed::new);
+            Optional<String> denied = SuiteControl.scriptedDecision(request.name(), Purposes.nameOf(request.purpose()));
+            if (denied.isPresent()) return new Decision.Denied<>(denialOf(denied.get()));
+
+            boolean throttledUser = request.principal() instanceof UserPrincipal user && user.userId().toString().equals(Credentials.text("throttledUserId"));
+            if (THROTTLE_RULE.equals(request.name()) && throttledUser) return new Decision.Denied<>(denialOf(RATE_LIMITED));
+
+            return new Decision.Allowed<>();
+        }
+
+        // A scripted denial is one of the api's decide codes; the rate limit carries its delay.
+        private static Denial denialOf(String code) {
+            return RATE_LIMITED.equals(code) ? Denial.of(code, Map.of("retryAfterMs", Credentials.number("throttleRetryAfterMs"))) : Denial.of(code);
+        }
+
+        private static void assertRolesRequestComplete(RequirementCall request) {
+            if (!ROLES_RIGHT.equals(request.name())) return;
+
+            boolean hasAllowed = request.params().map(params -> params.path("allowed").isArray()).orElse(false);
+            if (!hasAllowed || request.subject().isEmpty()) {
+                throw new IllegalStateException("the '" + ROLES_RIGHT + "' decide request lacks its 'allowed' param or its scope subject: the boundary dropped them");
+            }
+        }
+    }
+
+    /**
+     * The app's own decider for the overridden right (CHK-091): it records under its own hook name and denies what the
+     * script denies, while every other right and rule reaches the generic decider.
+     */
+    @Component
+    @SkippedUnder("missing-decider")
+    static final class OverriddenRightDecider implements Decider {
+        private static final String OVERRIDDEN_RIGHT = "tasks.update";
+
+        @Override
+        public Set<String> names() {
+            return Set.of(OVERRIDDEN_RIGHT);
+        }
+
+        @Override
+        public Decision<Denial> decide(RequirementCall request) {
+            SuiteControl.recordHookCall("decide-override:" + request.name(), API, request.operation().id());
+
+            return SuiteControl.scriptedDecision(request.name(), Purposes.nameOf(request.purpose()))
+                    .<Decision<Denial>>map(code -> new Decision.Denied<>(Denial.of(code)))
+                    .orElseGet(Decision.Allowed::new);
         }
     }
 

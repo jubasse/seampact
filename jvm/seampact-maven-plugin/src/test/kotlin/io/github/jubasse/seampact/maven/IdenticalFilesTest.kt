@@ -101,7 +101,7 @@ class IdenticalFilesTest {
         const val HEADER_START = "// "
         val ENTRY_IDS = listOf("tasks", "tasksService")
 
-        // The golden tree's apis: the core-path operations of each, in its own package.
+        // The golden tree's apis, each in its own package: every operation of tasks, getTask of tasksService.
         const val CONSUMER_CONFIG = """
             outDir: build/generated/sources/seampact/main
             openapi: none
@@ -111,7 +111,6 @@ class IdenticalFilesTest {
               - id: tasks
                 use: io.github.jubasse:seampact-spring-boot
                 api: tasks
-                operations: { include: [health, getChannel, getDraft, getTask, getTasksBatch, searchTasks] }
                 options: { package: com.example.tasks.api }
               - id: tasksService
                 use: io.github.jubasse:seampact-spring-boot
@@ -130,16 +129,6 @@ class IdenticalFilesTest {
                 <id>tasks</id>
                 <use>io.github.jubasse:seampact-spring-boot</use>
                 <api>tasks</api>
-                <operations>
-                  <include>
-                    <operation>health</operation>
-                    <operation>getChannel</operation>
-                    <operation>getDraft</operation>
-                    <operation>getTask</operation>
-                    <operation>getTasksBatch</operation>
-                    <operation>searchTasks</operation>
-                  </include>
-                </operations>
                 <options><package>com.example.tasks.api</package></options>
               </target>
               <target>

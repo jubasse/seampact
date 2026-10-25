@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.InjectableValues;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectReader;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.MissingNode;
@@ -24,6 +26,8 @@ final class InputStep {
     private static final String SCHEMA_INVALID_ROLE = "schemaInvalid";
     private static final int MAX_RENDERED_ISSUES = 100;
     private static final String REFUSE = "refuse";
+    private static final String PAGEABLE_COMPONENT = "pageable";
+    private static final String PAGEABLE_TYPE = "org.springframework.data.domain.Pageable";
 
     private InputStep() {}
 
@@ -33,12 +37,19 @@ final class InputStep {
         ObjectNode tree = NODES.objectNode();
 
         tree.set("path", pathParams(boundary, exchange, operation.path("params").path("path"), issues));
-        tree.set("query", queryParams(boundary, operation, request.getQueryString(), issues));
+        ObjectNode query = queryParams(boundary, operation, request.getQueryString(), issues);
+        tree.set("query", query);
+        PageReply.checkOnePosition(boundary.table(), exchange.route(), query, issues);
+        if (takesPageable(boundary.binding().inputTypes().get(exchange.route().id()))) PageReply.checkPageableRange(boundary.table(), exchange.route(), query, issues);
         tree.set("headers", headerParams(boundary, operation.path("params").path("header"), request, issues));
         if (operation.has("input")) tree.set("body", body(boundary, exchange, operation.path("input"), issues));
 
         if (!issues.isEmpty()) throw schemaInvalid(exchange.route(), issues);
 
+        PageReply.fillLimit(boundary.table(), exchange.route(), query);
+        InputFieldRights.apply(boundary, exchange, boundary.requestView(request, exchange), tree.path("body"));
+        exchange.query = query;
+        exchange.inputTree = tree;
         exchange.input = bind(boundary, exchange.route(), tree);
     }
 
@@ -149,9 +160,39 @@ final class InputStep {
             return MissingNode.getInstance();
         }
 
-        boundary.validator().check(body, input.path("schema"), "body", "", issues);
+        if (!(body instanceof ObjectNode members) || input.path("proofs").isEmpty()) {
+            boundary.validator().check(body, input.path("schema"), "body", "", issues);
+            return body;
+        }
 
-        return body;
+        // The proof fields of the operation's rules sit beside the body schema's members; the handler never sees them.
+        ObjectNode withoutProofs = members.deepCopy();
+        for (JsonNode proof : input.path("proofs")) {
+            issues.addAll(proofIssues(boundary, members, proof));
+            withoutProofs.remove(proof.path("name").asString());
+        }
+        boundary.validator().check(withoutProofs, input.path("schema"), "body", "", issues);
+
+        return withoutProofs;
+    }
+
+    /** The issues of one rule proof field of [body]: required, and checked by its own schema. */
+    static List<InputIssue> proofIssues(SeampactBoundary boundary, JsonNode body, JsonNode proof) {
+        String name = proof.path("name").asString();
+        String pointer = InputIssue.below("", name);
+        JsonNode member = body.path(name);
+        if (member.isMissingNode()) return List.of(new InputIssue("body", pointer, "required"));
+
+        return boundary.validator().issuesOf(member, proof.path("schema"), "body", pointer);
+    }
+
+    // A `springPage` list's input record holds the `Pageable` the boundary injects (ADR 0022 "Paging").
+    private static boolean takesPageable(Class<?> inputType) {
+        for (RecordComponent component : inputType.getRecordComponents()) {
+            if (PAGEABLE_COMPONENT.equals(component.getName()) && PAGEABLE_TYPE.equals(component.getType().getName())) return true;
+        }
+
+        return false;
     }
 
     // The tree holds every part; the record takes the parts the operation declares, by its component names.
@@ -162,8 +203,14 @@ final class InputStep {
             parts.set(component.getName(), tree.path(component.getName()));
         }
 
+        ObjectReader reader = boundary.mapper().readerFor(inputType);
+        if (takesPageable(inputType)) {
+            Object pageable = boundary.binding().pageable(route.id(), boundary.table().pagingStyle(route), tree.path("query"));
+            reader = reader.with(new InjectableValues.Std().addValue(PAGEABLE_COMPONENT, pageable));
+        }
+
         try {
-            return boundary.mapper().treeToValue(parts, inputType);
+            return reader.readValue(parts);
         } catch (JacksonException failure) {
             throw new IllegalStateException("seampact: binding the validated input of '" + route.id() + "' to " + inputType.getName() + " failed", failure);
         }

@@ -68,6 +68,13 @@ public final class ContractTable {
         return ir.path("enums").path(enumId);
     }
 
+    /** The paging style of [route]'s list, a missing node for an unpaged route. */
+    JsonNode pagingStyle(ContractRoute route) {
+        JsonNode style = route.operation().path("paging").path("style");
+
+        return style.isString() ? ir.path("pagings").path(style.asString()) : style;
+    }
+
     JsonNode format(ContractRoute route) {
         return ir.path("formats").path(route.operation().path("format").asString());
     }

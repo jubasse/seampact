@@ -3,6 +3,7 @@ package com.example.tasksservice.api.spring.runtime;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
+import io.github.jubasse.seampact.hooks.SignedTemplateRequest;
 import java.lang.annotation.Annotation;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +40,20 @@ public interface ApiBinding {
             JsonMapper mapper,
             JsonNode credentials,
             Optional<String> csrfToken,
+            Optional<SignedTemplateRequest> signature,
             RequestView request,
             OperationRef operation);
+
+    /**
+     * The Spring Data `Pageable` of the `springPage` list [operationId], built from its validated [query], its sort keys
+     * named by the item's Java members (ADR 0022 "Paging"); only an api with such a list overrides it.
+     */
+    default Object pageable(String operationId, JsonNode style, JsonNode query) {
+        throw new IllegalStateException("seampact: this api has no springPage list, so no Pageable");
+    }
+
+    /** The page facts (`items`, `total`) of the Spring Data `Page` a `springPage` list returned; any other body as is. */
+    default Object pageFacts(Object body) {
+        return body;
+    }
 }

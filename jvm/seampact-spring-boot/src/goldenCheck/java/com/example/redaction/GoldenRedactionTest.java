@@ -4,16 +4,20 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.example.tasks.api.GetTaskHeaders;
+import com.example.tasks.api.PaymentsHeaders;
+import com.example.tasks.api.PaymentsInput;
 import com.example.tasks.api.UserAuthenticateRequest;
 import com.example.tasks.api.UserCredentials;
+import com.example.tasks.api.schemas.PaymentEvent;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.node.JsonNodeFactory;
 
 /**
- * The compiled golden records of each kind of redaction the reference contract's core-path operations carry (ADR 0022
+ * The compiled golden records of each kind of redaction the reference contract's operations carry (ADR 0022
  * "Redaction"): a known secret is absent from {@code toString()}, the redaction constant present.
  */
 class GoldenRedactionTest {
@@ -21,6 +25,8 @@ class GoldenRedactionTest {
     private static final String BEARER_SECRET = "bearer-secret-1";
     private static final String COOKIE_SECRET = "cookie-secret-2";
     private static final String CSRF_SECRET = "csrf-secret-3";
+    private static final String SIGNED_BODY_SECRET = "signed-body-secret-4";
+    private static final String SIGNATURE_SECRET = "signature-secret-5";
 
     private static void assertRedacted(Object record, String... secrets) {
         String shown = record.toString();
@@ -56,5 +62,12 @@ class GoldenRedactionTest {
     @Test
     void credentialHeaderOfAnOperationInputIsHidden() {
         assertRedacted(new GetTaskHeaders(Optional.of("Bearer " + BEARER_SECRET)), BEARER_SECRET);
+    }
+
+    @Test
+    void signedRouteInputHidesTheParsedBody() {
+        PaymentEvent event = new PaymentEvent(SIGNED_BODY_SECRET, "charge.succeeded", JsonNodeFactory.instance.objectNode().put("note", SIGNED_BODY_SECRET));
+
+        assertRedacted(new PaymentsInput(new PaymentsHeaders("t=1,v1=" + SIGNATURE_SECRET), event), SIGNED_BODY_SECRET, SIGNATURE_SECRET);
     }
 }

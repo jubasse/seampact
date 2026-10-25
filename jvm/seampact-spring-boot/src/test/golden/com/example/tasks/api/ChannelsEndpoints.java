@@ -6,4 +6,7 @@ package com.example.tasks.api;
 public interface ChannelsEndpoints {
     GetChannelResult getChannel(GetChannelInput input) throws ApiSchemaInvalidError,
             ApiUnauthenticatedError, ApiNotFoundError, ApiInternalError;
+
+    ListChannelsResult listChannels(ListChannelsInput input) throws ApiSchemaInvalidError,
+            ApiUnauthenticatedError, ApiInternalError;
 }

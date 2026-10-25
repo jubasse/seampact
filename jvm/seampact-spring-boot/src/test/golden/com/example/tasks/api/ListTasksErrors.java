@@ -1,0 +1,41 @@
+package com.example.tasks.api;
+
+import com.example.tasks.api.schemas.ApiSchemaInvalidParams;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+
+public sealed interface ListTasksErrors extends ListTasksResult permits ListTasksErrors.ApiSchemaInvalid, ListTasksErrors.ApiUnauthenticated, ListTasksErrors.ApiNotFound, ListTasksErrors.ApiInternal {
+    @JsonInclude(JsonInclude.Include.NON_ABSENT)
+    record ApiSchemaInvalid(
+            @Valid @NotNull ApiSchemaInvalidParams params) implements ListTasksErrors {
+        @Override
+        public String toString() {
+            return "ApiSchemaInvalid[params=" + this.params() + "]";
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_ABSENT)
+    record ApiUnauthenticated() implements ListTasksErrors {
+        @Override
+        public String toString() {
+            return "ApiUnauthenticated[]";
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_ABSENT)
+    record ApiNotFound() implements ListTasksErrors {
+        @Override
+        public String toString() {
+            return "ApiNotFound[]";
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_ABSENT)
+    record ApiInternal() implements ListTasksErrors {
+        @Override
+        public String toString() {
+            return "ApiInternal[]";
+        }
+    }
+}

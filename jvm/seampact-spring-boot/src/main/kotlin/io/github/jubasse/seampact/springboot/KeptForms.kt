@@ -1,6 +1,7 @@
 package io.github.jubasse.seampact.springboot
 
 import io.github.jubasse.seampact.ir.model.ArrayTypeUse
+import io.github.jubasse.seampact.ir.model.BucketId
 import io.github.jubasse.seampact.ir.model.ContractIR
 import io.github.jubasse.seampact.ir.model.CredentialIdentity
 import io.github.jubasse.seampact.ir.model.DerivedIdempotency
@@ -10,11 +11,13 @@ import io.github.jubasse.seampact.ir.model.ErrorCode
 import io.github.jubasse.seampact.ir.model.ExemptIdempotency
 import io.github.jubasse.seampact.ir.model.FileTypeUse
 import io.github.jubasse.seampact.ir.model.HttpMethod
+import io.github.jubasse.seampact.ir.model.IdempotencyEnforcement
 import io.github.jubasse.seampact.ir.model.IdentityId
 import io.github.jubasse.seampact.ir.model.MapSchema
 import io.github.jubasse.seampact.ir.model.ObjectSchema
 import io.github.jubasse.seampact.ir.model.OpaqueTypeUse
 import io.github.jubasse.seampact.ir.model.Operation
+import io.github.jubasse.seampact.ir.model.Principal
 import io.github.jubasse.seampact.ir.model.RefTypeUse
 import io.github.jubasse.seampact.ir.model.ResponseShape
 import io.github.jubasse.seampact.ir.model.RuleRequirement
@@ -22,23 +25,28 @@ import io.github.jubasse.seampact.ir.model.ScalarType
 import io.github.jubasse.seampact.ir.model.ScalarTypeUse
 import io.github.jubasse.seampact.ir.model.SchemaId
 import io.github.jubasse.seampact.ir.model.SchemaPrincipal
+import io.github.jubasse.seampact.ir.model.SchemeId
+import io.github.jubasse.seampact.ir.model.SignatureScheme
 import io.github.jubasse.seampact.ir.model.SignedIdentity
+import io.github.jubasse.seampact.ir.model.TemplateSignature
 import io.github.jubasse.seampact.ir.model.TypeUse
 import io.github.jubasse.seampact.ir.model.UnionSchema
 import io.github.jubasse.seampact.ir.model.UnknownKeysPolicy
-import io.github.jubasse.seampact.ir.model.UrlForm
+import io.github.jubasse.seampact.ir.model.ValueSchemeKey
 
 private const val JSON_MEDIA = "application/json"
 private val SPRING_4_MEDIA = listOf("application/x-www-form-urlencoded", "multipart/form-data")
-private const val SPRING_PACK = "spring"
 private const val INT64_FORMAT = "int64"
 /** The string formats the boundary runtime's structural pass checks. */
 private val CHECKED_STRING_FORMATS = setOf("uuid", "date-time", "date", "decimal")
 /** The derivation of the 304 an ETag answers: the boundary's, never the handler's. */
 internal const val ETAG_DERIVATION = "cache.etag"
 private const val OUTPUT_DIRECTION = "output"
+private val TOP_LEVEL_POINTER = Regex("^/[^/]+$")
 private const val PATH_SOURCE = "path"
-private val PAYLOAD_SHAPES = listOf(ResponseShape.ITEM, ResponseShape.TABLE, ResponseShape.LIST)
+private const val BODY_SOURCE = "body"
+private val BUCKET_KEY_SOURCES = setOf(PATH_SOURCE, "scope", "principal")
+private val PAYLOAD_SHAPES = listOf(ResponseShape.ITEM, ResponseShape.TABLE, ResponseShape.LIST, ResponseShape.PAGE)
 
 /**
  * What one api's generation reads from its kept operations (ADR 0022 "Refused by name or waiting"): the operations,
@@ -58,14 +66,6 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
     }
 
     private fun checkApiForms() {
-        if (ir.api.wire.urls != UrlForm.RELATIVE) {
-            refusals.waiting("wire.urls", "'api.wire.urls: ${ir.api.wire.urls.value}'", IrPlace.ROOT.below("api", "wire", "urls"), Delivery.SPRING_3)
-        }
-
-        ir.packs.forEachIndexed { index, pack ->
-            if (pack.name == SPRING_PACK) refusals.waiting("pack.spring", "The 'pack:spring' profile", IrPlace.ROOT.below("packs", index), Delivery.SPRING_3)
-        }
-
         if (ir.extensionKeys.isNotEmpty()) {
             refusals.waiting("extensionKeys", "Typed extension values", IrPlace.ROOT.below("extensionKeys"), Delivery.AFTER_1_0)
         }
@@ -89,7 +89,10 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
                 val delivery = if (input.media.value in SPRING_4_MEDIA) Delivery.SPRING_4 else Delivery.AFTER_1_0
                 refusals.waiting("input.media", "A '${input.media.value}' body", at.below("input", "media"), delivery)
             }
-            if (!input.proofs.isNullOrEmpty()) refusals.waiting("input.proofs", "Rule proof fields in the body", at.below("input", "proofs"), Delivery.SPRING_3)
+            if (!input.proofs.isNullOrEmpty() && input.schema !is RefTypeUse) {
+                refusals.waiting("input.proofs", "Proof fields beside a body that is not an object schema", at.below("input", "proofs"), Delivery.AFTER_1_0)
+            }
+            input.proofs?.forEachIndexed { index, proof -> readType(proof.schema, at.below("input", "proofs", index, "schema")) }
             readType(input.schema, at.below("input", "schema"))
         }
 
@@ -101,23 +104,42 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
     }
 
     private fun checkOperationForms(operation: Operation, at: IrPlace) {
-        if (operation.paging != null) refusals.waiting("paging", "Paging", at.below("paging"), Delivery.SPRING_3)
-        if (operation.cache != null) refusals.waiting("cache", "Cache and ETag headers", at.below("cache"), Delivery.SPRING_3)
-        if (operation.concurrency != null) refusals.waiting("concurrency", "A version token (concurrency)", at.below("concurrency"), Delivery.SPRING_3)
+        checkPaging(ir, operation, at, refusals)
 
         when (val idempotency = operation.idempotency) {
             null, is ExemptIdempotency -> Unit
-            is DerivedIdempotency -> refusals.waiting("idempotency", "Idempotency replay", at.below("idempotency"), Delivery.SPRING_3)
+            is DerivedIdempotency -> if (idempotency.enforce is IdempotencyEnforcement.Unknown) {
+                refusals.unknownValue(at.below("idempotency", "enforce"), idempotency.enforce.value)
+            }
             else -> refusals.unknownValue(at.below("idempotency", "kind"), idempotency.kind)
         }
 
         operation.requires.forEachIndexed { index, requirement ->
-            if (requirement is RuleRequirement && requirement.bucket != null) {
-                refusals.waiting("throttle", "A throttle rule", at.below("requires", index), Delivery.SPRING_3)
+            if (requirement !is RuleRequirement) return@forEachIndexed
+            requirement.bucket?.let { bucketId -> checkBucket(bucketId, at.below("requires", index, "bucket")) }
+
+            val proof = ir.rules[requirement.rule]?.proof
+            if (proof != null && proof.in_.value != BODY_SOURCE) {
+                refusals.waiting("rule.proof.placement", "A rule proof in '${proof.in_.value}'", IrPlace.ROOT.below("rules", requirement.rule, "proof", "in"), Delivery.AFTER_1_0)
             }
         }
 
         checkRuntimeForms(operation, at)
+    }
+
+    // A throttle rule's bucket: its key reads the request's path, a resolved scope or the principal.
+    private fun checkBucket(bucketId: BucketId, at: IrPlace) {
+        val bucket = ir.buckets[bucketId]
+        if (bucket == null) {
+            refusals.inconsistent("bucket.undeclared", "The bucket '$bucketId' is not declared", at)
+            return
+        }
+
+        bucket.key.forEachIndexed { index, source ->
+            if (source.in_.value !in BUCKET_KEY_SOURCES || source.name == null) {
+                refusals.waiting("bucket.key", "A bucket key read from '${source.in_.value}'", IrPlace.ROOT.below("buckets", bucketId, "key", index), Delivery.AFTER_1_0)
+            }
+        }
     }
 
     // Forms the boundary runtime does not run yet, refused by name as on the Node targets.
@@ -129,8 +151,8 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
         if (operation.features.isNotEmpty()) refusals.waiting("features", "An operation feature", at.below("features"), Delivery.AFTER_1_0)
 
         operation.fieldRights.forEachIndexed { index, fieldRight ->
-            if (fieldRight.direction.value != OUTPUT_DIRECTION) {
-                refusals.waiting("fieldRight.input", "A restricted input field", at.below("fieldRights", index), Delivery.SPRING_3)
+            if (fieldRight.direction.value != OUTPUT_DIRECTION && !TOP_LEVEL_POINTER.matches(fieldRight.pointer)) {
+                refusals.waiting("fieldRight.nestedPointer", "An input field right below the top level", at.below("fieldRights", index, "pointer"), Delivery.AFTER_1_0)
             }
         }
 
@@ -143,12 +165,14 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
         val response = operation.responses[index]
         val responseAt = at.below("responses", index)
 
-        // The 304 of an ETag is the cache's, refused with it above.
+        // The 304 of an ETag is the boundary's, never a handler arm.
         if (response.derivedFrom?.derivation == ETAG_DERIVATION) return
 
         when (response.shape) {
             ResponseShape.ITEM, ResponseShape.TABLE, ResponseShape.LIST, ResponseShape.EMPTY -> Unit
-            ResponseShape.PAGE -> refusals.waiting("response.shape", "A 'page' response", responseAt.below("shape"), Delivery.SPRING_3)
+            ResponseShape.PAGE -> if (operation.paging?.style == null) {
+                refusals.inconsistent("paging.style.missing", "A 'page' response has no paging style", responseAt.below("shape"))
+            }
             ResponseShape.BINARY, ResponseShape.REDIRECT ->
                 refusals.waiting("response.shape", "A '${response.shape.value}' response", responseAt.below("shape"), Delivery.SPRING_4)
             is ResponseShape.Unknown -> refusals.unknownValue(responseAt.below("shape"), response.shape.value)
@@ -187,17 +211,51 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
 
         when (val identity = ir.identities[identityId]) {
             null -> refusals.inconsistent("identity.undeclared", "The identity '$identityId' is not declared", at)
-            is SignedIdentity -> refusals.waiting("signature", "A signed identity ('$identityId')", at, Delivery.SPRING_3)
+            is SignedIdentity -> {
+                if (!checkSignatureScheme(identity.signed, IrPlace.ROOT.below("identities", identityId, "signed"))) return
+                identities += identityId
+                readPrincipal(identityId, identity.principal)
+            }
             is CredentialIdentity -> {
                 identities += identityId
-                val principalAt = IrPlace.ROOT.below("identities", identityId, "principal")
-                when (val principal = identity.principal) {
-                    is SchemaPrincipal -> readSchema(principal.schema, principalAt.below("schema"))
-                    else -> refusals.waiting("principal.variants", "A principal of several variants", principalAt, Delivery.AFTER_1_0)
-                }
+                readPrincipal(identityId, identity.principal)
             }
             else -> refusals.unknownValue(at, identity.kind)
         }
+    }
+
+    private fun readPrincipal(identityId: IdentityId, principal: Principal) {
+        val principalAt = IrPlace.ROOT.below("identities", identityId, "principal")
+        when (principal) {
+            is SchemaPrincipal -> readSchema(principal.schema, principalAt.below("schema"))
+            else -> refusals.waiting("principal.variants", "A principal of several variants", principalAt, Delivery.AFTER_1_0)
+        }
+    }
+
+    // A signed identity's scheme: a named header, verified by its template with a key id the contract writes.
+    private fun checkSignatureScheme(schemeId: SchemeId, at: IrPlace): Boolean {
+        val scheme = ir.schemes[schemeId] as? SignatureScheme
+        if (scheme == null) {
+            refusals.inconsistent("scheme.unresolved", "The signature scheme '$schemeId' is not declared", at)
+            return false
+        }
+
+        val schemeAt = IrPlace.ROOT.below("schemes", schemeId)
+        val signature = scheme.signature
+        if (signature !is TemplateSignature) {
+            refusals.waiting("signature.application", "A signature verified by the application", schemeAt.below("signature"), Delivery.AFTER_1_0)
+            return false
+        }
+        if (signature.key !is ValueSchemeKey) {
+            refusals.waiting("signature.key.source", "A signature key read from the request", schemeAt.below("signature", "key"), Delivery.AFTER_1_0)
+            return false
+        }
+        if (scheme.name == null) {
+            refusals.inconsistent("scheme.signature.header", "The signature scheme '$schemeId' names no header", schemeAt)
+            return false
+        }
+
+        return true
     }
 
     private fun readType(type: TypeUse, at: IrPlace) {
@@ -216,7 +274,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
             }
             is ScalarTypeUse -> readScalar(type, at)
             is FileTypeUse -> refusals.waiting("type.file", "A file value", at, Delivery.SPRING_4)
-            is OpaqueTypeUse -> refusals.waiting("type.opaque", "An opaque value", at, Delivery.SPRING_3)
+            is OpaqueTypeUse -> Unit
             is TypeUse.Unknown -> refusals.unknownValue(at.below("kind"), type.kind)
         }
     }

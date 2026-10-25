@@ -74,7 +74,7 @@ Patterns use `PathPatternParser` syntax with positional variable names (`/v1/tas
 
 Spring orders patterns by specificity, so `/v1/tasks/search` wins over `/v1/tasks/{p1}` whatever the declaration order.
 
-The filter matches the raw request target against the contract templates: `getRequestURI()` without the request's own `getContextPath()`, read on each request, then without the servlet path, stripped as a raw prefix, never through the decoded `getServletPath()`. Behind a proxy, `ForwardedHeaderFilter` applies `X-Forwarded-Prefix` to the context path of each request, so routing stays right; the boot check still compares `mount` with the configured paths. The interceptor then compares the operation of the handler method Spring chose with that match. Tomcat decodes and normalizes the path before routing, so the two can differ:
+The filter matches the raw request target against the contract templates: `getRequestURI()` without the request's own `getContextPath()`, read on each request, then without the servlet path, stripped as a raw prefix, never through the decoded `getServletPath()`. Behind a proxy, `ForwardedHeaderFilter` applies `X-Forwarded-Prefix` to the context path of each request, so routing stays right. The boot check compares a configured `mount` with the configured paths; without one, an app under a context path or a servlet path starts, since the filter strips both from each request. The interceptor then compares the operation of the handler method Spring chose with that match. Tomcat decodes and normalizes the path before routing, so the two can differ:
 
 - `/v1/tasks/%73earch` reaches the `search` method while the raw path matches `{p1}`. The interceptor answers the path's `notFound` 404 before any check, as on Hono.
 - A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the filter, before Spring Security, on every Node target's terms (ADR 0016 "Errors raised before routing"). This covers a trailing slash, `//`, a dot segment (`x/../7`, `%2e%2e`), a percent-encoded static segment, and a segment holding a `;` path parameter, which Tomcat strips before routing.
@@ -164,21 +164,19 @@ Generated value types:
 
 Wire names that differ from the Java member name are carried by `@JsonProperty`, which Jackson 3 keeps in `com.fasterxml.jackson.annotation`.
 
-Step 6 decodes path, query, headers and the held body to a Jackson 3 `JsonNode` with the boundary's own `JsonMapper`, never the app's bean (ADR 0012 "Each target places the steps"). It then runs one pass:
+Step 6 decodes path, query, headers and the held body to a Jackson 3 `JsonNode` with the boundary's own `JsonMapper`, never the app's bean (ADR 0012 "Each target places the steps"). It then runs two passes:
 
-1. **A generated structural validator** walks the tree: `required`, `type` (no coercion), `unknownKeys`, `enum`, `oneOf` and the discriminator. It also covers the value rules whose Jakarta meaning differs from the contract's:
+1. **A generated structural validator** walks the tree and carries every rule of the contract, so a request gets every issue at once: `required`, `type` (no coercion), `unknownKeys`, `enum`, `oneOf`, the discriminator and every value rule. The value rules whose Jakarta meaning differs from the contract's keep the contract's meaning:
    - string lengths in code points, where `@Size` counts UTF-16 units;
    - `pattern` as an ECMA-262 search, where `@Pattern` matches the whole string;
    - `format`;
    - `multipleOf`.
-   Each issue carries its `{ in, pointer, rule }` from the tree.
+   Each issue carries its `{ in, pointer, rule }` from the tree, and the issues are bounded by `MAX_RENDERED_ISSUES = 100`.
 2. **The boundary's own `JsonMapper` binds** the tree to the input record. After the structural pass the binding cannot fail; a failure is a 500.
-3. **Bean Validation checks the record** with the boundary's own `ValidatorFactory` (Hibernate Validator 9, `ParameterMessageInterpolator`, the copied `Field<T>` value extractor), never the app's `Validator` bean. Records carry the standard constraints whose meaning is the contract's: `@Min`, `@Max`, `@DecimalMin` and `@DecimalMax` with `inclusive`, `@Size` on arrays and maps, `@NotNull`. Generated constraints with their validators in the copied runtime carry the rules of pass 1, so a developer's own `@Valid` on a record checks the same rules.
-4. **Issues are joined.** A violation's property path (`subs[1].dueAt`) maps to the wire pointer (`/subs/1/due_at`) through a table generated per record. `rule` is the contract keyword, read from the constraint's annotation type, never its message. Issues are bounded by `MAX_RENDERED_ISSUES = 100`.
 
-Passes 3 and 4 wait for spring-3: spring-2 runs passes 1 and 2, which carry every rule of the core-path operations, and compiles `pattern` with `java.util.regex` until the ECMA-262 search lands with them.
+Pass 1 runs the normalised pattern of ADR 0003 section 9 on `java.util.regex` with `find()`, `^` and `$` written `\A` and `\z` and astral escapes in Java's `\x{...}` form, so it searches as ECMA-262 does.
 
-The app needs a Jakarta Validation provider on its runtime classpath (`spring-boot-starter-validation`); without one, the boot check fails, naming the starter. The generated validator covers only the rules whose Jakarta meaning differs, so pass 3's value rules and the generated constraints run on that provider.
+The boundary runs no Bean Validation pass: a second pass would only repeat pass 1's rules. The records keep the standard constraints whose meaning is the contract's (`@Min`, `@Max`, `@DecimalMin` and `@DecimalMax` with `inclusive`, `@Size` on arrays and maps, `@NotNull`, `@Valid`), for the app's own `@Valid`; the app adds a Jakarta Validation provider only for that use.
 
 ### Query and bounded values
 
@@ -187,8 +185,9 @@ The app needs a Jakarta Validation provider on its runtime classpath (`spring-bo
   - Any other content coding answers 415; a corrupt compressed body is the client's 400.
   - The bytes are replayed to Spring, unchanged, through a request wrapper, so signed routes find their raw bytes without app setup.
   - No app-wide parser limit is involved, and the target exports no limit constant.
-- **Paging.** The paging roles, `overLimit` included, are validated in step 6, before any `Pageable` is built (ADR 0012 obligations). `Pageable` and `Page` appear only for the `springPage` style of the `pack:spring` profile (ADR 0008), never as a default shape.
+- **Paging.** The paging roles, `overLimit` included, are validated in step 6, before any `Pageable` is built (ADR 0012 obligations). `Pageable` and `Page` appear only for the `springPage` style of the `pack:spring` profile (ADR 0008), never as a default shape. Under that style the input record holds the `Pageable` the boundary builds from the validated paging query, injected at binding, and the handler answers Spring Data's `Page`, from which the boundary reads the page facts. The `Pageable` holds the page index as an `int`, so a page number whose index passes 2147483647 is one `api.schema_invalid` issue, rule `maximum`, at the page parameter, though the derived parameter has no maximum. Each sort key reaches the `Pageable` as the Java member of the item member it names (else the Java member a member of that name would take), since the entity's property is that member; a key that yields no Java name is refused at generation.
 - **Keys.** The throttle bucket key and the idempotency key are fixed-size SHA-256 digests with the same bytes, hex and base64url text as the Node targets, so keys and ETags are equal across targets. The idempotency key is derived as ADR 0012 obligations say, never from the credentials.
+- **Version tokens.** The boundary validates the expected version with the body; the handler compares it with the stored version and answers the operation's `stateConflict` error, as on the Node targets. Spring has no channel for the Node targets' "left to the handler" warnings, so the Spring guide says it.
 - **Absolute URLs.** Under `api.wire.urls: absolute`, every URL starts with the configured public origin, the property `seampact.<api>.public-origin`. The boot check fails without it, and the request `Host` and forwarded headers are never read. The origin is a scheme, host and port, and stays as configured behind a proxy.
 
 ### Redaction
@@ -198,7 +197,7 @@ The app needs a Jakarta Validation provider on its runtime classpath (`spring-bo
 - `AuthenticateRequest.credentials()`;
 - `csrfToken()`;
 - the members of each identity's generated credentials record;
-- a signed request's body and signature header;
+- a signed request's body, raw and parsed (the `body` of a signed route's input record), and its signature header;
 - a `sensitive` member.
 
 Each is printed as the generated `[redacted]` constant, since `seampact-hooks`'s `Redaction` is package-private (ADR 0012 obligations, CHK-168). The boundary's own logs carry the operation id, the rule and the pointer, never an input value.
@@ -239,12 +238,10 @@ The boot check runs in a `SmartInitializingSingleton`, before the server starts 
 - a mapping that no composed annotation registered and that `frameworkRoutes` does not allow-list (FR-25):
   - springdoc's paths read from its own properties (`springdoc.api-docs.path`, `/v3/api-docs` and `/v3/api-docs.yaml` by default, and the UI's paths) are accepted while `frameworkDocs` is `keep` (ADR 0011 "Which OpenAPI documents exist");
   - Boot's error path (`server.error.path`, `/error`) is accepted as the container's error target; a contract route reaches it only under `warn`, by a `sendError` the boundary let through;
-- a `mount` that differs from `server.servlet.context-path` followed by `spring.mvc.servlet.path`, both read from the environment;
+- a configured `mount` that differs from `server.servlet.context-path` followed by `spring.mvc.servlet.path`, both read from the environment; without a `mount` nothing is compared;
 - the boundary filter not ordered before Spring Security's chain, or a `ShallowEtagHeaderFilter`, `FormContentFilter` or `HiddenHttpMethodFilter` ordered before it;
-- a servlet container other than Tomcat ("Refused by name or waiting"), a reactive application, or no Jakarta Validation provider;
+- a servlet container other than Tomcat ("Refused by name or waiting") or a reactive application;
 - a Spring Boot major other than 4, read from `SpringBootVersion`; `generate` already refuses 3.x from the build's resolved version.
-
-Four of these rules wait for spring-3, where spring-2 relies on the run-time rules alone: mappings ordered before `RequestMappingHandlerMapping`, `mount` against the configured paths, a container other than Tomcat or a reactive app, and a missing Jakarta Validation provider.
 
 `artefacts.bootCheck: { handlers, frameworkRoutes }` switches those two checks apart (ADR 0011).
 
@@ -297,7 +294,7 @@ The target consumes no link (ADR 0009 "The provider seam"): it generates its own
 At compile and run time:
 
 - Spring Framework 7.0.6 or later (`spring-webmvc`), the matrix's floor for the flush flag of "The outgoing response check", Spring Boot 4 (`FilterRegistrationBean`, configuration properties, `SpringBootVersion`) and Jakarta Servlet 6.1;
-- Jakarta Validation 3.1 with a provider;
+- the Jakarta Validation 3.1 API, for the records' constraints;
 - Jackson 3 (`tools.jackson.core:jackson-databind`) and `jackson-annotations`;
 - `seampact-hooks`;
 - Spring Security 7 in the security class only, and `io.swagger.v3.oas.annotations` under `nativeDocs` only.
@@ -310,7 +307,6 @@ The boundary runtime is copied into `spring.runtime` with the generated header, 
 
 | Waits for | What |
 |---|---|
-| spring-3 | paging styles; idempotency replay, throttle, cache and ETag headers; version tokens (concurrency); rule proofs in the body; restricted input fields; signed routes and opaque values; `api.wire.urls: absolute`; the `pack:spring` profile |
 | spring-4 | form, multipart, download and redirect bodies (ADR 0012 bodies table, a multipart body counted on the raw stream as it arrives); `nativeDocs`; `frameworkDocs: off`; the Spring Security beans and customizer |
 | after 1.0 | Spring Boot 3.x (refused, not waiting); WebFlux; servlet containers other than Tomcat, which Boot 4 also supports (Jetty) but no consumer proves; asynchronous handler signatures; `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs |
 
@@ -322,8 +318,8 @@ The workflow `p6-spring-boot.yml` has five jobs:
 
 - `changes`;
 - `compiler-binary` (Node), which builds the linux-x64 binary;
-- `build`, a matrix in `eclipse-temurin` containers, whose first step fails when `node`, `npm` or `npx` is found. It builds the app with each plugin from the reference contract as a local `path` source, filtered by the entry's `operations` ("Core-path operations" below), on JDK 21 and 25; the rows that take the contract's bundle, served over https by `java Serve.java`, come with plugins-3;
-- `http-suite`, which starts `java -jar` and runs the `default`, `hand-written` and `boot` profiles, plus `pack:spring` from spring-3, through the suite's CLI (ADR 0015 "Suite profiles"), with the boot profile run as `command: java`;
+- `build`, a matrix in `eclipse-temurin` containers, whose first step fails when `node`, `npm` or `npx` is found. It builds the app with each plugin from the reference contract as a local `path` source ("Every operation" below), on JDK 21 and 25; the rows that take the contract's bundle, served over https by `java Serve.java`, come with plugins-3;
+- `http-suite`, which starts `java -jar` and runs the `default`, `hand-written` and `boot` profiles, plus `pack:spring` on a third jar built with `@seampact/pack-spring`, through the suite's CLI (ADR 0015 "Suite profiles"), with the boot profile run as `command: java`;
 - `spring-boot`, the aggregate, failing on any failed or cancelled job.
 
 The proof is:
@@ -335,12 +331,7 @@ The proof is:
 
 Suite cases that wait for a later PR carry a refusal naming that PR; the list is empty at spring-4.
 
-**Core-path operations.** Until spring-3, the app config's spring-boot entries keep, with their `operations.include`, the reference contract's operations free of paging, idempotency, cache headers, ETags and signatures, so `generate` refuses none of them:
-
-- `tasks`: `health`, `getChannel`, `getDraft`, `getTask`, `getTasksBatch` and `searchTasks`, whose idempotency is exempt;
-- `tasksService`: `getTask`.
-
-spring-3 widens the filter to the forms it brings, and spring-4 drops it. No other fixture is added.
+**Every operation.** From spring-3 the app config's spring-boot entries serve every operation of the reference contract, with no `operations` filter. No other fixture is added.
 
 ### Delivery
 
@@ -348,8 +339,8 @@ spring-3 widens the filter to the forms it brings, and spring-4 drops it. No oth
 |---|---|
 | spring-1 | the generator in `jvm/seampact-spring-boot` (Kotlin, Palantir JavaPoet pinned): `SpringBootTarget.generate(ir, entry)`, the options, types, records with redacted `toString()`, interfaces, composed annotations, results and exceptions; `SpringBootOptionsTest` and `SpringBootGoldenTest`, whose golden is compiled by `javac` on 21 and 25 against Spring Boot 4, and whose redaction case checks the `toString()` of one golden record of each kind of "Redaction" |
 | spring-2 | the filter, interceptor, argument resolver, reply handler, exception resolver, outgoing check, hook beans and boot check; the sample app; the suite CLI; the Gradle rows of the workflow, on the core-path operations |
-| spring-3 | paging, idempotency replay, throttle, cache and ETag headers, concurrency, rule proofs, restricted input fields, signed routes, absolute URLs, the `pack:spring` profile, `GeneratedRedactionTest`; the entries' filter widened to these forms |
-| spring-4 | the Spring Security beans and customizer, form, multipart, download and redirect bodies, `nativeDocs`, `frameworkDocs: off`, `SecurityRefusalsTest`; the filter dropped |
+| spring-3 | paging, idempotency replay, throttle, cache and ETag headers, concurrency, rule proofs, restricted input fields, signed routes, absolute URLs, the `pack:spring` profile, `GeneratedRedactionTest`, the boot check rules of mappings, mount and container, the ECMA-262 pattern search; the entries' filter dropped |
+| spring-4 | the Spring Security beans and customizer, form, multipart, download and redirect bodies, `nativeDocs`, `frameworkDocs: off`, `SecurityRefusalsTest` |
 
 ## Spike
 

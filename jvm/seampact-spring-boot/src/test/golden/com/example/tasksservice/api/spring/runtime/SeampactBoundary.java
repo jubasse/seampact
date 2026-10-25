@@ -1,5 +1,6 @@
 package com.example.tasksservice.api.spring.runtime;
 
+import io.github.jubasse.seampact.hooks.IdempotencyStore;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
 import jakarta.servlet.ServletException;
@@ -38,6 +39,10 @@ public final class SeampactBoundary {
     private static final String WARN = "warn";
     private static final String UNDECLARED_STATUS_ROLE = "undeclaredStatus";
     private static final int INTERNAL_ERROR = 500;
+    private static final String SECONDS_UNIT = "s";
+    private static final String CACHE_CONTROL_HEADER = "Cache-Control";
+    private static final String NO_STORE_DIRECTIVE = "no-store";
+    private static final long MILLISECONDS_PER_SECOND = 1000;
     private static final String SERVLET_PATH_PROPERTY = "spring.mvc.servlet.path";
 
     private final ContractTable table;
@@ -47,6 +52,7 @@ public final class SeampactBoundary {
     private final ListableBeanFactory beans;
     private final Environment environment;
     private final String exchangeAttribute;
+    private final Optional<String> publicOrigin;
 
     public SeampactBoundary(String tableJson, ApiBinding binding, ListableBeanFactory beans, Environment environment) {
         this.table = new ContractTable(mapper.readTree(tableJson));
@@ -55,6 +61,7 @@ public final class SeampactBoundary {
         this.beans = beans;
         this.environment = environment;
         this.exchangeAttribute = SeampactBoundary.class.getName() + "." + table.apiId();
+        this.publicOrigin = PublicOrigin.of(table, environment);
     }
 
     public String apiId() {
@@ -95,12 +102,22 @@ public final class SeampactBoundary {
         return validator;
     }
 
+    /** The app's idempotency store; the boot check made sure exactly one exists when an operation is idempotent. */
+    IdempotencyStore idempotencyStore() {
+        return beans.getBean(IdempotencyStore.class);
+    }
+
     ListableBeanFactory beans() {
         return beans;
     }
 
     Environment environment() {
         return environment;
+    }
+
+    /** The origin absolute URLs start with; empty under relative URLs. */
+    Optional<String> publicOrigin() {
+        return publicOrigin;
     }
 
     Optional<BoundaryExchange> exchangeOf(HttpServletRequest request) {
@@ -219,11 +236,24 @@ public final class SeampactBoundary {
         response.setStatus(status);
         response.setContentType(ErrorReplies.media(table, route));
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        writeRetryHeader(response, route.retryHeader(code), params);
+        if (route.isNoStore(code)) response.setHeader(CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE);
         try {
             response.getOutputStream().write(body);
         } catch (IOException failure) {
             throw new IllegalStateException("seampact: writing the error reply of '" + code + "' failed", failure);
         }
+    }
+
+    // The delay param of a 429 from a bucket rule, in integer milliseconds, written in the header's unit.
+    private static void writeRetryHeader(HttpServletResponse response, JsonNode retryHeader, JsonNode params) {
+        if (!retryHeader.isObject()) return;
+
+        JsonNode delayMs = params.path(retryHeader.path("param").asString());
+        if (!delayMs.isNumber()) return;
+
+        long value = SECONDS_UNIT.equals(retryHeader.path("unit").asString()) ? Math.ceilDiv(delayMs.asLong(), MILLISECONDS_PER_SECOND) : delayMs.asLong();
+        response.setHeader(retryHeader.path("name").asString(), String.valueOf(value));
     }
 
     /** Calls every `onUnexpectedError` bean, or logs the failure when the app registers none. */

@@ -21,6 +21,9 @@ import tools.jackson.databind.node.MissingNode;
 public final class ContractReplyHandler implements HandlerMethodReturnValueHandler {
     private static final String BODY = "body";
     private static final String PARAMS = "params";
+    private static final String ITEMS = "items";
+    private static final String TOTAL = "total";
+    private static final String PAGE_SHAPE = "page";
 
     private final SeampactBoundary boundary;
 
@@ -68,25 +71,62 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
         CheckingResponse checking = exchange.response;
 
         if (bodyValue != null) {
-            JsonNode body = boundary.mapper().valueToTree(bodyValue);
-            RequestView view = boundary.requestView(request, exchange);
-            OutputFieldRights.apply(boundary, exchange, view, response, body);
+            boolean isPage = PAGE_SHAPE.equals(response.path("shape").asString());
+            JsonNode handlerBody = boundary.mapper().valueToTree(isPage ? boundary.binding().pageFacts(bodyValue) : bodyValue);
+            JsonNode payload = isPage ? handlerBody.path(ITEMS) : handlerBody;
+            if (isPage && !payload.isArray()) {
+                exchange.violation = Optional.of("the handler returned a page without items");
+                return;
+            }
+            if (isPage && handlerBody.path(TOTAL).asLong(0) < 0) {
+                exchange.violation = Optional.of("the handler returned a page whose total is negative");
+                return;
+            }
 
-            if (boundary.validatesBodies()) {
-                List<InputIssue> issues = boundary.validator().issuesOf(body, response.path("body"), "body", "");
-                if (!issues.isEmpty()) {
-                    exchange.violation = Optional.of("the success body breaks its schema at " + issues.get(0).pointer() + " (" + issues.get(0).rule() + ")");
-                    return;
-                }
+            RequestView view = boundary.requestView(request, exchange);
+            OutputFieldRights.apply(boundary, exchange, view, response, payload);
+
+            Optional<String> broken = brokenSchema(response, payload);
+            if (broken.isPresent()) {
+                exchange.violation = broken;
+                return;
+            }
+
+            JsonNode body = payload;
+            if (isPage) {
+                PageReply.RenderedPage page = PageReply.render(boundary.table(), exchange, request.getQueryString(), request.getRequestURI(), boundary.publicOrigin(), handlerBody, payload, status);
+                page.headers().forEach(header -> checking.addHeader(header.getKey(), header.getValue()));
+                body = page.body();
+            }
+
+            byte[] bodyBytes = boundary.mapper().writeValueAsBytes(body);
+            if (CacheHeaders.write(exchange, request, checking, bodyBytes)) {
+                checking.setStatus(CacheHeaders.NOT_MODIFIED);
+                exchange.markBoundaryWrote();
+                return;
             }
 
             checking.setContentType(response.path("media").asString());
             checking.setCharacterEncoding(StandardCharsets.UTF_8.name());
-            checking.getOutputStream().write(boundary.mapper().writeValueAsBytes(body));
+            checking.getOutputStream().write(bodyBytes);
         }
 
         checking.setStatus(status);
         exchange.markBoundaryWrote();
+    }
+
+    // The success body against its schema when the api checks bodies; a list's, a table's and a page's every item.
+    private Optional<String> brokenSchema(JsonNode response, JsonNode payload) {
+        if (!boundary.validatesBodies()) return Optional.empty();
+
+        for (JsonNode instance : OutputFieldRights.schemaInstances(payload, response.path("shape").asString())) {
+            List<InputIssue> issues = boundary.validator().issuesOf(instance, response.path("body"), "body", "");
+            if (!issues.isEmpty()) {
+                return Optional.of("the success body breaks its schema at " + issues.get(0).pointer() + " (" + issues.get(0).rule() + ")");
+            }
+        }
+
+        return Optional.empty();
     }
 
     // A result arm's record component, null when the arm has none (a 204, a code without params).

@@ -10,16 +10,24 @@ import io.github.jubasse.seampact.hooks.ResolveScopeRequest;
 import io.github.jubasse.seampact.hooks.ResolvedScope;
 import io.github.jubasse.seampact.hooks.ScopeIdSource;
 import io.github.jubasse.seampact.hooks.ScopeResolution;
+import io.github.jubasse.seampact.hooks.SignatureEncoding;
+import io.github.jubasse.seampact.hooks.SignatureTemplate;
+import io.github.jubasse.seampact.hooks.SignedTemplateRequest;
 import io.github.jubasse.seampact.hooks.SubjectRef;
+import io.github.jubasse.seampact.hooks.ThrottleBucket;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.MissingNode;
+import tools.jackson.databind.node.NullNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
@@ -34,6 +42,7 @@ final class AccessSteps {
     private static final String ACCESS_DENIED = "org.springframework.security.access.AccessDeniedException";
     private static final String OPTIONAL_ACCESS = "optional";
     private static final String ANONYMOUS = "anonymous";
+    private static final String SIGNED = "signed";
 
     private AccessSteps() {}
 
@@ -48,6 +57,12 @@ final class AccessSteps {
         ContractRoute route = exchange.route();
         JsonNode access = route.operation().path("access");
         if (!access.has("identity")) return;
+
+        JsonNode identity = boundary.table().ir().path("identities").path(access.path("identity").asString());
+        if (SIGNED.equals(identity.path("kind").asString())) {
+            authenticateSigned(boundary, exchange, request, view, identity);
+            return;
+        }
 
         boolean optional = OPTIONAL_ACCESS.equals(access.path("kind").asString());
         ObjectNode credentials = JsonNodeFactory.instance.objectNode();
@@ -67,7 +82,7 @@ final class AccessSteps {
         }
 
         AuthenticateResult<?, Denial> result = boundary.binding().authenticate(access.path("identity").asString(), boundary.beans(),
-                boundary.mapper(), credentials, csrfToken, view, boundary.operationRef(route));
+                boundary.mapper(), credentials, csrfToken, Optional.empty(), view, boundary.operationRef(route));
 
         switch (result) {
             case AuthenticateResult.Authenticated<?, Denial> authenticated -> exchange.principal = authenticated.principal();
@@ -75,6 +90,32 @@ final class AccessSteps {
                 if (optional && ANONYMOUS.equals(access.path("onRefused").asString())) return;
                 throw refusalOf(boundary, denied.deny());
             }
+        }
+    }
+
+    // A signed route: the signature parsed from its header over the held raw body; a missing or malformed header is
+    // the unauthenticated refusal, and the hook verifies the signature.
+    private static void authenticateSigned(SeampactBoundary boundary, BoundaryExchange exchange, HttpServletRequest request, RequestView view, JsonNode identity) {
+        ContractRoute route = exchange.route();
+        JsonNode scheme = boundary.table().ir().path("schemes").path(identity.path("signed").asString());
+        JsonNode signature = scheme.path("signature");
+
+        Optional<SignatureHeader> parsed = SignatureHeader.parse(signature.path("format").asString(), request.getHeader(scheme.path("name").asString()));
+        if (parsed.isEmpty()) throw new ContractRefusal(BoundaryFilter.roleCode(route, UNAUTHENTICATED_ROLE), MissingNode.getInstance());
+
+        byte[] rawBody = exchange.body == null ? new byte[0] : exchange.body;
+        SignatureTemplate template = new SignatureTemplate(signature.path("algorithm").asString(), signature.path("payload").asString(),
+                SignatureEncoding.valueOf(signature.path("encoding").asString().toUpperCase(Locale.ROOT)),
+                signature.path("toleranceMs").isNumber() ? Optional.of(signature.path("toleranceMs").asLong()) : Optional.empty());
+        SignedTemplateRequest signed = new SignedTemplateRequest(rawBody, parsed.get().timestamp(), parsed.get().candidateSignatures(),
+                signature.path("key").path("value").asString(), template);
+
+        AuthenticateResult<?, Denial> result = boundary.binding().authenticate(route.operation().path("access").path("identity").asString(), boundary.beans(), boundary.mapper(),
+                JsonNodeFactory.instance.objectNode(), Optional.empty(), Optional.of(signed), view, boundary.operationRef(route));
+
+        switch (result) {
+            case AuthenticateResult.Authenticated<?, Denial> authenticated -> exchange.principal = authenticated.principal();
+            case AuthenticateResult.Denied<?, Denial> denied -> throw refusalOf(boundary, denied.deny());
         }
     }
 
@@ -141,6 +182,10 @@ final class AccessSteps {
 
     // A value a scope or a subject reads from the request: a path parameter, decoded and checked by its type.
     private static Object declaredValue(SeampactBoundary boundary, BoundaryExchange exchange, JsonNode source, JsonNode typeUse) {
+        return ScalarValues.of(declaredNode(boundary, exchange, source, typeUse), typeUse);
+    }
+
+    private static JsonNode declaredNode(SeampactBoundary boundary, BoundaryExchange exchange, JsonNode source, JsonNode typeUse) {
         String in = source.path("in").asString();
         if (!"path".equals(in)) {
             throw new IllegalStateException("seampact: a value read from '" + in + "' is not one the boundary resolves yet");
@@ -151,7 +196,7 @@ final class AccessSteps {
         List<InputIssue> issues = boundary.validator().issuesOf(value, typeUse, "path", InputIssue.below("", name));
         if (!issues.isEmpty()) throw InputStep.schemaInvalid(exchange.route(), issues);
 
-        return ScalarValues.of(value, typeUse);
+        return value;
     }
 
     private static void decideRequirements(SeampactBoundary boundary, BoundaryExchange exchange, RequestView view) {
@@ -162,7 +207,8 @@ final class AccessSteps {
             Optional<JsonNode> params = requirement.has("params") ? Optional.of(requirement.path("params")) : Optional.empty();
 
             Decision<Denial> decision = decide(boundary, name, new RequirementCall(isRule ? RequirementKind.RULE : RequirementKind.RIGHT,
-                    name, params, exchange.principal, subject, List.copyOf(exchange.scopes), Optional.empty(), Optional.empty(),
+                    name, params, exchange.principal, subject, List.copyOf(exchange.scopes), isRule ? proofOf(boundary, exchange, name) : Optional.empty(),
+                    throttleBucket(boundary, exchange, requirement.path("bucket")),
                     new Purpose.Route(), boundary.operationRef(exchange.route()), view,
                     new RequirementRequest.Extensions<>(Map.of(), Map.of())));
 
@@ -170,7 +216,84 @@ final class AccessSteps {
         }
     }
 
-    private static Optional<SubjectRef<Object, Object>> subjectOf(SeampactBoundary boundary, BoundaryExchange exchange, JsonNode subject, String name) {
+    /**
+     * The body field a rule reads its proof from, checked first: an issue there is the `schemaInvalid` refusal before
+     * the decider runs. A body that is absent or not JSON gives no proof; step 6 refuses it.
+     */
+    private static Optional<Object> proofOf(SeampactBoundary boundary, BoundaryExchange exchange, String rule) {
+        String name = boundary.table().ir().path("rules").path(rule).path("proof").path("name").asString("");
+        JsonNode proof = proofField(exchange.route().operation(), name);
+        if (proof.isMissingNode() || exchange.body == null) return Optional.empty();
+
+        JsonNode body;
+        try {
+            body = boundary.mapper().readTree(exchange.body);
+        } catch (JacksonException malformed) {
+            return Optional.empty();
+        }
+        if (!body.isObject()) return Optional.empty();
+
+        List<InputIssue> issues = InputStep.proofIssues(boundary, body, proof);
+        if (!issues.isEmpty()) throw InputStep.schemaInvalid(exchange.route(), issues);
+
+        return Optional.ofNullable(boundary.mapper().treeToValue(body.path(name), Object.class));
+    }
+
+    private static JsonNode proofField(JsonNode operation, String name) {
+        for (JsonNode proof : operation.path("input").path("proofs")) {
+            if (proof.path("name").asString().equals(name)) return proof;
+        }
+
+        return MissingNode.getInstance();
+    }
+
+    /**
+     * The bucket a throttle rule counts in: its key is the SHA-256 hex of `[api, bucket, values]` as the Node targets
+     * write it, so a counter shared across targets counts one client once.
+     */
+    private static Optional<ThrottleBucket> throttleBucket(SeampactBoundary boundary, BoundaryExchange exchange, JsonNode bucketId) {
+        if (bucketId.isMissingNode()) return Optional.empty();
+
+        JsonNode bucket = boundary.table().ir().path("buckets").path(bucketId.asString());
+        ArrayNode keyValues = JsonNodeFactory.instance.arrayNode();
+        for (JsonNode source : bucket.path("key")) keyValues.add(bucketKeyValue(boundary, exchange, source));
+
+        String key = Digests.hexOf(List.of(JsonNodeFactory.instance.stringNode(boundary.apiId()), bucketId, keyValues));
+        List<Object> values = new ArrayList<>();
+        for (JsonNode value : keyValues) values.add(value.isNull() ? null : boundary.mapper().treeToValue(value, Object.class));
+
+        return Optional.of(new ThrottleBucket(bucketId.asString(), key, values, longOf(bucket.path("limit")), longOf(bucket.path("windowMs"))));
+    }
+
+    // A key value as JSON: a path param decoded and checked by its type, a resolved scope's id, a principal member.
+    private static JsonNode bucketKeyValue(SeampactBoundary boundary, BoundaryExchange exchange, JsonNode source) {
+        String name = source.path("name").asString();
+
+        return switch (source.path("in").asString()) {
+            case "path" -> declaredNode(boundary, exchange, source, pathParamType(exchange, name));
+            case "scope" -> exchange.scopes.stream().filter(resolved -> resolved.scope().equals(name)).findFirst()
+                    .<JsonNode>map(resolved -> boundary.mapper().valueToTree(resolved.id())).orElse(NullNode.getInstance());
+            case "principal" -> {
+                JsonNode principal = boundary.mapper().valueToTree(exchange.principal);
+                yield principal.path(name).isMissingNode() ? NullNode.getInstance() : principal.path(name);
+            }
+            default -> throw new IllegalStateException("seampact: a bucket key read from '" + source.path("in").asString() + "' is not one the boundary reads");
+        };
+    }
+
+    private static JsonNode pathParamType(BoundaryExchange exchange, String name) {
+        for (JsonNode param : exchange.route().operation().path("params").path("path")) {
+            if (param.path("name").asString().equals(name)) return param.path("type");
+        }
+
+        throw new IllegalStateException("seampact: the bucket key reads the path param '" + name + "', which the operation does not declare");
+    }
+
+    private static Optional<Long> longOf(JsonNode value) {
+        return value.isNumber() ? Optional.of(value.asLong()) : Optional.empty();
+    }
+
+    static Optional<SubjectRef<Object, Object>> subjectOf(SeampactBoundary boundary, BoundaryExchange exchange, JsonNode subject, String name) {
         if (subject.isMissingNode()) return Optional.empty();
 
         JsonNode source = subject.path("source");
@@ -236,7 +359,7 @@ final class AccessSteps {
         return false;
     }
 
-    private static ContractRefusal refusalOf(SeampactBoundary boundary, Denial denial) {
+    static ContractRefusal refusalOf(SeampactBoundary boundary, Denial denial) {
         JsonNode params = denial.params().map(value -> boundary.mapper().<JsonNode>valueToTree(value)).orElse(MissingNode.getInstance());
 
         return new ContractRefusal(denial.code(), params);

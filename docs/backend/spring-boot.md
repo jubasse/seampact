@@ -91,6 +91,17 @@ class NotesController implements NotesEndpoints {
 
 The boundary has already checked the path, query, headers and body. You never write a status or a content type yourself.
 
+When an operation takes a version, the boundary checks its format only. Compare it with the stored version yourself, and return the operation's conflict error when they differ:
+
+```java
+if (input.body().expectedVersion() != task.version()) return new UpdateTaskErrors.StateConflict();
+```
+
+With `@seampact/pack-spring`, a list in the `springPage` style gets a `Pageable` in its input and returns Spring Data's `Page`. Add `org.springframework.data:spring-data-commons`; the Spring Boot BOM gives its version.
+
+- A sort key reaches the `Pageable` as the item's Java member name: `sort=created_at,desc` sorts by `createdAt`. Name your entity's properties like the generated record's members.
+- A page number past Spring Data's range (a page index above 2147483647) gets a 400 at the page parameter.
+
 ## Register the hooks
 
 Hooks are beans. Write one per identity, one decider for your rights and rules, and one resolver per scope.
@@ -116,7 +127,10 @@ The app refuses to start, and lists every problem, when:
 
 - an identity has no authenticate hook, a right or rule no decider, a scope no resolver;
 - an operation has no handler;
-- a route that is not in the contract is served and not allow-listed.
+- a route that is not in the contract is served and not allow-listed;
+- another handler mapping, ordered before Spring MVC's, takes a contract route;
+- the app does not run Spring MVC on Tomcat;
+- the contract writes absolute URLs and `seampact.<api>.public-origin` is missing or is not a scheme, host and port.
 
 Allow-list your own routes in the entry, with a reason:
 
@@ -133,8 +147,12 @@ Set the forwarded-headers strategy, so Spring reads the proxy's headers:
 server.forward-headers-strategy=framework
 ```
 
-With `framework`, a prefix sent in `X-Forwarded-Prefix` is applied, and the contract's routes still match. Strip any forwarded header a client sends at your edge proxy: only the proxy may set them.
+With `framework`, a prefix sent in `X-Forwarded-Prefix` is applied, and the contract's routes still match. The same holds for `server.servlet.context-path` and `spring.mvc.servlet.path`. Strip any forwarded header a client sends at your edge proxy: only the proxy may set them.
 
-The public URL of the api stays the one in the contract. Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix.
+The public URL of the api stays the one in the contract. Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. If the contract writes absolute URLs, set the public origin; the request's `Host` is never read:
+
+```properties
+seampact.tasks.public-origin=https://api.example.com
+```
 
 Pass secrets as environment variables (`SPRING_` properties or `${...}` placeholders), never baked into the image.

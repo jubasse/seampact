@@ -3,6 +3,7 @@ package com.example.tasksservice.api.spring.runtime;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.Optional;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -56,8 +57,12 @@ public final class BoundaryInterceptor implements HandlerInterceptor {
 
             AccessSteps.run(boundary, exchange, request);
             InputStep.run(boundary, exchange, request);
+            if (IdempotencyStep.begin(boundary, exchange)) return false;
         } catch (ContractRefusal refusal) {
             boundary.writeRefusal(exchange, refusal);
+            return false;
+        } catch (IOException failure) {
+            boundary.writeUnexpected(exchange, "replaying a stored reply failed", failure);
             return false;
         } catch (RuntimeException failure) {
             if (AccessSteps.isAccessDenied(failure)) throw failure;

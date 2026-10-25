@@ -1,5 +1,5 @@
 # The consumer's app config: the reference contract as a local `path` source, compiled by the pinned binary, and one
-# spring-boot entry per api, kept to the core-path operations until spring-3 widens the filter (ADR 0022).
+# spring-boot entry per api, serving every operation of the api (ADR 0022).
 outDir: build/generated/sources/seampact/main
 openapi: none
 sources:
@@ -8,14 +8,12 @@ targets:
   - id: tasks
     use: io.github.jubasse:seampact-spring-boot
     api: tasks
-    operations: { include: [health, getChannel, getDraft, getTask, getTasksBatch, searchTasks] }
     options: { package: com.example.tasks.api }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
   - id: tasksService
     use: io.github.jubasse:seampact-spring-boot
     api: tasksService
-    operations: { include: [getTask] }
     options: { package: com.example.tasksservice.api }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
