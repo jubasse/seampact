@@ -1,6 +1,6 @@
 {
   "name": "@seampact/codegen-angular",
-  "description": "Generates an injectable Angular api service over HttpClient with signal readers built on resource(), over the typed fetch client, with no query library.",
+  "description": "Generates an injectable Angular api service over HttpClient with signal readers built on resource(), over the typed fetch client, with no query library, and opt-in NgRx action groups and effects.",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -31,13 +31,25 @@
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@angular/common": ">=22",
-    "@angular/core": ">=22"
+    "@angular/core": ">=22",
+    "@ngrx/effects": ">=22",
+    "@ngrx/store": ">=22",
+    "rxjs": ">=7"
   },
   "peerDependenciesMeta": {
     "@angular/common": {
       "optional": true
     },
     "@angular/core": {
+      "optional": true
+    },
+    "@ngrx/effects": {
+      "optional": true
+    },
+    "@ngrx/store": {
+      "optional": true
+    },
+    "rxjs": {
       "optional": true
     }
   },

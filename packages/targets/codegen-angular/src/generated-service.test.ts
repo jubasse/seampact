@@ -54,3 +54,33 @@ test("`query: fetch` generates its golden service and HttpClient fetch", async (
     `${GOLDEN_DIRECTORY}/http-client-fetch.ts.golden`,
   );
 });
+
+test("`state: ngrx` adds its golden action groups and effects, exported from the index", async () => {
+  const outcome = await target.generate({
+    ir,
+    options: { query: "fetch", state: "ngrx" },
+    links,
+    artefacts: new Set(["queries", "service"]),
+  });
+
+  if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+  const modules = new Map(outcome.files.map((file) => [file.path, file.contents]));
+
+  expect(modules.get("index.ts")).toContain('export * from "./ngrx.js";');
+  await expect(modules.get("ngrx.ts")).toMatchFileSnapshot("../golden/ngrx/ngrx.ts.golden");
+});
+
+test("`state: ngrx` without the service artefact is refused by name", async () => {
+  const outcome = await target.generate({
+    ir,
+    options: { query: "fetch", state: "ngrx" },
+    links,
+    artefacts: new Set(["queries"]),
+  });
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    refusals: [{ code: "artefact.service.needed" }],
+  });
+});
