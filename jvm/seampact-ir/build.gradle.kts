@@ -12,6 +12,8 @@ plugins {
 
 group = "io.github.jubasse"
 
+apply(from = rootProject.file("gradle/publication.gradle.kts"))
+
 // The lowest Java version A13 supports: the bytecode every consumer runs.
 val bytecodeJavaVersion = 21
 

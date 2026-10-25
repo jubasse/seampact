@@ -9,6 +9,11 @@ spring-boot = "4.1.1"
 snakeyaml-engine = "3.2"
 # The JSON Schema 2020-12 validator of the app config and the IR schemas, so no schema is ported by hand.
 json-schema-validator = "3.0.8"
+# The Maven plugin's build (ADR 0010) and the Maven API it compiles against: the 3.9 floor, which Maven 4 runs.
+maven-plugin-development = "1.0.3"
+apache-maven = "3.9.16"
+maven-plugin-annotations = "3.15.2"
+javax-inject = "1"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
@@ -23,7 +28,12 @@ spring-test = { module = "org.springframework:spring-test" }
 
 snakeyaml-engine = { module = "org.snakeyaml:snakeyaml-engine", version.ref = "snakeyaml-engine" }
 json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "json-schema-validator" }
+maven-plugin-api = { module = "org.apache.maven:maven-plugin-api", version.ref = "apache-maven" }
+maven-core = { module = "org.apache.maven:maven-core", version.ref = "apache-maven" }
+maven-plugin-annotations = { module = "org.apache.maven.plugin-tools:maven-plugin-annotations", version.ref = "maven-plugin-annotations" }
+javax-inject = { module = "javax.inject:javax.inject", version.ref = "javax-inject" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+maven-plugin-development = { id = "org.gradlex.maven-plugin-development", version.ref = "maven-plugin-development" }

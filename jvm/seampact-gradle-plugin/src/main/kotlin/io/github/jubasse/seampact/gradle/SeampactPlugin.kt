@@ -6,6 +6,8 @@ import io.github.jubasse.seampact.ir.binary.BinaryPin
 import io.github.jubasse.seampact.ir.binary.BinaryPinResolution
 import io.github.jubasse.seampact.ir.config.AppConfigReader
 import io.github.jubasse.seampact.ir.config.LocalSourcePolicy
+import io.github.jubasse.seampact.runner.BinarySettings
+import io.github.jubasse.seampact.runner.pinBinary
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration

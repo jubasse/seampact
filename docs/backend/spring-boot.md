@@ -30,6 +30,46 @@ targets:
 
 `./gradlew build` generates the code, then compiles it with yours. The Node CLI does not generate a Spring Boot entry: `seampact generate` refuses it with `config.target.native`.
 
+### With Maven
+
+Add the plugin to `pom.xml`, next to `seampact-hooks`:
+
+```xml
+<plugin>
+  <groupId>io.github.jubasse</groupId>
+  <artifactId>seampact-maven-plugin</artifactId>
+  <version>${seampact.version}</version>
+  <executions>
+    <execution>
+      <goals>
+        <goal>generate</goal>
+        <goal>check</goal>
+      </goals>
+    </execution>
+  </executions>
+</plugin>
+```
+
+`./mvnw verify` generates the code before it compiles, then checks it. When nothing changed since the last run, `generate` skips.
+
+You can write the config in `<configuration>` instead of `seampact.config.yaml`, with the same keys. A list holds one child per item:
+
+```xml
+<configuration>
+  <outDir>target/generated-sources/seampact</outDir>
+  <targets>
+    <target>
+      <id>notes</id>
+      <use>io.github.jubasse:seampact-spring-boot</use>
+      <api>notes</api>
+      <options><package>com.example.notes.api</package></options>
+    </target>
+  </targets>
+</configuration>
+```
+
+Keep one of the two: a project with both fails.
+
 ## Write a controller
 
 Each resource has a generated `<Resource>Endpoints` interface, and each operation a mapping annotation in `<package>.spring`. Return one arm of the operation's result: `Status200` and the like, or an error of `<Operation>Errors`.

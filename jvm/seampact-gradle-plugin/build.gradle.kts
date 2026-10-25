@@ -12,6 +12,8 @@ plugins {
 
 group = "io.github.jubasse"
 
+apply(from = rootProject.file("gradle/publication.gradle.kts"))
+
 // The lowest Java version A13 supports: the bytecode every consumer runs.
 val bytecodeJavaVersion = 21
 
@@ -22,16 +24,7 @@ val testJdk: String? = providers.gradleProperty("testJdk").orNull
 // run on this build's Gradle.
 val testGradle: String? = providers.gradleProperty("testGradle").orNull
 
-// The compiler binaries the plugin pins: `-PseampactBinarySums=<SHA256SUMS>` of the release
-// `-PseampactCompilerVersion=<version>`. Without them the jar embeds no pin, and a `path` source needs a `binary { }`
-// override.
-val binarySums: String? = providers.gradleProperty("seampactBinarySums").orNull
-val compilerVersion: String? = providers.gradleProperty("seampactCompilerVersion").orNull
-
 val repositoryRoot = rootProject.projectDir.parentFile
-
-// The pin writer runs at build time on seampact-ir's own `BinaryPins`, so the jar holds the same bytes it reads.
-val pins: SourceSet = sourceSets.create("pins")
 
 // The jars the TestKit sample app compiles against besides Spring Boot: seampact-hooks, which is not published yet.
 val sampleAppClasspath: Configuration by configurations.creating {
@@ -39,17 +32,16 @@ val sampleAppClasspath: Configuration by configurations.creating {
 }
 
 dependencies {
-    implementation(project(":seampact-ir"))
-    implementation(project(":seampact-spring-boot"))
+    implementation(project(":seampact-runner"))
     implementation(libs.kotlinx.serialization.json)
 
-    "pinsImplementation"(project(":seampact-ir"))
     sampleAppClasspath(project(":seampact-hooks"))
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(kotlin("test"))
     testImplementation(gradleTestKit())
+    testImplementation(testFixtures(project(":seampact-runner")))
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
@@ -79,30 +71,6 @@ kotlin {
 
 tasks.withType<JavaCompile>().configureEach {
     options.release = bytecodeJavaVersion
-}
-
-val generatedResources = layout.buildDirectory.dir("generated/plugin-resources")
-
-val writeBinaryPins = tasks.register<JavaExec>("writeBinaryPins") {
-    description = "Writes seampact-binaries.properties from the release SHA256SUMS the build names."
-    classpath = pins.runtimeClasspath
-    mainClass = "io.github.jubasse.seampact.gradle.pins.WriteBinaryPinsKt"
-    val output = generatedResources.map { it.file("seampact-binaries.properties") }
-    outputs.file(output)
-    if (binarySums != null) inputs.file(binarySums)
-    inputs.property("compilerVersion", compilerVersion ?: "")
-    onlyIf("a release SHA256SUMS is named") { binarySums != null }
-    argumentProviders.add(CommandLineArgumentProvider { listOf(compilerVersion.orEmpty(), binarySums.orEmpty(), output.get().asFile.absolutePath) })
-}
-
-// The plugin version the generated header names.
-val writePluginVersion = tasks.register<WriteProperties>("writePluginVersion") {
-    destinationFile = generatedResources.map { it.file("io/github/jubasse/seampact/gradle/seampact-plugin.properties") }
-    property("version", project.version.toString())
-}
-
-sourceSets.main {
-    resources.srcDir(files(generatedResources).builtBy(writeBinaryPins, writePluginVersion))
 }
 
 tasks.test {
