@@ -9,7 +9,7 @@ import {
   type HttpInterceptorFn,
   HttpResponse,
 } from "@angular/common/http";
-import { inject as angularInject, PLATFORM_ID } from "@angular/core";
+import { inject as angularInject, PLATFORM_ID, TransferState } from "@angular/core";
 import { signalStore } from "@ngrx/signals";
 import { switchMap, throwError } from "rxjs";
 import { expect, inject, test } from "vitest";
@@ -29,6 +29,8 @@ import { QUIET_MS, wait } from "./requests.mjs";
 const LIST_REQUEST = { path: { channelId: GENERAL_CHANNEL_ID } };
 const OTHER_LIST_REQUEST = { path: { channelId: "10000000-0000-4000-8000-000000000002" } };
 const IDEMPOTENCY_HEADER = "idempotency-key";
+// The element Angular's browser `TransferState` reads the server's state from, for the default app id.
+const TRANSFERRED_STATE_ID = "ng-state";
 
 interface SeenRequest {
   readonly method: string;
@@ -50,8 +52,20 @@ function recordingInterceptor(): {
   return { interceptor, seen };
 }
 
-// A store whose list feature reads during server rendering too.
-const ServerReadingStore = signalStore(withListTasks({ readOnServer: true }));
+// A store whose list feature reads during server rendering too and hands the data to the browser.
+const TransferringStore = signalStore(withListTasks({ transferId: "general-tasks" }));
+
+// The page as server rendering leaves it: the transferred state in the script the browser reads it from.
+function renderTransferredState(json: string): HTMLScriptElement {
+  const script = document.createElement("script");
+
+  script.id = TRANSFERRED_STATE_ID;
+  script.type = "application/json";
+  script.textContent = json;
+  document.body.append(script);
+
+  return script;
+}
 
 function injectStore() {
   return angularInject(TaskBoardStore);
@@ -194,28 +208,73 @@ test("a write sent again with the key it gave runs once, the second answer repla
   unmount();
 });
 
-test("nothing reads on the server unless the feature opts in", async () => {
+test("nothing reads on the server unless given a transferId, whose data the browser takes", async () => {
   await loadScript({});
 
   const { interceptor, seen } = recordingInterceptor();
-  const serverProviders = [
-    ...appProviders(inject("userToken"), [interceptor]),
-    ServerReadingStore,
-    { provide: PLATFORM_ID, useValue: "server" },
-  ];
-  const { result, unmount } = await runInApplication(serverProviders, () => ({
-    browserOnly: injectStore(),
-    serverReading: angularInject(ServerReadingStore),
-  }));
+  const providers = [...appProviders(inject("userToken"), [interceptor]), TransferringStore];
+  const server = await runInApplication(
+    [...providers, { provide: PLATFORM_ID, useValue: "server" }],
+    () => ({
+      browserOnly: injectStore(),
+      transferring: angularInject(TransferringStore),
+      transferState: angularInject(TransferState),
+    }),
+  );
 
-  const skipped = await result.browserOnly.sendListTasks(LIST_REQUEST);
-  const read = await result.serverReading.sendListTasks(LIST_REQUEST);
+  const skipped = await server.result.browserOnly.sendListTasks(LIST_REQUEST);
+  const read = await server.result.transferring.sendListTasks(LIST_REQUEST);
 
   await wait(QUIET_MS);
 
   expect(skipped.status).toBe("idle");
-  expect(result.browserOnly.listTasks().status).toBe("idle");
+  expect(server.result.browserOnly.listTasks().status).toBe("idle");
   expect(read.status).toBe("success");
   expect(seen.map((sent) => sent.method)).toEqual(["GET"]);
+
+  const script = renderTransferredState(server.result.transferState.toJson());
+
+  server.unmount();
+
+  const browser = await runInApplication(providers, () => angularInject(TransferringStore));
+  const taken = await browser.result.sendListTasks(LIST_REQUEST);
+
+  script.remove();
+
+  expect(taken).toEqual(read);
+  expect(browser.result.listTasks()).toEqual(read);
+  expect(seen.map((sent) => sent.method)).toEqual(["GET"]);
+
+  await browser.result.sendListTasks(LIST_REQUEST);
+
+  expect(seen.map((sent) => sent.method)).toEqual(["GET", "GET"]);
+  browser.unmount();
+});
+
+test("destroying the store aborts a waiting read and leaves the slices unchanged", async () => {
+  await loadScript({});
+
+  const { result: store, unmount } = await runInApplication(
+    appProviders(inject("userToken")),
+    injectStore,
+  );
+
+  const waiting = store.sendListTasks(LIST_REQUEST);
+
   unmount();
+
+  const aborted = await waiting;
+
+  expect(aborted.status).toBe("error");
+  expect(aborted.error).toMatchObject({ name: "AbortError" });
+  expect(store.listTasks()).toMatchObject({ status: "pending", request: LIST_REQUEST });
+
+  const afterDestroy = await store.sendListTasks(LIST_REQUEST);
+
+  expect(afterDestroy.error).toMatchObject({ name: "AbortError" });
+
+  await store.sendCreateTask({ ...LIST_REQUEST, body: { title: "After the store" } });
+
+  expect(store.listTasks().status).toBe("pending");
+  expect(store.createTask().status).toBe("idle");
 });

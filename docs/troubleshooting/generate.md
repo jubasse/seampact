@@ -4,6 +4,7 @@
 |---|---|
 | `options.unknown`, `options.invalid`, `options.<key>.invalid` | Use only the options the target's page lists, with one of its values. |
 | `options.query.missing` | The React, Vue and Angular targets need `query`, for example `query: fetch`. |
+| `names.collision` | Two operations would get the same generated name, such as an action, a store member or a service member. Rename one operation in the contract, or drop `state`. |
 | `artefact.service.needed` | `state: ngrx` and `state: ngrx-signals` call the generated service. Add `service` to the target's `artefacts`, or drop `state`. |
 | `options.query.unsupported` | This release generates `tanstack` only. |
 | `options.staleTime.unsupported`, `options.keys.root.unsupported` | That option has no place with this query library. Drop it. |

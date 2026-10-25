@@ -140,9 +140,10 @@ export class NotesPage {
 - The slice holds the latest call: `status` (`idle`, `pending`, `success` or `error`), its `request`, and its `data` or typed `error`, a `ContractError` for a declared error.
 - `send<Operation>` never throws. It resolves to the slice its call ended with.
 - A new read of the same request aborts the one still running, which resolves with an `AbortError`. Reads of different requests run side by side; the slice shows the last one you sent.
-- Reads do nothing on the server, and resolve to the `idle` slice. To read there too, use `withListNotes({ readOnServer: true })`.
+- Reads do nothing on the server, and resolve to the `idle` slice. To read there and hand the data to the browser, use `withListNotes({ transferId: "notes" })`: the browser's first read of the same request takes that data and sends nothing.
 - Writes run side by side. Each one sends its own idempotency key. To retry a write safely, give the key yourself and send again with the same key: `sendCreateNote(request, { idempotencyKey })`. The server then runs it once.
-- When the store is destroyed, reads still running are aborted.
+- When the store is destroyed, reads still running are aborted, and the slices no longer change.
+- Your own store members must not reuse a slice or `send<Operation>` name. Features of two apis in one store clash when their operations share a name. NgRx only warns in dev mode, and the last one wins.
 - An operation that needs a timeout takes `{ timeoutMs }` as its second argument.
 - `state: ngrx-signals` needs the `service` artefact.
 
