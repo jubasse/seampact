@@ -2,6 +2,7 @@ package com.example.tasks.api.spring.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.example.tasks.api.spring.TasksContractTable;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -38,5 +39,26 @@ class DigestsTest {
 
         assertEquals("{\"9\":2,\"10\":1,\"4294967294\":6,\"-1\":7,\"01\":5,\"4294967295\":4,\"b\":3}", Digests.canonical(value));
         assertEquals("c7792be0e4e3e7cc71460895bde011d733bcbb0c495cbb3fd0540a551aff078b", Digests.hexOf(List.of(value)));
+    }
+
+    // The step 6 input tree keys headers by their declared names; the Node targets key them in lower case.
+    private static JsonNode createTaskInput(String authorization, String csrfToken) {
+        return JsonMapper.builder().build().readTree("""
+                {"path": {"channelId": "c1"}, "query": {},
+                 "headers": {"Authorization": "%s", "X-Csrf-Token": "%s", "Idempotency-Key": "key-1"},
+                 "body": {"title": "Plan"}}
+                """.formatted(authorization, csrfToken));
+    }
+
+    @Test
+    void aRetryAfterATokenRefreshHasTheFirstRequestsFingerprintAsOnTheNodeTargets() {
+        ContractTable table = new ContractTable(BoundaryMapper.create().readTree(TasksContractTable.json()));
+        JsonNode createTask = table.routes().stream().filter(route -> route.id().equals("createTask")).findFirst().orElseThrow().operation();
+
+        String first = IdempotencyStep.fingerprint(createTask, createTaskInput("Bearer user-old", "csrf-old"));
+        String retry = IdempotencyStep.fingerprint(createTask, createTaskInput("Bearer user-refreshed", "csrf-refreshed"));
+
+        assertEquals(first, retry);
+        assertEquals("583a81024c92d216cb3209acd8ccdd6f1350f6947a6636235ed8329fc77fde9c", first);
     }
 }
