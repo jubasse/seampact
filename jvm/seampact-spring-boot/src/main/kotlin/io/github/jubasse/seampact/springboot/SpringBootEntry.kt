@@ -32,7 +32,6 @@ public data class FrameworkRoute(val path: String, val reason: String, val metho
 
 private const val SUPPORTED_SPRING_BOOT_MAJOR = 4
 private const val BOOT_CHECK = "bootCheck"
-private const val NATIVE_DOCS = "nativeDocs"
 private const val ACCESS_HOOKS = "accessHooks"
 
 /** The entry members this release cannot serve, each refused by name with the release that brings it. */
@@ -74,13 +73,13 @@ private fun checkArtefact(artefact: String, value: JsonElement, refusals: Mutabl
             refusals += waitingEntryMember("artefact.bootCheck.hooks.warn", "$member/hooks", "'bootCheck.hooks: warn' (start with hooks missing)", Delivery.CONSUMER)
         }
         // Its value is validated by the app config schema; `NativeDocs.of` reads it.
-        NATIVE_DOCS -> Unit
+        NATIVE_DOCS_ARTEFACT -> Unit
         ACCESS_HOOKS -> if (value == JsonPrimitive(false)) {
             refusals += waitingEntryMember("artefact.accessHooks", member, "'accessHooks: false' (native access)", Delivery.CONSUMER)
         }
         else -> refusals += SpringBootRefusal(
             code = "artefact.unknown",
-            message = "The artefact '$artefact' is not one the spring-boot target emits; it takes '$BOOT_CHECK', '$NATIVE_DOCS' and '$ACCESS_HOOKS'.",
+            message = "The artefact '$artefact' is not one the spring-boot target emits; it takes '$BOOT_CHECK', '$NATIVE_DOCS_ARTEFACT' and '$ACCESS_HOOKS'.",
             fix = "Remove '$artefact' from the entry's `artefacts`.",
             member = member,
         )

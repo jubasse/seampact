@@ -125,6 +125,20 @@ private const val SPRING_SECURITY_OPTION = "springSecurity"
 private fun optionsWithSpringSecurityDefault(options: JsonObject, springSecurityWebVersion: String?): JsonObject =
     if (SPRING_SECURITY_OPTION in options) options else JsonObject(options + (SPRING_SECURITY_OPTION to JsonPrimitive(springSecurityWebVersion != null)))
 
+// The option turned on while the compile classpath has no spring-security-web: the beans would not compile.
+private fun springSecurityWithoutModule(entry: AppConfigEntry, springSecurityWebVersion: String?): ConfigProblem? {
+    val option = entry.options[SPRING_SECURITY_OPTION]
+    val turnedOn = option == JsonPrimitive(true) || option is JsonObject
+    if (!turnedOn || springSecurityWebVersion != null) return null
+
+    return ConfigProblem(
+        "options.springSecurity.unavailable",
+        "The option 'springSecurity' is $option, but the compile classpath resolves no org.springframework.security:spring-security-web, so the Spring Security beans would not compile.",
+        "Add spring-boot-starter-security to the app's dependencies, or set 'springSecurity' to false.",
+        "entry '${entry.id}' options springSecurity",
+    )
+}
+
 private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, settings: RunSettings, runnerVersion: String): EntryFiles {
     val buildTool = settings.buildTool
     val springBootVersion = settings.springBootVersion
@@ -154,6 +168,8 @@ private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, settings
             ),
         )
     }
+
+    springSecurityWithoutModule(entry, settings.springSecurityWebVersion)?.let { return EntryFiles.Refused(listOf(it)) }
 
     val viewed = when (val view = EntryView.of(entry, apis)) {
         is EntryViewOutcome.Viewed -> view.apis

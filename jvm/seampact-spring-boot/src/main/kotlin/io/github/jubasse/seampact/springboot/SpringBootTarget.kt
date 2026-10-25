@@ -91,7 +91,7 @@ public object SpringBootTarget {
             composedAnnotation(layout, operation, at, refusals)?.let { types += layout.springPackage to it }
         }
 
-        endpointsTypes(layout, nativeDocs).forEach { types += layout.operationsPackage to it }
+        endpointsTypes(layout, nativeDocs, operationTypes, refusals).forEach { types += layout.operationsPackage to it }
 
         return types
     }

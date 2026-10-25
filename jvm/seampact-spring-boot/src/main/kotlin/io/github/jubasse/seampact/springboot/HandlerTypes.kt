@@ -25,10 +25,10 @@ private const val PATTERN_WILDCARD = '*'
  * The endpoints interface of each resource (ADR 0007 `handlers: perResource`): one synchronous method per operation,
  * taking its input record, returning its result and declaring the exception of every code it lists.
  */
-internal fun endpointsTypes(layout: JavaLayout, nativeDocs: NativeDocs): List<TypeSpec> {
+internal fun endpointsTypes(layout: JavaLayout, nativeDocs: NativeDocs, operationTypes: OperationTypes, refusals: Refusals): List<TypeSpec> {
     val methods = LinkedHashMap<ClassName, MutableList<MethodSpec>>()
 
-    for ((_, operation) in layout.kept.operations) {
+    for ((index, operation) in layout.kept.operations) {
         val names = layout.operation(operation.id)
         val input = ParameterSpec.builder(names.input, "input")
         val method = MethodSpec.methodBuilder(names.method)
@@ -37,7 +37,8 @@ internal fun endpointsTypes(layout: JavaLayout, nativeDocs: NativeDocs): List<Ty
             .addExceptions(operation.errors.map { it.code }.distinct().mapNotNull { layout.errorClass(it) })
 
         if (nativeDocs == NativeDocs.SPRINGDOC) {
-            method.addAnnotation(springdocOperation(operation))
+            val at = IrPlace.ofOperation(index, operation.id)
+            method.addAnnotation(springdocOperation(operation, at, { response -> operationTypes.responseBody(operation, response) }, refusals))
             input.addAnnotation(springdocHiddenInput())
         }
 

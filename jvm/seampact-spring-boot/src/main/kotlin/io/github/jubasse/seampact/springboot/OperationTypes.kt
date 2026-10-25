@@ -102,7 +102,8 @@ internal class OperationTypes(
         return mapper.memberType(body, presence).boxedArgument()
     }
 
-    private fun responseBody(operation: Operation, response: Response): TypeName? {
+    /** The Java type of a response's body, the `body` of its result arm; null without a body. */
+    fun responseBody(operation: Operation, response: Response): TypeName? {
         val body = response.body ?: return null
         val presence = if (body.isNullable()) Presence.NULLABLE else Presence.REQUIRED
 

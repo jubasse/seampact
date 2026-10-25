@@ -46,7 +46,7 @@ class GeneratePluginTest {
         app.write("seampact.config.yaml", SampleApp.REFERENCE_CONFIG.replace(PACKAGE_OPTION, "$PACKAGE_OPTION\n            frameworkDocs: off"))
         app.writeBuildScript("seampact {\n${app.stubBinaryBlock()}\n}", SECURITY_STARTER)
 
-        app.run("compileJava", "processResources")
+        app.run("compileJava", "processResources", *cached)
 
         val properties = directory.resolve("build/resources/main/seampact-tasks.properties")
         assertTrue(properties.exists(), "the properties file is a resource")
@@ -54,6 +54,17 @@ class GeneratePluginTest {
         assertFalse(directory.resolve("build/resources/main/com").exists(), "the generated sources are not resources")
         val security = directory.resolve("build/classes/java/main/com/example/tasks/api/spring/TasksSecurityConfiguration.class")
         assertTrue(security.exists(), "the security beans are generated and compile")
+    }
+
+    @Test
+    fun refusesSpringSecurityOnWithoutSpringSecurityWeb() {
+        val app = SampleApp(directory)
+        app.write("seampact.config.yaml", SampleApp.REFERENCE_CONFIG.replace(PACKAGE_OPTION, "options: { package: com.example.tasks.api, springSecurity: true }"))
+        app.writeBuildScript("seampact {\n${app.stubBinaryBlock()}\n}")
+
+        val refused = app.fail("seampactGenerate")
+
+        assertTrue("options.springSecurity.unavailable" in refused.output, refused.output)
     }
 
     private companion object {
