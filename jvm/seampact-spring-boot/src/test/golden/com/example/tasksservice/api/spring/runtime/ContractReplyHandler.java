@@ -94,7 +94,7 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
 
             JsonNode body = payload;
             if (isPage) {
-                PageReply.RenderedPage page = PageReply.render(boundary.table(), exchange, request.getQueryString(), request.getRequestURI(), handlerBody, payload, status);
+                PageReply.RenderedPage page = PageReply.render(boundary.table(), exchange, request.getQueryString(), request.getRequestURI(), boundary.publicOrigin(), handlerBody, payload, status);
                 page.headers().forEach(header -> checking.addHeader(header.getKey(), header.getValue()));
                 body = page.body();
             }

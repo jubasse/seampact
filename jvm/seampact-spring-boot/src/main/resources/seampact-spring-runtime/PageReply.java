@@ -3,6 +3,7 @@ package io.github.jubasse.seampact.springboot.runtime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.MissingNode;
@@ -68,7 +69,7 @@ final class PageReply {
     }
 
     /** The page of [handlerPage] (its facts; [items] already projected), rendered for [status]. */
-    static RenderedPage render(ContractTable table, BoundaryExchange exchange, String rawQuery, String requestPath, JsonNode handlerPage, JsonNode items, int status) {
+    static RenderedPage render(ContractTable table, BoundaryExchange exchange, String rawQuery, String requestPath, Optional<String> publicOrigin, JsonNode handlerPage, JsonNode items, int status) {
         ContractRoute route = exchange.route();
         JsonNode style = table.pagingStyle(route);
         boolean writeNulls = NULL_ABSENT.equals(style.path("absent").asString());
@@ -85,13 +86,14 @@ final class PageReply {
         if (limit.isNumber() && handlerPage.path("total").isNumber() && limit.asLong() > 0) {
             slots.put("totalPages", ceilDivision(handlerPage.path("total").asLong(), limit.asLong()));
         }
-        slots.put("self", pageUrl(WireDecoding.withoutQueryMembers(query, List.of())));
+        String urlBase = publicOrigin.map(origin -> origin + requestPath).orElse("");
+        slots.put("self", pageUrl(urlBase, WireDecoding.withoutQueryMembers(query, List.of())));
 
         String position = style.path("position").asString();
         if (PAGE.equals(position) || OFFSET.equals(position)) {
-            numberedSlots(route, style, exchange.query, query, handlerPage, items.size(), limit, slots);
+            numberedSlots(route, style, exchange.query, query, urlBase, handlerPage, items.size(), limit, slots);
         } else {
-            tokenSlots(style, query, handlerPage, position, slots);
+            tokenSlots(style, query, urlBase, handlerPage, position, slots);
         }
 
         slots.set("items", items);
@@ -141,7 +143,7 @@ final class PageReply {
     }
 
     // A page or offset position: the boundary counts the page, its records and the URLs from the request.
-    private static void numberedSlots(ContractRoute route, JsonNode style, JsonNode sentQuery, String query, JsonNode handlerPage, int itemCount, JsonNode limitNode, ObjectNode slots) {
+    private static void numberedSlots(ContractRoute route, JsonNode style, JsonNode sentQuery, String query, String urlBase, JsonNode handlerPage, int itemCount, JsonNode limitNode, ObjectNode slots) {
         if (!limitNode.isNumber() || limitNode.asLong() <= 0) {
             throw new IllegalStateException("seampact: the list '" + route.id() + "' has no limit");
         }
@@ -174,42 +176,42 @@ final class PageReply {
             slots.put("to", offset + itemCount);
         }
 
-        slots.put("first", pageUrl(WireDecoding.withQueryMember(query, positionParam, positionAt(isPage, base, 0, limit))));
+        slots.put("first", pageUrl(urlBase, WireDecoding.withQueryMember(query, positionParam, positionAt(isPage, base, 0, limit))));
         if (offset > FIRST_OFFSET) {
             long previousOffset = Math.max(offset - limit, FIRST_OFFSET);
             String previous = isPage ? String.valueOf(base + Math.floorDiv(previousOffset, limit)) : String.valueOf(previousOffset);
-            slots.put("previous", pageUrl(WireDecoding.withQueryMember(query, positionParam, previous)));
+            slots.put("previous", pageUrl(urlBase, WireDecoding.withQueryMember(query, positionParam, previous)));
         }
         if (hasNext) {
             // An offset the client chose need not fall on a page start: the next page starts one limit further.
             String next = isPage ? positionAt(true, base, pageIndex + 1, limit) : String.valueOf(nextOffset);
-            slots.put("next", pageUrl(WireDecoding.withQueryMember(query, positionParam, next)));
+            slots.put("next", pageUrl(urlBase, WireDecoding.withQueryMember(query, positionParam, next)));
         }
         if (slots.path("totalPages").isNumber()) {
             long lastIndex = Math.max(slots.path("totalPages").asLong() - 1, 0);
-            slots.put("last", pageUrl(WireDecoding.withQueryMember(query, positionParam, positionAt(isPage, base, lastIndex, limit))));
+            slots.put("last", pageUrl(urlBase, WireDecoding.withQueryMember(query, positionParam, positionAt(isPage, base, lastIndex, limit))));
         }
     }
 
     // A cursor or since position: the URLs carry the tokens the handler returned.
-    private static void tokenSlots(JsonNode style, String query, JsonNode handlerPage, String position, ObjectNode slots) {
+    private static void tokenSlots(JsonNode style, String query, String urlBase, JsonNode handlerPage, String position, ObjectNode slots) {
         String positionParam = positionRole(style).path("name").asString();
         String beforeParam = roleName(style, BEFORE_ROLE);
         List<String> positionParams = beforeParam == null ? List.of(positionParam) : List.of(positionParam, beforeParam);
         String withoutPosition = WireDecoding.withoutQueryMembers(query, positionParams);
 
-        slots.put("first", pageUrl(withoutPosition));
+        slots.put("first", pageUrl(urlBase, withoutPosition));
         if (SINCE.equals(position)) {
-            putTokenUrl(slots, "next", withoutPosition, positionParam, handlerPage.path("nextSince"));
+            putTokenUrl(slots, urlBase, "next", withoutPosition, positionParam, handlerPage.path("nextSince"));
             return;
         }
 
-        putTokenUrl(slots, "next", withoutPosition, positionParam, handlerPage.path("nextCursor"));
-        putTokenUrl(slots, "previous", withoutPosition, beforeParam == null ? positionParam : beforeParam, handlerPage.path("previousCursor"));
+        putTokenUrl(slots, urlBase, "next", withoutPosition, positionParam, handlerPage.path("nextCursor"));
+        putTokenUrl(slots, urlBase, "previous", withoutPosition, beforeParam == null ? positionParam : beforeParam, handlerPage.path("previousCursor"));
     }
 
-    private static void putTokenUrl(ObjectNode slots, String role, String query, String param, JsonNode token) {
-        if (token.isString()) slots.put(role, pageUrl(WireDecoding.withQueryMember(query, param, token.asString())));
+    private static void putTokenUrl(ObjectNode slots, String urlBase, String role, String query, String param, JsonNode token) {
+        if (token.isString()) slots.put(role, pageUrl(urlBase, WireDecoding.withQueryMember(query, param, token.asString())));
     }
 
     private static String positionAt(boolean isPage, long base, long index, long limit) {
@@ -258,9 +260,10 @@ final class PageReply {
         return Math.floorDiv(dividend + divisor - 1, divisor);
     }
 
-    // A query-only reference (RFC 3986): it resolves against the URL the client called, so it keeps a path prefix a
-    // reverse proxy stripped. An empty query is `?`, since an empty reference would keep the called query.
-    private static String pageUrl(String query) {
-        return "?" + query;
+    // Under relative URLs a query-only reference (RFC 3986): it resolves against the URL the client called, so it keeps
+    // a path prefix a reverse proxy stripped. An empty query is `?`, since an empty reference would keep the called
+    // query. Under absolute URLs the base is the public origin and the request path.
+    private static String pageUrl(String urlBase, String query) {
+        return urlBase + "?" + query;
     }
 }

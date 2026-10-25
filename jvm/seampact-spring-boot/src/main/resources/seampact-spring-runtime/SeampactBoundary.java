@@ -52,6 +52,7 @@ public final class SeampactBoundary {
     private final ListableBeanFactory beans;
     private final Environment environment;
     private final String exchangeAttribute;
+    private final Optional<String> publicOrigin;
 
     public SeampactBoundary(String tableJson, ApiBinding binding, ListableBeanFactory beans, Environment environment) {
         this.table = new ContractTable(mapper.readTree(tableJson));
@@ -60,6 +61,7 @@ public final class SeampactBoundary {
         this.beans = beans;
         this.environment = environment;
         this.exchangeAttribute = SeampactBoundary.class.getName() + "." + table.apiId();
+        this.publicOrigin = PublicOrigin.of(table, environment);
     }
 
     public String apiId() {
@@ -111,6 +113,11 @@ public final class SeampactBoundary {
 
     Environment environment() {
         return environment;
+    }
+
+    /** The origin absolute URLs start with; empty under relative URLs. */
+    Optional<String> publicOrigin() {
+        return publicOrigin;
     }
 
     Optional<BoundaryExchange> exchangeOf(HttpServletRequest request) {

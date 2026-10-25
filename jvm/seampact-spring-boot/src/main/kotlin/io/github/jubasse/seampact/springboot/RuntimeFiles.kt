@@ -10,7 +10,7 @@ private val RUNTIME_CLASSES = listOf(
     "AccessSteps", "ApiBinding", "BodyReader", "BootCheck", "BoundaryExchange", "BoundaryFilter", "BoundaryInterceptor",
     "BoundaryMapper", "BoundaryMvcConfigurer", "CacheHeaders", "CheckingResponse", "ContractExceptionResolver", "ContractInputResolver",
     "ContractRefusal", "ContractReplyHandler", "ContractRoute", "ContractTable", "Decider", "Denial", "Digests", "ErrorReplies",
-    "HeldBodyRequest", "IdempotencyStep", "InputFieldRights", "InputIssue", "InputStep", "OutgoingCheck", "OutputFieldRights", "PageReply", "ReplyHandlerFirst",
+    "HeldBodyRequest", "IdempotencyStep", "InputFieldRights", "InputIssue", "InputStep", "OutgoingCheck", "OutputFieldRights", "PageReply", "PublicOrigin", "ReplyHandlerFirst",
     "RequirementCall", "ScalarValues", "ScopeCall", "ScopeResolver", "SeampactBoundary", "SignatureHeader", "StructuralValidator", "Templates",
     "UnexpectedErrorListener", "WireDecoding",
 )

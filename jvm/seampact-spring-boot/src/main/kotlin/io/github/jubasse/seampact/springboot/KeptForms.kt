@@ -32,7 +32,6 @@ import io.github.jubasse.seampact.ir.model.TemplateSignature
 import io.github.jubasse.seampact.ir.model.TypeUse
 import io.github.jubasse.seampact.ir.model.UnionSchema
 import io.github.jubasse.seampact.ir.model.UnknownKeysPolicy
-import io.github.jubasse.seampact.ir.model.UrlForm
 import io.github.jubasse.seampact.ir.model.ValueSchemeKey
 
 private const val JSON_MEDIA = "application/json"
@@ -68,10 +67,6 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
     }
 
     private fun checkApiForms() {
-        if (ir.api.wire.urls != UrlForm.RELATIVE) {
-            refusals.waiting("wire.urls", "'api.wire.urls: ${ir.api.wire.urls.value}'", IrPlace.ROOT.below("api", "wire", "urls"), Delivery.SPRING_3)
-        }
-
         ir.packs.forEachIndexed { index, pack ->
             if (pack.name == SPRING_PACK) refusals.waiting("pack.spring", "The 'pack:spring' profile", IrPlace.ROOT.below("packs", index), Delivery.SPRING_3)
         }

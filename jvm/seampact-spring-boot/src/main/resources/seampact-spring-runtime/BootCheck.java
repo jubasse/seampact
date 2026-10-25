@@ -26,8 +26,8 @@ import tools.jackson.databind.JsonNode;
 /**
  * The boot check (ADR 0022 "The boot check"), once every bean is built and before the server starts: it lists every
  * problem at once (a missing hook, a contract operation with no handler or two, a framework route the config does
- * not allow-list, a filter ordered before the boundary, an unsupported Spring Boot major) and throws, so the app
- * does not start.
+ * not allow-list, a filter ordered before the boundary, an unsupported Spring Boot major, a missing or malformed
+ * public origin under absolute URLs) and throws, so the app does not start.
  */
 public final class BootCheck implements SmartInitializingSingleton {
     private static final String SUPPORTED_BOOT_MAJOR = "4";
@@ -56,6 +56,7 @@ public final class BootCheck implements SmartInitializingSingleton {
         if (bootCheck.path("handlers").asBoolean(true)) handlerProblems(problems);
         if (bootCheck.path("frameworkRoutes").asBoolean(true)) frameworkRouteProblems(problems);
         filterProblems(problems);
+        PublicOrigin.bootProblem(boundary.table(), boundary.environment()).ifPresent(problems::add);
         if (!SpringBootVersion.getVersion().startsWith(SUPPORTED_BOOT_MAJOR + ".")) {
             problems.add("Spring Boot " + SpringBootVersion.getVersion() + " runs the app; fix: the spring-boot target supports Spring Boot 4.x only.");
         }
