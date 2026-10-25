@@ -4,6 +4,7 @@
 // compiler loads first: Angular's partially compiled packages need it as they load.
 import "@angular/compiler";
 import {
+  HttpClient,
   HttpErrorResponse,
   type HttpInterceptorFn,
   HttpResponse,
@@ -11,9 +12,10 @@ import {
   withInterceptors,
 } from "@angular/common/http";
 import { inject as angularInject, PLATFORM_ID, signal } from "@angular/core";
-import { Observable, switchMap, throwError } from "rxjs";
+import { Observable, of, switchMap, throwError } from "rxjs";
 import { expect, inject, test } from "vitest";
 import { page } from "vitest/browser";
+import { httpClientFetch } from "../../generated/queries/tasks/http-client-fetch.js";
 import { TasksApi } from "../../generated/queries/tasks/index.js";
 import {
   TasksApi as DataTasksApi,
@@ -87,6 +89,38 @@ function injectApi(): TasksApi {
 function listReads(seen: readonly SeenRequest[]): SeenRequest[] {
   return seen.filter((request) => request.method === "GET" && request.url.includes("/tasks"));
 }
+
+test("1: an interceptor answer the Response refuses rejects with a TypeError naming the status", async () => {
+  const refused: HttpInterceptorFn = () => of(new HttpResponse({ status: 600 }));
+  const { result: send, unmount } = await runInApplication(
+    [provideHttpClient(withInterceptors([refused]))],
+    () => httpClientFetch(angularInject(HttpClient)),
+  );
+
+  const failure = await send("/anything").catch((rejection: unknown) => rejection);
+
+  expect(failure).toBeInstanceOf(TypeError);
+  expect(String(failure)).toContain("600");
+  unmount();
+});
+
+test("1: a body an interceptor answers or throws as an object is read as JSON, on both paths", async () => {
+  const answers: HttpInterceptorFn = (request) =>
+    request.url.endsWith("/failed")
+      ? throwError(() => new HttpErrorResponse({ status: 401, error: { code: "no" } }))
+      : of(new HttpResponse({ status: 200, body: { cached: true } }));
+  const { result: send, unmount } = await runInApplication(
+    [provideHttpClient(withInterceptors([answers]))],
+    () => httpClientFetch(angularInject(HttpClient)),
+  );
+  const succeeded = await send("/ok");
+  const failed = await send("/failed");
+
+  expect(await succeeded.json()).toEqual({ cached: true });
+  expect(failed.status).toBe(401);
+  expect(await failed.json()).toEqual({ code: "no" });
+  unmount();
+});
 
 test("1: a list renders, the token sent by an app interceptor", async () => {
   await loadScript({});
