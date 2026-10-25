@@ -43,9 +43,12 @@ export type IdempotencyBegin =
 export interface IdempotencyStore {
   begin(claim: IdempotencyClaim): Awaitable<IdempotencyBegin>;
 
-  /** Keeps the final response of a request that reached the handler, a success or an error the handler answered. */
+  /**
+   * Keeps the final response of a request that reached the handler: a success, `no-store` included, or an error the
+   * handler answered without `no-store`.
+   */
   complete(key: string, response: StoredResponse): Awaitable<void>;
 
-  /** Releases the key after an unexpected failure, so the client may retry. */
+  /** Releases the key after a server error or an error reply marked `no-store`, so the client may retry. */
   abandon(key: string): Awaitable<void>;
 }

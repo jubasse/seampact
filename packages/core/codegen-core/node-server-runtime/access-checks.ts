@@ -18,13 +18,7 @@ import {
   deciderFor,
   type FrameworkDenialTest,
 } from "./boundary-hooks.js";
-import {
-  ContractError,
-  codeOfRole,
-  isPlainObject,
-  roleError,
-  unexpectedError,
-} from "./contract-error.js";
+import { ContractError, codeOfRole, roleError, unexpectedError } from "./contract-error.js";
 import {
   type AccessEntry,
   type ContractApi,
@@ -43,6 +37,7 @@ import {
   schemaInvalidError,
   validateRequest,
 } from "./input-issues.js";
+import { isPlainObject } from "./plain-object.js";
 import { sha256Hex } from "./sha256.js";
 import { parseSignatureHeader } from "./signature-header.js";
 import type { PlatformFixes } from "./transport-checks.js";

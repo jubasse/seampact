@@ -4,11 +4,12 @@
 import type { AccessGrant, CheckState } from "./access-checks.js";
 import type { BoundaryContext } from "./boundary-context.js";
 import type { BootProblem } from "./boundary-hooks.js";
-import { type ContractReply, isPlainObject, unexpectedError } from "./contract-error.js";
+import { type ContractReply, unexpectedError } from "./contract-error.js";
 import type { ContractApi, ContractRoute, ResponsesMode } from "./contract-route.js";
 import { handlerReply } from "./handler-reply.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
+import { isPlainObject } from "./plain-object.js";
 import { loggerProblems, type RuntimeLogger } from "./runtime-logger.js";
 
 const RESPONSES_MODES: readonly string[] = ["strict", "warn"];

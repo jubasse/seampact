@@ -5,7 +5,6 @@ import { type AccessGrant, type CheckState, decide } from "./access-checks.js";
 import {
   ContractError,
   type ContractReply,
-  isPlainObject,
   renderTemplate,
   unexpectedError,
 } from "./contract-error.js";
@@ -15,9 +14,10 @@ import {
   type ResponseEntry,
   type ValueShape,
 } from "./contract-route.js";
+import { handlerPage, renderedPage } from "./page-reply.js";
+import { isPlainObject } from "./plain-object.js";
 import { CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE, WEAK_ETAG_PREFIX } from "./reply-headers.js";
 import { sha256Base64Url } from "./sha256.js";
-import { handlerPage, renderedPage } from "./page-reply.js";
 
 const JSON_MEDIA = "application/json";
 const NOT_MODIFIED = 304;

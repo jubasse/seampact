@@ -3,8 +3,9 @@
 // api's format or codes is a violation, handled by the `responses` mode. Copied into the generated tree as is.
 import { type BoundaryContext, unexpectedContext } from "./boundary-context.js";
 import { reportUnexpected } from "./boundary-hooks.js";
-import { type ContractReply, isPlainObject } from "./contract-error.js";
+import type { ContractReply } from "./contract-error.js";
 import type { ReportedRequest } from "./error-reply.js";
+import { isPlainObject } from "./plain-object.js";
 import { hasNoStoreDirective } from "./reply-headers.js";
 import { runtimeLog } from "./runtime-logger.js";
 

@@ -8,10 +8,10 @@ import {
   ContractError,
   type ContractReply,
   codeOfRole,
-  isPlainObject,
   unexpectedError,
 } from "./contract-error.js";
 import { idempotencyDigest, idempotencyFingerprint } from "./idempotency-fingerprint.js";
+import { isPlainObject } from "./plain-object.js";
 import { isKeptForReplay } from "./replay-retention.js";
 import { runtimeLog } from "./runtime-logger.js";
 

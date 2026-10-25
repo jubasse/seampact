@@ -2,12 +2,7 @@
 // contract's rules (ADR 0006 section 6). Read by step 6, and earlier by the scope ids (step 4) and the body proofs
 // (step 5), which are validated before a hook receives them. Copied into the generated tree as is.
 import type { CheckState } from "./access-checks.js";
-import {
-  type ContractError,
-  isPlainObject,
-  MAX_RENDERED_ISSUES,
-  roleError,
-} from "./contract-error.js";
+import { type ContractError, MAX_RENDERED_ISSUES, roleError } from "./contract-error.js";
 import {
   type ContractRoute,
   decodeRequestParams,
@@ -15,6 +10,7 @@ import {
   type StandardIssue,
 } from "./contract-route.js";
 import { beforeParamSentWithAfter } from "./cursor-exclusion.js";
+import { isPlainObject } from "./plain-object.js";
 
 const SCHEMA_INVALID_ROLE = "schemaInvalid";
 const FALLBACK_RULE = "invalid";

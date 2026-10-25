@@ -2,8 +2,9 @@
 // boundary reads from the request, and the body, headers and `Link` relations the paging style writes from them.
 // Copied into the generated tree as is.
 import type { CheckState } from "./access-checks.js";
-import { isPlainObject, renderTemplate, unexpectedError } from "./contract-error.js";
+import { renderTemplate, unexpectedError } from "./contract-error.js";
 import type { PagingEntry } from "./contract-route.js";
+import { isPlainObject } from "./plain-object.js";
 import { withoutQueryMembers, withQueryMember } from "./wire-decoding.js";
 
 // The type of each member a handler returns beside the items; only the cursors may be absent, at either end.

@@ -92,12 +92,15 @@ final class IdempotencyStep {
             switch (scheme.path("kind").asString()) {
                 case "bearer" -> names.add(AUTHORIZATION_HEADER);
                 case "header" -> names.add(scheme.path("name").asString().toLowerCase(Locale.ROOT));
-                default -> { } // a cookie travels in no header param
+                default -> { } // no header param: a cookie, or a scheme the boundary refuses (query, basic, signature)
             }
         }
 
         JsonNode identity = ir.path("identities").path(access.path("identity").asString());
-        if (identity.has("signed")) names.add(ir.path("schemes").path(identity.path("signed").asString()).path("name").asString().toLowerCase(Locale.ROOT));
+        if (identity.has("signed")) {
+            JsonNode signatureScheme = ir.path("schemes").path(identity.path("signed").asString());
+            names.add(signatureScheme.path("name").asString().toLowerCase(Locale.ROOT));
+        }
         if (operation.path("csrf").has("header")) names.add(operation.path("csrf").path("header").asString().toLowerCase(Locale.ROOT));
 
         return names;
@@ -119,7 +122,7 @@ final class IdempotencyStep {
         return digested;
     }
 
-    /** Completes the claimed record with the reply that went out, or abandons it after a server error or a no-store reply. */
+    /** Completes the claimed record with the reply that went out, or abandons it after a server error or a no-store error reply. */
     static void settle(SeampactBoundary boundary, BoundaryExchange exchange, byte[] body) {
         String key = exchange.idempotencyKey;
         if (key == null) return;
@@ -136,9 +139,11 @@ final class IdempotencyStep {
         }
     }
 
-    // A reply its sender marked no-store must not be kept, so it is dropped for a replay as a server error is.
+    // An error reply its sender marked no-store is dropped for a replay as a server error is; a no-store success is
+    // kept, so a retry never runs the write twice.
     private static boolean isKeptForReplay(CheckingResponse response) {
         if (response.heldStatus() >= SERVER_ERROR_FLOOR) return false;
+        if (response.heldStatus() < CLIENT_ERROR_FLOOR) return true;
 
         for (String cacheControl : response.getHeaders(CACHE_CONTROL_HEADER)) {
             for (String directive : cacheControl.split(",")) {

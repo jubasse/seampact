@@ -10,8 +10,6 @@ import type {
 import { isPlainObject } from "./plain-object.js";
 import { CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE } from "./reply-headers.js";
 
-export { isPlainObject };
-
 /** The longest issues list rendered into a `schemaInvalid` error's params. */
 export const MAX_RENDERED_ISSUES = 100;
 
