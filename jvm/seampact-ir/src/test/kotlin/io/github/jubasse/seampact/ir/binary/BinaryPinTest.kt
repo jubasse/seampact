@@ -267,6 +267,31 @@ class BinaryPinTest {
         assertFalse(accounts.isPrivateGroup(77, 1000), "the group file does not list it")
     }
 
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun aLinkOnTheWayToTheCacheIsResolvedOnceAndOnlyTheRealPathIsRun() {
+        val privateHome = Files.createDirectory(work.resolve("private-home"))
+        val open = Files.createDirectory(work.resolve("open"))
+        Files.setPosixFilePermissions(open, PosixFilePermissions.fromString("rwxrwxrwx"))
+        val linkedHome = Files.createSymbolicLink(open.resolve("gradle-home"), privateHome)
+
+        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), linkedHome.resolve("caches/binaries"))
+
+        check(install is BinaryInstall.Installed) { "$install" }
+        assertEquals(privateHome.toRealPath().resolve("caches/binaries"), install.binary.path.parent.parent)
+    }
+
+    @Test
+    fun aPrivateGroupIsNamedAfterItsOwner() {
+        val passwd = "me:x:1000:1000::/home/me:/bin/sh\n"
+
+        val renamed = PosixAccounts(passwd, "devs:x:1000:\n")
+        val listedTwice = PosixAccounts(passwd, "me:x:1000:\nshared:x:1000:bob\n")
+
+        assertFalse(renamed.isPrivateGroup(1000, 1000), "its name is not the owner's login")
+        assertFalse(listedTwice.isPrivateGroup(1000, 1000), "a second line with its id lists another member")
+    }
+
     // A cache whose every directory, and the cache root's parent, is group-writable (umask 002).
     private fun groupWritableCache(): Pair<Path, Path> {
         val parent = Files.createDirectory(work.resolve("umask-002"))
