@@ -153,6 +153,7 @@ test("an unexpected error is a failure too, and the effect keeps answering", asy
 
     return throwError(() => new HttpErrorResponse({ status: 0, url: request.url }));
   };
+
   const { result, unmount } = await runInApplication(
     appProviders(inject("userToken"), [failFirst]),
     injectDispatching,
