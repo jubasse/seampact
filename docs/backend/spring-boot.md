@@ -128,7 +128,7 @@ With Spring Security on the classpath (`spring-boot-starter-security`), the plug
 - `NotesSecurityMatchers`: the contract's routes by access kind (`publicRoutes()`, `optionalRoutes()`, `identityRoutes()`, `signedRoutes()`, `anonymousOnRefusalRoutes()`);
 - `SecurityRefusals`: an entry point and an access-denied handler that answer 401, 403 and a CSRF refusal in the api's error format.
 
-Set `springSecurity: false` in the entry's options to turn them off.
+Set `springSecurity: false` in the entry's options to turn them off. Setting it on without Spring Security on the classpath fails the build with `options.springSecurity.unavailable`.
 
 Wire them in your chain:
 
@@ -137,14 +137,17 @@ Wire them in your chain:
 SecurityFilterChain chain(HttpSecurity http, NotesSecurityMatchers routes, SecurityRefusals refusals) {
     return http
             .authorizeHttpRequests(authorize -> authorize
-                    .requestMatchers(routes.identityRoutes()).authenticated()
-                    .anyRequest().permitAll())
+                    .requestMatchers(routes.publicRoutes(), routes.optionalRoutes(), routes.signedRoutes()).permitAll()
+                    .requestMatchers(routes.identityRoutes()).hasRole("MEMBER")
+                    .anyRequest().authenticated())
             .exceptionHandling(handling -> handling.authenticationEntryPoint(refusals).accessDeniedHandler(refusals))
             .build();
 }
 ```
 
-With `springSecurity: { matchers: true }`, a generated `Customizer<HttpSecurity>` also permits the public and optional-auth routes in every chain, before your own rules.
+Each matcher follows the route the api serves, so a public `/notes/{id}` never covers a protected `/notes/mine`. Signed routes are permitted: the api checks their signature.
+
+With `springSecurity: { matchers: true }`, a generated `Customizer<HttpSecurity>` permits the public, optional-auth and signed routes for you, in every chain. It runs before your own rules and your own customizers. A chain with no authorization rules of its own then denies every request it does not permit, so give each chain its rules.
 
 Your authenticate hook reads the user from `SecurityContextHolder`. On an optional-auth route that calls anonymously when the token is refused, keep the route out of your bearer filter:
 
@@ -158,7 +161,7 @@ BearerTokenResolver bearerTokens(NotesSecurityMatchers routes) {
 
 ## springdoc
 
-- `artefacts: { nativeDocs: true }` puts springdoc's `@Operation` on the generated interfaces. Add `io.swagger.core.v3:swagger-annotations-jakarta` (springdoc brings it).
+- `artefacts: { nativeDocs: true }` puts springdoc's `@Operation` on the generated interfaces. Each success shows the body the contract declares, not the handler's result type. Add `io.swagger.core.v3:swagger-annotations-jakarta` (springdoc brings it).
 - `frameworkDocs: off` writes `seampact-notes.properties`, which turns springdoc's document off. Load it in `application.properties`:
 
 ```properties
