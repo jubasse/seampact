@@ -1,12 +1,19 @@
-import type { QueryOperation, QueryPlan } from "@seampact/codegen-core";
-import { propertyKey } from "@seampact/codegen-core";
-import type { ReactQueryOptions } from "../options.js";
 import {
-  CLIENT_DIRECTIVE,
+  AS_ERROR_SOURCE,
+  callerOptionsParameter,
+  isRetryableSource,
+  MUTATE_OUTCOME_TYPE,
+  mutationCallerOptionsSource,
   operationType,
   planForms,
+  propertyKey,
+  type QueryOperation,
+  type QueryPlan,
   REQUIRED_CALL_TYPE,
-} from "../shared/operation-sources.js";
+  retryCheckSource,
+} from "@seampact/codegen-core";
+import type { ReactQueryOptions } from "../options.js";
+import { CLIENT_DIRECTIVE } from "../shared/operation-sources.js";
 
 // The `hooks.ts` of one api for plain fetch (ADR 0021 "Plain fetch"): `create<Api>Hooks` returns the members of
 // `create<Api>Queries` plus, per operation, a hook built on React's `useState` and `useEffect` alone. A query hook
@@ -27,8 +34,7 @@ export interface QueryCallerOptions<Operation extends AnyOperationTypes> {
 readonly call?: Operation["call"];
 }`;
 
-const MUTATION_STATE_TYPES = `/** What one \`mutate\` call resolves to: its data, or its error. */
-export type MutateOutcome<Data, Failure> = { readonly data: Data; readonly error: undefined } | { readonly data: undefined; readonly error: Failure };
+const MUTATION_STATE_TYPES = `${MUTATE_OUTCOME_TYPE}
 
 /**
  * What a mutation hook returns: \`mutate\` sends a request and resolves to its own outcome, never rejecting; the state
@@ -41,16 +47,7 @@ readonly error: Failure | undefined;
 readonly data: Data | undefined;
 }
 
-/** The caller's mutation hook options: \`retry\`, a whole count, sends a rejected write again that many times, with the same idempotency key. */
-export interface MutationCallerOptions<Operation extends AnyOperationTypes> {
-readonly call?: Operation["call"];
-readonly retry?: number;
-}`;
-
-const AS_ERROR_SOURCE = `// A rejection as an \`Error\`, the value kept as its cause when it is not one.
-function asError(rejection: unknown): Error {
-return rejection instanceof Error ? rejection : new Error(String(rejection), { cause: rejection });
-}`;
+${mutationCallerOptionsSource("hook")}`;
 
 // The read of one request: started by the effect, its result kept only while that request is still the hook's.
 const USE_FETCH_QUERY_SOURCE = `interface QuerySnapshot<Data> {
@@ -116,9 +113,7 @@ hookName: string,
 fetcher: (request: Request, attempt: object) => Promise<Data>,
 retry: number,
 ): MutationState<Request, Data, Error> {
-if (!Number.isInteger(retry) || retry < 0) {
-throw new Error(\`\${hookName}: the option retry is \${retry}, not a whole count of retries; pass 0 or more.\`);
-}
+${retryCheckSource("hookName")}
 
 const latestFetcher = useRef(fetcher);
 const latestMutate = useRef(0);
@@ -164,7 +159,6 @@ return { data: undefined, error };
 return { mutate, isPending: snapshot.isPending, error: snapshot.error, data: snapshot.data };
 }`;
 
-const ABORT_ERROR_NAME = "AbortError";
 const REACT_IMPORT = 'import { useCallback, useEffect, useRef, useState } from "react";';
 
 /** The source of `hooks.ts`; `imports` holds the specifiers of the client, the queries module and the runtime. */
@@ -213,20 +207,6 @@ ${hooks.join("\n\n")}
   ].join("\n\n");
 }
 
-// A declared error is the server's answer and an abort the caller's choice: only another rejection is sent again.
-function isRetryableSource(throwsErrors: boolean): string {
-  const declared = throwsErrors ? "!isContractError(error) && " : "";
-
-  return `function isRetryable(error: Error): boolean {
-return ${declared}error.name !== ${JSON.stringify(ABORT_ERROR_NAME)};
-}`;
-}
-
-// The options parameter, required when the client method requires a timeout.
-function optionsParameter(operation: QueryOperation, type: string): string {
-  return operation.needsTimeout ? `options: WithRequiredCall<${type}>` : `options?: ${type}`;
-}
-
 function hookSource(operation: QueryOperation, api: string): string {
   const { names } = operation;
   const types = operationType(operation, api);
@@ -234,13 +214,13 @@ function hookSource(operation: QueryOperation, api: string): string {
   const read = operation.needsTimeout ? "options." : "options?.";
 
   if (operation.form === "mutation") {
-    return `${propertyKey(names.hook)}: (${optionsParameter(operation, `MutationCallerOptions<${types}>`)}): MutationState<${types}["request"], ${types}["data"], ${types}["error"]> =>
+    return `${propertyKey(names.hook)}: (${callerOptionsParameter(operation, `MutationCallerOptions<${types}>`)}): MutationState<${types}["request"], ${types}["data"], ${types}["error"]> =>
 useFetchMutation(${JSON.stringify(names.hook)}, (request: ${types}["request"], attempt: object) => queries.${names.options}(${read}call).fetcher(request, attempt), ${read}retry ?? 0),`;
   }
 
   const filled = JSON.stringify(operation.filledHeaderKeys);
 
-  return `${propertyKey(names.hook)}: (request: ${types}["request"] | null, ${optionsParameter(operation, `QueryCallerOptions<${types}>`)}): QueryState<${types}["data"], ${types}["error"]> =>
+  return `${propertyKey(names.hook)}: (request: ${types}["request"] | null, ${callerOptionsParameter(operation, `QueryCallerOptions<${types}>`)}): QueryState<${types}["data"], ${types}["error"]> =>
 useFetchQuery(
 request,
 (current) => JSON.stringify([keyRequest(current, ${filled})]),

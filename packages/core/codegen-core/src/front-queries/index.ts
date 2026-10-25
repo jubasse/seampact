@@ -1,8 +1,17 @@
 // The framework-neutral query plan the front targets render (ADR 0021): per operation its form, export names, key,
 // resource, call options and next-page rule, the front runtime each front target copies into its output, and the
-// query module sources the TypeScript front targets share (plain fetch and TanStack Query factories).
+// query module sources the TypeScript front targets share (plain fetch and TanStack Query factories, and the parts of
+// the plain fetch hooks and composables).
 
 export { refuseUnsupportedClientErrorStyle } from "./client-error-style.js";
+export {
+  AS_ERROR_SOURCE,
+  callerOptionsParameter,
+  isRetryableSource,
+  MUTATE_OUTCOME_TYPE,
+  mutationCallerOptionsSource,
+  retryCheckSource,
+} from "./fetch-mode-sources.js";
 export { type FetchQueriesOptions, fetchQueriesModuleSource } from "./fetch-queries-module.js";
 export { FRONT_RUNTIME_MODULE, frontRuntimeFile } from "./front-runtime-file.js";
 export {

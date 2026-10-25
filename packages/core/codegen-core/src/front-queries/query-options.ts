@@ -126,7 +126,7 @@ function refuseCacheOptions<Library extends string>(
 
   refusals.push({
     code: "options.keys.root.unsupported",
-    message: `The option 'keys.root' has no meaning with 'query: ${noCache}': plain fetch hooks have no keys.`,
+    message: `The option 'keys.root' has no meaning with 'query: ${noCache}': plain fetch has no keys.`,
     fix: "Drop 'keys.root'.",
     member: below(OPTIONS_LOCATION, KEYS_KEY, ROOT_KEY).member,
   });

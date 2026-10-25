@@ -1,7 +1,12 @@
-import type { QueryOperation, QueryPlan } from "@seampact/codegen-core";
-import { propertyKey } from "@seampact/codegen-core";
+import {
+  operationType,
+  planForms,
+  propertyKey,
+  type QueryOperation,
+  type QueryPlan,
+} from "@seampact/codegen-core";
 import type { ReactQueryOptions } from "../options.js";
-import { CLIENT_DIRECTIVE, operationType, planForms } from "../shared/operation-sources.js";
+import { CLIENT_DIRECTIVE } from "../shared/operation-sources.js";
 
 // The `hooks.ts` of one api for SWR (ADR 0021 "SWR"): `create<Api>Hooks` returns the members of
 // `create<Api>Queries` plus `use<Op>(request | null, config?)` over `useSWR`, `use<Op>Infinite` over `useSWRInfinite`
