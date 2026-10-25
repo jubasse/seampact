@@ -3,8 +3,8 @@ import { describe, expect, test } from "vitest";
 import vectors from "../vectors/adr-0013.json" with { type: "json" };
 import {
   EmptySignatureSecretError,
-  SignaturePayloadInvalidError,
   type SignatureFailure,
+  SignaturePayloadInvalidError,
   SignatureToleranceMissingError,
   UnsupportedSignatureAlgorithmError,
   verifyTemplateSignature,

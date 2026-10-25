@@ -43,6 +43,28 @@ export class UnsupportedSignatureAlgorithmError extends Error {
   }
 }
 
+/** Thrown when the payload does not hold `{rawBody}` exactly once and `{ts}` at most once: a captured signature could pass with another body. */
+export class SignaturePayloadInvalidError extends Error {
+  readonly code = "signature.payload.invalid";
+
+  constructor(readonly payload: string) {
+    super(
+      `The signed payload '${payload}' must hold {rawBody} exactly once and {ts} at most once, or a captured signature could pass with another body. Copy the payload of the hook's signature template.`,
+    );
+  }
+}
+
+/** Thrown when the payload signs `{ts}` and the scheme has no tolerance: a replay of any age would pass. */
+export class SignatureToleranceMissingError extends Error {
+  readonly code = "signature.tolerance.missing";
+
+  constructor(readonly payload: string) {
+    super(
+      `The signed payload '${payload}' holds {ts} but the scheme has no tolerance, so a replayed request of any age would pass. Pass the tolerance of the hook's signature template as toleranceMs.`,
+    );
+  }
+}
+
 /** Thrown when the lookup returns an empty secret: anyone can compute a MAC with it, so the check fails closed. */
 export class EmptySignatureSecretError extends Error {
   readonly code = "signature.secret.empty";
@@ -70,6 +92,8 @@ export async function verifyTemplateSignature(
     throw new UnsupportedSignatureAlgorithmError(template.algorithm);
   }
 
+  refuseInvalidPayload(template);
+
   const payload = signedPayload(template, request);
 
   if (payload === undefined) return failed("timestamp-missing");
@@ -90,6 +114,22 @@ export async function verifyTemplateSignature(
   if (!anySecretMatches(secrets, payload, candidates)) return failed("signature-mismatch");
 
   return timestampFailure(request, template, options) ?? { verified: true };
+}
+
+function occurrences(text: string, placeholder: string): number {
+  return text.split(placeholder).length - 1;
+}
+
+function refuseInvalidPayload(template: SignatureTemplate): void {
+  const timestampCount = occurrences(template.payload, TIMESTAMP_PLACEHOLDER);
+
+  if (occurrences(template.payload, RAW_BODY_PLACEHOLDER) !== 1 || timestampCount > 1) {
+    throw new SignaturePayloadInvalidError(template.payload);
+  }
+
+  if (timestampCount === 1 && template.toleranceMs === undefined) {
+    throw new SignatureToleranceMissingError(template.payload);
+  }
 }
 
 function failed(failure: SignatureFailure): SignatureVerification {
