@@ -4,9 +4,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import org.codehaus.plexus.configuration.PlexusConfiguration
-import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration
-import org.codehaus.plexus.util.xml.Xpp3DomBuilder
-import java.io.StringReader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -16,7 +13,8 @@ class ConfigurationConverterTest {
     private val properties = mapOf("contractDirectory" to "../contract")
 
     private val converter = ConfigurationConverter(ConfigurationConverter.appSchema) { text ->
-        properties.entries.fold(text) { evaluated, (name, value) -> evaluated.replace("\${$name}", value) }
+        val evaluated = properties.entries.fold(text) { partly, (name, value) -> partly.replace("\${$name}", value) }
+        evaluated.takeUnless { "\${" in it }
     }
 
     @Test
@@ -109,19 +107,31 @@ class ConfigurationConverterTest {
                 "<allowLocal>maybe</allowLocal>",
                 "<sources source=\"x\"><contract><path>a</path></contract></sources>",
                 "<checks><generated>error</generated><generated>warning</generated></checks>",
+                "<outDir>\${missing}</outDir>",
             ),
         )
 
         val refused = assertIs<ConversionOutcome.Refused>(converted)
         assertEquals(
-            listOf("<configuration>/allowLocal", "<configuration>/sources", "<configuration>/checks/generated"),
+            listOf(
+                "<configuration>/allowLocal",
+                "<configuration>/sources",
+                "<configuration>/checks/generated",
+                "<configuration>/outDir",
+            ),
             refused.problems.map { it.where },
         )
         assertEquals(setOf(ConfigurationConverter.SHAPE_CODE), refused.problems.map { it.code }.toSet())
     }
 
-    private fun elements(vararg xml: String): List<PlexusConfiguration> =
-        xml.map { XmlPlexusConfiguration(Xpp3DomBuilder.build(StringReader(it.trim()))) }
+    @Test
+    fun readsTheBooleanSpellingsYamlReads() {
+        val converted = converter.convert(elements("<allowLocal>TRUE</allowLocal>"))
+
+        assertEquals(ConversionOutcome.Converted(json("""{ "allowLocal": true }""")), converted)
+    }
+
+    private fun elements(vararg xml: String): List<PlexusConfiguration> = xml.map(::plexusConfiguration)
 
     private fun json(text: String): JsonObject = Json.parseToJsonElement(text).jsonObject
 }

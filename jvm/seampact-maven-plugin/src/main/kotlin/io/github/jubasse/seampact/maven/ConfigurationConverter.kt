@@ -24,11 +24,12 @@ internal sealed interface ConversionOutcome {
  * gives (A42), with the JSON types `app.schema.json` gives each key: XML holds only text, so the schema says whether
  * `true` is a boolean or a string and whether an element is a list or an object. A list's items are its child
  * elements, whatever their name (`<targets><target>`); an object's keys are its children's names. `options`, which
- * the schema leaves to the target, reads `true`, `false` and numbers as such and any other text as a string. Each
- * text is first evaluated as Maven evaluates `${...}` ([evaluate]). The tree is then checked by the app config
- * reader against the same schema, which names any key it does not know.
+ * the schema leaves to the target, reads booleans (`true`, `True`, `TRUE`, as YAML does) and numbers as such and any
+ * other text as a string. Each text is first evaluated as Maven evaluates `${...}` ([evaluate], null when an expression
+ * does not resolve, which is refused). The tree is then checked by the app config reader against the same schema,
+ * which names any key it does not know.
  */
-internal class ConfigurationConverter(private val schema: JsonObject, private val evaluate: (String) -> String) {
+internal class ConfigurationConverter(private val schema: JsonObject, private val evaluate: (String) -> String?) {
     private val problems = mutableListOf<ConfigProblem>()
 
     /** Converts [elements], the top-level app-config keys the POM sets, each named by its key. */
@@ -68,7 +69,9 @@ internal class ConfigurationConverter(private val schema: JsonObject, private va
     }
 
     private fun leaf(rawText: String?, types: Set<String>, path: String): JsonElement {
-        val text = rawText?.let(evaluate)?.trim()
+        val text = rawText?.let { written ->
+            evaluate(written) ?: return refuse(path, unresolvedReason(written), UNRESOLVED_FIX)
+        }?.trim()
 
         if (text.isNullOrEmpty()) {
             return when {
@@ -80,8 +83,8 @@ internal class ConfigurationConverter(private val schema: JsonObject, private va
 
         if (types.isEmpty()) return freeScalar(text)
 
-        val asBoolean = JsonPrimitive(text).booleanOrNull
-        if (BOOLEAN in types && asBoolean != null && text == asBoolean.toString()) return JsonPrimitive(asBoolean)
+        val asBoolean = yamlBoolean(text)
+        if (BOOLEAN in types && asBoolean != null) return JsonPrimitive(asBoolean)
         if ((INTEGER in types || NUMBER in types) && NUMBER_TEXT.matches(text)) return JsonPrimitive(BigDecimal(text))
         if (STRING in types) return JsonPrimitive(text)
 
@@ -90,13 +93,12 @@ internal class ConfigurationConverter(private val schema: JsonObject, private va
 
     // A value the schema leaves free (a target's `options`): the JSON a YAML file would give for the same text.
     private fun freeScalar(text: String): JsonElement = when {
-        text == "true" || text == "false" -> JsonPrimitive(text.toBoolean())
+        yamlBoolean(text) != null -> JsonPrimitive(yamlBoolean(text))
         NUMBER_TEXT.matches(text) -> JsonPrimitive(BigDecimal(text))
         else -> JsonPrimitive(text)
     }
 
     private fun refuseAttributes(element: PlexusConfiguration, path: String) {
-        // Maven's own merge directives (`combine.children`, `combine.self`) are read by Maven, not by the plugin.
         val attributes = element.attributeNames.filterNot { it.startsWith(MAVEN_MERGE_PREFIX) }
         if (attributes.isNotEmpty()) {
             refuse(path, "has the attribute(s) ${attributes.joinToString { "'$it'" }}; the app config's keys are elements.", "Write each value as a child element.")
@@ -104,7 +106,7 @@ internal class ConfigurationConverter(private val schema: JsonObject, private va
     }
 
     private fun refuse(path: String, reason: String, fix: String): JsonElement {
-        problems += ConfigProblem(SHAPE_CODE, "The <configuration> element $path $reason", fix, path)
+        problems += shapeProblem(path, reason, fix)
 
         return JsonObject(emptyMap())
     }
@@ -161,8 +163,10 @@ internal class ConfigurationConverter(private val schema: JsonObject, private va
 
     internal companion object {
         const val SHAPE_CODE = "config.maven.shape"
+        const val UNRESOLVED_FIX = "Define the property in the POM, settings.xml or with -D, or write the value itself."
         private const val CONFIGURATION = "<configuration>"
-        private const val MAVEN_MERGE_PREFIX = "combine."
+        // Maven's own merge directives (`combine.children`, `combine.self`) are read by Maven, not by the plugin.
+        const val MAVEN_MERGE_PREFIX = "combine."
         private const val ARRAY = "array"
         private const val OBJECT = "object"
         private const val STRING = "string"
@@ -171,6 +175,17 @@ internal class ConfigurationConverter(private val schema: JsonObject, private va
         private const val NUMBER = "number"
         private val BRANCH_KEYWORDS = listOf("oneOf", "anyOf", "allOf")
         private val NUMBER_TEXT = Regex("-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?")
+
+        // The spellings YAML 1.2's core schema reads as booleans, so a value reads as it would in seampact.config.yaml.
+        private val YAML_BOOLEANS = mapOf("true" to true, "True" to true, "TRUE" to true, "false" to false, "False" to false, "FALSE" to false)
+
+        private fun yamlBoolean(text: String): Boolean? = YAML_BOOLEANS[text]
+
+        /** A `config.maven.shape` problem on the `<configuration>` element at [path]. */
+        fun shapeProblem(path: String, reason: String, fix: String): ConfigProblem =
+            ConfigProblem(SHAPE_CODE, "The <configuration> element $path $reason", fix, path)
+
+        fun unresolvedReason(written: String): String = "is '$written', whose \${...} expression Maven does not resolve."
 
         private const val APP_SCHEMA_RESOURCE = "/io/github/jubasse/seampact/ir/config/app.schema.json"
 

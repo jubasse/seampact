@@ -124,10 +124,11 @@ public abstract class SeampactMojo(private val repositorySystem: RepositorySyste
         listOfNotNull(allowLocal, outDir, sources, targets, openapi, checks, warnings, diff)
 
     // Maven gives a `PlexusConfiguration` parameter its XML as written; `${...}` is evaluated here, as for any other.
-    private fun expressionEvaluator(): (String) -> String {
+    // Null when Maven resolves no value, which the readers refuse by name.
+    private fun expressionEvaluator(): (String) -> String? {
         val evaluator = PluginParameterExpressionEvaluator(session, mojoExecution)
 
-        return { text -> if (EXPRESSION_START in text) evaluator.evaluate(text)?.toString().orEmpty() else text }
+        return { text -> if (EXPRESSION_START in text) evaluator.evaluate(text)?.toString() else text }
     }
 
     private fun springBootVersion(): String? = project.artifacts
