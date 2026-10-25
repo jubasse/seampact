@@ -135,7 +135,8 @@ jobs:
               $project = [
                 "name" => "seampact-ci/install-proof",
                 "version" => "0.0.0",
-                "repositories" => [["type" => "path", "url" => $tree, "options" => ["symlink" => false]]],
+                // Packagist off: a runtime dependency, or a published sibling standing in for the PR copy, fails the proof.
+                "repositories" => [["type" => "path", "url" => $tree, "options" => ["symlink" => false]], ["packagist.org" => false]],
                 "require" => [$package => "*@dev"],
               ];
               file_put_contents($target, json_encode($project, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n");
@@ -158,6 +159,10 @@ jobs:
                   }
                   $loaded++;
                 }
+              }
+              if ($loaded === 0) {
+                fwrite(STDERR, "$package: no type loads from the installed copy; check its psr-4 autoload.\n");
+                exit(1);
               }
               echo "$package installs alone from its split tree; $loaded types load.\n";
             ' "$project" "$package"

@@ -125,7 +125,7 @@ final class VectorsTest extends TestCase
             self::assertInstanceOf(EmptySignatureSecret::class, $refusal);
             self::assertSame(1, $refusal->index);
 
-            $trace = print_r($refusal->getTrace(), true);
+            $trace = print_r(self::verifierFrames($refusal), true);
             self::assertStringNotContainsString(self::CURRENT_SECRET, $trace);
             self::assertStringNotContainsString(self::SENSITIVE_BODY, $trace);
         } finally {
@@ -178,6 +178,15 @@ final class VectorsTest extends TestCase
             ->verify('Hello, World!', null, [base64_encode($truncatedMac)], self::KEY_ID, $scheme);
 
         self::assertSame(SignatureFailure::SignatureMismatch, $verification->failure);
+    }
+
+    /** @return list<array<string, mixed>> the frames of the verifier, without the test runner around them */
+    private static function verifierFrames(\Throwable $refusal): array
+    {
+        return array_values(array_filter(
+            $refusal->getTrace(),
+            static fn (array $frame): bool => str_starts_with($frame['class'] ?? '', 'Seampact\\SignedWebhooks\\'),
+        ));
     }
 
     private static function timestampScheme(): SignatureScheme

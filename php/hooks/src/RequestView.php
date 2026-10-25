@@ -8,7 +8,8 @@ namespace Seampact\Hooks;
 final readonly class RequestView
 {
     /**
-     * @param array<string, list<string>> $headers every header by name, each with its values in order
+     * @param array<string, list<string>> $headers every header by name, each with its values in order; PHP turns a
+     *     numeric header name such as `123` into an integer key
      */
     public function __construct(
         public string $method,

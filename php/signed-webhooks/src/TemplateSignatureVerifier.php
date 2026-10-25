@@ -16,7 +16,7 @@ final class TemplateSignatureVerifier
 
     private const HMAC_ALGORITHM = 'sha256';
     private const HMAC_SHA256_BYTES = 32;
-    private const TIMESTAMP_PLACEHOLDER = '{ts}';
+    public const TIMESTAMP_PLACEHOLDER = '{ts}';
     private const RAW_BODY_PLACEHOLDER = '{rawBody}';
     private const MILLISECONDS_PER_SECOND = 1000;
     private const UNIX_SECONDS = '/^[0-9]+$/D';
@@ -35,12 +35,12 @@ final class TemplateSignatureVerifier
      * @param list<string> $candidateSignatures every signature the header carries, still encoded
      *
      * @throws UnsupportedSignatureAlgorithm when the scheme names another algorithm than hmac-sha256
-     * @throws EmptySignatureSecret when the lookup returns an empty secret
+     * @throws EmptySignatureSecret when the lookup returns an empty secret or a value that is not a string
      */
     public function verify(
-        string $rawBody,
+        #[\SensitiveParameter] string $rawBody,
         ?string $timestamp,
-        array $candidateSignatures,
+        #[\SensitiveParameter] array $candidateSignatures,
         string $keyId,
         SignatureScheme $scheme,
     ): SignatureVerification {
@@ -60,9 +60,7 @@ final class TemplateSignatureVerifier
             return SignatureVerification::failed(SignatureFailure::NoSecret);
         }
 
-        if (in_array('', $secrets, true)) {
-            throw new EmptySignatureSecret($keyId);
-        }
+        self::refuseUnusableSecrets($secrets, $keyId);
 
         $payload = self::signedPayload($scheme->payload, $rawBody, $timestamp ?? '');
         $candidates = self::decodedCandidates($candidateSignatures, $scheme->encoding);
@@ -78,8 +76,22 @@ final class TemplateSignatureVerifier
             : SignatureVerification::failed($timestampFailure);
     }
 
+    /**
+     * Before any hashing, so a bad secret never reaches `hash_hmac` and its trace never carries the other secrets.
+     *
+     * @param array<mixed> $secrets
+     */
+    private static function refuseUnusableSecrets(#[\SensitiveParameter] array $secrets, string $keyId): void
+    {
+        foreach (array_values($secrets) as $index => $secret) {
+            if (!is_string($secret) || $secret === '') {
+                throw new EmptySignatureSecret($keyId, $index);
+            }
+        }
+    }
+
     // The payload template with `{ts}` replaced by the timestamp text as received and `{rawBody}` by the raw bytes.
-    private static function signedPayload(string $template, string $rawBody, string $timestamp): string
+    private static function signedPayload(string $template, #[\SensitiveParameter] string $rawBody, string $timestamp): string
     {
         [$beforeBody, $afterBody] = explode(self::RAW_BODY_PLACEHOLDER, $template, 2) + ['', ''];
 
@@ -95,7 +107,7 @@ final class TemplateSignatureVerifier
      *
      * @return list<string>
      */
-    private static function decodedCandidates(array $candidateSignatures, SignatureEncoding $encoding): array
+    private static function decodedCandidates(#[\SensitiveParameter] array $candidateSignatures, SignatureEncoding $encoding): array
     {
         $decodedCandidates = [];
 
@@ -110,7 +122,7 @@ final class TemplateSignatureVerifier
         return $decodedCandidates;
     }
 
-    private static function decodeCandidate(string $candidate, SignatureEncoding $encoding): ?string
+    private static function decodeCandidate(#[\SensitiveParameter] string $candidate, SignatureEncoding $encoding): ?string
     {
         $pattern = $encoding === SignatureEncoding::Hex ? self::HEX : self::BASE64;
 
@@ -129,7 +141,11 @@ final class TemplateSignatureVerifier
      * @param list<string> $secrets
      * @param list<string> $candidates
      */
-    private static function anySecretMatches(array $secrets, string $payload, array $candidates): bool
+    private static function anySecretMatches(
+        #[\SensitiveParameter] array $secrets,
+        #[\SensitiveParameter] string $payload,
+        #[\SensitiveParameter] array $candidates,
+    ): bool
     {
         $matched = false;
 
