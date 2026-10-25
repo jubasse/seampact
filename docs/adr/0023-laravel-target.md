@@ -49,14 +49,15 @@ Codegen emits, per api, under the target entry's `out` and the `namespace` optio
   - the media type;
   - the bounded body read and the decoding;
   - the outgoing response check.
-  It answers its own refusals in the api's format. On the first request of each booted application (each request under php-fpm, once per worker otherwise), it checks that it is the first entry of the kernel's global middleware. When it is not, it answers the api's 500 and logs the fix on every request, so a route-cached serve, which skips the boot check, still keeps "boundary first".
+  It answers its own refusals in the api's format. On the first request of each booted application, which under php-fpm is every request, it checks that it is the first entry of the kernel's global middleware. When it is not, it answers the api's 500 and logs the fix on every request, so a route-cached serve, which skips the boot check, still keeps "boundary first".
 - **The access middleware** (`TasksAccessMiddleware`), on every contract route and added to the priority list before `SubstituteBindings`. It runs steps 2 to 5: authenticate, principal requirements, scopes and requirements. It first checks that the route Laravel chose carries the operation that the raw path matched ("Routes"). Once steps 2 to 5 admit the request, it marks the request with that operation id, in a request attribute under a generated name.
 - **The registration**: one service provider per api (`TasksSeampactServiceProvider`), which the app lists in `bootstrap/providers.php`. It:
   - prepends the boundary middleware and places the access middleware, through the HTTP kernel;
   - registers the routes macro, or loads nothing under `routes: file`;
   - merges and publishes the config of "Options and registration";
   - excludes contract routes from `TrimStrings` and `ConvertEmptyStringsToNull` (`skipWhen`);
-  - runs the boot check.
+  - runs the boot check;
+  - refuses Octane at worker start ("Refused by name or waiting").
 
 Both middleware are registered from the provider, with no edit to `bootstrap/app.php` (spike). The routes point at the interface (`[TasksEndpoints::class, 'updateTask']`), which the container resolves to the bound controller, cached routes included (spike). Each route is named `seampact.<api>.<operationId>`.
 
@@ -73,7 +74,7 @@ Patterns use Laravel's syntax with positional parameter names (`/v1/tasks/{p1}`)
 
 Laravel matches routes in registration order, so the generated registration registers, per path depth, literal segments before placeholders: `/v1/tasks/search` before `/v1/tasks/{p1}`.
 
-The boundary middleware matches the raw request target against the contract templates. The raw target is `REQUEST_URI` without the query, minus the front controller's base path, computed from the server variables and stripped as a raw prefix. It never uses forwarded headers: the boundary runs before `TrustProxies`, and under Octane the trusted proxies an earlier request set would add `X-Forwarded-Prefix` to `getBaseUrl()`. The access middleware then compares the operation of the route Laravel chose with that match. Laravel decodes the path before routing, so the two can differ:
+The boundary middleware matches the raw request target against the contract templates. The raw target is `REQUEST_URI` without the query, minus the front controller's base path, computed from the server variables and stripped as a raw prefix (spike, CLI server). It never uses forwarded headers: the boundary runs before `TrustProxies`, and under Octane the trusted proxies an earlier request set would add `X-Forwarded-Prefix` to `getBaseUrl()`. The access middleware then compares the operation of the route Laravel chose with that match. Laravel decodes the path before routing, so the two can differ:
 
 - `/v1/tasks/%73earch` reaches the search route while the raw path matches `{p1}`. The access middleware answers the path's `notFound` 404 before any check (spike).
 - A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the boundary, before routing, on every Node target's terms (ADR 0016 "Errors raised before routing"). This covers a trailing slash (which Laravel would trim and route), `//`, a dot segment (`x/../7`, `%2e%2e`), a percent-encoded static segment, and a segment holding a `;` path parameter (`7;x=1`), as on Spring (ADR 0022 "Routes"). The spike's reduced boundary answered the first three cases this way; it had no rule for `%2e%2e` and `;`, which Laravel routes to `{p1}` as values.
@@ -124,7 +125,7 @@ The boundary middleware checks the reply of each contract route as it returns th
 
 The verdict rules, the `responses` modes, `bodyValidation` and the completion of the idempotency record are ADR 0016's:
 
-- **A declared success** that the boundary wrote passes. A streamed success comes only from a generated result (a download, laravel-4). A `StreamedResponse` carries its status and headers before its callback runs, so the boundary's declared streamed success is passed with its callback wrapped only to catch a failure: the chunks keep the writer's pace (spike).
+- **A declared success** that the boundary wrote passes. A streamed success comes only from a generated result (a download, laravel-4). A `StreamedResponse` carries its status and headers before its callback runs, so the boundary's declared streamed success is passed with its callback wrapped only to catch a failure: the chunks keep the writer's pace (spike, CLI server).
 - **An undeclared status** is a violation before any byte is sent, streams included (spike).
 - **A declared error** is held up to `MAX_CHECKED_ERROR_BODY_BYTES = 65536` and checked for the api's format and a listed code. A body in `gzip` or `deflate` is decoded first; a `br` error body, which PHP's zlib extension cannot decode, is a violation, a parity gap listed in Consequences. A streamed error body is buffered by running its callback into the held bytes before the verdict.
 - **A reply the boundary did not author.** On a contract route:
@@ -180,7 +181,7 @@ The contract input is the boundary's decoding, never `$request->input()`. `TrimS
 ### Query and bounded values
 
 - **Query.** Decoded from the raw `QUERY_STRING` by the IR's wire form, with form decoding (`+` is a space), never from `$request->query`, since PHP's `parse_str` turns `.` and spaces in a name into `_` and reads `a[]` as an array. Zero body bytes is no body. The media type is matched exactly.
-- **Body limit.** The boundary refuses a declared `Content-Length` above the route's limit before reading. It reads `php://input` in chunks through `getContent(true)`, decodes `gzip` and `deflate` with ext-zlib's `inflate_add`, counts both the encoded and the decoded bytes, and answers the route's 413 as soon as either passes the limit, chunked bodies included (spike).
+- **Body limit.** The boundary refuses a declared `Content-Length` above the route's limit before reading. It reads `php://input` in chunks through `getContent(true)`, decodes `gzip` and `deflate` with ext-zlib's `inflate_add`, counts both the encoded and the decoded bytes, and answers the route's 413 as soon as either passes the limit, chunked bodies included (spike, CLI server).
   - Any other content coding answers 415; a corrupt compressed body is the client's 400.
   - The app's `getContent()` keeps the bytes as received. The boundary's input, and a signed route's raw body, are the decoded bytes.
   - The web server's limit and `post_max_size` must be at least the largest route limit; the Laravel guide says so. The target exports no limit constant.
@@ -325,7 +326,9 @@ The boundary runtime is copied into `Laravel\Runtime` with the generated header,
 | laravel-3 | paging, idempotency replay, throttle, cache and ETag headers, signed routes, absolute URLs, the `pack:laravel` styles |
 | laravel-4 | multipart (`file`, `mimetypes` and `max` rules; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`response()->streamDownload()`) and redirect (`redirect()->to()`) bodies, the per-kind middleware lists, the published config |
 | a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target: the reference contract carries none |
-| after 1.0 | Laravel 12 and older (refused, not waiting); Octane, whose per-worker boot the spike did not run; `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs |
+| after 1.0 | Laravel 12 and older (refused, not waiting); Octane (refused, below); `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs |
+
+Octane is refused at run time, outside the boot check, since an Octane app usually serves from a route cache, where the boot check does not run. The provider's `boot()` listens for Octane's `Laravel\Octane\Events\WorkerStarting`, named as a string so the generated code needs no Octane package, and throws `runtime.octane.unsupported` with the fix "serve the app with php-fpm, or keep this api's provider out of the Octane app": the worker does not start.
 
 ### The consumer and the proof
 
@@ -336,7 +339,7 @@ The workflow `p6-laravel.yml` has five jobs:
 - `changes`;
 - `contract-bundle` (Node), which bundles the reference contract (ADR 0011 "The bundle");
 - `build`, a matrix on the latest PHP 8.3 and 8.5 in glibc `php` images, whose first step fails when `node`, `npm` or `npx` is found. It installs the app with Composer only, generates from that bundle, and runs `route:cache` and `config:cache` as the boot step; the local-YAML rows, through the compiler binary, come with php-core-4;
-- `http-suite`, which starts `php artisan serve` and runs the `default`, `hand-written` and `boot` profiles, plus `pack:laravel` from laravel-3, through the suite's CLI (ADR 0015 "Suite profiles");
+- `http-suite`, which serves the app with php-fpm behind nginx, as production does, and runs the `default`, `hand-written` and `boot` profiles, plus `pack:laravel` from laravel-3, through the suite's CLI (ADR 0015 "Suite profiles");
 - `laravel`, the aggregate, failing on any failed or cancelled job.
 
 The proof is:
@@ -352,13 +355,13 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 | PR | Delivers |
 |---|---|
 | laravel-1 | `php/laravel` (`Seampact\Laravel`): the generator class registered in `extra.seampact.generator`, the options (`namespace`, `routes` and the rest), readonly classes with `Field`, controller interfaces, FormRequests with their rules, the routes file and the macro's route table, the exceptions per error; a golden for the reference contract, linted with `php -l` and PHPStan max on PHP 8.3 and 8.5 |
-| laravel-2 | the boundary middleware (steps 1 to 5 and 10), the FormRequest steps 6 to 8, the provider with its hook bindings, scopes in request attributes, the 500 on a missing hook, the boot check, `php artisan seampact:generate`; the sample app with path repositories, the core suite profile, the e2e job of `p6-laravel.yml`; `BootCheckTest.php` only for a rule that is a brick |
-| laravel-3 | paging, idempotency, throttle, cache headers, the signed raw body, redaction (`__debugInfo()`, `#[\SensitiveParameter]`, the VarDumper caster), the `pack:laravel` profile; the pack and full suite profiles and `RedactionTest.php` |
+| laravel-2 | the boundary middleware (steps 1 and 10, the "boundary first" assertion), the access middleware (steps 2 to 5 and its mark), the FormRequest steps 6 to 8 failing closed without that mark, the mapping of "Exceptions on contract routes", the provider with its hook bindings and the Octane refusal, scopes in request attributes, the 500 on a missing hook, the boot check, `php artisan seampact:generate`; the sample app with path repositories under php-fpm behind nginx, the core suite profile, the e2e job of `p6-laravel.yml`; `BootCheckTest.php` only for a rule that is a brick |
+| laravel-3 | paging, idempotency, throttle, cache headers, the signed raw body, absolute URLs, redaction (`__debugInfo()`, `#[\SensitiveParameter]`, the VarDumper caster), the `pack:laravel` profile; the pack and full suite profiles and `RedactionTest.php` |
 | laravel-4 | guards and Sanctum for authenticate, Gates and Policies for decide, `AuthorizationException` in a decider answering the first denial code, coexistence with the native layers and their per-kind middleware lists, multipart, `streamDownload` and `redirect()->to()`, the published `config/seampact.php`; the suite's security and media rows, a Sanctum row in the sample app |
 
 ## Spike
 
-Run on Laravel 13.38.0 (a fresh `laravel/laravel` skeleton, Symfony HttpFoundation and VarDumper 8.1.9) on PHP 8.5.4 CLI under `php artisan serve` with four workers, and not kept. PHP 8.3, php-fpm behind a web server, Sanctum and Octane were not run. A reduced boundary had:
+Run on Laravel 13.38.0 (a fresh `laravel/laravel` skeleton, Symfony HttpFoundation and VarDumper 8.1.9) on PHP 8.5.4 CLI under `php artisan serve` with four workers, and not kept. PHP 8.3, php-fpm behind a web server, Sanctum and Octane were not run. The results marked "CLI server" (the base path from the server variables, stream pacing, the chunked bounded read) depend on the server; laravel-2's php-fpm suite proves them. A reduced boundary had:
 
 - a global middleware placed first, with a raw-path matcher, a bounded body read with gzip decoding, the authored-reply mark and the exception mapping;
 - a route middleware placed before `SubstituteBindings`;
@@ -407,12 +410,12 @@ Read from the sources, not run: `Illuminate\Routing\Pipeline::handleException` r
 - A native layer's refusal that the operation declares answers in the api's format; Laravel's 419 for CSRF becomes the contract's 403.
 - A path value whose percent-decoding is not UTF-8 is refused before steps 2 to 5 run, and `%2F` in a segment answers the path's 404; the Node targets pass both to step 6.
 - A `br` error body is a violation here, where ADR 0016 decodes it.
-- A multipart body cannot be counted as it arrives: PHP stores the upload before the app runs. The boundary refuses a declared `Content-Length` above the route limit, and `post_max_size` and the web server's limit bound the rest, a gap with ADR 0012's obligation.
+- A multipart body cannot be counted as it arrives: PHP stores the upload before the app runs. The boundary refuses a declared `Content-Length` above the route limit, and `post_max_size` and the web server's limit bound the rest, the Laravel exception that ADR 0012's obligations state.
 - Under `rules: native`, Laravel's value rules give their own verdicts, listed in the Laravel guide; a blank string never escapes a length or pattern rule.
 - `dump()` and `dd()` hide sensitive values through the provider's caster; `var_export`, `json_encode` and `(array)` do not.
 - Without a route cache the boot check runs on every request; production apps run `route:cache` and `config:cache` at deploy or container start.
-- Laravel 12 apps and Octane workers cannot use the target in 1.0.
-- ADR 0012's laravel row is refined: steps 1 and 10 run in a global middleware and steps 2 to 5 in a route middleware, for the reasons in Options.
+- Laravel 12 apps and Octane workers cannot use the target in 1.0; an Octane worker that loads a seampact provider refuses to start.
+- ADR 0012's laravel row is amended to match: steps 1 and 10 run in a global middleware and steps 2 to 5 in a route middleware, for the reasons in Options.
 
 ## Traceability
 
