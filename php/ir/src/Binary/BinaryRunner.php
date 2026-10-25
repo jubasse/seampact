@@ -99,6 +99,9 @@ final class BinaryRunner
     }
 
     /**
+     * Standard error goes to a private temporary file, read once the child exits: a pipe would block on Windows,
+     * where pipes cannot be read without blocking, and the deadline would not hold.
+     *
      * @param list<string> $command
      * @param array<string, string> $environment
      * @return array{array{code: int, signal: ?int}, string}
@@ -106,29 +109,46 @@ final class BinaryRunner
     private static function run(array $command, string $directory, array $environment, float $timeoutSeconds, bool $windows): array
     {
         $nullDevice = $windows ? 'NUL' : '/dev/null';
-        $descriptors = [0 => ['file', $nullDevice, 'r'], 1 => ['file', $nullDevice, 'w'], 2 => ['pipe', 'w']];
-        $process = proc_open($command, $descriptors, $pipes, $directory, $environment, ['bypass_shell' => true]);
+        $errorFile = self::newErrorFile();
 
-        if (!is_resource($process)) {
-            throw self::failed('did not start', '');
+        try {
+            $descriptors = [0 => ['file', $nullDevice, 'r'], 1 => ['file', $nullDevice, 'w'], 2 => ['file', $errorFile, 'w']];
+            $process = proc_open($command, $descriptors, $pipes, $directory, $environment, ['bypass_shell' => true]);
+
+            if (!is_resource($process)) {
+                throw self::failed('did not start', '');
+            }
+
+            $status = self::waitForExit($process, $timeoutSeconds);
+
+            return [
+                ['code' => $status['exitcode'], 'signal' => $status['signaled'] ? $status['termsig'] : null],
+                self::diagnosticsOf($errorFile),
+            ];
+        } finally {
+            unlink($errorFile);
         }
+    }
 
-        stream_set_blocking($pipes[2], false);
+    /**
+     * @param resource $process
+     * @return array{exitcode: int, signaled: bool, termsig: int}
+     */
+    private static function waitForExit($process, float $timeoutSeconds): array
+    {
         $deadline = hrtime(true) + (int) ($timeoutSeconds * 1e9);
-        $diagnostics = '';
-        $droppedBytes = 0;
 
         while (true) {
+            // Only the first status after the exit carries the exit code.
             $status = proc_get_status($process);
-            self::collect($pipes[2], $diagnostics, $droppedBytes);
-
             if (!$status['running']) {
-                break;
+                proc_close($process);
+
+                return $status;
             }
 
             if (hrtime(true) > $deadline) {
                 proc_terminate($process, self::KILL_SIGNAL);
-                fclose($pipes[2]);
                 proc_close($process);
                 throw BinaryRefusedException::of(
                     BinaryFailureCode::CompileTimeout,
@@ -139,32 +159,28 @@ final class BinaryRunner
 
             usleep(self::POLL_MICROSECONDS);
         }
-
-        self::collect($pipes[2], $diagnostics, $droppedBytes);
-        fclose($pipes[2]);
-        proc_close($process);
-
-        $shown = self::withoutControlCharacters($diagnostics);
-        if ($droppedBytes > 0) {
-            $shown .= "\n[{$droppedBytes} more bytes of diagnostics not shown]\n";
-        }
-
-        $signal = $status['signaled'] ? $status['termsig'] : null;
-
-        return [['code' => $status['exitcode'], 'signal' => $signal], $shown];
     }
 
-    /** @param resource $pipe */
-    private static function collect($pipe, string &$diagnostics, int &$droppedBytes): void
+    private static function diagnosticsOf(string $errorFile): string
     {
-        $chunk = stream_get_contents($pipe);
-        if ($chunk === false || $chunk === '') {
-            return;
+        $size = filesize($errorFile);
+        $kept = file_get_contents($errorFile, false, null, 0, self::DIAGNOSTICS_BYTES_MAX);
+        $shown = self::withoutControlCharacters($kept === false ? '' : $kept);
+        $dropped = ($size === false ? 0 : $size) - self::DIAGNOSTICS_BYTES_MAX;
+
+        return $dropped > 0 ? $shown . "\n[{$dropped} more bytes of diagnostics not shown]\n" : $shown;
+    }
+
+    private static function newErrorFile(): string
+    {
+        $file = sys_get_temp_dir() . DIRECTORY_SEPARATOR . self::OUTPUT_PREFIX . bin2hex(random_bytes(8)) . '.stderr';
+        $handle = @fopen($file, 'x');
+
+        if ($handle === false || !fclose($handle) || !chmod($file, 0600)) {
+            throw self::failed("could not be given a diagnostics file ('{$file}' cannot be created)", '');
         }
 
-        $room = self::DIAGNOSTICS_BYTES_MAX - strlen($diagnostics);
-        $diagnostics .= substr($chunk, 0, max(0, $room));
-        $droppedBytes += max(0, strlen($chunk) - max(0, $room));
+        return $file;
     }
 
     private static function withoutControlCharacters(string $text): string

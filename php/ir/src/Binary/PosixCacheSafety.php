@@ -33,11 +33,16 @@ final readonly class PosixCacheSafety implements CacheSafety
         }
 
         foreach (array_reverse($missing) as $path) {
-            if (!@mkdir($path, self::OWNER_ONLY) && $this->facts->of($path) === null) {
-                throw self::unsafe($path, "cannot be created", 'Check that your user can write its parent directory.');
+            if (!@mkdir($path, self::OWNER_ONLY)) {
+                // Another run may have created it first; the checks before each start read its modes.
+                if ($this->facts->of($path) === null) {
+                    throw self::unsafe($path, 'cannot be created', 'Check that your user can write its parent directory.');
+                }
+
+                continue;
             }
 
-            // mkdir applies the umask; chmod does not. A directory another run created first is left as it is.
+            // mkdir applies the umask; chmod does not.
             if (!chmod($path, self::OWNER_ONLY)) {
                 throw self::unsafe($path, 'cannot be made private', "Run `chmod 700 '{$path}'`.");
             }
