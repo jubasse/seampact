@@ -20,6 +20,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("io.github.jubasse:seampact-hooks")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 val compilerBinary = file(providers.gradleProperty("seampactBinary").orNull
@@ -30,6 +32,10 @@ seampact {
         path = compilerBinary
         sha256 = MessageDigest.getInstance("SHA-256").digest(compilerBinary.readBytes()).joinToString("") { "%02x".format(it) }
     }
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.bootJar {

@@ -154,7 +154,7 @@ jobs:
           for variant in configured allow-listed; do
             app="$RUNNER_TEMP/$variant"
             sh scripts/consumers/targets/spring-boot/assemble.sh "$app" "${variant/configured/}"
-            (cd "$app" && ./gradlew bootJar -PjavaVersion=${{ matrix.jdk }} -PseampactJvm="$GITHUB_WORKSPACE/jvm" \
+            (cd "$app" && ./gradlew test bootJar -PjavaVersion=${{ matrix.jdk }} -PseampactJvm="$GITHUB_WORKSPACE/jvm" \
               -PseampactBinary="$GITHUB_WORKSPACE/bin/seampact-linux-x64")
             mkdir -p jars
             cp "$app/build/libs/consumer.jar" "jars/$variant.jar"
