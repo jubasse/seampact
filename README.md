@@ -316,7 +316,7 @@ if (reply.ok) console.log(reply.body.title);
 
 ### Query
 
-Hooks over that client for React. SWR and RTK Query work the same way: see [React](docs/frontend/react.md).
+Hooks over that client for React. SWR, RTK Query and a library-free mode work the same way: see [React](docs/frontend/react.md).
 
 <details open><summary>TanStack Query (React)</summary>
 
