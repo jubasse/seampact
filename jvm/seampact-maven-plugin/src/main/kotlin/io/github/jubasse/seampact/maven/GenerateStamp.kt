@@ -1,7 +1,13 @@
 package io.github.jubasse.seampact.maven
 
+import java.io.IOException
+import java.nio.file.FileSystemLoopException
+import java.nio.file.FileVisitOption
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.HexFormat
 import kotlin.io.path.createParentDirectories
@@ -74,6 +80,7 @@ internal class GenerateStamp(private val file: Path) {
         const val SHA_256 = "SHA-256"
         const val NONE = "<none>"
         const val UNPUBLISHED_VERSION = "0.0.0"
+        const val LOOP = "<symbolic link loop>"
 
         fun treesHash(directories: List<Path>): String {
             val digest = MessageDigest.getInstance(SHA_256)
@@ -81,14 +88,35 @@ internal class GenerateStamp(private val file: Path) {
                 digest.update("${directory.toAbsolutePath().normalize()}\n".toByteArray())
                 if (!directory.isDirectory()) continue
 
-                val files = Files.walk(directory).use { paths -> paths.filter(Files::isRegularFile).map { directory.relativize(it) }.toList() }
-                for (relative in files.sortedBy { it.joinToString("/") }) {
-                    digest.update("${relative.joinToString("/")}\n".toByteArray())
-                    digest.update(Files.readAllBytes(directory.resolve(relative)))
+                val entries = TreeEntries(directory).also { Files.walkFileTree(directory, setOf(FileVisitOption.FOLLOW_LINKS), Int.MAX_VALUE, it) }
+                for ((relative, loop) in entries.found.toSortedMap()) {
+                    digest.update("$relative\n".toByteArray())
+                    if (loop) digest.update(LOOP.toByteArray()) else digest.update(Files.readAllBytes(directory.resolve(relative)))
                 }
             }
 
             return HexFormat.of().formatHex(digest.digest())
         }
+    }
+
+    // Every file under a directory, reached through symbolic links as the compiler reads a `path` source; a link back
+    // into a directory being walked is recorded by its path, once, instead of walked again.
+    private class TreeEntries(private val root: Path) : SimpleFileVisitor<Path>() {
+        val found = mutableMapOf<String, Boolean>()
+
+        override fun visitFile(file: Path, attributes: BasicFileAttributes): FileVisitResult {
+            if (attributes.isRegularFile) found[relative(file)] = false
+
+            return FileVisitResult.CONTINUE
+        }
+
+        override fun visitFileFailed(file: Path, exception: IOException): FileVisitResult {
+            if (exception !is FileSystemLoopException) throw exception
+            found[relative(file)] = true
+
+            return FileVisitResult.CONTINUE
+        }
+
+        private fun relative(file: Path): String = root.relativize(file).joinToString("/")
     }
 }
