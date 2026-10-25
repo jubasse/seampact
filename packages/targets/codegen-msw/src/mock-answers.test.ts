@@ -2,7 +2,8 @@ import { readGoldenIr } from "@seampact/codegen-core/node-server/test-support";
 import { setupServer } from "msw/node";
 import { afterAll, beforeAll, expect, test } from "vitest";
 import { type MockPlan, operationMocks } from "../runtime/mock-runtime.js";
-import { defaultExampleOf, mockPathOf } from "./mock-plan.js";
+import { mockPathOf } from "./mock-path.js";
+import { defaultExampleOf } from "./mock-plan.js";
 
 const CONFIG = { baseUrl: "http://api.test/" };
 const server = setupServer();
@@ -40,7 +41,9 @@ function taskPlan(example?: MockPlan["example"]): MockPlan {
     operation: "getTask",
     member: "getTask",
     method: "get",
+    route: "/v1/channels/{channelId}/tasks/{taskId}",
     path: mockPathOf("/v1/channels/{channelId}/tasks/{taskId}"),
+    shadowedBy: [],
     successes: [{ status: 200, shape: "payload", media: "application/json", payload: ["data"] }],
     format: "bare",
     errors: { "api.not_found": {} },
@@ -90,7 +93,7 @@ test("without an example the default handler fails naming the operation and how 
   expect(body).toMatchObject({
     name: "MissingMockReply",
     message: expect.stringContaining(
-      "'getTask' (GET /v1/channels/:channelId/tasks/:taskId) has no example",
+      "'getTask' (GET /v1/channels/{channelId}/tasks/{taskId}) has no example",
     ),
   });
 });

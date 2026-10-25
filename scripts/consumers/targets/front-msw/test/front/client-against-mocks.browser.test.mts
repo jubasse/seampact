@@ -8,9 +8,15 @@ import { describeClientAgainstMocks } from "../msw/client-against-mocks.mjs";
 const baseUrl = window.location.origin;
 const mocks = createMocks({ baseUrl });
 const worker = setupWorker(...mocks.handlers);
+const API_PATH_PREFIX = "/v1/";
+
+// The page loads its own modules from the Vite server; an api call no handler answers fails on MSW's error.
+function refuseUnhandledApiCall(request: Request, print: { error(): void }): void {
+  if (new URL(request.url).pathname.startsWith(API_PATH_PREFIX)) print.error();
+}
 
 beforeAll(async () => {
-  await worker.start({ quiet: true, onUnhandledRequest: "bypass" });
+  await worker.start({ quiet: true, onUnhandledRequest: refuseUnhandledApiCall });
 });
 afterEach(() => worker.resetHandlers());
 afterAll(() => worker.stop());

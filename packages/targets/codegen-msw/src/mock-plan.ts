@@ -8,6 +8,7 @@ import {
 } from "@seampact/codegen-core";
 import { pageBodyLocation, pageBodyTemplate } from "@seampact/codegen-core/node-server";
 import type { ContractIR, Operation, Template, WireFormat } from "@seampact/spec/ir";
+import { mockPathOf, shadowingSiblingPaths } from "./mock-path.js";
 
 // What the generated handlers tell the runtime about one operation (the runtime's `MockPlan` type checks the
 // generated value): where it answers, how each declared success and error is written on the wire, and its example.
@@ -15,7 +16,11 @@ export interface MockPlan {
   operation: string;
   member: string;
   method: string;
+  /** The contract path, as messages name it. */
+  route: string;
   path: string;
+  /** The MSW paths of the more specific same-method siblings, whose requests the handler lets through. */
+  shadowedBy: string[];
   format: string;
   successes: SuccessWriting[];
   errors: Record<string, ErrorAttachment>;
@@ -54,16 +59,10 @@ const PAYLOAD_SLOT = "payload";
 const ITEMS_SLOT = "items";
 const PARAMS_MERGE = "params";
 const NULL_ABSENT = "null";
-const PATH_PARAM = /\{([^}]+)\}/g;
 
 // The slots of an error body the code itself fills; the others (a trace id, the request's instance) are the
 // server's own and stay absent in a mock answer, as the format's `absent` renders them.
 const ERROR_CODE_SLOTS = ["code", "title", "status", "nature"] as const;
-
-/** The MSW path of a contract path: `{channelId}` becomes `:channelId`. */
-export function mockPathOf(contractPath: string): string {
-  return contractPath.replace(PATH_PARAM, (_placeholder, name: string) => `:${name}`);
-}
 
 /** The success example the default handler answers: the first the operation declares for a success status. */
 export function defaultExampleOf(operation: Operation): MockPlan["example"] {
@@ -85,10 +84,10 @@ export function mockPlanOf(
   location: IrLocation,
   refusals: Refusal[],
 ): MockPlan {
-  const example = defaultExampleOf(operation);
   const successes = planned.plan.successes.flatMap((success) =>
     successWriting(success, operation, ir, location, refusals),
   );
+  const example = pageWrappedExample(defaultExampleOf(operation), successes);
 
   if (planned.plan.notModified) successes.push({ status: NOT_MODIFIED, shape: "empty" });
 
@@ -96,12 +95,29 @@ export function mockPlanOf(
     operation: operation.id,
     member,
     method: planned.plan.method,
+    route: operation.path,
     path: mockPathOf(operation.path),
+    shadowedBy: shadowingSiblingPaths(operation, ir),
     format: operation.format,
     successes,
     errors: errorAttachments(operation, planned),
     ...(example === undefined ? {} : { example }),
   };
+}
+
+// A page example is the item array (grammar section 12); the runtime writes a page from its handler result, where
+// the items are the `items` member.
+function pageWrappedExample(
+  example: MockPlan["example"],
+  successes: readonly SuccessWriting[],
+): MockPlan["example"] {
+  if (example === undefined) return undefined;
+
+  const writing = successes.find((success) => success.status === example.status);
+
+  if (writing?.shape !== "page" || !Array.isArray(example.value)) return example;
+
+  return { ...example, value: { [ITEMS_SLOT]: example.value } };
 }
 
 function successWriting(

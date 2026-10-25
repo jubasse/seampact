@@ -13,12 +13,9 @@ import {
   refuseNotGeneratedYet,
   withoutRepeats,
 } from "@seampact/codegen-core";
-import {
-  literalSegmentRefusals,
-  mixedSegmentRefusals,
-  operationIdentifier,
-} from "@seampact/codegen-core/node-server";
+import { mixedSegmentRefusals, operationIdentifier } from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
+import { unescapableSegmentRefusals } from "./mock-path.js";
 import { errorWritingsOf, mockPlanOf, refuseMissingTypes } from "./mock-plan.js";
 import {
   HANDLERS_MEMBER,
@@ -65,7 +62,7 @@ export function generateMocks(
   if (!input.artefacts.has(HANDLERS_ARTEFACT)) return { status: "generated", files: [] };
 
   const { ir, links } = input;
-  const refusals: Refusal[] = [...mixedSegmentRefusals(ir), ...literalSegmentRefusals(ir)];
+  const refusals: Refusal[] = [...mixedSegmentRefusals(ir), ...unescapableSegmentRefusals(ir)];
 
   refuseApiForms(ir, refusals);
 
@@ -154,6 +151,6 @@ function mockedOperations(
       return [];
     }
 
-    return [{ member, method: operation.method, path: operation.path, plan, types }];
+    return [{ member, plan, types }];
   });
 }

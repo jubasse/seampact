@@ -31,7 +31,7 @@ const mocks = createMocks({ baseUrl: "http://localhost" });
 const server = setupServer(...mocks.handlers);
 ```
 
-Give `createMocks` the same `baseUrl` as your client. In the browser, use `setupWorker` from `msw/browser` and copy the worker script once with `npx msw init public`.
+Give `createMocks` the same `baseUrl` as your client. Two apis on one origin whose paths overlap: list the handlers of the api with the more specific paths first. In the browser, use `setupWorker` from `msw/browser` and copy the worker script once with `npx msw init public`.
 
 ## Answer in a test
 
@@ -54,3 +54,4 @@ The status, body, error code and params are typed from the contract. A reply is 
 - The handlers do not check the request. The option `validateRequests` is refused until they do.
 - The default handler answers success examples only, never an error or a request example.
 - A form the fetch client cannot read yet is refused the same way here.
+- Pages whose numbers or totals the server computes, such as the Laravel and Spring packs' pages, are refused by name.

@@ -17,11 +17,9 @@ export const MODULE_EXTENSION = ".ts";
 /** The member of `Mocks` that lists every default handler, so no operation may take its name. */
 export const HANDLERS_MEMBER = "handlers";
 
-// One operation as the mocks module writes it: its member, its contract route, its plan and its types.
+// One operation as the mocks module writes it: its member, its plan and its types.
 export interface MockedOperation {
   member: string;
-  method: string;
-  path: string;
   plan: MockPlan;
   types: OperationTypeExports;
 }
@@ -76,7 +74,10 @@ function mocksInterfaceSource(
   typeOf: (exportRef: ExportRef) => string,
 ): string {
   const members = operations.map((operation) => {
-    const route = `${operation.method.toUpperCase()} ${operation.path}`.replaceAll("*/", "*\\/");
+    const route = `${operation.plan.method.toUpperCase()} ${operation.plan.route}`.replaceAll(
+      "*/",
+      "*\\/",
+    );
 
     return `/** \`${route}\` */\nreadonly ${propertyKey(operation.member)}: ${operationMocksType(operation, typeOf)};`;
   });
@@ -93,7 +94,7 @@ function createMocksSource(
       `${propertyKey(operation.member)}: operationMocks<${typeOf(operation.types.output)}, ${typeOf(operation.types.errors)}>(config, plans.${operation.member}, errorWritings),`,
   );
   const byRoute = [...operations].sort((left, right) =>
-    compareRouteSpecificity(left.path, right.path),
+    compareRouteSpecificity(left.plan.route, right.plan.route),
   );
   const handlers = byRoute.map((operation) => `mocks.${operation.member}.handler,`);
 

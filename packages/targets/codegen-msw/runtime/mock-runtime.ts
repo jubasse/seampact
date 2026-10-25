@@ -1,7 +1,7 @@
 // The runtime the generated MSW handlers call, copied beside them as is: it writes a typed answer the way the api's
 // server would put it on the wire (the success envelope, the page facts, the error body in the api's error format), so
 // the generated client reads a mock answer as it reads the server's.
-import { type HttpHandler, HttpResponse, http } from "msw";
+import { type HttpHandler, HttpResponse, http, matchRequestUrl } from "msw";
 
 /** Where the mocked api lives: the `baseUrl` the app gives its client. */
 export interface MockConfig {
@@ -101,7 +101,11 @@ export interface MockPlan {
   readonly operation: string;
   readonly member: string;
   readonly method: MockMethod;
+  /** The contract path, as messages name it. */
+  readonly route: string;
   readonly path: string;
+  /** The MSW paths of the more specific same-method siblings, whose requests the handler lets through. */
+  readonly shadowedBy: readonly string[];
   readonly format: string;
   readonly successes: readonly SuccessWriting[];
   readonly errors: Readonly<Record<string, ErrorAttachment>>;
@@ -112,7 +116,7 @@ export interface MockPlan {
 export class MissingMockReply extends Error {
   constructor(plan: MockPlan) {
     super(
-      `seampact mocks: the operation '${plan.operation}' (${plan.method.toUpperCase()} ${plan.path}) has no example in the contract, so its mock has nothing to answer. Give it a reply in the test: server.use(mocks.${plan.member}.reply(status, body)), .error(code, params) or .resolve(resolver).`,
+      `seampact mocks: the operation '${plan.operation}' (${plan.method.toUpperCase()} ${plan.route}) has no example in the contract, so its mock has nothing to answer. Give it a reply in the test: server.use(mocks.${plan.member}.reply(status, body)), .error(code, params) or .resolve(resolver).`,
     );
     this.name = "MissingMockReply";
   }
@@ -130,9 +134,20 @@ export function operationMocks<Output, Errors>(
   plan: MockPlan,
   errorWritings: ErrorWritings,
 ): OperationMocks<Output, Errors> {
-  const url = `${config.baseUrl.replace(/\/+$/, "")}${plan.path}`;
+  const urlOf = (path: string) => `${config.baseUrl.replace(/\/+$/, "")}${path}`;
+  const siblingUrls = plan.shadowedBy.map(urlOf);
+
+  // A request a more specific sibling matches passes through (`undefined`) to the sibling's handler, so an override
+  // that `use` puts first never answers for it.
   const handle = (answer: (request: MockRequest) => Response | Promise<Response>) =>
-    http[plan.method](url, ({ request, params }) => answer({ request, params }));
+    http[plan.method](urlOf(plan.path), ({ request, params }) => {
+      const requestUrl = new URL(request.url);
+
+      if (siblingUrls.some((siblingUrl) => matchRequestUrl(requestUrl, siblingUrl).matches))
+        return undefined;
+
+      return answer({ request, params });
+    });
 
   return {
     handler: handle(({ request }) => {

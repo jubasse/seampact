@@ -175,7 +175,9 @@ const plans = {
     operation: "archiveTask",
     member: "archiveTask",
     method: "post",
+    route: "/v1/channels/{channelId}/tasks/{taskId}/archive",
     path: "/v1/channels/:channelId/tasks/:taskId/archive",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },
@@ -197,7 +199,9 @@ const plans = {
     operation: "assignTask",
     member: "assignTask",
     method: "post",
+    route: "/v1/channels/{channelId}/tasks/{taskId}/assign",
     path: "/v1/channels/:channelId/tasks/:taskId/assign",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },
@@ -219,7 +223,9 @@ const plans = {
     operation: "createTask",
     member: "createTask",
     method: "post",
+    route: "/v1/channels/{channelId}/tasks",
     path: "/v1/channels/:channelId/tasks",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 201, shape: "payload", media: "application/json", payload: [] },
@@ -244,7 +250,9 @@ const plans = {
     operation: "deleteDraft",
     member: "deleteDraft",
     method: "delete",
+    route: "/v1/me/drafts/{draftId}",
     path: "/v1/me/drafts/:draftId",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },
@@ -263,7 +271,9 @@ const plans = {
     operation: "getChannel",
     member: "getChannel",
     method: "get",
+    route: "/v1/channels/{channelId}",
     path: "/v1/channels/:channelId",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },
@@ -279,7 +289,9 @@ const plans = {
     operation: "getDraft",
     member: "getDraft",
     method: "get",
+    route: "/v1/me/drafts/{draftId}",
     path: "/v1/me/drafts/:draftId",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },
@@ -295,7 +307,9 @@ const plans = {
     operation: "getPreferences",
     member: "getPreferences",
     method: "get",
+    route: "/v1/me/preferences",
     path: "/v1/me/preferences",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },
@@ -312,7 +326,9 @@ const plans = {
     operation: "getTask",
     member: "getTask",
     method: "get",
+    route: "/v1/channels/{channelId}/tasks/{taskId}",
     path: "/v1/channels/:channelId/tasks/:taskId",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },
@@ -328,7 +344,9 @@ const plans = {
     operation: "getTasksBatch",
     member: "getTasksBatch",
     method: "post",
+    route: "/v1/channels/{channelId}/tasks/batch",
     path: "/v1/channels/:channelId/tasks/batch",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },
@@ -346,7 +364,9 @@ const plans = {
     operation: "health",
     member: "health",
     method: "get",
+    route: "/v1/health",
     path: "/v1/health",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },
@@ -357,7 +377,9 @@ const plans = {
     operation: "listChannels",
     member: "listChannels",
     method: "get",
+    route: "/v1/channels",
     path: "/v1/channels",
+    shadowedBy: [],
     format: "bare",
     successes: [
       {
@@ -383,7 +405,9 @@ const plans = {
     operation: "listTasks",
     member: "listTasks",
     method: "get",
+    route: "/v1/channels/{channelId}/tasks",
     path: "/v1/channels/:channelId/tasks",
+    shadowedBy: [],
     format: "bare",
     successes: [
       {
@@ -410,7 +434,9 @@ const plans = {
     operation: "payments",
     member: "payments",
     method: "post",
+    route: "/v1/hooks/payments",
     path: "/v1/hooks/payments",
+    shadowedBy: [],
     format: "bare",
     successes: [{ status: 204, shape: "empty" }],
     errors: {
@@ -425,7 +451,9 @@ const plans = {
     operation: "purgeTask",
     member: "purgeTask",
     method: "post",
+    route: "/v1/channels/{channelId}/tasks/{taskId}/purge",
     path: "/v1/channels/:channelId/tasks/:taskId/purge",
+    shadowedBy: [],
     format: "bare",
     successes: [{ status: 204, shape: "empty" }],
     errors: {
@@ -445,7 +473,9 @@ const plans = {
     operation: "searchTasks",
     member: "searchTasks",
     method: "post",
+    route: "/v1/channels/{channelId}/tasks/search",
     path: "/v1/channels/:channelId/tasks/search",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },
@@ -481,7 +511,9 @@ const plans = {
     operation: "updatePreferences",
     member: "updatePreferences",
     method: "patch",
+    route: "/v1/me/preferences",
     path: "/v1/me/preferences",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },
@@ -502,7 +534,9 @@ const plans = {
     operation: "updateTask",
     member: "updateTask",
     method: "patch",
+    route: "/v1/channels/{channelId}/tasks/{taskId}",
     path: "/v1/channels/:channelId/tasks/:taskId",
+    shadowedBy: [],
     format: "bare",
     successes: [
       { status: 200, shape: "payload", media: "application/json", payload: [] },

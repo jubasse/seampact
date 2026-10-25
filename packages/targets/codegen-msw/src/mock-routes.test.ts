@@ -3,7 +3,8 @@ import { readGoldenIr } from "@seampact/codegen-core/node-server/test-support";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
 import { type MockPlan, operationMocks } from "../runtime/mock-runtime.js";
-import { type MockPlan as GeneratedMockPlan, mockPathOf, mockPlanOf } from "./mock-plan.js";
+import { mockPathOf } from "./mock-path.js";
+import { type MockPlan as GeneratedMockPlan, mockPlanOf } from "./mock-plan.js";
 
 const CONFIG = { baseUrl: "http://api.test" };
 const server = setupServer();
@@ -115,5 +116,37 @@ test("a paged operation's example, its item array, is answered inside the page b
 
   const answer = await fetch("http://api.test/v1/channels/c1/tasks");
 
-  expect([answer.status, await answer.json()]).toMatchObject([200, { items }]);
+  // The reference contract writes a page bare: the body is the item array.
+  expect([answer.status, await answer.json()]).toEqual([200, items]);
+});
+
+test("a retry header in seconds rounds the milliseconds param up, as the server runtime writes it", async () => {
+  const rateLimited = {
+    status: 429,
+    media: "application/problem+json",
+    body: { code: "api.rate_limited" },
+    mergeParams: true,
+    noStore: true,
+  };
+  const plan = payloadPlan("getTask", "/v1/tasks/{taskId}", {
+    errors: {
+      "api.rate_limited": {
+        retryHeader: { name: "Retry-After", param: "retryAfterMs", unit: "s" },
+      },
+    },
+  });
+  const mocks = operationMocks<
+    TaskOutput,
+    { status: 429; code: "api.rate_limited"; params: { retryAfterMs: number } }
+  >(CONFIG, plan, { bare: { "api.rate_limited": rateLimited } });
+
+  server.use(mocks.error("api.rate_limited", { retryAfterMs: 1500 }));
+
+  const answer = await fetch("http://api.test/v1/tasks/t1");
+
+  expect([
+    answer.status,
+    answer.headers.get("retry-after"),
+    answer.headers.get("cache-control"),
+  ]).toEqual([429, "2", "no-store"]);
 });
