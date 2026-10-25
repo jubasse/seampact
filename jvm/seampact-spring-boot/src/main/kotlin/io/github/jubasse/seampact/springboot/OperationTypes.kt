@@ -8,6 +8,7 @@ import io.github.jubasse.seampact.ir.model.Operation
 import io.github.jubasse.seampact.ir.model.Param
 import io.github.jubasse.seampact.ir.model.Response
 import io.github.jubasse.seampact.ir.model.ResponseShape
+import io.github.jubasse.seampact.ir.model.SignedIdentity
 import javax.lang.model.element.Modifier
 
 // Header parameters that carry a credential or its CSRF companion: printed redacted, like the credentials record, as
@@ -40,7 +41,9 @@ internal class OperationTypes(
         addParams(names.headers, "headers", "header", operation.params.header)
 
         operation.input?.let { input ->
-            components += RecordComponent("body", mapper.memberType(input.schema, Presence.REQUIRED), redacted = input.schema.isSensitive())
+            // A signed route's body is the signed request's content: printed redacted, like its raw bytes (ADR 0022 "Redaction").
+            val signed = identityOf(operation)?.let { layout.ir.identities[it] } is SignedIdentity
+            components += RecordComponent("body", mapper.memberType(input.schema, Presence.REQUIRED), redacted = signed || input.schema.isSensitive())
         }
 
         if (isSpringPageList(layout.ir, operation)) {

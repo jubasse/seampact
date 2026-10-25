@@ -10,6 +10,6 @@ public record PaymentsInput(@Valid @NotNull PaymentsHeaders headers,
         @Valid @NotNull PaymentEvent body) {
     @Override
     public String toString() {
-        return "PaymentsInput[headers=" + this.headers() + ", body=" + this.body() + "]";
+        return "PaymentsInput[headers=" + this.headers() + ", body=" + TasksRedaction.REDACTED + "]";
     }
 }

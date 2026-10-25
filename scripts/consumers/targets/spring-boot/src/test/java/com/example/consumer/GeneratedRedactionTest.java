@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.example.tasks.api.GetTaskHeaders;
 import com.example.tasks.api.PaymentsHeaders;
+import com.example.tasks.api.PaymentsInput;
 import com.example.tasks.api.StripeAuthenticateRequest;
 import com.example.tasks.api.StripeCredentials;
 import com.example.tasks.api.UserAuthenticateRequest;
 import com.example.tasks.api.UserCredentials;
+import com.example.tasks.api.schemas.PaymentEvent;
 import com.example.tasksservice.api.ServiceCredentials;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
@@ -19,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import tools.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -95,5 +98,12 @@ class GeneratedRedactionTest {
     void credentialAndSignatureHeadersOfAnOperationInputAreHidden() {
         assertRedacted(new GetTaskHeaders(Optional.of("Bearer " + BEARER_SECRET)), BEARER_SECRET);
         assertRedacted(new PaymentsHeaders("t=1,v1=" + SIGNATURE_SECRET), SIGNATURE_SECRET);
+    }
+
+    @Test
+    void signedRouteInputHidesTheParsedBody() {
+        PaymentEvent event = new PaymentEvent(SIGNED_BODY_SECRET, "charge.succeeded", JsonNodeFactory.instance.objectNode().put("note", SIGNED_BODY_SECRET));
+
+        assertRedacted(new PaymentsInput(new PaymentsHeaders("t=1,v1=" + SIGNATURE_SECRET), event), SIGNED_BODY_SECRET, SIGNATURE_SECRET);
     }
 }

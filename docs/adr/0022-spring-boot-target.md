@@ -197,7 +197,7 @@ The boundary runs no Bean Validation pass: a second pass would only repeat pass 
 - `AuthenticateRequest.credentials()`;
 - `csrfToken()`;
 - the members of each identity's generated credentials record;
-- a signed request's body and signature header;
+- a signed request's body, raw and parsed (the `body` of a signed route's input record), and its signature header;
 - a `sensitive` member.
 
 Each is printed as the generated `[redacted]` constant, since `seampact-hooks`'s `Redaction` is package-private (ADR 0012 obligations, CHK-168). The boundary's own logs carry the operation id, the rule and the pointer, never an input value.
