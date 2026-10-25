@@ -4,3 +4,5 @@ jobs:
     steps:
       # pnpm publish is not run here
       - run: pnpm gate
+      # a local Maven cache for the consumer builds, no registry
+      - run: ./gradlew :seampact-ir:publishToMavenLocal

@@ -273,7 +273,8 @@ const PUBLISH: [RegExp, string][] = [
   [/\b(?:npm|pnpm|yarn)\s+(?:[\w-]+\s+)*publish\b/, "npm publish"],
   [/\bchangeset\s+publish\b/, "changeset publish"],
   [/^\s*publish\s*:/, "a changesets/action `publish:` input"],
-  [/\bgradlew?\s+.*\bpublish\w*/, "Gradle publish"],
+  // `publishToMavenLocal` only writes the local `~/.m2` cache the consumer builds read; it reaches no registry.
+  [/\bgradlew?\s+.*\bpublish(?!ToMavenLocal\b)\w*/, "Gradle publish"],
   [/\bmvnw?\s+.*\bdeploy\b/, "Maven deploy"],
   [/\bcomposer\s+.*\b(?:publish|deploy)\b/, "Composer publish"],
 ];
