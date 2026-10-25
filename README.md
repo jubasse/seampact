@@ -403,7 +403,7 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 
 ## Supported stacks
 
-### Backend
+### Servers
 
 | Server | Versions | Validators |
 |---|---|---|
@@ -416,7 +416,7 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 
 Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `seampact-maven-plugin`. PHP (Laravel, Symfony): planned.
 
-### Frontend
+### Clients
 
 | Framework | Versions | Query tools |
 |---|---|---|
