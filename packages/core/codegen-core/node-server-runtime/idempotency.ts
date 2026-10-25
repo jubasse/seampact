@@ -12,12 +12,11 @@ import {
   unexpectedError,
 } from "./contract-error.js";
 import { idempotencyDigest, idempotencyFingerprint } from "./idempotency-fingerprint.js";
-import { CACHE_CONTROL_HEADER, groupedHeaders, hasNoStoreDirective } from "./reply-headers.js";
+import { isKeptForReplay } from "./replay-retention.js";
 import { runtimeLog } from "./runtime-logger.js";
 
 const IN_PROGRESS_ROLE = "idempotencyInProgress";
 const KEY_REUSED_ROLE = "idempotencyKeyReused";
-const SERVER_ERROR_FLOOR = 500;
 const CLIENT_ERROR_FLOOR = 400;
 const REPLAYED = "true";
 
@@ -111,15 +110,6 @@ export async function settleIdempotency(
       error,
     );
   }
-}
-
-// A reply its sender marked `no-store` must not be kept, so it is dropped for a replay as a server error is.
-function isKeptForReplay(reply: ContractReply): boolean {
-  if (reply.status >= SERVER_ERROR_FLOOR) return false;
-
-  const cacheControl = groupedHeaders(reply.headers).get(CACHE_CONTROL_HEADER) ?? [];
-
-  return !hasNoStoreDirective(cacheControl.join(","));
 }
 
 function roleCode(state: CheckState, role: string): string {

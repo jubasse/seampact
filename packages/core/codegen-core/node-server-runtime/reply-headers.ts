@@ -1,7 +1,9 @@
 // The header names the boundary's replies own, and the rule that sets them on a reply someone else built: the body
 // headers are replaced, the reply's own names win, and `Vary` is merged. Shared by every server profile; copied into
 // the generated tree as is.
-import type { ContractReply } from "./contract-error.js";
+
+/** A reply's header pairs, in their order and as set. */
+export type ReplyHeaderPairs = readonly (readonly [name: string, value: string])[];
 
 export const ETAG_HEADER = "etag";
 /** The prefix of a weak entity tag, which a compressing middleware writes for the boundary's strong one. */
@@ -21,7 +23,7 @@ export const BODY_HEADERS: readonly string[] = [
 ];
 
 /** The reply's headers grouped by lowercase name, in their order. */
-export function groupedHeaders(headers: ContractReply["headers"]): Map<string, string[]> {
+export function groupedHeaders(headers: ReplyHeaderPairs): Map<string, string[]> {
   const grouped = new Map<string, string[]>();
 
   for (const [name, value] of headers) {
