@@ -18,6 +18,7 @@ export const target: Target = nodeServerTarget({
     frameworkModule: "adonis",
     frameworkSource: adonisModuleSource,
     ownValidators: vineOwnValidators,
+    ownValidatorsTakeRules: true,
   },
   validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
   frameworkDocsOffFix: "this framework writes no document of its own; remove the key",

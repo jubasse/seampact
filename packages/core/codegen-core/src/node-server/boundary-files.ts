@@ -16,6 +16,7 @@ import type {
   SourceFormat,
   Target,
 } from "../target.js";
+import { DEFAULT_VALIDATORS_OPTIONS, type ValidatorsOptions } from "../validators/rules-option.js";
 import { type NativeDocsContract, readNativeDocsDocument } from "./native-docs-reader.js";
 import { nativeDocsRuntimeFile } from "./native-docs-runtime-file.js";
 import { type NodeServerOptions, parseNodeServerOptions } from "./options.js";
@@ -91,7 +92,13 @@ export interface NodeServerPlacement {
    * The validators in the target's own library, written under `validators/` when the entry gives no `validators`
    * link; absent when the target needs the link. Pushes its refusals and returns nothing when it refuses.
    */
-  ownValidators?(ir: ContractIR, refusals: Refusal[]): OwnValidators | undefined;
+  ownValidators?(
+    ir: ContractIR,
+    refusals: Refusal[],
+    options: ValidatorsOptions,
+  ): OwnValidators | undefined;
+  /** True for a placement whose own validators take the `rules` option of the validator targets. */
+  readonly ownValidatorsTakeRules?: boolean;
 }
 
 /** A Node server target package: its name and version, its Prettier and its placement. */
@@ -171,6 +178,7 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
     parseOptions: (raw) =>
       parseNodeServerOptions(raw, {
         compression: targetPackage.placement.compressesReplies === true,
+        rules: targetPackage.placement.ownValidatorsTakeRules === true,
       }),
     generate: (input) => nodeServerBoundaryFiles(input, targetPackage.placement),
   });
@@ -208,15 +216,23 @@ export function nodeServerBoundaryFiles(
 
   const own =
     givenLink === undefined && ownValidatorsOn
-      ? writeOwnValidators(input.ir, placement)
+      ? writeOwnValidators(
+          input.ir,
+          placement,
+          input.options.rules === undefined
+            ? DEFAULT_VALIDATORS_OPTIONS
+            : { rules: input.options.rules },
+        )
       : undefined;
 
   if (own?.status === "refused") return own;
 
   const ownFiles = own === undefined ? [] : own.files;
 
-  const ignoredArtefactWarnings =
-    givenLink !== undefined && ownValidatorsOn ? [ignoredValidatorsArtefact()] : [];
+  const ignoredArtefactWarnings = [
+    ...(givenLink !== undefined && ownValidatorsOn ? [ignoredValidatorsArtefact()] : []),
+    ...(own === undefined && input.options.rules !== undefined ? [ignoredRulesOption()] : []),
+  ];
 
   if (!boundaryOn) {
     return { status: "generated", files: ownFiles, warnings: ignoredArtefactWarnings };
@@ -249,6 +265,15 @@ function ignoredValidatorsArtefact(): GenerateWarning {
   };
 }
 
+function ignoredRulesOption(): GenerateWarning {
+  return {
+    code: "options.rules.ignored",
+    message:
+      "The option 'rules' is set and the target writes no validators of its own: the option shapes nothing.",
+    fix: `Drop 'rules' from the target's \`options\`, or drop the validators link and keep the '${OWN_VALIDATORS_ARTEFACT}' artefact.`,
+  };
+}
+
 function validatorsArtefactNeeded(): Refusal {
   return {
     code: "artefact.validators.needed",
@@ -262,9 +287,13 @@ type OwnValidatorsOutcome =
   | { status: "written"; files: GeneratedFile[]; link: Link<"validators"> }
   | { status: "refused"; refusals: Refusal[] };
 
-function writeOwnValidators(ir: ContractIR, placement: NodeServerPlacement): OwnValidatorsOutcome {
+function writeOwnValidators(
+  ir: ContractIR,
+  placement: NodeServerPlacement,
+  options: ValidatorsOptions,
+): OwnValidatorsOutcome {
   const refusals: Refusal[] = [];
-  const own = placement.ownValidators?.(ir, refusals);
+  const own = placement.ownValidators?.(ir, refusals, options);
 
   if (own === undefined || refusals.length > 0) {
     return { status: "refused", refusals: withoutRepeats(refusals) };

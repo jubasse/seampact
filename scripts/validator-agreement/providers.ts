@@ -30,6 +30,9 @@ const PROVIDER_LIBRARIES: Readonly<Record<string, readonly string[]>> = {
   vinejs: ["@vinejs/vine"],
 };
 
+// Ajv validates the JSON Schema itself and has no native mode, so its target takes no `rules` option.
+const PROVIDERS_WITHOUT_RULES: ReadonlySet<string> = new Set(["ajv"]);
+
 const TYPES_PROVIDER_ID = "ts";
 const OWN_VALIDATORS_DIRECTORY = "validators";
 const TYPES_LOCATION = { kind: "relative", path: "types" };
@@ -258,7 +261,7 @@ async function providerTarget(providerId: string): Promise<ProviderTarget> {
     libraries,
     target: await packageTarget(packageName),
     validatorsDirectory: own ? OWN_VALIDATORS_DIRECTORY : "",
-    options: own ? {} : { rules: "seampact-consistent" },
+    options: PROVIDERS_WITHOUT_RULES.has(providerId) ? {} : { rules: "seampact-consistent" },
     linksFor: (ir) => (typesTarget === undefined ? {} : typesLinkOf(typesTarget, ir)),
   };
 }

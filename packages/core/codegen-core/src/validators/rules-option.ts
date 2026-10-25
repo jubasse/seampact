@@ -12,9 +12,9 @@ export interface ValidatorsOptions {
   readonly rules: RulesMode;
 }
 
-const RULES_KEY = "rules";
+export const RULES_KEY = "rules";
 
-const DEFAULT_VALIDATORS_OPTIONS: ValidatorsOptions = { rules: "native" };
+export const DEFAULT_VALIDATORS_OPTIONS: ValidatorsOptions = { rules: "native" };
 
 // Accepts `{}` and `rules: native | seampact-consistent`; any other key or value is refused by name.
 export function parseValidatorsOptions(raw: unknown): ParseOptionsOutcome<ValidatorsOptions> {
