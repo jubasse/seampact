@@ -9,7 +9,7 @@ spring-boot = "4.1.1"
 snakeyaml-engine = "3.2"
 # The JSON Schema 2020-12 validator of the app config and the IR schemas, so no schema is ported by hand.
 json-schema-validator = "3.0.8"
-# The Maven plugin's build (lead call 6) and the Maven API it compiles against: the 3.9 floor, which Maven 4 runs.
+# The Maven plugin's build (ADR 0010) and the Maven API it compiles against: the 3.9 floor, which Maven 4 runs.
 maven-plugin-development = "1.0.3"
 apache-maven = "3.9.16"
 maven-plugin-annotations = "3.15.2"

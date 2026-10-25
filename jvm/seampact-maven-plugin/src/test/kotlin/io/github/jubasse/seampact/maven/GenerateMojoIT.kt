@@ -1,5 +1,6 @@
 package io.github.jubasse.seampact.maven
 
+import io.github.jubasse.seampact.ir.config.LocalSourcePolicy
 import io.github.jubasse.seampact.runner.fixtures.ReferenceApp
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -34,7 +35,7 @@ class GenerateMojoIT {
         assertTrue("nothing to generate" in second.output, "the second run skips on its stamp")
         assertFalse(app.stubMarker.exists(), "a skipped run does not start the binary")
 
-        val refused = app.run("-o", "verify", extraEnvironment = mapOf(MavenApp.ALLOW_LOCAL_VARIABLE to "false"))
+        val refused = app.run("-o", "verify", extraEnvironment = mapOf(LocalSourcePolicy.ALLOW_LOCAL_VARIABLE to "false"))
         assertFalse(refused.succeeded, "SEAMPACT_ALLOW_LOCAL=false is part of the stamp, so the run refuses the path source")
         assertTrue("config.source.local" in refused.output, "the refusal names the local source")
     }

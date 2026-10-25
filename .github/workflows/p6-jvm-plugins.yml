@@ -2,9 +2,8 @@ name: JVM plugins
 
 # The Gradle and Maven plugins (ADR 0010, ADR 0011). The Gradle plugin's TestKit builds generate, compile and cache a
 # Spring Boot app from the reference contract, on Java 21 with the Gradle 8.14 floor and on Java 21 and 25 with the
-# repository's Gradle. The Maven plugin's tests build the same app with a real Maven, 3.9 and 4, on Java 21 and 25;
-# `identical-files` generates one app with both plugins and compares the files with each other and with the
-# spring-boot golden tree. The compiler binary is a stub, so the jobs run with Node removed from the runner. On a pull
+# repository's Gradle. The Maven plugin's tests build the same app with a real Maven, 3.9 and 4, on Java 21 and 25,
+# and generate one app with both plugins to compare the files with each other and with the spring-boot golden tree. The compiler binary is a stub, so the jobs run with Node removed from the runner. On a pull
 # request they run only when the change touches a watched path; `jvm-plugins` is the one check to require.
 
 on:
@@ -80,7 +79,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Remove Node from the runner, so the JVM path is proven to need none
+      # Shared with the maven-plugin job through the YAML anchor.
+      - &remove-node
+        name: Remove Node from the runner, so the JVM path is proven to need none
         shell: bash
         run: |
           set -euo pipefail
@@ -127,17 +128,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Remove Node from the runner, so the JVM path is proven to need none
-        shell: bash
-        run: |
-          set -euo pipefail
-          for node in $(which -a node nodejs npm npx corepack 2>/dev/null | sort -u); do
-            sudo rm -f "$node"
-          done
-          if command -v node; then
-            echo "Node is still on the PATH."
-            exit 1
-          fi
+      - *remove-node
       # Both JDKs are installed: Gradle runs on the last one, and the tests (and their Maven builds) run on the matrix
       # one, which the toolchain detection finds without a download.
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -154,40 +145,10 @@ jobs:
           TEST_MAVEN: ${{ matrix.test-maven }}
         run: ./gradlew :seampact-maven-plugin:check -PtestJdk="$TEST_JDK" -PtestMaven="$TEST_MAVEN"
 
-  identical-files:
-    name: identical files (Gradle and Maven plugins)
-    needs: changes
-    if: needs.changes.outputs.jvm-plugins == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Remove Node from the runner, so the JVM path is proven to need none
-        shell: bash
-        run: |
-          set -euo pipefail
-          for node in $(which -a node nodejs npm npx corepack 2>/dev/null | sort -u); do
-            sudo rm -f "$node"
-          done
-          if command -v node; then
-            echo "Node is still on the PATH."
-            exit 1
-          fi
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
-        with:
-          distribution: temurin
-          java-version: 21
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-      - name: Generate the reference app with both plugins and compare the files with the spring-boot golden
-        working-directory: jvm
-        run: ./gradlew :seampact-maven-plugin:test --tests '*IdenticalFilesTest'
-
   # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
   jvm-plugins:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, gradle-plugin, maven-plugin, identical-files]
+    needs: [changes, gradle-plugin, maven-plugin]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

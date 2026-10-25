@@ -1,13 +1,12 @@
 package io.github.jubasse.seampact.maven
 
+import io.github.jubasse.seampact.ir.config.LocalSourcePolicy
 import io.github.jubasse.seampact.runner.fixtures.ReferenceApp
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.copyTo
-import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
-import kotlin.io.path.writeText
 
 /**
  * A throwaway Spring Boot app built by a real Maven, through the consumer's `mvnw` on the Maven release under test:
@@ -90,9 +89,7 @@ internal class MavenApp(val directory: Path) {
         "<binary><path>stub-seampact</path><sha256>${ReferenceApp.sha256Of(stubBinary)}</sha256></binary>"
 
     fun write(relativePath: String, text: String) {
-        val file = directory.resolve(relativePath)
-        file.parent.createDirectories()
-        file.writeText(text.trimIndent() + "\n")
+        ReferenceApp.writeFile(directory, relativePath, text)
     }
 
     /** Runs `mvnw` with [arguments]; the build's exit code and its output. */
@@ -105,7 +102,7 @@ internal class MavenApp(val directory: Path) {
             .redirectOutput(log.toFile())
             .apply {
                 val variables = environment()
-                variables.remove(ALLOW_LOCAL_VARIABLE)
+                variables.remove(LocalSourcePolicy.ALLOW_LOCAL_VARIABLE)
                 variables["JAVA_HOME"] = System.getProperty("java.home")
                 variables["MAVEN_USER_HOME"] = workDirectory.resolve("maven-user-home").toString()
                 variables["MAVEN_OPTS"] = "-Duser.home=${workDirectory.resolve("user-home")}"
@@ -124,7 +121,7 @@ internal class MavenApp(val directory: Path) {
 
     private var runCount = 0
 
-    // The consumer's own wrapper script, on the Maven release under test.
+    // The consumer's own wrapper script, on the Maven release under test, checked against its pinned SHA-256.
     private fun installWrapper() {
         val consumerRoot = ReferenceApp.repositoryRoot.resolve("scripts/consumers/targets/spring-boot/maven")
         consumerRoot.resolve("mvnw").copyTo(directory.resolve("mvnw"))
@@ -135,6 +132,7 @@ internal class MavenApp(val directory: Path) {
             """
             distributionType=only-script
             distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/$version/apache-maven-$version-bin.zip
+            distributionSha256Sum=${System.getProperty("seampact.testMavenSha256")}
             """,
         )
     }
@@ -165,7 +163,6 @@ internal class MavenApp(val directory: Path) {
     }
 
     companion object {
-        const val ALLOW_LOCAL_VARIABLE = "SEAMPACT_ALLOW_LOCAL"
         private const val RUN_TIMEOUT_MINUTES = 15L
         val PLUGIN_VERSION: String = System.getProperty("seampact.pluginVersion")
 

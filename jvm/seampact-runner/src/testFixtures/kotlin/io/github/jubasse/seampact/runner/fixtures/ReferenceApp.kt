@@ -5,6 +5,7 @@ import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.HexFormat
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 
 /**
@@ -53,6 +54,13 @@ public object ReferenceApp {
             """.trimIndent() + "\n",
         )
         binary.toFile().setExecutable(true)
+    }
+
+    /** Writes [text], its indent trimmed, to [relativePath] under [directory], creating the directories it needs. */
+    public fun writeFile(directory: Path, relativePath: String, text: String) {
+        val file = directory.resolve(relativePath)
+        file.parent.createDirectories()
+        file.writeText(text.trimIndent() + "\n")
     }
 
     public fun sha256Of(file: Path): String = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file)))

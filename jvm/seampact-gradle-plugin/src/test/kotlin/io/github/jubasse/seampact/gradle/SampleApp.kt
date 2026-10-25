@@ -4,8 +4,6 @@ import io.github.jubasse.seampact.runner.fixtures.ReferenceApp
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import java.nio.file.Path
-import kotlin.io.path.createDirectories
-import kotlin.io.path.writeText
 
 /**
  * A throwaway Spring Boot app built by TestKit with the plugin under test: the reference contract as a `path`
@@ -56,9 +54,7 @@ internal class SampleApp(val directory: Path) {
         """.trimIndent()
 
     fun write(relativePath: String, text: String) {
-        val file = directory.resolve(relativePath)
-        file.parent.createDirectories()
-        file.writeText(text.trimIndent() + "\n")
+        ReferenceApp.writeFile(directory, relativePath, text)
     }
 
     /** The `binary { }` block that pins the stub binary by its hash. */

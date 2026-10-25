@@ -7,8 +7,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.nio.file.Path
-import kotlin.io.path.createDirectories
-import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -96,9 +94,7 @@ class IdenticalFilesTest {
         treeOf(ReferenceApp.repositoryRoot.resolve("jvm/seampact-spring-boot/src/test/golden"))
 
     private fun write(directory: Path, relativePath: String, text: String) {
-        val file = directory.resolve(relativePath)
-        file.parent.createDirectories()
-        file.writeText(text.trimIndent() + "\n")
+        ReferenceApp.writeFile(directory, relativePath, text)
     }
 
     private companion object {
