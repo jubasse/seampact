@@ -19,21 +19,25 @@ import java.nio.file.attribute.UserPrincipal
  * The private binary cache (ADR 0010, "Amendment 2026-10-21: the JVM channels", Cache checks). The runner creates
  * each missing directory owner-only whatever the umask. Before each start, the copy, its directory and each directory
  * above it up to the cache root must be owned by the current user, not be a link and not be writable by group or
- * others; on Windows, from the copy up to `%USERPROFILE%`, none may be a reparse point and no ACL may grant write to
- * another account than the current user, SYSTEM and Administrators.
+ * others; each directory above the cache root must be owned by the current user or root and not be writable by group
+ * or others. Group write is allowed when the group is the owner's private group ([PosixAccounts]). On Windows, from
+ * the copy up to `%USERPROFILE%`, none may be a reparse point and no ACL may grant write to another account than the
+ * current user, SYSTEM and Administrators.
  */
 internal object BinaryCache {
     private const val POSIX_VIEW = "posix"
     private const val UNIX_VIEW = "unix"
     private const val UNIX_UID_ATTRIBUTE = "unix:uid"
+    private const val UNIX_GID_ATTRIBUTE = "unix:gid"
+    private const val ROOT_UID = 0L
     private const val ACL_VIEW = "acl"
     private const val WINDOWS_OS_PREFIX = "Windows"
     private const val USER_PROFILE_VARIABLE = "USERPROFILE"
     private const val USER_NAME_PROPERTY = "user.name"
-    private const val SYSTEM_ACCOUNT = "NT AUTHORITY\\SYSTEM"
-    private const val ADMINISTRATORS_GROUP = "BUILTIN\\Administrators"
+    private const val SYSTEM_SID = "S-1-5-18"
+    private const val ADMINISTRATORS_SID = "S-1-5-32-544"
     private val OWNER_ONLY_DIRECTORY = PosixFilePermissions.fromString("rwx------")
-    private val WRITE_BY_OTHER_USERS = setOf(PosixFilePermission.GROUP_WRITE, PosixFilePermission.OTHERS_WRITE)
+    private val WELL_KNOWN_WRITER_SIDS = listOf(SYSTEM_SID, ADMINISTRATORS_SID)
     private val WINDOWS_WRITE_RIGHTS = setOf(
         AclEntryPermission.WRITE_DATA,
         AclEntryPermission.APPEND_DATA,
@@ -62,16 +66,16 @@ internal object BinaryCache {
         }
     }
 
-    /** The first unsafe entry from [copy] (when it exists) up to [cacheRoot], or null. */
-    fun unsafeEntry(copy: Path, cacheRoot: Path): BinaryFailure? {
+    /** The first unsafe entry from [copy] (when it exists) up to [cacheRoot] and above it, or null. */
+    fun unsafeEntry(copy: Path, cacheRoot: Path, accounts: () -> PosixAccounts = PosixAccounts::ofHost): BinaryFailure? {
         val root = cacheRoot.toAbsolutePath().normalize()
         val entry = copy.toAbsolutePath().normalize()
         if (!entry.startsWith(root)) return cacheUnsafe(entry, "is not under the cache root '$root'")
 
-        return if (isWindows()) unsafeOnWindows(entry, root) else unsafeOnPosix(entry, root)
+        return if (isWindows()) unsafeOnWindows(entry, root) else unsafeOnPosix(entry, root, lazy(accounts))
     }
 
-    private fun unsafeOnPosix(copy: Path, root: Path): BinaryFailure? {
+    private fun unsafeOnPosix(copy: Path, root: Path, accounts: Lazy<PosixAccounts>): BinaryFailure? {
         if (UNIX_VIEW !in copy.fileSystem.supportedFileAttributeViews()) {
             return cacheUnsafe(copy, "is on a file system whose owner and modes cannot be read")
         }
@@ -81,24 +85,47 @@ internal object BinaryCache {
             if (!Files.exists(entry, LinkOption.NOFOLLOW_LINKS)) continue
             if (Files.isSymbolicLink(entry)) return cacheUnsafe(entry, "is a link")
 
-            val ownerUid = (Files.getAttribute(entry, UNIX_UID_ATTRIBUTE, LinkOption.NOFOLLOW_LINKS) as Int).toLong()
+            val ownerUid = unixNumber(entry, UNIX_UID_ATTRIBUTE, LinkOption.NOFOLLOW_LINKS)
             if (ownerUid != currentUid) return cacheUnsafe(entry, "is owned by the user id $ownerUid, not by the current user ($currentUid)")
+            writableByOthers(entry, ownerUid, accounts, LinkOption.NOFOLLOW_LINKS)?.let { return it }
+        }
 
-            val permissions = Files.getPosixFilePermissions(entry, LinkOption.NOFOLLOW_LINKS)
-            if (permissions.any { it in WRITE_BY_OTHER_USERS }) return cacheUnsafe(entry, "may be written by group or others; run `chmod 700 '$entry'`")
+        // Above the cache root, links are followed: the real directories decide who may swap the cache.
+        val realParent = root.parent?.toRealPath() ?: return null
+        for (ancestor in generateSequence(realParent) { it.parent }) {
+            val ownerUid = unixNumber(ancestor, UNIX_UID_ATTRIBUTE)
+            if (ownerUid != currentUid && ownerUid != ROOT_UID) {
+                return cacheUnsafe(ancestor, "is above the cache and owned by the user id $ownerUid, neither the current user ($currentUid) nor root; use a private cache directory")
+            }
+            writableByOthers(ancestor, ownerUid, accounts)?.let { return it }
         }
 
         return null
     }
 
+    // Group write is allowed when the group is the owner's private group, as OpenSSH's StrictModes allows.
+    private fun writableByOthers(entry: Path, ownerUid: Long, accounts: Lazy<PosixAccounts>, vararg options: LinkOption): BinaryFailure? {
+        val permissions = Files.getPosixFilePermissions(entry, *options)
+        if (PosixFilePermission.OTHERS_WRITE in permissions) return cacheUnsafe(entry, "may be written by others; run `chmod 700 '$entry'`")
+        if (PosixFilePermission.GROUP_WRITE !in permissions) return null
+
+        val groupId = unixNumber(entry, UNIX_GID_ATTRIBUTE, *options)
+        if (accounts.value.isPrivateGroup(groupId, ownerUid)) return null
+
+        return cacheUnsafe(entry, "may be written by the group id $groupId, which is not its owner's private group; run `chmod 700 '$entry'`")
+    }
+
+    private fun unixNumber(entry: Path, attribute: String, vararg options: LinkOption): Long =
+        (Files.getAttribute(entry, attribute, *options) as Int).toLong()
+
     private fun unsafeOnWindows(copy: Path, root: Path): BinaryFailure? {
         if (ACL_VIEW !in copy.fileSystem.supportedFileAttributeViews()) {
             return cacheUnsafe(copy, "is on a file system whose access control list cannot be read")
         }
-        val allowedWriters = try {
-            windowsAllowedWriters(copy)
+        val currentUser = try {
+            copy.fileSystem.userPrincipalLookupService.lookupPrincipalByName(System.getProperty(USER_NAME_PROPERTY))
         } catch (lookupFailed: IOException) {
-            return cacheUnsafe(copy, "cannot be checked: the accounts allowed to write it are not found (${lookupFailed.message})")
+            return cacheUnsafe(copy, "cannot be checked: the current user is not found (${lookupFailed.message})")
         }
 
         for (entry in pathsUpTo(copy, windowsCheckLimit(root))) {
@@ -112,7 +139,7 @@ internal object BinaryCache {
                 aclEntry.type() == AclEntryType.ALLOW &&
                     AclEntryFlag.INHERIT_ONLY !in aclEntry.flags() &&
                     aclEntry.permissions().any { it in WINDOWS_WRITE_RIGHTS } &&
-                    aclEntry.principal() !in allowedWriters
+                    !isAllowedWriter(aclEntry.principal(), currentUser)
             }
             if (foreignWriter != null) return cacheUnsafe(entry, "grants write to '${foreignWriter.principal().name}'")
         }
@@ -120,15 +147,10 @@ internal object BinaryCache {
         return null
     }
 
-    private fun windowsAllowedWriters(path: Path): Set<UserPrincipal> {
-        val lookup = path.fileSystem.userPrincipalLookupService
-
-        return setOf(
-            lookup.lookupPrincipalByName(System.getProperty(USER_NAME_PROPERTY)),
-            lookup.lookupPrincipalByName(SYSTEM_ACCOUNT),
-            lookup.lookupPrincipalByName(ADMINISTRATORS_GROUP),
-        )
-    }
+    // SYSTEM and Administrators by their well-known SIDs, never by a name Windows translates. Java exposes no SID,
+    // but a Windows principal's hash code is the hash code of its SID string.
+    private fun isAllowedWriter(principal: UserPrincipal, currentUser: UserPrincipal): Boolean =
+        principal == currentUser || WELL_KNOWN_WRITER_SIDS.any { sid -> principal.hashCode() == sid.hashCode() }
 
     // The user profile, which Windows creates private, ends the walk; a cache outside it is checked up to its drive.
     private fun windowsCheckLimit(root: Path): Path {

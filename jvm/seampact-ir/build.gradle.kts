@@ -71,6 +71,11 @@ tasks.test {
     environment("NODE_OPTIONS", "--require ./seampact-test-no-such-module.cjs")
     // Nor any other variable outside the binary's contract, such as an OpenSSL configuration.
     environment("OPENSSL_CONF", "./seampact-test-no-such-openssl.cnf")
+    // The binary cache refuses a directory others may write above it, such as /tmp: the tests' temporary files
+    // live under build/ instead.
+    val testTemporaryDirectory = layout.buildDirectory.dir("tmp/test-temporary").get().asFile
+    systemProperty("java.io.tmpdir", testTemporaryDirectory.absolutePath)
+    doFirst { testTemporaryDirectory.mkdirs() }
     // `-PseampactBinary=<path>` runs the binary runner test on that standalone compiler binary.
     val seampactBinary = providers.gradleProperty("seampactBinary").orNull
     if (seampactBinary != null) {
