@@ -57,7 +57,7 @@ export async function beginIdempotency(
     principalDigest,
     clientKey,
   ]);
-  const fingerprint = await idempotencyFingerprint(route, input);
+  const fingerprint = await idempotencyFingerprint(route, input, idempotency.fingerprintHeaders);
   const begin = await store.begin({
     key,
     fingerprint,

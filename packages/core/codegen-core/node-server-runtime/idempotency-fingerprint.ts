@@ -30,14 +30,21 @@ export function idempotencyDigest(parts: readonly unknown[]): Promise<string> {
   return sha256Hex(JSON.stringify(parts, sortedMembers));
 }
 
-/** The digest a retry under the same key must match: the method, the contract path and the validated input. */
-export function idempotencyFingerprint(route: FingerprintRoute, input: unknown): Promise<string> {
+/**
+ * The digest a retry under the same key must match: the method, the contract path and the validated input, its
+ * headers cut to `fingerprintHeaders`, the author-declared header params in lower case (the route's idempotency
+ * entry). A header param the compiler derives (a trace id, a deadline, the key itself) changes on a retry.
+ */
+export function idempotencyFingerprint(
+  route: FingerprintRoute,
+  input: unknown,
+  fingerprintHeaders: readonly string[],
+): Promise<string> {
+  const credentials = credentialHeaders(route.access);
+  const counted = new Set(fingerprintHeaders.filter((name) => !credentials.has(name)));
+
   // The validated input holds the decoded path params, so an equivalent encoding of the path is the same request.
-  return idempotencyDigest([
-    route.method,
-    route.path,
-    withoutHeaders(input, credentialHeaders(route.access)),
-  ]);
+  return idempotencyDigest([route.method, route.path, withOnlyHeaders(input, counted)]);
 }
 
 // The headers carrying a credential, lower case: a retry after a token or session refresh is the same request
@@ -58,10 +65,10 @@ function credentialHeaders(access: FingerprintAccess): ReadonlySet<string> {
   return new Set(names);
 }
 
-function withoutHeaders(input: unknown, names: ReadonlySet<string>): unknown {
-  if (names.size === 0 || !isPlainObject(input) || !isPlainObject(input.headers)) return input;
+function withOnlyHeaders(input: unknown, names: ReadonlySet<string>): unknown {
+  if (!isPlainObject(input) || !isPlainObject(input.headers)) return input;
 
-  const kept = Object.entries(input.headers).filter(([name]) => !names.has(name));
+  const kept = Object.entries(input.headers).filter(([name]) => names.has(name));
 
   return { ...input, headers: Object.fromEntries(kept) };
 }

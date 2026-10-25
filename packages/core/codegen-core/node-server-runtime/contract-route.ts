@@ -227,6 +227,8 @@ export interface ContractRoute {
     readonly header: string;
     readonly replayHeader: string;
     readonly lifetimeMs: number;
+    /** The author-declared header params, lower case: the only headers the fingerprint digests. */
+    readonly fingerprintHeaders: readonly string[];
   };
   readonly responses: readonly ResponseEntry[];
   readonly errors: Readonly<Record<string, ErrorEntry>>;
