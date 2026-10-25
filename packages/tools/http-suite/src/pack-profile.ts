@@ -199,7 +199,10 @@ function adaptStep(step: SuiteStep, limitParameter: string, reader: FormatReader
     ...step,
     request: renameLimit(step.request, limitParameter),
     expect: isError
-      ? renameLimitPointer(replaceMedia(step.expect, PROBLEM_MEDIA, reader.errorMedia), limitParameter)
+      ? renameLimitPointer(
+          replaceMedia(step.expect, PROBLEM_MEDIA, reader.errorMedia),
+          limitParameter,
+        )
       : replaceMedia(step.expect, JSON_MEDIA, reader.media),
   };
 }
@@ -208,7 +211,10 @@ function adaptStep(step: SuiteStep, limitParameter: string, reader: FormatReader
 function renameLimitPointer(expectation: StepExpectation, limitParameter: string): StepExpectation {
   const body = expectation.body;
 
-  if (limitParameter === REFERENCE_LIMIT || body === undefined || !isJsonObject(body)) return expectation;
+  if (limitParameter === REFERENCE_LIMIT || body === undefined || !isJsonObject(body)) {
+    return expectation;
+  }
+
   if (!Array.isArray(body.issues)) return expectation;
 
   const renamed = body.issues.map((issue: JsonValue) =>
