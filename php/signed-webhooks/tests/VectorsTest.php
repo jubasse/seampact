@@ -13,6 +13,7 @@ use Seampact\SignedWebhooks\SignatureEncoding;
 use Seampact\SignedWebhooks\SignatureFailure;
 use Seampact\SignedWebhooks\SignatureScheme;
 use Seampact\SignedWebhooks\TemplateSignatureVerifier;
+use Seampact\SignedWebhooks\TimestampWithoutTolerance;
 use Seampact\SignedWebhooks\UnsupportedSignatureAlgorithm;
 
 // The ADR 0013 test vectors every ecosystem's helper passes, read from the npm package's vector file.
@@ -25,6 +26,9 @@ final class VectorsTest extends TestCase
     private const PAIR_FORMAT = '/^(?:[A-Za-z0-9]+=\{(?:ts|sig)\},?)+$/D';
     private const TIMESTAMP_PLACEHOLDER = '{ts}';
     private const SIGNATURE_PLACEHOLDER = '{sig}';
+    public const CURRENT_SECRET = 'whsec_CURRENT_SECRET';
+    private const SENSITIVE_BODY = '{"card":"4242 4242 4242 4242"}';
+    private const FIVE_MINUTES_MS = 300000;
 
     // Why each 401 vector fails: a wrong MAC, or a timestamp outside the tolerance.
     private const FAILURE_OF_VECTOR = [
@@ -107,6 +111,95 @@ final class VectorsTest extends TestCase
             ->verify('Hello, World!', null, [], self::KEY_ID, self::githubScheme());
 
         self::assertSame(SignatureFailure::NoSecret, $verification->failure);
+    }
+
+    public function testRefusesANonStringSecretWithoutLeakingTheOtherSecretsThroughTheTrace(): void
+    {
+        $previousIgnoreArgs = ini_set('zend.exception_ignore_args', '0');
+        $verifier = new TemplateSignatureVerifier(self::lookupWithAnUnsetSecret());
+
+        try {
+            $verifier->verify(self::SENSITIVE_BODY, null, ['00'], self::KEY_ID, self::githubScheme());
+            self::fail('A secret that is not a string must be refused.');
+        } catch (\Throwable $refusal) {
+            self::assertInstanceOf(EmptySignatureSecret::class, $refusal);
+            self::assertSame(1, $refusal->index);
+
+            $trace = print_r($refusal->getTrace(), true);
+            self::assertStringNotContainsString(self::CURRENT_SECRET, $trace);
+            self::assertStringNotContainsString(self::SENSITIVE_BODY, $trace);
+        } finally {
+            ini_set('zend.exception_ignore_args', $previousIgnoreArgs === false ? '1' : $previousIgnoreArgs);
+        }
+    }
+
+    public function testRefusesASchemeThatSignsTheTimestampWithoutATolerance(): void
+    {
+        $this->expectException(TimestampWithoutTolerance::class);
+
+        new SignatureScheme(TemplateSignatureVerifier::SUPPORTED_ALGORITHM, '{ts}.{rawBody}', SignatureEncoding::Hex);
+    }
+
+    public function testFailsWhenTheSignedTimestampIsMissing(): void
+    {
+        $verification = (new TemplateSignatureVerifier(self::lookup(['secret'])))
+            ->verify('Hello, World!', null, ['00'], self::KEY_ID, self::timestampScheme());
+
+        self::assertSame(SignatureFailure::TimestampMissing, $verification->failure);
+    }
+
+    public function testFailsWhenTheSignedTimestampIsNotUnixSeconds(): void
+    {
+        $timestamp = '1e9';
+        $signature = hash_hmac('sha256', "$timestamp.Hello, World!", 'secret');
+
+        $verification = (new TemplateSignatureVerifier(self::lookup(['secret']), self::fixedClock(0)))
+            ->verify('Hello, World!', $timestamp, [$signature], self::KEY_ID, self::timestampScheme());
+
+        self::assertSame(SignatureFailure::TimestampMalformed, $verification->failure);
+    }
+
+    public function testACandidateThatIsNotHexNeverMatches(): void
+    {
+        $signature = hash_hmac('sha256', 'Hello, World!', 'secret');
+
+        $verification = (new TemplateSignatureVerifier(self::lookup(['secret'])))
+            ->verify('Hello, World!', null, ['g' . substr($signature, 1)], self::KEY_ID, self::githubScheme());
+
+        self::assertSame(SignatureFailure::SignatureMismatch, $verification->failure);
+    }
+
+    public function testACandidateOfTheWrongLengthNeverMatches(): void
+    {
+        $truncatedMac = substr(hash_hmac('sha256', 'Hello, World!', 'secret', true), 0, 31);
+        $scheme = new SignatureScheme(TemplateSignatureVerifier::SUPPORTED_ALGORITHM, '{rawBody}', SignatureEncoding::Base64);
+
+        $verification = (new TemplateSignatureVerifier(self::lookup(['secret'])))
+            ->verify('Hello, World!', null, [base64_encode($truncatedMac)], self::KEY_ID, $scheme);
+
+        self::assertSame(SignatureFailure::SignatureMismatch, $verification->failure);
+    }
+
+    private static function timestampScheme(): SignatureScheme
+    {
+        return new SignatureScheme(
+            TemplateSignatureVerifier::SUPPORTED_ALGORITHM,
+            '{ts}.{rawBody}',
+            SignatureEncoding::Hex,
+            self::FIVE_MINUTES_MS,
+        );
+    }
+
+    // A rotation list whose second secret comes from an unset environment variable, as `getenv` answers it.
+    private static function lookupWithAnUnsetSecret(): SecretLookup
+    {
+        return new class implements SecretLookup {
+            public function secretsFor(string $keyId): array
+            {
+                // @phpstan-ignore return.type (the lookup is typed, but an application can still return what getenv gave it)
+                return [VectorsTest::CURRENT_SECRET, false];
+            }
+        };
     }
 
     private static function githubScheme(): SignatureScheme
