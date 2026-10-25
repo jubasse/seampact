@@ -5,14 +5,16 @@ import {
   type QueryOperation,
   type QueryPlan,
 } from "@seampact/codegen-core";
-import { refreshesResource } from "./queries-module.js";
+import {
+  mutationOptionsParameter,
+  reactiveOptionsParameter,
+} from "../composable-options-parameters.js";
+import { PINIA_COLADA_MODULE, refreshesResource } from "./queries-module.js";
 
 // The `composables.ts` of one api for Pinia Colada (ADR 0021 "The generated API"): `create<Api>Composables` returns
 // the members of `create<Api>Queries` plus a `use*` composable over each options factory. A query composable takes
 // its request and options as a value, a `ref` or a getter, and reads again when they change; a mutation composable
 // that refreshes a resource injects the app's query cache, so it runs where `inject` works, as every composable does.
-
-const PINIA_COLADA_MODULE = "@pinia/colada";
 
 /** The source of `composables.ts`; `imports` holds the specifiers of the client and the queries module. */
 export function composablesModuleSource(
@@ -61,17 +63,6 @@ ${composables.join("\n\n")}
 }`,
     `/** What \`create${api}Composables\` returns. */\nexport type ${api}Composables = ReturnType<typeof create${api}Composables>;`,
   ].join("\n\n");
-}
-
-// A query composable's options: a value, a `ref` or a getter, required when the client method requires a timeout.
-function reactiveOptionsParameter(operation: QueryOperation, type: string): string {
-  return operation.needsTimeout
-    ? `options: MaybeRefOrGetter<WithRequiredCall<${type}>>`
-    : `options?: MaybeRefOrGetter<${type} | undefined>`;
-}
-
-function mutationOptionsParameter(operation: QueryOperation, type: string): string {
-  return operation.needsTimeout ? `options: WithRequiredCall<${type}>` : `options?: ${type}`;
 }
 
 function composableSources(

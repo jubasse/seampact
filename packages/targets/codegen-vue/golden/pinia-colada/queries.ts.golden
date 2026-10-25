@@ -273,7 +273,14 @@ export function createTasksQueries(
           ),
         ...callerOptions,
         onSuccess: async (data, request, context) => {
-          await queryCache.invalidateQueries({ key: keys.resource("tasks") });
+          // A failed refetch stays on its own query, so the write the server accepted still succeeds.
+          await Promise.allSettled(
+            queryCache
+              .getEntries({ key: keys.resource("tasks") })
+              .map((entry) =>
+                queryCache.invalidateQueries({ key: entry.key, exact: true }),
+              ),
+          );
           await onSuccess?.(data, request, context);
         },
       });
@@ -308,7 +315,14 @@ export function createTasksQueries(
           ),
         ...callerOptions,
         onSuccess: async (data, request, context) => {
-          await queryCache.invalidateQueries({ key: keys.resource("tasks") });
+          // A failed refetch stays on its own query, so the write the server accepted still succeeds.
+          await Promise.allSettled(
+            queryCache
+              .getEntries({ key: keys.resource("tasks") })
+              .map((entry) =>
+                queryCache.invalidateQueries({ key: entry.key, exact: true }),
+              ),
+          );
           await onSuccess?.(data, request, context);
         },
       });
@@ -343,7 +357,14 @@ export function createTasksQueries(
           ),
         ...callerOptions,
         onSuccess: async (data, request, context) => {
-          await queryCache.invalidateQueries({ key: keys.resource("tasks") });
+          // A failed refetch stays on its own query, so the write the server accepted still succeeds.
+          await Promise.allSettled(
+            queryCache
+              .getEntries({ key: keys.resource("tasks") })
+              .map((entry) =>
+                queryCache.invalidateQueries({ key: entry.key, exact: true }),
+              ),
+          );
           await onSuccess?.(data, request, context);
         },
       });
@@ -378,7 +399,14 @@ export function createTasksQueries(
           ),
         ...callerOptions,
         onSuccess: async (data, request, context) => {
-          await queryCache.invalidateQueries({ key: keys.resource("drafts") });
+          // A failed refetch stays on its own query, so the write the server accepted still succeeds.
+          await Promise.allSettled(
+            queryCache
+              .getEntries({ key: keys.resource("drafts") })
+              .map((entry) =>
+                queryCache.invalidateQueries({ key: entry.key, exact: true }),
+              ),
+          );
           await onSuccess?.(data, request, context);
         },
       });
@@ -666,7 +694,14 @@ export function createTasksQueries(
           ),
         ...callerOptions,
         onSuccess: async (data, request, context) => {
-          await queryCache.invalidateQueries({ key: keys.resource("tasks") });
+          // A failed refetch stays on its own query, so the write the server accepted still succeeds.
+          await Promise.allSettled(
+            queryCache
+              .getEntries({ key: keys.resource("tasks") })
+              .map((entry) =>
+                queryCache.invalidateQueries({ key: entry.key, exact: true }),
+              ),
+          );
           await onSuccess?.(data, request, context);
         },
       });
@@ -696,7 +731,14 @@ export function createTasksQueries(
           ),
         ...callerOptions,
         onSuccess: async (data, request, context) => {
-          await queryCache.invalidateQueries({ key: keys.resource("tasks") });
+          // A failed refetch stays on its own query, so the write the server accepted still succeeds.
+          await Promise.allSettled(
+            queryCache
+              .getEntries({ key: keys.resource("tasks") })
+              .map((entry) =>
+                queryCache.invalidateQueries({ key: entry.key, exact: true }),
+              ),
+          );
           await onSuccess?.(data, request, context);
         },
       });
@@ -731,9 +773,14 @@ export function createTasksQueries(
           ),
         ...callerOptions,
         onSuccess: async (data, request, context) => {
-          await queryCache.invalidateQueries({
-            key: keys.resource("preferences"),
-          });
+          // A failed refetch stays on its own query, so the write the server accepted still succeeds.
+          await Promise.allSettled(
+            queryCache
+              .getEntries({ key: keys.resource("preferences") })
+              .map((entry) =>
+                queryCache.invalidateQueries({ key: entry.key, exact: true }),
+              ),
+          );
           await onSuccess?.(data, request, context);
         },
       });
@@ -768,7 +815,14 @@ export function createTasksQueries(
           ),
         ...callerOptions,
         onSuccess: async (data, request, context) => {
-          await queryCache.invalidateQueries({ key: keys.resource("tasks") });
+          // A failed refetch stays on its own query, so the write the server accepted still succeeds.
+          await Promise.allSettled(
+            queryCache
+              .getEntries({ key: keys.resource("tasks") })
+              .map((entry) =>
+                queryCache.invalidateQueries({ key: entry.key, exact: true }),
+              ),
+          );
           await onSuccess?.(data, request, context);
         },
       });

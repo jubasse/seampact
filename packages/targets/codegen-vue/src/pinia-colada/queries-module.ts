@@ -21,11 +21,12 @@ import {
 
 // The `queries.ts` of one api for Pinia Colada (ADR 0021 "The generated API"): the operation types, the caller option
 // types and `create<Api>Queries`, which returns `keys` and an options factory per operation, built with Pinia
-// Colada's `define*Options` so a key read back from the cache keeps its data type. It imports no composable.
+// Colada's `define*Options` so the options' key read back from the cache keeps its data type. It imports no composable.
 // Pinia Colada keys are JSON values, so the key of an operation with no request ends in `null`; a mutation that
 // refreshes a resource takes the app's query cache, which only a component or a store can inject.
 
-const PINIA_COLADA_MODULE = "@pinia/colada";
+/** The module the generated Pinia Colada sources import from. */
+export const PINIA_COLADA_MODULE = "@pinia/colada";
 
 // A key segment for an operation with no request: Pinia Colada keys take no `undefined`.
 const ABSENT_REQUEST_SEGMENT = "null";
@@ -243,7 +244,12 @@ function mutationSource(
     : "{ call, ...callerOptions }";
   const onSuccess = refreshes
     ? `\nonSuccess: async (data, request, context) => {
-await queryCache.invalidateQueries({ key: keys.resource(${JSON.stringify(operation.resource)}) });
+// A failed refetch stays on its own query, so the write the server accepted still succeeds.
+await Promise.allSettled(
+queryCache
+.getEntries({ key: keys.resource(${JSON.stringify(operation.resource)}) })
+.map((entry) => queryCache.invalidateQueries({ key: entry.key, exact: true })),
+);
 await onSuccess?.(data, request, context);
 },`
     : "";

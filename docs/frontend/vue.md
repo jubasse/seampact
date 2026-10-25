@@ -56,7 +56,7 @@ The composables only read and write through the client. They keep no store: put 
 
 ## With Pinia Colada
 
-With `query: pinia-colada`, the options factories use Pinia Colada's `defineQueryOptions`, so `queryCache.getQueryData(Notes.keys.listNotes({}))` keeps its type.
+With `query: pinia-colada`, the options factories use Pinia Colada's `defineQueryOptions`, so `queryCache.getQueryData(Notes.listNotesOptions({}).key)` keeps its type.
 
 ```ts
 const Notes = createNotesComposables(client);
@@ -71,6 +71,8 @@ const create = Notes.useCreateNote(); // { mutate, mutateAsync, error, data, ...
 - A write that refreshes its resource takes the query cache. The composable injects it; the options factory takes it first: `Notes.createNoteMutationOptions(useQueryCache())`.
 - Pinia Colada has no `select`: map `data` with a `computed`.
 - seampact writes no Pinia store: the cache is Pinia Colada's.
+- A failed list refresh after a write shows on the list; the write itself still succeeds.
+- In server rendering, Pinia Colada and Vue Query run their own server reads: hydrating them or turning them off there is your choice. Only `query: fetch` never reads on the server.
 
 ## Without a query library
 
