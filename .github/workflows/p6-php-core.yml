@@ -1,0 +1,185 @@
+name: PHP core packages
+
+# The Composer packages of the PHP path (ADR 0010): `seampact/hooks` checked against the shared hooks shape manifest
+# and `seampact/signed-webhooks` against the ADR 0013 vectors, each tested and analysed on the latest PHP 8.3 and 8.5;
+# then the split job, which builds every `php/<name>` mirror tree without pushing it and installs each one alone
+# into a throwaway project through a Composer path repository. On a pull request they run only when the change
+# touches the PHP packages, the files their tests read or this workflow; `php-core` is the one check to require.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php-core-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      php-core: ${{ steps.detect.outputs.php-core }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history, so the pull request can be compared with its base.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect a change to the PHP packages or the files their tests read
+        id: detect
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "php-core=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # The PHP packages, the shape manifest, the signature vectors and this workflow.
+          watched='^(php/|fixtures/hooks-shape/|packages/runtime/signed-webhooks/vectors/'
+          watched+='|\.github/workflows/p6-php-core\.yml$)'
+          # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
+          # quote, a backslash, a tab or a non-ASCII byte, still matches.
+          changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')
+          # An empty diff runs every job rather than none.
+          if [ -z "$changed" ] || grep -Eq "$watched" <<< "$changed"; then
+            echo "php-core=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "php-core=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  packages:
+    needs: changes
+    if: needs.changes.outputs.php-core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ["8.3", "8.5"]
+        package: [hooks, signed-webhooks]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: composer:2.10.2
+          coverage: none
+      - name: Validate the Composer manifest
+        working-directory: php/${{ matrix.package }}
+        run: composer validate --strict --no-interaction
+      - name: Install the PHP dev tools from the lock file
+        working-directory: php/${{ matrix.package }}
+        run: composer install --no-interaction --no-progress --no-plugins --no-scripts
+      - name: Audit the locked dependencies
+        working-directory: php/${{ matrix.package }}
+        run: composer audit --locked --no-interaction
+      - name: Test ${{ matrix.package }} on PHP ${{ matrix.php-version }}
+        working-directory: php/${{ matrix.package }}
+        run: vendor/bin/phpunit
+      - name: Analyse ${{ matrix.package }}
+        working-directory: php/${{ matrix.package }}
+        run: vendor/bin/phpstan analyse --no-progress
+
+  split:
+    needs: changes
+    if: needs.changes.outputs.php-core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ["8.3", "8.5"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history, which the split rewrites.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: composer:2.10.2
+          coverage: none
+      # No platform override here: Composer checks the real runtime against each package's PHP floor.
+      - name: Split each PHP package and install it alone through a path repository
+        shell: bash
+        env:
+          WORK: ${{ runner.temp }}/php-split
+        run: |
+          set -euo pipefail
+          work="$WORK"
+          rm -rf "$work"; mkdir -p "$work/trees" "$work/projects"
+          for manifest in php/*/composer.json; do
+            name=$(basename "$(dirname "$manifest")")
+            # The mirror's history: the directory's commits rewritten with php/<name> as the root; never pushed.
+            split=$(git subtree split --quiet --prefix="php/$name" HEAD)
+            mkdir "$work/trees/$name"
+            git archive "$split" | tar -x -C "$work/trees/$name"
+            test -f "$work/trees/$name/composer.json" || { echo "The split tree of php/$name has no composer.json at its root."; exit 1; }
+            package=$(php -r 'echo json_decode(file_get_contents($argv[1]), true, flags: JSON_THROW_ON_ERROR)["name"];' "$work/trees/$name/composer.json")
+            project="$work/projects/$name"
+            mkdir "$project"
+            php -r '
+              [, $package, $tree, $target] = $argv;
+              $project = [
+                "name" => "seampact-ci/install-proof",
+                "version" => "0.0.0",
+                "repositories" => [["type" => "path", "url" => $tree, "options" => ["symlink" => false]]],
+                "require" => [$package => "*@dev"],
+              ];
+              file_put_contents($target, json_encode($project, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n");
+            ' "$package" "$work/trees/$name" "$project/composer.json"
+            composer update --working-dir="$project" --no-interaction --no-progress
+            test ! -L "$project/vendor/$package" || { echo "$package was symlinked, not copied."; exit 1; }
+            # Every class of the installed copy loads through its own autoloader.
+            php -r '
+              [, $project, $package] = $argv;
+              require "$project/vendor/autoload.php";
+              $installed = json_decode(file_get_contents("$project/vendor/$package/composer.json"), true, flags: JSON_THROW_ON_ERROR);
+              $loaded = 0;
+              foreach ($installed["autoload"]["psr-4"] as $prefix => $directory) {
+                $root = "$project/vendor/$package/" . rtrim($directory, "/");
+                foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)) as $file) {
+                  $type = $prefix . str_replace("/", "\\", substr($file->getPathname(), strlen($root) + 1, -4));
+                  if (!class_exists($type) && !interface_exists($type) && !enum_exists($type)) {
+                    fwrite(STDERR, "$package: $type does not load from the installed copy.\n");
+                    exit(1);
+                  }
+                  $loaded++;
+                }
+              }
+              echo "$package installs alone from its split tree; $loaded types load.\n";
+            ' "$project" "$package"
+          done
+
+  # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
+  php-core:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, packages, split]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail when a needed job failed or was cancelled
+        shell: bash
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          set -euo pipefail
+          for result in $RESULTS; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              echo "A PHP core job ended in $result (results: $RESULTS)."
+              exit 1
+            fi
+          done
