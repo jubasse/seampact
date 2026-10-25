@@ -55,3 +55,11 @@ With the default `rules: native`, each library differs from the contract in a fe
 - `uuid` also checks the version and variant digits.
 - `date-time` does not check the calendar, and accepts second 60, a space instead of `T` and more than 9 fraction digits.
 - `exclusiveMinimum` and `exclusiveMaximum` have no class-validator rule: they stay the contract's checks. So do the checks on each item of a list, which report the item's position.
+
+### VineJS
+
+AdonisJS's own VineJS validators take `rules` on the server target, `@seampact/codegen-adonis`.
+
+- Lengths count UTF-16 units: an emoji counts 2, so `maxLength: 1` refuses "😀".
+- `uuid` also checks the version and variant digits. `00000000-0000-9000-8000-000000000000` is refused.
+- `date-time`, `exclusiveMinimum`, `exclusiveMaximum` and `multipleOf` have no VineJS rule: they stay the contract's checks.

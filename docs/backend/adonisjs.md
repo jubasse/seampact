@@ -33,7 +33,7 @@ You see `install-into: 21 packages in .../vendor/seampact`.
 pnpm install
 ```
 
-The starter already depends on `@vinejs/vine`. The generated server validates with it, so you need no validators entry.
+The starter already depends on `@vinejs/vine`. The generated server validates with it, so you need no validators entry. It uses VineJS's own rules; set `rules: seampact-consistent` in the server's `options` to get the contract's exact checks, as [Validators](../configuration/validators.md#vinejs) explains.
 
 Install, `tsconfig.json`: the generated code does not compile with the starter's `lib` and unused-variable checks. Replace `tsconfig.json`.
 

@@ -1,10 +1,12 @@
 import { below } from "../ir-location.js";
 import type { Refusal } from "../refusal.js";
 import type { ParseOptionsOutcome } from "../target.js";
+import { parseValidatorsOptions, type RulesMode } from "../validators/rules-option.js";
 
 // The options every Node server target takes (ADR 0016 "Target options"): what a reply outside the contract does,
 // whether JSON success replies are validated by the zod output validators, and what happens to an ETag the framework
-// adds. A target whose placement compresses its own replies (Fastify) also takes `compression`.
+// adds. A target whose placement compresses its own replies (Fastify) also takes `compression`; one whose own validators
+// take the validator targets' `rules` option (AdonisJS) also takes `rules`.
 const RESPONSES_MODES = ["strict", "warn"] as const;
 const FRAMEWORK_ETAG_MODES = ["strip", "keep"] as const;
 
@@ -22,6 +24,8 @@ export interface NodeServerOptions {
   /** False leaves a request the contract does not serve (a 404 or 405 path) to the app. */
   catchAll: boolean;
   compression: CompressionOption;
+  /** The `rules` of the target's own validators, present when the entry writes it. */
+  rules?: RulesMode;
 }
 
 /** The settings the registration may override; the rest of the options are fixed at generation. */
@@ -35,6 +39,8 @@ export function responseSettingsOf(options: NodeServerOptions): ResponseSettings
 /** What a target's placement lets its entry's `options` name beyond the options every Node server target takes. */
 export interface AcceptedNodeServerOptions {
   readonly compression: boolean;
+  /** True for a target whose own validators take `rules: native | seampact-consistent`. */
+  readonly rules?: boolean;
   /** The keys the target parses itself; accepted here and listed in the unknown-key refusal. */
   readonly targetKeys?: readonly string[];
 }
@@ -44,6 +50,7 @@ const BODY_VALIDATION_KEY = "bodyValidation";
 const FRAMEWORK_ETAG_KEY = "frameworkEtag";
 const CATCH_ALL_KEY = "catchAll";
 const COMPRESSION_KEY = "compression";
+const RULES_KEY = "rules";
 const THRESHOLD_BYTES_KEY = "thresholdBytes";
 const DEFAULT_COMPRESSION_THRESHOLD_BYTES = 1024;
 
@@ -57,8 +64,8 @@ const DEFAULT_NODE_SERVER_OPTIONS: NodeServerOptions = {
 
 /**
  * Accepts `{}`, `responses: strict | warn`, `bodyValidation: true | false`, `frameworkEtag: strip | keep`, `catchAll: true | false` and, where
- * accepted, `compression: off` or `compression: { thresholdBytes: <whole number> }`; the target's own keys are left to
- * it; any other key or value is refused.
+ * accepted, `compression: off` or `compression: { thresholdBytes: <whole number> }` and `rules: native |
+ * seampact-consistent`; the target's own keys are left to it; any other key or value is refused.
  */
 export function parseNodeServerOptions(
   raw: unknown,
@@ -84,6 +91,7 @@ export function parseNodeServerOptions(
     FRAMEWORK_ETAG_KEY,
     CATCH_ALL_KEY,
     ...(accepted.compression ? [COMPRESSION_KEY] : []),
+    ...(accepted.rules === true ? [RULES_KEY] : []),
     ...(accepted.targetKeys ?? []),
   ];
   const refusals = Object.keys(raw)
@@ -102,6 +110,9 @@ export function parseNodeServerOptions(
   );
   const catchAll = optionValue(raw, CATCH_ALL_KEY, DEFAULT_NODE_SERVER_OPTIONS.catchAll);
   const compression = optionValue(raw, COMPRESSION_KEY, DEFAULT_NODE_SERVER_OPTIONS.compression);
+  const rules = Object.hasOwn(raw, RULES_KEY)
+    ? parseValidatorsOptions({ [RULES_KEY]: optionValue(raw, RULES_KEY, undefined) })
+    : undefined;
 
   if (!isResponsesMode(responses)) {
     refusals.push({
@@ -148,13 +159,17 @@ export function parseNodeServerOptions(
     });
   }
 
+  if (rules?.status === "refused" && knownKeys.includes(RULES_KEY))
+    refusals.push(...rules.refusals);
+
   if (
     refusals.length > 0 ||
     !isResponsesMode(responses) ||
     typeof bodyValidation !== "boolean" ||
     !isFrameworkEtagMode(frameworkEtag) ||
     typeof catchAll !== "boolean" ||
-    !isCompressionOption(compression)
+    !isCompressionOption(compression) ||
+    rules?.status === "refused"
   ) {
     return { status: "refused", refusals };
   }
@@ -167,6 +182,7 @@ export function parseNodeServerOptions(
       frameworkEtag,
       catchAll,
       compression: structuredClone(compression),
+      ...(rules === undefined ? {} : { rules: rules.options.rules }),
     },
   };
 }

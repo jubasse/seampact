@@ -1,7 +1,8 @@
 // The VineJS support of the validators the AdonisJS target writes itself: one boundary-owned `Vine` instance, and the
 // Standard Schema that builds a VineJS schema from a generated shape, validates without conversion, keeps the declared
 // keys only and names each issue by its contract rule, the convention a server boundary renders (`code: "custom"`
-// with `params.rule`, `unrecognized_keys` with `keys`). The app's global VineJS settings never reach it.
+// with `params.rule`, `unrecognized_keys` with `keys`). The app's global VineJS settings never reach it. A check the
+// generator marks `native` (`rules: native`) is VineJS's own rule and count, reported with the plan's message.
 import { errors, SimpleMessagesProvider, Vine } from "@vinejs/vine";
 import type { FieldContext, SchemaTypes } from "@vinejs/vine/types";
 import { codePointLength, isDateTime, isIntegerMultiple } from "./wire-checks.js";
@@ -27,10 +28,21 @@ type ShapeCheck =
       readonly format: "uuid" | "date-time";
       readonly message: string;
       readonly layout?: string;
+      readonly native?: true;
     }
-  | { readonly rule: "minLength" | "maxLength"; readonly limit: number; readonly message: string }
-  | { readonly rule: "pattern"; readonly normalized: string; readonly message: string }
-  | { readonly rule: BoundRule; readonly literal: string }
+  | {
+      readonly rule: "minLength" | "maxLength";
+      readonly limit: number;
+      readonly message: string;
+      readonly native?: true;
+    }
+  | {
+      readonly rule: "pattern";
+      readonly normalized: string;
+      readonly message: string;
+      readonly native?: true;
+    }
+  | { readonly rule: BoundRule; readonly literal: string; readonly native?: true }
   | {
       readonly rule: "multipleOf";
       readonly literal: string;
@@ -103,6 +115,12 @@ const RULE_OF_VINE_RULE: ReadonlyMap<string, string> = new Map([
   ["enum", "enum"],
   ["array.minLength", "minItems"],
   ["array.maxLength", "maxItems"],
+  ["minLength", "minLength"],
+  ["maxLength", "maxLength"],
+  ["regex", "pattern"],
+  ["uuid", "format"],
+  ["min", "minimum"],
+  ["max", "maximum"],
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -265,10 +283,7 @@ function scalarSchema(shape: Extract<Shape, { kind: "scalar" }>) {
     case "boolean":
       return vine.boolean({ strict: true });
     case "string":
-      return shape.checks.reduce(
-        (schema, check) => schema.use(stringRule(check)),
-        vine.string().bail(false),
-      );
+      return shape.checks.reduce(withStringCheck, vine.string().bail(false));
     case "integer":
     case "number":
       return numericSchema(shape);
@@ -285,13 +300,72 @@ function numericSchema(shape: Extract<Shape, { kind: "scalar" }>) {
         ...shape.checks.filter((check) => !isBound(check)).map(numericRule),
         ...safeIntegerRules(shape.checks),
       ]
-    : shape.checks.map(numericRule);
+    : shape.checks.filter((check) => !isNativeBound(check)).map(numericRule);
+  const checked = rules.reduce((schema, rule) => schema.use(rule), base.bail(false));
 
-  return rules.reduce((schema, rule) => schema.use(rule), base.bail(false));
+  return nativeBounds(shape, integer).reduce(withNativeBound, checked);
 }
 
 function isBound(check: ShapeCheck): boolean {
   return check.rule === "minimum" || check.rule === "maximum";
+}
+
+// A check the generator marked for VineJS's own rule; `multipleOf` never is, VineJS having no rule for it.
+function isNative(check: ShapeCheck): boolean {
+  return "native" in check && check.native === true;
+}
+
+function isNativeBound(check: ShapeCheck): boolean {
+  return isBound(check) && isNative(check);
+}
+
+// The bounds VineJS's own `min` and `max` check: on an integer, only a bound inside the safe range, since the safe
+// range check stands for a looser one.
+function nativeBounds(shape: Extract<Shape, { kind: "scalar" }>, integer: boolean) {
+  return shape.checks.filter((check) => isNativeBound(check) && (!integer || isSafeBound(check)));
+}
+
+function isSafeBound(check: ShapeCheck): boolean {
+  return "literal" in check && Math.abs(Number(check.literal)) <= SAFE_INTEGER_LIMIT;
+}
+
+type VineNumber = ReturnType<typeof vine.number>;
+
+function withNativeBound(schema: VineNumber, check: ShapeCheck): VineNumber {
+  if (!("literal" in check)) return schema;
+
+  return check.rule === "minimum"
+    ? schema.min(Number(check.literal))
+    : schema.max(Number(check.literal));
+}
+
+type VineString = ReturnType<typeof vine.string>;
+
+function withStringCheck(schema: VineString, check: ShapeCheck): VineString {
+  if (!isNative(check)) return schema.use(stringRule(check));
+
+  switch (check.rule) {
+    case "minLength":
+      return schema.minLength(check.limit);
+    case "maxLength":
+      return schema.maxLength(check.limit);
+    case "pattern":
+      return schema.regex(new RegExp(check.normalized, "u"));
+    case "format":
+      if (check.format === "uuid") return schema.uuid();
+
+      throw new Error(
+        "codegen-adonis: the format '" +
+          check.format +
+          "' has no VineJS rule; this is a renderer bug.",
+      );
+    default:
+      throw new Error(
+        "codegen-adonis: the native rule '" +
+          check.rule +
+          "' is not a string check; this is a renderer bug.",
+      );
+  }
 }
 
 function stringRule(check: ShapeCheck) {
@@ -343,28 +417,43 @@ function formatTest(check: Extract<ShapeCheck, { rule: "format" }>): (value: unk
 }
 
 // A plain integer is in the safe range of ADR 0003, reported as `minimum` and `maximum`; a bound of the contract
-// inside that range stands as written.
+// inside that range stands as written. A side VineJS's own `min` or `max` checks inside that range needs no check here.
 function safeIntegerRules(checks: readonly ShapeCheck[]) {
+  const declaredCheck = (rule: "minimum" | "maximum") =>
+    checks.find((candidate) => candidate.rule === rule);
   const declared = (rule: "minimum" | "maximum"): number | undefined => {
-    const check = checks.find((candidate) => candidate.rule === rule);
+    const check = declaredCheck(rule);
 
     return check?.rule === rule ? Number(check.literal) : undefined;
+  };
+  const checkedNatively = (rule: "minimum" | "maximum"): boolean => {
+    const check = declaredCheck(rule);
+
+    return check !== undefined && isNativeBound(check) && isSafeBound(check);
   };
 
   const minimum = Math.max(declared("minimum") ?? -SAFE_INTEGER_LIMIT, -SAFE_INTEGER_LIMIT);
   const maximum = Math.min(declared("maximum") ?? SAFE_INTEGER_LIMIT, SAFE_INTEGER_LIMIT);
 
   return [
-    checkRule(
-      "minimum",
-      `The {{ field }} field must be at least ${minimum}`,
-      (value) => typeof value !== "number" || value >= minimum,
-    ),
-    checkRule(
-      "maximum",
-      `The {{ field }} field must be at most ${maximum}`,
-      (value) => typeof value !== "number" || value <= maximum,
-    ),
+    ...(checkedNatively("minimum")
+      ? []
+      : [
+          checkRule(
+            "minimum",
+            `The {{ field }} field must be at least ${minimum}`,
+            (value) => typeof value !== "number" || value >= minimum,
+          ),
+        ]),
+    ...(checkedNatively("maximum")
+      ? []
+      : [
+          checkRule(
+            "maximum",
+            `The {{ field }} field must be at most ${maximum}`,
+            (value) => typeof value !== "number" || value <= maximum,
+          ),
+        ]),
   ];
 }
 
@@ -446,6 +535,17 @@ function shapeAt(shape: Shape, path: readonly string[]): Shape | undefined {
   return inner === undefined ? undefined : shapeAt(inner, rest);
 }
 
+// The plan's message of a check VineJS's own rule made, so a rule reads the same in both modes; a bound has none.
+function nativeMessage(shape: Shape, path: readonly string[], rule: string): string | undefined {
+  const scalar = shapeAt(shape, path);
+
+  if (scalar?.kind !== "scalar") return undefined;
+
+  const check = scalar.checks.find((candidate) => isNative(candidate) && candidate.rule === rule);
+
+  return check !== undefined && "message" in check ? check.message : undefined;
+}
+
 // VineJS reports a null value as missing; the contract calls it a wrong type, or a value outside the enum.
 function ruleOfMissing(shape: Shape, candidate: unknown, path: readonly string[]): string {
   if (valueAt(candidate, path) !== null) return "required";
@@ -482,8 +582,10 @@ function issueOf(shape: Shape, candidate: unknown, error: VineMessage): InputIss
   }
 
   const rule = known === "required" ? ruleOfMissing(shape, candidate, path) : known;
+  const message =
+    (reported === undefined ? nativeMessage(shape, path, rule) : undefined) ?? error.message;
 
-  return { message: error.message, path, code: "custom", params: { rule } };
+  return { message, path, code: "custom", params: { rule } };
 }
 
 // A value of the wrong type reports its type alone.
