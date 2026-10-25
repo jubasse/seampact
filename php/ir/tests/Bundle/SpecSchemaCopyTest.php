@@ -15,14 +15,19 @@ final class SpecSchemaCopyTest extends TestCase
 
     private const COPIES = __DIR__ . '/../../resources/schemas';
 
+    // The spec schema directories this package ships copies of, every schema of each.
+    private const SCHEMA_DIRECTORIES = ['bundle', 'ir'];
+
     /** @return array<string, array{string}> */
     public static function specSchemas(): array
     {
         $root = Documents::repositoryRoot() . self::SPEC_SCHEMAS;
-        $cases = ['bundle/manifest.schema.json' => ['bundle/manifest.schema.json']];
+        $cases = [];
 
-        foreach (glob("{$root}/ir/*.schema.json") ?: [] as $file) {
-            $cases['ir/' . basename($file)] = ['ir/' . basename($file)];
+        foreach (self::SCHEMA_DIRECTORIES as $directory) {
+            foreach (glob("{$root}/{$directory}/*.schema.json") ?: [] as $file) {
+                $cases["{$directory}/" . basename($file)] = ["{$directory}/" . basename($file)];
+            }
         }
 
         return $cases;
@@ -39,8 +44,13 @@ final class SpecSchemaCopyTest extends TestCase
 
     public function testShipsNoSchemaTheSpecDropped(): void
     {
-        $copies = array_map(static fn (string $file): string => 'ir/' . basename($file), glob(self::COPIES . '/ir/*.json') ?: []);
+        $copies = [];
+        foreach (self::SCHEMA_DIRECTORIES as $directory) {
+            foreach (glob(self::COPIES . "/{$directory}/*.json") ?: [] as $file) {
+                $copies[] = "{$directory}/" . basename($file);
+            }
+        }
 
-        self::assertSame(array_keys(self::specSchemas()), ['bundle/manifest.schema.json', ...$copies]);
+        self::assertSame(array_keys(self::specSchemas()), $copies);
     }
 }

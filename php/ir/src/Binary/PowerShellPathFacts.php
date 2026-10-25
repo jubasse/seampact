@@ -42,14 +42,35 @@ final class PowerShellPathFacts implements WindowsPathFacts
 
     public function of(array $paths): array
     {
-        $read = $this->read($paths);
-        $facts = [];
+        return self::factsOf($this->read($paths));
+    }
 
-        foreach (is_array($read->facts ?? null) ? $read->facts : [] as $fact) {
-            if ($fact instanceof \stdClass && is_string($fact->path ?? null) && is_array($fact->writers ?? null)) {
-                $writers = array_values(array_filter($fact->writers, is_string(...)));
-                $facts[$fact->path] = new WindowsPathFact($fact->reparse === true, $writers);
+    /**
+     * The facts of the reader's JSON output, by path. Any other shape than the script writes is refused, so an
+     * unexpected output never reads as a safe path.
+     *
+     * @return array<string, WindowsPathFact>
+     * @throws BinaryRefusedException `binary.cache-unsafe`
+     */
+    public static function factsOf(\stdClass $read): array
+    {
+        $entries = $read->facts ?? null;
+        if (!is_array($entries)) {
+            throw self::unreadable('the output of Windows PowerShell has no `facts` list');
+        }
+
+        $facts = [];
+        foreach ($entries as $fact) {
+            if (!$fact instanceof \stdClass || !is_string($fact->path ?? null) || !is_bool($fact->reparse ?? null) || !is_array($fact->writers ?? null)) {
+                throw self::unreadable('an entry of the output of Windows PowerShell is not a path, a reparse flag and a list of writers');
             }
+
+            $writers = array_values($fact->writers);
+            if (array_filter($writers, is_string(...)) !== $writers) {
+                throw self::unreadable("a writer of '{$fact->path}' in the output of Windows PowerShell is not a SID");
+            }
+
+            $facts[$fact->path] = new WindowsPathFact($fact->reparse, $writers);
         }
 
         return $facts;

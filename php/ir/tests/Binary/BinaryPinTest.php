@@ -63,6 +63,7 @@ final class BinaryPinTest extends TestCase
 
         return [
             'path without a hash' => [['path' => 'compiler'], BinaryFailureCode::PinMissing],
+            'path with a null hash' => [['path' => 'compiler', 'sha256' => null], BinaryFailureCode::PinMissing],
             'path with an upper-case hash' => [['path' => 'compiler', 'sha256' => strtoupper(str_repeat('ab', 32))], BinaryFailureCode::PinInvalid],
             'path with a short hash' => [['path' => 'compiler', 'sha256' => 'abc'], BinaryFailureCode::PinInvalid],
             'path and version' => [['path' => 'compiler', 'version' => '1.0.0', 'sha256' => self::OTHER_SHA256], BinaryFailureCode::PinInvalid],
@@ -124,6 +125,25 @@ final class BinaryPinTest extends TestCase
 
         self::assertSame(BinaryFailureCode::PinMissing, $refused->code);
         self::assertStringContainsString('other.json', $refused->message);
+    }
+
+    public function testResolvesARelativePathAgainstTheComposerFileTheVariableNames(): void
+    {
+        TemporaryDirectory::write($this->project, 'sub/composer.json', (string) json_encode(['extra' => ['seampact' => ['binary' => ['path' => 'bin/seampact', 'sha256' => self::OTHER_SHA256]]]]));
+
+        $override = RootPackage::locate($this->project, ['COMPOSER' => 'sub/composer.json'])->binaryOverride();
+
+        self::assertSame("{$this->project}/sub/bin/seampact", $override?->value);
+    }
+
+    public function testRefusesAnExtraSeampactThatIsNotAnObject(): void
+    {
+        TemporaryDirectory::write($this->project, 'composer.json', (string) json_encode(['extra' => ['seampact' => 'binary']]));
+
+        $refused = $this->refusal(fn () => RootPackage::locate($this->project, []));
+
+        self::assertSame(BinaryFailureCode::PinInvalid, $refused->code);
+        self::assertStringContainsString('`extra.seampact`', $refused->message);
     }
 
     /** @param ?array<string, mixed> $binary */

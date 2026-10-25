@@ -117,6 +117,9 @@ final class BundleIrCheck
     {
         foreach (SupportCheck::check($document, IrSupport::ofModel(kinds: [])) as $refusal) {
             $code = self::SUPPORT_CODES[$refusal->code->value] ?? null;
+
+            // `ir.kind.unsupported`, `ir.feature.unsupported`, `ir.must-act.unknown` and `ir.nesting.too-deep` are
+            // the generator's: it reads the IR again with its own support, which this check, knowing no kind, lacks.
             if ($code === null) {
                 continue;
             }
