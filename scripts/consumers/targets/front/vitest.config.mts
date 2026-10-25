@@ -24,7 +24,7 @@ const STRIPPED_PREFIX = "/api";
 
 // The frameworks a browser test reaches only through `.mts` modules, which Vite's dependency scan does not read:
 // pre-bundled up front when the consumer installs them, or their late discovery reloads a running test.
-const PREBUNDLED_WHEN_INSTALLED = ["vue", "@tanstack/vue-query"];
+const PREBUNDLED_WHEN_INSTALLED = ["vue", "vue/server-renderer", "@tanstack/vue-query"];
 
 interface RunningServer {
   readonly baseUrl: string;

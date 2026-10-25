@@ -4,7 +4,7 @@ import { QueryClient, useMutation, useQuery, VueQueryPlugin } from "@tanstack/vu
 import { expect, inject, test } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-vue";
-import { h, type Plugin } from "vue";
+import { h, type Plugin, shallowRef } from "vue";
 import { createTasksComposables as createDataTasksComposables } from "../../generated/queriesData/tasks/index.js";
 import { createTasksQueries as createPlainTasksQueries } from "../../generated/queriesPlain/tasks/index.js";
 import {
@@ -27,6 +27,7 @@ import {
 } from "./requests.mjs";
 
 const LIST_REQUEST = { path: { channelId: GENERAL_CHANNEL_ID } };
+const OTHER_CHANNEL_ID = "10000000-0000-4000-8000-000000000002";
 
 function quietQueryClient(): QueryClient {
   return new QueryClient({
@@ -156,6 +157,7 @@ test("5: an unmount aborts the request", async () => {
       signal.addEventListener("abort", () => reject(signal.reason));
     });
   };
+
   const view = await render(TaskList, {
     props: { Tasks: tasksComposablesFor(inject("userToken"), hanging) },
     global: { plugins: [queryPlugin()] },
@@ -165,6 +167,22 @@ test("5: an unmount aborts the request", async () => {
   await view.unmount();
 
   await expect.poll(() => signals[0]?.aborted).toBe(true);
+});
+
+test("5: a request change reads the new request", async () => {
+  await loadScript({});
+
+  const { send, sent } = recordingFetch();
+  const Tasks = tasksComposablesFor(inject("userToken"), send);
+  const request = shallowRef(LIST_REQUEST);
+
+  await renderComposable(() => Tasks.useListTasks(request), [queryPlugin()]);
+
+  await expect.poll(() => listRequests(sent)).toHaveLength(1);
+  request.value = { path: { channelId: OTHER_CHANNEL_ID } };
+
+  await expect.poll(() => listRequests(sent)).toHaveLength(2);
+  expect(listRequests(sent)[1]?.url).toContain(OTHER_CHANNEL_ID);
 });
 
 test("6: a dropped first answer and one retry send one idempotency key, the second answer replayed", async () => {

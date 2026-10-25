@@ -4,7 +4,8 @@
 import { expect, inject, test } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-vue";
-import { h, shallowRef } from "vue";
+import { createSSRApp, h, shallowRef } from "vue";
+import { renderToString } from "vue/server-renderer";
 import { createTasksComposables as createDataTasksComposables } from "../../generated/queriesData/tasks/index.js";
 import { createTasksQueries as createPlainTasksQueries } from "../../generated/queriesPlain/tasks/index.js";
 import {
@@ -128,6 +129,33 @@ test("5: a request change aborts the previous read and sends the new one", async
   await expect.poll(() => signals.length).toBe(2);
   expect(signals[0]?.aborted).toBe(true);
   expect(signals[1]?.aborted).toBe(false);
+});
+
+test("5: refetch after the scope is disposed sends nothing", async () => {
+  await loadScript({});
+
+  const { send, signals } = hangingFetch();
+  const Tasks = tasksComposablesFor(inject("userToken"), send);
+  const { result, unmount } = await renderComposable(() => Tasks.useListTasks(LIST_REQUEST));
+
+  await expect.poll(() => signals.length).toBe(1);
+  await unmount();
+  result.refetch();
+  await wait(QUIET_MS);
+
+  expect(signals).toHaveLength(1);
+});
+
+test("5: a component rendered on the server sends no read", async () => {
+  const { send, signals } = hangingFetch();
+  const Tasks = tasksComposablesFor(inject("userToken"), send);
+
+  const html = await renderToString(createSSRApp(() => h(TaskList, { Tasks })));
+
+  await wait(QUIET_MS);
+
+  expect(html).toContain("Loading");
+  expect(signals).toHaveLength(0);
 });
 
 test("6: a dropped first answer and one retry send one idempotency key, the second answer replayed", async () => {
