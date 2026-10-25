@@ -1,35 +1,44 @@
 package com.example.tasks.api.spring.runtime;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.MissingNode;
 
 /**
  * The verdict on a contract route's held reply (ADR 0022 "The outgoing response check"): a declared status, a
- * success the reply handler wrote, an error in the api's format with a code the status lists, and a mark on every
- * reply of an admitted request. `sendError` and an empty 401, 403 or 429 answer their role's reply when the operation
- * declares the status. Under `strict` a violation is the api's 500; under `warn` it goes out and is logged.
+ * success the reply handler wrote, an error in the api's format with a code the status lists, a mark on every
+ * reply of an admitted request, and no change after the boundary wrote. A 401, 403 or 429 by `sendError` or with an
+ * empty body answers its role's reply when the operation declares it. Under `strict` a violation is the api's 500;
+ * under `warn` it goes out and is logged.
  */
 final class OutgoingCheck {
-    private static final Set<Integer> EMPTY_REFUSAL_STATUSES = Set.of(401, 403, 429);
-    private static final int UNAUTHORIZED = 401;
-    private static final int FORBIDDEN = 403;
+    private static final Map<Integer, String> REFUSAL_ROLES = Map.of(401, "unauthenticated", 403, "forbidden", 429, "rateLimited");
     private static final int NOT_MODIFIED = 304;
 
     private OutgoingCheck() {}
 
+    /** Gives the verdict; a failure of the check itself is the api's 500, never the container's. */
     static void finish(SeampactBoundary boundary, BoundaryExchange exchange) {
+        try {
+            check(boundary, exchange);
+        } catch (RuntimeException failure) {
+            boundary.writeUnexpected(exchange, "the outgoing check failed", failure);
+            release(boundary, exchange, exchange.response.heldBody());
+        }
+    }
+
+    private static void check(SeampactBoundary boundary, BoundaryExchange exchange) {
         CheckingResponse response = exchange.response;
         byte[] body = response.heldBody();
         int status = response.heldStatus();
 
-        if (!exchange.boundaryWrote && (response.errorSent() || (body.length == 0 && EMPTY_REFUSAL_STATUSES.contains(status)))) {
+        if (!exchange.boundaryWrote && (response.errorSent() || (body.length == 0 && REFUSAL_ROLES.containsKey(status)))) {
             Optional<String> code = refusalCode(exchange.route(), status);
             if (code.isPresent()) {
-                response.resetBuffer();
+                response.clearKeepingHeaders();
                 boundary.writeError(response, exchange.route(), code.get(), MissingNode.getInstance());
                 release(boundary, exchange, response.heldBody());
                 return;
@@ -54,7 +63,9 @@ final class OutgoingCheck {
     }
 
     private static Optional<String> violationOf(SeampactBoundary boundary, BoundaryExchange exchange, int status, byte[] body) {
-        if (exchange.boundaryWrote) return Optional.empty();
+        if (exchange.boundaryWrote) {
+            return exchange.response.changedSinceBoundaryReply() ? Optional.of("the reply changed after the boundary wrote it") : Optional.empty();
+        }
 
         ContractRoute route = exchange.route();
         if (exchange.response.errorSent()) return Optional.of("the status " + status + " was sent with sendError and no body");
@@ -90,11 +101,12 @@ final class OutgoingCheck {
         return Optional.of("the error body of status " + status + " carries no code the operation lists for it");
     }
 
+    // Only 401, 403 and 429 answer their role's code; any other status by sendError is a violation.
     private static Optional<String> refusalCode(ContractRoute route, int status) {
-        if (status == UNAUTHORIZED) return route.codeOfRole("unauthenticated").or(() -> route.codeOfStatus(status));
-        if (status == FORBIDDEN) return route.codeOfRole("forbidden").or(() -> route.codeOfStatus(status));
+        String role = REFUSAL_ROLES.get(status);
+        if (role == null) return Optional.empty();
 
-        return route.codeOfStatus(status);
+        return route.codeOfRole(role).filter(code -> route.statusOf(code).orElse(-1) == status);
     }
 
     private static void release(SeampactBoundary boundary, BoundaryExchange exchange, byte[] body) {

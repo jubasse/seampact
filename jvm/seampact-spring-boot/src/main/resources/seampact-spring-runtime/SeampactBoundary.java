@@ -182,13 +182,24 @@ public final class SeampactBoundary {
         }
 
         writeError(exchange.response, route, refusal.code(), refusal.params());
-        exchange.boundaryWrote = true;
+        exchange.markBoundaryWrote();
     }
 
-    /** Replaces whatever was written with the api's 500 and calls `onUnexpectedError`. */
+    /**
+     * Replaces whatever was written with the api's 500 and calls `onUnexpectedError`. A reply already committed past
+     * the wrapper cannot be replaced: it is logged and closed, and `onUnexpectedError` is called.
+     */
     void writeUnexpected(BoundaryExchange exchange, String reason, Throwable cause) {
-        exchange.response.discard();
         ContractRoute route = exchange.route();
+        if (exchange.response.isCommittedUnderneath()) {
+            LOG.error("seampact: the reply of {}.{} was committed before its check and is closed ({})", apiId(), route.id(), reason);
+            exchange.response.abandon();
+            exchange.markBoundaryWrote();
+            report(Optional.of(route.id()), reason, cause);
+            return;
+        }
+
+        exchange.response.discard();
         Optional<String> code = route.codeOfRole(UNDECLARED_STATUS_ROLE).or(() -> route.codeOfStatus(INTERNAL_ERROR));
 
         if (code.isPresent()) {
@@ -197,7 +208,7 @@ public final class SeampactBoundary {
             exchange.response.setStatus(INTERNAL_ERROR);
         }
 
-        exchange.boundaryWrote = true;
+        exchange.markBoundaryWrote();
         report(Optional.of(route.id()), reason, cause);
     }
 

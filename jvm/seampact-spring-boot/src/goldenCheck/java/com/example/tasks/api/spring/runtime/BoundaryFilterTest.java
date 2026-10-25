@@ -110,4 +110,17 @@ class BoundaryFilterTest {
 
         assertReplacedByInternalError(response);
     }
+
+    @Test
+    void pathParameterUnderTheBasePathAnswersTheApisNotFound() throws Exception {
+        List<HttpServletRequest> reachedApp = new ArrayList<>();
+
+        for (String path : List.of("/v1;x=1/health", "/%761/health", TASK_PATH + ";x=1")) {
+            MockHttpServletResponse response = serve(new MockHttpServletRequest("GET", path), (request, reply) -> reachedApp.add((HttpServletRequest) request));
+
+            assertEquals(NOT_FOUND, response.getStatus(), path);
+            assertTrue(response.getContentAsString().contains("\"code\":\"" + NOT_FOUND_CODE + "\""), response.getContentAsString());
+        }
+        assertEquals(List.of(), reachedApp);
+    }
 }

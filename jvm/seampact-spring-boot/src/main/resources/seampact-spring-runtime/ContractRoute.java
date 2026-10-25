@@ -2,6 +2,7 @@ package io.github.jubasse.seampact.springboot.runtime;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -14,6 +15,13 @@ import tools.jackson.databind.node.MissingNode;
 public final class ContractRoute {
     private static final String PLACEHOLDER_START = "{";
     private static final String PLACEHOLDER_END = "}";
+    private static final String PATH_PARAMETER_START = ";";
+
+    /**
+     * Spring's specificity between two templates of one length: at the first segment where one is literal and the
+     * other a placeholder, the literal one first, whatever the IR order.
+     */
+    static final Comparator<ContractRoute> MOST_SPECIFIC_FIRST = ContractRoute::compareSpecificity;
 
     private final JsonNode operation;
     private final JsonNode errorCatalog;
@@ -54,8 +62,8 @@ public final class ContractRoute {
             String template = templateSegments[index];
             String segment = segments[index];
 
-            if (template.startsWith(PLACEHOLDER_START) && template.endsWith(PLACEHOLDER_END)) {
-                if (segment.isEmpty()) return Optional.empty();
+            if (isPlaceholder(index)) {
+                if (segment.isEmpty() || segment.contains(PATH_PARAMETER_START)) return Optional.empty();
                 params.put(template.substring(1, template.length() - 1), decodedSegment(segment));
             } else if (!template.equals(segment)) {
                 return Optional.empty();
@@ -65,8 +73,25 @@ public final class ContractRoute {
         return Optional.of(params);
     }
 
+    private boolean isPlaceholder(int index) {
+        String template = templateSegments[index];
+
+        return template.startsWith(PLACEHOLDER_START) && template.endsWith(PLACEHOLDER_END);
+    }
+
+    private static int compareSpecificity(ContractRoute first, ContractRoute second) {
+        int shared = Math.min(first.templateSegments.length, second.templateSegments.length);
+
+        for (int index = 0; index < shared; index++) {
+            int order = Boolean.compare(first.isPlaceholder(index), second.isPlaceholder(index));
+            if (order != 0) return order;
+        }
+
+        return Integer.compare(first.templateSegments.length, second.templateSegments.length);
+    }
+
     // A path segment is percent-decoded as UTF-8; '+' stays a plus, unlike in a query.
-    private static String decodedSegment(String segment) {
+    static String decodedSegment(String segment) {
         return URLDecoder.decode(segment.replace("+", "%2B"), StandardCharsets.UTF_8);
     }
 

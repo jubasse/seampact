@@ -9,9 +9,11 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.web.cors.CorsUtils;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.MissingNode;
@@ -49,8 +51,9 @@ public final class BoundaryFilter implements Filter {
             return;
         }
 
+        // A CORS preflight is the app's CORS setup's to answer (ADR 0022 "Routes").
         Optional<String> contractPath = boundary.contractPathOf(request).filter(boundary.table()::isUnderBasePath);
-        if (contractPath.isEmpty()) {
+        if (contractPath.isEmpty() || CorsUtils.isPreFlightRequest(request)) {
             chain.doFilter(request, response);
             return;
         }
@@ -145,7 +148,7 @@ public final class BoundaryFilter implements Filter {
                         Map.of("limitBytes", JsonNodeFactory.instance.numberNode(limitBytes))));
             }
             case UNSUPPORTED_CODING -> new ContractRefusal(roleCode(route, UNSUPPORTED_MEDIA_TYPE_ROLE), MissingNode.getInstance());
-            case CORRUPT -> InputStep.schemaInvalid(route, java.util.List.of(new InputIssue("body", "", "type")));
+            case CORRUPT -> InputStep.schemaInvalid(route, List.of(new InputIssue("body", "", "type")));
         };
     }
 

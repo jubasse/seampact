@@ -1,6 +1,8 @@
 package io.github.jubasse.seampact.springboot.runtime;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +17,9 @@ import tools.jackson.databind.JsonNode;
 public final class ContractTable {
     private static final String HEAD = "HEAD";
     private static final String GET = "GET";
+    private static final String PATH_PARAMETER_START = ";";
+    private static final String CURRENT_SEGMENT = ".";
+    private static final String PARENT_SEGMENT = "..";
 
     static final String NOT_FOUND_ROLE = "notFound";
 
@@ -33,6 +38,7 @@ public final class ContractTable {
             prefixes.add(prefix);
         }
 
+        built.sort(ContractRoute.MOST_SPECIFIC_FIRST);
         this.routes = List.copyOf(built);
         this.basePaths = List.copyOf(prefixes);
     }
@@ -66,12 +72,35 @@ public final class ContractTable {
         return ir.path("formats").path(route.operation().path("format").asString());
     }
 
-    /** Whether [path] is one of the api's base paths or below one. */
-    boolean isUnderBasePath(String path) {
+    /**
+     * Whether the raw [rawPath] is one of the api's base paths or below one, read as Spring routes it: each segment
+     * without its `;` parameters and percent-decoded, dot segments resolved. The route match itself stays raw.
+     */
+    boolean isUnderBasePath(String rawPath) {
+        String path = routedPath(rawPath);
+
         return basePaths.stream().anyMatch(base -> !base.isEmpty() && (path.equals(base) || path.startsWith(base + "/")));
     }
 
-    /** The route [method] and [path] reach; `HEAD` reaches the path's `GET` operation. */
+    private static String routedPath(String rawPath) {
+        Deque<String> segments = new ArrayDeque<>();
+
+        for (String rawSegment : rawPath.split("/", -1)) {
+            int parameters = rawSegment.indexOf(PATH_PARAMETER_START);
+            String segment = ContractRoute.decodedSegment(parameters < 0 ? rawSegment : rawSegment.substring(0, parameters));
+
+            if (segment.equals(CURRENT_SEGMENT)) continue;
+            if (segment.equals(PARENT_SEGMENT)) {
+                if (segments.size() > 1) segments.removeLast();
+                continue;
+            }
+            segments.addLast(segment);
+        }
+
+        return String.join("/", segments);
+    }
+
+    /** The most specific route [method] and [path] reach; `HEAD` reaches the path's `GET` operation. */
     Optional<RouteMatch> match(String method, String path) {
         String served = HEAD.equals(method) ? GET : method;
 

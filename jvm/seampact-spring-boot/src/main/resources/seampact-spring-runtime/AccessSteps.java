@@ -228,7 +228,7 @@ final class AccessSteps {
                 .orElseThrow(() -> new IllegalStateException("seampact: no scope resolver bean serves '" + scope + "'"));
     }
 
-    private static boolean isAccessDenied(Throwable failure) {
+    static boolean isAccessDenied(Throwable failure) {
         for (Class<?> type = failure.getClass(); type != null; type = type.getSuperclass()) {
             if (type.getName().equals(ACCESS_DENIED)) return true;
         }

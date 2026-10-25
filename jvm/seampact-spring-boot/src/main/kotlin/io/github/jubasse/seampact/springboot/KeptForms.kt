@@ -32,6 +32,8 @@ private const val JSON_MEDIA = "application/json"
 private val SPRING_4_MEDIA = listOf("application/x-www-form-urlencoded", "multipart/form-data")
 private const val SPRING_PACK = "spring"
 private const val INT64_FORMAT = "int64"
+/** The string formats the boundary runtime's structural pass checks. */
+private val CHECKED_STRING_FORMATS = setOf("uuid", "date-time", "date", "decimal")
 /** The derivation of the 304 an ETag answers: the boundary's, never the handler's. */
 internal const val ETAG_DERIVATION = "cache.etag"
 private const val OUTPUT_DIRECTION = "output"
@@ -222,6 +224,9 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
     private fun readScalar(type: ScalarTypeUse, at: IrPlace) {
         if (type.type is ScalarType.Unknown) refusals.unknownValue(at.below("type"), type.type.value)
         if (type.format == INT64_FORMAT) refusals.waiting("format.int64", "An 'int64' value", at.below("format"), Delivery.AFTER_1_0)
+        if (type.type == ScalarType.STRING && type.format != null && type.format !in CHECKED_STRING_FORMATS) {
+            refusals.waiting("format.string", "The string format '${type.format}'", at.below("format"), Delivery.CONSUMER)
+        }
         if (type.content != null) refusals.waiting("scalar.content", "A JSON string content", at.below("content"), Delivery.AFTER_1_0)
     }
 

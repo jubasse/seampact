@@ -23,6 +23,8 @@ import tools.jackson.databind.node.ObjectNode;
  */
 final class StructuralValidator {
     private static final Pattern UUID_TEXT = Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+    private static final Pattern DECIMAL_TEXT = Pattern.compile("-?(0|[1-9][0-9]*)(\\.[0-9]+)?");
+    private static final String DECIMAL_FORMAT = "decimal";
     private static final String UNKNOWN_KEYS_STRIP = "strip";
     private static final String UNKNOWN_KEYS_KEEP = "keep";
 
@@ -101,9 +103,16 @@ final class StructuralValidator {
             if (!pattern.matcher(text).find()) issues.add(new InputIssue(in, pointer, "pattern"));
         }
 
-        if (typeUse.has("format") && !matchesFormat(text, typeUse.path("format").asString())) {
+        if (!typeUse.has("format")) return;
+
+        String format = typeUse.path("format").asString();
+        if (!matchesFormat(text, format)) {
             issues.add(new InputIssue(in, pointer, "format"));
+            return;
         }
+
+        // A decimal's range refinements compare numerically (ADR 0003 section 8).
+        if (format.equals(DECIMAL_FORMAT)) checkBounds(new BigDecimal(text), refinements, in, pointer, issues);
     }
 
     private static boolean matchesFormat(String text, String format) {
@@ -112,6 +121,7 @@ final class StructuralValidator {
                 case "uuid" -> UUID_TEXT.matcher(text).matches();
                 case "date-time" -> OffsetDateTime.parse(text, DateTimeFormatter.ISO_OFFSET_DATE_TIME) != null && text.matches(".*T\\d{2}:\\d{2}:\\d{2}.*");
                 case "date" -> LocalDate.parse(text, DateTimeFormatter.ISO_LOCAL_DATE) != null;
+                case DECIMAL_FORMAT -> DECIMAL_TEXT.matcher(text).matches();
                 default -> throw new IllegalStateException("seampact: the string format '" + format + "' is not one the boundary validates");
             };
         } catch (DateTimeParseException invalid) {

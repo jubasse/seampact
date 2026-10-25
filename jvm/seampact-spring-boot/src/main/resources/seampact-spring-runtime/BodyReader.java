@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.util.Locale;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
-import java.util.zip.ZipException;
 
 /**
  * The bounded body read of step 1 (ADR 0022 "Query and bounded values"): a declared `Content-Length` above the
@@ -58,9 +57,10 @@ final class BodyReader {
             default -> throw new BodyRefusedException(Refused.UNSUPPORTED_CODING);
         };
 
+        // The sent bytes are already read whole, so any read failure here is the decoder's: a corrupt or truncated body.
         try (decoded) {
             return readBounded(decoded, limitBytes);
-        } catch (ZipException corrupt) {
+        } catch (IOException corrupt) {
             throw new BodyRefusedException(Refused.CORRUPT);
         }
     }

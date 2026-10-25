@@ -31,6 +31,12 @@ final class BoundaryExchange {
         this.response = response;
     }
 
+    /** Marks the reply as the boundary's own and keeps what it wrote, so a later change is a violation. */
+    void markBoundaryWrote() {
+        boundaryWrote = true;
+        response.keepBoundaryReply();
+    }
+
     ContractRoute route() {
         return match.route();
     }

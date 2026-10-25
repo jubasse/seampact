@@ -1,8 +1,10 @@
 package com.example.tasksservice.api.spring.runtime;
 
+import jakarta.servlet.Filter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -162,7 +164,7 @@ public final class BootCheck implements SmartInitializingSingleton {
         for (Annotation annotation : method.getAnnotations()) {
             Class<? extends Annotation> type = annotation.annotationType();
             boolean composed = AnnotatedElementUtils.isAnnotated(type, RequestMapping.class);
-            boolean carriesOperation = java.util.Arrays.stream(type.getDeclaredMethods()).anyMatch(attribute -> attribute.getName().equals(OPERATION_ID_ATTRIBUTE));
+            boolean carriesOperation = Arrays.stream(type.getDeclaredMethods()).anyMatch(attribute -> attribute.getName().equals(OPERATION_ID_ATTRIBUTE));
             if (composed && carriesOperation) return true;
         }
 
@@ -175,7 +177,7 @@ public final class BootCheck implements SmartInitializingSingleton {
             if (filterOrderedBefore(filter, registration.getOrder())) problems.add(filterProblem(filter, registration.getOrder()));
         }
 
-        for (jakarta.servlet.Filter filter : boundary.beans().getBeansOfType(jakarta.servlet.Filter.class).values()) {
+        for (Filter filter : boundary.beans().getBeansOfType(Filter.class).values()) {
             if (filter instanceof Ordered ordered && filterOrderedBefore(filter.getClass().getName(), ordered.getOrder())) {
                 problems.add(filterProblem(filter.getClass().getName(), ordered.getOrder()));
             }

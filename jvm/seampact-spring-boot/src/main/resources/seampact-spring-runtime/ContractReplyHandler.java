@@ -86,7 +86,7 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
         }
 
         checking.setStatus(status);
-        exchange.boundaryWrote = true;
+        exchange.markBoundaryWrote();
     }
 
     // A result arm's record component, null when the arm has none (a 204, a code without params).
