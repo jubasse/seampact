@@ -9,13 +9,20 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import jakarta.validation.NoProviderFoundException;
+import jakarta.validation.Validation;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.boot.SpringBootVersion;
+import org.springframework.boot.web.server.servlet.ServletWebServerFactory;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.servlet.handler.AbstractUrlHandlerMapping;
+import org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
@@ -26,8 +33,10 @@ import tools.jackson.databind.JsonNode;
 /**
  * The boot check (ADR 0022 "The boot check"), once every bean is built and before the server starts: it lists every
  * problem at once (a missing hook, a contract operation with no handler or two, a framework route the config does
- * not allow-list, a filter ordered before the boundary, an unsupported Spring Boot major, a missing or malformed
- * public origin under absolute URLs) and throws, so the app does not start.
+ * not allow-list, a filter ordered before the boundary, a mapping ordered before Spring MVC's that takes a contract
+ * route, a mount the configured paths differ from, a container other than Tomcat, a reactive app, no Jakarta
+ * Validation provider, an unsupported Spring Boot major, a missing or malformed public origin under absolute URLs)
+ * and throws, so the app does not start.
  */
 public final class BootCheck implements SmartInitializingSingleton {
     private static final String SUPPORTED_BOOT_MAJOR = "4";
@@ -35,6 +44,11 @@ public final class BootCheck implements SmartInitializingSingleton {
     private static final String ERROR_PATH_PROPERTY = "server.error.path";
     private static final String SPRINGDOC_PATH_PROPERTY = "springdoc.api-docs.path";
     private static final String SPRINGDOC_UI_PROPERTY = "springdoc.swagger-ui.path";
+    private static final String CONTEXT_PATH_PROPERTY = "server.servlet.context-path";
+    private static final String SERVLET_PATH_PROPERTY = "spring.mvc.servlet.path";
+    private static final String TOMCAT_FACTORY = "Tomcat";
+    private static final String SAMPLE_SEGMENT = "x";
+    private static final List<String> HTTP_METHODS = List.of("GET", "POST", "PUT", "PATCH", "DELETE");
     private static final Set<String> BODY_READING_FILTERS = Set.of(
             "org.springframework.web.filter.FormContentFilter",
             "org.springframework.web.filter.HiddenHttpMethodFilter",
@@ -56,6 +70,9 @@ public final class BootCheck implements SmartInitializingSingleton {
         if (bootCheck.path("handlers").asBoolean(true)) handlerProblems(problems);
         if (bootCheck.path("frameworkRoutes").asBoolean(true)) frameworkRouteProblems(problems);
         filterProblems(problems);
+        earlierMappingProblems(problems);
+        mountProblems(problems);
+        platformProblems(problems);
         PublicOrigin.bootProblem(boundary.table(), boundary.environment()).ifPresent(problems::add);
         if (!SpringBootVersion.getVersion().startsWith(SUPPORTED_BOOT_MAJOR + ".")) {
             problems.add("Spring Boot " + SpringBootVersion.getVersion() + " runs the app; fix: the spring-boot target supports Spring Boot 4.x only.");
@@ -177,6 +194,83 @@ public final class BootCheck implements SmartInitializingSingleton {
         }
 
         return false;
+    }
+
+    // A mapping ordered before Spring MVC's that serves a contract method and path takes the route from the contract
+    // handler. A mapping that cannot list its routes (a router function) is left to the run-time rule.
+    private void earlierMappingProblems(List<String> problems) {
+        int contractOrder = boundary.beans().getBeansOfType(RequestMappingHandlerMapping.class).values().stream()
+                .mapToInt(RequestMappingHandlerMapping::getOrder).min().orElse(Ordered.LOWEST_PRECEDENCE);
+
+        for (Map.Entry<String, HandlerMapping> mapping : boundary.beans().getBeansOfType(HandlerMapping.class).entrySet()) {
+            HandlerMapping candidate = mapping.getValue();
+            boolean earlier = candidate instanceof Ordered ordered && ordered.getOrder() < contractOrder;
+            if (!earlier || candidate instanceof RequestMappingHandlerMapping) continue;
+
+            for (Map.Entry<String, List<String>> route : listedRoutes(candidate).entrySet()) {
+                String takenOperation = takenOperation(route.getKey(), route.getValue());
+                if (takenOperation == null) continue;
+                problems.add("the mapping '" + mapping.getKey() + "' is ordered before Spring MVC's and serves " + route.getKey()
+                        + ", the path of operation '" + takenOperation + "'; fix: order it after RequestMappingHandlerMapping or remove that route.");
+            }
+        }
+    }
+
+    // The patterns a mapping lists, each with its methods (none for every method).
+    private static Map<String, List<String>> listedRoutes(HandlerMapping mapping) {
+        Map<String, List<String>> routes = new LinkedHashMap<>();
+        if (mapping instanceof RequestMappingInfoHandlerMapping infos) {
+            for (RequestMappingInfo info : infos.getHandlerMethods().keySet()) {
+                List<String> methods = info.getMethodsCondition().getMethods().stream().map(Enum::name).toList();
+                info.getPatternValues().forEach(pattern -> routes.put(pattern, methods));
+            }
+        } else if (mapping instanceof AbstractUrlHandlerMapping urls) {
+            urls.getHandlerMap().keySet().forEach(pattern -> routes.put(pattern, List.of()));
+        }
+
+        return routes;
+    }
+
+    // The contract operation a pattern serves, its variables read as any segment; null when it serves none.
+    private String takenOperation(String pattern, List<String> methods) {
+        String samplePath = boundary.servletPath() + pattern.replaceAll("\\{[^/}]+}", SAMPLE_SEGMENT);
+        List<String> tried = methods.isEmpty() ? HTTP_METHODS : methods;
+        for (String method : tried) {
+            Optional<ContractTable.RouteMatch> match = boundary.table().match(method, samplePath);
+            if (match.isPresent()) return match.get().route().id();
+        }
+
+        return null;
+    }
+
+    // The entry's `mount` is the prefix every contract path is served under: the context path then the servlet path.
+    private void mountProblems(List<String> problems) {
+        String mount = boundary.table().settings().path("mount").asString("");
+        String contextPath = boundary.environment().getProperty(CONTEXT_PATH_PROPERTY, "").replaceAll("/+$", "");
+        String configured = contextPath + boundary.servletPath();
+        if (configured.equals(mount)) return;
+
+        problems.add("the app serves under '" + configured + "' (" + CONTEXT_PATH_PROPERTY + " then " + SERVLET_PATH_PROPERTY
+                + ") and the entry's mount is '" + mount + "'; fix: make them equal.");
+    }
+
+    // The boundary is a servlet filter checked by Bean Validation, tested on Tomcat (ADR 0022 "Refused by name or waiting").
+    private void platformProblems(List<String> problems) {
+        if (boundary.beans().getBeansOfType(RequestMappingHandlerMapping.class).isEmpty()) {
+            problems.add("the app runs no Spring MVC (a reactive or non-web app); fix: the spring-boot target serves Spring MVC on a servlet container.");
+        }
+
+        for (ServletWebServerFactory factory : boundary.beans().getBeansOfType(ServletWebServerFactory.class).values()) {
+            if (!factory.getClass().getSimpleName().startsWith(TOMCAT_FACTORY)) {
+                problems.add("the servlet container factory is " + factory.getClass().getName() + "; fix: the spring-boot target supports Tomcat only.");
+            }
+        }
+
+        try {
+            Validation.byDefaultProvider().configure();
+        } catch (NoProviderFoundException missing) {
+            problems.add("no Jakarta Validation provider is on the classpath; fix: add spring-boot-starter-validation.");
+        }
     }
 
     private void filterProblems(List<String> problems) {
