@@ -104,6 +104,19 @@ export function resultExpression(
   return `successOrThrow(${call}, (failure) => new ContractError(${JSON.stringify(operation.operationId)}, failure))`;
 }
 
+// A factory's caller options parameter: optional with a default, or required when the method requires a timeout.
+export function factoryOptionsParameter(operation: QueryOperation, type: string): string {
+  return operation.needsTimeout ? `options: WithRequiredCall<${type}>` : `options: ${type} = {}`;
+}
+
+/** The `staleTime` member of a query's options under `staleTime: contract`: the contract's freshness. */
+export function staleTimeMember(
+  operation: QueryOperation,
+  options: { readonly staleTime: "off" | "contract" },
+): string {
+  return options.staleTime === "contract" ? `staleTime: ${operation.freshnessMs},\n` : "";
+}
+
 /** `<Api>Operations["<op>"]`. */
 export function operationType(operation: QueryOperation, api: string): string {
   return `${api}Operations[${JSON.stringify(operation.names.base)}]`;
@@ -152,10 +165,15 @@ export function nextPageConstants(operations: readonly QueryOperation[]): string
   });
 }
 
-/** The `keys` object: `all`, `resource(type)` and a member per query and infinite query. */
-export function keysObjectSource(plan: QueryPlan): string {
+/**
+ * The `keys` object: `all`, `resource(type)` and a member per query and infinite query. `absentRequest`, when given,
+ * is the source of the key segment of a request that is undefined, for a library whose keys take no `undefined`.
+ */
+export function keysObjectSource(plan: QueryPlan, absentRequest?: string): string {
   const api = plan.apiName;
-  const members = plan.operations.flatMap((operation) => keyMemberSources(operation, api));
+  const members = plan.operations.flatMap((operation) =>
+    keyMemberSources(operation, api, absentRequest),
+  );
 
   return `const keys = {
 all: [ROOT] as const,
@@ -170,19 +188,25 @@ function keyPrefix(operation: QueryOperation): string {
     : `ROOT, { resource: ${JSON.stringify(operation.resource)} }`;
 }
 
-function keyMemberSources(operation: QueryOperation, api: string): string[] {
+function keyMemberSources(
+  operation: QueryOperation,
+  api: string,
+  absentRequest: string | undefined,
+): string[] {
   if (operation.form !== "query") return [];
 
   const { names } = operation;
   const request = `request: ${operationType(operation, api)}["request"]`;
   const filled = JSON.stringify(operation.filledHeaderKeys);
+  const fallback = absentRequest === undefined ? "" : ` ?? ${absentRequest}`;
+  const keyed = `keyRequest(request, ${filled})${fallback}`;
   const id = JSON.stringify(operation.operationId);
-  const plain = `${propertyKey(names.base)}: (${request}) => [${keyPrefix(operation)}, ${id}, keyRequest(request, ${filled})] as const,`;
+  const plain = `${propertyKey(names.base)}: (${request}) => [${keyPrefix(operation)}, ${id}, ${keyed}] as const,`;
 
   if (names.infinite === undefined) return [plain];
 
   return [
     plain,
-    `${propertyKey(names.infinite.key)}: (${request}) => [${keyPrefix(operation)}, ${id}, "infinite", keyRequest(request, ${filled})] as const,`,
+    `${propertyKey(names.infinite.key)}: (${request}) => [${keyPrefix(operation)}, ${id}, "infinite", ${keyed}] as const,`,
   ];
 }

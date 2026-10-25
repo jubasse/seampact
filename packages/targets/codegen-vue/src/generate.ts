@@ -12,12 +12,15 @@ import {
   type IndexedModule,
   importSpecifier,
   planQueries,
+  type QueriesImports,
   type QueryPlan,
   type Refusal,
   refuseUnsupportedClientErrorStyle,
 } from "@seampact/codegen-core";
 import { composablesModuleSource as fetchComposablesModuleSource } from "./fetch/composables-module.js";
 import type { VueQueryOptions } from "./options.js";
+import { composablesModuleSource as piniaColadaComposablesModuleSource } from "./pinia-colada/composables-module.js";
+import { queriesModuleSource as piniaColadaQueriesModuleSource } from "./pinia-colada/queries-module.js";
 import { composablesModuleSource as tanstackComposablesModuleSource } from "./tanstack/composables-module.js";
 import { queriesModuleSource as tanstackQueriesModuleSource } from "./tanstack/queries-module.js";
 
@@ -90,14 +93,7 @@ function queriesAndComposablesFiles(
     queries: `./${QUERIES_MODULE}${FRONT_MODULE_SUFFIX}`,
     runtime: FRONT_RUNTIME_SPECIFIER,
   };
-  const fetchMode = options.query === "fetch";
-  const queries = fetchMode
-    ? fetchQueriesModuleSource(plan, options, queriesImports)
-    : tanstackQueriesModuleSource(plan, options, root, queriesImports);
-  const composables = () =>
-    fetchMode
-      ? fetchComposablesModuleSource(plan, options, composablesImports)
-      : tanstackComposablesModuleSource(plan, composablesImports);
+  const sources = librarySources(plan, options, root, queriesImports, composablesImports);
   const indexed: IndexedModule[] = [
     ...(library.withComposables ? [{ module: COMPOSABLES_MODULE }] : []),
     { module: QUERIES_MODULE },
@@ -109,10 +105,44 @@ function queriesAndComposablesFiles(
   ];
 
   return [
-    { path: queriesFile, contents: `${queries}\n` },
-    ...(library.withComposables ? [{ path: composablesFile, contents: `${composables()}\n` }] : []),
+    { path: queriesFile, contents: `${sources.queries}\n` },
+    ...(library.withComposables
+      ? [{ path: composablesFile, contents: `${sources.composables()}\n` }]
+      : []),
     { path: `${INDEX_MODULE}${MODULE_EXTENSION}`, contents: apiIndexSource(indexed) },
   ];
+}
+
+interface LibrarySources {
+  readonly queries: string;
+  // Rendered only when the `composables` artefact is on.
+  readonly composables: () => string;
+}
+
+function librarySources(
+  plan: QueryPlan,
+  options: VueQueryOptions,
+  root: string,
+  queriesImports: QueriesImports,
+  composablesImports: QueriesImports & { readonly queries: string },
+): LibrarySources {
+  switch (options.query) {
+    case "fetch":
+      return {
+        queries: fetchQueriesModuleSource(plan, options, queriesImports),
+        composables: () => fetchComposablesModuleSource(plan, options, composablesImports),
+      };
+    case "pinia-colada":
+      return {
+        queries: piniaColadaQueriesModuleSource(plan, options, root, queriesImports),
+        composables: () => piniaColadaComposablesModuleSource(plan, options, composablesImports),
+      };
+    case "tanstack":
+      return {
+        queries: tanstackQueriesModuleSource(plan, options, root, queriesImports),
+        composables: () => tanstackComposablesModuleSource(plan, composablesImports),
+      };
+  }
 }
 
 // `itemsOf` flattens an infinite query's pages, which plain fetch has not.
@@ -127,7 +157,7 @@ function refuseUnsupportedArtefacts(
       code: "artefacts.itemsOf.unsupported",
       message:
         "The artefact 'itemsOf' flattens the pages of an infinite query, and 'query: fetch' has no infinite query.",
-      fix: "Turn 'itemsOf' off, or choose 'query: tanstack'.",
+      fix: "Turn 'itemsOf' off, or choose 'query: tanstack' or 'query: pinia-colada'.",
       member: "",
     },
   ];

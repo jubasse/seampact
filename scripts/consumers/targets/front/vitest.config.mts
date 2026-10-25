@@ -28,6 +28,8 @@ const PREBUNDLED_WHEN_INSTALLED = [
   "vue",
   "vue/server-renderer",
   "@tanstack/vue-query",
+  "pinia",
+  "@pinia/colada",
   "@angular/common",
   "@angular/common/http",
   "@angular/compiler",

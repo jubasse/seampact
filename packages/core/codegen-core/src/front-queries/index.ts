@@ -34,6 +34,7 @@ export {
   constantCaseOf,
   type ErrorMember,
   type FrontErrors,
+  factoryOptionsParameter,
   keysObjectSource,
   METHOD_RESULT_TYPE,
   nextPageConstantName,
@@ -48,6 +49,7 @@ export {
   resourceUnion,
   resultExpression,
   settingsTypeSource,
+  staleTimeMember,
 } from "./operation-sources.js";
 export {
   type FrontQueryOptions,

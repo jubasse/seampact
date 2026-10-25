@@ -1,0 +1,1 @@
+The Pinia Colada renderer of the vue target (`query: pinia-colada`): the `queries.ts` options factories over `@pinia/colada` `define*Options`, and `composables.ts`, one `use*` composable per factory taking a reactive request.

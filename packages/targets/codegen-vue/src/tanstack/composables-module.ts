@@ -4,6 +4,10 @@ import {
   type QueryOperation,
   type QueryPlan,
 } from "@seampact/codegen-core";
+import {
+  mutationOptionsParameter,
+  reactiveOptionsParameter,
+} from "../composable-options-parameters.js";
 
 // The `composables.ts` of one api for TanStack Query (ADR 0021 "The generated API"): `create<Api>Composables`
 // returns the members of `create<Api>Queries` plus a `use*` composable over each options factory. A query
@@ -55,17 +59,6 @@ ${composables.join("\n\n")}
 }`,
     `/** What \`create${api}Composables\` returns. */\nexport type ${api}Composables = ReturnType<typeof create${api}Composables>;`,
   ].join("\n\n");
-}
-
-// A query composable's options: a value, a `ref` or a getter, required when the client method requires a timeout.
-function reactiveOptionsParameter(operation: QueryOperation, type: string): string {
-  return operation.needsTimeout
-    ? `options: MaybeRefOrGetter<WithRequiredCall<${type}>>`
-    : `options?: MaybeRefOrGetter<${type} | undefined>`;
-}
-
-function mutationOptionsParameter(operation: QueryOperation, type: string): string {
-  return operation.needsTimeout ? `options: WithRequiredCall<${type}>` : `options?: ${type}`;
 }
 
 function composableSources(operation: QueryOperation, api: string): string[] {
