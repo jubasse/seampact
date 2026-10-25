@@ -49,8 +49,8 @@ Codegen emits, per api, under the target entry's `out` and the `namespace` optio
   - the media type;
   - the bounded body read and the decoding;
   - the outgoing response check.
-  It answers its own refusals in the api's format.
-- **The access middleware** (`TasksAccessMiddleware`), on every contract route and added to the priority list before `SubstituteBindings`. It runs steps 2 to 5: authenticate, principal requirements, scopes and requirements. It first checks that the route Laravel chose carries the operation that the raw path matched ("Routes").
+  It answers its own refusals in the api's format. On the first request of each booted application (each request under php-fpm, once per worker otherwise), it checks that it is the first entry of the kernel's global middleware. When it is not, it answers the api's 500 and logs the fix on every request, so a route-cached serve, which skips the boot check, still keeps "boundary first".
+- **The access middleware** (`TasksAccessMiddleware`), on every contract route and added to the priority list before `SubstituteBindings`. It runs steps 2 to 5: authenticate, principal requirements, scopes and requirements. It first checks that the route Laravel chose carries the operation that the raw path matched ("Routes"). Once steps 2 to 5 admit the request, it marks the request with that operation id, in a request attribute under a generated name.
 - **The registration**: one service provider per api (`TasksSeampactServiceProvider`), which the app lists in `bootstrap/providers.php`. It:
   - prepends the boundary middleware and places the access middleware, through the HTTP kernel;
   - registers the routes macro, or loads nothing under `routes: file`;
@@ -76,8 +76,8 @@ Laravel matches routes in registration order, so the generated registration regi
 The boundary middleware matches the raw request target against the contract templates. The raw target is `REQUEST_URI` without the query, minus the front controller's base path, computed from the server variables and stripped as a raw prefix. It never uses forwarded headers: the boundary runs before `TrustProxies`, and under Octane the trusted proxies an earlier request set would add `X-Forwarded-Prefix` to `getBaseUrl()`. The access middleware then compares the operation of the route Laravel chose with that match. Laravel decodes the path before routing, so the two can differ:
 
 - `/v1/tasks/%73earch` reaches the search route while the raw path matches `{p1}`. The access middleware answers the path's `notFound` 404 before any check (spike).
-- A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the boundary, before routing, on every Node target's terms (ADR 0016 "Errors raised before routing"). This covers a trailing slash (which Laravel would trim and route), `//`, a dot segment (`x/../7`, `%2e%2e`) and a percent-encoded static segment (spike).
-- `a%2Fb` in a segment matches `{p1}` raw, but Laravel routes the decoded `a/b` and finds no route. The boundary answers the path's `notFound` 404 when the reply carries routing's `NotFoundHttpException` and the access middleware never ran.
+- A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the boundary, before routing, on every Node target's terms (ADR 0016 "Errors raised before routing"). This covers a trailing slash (which Laravel would trim and route), `//`, a dot segment (`x/../7`, `%2e%2e`), a percent-encoded static segment, and a segment holding a `;` path parameter (`7;x=1`), as on Spring (ADR 0022 "Routes"). The spike's reduced boundary answered the first three cases this way; it had no rule for `%2e%2e` and `;`, which Laravel routes to `{p1}` as values.
+- `a%2Fb` in a segment matches `{p1}` raw, but Laravel routes the decoded `a/b` and finds no route, or the app's `Route::fallback()` answers it (200, no exception). On the way back, the boundary reads the route Laravel chose (`$request->route()`): when it is not the contract route of the operation that the raw path matched (no route, an app route, the fallback or another contract route), the boundary answers that path's `notFound` 404, whatever the reply.
 - A segment whose percent-decoding is not UTF-8 (`%E0%A4%A`) is refused by Laravel's `ValidatePathEncoding` with a `MalformedUrlException` (spike). The boundary answers it as ADR 0016 answers a path value that does not decode, the `schemaInvalid` 400 with that parameter's issue, without running steps 2 to 5.
 - `catchAll: false` leaves those paths to the app. A base path shared with another api of the app is left to the app.
 
@@ -108,7 +108,8 @@ Every other exception is rendered by the app's own handler, untouched. The bound
 - `AuthorizationException` (the `can` middleware, a Policy): `forbidden` (403);
 - `TokenMismatchException` and `OriginMismatchException` from `PreventRequestForgery`: `csrfInvalid` (403, where Laravel answers 419);
 - `ThrottleRequestsException`: `rateLimited` (429), keeping `Retry-After` and the `X-RateLimit-*` headers;
-- `PostTooLargeException` from `ValidatePostSize`: `payloadTooLarge` (413).
+- `PostTooLargeException` from `ValidatePostSize`: `payloadTooLarge` (413);
+- the `HttpException` 503 of `PreventRequestsDuringMaintenance`: `serviceUnavailable` (503, grammar 05 roles), keeping `Retry-After`.
 
 A role whose status the operation does not declare is the api's 500. Any other exception's reply is checked as written, below. An app's own handler renders a contract error with the exported `renderContractError($request, $exception)`.
 
@@ -123,23 +124,24 @@ The boundary middleware checks the reply of each contract route as it returns th
 
 The verdict rules, the `responses` modes, `bodyValidation` and the completion of the idempotency record are ADR 0016's:
 
-- **A declared success** passes. A `StreamedResponse` carries its status and headers before its callback runs, so a declared streamed success is passed with its callback wrapped only to catch a failure: the chunks keep the writer's pace (spike).
+- **A declared success** that the boundary wrote passes. A streamed success comes only from a generated result (a download, laravel-4). A `StreamedResponse` carries its status and headers before its callback runs, so the boundary's declared streamed success is passed with its callback wrapped only to catch a failure: the chunks keep the writer's pace (spike).
 - **An undeclared status** is a violation before any byte is sent, streams included (spike).
 - **A declared error** is held up to `MAX_CHECKED_ERROR_BODY_BYTES = 65536` and checked for the api's format and a listed code. A body in `gzip` or `deflate` is decoded first; a `br` error body, which PHP's zlib extension cannot decode, is a violation, a parity gap listed in Consequences. A streamed error body is buffered by running its callback into the held bytes before the verdict.
 - **A reply the boundary did not author.** On a contract route:
-  - a success status (a 2xx or a 304) that the boundary did not write is a violation: a handler that returned its own `response()->json()` (spike), or an app route registered before the contract route;
+  - a success status (a 2xx or a 304) that the boundary did not write is a violation: a handler that returned its own `response()->json()` (spike) or its own `StreamedResponse`;
   - once the access middleware admitted the request, a reply that is neither the boundary's nor the rendering of an exception is a violation.
 - **An ETag** that the boundary did not set is stripped, and a 304 that it did not write is a violation (`frameworkEtag: strip`, the default). Laravel's `cache.headers:etag` middleware adds its own ETag to the boundary's reply object (spike), so the boundary compares the header with the value it wrote.
+- **A changed authored reply.** The boundary recognises its reply by object identity, and later middleware or listeners can change that same object. It records the status and the body bytes it wrote, as it records the ETag, and judges a reply whose status or body differs as one it did not author.
 
 Under `strict` a violation is replaced by the api's 500, and `onUnexpectedError` is called. A failure inside a stream's callback, after the headers are sent, cannot be replaced: it is logged, `onUnexpectedError` is called and the body ends short. Under `warn` the reply goes out as written, and the violation is logged once.
 
-The limits are those of ADR 0016: a writer that bypasses the response (`echo` from the handler, `header()`) is not seen. An exception thrown inside `Response::send()` itself, after every middleware has returned, is rendered by Laravel's own error page (spike). A reply written by a global middleware the app prepends before the boundary is not seen either; the boot check refuses one.
+The limits are those of ADR 0016: a writer that bypasses the response (`echo` from the handler, `header()`, `exit` or `die`, and `dd()`, whose VarDumper output goes out with a 500 before the process exits) is not seen. An exception thrown inside `Response::send()` itself, after every middleware has returned, is rendered by Laravel's own error page (spike). A reply written by a global middleware the app prepends before the boundary is not seen either; the boot check refuses one.
 
 ### Errors raised before the boundary
 
 Before the boundary middleware, only the web server and PHP run: the web server's body limit (nginx `client_max_body_size`), PHP's `post_max_size` for form bodies, and a fatal error during the app's boot. The boot check requires the boundary first in the global stack.
 
-Between the boundary and the access middleware, `ValidatePathEncoding`, `PreventRequestsDuringMaintenance` (503), `ValidatePostSize`, the session, CSRF, throttle and guard middleware refuse by throwing. Their replies are mapped as "Exceptions on contract routes" says; a refusal the mapping does not name is checked as written.
+Between the boundary and the access middleware, `ValidatePathEncoding`, `PreventRequestsDuringMaintenance` (503, `php artisan down`), `ValidatePostSize`, the session, CSRF, throttle and guard middleware refuse by throwing. Their replies are mapped as "Exceptions on contract routes" says; a refusal the mapping does not name is checked as written.
 
 ### Types and validation
 
@@ -156,14 +158,15 @@ Wire names that differ from the PHP property name are carried by the generated d
 
 The boundary decodes the held body with `json_decode($bytes, false, 512, JSON_BIGINT_AS_STRING | JSON_THROW_ON_ERROR)`, objects preserved: a body that does not decode as UTF-8 JSON, or nests deeper than 512, is the malformed 400 of step 1. Path, query and headers are decoded by the IR's wire form. Step 6 then runs in the FormRequest:
 
-1. `validationData()` returns the boundary's decoded input as arrays, keyed `path`, `query`, `headers` and `body`. `.`, `*` and `~` in a wire name are escaped (`~1`, `~2`, `~0`) in the data and the rule keys, so Laravel's validator reads no wire name as a path (spike); the issue pointer decodes them back.
-2. `rules()` returns, per member, `bail` and a generated rule object that checks the member's type on the objects-preserved tree (no coercion, `{}` versus `[]`, whole numbers), then the value rules. Unknown keys, `enum`, `const`, `oneOf` and the discriminator are generated rule objects. A required member is `present`, never `required`, which fails on `""` (ADR 0003 Consequences).
+1. `authorize()` fails closed: unless the request carries the access middleware's mark for the FormRequest's own operation id, it throws the boundary's internal exception before any input is read (never `false`, which Laravel would answer 403), and the reply is the api's 500 with `onUnexpectedError` called. An app route to the interface or to the bound controller, a route without the access middleware, or a request under the `middleware.disable` binding that `withoutMiddleware()` sets in tests, therefore never reaches the handler; the Laravel guide says so for feature tests.
+2. `validationData()` returns the boundary's decoded input as arrays, keyed `path`, `query`, `headers` and `body`. `.`, `*` and `~` in a wire name are escaped (`~1`, `~2`, `~0`) in the data and the rule keys, so Laravel's validator reads no wire name as a path (spike); the issue pointer decodes them back.
+3. `rules()` returns, per member, `bail` and a generated rule object that checks the member's type on the objects-preserved tree (no coercion, `{}` versus `[]`, whole numbers), then the value rules. Unknown keys, `enum`, `const`, `oneOf` and the discriminator are generated rule objects. A required member is `present`, never `required`, which fails on `""` (ADR 0003 Consequences).
    - A nullable member, at the top level, nested or a `*` item, also gets `nullable` after `bail`, since Laravel runs its non-implicit rules on `null` otherwise. The generated rule objects, which are implicit, accept `null` on a nullable member and pass an absent optional member, so it stays absent.
    - A number or integer member that carries a Laravel value rule also gets `numeric:strict` after the type rule, so `between`, `size`, `gt`, `gte`, `lt`, `lte` and `multiple_of` compare its value, never the length of its decimal text. `numeric:strict` accepts `1.0`, which `integer:strict` would refuse.
-3. `failedValidation()` throws the generated `schemaInvalid` exception, so the 400 is rendered and Laravel's 422 never is (spike). Each issue carries its `{ in, pointer, rule }`, the contract rule name kept per generated rule, and the issues are bounded by `MAX_RENDERED_ISSUES = 100`.
-4. `passedValidation()` runs steps 7 and 8, then builds the typed input that `contractInput()` returns. `validated()` and `safe()` keep Laravel's meaning and return the escaped part arrays; the contract input is `contractInput()`.
+4. `failedValidation()` throws the generated `schemaInvalid` exception, so the 400 is rendered and Laravel's 422 never is (spike). Each issue carries its `{ in, pointer, rule }`, the contract rule name kept per generated rule, and the issues are bounded by `MAX_RENDERED_ISSUES = 100`.
+5. `passedValidation()` runs steps 7 and 8, then builds the typed input that `contractInput()` returns. `validated()` and `safe()` keep Laravel's meaning and return the escaped part arrays; the contract input is `contractInput()`.
 
-`authorize()` returns `true`: access ran in steps 2 to 5. `prepareForValidation()` is not overridden.
+With the mark, `authorize()` returns `true`: access ran in steps 2 to 5. `prepareForValidation()` is not overridden.
 
 The target takes `rules` (ADR 0009), as AdonisJS does for its own validators:
 
@@ -203,7 +206,7 @@ Each is printed as the generated `[redacted]` constant, since `seampact/hooks` k
 - Symfony VarDumper, behind Laravel's `dump()` and `dd()`, prints the real properties next to `__debugInfo()` (spike). The provider registers a caster for the generated classes in `AbstractCloner::$defaultCasters`, which hides them there too (spike).
 - `var_export`, `json_encode` and an `(array)` cast still show them; the Laravel guide says so.
 
-The boundary's own logs, written to the app's PSR-3 logger, carry the operation id, the rule and the pointer, never an input value.
+The boundary's own logs, written to the app's PSR-3 logger, carry the operation id, the rule and the pointer, never an input value. A pointer can hold client text (an unknown key's name), so a logged pointer is cut to `MAX_LOGGED_POINTER_BYTES = 256` on a UTF-8 boundary, with its control characters escaped.
 
 ### Options and registration
 
@@ -245,8 +248,12 @@ It does not run on other artisan commands, so `migrate` and `tinker` work on a b
 
 - the hook problems of ADR 0016's list, read from the container's bindings;
 - a contract operation without a bound handler (its interface unbound in the container), without a contract route, or with two (the macro called twice);
-- an app route registered before a contract route with the same method and URI, which Laravel would match first; other overlaps are left to the run-time rule of "A reply the boundary did not author";
-- a route that no generated registration made and that `frameworkRoutes` does not allow-list (FR-25). Laravel's own `/up` health route and the local disk's `storage/{path}` route are app routes like any other: the guide shows their allow-list lines;
+- an app route registered before a contract route with the same method and URI, which Laravel would match first; other overlaps are left to the run-time 404 of "Routes", which answers when the route Laravel chose is not the raw-matched operation's;
+- a route that no generated registration made and that `frameworkRoutes` does not allow-list (FR-25), an app `Route::fallback()` included. The check skips Laravel's own routes, each matched by what Laravel registers, never by path:
+  - the health route (`/up` by default), by its action `Illuminate\Foundation\Http\HealthCheck`, since Laravel gives it no name;
+  - the routes of a disk served locally (`storage/{path}`), by their names `storage.<disk>` and `storage.<disk>.upload`;
+  - Sanctum's CSRF cookie route, by its name `sanctum.csrf-cookie`, proved by laravel-4's Sanctum row;
+- a route that no generated registration made whose action is a contract interface's method or a method of a class bound to one, whatever `frameworkRoutes` allow-lists and whether that check is on; at run time the FormRequest refuses such a request anyway ("Types and validation");
 - a contract route whose URI differs from `mount` followed by the contract path, as when the app wraps the macro in a group prefix that `mount` does not name;
 - the boundary middleware not first in the global stack, the access middleware not before `SubstituteBindings` in the priority list, or a contract route without it (`withoutMiddleware`);
 - a missing `public_origin` under absolute URLs, or ext-zlib not loaded;
@@ -274,7 +281,7 @@ Laravel answers the hooks as application code, with no adapter package in 1.0 ex
 
 With `artefacts: { accessHooks: false }` and `access: { native }` (ADR 0012 "Native access instead of hooks"):
 
-- the target generates no hook interfaces and no steps 2 to 5;
+- the target generates no hook interfaces and no steps 2 to 5; the access middleware keeps its route check and marks the request, so the FormRequest still runs only behind it;
 - it exports the `TasksAccess` table and the per-kind middleware lists above, for the app's `can` middleware and Policies;
 - an operation that needs a principal at the boundary is refused by `generate`, as ADR 0012 says.
 
@@ -322,7 +329,7 @@ The boundary runtime is copied into `Laravel\Runtime` with the generated header,
 
 ### The consumer and the proof
 
-The sample app lives in `scripts/consumers/targets/laravel/`. It is a Laravel 13 skeleton that holds the developer's controllers and hook doubles, which answer from the suite script, and three control routes: `/__seampact/script`, `hook-calls` and `log-lines`, the last fed by a Monolog handler. It reads the template's credentials from the shared JSON. It installs `seampact/hooks`, `seampact/laravel` and `seampact/ir` from Composer path repositories pointing at the split trees (ADR 0011 "Unpublished installs"), and the reference contract's bundle that the workflow built.
+The sample app lives in `scripts/consumers/targets/laravel/`. It is a Laravel 13 skeleton that holds the developer's controllers and hook doubles, which answer from the suite script, and three control routes: `/__seampact/script`, `hook-calls` and `log-lines`, the last fed by a Monolog handler. It reads the template's credentials from the shared JSON. It installs `seampact/hooks`, `seampact/laravel` and `seampact/ir` from Composer path repositories pointing at the split trees (ADR 0011 "Unpublished installs for test consumers"), and the reference contract's bundle that the workflow built.
 
 The workflow `p6-laravel.yml` has five jobs:
 
