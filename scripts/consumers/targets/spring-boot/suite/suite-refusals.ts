@@ -15,7 +15,6 @@ export const SPRING_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "body-above-limit": CREATE_TASK,
   "cache-family-headers": PREFERENCES,
   "cookie-write-without-csrf-header": CREATE_TASK,
-  "delete-answers-body": "Calls deleteDraft, whose idempotency replay comes with spring-3.",
   "denied-requirement-short-circuits": CREATE_TASK,
   "empty-title-names-pointer-and-rule": CREATE_TASK,
   "etag-and-not-modified": PREFERENCES,

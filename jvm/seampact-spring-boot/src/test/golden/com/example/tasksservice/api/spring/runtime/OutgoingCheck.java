@@ -110,6 +110,7 @@ final class OutgoingCheck {
     }
 
     private static void release(SeampactBoundary boundary, BoundaryExchange exchange, byte[] body) {
+        IdempotencyStep.settle(boundary, exchange, body);
         try {
             exchange.response.release(body);
         } catch (IOException failure) {

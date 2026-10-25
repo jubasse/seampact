@@ -2,6 +2,8 @@ package com.example.consumer;
 
 import com.example.tasks.api.AppEndpoints;
 import com.example.tasks.api.ChannelsEndpoints;
+import com.example.tasks.api.DeleteDraftInput;
+import com.example.tasks.api.DeleteDraftResult;
 import com.example.tasks.api.DraftsEndpoints;
 import com.example.tasks.api.GetChannelInput;
 import com.example.tasks.api.GetChannelResult;
@@ -28,6 +30,7 @@ import com.example.tasks.api.schemas.Draft;
 import com.example.tasks.api.schemas.Health;
 import com.example.tasks.api.schemas.Task;
 import com.example.tasks.api.schemas.TaskSearchResult;
+import com.example.tasks.api.spring.DeleteDraft;
 import com.example.tasks.api.spring.GetChannel;
 import com.example.tasks.api.spring.GetDraft;
 import com.example.tasks.api.spring.GetTask;
@@ -95,6 +98,12 @@ final class TasksControllers {
         @GetDraft
         public GetDraftResult getDraft(GetDraftInput input) {
             return new GetDraftResult.Status200(new Draft(input.path().draftId(), "Draft text"));
+        }
+
+        @Override
+        @DeleteDraft
+        public DeleteDraftResult deleteDraft(DeleteDraftInput input) {
+            return new DeleteDraftResult.Status200(new Draft(input.path().draftId(), "Draft text"));
         }
     }
 

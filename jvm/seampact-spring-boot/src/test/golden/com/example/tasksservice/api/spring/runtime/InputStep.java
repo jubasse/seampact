@@ -42,6 +42,7 @@ final class InputStep {
 
         PageReply.fillLimit(boundary.table(), exchange.route(), query);
         exchange.query = query;
+        exchange.inputTree = tree;
         exchange.input = bind(boundary, exchange.route(), tree);
     }
 

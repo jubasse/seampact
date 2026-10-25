@@ -1,5 +1,8 @@
 package com.example.tasks.api.spring;
 
+import com.example.tasks.api.DeleteDraftErrors;
+import com.example.tasks.api.DeleteDraftInput;
+import com.example.tasks.api.DeleteDraftResult;
 import com.example.tasks.api.GetChannelErrors;
 import com.example.tasks.api.GetChannelInput;
 import com.example.tasks.api.GetChannelResult;
@@ -47,6 +50,7 @@ public final class TasksSeampactBinding implements ApiBinding {
     @Override
     public Map<String, Class<?>> inputTypes() {
         return Map.ofEntries(
+        Map.entry("deleteDraft", DeleteDraftInput.class),
         Map.entry("getChannel", GetChannelInput.class),
         Map.entry("getDraft", GetDraftInput.class),
         Map.entry("getTask", GetTaskInput.class),
@@ -60,6 +64,7 @@ public final class TasksSeampactBinding implements ApiBinding {
     @Override
     public Map<String, Class<? extends Annotation>> annotations() {
         return Map.ofEntries(
+        Map.entry("deleteDraft", DeleteDraft.class),
         Map.entry("getChannel", GetChannel.class),
         Map.entry("getDraft", GetDraft.class),
         Map.entry("getTask", GetTask.class),
@@ -73,6 +78,7 @@ public final class TasksSeampactBinding implements ApiBinding {
     @Override
     public Map<Class<?>, Integer> successArms() {
         return Map.ofEntries(
+        Map.entry(DeleteDraftResult.Status200.class, 200),
         Map.entry(GetChannelResult.Status200.class, 200),
         Map.entry(GetDraftResult.Status200.class, 200),
         Map.entry(GetTaskResult.Status200.class, 200),
@@ -86,6 +92,13 @@ public final class TasksSeampactBinding implements ApiBinding {
     @Override
     public Map<Class<?>, String> errorArms() {
         return Map.ofEntries(
+        Map.entry(DeleteDraftErrors.ApiSchemaInvalid.class, "api.schema_invalid"),
+        Map.entry(DeleteDraftErrors.ApiUnauthenticated.class, "api.unauthenticated"),
+        Map.entry(DeleteDraftErrors.ApiCsrfInvalid.class, "api.csrf_invalid"),
+        Map.entry(DeleteDraftErrors.ApiNotFound.class, "api.not_found"),
+        Map.entry(DeleteDraftErrors.ApiIdempotencyInProgress.class, "api.idempotency_in_progress"),
+        Map.entry(DeleteDraftErrors.ApiIdempotencyKeyReused.class, "api.idempotency_key_reused"),
+        Map.entry(DeleteDraftErrors.ApiInternal.class, "api.internal"),
         Map.entry(GetChannelErrors.ApiSchemaInvalid.class, "api.schema_invalid"),
         Map.entry(GetChannelErrors.ApiUnauthenticated.class, "api.unauthenticated"),
         Map.entry(GetChannelErrors.ApiNotFound.class, "api.not_found"),

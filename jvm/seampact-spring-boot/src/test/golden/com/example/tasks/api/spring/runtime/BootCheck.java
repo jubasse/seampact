@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import io.github.jubasse.seampact.hooks.IdempotencyStore;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -87,6 +88,12 @@ public final class BootCheck implements SmartInitializingSingleton {
                 if (!claims.containsKey(name) && !claims.containsKey(Decider.EVERY_NAME)) {
                     found.add("operation '" + route.id() + "': no decider for '" + name + "'; fix: register a Decider bean whose names() hold '" + name + "', or Decider.EVERY_NAME.");
                 }
+            }
+
+            boolean idempotent = "boundary".equals(operation.path("idempotency").path("enforce").asString());
+            if (idempotent && boundary.beans().getBeanNamesForType(IdempotencyStore.class).length != 1) {
+                found.add("operation '" + route.id() + "': it is idempotent and needs exactly one IdempotencyStore bean; fix: register one, such as"
+                        + " a store on the app's database.");
             }
 
             for (JsonNode scope : operation.path("scopes")) {

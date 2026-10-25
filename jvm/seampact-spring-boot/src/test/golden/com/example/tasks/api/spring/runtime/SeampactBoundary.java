@@ -1,5 +1,6 @@
 package com.example.tasks.api.spring.runtime;
 
+import io.github.jubasse.seampact.hooks.IdempotencyStore;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
 import jakarta.servlet.ServletException;
@@ -93,6 +94,11 @@ public final class SeampactBoundary {
 
     StructuralValidator validator() {
         return validator;
+    }
+
+    /** The app's idempotency store; the boot check made sure exactly one exists when an operation is idempotent. */
+    IdempotencyStore idempotencyStore() {
+        return beans.getBean(IdempotencyStore.class);
     }
 
     ListableBeanFactory beans() {

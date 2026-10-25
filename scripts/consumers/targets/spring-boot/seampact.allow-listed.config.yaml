@@ -8,7 +8,7 @@ targets:
   - id: tasks
     use: io.github.jubasse:seampact-spring-boot
     api: tasks
-    operations: { include: [health, listChannels, getChannel, listTasks, getDraft, getTask, getTasksBatch, searchTasks] }
+    operations: { include: [health, listChannels, getChannel, listTasks, getDraft, deleteDraft, getTask, getTasksBatch, searchTasks] }
     options: { package: com.example.tasks.api }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }

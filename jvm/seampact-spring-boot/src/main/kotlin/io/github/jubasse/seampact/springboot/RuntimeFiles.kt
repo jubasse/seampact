@@ -9,8 +9,8 @@ private const val RUNTIME_RESOURCE_DIRECTORY = "seampact-spring-runtime"
 private val RUNTIME_CLASSES = listOf(
     "AccessSteps", "ApiBinding", "BodyReader", "BootCheck", "BoundaryExchange", "BoundaryFilter", "BoundaryInterceptor",
     "BoundaryMapper", "BoundaryMvcConfigurer", "CheckingResponse", "ContractExceptionResolver", "ContractInputResolver",
-    "ContractRefusal", "ContractReplyHandler", "ContractRoute", "ContractTable", "Decider", "Denial", "ErrorReplies",
-    "HeldBodyRequest", "InputIssue", "InputStep", "OutgoingCheck", "OutputFieldRights", "PageReply", "ReplyHandlerFirst",
+    "ContractRefusal", "ContractReplyHandler", "ContractRoute", "ContractTable", "Decider", "Denial", "Digests", "ErrorReplies",
+    "HeldBodyRequest", "IdempotencyStep", "InputIssue", "InputStep", "OutgoingCheck", "OutputFieldRights", "PageReply", "ReplyHandlerFirst",
     "RequirementCall", "ScalarValues", "ScopeCall", "ScopeResolver", "SeampactBoundary", "StructuralValidator", "Templates",
     "UnexpectedErrorListener", "WireDecoding",
 )

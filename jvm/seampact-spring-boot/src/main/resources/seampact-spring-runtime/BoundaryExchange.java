@@ -23,6 +23,10 @@ final class BoundaryExchange {
     Object input;
     /** The decoded query step 6 bound, with the paging limit the handler receives. */
     JsonNode query;
+    /** The decoded path, query, headers and body of step 6, which the idempotency fingerprint digests. */
+    JsonNode inputTree;
+    /** The idempotency key this request claimed, until its record is completed or abandoned. */
+    String idempotencyKey;
     boolean admitted;
     boolean boundaryWrote;
     boolean exceptionSeen;

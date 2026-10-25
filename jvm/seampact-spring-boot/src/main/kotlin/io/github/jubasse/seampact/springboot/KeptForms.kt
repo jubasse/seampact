@@ -10,6 +10,7 @@ import io.github.jubasse.seampact.ir.model.ErrorCode
 import io.github.jubasse.seampact.ir.model.ExemptIdempotency
 import io.github.jubasse.seampact.ir.model.FileTypeUse
 import io.github.jubasse.seampact.ir.model.HttpMethod
+import io.github.jubasse.seampact.ir.model.IdempotencyEnforcement
 import io.github.jubasse.seampact.ir.model.IdentityId
 import io.github.jubasse.seampact.ir.model.MapSchema
 import io.github.jubasse.seampact.ir.model.ObjectSchema
@@ -107,7 +108,9 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
 
         when (val idempotency = operation.idempotency) {
             null, is ExemptIdempotency -> Unit
-            is DerivedIdempotency -> refusals.waiting("idempotency", "Idempotency replay", at.below("idempotency"), Delivery.SPRING_3)
+            is DerivedIdempotency -> if (idempotency.enforce is IdempotencyEnforcement.Unknown) {
+                refusals.unknownValue(at.below("idempotency", "enforce"), idempotency.enforce.value)
+            }
             else -> refusals.unknownValue(at.below("idempotency", "kind"), idempotency.kind)
         }
 
