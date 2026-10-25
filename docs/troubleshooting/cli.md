@@ -8,6 +8,12 @@
 | `init.ignore-file-link` | `.gitignore` is a symbolic link, and `init` does not write through links. Run `seampact init --no-ignore-files`, then add `.seampact/` to the link's target yourself. |
 | `init.local-sources-refused` | The starter contract is a local folder, and `SEAMPACT_ALLOW_LOCAL=false` or a root config's `allowLocal: false` refuses local sources. Run `init` where they are allowed, or write the app config yourself with a `package` source. |
 | `binary.generate-unavailable`, `binary.check-unavailable` | The standalone binary has no code generator. Run `generate` and `check` with the npm CLI, or with the Gradle, Maven or Composer plugin. |
+| `binary.artefact-unresolved` | The Gradle or Maven plugin did not find the compiler binary it pins. Add the repository that serves `io.github.jubasse:seampact-compiler`, or set `binary { path; sha256 }` to a binary on disk. |
+| `binary.compile-failed` | The Gradle or Maven plugin compiled a `path` source and the compiler refused it. Fix the contract as the diagnostics under the message say. |
+| `binary.ir-unreadable` | The compiler binary wrote an IR the plugin cannot read. Pin a binary of the plugin's version, and report it if they match. |
+| `ir.version.unsupported`, `ir.revision.mismatch` | The Gradle or Maven plugin reads another IR version than the compiler or the bundle wrote. Use a plugin and a compiler binary of the same seampact release, or a bundle built by it. |
+| `ir.kind.unsupported`, `ir.feature.unsupported`, `ir.must-act.unknown`, `ir.value.unknown` | The contract uses something this plugin release does not generate yet. Update the plugin, or compile with the seampact version that matches it. |
+| `ir.support.malformed`, `ir.nesting.too-deep` | The IR is damaged or not written by seampact. Compile or bundle the contract again with the seampact binary. |
 | `lint.no-source` | `lint` reads the contract, so it needs a source with a `path`. Add `{ path: ./contract }` to `sources`. |
 | `diff.against.invalid` | `--against` takes a folder of `<api>.ir.json` files (made by `seampact compile --out`) or one IR file. |
 | `compile.editor-schemas.outside` | `--editor-schemas` writes only below the workspace root, through no symbolic link. Name a relative directory in `workspace.editorSchemas` (default `.seampact/schemas`), and replace a symlinked directory or schema file by a real one. |

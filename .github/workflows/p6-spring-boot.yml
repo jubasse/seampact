@@ -2,7 +2,9 @@ name: Spring Boot target
 
 # The spring-boot generator (ADR 0022): its option and golden tests, then the golden tree compiled by javac against
 # Spring Boot 4 and its redaction checked, on Java 21 and 25 (A13). The consumer is then built by the Gradle plugin
-# with Node removed from the runner, and the shared http suite runs against its jar ("The consumer and the proof").
+# and by the Maven plugin with Node removed from the runner, from the reference contract's bundle served over HTTPS
+# on Java 21 and 25 and from the local YAML on Java 25, and the shared http suite runs against each jar ("The consumer
+# and the proof").
 # On a pull request it runs only when the change touches the JVM modules, the reference contract, the consumer, the
 # binary, the http suite or this workflow; `spring-boot` is the one check to require.
 
@@ -110,9 +112,11 @@ jobs:
           retention-days: 3
           if-no-files-found: error
 
-  # The consumer built by the Gradle plugin three times: as configured, with the boot variant's route allow-listed, and
-  # from the contract with @seampact/pack-spring applied (the pack:spring profile).
+  # The consumer built by one plugin three times: as configured, with the boot variant's route allow-listed, and from
+  # the contract with @seampact/pack-spring applied (the pack:spring profile). A `bundle` row fetches each contract as
+  # a release asset from a loopback HTTPS server; a `local-yaml` row compiles the `path` source.
   build:
+    name: build (${{ matrix.build-tool }}, Java ${{ matrix.jdk }}, ${{ matrix.contract }})
     needs: [changes, binary]
     if: needs.changes.outputs.spring-boot == 'true'
     runs-on: ubuntu-24.04
@@ -120,7 +124,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        build-tool: [gradle, maven]
         jdk: [21, 25]
+        contract: [bundle]
+        include:
+          - { build-tool: gradle, jdk: 25, contract: local-yaml }
+          - { build-tool: maven, jdk: 25, contract: local-yaml }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -147,27 +156,59 @@ jobs:
             21
             25
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-      - name: Build the consumer and its allow-listed and pack-spring variants on Java ${{ matrix.jdk }}
+      # The Maven build takes the plugin and seampact-hooks from Maven local (ADR 0011 "Unpublished installs").
+      - name: Publish the JVM modules to Maven local
+        if: matrix.build-tool == 'maven'
+        working-directory: jvm
+        run: >-
+          ./gradlew :seampact-ir:publishToMavenLocal :seampact-hooks:publishToMavenLocal
+          :seampact-spring-boot:publishToMavenLocal :seampact-runner:publishToMavenLocal
+          :seampact-maven-plugin:publishToMavenLocal
+      - name: Serve the contract bundles over HTTPS
+        if: matrix.contract == 'bundle'
+        run: sh scripts/consumers/targets/spring-boot/bundle-over-https.sh start "$RUNNER_TEMP/https"
+      - name: Build the consumer and its allow-listed and pack-spring variants
         shell: bash
+        env:
+          BUILD_TOOL: ${{ matrix.build-tool }}
+          CONTRACT: ${{ matrix.contract }}
+          JDK: ${{ matrix.jdk }}
         run: |
           set -euo pipefail
-          chmod +x bin/seampact-linux-x64
+          binary="$GITHUB_WORKSPACE/bin/seampact-linux-x64"
+          chmod +x "$binary"
+          if [ "$CONTRACT" = "bundle" ]; then
+            export JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStore=$RUNNER_TEMP/https/truststore.p12 -Djavax.net.ssl.trustStorePassword=changeit"
+          fi
+          # Maven runs on the row's JDK; Gradle on the last one, compiling and testing with the row's toolchain.
+          java_home_variable="JAVA_HOME_${JDK}_X64"
           for variant in configured allow-listed pack-spring; do
             app="$RUNNER_TEMP/$variant"
-            sh scripts/consumers/targets/spring-boot/assemble.sh "$app" "${variant/configured/}"
-            (cd "$app" && ./gradlew test bootJar -PjavaVersion=${{ matrix.jdk }} -PseampactJvm="$GITHUB_WORKSPACE/jvm" \
-              -PseampactBinary="$GITHUB_WORKSPACE/bin/seampact-linux-x64")
+            sh scripts/consumers/targets/spring-boot/assemble.sh "$app" "${variant/configured/}" "$BUILD_TOOL"
+            if [ "$CONTRACT" = "bundle" ]; then
+              sh scripts/consumers/targets/spring-boot/bundle-over-https.sh use "$RUNNER_TEMP/https" "$app" "$binary" "$variant"
+            fi
+            if [ "$BUILD_TOOL" = "maven" ]; then
+              (cd "$app" && JAVA_HOME="${!java_home_variable}" ./mvnw -B package -Djava.version="$JDK" \
+                -DseampactBinary="$binary" -DseampactBinarySha256="$(sha256sum "$binary" | cut -d' ' -f1)")
+              built="$app/target/consumer.jar"
+            else
+              (cd "$app" && ./gradlew test bootJar -PjavaVersion="$JDK" -PseampactJvm="$GITHUB_WORKSPACE/jvm" \
+                -PseampactBinary="$binary")
+              built="$app/build/libs/consumer.jar"
+            fi
             mkdir -p jars
-            cp "$app/build/libs/consumer.jar" "jars/$variant.jar"
+            cp "$built" "jars/$variant.jar"
           done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: spring-boot-consumer-jdk${{ matrix.jdk }}
+          name: spring-boot-consumer-${{ matrix.build-tool }}-jdk${{ matrix.jdk }}-${{ matrix.contract }}
           path: jars
           retention-days: 3
           if-no-files-found: error
 
   http-suite:
+    name: http-suite (${{ matrix.build-tool }}, Java ${{ matrix.jdk }}, ${{ matrix.contract }})
     needs: [changes, build]
     if: needs.changes.outputs.spring-boot == 'true'
     runs-on: ubuntu-24.04
@@ -175,7 +216,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        build-tool: [gradle, maven]
         jdk: [21, 25]
+        contract: [bundle]
+        include:
+          - { build-tool: gradle, jdk: 25, contract: local-yaml }
+          - { build-tool: maven, jdk: 25, contract: local-yaml }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -192,9 +238,9 @@ jobs:
           java-version: ${{ matrix.jdk }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: spring-boot-consumer-jdk${{ matrix.jdk }}
+          name: spring-boot-consumer-${{ matrix.build-tool }}-jdk${{ matrix.jdk }}-${{ matrix.contract }}
           path: jars
-      - name: Run the default, hand-written and boot profiles on Java ${{ matrix.jdk }}
+      - name: Run the default, hand-written, boot and pack:spring profiles
         env:
           SEAMPACT_SPRING_JAR: ${{ github.workspace }}/jars/configured.jar
           SEAMPACT_SPRING_ALLOW_LISTED_JAR: ${{ github.workspace }}/jars/allow-listed.jar
@@ -204,7 +250,7 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: spring-boot-http-suite-jdk${{ matrix.jdk }}
+          name: spring-boot-http-suite-${{ matrix.build-tool }}-jdk${{ matrix.jdk }}-${{ matrix.contract }}
           path: reports
           retention-days: 7
           if-no-files-found: warn

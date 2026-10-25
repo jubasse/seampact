@@ -92,6 +92,7 @@ public abstract class SeampactMojo(private val repositorySystem: RepositorySyste
             allowLocalVariable = System.getenv(LocalSourcePolicy.ALLOW_LOCAL_VARIABLE),
             springBootVersion = artefactVersion(SPRING_BOOT_GROUP, SPRING_BOOT_ARTIFACT),
             springSecurityWebVersion = artefactVersion(SPRING_SECURITY_GROUP, SPRING_SECURITY_WEB_ARTIFACT),
+            springSecurityConfigVersion = artefactVersion(SPRING_SECURITY_GROUP, SPRING_SECURITY_CONFIG_ARTIFACT),
             binary = binarySettings,
             bundleCacheDirectory = seampactCache.resolve(BUNDLE_CACHE),
             binaryCacheDirectory = seampactCache.resolve(BINARY_CACHE),
@@ -148,6 +149,7 @@ public abstract class SeampactMojo(private val repositorySystem: RepositorySyste
         private const val SPRING_BOOT_ARTIFACT = "spring-boot"
         private const val SPRING_SECURITY_GROUP = "org.springframework.security"
         private const val SPRING_SECURITY_WEB_ARTIFACT = "spring-security-web"
+        private const val SPRING_SECURITY_CONFIG_ARTIFACT = "spring-security-config"
 
         /** The Maven plugin as the run's problems and messages name it. */
         val MAVEN_BUILD_TOOL = BuildTool(

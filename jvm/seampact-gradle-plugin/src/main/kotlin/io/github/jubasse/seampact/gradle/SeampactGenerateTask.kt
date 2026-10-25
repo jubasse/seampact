@@ -21,7 +21,10 @@ public abstract class SeampactGenerateTask : SeampactTask() {
     public fun generate() {
         when (val outcome = generate(runSettings())) {
             is GenerateOutcome.Refused -> throw SeampactRefusedException(outcome.problems)
-            is GenerateOutcome.Generated -> outcome.lines.forEach(logger::lifecycle)
+            is GenerateOutcome.Generated -> {
+                outcome.lines.forEach(logger::lifecycle)
+                outcome.warnings.forEach(logger::warn)
+            }
         }
     }
 }

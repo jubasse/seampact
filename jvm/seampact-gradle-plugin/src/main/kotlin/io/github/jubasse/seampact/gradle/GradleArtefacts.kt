@@ -69,6 +69,7 @@ private fun failureText(failure: Throwable): String =
 internal enum class ClasspathModule(val group: String, val module: String) {
     SPRING_BOOT("org.springframework.boot", "spring-boot"),
     SPRING_SECURITY_WEB("org.springframework.security", "spring-security-web"),
+    SPRING_SECURITY_CONFIG("org.springframework.security", "spring-security-config"),
 }
 
 /** The version of [module] in the resolved graph of [root], or null without one. */

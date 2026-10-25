@@ -10,6 +10,8 @@
 | `options.staleTime.unsupported`, `options.keys.root.unsupported` | That option has no place with this query library. Drop it. |
 | `options.keys.invalid`, `options.keys.root.invalid` | Write `keys: { root: <name> }`. |
 | `options.errors.unsupported` | `errors: data` needs a client with `errorStyle: result`. |
+| `options.springSecurity.unavailable` (Spring Boot) | `springSecurity` is on, but Spring Security is not on the classpath. Add `spring-boot-starter-security`, or set `springSecurity: false`. |
+| `options.springSecurity.matchers.unavailable` (Spring Boot) | `springSecurity: { matchers: true }` needs `spring-security-config`. Add `spring-boot-starter-security`, or set `springSecurity: true`. |
 | `options.reply.invalid` (NestJS) | `reply` is `handler` or `interceptor`. |
 
 A warning does not stop `generate`.

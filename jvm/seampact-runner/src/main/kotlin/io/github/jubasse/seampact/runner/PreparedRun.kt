@@ -14,7 +14,8 @@ import java.util.Properties
 /**
  * What one run of a seampact goal or task reads besides the app config: the build's inputs and resolvers.
  * [dslTree] is the app config the build file writes, as JSON, named [dslName] in problems; null reads the file.
- * [springBootVersion] and [springSecurityWebVersion] are the versions the compile classpath resolves, null without one.
+ * [springBootVersion], [springSecurityWebVersion] and [springSecurityConfigVersion] are the versions the compile
+ * classpath resolves, null without one.
  */
 public class RunSettings(
     public val buildTool: BuildTool,
@@ -24,6 +25,7 @@ public class RunSettings(
     public val allowLocalVariable: String?,
     public val springBootVersion: String?,
     public val springSecurityWebVersion: String?,
+    public val springSecurityConfigVersion: String?,
     public val binary: BinarySettings,
     public val bundleCacheDirectory: Path,
     public val binaryCacheDirectory: Path,
@@ -33,7 +35,13 @@ public class RunSettings(
 
 /** A run with every entry planned (or refused one by one), or the problems that stop it before any entry. */
 public sealed interface PreparedRun {
-    public data class Prepared(val config: AppConfig, val bundles: List<CheckedBundle>, val plans: List<EntryPlan>) : PreparedRun
+    /** [warnings] are the compatibility check's, which generate and check print. */
+    public data class Prepared(
+        val config: AppConfig,
+        val bundles: List<CheckedBundle>,
+        val plans: List<EntryPlan>,
+        val warnings: List<ConfigProblem>,
+    ) : PreparedRun
 
     public data class Refused(val problems: List<ConfigProblem>) : PreparedRun
 }
@@ -48,7 +56,8 @@ public fun prepareRun(settings: RunSettings): PreparedRun {
         is AppConfigRead.Refused -> return PreparedRun.Refused(read.problems)
     }
 
-    val configProblems = waitingForms(config) + EntryView.unknownSourceProblems(config)
+    val matrix = checkMatrix(config, settings.springBootVersion, jvmFrameworks())
+    val configProblems = waitingForms(config) + EntryView.unknownSourceProblems(config) + matrix.problems
     if (configProblems.isNotEmpty()) return PreparedRun.Refused(configProblems)
 
     // The build's environment, with SEAMPACT_ALLOW_LOCAL as the build's input holds it (git reads the rest).
@@ -67,6 +76,7 @@ public fun prepareRun(settings: RunSettings): PreparedRun {
             config,
             read.bundles,
             planEntries(config, read.apis, settings, runnerVersion()),
+            matrix.warnings,
         )
     }
 }

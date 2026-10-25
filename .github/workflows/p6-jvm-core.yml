@@ -44,9 +44,9 @@ jobs:
             echo "jvm-core=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # The JVM modules, the bundle, config and IR schemas, the bundle vectors, the reference contract and the
+          # The JVM modules, the bundle, config and IR schemas, the bundle vectors, the compatibility matrix, the reference contract and the
           # golden IR, the binary package, the workspace and toolchain pins and this workflow.
-          watched='^(jvm/|packages/core/spec/schemas/(bundle|config|ir)/|packages/core/spec/vectors/bundle/'
+          watched='^(jvm/|packages/core/spec/schemas/(bundle|config|ir)/|packages/core/spec/vectors/bundle/|packages/core/spec/compatibility/'
           watched+='|fixtures/reference/|fixtures/golden/|packages/tools/binary/|\.github/workflows/p6-jvm-core\.yml$'
           watched+='|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a

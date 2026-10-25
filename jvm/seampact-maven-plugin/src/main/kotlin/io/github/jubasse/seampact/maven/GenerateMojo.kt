@@ -32,7 +32,10 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
         } else {
             when (val outcome = generate(settings)) {
                 is GenerateOutcome.Refused -> throw refused(outcome.problems)
-                is GenerateOutcome.Generated -> outcome.lines.forEach(log::info)
+                is GenerateOutcome.Generated -> {
+                    outcome.lines.forEach(log::info)
+                    outcome.warnings.forEach(log::warn)
+                }
             }
             stamp.record(inputsHash, roots)
         }
@@ -64,6 +67,7 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
         inputs.text("allowLocal", settings.allowLocalVariable)
         inputs.text("springBoot", settings.springBootVersion)
         inputs.text("springSecurityWeb", settings.springSecurityWebVersion)
+        inputs.text("springSecurityConfig", settings.springSecurityConfigVersion)
         inputs.text("bundleOrigins", bundleOrigins.joinToString(","))
 
         return inputs.hash()

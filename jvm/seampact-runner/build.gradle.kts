@@ -72,6 +72,17 @@ val writeRunnerVersion = tasks.register<WriteProperties>("writeRunnerVersion") {
     property("version", project.version.toString())
 }
 
+// The compatibility matrix of `@seampact/spec`, packed into the jar beside its reader, so the matrix keeps one source.
+val copyCompatibilityMatrix = tasks.register<Sync>("copyCompatibilityMatrix") {
+    val matrixFile = rootProject.projectDir.parentFile.resolve("packages/core/spec/compatibility/matrix.json")
+    doFirst { require(matrixFile.exists()) { "The compatibility matrix is missing: $matrixFile" } }
+    from(matrixFile) {
+        into("io/github/jubasse/seampact/runner")
+    }
+    into(layout.buildDirectory.dir("generated/compatibility-matrix"))
+}
+
 sourceSets.main {
     resources.srcDir(files(generatedResources).builtBy(writeBinaryPins, writeRunnerVersion))
+    resources.srcDir(copyCompatibilityMatrix)
 }

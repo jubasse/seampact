@@ -67,8 +67,20 @@ class GeneratePluginTest {
         assertTrue("options.springSecurity.unavailable" in refused.output, refused.output)
     }
 
+    @Test
+    fun refusesTheMatchersCustomizerWithoutSpringSecurityConfig() {
+        val app = SampleApp(directory)
+        app.write("seampact.config.yaml", SampleApp.REFERENCE_CONFIG.replace(PACKAGE_OPTION, "options: { package: com.example.tasks.api, springSecurity: { matchers: true } }"))
+        app.writeBuildScript("seampact {\n${app.stubBinaryBlock()}\n}", SECURITY_WEB_ONLY)
+
+        val refused = app.fail("seampactGenerate")
+
+        assertTrue("options.springSecurity.matchers.unavailable" in refused.output, refused.output)
+    }
+
     private companion object {
         const val PACKAGE_OPTION = "options: { package: com.example.tasks.api }"
         const val SECURITY_STARTER = "implementation(\"org.springframework.boot:spring-boot-starter-security\")"
+        const val SECURITY_WEB_ONLY = "implementation(\"org.springframework.security:spring-security-web\")"
     }
 }

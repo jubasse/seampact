@@ -53,6 +53,10 @@ public abstract class SeampactTask : DefaultTask() {
 
     @get:Input
     @get:Optional
+    public abstract val springSecurityConfigVersion: Property<String>
+
+    @get:Input
+    @get:Optional
     public abstract val binaryVersion: Property<String>
 
     @get:Input
@@ -101,6 +105,7 @@ public abstract class SeampactTask : DefaultTask() {
         allowLocalVariable = allowLocalVariable.orNull,
         springBootVersion = springBootVersion.orNull,
         springSecurityWebVersion = springSecurityWebVersion.orNull,
+        springSecurityConfigVersion = springSecurityConfigVersion.orNull,
         binary = BinarySettings(binaryVersion.orNull, binarySha256ByClassifier.get(), binaryPath.orNull, binarySha256.orNull),
         bundleCacheDirectory = Path.of(bundleCacheDirectory.get()),
         binaryCacheDirectory = Path.of(binaryCacheDirectory.get()),
