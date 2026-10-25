@@ -302,6 +302,15 @@ describe("pages on offset and after/before cursor positions", () => {
 
     expect(JSON.parse(reply.text).next).toBeUndefined();
   });
+
+  test("a request sending both the after and the before cursor is refused at before", async () => {
+    const reply = await positions.send(`/v1/channels/${CHANNEL}/tasks?after=c1&before=c2`);
+
+    expect(reply.status).toBe(400);
+    expect(JSON.parse(reply.text).issues).toEqual([
+      { pointer: "/before", rule: "exclusiveCursors" },
+    ]);
+  });
 });
 
 describe("pages under the Spring pack", () => {

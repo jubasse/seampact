@@ -50,7 +50,7 @@ Request roles. A style has exactly one position role (`cursor`, `page`, `offset`
 | Role | Meaning |
 |---|---|
 | `cursor` | an opaque position the handler issued |
-| `after`, `before` | a cursor kind whose two directions travel in two parameters (Stripe's `starting_after` and `ending_before`): records after the position, or before it. A request sends at most one of the two; both answer 400 |
+| `after`, `before` | a cursor kind whose two directions travel in two parameters (Stripe's `starting_after` and `ending_before`): records after the position, or before it. A request sends at most one of the two; both answer 400 `api.schema_invalid` with one issue at the `before` parameter, rule `exclusiveCursors` |
 | `page` | a page number, counted from `base` |
 | `offset` | the number of records to skip |
 | `since` | a changes-since token: opaque, or a `date-time` with `token: instant` (SCN-082) |
