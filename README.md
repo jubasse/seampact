@@ -44,7 +44,7 @@ From the CLI:
 | `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
 | `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
 
-Next: Spring Boot, Laravel, Symfony, Vue, Angular, MSW mocks.
+Next: Angular, MSW mocks, Laravel, Symfony, API Platform. For Spring Boot: Spring Security, multipart, download and redirect bodies, springdoc docs. For Vue: Pinia Colada.
 
 ## Example
 
@@ -293,7 +293,7 @@ export const NoteSchema = ajvStandardSchema({
 
 </details>
 
-Planned: Spring Bean Validation for Spring Boot, validation rules for Laravel.
+Spring Boot records carry standard Jakarta constraints for your own `@Valid`; the boundary checks the contract's rules itself. Planned: validation rules for Laravel.
 
 ---
 
@@ -347,10 +347,11 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 | Fastify | 5 | zod, yup, Ajv |
 | AdonisJS | 6, 7 | zod, yup, VineJS |
 | Hono | 4 | zod, yup |
+| Spring Boot | 4 | Jakarta Bean Validation |
 
-Clients: typed `fetch` client, and for React 19 over it TanStack Query 5 options and hooks, SWR 2 keys, fetchers and hooks, or an RTK Query 2 api. Vue and Angular: planned.
+Clients: typed `fetch` client, and over it, for React 19, TanStack Query 5 options and hooks, SWR 2 keys, fetchers and hooks, or an RTK Query 2 api; for Vue 3, composables on TanStack Query 5 (`@tanstack/vue-query`) or on `fetch` alone. Angular: planned.
 
-Java (Spring Boot 4) and PHP (Laravel, Symfony): planned.
+Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `seampact-maven-plugin`. PHP (Laravel, Symfony): planned.
 
 ## Get started
 
@@ -371,8 +372,10 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] Node servers: NestJS, Express, Fastify, AdonisJS, Hono
 - [x] CLI: `init`, `generate`, `check`, `lint`, `diff`, `bundle`, `explain`, editor schemas (`compile --editor-schemas`)
 - [x] Frontend: React hooks (TanStack Query, SWR, RTK Query, or no query library)
-- [ ] Frontend: Vue, Angular, MSW mocks
-- [ ] Java: Spring Boot. PHP: Laravel, Symfony, API Platform
+- [x] Frontend: Vue composables (TanStack Query, or no query library)
+- [ ] Frontend: Pinia Colada, Angular, MSW mocks
+- [x] Java: Spring Boot 4, with a Gradle and a Maven plugin
+- [ ] Java: Spring Security, multipart, download and redirect bodies, springdoc docs. PHP: Laravel, Symfony, API Platform
 - [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm
 - [ ] Example apps per stack pairing, and an `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
 - Later: a client conformance suite, a kit to write new targets, one shared core per language, then Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Python, Go, .NET, Rust ([full list](docs/roadmap.md))

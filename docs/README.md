@@ -28,10 +28,12 @@
 - [Fastify](backend/fastify.md)
 - [AdonisJS](backend/adonisjs.md)
 - [Hono](backend/hono.md)
+- [Spring Boot](backend/spring-boot.md): the Gradle or Maven plugin, controllers and hooks.
 
 ## Frontend
 
 - [React](frontend/react.md): TanStack Query, SWR or RTK Query hooks over the fetch client.
+- [Vue](frontend/vue.md): TanStack Query or plain `fetch` composables.
 - [Point the client at your backend](frontend/backend-url.md): the backend URL per environment, Docker included.
 - [Expo and React Native](frontend/mobile.md): the client and the React hooks on a phone.
 
