@@ -4,7 +4,8 @@
 |---|---|
 | `options.unknown`, `options.invalid`, `options.<key>.invalid` | Use only the options the target's page lists, with one of its values. |
 | `options.query.missing` | The React, Vue and Angular targets need `query`, for example `query: fetch`. |
-| `options.state.unsupported` | The Angular target does not generate NgRx code yet. Drop `state`. |
+| `options.state.unsupported` | The Angular target does not generate `state: ngrx-signals` yet. Use `state: ngrx`, or drop `state`. |
+| `artefact.service.needed` | `state: ngrx` calls the generated service. Add `service` to the target's `artefacts`, or drop `state`. |
 | `options.query.unsupported` | This release generates `tanstack` only. |
 | `options.staleTime.unsupported`, `options.keys.root.unsupported` | That option has no place with this query library. Drop it. |
 | `options.keys.invalid`, `options.keys.root.invalid` | Write `keys: { root: <name> }`. |
