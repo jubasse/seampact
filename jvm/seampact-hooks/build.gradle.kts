@@ -2,18 +2,11 @@
 // no runtime dependency (ADR 0009 rule 3), so an application never pulls the Kotlin standard library through it.
 
 plugins {
+    id("seampact.library-module")
     `java-library`
 }
 
-group = "io.github.jubasse"
-
-apply(from = rootProject.file("gradle/publication.gradle.kts"))
-
-// The lowest Java version A13 supports: the bytecode every consumer runs.
-val bytecodeJavaVersion = 21
-
-// `-PtestJdk=<major>` runs the tests on that JDK (CI passes 21 and 25); without it they run on the build JDK.
-val testJdk: String? = providers.gradleProperty("testJdk").orNull
+description = "The access hook interfaces and runtime types the generated Java code of seampact imports."
 
 val repositoryRoot = rootProject.projectDir.parentFile
 
@@ -27,7 +20,6 @@ dependencies {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release = bytecodeJavaVersion
     // `-parameters` keeps the hook parameter names the shape test compares with the manifest.
     options.compilerArgs.addAll(listOf("-parameters", "-Xlint:all", "-Werror"))
 }
@@ -65,9 +57,4 @@ tasks.test {
     systemProperty("seampact.hooksClassesDirectory", mainClassesDirectory.get())
     // The shape test reads the shared manifest; declared so a change reruns it.
     inputs.dir(repositoryRoot.resolve("fixtures/hooks-shape"))
-    if (testJdk != null) {
-        javaLauncher = javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(testJdk)
-        }
-    }
 }

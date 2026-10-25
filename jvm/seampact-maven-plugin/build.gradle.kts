@@ -4,23 +4,13 @@
 // `check` runs the pinned-bundle check and the generated drift. Built here with Gradle (ADR 0010), so `jvm/` keeps one
 // build tool.
 
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
+    id("seampact.library-module")
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.maven.plugin.development)
 }
 
-group = "io.github.jubasse"
 description = "Generates the Spring Boot code of a seampact contract from a pinned bundle or the pinned compiler."
-
-apply(from = rootProject.file("gradle/publication.gradle.kts"))
-
-// The lowest Java version A13 supports: the bytecode every consumer runs.
-val bytecodeJavaVersion = 21
-
-// `-PtestJdk=<major>` runs the tests on that JDK (CI passes 21 and 25); without it they run on the build JDK.
-val testJdk: String? = providers.gradleProperty("testJdk").orNull
 
 // `-PtestMaven=<version>` runs the Maven builds of the tests on that Maven release (CI passes 3.9 and 4); without it
 // they run on the 3.9 floor.
@@ -74,14 +64,8 @@ tasks.generateMavenPluginDescriptor {
 kotlin {
     explicitApi()
     compilerOptions {
-        jvmTarget = JvmTarget.fromTarget(bytecodeJavaVersion.toString())
-        freeCompilerArgs.add("-Xjdk-release=$bytecodeJavaVersion")
         allWarningsAsErrors = true
     }
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    options.release = bytecodeJavaVersion
 }
 
 // The modules a test's Maven build resolves, published to the root build's file repository.
@@ -106,9 +90,4 @@ tasks.test {
     inputs.dir(repositoryRoot.resolve("fixtures/reference"))
     inputs.dir(repositoryRoot.resolve("scripts/consumers/targets/spring-boot/maven"))
     inputs.dir(rootProject.file("seampact-spring-boot/src/test/golden"))
-    if (testJdk != null) {
-        javaLauncher = javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(testJdk)
-        }
-    }
 }
