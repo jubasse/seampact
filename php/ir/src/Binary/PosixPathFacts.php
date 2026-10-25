@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Binary;
 
-/** The facts of the running system: `lstat` and the effective user id of `ext-posix`. */
+/** The facts of the running system: `lstat`, the effective user id of `ext-posix`, and the account files. */
 final class PosixPathFacts implements PathFacts
 {
     public function of(string $path): ?PathFact
