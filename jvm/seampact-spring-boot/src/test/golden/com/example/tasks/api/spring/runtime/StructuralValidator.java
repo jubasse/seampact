@@ -101,7 +101,8 @@ final class StructuralValidator {
         if (refinements.has("maxLength") && length > refinements.path("maxLength").asInt()) issues.add(new InputIssue(in, pointer, "maxLength"));
 
         if (refinements.has("pattern")) {
-            Pattern pattern = patterns.computeIfAbsent(refinements.path("pattern").path("normalized").asString(), Pattern::compile);
+            String normalized = refinements.path("pattern").path("normalized").asString();
+            Pattern pattern = patterns.computeIfAbsent(normalized, written -> Pattern.compile(javaSyntaxOf(written)));
             if (!pattern.matcher(text).find()) issues.add(new InputIssue(in, pointer, "pattern"));
         }
 
@@ -115,6 +116,47 @@ final class StructuralValidator {
 
         // A decimal's range refinements compare numerically (ADR 0003 section 8).
         if (format.equals(DECIMAL_FORMAT)) checkBounds(new BigDecimal(text), refinements, in, pointer, issues);
+    }
+
+    /**
+     * The normalised pattern (ADR 0003 section 9, ECMAScript `u` syntax) in java.util.regex syntax, run with `find()`:
+     * `^` and `$` outside a class mean the start and the end of the string (Java's A and z anchors), and an astral code
+     * point escape takes Java's `x{...}` form. Every other construct of the normalised form reads the same in both engines.
+     */
+    static String javaSyntaxOf(String normalized) {
+        StringBuilder java = new StringBuilder();
+        boolean inClass = false;
+        int index = 0;
+
+        while (index < normalized.length()) {
+            char current = normalized.charAt(index);
+            if (current == '\\') {
+                index = appendEscape(normalized, index, java);
+                continue;
+            }
+
+            if (current == '[') inClass = true;
+            else if (current == ']') inClass = false;
+
+            if (!inClass && current == '^') java.append("\\A");
+            else if (!inClass && current == '$') java.append("\\z");
+            else java.append(current);
+            index++;
+        }
+
+        return java.toString();
+    }
+
+    // Appends the escape starting at [start] and returns the index after it.
+    private static int appendEscape(String normalized, int start, StringBuilder java) {
+        if (normalized.startsWith("\\u{", start)) {
+            int end = normalized.indexOf('}', start);
+            java.append("\\x{").append(normalized, start + 3, end + 1);
+            return end + 1;
+        }
+
+        java.append(normalized, start, start + 2);
+        return start + 2;
     }
 
     private static boolean matchesFormat(String text, String format) {
