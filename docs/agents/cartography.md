@@ -142,7 +142,8 @@ In pipeline order (ADR 0006 section 1).
 
 - `packages/targets/codegen-angular/src`: The angular target: an injectable api service per api whose fetch client sends through the app's `HttpClient`, with signal readers built on Angular's `resource()` and mutations with no cache, from the shared query plan, with the front runtime copied beside them.
 - `packages/targets/codegen-angular/src/fetch`: The plain fetch renderer of the angular target (`query: fetch`): `service.ts`, the `<Api>Api` service with signal readers on Angular's `resource()` and mutations over the shared fetcher factory of codegen-core, and `http-client-fetch.ts`, the fetch that sends through the app's `HttpClient`.
-- `packages/targets/codegen-angular/src/ngrx`: NgRx action groups and effects over the generated api service, for the option `state: ngrx`.
+- `packages/targets/codegen-angular/src/ngrx`: NgRx action groups and effects over the generated api service, for the option `state: ngrx`, and the call flows they share with `state: ngrx-signals`.
+- `packages/targets/codegen-angular/src/ngrx-signals`: Signal Store features over the generated api service, one per operation, for the option `state: ngrx-signals`.
 
 ### `@seampact/codegen-class-validator`
 

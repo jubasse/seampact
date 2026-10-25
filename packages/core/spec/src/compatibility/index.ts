@@ -273,6 +273,13 @@ export const CLIENT_TARGETS: readonly ClientTargetCompatibility[] = [
         testedMajors: [22],
         selectedBy: { option: "state", value: "ngrx" },
       },
+      {
+        id: "ngrx-signals",
+        package: "@ngrx/signals",
+        artefact: "service",
+        testedMajors: [22],
+        selectedBy: { option: "state", value: "ngrx-signals" },
+      },
     ],
     validatorStyles: [],
     ownValidators: [],
