@@ -73,13 +73,34 @@ final class IdempotencyStep {
         }
     }
 
-    /** The digest a retry under the same key must match: the method, the contract path and the decoded input. */
+    /**
+     * The digest a retry under the same key must match: the method, the contract path and the decoded input, its
+     * headers cut to the author-declared header params the table lists in `settings.fingerprintHeaders`. A header
+     * param the compiler derives (a trace id, a deadline, the key itself) changes on a retry.
+     */
     static String fingerprint(JsonNode ir, JsonNode operation, JsonNode inputTree) {
+        Set<String> counted = fingerprintHeaders(ir, operation);
+        counted.removeAll(credentialHeaders(ir, operation));
+
         // The decoded input holds the decoded path params, so an equivalent encoding of the path is the same request.
         return Digests.hexOf(List.of(
                 NODES.stringNode(operation.path("method").asString()),
                 NODES.stringNode(operation.path("path").asString()),
-                withoutHeaders(inputTree, credentialHeaders(ir, operation))));
+                withOnlyHeaders(inputTree, counted)));
+    }
+
+    private static Set<String> fingerprintHeaders(JsonNode ir, JsonNode operation) {
+        String operationId = operation.path("id").asString();
+        JsonNode listed = ir.path("settings").path("fingerprintHeaders").path(operationId);
+        if (!listed.isArray()) {
+            throw new IllegalStateException("seampact: the contract table lists no fingerprint headers for the idempotent operation '"
+                    + operationId + "'; regenerate the Spring Boot sources");
+        }
+
+        Set<String> names = new HashSet<>();
+        for (JsonNode name : listed) names.add(name.asString());
+
+        return names;
     }
 
     // The headers carrying a credential, lower case: a retry after a token or session refresh is the same request
@@ -107,13 +128,13 @@ final class IdempotencyStep {
     }
 
     // Header names are digested in lower case, as the Node targets key them.
-    private static JsonNode withoutHeaders(JsonNode inputTree, Set<String> names) {
+    private static JsonNode withOnlyHeaders(JsonNode inputTree, Set<String> names) {
         if (!(inputTree instanceof ObjectNode input)) return inputTree;
 
         ObjectNode headers = NODES.objectNode();
         for (Map.Entry<String, JsonNode> header : input.path("headers").properties()) {
             String name = header.getKey().toLowerCase(Locale.ROOT);
-            if (!names.contains(name)) headers.set(name, header.getValue());
+            if (names.contains(name)) headers.set(name, header.getValue());
         }
 
         ObjectNode digested = input.deepCopy();

@@ -24,12 +24,14 @@ private val DECLARATION_MEMBERS = listOf("api", "errors", "formats", "pagings", 
 private const val CHUNK_CHARACTERS = 8000
 
 private const val BOOT_CHECK = "bootCheck"
+private const val EXEMPT_IDEMPOTENCY = "exempt"
 private const val HOOKS_OFF = "off"
 
 /**
  * The api's contract table (ADR 0022 "Placement"): the IR view of the kept operations, the declarations they read
  * and the entry's settings, as JSON text the copied runtime reads with its own mapper. It is the IR itself, with the
- * members only tooling reads removed, so no third format exists between the IR and the boundary.
+ * members only tooling reads removed, so no third format exists between the IR and the boundary. The one fact read
+ * from a removed member, which header params the author declared, is in the settings (`fingerprintHeaders`).
  */
 internal fun contractTableType(layout: JavaLayout, options: SpringBootOptions, entry: SpringBootEntry): TypeSpec {
     val text = contractTable(layout, options, entry).toString()
@@ -58,18 +60,20 @@ private fun contractTable(layout: JavaLayout, options: SpringBootOptions, entry:
     val keptSchemas = layout.kept.objects.keys
     val keptEnums = layout.kept.enums
 
+    val operations = (ir["operations"] as JsonArray).filter { (it.jsonObject["id"] as JsonPrimitive).content in keptOperations }
+
     val view = buildJsonObject {
         for (member in DECLARATION_MEMBERS) ir[member]?.let { put(member, it) }
-        put("operations", JsonArray((ir["operations"] as JsonArray).filter { (it.jsonObject["id"] as JsonPrimitive).content in keptOperations }))
+        put("operations", JsonArray(operations))
         put("schemas", JsonObject((ir["schemas"] as JsonObject).filterKeys { it in keptSchemas }))
         put("enums", JsonObject((ir["enums"] as JsonObject).filterKeys { it in keptEnums }))
-        put("settings", settings(options, entry))
+        put("settings", settings(options, entry, operations))
     }
 
     return withoutToolingMembers(view) as JsonObject
 }
 
-private fun settings(options: SpringBootOptions, entry: SpringBootEntry): JsonObject {
+private fun settings(options: SpringBootOptions, entry: SpringBootEntry, operations: List<JsonElement>): JsonObject {
     val bootCheck = entry.artefacts[BOOT_CHECK]
     val everyCheck = bootCheck != JsonPrimitive(false)
     val checks = bootCheck as? JsonObject
@@ -88,6 +92,20 @@ private fun settings(options: SpringBootOptions, entry: SpringBootEntry): JsonOb
                 put("frameworkRoutes", everyCheck && checks?.get("frameworkRoutes") != JsonPrimitive(false))
             },
         )
+        put("fingerprintHeaders", fingerprintHeaders(operations))
+    }
+}
+
+// Per idempotent operation, the header params the author declared, lower case: the only headers its fingerprint
+// digests. A header param the compiler derives (trace, deadline, the key, CSRF) changes on a retry (ADR 0012).
+private fun fingerprintHeaders(operations: List<JsonElement>): JsonObject = buildJsonObject {
+    for (operation in operations.map { it.jsonObject }) {
+        val idempotency = operation["idempotency"] as? JsonObject ?: continue
+        if ((idempotency["kind"] as? JsonPrimitive)?.content == EXEMPT_IDEMPOTENCY) continue
+
+        val headerParams = ((operation["params"] as JsonObject)["header"] as JsonArray).map { it.jsonObject }
+        val declared = headerParams.filter { "derivedFrom" !in it }.map { (it["name"] as JsonPrimitive).content.lowercase() }
+        put((operation["id"] as JsonPrimitive).content, JsonArray(declared.map(::JsonPrimitive)))
     }
 }
 

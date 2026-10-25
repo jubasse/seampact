@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 // The vectors are what the Node targets' `sha256Hex` and `sha256Base64Url` give over `JSON.stringify` with sorted
 // members, so an idempotency key, a throttle key and an ETag are equal across targets.
@@ -60,7 +61,7 @@ class DigestsTest {
         String retry = IdempotencyStep.fingerprint(ir, createTask, createTaskInput("Bearer user-refreshed", "csrf-refreshed"));
 
         assertEquals(first, retry);
-        assertEquals("583a81024c92d216cb3209acd8ccdd6f1350f6947a6636235ed8329fc77fde9c", first);
+        assertEquals("8077418dab76b54fb536c8931896c2781fd2cbb0bb0e4a53e00f53131af694aa", first);
     }
 
     // The compiler derives `traceparent` and `X-Deadline` from the identity; they leave the fingerprint as every derived header param does.
@@ -82,5 +83,20 @@ class DigestsTest {
         String retry = IdempotencyStep.fingerprint(ir, createTask, createTaskInputWithDerivedHeaders("00-trace-new-01", "2026-10-25T10:00:05Z"));
 
         assertEquals(first, retry);
+    }
+
+    @Test
+    void anAuthorDeclaredHeaderParamStaysInTheFingerprintAsOnTheNodeTargets() {
+        ContractTable table = new ContractTable(BoundaryMapper.create().readTree(TasksContractTable.json()));
+        ObjectNode ir = (ObjectNode) table.ir().deepCopy();
+        ((ObjectNode) ir.path("settings").path("fingerprintHeaders")).set("createTask", NODES.arrayNode().add("x-request-source"));
+        JsonNode createTask = table.routes().stream().filter(route -> route.id().equals("createTask")).findFirst().orElseThrow().operation();
+        JsonNode input = JsonMapper.builder().build().readTree("""
+                {"path": {"channelId": "c1"}, "query": {},
+                 "headers": {"X-Request-Source": "mobile", "traceparent": "00-trace-01", "Idempotency-Key": "key-1"},
+                 "body": {"title": "Plan"}}
+                """);
+
+        assertEquals("55783fe63deeec1c2b65e4f36cd854050ec43f7788e672472aa6f13a2db0ad55", IdempotencyStep.fingerprint(ir, createTask, input));
     }
 }
