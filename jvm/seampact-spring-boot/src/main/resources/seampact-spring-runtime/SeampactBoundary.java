@@ -74,6 +74,14 @@ public final class SeampactBoundary {
     }
 
     /**
+     * The id of the operation the boundary filter matched for the request, its most specific route; empty outside the
+     * api's routes. The generated Spring Security matchers read it, so they agree with the boundary on every route.
+     */
+    public Optional<String> operationIdOf(HttpServletRequest request) {
+        return exchangeOf(request).map(exchange -> exchange.route().id());
+    }
+
+    /**
      * Writes [exception], a generated contract exception, as the api's reply on a contract route: for an app's own
      * `@ExceptionHandler` or advice that answers a contract error itself.
      */

@@ -104,7 +104,7 @@ public object SpringBootTarget {
                 layout.springPackage to bindingType(layout),
                 layout.springPackage to configurationType(layout, options.springSecurity),
             ) +
-            securityTypes(layout, options.springSecurity, refusals).map { layout.springPackage to it }
+            securityTypes(layout, options.springSecurity).map { layout.springPackage to it }
 
     private fun javaFile(packageName: String, type: TypeSpec, options: SpringBootOptions): GeneratedFile {
         val contents = JavaFile.builder(packageName, type)

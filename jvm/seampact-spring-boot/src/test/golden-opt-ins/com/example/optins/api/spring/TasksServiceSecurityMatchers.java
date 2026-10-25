@@ -1,12 +1,12 @@
 package com.example.optins.api.spring;
 
-import org.springframework.http.HttpMethod;
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
-import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import com.example.optins.api.spring.runtime.SeampactBoundary;
+import java.util.Set;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
- * The routes of the api 'tasksService' by access kind, for the app's own Spring Security rules, under the servlet path.
+ * The routes of the api 'tasksService' by access kind, for the app's own Spring Security rules: each matches the operation the
+ * boundary filter matched, so it needs that filter before Spring Security's chain, as the boot check makes sure.
  */
 public final class TasksServiceSecurityMatchers {
     private final RequestMatcher publicRoutes;
@@ -19,16 +19,12 @@ public final class TasksServiceSecurityMatchers {
 
     private final RequestMatcher signedRoutes;
 
-    public TasksServiceSecurityMatchers(String servletPath) {
-        PathPatternRequestMatcher.Builder routes = PathPatternRequestMatcher.withDefaults();
-        if (!servletPath.isEmpty() && !servletPath.equals("/")) {
-            routes = routes.basePath(servletPath);
-        }
-        this.publicRoutes = anyOf(routes.matcher(HttpMethod.GET, "/internal/v1/{p1}/{p2}/tasks/{p3}"), routes.matcher(HttpMethod.HEAD, "/internal/v1/{p1}/{p2}/tasks/{p3}"));
-        this.optionalRoutes = anyOf(routes.matcher(HttpMethod.GET, "/internal/v1/channels/{p1}/peeks/{p2}"), routes.matcher(HttpMethod.HEAD, "/internal/v1/channels/{p1}/peeks/{p2}"));
-        this.anonymousOnRefusalRoutes = anyOf(routes.matcher(HttpMethod.GET, "/internal/v1/channels/{p1}/peeks/{p2}"), routes.matcher(HttpMethod.HEAD, "/internal/v1/channels/{p1}/peeks/{p2}"));
-        this.identityRoutes = anyOf(routes.matcher(HttpMethod.GET, "/internal/v1/channels/{p1}/tasks/{p2}"), routes.matcher(HttpMethod.HEAD, "/internal/v1/channels/{p1}/tasks/{p2}"));
-        this.signedRoutes = anyOf(routes.matcher(HttpMethod.GET, "/internal/v1/channels/{p1}/signed/{p2}"), routes.matcher(HttpMethod.HEAD, "/internal/v1/channels/{p1}/signed/{p2}"));
+    public TasksServiceSecurityMatchers(SeampactBoundary boundary) {
+        this.publicRoutes = operations(boundary, Set.of("browseTask"));
+        this.optionalRoutes = operations(boundary, Set.of("peekTask"));
+        this.anonymousOnRefusalRoutes = operations(boundary, Set.of("peekTask"));
+        this.identityRoutes = operations(boundary, Set.of("getTask"));
+        this.signedRoutes = operations(boundary, Set.of("signTask"));
     }
 
     /**
@@ -66,8 +62,7 @@ public final class TasksServiceSecurityMatchers {
         return signedRoutes;
     }
 
-    private static RequestMatcher anyOf(RequestMatcher... matchers) {
-        if (matchers.length == 0) return request -> false;
-        return new OrRequestMatcher(matchers);
+    private static RequestMatcher operations(SeampactBoundary boundary, Set<String> operationIds) {
+        return request -> boundary.operationIdOf(request).filter(operationIds::contains).isPresent();
     }
 }

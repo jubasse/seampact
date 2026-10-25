@@ -1,7 +1,6 @@
 package io.github.jubasse.seampact.springboot
 
 import com.palantir.javapoet.AnnotationSpec
-import com.palantir.javapoet.ArrayTypeName
 import com.palantir.javapoet.ClassName
 import com.palantir.javapoet.CodeBlock
 import com.palantir.javapoet.FieldSpec
@@ -10,9 +9,7 @@ import com.palantir.javapoet.ParameterizedTypeName
 import com.palantir.javapoet.TypeName
 import com.palantir.javapoet.TypeSpec
 import io.github.jubasse.seampact.ir.model.Access
-import io.github.jubasse.seampact.ir.model.HttpMethod
 import io.github.jubasse.seampact.ir.model.IdentityAccess
-import io.github.jubasse.seampact.ir.model.Operation
 import io.github.jubasse.seampact.ir.model.OptionalAccess
 import io.github.jubasse.seampact.ir.model.PublicAccess
 import io.github.jubasse.seampact.ir.model.RefusedCredential
@@ -22,17 +19,12 @@ import javax.lang.model.element.Modifier
 
 private val CONFIGURATION = ClassName.get("org.springframework.context.annotation", "Configuration")
 private val BEAN = ClassName.get("org.springframework.context.annotation", "Bean")
-private val ENVIRONMENT = ClassName.get("org.springframework.core.env", "Environment")
-private val SPRING_HTTP_METHOD = ClassName.get("org.springframework.http", "HttpMethod")
+private val ORDER = ClassName.get("org.springframework.core.annotation", "Order")
+private val ORDERED = ClassName.get("org.springframework.core", "Ordered")
 private val REQUEST_MATCHER = ClassName.get("org.springframework.security.web.util.matcher", "RequestMatcher")
-private val OR_REQUEST_MATCHER = ClassName.get("org.springframework.security.web.util.matcher", "OrRequestMatcher")
-private val PATH_PATTERN_REQUEST_MATCHER = ClassName.get("org.springframework.security.web.servlet.util.matcher", "PathPatternRequestMatcher")
-private val PATH_PATTERN_BUILDER = PATH_PATTERN_REQUEST_MATCHER.nestedClass("Builder")
 private val CUSTOMIZER = ClassName.get("org.springframework.security.config", "Customizer")
 private val HTTP_SECURITY = ClassName.get("org.springframework.security.config.annotation.web.builders", "HttpSecurity")
-
-/** The Spring property whose servlet path the matchers take as their base path (ADR 0022 "Native security layers"). */
-private const val SERVLET_PATH_PROPERTY = "spring.mvc.servlet.path"
+private val STRING_SET = ParameterizedTypeName.get(ClassName.get(Set::class.java), JavaTypes.STRING)
 
 /** The runtime class answering Spring Security's refusals, copied only with the Spring Security beans. */
 internal const val SECURITY_REFUSALS = "SecurityRefusals"
@@ -54,39 +46,39 @@ internal fun JavaLayout.securityConfiguration(): ClassName = ClassName.get(sprin
 /**
  * The api's Spring Security beans, in classes of their own so an app without Spring Security never compiles against
  * them (ADR 0022 "Native security layers"): the request matchers per access kind, the refusals in the api's format,
- * and with `springSecurity: { matchers: true }` the customizer that permits the public and optional-auth routes.
+ * and with `springSecurity: { matchers: true }` the customizer that permits the public, optional-auth and signed routes.
  */
-internal fun securityTypes(layout: JavaLayout, mode: SpringSecurityMode, refusals: Refusals): List<TypeSpec> {
+internal fun securityTypes(layout: JavaLayout, mode: SpringSecurityMode): List<TypeSpec> {
     if (mode == SpringSecurityMode.OFF) return emptyList()
 
-    return listOf(matchersType(layout, refusals), securityConfigurationType(layout, mode))
+    return listOf(matchersType(layout), securityConfigurationType(layout, mode))
 }
 
-private fun matchersType(layout: JavaLayout, refusals: Refusals): TypeSpec {
-    val routesByKind = AccessKind.entries.associateWith { mutableListOf<CodeBlock>() }
+// Each kind matches by the operation the boundary filter matched, its most specific route, so a template of one kind
+// never covers a literal sibling of another (ADR 0022 "Native security layers").
+private fun matchersType(layout: JavaLayout): TypeSpec {
+    val operationIdsByKind = AccessKind.entries.associateWith { mutableListOf<CodeBlock>() }
 
-    for ((index, operation) in layout.kept.operations) {
-        val pattern = springPattern(operation.path, IrPlace.ofOperation(index, operation.id).below("path"), refusals) ?: continue
-        val matchers = methodsOf(operation).map { method -> CodeBlock.of("routes.matcher(\$T.\$L, \$S)", SPRING_HTTP_METHOD, method, pattern) }
-
-        for (kind in accessKindsOf(layout, operation.access)) routesByKind.getValue(kind) += matchers
+    for ((_, operation) in layout.kept.operations) {
+        for (kind in accessKindsOf(layout, operation.access)) operationIdsByKind.getValue(kind) += CodeBlock.of("\$S", operation.id)
     }
 
+    val boundary = layout.runtime("SeampactBoundary")
     val type = TypeSpec.classBuilder(layout.securityMatchers())
-        .addJavadoc("The routes of the api '\$L' by access kind, for the app's own Spring Security rules, under the servlet path.\n", layout.ir.api.id)
+        .addJavadoc(
+            "The routes of the api '\$L' by access kind, for the app's own Spring Security rules: each matches the operation the\n" +
+                "boundary filter matched, so it needs that filter before Spring Security's chain, as the boot check makes sure.\n",
+            layout.ir.api.id,
+        )
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
 
     val constructor = MethodSpec.constructorBuilder()
         .addModifiers(Modifier.PUBLIC)
-        .addParameter(String::class.java, "servletPath")
-        .addStatement("\$T routes = \$T.withDefaults()", PATH_PATTERN_BUILDER, PATH_PATTERN_REQUEST_MATCHER)
-        .beginControlFlow("if (!servletPath.isEmpty() && !servletPath.equals(\"/\"))")
-        .addStatement("routes = routes.basePath(servletPath)")
-        .endControlFlow()
+        .addParameter(boundary, "boundary")
 
-    for ((kind, matchers) in routesByKind) {
+    for ((kind, operationIds) in operationIdsByKind) {
         type.addField(FieldSpec.builder(REQUEST_MATCHER, kind.member, Modifier.PRIVATE, Modifier.FINAL).build())
-        constructor.addStatement("this.\$L = anyOf(\$L)", kind.member, CodeBlock.join(matchers, ", "))
+        constructor.addStatement("this.\$L = operations(boundary, \$T.of(\$L))", kind.member, Set::class.java, CodeBlock.join(operationIds, ", "))
         type.addMethod(
             MethodSpec.methodBuilder(kind.member)
                 .addJavadoc("Matches \$L.\n", kind.description)
@@ -100,23 +92,15 @@ private fun matchersType(layout: JavaLayout, refusals: Refusals): TypeSpec {
     return type
         .addMethod(constructor.build())
         .addMethod(
-            MethodSpec.methodBuilder("anyOf")
+            MethodSpec.methodBuilder("operations")
                 .addModifiers(Modifier.PRIVATE, Modifier.STATIC)
-                .addParameter(ArrayTypeName.of(REQUEST_MATCHER), "matchers")
-                .varargs(true)
+                .addParameter(boundary, "boundary")
+                .addParameter(STRING_SET, "operationIds")
                 .returns(REQUEST_MATCHER)
-                .addStatement("if (matchers.length == 0) return request -> false")
-                .addStatement("return new \$T(matchers)", OR_REQUEST_MATCHER)
+                .addStatement("return request -> boundary.operationIdOf(request).filter(operationIds::contains).isPresent()")
                 .build(),
         )
         .build()
-}
-
-// HEAD runs the path's GET operation (ADR 0022 "Routes"), so a GET route matches both.
-private fun methodsOf(operation: Operation): List<String> {
-    val method = operation.method.value.uppercase(java.util.Locale.ROOT)
-
-    return if (operation.method == HttpMethod.GET) listOf(method, "HEAD") else listOf(method)
 }
 
 private fun accessKindsOf(layout: JavaLayout, access: Access): List<AccessKind> = when (access) {
@@ -130,6 +114,7 @@ private fun accessKindsOf(layout: JavaLayout, access: Access): List<AccessKind> 
 private fun securityConfigurationType(layout: JavaLayout, mode: SpringSecurityMode): TypeSpec {
     val prefix = javaIdentifier(layout.ir.api.name.segments + listOf("security"), NamingRole.MEMBER)
     val matchers = layout.securityMatchers()
+    val boundary = layout.runtime("SeampactBoundary")
     val securityRefusals = layout.runtime(SECURITY_REFUSALS)
 
     val type = TypeSpec.classBuilder(layout.securityConfiguration())
@@ -138,13 +123,13 @@ private fun securityConfigurationType(layout: JavaLayout, mode: SpringSecurityMo
         .addAnnotation(AnnotationSpec.builder(CONFIGURATION).addMember("proxyBeanMethods", "false").build())
         .addMethod(
             securityBean("${prefix}Matchers", matchers)
-                .addParameter(ENVIRONMENT, "environment")
-                .addStatement("return new \$T(environment.getProperty(\$S, \"\"))", matchers, SERVLET_PATH_PROPERTY)
+                .addParameter(boundary, "boundary")
+                .addStatement("return new \$T(boundary)", matchers)
                 .build(),
         )
         .addMethod(
             securityBean("${prefix}Refusals", securityRefusals)
-                .addParameter(layout.runtime("SeampactBoundary"), "boundary")
+                .addParameter(boundary, "boundary")
                 .addStatement("return new \$T(boundary)", securityRefusals)
                 .build(),
         )
@@ -152,12 +137,17 @@ private fun securityConfigurationType(layout: JavaLayout, mode: SpringSecurityMo
     if (mode == SpringSecurityMode.ON_WITH_MATCHERS) {
         type.addMethod(
             securityBean("${prefix}Customizer", ParameterizedTypeName.get(CUSTOMIZER, HTTP_SECURITY))
-                .addJavadoc("Permits the public and optional-auth routes in every chain, before the app's own rules.\n")
+                .addJavadoc(
+                    "Permits the public, optional-auth and signed routes in every chain, before the app's own rules and, being\n" +
+                        "ordered first, before the app's own customizers; the boundary checks the signature of a signed route.\n",
+                )
+                .addAnnotation(AnnotationSpec.builder(ORDER).addMember("value", "\$T.HIGHEST_PRECEDENCE", ORDERED).build())
                 .addParameter(matchers, "matchers")
                 .addStatement(
-                    "return http -> http.authorizeHttpRequests(authorize -> authorize.requestMatchers(matchers.\$L(), matchers.\$L()).permitAll())",
+                    "return http -> http.authorizeHttpRequests(authorize -> authorize.requestMatchers(matchers.\$L(), matchers.\$L(), matchers.\$L()).permitAll())",
                     AccessKind.PUBLIC.member,
                     AccessKind.OPTIONAL.member,
+                    AccessKind.SIGNED.member,
                 )
                 .build(),
         )

@@ -19,8 +19,9 @@ import org.springframework.test.context.ActiveProfiles;
  * Spring Security's refusals in the api's format (ADR 0022 "The consumer and the proof"): its 401, 403 and CSRF
  * refusal reach the client as the operation's {@code api.unauthenticated}, {@code api.forbidden} and
  * {@code api.csrf_invalid} errors, and the generated customizer lets a public route through a chain that requires
- * authentication everywhere else. The reference contract declares no optional-auth operation, so the
- * optional-auth matcher is checked by the generator's golden test only.
+ * authentication everywhere else. The reference contract declares no optional-auth operation and no public template
+ * beside a literal route, so those matchers are checked by the generator's {@code SecurityMatchersTest}, which runs
+ * them in a Spring Security chain on routes of every access kind.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles(SuiteSecurity.SECURITY_REFUSALS_PROFILE)
