@@ -35,9 +35,9 @@ import tools.jackson.databind.JsonNode;
  * The boot check (ADR 0022 "The boot check"), once every bean is built and before the server starts: it lists every
  * problem at once (a missing hook, a contract operation with no handler or two, a framework route the config does
  * not allow-list, a filter ordered before the boundary, a mapping ordered before Spring MVC's that takes a contract
- * route, a mount the configured paths differ from, a container other than Tomcat, a reactive app, no Jakarta
- * Validation provider, an unsupported Spring Boot major, a missing or malformed public origin under absolute URLs)
- * and throws, so the app does not start.
+ * route, a configured mount the context and servlet paths differ from, a container other than Tomcat, a reactive
+ * app, no Jakarta Validation provider, an unsupported Spring Boot major, a missing or malformed public origin under
+ * absolute URLs) and throws, so the app does not start.
  */
 public final class BootCheck implements SmartInitializingSingleton {
     private static final String SUPPORTED_BOOT_MAJOR = "4";
@@ -244,9 +244,15 @@ public final class BootCheck implements SmartInitializingSingleton {
         return null;
     }
 
-    /** The entry's `mount` is the prefix every contract path is served under: the context path then the servlet path. */
+    /**
+     * The entry's `mount` is the prefix every contract path is served under: the context path then the servlet path.
+     * Without a mount nothing is compared, since the boundary strips both paths from each request.
+     */
     static Optional<String> mountProblem(JsonNode settings, Environment environment, String servletPath) {
-        String mount = settings.path("mount").asString("");
+        JsonNode mountSetting = settings.path("mount");
+        if (mountSetting.isMissingNode() || mountSetting.isNull()) return Optional.empty();
+
+        String mount = mountSetting.asString();
         String contextPath = environment.getProperty(CONTEXT_PATH_PROPERTY, "").replaceAll("/+$", "");
         String configured = contextPath + servletPath;
         if (configured.equals(mount)) return Optional.empty();
