@@ -1,1 +1,1 @@
-The source parts the react target's query libraries share: the operation types read from the client, the `isContractError` guard, the resource union, the next-page constants and the `keys` object.
+The source part the react target's query libraries share that is React's own: the `"use client"` directive (the other shared parts come from codegen-core).

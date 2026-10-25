@@ -22,6 +22,10 @@ const PROXIED_PATHS = ["^/v1/", "^/internal/", "^/__seampact/"];
 // The prefix a page calls the api under when the proxy strips it before the server sees the path.
 const STRIPPED_PREFIX = "/api";
 
+// The frameworks a browser test reaches only through `.mts` modules, which Vite's dependency scan does not read:
+// pre-bundled up front when the consumer installs them, or their late discovery reloads a running test.
+const PREBUNDLED_WHEN_INSTALLED = ["vue", "vue/server-renderer", "@tanstack/vue-query"];
+
 interface RunningServer {
   readonly baseUrl: string;
   close(): Promise<void>;
@@ -45,6 +49,7 @@ function nodeProjects(): TestProjectInlineConfiguration[] {
 function browserProject(running: RunningServer | undefined): TestProjectInlineConfiguration {
   return {
     server: running === undefined ? {} : { proxy: proxyTo(running.baseUrl) },
+    optimizeDeps: { include: installedOf(PREBUNDLED_WHEN_INSTALLED) },
     test: {
       name: "front",
       include: ["test/front/**/*.browser.test.{mts,tsx}"],
@@ -64,6 +69,12 @@ function browserProject(running: RunningServer | undefined): TestProjectInlineCo
       },
     },
   };
+}
+
+function installedOf(packageNames: readonly string[]): string[] {
+  return packageNames.filter((name) =>
+    existsSync(new URL(`./node_modules/${name}`, import.meta.url)),
+  );
 }
 
 interface ProxyRule {

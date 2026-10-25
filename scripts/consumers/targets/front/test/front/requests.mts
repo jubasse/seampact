@@ -1,4 +1,4 @@
-// What the react consumers' browser tests share: the tasks client on the page's origin, a fetch that records the
+// What the front consumers' browser tests share: the tasks client on the page's origin, a fetch that records the
 // requests it sends, the scripted list pages the server answers with, and a quiet wait before checking that nothing
 // more was sent.
 import { createClient } from "../../generated/client/tasks/index.js";

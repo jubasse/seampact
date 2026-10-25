@@ -1,0 +1,134 @@
+import {
+  apiIndexSource,
+  FRONT_RUNTIME_MODULE,
+  fetchQueriesModuleSource,
+  frontRuntimeFile,
+  type GeneratedFile,
+  type GenerateInput,
+  type GenerateOutcome,
+  type IndexedModule,
+  importSpecifier,
+  planQueries,
+  type QueryPlan,
+  type Refusal,
+  refuseUnsupportedClientErrorStyle,
+} from "@seampact/codegen-core";
+import { composablesModuleSource as fetchComposablesModuleSource } from "./fetch/composables-module.js";
+import type { VueQueryOptions } from "./options.js";
+import { composablesModuleSource as tanstackComposablesModuleSource } from "./tanstack/composables-module.js";
+import { queriesModuleSource as tanstackQueriesModuleSource } from "./tanstack/queries-module.js";
+
+export const QUERIES_ARTEFACT = "queries";
+export const COMPOSABLES_ARTEFACT = "composables";
+export const ITEMS_OF_ARTEFACT = "itemsOf";
+
+export type VueArtefact =
+  | typeof QUERIES_ARTEFACT
+  | typeof COMPOSABLES_ARTEFACT
+  | typeof ITEMS_OF_ARTEFACT;
+
+const QUERIES_MODULE = "queries";
+const COMPOSABLES_MODULE = "composables";
+const INDEX_MODULE = "index";
+const MODULE_EXTENSION = ".ts";
+const MODULE_SUFFIX = ".js";
+const RUNTIME_SPECIFIER = `./${FRONT_RUNTIME_MODULE}${MODULE_SUFFIX}`;
+const RUNTIME_TYPE_NAMES = ["PlainHeaders", "WithPlainHeaders"];
+const ITEMS_OF = "itemsOf";
+
+// Per api: the front runtime, `queries.ts`, `composables.ts` unless the artefact is off, and an index re-exporting
+// them; or every refusal at once.
+export function generateVueQueries(
+  input: GenerateInput<VueQueryOptions, VueArtefact, "client">,
+): GenerateOutcome {
+  if (!input.artefacts.has(QUERIES_ARTEFACT)) return { status: "generated", files: [] };
+
+  const { ir, links, options } = input;
+  const client = links.client.descriptor;
+  const refusals = [
+    ...refuseUnsupportedClientErrorStyle(options.errors, client.errorStyle),
+    ...refuseUnsupportedArtefacts(options, input.artefacts),
+  ];
+
+  if (refusals.length > 0) return { status: "refused", refusals };
+
+  const planned = planQueries(ir, client, { infinite: options.infinite === "on" });
+
+  if (planned.status === "refused") return planned;
+
+  const clientSpecifier = (fromFile: string) =>
+    importSpecifier(links.client, client.exports.Client, fromFile);
+  const files = queriesAndComposablesFiles(planned.plan, options, options.keysRoot ?? ir.api.id, {
+    withComposables: input.artefacts.has(COMPOSABLES_ARTEFACT),
+    withItemsOf: input.artefacts.has(ITEMS_OF_ARTEFACT),
+    clientSpecifier,
+  });
+
+  return { status: "generated", files: [frontRuntimeFile(), ...files], warnings: planned.warnings };
+}
+
+interface LibraryFiles {
+  readonly withComposables: boolean;
+  readonly withItemsOf: boolean;
+  readonly clientSpecifier: (fromFile: string) => string;
+}
+
+function queriesAndComposablesFiles(
+  plan: QueryPlan,
+  options: VueQueryOptions,
+  root: string,
+  library: LibraryFiles,
+): GeneratedFile[] {
+  const queriesFile = `${QUERIES_MODULE}${MODULE_EXTENSION}`;
+  const composablesFile = `${COMPOSABLES_MODULE}${MODULE_EXTENSION}`;
+  const queriesImports = {
+    client: library.clientSpecifier(queriesFile),
+    runtime: RUNTIME_SPECIFIER,
+  };
+  const composablesImports = {
+    client: library.clientSpecifier(composablesFile),
+    queries: `./${QUERIES_MODULE}${MODULE_SUFFIX}`,
+    runtime: RUNTIME_SPECIFIER,
+  };
+  const fetchMode = options.query === "fetch";
+  const queries = fetchMode
+    ? fetchQueriesModuleSource(plan, options, queriesImports)
+    : tanstackQueriesModuleSource(plan, options, root, queriesImports);
+  const composables = () =>
+    fetchMode
+      ? fetchComposablesModuleSource(plan, options, composablesImports)
+      : tanstackComposablesModuleSource(plan, composablesImports);
+  const indexed: IndexedModule[] = [
+    ...(library.withComposables ? [{ module: COMPOSABLES_MODULE }] : []),
+    { module: QUERIES_MODULE },
+    {
+      module: FRONT_RUNTIME_MODULE,
+      typeNames: [...RUNTIME_TYPE_NAMES],
+      valueNames: library.withItemsOf ? [ITEMS_OF] : [],
+    },
+  ];
+
+  return [
+    { path: queriesFile, contents: `${queries}\n` },
+    ...(library.withComposables ? [{ path: composablesFile, contents: `${composables()}\n` }] : []),
+    { path: `${INDEX_MODULE}${MODULE_EXTENSION}`, contents: apiIndexSource(indexed) },
+  ];
+}
+
+// `itemsOf` flattens an infinite query's pages, which plain fetch has not.
+function refuseUnsupportedArtefacts(
+  options: VueQueryOptions,
+  artefacts: ReadonlySet<VueArtefact>,
+): Refusal[] {
+  if (options.query !== "fetch" || !artefacts.has(ITEMS_OF_ARTEFACT)) return [];
+
+  return [
+    {
+      code: "artefacts.itemsOf.unsupported",
+      message:
+        "The artefact 'itemsOf' flattens the pages of an infinite query, and 'query: fetch' has no infinite query.",
+      fix: "Turn 'itemsOf' off, or choose 'query: tanstack'.",
+      member: "",
+    },
+  ];
+}

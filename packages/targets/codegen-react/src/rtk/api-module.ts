@@ -1,15 +1,17 @@
-import type { QueryOperation, QueryPlan, Refusal } from "@seampact/codegen-core";
-import { propertyKey } from "@seampact/codegen-core";
-import type { ReactQueryOptions } from "../options.js";
 import {
-  CLIENT_DIRECTIVE,
   nextPageConstantName,
   nextPageConstants,
   operationType,
   operationTypesSource,
   planForms,
+  propertyKey,
   type QueriesImports,
-} from "../shared/operation-sources.js";
+  type QueryOperation,
+  type QueryPlan,
+  type Refusal,
+} from "@seampact/codegen-core";
+import type { ReactQueryOptions } from "../options.js";
+import { CLIENT_DIRECTIVE } from "../shared/operation-sources.js";
 
 // The `api.ts` of one api for RTK Query (ADR 0021 "RTK Query"): `create<Api>Api(client, settings?)` over `createApi`
 // and `fakeBaseQuery`, an endpoint per operation whose `queryFn` calls the client with RTK's signal, resource types

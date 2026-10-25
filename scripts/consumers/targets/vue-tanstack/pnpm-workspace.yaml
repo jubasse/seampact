@@ -1,0 +1,4 @@
+# vue-demi, under @tanstack/vue-query, has a postinstall that switches its entry between Vue 2 and 3; it ships the
+# Vue 3 entry, so the script is not needed. The consumer run merges its own settings into this file.
+allowBuilds:
+  vue-demi: false

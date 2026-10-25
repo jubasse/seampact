@@ -1,5 +1,5 @@
-// The react consumer's app builds for production with Vite: the generated queries and hooks, the copied front
-// runtime and the client bundle for the browser, `"use client"` directive included.
+// The consumer app builds for production with Vite: the generated queries and hooks or composables, the
+// copied front runtime and the client bundle for the browser (React's `"use client"` directive included).
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,7 +8,7 @@ import { build } from "vite";
 import { afterAll, expect, test } from "vitest";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const OUT_DIR = mkdtempSync(join(tmpdir(), "seampact-react-build-"));
+const OUT_DIR = mkdtempSync(join(tmpdir(), "seampact-vite-build-"));
 
 afterAll(() => {
   rmSync(OUT_DIR, { recursive: true, force: true });

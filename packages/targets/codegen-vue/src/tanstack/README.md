@@ -1,0 +1,1 @@
+The TanStack Query renderer of the vue target (`query: tanstack`): the `queries.ts` options factories shared with codegen-core over `@tanstack/vue-query`, and `composables.ts`, one `use*` composable per factory taking a reactive request.

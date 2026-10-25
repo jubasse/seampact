@@ -1,6 +1,3 @@
-import type { QueryOperation, QueryPlan } from "@seampact/codegen-core";
-import { propertyKey } from "@seampact/codegen-core";
-import type { ReactQueryOptions } from "../options.js";
 import {
   CONTRACT_ERROR_GUARD,
   constantCaseOf,
@@ -10,12 +7,16 @@ import {
   operationType,
   operationTypesSource,
   planForms,
+  propertyKey,
   type QueriesImports,
+  type QueryOperation,
+  type QueryPlan,
   REQUIRED_CALL_TYPE,
   resourceTypeSource,
   resultExpression,
   settingsTypeSource,
-} from "../shared/operation-sources.js";
+} from "@seampact/codegen-core";
+import type { ReactQueryOptions } from "../options.js";
 
 // The server-safe `queries.ts` of one api for SWR (ADR 0021 "SWR"): the types each operation reads from the client
 // and `create<Api>Queries`, which returns `keys` and, per operation, the `{ key, fetcher }` pair `preload`, an
