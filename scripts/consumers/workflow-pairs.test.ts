@@ -17,7 +17,7 @@ const CONSUMER_WORKFLOWS = [
 ];
 
 // The workflows that run a front consumer: not a server pair, so only the matrix axes are checked.
-const FRONT_CONSUMER_WORKFLOWS = ["p6-react.yml", "p6-vue.yml", "p6-angular.yml"];
+const FRONT_CONSUMER_WORKFLOWS = ["p6-react.yml", "p6-vue.yml", "p6-angular.yml", "p4-msw.yml"];
 
 // The server target package and framework major each consumer target id tests, from the matrix's tested majors.
 const CONSUMER_TARGETS: ReadonlyMap<string, string> = new Map(

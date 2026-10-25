@@ -1,0 +1,113 @@
+name: MSW consumer
+
+# Builds and packs the seampact packages, installs them from the tarballs into the MSW test consumer and runs its
+# node project and its Vitest browser project on Playwright Chromium: the fetch client against the generated
+# handlers, with no server (ADR 0021). On a pull request it runs only when the change touches the packages, the
+# consumer harness, the reference contract, the toolchain pins or this workflow; `p4-msw` is the one check to require.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: msw-consumer-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      front: ${{ steps.detect.outputs.front }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history, so the pull request can be compared with its base.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect a change the MSW consumer depends on
+        id: detect
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "front=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # The packed packages, the consumer harness, the reference contract, the workspace and toolchain pins and
+          # this workflow.
+          watched='^(packages/|scripts/consumers/|scripts/golden/|fixtures/reference/'
+          watched+='|\.github/workflows/p4-msw\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|tsconfig\.base\.json$|\.nvmrc$)'
+          # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
+          # quote, a backslash, a tab or a non-ASCII byte, still matches.
+          changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')
+          # An empty diff runs every job rather than none.
+          if [ -z "$changed" ] || grep -Eq "$watched" <<< "$changed"; then
+            echo "front=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "front=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  consumer:
+    needs: changes
+    if: needs.changes.outputs.front == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [front-msw]
+        validators: [zod]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The browser the consumer run installs, cached on the Playwright version the front overlay pins.
+      - name: Read the pinned Playwright version
+        id: playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./scripts/consumers/targets/front/package.entries.json").playwright')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-headless-shell-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} from packed tarballs
+        run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
+
+  # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
+  p4-msw:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, consumer]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail when a needed job failed or was cancelled
+        shell: bash
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          set -euo pipefail
+          for result in $RESULTS; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              echo "An MSW consumer job ended in $result (results: $RESULTS)."
+              exit 1
+            fi
+          done

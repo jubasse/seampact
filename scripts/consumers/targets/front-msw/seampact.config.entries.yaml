@@ -1,0 +1,6 @@
+  # MSW 2 handlers per operation, typed by the same types as the fetch client they answer.
+  - id: mocks
+    use: "@seampact/codegen-msw"
+    apis: [tasks, tasksService]
+    link:
+      types: types
