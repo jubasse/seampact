@@ -222,6 +222,27 @@ export const CLIENT_TARGETS: readonly ClientTargetCompatibility[] = [
     ownValidators: [],
     clientStyles: ["fetch"],
   },
+  {
+    package: "@seampact/codegen-vue",
+    framework: {
+      id: "vue",
+      package: "vue",
+      tested: [{ major: 3, consumer: "vue-tanstack" }],
+      incompatible: [],
+    },
+    libraries: [
+      {
+        id: "tanstack-vue-query",
+        package: "@tanstack/vue-query",
+        artefact: "queries",
+        testedMajors: [5],
+        selectedBy: { option: "query", value: "tanstack" },
+      },
+    ],
+    validatorStyles: [],
+    ownValidators: [],
+    clientStyles: ["fetch"],
+  },
 ];
 
 // Every target the matrix records, servers then clients.

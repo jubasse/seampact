@@ -66,6 +66,7 @@ export {
   type QueryPlanSettings,
   REQUIRED_CALL_TYPE,
   type RequestMember,
+  refuseUnsupportedClientErrorStyle,
   resourceTypeSource,
   resourceUnion,
   resultExpression,

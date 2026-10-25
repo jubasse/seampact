@@ -2,6 +2,7 @@
 // resource, call options and next-page rule, the front runtime each front target copies into its output, and the
 // query module sources the TypeScript front targets share (plain fetch and TanStack Query factories).
 
+export { refuseUnsupportedClientErrorStyle } from "./client-error-style.js";
 export { type FetchQueriesOptions, fetchQueriesModuleSource } from "./fetch-queries-module.js";
 export { FRONT_RUNTIME_MODULE, frontRuntimeFile } from "./front-runtime-file.js";
 export {

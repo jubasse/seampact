@@ -10,6 +10,7 @@ import {
   planQueries,
   type QueryPlan,
   type Refusal,
+  refuseUnsupportedClientErrorStyle,
 } from "@seampact/codegen-core";
 import { hooksModuleSource as fetchHooksModuleSource } from "./fetch/hooks-module.js";
 import { queriesModuleSource as fetchQueriesModuleSource } from "./fetch/queries-module.js";
@@ -35,7 +36,6 @@ const RTK_API_MODULE = "api";
 const INDEX_MODULE = "index";
 const MODULE_EXTENSION = ".ts";
 const MODULE_SUFFIX = ".js";
-const OPTIONS_LOCATION = "";
 const RUNTIME_SPECIFIER = `./${FRONT_RUNTIME_MODULE}${MODULE_SUFFIX}`;
 const RUNTIME_TYPE_NAMES = ["PlainHeaders", "WithPlainHeaders"];
 // RTK Query's error is a plain value whose types the app reads.
@@ -53,7 +53,7 @@ export function generateReactQueries(
   const { ir, links, options } = input;
   const client = links.client.descriptor;
   const refusals = [
-    ...refuseUnsupportedForms(options, client.errorStyle),
+    ...refuseUnsupportedClientErrorStyle(options.errors, client.errorStyle),
     ...refuseUnsupportedArtefacts(options, input.artefacts),
   ];
 
@@ -181,34 +181,6 @@ function runtimeModule(typeNames: readonly string[], withItemsOf: boolean): Inde
     typeNames: [...typeNames],
     valueNames: withItemsOf ? [ITEMS_OF] : [],
   };
-}
-
-// `errors: data` needs a client that returns its errors.
-function refuseUnsupportedForms(
-  options: ReactQueryOptions,
-  errorStyle: "result" | "throw",
-): Refusal[] {
-  const refusals: Refusal[] = [];
-
-  if (errorStyle === "throw" && options.errors === "data") {
-    refusals.push({
-      code: "options.errors.unsupported",
-      message:
-        "The option 'errors: data' returns declared errors as data, but the linked client throws them (errorStyle: throw).",
-      fix: "Link a client with 'errorStyle: result', or drop 'errors: data'.",
-      member: `${OPTIONS_LOCATION}/errors`,
-    });
-  } else if (errorStyle === "throw") {
-    refusals.push({
-      code: "link.client.errorStyle.unsupported",
-      message:
-        "A client linked with 'errorStyle: throw' is not generated over yet: its per-operation error types are not in the client link.",
-      fix: "Link a client with 'errorStyle: result' (the default); the queries still throw its declared errors as a ContractError.",
-      member: "",
-    });
-  }
-
-  return refusals;
 }
 
 // `itemsOf` flattens an infinite query's pages, which plain fetch has not.
