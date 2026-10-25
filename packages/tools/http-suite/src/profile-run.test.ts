@@ -1,5 +1,5 @@
-import { expect, test } from "vitest";
 import { join } from "node:path";
+import { expect, test } from "vitest";
 import { caseProblems, reportFileOf } from "./profile-run.js";
 import { suiteReportOf } from "./suite-report.js";
 
@@ -23,6 +23,8 @@ test("a refused case without a refusal, or a missing case, is a problem", () => 
 });
 
 test("a pack profile's report file name holds no colon, which CI artifact uploads refuse", () => {
-  expect(reportFileOf("reports", "pack:spring")).toBe(join("reports", "http-suite-pack-spring.json"));
+  expect(reportFileOf("reports", "pack:spring")).toBe(
+    join("reports", "http-suite-pack-spring.json"),
+  );
   expect(reportFileOf("reports", "default")).toBe(join("reports", "http-suite-default.json"));
 });
