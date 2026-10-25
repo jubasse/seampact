@@ -40,6 +40,8 @@ public final class SeampactBoundary {
     private static final String UNDECLARED_STATUS_ROLE = "undeclaredStatus";
     private static final int INTERNAL_ERROR = 500;
     private static final String SECONDS_UNIT = "s";
+    private static final String CACHE_CONTROL_HEADER = "Cache-Control";
+    private static final String NO_STORE_DIRECTIVE = "no-store";
     private static final long MILLISECONDS_PER_SECOND = 1000;
     private static final String SERVLET_PATH_PROPERTY = "spring.mvc.servlet.path";
 
@@ -228,6 +230,7 @@ public final class SeampactBoundary {
         response.setContentType(ErrorReplies.media(table, route));
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         writeRetryHeader(response, route.retryHeader(code), params);
+        if (route.isNoStore(code)) response.setHeader(CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE);
         try {
             response.getOutputStream().write(body);
         } catch (IOException failure) {

@@ -11,6 +11,8 @@ import com.example.tasks.api.GetChannelInput;
 import com.example.tasks.api.GetChannelResult;
 import com.example.tasks.api.GetDraftInput;
 import com.example.tasks.api.GetDraftResult;
+import com.example.tasks.api.GetPreferencesInput;
+import com.example.tasks.api.GetPreferencesResult;
 import com.example.tasks.api.GetTaskErrors;
 import com.example.tasks.api.GetTaskInput;
 import com.example.tasks.api.GetTaskResult;
@@ -26,10 +28,14 @@ import com.example.tasks.api.ListTasksPage;
 import com.example.tasks.api.ListTasksResult;
 import com.example.tasks.api.SearchTasksInput;
 import com.example.tasks.api.SearchTasksResult;
+import com.example.tasks.api.PreferencesEndpoints;
 import com.example.tasks.api.TasksEndpoints;
+import com.example.tasks.api.UpdatePreferencesInput;
+import com.example.tasks.api.UpdatePreferencesResult;
 import com.example.tasks.api.schemas.Channel;
 import com.example.tasks.api.schemas.Draft;
 import com.example.tasks.api.schemas.Health;
+import com.example.tasks.api.schemas.Preferences;
 import com.example.tasks.api.schemas.Task;
 import com.example.tasks.api.schemas.TaskSearchResult;
 import com.example.tasks.api.spring.DeleteDraft;
@@ -106,6 +112,23 @@ final class TasksControllers {
         @DeleteDraft
         public DeleteDraftResult deleteDraft(DeleteDraftInput input) {
             return new DeleteDraftResult.Status200(new Draft(input.path().draftId(), "Draft text"));
+        }
+    }
+
+    @RestController
+    static final class CallerPreferences implements PreferencesEndpoints {
+        private static final String DEFAULT_LOCALE = "en";
+
+        @Override
+        @com.example.tasks.api.spring.GetPreferences
+        public GetPreferencesResult getPreferences(GetPreferencesInput input) {
+            return new GetPreferencesResult.Status200(new Preferences(DEFAULT_LOCALE, Optional.empty()));
+        }
+
+        @Override
+        @com.example.tasks.api.spring.UpdatePreferences
+        public UpdatePreferencesResult updatePreferences(UpdatePreferencesInput input) {
+            return new UpdatePreferencesResult.Status200(new Preferences(input.body().locale().orElse(DEFAULT_LOCALE), input.body().digest()));
         }
     }
 

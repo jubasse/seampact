@@ -129,6 +129,11 @@ public final class ContractRoute {
         return OptionalInt.empty();
     }
 
+    /** True when [code]'s params carry a sensitive value, so its reply is never stored. */
+    boolean isNoStore(String code) {
+        return errorCatalog.path(code).path("noStore").asBoolean(false);
+    }
+
     /** The retry header the operation gives [code], a missing node when it gives none. */
     JsonNode retryHeader(String code) {
         for (JsonNode error : operation.path("errors")) {

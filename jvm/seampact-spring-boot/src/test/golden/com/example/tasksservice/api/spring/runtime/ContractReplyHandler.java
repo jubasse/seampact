@@ -99,9 +99,16 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
                 body = page.body();
             }
 
+            byte[] bodyBytes = boundary.mapper().writeValueAsBytes(body);
+            if (CacheHeaders.write(exchange, request, checking, bodyBytes)) {
+                checking.setStatus(CacheHeaders.NOT_MODIFIED);
+                exchange.markBoundaryWrote();
+                return;
+            }
+
             checking.setContentType(response.path("media").asString());
             checking.setCharacterEncoding(StandardCharsets.UTF_8.name());
-            checking.getOutputStream().write(boundary.mapper().writeValueAsBytes(body));
+            checking.getOutputStream().write(bodyBytes);
         }
 
         checking.setStatus(status);

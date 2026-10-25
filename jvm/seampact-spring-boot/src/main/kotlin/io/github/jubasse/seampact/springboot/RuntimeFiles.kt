@@ -8,7 +8,7 @@ private const val RUNTIME_RESOURCE_DIRECTORY = "seampact-spring-runtime"
 // The boundary runtime's classes, copied into every api's output (ADR 0015 "Runtime helpers").
 private val RUNTIME_CLASSES = listOf(
     "AccessSteps", "ApiBinding", "BodyReader", "BootCheck", "BoundaryExchange", "BoundaryFilter", "BoundaryInterceptor",
-    "BoundaryMapper", "BoundaryMvcConfigurer", "CheckingResponse", "ContractExceptionResolver", "ContractInputResolver",
+    "BoundaryMapper", "BoundaryMvcConfigurer", "CacheHeaders", "CheckingResponse", "ContractExceptionResolver", "ContractInputResolver",
     "ContractRefusal", "ContractReplyHandler", "ContractRoute", "ContractTable", "Decider", "Denial", "Digests", "ErrorReplies",
     "HeldBodyRequest", "IdempotencyStep", "InputFieldRights", "InputIssue", "InputStep", "OutgoingCheck", "OutputFieldRights", "PageReply", "ReplyHandlerFirst",
     "RequirementCall", "ScalarValues", "ScopeCall", "ScopeResolver", "SeampactBoundary", "StructuralValidator", "Templates",

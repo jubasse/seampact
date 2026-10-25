@@ -106,7 +106,6 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
 
     private fun checkOperationForms(operation: Operation, at: IrPlace) {
         checkPaging(ir, operation, at, refusals)
-        if (operation.cache != null) refusals.waiting("cache", "Cache and ETag headers", at.below("cache"), Delivery.SPRING_3)
         if (operation.concurrency != null) refusals.waiting("concurrency", "A version token (concurrency)", at.below("concurrency"), Delivery.SPRING_3)
 
         when (val idempotency = operation.idempotency) {
@@ -162,7 +161,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
         val response = operation.responses[index]
         val responseAt = at.below("responses", index)
 
-        // The 304 of an ETag is the cache's, refused with it above.
+        // The 304 of an ETag is the boundary's, never a handler arm.
         if (response.derivedFrom?.derivation == ETAG_DERIVATION) return
 
         when (response.shape) {

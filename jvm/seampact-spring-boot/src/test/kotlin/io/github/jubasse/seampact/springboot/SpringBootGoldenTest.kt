@@ -113,7 +113,7 @@ class SpringBootGoldenTest {
         }
 
         val codes = refused.refusals.map { it.code }.toSet()
-        for (code in listOf("cache.unsupported", "signature.unsupported")) {
+        for (code in listOf("signature.unsupported")) {
             assertTrue(code in codes, "expected $code among $codes")
         }
         assertTrue(refused.refusals.all { it.message.contains("spring-") || it.message.contains("waits for") }, refused.message)
