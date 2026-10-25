@@ -1,4 +1,4 @@
-package io.github.jubasse.seampact.gradle
+package io.github.jubasse.seampact.runner
 
 import io.github.jubasse.seampact.ir.config.AppConfig
 import io.github.jubasse.seampact.ir.config.AppConfigEntry
@@ -76,33 +76,43 @@ private fun waits(what: String, bringer: String, where: String) =
  * so a refused entry leaves every root as it was, and `check` compares them. [springBootVersion] is the version the
  * compile classpath resolves.
  */
-internal fun planEntries(config: AppConfig, apis: List<SourceApi>, springBootVersion: String?, pluginVersion: String): List<EntryPlan> =
+internal fun planEntries(
+    config: AppConfig,
+    apis: List<SourceApi>,
+    springBootVersion: String?,
+    runnerVersion: String,
+    buildTool: BuildTool,
+): List<EntryPlan> =
     config.entries.map { entry ->
-        when (val generated = generateEntry(entry, apis, springBootVersion, pluginVersion)) {
+        when (val generated = generateEntry(entry, apis, springBootVersion, runnerVersion, buildTool)) {
             is EntryFiles.Refused -> EntryPlan.Refused(entry.id, generated.problems)
-            is EntryFiles.Generated -> EntryPlan.Planned(entry.id, withGradleFixes(GeneratedWriter.plan(entry.root, entry.id, generated.files, HandEditPolicy.REFUSE)))
+            is EntryFiles.Generated -> {
+                val plan = GeneratedWriter.plan(entry.root, entry.id, generated.files, HandEditPolicy.REFUSE)
+                EntryPlan.Planned(entry.id, withBuildToolFixes(plan, buildTool))
+            }
         }
     }
 
 private const val HAND_EDIT_CODE = "writer.file.edited"
-private const val GRADLE_HAND_EDIT_FIX =
-    "Restore the file or delete it, then run `gradle seampactGenerate`; hand-written code goes next to the generated files, not in them."
 
-// The writer's hand-edit fix, in the Gradle plugin's own terms.
-private fun withGradleFixes(outcome: PlanOutcome): PlanOutcome = when (outcome) {
+// The writer's hand-edit fix, in the build tool's own terms: the plugins have no force option.
+private fun withBuildToolFixes(outcome: PlanOutcome, buildTool: BuildTool): PlanOutcome = when (outcome) {
     is PlanOutcome.Planned -> outcome
     is PlanOutcome.Refused -> PlanOutcome.Refused(
-        outcome.refusals.map { if (it.code == HAND_EDIT_CODE) it.copy(fix = GRADLE_HAND_EDIT_FIX) else it },
+        outcome.refusals.map { if (it.code == HAND_EDIT_CODE) it.copy(fix = handEditFix(buildTool)) else it },
     )
 }
 
+private fun handEditFix(buildTool: BuildTool): String =
+    "Restore the file or delete it, then run `${buildTool.generateCommand}`; hand-written code goes next to the generated files, not in them."
+
 /** One entry's plan: the writer's plan of its files, or the problems that keep it from generating. */
-internal sealed interface EntryPlan {
-    val entryId: String
+public sealed interface EntryPlan {
+    public val entryId: String
 
-    data class Planned(override val entryId: String, val plan: PlanOutcome) : EntryPlan
+    public data class Planned(override val entryId: String, val plan: PlanOutcome) : EntryPlan
 
-    data class Refused(override val entryId: String, val problems: List<ConfigProblem>) : EntryPlan
+    public data class Refused(override val entryId: String, val problems: List<ConfigProblem>) : EntryPlan
 }
 
 private sealed interface EntryFiles {
@@ -111,13 +121,13 @@ private sealed interface EntryFiles {
     data class Refused(val problems: List<ConfigProblem>) : EntryFiles
 }
 
-private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, springBootVersion: String?, pluginVersion: String): EntryFiles {
+private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, springBootVersion: String?, runnerVersion: String, buildTool: BuildTool): EntryFiles {
     if (entry.use != SpringBootTarget.USE) {
         return EntryFiles.Refused(
             listOf(
                 ConfigProblem(
                     "config.target.unknown",
-                    "The target entry '${entry.id}' uses '${entry.use}', which the Gradle plugin does not generate; it generates '${SpringBootTarget.USE}'.",
+                    "The target entry '${entry.id}' uses '${entry.use}', which ${buildTool.pluginName} does not generate; it generates '${SpringBootTarget.USE}'.",
                     "Use '${SpringBootTarget.USE}', or move the entry to the app of the runner that generates it.",
                     "entry '${entry.id}' use",
                 ),
@@ -159,7 +169,7 @@ private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, springBo
         try {
             val ir = IrReader.read(api.ir, SpringBootTarget.IR_SUPPORT)
             val generated = SpringBootTarget.generate(ir, target).map { GeneratedFile(it.path, it.contents) }
-            when (val finished = withGeneratedHeader(generated, HeaderSource(entry.use, pluginVersion, api.api))) {
+            when (val finished = withGeneratedHeader(generated, HeaderSource(entry.use, runnerVersion, api.api))) {
                 is HeaderOutcome.Finished -> files += finished.files
                 is HeaderOutcome.Refused -> problems += finished.refusals.map { it.toProblem("entry '${entry.id}' api '${api.api}'") }
             }

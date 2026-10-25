@@ -2,18 +2,14 @@ package io.github.jubasse.seampact.gradle
 
 import io.github.jubasse.seampact.ir.bundle.MavenArtefactResolver
 import io.github.jubasse.seampact.ir.bundle.ResolvedArtefact
+import io.github.jubasse.seampact.runner.ArtefactUnresolvedException
+import io.github.jubasse.seampact.runner.BUNDLE_ARTEFACT_TYPE
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.file.FileCollection
 import java.io.IOException
 import java.nio.file.Path
-
-/**
- * The file type a contract bundle is published with as a Maven artefact: the bundle tarball, as a release asset
- * holds it (ADR 0010 "The contract bundle as a Maven artefact").
- */
-internal const val BUNDLE_ARTEFACT_TYPE = "tgz"
 
 /** The dependency notation of the bundle artefact at [coordinates], `groupId:artifactId:version`. */
 internal fun bundleArtefactNotation(coordinates: String): String = "$coordinates@$BUNDLE_ARTEFACT_TYPE"

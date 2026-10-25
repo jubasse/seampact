@@ -1,4 +1,4 @@
-package io.github.jubasse.seampact.gradle
+package io.github.jubasse.seampact.runner
 
 import io.github.jubasse.seampact.ir.binary.BinaryFailure
 import io.github.jubasse.seampact.ir.bundle.BundleFailure
@@ -6,9 +6,8 @@ import io.github.jubasse.seampact.ir.config.ConfigProblem
 import io.github.jubasse.seampact.ir.read.IrRefusal
 import io.github.jubasse.seampact.ir.write.WriterRefusal
 import io.github.jubasse.seampact.springboot.SpringBootRefusal
-import org.gradle.api.GradleException
 
-// Every refusal of a run as one shape, the config problem's (code, message, fix, where), so the build prints them
+// Every refusal of a run as one shape, the config problem's (code, message, fix, where), so both builds print them
 // alike and the codes stay those of the Node CLI and the seampact-ir readers.
 
 internal fun BundleFailure.toProblem(source: String): ConfigProblem {
@@ -40,13 +39,9 @@ internal fun IrRefusal.toProblem(where: String): ConfigProblem = ConfigProblem(
     "$where $member",
 )
 
-/** The text the build prints for [problems]: one block per problem, its code and place, its message and fix. */
-internal fun problemsText(problems: List<ConfigProblem>): String = problems.joinToString("\n") { problem ->
+/** The text a build prints for [problems]: one block per problem, its code and place, its message and fix. */
+public fun problemsText(problems: List<ConfigProblem>): String = problems.joinToString("\n") { problem ->
     val where = problem.where?.let { " ($it)" } ?: ""
 
     "${problem.code}$where: ${problem.message}\n    Fix: ${problem.fix}"
 }
-
-/** A run that refused: every problem, named, so one build shows them all. */
-internal class SeampactRefusedException(problems: List<ConfigProblem>) :
-    GradleException("seampact refused the app config:\n" + problemsText(problems))

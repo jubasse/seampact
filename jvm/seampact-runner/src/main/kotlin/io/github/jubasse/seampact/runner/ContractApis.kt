@@ -1,4 +1,4 @@
-package io.github.jubasse.seampact.gradle
+package io.github.jubasse.seampact.runner
 
 import io.github.jubasse.seampact.ir.binary.BinaryCompileResult
 import io.github.jubasse.seampact.ir.binary.BinaryInstall
@@ -23,7 +23,7 @@ import java.nio.file.Path
 import kotlin.io.path.writeText
 
 /** A bundle source that passed the pinned-bundle check, with the integrity it was checked against. */
-internal data class CheckedBundle(val source: String, val integrity: String)
+public data class CheckedBundle(val source: String, val integrity: String)
 
 /** The apis of the used sources, each as its IR JSON document, and the bundles checked on the way. */
 internal sealed interface ContractApisOutcome {

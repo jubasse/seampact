@@ -1,5 +1,5 @@
 // The build-time writer of the binary pins a plugin jar embeds (ADR 0010 "Pin").
-package io.github.jubasse.seampact.gradle.pins
+package io.github.jubasse.seampact.runner.pins
 
 import io.github.jubasse.seampact.ir.binary.BinaryPins
 import io.github.jubasse.seampact.ir.binary.BinaryPinsRead

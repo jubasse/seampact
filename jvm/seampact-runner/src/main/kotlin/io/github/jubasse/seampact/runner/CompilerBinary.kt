@@ -1,4 +1,4 @@
-package io.github.jubasse.seampact.gradle
+package io.github.jubasse.seampact.runner
 
 import io.github.jubasse.seampact.ir.binary.BinaryFailure
 import io.github.jubasse.seampact.ir.binary.BinaryFailureCode
@@ -15,14 +15,14 @@ import java.io.Serializable
 import java.nio.file.Path
 
 /** The build file's `binary { }` values (ADR 0010 "Pin"), as a task input. */
-internal data class BinarySettings(
+public data class BinarySettings(
     val version: String?,
     val sha256ByClassifier: Map<String, String>,
     val path: String?,
     val sha256: String?,
 ) : Serializable {
     /** The override these values write, or the reason they write none that can be pinned. */
-    fun override(): OverrideRead {
+    internal fun override(): OverrideRead {
         if (path != null && version != null) return OverrideRead.Refused(invalid("sets both `path` and `version`; the override is one or the other."))
         if (sha256 != null && path == null) return OverrideRead.Refused(invalid("sets `sha256` without `path`; `sha256` is the hash of your own build at `path`."))
         if (sha256ByClassifier.isNotEmpty() && version == null) {
@@ -42,7 +42,7 @@ internal data class BinarySettings(
         "Give `version` with `sha256ByClassifier`, or `path` with `sha256`.",
     )
 
-    internal companion object {
+    private companion object {
         private const val serialVersionUID: Long = 1
     }
 }
@@ -55,15 +55,15 @@ internal sealed interface OverrideRead {
 
 private const val PINS_RESOURCE = "/${BinaryPins.RESOURCE_NAME}"
 
-/** The pins this plugin jar embeds; null when it was built without a release `SHA256SUMS`. */
+/** The pins this runner jar embeds; null when it was built without a release `SHA256SUMS`. */
 internal fun embeddedPins(): BinaryPinsRead? {
-    val text = SeampactPlugin::class.java.getResourceAsStream(PINS_RESOURCE)?.use { it.readBytes().decodeToString() } ?: return null
+    val text = BuildTool::class.java.getResourceAsStream(PINS_RESOURCE)?.use { it.readBytes().decodeToString() } ?: return null
 
     return BinaryPins.readProperties(text)
 }
 
 /** The binary the build uses, from the embedded pins and the override, on this host. */
-internal fun pinBinary(settings: BinarySettings): BinaryPinResolution {
+public fun pinBinary(settings: BinarySettings): BinaryPinResolution {
     val override = when (val read = settings.override()) {
         is OverrideRead.Read -> read.override
         is OverrideRead.Refused -> return BinaryPinResolution.Refused(read.failure)
@@ -81,7 +81,12 @@ internal fun pinBinary(settings: BinarySettings): BinaryPinResolution {
  * Pins, resolves and installs the binary: a release artefact resolved by the build ([resolveArtefact], given the
  * pinned coordinates), or the consumer's own build. Its hash is checked before it is ever started.
  */
-internal fun installBinary(settings: BinarySettings, resolveArtefact: (BinaryPin.Artifact) -> Path, cacheDirectory: Path): BinaryInstall {
+internal fun installBinary(
+    settings: BinarySettings,
+    resolveArtefact: (BinaryPin.Artifact) -> Path,
+    cacheDirectory: Path,
+    buildTool: BuildTool,
+): BinaryInstall {
     val pin = when (val resolution = pinBinary(settings)) {
         is BinaryPinResolution.Pinned -> resolution.pin
         is BinaryPinResolution.Refused -> return BinaryInstall.Refused(resolution.failure)
@@ -95,7 +100,7 @@ internal fun installBinary(settings: BinarySettings, resolveArtefact: (BinaryPin
                 BinaryFailure(
                     BinaryFailureCode.ARTEFACT_UNRESOLVED,
                     "The build's repositories do not resolve the compiler binary ${pin.coordinates}: ${unresolved.message}",
-                    "Add the repository that holds it (mavenCentral(), or your mirror of it), or point `binary { path }` at your own build with its `sha256`.",
+                    buildTool.unresolvedBinaryFix,
                 ),
             )
         }
@@ -104,5 +109,5 @@ internal fun installBinary(settings: BinarySettings, resolveArtefact: (BinaryPin
     return BinaryInstaller.install(resolved, pin, cacheDirectory)
 }
 
-/** The build could not resolve an artefact; [message] is Gradle's own reason. */
-internal class ArtefactUnresolvedException(message: String, cause: Throwable? = null) : Exception(message, cause)
+/** The build could not resolve an artefact; [message] is the build tool's own reason. */
+public class ArtefactUnresolvedException(message: String, cause: Throwable? = null) : Exception(message, cause)

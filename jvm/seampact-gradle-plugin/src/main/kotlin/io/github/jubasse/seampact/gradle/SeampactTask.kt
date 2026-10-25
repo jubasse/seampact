@@ -1,5 +1,8 @@
 package io.github.jubasse.seampact.gradle
 
+import io.github.jubasse.seampact.runner.BinarySettings
+import io.github.jubasse.seampact.runner.BuildTool
+import io.github.jubasse.seampact.runner.RunSettings
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.provider.ListProperty
@@ -12,6 +15,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
+import org.gradle.work.DisableCachingByDefault
 import java.nio.file.Path
 
 /**
@@ -20,6 +24,7 @@ import java.nio.file.Path
  * classpath resolves. Bundle sources are pinned by their integrity, which the config holds. Absolute locations
  * (the app directory, the caches, the resolved artefacts) are internal, so the build cache is relocatable.
  */
+@DisableCachingByDefault(because = "The base of seampactGenerate and seampactCheck, which each say whether they cache.")
 public abstract class SeampactTask : DefaultTask() {
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
@@ -85,8 +90,10 @@ public abstract class SeampactTask : DefaultTask() {
     public abstract val mavenBundleOrigins: ListProperty<String>
 
     internal fun runSettings(): RunSettings = RunSettings(
+        buildTool = GRADLE_BUILD_TOOL,
         appDirectory = Path.of(appDirectory.get()),
         dslTree = dslTree.orNull,
+        dslName = SeampactExtension.DSL_NAME,
         allowLocalVariable = allowLocalVariable.orNull,
         springBootVersion = springBootVersion.orNull,
         binary = BinarySettings(binaryVersion.orNull, binarySha256ByClassifier.get(), binaryPath.orNull, binarySha256.orNull),
@@ -96,3 +103,10 @@ public abstract class SeampactTask : DefaultTask() {
         resolveBinaryArtefact = { resolvedSingleFile(binaryArtefact) },
     )
 }
+
+/** The Gradle plugin as the run's problems and messages name it. */
+internal val GRADLE_BUILD_TOOL = BuildTool(
+    pluginName = "the Gradle plugin",
+    generateCommand = "gradle seampactGenerate",
+    unresolvedBinaryFix = "Add the repository that holds it (mavenCentral(), or your mirror of it), or point `binary { path }` at your own build with its `sha256`.",
+)
