@@ -57,7 +57,7 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 | `config.matrix.unknown-framework` | Write the `allowUntested` item as `<framework>@<major>` for the framework this target serves. |
 | `config.matrix.allowed-tested` | That major is tested, so the item does nothing. Remove it. |
 | `config.matrix.pnp-unsupported` | Yarn Plug'n'Play hides the versions. Set `nodeLinker: node-modules` in `.yarnrc.yml`, run `yarn install`. |
-| `framework.version.unresolved` | The Gradle or Maven plugin found no Spring Boot on the compile classpath. Add Spring Boot 4 to the app's dependencies. |
+| `framework.version.unresolved` | The Gradle or Maven plugin found no Spring Boot on the compile classpath, or a version whose major it cannot read. Depend on a released Spring Boot 4. |
 | `config.own-validators.library-missing` | Install the validator library the message names. |
 
 See also [Link errors](link.md), [Monorepo and OpenAPI errors](config-root.md) and the [config reference](../configuration/reference.md).

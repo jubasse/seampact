@@ -165,7 +165,7 @@ private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, settings
                 ConfigProblem(
                     "framework.version.unresolved",
                     "The compile classpath resolves no org.springframework.boot:spring-boot, so the spring-boot target cannot check the Spring Boot version it generates for.",
-                    "Add Spring Boot 4 to the app's dependencies (the Spring Boot plugin's starters, or its BOM and spring-boot-starter-webmvc).",
+                    "Add Spring Boot ${testedMajorsOf(SpringBootTarget.USE)} to the app's dependencies (the Spring Boot plugin's starters, or its BOM and spring-boot-starter-webmvc).",
                     "entry '${entry.id}'",
                 ),
             ),

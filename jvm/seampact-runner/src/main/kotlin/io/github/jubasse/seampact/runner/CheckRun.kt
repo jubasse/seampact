@@ -102,11 +102,14 @@ private fun driftProblem(entryId: String, drift: EntryDrift.Listed, buildTool: B
 private fun checkLevel(config: AppConfig): String =
     ((config.checks?.get("generated")) as? JsonPrimitive)?.content ?: ERROR
 
-/** The run's warnings, the compatibility check's then [more], as the build prints them, less the ignored codes. */
-internal fun printedWarnings(prepared: PreparedRun.Prepared, more: List<ConfigProblem> = emptyList()): List<String> {
+/**
+ * The compatibility check's warnings, always printed (`warnings.ignore` scopes to a target's generate warnings, and
+ * `allowUntested` silences a framework major), then [ignorable], less the codes `warnings.ignore` lists.
+ */
+internal fun printedWarnings(prepared: PreparedRun.Prepared, ignorable: List<ConfigProblem> = emptyList()): List<String> {
     val ignored = ignoredWarnings(prepared.config)
 
-    return (prepared.warnings + more).filter { it.code !in ignored }.map { "seampact warning: ${problemsText(listOf(it))}" }
+    return (prepared.warnings + ignorable.filter { it.code !in ignored }).map { "seampact warning: ${problemsText(listOf(it))}" }
 }
 
 private fun ignoredWarnings(config: AppConfig): Set<String> =

@@ -25,6 +25,24 @@ class MatrixCheckTest {
     }
 
     @Test
+    fun warnsOnAnUntestedMajorEvenWhenWarningsIgnoreItsCode() {
+        val app = appOn(UNTESTED_VERSION, SampleApp.REFERENCE_CONFIG.replace(OPENAPI_NONE, "$OPENAPI_NONE\n        warnings: { ignore: [config.matrix.untested] }"))
+
+        val generated = app.run("seampactGenerate")
+
+        assertTrue("config.matrix.untested" in generated.output, generated.output)
+    }
+
+    @Test
+    fun refusesSpringBootTwo() {
+        val app = appOn("2.7.18", SampleApp.REFERENCE_CONFIG)
+
+        val refused = app.fail("seampactGenerate")
+
+        assertTrue("config.matrix.incompatible" in refused.output, refused.output)
+    }
+
+    @Test
     fun acceptsAnUntestedMajorTheEntryAllows() {
         val app = appOn(UNTESTED_VERSION, SampleApp.REFERENCE_CONFIG.replace(PACKAGE_OPTION, "$PACKAGE_OPTION\n            allowUntested: [spring-boot@5]"))
 

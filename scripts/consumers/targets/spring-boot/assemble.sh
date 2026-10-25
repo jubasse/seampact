@@ -25,6 +25,7 @@ add_spring_data_commons() {
     spring_data='    <dependency><groupId>org.springframework.data</groupId><artifactId>spring-data-commons</artifactId></dependency>'
     awk -v dependency="$spring_data" '/^  <\/dependencies>$/ { print dependency } { print }' "$destination/pom.xml" > "$destination/pom.xml.new"
     mv "$destination/pom.xml.new" "$destination/pom.xml"
+    grep -q 'spring-data-commons' "$destination/pom.xml" || { echo "assemble: no </dependencies> line indented by two spaces in the consumer pom.xml, spring-data-commons was not added" >&2; exit 1; }
   else
     printf '\ndependencies { implementation("org.springframework.data:spring-data-commons") }\n' >> "$destination/build.gradle.kts"
   fi

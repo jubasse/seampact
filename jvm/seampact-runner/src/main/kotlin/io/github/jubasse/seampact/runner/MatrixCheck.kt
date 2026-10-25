@@ -5,8 +5,10 @@ import io.github.jubasse.seampact.ir.config.AppConfigEntry
 import io.github.jubasse.seampact.ir.config.ConfigProblem
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -31,20 +33,36 @@ internal fun jvmFrameworks(): Map<String, JvmFramework> {
     val text = BuildTool::class.java.getResourceAsStream(MATRIX_RESOURCE)?.use { it.readBytes().decodeToString() }
         ?: error("The seampact-runner jar holds no $MATRIX_RESOURCE; it was not built by its own build.")
 
-    return Json.parseToJsonElement(text).jsonObject.getValue("jvmTargets").jsonArray.associate { item ->
-        val target = item.jsonObject
-        val framework = target.getValue("framework").jsonObject
+    return try {
+        parseJvmFrameworks(text)
+    } catch (failure: NoSuchElementException) {
+        throw IllegalStateException("$MATRIX_RESOURCE is malformed: ${failure.message}", failure)
+    } catch (failure: IllegalArgumentException) {
+        throw IllegalStateException("$MATRIX_RESOURCE is malformed: ${failure.message}", failure)
+    }
+}
 
-        target.getValue("package").jsonPrimitive.content to JvmFramework(
-            id = framework.getValue("id").jsonPrimitive.content,
-            coordinates = framework.getValue("package").jsonPrimitive.content,
-            testedMajors = framework.getValue("tested").jsonArray.map { it.jsonObject.getValue("major").jsonPrimitive.int },
-            incompatible = framework.getValue("incompatible").jsonArray.associate {
-                it.jsonObject.getValue("major").jsonPrimitive.int to it.jsonObject.getValue("reason").jsonPrimitive.content
+private fun parseJvmFrameworks(text: String): Map<String, JvmFramework> =
+    Json.parseToJsonElement(text).jsonObject.member("jvmTargets", "the file").jsonArray.associate { item ->
+        val target = item.jsonObject
+        val where = "jvmTargets[${target["package"]?.jsonPrimitive?.content ?: "?"}]"
+        val framework = target.member("framework", where).jsonObject
+
+        target.member("package", where).jsonPrimitive.content to JvmFramework(
+            id = framework.member("id", "$where.framework").jsonPrimitive.content,
+            coordinates = framework.member("package", "$where.framework").jsonPrimitive.content,
+            testedMajors = framework.member("tested", "$where.framework").jsonArray.map { it.jsonObject.major("$where.framework.tested") },
+            incompatible = framework.member("incompatible", "$where.framework").jsonArray.associate {
+                it.jsonObject.major("$where.framework.incompatible") to it.jsonObject.member("reason", "$where.framework.incompatible").jsonPrimitive.content
             },
         )
     }
-}
+
+private fun JsonObject.member(name: String, where: String): JsonElement =
+    this[name] ?: throw NoSuchElementException("$where has no '$name'")
+
+private fun JsonObject.major(where: String): Int =
+    member("major", where).jsonPrimitive.intOrNull ?: throw IllegalArgumentException("$where holds a 'major' that is not an integer")
 
 /**
  * Checks each JVM entry's framework against the matrix. Without a resolved version, or for a target the matrix does
@@ -92,6 +110,9 @@ private fun frameworkIdOf(item: String): String = item.substringBeforeLast('@')
 private fun where(entry: AppConfigEntry): String = "entry '${entry.id}'"
 
 private fun testedText(framework: JvmFramework): String = framework.testedMajors.joinToString(", ")
+
+/** The tested majors of the target [use], as the matrix records them, for the messages that name the framework to add. */
+internal fun testedMajorsOf(use: String): String = testedText(jvmFrameworks().getValue(use))
 
 private fun foreignFramework(entry: AppConfigEntry, item: String, framework: JvmFramework) = ConfigProblem(
     "config.matrix.unknown-framework",

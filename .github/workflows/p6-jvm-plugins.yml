@@ -46,9 +46,9 @@ jobs:
             echo "jvm-plugins=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # The JVM modules, the config, bundle and IR schemas, the bundle vectors, the reference contract and the
-          # golden IR, the consumer the Maven tests and the channel smoke run, the smoke's channels, and this workflow.
-          watched='^(jvm/|packages/core/spec/schemas/(bundle|config|ir)/|packages/core/spec/vectors/bundle/'
+          # The JVM modules, the config, bundle and IR schemas, the bundle vectors, the compatibility matrix, the
+          # reference contract and the golden IR, the consumer the Maven tests and the channel smoke run, the smoke's channels, and this workflow.
+          watched='^(jvm/|packages/core/spec/schemas/(bundle|config|ir)/|packages/core/spec/vectors/bundle/|packages/core/spec/compatibility/'
           watched+='|fixtures/reference/|fixtures/golden/|scripts/consumers/targets/spring-boot/|scripts/dist-smoke/'
           watched+='|\.github/workflows/p6-jvm-plugins\.yml$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a

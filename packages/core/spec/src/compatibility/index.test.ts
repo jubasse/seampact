@@ -218,13 +218,13 @@ test("a client target is not a server target and offers no validator pair", () =
   ).toBe(false);
 });
 
-test("the spring-boot JVM target is tested on Spring Boot 4 and refuses Spring Boot 3, apart from the npm targets", () => {
+test("the spring-boot JVM target is tested on Spring Boot 4 and refuses Spring Boot 2 and 3, apart from the npm targets", () => {
   expect(JVM_TARGETS.map((target) => target.package)).toEqual([
     "io.github.jubasse:seampact-spring-boot",
   ]);
   expect(JVM_TARGETS[0]?.framework.tested.map((tested) => tested.major)).toEqual([4]);
   expect(JVM_TARGETS[0]?.framework.incompatible.map((incompatible) => incompatible.major)).toEqual([
-    3,
+    2, 3,
   ]);
   expect(SERVER_TARGETS.map((target) => target.package)).not.toContain(
     "io.github.jubasse:seampact-spring-boot",

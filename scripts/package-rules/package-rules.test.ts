@@ -112,10 +112,11 @@ describe("package rules", () => {
     expect(fixture("workflow-publish", "pass")).toEqual([]);
     const wf = fixture("workflow-publish", "fail");
 
-    expect(wf).toHaveLength(3);
+    expect(wf).toHaveLength(4);
     expect(wf[0]).toContain(".github/workflows/ci.yml: namespaces: line 5");
     expect(wf.join("\n")).toContain("Gradle publish");
     expect(wf.join("\n")).toContain("Maven deploy");
+    expect(wf.join("\n")).toContain("line 8: publishes (Gradle publish)");
 
     proves("scripts-publish", "namespaces", "package.json", 'script "release" publishes');
 

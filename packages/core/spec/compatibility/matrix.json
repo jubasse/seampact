@@ -327,6 +327,10 @@
         ],
         "incompatible": [
           {
+            "major": 2,
+            "reason": "Spring Boot 2 runs Spring Framework 5 on javax, and the generated code needs Spring Framework 7 on jakarta and Jackson 3."
+          },
+          {
             "major": 3,
             "reason": "Spring Boot 3 runs Spring Framework 6 and Jackson 2, and the generated code needs Spring Framework 7 and Jackson 3."
           }

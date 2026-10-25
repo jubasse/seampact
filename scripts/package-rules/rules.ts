@@ -320,20 +320,51 @@ function checkWorkflows(root: string, out: Violation[]): void {
     if (!/\.ya?ml$/.test(name)) continue;
     const file = `${dir}/${name}`;
 
-    readFileSync(join(root, file), "utf8")
-      .split("\n")
-      .forEach((line, i) => {
-        const code = line.replace(/(^|\s)#.*$/, "");
-
-        for (const [re, what] of PUBLISH)
-          if (re.test(code))
-            out.push({
-              file,
-              rule: "namespaces",
-              message: `line ${i + 1}: publishes (${what}); nothing publishes before 1.0 (A3)`,
-            });
-      });
+    for (const { line, code } of workflowCommands(readFileSync(join(root, file), "utf8")))
+      for (const [re, what] of PUBLISH)
+        if (re.test(code))
+          out.push({
+            file,
+            rule: "namespaces",
+            message: `line ${line}: publishes (${what}); nothing publishes before 1.0 (A3)`,
+          });
   }
+}
+
+const BLOCK_RUN = /^(\s*)(?:-\s+)?run:\s*[>|][+-]?\d*\s*$/;
+
+const indentOf = (text: string): number => text.length - text.trimStart().length;
+
+/**
+ * The workflow's commands with the line each starts on. A folded or literal `run:` block and a command continued
+ * with a trailing backslash are one command, so a publish on a continuation line is read with its gradlew or mvn.
+ */
+function workflowCommands(text: string): { line: number; code: string }[] {
+  const lines = text.split("\n").map((raw) => raw.replace(/(^|\s)#.*$/, ""));
+  const commands: { line: number; code: string }[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const start = i + 1;
+    const block = BLOCK_RUN.exec(lines[i] ?? "");
+    let code = lines[i] ?? "";
+
+    if (block) {
+      const base = (block[1] ?? "").length;
+
+      while (
+        i + 1 < lines.length &&
+        (lines[i + 1]?.trim() === "" || indentOf(lines[i + 1] ?? "") > base)
+      )
+        code += ` ${lines[++i]}`;
+    } else {
+      while (code.trimEnd().endsWith("\\") && i + 1 < lines.length)
+        code = `${code.trimEnd().slice(0, -1)} ${lines[++i]}`;
+    }
+
+    commands.push({ line: start, code });
+  }
+
+  return commands;
 }
 
 function readdirSyncSafe(root: string, rel: string): string[] {
