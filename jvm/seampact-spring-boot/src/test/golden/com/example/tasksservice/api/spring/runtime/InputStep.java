@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.InjectableValues;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectReader;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.MissingNode;
@@ -24,6 +26,8 @@ final class InputStep {
     private static final String SCHEMA_INVALID_ROLE = "schemaInvalid";
     private static final int MAX_RENDERED_ISSUES = 100;
     private static final String REFUSE = "refuse";
+    private static final String PAGEABLE_COMPONENT = "pageable";
+    private static final String PAGEABLE_TYPE = "org.springframework.data.domain.Pageable";
 
     private InputStep() {}
 
@@ -181,6 +185,15 @@ final class InputStep {
         return boundary.validator().issuesOf(member, proof.path("schema"), "body", pointer);
     }
 
+    // A `springPage` list's input record holds the `Pageable` the boundary injects (ADR 0022 "Paging").
+    private static boolean takesPageable(Class<?> inputType) {
+        for (RecordComponent component : inputType.getRecordComponents()) {
+            if (PAGEABLE_COMPONENT.equals(component.getName()) && PAGEABLE_TYPE.equals(component.getType().getName())) return true;
+        }
+
+        return false;
+    }
+
     // The tree holds every part; the record takes the parts the operation declares, by its component names.
     private static Object bind(SeampactBoundary boundary, ContractRoute route, ObjectNode tree) {
         Class<?> inputType = boundary.binding().inputTypes().get(route.id());
@@ -189,8 +202,14 @@ final class InputStep {
             parts.set(component.getName(), tree.path(component.getName()));
         }
 
+        ObjectReader reader = boundary.mapper().readerFor(inputType);
+        if (takesPageable(inputType)) {
+            Object pageable = boundary.binding().pageable(boundary.table().pagingStyle(route), tree.path("query"));
+            reader = reader.with(new InjectableValues.Std().addValue(PAGEABLE_COMPONENT, pageable));
+        }
+
         try {
-            return boundary.mapper().treeToValue(parts, inputType);
+            return reader.readValue(parts);
         } catch (JacksonException failure) {
             throw new IllegalStateException("seampact: binding the validated input of '" + route.id() + "' to " + inputType.getName() + " failed", failure);
         }

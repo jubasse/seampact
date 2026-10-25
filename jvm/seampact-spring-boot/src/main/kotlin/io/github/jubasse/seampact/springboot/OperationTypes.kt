@@ -43,6 +43,10 @@ internal class OperationTypes(
             components += RecordComponent("body", mapper.memberType(input.schema, Presence.REQUIRED), redacted = input.schema.isSensitive())
         }
 
+        if (isSpringPageList(layout.ir, operation)) {
+            components += RecordComponent(PAGEABLE_COMPONENT, JavaTypes.PAGEABLE, injectedAs = PAGEABLE_COMPONENT)
+        }
+
         return parts + generatedRecord(names.input, components, layout).build()
     }
 
@@ -103,7 +107,11 @@ internal class OperationTypes(
             ResponseShape.ITEM -> mapper.memberType(body, presence)
             ResponseShape.LIST -> ParameterizedTypeName.get(JavaTypes.LIST, mapper.memberType(body, presence).boxedArgument())
             ResponseShape.TABLE -> ParameterizedTypeName.get(JavaTypes.MAP, JavaTypes.STRING, mapper.memberType(body, presence).boxedArgument())
-            ResponseShape.PAGE -> layout.operation(operation.id).page
+            ResponseShape.PAGE -> if (isSpringPageList(layout.ir, operation)) {
+                pageItemType(response)?.let { ParameterizedTypeName.get(JavaTypes.PAGE, it) }
+            } else {
+                layout.operation(operation.id).page
+            }
             else -> null
         }
     }

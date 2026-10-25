@@ -43,4 +43,17 @@ public interface ApiBinding {
             Optional<SignedTemplateRequest> signature,
             RequestView request,
             OperationRef operation);
+
+    /**
+     * The Spring Data `Pageable` of a `springPage` list, built from its validated [query] (ADR 0022 "Paging"); only an
+     * api with such a list overrides it.
+     */
+    default Object pageable(JsonNode style, JsonNode query) {
+        throw new IllegalStateException("seampact: this api has no springPage list, so no Pageable");
+    }
+
+    /** The page facts (`items`, `total`) of the Spring Data `Page` a `springPage` list returned; any other body as is. */
+    default Object pageFacts(Object body) {
+        return body;
+    }
 }

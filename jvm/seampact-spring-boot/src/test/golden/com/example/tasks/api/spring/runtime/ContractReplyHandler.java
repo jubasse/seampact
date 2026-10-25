@@ -71,8 +71,8 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
         CheckingResponse checking = exchange.response;
 
         if (bodyValue != null) {
-            JsonNode handlerBody = boundary.mapper().valueToTree(bodyValue);
             boolean isPage = PAGE_SHAPE.equals(response.path("shape").asString());
+            JsonNode handlerBody = boundary.mapper().valueToTree(isPage ? boundary.binding().pageFacts(bodyValue) : bodyValue);
             JsonNode payload = isPage ? handlerBody.path(ITEMS) : handlerBody;
             if (isPage && !payload.isArray()) {
                 exchange.violation = Optional.of("the handler returned a page without items");

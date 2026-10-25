@@ -45,7 +45,7 @@ jobs:
           fi
           # The JVM modules and their pins, the reference contract and its IRs, the consumer, the binary and the
           # core packages it embeds, the http suite, the lockfile and this workflow.
-          watched='^(jvm/|fixtures/reference/|fixtures/golden/reference/|scripts/consumers/targets/spring-boot/'
+          watched='^(jvm/|fixtures/reference/|fixtures/golden/reference/|fixtures/golden/pack-spring/|packages/packs/pack-spring/|scripts/consumers/targets/spring-boot/'
           watched+='|packages/core/|packages/tools/binary/|packages/tools/http-suite/|pnpm-lock\.yaml$'
           watched+='|\.github/workflows/p6-spring-boot\.yml$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
@@ -110,7 +110,8 @@ jobs:
           retention-days: 3
           if-no-files-found: error
 
-  # The consumer built by the Gradle plugin, twice: as configured, and with the boot variant's route allow-listed.
+  # The consumer built by the Gradle plugin three times: as configured, with the boot variant's route allow-listed, and
+  # from the contract with @seampact/pack-spring applied (the pack:spring profile).
   build:
     needs: [changes, binary]
     if: needs.changes.outputs.spring-boot == 'true'
@@ -146,12 +147,12 @@ jobs:
             21
             25
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-      - name: Build the consumer and its allow-listed variant on Java ${{ matrix.jdk }}
+      - name: Build the consumer and its allow-listed and pack-spring variants on Java ${{ matrix.jdk }}
         shell: bash
         run: |
           set -euo pipefail
           chmod +x bin/seampact-linux-x64
-          for variant in configured allow-listed; do
+          for variant in configured allow-listed pack-spring; do
             app="$RUNNER_TEMP/$variant"
             sh scripts/consumers/targets/spring-boot/assemble.sh "$app" "${variant/configured/}"
             (cd "$app" && ./gradlew test bootJar -PjavaVersion=${{ matrix.jdk }} -PseampactJvm="$GITHUB_WORKSPACE/jvm" \
@@ -197,6 +198,7 @@ jobs:
         env:
           SEAMPACT_SPRING_JAR: ${{ github.workspace }}/jars/configured.jar
           SEAMPACT_SPRING_ALLOW_LISTED_JAR: ${{ github.workspace }}/jars/allow-listed.jar
+          SEAMPACT_SPRING_PACK_JAR: ${{ github.workspace }}/jars/pack-spring.jar
           SEAMPACT_SPRING_REPORTS: ${{ github.workspace }}/reports
         run: pnpm vitest run --config scripts/consumers/targets/spring-boot/suite/vitest.config.ts
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

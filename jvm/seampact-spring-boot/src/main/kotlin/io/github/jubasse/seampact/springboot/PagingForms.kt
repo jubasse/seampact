@@ -32,6 +32,24 @@ private val RENDERED_PAGE_SLOTS = setOf(
 private val STRUCTURED_PAGE_SLOTS = setOf("items", "meta")
 private const val PAGE_SLOT = "page"
 private const val ITEMS_MEMBER = "items"
+private const val SPRING_PAGE_STYLE = "springPage"
+private const val SPRING_PACK_LAYER = "pack:@seampact/pack-spring"
+
+/** The input component a `springPage` list's handler reads its Spring Data `Pageable` from. */
+internal const val PAGEABLE_COMPONENT = "pageable"
+
+/**
+ * Whether [operation] is a list paged by the `springPage` style of `@seampact/pack-spring`, whose handler takes a
+ * Spring Data `Pageable` and returns a `Page` (ADR 0022 "Paging"); every other style keeps the generated page record.
+ */
+internal fun isSpringPageList(ir: ContractIR, operation: Operation): Boolean {
+    val style = operation.paging?.style?.let { ir.pagings[it] } ?: return false
+
+    return style.id == SPRING_PAGE_STYLE && style.origin.layer == SPRING_PACK_LAYER
+}
+
+/** Whether any kept operation of the api is a `springPage` list, so the Spring Data bridge is generated. */
+internal fun usesSpringPages(layout: JavaLayout): Boolean = layout.kept.operations.any { (_, operation) -> isSpringPageList(layout.ir, operation) }
 
 /**
  * The paging forms of one list (ADR 0022 "Query and bounded values"): the style resolves, its request roles are read
@@ -129,6 +147,7 @@ private fun isScalarTemplate(template: Template): Boolean = when (template) {
  * them; the cursors are optional, since they are absent at either end of the list.
  */
 internal fun pageRecord(layout: JavaLayout, operation: Operation, itemType: TypeName): TypeSpec? {
+    if (isSpringPageList(layout.ir, operation)) return null
     val style = operation.paging?.style?.let { layout.ir.pagings[it] } ?: return null
     val components = mutableListOf(RecordComponent(ITEMS_MEMBER, ParameterizedTypeName.get(JavaTypes.LIST, itemType)))
 

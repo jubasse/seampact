@@ -36,7 +36,6 @@ import io.github.jubasse.seampact.ir.model.ValueSchemeKey
 
 private const val JSON_MEDIA = "application/json"
 private val SPRING_4_MEDIA = listOf("application/x-www-form-urlencoded", "multipart/form-data")
-private const val SPRING_PACK = "spring"
 private const val INT64_FORMAT = "int64"
 /** The string formats the boundary runtime's structural pass checks. */
 private val CHECKED_STRING_FORMATS = setOf("uuid", "date-time", "date", "decimal")
@@ -67,10 +66,6 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
     }
 
     private fun checkApiForms() {
-        ir.packs.forEachIndexed { index, pack ->
-            if (pack.name == SPRING_PACK) refusals.waiting("pack.spring", "The 'pack:spring' profile", IrPlace.ROOT.below("packs", index), Delivery.SPRING_3)
-        }
-
         if (ir.extensionKeys.isNotEmpty()) {
             refusals.waiting("extensionKeys", "Typed extension values", IrPlace.ROOT.below("extensionKeys"), Delivery.AFTER_1_0)
         }

@@ -77,7 +77,7 @@ internal fun bindingType(layout: JavaLayout): TypeSpec {
     val identities = layout.kept.identities.mapNotNull { identityId -> layout.identity(identityId)?.let { identityId to it } }
     val hooks = mapEntries(identities.map { (identityId, names) -> CodeBlock.of("\$S, \$T.class", identityId, names.hook) })
 
-    return TypeSpec.classBuilder(layout.binding)
+    val binding = TypeSpec.classBuilder(layout.binding)
         .addJavadoc("The Java types of the api '\$L' its boundary runtime reads.\n", layout.ir.api.id)
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .addSuperinterface(layout.runtime("ApiBinding"))
@@ -88,7 +88,33 @@ internal fun bindingType(layout: JavaLayout): TypeSpec {
         .addMethod(mapMethod("authenticateHooks", JavaTypes.STRING, ANY_CLASS, hooks))
         .addMethod(contractCodeMethod(layout))
         .addMethod(authenticateMethod(layout, identities))
-        .build()
+    if (usesSpringPages(layout)) springPageMethods(layout).forEach(binding::addMethod)
+
+    return binding.build()
+}
+
+// The Spring Data bridge of an api with a `springPage` list: only its binding and `SpringDataPages` name Spring Data
+// types, so an app without such a list needs no Spring Data on its classpath.
+private fun springPageMethods(layout: JavaLayout): List<MethodSpec> {
+    val springDataPages = layout.runtime(SPRING_DATA_PAGES)
+
+    return listOf(
+        MethodSpec.methodBuilder("pageable")
+            .addAnnotation(Override::class.java)
+            .addModifiers(Modifier.PUBLIC)
+            .returns(JavaTypes.OBJECT)
+            .addParameter(JSON_NODE, "style")
+            .addParameter(JSON_NODE, "query")
+            .addStatement("return \$T.pageable(style, query)", springDataPages)
+            .build(),
+        MethodSpec.methodBuilder("pageFacts")
+            .addAnnotation(Override::class.java)
+            .addModifiers(Modifier.PUBLIC)
+            .returns(JavaTypes.OBJECT)
+            .addParameter(JavaTypes.OBJECT, "body")
+            .addStatement("return \$T.facts(body)", springDataPages)
+            .build(),
+    )
 }
 
 private fun mapEntries(entries: List<CodeBlock>): CodeBlock {

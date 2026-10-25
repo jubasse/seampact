@@ -1,11 +1,14 @@
-// Runs the shared http suite's `default`, `hand-written` and `boot` profiles against the Spring Boot consumer's
-// jars (ADR 0015 "Suite profiles") and writes one report per profile. The jars and the report directory come from
-// the environment: SEAMPACT_SPRING_JAR, SEAMPACT_SPRING_ALLOW_LISTED_JAR and SEAMPACT_SPRING_REPORTS.
+// Runs the shared http suite's `default`, `hand-written`, `boot` and `pack:spring` profiles against the Spring Boot
+// consumer's jars (ADR 0015 "Suite profiles") and writes one report per profile. The jars and the report directory
+// come from the environment: SEAMPACT_SPRING_JAR, SEAMPACT_SPRING_ALLOW_LISTED_JAR, SEAMPACT_SPRING_PACK_JAR and
+// SEAMPACT_SPRING_REPORTS.
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import type { ContractIR } from "../../../../../packages/core/spec/src/ir/index.ts";
 import {
   loadSuiteCases,
+  packProfileOf,
   refusalsOf,
   reportFileOf,
   runBootSuite,
@@ -19,7 +22,7 @@ import {
   writeSuiteReport,
 } from "../../../../../packages/tools/http-suite/src/index.ts";
 import { type RunningApp, startSpringApp } from "./spring-app.ts";
-import { SPRING_SUITE_REFUSALS } from "./suite-refusals.ts";
+import { PACK_SPRING_SUITE_REFUSALS, SPRING_SUITE_REFUSALS } from "./suite-refusals.ts";
 
 const TARGET = "spring-boot";
 const ALLOW_LISTED_CASE = "allow-listed-framework-route-boots";
@@ -27,9 +30,12 @@ const ALLOW_LISTED_ELSEWHERE = "Runs on the jar built with the route allow-liste
 const SUITE_TIMEOUT_MS = 600_000;
 const BOOT_TIMEOUT_MS = 120_000;
 const TARGET_PROFILES: readonly SuiteProfile[] = ["default", "hand-written", "boot"];
+const SPRING_PACK = "@seampact/pack-spring";
+const PACK_SPRING_GOLDEN = join(import.meta.dirname, "../../../../../fixtures/golden/pack-spring");
 
 const jar = requiredEnvironment("SEAMPACT_SPRING_JAR");
 const allowListedJar = requiredEnvironment("SEAMPACT_SPRING_ALLOW_LISTED_JAR");
+const packJar = requiredEnvironment("SEAMPACT_SPRING_PACK_JAR");
 const reportDirectory = requiredEnvironment("SEAMPACT_SPRING_REPORTS");
 const credentials = readCredentials();
 
@@ -89,6 +95,42 @@ function describeHttpProfile(profile: SuiteProfile): void {
     testEachCase(cases, () => report, SPRING_SUITE_REFUSALS, test);
   });
 }
+
+function packSpringIr(contract: string): ContractIR {
+  return JSON.parse(readFileSync(join(PACK_SPRING_GOLDEN, `${contract}.ir.json`), "utf8"));
+}
+
+// The pack-spring jar serves the reference contract with `@seampact/pack-spring` applied; its profile reads the
+// default cases through the pack's paging style, then runs the pack's own cases.
+describe("http suite, pack:spring profile", () => {
+  const pack = packProfileOf([packSpringIr("tasks"), packSpringIr("tasksService")], SPRING_PACK);
+  const refusals = {
+    ...pack.refusals,
+    ...refusalsOf(pack.cases, { ...SPRING_SUITE_REFUSALS, ...PACK_SPRING_SUITE_REFUSALS }),
+  };
+  let app: RunningApp | undefined;
+  let report: SuiteReport | undefined;
+
+  beforeAll(async () => {
+    app = await startSpringApp(packJar);
+    report = await runSuite({
+      baseUrl: app.baseUrl,
+      target: TARGET,
+      profile: pack.profile,
+      credentials,
+      cases: pack.cases,
+      reader: pack.reader,
+      refusals,
+    });
+    writeSuiteReport(report, reportFileOf(reportDirectory, pack.profile));
+  }, SUITE_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await app?.close();
+  });
+
+  testEachCase(pack.cases, () => report, refusals, test);
+});
 
 // The allow-listed variant needs the route in the config, so it boots the second jar; the other cases boot the first.
 async function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport> {

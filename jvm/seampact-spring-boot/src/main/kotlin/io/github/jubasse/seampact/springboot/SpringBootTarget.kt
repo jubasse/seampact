@@ -40,7 +40,7 @@ public object SpringBootTarget {
         val types = javaTypes(layout, refusals) + boundaryTypes(layout, options, entry)
         refusals.throwIfAny()
 
-        val runtime = runtimeFiles(layout.runtimePackage)
+        val runtime = runtimeFiles(layout)
 
         return (types.map { (packageName, type) -> javaFile(packageName, type, options) } + runtime)
             .sortedBy { it.path }

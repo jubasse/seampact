@@ -33,6 +33,10 @@ internal object JavaTypes {
     val JSON_PROPERTY: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "JsonProperty")
     val JSON_FORMAT: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "JsonFormat")
     val JSON_INCLUDE: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "JsonInclude")
+    val JACKSON_INJECT: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "JacksonInject")
+    val OPT_BOOLEAN: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "OptBoolean")
+    val PAGEABLE: ClassName = ClassName.get("org.springframework.data.domain", "Pageable")
+    val PAGE: ClassName = ClassName.get("org.springframework.data.domain", "Page")
 
     val NOT_NULL: ClassName = ClassName.get("jakarta.validation.constraints", "NotNull")
     val VALID: ClassName = ClassName.get("jakarta.validation", "Valid")
@@ -199,11 +203,13 @@ internal data class RecordComponent(
     val wireName: String? = null,
     val redacted: Boolean = false,
     val writtenAsString: Boolean = false,
+    /** The id of a value the boundary injects when it binds the record, never read from the request. */
+    val injectedAs: String? = null,
 )
 
 /**
- * The canonical constructor's parameters, each with `@JsonProperty` when its wire name differs from the Java name and
- * `@JsonFormat(shape = STRING)` when it is written as a string.
+ * The canonical constructor's parameters, each with `@JsonProperty` when its wire name differs from the Java name,
+ * `@JacksonInject` when the boundary injects it, and `@JsonFormat(shape = STRING)` when it is written as a string.
  */
 internal fun recordConstructor(components: List<RecordComponent>): MethodSpec {
     val constructor = MethodSpec.constructorBuilder()
@@ -212,6 +218,14 @@ internal fun recordConstructor(components: List<RecordComponent>): MethodSpec {
         val parameter = ParameterSpec.builder(component.type, component.name)
         if (component.wireName != null && component.wireName != component.name) {
             parameter.addAnnotation(AnnotationSpec.builder(JavaTypes.JSON_PROPERTY).addMember("value", "\$S", component.wireName).build())
+        }
+        if (component.injectedAs != null) {
+            parameter.addAnnotation(
+                AnnotationSpec.builder(JavaTypes.JACKSON_INJECT)
+                    .addMember("value", "\$S", component.injectedAs)
+                    .addMember("useInput", "\$T.FALSE", JavaTypes.OPT_BOOLEAN)
+                    .build(),
+            )
         }
         if (component.writtenAsString) {
             parameter.addAnnotation(AnnotationSpec.builder(JavaTypes.JSON_FORMAT).addMember("shape", "\$T.Shape.STRING", JavaTypes.JSON_FORMAT).build())
