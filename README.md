@@ -191,7 +191,7 @@ class NotesController implements NotesEndpoints {
 
 ### Schemas
 
-The validators generated from the same `Note` schema. Pick one per app:
+The validators generated from the same `Note` schema. Pick one per app.
 
 <details open><summary>zod</summary>
 
@@ -200,14 +200,8 @@ export const NoteSchema = z.object({
   // …
   title: z
     .string()
-    .refine((value) => codePointLength(value) >= 1, {
-      error: "Expected at least 1 character.",
-      params: { rule: "minLength" },
-    })
-    .refine((value) => codePointLength(value) <= 100, {
-      error: "Expected at most 100 characters.",
-      params: { rule: "maxLength" },
-    }),
+    .min(1, { error: "Expected at least 1 character." })
+    .max(100, { error: "Expected at most 100 characters." }),
   // …
 });
 ```
@@ -223,16 +217,8 @@ export const NoteSchema = yup
     title: yup
       .string()
       .strict()
-      .test({
-        name: "minLength",
-        message: "Expected at least 1 character.",
-        test: (value) => value === undefined || codePointLength(value) >= 1,
-      })
-      .test({
-        name: "maxLength",
-        message: "Expected at most 100 characters.",
-        test: (value) => value === undefined || codePointLength(value) <= 100,
-      })
+      .min(1, "Expected at least 1 character.")
+      .max(100, "Expected at most 100 characters.")
       .defined(),
     // …
   })
@@ -248,8 +234,8 @@ export const NoteSchema = yup
 export class NoteDto {
   // …
   @IsString()
-  @contract.MinLength(1, "Expected at least 1 character.")
-  @contract.MaxLength(100, "Expected at most 100 characters.")
+  @MinLength(1, { message: "Expected at least 1 character." })
+  @MaxLength(100, { message: "Expected at most 100 characters." })
   title!: string;
   // …
 }
@@ -274,8 +260,8 @@ export const NoteSchema = vineStandardSchema({
         kind: "scalar",
         base: "string",
         checks: [
-          { rule: "minLength", limit: 1, message: "Expected at least 1 character." },
-          { rule: "maxLength", limit: 100, message: "Expected at most 100 characters." },
+          { rule: "minLength", limit: 1, message: "Expected at least 1 character.", native: true },
+          { rule: "maxLength", limit: 100, message: "Expected at most 100 characters.", native: true },
         ],
       },
     },
@@ -311,6 +297,8 @@ export const NoteSchema = ajvStandardSchema({
 ```
 
 </details>
+
+These are the default `rules: native` output, each library's own rules. `rules: seampact-consistent` gives the contract's exact checks on every library ([validators](docs/configuration/validators.md)).
 
 Spring Boot records carry standard Jakarta constraints for your own `@Valid`; the boundary checks the contract's rules itself. Planned: validation rules for Laravel.
 
