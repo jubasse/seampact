@@ -23,6 +23,18 @@ function createTaskInput(authorization: string, csrfToken: string): unknown {
   };
 }
 
+// The compiler derives `traceparent` and `X-Deadline` from the identity: they are header params, not declared ones.
+function createTaskInputWithDerivedHeaders(traceparent: string, deadline: string): unknown {
+  return {
+    path: { channelId: "c1" },
+    query: {},
+    headers: { traceparent, "x-deadline": deadline, "idempotency-key": "key-1" },
+    body: { title: "Plan" },
+  };
+}
+
+const NO_DECLARED_HEADER: readonly string[] = [];
+
 // The same vector as the Spring Boot target's `DigestsTest`, so a shared replay store sees one fingerprint.
 const CREATE_TASK_FINGERPRINT = "583a81024c92d216cb3209acd8ccdd6f1350f6947a6636235ed8329fc77fde9c";
 
@@ -39,5 +51,20 @@ describe("the idempotency fingerprint", () => {
 
     expect(retry).toBe(first);
     expect(first).toBe(CREATE_TASK_FINGERPRINT);
+  });
+
+  test("a retry with a new trace id or deadline matches the first request", async () => {
+    const first = await idempotencyFingerprint(
+      CREATE_TASK,
+      createTaskInputWithDerivedHeaders("00-trace-old-01", "2026-10-25T10:00:00Z"),
+      NO_DECLARED_HEADER,
+    );
+    const retry = await idempotencyFingerprint(
+      CREATE_TASK,
+      createTaskInputWithDerivedHeaders("00-trace-new-01", "2026-10-25T10:00:05Z"),
+      NO_DECLARED_HEADER,
+    );
+
+    expect(retry).toBe(first);
   });
 });

@@ -62,4 +62,25 @@ class DigestsTest {
         assertEquals(first, retry);
         assertEquals("583a81024c92d216cb3209acd8ccdd6f1350f6947a6636235ed8329fc77fde9c", first);
     }
+
+    // The compiler derives `traceparent` and `X-Deadline` from the identity; they leave the fingerprint as every derived header param does.
+    private static JsonNode createTaskInputWithDerivedHeaders(String traceparent, String deadline) {
+        return JsonMapper.builder().build().readTree("""
+                {"path": {"channelId": "c1"}, "query": {},
+                 "headers": {"traceparent": "%s", "X-Deadline": "%s", "Idempotency-Key": "key-1"},
+                 "body": {"title": "Plan"}}
+                """.formatted(traceparent, deadline));
+    }
+
+    @Test
+    void aRetryWithANewTraceIdOrDeadlineHasTheFirstRequestsFingerprint() {
+        ContractTable table = new ContractTable(BoundaryMapper.create().readTree(TasksContractTable.json()));
+        JsonNode ir = table.ir();
+        JsonNode createTask = table.routes().stream().filter(route -> route.id().equals("createTask")).findFirst().orElseThrow().operation();
+
+        String first = IdempotencyStep.fingerprint(ir, createTask, createTaskInputWithDerivedHeaders("00-trace-old-01", "2026-10-25T10:00:00Z"));
+        String retry = IdempotencyStep.fingerprint(ir, createTask, createTaskInputWithDerivedHeaders("00-trace-new-01", "2026-10-25T10:00:05Z"));
+
+        assertEquals(first, retry);
+    }
 }
