@@ -20,6 +20,7 @@ import {
   refuseUnknownValueAt,
 } from "../located-refusals.js";
 import type { Refusal } from "../refusal.js";
+import { fingerprintHeaderNames } from "./fingerprint-headers.js";
 import type { CompressionOption, FrameworkEtagMode } from "./options.js";
 import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
 import { compareRouteSpecificity } from "./route-order.js";
@@ -895,10 +896,7 @@ function idempotencyEntry(
     header: idempotency.header,
     replayHeader: idempotency.replayHeader,
     lifetimeMs: idempotency.lifetimeMs,
-    // A header param the compiler derives (trace, deadline, the key, CSRF) never enters the fingerprint (ADR 0012).
-    fingerprintHeaders: operation.params.header
-      .filter((param) => param.derivedFrom === undefined)
-      .map((param) => param.name.toLowerCase()),
+    fingerprintHeaders: fingerprintHeaderNames(operation.params.header),
   };
 }
 

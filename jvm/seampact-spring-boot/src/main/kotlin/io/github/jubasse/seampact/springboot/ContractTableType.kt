@@ -98,7 +98,7 @@ private fun settings(options: SpringBootOptions, entry: SpringBootEntry, operati
 
 // Per idempotent operation, the header params the author declared, lower case: the only headers its fingerprint
 // digests. A header param the compiler derives (trace, deadline, the key, CSRF) changes on a retry (ADR 0012).
-private fun fingerprintHeaders(operations: List<JsonElement>): JsonObject = buildJsonObject {
+internal fun fingerprintHeaders(operations: List<JsonElement>): JsonObject = buildJsonObject {
     for (operation in operations.map { it.jsonObject }) {
         val idempotency = operation["idempotency"] as? JsonObject ?: continue
         if ((idempotency["kind"] as? JsonPrimitive)?.content == EXEMPT_IDEMPOTENCY) continue
