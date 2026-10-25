@@ -44,7 +44,7 @@ From the CLI:
 | `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
 | `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
 
-Next: MSW mocks, Laravel, Symfony, API Platform. For Spring Boot: Spring Security, multipart, download and redirect bodies, springdoc docs.
+Next: MSW mocks, Laravel, Symfony, API Platform. Form, file upload, download and redirect bodies on every server, once an app needs them.
 
 ## Example
 
@@ -414,7 +414,7 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 | Hono | 4 | zod, yup |
 | Spring Boot | 4 | generated checks, Jakarta constraints on the records |
 
-Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `seampact-maven-plugin`. PHP (Laravel, Symfony): planned.
+Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `seampact-maven-plugin`. It can also generate Spring Security matchers and refusals, and springdoc annotations. PHP (Laravel, Symfony): planned.
 
 ### Clients
 
@@ -448,8 +448,8 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] Frontend: Angular service over `HttpClient` (no query library)
 - [x] Frontend: NgRx actions and effects for Angular
 - [ ] Frontend: MSW mocks
-- [x] Java: Spring Boot 4, with a Gradle and a Maven plugin
-- [ ] Java: Spring Security, multipart, download and redirect bodies, springdoc docs. PHP: Laravel, Symfony, API Platform
+- [x] Java: Spring Boot 4, with a Gradle and a Maven plugin, Spring Security and springdoc
+- [ ] PHP: Laravel, Symfony, API Platform
 - [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm
 - [ ] Example apps per stack pairing, and an `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
 - Later: a client conformance suite, a kit to write new targets, one shared core per language, then Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Python, Go, .NET, Rust ([full list](docs/roadmap.md))
