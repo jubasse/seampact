@@ -12,6 +12,9 @@ interface PathFacts
 
     public function currentUid(): int;
 
+    /** Whether `$groupId` is the private group of `$ownerUid`: the owner's primary group, with no other member. */
+    public function isPrivateGroup(int $groupId, int $ownerUid): bool;
+
     /** The real path of an existing directory, links resolved. */
     public function realDirectory(string $path): string;
 }

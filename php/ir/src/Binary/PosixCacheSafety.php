@@ -8,13 +8,17 @@ namespace Seampact\Ir\Binary;
  * The POSIX cache rule: the copy, its directory and each directory up to the cache root are owned by the current
  * user, are not links and are not writable by group or others; each directory above the cache root, up to the
  * filesystem root, is owned by the current user or by root and is not writable by group or others, so a shared
- * cache directory is refused and the fix is a private one.
+ * cache directory is refused and the fix is a private one. Group write is allowed when the group is the owner's
+ * private group (its primary group, with no other member), as OpenSSH's StrictModes allows it, so a 002 umask
+ * with user private groups (Ubuntu) still works.
  */
 final readonly class PosixCacheSafety implements CacheSafety
 {
     private const OWNER_ONLY = 0700;
 
-    private const GROUP_OR_OTHER_WRITE = 0022;
+    private const GROUP_WRITE = 0020;
+
+    private const OTHER_WRITE = 0002;
 
     private const ROOT_UID = 0;
 
@@ -87,7 +91,7 @@ final readonly class PosixCacheSafety implements CacheSafety
             throw self::unsafe($path, "is owned by the user id {$fact->ownerUid}, not yours ({$uid})", 'Use a cache directory private to your user (COMPOSER_CACHE_DIR).');
         }
 
-        if (($fact->mode & self::GROUP_OR_OTHER_WRITE) !== 0) {
+        if ($this->isWritableByOthers($fact)) {
             throw self::unsafe($path, sprintf('is writable by group or others (mode %o)', $fact->mode), "Run `chmod 700 '{$path}'`.");
         }
     }
@@ -104,9 +108,18 @@ final readonly class PosixCacheSafety implements CacheSafety
             throw self::unsafe($path, "is owned by the user id {$fact->ownerUid}, neither yours nor root", 'Use a cache directory whose parents only you or root can write (COMPOSER_CACHE_DIR).');
         }
 
-        if (($fact->mode & self::GROUP_OR_OTHER_WRITE) !== 0) {
+        if ($this->isWritableByOthers($fact)) {
             throw self::unsafe($path, sprintf('is writable by group or others (mode %o), so the cache is shared', $fact->mode), 'Use a cache directory private to your user (COMPOSER_CACHE_DIR).');
         }
+    }
+
+    private function isWritableByOthers(PathFact $fact): bool
+    {
+        if (($fact->mode & self::OTHER_WRITE) !== 0) {
+            return true;
+        }
+
+        return ($fact->mode & self::GROUP_WRITE) !== 0 && !$this->facts->isPrivateGroup($fact->groupId, $fact->ownerUid);
     }
 
     private static function unsafe(string $path, string $problem, string $fix): BinaryRefusedException

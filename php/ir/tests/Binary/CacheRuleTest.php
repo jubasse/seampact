@@ -26,6 +26,8 @@ final class CacheRuleTest extends TestCase
     private const USER = 1000;
     private const OTHER_USER = 1001;
     private const ROOT = 0;
+    private const PRIVATE_GROUP = 1000;
+    private const SHARED_GROUP = 100;
 
     private const COPY = '/home/dev/.cache/composer/seampact/abc/seampact';
     private const CACHE_ROOT = '/home/dev/.cache/composer/seampact';
@@ -41,12 +43,16 @@ final class CacheRuleTest extends TestCase
     {
         return [
             'a private cache under a home directory' => [[], null],
-            'a copy owned by another user' => [[self::COPY => new PathFact(false, self::OTHER_USER, 0700)], self::COPY],
-            'a link as the hash directory' => [[dirname(self::COPY) => new PathFact(true, self::USER, 0777)], dirname(self::COPY)],
-            'a group-writable cache root' => [[self::CACHE_ROOT => new PathFact(false, self::USER, 0770)], self::CACHE_ROOT],
-            'a root-owned cache root' => [[self::CACHE_ROOT => new PathFact(false, self::ROOT, 0700)], self::CACHE_ROOT],
-            'a shared directory above the root' => [['/home/dev/.cache' => new PathFact(false, self::USER, 01777)], '/home/dev/.cache'],
-            'an ancestor owned by another user' => [['/home' => new PathFact(false, self::OTHER_USER, 0755)], '/home'],
+            'a copy owned by another user' => [[self::COPY => new PathFact(false, self::OTHER_USER, self::SHARED_GROUP, 0700)], self::COPY],
+            'a link as the hash directory' => [[dirname(self::COPY) => new PathFact(true, self::USER, self::SHARED_GROUP, 0777)], dirname(self::COPY)],
+            'a cache root its shared group may write' => [[self::CACHE_ROOT => new PathFact(false, self::USER, self::SHARED_GROUP, 0770)], self::CACHE_ROOT],
+            'a cache root its owner private group may write (umask 002)' => [[self::CACHE_ROOT => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0775)], null],
+            'a hash directory others may write, private group or not' => [[dirname(self::COPY) => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0777)], dirname(self::COPY)],
+            'an ancestor its owner private group may write' => [['/home/dev' => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0775)], null],
+            'an ancestor its shared group may write' => [['/home/dev' => new PathFact(false, self::USER, self::SHARED_GROUP, 0775)], '/home/dev'],
+            'a root-owned cache root' => [[self::CACHE_ROOT => new PathFact(false, self::ROOT, self::SHARED_GROUP, 0700)], self::CACHE_ROOT],
+            'a shared directory above the root' => [['/home/dev/.cache' => new PathFact(false, self::USER, self::SHARED_GROUP, 01777)], '/home/dev/.cache'],
+            'an ancestor owned by another user' => [['/home' => new PathFact(false, self::OTHER_USER, self::SHARED_GROUP, 0755)], '/home'],
         ];
     }
 
@@ -55,14 +61,14 @@ final class CacheRuleTest extends TestCase
     public function testAppliesThePosixRuleUpToTheFilesystemRoot(array $changed, ?string $refusedPath): void
     {
         $facts = [
-            self::COPY => new PathFact(false, self::USER, 0700),
-            dirname(self::COPY) => new PathFact(false, self::USER, 0700),
-            self::CACHE_ROOT => new PathFact(false, self::USER, 0700),
-            '/home/dev/.cache/composer' => new PathFact(false, self::USER, 0755),
-            '/home/dev/.cache' => new PathFact(false, self::USER, 0700),
-            '/home/dev' => new PathFact(false, self::USER, 0750),
-            '/home' => new PathFact(false, self::ROOT, 0755),
-            '/' => new PathFact(false, self::ROOT, 0755),
+            self::COPY => new PathFact(false, self::USER, self::SHARED_GROUP, 0700),
+            dirname(self::COPY) => new PathFact(false, self::USER, self::SHARED_GROUP, 0700),
+            self::CACHE_ROOT => new PathFact(false, self::USER, self::SHARED_GROUP, 0700),
+            '/home/dev/.cache/composer' => new PathFact(false, self::USER, self::SHARED_GROUP, 0755),
+            '/home/dev/.cache' => new PathFact(false, self::USER, self::SHARED_GROUP, 0700),
+            '/home/dev' => new PathFact(false, self::USER, self::SHARED_GROUP, 0750),
+            '/home' => new PathFact(false, self::ROOT, self::SHARED_GROUP, 0755),
+            '/' => new PathFact(false, self::ROOT, self::SHARED_GROUP, 0755),
             ...$changed,
         ];
         $safety = new PosixCacheSafety(self::CACHE_ROOT, self::posixFacts($facts));
@@ -170,6 +176,11 @@ final class CacheRuleTest extends TestCase
             public function currentUid(): int
             {
                 return 1000;
+            }
+
+            public function isPrivateGroup(int $groupId, int $ownerUid): bool
+            {
+                return $groupId === 1000 && $ownerUid === 1000;
             }
 
             public function realDirectory(string $path): string

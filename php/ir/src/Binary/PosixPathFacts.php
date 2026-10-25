@@ -16,7 +16,7 @@ final class PosixPathFacts implements PathFacts
             return null;
         }
 
-        return new PathFact(is_link($path), $stat['uid'], $stat['mode'] & 07777);
+        return new PathFact(is_link($path), $stat['uid'], $stat['gid'], $stat['mode'] & 07777);
     }
 
     public function currentUid(): int
@@ -30,6 +30,21 @@ final class PosixPathFacts implements PathFacts
         }
 
         return posix_geteuid();
+    }
+
+    public function isPrivateGroup(int $groupId, int $ownerUid): bool
+    {
+        if (!function_exists('posix_getpwuid') || !function_exists('posix_getgrgid')) {
+            return false;
+        }
+
+        $owner = posix_getpwuid($ownerUid);
+        $group = posix_getgrgid($groupId);
+        if ($owner === false || $group === false || $owner['gid'] !== $groupId) {
+            return false;
+        }
+
+        return array_diff($group['members'], [$owner['name']]) === [];
     }
 
     public function realDirectory(string $path): string
