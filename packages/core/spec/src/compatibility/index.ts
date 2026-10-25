@@ -258,6 +258,22 @@ export const CLIENT_TARGETS: readonly ClientTargetCompatibility[] = [
       tested: [{ major: 22, consumer: "angular-fetch" }],
       incompatible: [],
     },
+    libraries: [
+      {
+        id: "ngrx-store",
+        package: "@ngrx/store",
+        artefact: "service",
+        testedMajors: [22],
+        selectedBy: { option: "state", value: "ngrx" },
+      },
+      {
+        id: "ngrx-effects",
+        package: "@ngrx/effects",
+        artefact: "service",
+        testedMajors: [22],
+        selectedBy: { option: "state", value: "ngrx" },
+      },
+    ],
     validatorStyles: [],
     ownValidators: [],
     clientStyles: ["fetch"],

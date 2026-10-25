@@ -1,0 +1,4 @@
+{
+  "@ngrx/effects": "22.0.1",
+  "@ngrx/store": "22.0.1"
+}

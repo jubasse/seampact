@@ -1,6 +1,6 @@
 name: Angular consumers
 
-# Builds and packs the seampact packages, installs them from the tarballs into the angular test consumer and runs
+# Builds and packs the seampact packages, installs them from the tarballs into the angular test consumers and runs
 # their Vitest browser project on Playwright Chromium against the Hono server through a same-origin proxy
 # (ADR 0021). On a pull request they run only when the change touches the packages, the consumer harness, the
 # reference contract, the toolchain pins or this workflow; `p6-angular` is the one check to require.
@@ -64,7 +64,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [angular-fetch]
+        target: [angular-fetch, angular-ngrx]
         validators: [zod]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
