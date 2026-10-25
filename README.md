@@ -168,6 +168,25 @@ export const notesEndpoints: NotesHono.NotesEndpoints = {
 
 </details>
 
+<details><summary>Spring Boot</summary>
+
+```java
+@RestController
+class NotesController implements NotesEndpoints {
+    @Override
+    @GetNote
+    public GetNoteResult getNote(GetNoteInput input) {
+        Note note = notes.get(input.path().noteId());
+
+        return note == null
+                ? new GetNoteErrors.ApiNotFound()
+                : new GetNoteResult.Status200(note);
+    }
+}
+```
+
+</details>
+
 ---
 
 ### Schemas
@@ -316,7 +335,7 @@ if (reply.ok) console.log(reply.body.title);
 
 ### Query
 
-Hooks over that client for React. SWR, RTK Query and a library-free mode work the same way: see [React](docs/frontend/react.md).
+Hooks, composables and services over that client, for React, Vue and Angular. SWR, RTK Query and a library-free mode work the same way: see [React](docs/frontend/react.md), [Vue](docs/frontend/vue.md) and [Angular](docs/frontend/angular.md).
 
 <details open><summary>TanStack Query (React)</summary>
 
@@ -336,9 +355,54 @@ function NoteTitle(props: { noteId: string }) {
 
 </details>
 
+<details><summary>TanStack Query (Vue)</summary>
+
+```vue
+<script setup lang="ts">
+const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
+const Notes = createNotesComposables(client);
+const props = defineProps<{ noteId: string }>();
+
+const note = Notes.useGetNote(() => ({ path: { noteId: props.noteId } }));
+</script>
+
+<template>
+  <p v-if="note.isPending.value">Loading</p>
+  <p v-else-if="note.isError.value">{{ note.error.value?.message }}</p>
+  <h1 v-else>{{ note.data.value?.body.title }}</h1>
+</template>
+```
+
+</details>
+
+<details><summary>Angular</summary>
+
+```ts
+@Component({
+  selector: "note-title",
+  template: `
+    @if (note.isLoading()) {
+      <p>Loading</p>
+    } @else if (note.error()) {
+      <p>{{ note.error()?.message }}</p>
+    } @else {
+      <h1>{{ note.data()?.body.title }}</h1>
+    }
+  `,
+})
+export class NoteTitle {
+  readonly noteId = input.required<string>();
+  readonly note = inject(NotesApi).getNote(() => ({ path: { noteId: this.noteId() } }));
+}
+```
+
+</details>
+
 The full walk-through is in [Get started](docs/getting-started/README.md).
 
 ## Supported stacks
+
+### Backend
 
 | Server | Versions | Validators |
 |---|---|---|
@@ -349,9 +413,16 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 | Hono | 4 | zod, yup |
 | Spring Boot | 4 | generated checks, Jakarta constraints on the records |
 
-Clients: typed `fetch` client, and over it, for React 19, TanStack Query 5 options and hooks, SWR 2 keys, fetchers and hooks, or an RTK Query 2 api; for Vue 3, composables on TanStack Query 5 (`@tanstack/vue-query`) or on `fetch` alone; for Angular 22, an injectable api service over `HttpClient` with `resource()` readers and no query library.
-
 Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `seampact-maven-plugin`. PHP (Laravel, Symfony): planned.
+
+### Frontend
+
+| Framework | Versions | Query tools |
+|---|---|---|
+| Typed `fetch` client | any framework or none | none |
+| React | 19 | TanStack Query 5, SWR 2, RTK Query 2, or none |
+| Vue | 3 | TanStack Query 5, or none |
+| Angular | 22 | none: a service over `HttpClient` |
 
 ## Get started
 
