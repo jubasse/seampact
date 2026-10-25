@@ -118,7 +118,10 @@ function refuseCacheOptions<Library extends string>(
     refusals.push({
       code: `options.${key}.unsupported`,
       message: `The option '${key}' needs a query library's cache, which 'query: ${noCache}' has not.`,
-      fix: libraries === "" ? `Drop '${key}'.` : `Drop '${key}', or choose a query library: ${libraries}.`,
+      fix:
+        libraries === ""
+          ? `Drop '${key}'.`
+          : `Drop '${key}', or choose a query library: ${libraries}.`,
       member: below(OPTIONS_LOCATION, key).member,
     });
   }
