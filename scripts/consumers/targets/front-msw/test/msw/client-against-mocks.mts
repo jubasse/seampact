@@ -50,7 +50,7 @@ export function describeClientAgainstMocks(api: () => MockedApi): void {
       status: INTERNAL_STATUS,
       body: {
         message: expect.stringContaining(
-          "'getTask' (GET /v1/channels/:channelId/tasks/:taskId) has no example",
+          "'getTask' (GET /v1/channels/{channelId}/tasks/{taskId}) has no example",
         ),
       },
     });
