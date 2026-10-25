@@ -359,8 +359,9 @@ function NoteTitle(props: { noteId: string }) {
 
 ```vue
 <script setup lang="ts">
-const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
-const Notes = createNotesComposables(client);
+// api.ts builds them once: createNotesComposables(createClient({ baseUrl }))
+import { Notes } from "./api";
+
 const props = defineProps<{ noteId: string }>();
 
 const note = Notes.useGetNote(() => ({ path: { noteId: props.noteId } }));
