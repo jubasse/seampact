@@ -7,7 +7,9 @@ import {
   type GenerateOutcome,
   type IndexedModule,
   operationLocation,
+  planOperation,
   type Refusal,
+  refuseFormatForms,
   refuseInconsistentIr,
   refuseNotGeneratedYet,
   refuseUnknownValueAt,
@@ -23,10 +25,8 @@ import {
   RUNTIME_MODULE,
 } from "./client-module.js";
 import { clientMethodName } from "./describe.js";
-import { planOperation } from "./operation-plan.js";
 import type { FetchClientOptions } from "./options.js";
 import { runtimeModuleSource } from "./runtime-module.js";
-import { refuseFormatForms } from "./wire-format.js";
 
 export const CLIENT_ARTEFACT = "client";
 

@@ -1,7 +1,12 @@
 import type { OperationTypeExports } from "@seampact/codegen-core";
-import { type ExportRef, importSpecifier, type Link, propertyKey } from "@seampact/codegen-core";
+import {
+  type ExportRef,
+  importSpecifier,
+  type Link,
+  propertyKey,
+  typeNamespaceName,
+} from "@seampact/codegen-core";
 import { compareRouteSpecificity } from "@seampact/codegen-core/node-server";
-import { typeNamespaceName } from "@seampact/codegen-fetch";
 import type { ErrorWritings, MockPlan } from "./mock-plan.js";
 
 export const MOCKS_MODULE = "mocks";

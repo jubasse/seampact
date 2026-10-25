@@ -6,13 +6,18 @@ import {
   type GenerateOutcome,
   type IndexedModule,
   operationLocation,
+  planOperation,
   type Refusal,
+  refuseFormatForms,
   refuseInconsistentIr,
   refuseNotGeneratedYet,
   withoutRepeats,
 } from "@seampact/codegen-core";
-import { literalSegmentRefusals, mixedSegmentRefusals } from "@seampact/codegen-core/node-server";
-import { clientMethodName, planOperation, refuseFormatForms } from "@seampact/codegen-fetch";
+import {
+  literalSegmentRefusals,
+  mixedSegmentRefusals,
+  operationIdentifier,
+} from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
 import { errorWritingsOf, mockPlanOf, refuseMissingTypes } from "./mock-plan.js";
 import {
@@ -128,7 +133,7 @@ function mockedOperations(
 ): MockedOperation[] {
   return ir.operations.flatMap((operation, index) => {
     const location = operationLocation(index, operation.id);
-    const member = clientMethodName(operation);
+    const member = operationIdentifier(operation);
     const types = Object.hasOwn(typeExports, operation.id) ? typeExports[operation.id] : undefined;
     const planned = planOperation(operation, ir, location, refusals);
     const plan = mockPlanOf(operation, member, planned, ir, location, refusals);

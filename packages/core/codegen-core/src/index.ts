@@ -26,6 +26,16 @@ export type {
   ValidatorsDescriptor,
 } from "./descriptors.js";
 export {
+  type FactSource,
+  type OperationPlan,
+  type PageFact,
+  type PlannedOperation,
+  planOperation,
+  refuseFormatForms,
+  type SuccessPlan,
+  typeNamespaceName,
+} from "./fetch-client/index.js";
+export {
   DEFAULT_FRAMEWORK_ROUTE_CHECK,
   DEFAULT_HOOK_BOOT_CHECK,
   type FrameworkRouteAllowance,

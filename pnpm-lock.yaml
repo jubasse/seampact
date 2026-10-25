@@ -538,9 +538,6 @@ importers:
       '@seampact/codegen-core':
         specifier: workspace:*
         version: link:../../core/codegen-core
-      '@seampact/codegen-fetch':
-        specifier: workspace:*
-        version: link:../codegen-fetch
       '@seampact/spec':
         specifier: workspace:*
         version: link:../../core/spec

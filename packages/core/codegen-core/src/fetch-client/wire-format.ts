@@ -1,10 +1,7 @@
-import {
-  below,
-  type IrLocation,
-  type Refusal,
-  refuseNotGeneratedYet,
-} from "@seampact/codegen-core";
 import type { Template, WireFormat } from "@seampact/spec/ir";
+import { below, type IrLocation } from "../ir-location.js";
+import { refuseNotGeneratedYet } from "../located-refusals.js";
+import type { Refusal } from "../refusal.js";
 
 const CODE_SLOT = "code";
 const PARAMS_MERGE = "params";

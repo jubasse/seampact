@@ -1,3 +1,4 @@
+import type { PageFact, PlannedOperation, SuccessPlan } from "@seampact/codegen-core";
 import {
   below,
   type IrLocation,
@@ -6,7 +7,6 @@ import {
   refuseNotGeneratedYet,
 } from "@seampact/codegen-core";
 import { pageBodyLocation, pageBodyTemplate } from "@seampact/codegen-core/node-server";
-import type { PageFact, PlannedOperation, SuccessPlan } from "@seampact/codegen-fetch";
 import type { ContractIR, Operation, Template, WireFormat } from "@seampact/spec/ir";
 
 // What the generated handlers tell the runtime about one operation (the runtime's `MockPlan` type checks the

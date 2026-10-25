@@ -30,7 +30,6 @@
   },
   "peerDependencies": {
     "@seampact/codegen-core": "workspace:*",
-    "@seampact/codegen-fetch": "workspace:*",
     "@seampact/spec": "workspace:*",
     "msw": ">=2.15 <3"
   },
@@ -44,7 +43,6 @@
   },
   "devDependencies": {
     "@seampact/codegen-core": "workspace:*",
-    "@seampact/codegen-fetch": "workspace:*",
     "@seampact/spec": "workspace:*",
     "msw": "2.15.0"
   }

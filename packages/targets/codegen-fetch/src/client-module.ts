@@ -1,6 +1,12 @@
 import type { OperationTypeExports } from "@seampact/codegen-core";
-import { type ExportRef, importSpecifier, type Link, propertyKey } from "@seampact/codegen-core";
-import type { PlannedOperation } from "./operation-plan.js";
+import {
+  type ExportRef,
+  importSpecifier,
+  type Link,
+  type PlannedOperation,
+  propertyKey,
+  typeNamespaceName,
+} from "@seampact/codegen-core";
 import type { ErrorStyle } from "./options.js";
 
 export const CLIENT_MODULE = "client";
@@ -9,7 +15,6 @@ export const INDEX_MODULE = "index";
 export const MODULE_EXTENSION = ".ts";
 
 const MODULE_SUFFIX = ".js";
-const NAMESPACE_SUFFIX = "Types";
 
 // One operation as the client module writes it: its method name, plan and the types link exports it reads.
 export interface ClientOperation {
@@ -54,16 +59,6 @@ function typeNamespaces(operations: readonly ClientOperation[]): Set<string> {
   ]);
 
   return new Set([...modules].sort());
-}
-
-// `operations/input` is imported as `operationsInputTypes`; a module path is letters, digits, `-`, `_` and `/`.
-export function typeNamespaceName(module: string): string {
-  const words = module.split(/[^A-Za-z0-9]+/).filter((word) => word !== "");
-  const camel = words
-    .map((word, index) => (index === 0 ? word : `${word.charAt(0).toUpperCase()}${word.slice(1)}`))
-    .join("");
-
-  return `${camel}${NAMESPACE_SUFFIX}`;
 }
 
 // Imports the runtime names the module body uses, so the module has no unused import.
