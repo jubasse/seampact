@@ -2,6 +2,7 @@ package io.github.jubasse.seampact.ir.binary
 
 import com.sun.security.auth.module.UnixSystem
 import java.io.IOException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -52,7 +53,7 @@ internal object BinaryCache {
         for (each in missing.asReversed()) {
             try {
                 Files.createDirectory(each)
-            } catch (_: java.nio.file.FileAlreadyExistsException) {
+            } catch (_: FileAlreadyExistsException) {
                 // Another build created it in between; it is checked like any existing directory.
                 continue
             }
