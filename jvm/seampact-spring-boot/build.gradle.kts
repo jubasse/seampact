@@ -70,7 +70,7 @@ tasks.test {
 }
 
 // The golden tree as an app compiles it: the Spring Boot 4 starters the generated code needs, seampact-hooks, and
-// the redaction check that reads the compiled records.
+// the checks that run the compiled tree: its records' redaction and the boundary runtime on mock requests.
 val golden: SourceSet = sourceSets.create("golden") {
     java.srcDir(goldenDirectory)
     java.srcDir("src/goldenCheck/java")
@@ -81,6 +81,7 @@ dependencies {
     "goldenImplementation"(libs.spring.boot.starter.webmvc)
     "goldenImplementation"(libs.spring.boot.starter.validation)
     "goldenImplementation"(project(":seampact-hooks"))
+    "goldenImplementation"(libs.spring.test)
     "goldenImplementation"(platform(libs.junit.bom))
     "goldenImplementation"(libs.junit.jupiter)
     "goldenRuntimeOnly"(libs.junit.platform.launcher)

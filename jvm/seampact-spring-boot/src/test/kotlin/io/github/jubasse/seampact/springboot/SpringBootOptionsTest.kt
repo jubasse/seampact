@@ -108,6 +108,7 @@ class SpringBootOptionsTest {
                 "framework.version.unsupported" to "/springBootVersion",
                 "link.kind.not-consumed" to "/link/validators",
                 "link.kind.not-consumed" to "/link/a~1b",
+                "artefact.bootCheck.hooks.warn.unsupported" to "/artefacts/bootCheck/hooks",
                 "artefact.nativeDocs.unsupported" to "/artefacts/nativeDocs",
                 "artefact.accessHooks.unsupported" to "/artefacts/accessHooks",
                 "artefact.unknown" to "/artefacts/openapi",

@@ -1,0 +1,23 @@
+# The config of the 'allow-listed-framework-route' boot variant: the consumer's, with the variant's route
+# allow-listed on the tasks api.
+outDir: build/generated/sources/seampact/main
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasks
+    operations: { include: [health, getChannel, getDraft, getTask, getTasksBatch, searchTasks] }
+    options: { package: com.example.tasks.api }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { method: GET, path: /v1/unlisted, reason: "The boot variant's framework route outside the contract." }
+  - id: tasksService
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksService
+    operations: { include: [getTask] }
+    options: { package: com.example.tasksservice.api }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { method: GET, path: /v1/unlisted, reason: "The boot variant's framework route outside the contract." }
