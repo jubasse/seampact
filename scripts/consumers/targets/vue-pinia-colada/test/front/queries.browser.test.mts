@@ -122,6 +122,30 @@ test("3: under invalidate: off the list stays as it was after a create", async (
   expect(listRequests(sent)).toHaveLength(1);
 });
 
+test("3: a create the server accepted resolves when the list refresh fails", async () => {
+  await loadScript({});
+
+  const { send, sent } = recordingFetch();
+  const Tasks = tasksComposablesFor(inject("userToken"), send);
+  const { result } = await renderComposable(
+    () => ({ list: Tasks.useListTasks(LIST_REQUEST), create: Tasks.useCreateTask() }),
+    coladaPlugins(),
+  );
+
+  await expect.poll(() => result.list.status.value).toBe("success");
+  await loadScript({ answers: { "tasks.listTasks": { throws: "list refresh failure" } } });
+
+  const created = await result.create.mutateAsync({
+    ...LIST_REQUEST,
+    body: { title: "Accepted once" },
+  });
+
+  expect(created.body.title).toBe("Accepted once");
+  expect(result.create.status.value).toBe("success");
+  await expect.poll(() => result.list.status.value).toBe("error");
+  expect(sent.filter((request) => request.method === "POST")).toHaveLength(1);
+});
+
 test("4: a throttled user sees api.rate_limited with its retryAfterMs", async () => {
   await loadScript({});
 
