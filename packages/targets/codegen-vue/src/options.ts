@@ -8,7 +8,7 @@ import {
 // required, and the switches every front target shares. Vue has no `"use client"` line and refuses no pair.
 
 // `fetch` is no library: composables built on Vue's own `ref` and `watch`, with no cache.
-export const QUERY_LIBRARIES = ["tanstack", "fetch"] as const;
+export const QUERY_LIBRARIES = ["tanstack", "pinia-colada", "fetch"] as const;
 
 export type QueryLibrary = (typeof QUERY_LIBRARIES)[number];
 

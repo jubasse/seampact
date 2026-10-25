@@ -1,6 +1,6 @@
 {
   "name": "@seampact/codegen-vue",
-  "description": "Generates TanStack Query options and Vue composables, or plain fetch composables with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract.",
+  "description": "Generates TanStack Query or Pinia Colada options and Vue composables, or plain fetch composables with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract.",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -28,12 +28,16 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "peerDependencies": {
+    "@pinia/colada": ">=1.4 <2",
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@tanstack/vue-query": ">=5.90 <6",
     "vue": ">=3.3"
   },
   "peerDependenciesMeta": {
+    "@pinia/colada": {
+      "optional": true
+    },
     "@tanstack/vue-query": {
       "optional": true
     },

@@ -238,6 +238,13 @@ export const CLIENT_TARGETS: readonly ClientTargetCompatibility[] = [
         testedMajors: [5],
         selectedBy: { option: "query", value: "tanstack" },
       },
+      {
+        id: "pinia-colada",
+        package: "@pinia/colada",
+        artefact: "queries",
+        testedMajors: [1],
+        selectedBy: { option: "query", value: "pinia-colada" },
+      },
     ],
     validatorStyles: [],
     ownValidators: [],

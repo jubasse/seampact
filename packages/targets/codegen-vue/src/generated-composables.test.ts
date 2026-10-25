@@ -40,7 +40,7 @@ async function formattedModules(query: string): Promise<Map<string, string>> {
   return new Map(outcome.files.map((file) => [file.path, file.contents]));
 }
 
-test.each(["tanstack", "fetch"])(
+test.each(["tanstack", "pinia-colada", "fetch"])(
   "`query: %s` generates its golden queries and composables",
   async (query) => {
     const modules = await formattedModules(query);

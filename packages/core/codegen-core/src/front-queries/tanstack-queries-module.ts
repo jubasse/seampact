@@ -2,6 +2,7 @@ import { propertyKey } from "../property-key.js";
 import {
   CONTRACT_ERROR_GUARD,
   type FrontErrors,
+  factoryOptionsParameter,
   keysObjectSource,
   nextPageConstantName,
   nextPageConstants,
@@ -13,6 +14,7 @@ import {
   resourceTypeSource,
   resultExpression,
   settingsTypeSource,
+  staleTimeMember,
 } from "./operation-sources.js";
 import type { QueryOperation, QueryPlan } from "./query-plan.js";
 
@@ -174,15 +176,6 @@ function memberSources(
     : [plain, infiniteSource(operation, api, options)];
 }
 
-// The caller options parameter: optional with a default, or required when the method requires a timeout.
-function optionsParameter(operation: QueryOperation, type: string): string {
-  return operation.needsTimeout ? `options: WithRequiredCall<${type}>` : `options: ${type} = {}`;
-}
-
-function staleTimeMember(operation: QueryOperation, options: TanstackQueriesOptions): string {
-  return options.staleTime === "contract" ? `staleTime: ${operation.freshnessMs},\n` : "";
-}
-
 function querySource(
   operation: QueryOperation,
   api: string,
@@ -192,7 +185,7 @@ function querySource(
   const types = operationType(operation, api);
   const call = `await runWithSignal(call, signal, (callWithSignal) => client.${names.base}(request, callWithSignal))`;
 
-  return `${propertyKey(names.options)}<Selected = ${types}["data"]>(request: ${types}["request"], ${optionsParameter(operation, `QueryCallerOptions<${types}, Selected>`)}) {
+  return `${propertyKey(names.options)}<Selected = ${types}["data"]>(request: ${types}["request"], ${factoryOptionsParameter(operation, `QueryCallerOptions<${types}, Selected>`)}) {
 const { call, ...callerOptions } = options;
 
 return queryOptions<${types}["data"], ${types}["error"], Selected, QueryKey>({
@@ -216,7 +209,7 @@ function infiniteSource(
   const types = operationType(operation, api);
   const call = `await runWithSignal(call, signal, (callWithSignal) => client.${names.base}(pageParam, callWithSignal))`;
 
-  return `${propertyKey(infinite.options)}<Selected = InfiniteData<${types}["data"], ${types}["request"]>>(request: ${types}["request"], ${optionsParameter(operation, `InfiniteQueryCallerOptions<${types}, Selected>`)}) {
+  return `${propertyKey(infinite.options)}<Selected = InfiniteData<${types}["data"], ${types}["request"]>>(request: ${types}["request"], ${factoryOptionsParameter(operation, `InfiniteQueryCallerOptions<${types}, Selected>`)}) {
 const { call, ...callerOptions } = options;
 
 return infiniteQueryOptions<${types}["data"], ${types}["error"], Selected, QueryKey, ${types}["request"]>({
@@ -253,7 +246,7 @@ await onSuccess?.(data, request, onMutateResult, context);
 },`
     : "";
 
-  return `${propertyKey(names.options)}<OnMutateResult = unknown>(${optionsParameter(operation, `MutationCallerOptions<${types}, OnMutateResult>`)}) {
+  return `${propertyKey(names.options)}<OnMutateResult = unknown>(${factoryOptionsParameter(operation, `MutationCallerOptions<${types}, OnMutateResult>`)}) {
 const ${destructured} = options;
 
 return mutationOptions<${types}["data"], ${types}["error"], ${types}["request"], OnMutateResult>({
