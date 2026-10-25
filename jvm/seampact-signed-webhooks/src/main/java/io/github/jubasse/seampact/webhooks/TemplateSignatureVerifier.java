@@ -33,7 +33,7 @@ public final class TemplateSignatureVerifier {
     /** The signed timestamp placeholder of a payload template. */
     public static final String TIMESTAMP_PLACEHOLDER = "{ts}";
 
-    private static final String RAW_BODY_PLACEHOLDER = "{rawBody}";
+    static final String RAW_BODY_PLACEHOLDER = "{rawBody}";
     private static final BigInteger MILLISECONDS_PER_SECOND = BigInteger.valueOf(1000);
     private static final Pattern UNIX_SECONDS = Pattern.compile("[0-9]+");
     private static final Pattern HEX = Pattern.compile("(?:[0-9a-fA-F]{2})+");
@@ -71,7 +71,8 @@ public final class TemplateSignatureVerifier {
         boolean signsTimestamp = scheme.payload().contains(TIMESTAMP_PLACEHOLDER);
         if (signsTimestamp && timestamp.isEmpty()) return SignatureVerification.failed(SignatureFailure.TIMESTAMP_MISSING);
 
-        List<byte[]> secrets = usableSecrets(secretLookup.secretsFor(keyId), keyId);
+        List<byte[]> lookedUp = Objects.requireNonNull(secretLookup.secretsFor(keyId), "The SecretLookup returned null; return an empty list for an unknown key id.");
+        List<byte[]> secrets = usableSecrets(lookedUp, keyId);
         if (secrets.isEmpty()) return SignatureVerification.failed(SignatureFailure.NO_SECRET);
 
         byte[] payload = signedPayload(scheme.payload(), rawBody, timestamp.orElse(""));
@@ -93,15 +94,16 @@ public final class TemplateSignatureVerifier {
         return List.copyOf(secrets);
     }
 
-    // The payload template with `{ts}` replaced by the timestamp text as received and `{rawBody}` by the raw bytes.
+    // The payload template with `{ts}` replaced by the timestamp text as received and `{rawBody}`, which the scheme
+    // holds exactly once, by the raw bytes.
     private static byte[] signedPayload(String template, byte[] rawBody, String timestamp) {
         int bodyAt = template.indexOf(RAW_BODY_PLACEHOLDER);
-        String beforeBody = bodyAt < 0 ? template : template.substring(0, bodyAt);
-        String afterBody = bodyAt < 0 ? "" : template.substring(bodyAt + RAW_BODY_PLACEHOLDER.length());
+        String beforeBody = template.substring(0, bodyAt);
+        String afterBody = template.substring(bodyAt + RAW_BODY_PLACEHOLDER.length());
 
         ByteArrayOutputStream payload = new ByteArrayOutputStream();
         payload.writeBytes(beforeBody.replace(TIMESTAMP_PLACEHOLDER, timestamp).getBytes(StandardCharsets.UTF_8));
-        if (bodyAt >= 0) payload.writeBytes(rawBody);
+        payload.writeBytes(rawBody);
         payload.writeBytes(afterBody.replace(TIMESTAMP_PLACEHOLDER, timestamp).getBytes(StandardCharsets.UTF_8));
 
         return payload.toByteArray();

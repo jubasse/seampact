@@ -21,8 +21,8 @@ class SignatureSchemeTest {
     @ParameterizedTest
     @ValueSource(strings = {"{ts}.", "{ts}.{rawBody}.{rawBody}", "{ts}.{rawBody}.{ts}"})
     void refusesAPayloadWithoutTheRawBodyOnceOrWithTheTimestampTwice(String payload) {
-        IllegalArgumentException refused = assertThrows(
-            IllegalArgumentException.class,
+        SignaturePayloadInvalidException refused = assertThrows(
+            SignaturePayloadInvalidException.class,
             () -> new SignatureScheme(TemplateSignatureVerifier.SUPPORTED_ALGORITHM, payload, SignatureEncoding.HEX, FIVE_MINUTES)
         );
 
@@ -31,8 +31,8 @@ class SignatureSchemeTest {
 
     @Test
     void refusesAToleranceWithoutATimestamp() {
-        IllegalArgumentException refused = assertThrows(
-            IllegalArgumentException.class,
+        SignatureToleranceInvalidException refused = assertThrows(
+            SignatureToleranceInvalidException.class,
             () -> new SignatureScheme(TemplateSignatureVerifier.SUPPORTED_ALGORITHM, "{rawBody}", SignatureEncoding.HEX, FIVE_MINUTES)
         );
 
@@ -41,8 +41,8 @@ class SignatureSchemeTest {
 
     @Test
     void refusesANegativeTolerance() {
-        IllegalArgumentException refused = assertThrows(
-            IllegalArgumentException.class,
+        SignatureToleranceInvalidException refused = assertThrows(
+            SignatureToleranceInvalidException.class,
             () -> new SignatureScheme(TemplateSignatureVerifier.SUPPORTED_ALGORITHM, "{ts}.{rawBody}", SignatureEncoding.HEX, Optional.of(Duration.ofSeconds(-1)))
         );
 
