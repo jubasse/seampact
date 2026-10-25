@@ -75,8 +75,8 @@ final class IdempotencyStep {
 
     /**
      * The digest a retry under the same key must match: the method, the contract path and the decoded input, its
-     * headers cut to the author-declared header params the table lists in `settings.fingerprintHeaders`. A header
-     * param the compiler derives (a trace id, a deadline, the key itself) changes on a retry.
+     * headers cut to the author-declared header params and union tag the table lists in `settings.fingerprintHeaders`.
+     * Any other header param the compiler derives (a trace id, a deadline, the key) changes on a retry.
      */
     static String fingerprint(JsonNode ir, JsonNode operation, JsonNode inputTree) {
         Set<String> counted = fingerprintHeaders(ir, operation);

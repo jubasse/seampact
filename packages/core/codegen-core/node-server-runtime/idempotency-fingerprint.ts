@@ -32,8 +32,8 @@ export function idempotencyDigest(parts: readonly unknown[]): Promise<string> {
 
 /**
  * The digest a retry under the same key must match: the method, the contract path and the validated input, its
- * headers cut to `fingerprintHeaders`, the author-declared header params in lower case (the route's idempotency
- * entry). A header param the compiler derives (a trace id, a deadline, the key itself) changes on a retry.
+ * headers cut to `fingerprintHeaders`, the author-declared header params and a union tag in lower case (the route's
+ * idempotency entry). Any other header param the compiler derives (a trace id, a deadline, the key) changes on a retry.
  */
 export function idempotencyFingerprint(
   route: FingerprintRoute,
