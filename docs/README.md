@@ -34,6 +34,7 @@
 
 - [React](frontend/react.md): TanStack Query, SWR or RTK Query hooks over the fetch client.
 - [Vue](frontend/vue.md): TanStack Query or plain `fetch` composables.
+- [Angular](frontend/angular.md): an api service over `HttpClient` with signal readers.
 - [Point the client at your backend](frontend/backend-url.md): the backend URL per environment, Docker included.
 - [Expo and React Native](frontend/mobile.md): the client and the React hooks on a phone.
 
