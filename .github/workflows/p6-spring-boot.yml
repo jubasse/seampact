@@ -43,10 +43,11 @@ jobs:
             echo "spring-boot=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # The JVM modules and their pins, the reference contract and its IRs, the consumer, the binary, the http
-          # suite and this workflow.
+          # The JVM modules and their pins, the reference contract and its IRs, the consumer, the binary and the
+          # core packages it embeds, the http suite, the lockfile and this workflow.
           watched='^(jvm/|fixtures/reference/|fixtures/golden/reference/|scripts/consumers/targets/spring-boot/'
-          watched+='|packages/tools/binary/|packages/tools/http-suite/|\.github/workflows/p6-spring-boot\.yml$)'
+          watched+='|packages/core/|packages/tools/binary/|packages/tools/http-suite/|pnpm-lock\.yaml$'
+          watched+='|\.github/workflows/p6-spring-boot\.yml$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.
           changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')

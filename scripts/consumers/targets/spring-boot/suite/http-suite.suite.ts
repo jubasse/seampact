@@ -26,6 +26,7 @@ const ALLOW_LISTED_CASE = "allow-listed-framework-route-boots";
 const ALLOW_LISTED_ELSEWHERE = "Runs on the jar built with the route allow-listed.";
 const SUITE_TIMEOUT_MS = 600_000;
 const BOOT_TIMEOUT_MS = 120_000;
+const TARGET_PROFILES: readonly SuiteProfile[] = ["default", "hand-written", "boot"];
 
 const jar = requiredEnvironment("SEAMPACT_SPRING_JAR");
 const allowListedJar = requiredEnvironment("SEAMPACT_SPRING_ALLOW_LISTED_JAR");
@@ -153,4 +154,12 @@ describe("http suite, boot profile", () => {
   }, SUITE_TIMEOUT_MS);
 
   testEachCase(cases, () => report, SPRING_SUITE_REFUSALS, test);
+});
+
+test("every refusal names a case of a profile the target runs", () => {
+  const caseIds = new Set(
+    TARGET_PROFILES.flatMap((profile) => loadSuiteCases(profile).map((suiteCase) => suiteCase.id)),
+  );
+
+  expect(Object.keys(SPRING_SUITE_REFUSALS).filter((id) => !caseIds.has(id))).toEqual([]);
 });
