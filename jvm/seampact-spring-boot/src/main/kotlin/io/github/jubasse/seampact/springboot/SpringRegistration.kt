@@ -15,6 +15,7 @@ import javax.lang.model.element.Modifier
 
 private val CONFIGURATION = ClassName.get("org.springframework.context.annotation", "Configuration")
 private val BEAN = ClassName.get("org.springframework.context.annotation", "Bean")
+private val IMPORT = ClassName.get("org.springframework.context.annotation", "Import")
 private val LISTABLE_BEAN_FACTORY = ClassName.get("org.springframework.beans.factory", "ListableBeanFactory")
 private val OBJECT_PROVIDER = ClassName.get("org.springframework.beans.factory", "ObjectProvider")
 private val BEAN_POST_PROCESSOR = ClassName.get("org.springframework.beans.factory.config", "BeanPostProcessor")
@@ -200,7 +201,7 @@ private fun authenticateMethod(layout: JavaLayout, identities: List<Pair<String,
  * filter, its MVC pieces, the reply handler placed first and the boot check. It uses no `@Profile` or
  * `@ConditionalOnProperty`, so AOT and native builds behave as the JVM build does.
  */
-internal fun configurationType(layout: JavaLayout): TypeSpec {
+internal fun configurationType(layout: JavaLayout, springSecurity: SpringSecurityMode): TypeSpec {
     val boundary = layout.runtime("SeampactBoundary")
     val filter = layout.runtime("BoundaryFilter")
     val prefix = javaIdentifier(layout.ir.api.name.segments + listOf("seampact"), io.github.jubasse.seampact.ir.naming.NamingRole.MEMBER)
@@ -210,6 +211,11 @@ internal fun configurationType(layout: JavaLayout): TypeSpec {
         .addJavadoc("Registers the boundary of the api '\$L'; import it, or let component scan find it.\n", layout.ir.api.id)
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(AnnotationSpec.builder(CONFIGURATION).addMember("proxyBeanMethods", "false").build())
+        .apply {
+            if (springSecurity != SpringSecurityMode.OFF) {
+                addAnnotation(AnnotationSpec.builder(IMPORT).addMember("value", "\$T.class", layout.securityConfiguration()).build())
+            }
+        }
         .addMethod(
             bean("${prefix}Boundary", boundary)
                 .addParameter(LISTABLE_BEAN_FACTORY, "beans")

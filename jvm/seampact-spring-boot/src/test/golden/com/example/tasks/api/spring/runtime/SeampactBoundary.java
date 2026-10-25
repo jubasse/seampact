@@ -203,6 +203,20 @@ public final class SeampactBoundary {
     }
 
     /**
+     * Writes the operation's code for a Spring Security refusal's [role]; a role the operation does not declare is the
+     * api's 500, since the refusal has no contract reply.
+     */
+    void writeRoleRefusal(BoundaryExchange exchange, String role, Throwable cause) {
+        Optional<String> code = exchange.route().codeOfRole(role);
+        if (code.isEmpty()) {
+            writeUnexpected(exchange, "Spring Security refused with a role the operation does not declare (" + role + ")", cause);
+            return;
+        }
+
+        writeRefusal(exchange, new ContractRefusal(code.get(), MissingNode.getInstance()));
+    }
+
+    /**
      * Replaces whatever was written with the api's 500 and calls `onUnexpectedError`. A reply already committed past
      * the wrapper cannot be replaced: it is logged and closed, and `onUnexpectedError` is called.
      */

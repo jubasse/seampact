@@ -82,6 +82,8 @@ dependencies {
     "goldenImplementation"(platform(libs.spring.boot.dependencies))
     "goldenImplementation"(libs.spring.boot.starter.webmvc)
     "goldenImplementation"(libs.spring.boot.starter.validation)
+    "goldenImplementation"(libs.spring.boot.starter.security)
+    "goldenImplementation"(libs.swagger.annotations.jakarta)
     "goldenImplementation"(project(":seampact-hooks"))
     "goldenImplementation"(libs.spring.test)
     "goldenImplementation"(platform(libs.junit.bom))

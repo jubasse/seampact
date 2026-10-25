@@ -34,7 +34,6 @@ private const val SUPPORTED_SPRING_BOOT_MAJOR = 4
 private const val BOOT_CHECK = "bootCheck"
 private const val NATIVE_DOCS = "nativeDocs"
 private const val ACCESS_HOOKS = "accessHooks"
-private const val FRAMEWORK_DOCS_OFF = "off"
 
 /** The entry members this release cannot serve, each refused by name with the release that brings it. */
 internal fun checkEntry(entry: SpringBootEntry, options: SpringBootOptions, refusals: MutableList<SpringBootRefusal>) {
@@ -51,18 +50,7 @@ internal fun checkEntry(entry: SpringBootEntry, options: SpringBootOptions, refu
 
     for ((artefact, value) in entry.artefacts) checkArtefact(artefact, value, refusals)
 
-    if (entry.frameworkDocs == FRAMEWORK_DOCS_OFF) {
-        refusals += waitingEntryMember("frameworkDocs.off", "/frameworkDocs", "'frameworkDocs: off'", Delivery.SPRING_4)
-    }
 
-    if (options.springSecurity != SpringSecurityMode.OFF) {
-        refusals += waitingEntryMember(
-            "options.springSecurity",
-            "/options/springSecurity",
-            "The Spring Security beans ('springSecurity' on, set by the option or by the build plugin from the classpath)",
-            Delivery.SPRING_4,
-        )
-    }
 }
 
 private fun checkSpringBootVersion(version: String, refusals: MutableList<SpringBootRefusal>) {
@@ -85,9 +73,8 @@ private fun checkArtefact(artefact: String, value: JsonElement, refusals: Mutabl
         BOOT_CHECK -> if ((value as? JsonObject)?.get("hooks") == JsonPrimitive("warn")) {
             refusals += waitingEntryMember("artefact.bootCheck.hooks.warn", "$member/hooks", "'bootCheck.hooks: warn' (start with hooks missing)", Delivery.CONSUMER)
         }
-        NATIVE_DOCS -> if (value == JsonPrimitive(true)) {
-            refusals += waitingEntryMember("artefact.nativeDocs", member, "The 'nativeDocs' artefact", Delivery.SPRING_4)
-        }
+        // Its value is validated by the app config schema; `NativeDocs.of` reads it.
+        NATIVE_DOCS -> Unit
         ACCESS_HOOKS -> if (value == JsonPrimitive(false)) {
             refusals += waitingEntryMember("artefact.accessHooks", member, "'accessHooks: false' (native access)", Delivery.CONSUMER)
         }

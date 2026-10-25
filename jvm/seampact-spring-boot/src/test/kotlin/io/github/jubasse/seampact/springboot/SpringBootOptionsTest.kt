@@ -109,11 +109,8 @@ class SpringBootOptionsTest {
                 "link.kind.not-consumed" to "/link/validators",
                 "link.kind.not-consumed" to "/link/a~1b",
                 "artefact.bootCheck.hooks.warn.unsupported" to "/artefacts/bootCheck/hooks",
-                "artefact.nativeDocs.unsupported" to "/artefacts/nativeDocs",
                 "artefact.accessHooks.unsupported" to "/artefacts/accessHooks",
                 "artefact.unknown" to "/artefacts/openapi",
-                "frameworkDocs.off.unsupported" to "/frameworkDocs",
-                "options.springSecurity.unsupported" to "/options/springSecurity",
             ),
             refusals.map { it.code to it.member },
         )

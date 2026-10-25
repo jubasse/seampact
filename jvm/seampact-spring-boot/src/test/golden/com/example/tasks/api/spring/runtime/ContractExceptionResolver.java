@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.ModelAndView;
-import tools.jackson.databind.node.MissingNode;
 
 /**
  * The first exception resolver (ADR 0022 "Exceptions on contract routes"): on a contract route it answers the
@@ -42,13 +41,7 @@ public final class ContractExceptionResolver implements HandlerExceptionResolver
         Optional<String> role = securityRole(exception);
         if (role.isEmpty()) return null;
 
-        Optional<String> roleCode = exchange.route().codeOfRole(role.get());
-        if (roleCode.isEmpty()) {
-            boundary.writeUnexpected(exchange, "Spring Security refused with a role the operation does not declare (" + role.get() + ")", exception);
-            return new ModelAndView();
-        }
-
-        boundary.writeRefusal(exchange, new ContractRefusal(roleCode.get(), MissingNode.getInstance()));
+        boundary.writeRoleRefusal(exchange, role.get(), exception);
 
         return new ModelAndView();
     }

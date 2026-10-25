@@ -43,6 +43,8 @@ public final class BootCheck implements SmartInitializingSingleton {
     private static final String ERROR_PATH_PROPERTY = "server.error.path";
     private static final String SPRINGDOC_PATH_PROPERTY = "springdoc.api-docs.path";
     private static final String SPRINGDOC_UI_PROPERTY = "springdoc.swagger-ui.path";
+    private static final String FRAMEWORK_DOCS_SETTING = "frameworkDocs";
+    private static final String FRAMEWORK_DOCS_OFF = "off";
     private static final String CONTEXT_PATH_PROPERTY = "server.servlet.context-path";
     private static final String SERVLET_PATH_PROPERTY = "spring.mvc.servlet.path";
     private static final String TOMCAT_FACTORY = "Tomcat";
@@ -160,7 +162,7 @@ public final class BootCheck implements SmartInitializingSingleton {
             for (String pattern : mapping.getKey().getPatternValues()) {
                 if (accepted.contains(pattern) || isAllowListed(methods, pattern)) continue;
                 problems.add("the framework route " + (methods.isEmpty() ? "" : String.join(",", methods) + " ") + pattern
-                        + " is outside the contract and not allow-listed; fix: add it to the entry's frameworkRoutes with a reason, or remove it.");
+                        + " is outside the contract and not allow-listed; " + frameworkRouteFix(pattern));
             }
         }
     }
@@ -176,11 +178,36 @@ public final class BootCheck implements SmartInitializingSingleton {
     }
 
     private List<String> acceptedFrameworkPaths() {
-        String docs = boundary.environment().getProperty(SPRINGDOC_PATH_PROPERTY, "/v3/api-docs");
         String errorPath = boundary.environment().getProperty(ERROR_PATH_PROPERTY, "/error");
+        if (frameworkDocsOff()) return List.of(errorPath);
 
-        return List.of(errorPath, docs, docs + ".yaml", docs + "/swagger-config",
+        List<String> docs = springdocPaths();
+        List<String> accepted = new ArrayList<>(docs.size() + 1);
+        accepted.add(errorPath);
+        accepted.addAll(docs);
+
+        return accepted;
+    }
+
+    private List<String> springdocPaths() {
+        String docs = boundary.environment().getProperty(SPRINGDOC_PATH_PROPERTY, "/v3/api-docs");
+
+        return List.of(docs, docs + ".yaml", docs + "/swagger-config",
                 boundary.environment().getProperty(SPRINGDOC_UI_PROPERTY, "/swagger-ui.html"));
+    }
+
+    // `frameworkDocs: off` (ADR 0022): springdoc's own document is turned off by the generated properties file.
+    private boolean frameworkDocsOff() {
+        return FRAMEWORK_DOCS_OFF.equals(boundary.table().settings().path(FRAMEWORK_DOCS_SETTING).asString());
+    }
+
+    private String frameworkRouteFix(String pattern) {
+        if (frameworkDocsOff() && springdocPaths().contains(pattern)) {
+            return "fix: the entry sets frameworkDocs: off; load the generated seampact-" + boundary.apiId()
+                    + ".properties with spring.config.import, which sets springdoc.api-docs.enabled=false.";
+        }
+
+        return "fix: add it to the entry's frameworkRoutes with a reason, or remove it.";
     }
 
     // A composed annotation of any api: meta-annotated with @RequestMapping and carrying an operation id.

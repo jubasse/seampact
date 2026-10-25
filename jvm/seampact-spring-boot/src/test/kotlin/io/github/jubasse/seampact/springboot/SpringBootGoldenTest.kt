@@ -28,6 +28,8 @@ import kotlinx.serialization.json.JsonPrimitive
 // The reference contract's apis generated with the core-path operations every spring-boot release serves (ADR 0022
 // "The consumer and the proof"), compared byte for byte with the committed tree, which `goldenTest` then compiles
 // against Spring Boot 4. `-PupdateGolden` rewrites the tree instead.
+private const val TASKS_IR = "tasks.ir.json"
+
 class SpringBootGoldenTest {
     private val repositoryRoot: Path = Path.of(System.getProperty("seampact.repositoryRoot"))
     private val goldenDirectory: Path = Path.of(System.getProperty("seampact.goldenDirectory"))
@@ -36,7 +38,7 @@ class SpringBootGoldenTest {
     private class GoldenApi(val irFile: String, val packageName: String, val operations: Set<String>)
 
     private val apis = listOf(
-        GoldenApi("tasks.ir.json", "com.example.tasks.api", setOf("health", "getChannel", "getDraft", "deleteDraft", "getPreferences", "updatePreferences", "getTask", "createTask", "updateTask", "assignTask", "archiveTask", "purgeTask", "getTasksBatch", "listChannels", "listTasks", "searchTasks", "payments")),
+        GoldenApi(TASKS_IR, "com.example.tasks.api", setOf("health", "getChannel", "getDraft", "deleteDraft", "getPreferences", "updatePreferences", "getTask", "createTask", "updateTask", "assignTask", "archiveTask", "purgeTask", "getTasksBatch", "listChannels", "listTasks", "searchTasks", "payments")),
         GoldenApi("tasksService.ir.json", "com.example.tasksservice.api", setOf("getTask")),
     )
 
@@ -56,8 +58,22 @@ class SpringBootGoldenTest {
     private fun entry(packageName: String): SpringBootEntry =
         SpringBootEntry(id = "server", options = JsonObject(mapOf("package" to JsonPrimitive(packageName))), springBootVersion = "4.1.1")
 
+    // The tasks api also carries every opt-in of spring-4: the Spring Security beans with the customizer, springdoc's
+    // annotations and `frameworkDocs: off`; the tasksService api keeps every default.
+    private fun goldenEntry(api: GoldenApi): SpringBootEntry {
+        val entry = entry(api.packageName)
+        if (api.irFile != TASKS_IR) return entry
+
+        val matchers = JsonObject(mapOf("matchers" to JsonPrimitive(true)))
+        return entry.copy(
+            options = JsonObject(entry.options + ("springSecurity" to matchers)),
+            artefacts = JsonObject(mapOf("nativeDocs" to JsonPrimitive(true))),
+            frameworkDocs = "off",
+        )
+    }
+
     private fun generatedTree(): Map<String, String> = apis
-        .flatMap { api -> SpringBootTarget.generate(coreView(api), entry(api.packageName)) }
+        .flatMap { api -> SpringBootTarget.generate(coreView(api), goldenEntry(api)) }
         .associate { it.path to it.contents }
 
     private fun committedTree(): Map<String, String> {
