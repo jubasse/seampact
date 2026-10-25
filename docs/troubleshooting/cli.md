@@ -11,7 +11,8 @@
 | `binary.artefact-unresolved` | The Gradle or Maven plugin did not find the compiler binary it pins. Add the repository that serves `io.github.jubasse:seampact-compiler`, or set `binary { path; sha256 }` to a binary on disk. |
 | `binary.compile-refused` | The Gradle or Maven plugin compiled a `path` source and the compiler refused it. Fix the contract as the diagnostics under the message say. |
 | `binary.compile-failed` | The compiler binary exited outside its contract (another exit code, a signal, or no IR). Run the build again; report it with the binary version if it repeats. |
-| `binary.cache-unsafe` | Keep the binary cache private: `chmod 700` the directory the message names, or remove it. |
+| `binary.cache-unsafe` | Keep the binary cache private: `chmod 700` the directory the message names (`chmod g-w` when the message names its group), or remove it. On Windows, keep the cache under `%LOCALAPPDATA%`. |
+| `binary.cache-unavailable` | The binary cache directory is relative. Set the setting the message names to an absolute path. |
 | `binary.ir-unreadable` | The compiler binary wrote an IR the plugin cannot read. Pin a binary of the plugin's version, and report it if they match. |
 | `ir.version.unsupported`, `ir.revision.mismatch` | The Gradle or Maven plugin reads another IR version than the compiler or the bundle wrote. Use a plugin and a compiler binary of the same seampact release, or a bundle built by it. |
 | `ir.kind.unsupported`, `ir.feature.unsupported`, `ir.must-act.unknown`, `ir.value.unknown` | The contract uses something this plugin release does not generate yet. Update the plugin, or compile with the seampact version that matches it. |
