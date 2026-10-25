@@ -335,7 +335,7 @@ if (reply.ok) console.log(reply.body.title);
 
 ### Query
 
-Hooks, composables and services over that client, for React, Vue and Angular. SWR, RTK Query, Pinia Colada and a library-free mode work the same way: see [React](docs/frontend/react.md), [Vue](docs/frontend/vue.md) and [Angular](docs/frontend/angular.md).
+Hooks, composables and services over that client, for React, Vue and Angular. SWR, RTK Query, Pinia Colada, NgRx, NgRx Signals and a library-free mode work the same way: see [React](docs/frontend/react.md), [Vue](docs/frontend/vue.md) and [Angular](docs/frontend/angular.md).
 
 <details open><summary>TanStack Query (React)</summary>
 
@@ -394,6 +394,39 @@ const note = Notes.useGetNote(() => ({ path: { noteId: props.noteId } }));
 export class NoteTitle {
   readonly noteId = input.required<string>();
   readonly note = inject(NotesApi).getNote(() => ({ path: { noteId: this.noteId() } }));
+}
+```
+
+</details>
+
+<details><summary>NgRx (Angular)</summary>
+
+```ts
+store.dispatch(NotesActions.getNote({ request: { path: { noteId } } }));
+
+export const noteReducer = createReducer(
+  initialNote,
+  on(NotesActions.getNoteSuccess, (state, { data }) => ({ ...state, title: data.body.title })),
+  on(NotesActions.getNoteFailure, (state, { error }) => ({ ...state, error: error.message })),
+);
+```
+
+Actions and effects are generated; the reducer and state stay yours.
+
+</details>
+
+<details><summary>NgRx Signals (Angular)</summary>
+
+```ts
+export const NoteStore = signalStore(withGetNote());
+
+export class NoteTitle {
+  readonly store = inject(NoteStore);
+  readonly title = computed(() => this.store.getNote().data?.body.title);
+
+  constructor() {
+    void this.store.sendGetNote({ path: { noteId: "n1" } });
+  }
 }
 ```
 
