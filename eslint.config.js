@@ -11,6 +11,7 @@ export default [
       "**/node_modules/**",
       "**/dist/**",
       "**/coverage/**",
+      "**/.vitest/**",
       "**/build/**",
       "php/**/vendor/**",
       "packages/core/spec/schemas/authoring/**",
