@@ -31,6 +31,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-fastify` | `packages/targets/codegen-fastify` | target | Generates a Fastify plugin per api that registers each contract route with its access, validation and reply checks around your handler map, on Fastify 5, validating with the zod or yup link you give or with Ajv validators it generates. |
 | `@seampact/codegen-fetch` | `packages/targets/codegen-fetch` | target | Generates a typed fetch client with one method per operation, returning its success and error responses as typed results. |
 | `@seampact/codegen-hono` | `packages/targets/codegen-hono` | target | Generates a registerRoutes function per api that adds each contract route to a Hono 4 app with its access, validation and reply checks around your handler map, validating with zod. |
+| `@seampact/codegen-msw` | `packages/targets/codegen-msw` | target | Generates Mock Service Worker 2 handlers per operation that answer the contract's examples, or the typed success or error a test gives, in the api's wire format. |
 | `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, an input decorator whose pipe validates, a handler wrapper or opt-in reply interceptor that writes the checked reply, the error filter and a boot check, validating with zod. |
 | `@seampact/codegen-react` | `packages/targets/codegen-react` | target | Generates TanStack Query or SWR options and React hooks, an RTK Query api, or plain fetch hooks with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract. |
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
@@ -165,6 +166,10 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-hono`
 
 - `packages/targets/codegen-hono/src`: The Hono server target: a `registerRoutes` function per api that places the shared request checks of codegen-core, in their Web-standard profile, around the app's handler map on Hono 4, validating with zod.
+
+### `@seampact/codegen-msw`
+
+- `packages/targets/codegen-msw/src`: The MSW target: Mock Service Worker 2 handlers per operation, answering the contract's example or the typed success or error a test gives, written in the api's wire format so the generated fetch client reads them.
 
 ### `@seampact/codegen-nestjs`
 

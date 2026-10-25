@@ -85,14 +85,12 @@ function createMocksSource(
 ): string {
   const members = operations.map(
     (operation) =>
-      `${propertyKey(operation.member)}: operationMocks<${typeOf(operation.types.output)}, ${typeOf(operation.types.errors)}>(config, plans[${JSON.stringify(operation.member)}], errorWritings),`,
+      `${propertyKey(operation.member)}: operationMocks<${typeOf(operation.types.output)}, ${typeOf(operation.types.errors)}>(config, plans.${operation.member}, errorWritings),`,
   );
   const byRoute = [...operations].sort((left, right) =>
     compareRouteSpecificity(left.path, right.path),
   );
-  const handlers = byRoute.map(
-    (operation) => `mocks[${JSON.stringify(operation.member)}].handler,`,
-  );
+  const handlers = byRoute.map((operation) => `mocks.${operation.member}.handler,`);
 
   return `/** The mock handlers of every operation, answering under \`config.baseUrl\` as the api would. */\nexport function createMocks(config: MockConfig): Mocks {\nconst mocks = {\n${members.join("\n")}\n};\n\nreturn { ...mocks, ${HANDLERS_MEMBER}: [\n${handlers.join("\n")}\n] };\n}`;
 }

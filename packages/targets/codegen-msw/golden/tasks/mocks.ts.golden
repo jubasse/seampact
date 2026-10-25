@@ -637,93 +637,93 @@ export function createMocks(config: MockConfig): Mocks {
     archiveTask: operationMocks<
       operationsTypes.archiveTaskOutput,
       operationsTypes.archiveTaskErrors
-    >(config, plans["archiveTask"], errorWritings),
+    >(config, plans.archiveTask, errorWritings),
     assignTask: operationMocks<
       operationsTypes.assignTaskOutput,
       operationsTypes.assignTaskErrors
-    >(config, plans["assignTask"], errorWritings),
+    >(config, plans.assignTask, errorWritings),
     createTask: operationMocks<
       operationsTypes.createTaskOutput,
       operationsTypes.createTaskErrors
-    >(config, plans["createTask"], errorWritings),
+    >(config, plans.createTask, errorWritings),
     deleteDraft: operationMocks<
       operationsTypes.deleteDraftOutput,
       operationsTypes.deleteDraftErrors
-    >(config, plans["deleteDraft"], errorWritings),
+    >(config, plans.deleteDraft, errorWritings),
     getChannel: operationMocks<
       operationsTypes.getChannelOutput,
       operationsTypes.getChannelErrors
-    >(config, plans["getChannel"], errorWritings),
+    >(config, plans.getChannel, errorWritings),
     getDraft: operationMocks<
       operationsTypes.getDraftOutput,
       operationsTypes.getDraftErrors
-    >(config, plans["getDraft"], errorWritings),
+    >(config, plans.getDraft, errorWritings),
     getPreferences: operationMocks<
       operationsTypes.getPreferencesOutput,
       operationsTypes.getPreferencesErrors
-    >(config, plans["getPreferences"], errorWritings),
+    >(config, plans.getPreferences, errorWritings),
     getTask: operationMocks<
       operationsTypes.getTaskOutput,
       operationsTypes.getTaskErrors
-    >(config, plans["getTask"], errorWritings),
+    >(config, plans.getTask, errorWritings),
     getTasksBatch: operationMocks<
       operationsTypes.getTasksBatchOutput,
       operationsTypes.getTasksBatchErrors
-    >(config, plans["getTasksBatch"], errorWritings),
+    >(config, plans.getTasksBatch, errorWritings),
     health: operationMocks<
       operationsTypes.healthOutput,
       operationsTypes.healthErrors
-    >(config, plans["health"], errorWritings),
+    >(config, plans.health, errorWritings),
     listChannels: operationMocks<
       operationsTypes.listChannelsOutput,
       operationsTypes.listChannelsErrors
-    >(config, plans["listChannels"], errorWritings),
+    >(config, plans.listChannels, errorWritings),
     listTasks: operationMocks<
       operationsTypes.listTasksOutput,
       operationsTypes.listTasksErrors
-    >(config, plans["listTasks"], errorWritings),
+    >(config, plans.listTasks, errorWritings),
     payments: operationMocks<
       operationsTypes.paymentsOutput,
       operationsTypes.paymentsErrors
-    >(config, plans["payments"], errorWritings),
+    >(config, plans.payments, errorWritings),
     purgeTask: operationMocks<
       operationsTypes.purgeTaskOutput,
       operationsTypes.purgeTaskErrors
-    >(config, plans["purgeTask"], errorWritings),
+    >(config, plans.purgeTask, errorWritings),
     searchTasks: operationMocks<
       operationsTypes.searchTasksOutput,
       operationsTypes.searchTasksErrors
-    >(config, plans["searchTasks"], errorWritings),
+    >(config, plans.searchTasks, errorWritings),
     updatePreferences: operationMocks<
       operationsTypes.updatePreferencesOutput,
       operationsTypes.updatePreferencesErrors
-    >(config, plans["updatePreferences"], errorWritings),
+    >(config, plans.updatePreferences, errorWritings),
     updateTask: operationMocks<
       operationsTypes.updateTaskOutput,
       operationsTypes.updateTaskErrors
-    >(config, plans["updateTask"], errorWritings),
+    >(config, plans.updateTask, errorWritings),
   };
 
   return {
     ...mocks,
     handlers: [
-      mocks["health"].handler,
-      mocks["listChannels"].handler,
-      mocks["getPreferences"].handler,
-      mocks["payments"].handler,
-      mocks["updatePreferences"].handler,
-      mocks["deleteDraft"].handler,
-      mocks["getDraft"].handler,
-      mocks["getChannel"].handler,
-      mocks["createTask"].handler,
-      mocks["listTasks"].handler,
-      mocks["getTasksBatch"].handler,
-      mocks["searchTasks"].handler,
-      mocks["getTask"].handler,
-      mocks["updateTask"].handler,
-      mocks["archiveTask"].handler,
-      mocks["assignTask"].handler,
-      mocks["purgeTask"].handler,
+      mocks.health.handler,
+      mocks.listChannels.handler,
+      mocks.getPreferences.handler,
+      mocks.payments.handler,
+      mocks.updatePreferences.handler,
+      mocks.deleteDraft.handler,
+      mocks.getDraft.handler,
+      mocks.getChannel.handler,
+      mocks.createTask.handler,
+      mocks.listTasks.handler,
+      mocks.getTasksBatch.handler,
+      mocks.searchTasks.handler,
+      mocks.getTask.handler,
+      mocks.updateTask.handler,
+      mocks.archiveTask.handler,
+      mocks.assignTask.handler,
+      mocks.purgeTask.handler,
     ],
   };
 }

@@ -42,7 +42,7 @@ test("the reference contract's handlers match their golden files", async () => {
   if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome));
 
   for (const file of outcome.files.filter((generated) => generated.path !== "runtime.ts")) {
-    await expect(file.contents).toMatchFileSnapshot(`../golden/tasks/${file.path}`);
+    await expect(file.contents).toMatchFileSnapshot(`../golden/tasks/${file.path}.golden`);
   }
 
   expect(outcome.files.map((file) => file.path)).toEqual(["index.ts", "mocks.ts", "runtime.ts"]);
