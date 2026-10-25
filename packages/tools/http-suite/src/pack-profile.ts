@@ -3,8 +3,10 @@
 import type { ContractIR, PagingRequestRole, PagingStyle, WireFormat } from "@seampact/spec/ir";
 import { type FormatReader, FormatReaderError, formatReaderOf } from "./format-reader.js";
 import { CASES_DIRECTORY, loadSuiteCases } from "./load-cases.js";
+import { isJsonObject } from "./response-check.js";
 import type {
   HeaderExpectation,
+  JsonValue,
   StepExpectation,
   StepRequest,
   SuiteCase,
@@ -22,6 +24,7 @@ const DEFAULT_PAGING_CONVENTION = "paging.default";
 
 // The reference's paging style, as the shipped default cases write it.
 const REFERENCE_LIMIT = "limit";
+const REFERENCE_LIMIT_POINTER = `/${REFERENCE_LIMIT}`;
 const REFERENCE_SORT = "sort";
 const REFERENCE_CURSOR = "cursor";
 const REFERENCE_SORT_STYLE = "signed";
@@ -61,10 +64,13 @@ export function packProfileOf(
     );
   }
 
-  const reader = formatReaderOf(
-    format ?? bareFormat(ir),
-    paging,
-    contracts.flatMap((contract) => contract.operations),
+  const reader = readingContractPathsOnly(
+    formatReaderOf(
+      format ?? bareFormat(ir),
+      paging,
+      contracts.flatMap((contract) => contract.operations),
+    ),
+    contracts,
   );
   const refusals: Record<string, string> = {};
   const defaultCases = loadSuiteCases("default", directory).map((suiteCase) => {
@@ -117,6 +123,36 @@ function bareFormat(ir: ContractIR): WireFormat {
   return bare;
 }
 
+/**
+ * A response to a path outside every surface prefix is the app's own (its 404 page), never a contract response, so
+ * the pack's reader leaves it as sent.
+ */
+function readingContractPathsOnly(
+  reader: FormatReader,
+  contracts: readonly ContractIR[],
+): FormatReader {
+  const prefixes = contracts.flatMap((contract) =>
+    Object.values(contract.api.surfaces).map((surface) => surface.prefix),
+  );
+
+  return {
+    ...reader,
+    read: (status, body, request) =>
+      isUnderAPrefix(request.path, prefixes)
+        ? reader.read(status, body, request)
+        : { json: body, failures: [] },
+  };
+}
+
+function isUnderAPrefix(requestPath: string, prefixes: readonly string[]): boolean {
+  const queryStart = requestPath.indexOf("?");
+  const path = queryStart === -1 ? requestPath : requestPath.slice(0, queryStart);
+
+  return prefixes.some(
+    (prefix) => prefix === "" || path === prefix || path.startsWith(`${prefix}/`),
+  );
+}
+
 function roleOf(paging: PagingStyle | undefined, role: string): PagingRequestRole | undefined {
   return paging?.request.find((candidate) => candidate.role === role);
 }
@@ -163,9 +199,25 @@ function adaptStep(step: SuiteStep, limitParameter: string, reader: FormatReader
     ...step,
     request: renameLimit(step.request, limitParameter),
     expect: isError
-      ? replaceMedia(step.expect, PROBLEM_MEDIA, reader.errorMedia)
+      ? renameLimitPointer(replaceMedia(step.expect, PROBLEM_MEDIA, reader.errorMedia), limitParameter)
       : replaceMedia(step.expect, JSON_MEDIA, reader.media),
   };
+}
+
+// An issue the case expects on the reference's limit parameter sits on the pack's name for it.
+function renameLimitPointer(expectation: StepExpectation, limitParameter: string): StepExpectation {
+  const body = expectation.body;
+
+  if (limitParameter === REFERENCE_LIMIT || body === undefined || !isJsonObject(body)) return expectation;
+  if (!Array.isArray(body.issues)) return expectation;
+
+  const renamed = body.issues.map((issue: JsonValue) =>
+    isJsonObject(issue) && issue.pointer === REFERENCE_LIMIT_POINTER
+      ? { ...issue, pointer: `/${limitParameter}` }
+      : issue,
+  );
+
+  return { ...expectation, body: { ...body, issues: renamed } };
 }
 
 function renameLimit(request: StepRequest, limitParameter: string): StepRequest {

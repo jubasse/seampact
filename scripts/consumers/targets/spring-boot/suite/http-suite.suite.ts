@@ -22,7 +22,7 @@ import {
   writeSuiteReport,
 } from "../../../../../packages/tools/http-suite/src/index.ts";
 import { type RunningApp, startSpringApp } from "./spring-app.ts";
-import { PACK_SPRING_SUITE_REFUSALS, SPRING_SUITE_REFUSALS } from "./suite-refusals.ts";
+import { SPRING_SUITE_REFUSALS } from "./suite-refusals.ts";
 
 const TARGET = "spring-boot";
 const ALLOW_LISTED_CASE = "allow-listed-framework-route-boots";
@@ -106,7 +106,7 @@ describe("http suite, pack:spring profile", () => {
   const pack = packProfileOf([packSpringIr("tasks"), packSpringIr("tasksService")], SPRING_PACK);
   const refusals = {
     ...pack.refusals,
-    ...refusalsOf(pack.cases, { ...SPRING_SUITE_REFUSALS, ...PACK_SPRING_SUITE_REFUSALS }),
+    ...refusalsOf(pack.cases, SPRING_SUITE_REFUSALS),
   };
   let app: RunningApp | undefined;
   let report: SuiteReport | undefined;

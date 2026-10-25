@@ -369,6 +369,25 @@ describe("the pack profile", () => {
     expect(profile.cases.map((suiteCase) => suiteCase.id)).toContain("pack-hal-page-next-link");
   });
 
+  test("expects the issue on the pack's name for the limit parameter", () => {
+    const profile = packProfileOf(contractsOf("hal"), HAL);
+    const limitCase = profile.cases.find((suiteCase) => suiteCase.id === "limit-above-max-refused");
+
+    expect(limitCase?.steps[0]?.expect.body).toEqual({
+      code: ERROR_CODE,
+      issues: [{ pointer: "/size" }],
+    });
+  });
+
+  test("leaves the app's own response to a path outside every surface prefix unread", () => {
+    const profile = packProfileOf(contractsOf("spring"), "@seampact/pack-spring");
+    const appNotFound = { status: 404, error: "Not Found", path: "/V1/channels/c1/tasks/t1" };
+
+    expect(
+      profile.reader.read(404, appNotFound, { method: "GET", path: "/V1/channels/c1/tasks/t1" }),
+    ).toEqual({ json: appNotFound, failures: [] });
+  });
+
   test("reads a default case through the pack's format", async () => {
     const profile = packProfileOf(contractsOf("hal"), HAL);
     const server: Server = createServer((request, response) => {
