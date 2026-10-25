@@ -70,6 +70,10 @@ You can write the config in `<configuration>` instead of `seampact.config.yaml`,
 
 Keep one of the two: a project with both fails.
 
+### When the build fails
+
+Each error starts with a code, such as `framework.version.unresolved` or `binary.compile-failed`. Find it in [Troubleshooting](../troubleshooting/README.md).
+
 ## Write a controller
 
 Each resource has a generated `<Resource>Endpoints` interface, and each operation a mapping annotation in `<package>.spring`. Return one arm of the operation's result: `Status200` and the like, or an error of `<Operation>Errors`.
@@ -147,7 +151,7 @@ SecurityFilterChain chain(HttpSecurity http, NotesSecurityMatchers routes, Secur
 
 Each matcher follows the route the api serves, so a public `/notes/{id}` never covers a protected `/notes/mine`. Signed routes are permitted: the api checks their signature.
 
-With `springSecurity: { matchers: true }`, a generated `Customizer<HttpSecurity>` permits the public, optional-auth and signed routes for you, in every chain. It runs before your own rules and your own customizers. A chain with no authorization rules of its own then denies every request it does not permit, so give each chain its rules.
+With `springSecurity: { matchers: true }`, a generated `Customizer<HttpSecurity>` permits the public, optional-auth and signed routes for you, in every chain. It runs before your own rules and your own customizers. A chain with no authorization rules of its own then denies every request it does not permit, so give each chain its rules. The customizer needs `spring-security-config`, which `spring-boot-starter-security` brings; without it, the build fails with `options.springSecurity.matchers.unavailable`.
 
 Your authenticate hook reads the user from `SecurityContextHolder`. On an optional-auth route that calls anonymously when the token is refused, keep the route out of your bearer filter:
 
