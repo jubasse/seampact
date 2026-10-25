@@ -1,6 +1,9 @@
 import {
   apiIndexSource,
+  FRONT_MODULE_SUFFIX,
   FRONT_RUNTIME_MODULE,
+  FRONT_RUNTIME_SPECIFIER,
+  FRONT_RUNTIME_TYPE_NAMES,
   frontRuntimeFile,
   type GeneratedFile,
   type GenerateInput,
@@ -35,11 +38,8 @@ const HOOKS_MODULE = "hooks";
 const RTK_API_MODULE = "api";
 const INDEX_MODULE = "index";
 const MODULE_EXTENSION = ".ts";
-const MODULE_SUFFIX = ".js";
-const RUNTIME_SPECIFIER = `./${FRONT_RUNTIME_MODULE}${MODULE_SUFFIX}`;
-const RUNTIME_TYPE_NAMES = ["PlainHeaders", "WithPlainHeaders"];
 // RTK Query's error is a plain value whose types the app reads.
-const RTK_RUNTIME_TYPE_NAMES = [...RUNTIME_TYPE_NAMES, "ContractFailure", "PlainRejection"];
+const RTK_RUNTIME_TYPE_NAMES = [...FRONT_RUNTIME_TYPE_NAMES, "ContractFailure", "PlainRejection"];
 const ITEMS_OF = "itemsOf";
 
 // Per api: the front runtime, the library's modules and an index re-exporting them; or every refusal at once.
@@ -99,18 +99,18 @@ function queriesAndHooksFiles(
   const hooksFile = `${HOOKS_MODULE}${MODULE_EXTENSION}`;
   const queriesImports = {
     client: library.clientSpecifier(queriesFile),
-    runtime: RUNTIME_SPECIFIER,
+    runtime: FRONT_RUNTIME_SPECIFIER,
   };
   const hooksImports = {
     client: library.clientSpecifier(hooksFile),
-    queries: `./${QUERIES_MODULE}${MODULE_SUFFIX}`,
-    runtime: RUNTIME_SPECIFIER,
+    queries: `./${QUERIES_MODULE}${FRONT_MODULE_SUFFIX}`,
+    runtime: FRONT_RUNTIME_SPECIFIER,
   };
   const { queries, hooks } = librarySources(plan, options, root, queriesImports, hooksImports);
   const indexed: IndexedModule[] = [
     ...(library.withHooks ? [{ module: HOOKS_MODULE }] : []),
     { module: QUERIES_MODULE },
-    runtimeModule(RUNTIME_TYPE_NAMES, library.withItemsOf),
+    runtimeModule(FRONT_RUNTIME_TYPE_NAMES, library.withItemsOf),
   ];
 
   return [
@@ -161,7 +161,7 @@ function rtkFiles(
     library.withHooks ? "hooks" : "noHooks",
     {
       client: library.clientSpecifier(apiFile),
-      runtime: RUNTIME_SPECIFIER,
+      runtime: FRONT_RUNTIME_SPECIFIER,
     },
   );
   const indexed: IndexedModule[] = [

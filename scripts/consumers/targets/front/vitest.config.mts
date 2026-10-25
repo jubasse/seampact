@@ -24,7 +24,17 @@ const STRIPPED_PREFIX = "/api";
 
 // The frameworks a browser test reaches only through `.mts` modules, which Vite's dependency scan does not read:
 // pre-bundled up front when the consumer installs them, or their late discovery reloads a running test.
-const PREBUNDLED_WHEN_INSTALLED = ["vue", "vue/server-renderer", "@tanstack/vue-query"];
+const PREBUNDLED_WHEN_INSTALLED = [
+  "vue",
+  "vue/server-renderer",
+  "@tanstack/vue-query",
+  "@angular/common",
+  "@angular/common/http",
+  "@angular/compiler",
+  "@angular/core",
+  "@angular/platform-browser",
+  "rxjs",
+];
 
 interface RunningServer {
   readonly baseUrl: string;
@@ -71,10 +81,17 @@ function browserProject(running: RunningServer | undefined): TestProjectInlineCo
   };
 }
 
-function installedOf(packageNames: readonly string[]): string[] {
-  return packageNames.filter((name) =>
-    existsSync(new URL(`./node_modules/${name}`, import.meta.url)),
+// An entry is installed when its package is: `@angular/common/http` has no directory of its own.
+function installedOf(entryNames: readonly string[]): string[] {
+  return entryNames.filter((name) =>
+    existsSync(new URL(`./node_modules/${packageNameOf(name)}`, import.meta.url)),
   );
+}
+
+function packageNameOf(entryName: string): string {
+  const segments = entryName.split("/");
+
+  return segments.slice(0, entryName.startsWith("@") ? 2 : 1).join("/");
 }
 
 interface ProxyRule {

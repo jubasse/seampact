@@ -127,7 +127,12 @@ export function settingsTypeSource(api: string): string {
 
 /** The operation's base name in constant case, as in `LIST_TASKS`. */
 export function constantCaseOf(operation: QueryOperation): string {
-  return operation.names.base.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase();
+  return constantCase(operation.names.base);
+}
+
+/** A camel or Pascal case name in constant case, as in `TASKS_SERVICE` for `TasksService`. */
+export function constantCase(name: string): string {
+  return name.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase();
 }
 
 export function nextPageConstantName(operation: QueryOperation): string {

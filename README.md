@@ -44,7 +44,7 @@ From the CLI:
 | `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
 | `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
 
-Next: Angular, MSW mocks, Laravel, Symfony, API Platform. For Spring Boot: Spring Security, multipart, download and redirect bodies, springdoc docs. For Vue: Pinia Colada.
+Next: MSW mocks, Laravel, Symfony, API Platform. For Spring Boot: Spring Security, multipart, download and redirect bodies, springdoc docs. For Vue: Pinia Colada. For Angular: NgRx.
 
 ## Example
 
@@ -349,7 +349,7 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 | Hono | 4 | zod, yup |
 | Spring Boot | 4 | generated checks, Jakarta constraints on the records |
 
-Clients: typed `fetch` client, and over it, for React 19, TanStack Query 5 options and hooks, SWR 2 keys, fetchers and hooks, or an RTK Query 2 api; for Vue 3, composables on TanStack Query 5 (`@tanstack/vue-query`) or on `fetch` alone. Angular: planned.
+Clients: typed `fetch` client, and over it, for React 19, TanStack Query 5 options and hooks, SWR 2 keys, fetchers and hooks, or an RTK Query 2 api; for Vue 3, composables on TanStack Query 5 (`@tanstack/vue-query`) or on `fetch` alone; for Angular 22, an injectable api service over `HttpClient` with `resource()` readers and no query library.
 
 Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `seampact-maven-plugin`. PHP (Laravel, Symfony): planned.
 
@@ -373,7 +373,8 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] CLI: `init`, `generate`, `check`, `lint`, `diff`, `bundle`, `explain`, editor schemas (`compile --editor-schemas`)
 - [x] Frontend: React hooks (TanStack Query, SWR, RTK Query, or no query library)
 - [x] Frontend: Vue composables (TanStack Query, or no query library)
-- [ ] Frontend: Pinia Colada, Angular, MSW mocks
+- [x] Frontend: Angular service over `HttpClient` (no query library)
+- [ ] Frontend: Pinia Colada, NgRx, MSW mocks
 - [x] Java: Spring Boot 4, with a Gradle and a Maven plugin
 - [ ] Java: Spring Security, multipart, download and redirect bodies, springdoc docs. PHP: Laravel, Symfony, API Platform
 - [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm

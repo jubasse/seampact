@@ -1,6 +1,9 @@
 import {
   apiIndexSource,
+  FRONT_MODULE_SUFFIX,
   FRONT_RUNTIME_MODULE,
+  FRONT_RUNTIME_SPECIFIER,
+  FRONT_RUNTIME_TYPE_NAMES,
   fetchQueriesModuleSource,
   frontRuntimeFile,
   type GeneratedFile,
@@ -31,9 +34,6 @@ const QUERIES_MODULE = "queries";
 const COMPOSABLES_MODULE = "composables";
 const INDEX_MODULE = "index";
 const MODULE_EXTENSION = ".ts";
-const MODULE_SUFFIX = ".js";
-const RUNTIME_SPECIFIER = `./${FRONT_RUNTIME_MODULE}${MODULE_SUFFIX}`;
-const RUNTIME_TYPE_NAMES = ["PlainHeaders", "WithPlainHeaders"];
 const ITEMS_OF = "itemsOf";
 
 // Per api: the front runtime, `queries.ts`, `composables.ts` unless the artefact is off, and an index re-exporting
@@ -83,12 +83,12 @@ function queriesAndComposablesFiles(
   const composablesFile = `${COMPOSABLES_MODULE}${MODULE_EXTENSION}`;
   const queriesImports = {
     client: library.clientSpecifier(queriesFile),
-    runtime: RUNTIME_SPECIFIER,
+    runtime: FRONT_RUNTIME_SPECIFIER,
   };
   const composablesImports = {
     client: library.clientSpecifier(composablesFile),
-    queries: `./${QUERIES_MODULE}${MODULE_SUFFIX}`,
-    runtime: RUNTIME_SPECIFIER,
+    queries: `./${QUERIES_MODULE}${FRONT_MODULE_SUFFIX}`,
+    runtime: FRONT_RUNTIME_SPECIFIER,
   };
   const fetchMode = options.query === "fetch";
   const queries = fetchMode
@@ -103,7 +103,7 @@ function queriesAndComposablesFiles(
     { module: QUERIES_MODULE },
     {
       module: FRONT_RUNTIME_MODULE,
-      typeNames: [...RUNTIME_TYPE_NAMES],
+      typeNames: [...FRONT_RUNTIME_TYPE_NAMES],
       valueNames: library.withItemsOf ? [ITEMS_OF] : [],
     },
   ];

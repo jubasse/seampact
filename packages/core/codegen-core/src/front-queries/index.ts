@@ -7,13 +7,21 @@ export { refuseUnsupportedClientErrorStyle } from "./client-error-style.js";
 export {
   AS_ERROR_SOURCE,
   callerOptionsParameter,
+  cellsMutationSource,
   isRetryableSource,
   MUTATE_OUTCOME_TYPE,
   mutationCallerOptionsSource,
+  type ReactiveCells,
   retryCheckSource,
 } from "./fetch-mode-sources.js";
 export { type FetchQueriesOptions, fetchQueriesModuleSource } from "./fetch-queries-module.js";
-export { FRONT_RUNTIME_MODULE, frontRuntimeFile } from "./front-runtime-file.js";
+export {
+  FRONT_MODULE_SUFFIX,
+  FRONT_RUNTIME_MODULE,
+  FRONT_RUNTIME_SPECIFIER,
+  FRONT_RUNTIME_TYPE_NAMES,
+  frontRuntimeFile,
+} from "./front-runtime-file.js";
 export {
   NEXT_PAGE_EVIDENCE,
   type NextPageEvidence,
@@ -22,6 +30,7 @@ export {
 } from "./next-page-rule.js";
 export {
   CONTRACT_ERROR_GUARD,
+  constantCase,
   constantCaseOf,
   type ErrorMember,
   type FrontErrors,

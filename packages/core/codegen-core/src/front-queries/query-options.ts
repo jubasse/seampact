@@ -104,6 +104,7 @@ export function parseFrontQueryOptions<Library extends string, Own extends objec
 }
 
 // Without a query library there is no cache: freshness, invalidation, infinite queries and keys are refused when set.
+// A target whose only value is plain fetch has no library to offer in the fix.
 function refuseCacheOptions<Library extends string>(
   raw: Readonly<Record<string, unknown>>,
   keysRoot: string | undefined,
@@ -117,7 +118,10 @@ function refuseCacheOptions<Library extends string>(
     refusals.push({
       code: `options.${key}.unsupported`,
       message: `The option '${key}' needs a query library's cache, which 'query: ${noCache}' has not.`,
-      fix: `Drop '${key}', or choose a query library: ${libraries}.`,
+      fix:
+        libraries === ""
+          ? `Drop '${key}'.`
+          : `Drop '${key}', or choose a query library: ${libraries}.`,
       member: below(OPTIONS_LOCATION, key).member,
     });
   }
