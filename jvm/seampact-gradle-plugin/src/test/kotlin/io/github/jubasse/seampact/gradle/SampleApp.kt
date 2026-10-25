@@ -1,12 +1,9 @@
 package io.github.jubasse.seampact.gradle
 
+import io.github.jubasse.seampact.runner.fixtures.ReferenceApp
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
-import java.nio.file.Files
 import java.nio.file.Path
-import java.security.MessageDigest
-import java.util.HexFormat
-import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 
@@ -19,9 +16,8 @@ internal class SampleApp(val directory: Path) {
     val stubMarker: Path = directory.resolve("stub-ran")
 
     init {
-        val repositoryRoot = Path.of(System.getProperty("seampact.repositoryRoot"))
-        repositoryRoot.resolve("fixtures/reference").toFile().copyRecursively(directory.resolve("contract").toFile())
-        writeStubBinary(repositoryRoot.resolve("fixtures/golden/reference"))
+        ReferenceApp.copyContract(directory)
+        ReferenceApp.writeStubBinary(stubBinary, stubMarker)
 
         write(
             "settings.gradle.kts",
@@ -93,41 +89,11 @@ internal class SampleApp(val directory: Path) {
         return if (gradleVersion == null) runner else runner.withGradleVersion(gradleVersion)
     }
 
-    // A stub of the compiler binary: it marks that it ran, then writes the golden IR where `--out` points.
-    private fun writeStubBinary(golden: Path) {
-        stubBinary.writeText(
-            """
-            #!/bin/sh
-            touch '${stubMarker.absolutePathString()}'
-            out=""
-            while [ "${'$'}#" -gt 0 ]; do
-              if [ "${'$'}1" = "--out" ]; then out="${'$'}2"; fi
-              shift
-            done
-            mkdir -p "${'$'}out"
-            cp '${golden.resolve("tasks.ir.json")}' '${golden.resolve("tasksService.ir.json")}' "${'$'}out/"
-            """.trimIndent() + "\n",
-        )
-        stubBinary.toFile().setExecutable(true)
-    }
-
     companion object {
         const val ALLOW_LOCAL_VARIABLE = "SEAMPACT_ALLOW_LOCAL"
 
-        /** The reference app config: the core operations of `tasks` the spring-boot target generates today. */
-        const val REFERENCE_CONFIG = """
-            outDir: build/generated/sources/seampact/main
-            openapi: none
-            sources:
-              contract: { path: contract }
-            targets:
-              - id: server
-                use: io.github.jubasse:seampact-spring-boot
-                api: tasks
-                operations: { include: [health, getChannel, getDraft, getTask, getTasksBatch, searchTasks] }
-                options: { package: com.example.tasks.api }
-            """
+        const val REFERENCE_CONFIG = ReferenceApp.CONFIG
 
-        fun sha256Of(file: Path): String = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file)))
+        fun sha256Of(file: Path): String = ReferenceApp.sha256Of(file)
     }
 }

@@ -1,0 +1,46 @@
+package io.github.jubasse.seampact.maven
+
+import io.github.jubasse.seampact.runner.fixtures.ReferenceApp
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.exists
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+// The plugin end to end on the reference contract through a real Maven: the generated sources compile with the
+// app and `verify` runs the check, an offline second run skips on its stamp without starting the binary, and a
+// changed SEAMPACT_ALLOW_LOCAL runs it again.
+class GenerateMojoIT {
+    @TempDir
+    lateinit var directory: Path
+
+    @Test
+    fun generatesCompilesSkipsOnItsStampAndChecks() {
+        val app = MavenApp(directory)
+        app.write("seampact.config.yaml", ReferenceApp.CONFIG.replace(GRADLE_OUT_DIR, MAVEN_OUT_DIR))
+        app.writePom(app.stubBinaryElement())
+
+        val first = app.run("verify")
+        assertTrue(first.succeeded, "the first build succeeds")
+        assertTrue("seampact: entry 'server' wrote" in first.output, "the entry is generated")
+        assertTrue(directory.resolve("target/classes/com/example/tasks/api/TasksEndpoints.class").exists(), "the generated endpoints interface compiles")
+        assertTrue("checks.generated is not compared" in first.output, "verify runs the check; an outDir under target is not compared")
+
+        app.stubMarker.deleteIfExists()
+        val second = app.run("-o", "compile")
+        assertTrue(second.succeeded, "the offline second build succeeds")
+        assertTrue("nothing to generate" in second.output, "the second run skips on its stamp")
+        assertFalse(app.stubMarker.exists(), "a skipped run does not start the binary")
+
+        val refused = app.run("-o", "verify", extraEnvironment = mapOf(MavenApp.ALLOW_LOCAL_VARIABLE to "false"))
+        assertFalse(refused.succeeded, "SEAMPACT_ALLOW_LOCAL=false is part of the stamp, so the run refuses the path source")
+        assertTrue("config.source.local" in refused.output, "the refusal names the local source")
+    }
+
+    private companion object {
+        const val GRADLE_OUT_DIR = "build/generated/sources/seampact/main"
+        const val MAVEN_OUT_DIR = "target/generated-sources/seampact"
+    }
+}

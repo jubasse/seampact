@@ -7,6 +7,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    // The reference app both plugins' tests build.
+    `java-test-fixtures`
 }
 
 group = "io.github.jubasse"

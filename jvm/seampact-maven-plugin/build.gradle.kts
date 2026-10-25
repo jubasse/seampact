@@ -50,6 +50,7 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(kotlin("test"))
     testImplementation(gradleTestKit())
+    testImplementation(testFixtures(project(":seampact-runner")))
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 

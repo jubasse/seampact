@@ -1,0 +1,59 @@
+package io.github.jubasse.seampact.runner.fixtures
+
+import java.nio.file.Files
+import java.nio.file.Path
+import java.security.MessageDigest
+import java.util.HexFormat
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.writeText
+
+/**
+ * What the plugins' tests build: the reference contract as a `path` source, compiled by a stub of the compiler
+ * binary that writes the golden IR, so no Node and no release is needed.
+ */
+public object ReferenceApp {
+    /** The reference app config: the core operations of `tasks` the spring-boot target generates today. */
+    public const val CONFIG: String = """
+        outDir: build/generated/sources/seampact/main
+        openapi: none
+        sources:
+          contract: { path: contract }
+        targets:
+          - id: server
+            use: io.github.jubasse:seampact-spring-boot
+            api: tasks
+            operations: { include: [health, getChannel, getDraft, getTask, getTasksBatch, searchTasks] }
+            options: { package: com.example.tasks.api }
+        """
+
+    public val repositoryRoot: Path get() = Path.of(System.getProperty("seampact.repositoryRoot"))
+
+    /** Copies the reference contract into `<app>/contract`. */
+    public fun copyContract(app: Path) {
+        repositoryRoot.resolve("fixtures/reference").toFile().copyRecursively(app.resolve("contract").toFile())
+    }
+
+    /**
+     * Writes at [binary] a stub of the compiler binary: it touches [marker], then writes the golden IR where `--out`
+     * points.
+     */
+    public fun writeStubBinary(binary: Path, marker: Path) {
+        val golden = repositoryRoot.resolve("fixtures/golden/reference")
+        binary.writeText(
+            """
+            #!/bin/sh
+            touch '${marker.absolutePathString()}'
+            out=""
+            while [ "${'$'}#" -gt 0 ]; do
+              if [ "${'$'}1" = "--out" ]; then out="${'$'}2"; fi
+              shift
+            done
+            mkdir -p "${'$'}out"
+            cp '${golden.resolve("tasks.ir.json")}' '${golden.resolve("tasksService.ir.json")}' "${'$'}out/"
+            """.trimIndent() + "\n",
+        )
+        binary.toFile().setExecutable(true)
+    }
+
+    public fun sha256Of(file: Path): String = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file)))
+}
