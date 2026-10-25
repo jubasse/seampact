@@ -11,7 +11,7 @@ import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 
-/** The bounded body read (ADR 0022 "Query and bounded values"): a corrupt compressed body is the client's 400. */
+/** The bounded body read (ADR 0022 "Query and bounded values"): a corrupt compressed body is the client's 400, several codings a 415. */
 class BodyReaderTest {
     private static final long LIMIT_BYTES = 1024;
     private static final int TRUNCATED_BYTES = 20;
@@ -34,5 +34,17 @@ class BodyReaderTest {
         BodyReader.BodyRefusedException refused = assertThrows(BodyReader.BodyRefusedException.class, () -> BodyReader.read(request, LIMIT_BYTES));
 
         assertEquals(BodyReader.Refused.CORRUPT, refused.reason());
+    }
+
+    @Test
+    void twoContentEncodingLinesAreAnUnsupportedCoding() throws IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/v1/channels/c1/tasks/batch");
+        request.addHeader("Content-Encoding", "gzip");
+        request.addHeader("Content-Encoding", "gzip");
+        request.setContent(gzip("{\"taskIds\":[\"t1\"]}"));
+
+        BodyReader.BodyRefusedException refused = assertThrows(BodyReader.BodyRefusedException.class, () -> BodyReader.read(request, LIMIT_BYTES));
+
+        assertEquals(BodyReader.Refused.UNSUPPORTED_CODING, refused.reason());
     }
 }

@@ -5,6 +5,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
@@ -12,13 +14,14 @@ import java.util.zip.InflaterInputStream;
 /**
  * The bounded body read of step 1 (ADR 0022 "Query and bounded values"): a declared `Content-Length` above the
  * route's limit is refused before reading, and both the bytes sent and the bytes `gzip` or `deflate` decode to are
- * counted while reading, so neither passes the limit.
+ * counted while reading, so neither passes the limit. A body sent with more than one coding is refused.
  */
 final class BodyReader {
     private static final int CHUNK_BYTES = 8192;
     private static final String IDENTITY = "identity";
     private static final String GZIP = "gzip";
     private static final String DEFLATE = "deflate";
+    private static final String CONTENT_ENCODING_HEADER = "Content-Encoding";
 
     /** Why a body was refused: too large, a content coding the JDK does not decode, or a corrupt compressed body. */
     enum Refused {
@@ -48,7 +51,7 @@ final class BodyReader {
         if (request.getContentLengthLong() > limitBytes) throw new BodyRefusedException(Refused.TOO_LARGE);
 
         byte[] sent = readBounded(request.getInputStream(), limitBytes);
-        String coding = request.getHeader("Content-Encoding");
+        String coding = singleCoding(request);
         if (coding == null || coding.isBlank() || IDENTITY.equalsIgnoreCase(coding.trim())) return sent;
 
         InputStream decoded = switch (coding.trim().toLowerCase(Locale.ROOT)) {
@@ -63,6 +66,15 @@ final class BodyReader {
         } catch (IOException corrupt) {
             throw new BodyRefusedException(Refused.CORRUPT);
         }
+    }
+
+    // Several `Content-Encoding` lines are stacked codings, which the boundary refuses as the Node targets do; a
+    // stacked list on one line falls through to the unsupported coding.
+    private static String singleCoding(HttpServletRequest request) throws BodyRefusedException {
+        List<String> codings = Collections.list(request.getHeaders(CONTENT_ENCODING_HEADER));
+        if (codings.size() > 1) throw new BodyRefusedException(Refused.UNSUPPORTED_CODING);
+
+        return codings.isEmpty() ? null : codings.get(0);
     }
 
     private static InputStream gzipStream(byte[] sent) throws BodyRefusedException {

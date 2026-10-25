@@ -3,9 +3,10 @@
 // api's format or codes is a violation, handled by the `responses` mode. Copied into the generated tree as is.
 import { type BoundaryContext, unexpectedContext } from "./boundary-context.js";
 import { reportUnexpected } from "./boundary-hooks.js";
-import { type ContractReply, isPlainObject } from "./contract-error.js";
+import type { ContractReply } from "./contract-error.js";
 import type { ReportedRequest } from "./error-reply.js";
-import { NO_STORE_DIRECTIVE } from "./reply-headers.js";
+import { isPlainObject } from "./plain-object.js";
+import { hasNoStoreDirective } from "./reply-headers.js";
 import { runtimeLog } from "./runtime-logger.js";
 
 /** The longest error body the check holds to read its code; a longer one is a violation. */
@@ -144,13 +145,6 @@ export function errorBodyViolation(
   }
 
   return undefined;
-}
-
-// `private, no-store` carries the directive; a header value that lacks it does not.
-function hasNoStoreDirective(cacheControlHeader: string): boolean {
-  return cacheControlHeader
-    .split(",")
-    .some((directive) => directive.trim().toLowerCase() === NO_STORE_DIRECTIVE);
 }
 
 /** The violation of a held success body against its output schema, or undefined when it validates. */

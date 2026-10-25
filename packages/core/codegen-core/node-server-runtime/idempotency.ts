@@ -8,15 +8,15 @@ import {
   ContractError,
   type ContractReply,
   codeOfRole,
-  isPlainObject,
   unexpectedError,
 } from "./contract-error.js";
+import { idempotencyDigest, idempotencyFingerprint } from "./idempotency-fingerprint.js";
+import { isPlainObject } from "./plain-object.js";
+import { isKeptForReplay } from "./replay-retention.js";
 import { runtimeLog } from "./runtime-logger.js";
-import { sha256Hex } from "./sha256.js";
 
 const IN_PROGRESS_ROLE = "idempotencyInProgress";
 const KEY_REUSED_ROLE = "idempotencyKeyReused";
-const SERVER_ERROR_FLOOR = 500;
 const CLIENT_ERROR_FLOOR = 400;
 const REPLAYED = "true";
 
@@ -49,16 +49,15 @@ export async function beginIdempotency(
   const principalDigest =
     grant.principal === null || grant.principal === undefined
       ? ""
-      : await digest([grant.principal]);
-  const key = await digest([
+      : await idempotencyDigest([grant.principal]);
+  const key = await idempotencyDigest([
     state.api.id,
     route.id,
     grant.identity ?? "",
     principalDigest,
     clientKey,
   ]);
-  // The validated input holds the decoded path params, so an equivalent encoding of the path is the same request.
-  const fingerprint = await digest([route.method, route.path, input]);
+  const fingerprint = await idempotencyFingerprint(route, input, idempotency.fingerprintHeaders);
   const begin = await store.begin({
     key,
     fingerprint,
@@ -91,7 +90,7 @@ function replayOf(stored: StoredResponse, replayHeader: string): ContractReply {
   };
 }
 
-/** Completes the record with the reply that went out, or abandons it after a server error. */
+/** Completes the record with the reply that went out, or abandons it after a server error or a `no-store` reply. */
 export async function settleIdempotency(
   hooks: BoundaryHooks | undefined,
   key: string,
@@ -102,7 +101,7 @@ export async function settleIdempotency(
   if (store === undefined) return;
 
   try {
-    if (reply.status >= SERVER_ERROR_FLOOR) await store.abandon(key);
+    if (!isKeptForReplay(reply)) await store.abandon(key);
     else
       await store.complete(key, { status: reply.status, headers: reply.headers, body: reply.body });
   } catch (error) {
@@ -124,19 +123,4 @@ function roleCode(state: CheckState, role: string): string {
   }
 
   return code;
-}
-
-// Object members sorted by name, so the same request with its members reordered digests the same.
-function digest(parts: readonly unknown[]): Promise<string> {
-  return sha256Hex(JSON.stringify(parts, sortedMembers));
-}
-
-function sortedMembers(_name: string, value: unknown): unknown {
-  if (!isPlainObject(value)) return value;
-
-  return Object.fromEntries(
-    Object.keys(value)
-      .sort()
-      .map((name) => [name, value[name]]),
-  );
 }

@@ -2,14 +2,9 @@
 // request the api does not serve (a bare one when no operation can answer it), and a framework refusal (an error
 // carrying a 401, 403 or 429 status) mapped to its role. Copied into the generated tree as is.
 import { type BoundaryHooks, reportUnexpected } from "./boundary-hooks.js";
-import {
-  ContractError,
-  codeOfRole,
-  codeOfStatus,
-  isPlainObject,
-  unexpectedError,
-} from "./contract-error.js";
+import { ContractError, codeOfRole, codeOfStatus, unexpectedError } from "./contract-error.js";
 import { type ContractApi, type ContractRoute, matchesContractPath } from "./contract-route.js";
+import { isPlainObject } from "./plain-object.js";
 import { runtimeLog } from "./runtime-logger.js";
 
 /** The status of a request the api does not serve. */

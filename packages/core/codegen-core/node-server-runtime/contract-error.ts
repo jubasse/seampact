@@ -7,6 +7,7 @@ import type {
   ErrorEntry,
   FormatTemplate,
 } from "./contract-route.js";
+import { isPlainObject } from "./plain-object.js";
 import { CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE } from "./reply-headers.js";
 
 /** The longest issues list rendered into a `schemaInvalid` error's params. */
@@ -195,9 +196,4 @@ export function renderTemplate(
       return Object.keys(rendered).length > 0 ? rendered : undefined;
     }
   }
-}
-
-/** Whether a value is a JSON object (not null, not an array). */
-export function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

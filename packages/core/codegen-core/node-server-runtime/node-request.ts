@@ -5,7 +5,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   type ContractError,
-  isPlainObject,
   PAYLOAD_TOO_LARGE_ROLE,
   roleError,
   unexpectedError,
@@ -17,6 +16,7 @@ import {
   matchContractRoute,
 } from "./contract-route.js";
 import { clientStatusError, type ReportedRequest } from "./error-reply.js";
+import { isPlainObject } from "./plain-object.js";
 import { runtimeLog } from "./runtime-logger.js";
 
 const PAYLOAD_TOO_LARGE = 413;

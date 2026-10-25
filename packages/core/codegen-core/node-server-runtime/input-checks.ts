@@ -1,9 +1,10 @@
 // Steps 6 and 7 of the check order (ADR 0012): the whole request validated in one pass by the validators link,
 // then restricted input fields. Copied into the generated tree as is.
 import { type AccessGrant, type CheckState, decide } from "./access-checks.js";
-import { ContractError, isPlainObject, roleParams } from "./contract-error.js";
+import { ContractError, roleParams } from "./contract-error.js";
 import type { ContractRoute } from "./contract-route.js";
 import { schemaInvalidError, validateRequest } from "./input-issues.js";
+import { isPlainObject } from "./plain-object.js";
 
 const FORBIDDEN_ROLE = "forbidden";
 

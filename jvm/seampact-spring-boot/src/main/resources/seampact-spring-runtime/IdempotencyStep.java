@@ -9,10 +9,12 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.MissingNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Idempotency at the boundary (ADR 0012 obligations): the claim's fixed-size key and fingerprint after step 6, the
@@ -27,6 +29,9 @@ final class IdempotencyStep {
     private static final String CONTENT_TYPE = "content-type";
     private static final String CONTENT_HEADER_PREFIX = "content-";
     private static final String REPLAYED = "true";
+    private static final String AUTHORIZATION_HEADER = "authorization";
+    private static final String CACHE_CONTROL_HEADER = "Cache-Control";
+    private static final String NO_STORE_DIRECTIVE = "no-store";
     private static final int CLIENT_ERROR_FLOOR = 400;
     private static final int SERVER_ERROR_FLOOR = 500;
 
@@ -51,11 +56,7 @@ final class IdempotencyStep {
                 NODES.stringNode(route.operation().path("access").path("identity").asString("")),
                 NODES.stringNode(principalDigest(boundary, exchange)),
                 clientKey));
-        // The decoded input holds the decoded path params, so an equivalent encoding of the path is the same request.
-        String fingerprint = Digests.hexOf(List.of(
-                NODES.stringNode(route.operation().path("method").asString()),
-                NODES.stringNode(route.operation().path("path").asString()),
-                exchange.inputTree));
+        String fingerprint = fingerprint(boundary.table().ir(), route.operation(), exchange.inputTree);
 
         IdempotencyBegin begun = store.begin(new IdempotencyClaim(key, fingerprint, idempotency.path("lifetimeMs").asLong(), boundary.operationRef(route)));
         switch (begun) {
@@ -72,7 +73,77 @@ final class IdempotencyStep {
         }
     }
 
-    /** Completes the claimed record with the reply that went out, or abandons it after a server error. */
+    /**
+     * The digest a retry under the same key must match: the method, the contract path and the decoded input, its
+     * headers cut to the author-declared header params and union tag the table lists in `settings.fingerprintHeaders`.
+     * Any other header param the compiler derives (a trace id, a deadline, the key) changes on a retry.
+     */
+    static String fingerprint(JsonNode ir, JsonNode operation, JsonNode inputTree) {
+        Set<String> counted = fingerprintHeaders(ir, operation);
+        counted.removeAll(credentialHeaders(ir, operation));
+
+        // The decoded input holds the decoded path params, so an equivalent encoding of the path is the same request.
+        return Digests.hexOf(List.of(
+                NODES.stringNode(operation.path("method").asString()),
+                NODES.stringNode(operation.path("path").asString()),
+                withOnlyHeaders(inputTree, counted)));
+    }
+
+    private static Set<String> fingerprintHeaders(JsonNode ir, JsonNode operation) {
+        String operationId = operation.path("id").asString();
+        JsonNode listed = ir.path("settings").path("fingerprintHeaders").path(operationId);
+        if (!listed.isArray()) {
+            throw new IllegalStateException("seampact: the contract table lists no fingerprint headers for the idempotent operation '"
+                    + operationId + "'; regenerate the Spring Boot sources");
+        }
+
+        Set<String> names = new HashSet<>();
+        for (JsonNode name : listed) names.add(name.asString());
+
+        return names;
+    }
+
+    // The headers carrying a credential, lower case: a retry after a token or session refresh is the same request
+    // (ADR 0012 "Target obligations"), and a fingerprint never digests a credential.
+    private static Set<String> credentialHeaders(JsonNode ir, JsonNode operation) {
+        Set<String> names = new HashSet<>();
+        JsonNode access = operation.path("access");
+        for (JsonNode schemeId : access.path("schemes")) {
+            JsonNode scheme = ir.path("schemes").path(schemeId.asString());
+            switch (scheme.path("kind").asString()) {
+                case "bearer" -> names.add(AUTHORIZATION_HEADER);
+                case "header" -> names.add(scheme.path("name").asString().toLowerCase(Locale.ROOT));
+                default -> { } // no header param: a cookie, or a scheme the boundary refuses (query, basic, signature)
+            }
+        }
+
+        JsonNode identity = ir.path("identities").path(access.path("identity").asString());
+        if (identity.has("signed")) {
+            JsonNode signatureScheme = ir.path("schemes").path(identity.path("signed").asString());
+            names.add(signatureScheme.path("name").asString().toLowerCase(Locale.ROOT));
+        }
+        if (operation.path("csrf").has("header")) names.add(operation.path("csrf").path("header").asString().toLowerCase(Locale.ROOT));
+
+        return names;
+    }
+
+    // Header names are digested in lower case, as the Node targets key them.
+    private static JsonNode withOnlyHeaders(JsonNode inputTree, Set<String> names) {
+        if (!(inputTree instanceof ObjectNode input)) return inputTree;
+
+        ObjectNode headers = NODES.objectNode();
+        for (Map.Entry<String, JsonNode> header : input.path("headers").properties()) {
+            String name = header.getKey().toLowerCase(Locale.ROOT);
+            if (names.contains(name)) headers.set(name, header.getValue());
+        }
+
+        ObjectNode digested = input.deepCopy();
+        digested.set("headers", headers);
+
+        return digested;
+    }
+
+    /** Completes the claimed record with the reply that went out, or abandons it after a server error or a no-store error reply. */
     static void settle(SeampactBoundary boundary, BoundaryExchange exchange, byte[] body) {
         String key = exchange.idempotencyKey;
         if (key == null) return;
@@ -81,12 +152,27 @@ final class IdempotencyStep {
         CheckingResponse response = exchange.response;
         try {
             IdempotencyStore store = boundary.idempotencyStore();
-            if (response.heldStatus() >= SERVER_ERROR_FLOOR) store.abandon(key);
+            if (!isKeptForReplay(response)) store.abandon(key);
             else store.complete(key, new StoredResponse(response.heldStatus(), storedHeaders(exchange.route(), response), body));
         } catch (RuntimeException failure) {
             SeampactBoundary.LOG.error("seampact: the idempotency store failed to record the reply of {}.{}; a retry with the same key may run"
                     + " again. Check the store's backend.", boundary.apiId(), exchange.route().id(), failure);
         }
+    }
+
+    // An error reply its sender marked no-store is dropped for a replay as a server error is; a no-store success is
+    // kept, so a retry never runs the write twice.
+    private static boolean isKeptForReplay(CheckingResponse response) {
+        if (response.heldStatus() >= SERVER_ERROR_FLOOR) return false;
+        if (response.heldStatus() < CLIENT_ERROR_FLOOR) return true;
+
+        for (String cacheControl : response.getHeaders(CACHE_CONTROL_HEADER)) {
+            for (String directive : cacheControl.split(",")) {
+                if (directive.trim().equalsIgnoreCase(NO_STORE_DIRECTIVE)) return false;
+            }
+        }
+
+        return true;
     }
 
     private static String principalDigest(SeampactBoundary boundary, BoundaryExchange exchange) {

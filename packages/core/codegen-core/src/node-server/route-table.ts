@@ -20,6 +20,7 @@ import {
   refuseUnknownValueAt,
 } from "../located-refusals.js";
 import type { Refusal } from "../refusal.js";
+import { fingerprintHeaderNames } from "./fingerprint-headers.js";
 import type { CompressionOption, FrameworkEtagMode } from "./options.js";
 import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
 import { compareRouteSpecificity } from "./route-order.js";
@@ -895,6 +896,7 @@ function idempotencyEntry(
     header: idempotency.header,
     replayHeader: idempotency.replayHeader,
     lifetimeMs: idempotency.lifetimeMs,
+    fingerprintHeaders: fingerprintHeaderNames(operation.params.header),
   };
 }
 

@@ -30,7 +30,6 @@ import {
   ContractError,
   codeOfRole,
   codeOfStatus,
-  isPlainObject,
   PAYLOAD_TOO_LARGE_ROLE,
   roleError,
   unexpectedError,
@@ -62,6 +61,7 @@ import {
   writeContractReply,
 } from "./node-server/node-reply.js";
 import { announcesBody, DEFAULT_METHOD, requestTarget } from "./node-server/node-request.js";
+import { isPlainObject } from "./node-server/plain-object.js";
 import {
   loggerProblems,
   type RuntimeLogger,
