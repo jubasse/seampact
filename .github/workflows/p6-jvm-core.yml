@@ -45,9 +45,9 @@ jobs:
             exit 0
           fi
           # The JVM modules, the bundle, config and IR schemas, the bundle vectors, the compatibility matrix, the reference contract and the
-          # golden IR, the binary package, the workspace and toolchain pins and this workflow.
+          # golden IR, the binary package, the signed webhook vectors, the workspace and toolchain pins and this workflow.
           watched='^(jvm/|packages/core/spec/schemas/(bundle|config|ir)/|packages/core/spec/vectors/bundle/|packages/core/spec/compatibility/'
-          watched+='|fixtures/reference/|fixtures/golden/|packages/tools/binary/|\.github/workflows/p6-jvm-core\.yml$'
+          watched+='|fixtures/reference/|fixtures/golden/|packages/tools/binary/|packages/runtime/signed-webhooks/vectors/|\.github/workflows/p6-jvm-core\.yml$'
           watched+='|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.
@@ -125,8 +125,12 @@ jobs:
       - name: Check the JVM core modules on Java ${{ matrix.test-jdk }}
         working-directory: jvm
         run: |
-          ./gradlew :seampact-ir:check :seampact-compiler:check -PtestJdk=${{ matrix.test-jdk }} \
-            -PseampactBinary="$GITHUB_WORKSPACE/bin/seampact-linux-x64"
+          ./gradlew :seampact-ir:check :seampact-compiler:check :seampact-runner:check :seampact-signed-webhooks:check \
+            -PtestJdk=${{ matrix.test-jdk }} -PseampactBinary="$GITHUB_WORKSPACE/bin/seampact-linux-x64"
+      # ADR 0011 "Unpublished installs for test consumers": every module installs to Maven local and resolves from it.
+      - name: Publish to Maven local and resolve every module from it
+        if: matrix.test-jdk == 25
+        run: jvm/build-logic/maven-local/check.sh "$RUNNER_TEMP/maven-local"
 
   # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
   jvm-core:
