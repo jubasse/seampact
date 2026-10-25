@@ -53,13 +53,13 @@ export function generateAngularQueries(
   if (planned.status === "refused") return planned;
 
   const withService = input.artefacts.has(SERVICE_ARTEFACT);
-  const serviceRefusals = [
+  const targetRefusals = [
     ...(withService ? refuseServiceMemberCollisions(planned.plan) : []),
     ...refuseStateWithout(options, withService),
     ...(options.state === "ngrx" ? refuseActionGroupCollisions(planned.plan) : []),
   ];
 
-  if (serviceRefusals.length > 0) return { status: "refused", refusals: serviceRefusals };
+  if (targetRefusals.length > 0) return { status: "refused", refusals: targetRefusals };
 
   const clientSpecifier = (fromFile: string) =>
     importSpecifier(links.client, client.exports.Client, fromFile);
@@ -76,7 +76,7 @@ function queriesAndServiceFiles(
 ): GeneratedFile[] {
   const queriesFile = `${QUERIES_MODULE}${MODULE_EXTENSION}`;
   const serviceFile = `${SERVICE_MODULE}${MODULE_EXTENSION}`;
-  const withNgrx = withService && options.state === "ngrx";
+  const withNgrx = options.state === "ngrx";
   const queries = fetchQueriesModuleSource(plan, options, {
     client: clientSpecifier(queriesFile),
     runtime: FRONT_RUNTIME_SPECIFIER,
@@ -101,6 +101,7 @@ function queriesAndServiceFiles(
     contents: `${ngrxModuleSource(plan, {
       service: `./${SERVICE_MODULE}${FRONT_MODULE_SUFFIX}`,
       queries: `./${QUERIES_MODULE}${FRONT_MODULE_SUFFIX}`,
+      runtime: FRONT_RUNTIME_SPECIFIER,
     })}\n`,
   });
   const indexed: IndexedModule[] = [

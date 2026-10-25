@@ -184,7 +184,7 @@ test("an unexpected error is a failure too, and the effect keeps answering", asy
   unmount();
 });
 
-test("each write action sends its own idempotency key, both sent at once", async () => {
+test("each write action sends its own idempotency key", async () => {
   await loadScript({});
 
   const { interceptor, seen } = recordingInterceptor();
@@ -207,6 +207,26 @@ test("each write action sends its own idempotency key, both sent at once", async
   expect(keys).toHaveLength(2);
   expect(keys).not.toContain(null);
   expect(new Set(keys).size).toBe(2);
+  unmount();
+});
+
+test("a write action dispatched again with the key it gave sends that key again", async () => {
+  await loadScript({});
+
+  const { interceptor, seen } = recordingInterceptor();
+  const { result, unmount } = await runInApplication(
+    appProviders(inject("userToken"), [interceptor]),
+    injectDispatching,
+  );
+  const request = { ...LIST_REQUEST, body: { title: "Retry with its key" } };
+  const idempotencyKey = crypto.randomUUID();
+
+  result.store.dispatch(TasksActions.createTask({ request, call: { idempotencyKey } }));
+  await expect.poll(() => result.seen.length).toBe(2);
+  result.store.dispatch(TasksActions.createTask({ request, call: { idempotencyKey } }));
+  await expect.poll(() => result.seen.length).toBe(4);
+
+  expect(postedKeys(seen)).toEqual([idempotencyKey, idempotencyKey]);
   unmount();
 });
 

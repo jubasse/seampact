@@ -2,8 +2,20 @@
 import { type EnvironmentProviders, inject } from "@angular/core";
 import { Actions, createEffect, ofType, provideEffects } from "@ngrx/effects";
 import { createActionGroup, props } from "@ngrx/store";
-import { mergeMap, Observable, switchMap } from "rxjs";
+import {
+  defer,
+  filter,
+  finalize,
+  groupBy,
+  mergeMap,
+  NEVER,
+  Observable,
+  type OperatorFunction,
+  Subject,
+  take,
+} from "rxjs";
 import type { TasksOperations } from "./queries.js";
+import { keyRequest, withIdempotencyKey } from "./query-runtime.js";
 import { TasksApi } from "./service.js";
 
 // A rejection as an `Error`, the value kept as its cause when it is not one.
@@ -13,16 +25,19 @@ function asError(rejection: unknown): Error {
     : new Error(String(rejection), { cause: rejection });
 }
 
-// The success or failure action of one call; an error never leaves the effect. Unsubscribing, as `switchMap` does
-// on the next read, aborts the call and drops its outcome.
+// The success or failure action of one call; an error never leaves the effect. A call `superseded` aborts ends in
+// its failure with the abort error; unsubscribing, as the effect's teardown does, aborts it with no outcome.
 function outcomeOf<Data, Succeeded, Failed>(
   send: (signal: AbortSignal) => Promise<Data>,
   succeeded: (data: Data) => Succeeded,
   failed: (error: Error) => Failed,
+  superseded: Observable<unknown> = NEVER,
 ): Observable<Succeeded | Failed> {
   return new Observable<Succeeded | Failed>((subscriber) => {
     const controller = new AbortController();
     let settled = false;
+
+    subscriber.add(superseded.subscribe(() => controller.abort()));
 
     void new Promise<Data>((resolve) => {
       resolve(send(controller.signal));
@@ -43,6 +58,52 @@ function outcomeOf<Data, Succeeded, Failed>(
       if (!settled) controller.abort();
     };
   });
+}
+
+// Per request key, the latest read wins: a read of the same request aborts the one still waiting, which ends in its
+// failure; reads of other requests run side by side. A request's group closes once none of its reads waits.
+function latestReadPerRequest<Action, Outcome>(
+  keyOf: (action: Action) => string,
+  read: (action: Action, superseded: Observable<Action>) => Observable<Outcome>,
+): OperatorFunction<Action, Outcome> {
+  return (actions) =>
+    defer(() => {
+      const idleKeys = new Subject<string>();
+
+      return actions.pipe(
+        groupBy(keyOf, {
+          duration: (group) =>
+            idleKeys.pipe(filter((idleKey) => idleKey === group.key)),
+        }),
+        mergeMap((group) => {
+          let waiting = 0;
+
+          return group.pipe(
+            mergeMap((action) => {
+              waiting += 1;
+
+              return read(action, group.pipe(take(1))).pipe(
+                finalize(() => {
+                  waiting -= 1;
+                  if (waiting === 0) idleKeys.next(group.key);
+                }),
+              );
+            }),
+          );
+        }),
+      );
+    });
+}
+
+// The request with the idempotency key a write action gives; without one, the service draws a key per action.
+function withActionKey<Request extends object | undefined>(
+  request: Request,
+  headerKey: string,
+  idempotencyKey: string | undefined,
+): Request {
+  if (idempotencyKey === undefined) return request;
+
+  return withIdempotencyKey(request, headerKey, () => idempotencyKey);
 }
 
 /** The actions of "Tasks/channels": per operation the call to send, its success with the data and its failure with the error. */
@@ -82,7 +143,9 @@ export const DraftsActions = createActionGroup({
   events: {
     deleteDraft: props<{
       request: TasksOperations["deleteDraft"]["request"];
-      call?: TasksOperations["deleteDraft"]["call"];
+      call?: TasksOperations["deleteDraft"]["call"] & {
+        readonly idempotencyKey?: string;
+      };
     }>(),
     deleteDraftSuccess: props<{
       request: TasksOperations["deleteDraft"]["request"];
@@ -125,7 +188,9 @@ export const PreferencesActions = createActionGroup({
     }>(),
     updatePreferences: props<{
       request: TasksOperations["updatePreferences"]["request"];
-      call?: TasksOperations["updatePreferences"]["call"];
+      call?: TasksOperations["updatePreferences"]["call"] & {
+        readonly idempotencyKey?: string;
+      };
     }>(),
     updatePreferencesSuccess: props<{
       request: TasksOperations["updatePreferences"]["request"];
@@ -144,7 +209,9 @@ export const TasksActions = createActionGroup({
   events: {
     archiveTask: props<{
       request: TasksOperations["archiveTask"]["request"];
-      call?: TasksOperations["archiveTask"]["call"];
+      call?: TasksOperations["archiveTask"]["call"] & {
+        readonly idempotencyKey?: string;
+      };
     }>(),
     archiveTaskSuccess: props<{
       request: TasksOperations["archiveTask"]["request"];
@@ -156,7 +223,9 @@ export const TasksActions = createActionGroup({
     }>(),
     assignTask: props<{
       request: TasksOperations["assignTask"]["request"];
-      call?: TasksOperations["assignTask"]["call"];
+      call?: TasksOperations["assignTask"]["call"] & {
+        readonly idempotencyKey?: string;
+      };
     }>(),
     assignTaskSuccess: props<{
       request: TasksOperations["assignTask"]["request"];
@@ -168,7 +237,9 @@ export const TasksActions = createActionGroup({
     }>(),
     createTask: props<{
       request: TasksOperations["createTask"]["request"];
-      call?: TasksOperations["createTask"]["call"];
+      call?: TasksOperations["createTask"]["call"] & {
+        readonly idempotencyKey?: string;
+      };
     }>(),
     createTaskSuccess: props<{
       request: TasksOperations["createTask"]["request"];
@@ -216,7 +287,9 @@ export const TasksActions = createActionGroup({
     }>(),
     purgeTask: props<{
       request: TasksOperations["purgeTask"]["request"];
-      call?: TasksOperations["purgeTask"]["call"];
+      call?: TasksOperations["purgeTask"]["call"] & {
+        readonly idempotencyKey?: string;
+      };
     }>(),
     purgeTaskSuccess: props<{
       request: TasksOperations["purgeTask"]["request"];
@@ -240,7 +313,9 @@ export const TasksActions = createActionGroup({
     }>(),
     updateTask: props<{
       request: TasksOperations["updateTask"]["request"];
-      call?: TasksOperations["updateTask"]["call"];
+      call?: TasksOperations["updateTask"]["call"] & {
+        readonly idempotencyKey?: string;
+      };
     }>(),
     updateTaskSuccess: props<{
       request: TasksOperations["updateTask"]["request"];
@@ -290,23 +365,26 @@ export const TasksEffects = {
     (actions = inject(Actions), api = inject(TasksApi)) =>
       actions.pipe(
         ofType(ChannelsActions.getChannel),
-        switchMap((action) =>
-          outcomeOf(
-            (signal) =>
-              api.queries
-                .getChannelOptions(action.request, action.call)
-                .fetcher(signal),
-            (data) =>
-              ChannelsActions.getChannelSuccess({
-                request: action.request,
-                data,
-              }),
-            (error) =>
-              ChannelsActions.getChannelFailure({
-                request: action.request,
-                error,
-              }),
-          ),
+        latestReadPerRequest(
+          (action) => JSON.stringify(keyRequest(action.request, [])) ?? "",
+          (action, superseded) =>
+            outcomeOf(
+              (signal) =>
+                api.queries
+                  .getChannelOptions(action.request, action.call)
+                  .fetcher(signal),
+              (data) =>
+                ChannelsActions.getChannelSuccess({
+                  request: action.request,
+                  data,
+                }),
+              (error) =>
+                ChannelsActions.getChannelFailure({
+                  request: action.request,
+                  error,
+                }),
+              superseded,
+            ),
         ),
       ),
     { functional: true },
@@ -316,23 +394,26 @@ export const TasksEffects = {
     (actions = inject(Actions), api = inject(TasksApi)) =>
       actions.pipe(
         ofType(ChannelsActions.listChannels),
-        switchMap((action) =>
-          outcomeOf(
-            (signal) =>
-              api.queries
-                .listChannelsOptions(action.request, action.call)
-                .fetcher(signal),
-            (data) =>
-              ChannelsActions.listChannelsSuccess({
-                request: action.request,
-                data,
-              }),
-            (error) =>
-              ChannelsActions.listChannelsFailure({
-                request: action.request,
-                error,
-              }),
-          ),
+        latestReadPerRequest(
+          (action) => JSON.stringify(keyRequest(action.request, [])) ?? "",
+          (action, superseded) =>
+            outcomeOf(
+              (signal) =>
+                api.queries
+                  .listChannelsOptions(action.request, action.call)
+                  .fetcher(signal),
+              (data) =>
+                ChannelsActions.listChannelsSuccess({
+                  request: action.request,
+                  data,
+                }),
+              (error) =>
+                ChannelsActions.listChannelsFailure({
+                  request: action.request,
+                  error,
+                }),
+              superseded,
+            ),
         ),
       ),
     { functional: true },
@@ -344,10 +425,25 @@ export const TasksEffects = {
         ofType(DraftsActions.deleteDraft),
         mergeMap((action) =>
           outcomeOf(
-            () =>
-              api.queries
-                .deleteDraftMutationOptions(action.call)
-                .fetcher(action.request, action),
+            () => {
+              const {
+                idempotencyKey,
+                ...call
+              }: TasksOperations["deleteDraft"]["call"] & {
+                readonly idempotencyKey?: string;
+              } = action.call ?? {};
+
+              return api.queries
+                .deleteDraftMutationOptions(call)
+                .fetcher(
+                  withActionKey(
+                    action.request,
+                    "idempotency-key",
+                    idempotencyKey,
+                  ),
+                  action,
+                );
+            },
             (data) =>
               DraftsActions.deleteDraftSuccess({
                 request: action.request,
@@ -368,17 +464,26 @@ export const TasksEffects = {
     (actions = inject(Actions), api = inject(TasksApi)) =>
       actions.pipe(
         ofType(DraftsActions.getDraft),
-        switchMap((action) =>
-          outcomeOf(
-            (signal) =>
-              api.queries
-                .getDraftOptions(action.request, action.call)
-                .fetcher(signal),
-            (data) =>
-              DraftsActions.getDraftSuccess({ request: action.request, data }),
-            (error) =>
-              DraftsActions.getDraftFailure({ request: action.request, error }),
-          ),
+        latestReadPerRequest(
+          (action) => JSON.stringify(keyRequest(action.request, [])) ?? "",
+          (action, superseded) =>
+            outcomeOf(
+              (signal) =>
+                api.queries
+                  .getDraftOptions(action.request, action.call)
+                  .fetcher(signal),
+              (data) =>
+                DraftsActions.getDraftSuccess({
+                  request: action.request,
+                  data,
+                }),
+              (error) =>
+                DraftsActions.getDraftFailure({
+                  request: action.request,
+                  error,
+                }),
+              superseded,
+            ),
         ),
       ),
     { functional: true },
@@ -388,23 +493,26 @@ export const TasksEffects = {
     (actions = inject(Actions), api = inject(TasksApi)) =>
       actions.pipe(
         ofType(PreferencesActions.getPreferences),
-        switchMap((action) =>
-          outcomeOf(
-            (signal) =>
-              api.queries
-                .getPreferencesOptions(action.request, action.call)
-                .fetcher(signal),
-            (data) =>
-              PreferencesActions.getPreferencesSuccess({
-                request: action.request,
-                data,
-              }),
-            (error) =>
-              PreferencesActions.getPreferencesFailure({
-                request: action.request,
-                error,
-              }),
-          ),
+        latestReadPerRequest(
+          (action) => JSON.stringify(keyRequest(action.request, [])) ?? "",
+          (action, superseded) =>
+            outcomeOf(
+              (signal) =>
+                api.queries
+                  .getPreferencesOptions(action.request, action.call)
+                  .fetcher(signal),
+              (data) =>
+                PreferencesActions.getPreferencesSuccess({
+                  request: action.request,
+                  data,
+                }),
+              (error) =>
+                PreferencesActions.getPreferencesFailure({
+                  request: action.request,
+                  error,
+                }),
+              superseded,
+            ),
         ),
       ),
     { functional: true },
@@ -416,10 +524,25 @@ export const TasksEffects = {
         ofType(PreferencesActions.updatePreferences),
         mergeMap((action) =>
           outcomeOf(
-            () =>
-              api.queries
-                .updatePreferencesMutationOptions(action.call)
-                .fetcher(action.request, action),
+            () => {
+              const {
+                idempotencyKey,
+                ...call
+              }: TasksOperations["updatePreferences"]["call"] & {
+                readonly idempotencyKey?: string;
+              } = action.call ?? {};
+
+              return api.queries
+                .updatePreferencesMutationOptions(call)
+                .fetcher(
+                  withActionKey(
+                    action.request,
+                    "idempotency-key",
+                    idempotencyKey,
+                  ),
+                  action,
+                );
+            },
             (data) =>
               PreferencesActions.updatePreferencesSuccess({
                 request: action.request,
@@ -442,10 +565,25 @@ export const TasksEffects = {
         ofType(TasksActions.archiveTask),
         mergeMap((action) =>
           outcomeOf(
-            () =>
-              api.queries
-                .archiveTaskMutationOptions(action.call)
-                .fetcher(action.request, action),
+            () => {
+              const {
+                idempotencyKey,
+                ...call
+              }: TasksOperations["archiveTask"]["call"] & {
+                readonly idempotencyKey?: string;
+              } = action.call ?? {};
+
+              return api.queries
+                .archiveTaskMutationOptions(call)
+                .fetcher(
+                  withActionKey(
+                    action.request,
+                    "idempotency-key",
+                    idempotencyKey,
+                  ),
+                  action,
+                );
+            },
             (data) =>
               TasksActions.archiveTaskSuccess({
                 request: action.request,
@@ -468,10 +606,25 @@ export const TasksEffects = {
         ofType(TasksActions.assignTask),
         mergeMap((action) =>
           outcomeOf(
-            () =>
-              api.queries
-                .assignTaskMutationOptions(action.call)
-                .fetcher(action.request, action),
+            () => {
+              const {
+                idempotencyKey,
+                ...call
+              }: TasksOperations["assignTask"]["call"] & {
+                readonly idempotencyKey?: string;
+              } = action.call ?? {};
+
+              return api.queries
+                .assignTaskMutationOptions(call)
+                .fetcher(
+                  withActionKey(
+                    action.request,
+                    "idempotency-key",
+                    idempotencyKey,
+                  ),
+                  action,
+                );
+            },
             (data) =>
               TasksActions.assignTaskSuccess({ request: action.request, data }),
             (error) =>
@@ -491,10 +644,25 @@ export const TasksEffects = {
         ofType(TasksActions.createTask),
         mergeMap((action) =>
           outcomeOf(
-            () =>
-              api.queries
-                .createTaskMutationOptions(action.call)
-                .fetcher(action.request, action),
+            () => {
+              const {
+                idempotencyKey,
+                ...call
+              }: TasksOperations["createTask"]["call"] & {
+                readonly idempotencyKey?: string;
+              } = action.call ?? {};
+
+              return api.queries
+                .createTaskMutationOptions(call)
+                .fetcher(
+                  withActionKey(
+                    action.request,
+                    "idempotency-key",
+                    idempotencyKey,
+                  ),
+                  action,
+                );
+            },
             (data) =>
               TasksActions.createTaskSuccess({ request: action.request, data }),
             (error) =>
@@ -512,17 +680,20 @@ export const TasksEffects = {
     (actions = inject(Actions), api = inject(TasksApi)) =>
       actions.pipe(
         ofType(TasksActions.getTask),
-        switchMap((action) =>
-          outcomeOf(
-            (signal) =>
-              api.queries
-                .getTaskOptions(action.request, action.call)
-                .fetcher(signal),
-            (data) =>
-              TasksActions.getTaskSuccess({ request: action.request, data }),
-            (error) =>
-              TasksActions.getTaskFailure({ request: action.request, error }),
-          ),
+        latestReadPerRequest(
+          (action) => JSON.stringify(keyRequest(action.request, [])) ?? "",
+          (action, superseded) =>
+            outcomeOf(
+              (signal) =>
+                api.queries
+                  .getTaskOptions(action.request, action.call)
+                  .fetcher(signal),
+              (data) =>
+                TasksActions.getTaskSuccess({ request: action.request, data }),
+              (error) =>
+                TasksActions.getTaskFailure({ request: action.request, error }),
+              superseded,
+            ),
         ),
       ),
     { functional: true },
@@ -532,23 +703,26 @@ export const TasksEffects = {
     (actions = inject(Actions), api = inject(TasksApi)) =>
       actions.pipe(
         ofType(TasksActions.getTasksBatch),
-        switchMap((action) =>
-          outcomeOf(
-            (signal) =>
-              api.queries
-                .getTasksBatchOptions(action.request, action.call)
-                .fetcher(signal),
-            (data) =>
-              TasksActions.getTasksBatchSuccess({
-                request: action.request,
-                data,
-              }),
-            (error) =>
-              TasksActions.getTasksBatchFailure({
-                request: action.request,
-                error,
-              }),
-          ),
+        latestReadPerRequest(
+          (action) => JSON.stringify(keyRequest(action.request, [])) ?? "",
+          (action, superseded) =>
+            outcomeOf(
+              (signal) =>
+                api.queries
+                  .getTasksBatchOptions(action.request, action.call)
+                  .fetcher(signal),
+              (data) =>
+                TasksActions.getTasksBatchSuccess({
+                  request: action.request,
+                  data,
+                }),
+              (error) =>
+                TasksActions.getTasksBatchFailure({
+                  request: action.request,
+                  error,
+                }),
+              superseded,
+            ),
         ),
       ),
     { functional: true },
@@ -558,17 +732,26 @@ export const TasksEffects = {
     (actions = inject(Actions), api = inject(TasksApi)) =>
       actions.pipe(
         ofType(TasksActions.listTasks),
-        switchMap((action) =>
-          outcomeOf(
-            (signal) =>
-              api.queries
-                .listTasksOptions(action.request, action.call)
-                .fetcher(signal),
-            (data) =>
-              TasksActions.listTasksSuccess({ request: action.request, data }),
-            (error) =>
-              TasksActions.listTasksFailure({ request: action.request, error }),
-          ),
+        latestReadPerRequest(
+          (action) => JSON.stringify(keyRequest(action.request, [])) ?? "",
+          (action, superseded) =>
+            outcomeOf(
+              (signal) =>
+                api.queries
+                  .listTasksOptions(action.request, action.call)
+                  .fetcher(signal),
+              (data) =>
+                TasksActions.listTasksSuccess({
+                  request: action.request,
+                  data,
+                }),
+              (error) =>
+                TasksActions.listTasksFailure({
+                  request: action.request,
+                  error,
+                }),
+              superseded,
+            ),
         ),
       ),
     { functional: true },
@@ -580,10 +763,25 @@ export const TasksEffects = {
         ofType(TasksActions.purgeTask),
         mergeMap((action) =>
           outcomeOf(
-            () =>
-              api.queries
-                .purgeTaskMutationOptions(action.call)
-                .fetcher(action.request, action),
+            () => {
+              const {
+                idempotencyKey,
+                ...call
+              }: TasksOperations["purgeTask"]["call"] & {
+                readonly idempotencyKey?: string;
+              } = action.call ?? {};
+
+              return api.queries
+                .purgeTaskMutationOptions(call)
+                .fetcher(
+                  withActionKey(
+                    action.request,
+                    "idempotency-key",
+                    idempotencyKey,
+                  ),
+                  action,
+                );
+            },
             (data) =>
               TasksActions.purgeTaskSuccess({ request: action.request, data }),
             (error) =>
@@ -626,10 +824,25 @@ export const TasksEffects = {
         ofType(TasksActions.updateTask),
         mergeMap((action) =>
           outcomeOf(
-            () =>
-              api.queries
-                .updateTaskMutationOptions(action.call)
-                .fetcher(action.request, action),
+            () => {
+              const {
+                idempotencyKey,
+                ...call
+              }: TasksOperations["updateTask"]["call"] & {
+                readonly idempotencyKey?: string;
+              } = action.call ?? {};
+
+              return api.queries
+                .updateTaskMutationOptions(call)
+                .fetcher(
+                  withActionKey(
+                    action.request,
+                    "idempotency-key",
+                    idempotencyKey,
+                  ),
+                  action,
+                );
+            },
             (data) =>
               TasksActions.updateTaskSuccess({ request: action.request, data }),
             (error) =>
@@ -647,17 +860,26 @@ export const TasksEffects = {
     (actions = inject(Actions), api = inject(TasksApi)) =>
       actions.pipe(
         ofType(TasksApiActions.health),
-        switchMap((action) =>
-          outcomeOf(
-            (signal) =>
-              api.queries
-                .healthOptions(action.request, action.call)
-                .fetcher(signal),
-            (data) =>
-              TasksApiActions.healthSuccess({ request: action.request, data }),
-            (error) =>
-              TasksApiActions.healthFailure({ request: action.request, error }),
-          ),
+        latestReadPerRequest(
+          (action) => JSON.stringify(keyRequest(action.request, [])) ?? "",
+          (action, superseded) =>
+            outcomeOf(
+              (signal) =>
+                api.queries
+                  .healthOptions(action.request, action.call)
+                  .fetcher(signal),
+              (data) =>
+                TasksApiActions.healthSuccess({
+                  request: action.request,
+                  data,
+                }),
+              (error) =>
+                TasksApiActions.healthFailure({
+                  request: action.request,
+                  error,
+                }),
+              superseded,
+            ),
         ),
       ),
     { functional: true },

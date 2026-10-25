@@ -110,6 +110,40 @@ test("`state: ngrx` refuses an operation whose action name another operation's o
 
   expect(outcome).toMatchObject({
     status: "refused",
-    refusals: [{ code: "names.collision", operation: "listTasksSuccess" }],
+    refusals: [
+      {
+        code: "names.collision",
+        message: expect.stringContaining("the action 'listTasksSuccess'"),
+      },
+    ],
+  });
+});
+
+test("`state: ngrx` refuses two resources whose action groups take one name", async () => {
+  const respelt = {
+    ...ir,
+    operations: ir.operations.map((operation) =>
+      operation.id === "getTask" && operation.resource !== undefined
+        ? { ...operation, resource: { ...operation.resource, type: "Tasks" } }
+        : operation,
+    ),
+  };
+
+  const outcome = await target.generate({
+    ir: respelt,
+    options: { query: "fetch", state: "ngrx" },
+    links,
+    artefacts: new Set(["queries", "service"]),
+  });
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    refusals: [
+      {
+        code: "names.collision",
+        message: expect.stringContaining("'TasksActions'"),
+        operation: expect.any(String),
+      },
+    ],
   });
 });

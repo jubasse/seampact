@@ -98,8 +98,9 @@ export const notesReducer = createReducer(
 - One action group per resource of the contract: `NotesActions` for `notes`. Operations with no resource are in `<Api>ApiActions`.
 - Each operation has three actions: `listNotes` with the `request`, `listNotesSuccess` with the `request` and `data`, `listNotesFailure` with the `request` and the typed `error`.
 - An effect sends each action through the service. Every error ends in the failure action, a `ContractError` for a declared error. The effect keeps running.
-- A new read of an operation aborts the previous one still running.
-- Writes run side by side. Each write action sends its own idempotency key. There is no retry: dispatch again to retry.
+- A new read of the same request aborts the one still running, which ends in its failure action with an `AbortError`. Reads of different requests run side by side.
+- Writes run side by side. Each write action sends its own idempotency key. To retry a write safely, give the key yourself and dispatch again with the same key: `call: { idempotencyKey }`. The server then runs it once.
+- Effects run wherever the app dispatches, the server included. Dispatch reads in the browser (for example in `afterNextRender`) to keep them off the server.
 - An operation that needs a timeout takes `call: { timeoutMs }` in its action.
 - `state: ngrx` needs the `service` artefact.
 - A failure action carries the contract error object, so leave NgRx's `strictActionSerializability` check off (its default).
