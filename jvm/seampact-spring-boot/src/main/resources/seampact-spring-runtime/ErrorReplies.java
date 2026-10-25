@@ -2,7 +2,6 @@ package io.github.jubasse.seampact.springboot.runtime;
 
 import java.util.Map;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -29,15 +28,11 @@ final class ErrorReplies {
         slots.put("nature", catalog.path("nature").asString());
         if (catalog.path("title").isString()) slots.put("title", catalog.path("title").asString());
 
-        JsonNode bodyTemplate = format.path("error").path("body");
-        JsonNode rendered = render(bodyTemplate, slots, writeNulls);
-        if (rendered instanceof ObjectNode body
-                && MERGE_PARAMS.equals(bodyTemplate.path("merge").asString())
-                && params instanceof ObjectNode paramMembers) {
-            paramMembers.properties().forEach(member -> body.set(member.getKey(), member.getValue()));
-        }
+        if (params instanceof ObjectNode) slots.set(MERGE_PARAMS, params);
 
-        return rendered;
+        JsonNode rendered = Templates.render(format.path("error").path("body"), slots, writeNulls);
+
+        return rendered.isMissingNode() ? NODES.objectNode() : rendered;
     }
 
     /** The media type of the api's errors on [route]. */
@@ -52,48 +47,6 @@ final class ErrorReplies {
         ObjectNode slotNode = NODES.objectNode();
         slots.forEach(slotNode::set);
 
-        return render(template, slotNode, false);
-    }
-
-    private static JsonNode render(JsonNode template, JsonNode slots, boolean writeNulls) {
-        return switch (template.path("kind").asString()) {
-            case "object" -> renderObject(template, slots, writeNulls);
-            case "slot" -> slotValue(template, slots);
-            case "text" -> NODES.stringNode(template.path("text").asString());
-            case "literal" -> template.path("value");
-            case "each" -> renderEach(template, slots, writeNulls);
-            default -> throw new IllegalStateException(
-                    "seampact: the format template kind '" + template.path("kind").asString() + "' is not one the boundary renders");
-        };
-    }
-
-    private static JsonNode renderObject(JsonNode template, JsonNode slots, boolean writeNulls) {
-        ObjectNode object = NODES.objectNode();
-        for (JsonNode member : template.path("members")) {
-            JsonNode value = render(member.path("value"), slots, writeNulls);
-            String name = member.path("name").path("text").asString();
-            if (!value.isMissingNode()) object.set(name, value);
-            else if (writeNulls) object.putNull(name);
-        }
-
-        return object;
-    }
-
-    private static JsonNode renderEach(JsonNode template, JsonNode slots, boolean writeNulls) {
-        ArrayNode items = NODES.arrayNode();
-        for (JsonNode item : slots.path(template.path("of").asString())) {
-            JsonNode itemSlots = slots.deepCopy();
-            if (itemSlots instanceof ObjectNode withItem) withItem.set("item", item);
-            items.add(render(template.path("as"), itemSlots, writeNulls));
-        }
-
-        return items;
-    }
-
-    private static JsonNode slotValue(JsonNode template, JsonNode slots) {
-        JsonNode value = slots.path(template.path("slot").asString());
-        for (JsonNode key : template.path("path")) value = value.path(key.asString());
-
-        return value;
+        return Templates.render(template, slotNode, false);
     }
 }

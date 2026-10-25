@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import tools.jackson.databind.JsonNode;
 
 /**
  * One contract request as the boundary's pieces share it through a request attribute: the matched route, the held
@@ -20,6 +21,8 @@ final class BoundaryExchange {
     byte[] body;
     Object principal;
     Object input;
+    /** The decoded query step 6 bound, with the paging limit the handler receives. */
+    JsonNode query;
     boolean admitted;
     boolean boundaryWrote;
     boolean exceptionSeen;

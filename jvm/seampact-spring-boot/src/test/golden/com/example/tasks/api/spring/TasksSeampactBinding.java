@@ -15,6 +15,12 @@ import com.example.tasks.api.GetTasksBatchResult;
 import com.example.tasks.api.HealthErrors;
 import com.example.tasks.api.HealthInput;
 import com.example.tasks.api.HealthResult;
+import com.example.tasks.api.ListChannelsErrors;
+import com.example.tasks.api.ListChannelsInput;
+import com.example.tasks.api.ListChannelsResult;
+import com.example.tasks.api.ListTasksErrors;
+import com.example.tasks.api.ListTasksInput;
+import com.example.tasks.api.ListTasksResult;
 import com.example.tasks.api.SearchTasksErrors;
 import com.example.tasks.api.SearchTasksInput;
 import com.example.tasks.api.SearchTasksResult;
@@ -46,6 +52,8 @@ public final class TasksSeampactBinding implements ApiBinding {
         Map.entry("getTask", GetTaskInput.class),
         Map.entry("getTasksBatch", GetTasksBatchInput.class),
         Map.entry("health", HealthInput.class),
+        Map.entry("listChannels", ListChannelsInput.class),
+        Map.entry("listTasks", ListTasksInput.class),
         Map.entry("searchTasks", SearchTasksInput.class));
     }
 
@@ -57,6 +65,8 @@ public final class TasksSeampactBinding implements ApiBinding {
         Map.entry("getTask", GetTask.class),
         Map.entry("getTasksBatch", GetTasksBatch.class),
         Map.entry("health", Health.class),
+        Map.entry("listChannels", ListChannels.class),
+        Map.entry("listTasks", ListTasks.class),
         Map.entry("searchTasks", SearchTasks.class));
     }
 
@@ -68,6 +78,8 @@ public final class TasksSeampactBinding implements ApiBinding {
         Map.entry(GetTaskResult.Status200.class, 200),
         Map.entry(GetTasksBatchResult.Status200.class, 200),
         Map.entry(HealthResult.Status200.class, 200),
+        Map.entry(ListChannelsResult.Status200.class, 200),
+        Map.entry(ListTasksResult.Status200.class, 200),
         Map.entry(SearchTasksResult.Status200.class, 200));
     }
 
@@ -94,6 +106,13 @@ public final class TasksSeampactBinding implements ApiBinding {
         Map.entry(GetTasksBatchErrors.ApiInternal.class, "api.internal"),
         Map.entry(HealthErrors.ApiSchemaInvalid.class, "api.schema_invalid"),
         Map.entry(HealthErrors.ApiInternal.class, "api.internal"),
+        Map.entry(ListChannelsErrors.ApiSchemaInvalid.class, "api.schema_invalid"),
+        Map.entry(ListChannelsErrors.ApiUnauthenticated.class, "api.unauthenticated"),
+        Map.entry(ListChannelsErrors.ApiInternal.class, "api.internal"),
+        Map.entry(ListTasksErrors.ApiSchemaInvalid.class, "api.schema_invalid"),
+        Map.entry(ListTasksErrors.ApiUnauthenticated.class, "api.unauthenticated"),
+        Map.entry(ListTasksErrors.ApiNotFound.class, "api.not_found"),
+        Map.entry(ListTasksErrors.ApiInternal.class, "api.internal"),
         Map.entry(SearchTasksErrors.ApiSchemaInvalid.class, "api.schema_invalid"),
         Map.entry(SearchTasksErrors.ApiUnauthenticated.class, "api.unauthenticated"),
         Map.entry(SearchTasksErrors.ApiCsrfInvalid.class, "api.csrf_invalid"),

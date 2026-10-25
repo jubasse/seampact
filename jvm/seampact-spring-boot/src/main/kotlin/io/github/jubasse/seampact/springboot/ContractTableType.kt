@@ -18,7 +18,7 @@ import javax.lang.model.element.Modifier
 private val TOOLING_MEMBERS = setOf("derivedFrom", "origin", "docs", "examples", "maturity")
 
 // The declarations the boundary reads beside the kept operations and the schemas and enums they reach.
-private val DECLARATION_MEMBERS = listOf("api", "errors", "formats", "identities", "schemes", "scopes", "rights", "rules")
+private val DECLARATION_MEMBERS = listOf("api", "errors", "formats", "pagings", "identities", "schemes", "scopes", "rights", "rules")
 
 // A Java string constant holds at most 65535 UTF-8 bytes: a chunk of 8000 characters always fits.
 private const val CHUNK_CHARACTERS = 8000

@@ -33,12 +33,15 @@ final class InputStep {
         ObjectNode tree = NODES.objectNode();
 
         tree.set("path", pathParams(boundary, exchange, operation.path("params").path("path"), issues));
-        tree.set("query", queryParams(boundary, operation, request.getQueryString(), issues));
+        ObjectNode query = queryParams(boundary, operation, request.getQueryString(), issues);
+        tree.set("query", query);
         tree.set("headers", headerParams(boundary, operation.path("params").path("header"), request, issues));
         if (operation.has("input")) tree.set("body", body(boundary, exchange, operation.path("input"), issues));
 
         if (!issues.isEmpty()) throw schemaInvalid(exchange.route(), issues);
 
+        PageReply.fillLimit(boundary.table(), exchange.route(), query);
+        exchange.query = query;
         exchange.input = bind(boundary, exchange.route(), tree);
     }
 

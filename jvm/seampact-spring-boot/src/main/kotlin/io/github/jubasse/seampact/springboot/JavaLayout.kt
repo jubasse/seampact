@@ -37,6 +37,7 @@ internal data class OperationNames(
     val query: ClassName,
     val headers: ClassName,
     val result: ClassName,
+    val page: ClassName,
     val errors: ClassName,
     val annotation: ClassName,
     val endpoints: ClassName,
@@ -138,7 +139,8 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
             operationNames[operation.id] = names
 
             if (endpointsClaimed.add(names.endpoints)) claim(names.endpoints, "the endpoints interface '${names.endpoints.simpleName()}'", place, refusals)
-            for (className in listOf(names.input, names.path, names.query, names.headers, names.result, names.errors, names.annotation)) {
+            val pageName = if (operation.paging?.style != null) listOf(names.page) else emptyList()
+            for (className in listOf(names.input, names.path, names.query, names.headers, names.result, names.errors, names.annotation) + pageName) {
                 claim(className, "a type of operation '${operation.id}'", place, refusals)
             }
         }
@@ -167,6 +169,7 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
             query = inOperations(NamingRole.QUERY),
             headers = inOperations(NamingRole.HEADERS),
             result = ClassName.get(operationsPackage, javaIdentifier(segments + "result", NamingRole.SCHEMA)),
+            page = ClassName.get(operationsPackage, javaIdentifier(segments + "page", NamingRole.SCHEMA)),
             errors = inOperations(NamingRole.ERRORS),
             annotation = ClassName.get(springPackage, javaIdentifier(segments, NamingRole.SCHEMA)),
             endpoints = ClassName.get(operationsPackage, javaIdentifier(endpointsOwner, NamingRole.ENDPOINTS)),

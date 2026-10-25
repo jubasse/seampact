@@ -43,11 +43,11 @@ final class OutputFieldRights {
     }
 
     // A table's values and a list's items are each an instance of the body's schema.
-    private static List<JsonNode> schemaInstances(JsonNode body, String shape) {
+    static List<JsonNode> schemaInstances(JsonNode body, String shape) {
         List<JsonNode> instances = new ArrayList<>();
         switch (shape) {
             case "table" -> body.properties().forEach(entry -> instances.add(entry.getValue()));
-            case "list" -> body.forEach(instances::add);
+            case "list", "page" -> body.forEach(instances::add);
             default -> instances.add(body);
         }
 

@@ -38,7 +38,7 @@ private val CHECKED_STRING_FORMATS = setOf("uuid", "date-time", "date", "decimal
 internal const val ETAG_DERIVATION = "cache.etag"
 private const val OUTPUT_DIRECTION = "output"
 private const val PATH_SOURCE = "path"
-private val PAYLOAD_SHAPES = listOf(ResponseShape.ITEM, ResponseShape.TABLE, ResponseShape.LIST)
+private val PAYLOAD_SHAPES = listOf(ResponseShape.ITEM, ResponseShape.TABLE, ResponseShape.LIST, ResponseShape.PAGE)
 
 /**
  * What one api's generation reads from its kept operations (ADR 0022 "Refused by name or waiting"): the operations,
@@ -101,7 +101,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
     }
 
     private fun checkOperationForms(operation: Operation, at: IrPlace) {
-        if (operation.paging != null) refusals.waiting("paging", "Paging", at.below("paging"), Delivery.SPRING_3)
+        checkPaging(ir, operation, at, refusals)
         if (operation.cache != null) refusals.waiting("cache", "Cache and ETag headers", at.below("cache"), Delivery.SPRING_3)
         if (operation.concurrency != null) refusals.waiting("concurrency", "A version token (concurrency)", at.below("concurrency"), Delivery.SPRING_3)
 
@@ -148,7 +148,9 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
 
         when (response.shape) {
             ResponseShape.ITEM, ResponseShape.TABLE, ResponseShape.LIST, ResponseShape.EMPTY -> Unit
-            ResponseShape.PAGE -> refusals.waiting("response.shape", "A 'page' response", responseAt.below("shape"), Delivery.SPRING_3)
+            ResponseShape.PAGE -> if (operation.paging?.style == null) {
+                refusals.inconsistent("paging.style.missing", "A 'page' response has no paging style", responseAt.below("shape"))
+            }
             ResponseShape.BINARY, ResponseShape.REDIRECT ->
                 refusals.waiting("response.shape", "A '${response.shape.value}' response", responseAt.below("shape"), Delivery.SPRING_4)
             is ResponseShape.Unknown -> refusals.unknownValue(responseAt.below("shape"), response.shape.value)

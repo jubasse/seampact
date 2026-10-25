@@ -71,11 +71,13 @@ internal class OperationTypes(
         val names = layout.operation(operation.id)
         val result = TypeSpec.interfaceBuilder(names.result).addModifiers(Modifier.PUBLIC, Modifier.SEALED)
 
+        val types = mutableListOf<TypeSpec>()
         for (response in operation.responses) {
             if (response.derivedFrom?.derivation == ETAG_DERIVATION) continue
+            if (response.shape == ResponseShape.PAGE) pageItemType(response)?.let { item -> pageRecord(layout, operation, item)?.let { types += it } }
 
             val arm = names.result.nestedClass(STATUS_ARM_PREFIX + response.status)
-            val components = listOfNotNull(responseBody(response)?.let { RecordComponent("body", it, redacted = response.body?.isSensitive() == true) })
+            val components = listOfNotNull(responseBody(operation, response)?.let { RecordComponent("body", it, redacted = response.body?.isSensitive() == true) })
             result.addType(generatedRecord(arm, components, layout).addModifiers(Modifier.STATIC).addSuperinterface(names.result).build())
             result.addPermittedSubclass(arm)
         }
@@ -83,10 +85,17 @@ internal class OperationTypes(
         val errors = errorsType(operation)
         if (errors != null) result.addPermittedSubclass(names.errors)
 
-        return listOfNotNull(result.build(), errors)
+        return types + listOfNotNull(result.build(), errors)
     }
 
-    private fun responseBody(response: Response): TypeName? {
+    private fun pageItemType(response: Response): TypeName? {
+        val body = response.body ?: return null
+        val presence = if (body.isNullable()) Presence.NULLABLE else Presence.REQUIRED
+
+        return mapper.memberType(body, presence).boxedArgument()
+    }
+
+    private fun responseBody(operation: Operation, response: Response): TypeName? {
         val body = response.body ?: return null
         val presence = if (body.isNullable()) Presence.NULLABLE else Presence.REQUIRED
 
@@ -94,6 +103,7 @@ internal class OperationTypes(
             ResponseShape.ITEM -> mapper.memberType(body, presence)
             ResponseShape.LIST -> ParameterizedTypeName.get(JavaTypes.LIST, mapper.memberType(body, presence).boxedArgument())
             ResponseShape.TABLE -> ParameterizedTypeName.get(JavaTypes.MAP, JavaTypes.STRING, mapper.memberType(body, presence).boxedArgument())
+            ResponseShape.PAGE -> layout.operation(operation.id).page
             else -> null
         }
     }

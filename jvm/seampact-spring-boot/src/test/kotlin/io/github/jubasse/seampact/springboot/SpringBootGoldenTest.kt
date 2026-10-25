@@ -36,7 +36,7 @@ class SpringBootGoldenTest {
     private class GoldenApi(val irFile: String, val packageName: String, val operations: Set<String>)
 
     private val apis = listOf(
-        GoldenApi("tasks.ir.json", "com.example.tasks.api", setOf("health", "getChannel", "getDraft", "getTask", "getTasksBatch", "searchTasks")),
+        GoldenApi("tasks.ir.json", "com.example.tasks.api", setOf("health", "getChannel", "getDraft", "getTask", "getTasksBatch", "listChannels", "listTasks", "searchTasks")),
         GoldenApi("tasksService.ir.json", "com.example.tasksservice.api", setOf("getTask")),
     )
 
@@ -113,7 +113,7 @@ class SpringBootGoldenTest {
         }
 
         val codes = refused.refusals.map { it.code }.toSet()
-        for (code in listOf("paging.unsupported", "idempotency.unsupported", "cache.unsupported", "signature.unsupported")) {
+        for (code in listOf("idempotency.unsupported", "cache.unsupported", "signature.unsupported")) {
             assertTrue(code in codes, "expected $code among $codes")
         }
         assertTrue(refused.refusals.all { it.message.contains("spring-") || it.message.contains("waits for") }, refused.message)

@@ -11,6 +11,9 @@ public interface TasksEndpoints {
             ApiUnauthenticatedError, ApiNotFoundError, ApiPayloadTooLargeError,
             ApiUnsupportedMediaTypeError, ApiInternalError;
 
+    ListTasksResult listTasks(ListTasksInput input) throws ApiSchemaInvalidError,
+            ApiUnauthenticatedError, ApiNotFoundError, ApiInternalError;
+
     SearchTasksResult searchTasks(SearchTasksInput input) throws ApiSchemaInvalidError,
             ApiUnauthenticatedError, ApiCsrfInvalidError, ApiForbiddenError, ApiNotFoundError,
             ApiPayloadTooLargeError, ApiUnsupportedMediaTypeError, ApiInternalError;
