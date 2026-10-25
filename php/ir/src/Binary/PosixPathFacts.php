@@ -34,31 +34,15 @@ final class PosixPathFacts implements PathFacts
 
     public function isPrivateGroup(int $groupId, int $ownerUid): bool
     {
-        if (!function_exists('posix_getpwuid') || !function_exists('posix_getgrgid')) {
+        $passwd = @file_get_contents(SystemAccounts::PASSWD_FILE);
+        $group = @file_get_contents(SystemAccounts::GROUP_FILE);
+        $nsswitch = is_file(SystemAccounts::NSSWITCH_FILE) ? @file_get_contents(SystemAccounts::NSSWITCH_FILE) : null;
+
+        // An account file that cannot be read proves nothing: the group write is refused.
+        if ($passwd === false || $group === false || $nsswitch === false) {
             return false;
         }
 
-        $owner = posix_getpwuid($ownerUid);
-        $group = posix_getgrgid($groupId);
-        if ($owner === false || $group === false || $owner['gid'] !== $groupId) {
-            return false;
-        }
-
-        return array_diff($group['members'], [$owner['name']]) === [];
-    }
-
-    public function realDirectory(string $path): string
-    {
-        $real = realpath($path);
-
-        if ($real === false) {
-            throw BinaryRefusedException::of(
-                BinaryFailureCode::CacheUnsafe,
-                "The directory '{$path}' above the binary cache cannot be resolved.",
-                'Check that the cache directory exists and that your user can read its parents.',
-            );
-        }
-
-        return $real;
+        return SystemAccounts::isPrivateGroup($groupId, $ownerUid, $passwd, $group, $nsswitch);
     }
 }

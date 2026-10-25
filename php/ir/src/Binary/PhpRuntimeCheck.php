@@ -17,6 +17,9 @@ final class PhpRuntimeCheck
 
     private const FLOOR = '8.3.36';
 
+    // A pre-release suffix (`RC1`, `alpha1`, `-dev`) marks a build that may predate its release.
+    private const PRE_RELEASE_SUFFIX = '/^[-._+]?(?:dev|alpha|beta|a|b|rc)/i';
+
     private function __construct()
     {
     }
@@ -28,26 +31,35 @@ final class PhpRuntimeCheck
             return;
         }
 
-        $release = preg_match('/^(\d+)\.(\d+)\.(\d+)/', $runningVersion, $parts) === 1
+        $release = preg_match('/^(\d+)\.(\d+)\.(\d+)(.*)$/s', $runningVersion, $parts) === 1
             ? "{$parts[1]}.{$parts[2]}.{$parts[3]}"
             : $runningVersion;
         $branch = isset($parts[1], $parts[2]) ? "{$parts[1]}.{$parts[2]}" : '';
+        $preRelease = preg_match(self::PRE_RELEASE_SUFFIX, $parts[4] ?? '') === 1;
         $fixed = self::FIXED_RELEASES[$branch] ?? null;
 
-        if ($fixed === null && version_compare($release, self::FLOOR, '>=')) {
+        if ($fixed === null && self::isAtLeast($release, $preRelease, self::FLOOR)) {
             return;
         }
 
         $fixed ??= self::FLOOR;
-        if (version_compare($release, $fixed, '>=')) {
+        if (self::isAtLeast($release, $preRelease, $fixed)) {
             return;
         }
 
         throw BinaryRefusedException::of(
             BinaryFailureCode::PhpUnpatched,
             "PHP {$runningVersion} lacks the fixes of CVE-2026-109618 and CVE-2026-109619; the first fixed release of its branch is {$fixed}.",
-            "Upgrade PHP to {$fixed} or later. If your distribution backports the fixes under an older version number, "
+            "Upgrade PHP to {$fixed} or later (a pre-release of {$fixed} does not count). If your distribution backports the fixes under an older version number, "
                 . 'set `"phpPatched": true` under `extra.seampact` in your root composer.json.',
         );
+    }
+
+    // A pre-release of a version comes before it: `8.5.12RC1` is not `8.5.12`.
+    private static function isAtLeast(string $release, bool $preRelease, string $fixed): bool
+    {
+        $comparison = version_compare($release, $fixed);
+
+        return $comparison > 0 || ($comparison === 0 && !$preRelease);
     }
 }

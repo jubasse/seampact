@@ -37,6 +37,7 @@ final class CacheRuleTest extends TestCase
     private const EVERYONE_SID = 'S-1-1-0';
     private const PROFILE = 'C:\\Users\\dev';
     private const WINDOWS_COPY = 'C:\\Users\\dev\\AppData\\Local\\seampact\\abc\\seampact.exe';
+    private const WINDOWS_CACHE_ROOT = 'C:\\Users\\dev\\AppData\\Local\\seampact';
 
     /** @return array<string, array{array<string, PathFact>, ?string}> the changed facts, and the path refused or null */
     public static function posixCases(): array
@@ -48,6 +49,9 @@ final class CacheRuleTest extends TestCase
             'a cache root its shared group may write' => [[self::CACHE_ROOT => new PathFact(false, self::USER, self::SHARED_GROUP, 0770)], self::CACHE_ROOT],
             'a cache root its owner private group may write (umask 002)' => [[self::CACHE_ROOT => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0775)], null],
             'a hash directory others may write, private group or not' => [[dirname(self::COPY) => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0777)], dirname(self::COPY)],
+            'a hash directory its owner private group may write' => [[dirname(self::COPY) => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0770)], dirname(self::COPY)],
+            'a copy its owner private group may write' => [[self::COPY => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0770)], self::COPY],
+            'a link above the real cache root' => [['/home/dev/.cache' => new PathFact(true, self::USER, self::SHARED_GROUP, 0777)], '/home/dev/.cache'],
             'an ancestor its owner private group may write' => [['/home/dev' => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0775)], null],
             'an ancestor its shared group may write' => [['/home/dev' => new PathFact(false, self::USER, self::SHARED_GROUP, 0775)], '/home/dev'],
             'a root-owned cache root' => [[self::CACHE_ROOT => new PathFact(false, self::ROOT, self::SHARED_GROUP, 0700)], self::CACHE_ROOT],
@@ -71,9 +75,9 @@ final class CacheRuleTest extends TestCase
             '/' => new PathFact(false, self::ROOT, self::SHARED_GROUP, 0755),
             ...$changed,
         ];
-        $safety = new PosixCacheSafety(self::CACHE_ROOT, self::posixFacts($facts));
+        $safety = new PosixCacheSafety(self::posixFacts($facts));
 
-        $this->assertRefusal(static fn () => $safety->refuseUnsafe(self::COPY), $refusedPath);
+        $this->assertRefusal(static fn () => $safety->refuseUnsafe(self::COPY, self::CACHE_ROOT), $refusedPath);
     }
 
     /** @return array<string, array{array<string, WindowsPathFact>, ?string}> */
@@ -103,14 +107,14 @@ final class CacheRuleTest extends TestCase
         ];
         $safety = new WindowsCacheSafety(self::PROFILE, self::windowsFacts($facts));
 
-        $this->assertRefusal(static fn () => $safety->refuseUnsafe(self::WINDOWS_COPY), $refusedPath);
+        $this->assertRefusal(static fn () => $safety->refuseUnsafe(self::WINDOWS_COPY, self::WINDOWS_CACHE_ROOT), $refusedPath);
     }
 
     public function testRefusesAWindowsCopyOutsideTheProfile(): void
     {
         $safety = new WindowsCacheSafety(self::PROFILE, self::windowsFacts([]));
 
-        $this->assertRefusal(static fn () => $safety->refuseUnsafe('D:\\shared\\seampact.exe'), 'D:\\shared\\seampact.exe');
+        $this->assertRefusal(static fn () => $safety->refuseUnsafe('D:\\shared\\seampact.exe', 'D:\\shared'), 'D:\\shared\\seampact.exe');
     }
 
     /** @return array<string, array{array<string, string>, bool, ?string}> */
@@ -185,11 +189,6 @@ final class CacheRuleTest extends TestCase
             public function isPrivateGroup(int $groupId, int $ownerUid): bool
             {
                 return $groupId === 1000 && $ownerUid === 1000;
-            }
-
-            public function realDirectory(string $path): string
-            {
-                return $path;
             }
         };
     }

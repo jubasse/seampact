@@ -18,6 +18,7 @@ enum BinaryFailureCode: string
     case PlatformUnsupported = 'binary.platform-unsupported';
     case CacheUnavailable = 'binary.cache-unavailable';
     case CacheUnsafe = 'binary.cache-unsafe';
+    case CompileRefused = 'binary.compile-refused';
     case CompileTimeout = 'binary.compile-timeout';
     case CompileFailed = 'binary.compile-failed';
     case PhpUnpatched = 'php.unpatched';

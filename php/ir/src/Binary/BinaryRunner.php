@@ -7,9 +7,11 @@ namespace Seampact\Ir\Binary;
 /**
  * Runs `compile --config <app config> --out <directory>` of the private binary copy through `proc_open` with an
  * array command, so no shell reads it, from the app config's directory, with the contract's environment only.
- * The output directory is a fresh one created owner-only in the system temporary directory; only the
+ * Every path is made absolute before any check, so the child, which starts in another directory, gets the files
+ * checked. The output directory is a fresh one created owner-only in the system temporary directory; only the
  * `<api>.ir.json` of each api asked for is read from it, then it is removed. Standard input and output are the
- * null device: the diagnostics are on standard error.
+ * null device: the diagnostics are on standard error. Exits 1 (refused) and 2 (a usage error) are refused as
+ * `binary.compile-refused` with the binary's diagnostics.
  */
 final class BinaryRunner
 {
@@ -28,16 +30,27 @@ final class BinaryRunner
 
     private const IR_SUFFIX = '.ir.json';
 
+    // The api names of the app config schema: never a path separator or a `..`.
+    private const API_NAME_PATTERN = '/^[A-Za-z][A-Za-z0-9_-]*$/D';
+
+    // What replaces a byte that is not part of a valid UTF-8 sequence, before the control characters are removed.
+    private const INVALID_BYTE_REPLACEMENT = '?';
+
+    // One well-formed UTF-8 sequence (RFC 3629) in group 1, else any single byte.
+    private const VALID_UTF8_SEQUENCE_OR_BYTE = '/([\x00-\x7F]|[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]'
+        . '|[\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}|\xED[\x80-\x9F][\x80-\xBF]|\xF0[\x90-\xBF][\x80-\xBF]{2}'
+        . '|[\xF1-\xF3][\x80-\xBF]{3}|\xF4[\x80-\x8F][\x80-\xBF]{2})|./s';
+
     private function __construct()
     {
     }
 
     /**
-     * @param string $configFile the absolute path of the app config
+     * @param string $configFile the path of the app config, made absolute against the working directory
      * @param list<string> $apis the apis of the app config, whose IR files are read
      * @param array<string, string> $parentEnvironment the variables of this process, filtered to the contract's
-     * @throws BinaryRefusedException `binary.cache-unsafe`, `binary.hash-mismatch`, `binary.compile-timeout` or
-     *     `binary.compile-failed`
+     * @throws BinaryRefusedException `binary.cache-unsafe`, `binary.hash-mismatch`, `binary.compile-refused`,
+     *     `binary.compile-timeout` or `binary.compile-failed`
      */
     public static function compile(
         InstalledBinary $binary,
@@ -47,6 +60,9 @@ final class BinaryRunner
         array $parentEnvironment,
         bool $windows,
     ): BinaryCompileOutput {
+        self::refuseUnsafeApiNames($apis);
+        $configFile = AbsolutePath::resolved($configFile);
+        self::refuseRelativeBinary($binary);
         $binary->refuseUnlessIntact();
         $outputDirectory = self::newOutputDirectory();
 
@@ -76,7 +92,7 @@ final class BinaryRunner
         }
 
         if ($exit['code'] === self::EXIT_REFUSED || $exit['code'] === self::EXIT_USAGE) {
-            return new BinaryCompileOutput($exit['code'], $diagnostics, []);
+            throw self::refused($exit['code'], $diagnostics);
         }
 
         if ($exit['code'] !== self::EXIT_COMPILED) {
@@ -95,7 +111,7 @@ final class BinaryRunner
             $irTextByApi[$api] = $text;
         }
 
-        return new BinaryCompileOutput(self::EXIT_COMPILED, $diagnostics, $irTextByApi);
+        return new BinaryCompileOutput($diagnostics, $irTextByApi);
     }
 
     /**
@@ -173,7 +189,7 @@ final class BinaryRunner
 
     private static function newErrorFile(): string
     {
-        $file = sys_get_temp_dir() . DIRECTORY_SEPARATOR . self::OUTPUT_PREFIX . bin2hex(random_bytes(8)) . '.stderr';
+        $file = self::temporaryPath('.stderr');
         $handle = @fopen($file, 'x');
 
         if ($handle === false || !fclose($handle) || !chmod($file, 0600)) {
@@ -183,11 +199,57 @@ final class BinaryRunner
         return $file;
     }
 
+    // Invalid UTF-8 is replaced first, so the C1 controls (U+0080 to U+009F) are always found and removed.
     private static function withoutControlCharacters(string $text): string
     {
-        $text = preg_replace('/[\x00-\x08\x0b-\x1f\x7f]/', '', $text) ?? '';
+        $valid = preg_match('//u', $text) === 1 ? $text : self::withInvalidBytesReplaced($text);
+        $text = preg_replace('/[\x00-\x08\x0b-\x1f\x7f]/', '', $valid) ?? '';
 
-        return preg_match('//u', $text) === 1 ? preg_replace('/[\x{80}-\x{9f}]/u', '', $text) ?? $text : $text;
+        return preg_replace('/[\x{80}-\x{9f}]/u', '', $text) ?? '';
+    }
+
+    private static function withInvalidBytesReplaced(string $text): string
+    {
+        return preg_replace_callback(
+            self::VALID_UTF8_SEQUENCE_OR_BYTE,
+            static fn (array $match): string => $match[1] ?? self::INVALID_BYTE_REPLACEMENT,
+            $text,
+            -1,
+            $count,
+            PREG_UNMATCHED_AS_NULL,
+        ) ?? '';
+    }
+
+    // Below the system temporary directory, made absolute: a relative TMPDIR is resolved once here.
+    private static function temporaryPath(string $suffix): string
+    {
+        return AbsolutePath::resolved(sys_get_temp_dir()) . DIRECTORY_SEPARATOR . self::OUTPUT_PREFIX . bin2hex(random_bytes(8)) . $suffix;
+    }
+
+    /** @param list<string> $apis */
+    private static function refuseUnsafeApiNames(array $apis): void
+    {
+        foreach ($apis as $api) {
+            if (preg_match(self::API_NAME_PATTERN, $api) !== 1) {
+                throw new \InvalidArgumentException("The api name '{$api}' is not an api name of the app config schema (a letter, then letters, digits, `_` or `-`); its IR file is never read.");
+            }
+        }
+    }
+
+    private static function refuseRelativeBinary(InstalledBinary $binary): void
+    {
+        if (!AbsolutePath::isAbsolute($binary->path)) {
+            throw self::failed("path '{$binary->path}' is relative, so the file checked and the file started could differ", '');
+        }
+    }
+
+    private static function refused(int $exitCode, string $diagnostics): BinaryRefusedException
+    {
+        return BinaryRefusedException::of(
+            BinaryFailureCode::CompileRefused,
+            "The compiler binary refused the compile with the exit code {$exitCode}. Its diagnostics:\n{$diagnostics}",
+            'Fix what the diagnostics name in the app config or the contract, then run the compile again.',
+        );
     }
 
     private static function failed(string $what, string $diagnostics): BinaryRefusedException
@@ -203,7 +265,7 @@ final class BinaryRunner
 
     private static function newOutputDirectory(): string
     {
-        $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . self::OUTPUT_PREFIX . bin2hex(random_bytes(8));
+        $directory = self::temporaryPath('');
 
         if (!mkdir($directory, 0700) || !chmod($directory, 0700)) {
             throw self::failed("could not be given an output directory ('{$directory}' cannot be created)", '');

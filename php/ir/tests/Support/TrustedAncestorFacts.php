@@ -41,9 +41,4 @@ final readonly class TrustedAncestorFacts implements PathFacts
     {
         return $this->real->isPrivateGroup($groupId, $ownerUid);
     }
-
-    public function realDirectory(string $path): string
-    {
-        return $this->real->realDirectory($path);
-    }
 }

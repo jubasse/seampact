@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Seampact\Ir\Binary;
 
 /**
- * Copies a binary into `<cache root>/<sha256>/`: streamed into a temporary file created exclusively there and
+ * Creates the cache root and resolves its real path once; only that path is checked and run from then on. Copies a
+ * binary into `<cache root>/<sha256>/`: streamed into a temporary file created exclusively there and
  * hashed as it streams, made executable, then renamed atomically to its name. An entry already there with the
  * right hash counts as success, so concurrent runs and a running `.exe` on Windows are safe. A copy whose hash
  * differs is deleted and refused. Only the copy ever runs, never the file it came from.
@@ -23,10 +24,12 @@ final class BinaryInstaller
     /** @throws BinaryRefusedException */
     public static function install(string $source, string $sha256, string $cacheRoot, string $fileName, CacheSafety $safety): InstalledBinary
     {
-        $directory = $cacheRoot . DIRECTORY_SEPARATOR . $sha256;
+        $safety->createPrivateDirectory($cacheRoot);
+        $realCacheRoot = self::realCacheRoot($cacheRoot);
+        $directory = $realCacheRoot . DIRECTORY_SEPARATOR . $sha256;
         $safety->createPrivateDirectory($directory);
         $target = $directory . DIRECTORY_SEPARATOR . $fileName;
-        $installed = new InstalledBinary($target, $sha256, $safety);
+        $installed = new InstalledBinary($target, $sha256, $realCacheRoot, $safety);
 
         if (is_file($target) && hash_file('sha256', $target) === $sha256) {
             $installed->refuseUnlessIntact();
@@ -63,6 +66,21 @@ final class BinaryInstaller
             "The compiler binary '{$file}' has the SHA-256 {$actual}; the pin is {$expected}. It is never run.",
             'Point the override at the build the pin names, or pin the SHA-256 of your own build after you review it.',
         );
+    }
+
+    private static function realCacheRoot(string $cacheRoot): string
+    {
+        $real = realpath($cacheRoot);
+
+        if ($real === false) {
+            throw BinaryRefusedException::of(
+                BinaryFailureCode::CacheUnsafe,
+                "The binary cache root '{$cacheRoot}' cannot be resolved to its real path.",
+                'Check that your user can read the cache directory and each of its parents.',
+            );
+        }
+
+        return $real;
     }
 
     // The SHA-256 of the bytes streamed from `$source` into the new file `$temporary`.

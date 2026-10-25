@@ -10,6 +10,9 @@ interface CacheSafety
     /** Creates the cache root, each missing directory on its way and `$directory` owner-only, whatever the umask. */
     public function createPrivateDirectory(string $directory): void;
 
-    /** @throws BinaryRefusedException `binary.cache-unsafe`, naming the path */
-    public function refuseUnsafe(string $copyPath): void;
+    /**
+     * @param string $cacheRoot the real path of the cache root, which `$copyPath` is below
+     * @throws BinaryRefusedException `binary.cache-unsafe`, naming the path
+     */
+    public function refuseUnsafe(string $copyPath, string $cacheRoot): void;
 }

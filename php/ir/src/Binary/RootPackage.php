@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Seampact\Ir\Binary;
 
 /**
- * The root package's `composer.json`: the file the `COMPOSER` variable names (relative to the project directory),
+ * The root package's `composer.json`: the file the `COMPOSER` variable names (relative to the project directory,
+ * made absolute first),
  * else `composer.json` in the project directory. Only this file sets the binary override and the
  * `extra.seampact.phpPatched` opt-out; a dependency's `extra.seampact.binary`, which Composer copies into
  * `vendor/composer/installed.json`, is refused.
@@ -22,10 +23,11 @@ final readonly class RootPackage
      */
     public static function locate(string $projectDirectory, array $environment): self
     {
+        $projectDirectory = AbsolutePath::resolved($projectDirectory);
         $named = $environment['COMPOSER'] ?? '';
         $composerFile = match (true) {
             $named === '' => $projectDirectory . DIRECTORY_SEPARATOR . 'composer.json',
-            self::isAbsolute($named) => $named,
+            AbsolutePath::isAbsolute($named) => $named,
             default => $projectDirectory . DIRECTORY_SEPARATOR . $named,
         };
 
@@ -33,7 +35,15 @@ final readonly class RootPackage
         $extra = $document->extra ?? null;
         $seampact = $extra instanceof \stdClass ? $extra->seampact ?? null : null;
 
-        return new self($composerFile, $seampact instanceof \stdClass ? $seampact : new \stdClass());
+        if ($seampact !== null && !$seampact instanceof \stdClass) {
+            throw BinaryRefusedException::of(
+                BinaryFailureCode::PinInvalid,
+                "`extra.seampact` of '{$composerFile}' is not an object.",
+                'Make `extra.seampact` an object, such as {"binary": {"path": "...", "sha256": "..."}}, or remove it.',
+            );
+        }
+
+        return new self($composerFile, $seampact ?? new \stdClass());
     }
 
     /** The `extra.seampact.binary` override, or null when the root package sets none. */
@@ -89,11 +99,6 @@ final readonly class RootPackage
                 );
             }
         }
-    }
-
-    private static function isAbsolute(string $path): bool
-    {
-        return str_starts_with($path, '/') || str_starts_with($path, '\\') || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
     }
 
     private static function readJson(string $file): \stdClass

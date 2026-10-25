@@ -46,7 +46,7 @@ final class CompilerBinary
         $cacheRoot = CacheRoot::locate($environment, $host->isWindows());
         $safety = $host->isWindows()
             ? new WindowsCacheSafety($environment['USERPROFILE'] ?? throw self::noUserProfile())
-            : new PosixCacheSafety($cacheRoot);
+            : new PosixCacheSafety();
 
         return BinaryInstaller::install(
             $override->value,

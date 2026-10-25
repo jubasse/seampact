@@ -52,7 +52,6 @@ final class BinaryStubRunTest extends TestCase
 
         $output = $this->compile($binary, ['shop', 'admin']);
 
-        self::assertTrue($output->compiled());
         self::assertSame(['shop' => '{"irVersion":1}', 'admin' => '{"irVersion":1}'], $output->irTextByApi);
         self::assertSame("{$this->cacheRoot}/{$binary->sha256}/seampact", $binary->path);
         self::assertSame(0700, fileperms(dirname($binary->path)) & 0777);
@@ -83,7 +82,7 @@ final class BinaryStubRunTest extends TestCase
 
         $output = $this->compile($binary, ['shop']);
 
-        self::assertTrue($output->compiled());
+        self::assertSame(['shop' => '{}'], $output->irTextByApi);
         self::assertFileDoesNotExist($marker);
     }
 
@@ -186,7 +185,7 @@ final class BinaryStubRunTest extends TestCase
         try {
             $refused = $this->refusal(function () use ($source, $sha256): void {
                 $cacheRoot = CacheRoot::locate(['COMPOSER_CACHE_DIR' => 'relative-cache', 'HOME' => $this->directory], false);
-                $safety = new PosixCacheSafety($cacheRoot, new TrustedAncestorFacts($this->directory));
+                $safety = new PosixCacheSafety(new TrustedAncestorFacts($this->directory));
                 $this->compile(BinaryInstaller::install($source, $sha256, $cacheRoot, 'seampact', $safety), ['shop']);
             });
         } finally {
@@ -204,12 +203,12 @@ final class BinaryStubRunTest extends TestCase
         symlink("{$this->directory}/private", "{$this->directory}/link");
         $cacheRoot = "{$this->directory}/link/seampact";
         $source = StubBinary::compiler("{$this->directory}/compiler", ['shop']);
-        $safety = new PosixCacheSafety($cacheRoot, new TrustedAncestorFacts($this->directory));
+        $safety = new PosixCacheSafety(new TrustedAncestorFacts($this->directory));
 
         $binary = BinaryInstaller::install($source, StubBinary::sha256($source), $cacheRoot, 'seampact', $safety);
 
         self::assertSame("{$this->directory}/private/seampact/{$binary->sha256}/seampact", $binary->path);
-        self::assertTrue($this->compile($binary, ['shop'])->compiled());
+        self::assertSame(['shop' => '{}'], $this->compile($binary, ['shop'])->irTextByApi);
     }
 
     public function testRefusesAnyOtherExitCode(): void
@@ -265,7 +264,7 @@ final class BinaryStubRunTest extends TestCase
 
     private function installed(string $source): InstalledBinary
     {
-        $safety = new PosixCacheSafety($this->cacheRoot, new TrustedAncestorFacts($this->directory));
+        $safety = new PosixCacheSafety(new TrustedAncestorFacts($this->directory));
 
         return BinaryInstaller::install($source, StubBinary::sha256($source), $this->cacheRoot, 'seampact', $safety);
     }

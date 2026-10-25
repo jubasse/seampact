@@ -56,7 +56,7 @@ final readonly class BinaryOverride
             throw self::invalid("{$where} has a `{$source->value}` that is not a non-empty string");
         }
 
-        if (!property_exists($binary, 'sha256')) {
+        if (!property_exists($binary, 'sha256') || $binary->sha256 === null) {
             throw self::missing("{$where} gives no `sha256`");
         }
 
@@ -107,9 +107,7 @@ final readonly class BinaryOverride
 
     private static function resolvedPath(string $path, string $composerFile): string
     {
-        $isAbsolute = str_starts_with($path, '/') || str_starts_with($path, '\\') || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
-
-        return $isAbsolute ? $path : dirname($composerFile) . DIRECTORY_SEPARATOR . $path;
+        return AbsolutePath::isAbsolute($path) ? $path : dirname($composerFile) . DIRECTORY_SEPARATOR . $path;
     }
 
     private static function invalid(string $problem): BinaryRefusedException

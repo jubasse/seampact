@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Seampact\Ir\Bundle;
 
 /**
- * The ustar entries of a bundle tarball (POSIX.1-1988 with pax extended headers), read from the uncompressed
- * bytes, each checked before the next is read: regular files and directories only, pax extended headers for
+ * The ustar entries of a bundle tarball (POSIX.1-1988 with pax extended headers), read block by block from the
+ * uncompressed archive in a private temporary file, each checked before the next is read; a file's bytes stay in
+ * the archive, located by offset and size: regular files and directories only, pax extended headers for
  * `path` and `size` only, global pax headers ignored, every other type refused; a file is the manifest or a
  * portable bundle path, a directory one of their parents; no duplicate (also once folded to ASCII lower case) or
  * path that is both a file and a directory. Entry names are untrusted: quoted in messages, kept exact in `file`.
@@ -60,18 +61,23 @@ final class UstarParser
     /** @var array<string, true> every directory folded (an entry's or a file's parent) */
     private array $directoryFolds = [];
 
-    public function __construct(private readonly string $archive)
+    /** @var resource */
+    private $archive;
+
+    /** @param resource $archive the uncompressed archive, of `$archiveBytes` bytes */
+    public function __construct($archive, private readonly int $archiveBytes)
     {
+        $this->archive = $archive;
     }
 
     public function parse(): BundleArchiveRead
     {
         while (true) {
-            if ($this->offset + self::BLOCK_BYTES > strlen($this->archive)) {
+            if ($this->offset + self::BLOCK_BYTES > $this->archiveBytes) {
                 return BundleArchiveRead::refused(BundleArchiveRead::archiveInvalid('it ends before its end-of-archive block'));
             }
 
-            $header = substr($this->archive, $this->offset, self::BLOCK_BYTES);
+            $header = $this->bytesAt($this->offset, self::BLOCK_BYTES);
             if (trim($header, "\0") === '') {
                 return BundleArchiveRead::read($this->files);
             }
@@ -109,24 +115,23 @@ final class UstarParser
 
         $dataStart = $this->offset + self::BLOCK_BYTES;
         // Subtracted, not added: a pax size near PHP_INT_MAX would overflow the sum.
-        if ($size > strlen($this->archive) - $dataStart) {
+        if ($size > $this->archiveBytes - $dataStart) {
             return BundleArchiveRead::archiveInvalid('it ends inside an entry', $path);
         }
 
-        $data = substr($this->archive, $dataStart, $size);
         $this->offset = $dataStart + intdiv($size + self::BLOCK_BYTES - 1, self::BLOCK_BYTES) * self::BLOCK_BYTES;
 
-        return $this->typed($type, $path, $data);
+        return $this->typed($type, $path, $dataStart, $size);
     }
 
-    private function typed(string $type, string $path, string $data): ?BundleFailure
+    private function typed(string $type, string $path, int $dataStart, int $size): ?BundleFailure
     {
         if ($type === self::PAX_TYPE_GLOBAL) {
             return null;
         }
 
         if ($type === self::PAX_TYPE_EXTENDED) {
-            return $this->readPax($data, $path);
+            return $this->readPax($this->bytesAt($dataStart, $size), $path);
         }
 
         $this->paxPath = null;
@@ -137,7 +142,7 @@ final class UstarParser
         }
 
         if ($type === self::TYPE_FILE || $type === self::TYPE_FILE_OLD) {
-            return $this->file($path, $data);
+            return $this->file($path, $dataStart, $size);
         }
 
         return new BundleFailure(
@@ -186,7 +191,7 @@ final class UstarParser
         return null;
     }
 
-    private function file(string $path, string $data): ?BundleFailure
+    private function file(string $path, int $dataStart, int $size): ?BundleFailure
     {
         $problem = self::filePathProblem($path);
         if ($problem !== null) {
@@ -212,9 +217,24 @@ final class UstarParser
 
         $this->fileByFold[$folded] = $path;
         $this->addParentDirectories($path);
-        $this->files[] = new BundleEntry($path, $data);
+        $this->files[] = new BundleEntry($path, $dataStart, $size);
 
         return null;
+    }
+
+    private function bytesAt(int $offset, int $length): string
+    {
+        if ($length < 1) {
+            return '';
+        }
+
+        $bytes = fseek($this->archive, $offset) === 0 ? fread($this->archive, $length) : false;
+
+        if ($bytes === false || strlen($bytes) !== $length) {
+            throw new \RuntimeException("bundle: reading {$length} bytes at {$offset} of the uncompressed tarball failed; check the free space of the temporary directory.");
+        }
+
+        return $bytes;
     }
 
     private function hasFileParent(string $path): bool
