@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use Seampact\SignedWebhooks\Clock;
 use Seampact\SignedWebhooks\EmptySignatureSecret;
 use Seampact\SignedWebhooks\SecretLookup;
+use Seampact\SignedWebhooks\SignaturePayloadInvalid;
 use Seampact\SignedWebhooks\SignatureEncoding;
 use Seampact\SignedWebhooks\SignatureFailure;
 use Seampact\SignedWebhooks\SignatureScheme;
@@ -138,6 +139,25 @@ final class VectorsTest extends TestCase
         $this->expectException(TimestampWithoutTolerance::class);
 
         new SignatureScheme(TemplateSignatureVerifier::SUPPORTED_ALGORITHM, '{ts}.{rawBody}', SignatureEncoding::Hex);
+    }
+
+    #[DataProvider('payloadsWithoutOneRawBody')]
+    public function testRefusesAPayloadThatDoesNotHoldTheRawBodyOnce(string $payload): void
+    {
+        $this->expectException(SignaturePayloadInvalid::class);
+
+        new SignatureScheme(TemplateSignatureVerifier::SUPPORTED_ALGORITHM, $payload, SignatureEncoding::Hex, 1000);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function payloadsWithoutOneRawBody(): array
+    {
+        return [
+            'no body' => ['{ts}.'],
+            'empty' => [''],
+            'body twice' => ['{rawBody}{rawBody}'],
+            'timestamp twice' => ['{ts}{ts}{rawBody}'],
+        ];
     }
 
     public function testFailsWhenTheSignedTimestampIsMissing(): void
