@@ -21,8 +21,15 @@ export function refusalsOf(
   );
 }
 
+// The profile's colon (`pack:spring`) becomes a dash: CI artifact uploads refuse a colon in a file name.
+const PROFILE_KIND_SEPARATOR = ":";
+const FILE_NAME_SEPARATOR = "-";
+
+/** The report file of [profile] in [directory]: `http-suite-pack-spring.json` for `pack:spring`. */
 export function reportFileOf(directory: string, profile: SuiteProfile): string {
-  return join(directory, `http-suite-${profile}.json`);
+  const fileProfile = profile.replaceAll(PROFILE_KIND_SEPARATOR, FILE_NAME_SEPARATOR);
+
+  return join(directory, `http-suite-${fileProfile}.json`);
 }
 
 /** Each way the case [id] of [report] differs from passing, or from refused when [refusals] names it. */
