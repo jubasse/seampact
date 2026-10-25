@@ -51,11 +51,7 @@ final class IdempotencyStep {
                 NODES.stringNode(route.operation().path("access").path("identity").asString("")),
                 NODES.stringNode(principalDigest(boundary, exchange)),
                 clientKey));
-        // The decoded input holds the decoded path params, so an equivalent encoding of the path is the same request.
-        String fingerprint = Digests.hexOf(List.of(
-                NODES.stringNode(route.operation().path("method").asString()),
-                NODES.stringNode(route.operation().path("path").asString()),
-                exchange.inputTree));
+        String fingerprint = fingerprint(route.operation(), exchange.inputTree);
 
         IdempotencyBegin begun = store.begin(new IdempotencyClaim(key, fingerprint, idempotency.path("lifetimeMs").asLong(), boundary.operationRef(route)));
         switch (begun) {
@@ -70,6 +66,15 @@ final class IdempotencyStep {
                 return true;
             }
         }
+    }
+
+    /** The digest a retry under the same key must match: the method, the contract path and the decoded input. */
+    static String fingerprint(JsonNode operation, JsonNode inputTree) {
+        // The decoded input holds the decoded path params, so an equivalent encoding of the path is the same request.
+        return Digests.hexOf(List.of(
+                NODES.stringNode(operation.path("method").asString()),
+                NODES.stringNode(operation.path("path").asString()),
+                inputTree));
     }
 
     /** Completes the claimed record with the reply that went out, or abandons it after a server error. */

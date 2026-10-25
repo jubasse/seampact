@@ -11,6 +11,7 @@ import {
   isPlainObject,
   unexpectedError,
 } from "./contract-error.js";
+import type { ContractRoute } from "./contract-route.js";
 import { runtimeLog } from "./runtime-logger.js";
 import { sha256Hex } from "./sha256.js";
 
@@ -57,8 +58,7 @@ export async function beginIdempotency(
     principalDigest,
     clientKey,
   ]);
-  // The validated input holds the decoded path params, so an equivalent encoding of the path is the same request.
-  const fingerprint = await digest([route.method, route.path, input]);
+  const fingerprint = await idempotencyFingerprint(route, input);
   const begin = await store.begin({
     key,
     fingerprint,
@@ -76,6 +76,15 @@ export async function beginIdempotency(
     case "replay":
       return { outcome: "replay", reply: replayOf(begin.response, idempotency.replayHeader) };
   }
+}
+
+/** The digest a retry under the same key must match: the method, the contract path and the validated input. */
+export function idempotencyFingerprint(
+  route: Pick<ContractRoute, "method" | "path" | "access">,
+  input: unknown,
+): Promise<string> {
+  // The validated input holds the decoded path params, so an equivalent encoding of the path is the same request.
+  return digest([route.method, route.path, input]);
 }
 
 function replayOf(stored: StoredResponse, replayHeader: string): ContractReply {
