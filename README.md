@@ -423,7 +423,7 @@ Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse
 | Typed `fetch` client | any framework or none | none |
 | React | 19 | TanStack Query 5, SWR 2, RTK Query 2, or none |
 | Vue | 3 | TanStack Query 5, Pinia Colada 1, or none |
-| Angular | 22 | none: a service over `HttpClient`, with NgRx 22 actions and effects as an option |
+| Angular | 22 | none: a service over `HttpClient`, with NgRx 22 actions and effects or NgRx Signals 22 store features as an option |
 
 ## Get started
 
@@ -447,6 +447,7 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] Frontend: Vue composables (TanStack Query, Pinia Colada, or no query library)
 - [x] Frontend: Angular service over `HttpClient` (no query library)
 - [x] Frontend: NgRx actions and effects for Angular
+- [x] Frontend: NgRx Signal Store features for Angular
 - [ ] Frontend: MSW mocks
 - [x] Java: Spring Boot 4, with a Gradle and a Maven plugin, Spring Security and springdoc
 - [ ] PHP: Laravel, Symfony, API Platform

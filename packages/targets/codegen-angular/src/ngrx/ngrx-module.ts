@@ -8,6 +8,18 @@ import {
   typeScriptIdentifier,
 } from "@seampact/codegen-core";
 import { deriveName, splitName } from "@seampact/spec/naming";
+import {
+  ACTION_KEY_RUNTIME_IMPORT,
+  ACTION_KEY_SOURCE,
+  actionKeyOf,
+  callOptionsType,
+  callParameterSource,
+  LATEST_READ_SOURCE,
+  NAME_ROLE,
+  OUTCOME_SOURCE,
+  readKeyExpression,
+  writeSendSource,
+} from "./call-flows.js";
 
 // The `ngrx.ts` of one api for `state: ngrx` (ADR 0021 "Angular"): per resource an NgRx action group, with per
 // operation the action that asks for the call, its success with the data and its failure with the error; per operation
@@ -19,7 +31,6 @@ import { deriveName, splitName } from "@seampact/spec/naming";
 export const NGRX_MODULE = "ngrx";
 
 const ACTIONS_SUFFIX = "Actions";
-const NAME_ROLE = "schema";
 
 /** The action group of one resource, or of the api's operations that have none. */
 interface ActionGroup {
@@ -34,88 +45,6 @@ export interface NgrxImports {
   readonly queries: string;
   readonly runtime: string;
 }
-
-const OUTCOME_SOURCE = `// The success or failure action of one call; an error never leaves the effect. A call \`superseded\` aborts ends in
-// its failure with the abort error; unsubscribing, as the effect's teardown does, aborts it with no outcome.
-function outcomeOf<Data, Succeeded, Failed>(
-send: (signal: AbortSignal) => Promise<Data>,
-succeeded: (data: Data) => Succeeded,
-failed: (error: Error) => Failed,
-superseded: Observable<unknown> = NEVER,
-): Observable<Succeeded | Failed> {
-return new Observable<Succeeded | Failed>((subscriber) => {
-const controller = new AbortController();
-let settled = false;
-
-subscriber.add(superseded.subscribe(() => controller.abort()));
-
-void new Promise<Data>((resolve) => {
-resolve(send(controller.signal));
-}).then(
-(data) => {
-settled = true;
-subscriber.next(succeeded(data));
-subscriber.complete();
-},
-(rejection: unknown) => {
-settled = true;
-subscriber.next(failed(asError(rejection)));
-subscriber.complete();
-},
-);
-
-return () => {
-if (!settled) controller.abort();
-};
-});
-}`;
-
-const LATEST_READ_SOURCE = `// Per request key, the latest read wins: a read of the same request aborts the one still waiting, which ends in its
-// failure; reads of other requests run side by side. A request's group closes once none of its reads waits.
-function latestReadPerRequest<Action, Outcome>(
-keyOf: (action: Action) => string,
-read: (action: Action, superseded: Observable<Action>) => Observable<Outcome>,
-): OperatorFunction<Action, Outcome> {
-return (actions) =>
-defer(() => {
-const idleKeys = new Subject<string>();
-
-return actions.pipe(
-groupBy(keyOf, {
-duration: (group) => idleKeys.pipe(filter((idleKey) => idleKey === group.key)),
-}),
-mergeMap((group) => {
-let waiting = 0;
-
-return group.pipe(
-mergeMap((action) => {
-waiting += 1;
-
-return read(action, group.pipe(take(1))).pipe(
-finalize(() => {
-waiting -= 1;
-if (waiting === 0) idleKeys.next(group.key);
-}),
-);
-}),
-);
-}),
-);
-});
-}`;
-
-const ACTION_KEY_SOURCE = `// The request with the idempotency key a write action gives; without one, the service draws a key per action.
-function withActionKey<Request extends object | undefined>(
-request: Request,
-headerKey: string,
-idempotencyKey: string | undefined,
-): Request {
-if (idempotencyKey === undefined) return request;
-
-return withIdempotencyKey(request, headerKey, () => idempotencyKey);
-}`;
-
-const ACTION_KEY_TYPE = "{ readonly idempotencyKey?: string }";
 
 /**
  * A refusal per action group that would take the name of another, as two resources spelt apart can, and per event
@@ -194,7 +123,7 @@ export function ngrxModuleSource(plan: QueryPlan, imports: NgrxImports): string 
   ];
   const runtimeNames = [
     ...(reads ? ["keyRequest"] : []),
-    ...(keyedWrites ? ["withIdempotencyKey"] : []),
+    ...(keyedWrites ? [ACTION_KEY_RUNTIME_IMPORT] : []),
   ];
   const effects = groups.flatMap((group) =>
     group.operations.map((operation) => effectSource(operation, group.name, api)),
@@ -250,9 +179,8 @@ function actionGroupSource(group: ActionGroup, api: string): string {
   const events = group.operations.map((operation) => {
     const types = operationType(operation, api);
     const base = operation.names.base;
-    const actionKey = actionKeyOf(operation) === undefined ? "" : ` & ${ACTION_KEY_TYPE}`;
-    const callType = `${types}["call"]${actionKey}`;
-    const call = operation.needsTimeout ? `call: ${callType}` : `call?: ${callType}`;
+    const callType = callOptionsType(operation, api);
+    const call = callParameterSource(operation, callType);
 
     return [
       `${propertyKey(base)}: props<{ request: ${types}["request"]; ${call} }>(),`,
@@ -268,11 +196,6 @@ events: {
 ${events.join("\n")}
 },
 });`;
-}
-
-// The idempotency header of a write whose action may give its own key.
-function actionKeyOf(operation: QueryOperation): string | undefined {
-  return operation.form === "mutation" ? operation.idempotencyHeaderKey : undefined;
 }
 
 function effectSource(operation: QueryOperation, group: string, api: string): string {
@@ -296,10 +219,8 @@ ${flow},
 
 // A read sends through the service's query fetcher, aborted by the next read of the same request.
 function readFlowSource(operation: QueryOperation, outcomes: string): string {
-  const filled = JSON.stringify(operation.filledHeaderKeys);
-
   return `latestReadPerRequest(
-(action) => JSON.stringify(keyRequest(action.request, ${filled})) ?? "",
+(action) => ${readKeyExpression(operation, "action.request")},
 (action, superseded) =>
 outcomeOf(
 (signal) => api.queries.${operation.names.options}(action.request, action.call).fetcher(signal),
@@ -309,22 +230,14 @@ superseded,
 )`;
 }
 
-// A write sends through the service's mutation fetcher with the action as the attempt, so each action sends one
-// idempotency key, or the key the action gives.
+// A write sends with the action as the attempt, so each action sends one idempotency key, or the key the action gives.
 function writeFlowSource(operation: QueryOperation, api: string, outcomes: string): string {
-  const options = operation.names.options;
-  const headerKey = actionKeyOf(operation);
-  const callFallback = operation.needsTimeout ? "" : " ?? {}";
-  const send =
-    headerKey === undefined
-      ? `() => api.queries.${options}(action.call).fetcher(action.request, action)`
-      : `() => {
-const { idempotencyKey, ...call }: ${operationType(operation, api)}["call"] & ${ACTION_KEY_TYPE} = action.call${callFallback};
-
-return api.queries
-.${options}(call)
-.fetcher(withActionKey(action.request, ${JSON.stringify(headerKey)}, idempotencyKey), action);
-}`;
+  const send = writeSendSource(operation, api, {
+    parameters: "",
+    request: "action.request",
+    call: "action.call",
+    attempt: "action",
+  });
 
   return `mergeMap((action) =>
 outcomeOf(

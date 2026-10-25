@@ -15,7 +15,10 @@ import {
   take,
 } from "rxjs";
 import type { TasksOperations } from "./queries.js";
-import { keyRequest, withIdempotencyKey } from "./query-runtime.js";
+import {
+  keyRequest,
+  withIdempotencyKey as runtimeWithIdempotencyKey,
+} from "./query-runtime.js";
 import { TasksApi } from "./service.js";
 
 // A rejection as an `Error`, the value kept as its cause when it is not one.
@@ -25,8 +28,8 @@ function asError(rejection: unknown): Error {
     : new Error(String(rejection), { cause: rejection });
 }
 
-// The success or failure action of one call; an error never leaves the effect. A call `superseded` aborts ends in
-// its failure with the abort error; unsubscribing, as the effect's teardown does, aborts it with no outcome.
+// The success or failure of one call; an error never leaves the stream. A call `superseded` aborts ends in its
+// failure with the abort error; unsubscribing, as an effect's or a store's teardown does, aborts it with no outcome.
 function outcomeOf<Data, Succeeded, Failed>(
   send: (signal: AbortSignal) => Promise<Data>,
   succeeded: (data: Data) => Succeeded,
@@ -96,14 +99,14 @@ function latestReadPerRequest<Action, Outcome>(
 }
 
 // The request with the idempotency key a write action gives; without one, the service draws a key per action.
-function withActionKey<Request extends object | undefined>(
+function requestWithActionKey<Request extends object | undefined>(
   request: Request,
   headerKey: string,
   idempotencyKey: string | undefined,
 ): Request {
   if (idempotencyKey === undefined) return request;
 
-  return withIdempotencyKey(request, headerKey, () => idempotencyKey);
+  return runtimeWithIdempotencyKey(request, headerKey, () => idempotencyKey);
 }
 
 /** The actions of "Tasks/channels": per operation the call to send, its success with the data and its failure with the error. */
@@ -436,7 +439,7 @@ export const TasksEffects = {
               return api.queries
                 .deleteDraftMutationOptions(call)
                 .fetcher(
-                  withActionKey(
+                  requestWithActionKey(
                     action.request,
                     "idempotency-key",
                     idempotencyKey,
@@ -535,7 +538,7 @@ export const TasksEffects = {
               return api.queries
                 .updatePreferencesMutationOptions(call)
                 .fetcher(
-                  withActionKey(
+                  requestWithActionKey(
                     action.request,
                     "idempotency-key",
                     idempotencyKey,
@@ -576,7 +579,7 @@ export const TasksEffects = {
               return api.queries
                 .archiveTaskMutationOptions(call)
                 .fetcher(
-                  withActionKey(
+                  requestWithActionKey(
                     action.request,
                     "idempotency-key",
                     idempotencyKey,
@@ -617,7 +620,7 @@ export const TasksEffects = {
               return api.queries
                 .assignTaskMutationOptions(call)
                 .fetcher(
-                  withActionKey(
+                  requestWithActionKey(
                     action.request,
                     "idempotency-key",
                     idempotencyKey,
@@ -655,7 +658,7 @@ export const TasksEffects = {
               return api.queries
                 .createTaskMutationOptions(call)
                 .fetcher(
-                  withActionKey(
+                  requestWithActionKey(
                     action.request,
                     "idempotency-key",
                     idempotencyKey,
@@ -774,7 +777,7 @@ export const TasksEffects = {
               return api.queries
                 .purgeTaskMutationOptions(call)
                 .fetcher(
-                  withActionKey(
+                  requestWithActionKey(
                     action.request,
                     "idempotency-key",
                     idempotencyKey,
@@ -835,7 +838,7 @@ export const TasksEffects = {
               return api.queries
                 .updateTaskMutationOptions(call)
                 .fetcher(
-                  withActionKey(
+                  requestWithActionKey(
                     action.request,
                     "idempotency-key",
                     idempotencyKey,

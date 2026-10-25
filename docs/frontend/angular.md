@@ -105,15 +105,57 @@ export const notesReducer = createReducer(
 - `state: ngrx` needs the `service` artefact.
 - A failure action carries the contract error object, so leave NgRx's `strictActionSerializability` check off (its default).
 
+## NgRx Signals
+
+Add `state: ngrx-signals` to the options, and install `@ngrx/signals` 22:
+
+```yaml
+    options: { query: fetch, state: ngrx-signals }
+```
+
+seampact then writes one Signal Store feature per operation. Put the ones you need in your own store:
+
+```ts
+export const NotesStore = signalStore(
+  withState({ folderId: "" }),
+  withListNotes(),
+  withCreateNote(),
+);
+
+bootstrapApplication(App, {
+  providers: [provideHttpClient(), provideNotesApi({ baseUrl: environment.apiUrl }), NotesStore],
+});
+
+export class NotesPage {
+  readonly store = inject(NotesStore);
+  readonly notes = computed(() => this.store.listNotes().data?.body.items ?? []);
+
+  constructor() {
+    void this.store.sendListNotes({ query: { folderId: "inbox" } });
+  }
+}
+```
+
+- Each feature adds a state slice named after the operation (`listNotes`) and a method `send<Operation>` (`sendListNotes`).
+- The slice holds the latest call: `status` (`idle`, `pending`, `success` or `error`), its `request`, and its `data` or typed `error`, a `ContractError` for a declared error.
+- `send<Operation>` never throws. It resolves to the slice its call ended with.
+- A new read of the same request aborts the one still running, which resolves with an `AbortError`. Reads of different requests run side by side; the slice shows the last one you sent.
+- Reads do nothing on the server, and resolve to the `idle` slice. To read there and hand the data to the browser, use `withListNotes({ transferId: "notes" })`: the browser's first read of the same request takes that data and sends nothing.
+- Writes run side by side. Each one sends its own idempotency key. To retry a write safely, give the key yourself and send again with the same key: `sendCreateNote(request, { idempotencyKey })`. The server then runs it once.
+- When the store is destroyed, reads still running are aborted, and the slices no longer change.
+- Your own store members must not reuse a slice or `send<Operation>` name. Features of two apis in one store clash when their operations share a name. NgRx only warns in dev mode, and the last one wins.
+- An operation that needs a timeout takes `{ timeoutMs }` as its second argument.
+- `state: ngrx-signals` needs the `service` artefact.
+
 ## Options
 
 | Option | Values | Default |
 |---|---|---|
 | `query` | `fetch` | required |
 | `errors` | `throw`, `data` (the whole reply as data) | `throw` |
-| `state` | `ngrx` (actions and effects) | none |
+| `state` | `ngrx` (actions and effects), `ngrx-signals` (Signal Store features) | none |
 
-`staleTime`, `invalidate`, `infinite` and `keys.root` need a query library: `generate` refuses them. `state: ngrx-signals` (Signal Store) is not generated yet and is refused too.
+`staleTime`, `invalidate`, `infinite` and `keys.root` need a query library: `generate` refuses them.
 
 `errors: data` needs a client with `errorStyle: result`, which is the client's default.
 
