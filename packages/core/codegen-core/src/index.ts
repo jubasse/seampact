@@ -38,6 +38,7 @@ export {
   CONTRACT_ERROR_GUARD,
   callerOptionsParameter,
   cellsMutationSource,
+  constantCase,
   constantCaseOf,
   type ErrorMember,
   type FetchQueriesOptions,

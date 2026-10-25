@@ -24,6 +24,7 @@ export {
 } from "./next-page-rule.js";
 export {
   CONTRACT_ERROR_GUARD,
+  constantCase,
   constantCaseOf,
   type ErrorMember,
   type FrontErrors,

@@ -243,6 +243,18 @@ export const CLIENT_TARGETS: readonly ClientTargetCompatibility[] = [
     ownValidators: [],
     clientStyles: ["fetch"],
   },
+  {
+    package: "@seampact/codegen-angular",
+    framework: {
+      id: "angular",
+      package: "@angular/core",
+      tested: [{ major: 22, consumer: "angular-fetch" }],
+      incompatible: [],
+    },
+    validatorStyles: [],
+    ownValidators: [],
+    clientStyles: ["fetch"],
+  },
 ];
 
 // Every target the matrix records, servers then clients.
