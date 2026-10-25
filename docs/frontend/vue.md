@@ -73,7 +73,8 @@ const add = async () => {
 ```
 
 - Pass `null` as the request to skip a read.
-- A read stops when the component unmounts or its request changes.
+- A read starts when the component mounts, so server rendering sends none: load server data your own way, or use `query: tanstack`.
+- A read stops when the component unmounts or its request changes. Outside a component, a composable reads at once and stops only when its `effectScope` stops.
 - There is no cache. A write does not refresh other composables: call `refetch`.
 - `mutate` never throws. Each call resolves to its own `{ data }` or `{ error }`, a `ContractError` for a declared error. The `data`, `error` and `isPending` refs show the latest call.
 - `retry` sends a failed write again with the same idempotency key, so the server runs it once. It takes a whole count (0 or more); another value makes the composable throw. A declared error is not retried.
