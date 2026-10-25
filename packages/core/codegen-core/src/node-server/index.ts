@@ -31,6 +31,7 @@ export {
   responseSettingsOf,
 } from "./options.js";
 export { type OwnValidatorsLibrary, ownValidatorsFiles } from "./own-validators-files.js";
+export { pageBodyLocation, pageBodyTemplate } from "./paging-entry.js";
 export { literalSegmentRefusals, mixedSegmentRefusals } from "./path-segment-refusals.js";
 export { compareRouteSpecificity } from "./route-order.js";
 export { type RouteTableOptions, routeTableSource } from "./route-table.js";

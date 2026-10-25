@@ -29,10 +29,11 @@ export function clientModuleSource(
 ): string {
   const clientFile = `${CLIENT_MODULE}${MODULE_EXTENSION}`;
   const namespaces = typeNamespaces(operations);
-  const typeOf = (exportRef: ExportRef) => `${namespaceName(exportRef.module)}.${exportRef.export}`;
+  const typeOf = (exportRef: ExportRef) =>
+    `${typeNamespaceName(exportRef.module)}.${exportRef.export}`;
   const importLines = [...namespaces].map(
     (module) =>
-      `import type * as ${namespaceName(module)} from "${importSpecifier(typesLink, { module, export: "" }, clientFile)}";`,
+      `import type * as ${typeNamespaceName(module)} from "${importSpecifier(typesLink, { module, export: "" }, clientFile)}";`,
   );
 
   const body = [
@@ -56,7 +57,7 @@ function typeNamespaces(operations: readonly ClientOperation[]): Set<string> {
 }
 
 // `operations/input` is imported as `operationsInputTypes`; a module path is letters, digits, `-`, `_` and `/`.
-function namespaceName(module: string): string {
+export function typeNamespaceName(module: string): string {
   const words = module.split(/[^A-Za-z0-9]+/).filter((word) => word !== "");
   const camel = words
     .map((word, index) => (index === 0 ? word : `${word.charAt(0).toUpperCase()}${word.slice(1)}`))
