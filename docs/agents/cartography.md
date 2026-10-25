@@ -33,6 +33,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, an input decorator whose pipe validates, a handler wrapper or opt-in reply interceptor that writes the checked reply, the error filter and a boot check, validating with zod. |
 | `@seampact/codegen-react` | `packages/targets/codegen-react` | target | Generates TanStack Query or SWR options and React hooks, an RTK Query api, or plain fetch hooks with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract. |
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
+| `@seampact/codegen-vue` | `packages/targets/codegen-vue` | target | Generates TanStack Query options and Vue composables, or plain fetch composables with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract. |
 | `@seampact/codegen-yup` | `packages/targets/codegen-yup` | target | Generates Standard Schema yup validators per schema and direction, and one input validator per operation. |
 | `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
 | `@seampact/binary` | `packages/tools/binary` | tool | The standalone compiler binary: the CLI as a Node single executable application for five platforms, with the first-party packs embedded. |
@@ -64,7 +65,7 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-core`
 
 - `packages/core/codegen-core/src`: The API the code generators are written against: target definitions, link descriptors, refusals, and the steps around a target's generate (IR support and link checks, header, formatting, file writer), and the helpers targets share (IR locations, located refusals, planned names, property keys, the front query plan).
-- `packages/core/codegen-core/src/front-queries`: The framework-neutral query plan the front targets render (ADR 0021): per operation its form, export names, key, resource, call options and next-page rule, and the front runtime each front target copies into its output.
+- `packages/core/codegen-core/src/front-queries`: The framework-neutral query plan the front targets render (ADR 0021): per operation its form, export names, key, resource, call options and next-page rule, the front runtime each front target copies into its output, and the query module sources the TypeScript front targets share (plain fetch and TanStack Query factories).
 - `packages/core/codegen-core/src/node-server`: The shared server boundary every Node and Web-standard server target generates (ADR 0016, ADR 0020): the framework-neutral runtime copied into the generated tree, the emitters of the route table, handler interfaces and hook types, the target options parser, the path segments a router cannot read, and the assembly of one api's boundary files around a target's placement.
 - `packages/core/codegen-core/src/validators`: The validator-neutral half of every validators target: the module layout and export names, the descriptor, the `rules` option, the shared wire checks, and the plan of each schema and operation input with every refusal, which a target renders in its own library.
 
@@ -166,13 +167,19 @@ In pipeline order (ADR 0006 section 1).
 - `packages/targets/codegen-react/src`: The React target: TanStack Query or SWR options and hooks, or an RTK Query api, per api over the linked fetch client, from the shared query plan, with the front runtime copied beside them.
 - `packages/targets/codegen-react/src/fetch`: The plain fetch renderer of the react target (`query: fetch`): the server-safe `queries.ts` (one fetcher per operation) and the `"use client"` `hooks.ts` built on React state and effects, with no query library.
 - `packages/targets/codegen-react/src/rtk`: The RTK Query renderer of the react target: the `api.ts` of each api over `createApi` and `fakeBaseQuery`, with plain store errors, from the shared query plan.
-- `packages/targets/codegen-react/src/shared`: The source parts the react target's query libraries share: the operation types read from the client, the `isContractError` guard, the resource union, the next-page constants and the `keys` object.
+- `packages/targets/codegen-react/src/shared`: The source parts the react target's query libraries share: the `"use client"` directive, and the operation types, `isContractError` guard, resource union, next-page constants and `keys` object re-exported from codegen-core.
 - `packages/targets/codegen-react/src/swr`: The SWR renderer of the react target: the server-safe `queries.ts` (keys and `{ key, fetcher }` pairs) and the `"use client"` `hooks.ts` of each api, from the shared query plan.
 - `packages/targets/codegen-react/src/tanstack`: The TanStack Query renderer of the react target: the server-safe `queries.ts` and the `"use client"` `hooks.ts` of each api, from the shared query plan.
 
 ### `@seampact/codegen-ts`
 
 - `packages/targets/codegen-ts/src`: The TypeScript types target: one named type per schema and enum, and each operation's input, output and error union, provided to the other targets as the `types` link.
+
+### `@seampact/codegen-vue`
+
+- `packages/targets/codegen-vue/src`: The Vue target: TanStack Query options and composables, or plain fetch composables on Vue's `ref` and `watch`, per api over the linked fetch client, from the shared query plan, with the front runtime copied beside them.
+- `packages/targets/codegen-vue/src/fetch`: The plain fetch renderer of the vue target (`query: fetch`): `composables.ts`, built on Vue's `ref` and `watch` alone over the shared fetcher factory of codegen-core, with no query library and no cache.
+- `packages/targets/codegen-vue/src/tanstack`: The TanStack Query renderer of the vue target (`query: tanstack`): the `queries.ts` options factories shared with codegen-core over `@tanstack/vue-query`, and `composables.ts`, one `use*` composable per factory taking a reactive request.
 
 ### `@seampact/codegen-yup`
 
