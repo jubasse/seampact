@@ -2,7 +2,7 @@ name: Native IR models
 
 # The native IR models generated from the IR JSON Schema (ADR 0010): the regenerate-and-diff check, then the
 # Kotlin model's tests on Java 21 and 25 (A13), with bytecode for Java 21, and the PHP model's tests and static
-# analysis on PHP 8.2 and the latest PHP. On a pull request they run only when the change touches the models,
+# analysis on the latest PHP 8.3 and 8.5 (the patched floor, ADR 0010). On a pull request they run only when the change touches the models,
 # their sources, the toolchain pins or this workflow; `native-ir` is the one check to require.
 
 on:
@@ -109,7 +109,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.2", "latest"]
+        php-version: ["8.3", "8.5"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
