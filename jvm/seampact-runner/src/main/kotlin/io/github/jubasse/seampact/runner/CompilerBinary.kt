@@ -106,7 +106,7 @@ internal fun installBinary(
         }
     }
 
-    return BinaryInstaller.install(resolved, pin, cacheDirectory)
+    return BinaryInstaller.install(resolved, pin, cacheDirectory, buildTool.binaryCacheSetting)
 }
 
 /** The build could not resolve an artefact; [message] is the build tool's own reason. */

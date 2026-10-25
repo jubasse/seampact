@@ -4,7 +4,8 @@ name: JVM core
 # bundle channels, the app config reader and each entry's IR view, the generated-file writer, the pinned standalone
 # binary and its runner, and the compiler's classifier publication, on Java 21 and 25 (A13). A
 # Node job builds the linux x64 binary; the Java job runs with Node removed from the runner and compiles the
-# reference contract with that binary, whose IR must equal the golden IR byte for byte. On a pull request they run
+# reference contract with that binary, whose IR must equal the golden IR byte for byte. A Windows job runs the binary
+# cache checks on a real NTFS ACL: the profile, the ACEs, the junctions and the SIDs. On a pull request they run
 # only when the change touches a watched path; `jvm-core` is the one check to require.
 
 on:
@@ -132,10 +133,32 @@ jobs:
         if: matrix.test-jdk == 25
         run: jvm/build-logic/maven-local/check.sh "$RUNNER_TEMP/maven-local"
 
+  windows-cache:
+    name: binary cache checks (Windows)
+    needs: changes
+    if: needs.changes.outputs.jvm-core == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Run the binary cache tests on Windows
+        working-directory: jvm
+        shell: bash
+        run: ./gradlew :seampact-ir:test --tests 'io.github.jubasse.seampact.ir.binary.*'
+
   # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
   jvm-core:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, binary, java]
+    needs: [changes, binary, java, windows-cache]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

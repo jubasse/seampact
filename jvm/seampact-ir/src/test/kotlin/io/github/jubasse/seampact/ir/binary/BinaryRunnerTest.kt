@@ -33,7 +33,7 @@ class BinaryRunnerTest {
             repositoryRoot.resolve("fixtures/reference").toFile().copyRecursively(app.resolve("contract").toFile())
             val config = Files.writeString(app.resolve("seampact.config.yaml"), appConfig)
             val binary = Path.of(System.getProperty("seampact.binary"))
-            val install = BinaryInstaller.install(binary, BinaryPin.LocalFile(binary, BinaryInstaller.sha256Of(binary)), app.resolve("cache"))
+            val install = BinaryInstaller.install(binary, BinaryPin.LocalFile(binary, BinaryInstaller.sha256Of(binary)), app.resolve("cache"), "the test cache")
             check(install is BinaryInstall.Installed) { "the binary was refused: $install" }
 
             val result = BinaryRunner.compile(install.binary, config, IrSupport.ofModel(kinds = listOf("httpOperation")))

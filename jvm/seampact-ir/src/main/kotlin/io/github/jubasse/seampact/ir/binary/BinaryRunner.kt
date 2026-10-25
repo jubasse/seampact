@@ -65,12 +65,14 @@ public object BinaryRunner {
         support: IrSupport,
         timeout: Duration = DEFAULT_TIMEOUT,
     ): BinaryCompileResult {
-        val unsafeEntry = BinaryCache.unsafeEntry(binary.path, binary.cacheRoot)
+        val unsafeEntry = BinaryCache.unsafeEntry(binary.path, binary.cacheRoot, binary.accounts)
         if (unsafeEntry != null) return BinaryCompileResult.Refused(unsafeEntry)
         val startedSha256 = BinaryInstaller.sha256Of(binary.path)
         if (startedSha256 != binary.sha256) return BinaryCompileResult.Refused(changedSinceInstall(binary, startedSha256))
 
-        val workDirectory = Files.createTempDirectory("seampact-compile-")
+        // Absolute before the start, so the paths the binary receives name the files the runner reads, whatever the
+        // child's working directory.
+        val workDirectory = Files.createTempDirectory("seampact-compile-").toAbsolutePath()
         try {
             val irDirectory = workDirectory.resolve("ir")
             val stdout = workDirectory.resolve("stdout.txt")

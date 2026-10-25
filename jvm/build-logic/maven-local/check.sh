@@ -55,7 +55,7 @@ tasks.register("resolveSeampactModules") {
     val modules = configurations.getByName("seampactModules")
     inputs.files(modules)
     doLast {
-        val seampactFiles = modules.files.map { it.name }.filter { it.startsWith("seampact-") }.sorted()
+        val seampactFiles = modules.files.filter { it.name.startsWith("seampact-") }.map { it.absolutePath }.sorted()
         println(seampactFiles.joinToString("\n"))
     }
 }
@@ -63,12 +63,14 @@ KOTLIN
 
 resolved=$("$jvm_directory/gradlew" -p "$consumer" --quiet resolveSeampactModules "-Dmaven.repo.local=$local_repository")
 
+# Gradle reads a mavenLocal() file in place, so each jar must lie in the local repository, not in a download cache.
+group_path=${group//.//}
 missing=""
 for module in $modules; do
-  grep -qx "$module-$version.jar" <<< "$resolved" || missing+=" $module"
+  grep -qxF "$local_repository/$group_path/$module/$version/$module-$version.jar" <<< "$resolved" || missing+=" $module"
 done
 if [ -n "$missing" ]; then
-  echo "mavenLocal() did not resolve:$missing. Resolved: $resolved" >&2
+  echo "mavenLocal() did not resolve from $local_repository:$missing. Resolved: $resolved" >&2
   exit 1
 fi
 

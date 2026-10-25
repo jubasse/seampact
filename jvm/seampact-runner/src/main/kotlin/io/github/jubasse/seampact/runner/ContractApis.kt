@@ -1,6 +1,7 @@
 package io.github.jubasse.seampact.runner
 
 import io.github.jubasse.seampact.ir.binary.BinaryCompileResult
+import io.github.jubasse.seampact.ir.binary.BinaryFailureCode
 import io.github.jubasse.seampact.ir.binary.BinaryInstall
 import io.github.jubasse.seampact.ir.binary.BinaryRunner
 import io.github.jubasse.seampact.ir.bundle.BundleFetcher
@@ -116,7 +117,7 @@ internal class ContractApis(
                 apis += SourceApi(name, compiled.api, Json.parseToJsonElement(compiled.irText).jsonObject)
             }
             is BinaryCompileResult.Failed -> problems += ConfigProblem(
-                "binary.compile-refused",
+                BinaryFailureCode.COMPILE_REFUSED.code,
                 "The compiler exited with ${result.exitCode} on the source '$name':\n${result.stderr}${result.stdout}".trimEnd(),
                 "Fix the contract as the compiler's diagnostics say.",
                 "source '$name'",
