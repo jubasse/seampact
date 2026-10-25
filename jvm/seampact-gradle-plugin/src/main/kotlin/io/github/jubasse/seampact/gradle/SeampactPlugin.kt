@@ -96,10 +96,12 @@ public class SeampactPlugin : Plugin<Project> {
 
         val springBootVersion = compileClasspathVersion(project, ClasspathModule.SPRING_BOOT)
         val springSecurityWebVersion = compileClasspathVersion(project, ClasspathModule.SPRING_SECURITY_WEB)
+        val springSecurityConfigVersion = compileClasspathVersion(project, ClasspathModule.SPRING_SECURITY_CONFIG)
         listOf(generate, check).forEach { task ->
             task.configure {
                 it.springBootVersion.set(springBootVersion)
                 it.springSecurityWebVersion.set(springSecurityWebVersion)
+                it.springSecurityConfigVersion.set(springSecurityConfigVersion)
             }
         }
 

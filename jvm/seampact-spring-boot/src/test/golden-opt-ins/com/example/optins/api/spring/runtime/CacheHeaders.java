@@ -11,7 +11,7 @@ import tools.jackson.databind.JsonNode;
  * the body as on the Node targets, so a client's tag stays valid across them.
  */
 final class CacheHeaders {
-    private static final String NO_STORE_DIRECTIVE = "no-store";
+    static final String NO_STORE_DIRECTIVE = "no-store";
     private static final String CACHE_CONTROL_HEADER = "Cache-Control";
     private static final String ETAG_HEADER = "ETag";
     private static final String IF_NONE_MATCH_HEADER = "If-None-Match";

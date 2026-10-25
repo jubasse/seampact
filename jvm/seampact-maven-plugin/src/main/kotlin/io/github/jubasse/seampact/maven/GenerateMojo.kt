@@ -64,6 +64,7 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
         inputs.text("allowLocal", settings.allowLocalVariable)
         inputs.text("springBoot", settings.springBootVersion)
         inputs.text("springSecurityWeb", settings.springSecurityWebVersion)
+        inputs.text("springSecurityConfig", settings.springSecurityConfigVersion)
         inputs.text("bundleOrigins", bundleOrigins.joinToString(","))
 
         return inputs.hash()

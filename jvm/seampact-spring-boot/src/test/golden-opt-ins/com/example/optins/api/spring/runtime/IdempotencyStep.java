@@ -31,7 +31,6 @@ final class IdempotencyStep {
     private static final String REPLAYED = "true";
     private static final String AUTHORIZATION_HEADER = "authorization";
     private static final String CACHE_CONTROL_HEADER = "Cache-Control";
-    private static final String NO_STORE_DIRECTIVE = "no-store";
     private static final int CLIENT_ERROR_FLOOR = 400;
     private static final int SERVER_ERROR_FLOOR = 500;
 
@@ -168,7 +167,7 @@ final class IdempotencyStep {
 
         for (String cacheControl : response.getHeaders(CACHE_CONTROL_HEADER)) {
             for (String directive : cacheControl.split(",")) {
-                if (directive.trim().equalsIgnoreCase(NO_STORE_DIRECTIVE)) return false;
+                if (directive.trim().equalsIgnoreCase(CacheHeaders.NO_STORE_DIRECTIVE)) return false;
             }
         }
 

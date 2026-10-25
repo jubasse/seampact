@@ -139,6 +139,21 @@ private fun springSecurityWithoutModule(entry: AppConfigEntry, springSecurityWeb
     )
 }
 
+private const val MATCHERS_MEMBER = "matchers"
+
+// `{ matchers: true }` adds a customizer typed against spring-security-config, which spring-security-web alone lacks.
+private fun securityMatchersWithoutModule(entry: AppConfigEntry, springSecurityConfigVersion: String?): ConfigProblem? {
+    val option = entry.options[SPRING_SECURITY_OPTION] as? JsonObject ?: return null
+    if (option[MATCHERS_MEMBER] != JsonPrimitive(true) || springSecurityConfigVersion != null) return null
+
+    return ConfigProblem(
+        "options.springSecurity.matchers.unavailable",
+        "The option 'springSecurity' is $option, but the compile classpath resolves no org.springframework.security:spring-security-config, so the matchers customizer would not compile.",
+        "Add spring-boot-starter-security to the app's dependencies, or set 'springSecurity' to true.",
+        "entry '${entry.id}' options springSecurity matchers",
+    )
+}
+
 private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, settings: RunSettings, runnerVersion: String): EntryFiles {
     val buildTool = settings.buildTool
     val springBootVersion = settings.springBootVersion
@@ -170,6 +185,7 @@ private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, settings
     }
 
     springSecurityWithoutModule(entry, settings.springSecurityWebVersion)?.let { return EntryFiles.Refused(listOf(it)) }
+    securityMatchersWithoutModule(entry, settings.springSecurityConfigVersion)?.let { return EntryFiles.Refused(listOf(it)) }
 
     val viewed = when (val view = EntryView.of(entry, apis)) {
         is EntryViewOutcome.Viewed -> view.apis
