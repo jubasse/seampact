@@ -13,6 +13,9 @@
     "phpstan/phpstan": "2.2.16",
     "phpunit/phpunit": "11.5.56"
   },
+  "suggest": {
+    "ext-posix": "Checks that only your user can write the compiler binary cache; needed to run the binary on Linux and macOS."
+  },
   "autoload": {
     "psr-4": {
       "Seampact\\Ir\\": "src/"
