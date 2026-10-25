@@ -14,12 +14,12 @@ import {
   type PagingEntry,
   type StandardIssue,
 } from "./contract-route.js";
-import { repeatedBeforeParam } from "./cursor-exclusion.js";
+import { beforeParamSentWithAfter } from "./cursor-exclusion.js";
 
 const SCHEMA_INVALID_ROLE = "schemaInvalid";
 const FALLBACK_RULE = "invalid";
 const ENUM_RULE = "enum";
-const EXCLUSIVE_CURSORS_RULE = "not";
+const EXCLUSIVE_CURSORS_RULE = "exclusiveCursors";
 
 // The validator input's parts, as an issue's `in` names them (ADR 0006 section 6).
 const ISSUE_PARTS = {
@@ -81,7 +81,7 @@ function bothCursorsIssues(
   paging: PagingEntry | undefined,
   query: Readonly<Record<string, unknown>>,
 ): InputIssue[] {
-  const beforeParam = repeatedBeforeParam(paging, query);
+  const beforeParam = beforeParamSentWithAfter(paging, query);
 
   if (beforeParam === undefined) return [];
 
