@@ -421,11 +421,13 @@ function formatTest(check: Extract<ShapeCheck, { rule: "format" }>): (value: unk
 function safeIntegerRules(checks: readonly ShapeCheck[]) {
   const declaredCheck = (rule: "minimum" | "maximum") =>
     checks.find((candidate) => candidate.rule === rule);
+
   const declared = (rule: "minimum" | "maximum"): number | undefined => {
     const check = declaredCheck(rule);
 
     return check?.rule === rule ? Number(check.literal) : undefined;
   };
+
   const checkedNatively = (rule: "minimum" | "maximum"): boolean => {
     const check = declaredCheck(rule);
 
