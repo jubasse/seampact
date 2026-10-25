@@ -9,7 +9,7 @@ final readonly class SignedApplicationRequest implements SignedRequest
 {
     /**
      * @param string $rawBody the decoded body bytes, exactly as received
-     * @param array<string, string> $headers the headers the scheme declares, by lower-case name
+     * @param array<string, string> $headers the headers the scheme declares, by name
      */
     public function __construct(
         public string $rawBody,

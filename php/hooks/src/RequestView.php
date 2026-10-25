@@ -8,7 +8,7 @@ namespace Seampact\Hooks;
 final readonly class RequestView
 {
     /**
-     * @param array<string, list<string>> $headers every header by lower-case name, each with its values in order
+     * @param array<string, list<string>> $headers every header by name, each with its values in order
      */
     public function __construct(
         public string $method,
