@@ -50,9 +50,10 @@ internal fun springdocOperation(operation: Operation, at: IrPlace, bodyType: (Re
         val responseIndex = operation.responses.indexOfFirst { it.status == status }
         val response = operation.responses[responseIndex]
         val description = response.docs?.summary ?: response.docs?.description ?: ""
-        val content = springdocContent(response, bodyType(response))
+        val body = bodyType(response)
+        val content = springdocContent(response, body)
         if (content == null) {
-            refusals.waiting("nativeDocs.body", "springdoc's schema of the response body '${bodyType(response)}'", at.below("responses", responseIndex, "body"), Delivery.CONSUMER)
+            refusals.waiting("nativeDocs.body", "springdoc's schema of the response body '$body'", at.below("responses", responseIndex, "body"), Delivery.CONSUMER)
             continue
         }
 
