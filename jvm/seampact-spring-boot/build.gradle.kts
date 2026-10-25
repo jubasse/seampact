@@ -82,6 +82,9 @@ val golden: SourceSet = sourceSets.create("golden") {
     java.srcDir(goldenDirectory)
     java.srcDir(optInsGoldenDirectory)
     java.srcDir("src/goldenCheck/java")
+    // The opt-ins tree's `frameworkDocs: off` file, which a golden check hands to springdoc.
+    resources.srcDir(optInsGoldenDirectory)
+    resources.include("*.properties")
 }
 
 dependencies {
@@ -90,6 +93,7 @@ dependencies {
     "goldenImplementation"(libs.spring.boot.starter.validation)
     "goldenImplementation"(libs.spring.boot.starter.security)
     "goldenImplementation"(libs.swagger.annotations.jakarta)
+    "goldenImplementation"(libs.springdoc.webmvc.api)
     "goldenImplementation"(project(":seampact-hooks"))
     "goldenImplementation"(libs.spring.test)
     "goldenImplementation"(platform(libs.junit.bom))

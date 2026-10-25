@@ -7,6 +7,9 @@ javapoet = "0.22.0"
 spring-boot = "4.1.1"
 # The springdoc annotations a `nativeDocs` golden output carries: the swagger-core line springdoc 3.2 uses (ADR 0022).
 swagger-annotations = "2.2.55"
+# The springdoc line that runs a `nativeDocs` golden output and `frameworkDocs: off` in the golden checks: the last
+# one built on a Spring Boot line no newer than the golden one, so it moves none of its modules (ADR 0022).
+springdoc = "3.1.1"
 # The YAML 1.2 reader of the app config (ADR 0011).
 snakeyaml-engine = "3.2"
 # The JSON Schema 2020-12 validator of the app config and the IR schemas, so no schema is ported by hand.
@@ -28,6 +31,7 @@ spring-boot-starter-webmvc = { module = "org.springframework.boot:spring-boot-st
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 spring-test = { module = "org.springframework:spring-test" }
 spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security" }
+springdoc-webmvc-api = { module = "org.springdoc:springdoc-openapi-starter-webmvc-api", version.ref = "springdoc" }
 swagger-annotations-jakarta = { module = "io.swagger.core.v3:swagger-annotations-jakarta", version.ref = "swagger-annotations" }
 
 snakeyaml-engine = { module = "org.snakeyaml:snakeyaml-engine", version.ref = "snakeyaml-engine" }
