@@ -36,12 +36,18 @@ import com.example.tasks.api.ListChannelsResult;
 import com.example.tasks.api.ListTasksErrors;
 import com.example.tasks.api.ListTasksInput;
 import com.example.tasks.api.ListTasksResult;
+import com.example.tasks.api.PaymentsErrors;
+import com.example.tasks.api.PaymentsInput;
+import com.example.tasks.api.PaymentsResult;
 import com.example.tasks.api.PurgeTaskErrors;
 import com.example.tasks.api.PurgeTaskInput;
 import com.example.tasks.api.PurgeTaskResult;
 import com.example.tasks.api.SearchTasksErrors;
 import com.example.tasks.api.SearchTasksInput;
 import com.example.tasks.api.SearchTasksResult;
+import com.example.tasks.api.StripeAuthenticateHook;
+import com.example.tasks.api.StripeAuthenticateRequest;
+import com.example.tasks.api.StripeCredentials;
 import com.example.tasks.api.TasksContractException;
 import com.example.tasks.api.UpdatePreferencesErrors;
 import com.example.tasks.api.UpdatePreferencesInput;
@@ -57,6 +63,7 @@ import com.example.tasks.api.spring.runtime.Denial;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
+import io.github.jubasse.seampact.hooks.SignedTemplateRequest;
 import java.lang.annotation.Annotation;
 import java.util.Map;
 import java.util.Optional;
@@ -83,6 +90,7 @@ public final class TasksSeampactBinding implements ApiBinding {
         Map.entry("health", HealthInput.class),
         Map.entry("listChannels", ListChannelsInput.class),
         Map.entry("listTasks", ListTasksInput.class),
+        Map.entry("payments", PaymentsInput.class),
         Map.entry("purgeTask", PurgeTaskInput.class),
         Map.entry("searchTasks", SearchTasksInput.class),
         Map.entry("updatePreferences", UpdatePreferencesInput.class),
@@ -104,6 +112,7 @@ public final class TasksSeampactBinding implements ApiBinding {
         Map.entry("health", Health.class),
         Map.entry("listChannels", ListChannels.class),
         Map.entry("listTasks", ListTasks.class),
+        Map.entry("payments", Payments.class),
         Map.entry("purgeTask", PurgeTask.class),
         Map.entry("searchTasks", SearchTasks.class),
         Map.entry("updatePreferences", UpdatePreferences.class),
@@ -125,6 +134,7 @@ public final class TasksSeampactBinding implements ApiBinding {
         Map.entry(HealthResult.Status200.class, 200),
         Map.entry(ListChannelsResult.Status200.class, 200),
         Map.entry(ListTasksResult.Status200.class, 200),
+        Map.entry(PaymentsResult.Status204.class, 204),
         Map.entry(PurgeTaskResult.Status204.class, 204),
         Map.entry(SearchTasksResult.Status200.class, 200),
         Map.entry(UpdatePreferencesResult.Status200.class, 200),
@@ -203,6 +213,11 @@ public final class TasksSeampactBinding implements ApiBinding {
         Map.entry(ListTasksErrors.ApiUnauthenticated.class, "api.unauthenticated"),
         Map.entry(ListTasksErrors.ApiNotFound.class, "api.not_found"),
         Map.entry(ListTasksErrors.ApiInternal.class, "api.internal"),
+        Map.entry(PaymentsErrors.ApiSchemaInvalid.class, "api.schema_invalid"),
+        Map.entry(PaymentsErrors.ApiUnauthenticated.class, "api.unauthenticated"),
+        Map.entry(PaymentsErrors.ApiPayloadTooLarge.class, "api.payload_too_large"),
+        Map.entry(PaymentsErrors.ApiUnsupportedMediaType.class, "api.unsupported_media_type"),
+        Map.entry(PaymentsErrors.ApiInternal.class, "api.internal"),
         Map.entry(PurgeTaskErrors.ApiSchemaInvalid.class, "api.schema_invalid"),
         Map.entry(PurgeTaskErrors.ApiReauthenticationRequired.class, "api.reauthentication_required"),
         Map.entry(PurgeTaskErrors.ApiUnauthenticated.class, "api.unauthenticated"),
@@ -246,7 +261,8 @@ public final class TasksSeampactBinding implements ApiBinding {
     @Override
     public Map<String, Class<?>> authenticateHooks() {
         return Map.ofEntries(
-        Map.entry("user", UserAuthenticateHook.class));
+        Map.entry("user", UserAuthenticateHook.class),
+        Map.entry("stripe", StripeAuthenticateHook.class));
     }
 
     @Override
@@ -257,9 +273,11 @@ public final class TasksSeampactBinding implements ApiBinding {
     @Override
     public AuthenticateResult<?, Denial> authenticate(String identity, ListableBeanFactory beans,
             JsonMapper mapper, JsonNode credentials, Optional<String> csrfToken,
-            RequestView request, OperationRef operation) {
+            Optional<SignedTemplateRequest> signature, RequestView request,
+            OperationRef operation) {
         return switch (identity) {
             case "user" -> beans.getBean(UserAuthenticateHook.class).authenticate(new UserAuthenticateRequest(mapper.treeToValue(credentials, UserCredentials.class), csrfToken, request, operation, Map.of()));
+            case "stripe" -> beans.getBean(StripeAuthenticateHook.class).authenticate(new StripeAuthenticateRequest(mapper.treeToValue(credentials, StripeCredentials.class), csrfToken, signature, request, operation, Map.of()));
             default -> throw new IllegalArgumentException("seampact: the identity '" + identity + "' is not one the operations of the api 'tasks' authenticate with");
         };
     }

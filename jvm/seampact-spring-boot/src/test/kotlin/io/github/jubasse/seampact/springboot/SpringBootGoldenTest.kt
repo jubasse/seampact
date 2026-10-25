@@ -36,7 +36,7 @@ class SpringBootGoldenTest {
     private class GoldenApi(val irFile: String, val packageName: String, val operations: Set<String>)
 
     private val apis = listOf(
-        GoldenApi("tasks.ir.json", "com.example.tasks.api", setOf("health", "getChannel", "getDraft", "deleteDraft", "getPreferences", "updatePreferences", "getTask", "createTask", "updateTask", "assignTask", "archiveTask", "purgeTask", "getTasksBatch", "listChannels", "listTasks", "searchTasks")),
+        GoldenApi("tasks.ir.json", "com.example.tasks.api", setOf("health", "getChannel", "getDraft", "deleteDraft", "getPreferences", "updatePreferences", "getTask", "createTask", "updateTask", "assignTask", "archiveTask", "purgeTask", "getTasksBatch", "listChannels", "listTasks", "searchTasks", "payments")),
         GoldenApi("tasksService.ir.json", "com.example.tasksservice.api", setOf("getTask")),
     )
 
@@ -107,19 +107,11 @@ class SpringBootGoldenTest {
     }
 
     @Test
-    fun refusesTheFormsOfTheWholeReferenceContractByName() {
-        val refused = assertFailsWith<SpringBootRefusedException> {
-            SpringBootTarget.generate(referenceIr("tasks.ir.json"), entry("com.example.tasks.api"))
-        }
-
-        val codes = refused.refusals.map { it.code }.toSet()
-        for (code in listOf("signature.unsupported")) {
-            assertTrue(code in codes, "expected $code among $codes")
-        }
-        assertTrue(refused.refusals.all { it.message.contains("spring-") || it.message.contains("waits for") }, refused.message)
-        for (code in listOf("type.opaque.unsupported")) {
-            val refusal = refused.refusals.firstOrNull { it.code == code }
-            assertTrue(refusal != null && refusal.message.contains("spring-3"), "expected $code naming spring-3 among ${refused.message}")
+    fun generatesTheWholeReferenceContract() {
+        for (api in apis) {
+            val ir = referenceIr(api.irFile)
+            assertEquals(ir.operations.map { it.id }.toSet(), api.operations, "the golden view of ${api.irFile} keeps every operation")
+            SpringBootTarget.generate(ir, entry(api.packageName))
         }
     }
 

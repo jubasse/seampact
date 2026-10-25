@@ -10,6 +10,7 @@ import com.palantir.javapoet.TypeSpec
 import com.palantir.javapoet.WildcardTypeName
 import io.github.jubasse.seampact.ir.model.CredentialIdentity
 import io.github.jubasse.seampact.ir.model.SchemaPrincipal
+import io.github.jubasse.seampact.ir.model.SignedIdentity
 import javax.lang.model.element.Modifier
 
 private val CONFIGURATION = ClassName.get("org.springframework.context.annotation", "Configuration")
@@ -21,7 +22,7 @@ private val ENVIRONMENT = ClassName.get("org.springframework.core.env", "Environ
 private val FILTER_REGISTRATION_BEAN = ClassName.get("org.springframework.boot.web.servlet", "FilterRegistrationBean")
 private val DISPATCHER_TYPE = ClassName.get("jakarta.servlet", "DispatcherType")
 private val WEB_MVC_CONFIGURER = ClassName.get("org.springframework.web.servlet.config.annotation", "WebMvcConfigurer")
-private val JSON_NODE = ClassName.get("tools.jackson.databind", "JsonNode")
+private val JSON_NODE = JavaTypes.JSON_NODE
 private val JSON_MAPPER = ClassName.get("tools.jackson.databind.json", "JsonMapper")
 private val ANNOTATION = ClassName.get("java.lang.annotation", "Annotation")
 private val CLASS = ClassName.get("java.lang", "Class")
@@ -41,15 +42,19 @@ private val ANNOTATION_CLASS: TypeName = ParameterizedTypeName.get(CLASS, Wildca
  * the app's hook bean implements it, narrowed by the identity's request record and principal.
  */
 internal fun authenticateHookTypes(layout: JavaLayout): List<TypeSpec> = layout.kept.identities.mapNotNull { identityId ->
-    val identity = layout.ir.identities[identityId] as? CredentialIdentity ?: return@mapNotNull null
+    val principal = when (val identity = layout.ir.identities[identityId]) {
+        is CredentialIdentity -> identity.principal
+        is SignedIdentity -> identity.principal
+        else -> return@mapNotNull null
+    }
     val names = layout.identity(identityId) ?: return@mapNotNull null
-    val principalSchema = (identity.principal as? SchemaPrincipal)?.schema ?: return@mapNotNull null
-    val principal = layout.schemaClass(principalSchema) ?: return@mapNotNull null
+    val principalSchema = (principal as? SchemaPrincipal)?.schema ?: return@mapNotNull null
+    val principalClass = layout.schemaClass(principalSchema) ?: return@mapNotNull null
 
     TypeSpec.interfaceBuilder(names.hook)
         .addJavadoc("The authenticate hook of the identity '\$L': register one bean implementing it.\n", identityId)
         .addModifiers(Modifier.PUBLIC)
-        .addSuperinterface(ParameterizedTypeName.get(AUTHENTICATE_HOOK, names.request, principal, layout.runtime("Denial")))
+        .addSuperinterface(ParameterizedTypeName.get(AUTHENTICATE_HOOK, names.request, principalClass, layout.runtime("Denial")))
         .build()
 }
 
@@ -127,6 +132,7 @@ private fun authenticateMethod(layout: JavaLayout, identities: List<Pair<String,
         .addParameter(JSON_MAPPER, "mapper")
         .addParameter(JSON_NODE, "credentials")
         .addParameter(ParameterizedTypeName.get(JavaTypes.OPTIONAL, JavaTypes.STRING), "csrfToken")
+        .addParameter(ParameterizedTypeName.get(JavaTypes.OPTIONAL, SIGNED_TEMPLATE_REQUEST), "signature")
         .addParameter(REQUEST_VIEW, "request")
         .addParameter(OPERATION_REF, "operation")
 
@@ -138,9 +144,10 @@ private fun authenticateMethod(layout: JavaLayout, identities: List<Pair<String,
 
     val code = CodeBlock.builder().add("return switch (identity) {\n").indent()
     for ((identityId, names) in identities) {
+        val signatureArgument = if (layout.ir.identities[identityId] is SignedIdentity) "signature, " else ""
         code.add(
-            "case \$S -> beans.getBean(\$T.class).authenticate(new \$T(mapper.treeToValue(credentials, \$T.class), csrfToken, request, operation, \$T.of()));\n",
-            identityId, names.hook, names.request, names.credentials, JavaTypes.MAP,
+            "case \$S -> beans.getBean(\$T.class).authenticate(new \$T(mapper.treeToValue(credentials, \$T.class), csrfToken, \$Lrequest, operation, \$T.of()));\n",
+            identityId, names.hook, names.request, names.credentials, signatureArgument, JavaTypes.MAP,
         )
     }
     code.add("default -> \$L;\n", unknown).unindent().add("};\n")

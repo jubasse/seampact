@@ -25,6 +25,9 @@ import com.example.tasks.api.GetTasksBatchInput;
 import com.example.tasks.api.GetTasksBatchResult;
 import com.example.tasks.api.HealthInput;
 import com.example.tasks.api.HealthResult;
+import com.example.tasks.api.HooksEndpoints;
+import com.example.tasks.api.PaymentsInput;
+import com.example.tasks.api.PaymentsResult;
 import com.example.tasks.api.ListChannelsInput;
 import com.example.tasks.api.ListChannelsPage;
 import com.example.tasks.api.ListChannelsResult;
@@ -86,6 +89,15 @@ final class TasksControllers {
         public HealthResult health(HealthInput input) {
             return answers.answer(API, "health", 200, Health.class, HealthResult.Status200::new, Map.<String, java.util.function.Supplier<HealthResult>>of())
                     .orElseGet(() -> new HealthResult.Status200(new Health("ok")));
+        }
+    }
+
+    @RestController
+    static final class Hooks implements HooksEndpoints {
+        @Override
+        @com.example.tasks.api.spring.Payments
+        public PaymentsResult payments(PaymentsInput input) {
+            return new PaymentsResult.Status204();
         }
     }
 

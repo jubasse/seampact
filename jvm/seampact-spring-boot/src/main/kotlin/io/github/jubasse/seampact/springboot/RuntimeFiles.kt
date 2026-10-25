@@ -11,7 +11,7 @@ private val RUNTIME_CLASSES = listOf(
     "BoundaryMapper", "BoundaryMvcConfigurer", "CacheHeaders", "CheckingResponse", "ContractExceptionResolver", "ContractInputResolver",
     "ContractRefusal", "ContractReplyHandler", "ContractRoute", "ContractTable", "Decider", "Denial", "Digests", "ErrorReplies",
     "HeldBodyRequest", "IdempotencyStep", "InputFieldRights", "InputIssue", "InputStep", "OutgoingCheck", "OutputFieldRights", "PageReply", "ReplyHandlerFirst",
-    "RequirementCall", "ScalarValues", "ScopeCall", "ScopeResolver", "SeampactBoundary", "StructuralValidator", "Templates",
+    "RequirementCall", "ScalarValues", "ScopeCall", "ScopeResolver", "SeampactBoundary", "SignatureHeader", "StructuralValidator", "Templates",
     "UnexpectedErrorListener", "WireDecoding",
 )
 

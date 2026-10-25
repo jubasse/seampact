@@ -10,6 +10,9 @@ import io.github.jubasse.seampact.hooks.ResolveScopeRequest;
 import io.github.jubasse.seampact.hooks.ResolvedScope;
 import io.github.jubasse.seampact.hooks.ScopeIdSource;
 import io.github.jubasse.seampact.hooks.ScopeResolution;
+import io.github.jubasse.seampact.hooks.SignatureEncoding;
+import io.github.jubasse.seampact.hooks.SignatureTemplate;
+import io.github.jubasse.seampact.hooks.SignedTemplateRequest;
 import io.github.jubasse.seampact.hooks.SubjectRef;
 import io.github.jubasse.seampact.hooks.ThrottleBucket;
 import jakarta.servlet.http.Cookie;
@@ -39,6 +42,7 @@ final class AccessSteps {
     private static final String ACCESS_DENIED = "org.springframework.security.access.AccessDeniedException";
     private static final String OPTIONAL_ACCESS = "optional";
     private static final String ANONYMOUS = "anonymous";
+    private static final String SIGNED = "signed";
 
     private AccessSteps() {}
 
@@ -53,6 +57,12 @@ final class AccessSteps {
         ContractRoute route = exchange.route();
         JsonNode access = route.operation().path("access");
         if (!access.has("identity")) return;
+
+        JsonNode identity = boundary.table().ir().path("identities").path(access.path("identity").asString());
+        if (SIGNED.equals(identity.path("kind").asString())) {
+            authenticateSigned(boundary, exchange, request, view, identity);
+            return;
+        }
 
         boolean optional = OPTIONAL_ACCESS.equals(access.path("kind").asString());
         ObjectNode credentials = JsonNodeFactory.instance.objectNode();
@@ -72,7 +82,7 @@ final class AccessSteps {
         }
 
         AuthenticateResult<?, Denial> result = boundary.binding().authenticate(access.path("identity").asString(), boundary.beans(),
-                boundary.mapper(), credentials, csrfToken, view, boundary.operationRef(route));
+                boundary.mapper(), credentials, csrfToken, Optional.empty(), view, boundary.operationRef(route));
 
         switch (result) {
             case AuthenticateResult.Authenticated<?, Denial> authenticated -> exchange.principal = authenticated.principal();
@@ -80,6 +90,32 @@ final class AccessSteps {
                 if (optional && ANONYMOUS.equals(access.path("onRefused").asString())) return;
                 throw refusalOf(boundary, denied.deny());
             }
+        }
+    }
+
+    // A signed route: the signature parsed from its header over the held raw body; a missing or malformed header is
+    // the unauthenticated refusal, and the hook verifies the signature.
+    private static void authenticateSigned(SeampactBoundary boundary, BoundaryExchange exchange, HttpServletRequest request, RequestView view, JsonNode identity) {
+        ContractRoute route = exchange.route();
+        JsonNode scheme = boundary.table().ir().path("schemes").path(identity.path("signed").asString());
+        JsonNode signature = scheme.path("signature");
+
+        Optional<SignatureHeader> parsed = SignatureHeader.parse(signature.path("format").asString(), request.getHeader(scheme.path("name").asString()));
+        if (parsed.isEmpty()) throw new ContractRefusal(BoundaryFilter.roleCode(route, UNAUTHENTICATED_ROLE), MissingNode.getInstance());
+
+        byte[] rawBody = exchange.body == null ? new byte[0] : exchange.body;
+        SignatureTemplate template = new SignatureTemplate(signature.path("algorithm").asString(), signature.path("payload").asString(),
+                SignatureEncoding.valueOf(signature.path("encoding").asString().toUpperCase(Locale.ROOT)),
+                signature.path("toleranceMs").isNumber() ? Optional.of(signature.path("toleranceMs").asLong()) : Optional.empty());
+        SignedTemplateRequest signed = new SignedTemplateRequest(rawBody, parsed.get().timestamp(), parsed.get().candidateSignatures(),
+                signature.path("key").path("value").asString(), template);
+
+        AuthenticateResult<?, Denial> result = boundary.binding().authenticate(route.operation().path("access").path("identity").asString(), boundary.beans(), boundary.mapper(),
+                JsonNodeFactory.instance.objectNode(), Optional.empty(), Optional.of(signed), view, boundary.operationRef(route));
+
+        switch (result) {
+            case AuthenticateResult.Authenticated<?, Denial> authenticated -> exchange.principal = authenticated.principal();
+            case AuthenticateResult.Denied<?, Denial> denied -> throw refusalOf(boundary, denied.deny());
         }
     }
 

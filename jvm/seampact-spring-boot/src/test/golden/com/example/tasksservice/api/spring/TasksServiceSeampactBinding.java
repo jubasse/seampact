@@ -12,6 +12,7 @@ import com.example.tasksservice.api.spring.runtime.Denial;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
+import io.github.jubasse.seampact.hooks.SignedTemplateRequest;
 import java.lang.annotation.Annotation;
 import java.util.Map;
 import java.util.Optional;
@@ -66,7 +67,8 @@ public final class TasksServiceSeampactBinding implements ApiBinding {
     @Override
     public AuthenticateResult<?, Denial> authenticate(String identity, ListableBeanFactory beans,
             JsonMapper mapper, JsonNode credentials, Optional<String> csrfToken,
-            RequestView request, OperationRef operation) {
+            Optional<SignedTemplateRequest> signature, RequestView request,
+            OperationRef operation) {
         return switch (identity) {
             case "service" -> beans.getBean(ServiceAuthenticateHook.class).authenticate(new ServiceAuthenticateRequest(mapper.treeToValue(credentials, ServiceCredentials.class), csrfToken, request, operation, Map.of()));
             default -> throw new IllegalArgumentException("seampact: the identity '" + identity + "' is not one the operations of the api 'tasksService' authenticate with");

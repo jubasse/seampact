@@ -25,6 +25,7 @@ final class StructuralValidator {
     private static final Pattern UUID_TEXT = Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
     private static final Pattern DECIMAL_TEXT = Pattern.compile("-?(0|[1-9][0-9]*)(\\.[0-9]+)?");
     private static final String DECIMAL_FORMAT = "decimal";
+    private static final String OPAQUE = "opaque";
     private static final String UNKNOWN_KEYS_STRIP = "strip";
     private static final String UNKNOWN_KEYS_KEEP = "keep";
 
@@ -44,6 +45,8 @@ final class StructuralValidator {
     }
 
     void check(JsonNode value, JsonNode typeUse, String in, String pointer, List<InputIssue> issues) {
+        // An opaque value is any JSON, null included.
+        if (OPAQUE.equals(typeUse.path("kind").asString())) return;
         if (value.isNull()) {
             if (!typeUse.path("nullable").asBoolean(false)) issues.add(new InputIssue(in, pointer, "type"));
             return;
@@ -54,7 +57,6 @@ final class StructuralValidator {
             case "enum" -> checkEnum(value, typeUse, in, pointer, issues);
             case "array" -> checkArray(value, typeUse, in, pointer, issues);
             case "ref" -> checkSchema(value, table.schema(typeUse.path("schema").asString()), in, pointer, issues);
-            case "opaque" -> {}
             default -> throw new IllegalStateException(
                     "seampact: the type kind '" + typeUse.path("kind").asString() + "' is not one the boundary validates");
         }

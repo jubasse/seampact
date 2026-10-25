@@ -12,6 +12,7 @@ import io.github.jubasse.seampact.ir.model.EnumTypeUse
 import io.github.jubasse.seampact.ir.model.RefTypeUse
 import io.github.jubasse.seampact.ir.model.Refinements
 import io.github.jubasse.seampact.ir.model.ScalarType
+import io.github.jubasse.seampact.ir.model.OpaqueTypeUse
 import io.github.jubasse.seampact.ir.model.ScalarTypeUse
 import io.github.jubasse.seampact.ir.model.TypeUse
 import javax.lang.model.element.Modifier
@@ -23,6 +24,7 @@ internal object JavaTypes {
     val OPTIONAL: ClassName = ClassName.get("java.util", "Optional")
     val LIST: ClassName = ClassName.get("java.util", "List")
     val MAP: ClassName = ClassName.get("java.util", "Map")
+    val JSON_NODE: ClassName = ClassName.get("tools.jackson.databind", "JsonNode")
     val UUID: ClassName = ClassName.get("java.util", "UUID")
     val BIG_DECIMAL: ClassName = ClassName.get("java.math", "BigDecimal")
     val OFFSET_DATE_TIME: ClassName = ClassName.get("java.time", "OffsetDateTime")
@@ -91,6 +93,8 @@ internal class TypeMapper(private val layout: JavaLayout) {
         is EnumTypeUse -> layout.enumClass(type.enum) ?: JavaTypes.OBJECT
         is ArrayTypeUse -> arrayType(type)
         is ScalarTypeUse -> scalarType(type, boxed)
+        // An opaque value is any JSON the contract does not shape: the handler reads it as a tree.
+        is OpaqueTypeUse -> JavaTypes.JSON_NODE
         else -> JavaTypes.OBJECT
     }
 

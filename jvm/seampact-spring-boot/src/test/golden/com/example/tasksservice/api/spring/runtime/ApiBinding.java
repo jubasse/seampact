@@ -3,6 +3,7 @@ package com.example.tasksservice.api.spring.runtime;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
+import io.github.jubasse.seampact.hooks.SignedTemplateRequest;
 import java.lang.annotation.Annotation;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +40,7 @@ public interface ApiBinding {
             JsonMapper mapper,
             JsonNode credentials,
             Optional<String> csrfToken,
+            Optional<SignedTemplateRequest> signature,
             RequestView request,
             OperationRef operation);
 }

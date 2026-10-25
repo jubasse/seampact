@@ -17,6 +17,7 @@ import io.github.jubasse.seampact.ir.model.MapSchema
 import io.github.jubasse.seampact.ir.model.ObjectSchema
 import io.github.jubasse.seampact.ir.model.OpaqueTypeUse
 import io.github.jubasse.seampact.ir.model.Operation
+import io.github.jubasse.seampact.ir.model.Principal
 import io.github.jubasse.seampact.ir.model.RefTypeUse
 import io.github.jubasse.seampact.ir.model.ResponseShape
 import io.github.jubasse.seampact.ir.model.RuleRequirement
@@ -24,11 +25,15 @@ import io.github.jubasse.seampact.ir.model.ScalarType
 import io.github.jubasse.seampact.ir.model.ScalarTypeUse
 import io.github.jubasse.seampact.ir.model.SchemaId
 import io.github.jubasse.seampact.ir.model.SchemaPrincipal
+import io.github.jubasse.seampact.ir.model.SchemeId
+import io.github.jubasse.seampact.ir.model.SignatureScheme
 import io.github.jubasse.seampact.ir.model.SignedIdentity
+import io.github.jubasse.seampact.ir.model.TemplateSignature
 import io.github.jubasse.seampact.ir.model.TypeUse
 import io.github.jubasse.seampact.ir.model.UnionSchema
 import io.github.jubasse.seampact.ir.model.UnknownKeysPolicy
 import io.github.jubasse.seampact.ir.model.UrlForm
+import io.github.jubasse.seampact.ir.model.ValueSchemeKey
 
 private const val JSON_MEDIA = "application/json"
 private val SPRING_4_MEDIA = listOf("application/x-www-form-urlencoded", "multipart/form-data")
@@ -216,17 +221,51 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
 
         when (val identity = ir.identities[identityId]) {
             null -> refusals.inconsistent("identity.undeclared", "The identity '$identityId' is not declared", at)
-            is SignedIdentity -> refusals.waiting("signature", "A signed identity ('$identityId')", at, Delivery.SPRING_3)
+            is SignedIdentity -> {
+                if (!checkSignatureScheme(identity.signed, IrPlace.ROOT.below("identities", identityId, "signed"))) return
+                identities += identityId
+                readPrincipal(identityId, identity.principal)
+            }
             is CredentialIdentity -> {
                 identities += identityId
-                val principalAt = IrPlace.ROOT.below("identities", identityId, "principal")
-                when (val principal = identity.principal) {
-                    is SchemaPrincipal -> readSchema(principal.schema, principalAt.below("schema"))
-                    else -> refusals.waiting("principal.variants", "A principal of several variants", principalAt, Delivery.AFTER_1_0)
-                }
+                readPrincipal(identityId, identity.principal)
             }
             else -> refusals.unknownValue(at, identity.kind)
         }
+    }
+
+    private fun readPrincipal(identityId: IdentityId, principal: Principal) {
+        val principalAt = IrPlace.ROOT.below("identities", identityId, "principal")
+        when (principal) {
+            is SchemaPrincipal -> readSchema(principal.schema, principalAt.below("schema"))
+            else -> refusals.waiting("principal.variants", "A principal of several variants", principalAt, Delivery.AFTER_1_0)
+        }
+    }
+
+    // A signed identity's scheme: a named header, verified by its template with a key id the contract writes.
+    private fun checkSignatureScheme(schemeId: SchemeId, at: IrPlace): Boolean {
+        val scheme = ir.schemes[schemeId] as? SignatureScheme
+        if (scheme == null) {
+            refusals.inconsistent("scheme.unresolved", "The signature scheme '$schemeId' is not declared", at)
+            return false
+        }
+
+        val schemeAt = IrPlace.ROOT.below("schemes", schemeId)
+        val signature = scheme.signature
+        if (signature !is TemplateSignature) {
+            refusals.waiting("signature.application", "A signature verified by the application", schemeAt.below("signature"), Delivery.AFTER_1_0)
+            return false
+        }
+        if (signature.key !is ValueSchemeKey) {
+            refusals.waiting("signature.key.source", "A signature key read from the request", schemeAt.below("signature", "key"), Delivery.AFTER_1_0)
+            return false
+        }
+        if (scheme.name == null) {
+            refusals.inconsistent("scheme.signature.header", "The signature scheme '$schemeId' names no header", schemeAt)
+            return false
+        }
+
+        return true
     }
 
     private fun readType(type: TypeUse, at: IrPlace) {
@@ -245,7 +284,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
             }
             is ScalarTypeUse -> readScalar(type, at)
             is FileTypeUse -> refusals.waiting("type.file", "A file value", at, Delivery.SPRING_4)
-            is OpaqueTypeUse -> refusals.waiting("type.opaque", "An opaque value", at, Delivery.SPRING_3)
+            is OpaqueTypeUse -> Unit
             is TypeUse.Unknown -> refusals.unknownValue(at.below("kind"), type.kind)
         }
     }
