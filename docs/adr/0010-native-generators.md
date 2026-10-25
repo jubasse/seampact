@@ -56,7 +56,7 @@ Composer, vendor `seampact`:
 | `seampact/api-platform` | target | resource metadata, DTOs, State Provider and Processor interfaces, the `kernel.controller` listener and the decorated deserialize provider; API Platform's own OpenAPI generation left as the app has it, completed with `nativeDocs` or turned off with `frameworkDocs: off` ([A43](../decisions.md#a43)) |
 | `seampact/laravel-spatie` | adapter | spatie/laravel-permission behind the decide hook ([A24](../decisions.md#a24)) |
 
-Targets are development requirements (`require-dev`); `seampact/hooks` is a runtime requirement of the application. The `vendor/bin/seampact` runner discovers installed targets through a key in each target's `composer.json` `extra` section, the PHP counterpart of the Node CLI resolving targets from the project (ADR 0009). The PHP version floor is the lowest version required by the framework majors the PHP targets support.
+Targets are development requirements (`require-dev`); `seampact/hooks` is a runtime requirement of the application. The `vendor/bin/seampact` runner discovers installed targets through a key in each target's `composer.json` `extra` section, the PHP counterpart of the Node CLI resolving targets from the project (ADR 0009). The PHP floor is 8.3, patched: every seampact Composer package requires `>=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12`, the releases that fix PHP2Shell (CVE-2026-109618 and CVE-2026-109619), so Composer refuses an unpatched runtime; CI runs the latest 8.3 and 8.5.
 
 ### Namespaces
 
@@ -143,6 +143,33 @@ The binary and the contract bundle reach a JVM build through its own Maven repos
 - **Runner.** The plugin runs the binary's `compile` into a temporary directory and reads the IR with the `seampact-ir` reader. A non-zero exit passes the binary's own diagnostics through, unchanged; a compile past its deadline is stopped (`binary.compile-timeout`). The binary starts without any `NODE_*` variable of the build environment, and is built to ignore `NODE_OPTIONS` anyway, so no `--require` of the environment runs inside the pinned code.
 - **The contract bundle as a Maven artefact.** Besides the three channels of ADR 0011, a contract bundle may be published and consumed as a Maven artefact. The app config names it as a source `{ maven: "<groupId>:<artifactId>:<version>", integrity }`, the DSL with the same keys. The version is one release: a dynamic version (`+`, `1.+`, `latest.release`, a range) or a `-SNAPSHOT` is refused by name in both runners (`config.source.maven-unpinned`). The plugins resolve it through the same repositories and run the pinned-bundle check of ADR 0011 on it. The Node CLI does not resolve Maven artefacts and refuses the source by name (`bundle.maven-jvm-only`), naming the release URL, git tag and npm package forms of the same bundle.
 - **What a JVM build reads.** The plugins read the app config, from the file or the DSL, with the schema and the problem codes of the Node CLI, and fetch, cache and check bundles as the Node runner does. Two forms no JVM consumer needs yet are refused by name: a `package` bundle source, which needs the npm registry (`bundle.package-unsupported`), and a monorepo root config that lists the app (`config.root.unsupported`).
+
+### Amendment 2026-10-26: the PHP channels
+
+Composer has no classifier and no OS or arch filter, so the binary does not travel as a Composer package: `seampact/ir` gets it itself, and the PHP build machine still needs no Node.js.
+
+- **Contract only.** `seampact/ir` depends on the binary through a contract, never on how it is built:
+  - the five release assets of the JVM channels table, and the release manifest `SHA256SUMS`, one `<sha256>  <asset>` line per asset;
+  - the command `compile --config <app config> --out <directory>`, run from the app config's directory, which writes one `<api>.ir.json` per api into the directory;
+  - the exit codes: 0 compiled, 1 refused with its diagnostics, 2 a usage error; the diagnostics are on stderr.
+
+  A compiler rebuilt in another language that keeps these names, this manifest, this command and these exit codes drops in with no change to any PHP package.
+- **Pin.** `seampact/ir` ships `resources/binaries.json`: the binary version and one SHA-256 per asset, written at release time from `SHA256SUMS`. An app overrides it in `seampact.config.yaml`, under the PHP runner's key, with one of: a version with all its hashes, a mirror `url` with all its hashes, or a local `path` with its hash. The refusals are the JVM's: an override with no hash (`binary.pin-missing`); a hash that is not 64 lowercase hexadecimal digits, or an asset of no release binary (`binary.pin-invalid`); a file whose hash differs from the pin (`binary.hash-mismatch`, naming both values).
+- **Fetch and cache.** The download uses https only, follows a bounded number of redirects, each https too, and stops at a deadline. The file is hashed before it is installed under `$COMPOSER_CACHE_DIR/seampact`, else `$XDG_CACHE_HOME/seampact`. A cache entry that is a link or that other users may write is refused (`binary.cache-unsafe`), and the installed copy is hashed again right before each start.
+- **Lazy.** As on the JVM, the binary is resolved only when an input needs it: a `path` source, or the OpenAPI documents of an app config. A bundle-only app with `openapi: none` never downloads it.
+- **Platforms.** `PHP_OS_FAMILY` gives the OS and `php_uname('m')` the arch; on Linux the C library is read from `/proc/self/maps`, else from an `ld-musl-*` loader under `/lib`:
+
+  | `PHP_OS_FAMILY` | `php_uname('m')` | Release asset |
+  |---|---|---|
+  | `Linux`, glibc | `x86_64` | `seampact-linux-x64` |
+  | `Linux`, glibc | `aarch64` | `seampact-linux-arm64` |
+  | `Darwin` | `x86_64` | `seampact-darwin-x64` |
+  | `Darwin` | `arm64` | `seampact-darwin-arm64` |
+  | `Windows` | `AMD64` | `seampact-win32-x64.exe` |
+
+  Any other row, musl and BSD included, is refused (`binary.platform-unsupported`, naming the detected OS, arch and C library) with the JVM's three fixes: use a bundle source; build on a glibc image; or point `path` at your own build, with its hash. Most Alpine PHP images are musl: the PHP guide names the bundle source for them.
+- **Runner.** `vendor/bin/seampact` and the framework commands run the binary's `compile` into a temporary directory through `proc_open` with an array command, so no shell reads it, and read the IR with the `seampact/ir` reader. The child starts without any `NODE_*` variable of the environment. A non-zero exit passes the binary's diagnostics through unchanged; a compile past its deadline is stopped (`binary.compile-timeout`). There is no Composer plugin: nothing runs on `composer install`.
+- **Until publication.** The compiler is not published yet, so there is no release asset to fetch: the embedded pin stays empty, and the download, with its version and `url` overrides, lands with the first release. Until then a `path` override with its hash is the only way to the binary, in CI and in the test consumers. An input that needs the binary without one is refused by name (`binary.unpublished`), naming the `path` override.
 
 ## Consequences
 
