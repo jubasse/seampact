@@ -3,8 +3,11 @@ name: JVM plugins
 # The Gradle and Maven plugins (ADR 0010, ADR 0011). The Gradle plugin's TestKit builds generate, compile and cache a
 # Spring Boot app from the reference contract, on Java 21 with the Gradle 8.14 floor and on Java 21 and 25 with the
 # repository's Gradle. The Maven plugin's tests build the same app with a real Maven, 3.9 and 4, on Java 21 and 25,
-# and generate one app with both plugins to compare the files with each other and with the spring-boot golden tree. The compiler binary is a stub, so the jobs run with Node removed from the runner. On a pull
-# request they run only when the change touches a watched path; `jvm-plugins` is the one check to require.
+# and generate one app with both plugins to compare the files with each other and with the spring-boot golden tree. The compiler binary is a stub, so the jobs run with Node removed from the runner. The channel smoke
+# serves a bundle of the reference contract and a tampered copy as a release asset and from a git tag
+# (`scripts/dist-smoke`, which needs Node); each plugin generates and checks the consumer from each channel and refuses
+# the tampered copy. On a pull request they run only when the change touches a watched path; `jvm-plugins` is the one
+# check to require.
 
 on:
   push:
@@ -44,9 +47,9 @@ jobs:
             exit 0
           fi
           # The JVM modules, the config, bundle and IR schemas, the bundle vectors, the reference contract and the
-          # golden IR, the consumer's Maven wrapper the Maven tests run, and this workflow.
+          # golden IR, the consumer the Maven tests and the channel smoke run, the smoke's channels, and this workflow.
           watched='^(jvm/|packages/core/spec/schemas/(bundle|config|ir)/|packages/core/spec/vectors/bundle/'
-          watched+='|fixtures/reference/|fixtures/golden/|scripts/consumers/targets/spring-boot/maven/'
+          watched+='|fixtures/reference/|fixtures/golden/|scripts/consumers/targets/spring-boot/|scripts/dist-smoke/'
           watched+='|\.github/workflows/p6-jvm-plugins\.yml$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.
@@ -145,10 +148,63 @@ jobs:
           TEST_MAVEN: ${{ matrix.test-maven }}
         run: ./gradlew :seampact-maven-plugin:check -PtestJdk="$TEST_JDK" -PtestMaven="$TEST_MAVEN"
 
+  channel-smoke:
+    name: channel smoke (${{ matrix.build-tool }})
+    needs: changes
+    if: needs.changes.outputs.jvm-plugins == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        build-tool: [gradle, maven]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Publish the JVM modules to Maven local
+        if: matrix.build-tool == 'maven'
+        working-directory: jvm
+        run: >-
+          ./gradlew :seampact-ir:publishToMavenLocal :seampact-hooks:publishToMavenLocal
+          :seampact-spring-boot:publishToMavenLocal :seampact-runner:publishToMavenLocal
+          :seampact-maven-plugin:publishToMavenLocal
+      - name: Serve the release and git channels
+        shell: bash
+        run: |
+          set -euo pipefail
+          served="$RUNNER_TEMP/served.json"
+          node --experimental-transform-types --import ./scripts/ir-models/register.ts scripts/dist-smoke/cli.ts serve \
+            --work "$RUNNER_TEMP/channels" > "$served" 2> "$RUNNER_TEMP/channels.log" &
+          for _ in $(seq 1 60); do
+            if [ -s "$served" ]; then exit 0; fi
+            sleep 2
+          done
+          echo "The channels did not start; their log:"
+          cat "$RUNNER_TEMP/channels.log"
+          exit 1
+      - name: Generate and check from each channel with the ${{ matrix.build-tool }} plugin
+        env:
+          BUILD_TOOL: ${{ matrix.build-tool }}
+        run: >-
+          sh scripts/consumers/targets/spring-boot/channel-smoke.sh "$RUNNER_TEMP/served.json" "$BUILD_TOOL"
+          "$RUNNER_TEMP/smoke" "$GITHUB_WORKSPACE/jvm"
+
   # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
   jvm-plugins:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, gradle-plugin, maven-plugin]
+    needs: [changes, gradle-plugin, maven-plugin, channel-smoke]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
