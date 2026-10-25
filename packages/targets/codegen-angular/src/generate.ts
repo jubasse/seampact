@@ -22,6 +22,11 @@ import {
 } from "./fetch/http-client-fetch-module.js";
 import { SERVICE_OWN_MEMBERS, serviceModuleSource } from "./fetch/service-module.js";
 import { NGRX_MODULE, ngrxModuleSource, refuseActionGroupCollisions } from "./ngrx/ngrx-module.js";
+import {
+  NGRX_SIGNALS_MODULE,
+  refuseStoreMemberCollisions,
+  signalStoreModuleSource,
+} from "./ngrx-signals/signal-store-module.js";
 import type { AngularQueryOptions } from "./options.js";
 
 export const QUERIES_ARTEFACT = "queries";
@@ -35,8 +40,8 @@ const INDEX_MODULE = "index";
 const MODULE_EXTENSION = ".ts";
 
 // Per api: the front runtime, `queries.ts`, unless the artefact is off `service.ts` with the HttpClient fetch it sends
-// through, with `state: ngrx` the NgRx actions and effects over the service, and an index re-exporting them; or every
-// refusal at once.
+// through, with `state: ngrx` the NgRx actions and effects over the service or with `state: ngrx-signals` its Signal
+// Store features, and an index re-exporting them; or every refusal at once.
 export function generateAngularQueries(
   input: GenerateInput<AngularQueryOptions, AngularArtefact, "client">,
 ): GenerateOutcome {
@@ -57,6 +62,7 @@ export function generateAngularQueries(
     ...(withService ? refuseServiceMemberCollisions(planned.plan) : []),
     ...refuseStateWithout(options, withService),
     ...(options.state === "ngrx" ? refuseActionGroupCollisions(planned.plan) : []),
+    ...(options.state === "ngrx-signals" ? refuseStoreMemberCollisions(planned.plan) : []),
   ];
 
   if (targetRefusals.length > 0) return { status: "refused", refusals: targetRefusals };
@@ -77,6 +83,12 @@ function queriesAndServiceFiles(
   const queriesFile = `${QUERIES_MODULE}${MODULE_EXTENSION}`;
   const serviceFile = `${SERVICE_MODULE}${MODULE_EXTENSION}`;
   const withNgrx = options.state === "ngrx";
+  const withSignalStore = options.state === "ngrx-signals";
+  const stateImports = {
+    service: `./${SERVICE_MODULE}${FRONT_MODULE_SUFFIX}`,
+    queries: `./${QUERIES_MODULE}${FRONT_MODULE_SUFFIX}`,
+    runtime: FRONT_RUNTIME_SPECIFIER,
+  };
   const queries = fetchQueriesModuleSource(plan, options, {
     client: clientSpecifier(queriesFile),
     runtime: FRONT_RUNTIME_SPECIFIER,
@@ -98,14 +110,15 @@ function queriesAndServiceFiles(
   ];
   const ngrxFile = (): GeneratedFile => ({
     path: `${NGRX_MODULE}${MODULE_EXTENSION}`,
-    contents: `${ngrxModuleSource(plan, {
-      service: `./${SERVICE_MODULE}${FRONT_MODULE_SUFFIX}`,
-      queries: `./${QUERIES_MODULE}${FRONT_MODULE_SUFFIX}`,
-      runtime: FRONT_RUNTIME_SPECIFIER,
-    })}\n`,
+    contents: `${ngrxModuleSource(plan, stateImports)}\n`,
+  });
+  const signalStoreFile = (): GeneratedFile => ({
+    path: `${NGRX_SIGNALS_MODULE}${MODULE_EXTENSION}`,
+    contents: `${signalStoreModuleSource(plan, stateImports)}\n`,
   });
   const indexed: IndexedModule[] = [
     ...(withNgrx ? [{ module: NGRX_MODULE }] : []),
+    ...(withSignalStore ? [{ module: NGRX_SIGNALS_MODULE }] : []),
     ...(withService ? [{ module: SERVICE_MODULE }, { module: HTTP_CLIENT_FETCH_MODULE }] : []),
     { module: QUERIES_MODULE },
     { module: FRONT_RUNTIME_MODULE, typeNames: [...FRONT_RUNTIME_TYPE_NAMES], valueNames: [] },
@@ -115,18 +128,19 @@ function queriesAndServiceFiles(
     { path: queriesFile, contents: `${queries}\n` },
     ...(withService ? serviceFiles() : []),
     ...(withNgrx ? [ngrxFile()] : []),
+    ...(withSignalStore ? [signalStoreFile()] : []),
     { path: `${INDEX_MODULE}${MODULE_EXTENSION}`, contents: apiIndexSource(indexed) },
   ];
 }
 
-// The NgRx effects call the service, so `state` without it would shape nothing.
+// The NgRx effects and the Signal Store features call the service, so `state` without it would shape nothing.
 function refuseStateWithout(options: AngularQueryOptions, withService: boolean): Refusal[] {
   if (options.state === undefined || withService) return [];
 
   return [
     {
       code: "artefact.service.needed",
-      message: `The option 'state: ${options.state}' needs the 'service' artefact, which the entry turns off: its effects call the service.`,
+      message: `The option 'state: ${options.state}' needs the 'service' artefact, which the entry turns off: the code it generates calls the service.`,
       fix: "Add 'service' to the target's `artefacts`, or drop 'state'.",
       member: "",
     },

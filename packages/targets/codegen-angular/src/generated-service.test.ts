@@ -71,19 +71,70 @@ test("`state: ngrx` adds its golden action groups and effects, exported from the
   await expect(modules.get("ngrx.ts")).toMatchFileSnapshot("../golden/ngrx/ngrx.ts.golden");
 });
 
-test("`state: ngrx` without the service artefact is refused by name", async () => {
+test("`state: ngrx-signals` adds its golden Signal Store features, exported from the index", async () => {
   const outcome = await target.generate({
     ir,
-    options: { query: "fetch", state: "ngrx" },
+    options: { query: "fetch", state: "ngrx-signals" },
     links,
-    artefacts: new Set(["queries"]),
+    artefacts: new Set(["queries", "service"]),
+  });
+
+  if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+  const modules = new Map(outcome.files.map((file) => [file.path, file.contents]));
+
+  expect(modules.has("ngrx.ts")).toBe(false);
+  expect(modules.get("index.ts")).toContain('export * from "./ngrx-signals.js";');
+  await expect(modules.get("ngrx-signals.ts")).toMatchFileSnapshot(
+    "../golden/ngrx-signals/ngrx-signals.ts.golden",
+  );
+});
+
+test("`state: ngrx-signals` refuses an operation whose store member another operation's feature adds", async () => {
+  const renamed = {
+    ...ir,
+    operations: ir.operations.map((operation) =>
+      operation.id === "getTask" ? { ...operation, id: "sendListTasks" } : operation,
+    ),
+  };
+  const renamedDescriptor: ClientDescriptor = {
+    ...descriptor,
+    operations: Object.fromEntries(
+      renamed.operations.map((operation) => [operation.id, { method: operation.id }]),
+    ),
+  };
+
+  const outcome = await target.generate({
+    ir: renamed,
+    options: { query: "fetch", state: "ngrx-signals" },
+    links: {
+      client: { descriptor: renamedDescriptor, location: { kind: "relative", path: "../client" } },
+    },
+    artefacts: new Set(["queries", "service"]),
   });
 
   expect(outcome).toMatchObject({
     status: "refused",
-    refusals: [{ code: "artefact.service.needed" }],
+    refusals: [{ code: "names.collision", message: expect.stringContaining("'sendListTasks'") }],
   });
 });
+
+test.each(["ngrx", "ngrx-signals"])(
+  "`state: %s` without the service artefact is refused by name",
+  async (state) => {
+    const outcome = await target.generate({
+      ir,
+      options: { query: "fetch", state },
+      links,
+      artefacts: new Set(["queries"]),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: [{ code: "artefact.service.needed" }],
+    });
+  },
+);
 
 test("`state: ngrx` refuses an operation whose action name another operation's outcome takes", async () => {
   const renamed = {

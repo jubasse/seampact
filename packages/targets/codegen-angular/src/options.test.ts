@@ -34,16 +34,19 @@ test("a missing or library `query`, an unknown key and the cache options are ref
   ]);
 });
 
-test("`state: ngrx` parses, `ngrx-signals` is refused by name until it is generated, another value as invalid", () => {
+test("`state: ngrx` and `state: ngrx-signals` parse, another value is refused as invalid", () => {
   expect(parseAngularQueryOptions({ query: "fetch", state: "ngrx" })).toMatchObject({
     status: "parsed",
     options: { query: "fetch", state: "ngrx" },
   });
   expect(parseAngularQueryOptions({ query: "fetch", state: "ngrx-signals" })).toMatchObject({
-    status: "refused",
-    refusals: [{ code: "options.state.unsupported", member: "/state" }],
+    status: "parsed",
+    options: { query: "fetch", state: "ngrx-signals" },
   });
-  expect(refusalCodes({ query: "fetch", state: "redux" })).toEqual(["options.state.invalid"]);
+  expect(parseAngularQueryOptions({ query: "fetch", state: "redux" })).toMatchObject({
+    status: "refused",
+    refusals: [{ code: "options.state.invalid", member: "/state" }],
+  });
   expect(refusalCodes({ query: "fetch", state: true })).toEqual(["options.state.invalid"]);
 });
 

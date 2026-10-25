@@ -25,8 +25,8 @@ function asError(rejection: unknown): Error {
     : new Error(String(rejection), { cause: rejection });
 }
 
-// The success or failure action of one call; an error never leaves the effect. A call `superseded` aborts ends in
-// its failure with the abort error; unsubscribing, as the effect's teardown does, aborts it with no outcome.
+// The success or failure of one call; an error never leaves the stream. A call `superseded` aborts ends in its
+// failure with the abort error; unsubscribing, as an effect's or a store's teardown does, aborts it with no outcome.
 function outcomeOf<Data, Succeeded, Failed>(
   send: (signal: AbortSignal) => Promise<Data>,
   succeeded: (data: Data) => Succeeded,
