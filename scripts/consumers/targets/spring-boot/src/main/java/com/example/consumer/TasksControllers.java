@@ -14,6 +14,12 @@ import com.example.tasks.api.GetTasksBatchInput;
 import com.example.tasks.api.GetTasksBatchResult;
 import com.example.tasks.api.HealthInput;
 import com.example.tasks.api.HealthResult;
+import com.example.tasks.api.ListChannelsInput;
+import com.example.tasks.api.ListChannelsPage;
+import com.example.tasks.api.ListChannelsResult;
+import com.example.tasks.api.ListTasksInput;
+import com.example.tasks.api.ListTasksPage;
+import com.example.tasks.api.ListTasksResult;
 import com.example.tasks.api.SearchTasksInput;
 import com.example.tasks.api.SearchTasksResult;
 import com.example.tasks.api.TasksEndpoints;
@@ -26,6 +32,8 @@ import com.example.tasks.api.spring.GetChannel;
 import com.example.tasks.api.spring.GetDraft;
 import com.example.tasks.api.spring.GetTask;
 import com.example.tasks.api.spring.GetTasksBatch;
+import com.example.tasks.api.spring.ListChannels;
+import com.example.tasks.api.spring.ListTasks;
 import com.example.tasks.api.spring.SearchTasks;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,6 +45,8 @@ import org.springframework.web.bind.annotation.RestController;
 /** The `tasks` api's controllers: one declared success per operation, unless the loaded script answers. */
 final class TasksControllers {
     private static final String API = "tasks";
+    private static final String NEXT_CURSOR = "page-2";
+    private static final UUID GENERAL_CHANNEL_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
 
     private TasksControllers() {}
 
@@ -63,6 +73,12 @@ final class TasksControllers {
 
         Channels(ScriptedAnswers answers) {
             this.answers = answers;
+        }
+
+        @Override
+        @ListChannels
+        public ListChannelsResult listChannels(ListChannelsInput input) {
+            return new ListChannelsResult.Status200(new ListChannelsPage(List.of(new Channel(GENERAL_CHANNEL_ID, "General")), Optional.empty()));
         }
 
         @Override
@@ -96,6 +112,16 @@ final class TasksControllers {
             return answers.answer(API, "getTask", 200, Task.class, GetTaskResult.Status200::new,
                             Map.<String, java.util.function.Supplier<GetTaskResult>>of("api.not_found", GetTaskErrors.ApiNotFound::new))
                     .orElseGet(() -> new GetTaskResult.Status200(SampleData.task(input.path().taskId())));
+        }
+
+        @Override
+        @ListTasks
+        public ListTasksResult listTasks(ListTasksInput input) {
+            // The first page links a second one; the second is the last.
+            Optional<String> nextCursor = input.query().cursor().isPresent() ? Optional.empty() : Optional.of(NEXT_CURSOR);
+
+            return answers.answer(API, "listTasks", 200, ListTasksPage.class, ListTasksResult.Status200::new, Map.<String, java.util.function.Supplier<ListTasksResult>>of())
+                    .orElseGet(() -> new ListTasksResult.Status200(new ListTasksPage(List.of(SampleData.task(SampleData.NEW_TASK_ID)), nextCursor)));
         }
 
         @Override

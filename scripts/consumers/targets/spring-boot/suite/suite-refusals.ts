@@ -2,7 +2,6 @@
 // the consumer keeps the reference's core-path operations until spring-3 widens its filter (ADR 0022 "Delivery").
 const CREATE_TASK =
   "Calls createTask, whose idempotency replay, throttle and restricted input fields come with spring-3.";
-const LIST_TASKS = "Calls listTasks, whose paging comes with spring-3.";
 const PAYMENTS = "Calls the signed payments route, which comes with spring-3.";
 const PREFERENCES =
   "Calls the preferences operations, whose cache headers and idempotency replay come with spring-3.";
@@ -25,15 +24,12 @@ export const SPRING_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "idempotency-key-missing": CREATE_TASK,
   "idempotency-key-reused": CREATE_TASK,
   "idempotent-replay": CREATE_TASK,
-  "limit-above-max-refused": LIST_TASKS,
   "malformed-json-answers-bad-request": CREATE_TASK,
   "member-action-version-conflict": UPDATE_TASK,
   "missing-decider-fails-boot":
     "Names the 'roles' rule, which only createTask uses; createTask comes with spring-3.",
   "overridden-right-reaches-its-own-hook": CREATE_TASK,
-  "page-links-next-page": LIST_TASKS,
   "plus-json-media-type-unsupported": PREFERENCES,
-  "query-number-decoding": LIST_TASKS,
   "recent-auth-denied": PURGE_TASK,
   "recent-auth-proof-required": PURGE_TASK,
   "refusal-before-handler-not-stored": CREATE_TASK,
@@ -45,8 +41,6 @@ export const SPRING_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "stale-body-version-conflict": UPDATE_TASK,
   "stale-webhook-signature": PAYMENTS,
   "throttled-with-retry-after": CREATE_TASK,
-  "undeclared-member-stripped-from-page-items": LIST_TASKS,
-  "undeclared-sort-key-on-list-tasks": LIST_TASKS,
   "unknown-body-key-refused": CREATE_TASK,
   "unknown-enum-value-refused": UPDATE_TASK,
 };

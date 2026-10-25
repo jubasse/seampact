@@ -99,7 +99,7 @@ final class StructuralValidator {
         if (refinements.has("maxLength") && length > refinements.path("maxLength").asInt()) issues.add(new InputIssue(in, pointer, "maxLength"));
 
         if (refinements.has("pattern")) {
-            Pattern pattern = patterns.computeIfAbsent(refinements.path("pattern").asString(), Pattern::compile);
+            Pattern pattern = patterns.computeIfAbsent(refinements.path("pattern").path("normalized").asString(), Pattern::compile);
             if (!pattern.matcher(text).find()) issues.add(new InputIssue(in, pointer, "pattern"));
         }
 
