@@ -14,34 +14,48 @@ public class CompiledApi(public val api: String, public val irText: String, publ
 
 /** The outcome of [BinaryRunner.compile]. */
 public sealed interface BinaryCompileResult {
-    /** Each api of the app config's sources, in api name order. */
+    /** Each api the binary wrote, in api name order. */
     public data class Compiled(val apis: List<CompiledApi>) : BinaryCompileResult
 
-    /** The binary exited with [exitCode]; its two streams, unchanged, hold its diagnostics. */
+    /**
+     * The binary refused the compile (exit 1) or its usage (exit 2); its two streams hold its diagnostics, with
+     * control characters other than newline and tab removed.
+     */
     public data class Failed(val exitCode: Int, val stdout: String, val stderr: String) : BinaryCompileResult
 
-    /** The binary changed after it was installed and was not started. */
+    /** The binary or its cache changed after it was installed, and it was not started. */
     public data class Refused(val failure: BinaryFailure) : BinaryCompileResult
+
+    /** The binary left its contract (`binary.compile-failed`): an unknown exit, a signal, or a missing IR file. */
+    public data class OutsideContract(val failure: BinaryFailure) : BinaryCompileResult
 
     /** The binary did not finish within the deadline and was stopped. */
     public data class TimedOut(val failure: BinaryFailure) : BinaryCompileResult
 }
 
 /**
- * Compiles local YAML sources with the pinned standalone binary (ADR 0010, "How a native plugin gets the IR"): runs
- * `compile --config <app config> --out <temporary directory>` from the app config's directory, then reads each
- * `<api>.ir.json` with [IrReader] under the caller's support. A non-zero exit is passed through with the binary's
- * own diagnostics. The binary is hashed again right before it starts, and it starts without any `NODE_*` variable
- * of the build environment (`NODE_OPTIONS` could make it load foreign code).
+ * Compiles local YAML sources with the pinned standalone binary (ADR 0010, "Amendment 2026-10-21: the JVM channels",
+ * Runner and Exits): checks the private cache and hashes the copy right before it starts, runs
+ * `compile --config <app config> --out <temporary directory>` from the app config's directory with only the
+ * environment variables the binary reads, then reads each `<api>.ir.json` with [IrReader] under the caller's support.
  */
 public object BinaryRunner {
     /** How long a compile may take before it is stopped. */
     public val DEFAULT_TIMEOUT: Duration = Duration.ofMinutes(5)
 
     private const val IR_FILE_SUFFIX = ".ir.json"
-    private const val NODE_VARIABLE_PREFIX = "NODE_"
+    private const val SIGNAL_EXIT_BASE = 128
+    private val CONTRACT_REFUSAL_EXITS = setOf(1, 2)
+
+    // The binary's contract: it reads no other environment variable.
+    private val CONTRACT_VARIABLES = setOf("TMPDIR", "TEMP", "TMP")
+    private const val WINDOWS_SYSTEM_ROOT = "SYSTEMROOT"
+
+    private val CONTROL_CHARACTERS_BUT_NEWLINE_AND_TAB = Regex("[\\p{Cc}&&[^\\n\\t]]")
 
     /**
+     * The JVM's compile config names one entry, so an exit 0 that wrote no IR file left the contract.
+     *
      * @throws io.github.jubasse.seampact.ir.read.IrRefusedException an IR the [support] does not read
      * @throws io.github.jubasse.seampact.ir.read.IrMalformedException an IR file that is not an IR
      */
@@ -51,6 +65,8 @@ public object BinaryRunner {
         support: IrSupport,
         timeout: Duration = DEFAULT_TIMEOUT,
     ): BinaryCompileResult {
+        val unsafeEntry = BinaryCache.unsafeEntry(binary.path, binary.cacheRoot)
+        if (unsafeEntry != null) return BinaryCompileResult.Refused(unsafeEntry)
         val startedSha256 = BinaryInstaller.sha256Of(binary.path)
         if (startedSha256 != binary.sha256) return BinaryCompileResult.Refused(changedSinceInstall(binary, startedSha256))
 
@@ -65,7 +81,7 @@ public object BinaryRunner {
                 .directory(configFile.parent.toFile())
                 .redirectOutput(stdout.toFile())
                 .redirectError(stderr.toFile())
-            removeNodeVariables(processBuilder.environment())
+            keepContractVariables(processBuilder.environment(), BinaryCache.isWindows())
 
             val process = processBuilder.start()
             // The binary reads no input: its standard input is closed at once.
@@ -76,32 +92,58 @@ public object BinaryRunner {
                 return BinaryCompileResult.TimedOut(timedOut(timeout))
             }
 
-            if (process.exitValue() != 0) {
-                return BinaryCompileResult.Failed(process.exitValue(), Files.readString(stdout), Files.readString(stderr))
+            val exitCode = process.exitValue()
+            if (exitCode in CONTRACT_REFUSAL_EXITS) {
+                return BinaryCompileResult.Failed(exitCode, withoutControlCharacters(Files.readString(stdout)), withoutControlCharacters(Files.readString(stderr)))
             }
+            if (exitCode != 0) return BinaryCompileResult.OutsideContract(unknownExit(exitCode))
 
-            return BinaryCompileResult.Compiled(readIrs(irDirectory, support))
+            return readIrs(irDirectory, support)
         } finally {
             workDirectory.toFile().deleteRecursively()
         }
     }
 
-    private fun readIrs(irDirectory: Path, support: IrSupport): List<CompiledApi> {
-        // `compile --out` creates the directory even for no api; its absence after a success is a binary fault.
-        check(Files.isDirectory(irDirectory)) { "binary: the compile exited 0 and wrote no '$irDirectory'." }
+    private fun readIrs(irDirectory: Path, support: IrSupport): BinaryCompileResult {
+        if (!Files.isDirectory(irDirectory)) return BinaryCompileResult.OutsideContract(irMissing())
 
         val irFiles = Files.list(irDirectory).use { files -> files.filter { it.name.endsWith(IR_FILE_SUFFIX) }.sorted().toList() }
+        if (irFiles.isEmpty()) return BinaryCompileResult.OutsideContract(irMissing())
 
-        return irFiles.map { file ->
-            val text = Files.readString(file)
-            CompiledApi(file.name.removeSuffix(IR_FILE_SUFFIX), text, IrReader.read(text, support))
-        }
+        return BinaryCompileResult.Compiled(
+            irFiles.map { file ->
+                val text = Files.readString(file)
+                CompiledApi(file.name.removeSuffix(IR_FILE_SUFFIX), text, IrReader.read(text, support))
+            },
+        )
     }
 
-    /** Drops every `NODE_*` variable; Windows names are case-insensitive, so the prefix is too. */
-    internal fun removeNodeVariables(environment: MutableMap<String, String>) {
-        environment.keys.removeIf { name -> name.uppercase().startsWith(NODE_VARIABLE_PREFIX) }
+    /** Keeps only the variables of the binary's contract; Windows names are case-insensitive, so the match is too. */
+    internal fun keepContractVariables(environment: MutableMap<String, String>, windows: Boolean) {
+        val kept = if (windows) CONTRACT_VARIABLES + WINDOWS_SYSTEM_ROOT else CONTRACT_VARIABLES
+        environment.keys.removeIf { name -> name.uppercase() !in kept }
     }
+
+    internal fun withoutControlCharacters(text: String): String = text.replace(CONTROL_CHARACTERS_BUT_NEWLINE_AND_TAB, "")
+
+    private fun unknownExit(exitCode: Int): BinaryFailure {
+        // A POSIX child stopped by a signal reports 128 plus the signal number.
+        val stoppedBy = if (!BinaryCache.isWindows() && exitCode > SIGNAL_EXIT_BASE) "was stopped by the signal ${exitCode - SIGNAL_EXIT_BASE}" else "exited with $exitCode"
+
+        return BinaryFailure(
+            code = BinaryFailureCode.COMPILE_FAILED,
+            message = "The standalone compiler $stoppedBy, outside its exits 0, 1 and 2.",
+            fix = "Run the build again; if it fails the same way, report it with the binary version and the contract.",
+            actual = exitCode.toString(),
+        )
+    }
+
+    private fun irMissing(): BinaryFailure = BinaryFailure(
+        code = BinaryFailureCode.COMPILE_FAILED,
+        message = "The standalone compiler exited 0 without writing an IR file (<api>$IR_FILE_SUFFIX).",
+        fix = "Use a compiler binary of the plugin's seampact release; report it if they match.",
+        expected = "<api>$IR_FILE_SUFFIX",
+    )
 
     private fun changedSinceInstall(binary: VerifiedBinary, actual: String): BinaryFailure = BinaryFailure(
         code = BinaryFailureCode.HASH_MISMATCH,

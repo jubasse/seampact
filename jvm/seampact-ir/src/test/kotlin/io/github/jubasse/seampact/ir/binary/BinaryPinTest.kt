@@ -28,7 +28,7 @@ class BinaryPinTest {
         work = Files.createTempDirectory("seampact-binary-pin-")
         marker = work.resolve("started")
         stub = work.resolve("stub")
-        Files.writeString(stub, "#!/bin/sh\ntouch '$marker'\nexit 3\n")
+        Files.writeString(stub, "#!/bin/sh\n/usr/bin/touch '$marker'\nexit 1\n")
         stub.toFile().setExecutable(true)
     }
 
@@ -62,34 +62,70 @@ class BinaryPinTest {
         val result = BinaryRunner.compile(install.binary, config, IrSupport.ofModel(emptyList()))
 
         assertTrue(Files.exists(marker))
-        assertEquals(3, (result as BinaryCompileResult.Failed).exitCode)
+        assertEquals(1, (result as BinaryCompileResult.Failed).exitCode)
     }
 
     @Test
     @DisabledOnOs(OS.WINDOWS)
-    fun theBinaryStartsWithoutTheBuildsNodeVariables() {
-        // The Gradle test task sets NODE_OPTIONS, as a build environment may.
-        assertNotNull(System.getenv("NODE_OPTIONS"), "the test task must set NODE_OPTIONS for this test to prove anything")
-        val printsItsEnvironment = Files.writeString(work.resolve("env-stub"), "#!/bin/sh\nenv\nexit 3\n")
-        printsItsEnvironment.toFile().setExecutable(true)
-        val pin = BinaryPin.LocalFile(printsItsEnvironment, BinaryInstaller.sha256Of(printsItsEnvironment))
-        val install = BinaryInstaller.install(printsItsEnvironment, pin, work.resolve("cache"))
-        check(install is BinaryInstall.Installed)
-        val config = Files.writeString(work.resolve("seampact.config.yaml"), "targets: []\n")
+    fun anExitOutsideTheContractIsACompileFailure() {
+        val result = runStub("exit 3\n")
 
-        val result = BinaryRunner.compile(install.binary, config, IrSupport.ofModel(emptyList())) as BinaryCompileResult.Failed
-
-        assertTrue(result.stdout.lines().any { it.startsWith("PATH=") })
-        assertEquals(emptyList(), result.stdout.lines().filter { it.uppercase().startsWith("NODE_") })
+        val failure = (result as BinaryCompileResult.OutsideContract).failure
+        assertEquals(BinaryFailureCode.COMPILE_FAILED, failure.code)
+        assertEquals("3", failure.actual)
     }
 
     @Test
-    fun nodeVariablesAreRemovedWhateverTheirCase() {
-        val environment = mutableMapOf("NODE_OPTIONS" to "--require x", "node_path" to "/x", "Node_Extra_Ca_Certs" to "/c", "PATH" to "/bin")
+    @DisabledOnOs(OS.WINDOWS)
+    fun aSignalIsACompileFailureNamingTheSignal() {
+        val result = runStub("kill -9 $$\n")
 
-        BinaryRunner.removeNodeVariables(environment)
+        val failure = (result as BinaryCompileResult.OutsideContract).failure
+        assertEquals(BinaryFailureCode.COMPILE_FAILED, failure.code)
+        assertTrue(failure.message.contains("signal 9"), failure.message)
+    }
 
-        assertEquals(mapOf("PATH" to "/bin"), environment)
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun noIrAfterASuccessIsACompileFailure() {
+        val result = runStub("/bin/mkdir \"$5\"\nexit 0\n")
+
+        val failure = (result as BinaryCompileResult.OutsideContract).failure
+        assertEquals(BinaryFailureCode.COMPILE_FAILED, failure.code)
+        assertTrue(failure.message.contains("without writing an IR file"), failure.message)
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun theDiagnosticsLoseTheirControlCharactersButNewlinesAndTabs() {
+        val result = runStub("printf 'bad\\033[2J\\tline\\r\\n' >&2\nexit 1\n")
+
+        assertEquals("bad[2J\tline\n", (result as BinaryCompileResult.Failed).stderr)
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun theBinaryStartsWithOnlyTheContractVariables() {
+        // The Gradle test task sets both, as a build environment may.
+        assertNotNull(System.getenv("NODE_OPTIONS"), "the test task must set NODE_OPTIONS for this test to prove anything")
+        assertNotNull(System.getenv("OPENSSL_CONF"), "the test task must set OPENSSL_CONF for this test to prove anything")
+
+        val result = runStub("/usr/bin/env\nexit 1\n") as BinaryCompileResult.Failed
+
+        val names = result.stdout.lines().filter { it.isNotEmpty() }.map { it.substringBefore("=") }
+        assertTrue("OPENSSL_CONF" !in names && "PATH" !in names && names.none { it.uppercase().startsWith("NODE_") }, "$names")
+    }
+
+    @Test
+    fun onlyTheContractVariablesAreKeptWhateverTheirCase() {
+        val environment = mutableMapOf("NODE_OPTIONS" to "--require x", "OPENSSL_CONF" to "/c", "PATH" to "/bin", "TMPDIR" to "/t", "Temp" to "/w", "SystemRoot" to "C:\\Windows")
+        val onWindows = environment.toMutableMap()
+
+        BinaryRunner.keepContractVariables(environment, windows = false)
+        BinaryRunner.keepContractVariables(onWindows, windows = true)
+
+        assertEquals(mapOf("TMPDIR" to "/t", "Temp" to "/w"), environment)
+        assertEquals(mapOf("TMPDIR" to "/t", "Temp" to "/w", "SystemRoot" to "C:\\Windows"), onWindows)
     }
 
     @Test
@@ -98,7 +134,7 @@ class BinaryPinTest {
         val pin = BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub))
         val install = BinaryInstaller.install(stub, pin, work.resolve("cache"))
         check(install is BinaryInstall.Installed)
-        Files.writeString(install.binary.path, "#!/bin/sh\ntouch '$marker'\nexit 4\n")
+        Files.writeString(install.binary.path, "#!/bin/sh\n/usr/bin/touch '$marker'\nexit 4\n")
         val config = Files.writeString(work.resolve("seampact.config.yaml"), "targets: []\n")
 
         val result = BinaryRunner.compile(install.binary, config, IrSupport.ofModel(emptyList()))
@@ -145,6 +181,45 @@ class BinaryPinTest {
         check(first is BinaryInstall.Installed)
         assertEquals("rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(first.binary.path)))
         assertTrue(second is BinaryInstall.Installed, "$second")
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun theCacheRootAndEachDirectoryTheRunnerCreatesAreOwnerOnlyWhateverTheUmask() {
+        val cacheRoot = work.resolve("home").resolve("caches").resolve("binaries")
+        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), cacheRoot)
+
+        check(install is BinaryInstall.Installed) { "$install" }
+        for (directory in listOf(work.resolve("home"), work.resolve("home/caches"), cacheRoot, install.binary.path.parent)) {
+            assertEquals("rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(directory)), "$directory")
+        }
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun aCacheRootTheGroupMayWriteIsRefusedNamingChmod() {
+        val cacheRoot = Files.createDirectory(work.resolve("shared-cache"))
+        Files.setPosixFilePermissions(cacheRoot, PosixFilePermissions.fromString("rwxrwx---"))
+
+        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), cacheRoot)
+
+        val failure = (install as BinaryInstall.Refused).failure
+        assertEquals(BinaryFailureCode.CACHE_UNSAFE, failure.code)
+        assertTrue(failure.message.contains("chmod 700"), failure.message)
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun aCacheOpenedToOthersAfterTheInstallIsCheckedRightBeforeTheStart() {
+        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), work.resolve("cache"))
+        check(install is BinaryInstall.Installed)
+        Files.setPosixFilePermissions(install.binary.path.parent, PosixFilePermissions.fromString("rwxrwxrwx"))
+        val config = Files.writeString(work.resolve("seampact.config.yaml"), "targets: []\n")
+
+        val result = BinaryRunner.compile(install.binary, config, IrSupport.ofModel(emptyList()))
+
+        assertEquals(BinaryFailureCode.CACHE_UNSAFE, (result as BinaryCompileResult.Refused).failure.code)
+        assertFalse(Files.exists(marker))
     }
 
     @Test
@@ -209,5 +284,15 @@ class BinaryPinTest {
 
         assertEquals(BinaryFailureCode.PIN_MISSING, (unpinned as BinaryPinResolution.Refused).failure.code)
         assertEquals(BinaryPin.LocalFile(stub, "f".repeat(64)), (ownBuild as BinaryPinResolution.Pinned).pin)
+    }
+
+    private fun runStub(script: String): BinaryCompileResult {
+        val binary = Files.writeString(work.resolve("script-stub"), "#!/bin/sh\n$script")
+        binary.toFile().setExecutable(true)
+        val install = BinaryInstaller.install(binary, BinaryPin.LocalFile(binary, BinaryInstaller.sha256Of(binary)), work.resolve("cache"))
+        check(install is BinaryInstall.Installed) { "$install" }
+        val config = Files.writeString(work.resolve("seampact.config.yaml"), "targets: []\n")
+
+        return BinaryRunner.compile(install.binary, config, IrSupport.ofModel(emptyList()))
     }
 }

@@ -9,6 +9,9 @@ public enum class BinaryFailureCode(public val code: String) {
     CACHE_UNSAFE("binary.cache-unsafe"),
     COMPILE_TIMEOUT("binary.compile-timeout"),
 
+    /** The binary left its contract: an exit other than 0, 1 or 2, a signal, or an IR file missing after exit 0. */
+    COMPILE_FAILED("binary.compile-failed"),
+
     /** The build plugin could not resolve the pinned release artefact through the build's repositories. */
     ARTEFACT_UNRESOLVED("binary.artefact-unresolved"),
 }

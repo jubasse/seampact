@@ -116,12 +116,13 @@ internal class ContractApis(
                 apis += SourceApi(name, compiled.api, Json.parseToJsonElement(compiled.irText).jsonObject)
             }
             is BinaryCompileResult.Failed -> problems += ConfigProblem(
-                "binary.compile-failed",
+                "binary.compile-refused",
                 "The compiler exited with ${result.exitCode} on the source '$name':\n${result.stderr}${result.stdout}".trimEnd(),
                 "Fix the contract as the compiler's diagnostics say.",
                 "source '$name'",
             )
             is BinaryCompileResult.Refused -> problems += result.failure.toProblem("source '$name'")
+            is BinaryCompileResult.OutsideContract -> problems += result.failure.toProblem("source '$name'")
             is BinaryCompileResult.TimedOut -> problems += result.failure.toProblem("source '$name'")
         }
     }
