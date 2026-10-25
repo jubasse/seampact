@@ -102,6 +102,7 @@ export const notesReducer = createReducer(
 - Writes run side by side. Each write action sends its own idempotency key. There is no retry: dispatch again to retry.
 - An operation that needs a timeout takes `call: { timeoutMs }` in its action.
 - `state: ngrx` needs the `service` artefact.
+- A failure action carries the contract error object, so leave NgRx's `strictActionSerializability` check off (its default).
 
 ## Options
 
