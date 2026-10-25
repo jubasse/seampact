@@ -40,6 +40,7 @@ final class InputStep {
         ObjectNode query = queryParams(boundary, operation, request.getQueryString(), issues);
         tree.set("query", query);
         PageReply.checkOnePosition(boundary.table(), exchange.route(), query, issues);
+        if (takesPageable(boundary.binding().inputTypes().get(exchange.route().id()))) PageReply.checkPageableRange(boundary.table(), exchange.route(), query, issues);
         tree.set("headers", headerParams(boundary, operation.path("params").path("header"), request, issues));
         if (operation.has("input")) tree.set("body", body(boundary, exchange, operation.path("input"), issues));
 
@@ -204,7 +205,7 @@ final class InputStep {
 
         ObjectReader reader = boundary.mapper().readerFor(inputType);
         if (takesPageable(inputType)) {
-            Object pageable = boundary.binding().pageable(boundary.table().pagingStyle(route), tree.path("query"));
+            Object pageable = boundary.binding().pageable(route.id(), boundary.table().pagingStyle(route), tree.path("query"));
             reader = reader.with(new InjectableValues.Std().addValue(PAGEABLE_COMPONENT, pageable));
         }
 

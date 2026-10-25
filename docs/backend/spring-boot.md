@@ -99,6 +99,9 @@ if (input.body().expectedVersion() != task.version()) return new UpdateTaskError
 
 With `@seampact/pack-spring`, a list in the `springPage` style gets a `Pageable` in its input and returns Spring Data's `Page`. Add `org.springframework.data:spring-data-commons`; the Spring Boot BOM gives its version.
 
+- A sort key reaches the `Pageable` as the item's Java member name: `sort=created_at,desc` sorts by `createdAt`. Name your entity's properties like the generated record's members.
+- A page number past Spring Data's range (a page index above 2147483647) gets a 400 at the page parameter.
+
 ## Register the hooks
 
 Hooks are beans. Write one per identity, one decider for your rights and rules, and one resolver per scope.
@@ -126,7 +129,7 @@ The app refuses to start, and lists every problem, when:
 - an operation has no handler;
 - a route that is not in the contract is served and not allow-listed;
 - another handler mapping, ordered before Spring MVC's, takes a contract route;
-- the app does not run Spring MVC on Tomcat, or has no Jakarta Validation provider (add `spring-boot-starter-validation`);
+- the app does not run Spring MVC on Tomcat;
 - the contract writes absolute URLs and `seampact.<api>.public-origin` is missing or is not a scheme, host and port.
 
 Allow-list your own routes in the entry, with a reason:

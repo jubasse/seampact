@@ -8,12 +8,15 @@ import io.github.jubasse.seampact.ir.model.ContractIR
 import io.github.jubasse.seampact.ir.model.EachTemplate
 import io.github.jubasse.seampact.ir.model.HandlerResultMember
 import io.github.jubasse.seampact.ir.model.LiteralTemplate
+import io.github.jubasse.seampact.ir.model.ObjectSchema
 import io.github.jubasse.seampact.ir.model.ObjectTemplate
 import io.github.jubasse.seampact.ir.model.Operation
 import io.github.jubasse.seampact.ir.model.PagingParamPlacement
 import io.github.jubasse.seampact.ir.model.PagingPosition
 import io.github.jubasse.seampact.ir.model.PagingRole
 import io.github.jubasse.seampact.ir.model.PagingStyle
+import io.github.jubasse.seampact.ir.model.RefTypeUse
+import io.github.jubasse.seampact.ir.model.ResponseShape
 import io.github.jubasse.seampact.ir.model.SlotTemplate
 import io.github.jubasse.seampact.ir.model.Template
 import io.github.jubasse.seampact.ir.model.TextTemplate
@@ -52,6 +55,22 @@ internal fun isSpringPageList(ir: ContractIR, operation: Operation): Boolean {
 internal fun usesSpringPages(layout: JavaLayout): Boolean = layout.kept.operations.any { (_, operation) -> isSpringPageList(layout.ir, operation) }
 
 /**
+ * The Java member each sort key of a `springPage` list names, the property Spring Data sorts the entity by: the item's
+ * member of that wire name, else the member a property of that name would take. Null for a key that yields no Java
+ * name, which `checkPaging` refuses.
+ */
+internal fun springSortProperties(ir: ContractIR, operation: Operation): Map<String, String?> {
+    val item = operation.responses.firstOrNull { it.shape == ResponseShape.PAGE }?.body as? RefTypeUse
+    val itemSchema = item?.let { ir.schemas[it.schema] } as? ObjectSchema
+
+    return operation.paging?.sortKeys.orEmpty().associate { sortKey ->
+        val property = itemSchema?.properties?.firstOrNull { it.name == sortKey.key }
+
+        sortKey.key to memberIdentifier(sortKey.key, property?.codeName)
+    }
+}
+
+/**
  * The paging forms of one list (ADR 0022 "Query and bounded values"): the style resolves, its request roles are read
  * from the query, and every slot its templates write is one the boundary fills; anything else is refused by name.
  */
@@ -86,6 +105,16 @@ internal fun checkPaging(ir: ContractIR, operation: Operation, at: IrPlace, refu
     }
 
     checkPageTemplates(ir, operation, style, styleAt, refusals)
+    if (isSpringPageList(ir, operation)) checkSpringSortKeys(ir, operation, at, refusals)
+}
+
+private fun checkSpringSortKeys(ir: ContractIR, operation: Operation, at: IrPlace, refusals: Refusals) {
+    val members = springSortProperties(ir, operation)
+    operation.paging?.sortKeys.orEmpty().forEachIndexed { index, sortKey ->
+        if (members[sortKey.key] == null) {
+            refusals.inconsistent("paging.sortKey.no-member", "The sort key '${sortKey.key}' yields no Java member name", at.below("paging", "sortKeys", index, "key"))
+        }
+    }
 }
 
 private fun checkPageTemplates(ir: ContractIR, operation: Operation, style: PagingStyle, styleAt: IrPlace, refusals: Refusals) {

@@ -97,15 +97,27 @@ internal fun bindingType(layout: JavaLayout): TypeSpec {
 // types, so an app without such a list needs no Spring Data on its classpath.
 private fun springPageMethods(layout: JavaLayout): List<MethodSpec> {
     val springDataPages = layout.runtime(SPRING_DATA_PAGES)
+    val springPageLists = layout.kept.operations.map { (_, operation) -> operation }.filter { isSpringPageList(layout.ir, it) }
+    val sortProperties = mapEntries(springPageLists.map { operation ->
+        val members = springSortProperties(layout.ir, operation).mapNotNull { (key, member) -> member?.let { CodeBlock.of("\$S, \$S", key, it) } }
+        CodeBlock.of("\$S, \$L", operation.id, mapExpression(members))
+    })
 
     return listOf(
         MethodSpec.methodBuilder("pageable")
             .addAnnotation(Override::class.java)
             .addModifiers(Modifier.PUBLIC)
             .returns(JavaTypes.OBJECT)
+            .addParameter(JavaTypes.STRING, "operationId")
             .addParameter(JSON_NODE, "style")
             .addParameter(JSON_NODE, "query")
-            .addStatement("return \$T.pageable(style, query)", springDataPages)
+            .addStatement("return \$T.pageable(style, query, springSortProperties().get(operationId))", springDataPages)
+            .build(),
+        MethodSpec.methodBuilder("springSortProperties")
+            .addJavadoc("The Java member each sort key of a springPage list names, by operation id.\n")
+            .addModifiers(Modifier.PRIVATE, Modifier.STATIC)
+            .returns(ParameterizedTypeName.get(JavaTypes.MAP, JavaTypes.STRING, ParameterizedTypeName.get(JavaTypes.MAP, JavaTypes.STRING, JavaTypes.STRING)))
+            .addCode(sortProperties)
             .build(),
         MethodSpec.methodBuilder("pageFacts")
             .addAnnotation(Override::class.java)
@@ -117,13 +129,15 @@ private fun springPageMethods(layout: JavaLayout): List<MethodSpec> {
     )
 }
 
-private fun mapEntries(entries: List<CodeBlock>): CodeBlock {
-    if (entries.isEmpty()) return CodeBlock.of("return \$T.of();\n", JavaTypes.MAP)
+private fun mapEntries(entries: List<CodeBlock>): CodeBlock = CodeBlock.of("return \$L;\n", mapExpression(entries))
 
-    val code = CodeBlock.builder().add("return \$T.ofEntries(", JavaTypes.MAP)
+private fun mapExpression(entries: List<CodeBlock>): CodeBlock {
+    if (entries.isEmpty()) return CodeBlock.of("\$T.of()", JavaTypes.MAP)
+
+    val code = CodeBlock.builder().add("\$T.ofEntries(", JavaTypes.MAP)
     entries.forEachIndexed { index, entry -> code.add(if (index == 0) "\n\$T.entry(\$L)" else ",\n\$T.entry(\$L)", JavaTypes.MAP, entry) }
 
-    return code.add(");\n").build()
+    return code.add(")").build()
 }
 
 private fun mapMethod(name: String, key: TypeName, value: TypeName, body: CodeBlock): MethodSpec = MethodSpec.methodBuilder(name)

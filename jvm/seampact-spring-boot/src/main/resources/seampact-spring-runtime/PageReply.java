@@ -20,6 +20,7 @@ final class PageReply {
     private static final String AFTER_ROLE = "after";
     private static final String CLAMP = "clamp";
     private static final String EXCLUSIVE_CURSORS_RULE = "exclusiveCursors";
+    private static final String MAXIMUM_RULE = "maximum";
     private static final String NULL_ABSENT = "null";
     private static final String PAGE = "page";
     private static final String OFFSET = "offset";
@@ -55,10 +56,7 @@ final class PageReply {
         }
     }
 
-    /**
-     * A cursor style that carries `after` and `before` takes one of them: both sent is one `not` issue at the `before`
-     * parameter, the JSON Schema form `not: {required: [after, before]}`.
-     */
+    /** A cursor style that carries `after` and `before` takes one of them: both sent is one `exclusiveCursors` issue at the `before` parameter. */
     static void checkOnePosition(ContractTable table, ContractRoute route, JsonNode query, List<InputIssue> issues) {
         JsonNode style = table.pagingStyle(route);
         String afterParam = roleName(style, AFTER_ROLE);
@@ -66,6 +64,22 @@ final class PageReply {
         if (afterParam == null || beforeParam == null) return;
 
         if (query.has(afterParam) && query.has(beforeParam)) issues.add(new InputIssue("query", InputIssue.below("", beforeParam), EXCLUSIVE_CURSORS_RULE));
+    }
+
+    /**
+     * The page a Spring Data `Pageable` holds is an `int` counted from 0: a page number past it is one `maximum` issue
+     * at the page parameter (ADR 0022 "Paging"), where the derived parameter itself has no maximum.
+     */
+    static void checkPageableRange(ContractTable table, ContractRoute route, JsonNode query, List<InputIssue> issues) {
+        JsonNode pageRole = roleOf(table.pagingStyle(route), PAGE);
+        if (pageRole == null) return;
+
+        String pageParam = pageRole.path("name").asString();
+        JsonNode sent = query.path(pageParam);
+        long lastPageNumber = Integer.MAX_VALUE + pageRole.path("base").asLong(DEFAULT_PAGE_BASE);
+        if (sent.isIntegralNumber() && sent.canConvertToLong() && sent.asLong() > lastPageNumber) {
+            issues.add(new InputIssue("query", InputIssue.below("", pageParam), MAXIMUM_RULE));
+        }
     }
 
     /** The page of [handlerPage] (its facts; [items] already projected), rendered for [status]. */
@@ -155,36 +169,38 @@ final class PageReply {
         long base = positionRole.path("base").asLong(DEFAULT_PAGE_BASE);
         JsonNode sent = sentQuery == null ? MissingNode.getInstance() : sentQuery.path(positionParam);
 
+        long pageIndex;
         long offset;
         if (isPage) {
             long pageNumber = sent.isNumber() ? sent.asLong() : base;
             slots.put(PAGE, pageNumber);
-            offset = (pageNumber - base) * limit;
+            pageIndex = pageNumber - base;
+            offset = saturatedProduct(pageIndex, limit);
         } else {
             offset = sent.isNumber() ? sent.asLong() : FIRST_OFFSET;
+            pageIndex = Math.floorDiv(offset, limit);
         }
         slots.put(OFFSET, offset);
 
-        long pageIndex = Math.floorDiv(offset, limit);
-        long nextOffset = offset + limit;
-        boolean hasNext = hasMember(style, "more")
+        // A position past the last long offset has no next page and no record numbers, rather than wrapping negative.
+        boolean nextFits = offset <= Long.MAX_VALUE - limit;
+        boolean hasNext = nextFits && (hasMember(style, "more")
                 ? handlerPage.path("more").asBoolean(false)
-                : handlerPage.path("total").isNumber() && nextOffset < handlerPage.path("total").asLong();
+                : handlerPage.path("total").isNumber() && offset + limit < handlerPage.path("total").asLong());
 
-        if (itemCount > 0) {
+        if (itemCount > 0 && offset <= Long.MAX_VALUE - itemCount) {
             slots.put("from", offset + 1);
             slots.put("to", offset + itemCount);
         }
 
         slots.put("first", pageUrl(urlBase, WireDecoding.withQueryMember(query, positionParam, positionAt(isPage, base, 0, limit))));
         if (offset > FIRST_OFFSET) {
-            long previousOffset = Math.max(offset - limit, FIRST_OFFSET);
-            String previous = isPage ? String.valueOf(base + Math.floorDiv(previousOffset, limit)) : String.valueOf(previousOffset);
+            String previous = isPage ? String.valueOf(base + pageIndex - 1) : String.valueOf(Math.max(offset - limit, FIRST_OFFSET));
             slots.put("previous", pageUrl(urlBase, WireDecoding.withQueryMember(query, positionParam, previous)));
         }
         if (hasNext) {
             // An offset the client chose need not fall on a page start: the next page starts one limit further.
-            String next = isPage ? positionAt(true, base, pageIndex + 1, limit) : String.valueOf(nextOffset);
+            String next = isPage ? positionAt(true, base, pageIndex + 1, limit) : String.valueOf(offset + limit);
             slots.put("next", pageUrl(urlBase, WireDecoding.withQueryMember(query, positionParam, next)));
         }
         if (slots.path("totalPages").isNumber()) {
@@ -234,8 +250,14 @@ final class PageReply {
     }
 
     private static String roleName(JsonNode style, String roleName) {
+        JsonNode role = roleOf(style, roleName);
+
+        return role == null ? null : role.path("name").asString();
+    }
+
+    private static JsonNode roleOf(JsonNode style, String roleName) {
         for (JsonNode role : style.path("request")) {
-            if (roleName.equals(role.path("role").asString())) return role.path("name").asString();
+            if (roleName.equals(role.path("role").asString())) return role;
         }
 
         return null;
@@ -254,6 +276,13 @@ final class PageReply {
         }
 
         return false;
+    }
+
+    private static long saturatedProduct(long left, long right) {
+        long high = Math.multiplyHigh(left, right);
+        long low = left * right;
+
+        return high == 0 && low >= 0 ? low : Long.MAX_VALUE;
     }
 
     private static long ceilDivision(long dividend, long divisor) {

@@ -45,10 +45,10 @@ public interface ApiBinding {
             OperationRef operation);
 
     /**
-     * The Spring Data `Pageable` of a `springPage` list, built from its validated [query] (ADR 0022 "Paging"); only an
-     * api with such a list overrides it.
+     * The Spring Data `Pageable` of the `springPage` list [operationId], built from its validated [query], its sort keys
+     * named by the item's Java members (ADR 0022 "Paging"); only an api with such a list overrides it.
      */
-    default Object pageable(JsonNode style, JsonNode query) {
+    default Object pageable(String operationId, JsonNode style, JsonNode query) {
         throw new IllegalStateException("seampact: this api has no springPage list, so no Pageable");
     }
 

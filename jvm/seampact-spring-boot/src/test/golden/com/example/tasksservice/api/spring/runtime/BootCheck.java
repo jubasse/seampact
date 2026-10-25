@@ -11,8 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import jakarta.validation.NoProviderFoundException;
-import jakarta.validation.Validation;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.boot.SpringBootVersion;
 import org.springframework.boot.web.server.servlet.ServletWebServerFactory;
@@ -36,8 +34,8 @@ import tools.jackson.databind.JsonNode;
  * problem at once (a missing hook, a contract operation with no handler or two, a framework route the config does
  * not allow-list, a filter ordered before the boundary, a mapping ordered before Spring MVC's that takes a contract
  * route, a configured mount the context and servlet paths differ from, a container other than Tomcat, a reactive
- * app, no Jakarta Validation provider, an unsupported Spring Boot major, a missing or malformed public origin under
- * absolute URLs) and throws, so the app does not start.
+ * app, an unsupported Spring Boot major, a missing or malformed public origin under absolute URLs) and throws, so
+ * the app does not start.
  */
 public final class BootCheck implements SmartInitializingSingleton {
     private static final String SUPPORTED_BOOT_MAJOR = "4";
@@ -261,7 +259,7 @@ public final class BootCheck implements SmartInitializingSingleton {
                 + ") and the entry's mount is '" + mount + "'; fix: make them equal.");
     }
 
-    // The boundary is a servlet filter checked by Bean Validation, tested on Tomcat (ADR 0022 "Refused by name or waiting").
+    // The boundary is a servlet filter, tested on Tomcat (ADR 0022 "Refused by name or waiting").
     private void platformProblems(List<String> problems) {
         if (boundary.beans().getBeansOfType(RequestMappingHandlerMapping.class).isEmpty()) {
             problems.add("the app runs no Spring MVC (a reactive or non-web app); fix: the spring-boot target serves Spring MVC on a servlet container.");
@@ -271,12 +269,6 @@ public final class BootCheck implements SmartInitializingSingleton {
             if (!factory.getClass().getSimpleName().startsWith(TOMCAT_FACTORY)) {
                 problems.add("the servlet container factory is " + factory.getClass().getName() + "; fix: the spring-boot target supports Tomcat only.");
             }
-        }
-
-        try {
-            Validation.byDefaultProvider().configure();
-        } catch (NoProviderFoundException missing) {
-            problems.add("no Jakarta Validation provider is on the classpath; fix: add spring-boot-starter-validation.");
         }
     }
 

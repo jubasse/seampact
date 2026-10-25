@@ -106,6 +106,17 @@ class SpringBootGoldenTest {
         assertTrue(collision.message.contains("schema 'Channel'") && collision.message.contains("schema 'Task'"), collision.message)
     }
 
+    // A sort key reaches Spring Data as the Java member of the item it names, since the entity's property is that member.
+    @Test
+    fun mapsTheSpringPageSortKeysToTheItemsJavaMembers() {
+        val packSpringText = repositoryRoot.resolve("fixtures/golden/pack-spring/tasks.ir.json").readText()
+        val snakeCaseSortKey = packSpringText.replace("\"createdAt\"", "\"created_at\"")
+        val generated = SpringBootTarget.generate(IrReader.read(snakeCaseSortKey, SpringBootTarget.IR_SUPPORT), entry("com.example.tasks.api"))
+
+        val binding = generated.single { it.path.endsWith("SeampactBinding.java") }.contents
+        assertTrue("Map.entry(\"created_at\", \"createdAt\")" in binding, binding)
+    }
+
     @Test
     fun generatesTheWholeReferenceContract() {
         for (api in apis) {
