@@ -1,7 +1,7 @@
 import { below } from "../ir-location.js";
 import type { Refusal } from "../refusal.js";
 import type { ParseOptionsOutcome } from "../target.js";
-import { parseValidatorsOptions, type RulesMode } from "../validators/rules-option.js";
+import { parseValidatorsOptions, RULES_KEY, type RulesMode } from "../validators/rules-option.js";
 
 // The options every Node server target takes (ADR 0016 "Target options"): what a reply outside the contract does,
 // whether JSON success replies are validated by the zod output validators, and what happens to an ETag the framework
@@ -50,7 +50,6 @@ const BODY_VALIDATION_KEY = "bodyValidation";
 const FRAMEWORK_ETAG_KEY = "frameworkEtag";
 const CATCH_ALL_KEY = "catchAll";
 const COMPRESSION_KEY = "compression";
-const RULES_KEY = "rules";
 const THRESHOLD_BYTES_KEY = "thresholdBytes";
 const DEFAULT_COMPRESSION_THRESHOLD_BYTES = 1024;
 
