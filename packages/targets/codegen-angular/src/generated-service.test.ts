@@ -84,3 +84,32 @@ test("`state: ngrx` without the service artefact is refused by name", async () =
     refusals: [{ code: "artefact.service.needed" }],
   });
 });
+
+test("`state: ngrx` refuses an operation whose action name another operation's outcome takes", async () => {
+  const renamed = {
+    ...ir,
+    operations: ir.operations.map((operation) =>
+      operation.id === "getTask" ? { ...operation, id: "listTasksSuccess" } : operation,
+    ),
+  };
+  const renamedDescriptor: ClientDescriptor = {
+    ...descriptor,
+    operations: Object.fromEntries(
+      renamed.operations.map((operation) => [operation.id, { method: operation.id }]),
+    ),
+  };
+
+  const outcome = await target.generate({
+    ir: renamed,
+    options: { query: "fetch", state: "ngrx" },
+    links: {
+      client: { descriptor: renamedDescriptor, location: { kind: "relative", path: "../client" } },
+    },
+    artefacts: new Set(["queries", "service"]),
+  });
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    refusals: [{ code: "names.collision", operation: "listTasksSuccess" }],
+  });
+});

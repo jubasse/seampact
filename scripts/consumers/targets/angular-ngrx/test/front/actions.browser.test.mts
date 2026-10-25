@@ -22,6 +22,7 @@ import { loadScript } from "./control.mjs";
 import "./provided.mjs";
 
 const LIST_REQUEST = { path: { channelId: GENERAL_CHANNEL_ID } };
+const OTHER_LIST_REQUEST = { path: { channelId: "10000000-0000-4000-8000-000000000002" } };
 const IDEMPOTENCY_HEADER = "idempotency-key";
 
 interface Dispatching {
@@ -56,6 +57,13 @@ function recorded<Creator extends ActionCreator>(
   });
 
   return matching;
+}
+
+function byChannel(
+  left: { path: { channelId: string } },
+  right: { path: { channelId: string } },
+): number {
+  return left.path.channelId.localeCompare(right.path.channelId);
 }
 
 function postedKeys(seen: readonly { method: string; key: string | null }[]): (string | null)[] {
@@ -202,7 +210,7 @@ test("each write action sends its own idempotency key, both sent at once", async
   unmount();
 });
 
-test("a read action aborts the read the previous one of its operation still waits on", async () => {
+test("a read action aborts only the read of the same request still waiting, which ends in its failure", async () => {
   await loadScript({});
 
   const cancelled: boolean[] = [];
@@ -219,12 +227,51 @@ test("a read action aborts the read the previous one of its operation still wait
     appProviders(inject("userToken"), [hanging]),
     injectDispatching,
   );
+  const failures = recorded(result.actions, TasksActions.listTasksFailure);
 
   result.store.dispatch(TasksActions.listTasks({ request: LIST_REQUEST }));
   await expect.poll(() => cancelled.length).toBe(1);
-  result.store.dispatch(TasksActions.listTasks({ request: LIST_REQUEST }));
-  await expect.poll(() => cancelled).toEqual([true, false]);
+  result.store.dispatch(TasksActions.listTasks({ request: OTHER_LIST_REQUEST }));
+  await expect.poll(() => cancelled.length).toBe(2);
+  expect(cancelled).toEqual([false, false]);
 
-  expect(result.seen).toHaveLength(2);
+  result.store.dispatch(TasksActions.listTasks({ request: { ...LIST_REQUEST } }));
+  await expect.poll(() => cancelled).toEqual([true, false, false]);
+  await expect.poll(() => failures.length).toBe(1);
+
+  expect(failures[0]?.request).toEqual(LIST_REQUEST);
+  expect(failures[0]?.error).toMatchObject({ name: "AbortError" });
+  unmount();
+});
+
+test("two different reads of one operation both answer; the same read twice answers the latest", async () => {
+  await loadScript({});
+
+  const { result, unmount } = await runInApplication(
+    appProviders(inject("userToken")),
+    injectDispatching,
+  );
+  const successes = recorded(result.actions, TasksActions.listTasksSuccess);
+  const failures = recorded(result.actions, TasksActions.listTasksFailure);
+
+  result.store.dispatch(TasksActions.listTasks({ request: LIST_REQUEST }));
+  result.store.dispatch(TasksActions.listTasks({ request: OTHER_LIST_REQUEST }));
+  await expect.poll(() => successes.length).toBe(2);
+
+  expect(successes.map((success) => success.request).sort(byChannel)).toEqual(
+    [LIST_REQUEST, OTHER_LIST_REQUEST].sort(byChannel),
+  );
+
+  result.store.dispatch(TasksActions.listTasks({ request: LIST_REQUEST }));
+  result.store.dispatch(TasksActions.listTasks({ request: LIST_REQUEST }));
+  await expect.poll(() => successes.length + failures.length).toBe(4);
+
+  expect(failures.map((failure) => failure.error)).toEqual([
+    expect.objectContaining({ name: "AbortError" }),
+  ]);
+  expect(result.seen.slice(-2)).toEqual([
+    TasksActions.listTasksFailure.type,
+    TasksActions.listTasksSuccess.type,
+  ]);
   unmount();
 });
