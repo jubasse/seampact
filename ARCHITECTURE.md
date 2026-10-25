@@ -40,7 +40,7 @@ Rule (ADR 0009, section "Repository layout"): npm packages live at `packages/<gr
 | `packages/packs/` | Data-only convention packs (ADR 0008), for example `packs/pack-hal`. |
 | `packages/runtime/` | The hooks, helper and adapter packages that generated code depends on at run time (ADR 0009, section "Package roles"). |
 | `packages/tools/` | Repository-side tools: `binary` (the standalone compiler, ADR 0010) and `http-suite`. |
-| `jvm/` | One Gradle build, one subproject per artifact: `seampact-ir` (IR reader, bundle verifier, binary runner), `seampact-hooks`, `seampact-compiler` (the binary as Maven classifier artefacts). |
+| `jvm/` | One Gradle build, one subproject per artifact: `seampact-ir` (IR reader, bundle verifier), `seampact-hooks` (hook interfaces and runtime types), `seampact-runner` (the run both plugins share), `seampact-spring-boot` (the Spring Boot generator), `seampact-gradle-plugin` and `seampact-maven-plugin` (generate at build time), `seampact-compiler` (the binary as Maven classifier artefacts). |
 | `php/` | One directory per Composer package, `php/<name>`, each with its own `composer.json`. |
 | `fixtures/` | Test inputs and expected outputs, shared by the tests (`loader`, `validate`, `passes`, `reference`, `draft`). |
 | `scripts/` | Repository tooling: `cartography`, `checklist`, `hooks`, `ir-models` (Kotlin and PHP models), `package-rules`, `workspace`. |
