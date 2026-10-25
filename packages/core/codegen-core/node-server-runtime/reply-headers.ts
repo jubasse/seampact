@@ -33,6 +33,13 @@ export function groupedHeaders(headers: ContractReply["headers"]): Map<string, s
   return grouped;
 }
 
+/** True when a `Cache-Control` value carries `no-store`: `private, no-store` does, a value that lacks it does not. */
+export function hasNoStoreDirective(cacheControlHeader: string): boolean {
+  return cacheControlHeader
+    .split(",")
+    .some((directive) => directive.trim().toLowerCase() === NO_STORE_DIRECTIVE);
+}
+
 /** The `Vary` names already set followed by the added ones, each once whatever its case. */
 export function mergedVary(current: readonly string[], added: readonly string[]): string {
   const names: string[] = [];

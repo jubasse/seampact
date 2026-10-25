@@ -12,6 +12,7 @@ import {
   unexpectedError,
 } from "./contract-error.js";
 import { idempotencyDigest, idempotencyFingerprint } from "./idempotency-fingerprint.js";
+import { CACHE_CONTROL_HEADER, groupedHeaders, hasNoStoreDirective } from "./reply-headers.js";
 import { runtimeLog } from "./runtime-logger.js";
 
 const IN_PROGRESS_ROLE = "idempotencyInProgress";
@@ -90,7 +91,7 @@ function replayOf(stored: StoredResponse, replayHeader: string): ContractReply {
   };
 }
 
-/** Completes the record with the reply that went out, or abandons it after a server error. */
+/** Completes the record with the reply that went out, or abandons it after a server error or a `no-store` reply. */
 export async function settleIdempotency(
   hooks: BoundaryHooks | undefined,
   key: string,
@@ -101,7 +102,7 @@ export async function settleIdempotency(
   if (store === undefined) return;
 
   try {
-    if (reply.status >= SERVER_ERROR_FLOOR) await store.abandon(key);
+    if (!isKeptForReplay(reply)) await store.abandon(key);
     else
       await store.complete(key, { status: reply.status, headers: reply.headers, body: reply.body });
   } catch (error) {
@@ -110,6 +111,15 @@ export async function settleIdempotency(
       error,
     );
   }
+}
+
+// A reply its sender marked `no-store` must not be kept, so it is dropped for a replay as a server error is.
+function isKeptForReplay(reply: ContractReply): boolean {
+  if (reply.status >= SERVER_ERROR_FLOOR) return false;
+
+  const cacheControl = groupedHeaders(reply.headers).get(CACHE_CONTROL_HEADER) ?? [];
+
+  return !hasNoStoreDirective(cacheControl.join(","));
 }
 
 function roleCode(state: CheckState, role: string): string {

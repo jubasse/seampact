@@ -30,6 +30,8 @@ final class IdempotencyStep {
     private static final String CONTENT_HEADER_PREFIX = "content-";
     private static final String REPLAYED = "true";
     private static final String AUTHORIZATION_HEADER = "authorization";
+    private static final String CACHE_CONTROL_HEADER = "Cache-Control";
+    private static final String NO_STORE_DIRECTIVE = "no-store";
     private static final int CLIENT_ERROR_FLOOR = 400;
     private static final int SERVER_ERROR_FLOOR = 500;
 
@@ -117,7 +119,7 @@ final class IdempotencyStep {
         return digested;
     }
 
-    /** Completes the claimed record with the reply that went out, or abandons it after a server error. */
+    /** Completes the claimed record with the reply that went out, or abandons it after a server error or a no-store reply. */
     static void settle(SeampactBoundary boundary, BoundaryExchange exchange, byte[] body) {
         String key = exchange.idempotencyKey;
         if (key == null) return;
@@ -126,12 +128,25 @@ final class IdempotencyStep {
         CheckingResponse response = exchange.response;
         try {
             IdempotencyStore store = boundary.idempotencyStore();
-            if (response.heldStatus() >= SERVER_ERROR_FLOOR) store.abandon(key);
+            if (!isKeptForReplay(response)) store.abandon(key);
             else store.complete(key, new StoredResponse(response.heldStatus(), storedHeaders(exchange.route(), response), body));
         } catch (RuntimeException failure) {
             SeampactBoundary.LOG.error("seampact: the idempotency store failed to record the reply of {}.{}; a retry with the same key may run"
                     + " again. Check the store's backend.", boundary.apiId(), exchange.route().id(), failure);
         }
+    }
+
+    // A reply its sender marked no-store must not be kept, so it is dropped for a replay as a server error is.
+    private static boolean isKeptForReplay(CheckingResponse response) {
+        if (response.heldStatus() >= SERVER_ERROR_FLOOR) return false;
+
+        for (String cacheControl : response.getHeaders(CACHE_CONTROL_HEADER)) {
+            for (String directive : cacheControl.split(",")) {
+                if (directive.trim().equalsIgnoreCase(NO_STORE_DIRECTIVE)) return false;
+            }
+        }
+
+        return true;
     }
 
     private static String principalDigest(SeampactBoundary boundary, BoundaryExchange exchange) {
