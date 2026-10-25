@@ -136,11 +136,11 @@ The verdict rules, the `responses` modes, `bodyValidation` and the completion of
 
 Under `strict` a violation is replaced by the api's 500, and `onUnexpectedError` is called. A failure inside a stream's callback, after the headers are sent, cannot be replaced: it is logged, `onUnexpectedError` is called and the body ends short. Under `warn` the reply goes out as written, and the violation is logged once.
 
-The limits are those of ADR 0016: a writer that bypasses the response (`echo` from the handler, `header()`, `exit` or `die`, and `dd()`, whose VarDumper output goes out with a 500 before the process exits) is not seen. An exception thrown inside `Response::send()` itself, after every middleware has returned, is rendered by Laravel's own error page (spike). A reply written by a global middleware the app prepends before the boundary is not seen either; the boot check refuses one.
+The limits are those of ADR 0016: a writer that bypasses the response (`echo` from the handler, `header()`, `exit` or `die`, and `dd()`, whose VarDumper output goes out with a 500 before the process exits) is not seen. An exception thrown inside `Response::send()` itself, after every middleware has returned, is rendered by Laravel's own error page (spike). A reply written by a global middleware the app prepends before the boundary is not seen either; the boot check refuses one, and so does the boundary's first-request assertion.
 
 ### Errors raised before the boundary
 
-Before the boundary middleware, only the web server and PHP run: the web server's body limit (nginx `client_max_body_size`), PHP's `post_max_size` for form bodies, and a fatal error during the app's boot. The boot check requires the boundary first in the global stack.
+Before the boundary middleware, only the web server and PHP run: the web server's body limit (nginx `client_max_body_size`), PHP's `post_max_size` for form bodies, and a fatal error during the app's boot. The boot check and the boundary's first-request assertion require the boundary first in the global stack.
 
 Between the boundary and the access middleware, `ValidatePathEncoding`, `PreventRequestsDuringMaintenance` (503, `php artisan down`), `ValidatePostSize`, the session, CSRF, throttle and guard middleware refuse by throwing. Their replies are mapped as "Exceptions on contract routes" says; a refusal the mapping does not name is checked as written.
 
@@ -406,7 +406,7 @@ Read from the sources, not run: `Illuminate\Routing\Pipeline::handleException` r
 
 - An app keeps its controllers, its exception handler, its middleware groups, its guards, Gates and Policies. On contract routes the boundary's checks and reply win, and its own routes are unchanged.
 - The check order holds in Laravel without app setup beyond listing the provider and calling the macro: route-model binding, `TrimStrings` and `$request->input()` never decide a contract input.
-- Every reply on a contract route is checked, from whichever writer, streams included, except an exception thrown inside `Response::send()`.
+- Every reply on a contract route is checked, from whichever writer, streams included, except an exception thrown inside `Response::send()` and the writers that bypass the response (`echo`, `header()`, `exit`, `dd()`).
 - A native layer's refusal that the operation declares answers in the api's format; Laravel's 419 for CSRF becomes the contract's 403.
 - A path value whose percent-decoding is not UTF-8 is refused before steps 2 to 5 run, and `%2F` in a segment answers the path's 404; the Node targets pass both to step 6.
 - A `br` error body is a violation here, where ADR 0016 decodes it.
