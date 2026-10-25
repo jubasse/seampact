@@ -74,7 +74,6 @@ import {
   ContractError,
   codeOfRole,
   codeOfStatus,
-  isPlainObject,
   renderContractReply,
   unexpectedError,
 } from "./node-server/contract-error.js";
@@ -116,6 +115,7 @@ import {
   pathnameOf,
   reportedRequest,
 } from "./node-server/node-request.js";
+import { isPlainObject } from "./node-server/plain-object.js";
 import {
   loggerProblems,
   type RuntimeLogger,
