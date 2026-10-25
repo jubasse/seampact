@@ -8,11 +8,14 @@ import {
 } from "@seampact/codegen-core";
 import { deriveName, splitName } from "@seampact/spec/naming";
 import {
+  ACTION_KEY_RUNTIME_IMPORT,
   ACTION_KEY_SOURCE,
   actionKeyOf,
   callOptionsType,
+  callParameterSource,
   LATEST_READ_RXJS_NAMES,
   LATEST_READ_SOURCE,
+  NAME_ROLE,
   OUTCOME_SOURCE,
   readKeyExpression,
   writeSendSource,
@@ -22,12 +25,13 @@ import {
 // feature `with<Op>()` that the app composes into its own `signalStore`. It adds the state slice `<op>` (the status,
 // request, data and typed error of the operation's latest call) and the method `send<Op>(request, call?)`, which sends
 // through the `<Api>Api` service and resolves to the slice its call settled. Reads follow the latest per request key
-// as `state: ngrx` does, and skip the server unless the feature is given `readOnServer`; writes run side by side, each
-// with its own idempotency key unless the call gives one. The store, and any state beyond the slices, stay the app's.
+// as `state: ngrx` does, and skip the server unless the feature is given a `transferId`, which reads there and hands
+// the data to the browser; writes run side by side, each with its own idempotency key unless the call gives one. The
+// store, and any state beyond the slices, stay the app's. The module's own top-level names never start with `with`
+// and a capital, so no feature `with<Op>` takes one of them.
 
 export const NGRX_SIGNALS_MODULE = "ngrx-signals";
 
-const NAME_ROLE = "schema";
 const FEATURE_PREFIX = "with";
 const METHOD_PREFIX = "send";
 
@@ -69,9 +73,15 @@ function failedSlice<Request>(request: Request, error: Error): OperationSlice<Re
 return { status: "error", request, data: undefined, error };
 }`;
 
-const READ_SENDER_SOURCE = `/** The options of a read feature: \`readOnServer\` reads during server rendering, which the feature skips by default. */
+// The NgRx Signals names the module imports, aliased so that no feature takes their name.
+const NGRX_SIGNALS_IMPORT = `import { patchState, signalStoreFeature, withMethods as ngrxWithMethods, withState as ngrxWithState } from "@ngrx/signals";`;
+
+const READ_SENDER_SOURCE = `/**
+ * The options of a read feature: \`transferId\` reads during server rendering, which the feature skips by default, and
+ * hands each request's data to the browser under that id, where the first read of the request takes it and sends nothing.
+ */
 export interface ReadFeatureOptions {
-readonly readOnServer?: boolean;
+readonly transferId?: string;
 }
 
 interface WaitingRead<Request, Call, Data> {
@@ -82,15 +92,19 @@ readonly resolve: (slice: OperationSlice<Request, Data, Error>) => void;
 
 // The send of a read feature: the latest read of a request aborts the one still waiting, which resolves to its
 // failure; reads of other requests run side by side. Only the latest read writes the slice; each resolves to the slice
-// it settled. On the server it reads nothing and resolves to the idle slice, unless \`readOnServer\`. When the store is
-// destroyed, every waiting read is aborted and resolves to its failure, and the slice no longer changes.
+// it settled. On the server it reads nothing and resolves to the idle slice, unless given a \`transferId\`. When the
+// store is destroyed, every waiting read is aborted and resolves to its failure, and the slice no longer changes.
 function readSender<Request, Call, Data>(
 keyOf: (request: Request) => string,
 fetcher: (request: Request, call: Call, signal: AbortSignal) => Promise<Data>,
 write: (slice: OperationSlice<Request, Data, Error>) => void,
 options: ReadFeatureOptions,
 ): (request: Request, call: Call) => Promise<OperationSlice<Request, Data, Error>> {
-const readsHere = options.readOnServer === true || !isPlatformServer(inject(PLATFORM_ID));
+const transferId = options.transferId;
+const onServer = isPlatformServer(inject(PLATFORM_ID));
+const transferState = inject(TransferState);
+const readsHere = transferId !== undefined || !onServer;
+const transferKeyOf = (request: Request) => makeStateKey<Data | undefined>(\`\${transferId}:\${keyOf(request)}\`);
 const asked = new Subject<WaitingRead<Request, Call, Data>>();
 const waiting = new Set<WaitingRead<Request, Call, Data>>();
 let latest: WaitingRead<Request, Call, Data> | undefined;
@@ -98,8 +112,23 @@ let destroyed = false;
 
 const settle = (read: WaitingRead<Request, Call, Data>, slice: OperationSlice<Request, Data, Error>) => {
 waiting.delete(read);
+if (onServer && transferId !== undefined && slice.status === "success") {
+transferState.set(transferKeyOf(read.request), slice.data);
+}
 if (read === latest && !destroyed) write(slice);
 read.resolve(slice);
+};
+
+// The data the server read for this request, taken once.
+const takeTransferred = (request: Request): Data | undefined => {
+if (onServer || transferId === undefined) return undefined;
+
+const transferKey = transferKeyOf(request);
+const data = transferState.get(transferKey, undefined);
+
+transferState.remove(transferKey);
+
+return data;
 };
 
 const subscription = asked
@@ -130,6 +159,18 @@ if (!readsHere) return Promise.resolve(IDLE_SLICE);
 
 if (destroyed) return Promise.resolve(failedSlice(request, abortError()));
 
+const transferred = takeTransferred(request);
+
+if (transferred !== undefined) {
+const slice = succeededSlice(request, transferred);
+
+// The transferred data is the latest call: no read still waiting writes the slice after it.
+latest = undefined;
+write(slice);
+
+return Promise.resolve(slice);
+}
+
 return new Promise((resolve) => {
 const read = { request, call, resolve };
 
@@ -147,17 +188,23 @@ return new DOMException("The store was destroyed.", "AbortError");
 
 const WRITE_SENDER_SOURCE = `// The send of a write feature: writes run side by side and each resolves to the slice it settled; only the latest
 // writes the slice. Each call is its own attempt, so it sends one idempotency key, or the key its call options give.
+// Once the store is destroyed a write still sends, as \`mutate\` does, but the slice no longer changes.
 function writeSender<Request, Call, Data>(
 send: (request: Request, call: Call, attempt: object) => Promise<Data>,
 write: (slice: OperationSlice<Request, Data, Error>) => void,
 ): (request: Request, call: Call) => Promise<OperationSlice<Request, Data, Error>> {
 let latest: object | undefined;
+let destroyed = false;
+
+inject(DestroyRef).onDestroy(() => {
+destroyed = true;
+});
 
 return async (request, call) => {
 const attempt = {};
 
 latest = attempt;
-write(pendingSlice(request));
+if (!destroyed) write(pendingSlice(request));
 
 const slice = await new Promise<Data>((resolve) => {
 resolve(send(request, call, attempt));
@@ -166,7 +213,7 @@ resolve(send(request, call, attempt));
 (rejection: unknown) => failedSlice(request, asError(rejection)),
 );
 
-if (latest === attempt) write(slice);
+if (latest === attempt && !destroyed) write(slice);
 
 return slice;
 };
@@ -211,13 +258,13 @@ export function signalStoreModuleSource(plan: QueryPlan, imports: SignalStoreImp
   const writes = plan.operations.some((operation) => operation.form === "mutation");
   const keyedWrites = plan.operations.some((operation) => actionKeyOf(operation) !== undefined);
   const angularNames = [
-    ...(reads ? ["DestroyRef"] : []),
+    "DestroyRef",
     "inject",
-    ...(reads ? ["PLATFORM_ID"] : []),
+    ...(reads ? ["makeStateKey", "PLATFORM_ID", "TransferState"] : []),
   ];
   const runtimeNames = [
     ...(reads ? ["keyRequest"] : []),
-    ...(keyedWrites ? ["withIdempotencyKey"] : []),
+    ...(keyedWrites ? [ACTION_KEY_RUNTIME_IMPORT] : []),
   ];
   const features = plan.operations.map((operation) => featureSource(operation, api));
 
@@ -225,7 +272,7 @@ export function signalStoreModuleSource(plan: QueryPlan, imports: SignalStoreImp
     [
       ...(reads ? [`import { isPlatformServer } from "@angular/common";`] : []),
       `import { ${angularNames.join(", ")} } from "@angular/core";`,
-      `import { patchState, signalStoreFeature, withMethods, withState } from "@ngrx/signals";`,
+      NGRX_SIGNALS_IMPORT,
       ...(reads ? [`import { ${LATEST_READ_RXJS_NAMES.join(", ")} } from "rxjs";`] : []),
       `import type { ${api}Operations } from "${imports.queries}";`,
       ...(runtimeNames.length === 0
@@ -255,12 +302,12 @@ function featureSource(operation: QueryOperation, api: string): string {
   const types = operationType(operation, api);
   const sliceType = `SliceOf<${types}>`;
   const callType = callOptionsType(operation, api);
-  const callParameter = operation.needsTimeout ? `call: ${callType}` : `call?: ${callType}`;
+  const callParameter = callParameterSource(operation, callType);
   const isRead = operation.form === "query";
   const optionsParameter = isRead ? "options: ReadFeatureOptions = {}" : "";
   const sender = isRead ? readSenderCall(operation, types) : writeSenderCall(operation, api, types);
   const what = isRead
-    ? "reads the latest per request, nothing on the server unless `readOnServer`"
+    ? "reads the latest per request, nothing on the server unless given a `transferId`"
     : `writes side by side${actionKeyOf(operation) === undefined ? "" : ", each with its own idempotency key unless `call` gives one"}`;
 
   return `/**
@@ -270,8 +317,8 @@ function featureSource(operation: QueryOperation, api: string): string {
  */
 export function ${FEATURE_PREFIX}${pascalName(operation)}(${optionsParameter}) {
 return signalStoreFeature(
-withState<{ ${base}: ${sliceType} }>({ ${base}: IDLE_SLICE }),
-withMethods((store, api = inject(${api}Api)) => {
+ngrxWithState<{ ${base}: ${sliceType} }>({ ${base}: IDLE_SLICE }),
+ngrxWithMethods((store, api = inject(${api}Api)) => {
 const send = ${sender};
 
 return {
@@ -290,8 +337,8 @@ function callArgumentType(operation: QueryOperation, callType: string): string {
 function sliceWriter(operation: QueryOperation): string {
   const base = operation.names.base;
 
-  return `(${base}) => {
-patchState(store, { ${base} });
+  return `(slice) => {
+patchState(store, { ${base}: slice });
 }`;
 }
 

@@ -87,16 +87,25 @@ export const LATEST_READ_RXJS_NAMES = [
   "take",
 ];
 
+/** The name the action key helper is declared under; no operation's generated name can take it. */
+const ACTION_KEY_HELPER = "requestWithActionKey";
+
+/** The runtime import the action key helper needs, aliased so that no generated `with<Op>` takes its name. */
+export const ACTION_KEY_RUNTIME_IMPORT = "withIdempotencyKey as runtimeWithIdempotencyKey";
+
 export const ACTION_KEY_SOURCE = `// The request with the idempotency key a write action gives; without one, the service draws a key per action.
-function withActionKey<Request extends object | undefined>(
+function ${ACTION_KEY_HELPER}<Request extends object | undefined>(
 request: Request,
 headerKey: string,
 idempotencyKey: string | undefined,
 ): Request {
 if (idempotencyKey === undefined) return request;
 
-return withIdempotencyKey(request, headerKey, () => idempotencyKey);
+return runtimeWithIdempotencyKey(request, headerKey, () => idempotencyKey);
 }`;
+
+/** The name role the generated pascal-case names derive under. */
+export const NAME_ROLE = "schema";
 
 export const ACTION_KEY_TYPE = "{ readonly idempotencyKey?: string }";
 
@@ -110,6 +119,11 @@ export function callOptionsType(operation: QueryOperation, api: string): string 
   const actionKey = actionKeyOf(operation) === undefined ? "" : ` & ${ACTION_KEY_TYPE}`;
 
   return `${operationType(operation, api)}["call"]${actionKey}`;
+}
+
+/** The `call` parameter of a generated function: required when the client method requires a timeout. */
+export function callParameterSource(operation: QueryOperation, callType: string): string {
+  return operation.needsTimeout ? `call: ${callType}` : `call?: ${callType}`;
 }
 
 /** The request key a read is grouped by, as an expression over `request`. */
@@ -147,6 +161,6 @@ const { idempotencyKey, ...call }: ${callOptionsType(operation, api)} = ${names.
 
 return api.queries
 .${options}(call)
-.fetcher(withActionKey(${names.request}, ${JSON.stringify(headerKey)}, idempotencyKey), ${names.attempt});
+.fetcher(${ACTION_KEY_HELPER}(${names.request}, ${JSON.stringify(headerKey)}, idempotencyKey), ${names.attempt});
 }`;
 }

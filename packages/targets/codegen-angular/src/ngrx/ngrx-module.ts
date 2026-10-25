@@ -9,10 +9,13 @@ import {
 } from "@seampact/codegen-core";
 import { deriveName, splitName } from "@seampact/spec/naming";
 import {
+  ACTION_KEY_RUNTIME_IMPORT,
   ACTION_KEY_SOURCE,
   actionKeyOf,
   callOptionsType,
+  callParameterSource,
   LATEST_READ_SOURCE,
+  NAME_ROLE,
   OUTCOME_SOURCE,
   readKeyExpression,
   writeSendSource,
@@ -28,7 +31,6 @@ import {
 export const NGRX_MODULE = "ngrx";
 
 const ACTIONS_SUFFIX = "Actions";
-const NAME_ROLE = "schema";
 
 /** The action group of one resource, or of the api's operations that have none. */
 interface ActionGroup {
@@ -121,7 +123,7 @@ export function ngrxModuleSource(plan: QueryPlan, imports: NgrxImports): string 
   ];
   const runtimeNames = [
     ...(reads ? ["keyRequest"] : []),
-    ...(keyedWrites ? ["withIdempotencyKey"] : []),
+    ...(keyedWrites ? [ACTION_KEY_RUNTIME_IMPORT] : []),
   ];
   const effects = groups.flatMap((group) =>
     group.operations.map((operation) => effectSource(operation, group.name, api)),
@@ -178,7 +180,7 @@ function actionGroupSource(group: ActionGroup, api: string): string {
     const types = operationType(operation, api);
     const base = operation.names.base;
     const callType = callOptionsType(operation, api);
-    const call = operation.needsTimeout ? `call: ${callType}` : `call?: ${callType}`;
+    const call = callParameterSource(operation, callType);
 
     return [
       `${propertyKey(base)}: props<{ request: ${types}["request"]; ${call} }>(),`,

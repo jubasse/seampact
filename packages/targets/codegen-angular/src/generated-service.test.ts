@@ -31,6 +31,8 @@ export type Client = Readonly<
   >
 >;
 export declare class ContractError<Id extends string, Failure> extends Error {
+  readonly operationId: Id;
+  readonly failure: Failure;
   constructor(operationId: Id, failure: Failure);
 }
 export declare function createClient(config: {
@@ -206,6 +208,8 @@ test("`state: ngrx-signals` compiles with operations named after the module's ow
   const typeErrors = ts
     .getPreEmitDiagnostics(program)
     .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+
+  rmSync(SIGNALS_PROJECT, { recursive: true, force: true });
 
   expect(typeErrors).toEqual([]);
 });
