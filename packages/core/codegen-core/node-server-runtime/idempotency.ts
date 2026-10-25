@@ -11,9 +11,8 @@ import {
   isPlainObject,
   unexpectedError,
 } from "./contract-error.js";
-import type { ContractRoute } from "./contract-route.js";
+import { idempotencyDigest, idempotencyFingerprint } from "./idempotency-fingerprint.js";
 import { runtimeLog } from "./runtime-logger.js";
-import { sha256Hex } from "./sha256.js";
 
 const IN_PROGRESS_ROLE = "idempotencyInProgress";
 const KEY_REUSED_ROLE = "idempotencyKeyReused";
@@ -50,8 +49,8 @@ export async function beginIdempotency(
   const principalDigest =
     grant.principal === null || grant.principal === undefined
       ? ""
-      : await digest([grant.principal]);
-  const key = await digest([
+      : await idempotencyDigest([grant.principal]);
+  const key = await idempotencyDigest([
     state.api.id,
     route.id,
     grant.identity ?? "",
@@ -76,15 +75,6 @@ export async function beginIdempotency(
     case "replay":
       return { outcome: "replay", reply: replayOf(begin.response, idempotency.replayHeader) };
   }
-}
-
-/** The digest a retry under the same key must match: the method, the contract path and the validated input. */
-export function idempotencyFingerprint(
-  route: Pick<ContractRoute, "method" | "path" | "access">,
-  input: unknown,
-): Promise<string> {
-  // The validated input holds the decoded path params, so an equivalent encoding of the path is the same request.
-  return digest([route.method, route.path, input]);
 }
 
 function replayOf(stored: StoredResponse, replayHeader: string): ContractReply {
@@ -133,19 +123,4 @@ function roleCode(state: CheckState, role: string): string {
   }
 
   return code;
-}
-
-// Object members sorted by name, so the same request with its members reordered digests the same.
-function digest(parts: readonly unknown[]): Promise<string> {
-  return sha256Hex(JSON.stringify(parts, sortedMembers));
-}
-
-function sortedMembers(_name: string, value: unknown): unknown {
-  if (!isPlainObject(value)) return value;
-
-  return Object.fromEntries(
-    Object.keys(value)
-      .sort()
-      .map((name) => [name, value[name]]),
-  );
 }

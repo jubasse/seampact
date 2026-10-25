@@ -9,10 +9,12 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.MissingNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Idempotency at the boundary (ADR 0012 obligations): the claim's fixed-size key and fingerprint after step 6, the
@@ -27,6 +29,7 @@ final class IdempotencyStep {
     private static final String CONTENT_TYPE = "content-type";
     private static final String CONTENT_HEADER_PREFIX = "content-";
     private static final String REPLAYED = "true";
+    private static final String AUTHORIZATION_HEADER = "authorization";
     private static final int CLIENT_ERROR_FLOOR = 400;
     private static final int SERVER_ERROR_FLOOR = 500;
 
@@ -51,7 +54,7 @@ final class IdempotencyStep {
                 NODES.stringNode(route.operation().path("access").path("identity").asString("")),
                 NODES.stringNode(principalDigest(boundary, exchange)),
                 clientKey));
-        String fingerprint = fingerprint(route.operation(), exchange.inputTree);
+        String fingerprint = fingerprint(boundary.table().ir(), route.operation(), exchange.inputTree);
 
         IdempotencyBegin begun = store.begin(new IdempotencyClaim(key, fingerprint, idempotency.path("lifetimeMs").asLong(), boundary.operationRef(route)));
         switch (begun) {
@@ -69,12 +72,49 @@ final class IdempotencyStep {
     }
 
     /** The digest a retry under the same key must match: the method, the contract path and the decoded input. */
-    static String fingerprint(JsonNode operation, JsonNode inputTree) {
+    static String fingerprint(JsonNode ir, JsonNode operation, JsonNode inputTree) {
         // The decoded input holds the decoded path params, so an equivalent encoding of the path is the same request.
         return Digests.hexOf(List.of(
                 NODES.stringNode(operation.path("method").asString()),
                 NODES.stringNode(operation.path("path").asString()),
-                inputTree));
+                withoutHeaders(inputTree, credentialHeaders(ir, operation))));
+    }
+
+    // The headers carrying a credential, lower case: a retry after a token or session refresh is the same request
+    // (ADR 0012 "Target obligations"), and a fingerprint never digests a credential.
+    private static Set<String> credentialHeaders(JsonNode ir, JsonNode operation) {
+        Set<String> names = new HashSet<>();
+        JsonNode access = operation.path("access");
+        for (JsonNode schemeId : access.path("schemes")) {
+            JsonNode scheme = ir.path("schemes").path(schemeId.asString());
+            switch (scheme.path("kind").asString()) {
+                case "bearer" -> names.add(AUTHORIZATION_HEADER);
+                case "header" -> names.add(scheme.path("name").asString().toLowerCase(Locale.ROOT));
+                default -> { } // a cookie travels in no header param
+            }
+        }
+
+        JsonNode identity = ir.path("identities").path(access.path("identity").asString());
+        if (identity.has("signed")) names.add(ir.path("schemes").path(identity.path("signed").asString()).path("name").asString().toLowerCase(Locale.ROOT));
+        if (operation.path("csrf").has("header")) names.add(operation.path("csrf").path("header").asString().toLowerCase(Locale.ROOT));
+
+        return names;
+    }
+
+    // Header names are digested in lower case, as the Node targets key them.
+    private static JsonNode withoutHeaders(JsonNode inputTree, Set<String> names) {
+        if (!(inputTree instanceof ObjectNode input)) return inputTree;
+
+        ObjectNode headers = NODES.objectNode();
+        for (Map.Entry<String, JsonNode> header : input.path("headers").properties()) {
+            String name = header.getKey().toLowerCase(Locale.ROOT);
+            if (!names.contains(name)) headers.set(name, header.getValue());
+        }
+
+        ObjectNode digested = input.deepCopy();
+        digested.set("headers", headers);
+
+        return digested;
     }
 
     /** Completes the claimed record with the reply that went out, or abandons it after a server error. */

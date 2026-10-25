@@ -1,21 +1,16 @@
 import { describe, expect, test } from "vitest";
-import type { ContractRoute } from "../../node-server-runtime/contract-route.js";
-import { idempotencyFingerprint } from "../../node-server-runtime/idempotency.js";
+import {
+  type FingerprintRoute,
+  idempotencyFingerprint,
+} from "../../node-server-runtime/idempotency-fingerprint.js";
 
-const CREATE_TASK: Pick<ContractRoute, "method" | "path" | "access"> = {
+const CREATE_TASK: FingerprintRoute = {
   method: "post",
   path: "/v1/channels/{channelId}/tasks",
   access: {
     kind: "identity",
-    identity: "user",
-    anonymousAllowed: false,
-    credentials: [
-      { scheme: "bearer", in: "bearer" },
-      { scheme: "sessionCookie", in: "cookie", name: "session" },
-    ],
+    credentials: [{ in: "bearer" }, { in: "cookie", name: "session" }],
     csrfHeader: "X-Csrf-Token",
-    principalSchema: "User",
-    principalValidator: { "~standard": { validate: (value) => ({ value }) } },
   },
 };
 

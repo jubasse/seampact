@@ -53,10 +53,11 @@ class DigestsTest {
     @Test
     void aRetryAfterATokenRefreshHasTheFirstRequestsFingerprintAsOnTheNodeTargets() {
         ContractTable table = new ContractTable(BoundaryMapper.create().readTree(TasksContractTable.json()));
+        JsonNode ir = table.ir();
         JsonNode createTask = table.routes().stream().filter(route -> route.id().equals("createTask")).findFirst().orElseThrow().operation();
 
-        String first = IdempotencyStep.fingerprint(createTask, createTaskInput("Bearer user-old", "csrf-old"));
-        String retry = IdempotencyStep.fingerprint(createTask, createTaskInput("Bearer user-refreshed", "csrf-refreshed"));
+        String first = IdempotencyStep.fingerprint(ir, createTask, createTaskInput("Bearer user-old", "csrf-old"));
+        String retry = IdempotencyStep.fingerprint(ir, createTask, createTaskInput("Bearer user-refreshed", "csrf-refreshed"));
 
         assertEquals(first, retry);
         assertEquals("583a81024c92d216cb3209acd8ccdd6f1350f6947a6636235ed8329fc77fde9c", first);
