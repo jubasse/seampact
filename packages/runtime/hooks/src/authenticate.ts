@@ -23,7 +23,7 @@ export interface SignatureTemplate {
 export interface SignedTemplateRequest {
   readonly verify: "template";
 
-  /** The body exactly as received, never re-serialized. */
+  /** The body as received, decoded when the request has a `Content-Encoding`, never re-serialized. */
   readonly rawBody: Uint8Array;
 
   /** The `{ts}` text as received, so the payload is rebuilt byte for byte; absent when the format has no `{ts}`. */
@@ -42,7 +42,7 @@ export interface SignedTemplateRequest {
 export interface SignedApplicationRequest {
   readonly verify: "application";
 
-  /** The body exactly as received, never re-serialized. */
+  /** The body as received, decoded when the request has a `Content-Encoding`, never re-serialized. */
   readonly rawBody: Uint8Array;
 
   /** The signature header value, unparsed. */
