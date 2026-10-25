@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import {
@@ -35,6 +35,9 @@ const PROBLEM_MEDIA = "application/problem+json";
 const TOO_LARGE_BODY_BYTES = 1_048_577;
 // The code of a body over its limit, marked as a code whose params carry a sensitive value.
 const NO_STORE_CODE = "api.payload_too_large";
+// The secret the Stripe-style signed hook route is verified with in this test.
+const WEBHOOK_SECRET = "whsec_test";
+const MILLISECONDS_PER_SECOND = 1000;
 
 interface ReferenceAppModule {
   readonly ALLOWED_ORIGIN: string;
@@ -55,7 +58,7 @@ interface ReferenceAppModule {
     writer?: string,
   ) => Error;
   readonly handlers: Record<string, object>;
-  readonly hooks: object;
+  readonly hooks: { readonly authenticate: { readonly stripe: SignedIdentityHook } };
   resetScenario(): void;
   bootWith(registration: object, basePath?: string): void;
   bootTwice(registration: object): void;
@@ -63,6 +66,11 @@ interface ReferenceAppModule {
   requestThroughSubApp(path: string, init?: RequestInit): Promise<Response>;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+}
+
+// The scenario's authenticate hook of the signed `stripe` identity.
+interface SignedIdentityHook {
+  authenticate(request: { readonly signature?: { readonly rawBody: Uint8Array } }): unknown;
 }
 
 interface UncheckedAppModule {
@@ -295,6 +303,41 @@ describe("the request body", () => {
 
     expect(reply.status).toBe(201);
     expect(app.calls.handled).toEqual(["createTask"]);
+  });
+
+  test("a gzip signed request is verified over its decoded body, the bytes the sender signed", async () => {
+    const eventText = JSON.stringify({ id: "evt_1", type: "payment.succeeded", data: {} });
+    const timestamp = String(Math.floor(Date.now() / MILLISECONDS_PER_SECOND));
+    const signature = createHmac("sha256", WEBHOOK_SECRET)
+      .update(`${timestamp}.${eventText}`)
+      .digest("hex");
+    const verified = vi
+      .spyOn(app.hooks.authenticate.stripe, "authenticate")
+      .mockImplementation(({ signature: signed }) => {
+        const signedText = Buffer.from(signed?.rawBody ?? []).toString("utf8");
+        const expected = createHmac("sha256", WEBHOOK_SECRET)
+          .update(`${timestamp}.${signedText}`)
+          .digest("hex");
+
+        return expected === signature
+          ? { principal: { account: "acct_1" } }
+          : { deny: { code: "api.unauthenticated" } };
+      });
+
+    app.scenario.answers.payments = () => ({ status: 204 });
+
+    const reply = await send("POST", "/v1/hooks/payments", {
+      headers: {
+        "content-type": "application/json",
+        "content-encoding": "gzip",
+        "stripe-signature": `t=${timestamp},v1=${signature}`,
+      },
+      body: gzipSync(eventText),
+    });
+
+    expect(reply.status).toBe(204);
+    expect(verified).toHaveBeenCalledOnce();
+    expect(app.calls.handled).toEqual(["payments"]);
   });
 
   test("a gzip body that expands past the route's limit answers the 413 while it is read", async () => {

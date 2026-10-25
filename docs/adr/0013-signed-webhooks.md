@@ -129,7 +129,7 @@ A route `github: { method: post, path: 'github/{workspaceId}', pathParams: { wor
 
 ### Where the verification happens
 
-For a template scheme, the generated boundary captures the raw body, parses the signature header and calls the identity's authenticate hook with the raw bytes and the parsed fields (timestamp, candidate signatures, and the key id from the scheme's `key`). The hook answers the principal or the declared 401. The boundary does not verify the MAC itself, because the secret store and the policy (one secret, several during rotation, one per tenant) belong to the application.
+For a template scheme, the generated boundary captures the raw body, parses the signature header and calls the identity's authenticate hook with the raw bytes and the parsed fields (timestamp, candidate signatures, and the key id from the scheme's `key`). The hook answers the principal or the declared 401. The boundary does not verify the MAC itself, because the secret store and the policy (one secret, several during rotation, one per tenant) belong to the application. The raw body is the decoded body: a request sent with a `Content-Encoding` (gzip, deflate, br) is inflated first, so the signature is checked over the bytes the sender signed, in both forms.
 
 Each ecosystem has an optional helper that implements a template scheme behind the hook: `@seampact/signed-webhooks` (npm, every Node server target), `io.github.jubasse:seampact-signed-webhooks` (JVM) and `seampact/signed-webhooks` (Composer). The application gives it a secret lookup, from key id to the list of currently valid secrets; the helper never stores a secret. It:
 1. rebuilds the signed payload from the template, using the raw bytes exactly as received;
