@@ -35,6 +35,8 @@ const PREBUNDLED_WHEN_INSTALLED = [
   "@angular/compiler",
   "@angular/core",
   "@angular/platform-browser",
+  "@ngrx/effects",
+  "@ngrx/store",
   "rxjs",
 ];
 

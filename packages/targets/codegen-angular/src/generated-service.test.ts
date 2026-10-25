@@ -54,3 +54,96 @@ test("`query: fetch` generates its golden service and HttpClient fetch", async (
     `${GOLDEN_DIRECTORY}/http-client-fetch.ts.golden`,
   );
 });
+
+test("`state: ngrx` adds its golden action groups and effects, exported from the index", async () => {
+  const outcome = await target.generate({
+    ir,
+    options: { query: "fetch", state: "ngrx" },
+    links,
+    artefacts: new Set(["queries", "service"]),
+  });
+
+  if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+  const modules = new Map(outcome.files.map((file) => [file.path, file.contents]));
+
+  expect(modules.get("index.ts")).toContain('export * from "./ngrx.js";');
+  await expect(modules.get("ngrx.ts")).toMatchFileSnapshot("../golden/ngrx/ngrx.ts.golden");
+});
+
+test("`state: ngrx` without the service artefact is refused by name", async () => {
+  const outcome = await target.generate({
+    ir,
+    options: { query: "fetch", state: "ngrx" },
+    links,
+    artefacts: new Set(["queries"]),
+  });
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    refusals: [{ code: "artefact.service.needed" }],
+  });
+});
+
+test("`state: ngrx` refuses an operation whose action name another operation's outcome takes", async () => {
+  const renamed = {
+    ...ir,
+    operations: ir.operations.map((operation) =>
+      operation.id === "getTask" ? { ...operation, id: "listTasksSuccess" } : operation,
+    ),
+  };
+  const renamedDescriptor: ClientDescriptor = {
+    ...descriptor,
+    operations: Object.fromEntries(
+      renamed.operations.map((operation) => [operation.id, { method: operation.id }]),
+    ),
+  };
+
+  const outcome = await target.generate({
+    ir: renamed,
+    options: { query: "fetch", state: "ngrx" },
+    links: {
+      client: { descriptor: renamedDescriptor, location: { kind: "relative", path: "../client" } },
+    },
+    artefacts: new Set(["queries", "service"]),
+  });
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    refusals: [
+      {
+        code: "names.collision",
+        message: expect.stringContaining("the action 'listTasksSuccess'"),
+      },
+    ],
+  });
+});
+
+test("`state: ngrx` refuses two resources whose action groups take one name", async () => {
+  const respelt = {
+    ...ir,
+    operations: ir.operations.map((operation) =>
+      operation.id === "getTask" && operation.resource !== undefined
+        ? { ...operation, resource: { ...operation.resource, type: "Tasks" } }
+        : operation,
+    ),
+  };
+
+  const outcome = await target.generate({
+    ir: respelt,
+    options: { query: "fetch", state: "ngrx" },
+    links,
+    artefacts: new Set(["queries", "service"]),
+  });
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    refusals: [
+      {
+        code: "names.collision",
+        message: expect.stringContaining("'TasksActions'"),
+        operation: expect.any(String),
+      },
+    ],
+  });
+});

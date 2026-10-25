@@ -381,9 +381,18 @@ importers:
       '@angular/core':
         specifier: '>=22'
         version: 22.2.3(rxjs@7.8.2)
+      '@ngrx/effects':
+        specifier: '>=22'
+        version: 22.0.1(@angular/core@22.2.3(rxjs@7.8.2))(@ngrx/store@22.0.1(@angular/core@22.2.3(rxjs@7.8.2))(rxjs@7.8.2))(rxjs@7.8.2)
+      '@ngrx/store':
+        specifier: '>=22'
+        version: 22.0.1(@angular/core@22.2.3(rxjs@7.8.2))(rxjs@7.8.2)
       prettier:
         specifier: 3.9.10
         version: 3.9.10
+      rxjs:
+        specifier: '>=7'
+        version: 7.8.2
     devDependencies:
       '@seampact/codegen-core':
         specifier: workspace:*
@@ -1449,6 +1458,19 @@ packages:
         optional: true
       typescript:
         optional: true
+
+  '@ngrx/effects@22.0.1':
+    resolution: {integrity: sha512-SRI6Q04rJfrf/qUwphzoJU8IJsPAPzP0MmmXK5qbMUuZ24V1JbAyI5+c0bEVzIFMMOooAU7wkO6iuJg5TVjmsw==}
+    peerDependencies:
+      '@angular/core': ^22.0.0
+      '@ngrx/store': 22.0.1
+      rxjs: ^6.5.3 || ^7.5.0
+
+  '@ngrx/store@22.0.1':
+    resolution: {integrity: sha512-CWCqqG+qepatkH9HE4+a17x/uyU/sTDO75IQWEntJi0xGTeE++iZH/QUm4MWB7mmb43Y+PnwydI3515DzfINtg==}
+    peerDependencies:
+      '@angular/core': ^22.0.0
+      rxjs: ^6.5.3 || ^7.5.0
 
   '@noble/hashes@1.8.0':
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
@@ -4284,6 +4306,19 @@ snapshots:
       class-transformer: 0.5.1
       class-validator: 0.15.1
       typescript: 6.0.3
+
+  '@ngrx/effects@22.0.1(@angular/core@22.2.3(rxjs@7.8.2))(@ngrx/store@22.0.1(@angular/core@22.2.3(rxjs@7.8.2))(rxjs@7.8.2))(rxjs@7.8.2)':
+    dependencies:
+      '@angular/core': 22.2.3(rxjs@7.8.2)
+      '@ngrx/store': 22.0.1(@angular/core@22.2.3(rxjs@7.8.2))(rxjs@7.8.2)
+      rxjs: 7.8.2
+      tslib: 2.8.1
+
+  '@ngrx/store@22.0.1(@angular/core@22.2.3(rxjs@7.8.2))(rxjs@7.8.2)':
+    dependencies:
+      '@angular/core': 22.2.3(rxjs@7.8.2)
+      rxjs: 7.8.2
+      tslib: 2.8.1
 
   '@noble/hashes@1.8.0': {}
 

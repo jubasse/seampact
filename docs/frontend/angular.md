@@ -66,14 +66,54 @@ export class NoteList {
 
 The service only reads and writes. Keep shared state in your own store or signals.
 
+## NgRx
+
+Add `state: ngrx` to the options, and install `@ngrx/store` and `@ngrx/effects` 22:
+
+```yaml
+    options: { query: fetch, state: ngrx }
+```
+
+seampact then writes typed actions and effects. Your reducers, selectors and state stay yours.
+
+```ts
+bootstrapApplication(App, {
+  providers: [
+    provideHttpClient(),
+    provideStore({ notes: notesReducer }),
+    provideNotesApi({ baseUrl: environment.apiUrl }),
+    provideNotesEffects(),
+  ],
+});
+
+store.dispatch(NotesActions.listNotes({ request: { query: { folderId } } }));
+
+export const notesReducer = createReducer(
+  initialNotes,
+  on(NotesActions.listNotesSuccess, (state, { data }) => ({ ...state, items: data.body.items })),
+  on(NotesActions.listNotesFailure, (state, { error }) => ({ ...state, error: error.message })),
+);
+```
+
+- One action group per resource of the contract: `NotesActions` for `notes`. Operations with no resource are in `<Api>ApiActions`.
+- Each operation has three actions: `listNotes` with the `request`, `listNotesSuccess` with the `request` and `data`, `listNotesFailure` with the `request` and the typed `error`.
+- An effect sends each action through the service. Every error ends in the failure action, a `ContractError` for a declared error. The effect keeps running.
+- A new read of the same request aborts the one still running, which ends in its failure action with an `AbortError`. Reads of different requests run side by side.
+- Writes run side by side. Each write action sends its own idempotency key. To retry a write safely, give the key yourself and dispatch again with the same key: `call: { idempotencyKey }`. The server then runs it once.
+- Effects run wherever the app dispatches, the server included. Dispatch reads in the browser (for example in `afterNextRender`) to keep them off the server.
+- An operation that needs a timeout takes `call: { timeoutMs }` in its action.
+- `state: ngrx` needs the `service` artefact.
+- A failure action carries the contract error object, so leave NgRx's `strictActionSerializability` check off (its default).
+
 ## Options
 
 | Option | Values | Default |
 |---|---|---|
 | `query` | `fetch` | required |
 | `errors` | `throw`, `data` (the whole reply as data) | `throw` |
+| `state` | `ngrx` (actions and effects) | none |
 
-`staleTime`, `invalidate`, `infinite` and `keys.root` need a query library: `generate` refuses them. `state` (NgRx) is not generated yet and is refused too.
+`staleTime`, `invalidate`, `infinite` and `keys.root` need a query library: `generate` refuses them. `state: ngrx-signals` (Signal Store) is not generated yet and is refused too.
 
 `errors: data` needs a client with `errorStyle: result`, which is the client's default.
 

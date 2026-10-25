@@ -44,7 +44,7 @@ From the CLI:
 | `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
 | `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
 
-Next: MSW mocks, Laravel, Symfony, API Platform. For Spring Boot: Spring Security, multipart, download and redirect bodies, springdoc docs. For Angular: NgRx.
+Next: MSW mocks, Laravel, Symfony, API Platform. For Spring Boot: Spring Security, multipart, download and redirect bodies, springdoc docs.
 
 ## Example
 
@@ -423,7 +423,7 @@ Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse
 | Typed `fetch` client | any framework or none | none |
 | React | 19 | TanStack Query 5, SWR 2, RTK Query 2, or none |
 | Vue | 3 | TanStack Query 5, Pinia Colada 1, or none |
-| Angular | 22 | none: a service over `HttpClient` |
+| Angular | 22 | none: a service over `HttpClient`, with NgRx 22 actions and effects as an option |
 
 ## Get started
 
@@ -446,7 +446,8 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] Frontend: React hooks (TanStack Query, SWR, RTK Query, or no query library)
 - [x] Frontend: Vue composables (TanStack Query, Pinia Colada, or no query library)
 - [x] Frontend: Angular service over `HttpClient` (no query library)
-- [ ] Frontend: NgRx, MSW mocks
+- [x] Frontend: NgRx actions and effects for Angular
+- [ ] Frontend: MSW mocks
 - [x] Java: Spring Boot 4, with a Gradle and a Maven plugin
 - [ ] Java: Spring Security, multipart, download and redirect bodies, springdoc docs. PHP: Laravel, Symfony, API Platform
 - [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm
