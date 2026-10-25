@@ -350,12 +350,12 @@ Every page is listed in [docs/README.md](docs/README.md).
 
 - [x] Node servers: NestJS, Express, Fastify, AdonisJS, Hono
 - [x] CLI: `init`, `generate`, `check`, `lint`, `diff`, `bundle`, `explain`, editor schemas (`compile --editor-schemas`)
-- [x] Frontend: React hooks (TanStack Query, SWR, RTK Query)
+- [x] Frontend: React hooks (TanStack Query, SWR, RTK Query, or no query library)
 - [ ] Frontend: Vue, Angular, MSW mocks
 - [ ] Java: Spring Boot. PHP: Laravel, Symfony, API Platform
 - [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm
 - [ ] Example apps per stack pairing, and an `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
-- Later: Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Python, Go, .NET, Rust ([full list](docs/roadmap.md))
+- Later: a client conformance suite, a kit to write new targets, one shared core per language, then Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Python, Go, .NET, Rust ([full list](docs/roadmap.md))
 
 ## Contributing
 
