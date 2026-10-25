@@ -19,6 +19,7 @@ import org.springframework.boot.web.server.servlet.ServletWebServerFactory;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.env.Environment;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.handler.AbstractUrlHandlerMapping;
@@ -71,7 +72,7 @@ public final class BootCheck implements SmartInitializingSingleton {
         if (bootCheck.path("frameworkRoutes").asBoolean(true)) frameworkRouteProblems(problems);
         filterProblems(problems);
         earlierMappingProblems(problems);
-        mountProblems(problems);
+        mountProblem(boundary.table().settings(), boundary.environment(), boundary.servletPath()).ifPresent(problems::add);
         platformProblems(problems);
         PublicOrigin.bootProblem(boundary.table(), boundary.environment()).ifPresent(problems::add);
         if (!SpringBootVersion.getVersion().startsWith(SUPPORTED_BOOT_MAJOR + ".")) {
@@ -243,14 +244,14 @@ public final class BootCheck implements SmartInitializingSingleton {
         return null;
     }
 
-    // The entry's `mount` is the prefix every contract path is served under: the context path then the servlet path.
-    private void mountProblems(List<String> problems) {
-        String mount = boundary.table().settings().path("mount").asString("");
-        String contextPath = boundary.environment().getProperty(CONTEXT_PATH_PROPERTY, "").replaceAll("/+$", "");
-        String configured = contextPath + boundary.servletPath();
-        if (configured.equals(mount)) return;
+    /** The entry's `mount` is the prefix every contract path is served under: the context path then the servlet path. */
+    static Optional<String> mountProblem(JsonNode settings, Environment environment, String servletPath) {
+        String mount = settings.path("mount").asString("");
+        String contextPath = environment.getProperty(CONTEXT_PATH_PROPERTY, "").replaceAll("/+$", "");
+        String configured = contextPath + servletPath;
+        if (configured.equals(mount)) return Optional.empty();
 
-        problems.add("the app serves under '" + configured + "' (" + CONTEXT_PATH_PROPERTY + " then " + SERVLET_PATH_PROPERTY
+        return Optional.of("the app serves under '" + configured + "' (" + CONTEXT_PATH_PROPERTY + " then " + SERVLET_PATH_PROPERTY
                 + ") and the entry's mount is '" + mount + "'; fix: make them equal.");
     }
 
