@@ -18,6 +18,7 @@ final class PageReply {
     private static final String BEFORE_ROLE = "before";
     private static final String AFTER_ROLE = "after";
     private static final String CLAMP = "clamp";
+    private static final String NOT_RULE = "not";
     private static final String NULL_ABSENT = "null";
     private static final String PAGE = "page";
     private static final String OFFSET = "offset";
@@ -51,6 +52,19 @@ final class PageReply {
         if (CLAMP.equals(paging.path("overLimit").asString()) && maxLimit.isNumber() && sent.isNumber() && sent.asLong() > maxLimit.asLong()) {
             query.put(limitParam, maxLimit.asLong());
         }
+    }
+
+    /**
+     * A cursor style that carries `after` and `before` takes one of them: both sent is one `not` issue at the `before`
+     * parameter, the JSON Schema form `not: {required: [after, before]}`.
+     */
+    static void checkOnePosition(ContractTable table, ContractRoute route, JsonNode query, List<InputIssue> issues) {
+        JsonNode style = table.pagingStyle(route);
+        String afterParam = roleName(style, AFTER_ROLE);
+        String beforeParam = roleName(style, BEFORE_ROLE);
+        if (afterParam == null || beforeParam == null) return;
+
+        if (query.has(afterParam) && query.has(beforeParam)) issues.add(new InputIssue("query", InputIssue.below("", beforeParam), NOT_RULE));
     }
 
     /** The page of [handlerPage] (its facts; [items] already projected), rendered for [status]. */

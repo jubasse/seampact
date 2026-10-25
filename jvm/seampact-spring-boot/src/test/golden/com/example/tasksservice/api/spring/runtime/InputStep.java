@@ -35,6 +35,7 @@ final class InputStep {
         tree.set("path", pathParams(boundary, exchange, operation.path("params").path("path"), issues));
         ObjectNode query = queryParams(boundary, operation, request.getQueryString(), issues);
         tree.set("query", query);
+        PageReply.checkOnePosition(boundary.table(), exchange.route(), query, issues);
         tree.set("headers", headerParams(boundary, operation.path("params").path("header"), request, issues));
         if (operation.has("input")) tree.set("body", body(boundary, exchange, operation.path("input"), issues));
 
