@@ -1,6 +1,6 @@
 # Vue
 
-seampact writes Vue composables over the typed `fetch` client, for TanStack Query 5 (`@tanstack/vue-query`) or with no query library. Pick one with the `query` option.
+seampact writes Vue composables over the typed `fetch` client, for TanStack Query 5 (`@tanstack/vue-query`), Pinia Colada 1 (`@pinia/colada`) or with no query library. Pick one with the `query` option.
 
 ## Add the targets
 
@@ -20,7 +20,7 @@ targets:
     link: { client: client }
 ```
 
-Install `@tanstack/vue-query` 5 for `query: tanstack`. `query: fetch` needs nothing but Vue 3. Then run `npx seampact generate`.
+Install `@tanstack/vue-query` 5 for `query: tanstack`, or `pinia` and `@pinia/colada` 1 for `query: pinia-colada`. `query: fetch` needs nothing but Vue 3. Then run `npx seampact generate`.
 
 ## Use the composables
 
@@ -33,7 +33,7 @@ const notes = Notes.useListNotes({});
 const create = Notes.useCreateNote();
 ```
 
-`VITE_API_URL` holds your backend URL: see [Point the client at your backend](backend-url.md). With TanStack Query, install `VueQueryPlugin` in your app. After a write, the composables refresh the queries of the same resource.
+`VITE_API_URL` holds your backend URL: see [Point the client at your backend](backend-url.md). With TanStack Query, install `VueQueryPlugin` in your app; with Pinia Colada, install Pinia, then `PiniaColada`. After a write, the composables refresh the queries of the same resource.
 
 A request can be a value, a `ref` or a getter (`() => ({ path: { id: props.id } })`): the query reads again when it changes.
 
@@ -47,12 +47,30 @@ The composables only read and write through the client. They keep no store: put 
 
 | Option | Values | Default |
 |---|---|---|
-| `query` | `tanstack`, `fetch` (no library) | required |
+| `query` | `tanstack`, `pinia-colada`, `fetch` (no library) | required |
 | `errors` | `throw`, `data` (the whole reply as data) | `throw` |
 | `invalidate` | `resource`, `off` (not with `fetch`) | `resource` |
 | `staleTime` | `off`, `contract` (freshness from the contract's `cache`) | `off` |
 | `infinite` | `on`, `off` (not with `fetch`) | `on` |
 | `keys.root` | a name (not with `fetch`) | the api id |
+
+## With Pinia Colada
+
+With `query: pinia-colada`, the options factories use Pinia Colada's `defineQueryOptions`, so `queryCache.getQueryData(Notes.keys.listNotes({}))` keeps its type.
+
+```ts
+const Notes = createNotesComposables(client);
+
+// In a component's setup:
+const notes = Notes.useListNotes({}); // { data, error, status, refetch, ... }
+const pages = Notes.useListNotesInfinite({}); // { data, hasNextPage, loadNextPage, ... }
+const create = Notes.useCreateNote(); // { mutate, mutateAsync, error, data, ... }
+```
+
+- Your caller options are Pinia Colada's own, spread after the generated ones; `key` replaces the generated key.
+- A write that refreshes its resource takes the query cache. The composable injects it; the options factory takes it first: `Notes.createNoteMutationOptions(useQueryCache())`.
+- Pinia Colada has no `select`: map `data` with a `computed`.
+- seampact writes no Pinia store: the cache is Pinia Colada's.
 
 ## Without a query library
 
@@ -73,7 +91,7 @@ const add = async () => {
 ```
 
 - Pass `null` as the request to skip a read.
-- A read starts when the component mounts, so server rendering sends none: load server data your own way, or use `query: tanstack`.
+- A read starts when the component mounts, so server rendering sends none: load server data your own way, or use a query library.
 - A read stops when the component unmounts or its request changes. Outside a component, a composable reads at once and stops only when its `effectScope` stops.
 - There is no cache. A write does not refresh other composables: call `refetch`.
 - `mutate` never throws. Each call resolves to its own `{ data }` or `{ error }`, a `ContractError` for a declared error. The `data`, `error` and `isPending` refs show the latest call.

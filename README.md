@@ -44,7 +44,7 @@ From the CLI:
 | `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
 | `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
 
-Next: MSW mocks, Laravel, Symfony, API Platform. For Spring Boot: Spring Security, multipart, download and redirect bodies, springdoc docs. For Vue: Pinia Colada. For Angular: NgRx.
+Next: MSW mocks, Laravel, Symfony, API Platform. For Spring Boot: Spring Security, multipart, download and redirect bodies, springdoc docs. For Angular: NgRx.
 
 ## Example
 
@@ -335,7 +335,7 @@ if (reply.ok) console.log(reply.body.title);
 
 ### Query
 
-Hooks, composables and services over that client, for React, Vue and Angular. SWR, RTK Query and a library-free mode work the same way: see [React](docs/frontend/react.md), [Vue](docs/frontend/vue.md) and [Angular](docs/frontend/angular.md).
+Hooks, composables and services over that client, for React, Vue and Angular. SWR, RTK Query, Pinia Colada and a library-free mode work the same way: see [React](docs/frontend/react.md), [Vue](docs/frontend/vue.md) and [Angular](docs/frontend/angular.md).
 
 <details open><summary>TanStack Query (React)</summary>
 
@@ -422,7 +422,7 @@ Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse
 |---|---|---|
 | Typed `fetch` client | any framework or none | none |
 | React | 19 | TanStack Query 5, SWR 2, RTK Query 2, or none |
-| Vue | 3 | TanStack Query 5, or none |
+| Vue | 3 | TanStack Query 5, Pinia Colada 1, or none |
 | Angular | 22 | none: a service over `HttpClient` |
 
 ## Get started
@@ -444,9 +444,9 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] Node servers: NestJS, Express, Fastify, AdonisJS, Hono
 - [x] CLI: `init`, `generate`, `check`, `lint`, `diff`, `bundle`, `explain`, editor schemas (`compile --editor-schemas`)
 - [x] Frontend: React hooks (TanStack Query, SWR, RTK Query, or no query library)
-- [x] Frontend: Vue composables (TanStack Query, or no query library)
+- [x] Frontend: Vue composables (TanStack Query, Pinia Colada, or no query library)
 - [x] Frontend: Angular service over `HttpClient` (no query library)
-- [ ] Frontend: Pinia Colada, NgRx, MSW mocks
+- [ ] Frontend: NgRx, MSW mocks
 - [x] Java: Spring Boot 4, with a Gradle and a Maven plugin
 - [ ] Java: Spring Security, multipart, download and redirect bodies, springdoc docs. PHP: Laravel, Symfony, API Platform
 - [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm

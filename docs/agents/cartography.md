@@ -34,7 +34,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, an input decorator whose pipe validates, a handler wrapper or opt-in reply interceptor that writes the checked reply, the error filter and a boot check, validating with zod. |
 | `@seampact/codegen-react` | `packages/targets/codegen-react` | target | Generates TanStack Query or SWR options and React hooks, an RTK Query api, or plain fetch hooks with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract. |
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
-| `@seampact/codegen-vue` | `packages/targets/codegen-vue` | target | Generates TanStack Query options and Vue composables, or plain fetch composables with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract. |
+| `@seampact/codegen-vue` | `packages/targets/codegen-vue` | target | Generates TanStack Query or Pinia Colada options and Vue composables, or plain fetch composables with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract. |
 | `@seampact/codegen-yup` | `packages/targets/codegen-yup` | target | Generates Standard Schema yup validators per schema and direction, and one input validator per operation. |
 | `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
 | `@seampact/binary` | `packages/tools/binary` | tool | The standalone compiler binary: the CLI as a Node single executable application for five platforms, with the first-party packs embedded. |
@@ -185,6 +185,7 @@ In pipeline order (ADR 0006 section 1).
 
 - `packages/targets/codegen-vue/src`: The Vue target: TanStack Query options and composables, or plain fetch composables on Vue's `ref` and `watch`, per api over the linked fetch client, from the shared query plan, with the front runtime copied beside them.
 - `packages/targets/codegen-vue/src/fetch`: The plain fetch renderer of the vue target (`query: fetch`): `composables.ts`, built on Vue's `ref` and `watch` alone over the shared fetcher factory of codegen-core, with no query library and no cache.
+- `packages/targets/codegen-vue/src/pinia-colada`: The Pinia Colada renderer of the vue target (`query: pinia-colada`): the `queries.ts` options factories over `@pinia/colada` `define*Options`, and `composables.ts`, one `use*` composable per factory taking a reactive request.
 - `packages/targets/codegen-vue/src/tanstack`: The TanStack Query renderer of the vue target (`query: tanstack`): the `queries.ts` options factories shared with codegen-core over `@tanstack/vue-query`, and `composables.ts`, one `use*` composable per factory taking a reactive request.
 
 ### `@seampact/codegen-yup`
