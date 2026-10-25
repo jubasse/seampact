@@ -121,6 +121,50 @@ class UserHook implements UserAuthenticateHook {
 
 A decider lists the names it answers in `names()`, or `Decider.EVERY_NAME` for all of them.
 
+## With Spring Security
+
+Set `springSecurity: true` in the entry's options. The plugin generates, for the `notes` api:
+
+- `NotesSecurityMatchers`: the contract's routes by access kind (`publicRoutes()`, `optionalRoutes()`, `identityRoutes()`, `signedRoutes()`, `anonymousOnRefusalRoutes()`);
+- `SecurityRefusals`: an entry point and an access-denied handler that answer 401, 403 and a CSRF refusal in the api's error format.
+
+Wire them in your chain:
+
+```java
+@Bean
+SecurityFilterChain chain(HttpSecurity http, NotesSecurityMatchers routes, SecurityRefusals refusals) {
+    return http
+            .authorizeHttpRequests(authorize -> authorize
+                    .requestMatchers(routes.identityRoutes()).authenticated()
+                    .anyRequest().permitAll())
+            .exceptionHandling(handling -> handling.authenticationEntryPoint(refusals).accessDeniedHandler(refusals))
+            .build();
+}
+```
+
+With `springSecurity: { matchers: true }`, a generated `Customizer<HttpSecurity>` also permits the public and optional-auth routes in every chain, before your own rules.
+
+Your authenticate hook reads the user from `SecurityContextHolder`. On an optional-auth route that calls anonymously when the token is refused, keep the route out of your bearer filter:
+
+```java
+@Bean
+BearerTokenResolver bearerTokens(NotesSecurityMatchers routes) {
+    DefaultBearerTokenResolver standard = new DefaultBearerTokenResolver();
+    return request -> routes.anonymousOnRefusalRoutes().matches(request) ? null : standard.resolve(request);
+}
+```
+
+## springdoc
+
+- `artefacts: { nativeDocs: true }` puts springdoc's `@Operation` on the generated interfaces. Add `io.swagger.core.v3:swagger-annotations-jakarta` (springdoc brings it).
+- `frameworkDocs: off` writes `seampact-notes.properties`, which turns springdoc's document off. Load it in `application.properties`:
+
+```properties
+spring.config.import=classpath:seampact-notes.properties
+```
+
+The boot check fails when springdoc still serves its document.
+
 ## The boot check
 
 The app refuses to start, and lists every problem, when:
