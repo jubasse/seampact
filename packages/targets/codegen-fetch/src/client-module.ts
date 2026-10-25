@@ -1,6 +1,12 @@
 import type { OperationTypeExports } from "@seampact/codegen-core";
-import { type ExportRef, importSpecifier, type Link, propertyKey } from "@seampact/codegen-core";
-import type { PlannedOperation } from "./operation-plan.js";
+import {
+  type ExportRef,
+  importSpecifier,
+  type Link,
+  type PlannedOperation,
+  propertyKey,
+  typeNamespaceName,
+} from "@seampact/codegen-core";
 import type { ErrorStyle } from "./options.js";
 
 export const CLIENT_MODULE = "client";
@@ -9,7 +15,6 @@ export const INDEX_MODULE = "index";
 export const MODULE_EXTENSION = ".ts";
 
 const MODULE_SUFFIX = ".js";
-const NAMESPACE_SUFFIX = "Types";
 
 // One operation as the client module writes it: its method name, plan and the types link exports it reads.
 export interface ClientOperation {
@@ -29,10 +34,11 @@ export function clientModuleSource(
 ): string {
   const clientFile = `${CLIENT_MODULE}${MODULE_EXTENSION}`;
   const namespaces = typeNamespaces(operations);
-  const typeOf = (exportRef: ExportRef) => `${namespaceName(exportRef.module)}.${exportRef.export}`;
+  const typeOf = (exportRef: ExportRef) =>
+    `${typeNamespaceName(exportRef.module)}.${exportRef.export}`;
   const importLines = [...namespaces].map(
     (module) =>
-      `import type * as ${namespaceName(module)} from "${importSpecifier(typesLink, { module, export: "" }, clientFile)}";`,
+      `import type * as ${typeNamespaceName(module)} from "${importSpecifier(typesLink, { module, export: "" }, clientFile)}";`,
   );
 
   const body = [
@@ -53,16 +59,6 @@ function typeNamespaces(operations: readonly ClientOperation[]): Set<string> {
   ]);
 
   return new Set([...modules].sort());
-}
-
-// `operations/input` is imported as `operationsInputTypes`; a module path is letters, digits, `-`, `_` and `/`.
-function namespaceName(module: string): string {
-  const words = module.split(/[^A-Za-z0-9]+/).filter((word) => word !== "");
-  const camel = words
-    .map((word, index) => (index === 0 ? word : `${word.charAt(0).toUpperCase()}${word.slice(1)}`))
-    .join("");
-
-  return `${camel}${NAMESPACE_SUFFIX}`;
 }
 
 // Imports the runtime names the module body uses, so the module has no unused import.

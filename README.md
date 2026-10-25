@@ -28,7 +28,7 @@ From one YAML contract:
 | Server boundary | Routes for NestJS, Express, Fastify, AdonisJS or Hono. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
 | Built-in rules | Paging, rate limits, idempotency keys, ETags, CSRF, signed requests and field rights, declared in the contract and enforced at the boundary. You plug in the stores and decisions. |
 | Errors | One error format, RFC 9457 `problem+json` by default, with typed error codes per route. |
-| Clients | A typed `fetch` client, and TanStack Query, SWR or RTK Query hooks for React. |
+| Clients | A typed `fetch` client, hooks for React (TanStack Query, SWR, RTK Query), composables for Vue (TanStack Query, Pinia Colada), an Angular service with NgRx effects as an option, and MSW mocks to test them with no backend. |
 | Docs | OpenAPI 3.1 documents, and on NestJS and Fastify your framework's own Swagger kept in line with the contract. |
 | Editor support | Schemas that complete and check the contract's names as you type. |
 
@@ -44,7 +44,7 @@ From the CLI:
 | `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
 | `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
 
-Next: MSW mocks, Laravel, Symfony, API Platform. Form, file upload, download and redirect bodies on every server, once an app needs them.
+Next: Laravel, Symfony, API Platform. Form, file upload, download and redirect bodies on every server, once an app needs them.
 
 ## Example
 
@@ -424,6 +424,7 @@ Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse
 | React | 19 | TanStack Query 5, SWR 2, RTK Query 2, or none |
 | Vue | 3 | TanStack Query 5, Pinia Colada 1, or none |
 | Angular | 22 | none: a service over `HttpClient`, with NgRx 22 actions and effects or NgRx Signals 22 store features as an option |
+| MSW mocks | 2 | none: handlers for `setupServer` and `setupWorker` |
 
 ## Get started
 
@@ -448,7 +449,7 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] Frontend: Angular service over `HttpClient` (no query library)
 - [x] Frontend: NgRx actions and effects for Angular
 - [x] Frontend: NgRx Signal Store features for Angular
-- [ ] Frontend: MSW mocks
+- [x] Frontend: MSW mocks
 - [x] Java: Spring Boot 4, with a Gradle and a Maven plugin, Spring Security and springdoc
 - [ ] PHP: Laravel, Symfony, API Platform
 - [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm

@@ -1,11 +1,3 @@
-import {
-  below,
-  type IrLocation,
-  type Refusal,
-  refuseInconsistentIr,
-  refuseNotGeneratedYet,
-  refuseUnknownValueAt,
-} from "@seampact/codegen-core";
 import type {
   HeaderTemplate,
   PagingStyle,
@@ -14,6 +6,13 @@ import type {
   TextTemplate,
   WireFormat,
 } from "@seampact/spec/ir";
+import { below, type IrLocation } from "../ir-location.js";
+import {
+  refuseInconsistentIr,
+  refuseNotGeneratedYet,
+  refuseUnknownValueAt,
+} from "../located-refusals.js";
+import type { Refusal } from "../refusal.js";
 
 // Where the client finds a success payload or a page fact: a member path in the JSON body, a response header, a
 // `Link` relation, or a query parameter of a `Link` target (the cursor of the `next` page).

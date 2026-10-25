@@ -1,0 +1,49 @@
+{
+  "name": "@seampact/codegen-msw",
+  "description": "Generates Mock Service Worker 2 handlers per operation that answer the contract's examples, or the typed success or error a test gives, in the api's wire format.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist",
+    "runtime"
+  ],
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "seampact": {
+    "role": "target"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@seampact/codegen-core": "workspace:*",
+    "@seampact/spec": "workspace:*",
+    "msw": ">=2.15 <3"
+  },
+  "peerDependenciesMeta": {
+    "msw": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "prettier": "3.9.10"
+  },
+  "devDependencies": {
+    "@seampact/codegen-core": "workspace:*",
+    "@seampact/spec": "workspace:*",
+    "msw": "2.15.0"
+  }
+}

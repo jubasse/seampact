@@ -1,7 +1,7 @@
+import { refuseFormatForms } from "@seampact/codegen-core";
 import { readGoldenIr } from "@seampact/codegen-core/node-server/test-support";
 import type { Template, WireFormat } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
-import { refuseFormatForms } from "./wire-format.js";
 
 // `conventions.errors.requireCode: false` lets a contract write an error body with no code; the client reads the
 // code, so it refuses that format by name until it models one.

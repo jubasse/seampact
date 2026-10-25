@@ -1,14 +1,4 @@
 import {
-  below,
-  type ClientFilledHeaders,
-  clientFilledHeadersOf,
-  type IrLocation,
-  type Refusal,
-  refuseInconsistentIr,
-  refuseNotGeneratedYet,
-  refuseUnknownValueAt,
-} from "@seampact/codegen-core";
-import {
   type ContractIR,
   isKnownVariant,
   type Operation,
@@ -17,6 +7,14 @@ import {
   type Response,
   type WireFormat,
 } from "@seampact/spec/ir";
+import { type ClientFilledHeaders, clientFilledHeadersOf } from "../client-filled-headers.js";
+import { below, type IrLocation } from "../ir-location.js";
+import {
+  refuseInconsistentIr,
+  refuseNotGeneratedYet,
+  refuseUnknownValueAt,
+} from "../located-refusals.js";
+import type { Refusal } from "../refusal.js";
 import { type PageFact, pageReaderOf, payloadPathOf } from "./success-reader.js";
 
 // What the generated client tells the runtime about one operation; the runtime's `OperationPlan` type checks the

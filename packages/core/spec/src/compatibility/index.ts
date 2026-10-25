@@ -285,6 +285,19 @@ export const CLIENT_TARGETS: readonly ClientTargetCompatibility[] = [
     ownValidators: [],
     clientStyles: ["fetch"],
   },
+  {
+    // The mock handlers read the `types` link, not a `client` link: they answer what the fetch client reads.
+    package: "@seampact/codegen-msw",
+    framework: {
+      id: "msw",
+      package: "msw",
+      tested: [{ major: 2, consumer: "front-msw" }],
+      incompatible: [],
+    },
+    validatorStyles: [],
+    ownValidators: [],
+    clientStyles: [],
+  },
 ];
 
 // Every target the matrix records, servers then clients.

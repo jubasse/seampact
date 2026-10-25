@@ -10,3 +10,5 @@ allowBuilds:
   # vue-demi's postinstall switches its entry between Vue 2 and 3; it ships the Vue 3 entry, which Vue 3.5 needs.
   vue-demi: false
   simple-git-hooks: false
+  # msw's postinstall only copies its worker script into the app's own `msw.workerDirectory`, which no package sets.
+  msw: false
