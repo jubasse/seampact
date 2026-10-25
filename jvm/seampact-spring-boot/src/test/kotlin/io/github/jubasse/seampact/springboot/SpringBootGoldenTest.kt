@@ -1,10 +1,15 @@
 package io.github.jubasse.seampact.springboot
 
+import io.github.jubasse.seampact.ir.model.Access
 import io.github.jubasse.seampact.ir.model.ArrayTypeUse
 import io.github.jubasse.seampact.ir.model.ContractIR
 import io.github.jubasse.seampact.ir.model.CredentialIdentity
 import io.github.jubasse.seampact.ir.model.IdentityAccess
 import io.github.jubasse.seampact.ir.model.ObjectSchema
+import io.github.jubasse.seampact.ir.model.Operation
+import io.github.jubasse.seampact.ir.model.OptionalAccess
+import io.github.jubasse.seampact.ir.model.PublicAccess
+import io.github.jubasse.seampact.ir.model.RefusedCredential
 import io.github.jubasse.seampact.ir.model.Refinements
 import io.github.jubasse.seampact.ir.model.ScalarType
 import io.github.jubasse.seampact.ir.model.ScalarTypeUse
@@ -80,8 +85,31 @@ class SpringBootGoldenTest {
     private fun optInsTree(): Map<String, String> {
         val api = apis.single { it.irFile == TASKS_SERVICE_IR }
 
-        return SpringBootTarget.generate(coreView(api), optInsEntry(OPT_INS_PACKAGE)).associate { it.path to it.contents }
+        return SpringBootTarget.generate(withEveryAccessKind(coreView(api)), optInsEntry(OPT_INS_PACKAGE)).associate { it.path to it.contents }
     }
+
+    // Copies of getTask under each access kind the Spring Security matchers group: a public template whose `{area}`
+    // also covers getTask's literal `channels` segment, an optional-auth route that calls anonymously on a refused
+    // credential, and a route a signed identity calls.
+    private fun withEveryAccessKind(ir: ContractIR): ContractIR {
+        val getTask = ir.operations.single { it.id == "getTask" }
+        val origin = (getTask.access as IdentityAccess).origin
+        val areaParam = getTask.params.path.first().copy(name = "area")
+
+        val browseTask = getTask.variant("browse", "/internal/v1/{area}/{channelId}/tasks/{taskId}", PublicAccess(reason = "Shared links open it.", origin = origin))
+            .let { it.copy(params = it.params.copy(path = listOf(areaParam) + it.params.path)) }
+        val peekTask = getTask.variant(
+            "peek",
+            "/internal/v1/channels/{channelId}/peeks/{taskId}",
+            OptionalAccess(identity = "service", schemes = listOf("internalToken"), reason = "Previews open it.", onRefused = RefusedCredential.ANONYMOUS, origin = origin),
+        )
+        val signTask = getTask.variant("sign", "/internal/v1/channels/{channelId}/signed/{taskId}", IdentityAccess(identity = "stripe", schemes = listOf("stripeSignature"), origin = origin))
+
+        return ir.copy(operations = ir.operations + listOf(browseTask, peekTask, signTask))
+    }
+
+    private fun Operation.variant(verb: String, path: String, access: Access): Operation =
+        copy(id = "${verb}Task", name = name.copy(segments = listOf(verb, "task")), path = path, access = access)
 
     private fun committedTree(directory: Path): Map<String, String> {
         if (!Files.isDirectory(directory)) return emptyMap()

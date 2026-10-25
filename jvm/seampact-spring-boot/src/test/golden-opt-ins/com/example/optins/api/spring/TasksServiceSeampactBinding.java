@@ -1,11 +1,23 @@
 package com.example.optins.api.spring;
 
+import com.example.optins.api.BrowseTaskErrors;
+import com.example.optins.api.BrowseTaskInput;
+import com.example.optins.api.BrowseTaskResult;
 import com.example.optins.api.GetTaskErrors;
 import com.example.optins.api.GetTaskInput;
 import com.example.optins.api.GetTaskResult;
+import com.example.optins.api.PeekTaskErrors;
+import com.example.optins.api.PeekTaskInput;
+import com.example.optins.api.PeekTaskResult;
 import com.example.optins.api.ServiceAuthenticateHook;
 import com.example.optins.api.ServiceAuthenticateRequest;
 import com.example.optins.api.ServiceCredentials;
+import com.example.optins.api.SignTaskErrors;
+import com.example.optins.api.SignTaskInput;
+import com.example.optins.api.SignTaskResult;
+import com.example.optins.api.StripeAuthenticateHook;
+import com.example.optins.api.StripeAuthenticateRequest;
+import com.example.optins.api.StripeCredentials;
 import com.example.optins.api.TasksServiceContractException;
 import com.example.optins.api.spring.runtime.ApiBinding;
 import com.example.optins.api.spring.runtime.Denial;
@@ -27,19 +39,28 @@ public final class TasksServiceSeampactBinding implements ApiBinding {
     @Override
     public Map<String, Class<?>> inputTypes() {
         return Map.ofEntries(
-        Map.entry("getTask", GetTaskInput.class));
+        Map.entry("getTask", GetTaskInput.class),
+        Map.entry("browseTask", BrowseTaskInput.class),
+        Map.entry("peekTask", PeekTaskInput.class),
+        Map.entry("signTask", SignTaskInput.class));
     }
 
     @Override
     public Map<String, Class<? extends Annotation>> annotations() {
         return Map.ofEntries(
-        Map.entry("getTask", GetTask.class));
+        Map.entry("getTask", GetTask.class),
+        Map.entry("browseTask", BrowseTask.class),
+        Map.entry("peekTask", PeekTask.class),
+        Map.entry("signTask", SignTask.class));
     }
 
     @Override
     public Map<Class<?>, Integer> successArms() {
         return Map.ofEntries(
-        Map.entry(GetTaskResult.Status200.class, 200));
+        Map.entry(GetTaskResult.Status200.class, 200),
+        Map.entry(BrowseTaskResult.Status200.class, 200),
+        Map.entry(PeekTaskResult.Status200.class, 200),
+        Map.entry(SignTaskResult.Status200.class, 200));
     }
 
     @Override
@@ -50,13 +71,32 @@ public final class TasksServiceSeampactBinding implements ApiBinding {
         Map.entry(GetTaskErrors.ApiForbidden.class, "api.forbidden"),
         Map.entry(GetTaskErrors.ApiNotFound.class, "api.not_found"),
         Map.entry(GetTaskErrors.ApiInternal.class, "api.internal"),
-        Map.entry(GetTaskErrors.ApiDeadlineExceeded.class, "api.deadline_exceeded"));
+        Map.entry(GetTaskErrors.ApiDeadlineExceeded.class, "api.deadline_exceeded"),
+        Map.entry(BrowseTaskErrors.ApiSchemaInvalid.class, "api.schema_invalid"),
+        Map.entry(BrowseTaskErrors.ApiUnauthenticated.class, "api.unauthenticated"),
+        Map.entry(BrowseTaskErrors.ApiForbidden.class, "api.forbidden"),
+        Map.entry(BrowseTaskErrors.ApiNotFound.class, "api.not_found"),
+        Map.entry(BrowseTaskErrors.ApiInternal.class, "api.internal"),
+        Map.entry(BrowseTaskErrors.ApiDeadlineExceeded.class, "api.deadline_exceeded"),
+        Map.entry(PeekTaskErrors.ApiSchemaInvalid.class, "api.schema_invalid"),
+        Map.entry(PeekTaskErrors.ApiUnauthenticated.class, "api.unauthenticated"),
+        Map.entry(PeekTaskErrors.ApiForbidden.class, "api.forbidden"),
+        Map.entry(PeekTaskErrors.ApiNotFound.class, "api.not_found"),
+        Map.entry(PeekTaskErrors.ApiInternal.class, "api.internal"),
+        Map.entry(PeekTaskErrors.ApiDeadlineExceeded.class, "api.deadline_exceeded"),
+        Map.entry(SignTaskErrors.ApiSchemaInvalid.class, "api.schema_invalid"),
+        Map.entry(SignTaskErrors.ApiUnauthenticated.class, "api.unauthenticated"),
+        Map.entry(SignTaskErrors.ApiForbidden.class, "api.forbidden"),
+        Map.entry(SignTaskErrors.ApiNotFound.class, "api.not_found"),
+        Map.entry(SignTaskErrors.ApiInternal.class, "api.internal"),
+        Map.entry(SignTaskErrors.ApiDeadlineExceeded.class, "api.deadline_exceeded"));
     }
 
     @Override
     public Map<String, Class<?>> authenticateHooks() {
         return Map.ofEntries(
-        Map.entry("service", ServiceAuthenticateHook.class));
+        Map.entry("service", ServiceAuthenticateHook.class),
+        Map.entry("stripe", StripeAuthenticateHook.class));
     }
 
     @Override
@@ -71,6 +111,7 @@ public final class TasksServiceSeampactBinding implements ApiBinding {
             OperationRef operation) {
         return switch (identity) {
             case "service" -> beans.getBean(ServiceAuthenticateHook.class).authenticate(new ServiceAuthenticateRequest(mapper.treeToValue(credentials, ServiceCredentials.class), csrfToken, request, operation, Map.of()));
+            case "stripe" -> beans.getBean(StripeAuthenticateHook.class).authenticate(new StripeAuthenticateRequest(mapper.treeToValue(credentials, StripeCredentials.class), csrfToken, signature, request, operation, Map.of()));
             default -> throw new IllegalArgumentException("seampact: the identity '" + identity + "' is not one the operations of the api 'tasksService' authenticate with");
         };
     }

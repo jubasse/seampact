@@ -15,4 +15,28 @@ public interface InternalEndpoints {
     GetTaskResult getTask(@Parameter(hidden = true) GetTaskInput input) throws
             ApiSchemaInvalidError, ApiUnauthenticatedError, ApiForbiddenError, ApiNotFoundError,
             ApiInternalError, ApiDeadlineExceededError;
+
+    @Operation(
+            operationId = "browseTask",
+            responses = @ApiResponse(responseCode = "200", description = "")
+    )
+    BrowseTaskResult browseTask(@Parameter(hidden = true) BrowseTaskInput input) throws
+            ApiSchemaInvalidError, ApiUnauthenticatedError, ApiForbiddenError, ApiNotFoundError,
+            ApiInternalError, ApiDeadlineExceededError;
+
+    @Operation(
+            operationId = "peekTask",
+            responses = @ApiResponse(responseCode = "200", description = "")
+    )
+    PeekTaskResult peekTask(@Parameter(hidden = true) PeekTaskInput input) throws
+            ApiSchemaInvalidError, ApiUnauthenticatedError, ApiForbiddenError, ApiNotFoundError,
+            ApiInternalError, ApiDeadlineExceededError;
+
+    @Operation(
+            operationId = "signTask",
+            responses = @ApiResponse(responseCode = "200", description = "")
+    )
+    SignTaskResult signTask(@Parameter(hidden = true) SignTaskInput input) throws
+            ApiSchemaInvalidError, ApiUnauthenticatedError, ApiForbiddenError, ApiNotFoundError,
+            ApiInternalError, ApiDeadlineExceededError;
 }

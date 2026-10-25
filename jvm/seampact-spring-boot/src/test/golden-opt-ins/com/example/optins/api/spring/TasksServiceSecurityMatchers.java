@@ -24,11 +24,11 @@ public final class TasksServiceSecurityMatchers {
         if (!servletPath.isEmpty() && !servletPath.equals("/")) {
             routes = routes.basePath(servletPath);
         }
-        this.publicRoutes = anyOf();
-        this.optionalRoutes = anyOf();
-        this.anonymousOnRefusalRoutes = anyOf();
+        this.publicRoutes = anyOf(routes.matcher(HttpMethod.GET, "/internal/v1/{p1}/{p2}/tasks/{p3}"), routes.matcher(HttpMethod.HEAD, "/internal/v1/{p1}/{p2}/tasks/{p3}"));
+        this.optionalRoutes = anyOf(routes.matcher(HttpMethod.GET, "/internal/v1/channels/{p1}/peeks/{p2}"), routes.matcher(HttpMethod.HEAD, "/internal/v1/channels/{p1}/peeks/{p2}"));
+        this.anonymousOnRefusalRoutes = anyOf(routes.matcher(HttpMethod.GET, "/internal/v1/channels/{p1}/peeks/{p2}"), routes.matcher(HttpMethod.HEAD, "/internal/v1/channels/{p1}/peeks/{p2}"));
         this.identityRoutes = anyOf(routes.matcher(HttpMethod.GET, "/internal/v1/channels/{p1}/tasks/{p2}"), routes.matcher(HttpMethod.HEAD, "/internal/v1/channels/{p1}/tasks/{p2}"));
-        this.signedRoutes = anyOf();
+        this.signedRoutes = anyOf(routes.matcher(HttpMethod.GET, "/internal/v1/channels/{p1}/signed/{p2}"), routes.matcher(HttpMethod.HEAD, "/internal/v1/channels/{p1}/signed/{p2}"));
     }
 
     /**
