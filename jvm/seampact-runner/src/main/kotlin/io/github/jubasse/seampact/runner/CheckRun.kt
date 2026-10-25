@@ -36,15 +36,14 @@ public fun check(settings: RunSettings, buildDirectory: Path): CheckReport {
         val refusals = prepared.plans.filterIsInstance<EntryPlan.Refused>().flatMap { it.problems }
         val skipped = "seampact: checks.generated is not compared: outDir $outDir is under the build directory, so its files are not committed."
 
-        return CheckReport(if (refusals.isEmpty()) lines + skipped else lines, emptyList(), refusals)
+        return CheckReport(if (refusals.isEmpty()) lines + skipped else lines, printedWarnings(prepared), refusals)
     }
 
     val errors = mutableListOf<ConfigProblem>()
     val warnings = mutableListOf<ConfigProblem>()
     collectDrift(prepared, settings.buildTool, errors, warnings)
 
-    val ignored = ignoredWarnings(prepared.config)
-    val printed = warnings.filter { it.code !in ignored }.map { "seampact warning: ${problemsText(listOf(it))}" }
+    val printed = printedWarnings(prepared, warnings)
     val matched = if (errors.isEmpty()) listOf("seampact: the generated files match the files on disk.") else emptyList()
 
     return CheckReport(lines + matched, printed, errors)
@@ -102,6 +101,13 @@ private fun driftProblem(entryId: String, drift: EntryDrift.Listed, buildTool: B
 
 private fun checkLevel(config: AppConfig): String =
     ((config.checks?.get("generated")) as? JsonPrimitive)?.content ?: ERROR
+
+/** The run's warnings, the compatibility check's then [more], as the build prints them, less the ignored codes. */
+internal fun printedWarnings(prepared: PreparedRun.Prepared, more: List<ConfigProblem> = emptyList()): List<String> {
+    val ignored = ignoredWarnings(prepared.config)
+
+    return (prepared.warnings + more).filter { it.code !in ignored }.map { "seampact warning: ${problemsText(listOf(it))}" }
+}
 
 private fun ignoredWarnings(config: AppConfig): Set<String> =
     ((config.warnings?.get("ignore") as? JsonArray) ?: JsonArray(emptyList()))

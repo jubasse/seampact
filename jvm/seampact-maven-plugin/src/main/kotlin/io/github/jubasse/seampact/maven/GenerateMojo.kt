@@ -32,7 +32,10 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
         } else {
             when (val outcome = generate(settings)) {
                 is GenerateOutcome.Refused -> throw refused(outcome.problems)
-                is GenerateOutcome.Generated -> outcome.lines.forEach(log::info)
+                is GenerateOutcome.Generated -> {
+                    outcome.lines.forEach(log::info)
+                    outcome.warnings.forEach(log::warn)
+                }
             }
             stamp.record(inputsHash, roots)
         }

@@ -1,4 +1,5 @@
 ---
+"@seampact/spec": minor
 ---
 
-The Gradle and Maven plugins refuse `springSecurity: { matchers: true }` by name when `spring-security-config` is not on the classpath, and their release, git and HTTPS bundle sources are smoke-tested on every change.
+The Gradle and Maven plugins check the Spring Boot version against the compatibility matrix with `checks.matrix` and `allowUntested`, refuse `springSecurity: { matchers: true }` without `spring-security-config`, and are smoke-tested on release, git and HTTPS bundle sources.

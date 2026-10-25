@@ -52,13 +52,12 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 
 | You see | Do |
 |---|---|
-| `config.matrix.untested` | Your framework version is not tested. Accept it with `allowUntested: [nestjs@13]` on the entry, or install a tested one. With `checks.matrix: error` it fails. |
+| `config.matrix.untested` | Your framework version is not tested. Accept it with `allowUntested: [nestjs@13]` (Spring Boot: `spring-boot@5`) on the entry, or install a tested one. With `checks.matrix: error` it fails. |
 | `config.matrix.incompatible` | Install a framework version the message lists. |
 | `config.matrix.unknown-framework` | Write the `allowUntested` item as `<framework>@<major>` for the framework this target serves. |
 | `config.matrix.allowed-tested` | That major is tested, so the item does nothing. Remove it. |
 | `config.matrix.pnp-unsupported` | Yarn Plug'n'Play hides the versions. Set `nodeLinker: node-modules` in `.yarnrc.yml`, run `yarn install`. |
 | `framework.version.unresolved` | The Gradle or Maven plugin found no Spring Boot on the compile classpath. Add Spring Boot 4 to the app's dependencies. |
-| `framework.version.unsupported` | The spring-boot target needs Spring Boot 4. Upgrade the app. |
 | `config.own-validators.library-missing` | Install the validator library the message names. |
 
 See also [Link errors](link.md), [Monorepo and OpenAPI errors](config-root.md) and the [config reference](../configuration/reference.md).

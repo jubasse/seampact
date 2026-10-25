@@ -5,9 +5,12 @@ import io.github.jubasse.seampact.ir.write.GeneratedWriter
 import io.github.jubasse.seampact.ir.write.PlanOutcome
 import io.github.jubasse.seampact.ir.write.PlannedWrite
 
-/** What a generate run did: the lines the build prints, or every problem that refused it, with nothing written. */
+/**
+ * What a generate run did: the lines and the warnings the build prints, or every problem that refused it, with
+ * nothing written.
+ */
 public sealed interface GenerateOutcome {
-    public data class Generated(val lines: List<String>) : GenerateOutcome
+    public data class Generated(val lines: List<String>, val warnings: List<String>) : GenerateOutcome
 
     public data class Refused(val problems: List<ConfigProblem>) : GenerateOutcome
 }
@@ -45,5 +48,5 @@ public fun generate(settings: RunSettings): GenerateOutcome {
         "seampact: entry '${other.id}' uses '${other.use}', which its own runner generates; ${settings.buildTool.pluginName} leaves it."
     }
 
-    return GenerateOutcome.Generated(lines + left)
+    return GenerateOutcome.Generated(lines + left, printedWarnings(prepared))
 }

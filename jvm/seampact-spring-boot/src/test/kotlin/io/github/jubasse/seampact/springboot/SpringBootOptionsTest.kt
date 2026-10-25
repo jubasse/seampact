@@ -94,7 +94,6 @@ class SpringBootOptionsTest {
         val entry = SpringBootEntry(
             id = "server",
             options = options("""{ "package": "a", "springSecurity": true }"""),
-            springBootVersion = "3.5.6",
             artefacts = options("""{ "bootCheck": { "hooks": "warn" }, "nativeDocs": true, "accessHooks": false, "openapi": true }"""),
             frameworkDocs = "off",
             link = mapOf("validators" to "zod", "a/b" to "zod"),
@@ -105,7 +104,6 @@ class SpringBootOptionsTest {
 
         assertEquals(
             listOf(
-                "framework.version.unsupported" to "/springBootVersion",
                 "link.kind.not-consumed" to "/link/validators",
                 "link.kind.not-consumed" to "/link/a~1b",
                 "artefact.bootCheck.hooks.warn.unsupported" to "/artefacts/bootCheck/hooks",

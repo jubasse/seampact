@@ -6,13 +6,12 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * One spring-boot target entry of the app config, as a build plugin reads it (ADR 0011 "The app config"): its [id],
- * its `options`, `artefacts`, `frameworkDocs` and `link` members, and the Spring Boot version the build resolved,
- * which `generate` checks against the compatibility matrix. The IR passed beside it is already the entry's view.
+ * its `options`, `artefacts`, `frameworkDocs` and `link` members. The build plugin checks the Spring Boot version it
+ * resolved against the compatibility matrix before. The IR passed beside it is already the entry's view.
  */
 public data class SpringBootEntry(
     val id: String,
     val options: JsonObject,
-    val springBootVersion: String,
     val artefacts: JsonObject = JsonObject(emptyMap()),
     val frameworkDocs: String? = null,
     val link: Map<String, String> = emptyMap(),
@@ -30,14 +29,11 @@ public data class FrameworkRoute(val path: String, val reason: String, val metho
     )
 }
 
-private const val SUPPORTED_SPRING_BOOT_MAJOR = 4
 private const val BOOT_CHECK = "bootCheck"
 private const val ACCESS_HOOKS = "accessHooks"
 
 /** The entry members this release cannot serve, each refused by name with the release that brings it. */
 internal fun checkEntry(entry: SpringBootEntry, options: SpringBootOptions, refusals: MutableList<SpringBootRefusal>) {
-    checkSpringBootVersion(entry.springBootVersion, refusals)
-
     for ((kind, provider) in entry.link) {
         refusals += SpringBootRefusal(
             code = "link.kind.not-consumed",
@@ -48,20 +44,6 @@ internal fun checkEntry(entry: SpringBootEntry, options: SpringBootOptions, refu
     }
 
     for ((artefact, value) in entry.artefacts) checkArtefact(artefact, value, refusals)
-
-
-}
-
-private fun checkSpringBootVersion(version: String, refusals: MutableList<SpringBootRefusal>) {
-    val major = version.substringBefore('.').toIntOrNull()
-    if (major == SUPPORTED_SPRING_BOOT_MAJOR) return
-
-    refusals += SpringBootRefusal(
-        code = "framework.version.unsupported",
-        message = "The build resolves Spring Boot '$version'; the spring-boot target supports Spring Boot $SUPPORTED_SPRING_BOOT_MAJOR.x only (Spring Framework 7, Jackson 3), and 3.x is incompatible.",
-        fix = "Upgrade the app to Spring Boot $SUPPORTED_SPRING_BOOT_MAJOR.x.",
-        member = "/springBootVersion",
-    )
 }
 
 private fun checkArtefact(artefact: String, value: JsonElement, refusals: MutableList<SpringBootRefusal>) {

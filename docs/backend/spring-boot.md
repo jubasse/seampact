@@ -70,6 +70,10 @@ You can write the config in `<configuration>` instead of `seampact.config.yaml`,
 
 Keep one of the two: a project with both fails.
 
+### Spring Boot versions
+
+The plugins read the Spring Boot version of your build. Spring Boot 4 is tested. Spring Boot 3 fails with `config.matrix.incompatible`. A newer major prints `config.matrix.untested`; accept it on the entry with `allowUntested: [spring-boot@5]`, or make it fail with `checks: { matrix: error }`.
+
 ### When the build fails
 
 Each error starts with a code, such as `framework.version.unresolved` or `binary.compile-failed`. Find it in [Troubleshooting](../troubleshooting/README.md).

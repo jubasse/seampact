@@ -1,5 +1,8 @@
 // The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers of each link kind, per server target the framework majors it is tested on or refuses and the validator styles it accepts, and per client target the framework and query library majors it is tested on and the client link styles it reads.
-// One file with no relative import, so the repository scripts that Node runs from source can import it.
+// The data is `compatibility/matrix.json`, which the JVM build plugins read too; this file types it and adds the
+// queries. Its one relative import is that JSON file, so the repository scripts that Node runs from source can import it.
+
+import matrix from "../../compatibility/matrix.json" with { type: "json" };
 
 export type ProviderKind = "validators" | "types" | "client";
 
@@ -85,220 +88,73 @@ export interface ValidatorPair {
   readonly validatorPackage: string;
 }
 
+const PROVIDER_KINDS: readonly ProviderKind[] = ["validators", "types", "client"];
+const VALIDATOR_STYLES: readonly ValidatorStyle[] = ["standard-schema", "class-validator"];
+const CLIENT_STYLES: readonly ClientStyle[] = ["fetch"];
+const PROVIDER_STYLES: readonly ProviderStyle[] = [
+  ...VALIDATOR_STYLES,
+  "typescript",
+  ...CLIENT_STYLES,
+];
+
+function isOneOf<Value extends string>(value: string, allowed: readonly Value[]): value is Value {
+  const allowedValues: readonly string[] = allowed;
+
+  return allowedValues.includes(value);
+}
+
+// The matrix file holds plain strings; a value outside its union is a broken data file, named with where it sits.
+function oneOf<Value extends string>(
+  value: string,
+  allowed: readonly Value[],
+  where: string,
+): Value {
+  if (isOneOf(value, allowed)) return value;
+
+  throw new Error(
+    `compatibility: matrix.json ${where} is '${value}', not one of ${allowed.join(", ")}.`,
+  );
+}
+
+type MatrixTarget = (typeof matrix.serverTargets)[number];
+
+function targetOf(target: MatrixTarget): TargetCompatibility {
+  return {
+    ...target,
+    validatorStyles: target.validatorStyles.map((style) =>
+      oneOf(style, VALIDATOR_STYLES, `${target.package} validatorStyles`),
+    ),
+  };
+}
+
 // In the order a refusal names them.
-export const FIRST_PARTY_PROVIDERS: readonly FirstPartyProvider[] = [
-  { id: "zod", package: "@seampact/codegen-zod", kind: "validators", style: "standard-schema" },
-  { id: "yup", package: "@seampact/codegen-yup", kind: "validators", style: "standard-schema" },
-  {
-    id: "class-validator",
-    package: "@seampact/codegen-class-validator",
-    kind: "validators",
-    style: "class-validator",
-  },
-  { id: "ts", package: "@seampact/codegen-ts", kind: "types", style: "typescript" },
-  { id: "fetch", package: "@seampact/codegen-fetch", kind: "client", style: "fetch" },
-];
+export const FIRST_PARTY_PROVIDERS: readonly FirstPartyProvider[] = matrix.firstPartyProviders.map(
+  (provider) => ({
+    ...provider,
+    kind: oneOf(provider.kind, PROVIDER_KINDS, `${provider.id} kind`),
+    style: oneOf(provider.style, PROVIDER_STYLES, `${provider.id} style`),
+  }),
+);
 
-export const SERVER_TARGETS: readonly TargetCompatibility[] = [
-  {
-    package: "@seampact/codegen-nestjs",
-    framework: {
-      id: "nestjs",
-      package: "@nestjs/core",
-      tested: [{ major: 12, consumer: "nestjs" }],
-      incompatible: [],
-    },
-    libraries: [
-      {
-        id: "nestjs-swagger",
-        package: "@nestjs/swagger",
-        artefact: "nativeDocs",
-        testedMajors: [12],
-      },
-    ],
-    validatorStyles: ["standard-schema", "class-validator"],
-    ownValidators: [],
-  },
-  {
-    package: "@seampact/codegen-express",
-    framework: {
-      id: "express",
-      package: "express",
-      tested: [
-        { major: 4, consumer: "express4" },
-        { major: 5, consumer: "express" },
-      ],
-      incompatible: [],
-    },
-    validatorStyles: ["standard-schema"],
-    ownValidators: [],
-  },
-  {
-    package: "@seampact/codegen-fastify",
-    framework: {
-      id: "fastify",
-      package: "fastify",
-      tested: [{ major: 5, consumer: "fastify" }],
-      incompatible: [],
-    },
-    libraries: [
-      {
-        id: "fastify-swagger",
-        package: "@fastify/swagger",
-        artefact: "nativeDocs",
-        testedMajors: [9],
-      },
-    ],
-    validatorStyles: ["standard-schema"],
-    ownValidators: [{ id: "ajv", library: "ajv" }],
-  },
-  {
-    package: "@seampact/codegen-adonis",
-    framework: {
-      id: "adonis",
-      package: "@adonisjs/core",
-      tested: [
-        { major: 6, consumer: "adonis6" },
-        { major: 7, consumer: "adonis" },
-      ],
-      incompatible: [],
-    },
-    validatorStyles: ["standard-schema"],
-    ownValidators: [{ id: "vinejs", library: "@vinejs/vine" }],
-  },
-  {
-    package: "@seampact/codegen-hono",
-    framework: {
-      id: "hono",
-      package: "hono",
-      tested: [{ major: 4, consumer: "hono" }],
-      incompatible: [],
-    },
-    validatorStyles: ["standard-schema"],
-    ownValidators: [],
-  },
-];
+export const SERVER_TARGETS: readonly TargetCompatibility[] = matrix.serverTargets.map(targetOf);
 
-export const CLIENT_TARGETS: readonly ClientTargetCompatibility[] = [
-  {
-    package: "@seampact/codegen-react",
-    framework: {
-      id: "react",
-      package: "react",
-      tested: [{ major: 19, consumer: "react-tanstack" }],
-      incompatible: [],
-    },
-    libraries: [
-      {
-        id: "tanstack-query",
-        package: "@tanstack/react-query",
-        artefact: "queries",
-        testedMajors: [5],
-        selectedBy: { option: "query", value: "tanstack" },
-      },
-      {
-        id: "swr",
-        package: "swr",
-        artefact: "queries",
-        testedMajors: [2],
-        selectedBy: { option: "query", value: "swr" },
-      },
-      {
-        id: "reduxjs-toolkit",
-        package: "@reduxjs/toolkit",
-        artefact: "queries",
-        testedMajors: [2],
-        selectedBy: { option: "query", value: "rtk" },
-      },
-      {
-        id: "react-redux",
-        package: "react-redux",
-        artefact: "queries",
-        testedMajors: [9],
-        selectedBy: { option: "query", value: "rtk" },
-      },
-    ],
-    validatorStyles: [],
-    ownValidators: [],
-    clientStyles: ["fetch"],
-  },
-  {
-    package: "@seampact/codegen-vue",
-    framework: {
-      id: "vue",
-      package: "vue",
-      tested: [{ major: 3, consumer: "vue-tanstack" }],
-      incompatible: [],
-    },
-    libraries: [
-      {
-        id: "tanstack-vue-query",
-        package: "@tanstack/vue-query",
-        artefact: "queries",
-        testedMajors: [5],
-        selectedBy: { option: "query", value: "tanstack" },
-      },
-      {
-        id: "pinia-colada",
-        package: "@pinia/colada",
-        artefact: "queries",
-        testedMajors: [1],
-        selectedBy: { option: "query", value: "pinia-colada" },
-      },
-    ],
-    validatorStyles: [],
-    ownValidators: [],
-    clientStyles: ["fetch"],
-  },
-  {
-    package: "@seampact/codegen-angular",
-    framework: {
-      id: "angular",
-      package: "@angular/core",
-      tested: [{ major: 22, consumer: "angular-fetch" }],
-      incompatible: [],
-    },
-    libraries: [
-      {
-        id: "ngrx-store",
-        package: "@ngrx/store",
-        artefact: "service",
-        testedMajors: [22],
-        selectedBy: { option: "state", value: "ngrx" },
-      },
-      {
-        id: "ngrx-effects",
-        package: "@ngrx/effects",
-        artefact: "service",
-        testedMajors: [22],
-        selectedBy: { option: "state", value: "ngrx" },
-      },
-      {
-        id: "ngrx-signals",
-        package: "@ngrx/signals",
-        artefact: "service",
-        testedMajors: [22],
-        selectedBy: { option: "state", value: "ngrx-signals" },
-      },
-    ],
-    validatorStyles: [],
-    ownValidators: [],
-    clientStyles: ["fetch"],
-  },
-  {
-    // The mock handlers read the `types` link, not a `client` link: they answer what the fetch client reads.
-    package: "@seampact/codegen-msw",
-    framework: {
-      id: "msw",
-      package: "msw",
-      tested: [{ major: 2, consumer: "front-msw" }],
-      incompatible: [],
-    },
-    validatorStyles: [],
-    ownValidators: [],
-    clientStyles: [],
-  },
-];
+export const CLIENT_TARGETS: readonly ClientTargetCompatibility[] = matrix.clientTargets.map(
+  (target) => ({
+    ...targetOf(target),
+    clientStyles: target.clientStyles.map((style) =>
+      oneOf(style, CLIENT_STYLES, `${target.package} clientStyles`),
+    ),
+  }),
+);
+
+// The targets the Gradle and Maven plugins generate: `package` is the `use` coordinates and `framework.package` the
+// `group:artifact` whose version the build resolves on the compile classpath. They accept no validator link.
+export interface JvmTargetCompatibility {
+  readonly package: string;
+  readonly framework: FrameworkSupport;
+}
+
+export const JVM_TARGETS: readonly JvmTargetCompatibility[] = matrix.jvmTargets;
 
 // Every target the matrix records, servers then clients.
 export const ALL_TARGETS: readonly TargetCompatibility[] = [...SERVER_TARGETS, ...CLIENT_TARGETS];

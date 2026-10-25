@@ -64,7 +64,7 @@ class SpringBootGoldenTest {
     }
 
     private fun entry(packageName: String): SpringBootEntry =
-        SpringBootEntry(id = "server", options = JsonObject(mapOf("package" to JsonPrimitive(packageName))), springBootVersion = "4.1.1")
+        SpringBootEntry(id = "server", options = JsonObject(mapOf("package" to JsonPrimitive(packageName))))
 
     // The Spring Security beans with the customizer, springdoc's annotations and `frameworkDocs: off`.
     private fun optInsEntry(packageName: String): SpringBootEntry {
