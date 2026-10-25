@@ -18,7 +18,8 @@ final class MemoryIdempotencyStore implements IdempotencyStore {
     @Override
     public synchronized IdempotencyBegin begin(IdempotencyClaim claim) {
         long nowMs = System.currentTimeMillis();
-        entries.values().removeIf(entry -> entry.response() != null && entry.expiresAtMs() <= nowMs);
+        // A running entry expires too, so a request that never settled does not hold its key for the app's life.
+        entries.values().removeIf(entry -> entry.expiresAtMs() <= nowMs);
 
         Entry existing = entries.get(claim.key());
         if (existing == null) {

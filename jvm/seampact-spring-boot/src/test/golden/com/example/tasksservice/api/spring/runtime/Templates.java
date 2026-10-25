@@ -1,5 +1,6 @@
 package com.example.tasksservice.api.spring.runtime;
 
+import java.util.Map;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -75,9 +76,12 @@ final class Templates {
         JsonNode source = slots.path(template.path("of").asString());
         if (!source.isArray()) return MissingNode.getInstance();
 
+        // One shallow copy of the slots for every item: rendering reads the slots and never changes them.
+        ObjectNode itemSlots = NODES.objectNode();
+        for (Map.Entry<String, JsonNode> slot : slots.properties()) itemSlots.set(slot.getKey(), slot.getValue());
+
         ArrayNode items = NODES.arrayNode();
         for (JsonNode item : source) {
-            ObjectNode itemSlots = slots.isObject() ? ((ObjectNode) slots).deepCopy() : NODES.objectNode();
             itemSlots.set(ITEM_SLOT, item);
             JsonNode value = render(template.path("as"), itemSlots, writeNulls);
             if (!value.isMissingNode()) items.add(value);
