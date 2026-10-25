@@ -138,6 +138,8 @@ An exception that escapes `chain.doFilter`, on the `REQUEST` or the `ASYNC` disp
 
 Under `strict` a violation is replaced by the api's 500 when the response is not committed, and `onUnexpectedError` is called. A failure after the commit (a stream whose writer throws after its first bytes) cannot be replaced: it is logged, `onUnexpectedError` is called and the connection is closed. Under `warn` the reply goes out as written, and the violation is logged once.
 
+Until spring-4 brings streamed bodies, the wrapper holds every reply whole in memory, success included, and an error body is neither bounded by `MAX_CHECKED_ERROR_BODY_BYTES` nor decoded from `gzip` or `deflate`: such a body fails the check as not JSON.
+
 The limits are those of ADR 0016: a writer that bypasses the response (the raw socket) is not seen. A reply that an app filter ordered before the boundary filter writes is not seen either; the boot check refuses such a filter only for `ShallowEtagHeaderFilter`, `FormContentFilter`, `HiddenHttpMethodFilter` and Spring Security's chain.
 
 ### Errors raised before the boundary
@@ -173,6 +175,8 @@ Step 6 decodes path, query, headers and the held body to a Jackson 3 `JsonNode` 
 2. **The boundary's own `JsonMapper` binds** the tree to the input record. After the structural pass the binding cannot fail; a failure is a 500.
 3. **Bean Validation checks the record** with the boundary's own `ValidatorFactory` (Hibernate Validator 9, `ParameterMessageInterpolator`, the copied `Field<T>` value extractor), never the app's `Validator` bean. Records carry the standard constraints whose meaning is the contract's: `@Min`, `@Max`, `@DecimalMin` and `@DecimalMax` with `inclusive`, `@Size` on arrays and maps, `@NotNull`. Generated constraints with their validators in the copied runtime carry the rules of pass 1, so a developer's own `@Valid` on a record checks the same rules.
 4. **Issues are joined.** A violation's property path (`subs[1].dueAt`) maps to the wire pointer (`/subs/1/due_at`) through a table generated per record. `rule` is the contract keyword, read from the constraint's annotation type, never its message. Issues are bounded by `MAX_RENDERED_ISSUES = 100`.
+
+Passes 3 and 4 wait for spring-3: spring-2 runs passes 1 and 2, which carry every rule of the core-path operations, and compiles `pattern` with `java.util.regex` until the ECMA-262 search lands with them.
 
 The app needs a Jakarta Validation provider on its runtime classpath (`spring-boot-starter-validation`); without one, the boot check fails, naming the starter. The generated validator covers only the rules whose Jakarta meaning differs, so pass 3's value rules and the generated constraints run on that provider.
 
@@ -239,6 +243,8 @@ The boot check runs in a `SmartInitializingSingleton`, before the server starts 
 - the boundary filter not ordered before Spring Security's chain, or a `ShallowEtagHeaderFilter`, `FormContentFilter` or `HiddenHttpMethodFilter` ordered before it;
 - a servlet container other than Tomcat ("Refused by name or waiting"), a reactive application, or no Jakarta Validation provider;
 - a Spring Boot major other than 4, read from `SpringBootVersion`; `generate` already refuses 3.x from the build's resolved version.
+
+Four of these rules wait for spring-3, where spring-2 relies on the run-time rules alone: mappings ordered before `RequestMappingHandlerMapping`, `mount` against the configured paths, a container other than Tomcat or a reactive app, and a missing Jakarta Validation provider.
 
 `artefacts.bootCheck: { handlers, frameworkRoutes }` switches those two checks apart (ADR 0011).
 
