@@ -90,6 +90,30 @@ final class TasksHooks {
         }
     }
 
+    /**
+     * The app's own decider for the overridden right (CHK-091): it records under its own hook name and denies what the
+     * script denies, while every other right and rule reaches the generic decider.
+     */
+    @Component
+    @SkippedUnder("missing-decider")
+    static final class OverriddenRightDecider implements Decider {
+        private static final String OVERRIDDEN_RIGHT = "tasks.update";
+
+        @Override
+        public Set<String> names() {
+            return Set.of(OVERRIDDEN_RIGHT);
+        }
+
+        @Override
+        public Decision<Denial> decide(RequirementCall request) {
+            SuiteControl.recordHookCall("decide-override:" + request.name(), API, request.operation().id());
+
+            return SuiteControl.scriptedDecision(request.name(), Purposes.nameOf(request.purpose()))
+                    .<Decision<Denial>>map(code -> new Decision.Denied<>(Denial.of(code)))
+                    .orElseGet(Decision.Allowed::new);
+        }
+    }
+
     /** Resolves a declared channel id to itself, every channel existing, unless the script denies the scope. */
     @Component
     @SkippedUnder("missing-scope-resolver")

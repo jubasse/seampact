@@ -1,6 +1,11 @@
 package com.example.consumer;
 
 import com.example.tasks.api.AppEndpoints;
+import com.example.tasks.api.ArchiveTaskErrors;
+import com.example.tasks.api.ArchiveTaskInput;
+import com.example.tasks.api.ArchiveTaskResult;
+import com.example.tasks.api.AssignTaskInput;
+import com.example.tasks.api.AssignTaskResult;
 import com.example.tasks.api.ChannelsEndpoints;
 import com.example.tasks.api.CreateTaskInput;
 import com.example.tasks.api.CreateTaskResult;
@@ -26,17 +31,23 @@ import com.example.tasks.api.ListChannelsResult;
 import com.example.tasks.api.ListTasksInput;
 import com.example.tasks.api.ListTasksPage;
 import com.example.tasks.api.ListTasksResult;
+import com.example.tasks.api.PurgeTaskInput;
+import com.example.tasks.api.PurgeTaskResult;
 import com.example.tasks.api.SearchTasksInput;
 import com.example.tasks.api.SearchTasksResult;
 import com.example.tasks.api.PreferencesEndpoints;
 import com.example.tasks.api.TasksEndpoints;
 import com.example.tasks.api.UpdatePreferencesInput;
+import com.example.tasks.api.UpdateTaskErrors;
+import com.example.tasks.api.UpdateTaskInput;
+import com.example.tasks.api.UpdateTaskResult;
 import com.example.tasks.api.UpdatePreferencesResult;
 import com.example.tasks.api.schemas.Channel;
 import com.example.tasks.api.schemas.Draft;
 import com.example.tasks.api.schemas.Health;
 import com.example.tasks.api.schemas.Preferences;
 import com.example.tasks.api.schemas.Task;
+import com.example.tasks.api.schemas.TaskState;
 import com.example.tasks.api.schemas.TaskSearchResult;
 import com.example.tasks.api.spring.DeleteDraft;
 import com.example.tasks.api.spring.GetChannel;
@@ -154,6 +165,43 @@ final class TasksControllers {
             Task created = SampleData.task(UUID.randomUUID());
 
             return new CreateTaskResult.Status201(new Task(created.taskId(), input.body().title(), created.state(), created.effort(), created.version(), created.createdAt()));
+        }
+
+        @Override
+        @com.example.tasks.api.spring.UpdateTask
+        public UpdateTaskResult updateTask(UpdateTaskInput input) {
+            // Every task is at its first version, so another expected version is stale.
+            if (input.body().expectedVersion() != SampleData.FIRST_VERSION) return new UpdateTaskErrors.StateConflict();
+
+            Task current = SampleData.task(input.path().taskId());
+
+            return new UpdateTaskResult.Status200(withNextVersion(current, input.body().title().orElse(current.title()), current.state()));
+        }
+
+        @Override
+        @com.example.tasks.api.spring.AssignTask
+        public AssignTaskResult assignTask(AssignTaskInput input) {
+            return new AssignTaskResult.Status200(SampleData.task(input.path().taskId()));
+        }
+
+        @Override
+        @com.example.tasks.api.spring.ArchiveTask
+        public ArchiveTaskResult archiveTask(ArchiveTaskInput input) {
+            if (input.body().expectedVersion() != SampleData.FIRST_VERSION) return new ArchiveTaskErrors.StateConflict();
+
+            Task current = SampleData.task(input.path().taskId());
+
+            return new ArchiveTaskResult.Status200(withNextVersion(current, current.title(), TaskState.ARCHIVED));
+        }
+
+        @Override
+        @com.example.tasks.api.spring.PurgeTask
+        public PurgeTaskResult purgeTask(PurgeTaskInput input) {
+            return new PurgeTaskResult.Status204();
+        }
+
+        private static Task withNextVersion(Task current, String title, TaskState state) {
+            return new Task(current.taskId(), title, state, current.effort(), current.version() + 1, current.createdAt());
         }
 
         @Override

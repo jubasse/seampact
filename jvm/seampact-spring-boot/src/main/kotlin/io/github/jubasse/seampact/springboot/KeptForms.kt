@@ -41,6 +41,7 @@ internal const val ETAG_DERIVATION = "cache.etag"
 private const val OUTPUT_DIRECTION = "output"
 private val TOP_LEVEL_POINTER = Regex("^/[^/]+$")
 private const val PATH_SOURCE = "path"
+private const val BODY_SOURCE = "body"
 private val BUCKET_KEY_SOURCES = setOf(PATH_SOURCE, "scope", "principal")
 private val PAYLOAD_SHAPES = listOf(ResponseShape.ITEM, ResponseShape.TABLE, ResponseShape.LIST, ResponseShape.PAGE)
 
@@ -93,7 +94,10 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
                 val delivery = if (input.media.value in SPRING_4_MEDIA) Delivery.SPRING_4 else Delivery.AFTER_1_0
                 refusals.waiting("input.media", "A '${input.media.value}' body", at.below("input", "media"), delivery)
             }
-            if (!input.proofs.isNullOrEmpty()) refusals.waiting("input.proofs", "Rule proof fields in the body", at.below("input", "proofs"), Delivery.SPRING_3)
+            if (!input.proofs.isNullOrEmpty() && input.schema !is RefTypeUse) {
+                refusals.waiting("input.proofs", "Proof fields beside a body that is not an object schema", at.below("input", "proofs"), Delivery.AFTER_1_0)
+            }
+            input.proofs?.forEachIndexed { index, proof -> readType(proof.schema, at.below("input", "proofs", index, "schema")) }
             readType(input.schema, at.below("input", "schema"))
         }
 
@@ -106,7 +110,6 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
 
     private fun checkOperationForms(operation: Operation, at: IrPlace) {
         checkPaging(ir, operation, at, refusals)
-        if (operation.concurrency != null) refusals.waiting("concurrency", "A version token (concurrency)", at.below("concurrency"), Delivery.SPRING_3)
 
         when (val idempotency = operation.idempotency) {
             null, is ExemptIdempotency -> Unit
@@ -117,7 +120,13 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
         }
 
         operation.requires.forEachIndexed { index, requirement ->
-            if (requirement is RuleRequirement) requirement.bucket?.let { bucketId -> checkBucket(bucketId, at.below("requires", index, "bucket")) }
+            if (requirement !is RuleRequirement) return@forEachIndexed
+            requirement.bucket?.let { bucketId -> checkBucket(bucketId, at.below("requires", index, "bucket")) }
+
+            val proof = ir.rules[requirement.rule]?.proof
+            if (proof != null && proof.in_.value != BODY_SOURCE) {
+                refusals.waiting("rule.proof.placement", "A rule proof in '${proof.in_.value}'", IrPlace.ROOT.below("rules", requirement.rule, "proof", "in"), Delivery.AFTER_1_0)
+            }
         }
 
         checkRuntimeForms(operation, at)

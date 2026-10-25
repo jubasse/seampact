@@ -155,9 +155,30 @@ final class InputStep {
             return MissingNode.getInstance();
         }
 
-        boundary.validator().check(body, input.path("schema"), "body", "", issues);
+        if (!(body instanceof ObjectNode members) || input.path("proofs").isEmpty()) {
+            boundary.validator().check(body, input.path("schema"), "body", "", issues);
+            return body;
+        }
 
-        return body;
+        // The proof fields of the operation's rules sit beside the body schema's members; the handler never sees them.
+        ObjectNode withoutProofs = members.deepCopy();
+        for (JsonNode proof : input.path("proofs")) {
+            issues.addAll(proofIssues(boundary, members, proof));
+            withoutProofs.remove(proof.path("name").asString());
+        }
+        boundary.validator().check(withoutProofs, input.path("schema"), "body", "", issues);
+
+        return withoutProofs;
+    }
+
+    /** The issues of one rule proof field of [body]: required, and checked by its own schema. */
+    static List<InputIssue> proofIssues(SeampactBoundary boundary, JsonNode body, JsonNode proof) {
+        String name = proof.path("name").asString();
+        String pointer = InputIssue.below("", name);
+        JsonNode member = body.path(name);
+        if (member.isMissingNode()) return List.of(new InputIssue("body", pointer, "required"));
+
+        return boundary.validator().issuesOf(member, proof.path("schema"), "body", pointer);
     }
 
     // The tree holds every part; the record takes the parts the operation declares, by its component names.

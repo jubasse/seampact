@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -170,13 +171,44 @@ final class AccessSteps {
             Optional<JsonNode> params = requirement.has("params") ? Optional.of(requirement.path("params")) : Optional.empty();
 
             Decision<Denial> decision = decide(boundary, name, new RequirementCall(isRule ? RequirementKind.RULE : RequirementKind.RIGHT,
-                    name, params, exchange.principal, subject, List.copyOf(exchange.scopes), Optional.empty(),
+                    name, params, exchange.principal, subject, List.copyOf(exchange.scopes), isRule ? proofOf(boundary, exchange, name) : Optional.empty(),
                     throttleBucket(boundary, exchange, requirement.path("bucket")),
                     new Purpose.Route(), boundary.operationRef(exchange.route()), view,
                     new RequirementRequest.Extensions<>(Map.of(), Map.of())));
 
             if (decision instanceof Decision.Denied<Denial> denied) throw refusalOf(boundary, denied.deny());
         }
+    }
+
+    /**
+     * The body field a rule reads its proof from, checked first: an issue there is the `schemaInvalid` refusal before
+     * the decider runs. A body that is absent or not JSON gives no proof; step 6 refuses it.
+     */
+    private static Optional<Object> proofOf(SeampactBoundary boundary, BoundaryExchange exchange, String rule) {
+        String name = boundary.table().ir().path("rules").path(rule).path("proof").path("name").asString("");
+        JsonNode proof = proofField(exchange.route().operation(), name);
+        if (proof.isMissingNode() || exchange.body == null) return Optional.empty();
+
+        JsonNode body;
+        try {
+            body = boundary.mapper().readTree(exchange.body);
+        } catch (JacksonException malformed) {
+            return Optional.empty();
+        }
+        if (!body.isObject()) return Optional.empty();
+
+        List<InputIssue> issues = InputStep.proofIssues(boundary, body, proof);
+        if (!issues.isEmpty()) throw InputStep.schemaInvalid(exchange.route(), issues);
+
+        return Optional.ofNullable(boundary.mapper().treeToValue(body.path(name), Object.class));
+    }
+
+    private static JsonNode proofField(JsonNode operation, String name) {
+        for (JsonNode proof : operation.path("input").path("proofs")) {
+            if (proof.path("name").asString().equals(name)) return proof;
+        }
+
+        return MissingNode.getInstance();
     }
 
     /**
