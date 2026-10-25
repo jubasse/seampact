@@ -1,6 +1,9 @@
 import {
   apiIndexSource,
+  FRONT_MODULE_SUFFIX,
   FRONT_RUNTIME_MODULE,
+  FRONT_RUNTIME_SPECIFIER,
+  FRONT_RUNTIME_TYPE_NAMES,
   fetchQueriesModuleSource,
   frontRuntimeFile,
   type GeneratedFile,
@@ -29,9 +32,6 @@ const QUERIES_MODULE = "queries";
 const SERVICE_MODULE = "service";
 const INDEX_MODULE = "index";
 const MODULE_EXTENSION = ".ts";
-const MODULE_SUFFIX = ".js";
-const RUNTIME_SPECIFIER = `./${FRONT_RUNTIME_MODULE}${MODULE_SUFFIX}`;
-const RUNTIME_TYPE_NAMES = ["PlainHeaders", "WithPlainHeaders"];
 
 // Per api: the front runtime, `queries.ts`, and unless the artefact is off `service.ts` with the HttpClient fetch it
 // sends through, and an index re-exporting them; or every refusal at once.
@@ -72,7 +72,7 @@ function queriesAndServiceFiles(
   const serviceFile = `${SERVICE_MODULE}${MODULE_EXTENSION}`;
   const queries = fetchQueriesModuleSource(plan, options, {
     client: clientSpecifier(queriesFile),
-    runtime: RUNTIME_SPECIFIER,
+    runtime: FRONT_RUNTIME_SPECIFIER,
   });
   const serviceFiles = (): GeneratedFile[] => [
     {
@@ -83,16 +83,16 @@ function queriesAndServiceFiles(
       path: serviceFile,
       contents: `${serviceModuleSource(plan, options, {
         client: clientSpecifier(serviceFile),
-        queries: `./${QUERIES_MODULE}${MODULE_SUFFIX}`,
-        runtime: RUNTIME_SPECIFIER,
-        httpClientFetch: `./${HTTP_CLIENT_FETCH_MODULE}${MODULE_SUFFIX}`,
+        queries: `./${QUERIES_MODULE}${FRONT_MODULE_SUFFIX}`,
+        runtime: FRONT_RUNTIME_SPECIFIER,
+        httpClientFetch: `./${HTTP_CLIENT_FETCH_MODULE}${FRONT_MODULE_SUFFIX}`,
       })}\n`,
     },
   ];
   const indexed: IndexedModule[] = [
     ...(withService ? [{ module: SERVICE_MODULE }, { module: HTTP_CLIENT_FETCH_MODULE }] : []),
     { module: QUERIES_MODULE },
-    { module: FRONT_RUNTIME_MODULE, typeNames: [...RUNTIME_TYPE_NAMES], valueNames: [] },
+    { module: FRONT_RUNTIME_MODULE, typeNames: [...FRONT_RUNTIME_TYPE_NAMES], valueNames: [] },
   ];
 
   return [

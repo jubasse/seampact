@@ -15,7 +15,13 @@ export {
   retryCheckSource,
 } from "./fetch-mode-sources.js";
 export { type FetchQueriesOptions, fetchQueriesModuleSource } from "./fetch-queries-module.js";
-export { FRONT_RUNTIME_MODULE, frontRuntimeFile } from "./front-runtime-file.js";
+export {
+  FRONT_MODULE_SUFFIX,
+  FRONT_RUNTIME_MODULE,
+  FRONT_RUNTIME_SPECIFIER,
+  FRONT_RUNTIME_TYPE_NAMES,
+  frontRuntimeFile,
+} from "./front-runtime-file.js";
 export {
   NEXT_PAGE_EVIDENCE,
   type NextPageEvidence,

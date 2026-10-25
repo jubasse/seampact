@@ -62,9 +62,9 @@ export interface ReactiveCells {
 }
 
 /**
- * The fetch mutation over reactive cells: one fetcher and one attempt object per \`mutate\`, passed to each retry, so
- * the retries keep one idempotency key; only the latest \`mutate\` writes the cells, and every call resolves to its
- * own outcome. A write is not aborted when its owner is destroyed.
+ * The fetch mutation over reactive cells: one attempt object per \`mutate\`, passed to each retry, so the retries
+ * keep one idempotency key even when the options are rebuilt per attempt; only the latest \`mutate\` writes the cells,
+ * and every call resolves to its own outcome. A write is not aborted when its owner is destroyed.
  */
 export function cellsMutationSource(cells: ReactiveCells): string {
   const { cellConstructor, write } = cells;

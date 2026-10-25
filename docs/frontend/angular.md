@@ -33,7 +33,7 @@ bootstrapApplication(App, {
 });
 ```
 
-`apiUrl` holds your backend URL: see [Point the client at your backend](backend-url.md). For Angular's XSRF header, keep the api on the page's origin and set `withXsrfConfiguration({ headerName })` to the CSRF header your contract declares.
+`apiUrl` holds your backend URL: see [Point the client at your backend](backend-url.md). For Angular's XSRF header, keep the api on the page's origin and set `withXsrfConfiguration({ headerName })` to the CSRF header your contract declares. For cookies on a cross-origin api, set `withCredentials` in an interceptor: the config has no `fetch` option.
 
 ## Use it in a component
 
@@ -55,7 +55,7 @@ export class NoteList {
 - The request is a function: when a signal it reads changes, the read starts again. Return `null` to skip a read.
 - Create readers in a field initializer. Elsewhere, pass `{ injector }`.
 - A read stops when the component (or the injector) is destroyed, or when its request changes.
-- No read runs during server rendering. Pass `{ transferId: "notes" }` to read on the server and hand the data to the browser.
+- No read runs during server rendering. Pass `{ transferId: "notes" }` to read on the server and hand the data to the browser. Angular's server transfer caps a body at 1 MiB, so a larger read fails there.
 - There is no cache. A write does not refresh other readers: call `refetch`.
 - `mutate` never throws. Each call resolves to its own `{ data }` or `{ error }`, a `ContractError` for a declared error. The `data`, `error` and `isPending` signals show the latest call.
 - `retry` sends a failed write again with the same idempotency key, so the server runs it once. It takes a whole count (0 or more). A declared error is not retried.

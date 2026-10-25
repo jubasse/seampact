@@ -11,7 +11,13 @@ import {
   provideHttpClient,
   withInterceptors,
 } from "@angular/common/http";
-import { inject as angularInject, PLATFORM_ID, signal } from "@angular/core";
+import {
+  inject as angularInject,
+  createEnvironmentInjector,
+  PLATFORM_ID,
+  runInInjectionContext,
+  signal,
+} from "@angular/core";
 import { Observable, of, switchMap, throwError } from "rxjs";
 import { expect, inject, test } from "vitest";
 import { page } from "vitest/browser";
@@ -186,9 +192,10 @@ test("5: destroying the component aborts the read", async () => {
   const view = await mount(TaskList, appProviders(inject("userToken"), [interceptor]));
 
   await expect.poll(() => cancelled.length).toBe(1);
-  view.unmount();
+  view.component.destroy();
 
   await expect.poll(() => cancelled[0]).toBe(true);
+  view.unmount();
 });
 
 test("5: a changed signal input aborts the previous read and sends the new one", async () => {
@@ -205,21 +212,28 @@ test("5: a changed signal input aborts the previous read and sends the new one",
   view.unmount();
 });
 
-test("5: refetch after the injector is destroyed sends nothing", async () => {
+test("5: refetch after the reader's injector is destroyed sends nothing", async () => {
   await loadScript({});
 
   const { interceptor, cancelled } = hangingInterceptor();
-  const { result, unmount } = await runInApplication(
+  const { application, unmount } = await runInApplication(
     appProviders(inject("userToken"), [interceptor]),
-    () => injectApi().listTasks(() => LIST_REQUEST),
+    () => undefined,
+  );
+  // Only the reader's injector goes; the application and its HttpClient stay alive.
+  const readerInjector = createEnvironmentInjector([], application.injector);
+  const result = runInInjectionContext(application.injector, () =>
+    angularInject(TasksApi).listTasks(() => LIST_REQUEST, { injector: readerInjector }),
   );
 
   await expect.poll(() => cancelled.length).toBe(1);
-  unmount();
+  readerInjector.destroy();
+  await expect.poll(() => cancelled[0]).toBe(true);
   result.refetch();
   await wait(QUIET_MS);
 
   expect(cancelled).toHaveLength(1);
+  unmount();
 });
 
 test("5: on the server a reader sends nothing unless given a transferId", async () => {
