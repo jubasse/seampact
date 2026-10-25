@@ -5,7 +5,6 @@ import {
   type InfiniteQueryObserverOptions,
   mutationOptions,
   type MutationOptions,
-  type QueryKey,
   queryOptions,
   type QueryOptions,
 } from "@tanstack/vue-query";
@@ -81,12 +80,23 @@ export function isContractError<Thrown>(
   return error instanceof ContractError;
 }
 
+/** A query key: the root, the resource, the operation id and the key request, or the caller's own segments. */
+export type QueryKey = readonly (
+  string | Readonly<Record<string, unknown>> | undefined
+)[];
+
 /** The caller's query options, spread after the generated ones; `call` passes the client's call options. */
 export type QueryCallerOptions<
   Operation extends AnyOperationTypes,
   Selected = Operation["data"],
 > = Omit<
-  QueryOptions<Operation["data"], Operation["error"], Selected>,
+  QueryOptions<
+    Operation["data"],
+    Operation["error"],
+    Selected,
+    Operation["data"],
+    QueryKey
+  >,
   "queryFn" | "queryKey"
 > & {
   readonly queryKey?: QueryKey;
@@ -105,7 +115,11 @@ export type InfiniteQueryCallerOptions<
     QueryKey,
     Operation["request"]
   >,
-  "queryFn" | "queryKey" | "initialPageParam" | "getNextPageParam"
+  | "queryFn"
+  | "queryKey"
+  | "initialPageParam"
+  | "getNextPageParam"
+  | "initialData"
 > &
   Partial<
     Pick<

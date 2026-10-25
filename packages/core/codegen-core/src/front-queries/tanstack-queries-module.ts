@@ -38,6 +38,12 @@ export interface TanstackAdapter {
   readonly infiniteQueryOptionsType: string;
   readonly mutationOptionsType: string;
   readonly entryPoints: string;
+  // The type arguments the query option type takes after the data, error and selected data, as source.
+  readonly queryOptionsTrailingArguments: string;
+  // The option keys the infinite caller options leave out beyond those the factory sets.
+  readonly infiniteCallerOmissions: readonly string[];
+  // The key type declared in the module, when the library's own `QueryKey` does not fit its option types.
+  readonly queryKeySource?: string;
 }
 
 /** The source of the TanStack Query `queries.ts`. */
@@ -63,7 +69,7 @@ export function tanstackQueriesModuleSource(
       ? ["type InfiniteData", "infiniteQueryOptions", `type ${adapter.infiniteQueryOptionsType}`]
       : []),
     ...(hasMutation ? ["mutationOptions", `type ${adapter.mutationOptionsType}`] : []),
-    "type QueryKey",
+    ...(adapter.queryKeySource === undefined ? ["type QueryKey"] : []),
     ...(hasQuery ? ["queryOptions", `type ${adapter.queryOptionsType}`] : []),
   ];
   const runtimeNames = [
@@ -87,6 +93,7 @@ export function tanstackQueriesModuleSource(
     ].join("\n"),
     operationTypesSource(api, operations, options.errors, "perOperation"),
     ...(throwsErrors ? [CONTRACT_ERROR_GUARD] : []),
+    ...(adapter.queryKeySource === undefined ? [] : [adapter.queryKeySource]),
     callerOptionTypesSource({ hasQuery, hasInfinite, hasMutation }, adapter),
     settingsTypeSource(api),
     resourceTypeSource(plan),
@@ -104,12 +111,12 @@ function callerOptionTypesSource(
   const sources = [
     ...(forms.hasQuery
       ? [
-          `/** The caller's query options, spread after the generated ones; \`call\` passes the client's call options. */\nexport type QueryCallerOptions<Operation extends AnyOperationTypes, Selected = Operation["data"]> = Omit<${adapter.queryOptionsType}<Operation["data"], Operation["error"], Selected>, "queryFn" | "queryKey"> & {\nreadonly queryKey?: QueryKey;\n${call};\n};`,
+          `/** The caller's query options, spread after the generated ones; \`call\` passes the client's call options. */\nexport type QueryCallerOptions<Operation extends AnyOperationTypes, Selected = Operation["data"]> = Omit<${adapter.queryOptionsType}<Operation["data"], Operation["error"], Selected${adapter.queryOptionsTrailingArguments}>, "queryFn" | "queryKey"> & {\nreadonly queryKey?: QueryKey;\n${call};\n};`,
         ]
       : []),
     ...(forms.hasInfinite
       ? [
-          `/** The caller's infinite query options; the pages start from the request and follow the contract's page facts unless the caller sets them. */\nexport type InfiniteQueryCallerOptions<Operation extends AnyOperationTypes, Selected = InfiniteData<Operation["data"], Operation["request"]>> = Omit<${adapter.infiniteQueryOptionsType}<Operation["data"], Operation["error"], Selected, QueryKey, Operation["request"]>, "queryFn" | "queryKey" | "initialPageParam" | "getNextPageParam"> & Partial<Pick<${adapter.infiniteQueryOptionsType}<Operation["data"], Operation["error"], Selected, QueryKey, Operation["request"]>, "initialPageParam" | "getNextPageParam">> & {\nreadonly queryKey?: QueryKey;\n${call};\n};`,
+          `/** The caller's infinite query options; the pages start from the request and follow the contract's page facts unless the caller sets them. */\nexport type InfiniteQueryCallerOptions<Operation extends AnyOperationTypes, Selected = InfiniteData<Operation["data"], Operation["request"]>> = Omit<${adapter.infiniteQueryOptionsType}<Operation["data"], Operation["error"], Selected, QueryKey, Operation["request"]>, "queryFn" | "queryKey" | "initialPageParam" | "getNextPageParam"${adapter.infiniteCallerOmissions.map((key) => ` | ${JSON.stringify(key)}`).join("")}> & Partial<Pick<${adapter.infiniteQueryOptionsType}<Operation["data"], Operation["error"], Selected, QueryKey, Operation["request"]>, "initialPageParam" | "getNextPageParam">> & {\nreadonly queryKey?: QueryKey;\n${call};\n};`,
         ]
       : []),
     ...(forms.hasMutation

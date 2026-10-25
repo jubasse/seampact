@@ -15,6 +15,8 @@ const REACT_QUERY: TanstackAdapter = {
   infiniteQueryOptionsType: "UseInfiniteQueryOptions",
   mutationOptionsType: "UseMutationOptions",
   entryPoints: "`useQuery`, `useSuspenseQuery`, `prefetchQuery`",
+  queryOptionsTrailingArguments: "",
+  infiniteCallerOmissions: [],
 };
 
 /** The source of `queries.ts`. */
