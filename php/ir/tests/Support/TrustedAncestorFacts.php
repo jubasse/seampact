@@ -23,7 +23,9 @@ final readonly class TrustedAncestorFacts implements PathFacts
 
     public function of(string $path): ?PathFact
     {
-        if (str_starts_with($path . '/', $this->testDirectory . '/')) {
+        $absolute = str_starts_with($path, '/') ? $path : getcwd() . '/' . $path;
+
+        if (str_starts_with($absolute . '/', $this->testDirectory . '/')) {
             return $this->real->of($path);
         }
 

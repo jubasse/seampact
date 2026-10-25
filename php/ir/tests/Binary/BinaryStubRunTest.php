@@ -12,6 +12,7 @@ use Seampact\Ir\Binary\BinaryFailureCode;
 use Seampact\Ir\Binary\BinaryInstaller;
 use Seampact\Ir\Binary\BinaryRefusedException;
 use Seampact\Ir\Binary\BinaryRunner;
+use Seampact\Ir\Binary\CacheRoot;
 use Seampact\Ir\Binary\InstalledBinary;
 use Seampact\Ir\Binary\PosixCacheSafety;
 use Seampact\Ir\Tests\Support\StubBinary;
@@ -138,25 +139,77 @@ final class BinaryStubRunTest extends TestCase
         self::assertSame(dirname($this->config) . "\n", file_get_contents($arguments));
     }
 
-    public function testPassesTheDiagnosticsOfARefusalThroughWithoutControlCharacters(): void
+    public function testRefusesAnExitOneWithItsDiagnosticsWithoutControlCharacters(): void
     {
         $binary = $this->installed(StubBinary::script("{$this->directory}/compiler", "printf 'error \\033[31mred\\033[0m\\tat line 1\\r\\nnext\\n' >&2\nexit 1"));
 
-        $output = $this->compile($binary, ['shop']);
+        $refused = $this->refusal(fn () => $this->compile($binary, ['shop']));
 
-        self::assertSame(1, $output->exitCode);
-        self::assertSame("error [31mred[0m\tat line 1\nnext\n", $output->diagnostics);
-        self::assertSame([], $output->irTextByApi);
+        self::assertSame(BinaryFailureCode::CompileRefused, $refused->code);
+        self::assertStringContainsString('code 1', $refused->message);
+        self::assertStringContainsString("error [31mred[0m\tat line 1\nnext\n", $refused->message);
     }
 
-    public function testPassesAUsageErrorThrough(): void
+    public function testRefusesAUsageErrorWithItsDiagnostics(): void
     {
         $binary = $this->installed(StubBinary::script("{$this->directory}/compiler", "echo 'unknown option' >&2\nexit 2"));
 
-        $output = $this->compile($binary, ['shop']);
+        $refused = $this->refusal(fn () => $this->compile($binary, ['shop']));
 
-        self::assertSame(2, $output->exitCode);
-        self::assertSame("unknown option\n", $output->diagnostics);
+        self::assertSame(BinaryFailureCode::CompileRefused, $refused->code);
+        self::assertStringContainsString('code 2', $refused->message);
+        self::assertStringContainsString("unknown option\n", $refused->message);
+    }
+
+    public function testStripsC1ControlsFromDiagnosticsThatAreNotValidUtf8(): void
+    {
+        $binary = $this->installed(StubBinary::script("{$this->directory}/compiler", "printf 'bad \\377 csi \\302\\23331m raw \\233 end' >&2\nexit 1"));
+
+        $refused = $this->refusal(fn () => $this->compile($binary, ['shop']));
+
+        self::assertStringNotContainsString("\u{9b}", $refused->message);
+        self::assertStringNotContainsString("\x9b", $refused->message);
+        self::assertStringContainsString('csi 31m raw', $refused->message);
+    }
+
+    public function testNeverRunsAFilePlantedBesideTheConfigUnderARelativeCacheVariable(): void
+    {
+        $marker = "{$this->directory}/planted-ran";
+        $source = StubBinary::compiler("{$this->directory}/compiler", ['shop']);
+        $sha256 = StubBinary::sha256($source);
+        TemporaryDirectory::write($this->directory, "app/relative-cache/seampact/{$sha256}/seampact", '');
+        StubBinary::script("{$this->directory}/app/relative-cache/seampact/{$sha256}/seampact", 'touch ' . escapeshellarg($marker));
+        $workingDirectory = getcwd();
+        self::assertIsString($workingDirectory);
+        chdir($this->directory);
+
+        try {
+            $refused = $this->refusal(function () use ($source, $sha256): void {
+                $cacheRoot = CacheRoot::locate(['COMPOSER_CACHE_DIR' => 'relative-cache', 'HOME' => $this->directory], false);
+                $safety = new PosixCacheSafety($cacheRoot, new TrustedAncestorFacts($this->directory));
+                $this->compile(BinaryInstaller::install($source, $sha256, $cacheRoot, 'seampact', $safety), ['shop']);
+            });
+        } finally {
+            chdir($workingDirectory);
+        }
+
+        self::assertFileDoesNotExist($marker);
+        self::assertSame(BinaryFailureCode::CacheUnavailable, $refused->code);
+        self::assertStringContainsString('COMPOSER_CACHE_DIR', $refused->message);
+    }
+
+    public function testChecksAndRunsTheRealPathOfACacheReachedThroughALink(): void
+    {
+        mkdir("{$this->directory}/private", 0700);
+        symlink("{$this->directory}/private", "{$this->directory}/link");
+        $cacheRoot = "{$this->directory}/link/seampact";
+        $source = StubBinary::compiler("{$this->directory}/compiler", ['shop']);
+        $safety = new PosixCacheSafety($cacheRoot, new TrustedAncestorFacts($this->directory));
+
+        $binary = BinaryInstaller::install($source, StubBinary::sha256($source), $cacheRoot, 'seampact', $safety);
+
+        self::assertSame("{$this->directory}/private/seampact/{$binary->sha256}/seampact", $binary->path);
+        self::assertTrue($this->compile($binary, ['shop'])->compiled());
     }
 
     public function testRefusesAnyOtherExitCode(): void

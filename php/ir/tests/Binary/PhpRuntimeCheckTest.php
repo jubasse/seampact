@@ -25,6 +25,9 @@ final class PhpRuntimeCheckTest extends TestCase
             '8.5 unpatched' => ['8.5.4', '8.5.12'],
             '8.5 fixed with a suffix' => ['8.5.12-1+ubuntu24.04.1', null],
             'a later branch' => ['8.6.0', null],
+            'a release candidate of the fixed release' => ['8.5.12RC1', '8.5.12'],
+            'an alpha of the fixed release' => ['8.4.27alpha1', '8.4.27'],
+            'a development build of the fixed release' => ['8.3.36-dev', '8.3.36'],
         ];
     }
 

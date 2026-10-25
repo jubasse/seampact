@@ -121,6 +121,10 @@ final class CacheRuleTest extends TestCase
             'xdg cache' => [['XDG_CACHE_HOME' => '/x/', 'HOME' => '/h'], false, '/x/seampact'],
             'home' => [['HOME' => '/h'], false, '/h/.cache/seampact'],
             'windows' => [['LOCALAPPDATA' => 'C:\\Users\\dev\\AppData\\Local', 'HOME' => '/h'], true, 'C:\\Users\\dev\\AppData\\Local' . DIRECTORY_SEPARATOR . 'seampact'],
+            'a relative xdg cache is ignored' => [['XDG_CACHE_HOME' => 'x', 'HOME' => '/h'], false, '/h/.cache/seampact'],
+            'a relative composer cache is refused' => [['COMPOSER_CACHE_DIR' => 'c', 'HOME' => '/h'], false, null],
+            'a relative home is refused' => [['HOME' => 'h'], false, null],
+            'a relative local app data is refused' => [['LOCALAPPDATA' => 'AppData\\Local'], true, null],
             'none' => [[], false, null],
             'none on windows' => [['HOME' => '/h'], true, null],
         ];
