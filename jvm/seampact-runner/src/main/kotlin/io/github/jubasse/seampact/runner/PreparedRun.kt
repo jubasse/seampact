@@ -14,6 +14,7 @@ import java.util.Properties
 /**
  * What one run of a seampact goal or task reads besides the app config: the build's inputs and resolvers.
  * [dslTree] is the app config the build file writes, as JSON, named [dslName] in problems; null reads the file.
+ * [springBootVersion] and [springSecurityWebVersion] are the versions the compile classpath resolves, null without one.
  */
 public class RunSettings(
     public val buildTool: BuildTool,
@@ -22,6 +23,7 @@ public class RunSettings(
     public val dslName: String,
     public val allowLocalVariable: String?,
     public val springBootVersion: String?,
+    public val springSecurityWebVersion: String?,
     public val binary: BinarySettings,
     public val bundleCacheDirectory: Path,
     public val binaryCacheDirectory: Path,
@@ -64,7 +66,7 @@ public fun prepareRun(settings: RunSettings): PreparedRun {
         is ContractApisOutcome.Read -> PreparedRun.Prepared(
             config,
             read.bundles,
-            planEntries(config, read.apis, settings.springBootVersion, runnerVersion(), settings.buildTool),
+            planEntries(config, read.apis, settings, runnerVersion()),
         )
     }
 }

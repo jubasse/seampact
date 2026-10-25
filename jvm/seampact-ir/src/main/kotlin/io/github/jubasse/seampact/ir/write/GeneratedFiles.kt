@@ -12,9 +12,10 @@ public data class HeaderSource(val generator: String, val version: String, val a
 /** The writer's own file in each target's output directory; no target may generate it. */
 public const val MANIFEST_FILE_NAME: String = ".seampact-manifest.json"
 
-// The extensions the JVM targets emit, and whether they take the header as a `//` line; JSON has no comment
+// The extensions the JVM targets emit, each with the line comment that carries the header; JSON has no comment
 // syntax, the manifest covers it.
-private val LINE_COMMENT_BY_EXTENSION = mapOf(".java" to true, ".kt" to true, ".json" to false)
+private const val NO_LINE_COMMENT = ""
+private val LINE_COMMENT_BY_EXTENSION = mapOf(".java" to "//", ".kt" to "//", ".properties" to "#", ".json" to NO_LINE_COMMENT)
 
 /** The one line every generated file with comment syntax starts with (ADR 0015 "The generated header"). */
 public fun generatedHeader(source: HeaderSource): String =
@@ -34,14 +35,14 @@ public fun withGeneratedHeader(files: List<GeneratedFile>, header: HeaderSource)
     val refusals = mutableListOf<WriterRefusal>()
 
     for (file in files) {
-        when (LINE_COMMENT_BY_EXTENSION[extensionOf(file.path)]) {
-            true -> finished += file.copy(contents = "// $line\n${file.contents}")
-            false -> finished += file
+        when (val comment = LINE_COMMENT_BY_EXTENSION[extensionOf(file.path)]) {
             null -> refusals += WriterRefusal(
                 "file.extension.unsupported",
                 "The target generated '${file.path}', whose extension is not one the writer knows (${LINE_COMMENT_BY_EXTENSION.keys.joinToString(", ")}).",
                 "Report this to the target's maintainers: the writer must learn the extension before a target emits it.",
             )
+            NO_LINE_COMMENT -> finished += file
+            else -> finished += file.copy(contents = "$comment $line\n${file.contents}")
         }
     }
 

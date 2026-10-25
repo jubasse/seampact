@@ -123,10 +123,12 @@ A decider lists the names it answers in `names()`, or `Decider.EVERY_NAME` for a
 
 ## With Spring Security
 
-Set `springSecurity: true` in the entry's options. The plugin generates, for the `notes` api:
+With Spring Security on the classpath (`spring-boot-starter-security`), the plugin generates, for the `notes` api:
 
 - `NotesSecurityMatchers`: the contract's routes by access kind (`publicRoutes()`, `optionalRoutes()`, `identityRoutes()`, `signedRoutes()`, `anonymousOnRefusalRoutes()`);
 - `SecurityRefusals`: an entry point and an access-denied handler that answer 401, 403 and a CSRF refusal in the api's error format.
+
+Set `springSecurity: false` in the entry's options to turn them off.
 
 Wire them in your chain:
 

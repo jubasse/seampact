@@ -20,6 +20,7 @@ import io.github.jubasse.seampact.springboot.SpringBootEntry
 import io.github.jubasse.seampact.springboot.SpringBootRefusedException
 import io.github.jubasse.seampact.springboot.SpringBootTarget
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -73,18 +74,13 @@ private fun waits(what: String, bringer: String, where: String) =
 /**
  * Generates each JVM entry from its view of the IR (ADR 0011 "The app config") and plans its write into its output
  * root (ADR 0015 "Writing files"), with nothing written: `generate` commits the plans only when every entry planned,
- * so a refused entry leaves every root as it was, and `check` compares them. [springBootVersion] is the version the
- * compile classpath resolves.
+ * so a refused entry leaves every root as it was, and `check` compares them.
  */
-internal fun planEntries(
-    config: AppConfig,
-    apis: List<SourceApi>,
-    springBootVersion: String?,
-    runnerVersion: String,
-    buildTool: BuildTool,
-): List<EntryPlan> =
-    config.entries.map { entry ->
-        when (val generated = generateEntry(entry, apis, springBootVersion, runnerVersion, buildTool)) {
+internal fun planEntries(config: AppConfig, apis: List<SourceApi>, settings: RunSettings, runnerVersion: String): List<EntryPlan> {
+    val buildTool = settings.buildTool
+
+    return config.entries.map { entry ->
+        when (val generated = generateEntry(entry, apis, settings, runnerVersion)) {
             is EntryFiles.Refused -> EntryPlan.Refused(entry.id, generated.problems)
             is EntryFiles.Generated -> {
                 val plan = GeneratedWriter.plan(entry.root, entry.id, generated.files, HandEditPolicy.REFUSE)
@@ -92,6 +88,7 @@ internal fun planEntries(
             }
         }
     }
+}
 
 private const val HAND_EDIT_CODE = "writer.file.edited"
 
@@ -121,7 +118,17 @@ private sealed interface EntryFiles {
     data class Refused(val problems: List<ConfigProblem>) : EntryFiles
 }
 
-private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, springBootVersion: String?, runnerVersion: String, buildTool: BuildTool): EntryFiles {
+private const val SPRING_SECURITY_OPTION = "springSecurity"
+
+// Without the option, the Spring Security beans follow the compile classpath (ADR 0022 "Native security layers"):
+// on when spring-security-web is there.
+private fun optionsWithSpringSecurityDefault(options: JsonObject, springSecurityWebVersion: String?): JsonObject =
+    if (SPRING_SECURITY_OPTION in options) options else JsonObject(options + (SPRING_SECURITY_OPTION to JsonPrimitive(springSecurityWebVersion != null)))
+
+private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, settings: RunSettings, runnerVersion: String): EntryFiles {
+    val buildTool = settings.buildTool
+    val springBootVersion = settings.springBootVersion
+
     if (entry.use != SpringBootTarget.USE) {
         return EntryFiles.Refused(
             listOf(
@@ -155,7 +162,7 @@ private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, springBo
 
     val target = SpringBootEntry(
         id = entry.id,
-        options = entry.options,
+        options = optionsWithSpringSecurityDefault(entry.options, settings.springSecurityWebVersion),
         springBootVersion = springBootVersion,
         artefacts = entry.artefacts,
         frameworkDocs = entry.frameworkDocs,

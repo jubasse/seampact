@@ -138,7 +138,7 @@ An exception that escapes `chain.doFilter`, on the `REQUEST` or the `ASYNC` disp
 
 Under `strict` a violation is replaced by the api's 500 when the response is not committed, and `onUnexpectedError` is called. A failure after the commit (a stream whose writer throws after its first bytes) cannot be replaced: it is logged, `onUnexpectedError` is called and the connection is closed. Under `warn` the reply goes out as written, and the violation is logged once.
 
-Until spring-4 brings streamed bodies, the wrapper holds every reply whole in memory, success included, and an error body is neither bounded by `MAX_CHECKED_ERROR_BODY_BYTES` nor decoded from `gzip` or `deflate`: such a body fails the check as not JSON.
+Until a consumer needs streamed bodies, the wrapper holds every reply whole in memory, success included, and an error body is neither bounded by `MAX_CHECKED_ERROR_BODY_BYTES` nor decoded from `gzip` or `deflate`: such a body fails the check as not JSON.
 
 The limits are those of ADR 0016: a writer that bypasses the response (the raw socket) is not seen. A reply that an app filter ordered before the boundary filter writes is not seen either; the boot check refuses such a filter only for `ShallowEtagHeaderFilter`, `FormContentFilter`, `HiddenHttpMethodFilter` and Spring Security's chain.
 
@@ -307,7 +307,7 @@ The boundary runtime is copied into `spring.runtime` with the generated header, 
 
 | Waits for | What |
 |---|---|
-| spring-4 | form, multipart, download and redirect bodies (ADR 0012 bodies table, a multipart body counted on the raw stream as it arrives) |
+| a consumer that needs them | form, multipart, download and redirect bodies (ADR 0012 bodies table, a multipart body counted on the raw stream as it arrives), refused by name as on every Node target: the reference contract carries none |
 | after 1.0 | Spring Boot 3.x (refused, not waiting); WebFlux; servlet containers other than Tomcat, which Boot 4 also supports (Jetty) but no consumer proves; asynchronous handler signatures; `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs |
 
 ### The consumer and the proof
@@ -340,7 +340,7 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 | spring-1 | the generator in `jvm/seampact-spring-boot` (Kotlin, Palantir JavaPoet pinned): `SpringBootTarget.generate(ir, entry)`, the options, types, records with redacted `toString()`, interfaces, composed annotations, results and exceptions; `SpringBootOptionsTest` and `SpringBootGoldenTest`, whose golden is compiled by `javac` on 21 and 25 against Spring Boot 4, and whose redaction case checks the `toString()` of one golden record of each kind of "Redaction" |
 | spring-2 | the filter, interceptor, argument resolver, reply handler, exception resolver, outgoing check, hook beans and boot check; the sample app; the suite CLI; the Gradle rows of the workflow, on the core-path operations |
 | spring-3 | paging, idempotency replay, throttle, cache and ETag headers, concurrency, rule proofs, restricted input fields, signed routes, absolute URLs, the `pack:spring` profile, `GeneratedRedactionTest`, the boot check rules of mappings, mount and container, the ECMA-262 pattern search; the entries' filter dropped |
-| spring-4 | the Spring Security beans and customizer, form, multipart, download and redirect bodies, `nativeDocs`, `frameworkDocs: off`, `SecurityRefusalsTest` |
+| spring-4 | the Spring Security beans and customizer, `nativeDocs`, `frameworkDocs: off` through both plugins, the `springSecurity` default read from the compile classpath, `SecurityRefusalsTest`; form, multipart, download and redirect bodies stay refused by name until a consumer needs them |
 
 ## Spike
 

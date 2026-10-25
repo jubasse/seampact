@@ -14,6 +14,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.language.jvm.tasks.ProcessResources
 import java.nio.file.Path
 
 /**
@@ -88,15 +89,28 @@ public class SeampactPlugin : Plugin<Project> {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
         sourceSets.named(MAIN_SOURCE_SET) { it.java.srcDir(generate) }
 
-        val springBootVersion = project.configurations.named(COMPILE_CLASSPATH)
-            .flatMap { it.incoming.resolutionResult.rootComponent }
-            .map { springBootVersionIn(it) ?: NO_SPRING_BOOT }
-            .filter { it != NO_SPRING_BOOT }
-        generate.configure { it.springBootVersion.set(springBootVersion) }
-        check.configure { it.springBootVersion.set(springBootVersion) }
+        // The properties files the target writes (`frameworkDocs: off`) go on the classpath; the sources do not.
+        project.tasks.named(PROCESS_RESOURCES_TASK, ProcessResources::class.java) { task ->
+            task.from(generate) { it.include(GENERATED_RESOURCES) }
+        }
+
+        val springBootVersion = compileClasspathVersion(project, ClasspathModule.SPRING_BOOT)
+        val springSecurityWebVersion = compileClasspathVersion(project, ClasspathModule.SPRING_SECURITY_WEB)
+        listOf(generate, check).forEach { task ->
+            task.configure {
+                it.springBootVersion.set(springBootVersion)
+                it.springSecurityWebVersion.set(springSecurityWebVersion)
+            }
+        }
 
         project.tasks.named(CHECK_LIFECYCLE_TASK) { it.dependsOn(check) }
     }
+
+    private fun compileClasspathVersion(project: Project, module: ClasspathModule): Provider<String> =
+        project.configurations.named(COMPILE_CLASSPATH)
+            .flatMap { it.incoming.resolutionResult.rootComponent }
+            .map { moduleVersionIn(it, module) ?: NO_MODULE }
+            .filter { it != NO_MODULE }
 
     // The pinned binary's artefact; nothing to resolve when the pin is the consumer's own build or is refused (the
     // task then reports why).
@@ -125,12 +139,14 @@ public class SeampactPlugin : Plugin<Project> {
         const val JAVA_PLUGIN = "java"
         const val MAIN_SOURCE_SET = "main"
         const val COMPILE_CLASSPATH = "compileClasspath"
+        const val PROCESS_RESOURCES_TASK = "processResources"
+        const val GENERATED_RESOURCES = "*.properties"
         const val CHECK_LIFECYCLE_TASK = "check"
         const val CACHE_DIRECTORY = "caches/seampact"
         const val BUNDLE_CACHE = "bundles"
         const val BINARY_CACHE = "binaries"
         const val MODULE_CACHE_DIRECTORY = "caches/modules-2"
         const val READ_ONLY_CACHE_VARIABLE = "GRADLE_RO_DEP_CACHE"
-        const val NO_SPRING_BOOT = ""
+        const val NO_MODULE = ""
     }
 }

@@ -18,7 +18,6 @@ public class SpringBootRefusedException(public val refusals: List<SpringBootRefu
 
 /** The delivery that brings a form this release refuses (ADR 0022 "Refused by name or waiting"). */
 internal enum class Delivery(val description: String) {
-    SPRING_4("it comes with spring-4, the security, multipart, download and native docs release of this target"),
     AFTER_1_0("no reference contract carries it, so it waits for a consumer after 1.0"),
     CONSUMER("it waits for an app that needs it"),
 }
