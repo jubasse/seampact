@@ -347,7 +347,7 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 | Fastify | 5 | zod, yup, Ajv |
 | AdonisJS | 6, 7 | zod, yup, VineJS |
 | Hono | 4 | zod, yup |
-| Spring Boot | 4 | Jakarta Bean Validation |
+| Spring Boot | 4 | generated checks, Jakarta constraints on the records |
 
 Clients: typed `fetch` client, and over it, for React 19, TanStack Query 5 options and hooks, SWR 2 keys, fetchers and hooks, or an RTK Query 2 api; for Vue 3, composables on TanStack Query 5 (`@tanstack/vue-query`) or on `fetch` alone. Angular: planned.
 
