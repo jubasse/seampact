@@ -36,6 +36,7 @@ JVM, groupId `io.github.jubasse`:
 |---|---|---|---|
 | `seampact-ir` | Kotlin | core | IR model, naming, app-config reader (the file or the plugin DSL, [A42](../decisions.md#a42)), bundle reader and verifier, binary runner |
 | `seampact-hooks` | Java | hooks | access hook interfaces and runtime types imported by generated Java, the three-state `Field<T>` (ADR 0003 section 5); no dependency; vendorable (ADR 0009) |
+| `seampact-runner` | Kotlin | core | the run both plugins share, free of any build-tool API: the pinned binary, the app layout, the generate and check runs and their problems |
 | `seampact-spring-boot` | Kotlin | target | the spring-boot generator, shared by both plugins |
 | `seampact-gradle-plugin` | Kotlin | target | plugin id `io.github.jubasse.seampact`; task `seampactGenerate`, wired before Java compilation, with the config, the bundle or source, the binary hash and the options declared as task inputs and the output directory as its output, so up-to-date checks and the build cache work; the `seampact { }` DSL takes the app-config keys |
 | `seampact-maven-plugin` | Kotlin | target | goal `generate`, bound to `generate-sources`, adds the output as a source root; `<configuration>` takes the app-config keys |
