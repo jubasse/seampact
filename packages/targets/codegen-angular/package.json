@@ -33,6 +33,7 @@
     "@angular/common": ">=22",
     "@angular/core": ">=22",
     "@ngrx/effects": ">=22",
+    "@ngrx/signals": ">=22",
     "@ngrx/store": ">=22",
     "rxjs": ">=7"
   },
@@ -44,6 +45,9 @@
       "optional": true
     },
     "@ngrx/effects": {
+      "optional": true
+    },
+    "@ngrx/signals": {
       "optional": true
     },
     "@ngrx/store": {
