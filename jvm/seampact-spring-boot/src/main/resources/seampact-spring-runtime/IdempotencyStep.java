@@ -6,8 +6,10 @@ import io.github.jubasse.seampact.hooks.IdempotencyStore;
 import io.github.jubasse.seampact.hooks.StoredResponse;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.MissingNode;
@@ -23,6 +25,7 @@ final class IdempotencyStep {
     private static final String IN_PROGRESS_ROLE = "idempotencyInProgress";
     private static final String KEY_REUSED_ROLE = "idempotencyKeyReused";
     private static final String CONTENT_TYPE = "content-type";
+    private static final String CONTENT_HEADER_PREFIX = "content-";
     private static final String REPLAYED = "true";
     private static final int CLIENT_ERROR_FLOOR = 400;
     private static final int SERVER_ERROR_FLOOR = 500;
@@ -79,7 +82,7 @@ final class IdempotencyStep {
         try {
             IdempotencyStore store = boundary.idempotencyStore();
             if (response.heldStatus() >= SERVER_ERROR_FLOOR) store.abandon(key);
-            else store.complete(key, new StoredResponse(response.heldStatus(), storedHeaders(response), body));
+            else store.complete(key, new StoredResponse(response.heldStatus(), storedHeaders(exchange.route(), response), body));
         } catch (RuntimeException failure) {
             SeampactBoundary.LOG.error("seampact: the idempotency store failed to record the reply of {}.{}; a retry with the same key may run"
                     + " again. Check the store's backend.", boundary.apiId(), exchange.route().id(), failure);
@@ -92,16 +95,32 @@ final class IdempotencyStep {
         return Digests.hexOf(List.of(boundary.mapper().valueToTree(exchange.principal)));
     }
 
-    private static List<StoredResponse.Header> storedHeaders(CheckingResponse response) {
+    // The contract reply only, as the Node targets store it: its content headers and the headers the operation declares
+    // for its status. Headers the framework set beside it (session cookies, CORS, security headers) belong to the
+    // request that ran and are never stored or replayed.
+    private static List<StoredResponse.Header> storedHeaders(ContractRoute route, CheckingResponse response) {
+        Set<String> declared = declaredHeaders(route, response.heldStatus());
         List<StoredResponse.Header> headers = new ArrayList<>();
         if (response.getContentType() != null) headers.add(new StoredResponse.Header(CONTENT_TYPE, response.getContentType()));
         for (String name : response.getHeaderNames()) {
             String lowerName = name.toLowerCase(Locale.ROOT);
             if (lowerName.equals(CONTENT_TYPE)) continue;
+            if (!lowerName.startsWith(CONTENT_HEADER_PREFIX) && !declared.contains(lowerName)) continue;
+
             for (String value : response.getHeaders(name)) headers.add(new StoredResponse.Header(lowerName, value));
         }
 
         return headers;
+    }
+
+    private static Set<String> declaredHeaders(ContractRoute route, int status) {
+        Set<String> declared = new HashSet<>();
+        for (JsonNode response : route.operation().path("responses")) {
+            if (response.path("status").asInt() != status) continue;
+            for (JsonNode header : response.path("headers")) declared.add(header.path("name").asString().toLowerCase(Locale.ROOT));
+        }
+
+        return declared;
     }
 
     // The stored reply as it went out; a stored success carries the replay header.

@@ -29,4 +29,14 @@ class DigestsTest {
         assertEquals("8418156b997e15c2cacd6ae3aa6e1a0bc3a66cfae86c8eca7147160fce9bc420", Digests.hexOf(List.of(value)));
         assertEquals("hBgVa5l-FcLKzWrjqm4aC8OmbProbI7KcUcWD86bxCA", Digests.base64UrlOf(List.of(value)));
     }
+
+    // `JSON.stringify` writes array-index member names (canonical integers below 2^32 - 1) first, in numeric order.
+    @Test
+    void canonicalTextWritesIndexLikeMemberNamesFirstAsJavaScript() {
+        JsonNode value = JsonMapper.builder().build().readTree(
+                "{\"b\":3,\"10\":1,\"9\":2,\"4294967295\":4,\"01\":5,\"4294967294\":6,\"-1\":7}");
+
+        assertEquals("{\"9\":2,\"10\":1,\"4294967294\":6,\"-1\":7,\"01\":5,\"4294967295\":4,\"b\":3}", Digests.canonical(value));
+        assertEquals("c7792be0e4e3e7cc71460895bde011d733bcbb0c495cbb3fd0540a551aff078b", Digests.hexOf(List.of(value)));
+    }
 }

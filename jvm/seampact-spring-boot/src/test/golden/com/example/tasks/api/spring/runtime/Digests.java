@@ -11,6 +11,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,9 @@ final class Digests {
     // `JSON.stringify` writes an exponent from 1e21 up and below 1e-6.
     private static final BigDecimal PLAIN_UPPER = new BigDecimal("1e21");
     private static final BigDecimal PLAIN_LOWER = new BigDecimal("1e-6");
+    // 2^32 - 1, the first integer that is not an array index in JavaScript, and its digit count.
+    private static final long NOT_AN_INDEX = 4_294_967_295L;
+    private static final int MAX_INDEX_DIGITS = 10;
 
     private Digests() {}
 
@@ -88,10 +92,12 @@ final class Digests {
         }
     }
 
-    // Members sorted by UTF-16 code units, as JavaScript's default sort compares them.
+    // Members sorted by UTF-16 code units, as JavaScript's default sort compares them; `JSON.stringify` then writes the
+    // array-index names first, in numeric order, as every JavaScript object orders its own keys.
     private static void writeObject(JsonNode value, StringBuilder text) {
         List<Map.Entry<String, JsonNode>> members = new ArrayList<>(value.properties());
         members.sort(Map.Entry.comparingByKey());
+        members.sort(Comparator.comparingLong(member -> arrayIndexOf(member.getKey())));
 
         text.append('{');
         for (int index = 0; index < members.size(); index++) {
@@ -101,6 +107,16 @@ final class Digests {
             writeValue(members.get(index).getValue(), text);
         }
         text.append('}');
+    }
+
+    // A canonical integer below 2^32 - 1 is an array index; any other name sorts after every index, in its given order.
+    private static long arrayIndexOf(String name) {
+        boolean canonical = !name.isEmpty() && name.length() <= MAX_INDEX_DIGITS && name.chars().allMatch(character -> character >= '0' && character <= '9')
+                && (name.length() == 1 || name.charAt(0) != '0');
+        if (!canonical) return NOT_AN_INDEX;
+
+        long index = Long.parseLong(name);
+        return index < NOT_AN_INDEX ? index : NOT_AN_INDEX;
     }
 
     private static void writeString(String value, StringBuilder text) {
