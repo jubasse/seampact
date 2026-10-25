@@ -36,6 +36,10 @@ internal object BinaryCache {
     private const val USER_PROFILE_VARIABLE = "USERPROFILE"
     private const val SYSTEM_SID = "S-1-5-18"
     private const val ADMINISTRATORS_SID = "S-1-5-32-544"
+    private const val PRIVATE_CACHE_FIX = "Keep the binary cache private to your user: owned by you, not a link, " +
+        "writable by no one else (`chmod 700` on POSIX), or remove the entry so the next build creates it private."
+    private const val OUTSIDE_PROFILE_FIX = "The cache is outside your profile (`%USERPROFILE%`), so it is checked up " +
+        "to its drive root: move it under your profile, such as `%LOCALAPPDATA%`, which Windows keeps private."
     private val OWNER_ONLY_DIRECTORY = PosixFilePermissions.fromString("rwx------")
     private val WELL_KNOWN_WRITER_SIDS = listOf(SYSTEM_SID, ADMINISTRATORS_SID)
     private val WINDOWS_WRITE_RIGHTS = setOf(
@@ -175,11 +179,6 @@ internal object BinaryCache {
     private fun supportsPosix(path: Path): Boolean = POSIX_VIEW in path.fileSystem.supportedFileAttributeViews()
 
     fun isWindows(): Boolean = System.getProperty("os.name").startsWith(WINDOWS_OS_PREFIX)
-
-    private const val PRIVATE_CACHE_FIX = "Keep the binary cache private to your user: owned by you, not a link, " +
-        "writable by no one else (`chmod 700` on POSIX), or remove the entry so the next build creates it private."
-    private const val OUTSIDE_PROFILE_FIX = "The cache is outside your profile (`%USERPROFILE%`), so it is checked up " +
-        "to its drive root: move it under your profile, such as `%LOCALAPPDATA%`, which Windows keeps private."
 
     private fun cacheUnsafe(entry: Path, reason: String, fix: String = PRIVATE_CACHE_FIX): BinaryFailure = BinaryFailure(
         code = BinaryFailureCode.CACHE_UNSAFE,
