@@ -1,21 +1,28 @@
 import { describe, expect, test } from "vitest";
 import { isKeptForReplay } from "../../node-server-runtime/replay-retention.js";
 
-function createdReply(cacheControl: string) {
+const CREATED = 201;
+const CONFLICT = 409;
+
+function replyWith(status: number, cacheControl: string) {
   return {
-    status: 201,
+    status,
     headers: [["Cache-Control", cacheControl]] as const,
     body: new Uint8Array(),
   };
 }
 
 describe("the replies an idempotency record keeps", () => {
-  test("a reply marked no-store is not kept for a replay", () => {
-    expect(isKeptForReplay(createdReply("private, No-Store"))).toBe(false);
+  test("an error reply marked no-store is not kept for a replay", () => {
+    expect(isKeptForReplay(replyWith(CONFLICT, "private, No-Store"))).toBe(false);
+  });
+
+  test("a success marked no-store is kept for a replay", () => {
+    expect(isKeptForReplay(replyWith(CREATED, "private, No-Store"))).toBe(true);
   });
 
   test("a reply without no-store is kept for a replay", () => {
-    expect(isKeptForReplay(createdReply("private"))).toBe(true);
+    expect(isKeptForReplay(replyWith(CREATED, "private"))).toBe(true);
   });
 
   test("a server error is not kept for a replay", () => {

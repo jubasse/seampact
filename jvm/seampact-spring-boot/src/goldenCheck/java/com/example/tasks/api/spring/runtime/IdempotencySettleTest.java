@@ -20,6 +20,7 @@ class IdempotencySettleTest {
     private static final String CREATE_TASK_PATH = "/v1/channels/c1/tasks";
     private static final String CLAIMED_KEY = "key-1";
     private static final int CREATED = 201;
+    private static final int CONFLICT = 409;
 
     private final RecordingStore store = new RecordingStore();
     private final SeampactBoundary boundary = boundaryWith(store);
@@ -31,9 +32,9 @@ class IdempotencySettleTest {
         return new SeampactBoundary(TasksContractTable.json(), new TasksSeampactBinding(), beans, new StandardEnvironment());
     }
 
-    private void settleCreatedReply(String cacheControl) {
+    private void settleReply(int status, String cacheControl) {
         CheckingResponse response = new CheckingResponse(new MockHttpServletResponse(), true);
-        response.setStatus(CREATED);
+        response.setStatus(status);
         response.setHeader("Cache-Control", cacheControl);
         BoundaryExchange exchange = new BoundaryExchange(boundary.table().match("POST", CREATE_TASK_PATH).orElseThrow(), CREATE_TASK_PATH, response);
         exchange.idempotencyKey = CLAIMED_KEY;
@@ -42,16 +43,24 @@ class IdempotencySettleTest {
     }
 
     @Test
-    void aReplyMarkedNoStoreIsNotKeptForAReplay() {
-        settleCreatedReply("private, No-Store");
+    void anErrorReplyMarkedNoStoreIsNotKeptForAReplay() {
+        settleReply(CONFLICT, "private, No-Store");
 
         assertEquals(List.of(), store.completed);
         assertEquals(List.of(CLAIMED_KEY), store.abandoned);
     }
 
     @Test
+    void aSuccessMarkedNoStoreIsKeptForAReplay() {
+        settleReply(CREATED, "private, No-Store");
+
+        assertEquals(List.of(CLAIMED_KEY), store.completed);
+        assertEquals(List.of(), store.abandoned);
+    }
+
+    @Test
     void aReplyWithoutNoStoreIsKeptForAReplay() {
-        settleCreatedReply("private");
+        settleReply(CREATED, "private");
 
         assertEquals(List.of(CLAIMED_KEY), store.completed);
     }
