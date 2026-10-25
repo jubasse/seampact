@@ -8,11 +8,18 @@ import {
   MAX_RENDERED_ISSUES,
   roleError,
 } from "./contract-error.js";
-import { type ContractRoute, decodeRequestParams, type StandardIssue } from "./contract-route.js";
+import {
+  type ContractRoute,
+  decodeRequestParams,
+  type PagingEntry,
+  type StandardIssue,
+} from "./contract-route.js";
+import { repeatedBeforeParam } from "./cursor-exclusion.js";
 
 const SCHEMA_INVALID_ROLE = "schemaInvalid";
 const FALLBACK_RULE = "invalid";
 const ENUM_RULE = "enum";
+const EXCLUSIVE_CURSORS_RULE = "not";
 
 // The validator input's parts, as an issue's `in` names them (ADR 0006 section 6).
 const ISSUE_PARTS = {
@@ -55,10 +62,32 @@ export async function validateRequest(state: CheckState): Promise<RequestValidat
   const candidate: RequestCandidate =
     route.input === undefined ? params : { ...params, body: request.body };
   const result = await route.validator["~standard"].validate(candidate);
+  const exclusiveIssues = bothCursorsIssues(route.paging, candidate.query);
 
-  if (result.issues === undefined) return { candidate, value: result.value, issues: [] };
+  if (result.issues === undefined && exclusiveIssues.length === 0) {
+    return { candidate, value: result.value, issues: [] };
+  }
 
-  return { candidate, issues: inputIssues(candidate, result.issues) };
+  return {
+    candidate,
+    issues: [
+      ...(result.issues === undefined ? [] : inputIssues(candidate, result.issues)),
+      ...exclusiveIssues,
+    ],
+  };
+}
+
+function bothCursorsIssues(
+  paging: PagingEntry | undefined,
+  query: Readonly<Record<string, unknown>>,
+): InputIssue[] {
+  const beforeParam = repeatedBeforeParam(paging, query);
+
+  if (beforeParam === undefined) return [];
+
+  return [
+    { in: ISSUE_PARTS.query, pointer: jsonPointer([beforeParam]), rule: EXCLUSIVE_CURSORS_RULE },
+  ];
 }
 
 /** The issues on one member of a part: at it, below it, or on a value that holds it. */
