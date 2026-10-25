@@ -42,6 +42,7 @@ final class InputStep {
         if (!issues.isEmpty()) throw schemaInvalid(exchange.route(), issues);
 
         PageReply.fillLimit(boundary.table(), exchange.route(), query);
+        InputFieldRights.apply(boundary, exchange, boundary.requestView(request, exchange), tree.path("body"));
         exchange.query = query;
         exchange.inputTree = tree;
         exchange.input = bind(boundary, exchange.route(), tree);

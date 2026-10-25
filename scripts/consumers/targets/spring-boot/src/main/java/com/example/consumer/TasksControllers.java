@@ -2,6 +2,8 @@ package com.example.consumer;
 
 import com.example.tasks.api.AppEndpoints;
 import com.example.tasks.api.ChannelsEndpoints;
+import com.example.tasks.api.CreateTaskInput;
+import com.example.tasks.api.CreateTaskResult;
 import com.example.tasks.api.DeleteDraftInput;
 import com.example.tasks.api.DeleteDraftResult;
 import com.example.tasks.api.DraftsEndpoints;
@@ -121,6 +123,14 @@ final class TasksControllers {
             return answers.answer(API, "getTask", 200, Task.class, GetTaskResult.Status200::new,
                             Map.<String, java.util.function.Supplier<GetTaskResult>>of("api.not_found", GetTaskErrors.ApiNotFound::new))
                     .orElseGet(() -> new GetTaskResult.Status200(SampleData.task(input.path().taskId())));
+        }
+
+        @Override
+        @com.example.tasks.api.spring.CreateTask
+        public CreateTaskResult createTask(CreateTaskInput input) {
+            Task created = SampleData.task(UUID.randomUUID());
+
+            return new CreateTaskResult.Status201(new Task(created.taskId(), input.body().title(), created.state(), created.effort(), created.version(), created.createdAt()));
         }
 
         @Override

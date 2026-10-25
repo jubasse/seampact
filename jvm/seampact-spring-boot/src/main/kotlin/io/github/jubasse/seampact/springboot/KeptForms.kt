@@ -1,6 +1,7 @@
 package io.github.jubasse.seampact.springboot
 
 import io.github.jubasse.seampact.ir.model.ArrayTypeUse
+import io.github.jubasse.seampact.ir.model.BucketId
 import io.github.jubasse.seampact.ir.model.ContractIR
 import io.github.jubasse.seampact.ir.model.CredentialIdentity
 import io.github.jubasse.seampact.ir.model.DerivedIdempotency
@@ -38,7 +39,9 @@ private val CHECKED_STRING_FORMATS = setOf("uuid", "date-time", "date", "decimal
 /** The derivation of the 304 an ETag answers: the boundary's, never the handler's. */
 internal const val ETAG_DERIVATION = "cache.etag"
 private const val OUTPUT_DIRECTION = "output"
+private val TOP_LEVEL_POINTER = Regex("^/[^/]+$")
 private const val PATH_SOURCE = "path"
+private val BUCKET_KEY_SOURCES = setOf(PATH_SOURCE, "scope", "principal")
 private val PAYLOAD_SHAPES = listOf(ResponseShape.ITEM, ResponseShape.TABLE, ResponseShape.LIST, ResponseShape.PAGE)
 
 /**
@@ -115,12 +118,25 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
         }
 
         operation.requires.forEachIndexed { index, requirement ->
-            if (requirement is RuleRequirement && requirement.bucket != null) {
-                refusals.waiting("throttle", "A throttle rule", at.below("requires", index), Delivery.SPRING_3)
-            }
+            if (requirement is RuleRequirement) requirement.bucket?.let { bucketId -> checkBucket(bucketId, at.below("requires", index, "bucket")) }
         }
 
         checkRuntimeForms(operation, at)
+    }
+
+    // A throttle rule's bucket: its key reads the request's path, a resolved scope or the principal.
+    private fun checkBucket(bucketId: BucketId, at: IrPlace) {
+        val bucket = ir.buckets[bucketId]
+        if (bucket == null) {
+            refusals.inconsistent("bucket.undeclared", "The bucket '$bucketId' is not declared", at)
+            return
+        }
+
+        bucket.key.forEachIndexed { index, source ->
+            if (source.in_.value !in BUCKET_KEY_SOURCES || source.name == null) {
+                refusals.waiting("bucket.key", "A bucket key read from '${source.in_.value}'", IrPlace.ROOT.below("buckets", bucketId, "key", index), Delivery.AFTER_1_0)
+            }
+        }
     }
 
     // Forms the boundary runtime does not run yet, refused by name as on the Node targets.
@@ -132,8 +148,8 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
         if (operation.features.isNotEmpty()) refusals.waiting("features", "An operation feature", at.below("features"), Delivery.AFTER_1_0)
 
         operation.fieldRights.forEachIndexed { index, fieldRight ->
-            if (fieldRight.direction.value != OUTPUT_DIRECTION) {
-                refusals.waiting("fieldRight.input", "A restricted input field", at.below("fieldRights", index), Delivery.SPRING_3)
+            if (fieldRight.direction.value != OUTPUT_DIRECTION && !TOP_LEVEL_POINTER.matches(fieldRight.pointer)) {
+                refusals.waiting("fieldRight.nestedPointer", "An input field right below the top level", at.below("fieldRights", index, "pointer"), Delivery.AFTER_1_0)
             }
         }
 

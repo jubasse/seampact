@@ -129,6 +129,15 @@ public final class ContractRoute {
         return OptionalInt.empty();
     }
 
+    /** The retry header the operation gives [code], a missing node when it gives none. */
+    JsonNode retryHeader(String code) {
+        for (JsonNode error : operation.path("errors")) {
+            if (code.equals(error.path("code").asString())) return error.path("retryHeader");
+        }
+
+        return MissingNode.getInstance();
+    }
+
     /** The params template the operation gives [code] under [role], a missing node when it gives none. */
     JsonNode roleParams(String code, String role) {
         for (JsonNode error : operation.path("errors")) {

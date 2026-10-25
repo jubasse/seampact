@@ -39,6 +39,8 @@ public final class SeampactBoundary {
     private static final String WARN = "warn";
     private static final String UNDECLARED_STATUS_ROLE = "undeclaredStatus";
     private static final int INTERNAL_ERROR = 500;
+    private static final String SECONDS_UNIT = "s";
+    private static final long MILLISECONDS_PER_SECOND = 1000;
     private static final String SERVLET_PATH_PROPERTY = "spring.mvc.servlet.path";
 
     private final ContractTable table;
@@ -225,11 +227,23 @@ public final class SeampactBoundary {
         response.setStatus(status);
         response.setContentType(ErrorReplies.media(table, route));
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        writeRetryHeader(response, route.retryHeader(code), params);
         try {
             response.getOutputStream().write(body);
         } catch (IOException failure) {
             throw new IllegalStateException("seampact: writing the error reply of '" + code + "' failed", failure);
         }
+    }
+
+    // The delay param of a 429 from a bucket rule, in integer milliseconds, written in the header's unit.
+    private static void writeRetryHeader(HttpServletResponse response, JsonNode retryHeader, JsonNode params) {
+        if (!retryHeader.isObject()) return;
+
+        JsonNode delayMs = params.path(retryHeader.path("param").asString());
+        if (!delayMs.isNumber()) return;
+
+        long value = SECONDS_UNIT.equals(retryHeader.path("unit").asString()) ? Math.ceilDiv(delayMs.asLong(), MILLISECONDS_PER_SECOND) : delayMs.asLong();
+        response.setHeader(retryHeader.path("name").asString(), String.valueOf(value));
     }
 
     /** Calls every `onUnexpectedError` bean, or logs the failure when the app registers none. */
