@@ -18,9 +18,16 @@ private val RUNTIME_CLASSES = listOf(
 /** The runtime class that builds Spring Data's `Pageable` and reads its `Page`, copied only for a `springPage` list. */
 internal const val SPRING_DATA_PAGES = "SpringDataPages"
 
-/** The boundary runtime's sources, moved into the api's runtime package; the Spring Data bridge only when it is used. */
-internal fun runtimeFiles(layout: JavaLayout): List<GeneratedFile> {
-    val classes = if (usesSpringPages(layout)) RUNTIME_CLASSES + SPRING_DATA_PAGES else RUNTIME_CLASSES
+/**
+ * The boundary runtime's sources, moved into the api's runtime package; the Spring Data bridge and the Spring Security
+ * refusals only when they are used.
+ */
+internal fun runtimeFiles(layout: JavaLayout, options: SpringBootOptions): List<GeneratedFile> {
+    val classes = RUNTIME_CLASSES +
+        listOfNotNull(
+            SPRING_DATA_PAGES.takeIf { usesSpringPages(layout) },
+            SECURITY_REFUSALS.takeIf { options.springSecurity != SpringSecurityMode.OFF },
+        )
 
     return classes.map { name -> runtimeFile(layout.runtimePackage, name) }
 }

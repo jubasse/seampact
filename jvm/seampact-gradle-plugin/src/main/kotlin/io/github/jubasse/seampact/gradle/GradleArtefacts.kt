@@ -65,11 +65,14 @@ internal fun resolvedSingleFile(files: FileCollection): Path = try {
 private fun failureText(failure: Throwable): String =
     generateSequence(failure) { it.cause }.mapNotNull { it.message }.distinct().joinToString(": ")
 
-private const val SPRING_BOOT_GROUP = "org.springframework.boot"
-private const val SPRING_BOOT_MODULE = "spring-boot"
+/** A module of the compile classpath the spring-boot target reads the version or presence of. */
+internal enum class ClasspathModule(val group: String, val module: String) {
+    SPRING_BOOT("org.springframework.boot", "spring-boot"),
+    SPRING_SECURITY_WEB("org.springframework.security", "spring-security-web"),
+}
 
-/** The version of `org.springframework.boot:spring-boot` in the resolved graph of [root], or null without one. */
-internal fun springBootVersionIn(root: ResolvedComponentResult): String? {
+/** The version of [module] in the resolved graph of [root], or null without one. */
+internal fun moduleVersionIn(root: ResolvedComponentResult, module: ClasspathModule): String? {
     val seen = mutableSetOf<ResolvedComponentResult>()
     val pending = ArrayDeque(listOf(root))
 
@@ -78,7 +81,7 @@ internal fun springBootVersionIn(root: ResolvedComponentResult): String? {
         if (!seen.add(component)) continue
 
         val id = component.id
-        if (id is ModuleComponentIdentifier && id.group == SPRING_BOOT_GROUP && id.module == SPRING_BOOT_MODULE) return id.version
+        if (id is ModuleComponentIdentifier && id.group == module.group && id.module == module.module) return id.version
 
         component.dependencies.filterIsInstance<ResolvedDependencyResult>().forEach { pending += it.selected }
     }

@@ -21,7 +21,7 @@ import java.nio.file.Path
 /**
  * What the `generate` and `check` goals read: the app config, from `seampact.config.yaml` or the app-config keys of
  * the plugin's `<configuration>` (A42, converted by [ConfigurationConverter]), the `<binary>` pin override,
- * `SEAMPACT_ALLOW_LOCAL` and the Spring Boot version of the project's dependencies. Bundles and the compiler binary
+ * `SEAMPACT_ALLOW_LOCAL`, and the Spring Boot and Spring Security versions of the project's dependencies. Bundles and the compiler binary
  * are resolved through Resolver with the project's repositories.
  */
 public abstract class SeampactMojo(private val repositorySystem: RepositorySystem) : AbstractMojo() {
@@ -90,7 +90,8 @@ public abstract class SeampactMojo(private val repositorySystem: RepositorySyste
             dslTree = dslTree,
             dslName = DSL_NAME,
             allowLocalVariable = System.getenv(LocalSourcePolicy.ALLOW_LOCAL_VARIABLE),
-            springBootVersion = springBootVersion(),
+            springBootVersion = artefactVersion(SPRING_BOOT_GROUP, SPRING_BOOT_ARTIFACT),
+            springSecurityWebVersion = artefactVersion(SPRING_SECURITY_GROUP, SPRING_SECURITY_WEB_ARTIFACT),
             binary = binarySettings,
             bundleCacheDirectory = seampactCache.resolve(BUNDLE_CACHE),
             binaryCacheDirectory = seampactCache.resolve(BINARY_CACHE),
@@ -131,8 +132,8 @@ public abstract class SeampactMojo(private val repositorySystem: RepositorySyste
         return { text -> if (EXPRESSION_START in text) evaluator.evaluate(text)?.toString() else text }
     }
 
-    private fun springBootVersion(): String? = project.artifacts
-        .firstOrNull { it.groupId == SPRING_BOOT_GROUP && it.artifactId == SPRING_BOOT_ARTIFACT }
+    private fun artefactVersion(groupId: String, artifactId: String): String? = project.artifacts
+        .firstOrNull { it.groupId == groupId && it.artifactId == artifactId }
         ?.baseVersion
 
     internal companion object {
@@ -145,6 +146,8 @@ public abstract class SeampactMojo(private val repositorySystem: RepositorySyste
         private const val BINARY_CACHE = "binaries"
         private const val SPRING_BOOT_GROUP = "org.springframework.boot"
         private const val SPRING_BOOT_ARTIFACT = "spring-boot"
+        private const val SPRING_SECURITY_GROUP = "org.springframework.security"
+        private const val SPRING_SECURITY_WEB_ARTIFACT = "spring-security-web"
 
         /** The Maven plugin as the run's problems and messages name it. */
         val MAVEN_BUILD_TOOL = BuildTool(

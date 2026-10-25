@@ -138,7 +138,7 @@ An exception that escapes `chain.doFilter`, on the `REQUEST` or the `ASYNC` disp
 
 Under `strict` a violation is replaced by the api's 500 when the response is not committed, and `onUnexpectedError` is called. A failure after the commit (a stream whose writer throws after its first bytes) cannot be replaced: it is logged, `onUnexpectedError` is called and the connection is closed. Under `warn` the reply goes out as written, and the violation is logged once.
 
-Until spring-4 brings streamed bodies, the wrapper holds every reply whole in memory, success included, and an error body is neither bounded by `MAX_CHECKED_ERROR_BODY_BYTES` nor decoded from `gzip` or `deflate`: such a body fails the check as not JSON.
+Until a consumer needs streamed bodies, the wrapper holds every reply whole in memory, success included, and an error body is neither bounded by `MAX_CHECKED_ERROR_BODY_BYTES` nor decoded from `gzip` or `deflate`: such a body fails the check as not JSON.
 
 The limits are those of ADR 0016: a writer that bypasses the response (the raw socket) is not seen. A reply that an app filter ordered before the boundary filter writes is not seen either; the boot check refuses such a filter only for `ShallowEtagHeaderFilter`, `FormContentFilter`, `HiddenHttpMethodFilter` and Spring Security's chain.
 
@@ -236,7 +236,7 @@ The boot check runs in a `SmartInitializingSingleton`, before the server starts 
 - a contract operation without a bound handler (no mapped method carries its composed annotation), or with two;
 - a mapping ordered before `RequestMappingHandlerMapping` that serves a contract method and path, which would take the route from the contract handler; a mapping that cannot list its routes is left to the run-time rule of "A reply the boundary did not author";
 - a mapping that no composed annotation registered and that `frameworkRoutes` does not allow-list (FR-25):
-  - springdoc's paths read from its own properties (`springdoc.api-docs.path`, `/v3/api-docs` and `/v3/api-docs.yaml` by default, and the UI's paths) are accepted while `frameworkDocs` is `keep` (ADR 0011 "Which OpenAPI documents exist");
+  - springdoc's paths read from its own properties (`springdoc.api-docs.path`, `/v3/api-docs` and `/v3/api-docs.yaml` by default, and the UI's paths) are accepted while `frameworkDocs` is `keep` (ADR 0011 "Which OpenAPI documents exist"); under `off` they are a problem whose fix names the generated properties file;
   - Boot's error path (`server.error.path`, `/error`) is accepted as the container's error target; a contract route reaches it only under `warn`, by a `sendError` the boundary let through;
 - a configured `mount` that differs from `server.servlet.context-path` followed by `spring.mvc.servlet.path`, both read from the environment; without a `mount` nothing is compared;
 - the boundary filter not ordered before Spring Security's chain, or a `ShallowEtagHeaderFilter`, `FormContentFilter` or `HiddenHttpMethodFilter` ordered before it;
@@ -249,9 +249,9 @@ The boot check runs in a `SmartInitializingSingleton`, before the server starts 
 
 With `springSecurity` on, the target generates Spring Security 7 beans in their own class, so an app without Spring Security never compiles against it. Without the key, the plugin sets `springSecurity` from the app's compile classpath (on when `spring-security-web` is there); the generator stays a pure function of the IR and the entry (ADR 0015 "Generate is pure"). `springSecurity: false` turns it off. The beans:
 
-- `TasksSecurityMatchers`: one `RequestMatcher` per access kind (public, optional, identity, signed), built from `PathPatternRequestMatcher.withDefaults().basePath(<servlet path>)` with each operation's method and template (ADR 0012 "Native security layers"). The base path is read from `spring.mvc.servlet.path`: without it, under a servlet path, no matcher matches, and a route the app protects with them is served unauthenticated (spike).
-- An `AuthenticationEntryPoint`, an `AccessDeniedHandler` and the CSRF refusal (a `CsrfException` in that handler, the `csrfInvalid` role). Each answers in the api's format with the role of the operation the request matches. The app wires them in its own chain (`exceptionHandling`, `httpBasic`, `oauth2ResourceServer`); the README shows it.
-- Opt-in, with `springSecurity: { matchers: true }` (A42): a `Customizer<HttpSecurity>` bean. Spring Security 7 applies it to every `HttpSecurity` before the app's own rules (spike). It permits the public and optional-auth routes, and keeps the optional-auth routes with `onRefused: anonymous` out of the resource server's bearer filter through a `BearerTokenResolver` that returns no token on them.
+- `TasksSecurityMatchers`: one `RequestMatcher` per access kind (public, optional, identity, signed), plus the optional-auth routes with `onRefused: anonymous` (ADR 0012 "Native security layers"). Each matches by the operation the boundary filter matched for the request, read with `SeampactBoundary.operationIdOf`, so the matchers agree with the boundary's most-specific match: a public template `/v1/things/{id}` never covers its identity literal sibling `/v1/things/mine`, and the servlet path, decoding, dot segments and `HEAD` are the boundary's. Per-route path patterns would match both siblings, and a `permitAll` on the template would serve the literal with no authentication. The boot check keeps the boundary filter ordered before Spring Security's chain, which these matchers need.
+- `SecurityRefusals`, one bean that is the `AuthenticationEntryPoint` and the `AccessDeniedHandler`, the CSRF refusal included (a `CsrfException` in that handler, the `csrfInvalid` role). It answers in the api's format with the role of the operation the request matches, and a role the operation does not declare is the api's 500, as in the exception resolver. Outside the api's routes it answers as Spring Security's defaults, with `sendError`. The app wires it in its own chain (`exceptionHandling`, `httpBasic`, `oauth2ResourceServer`); the guide shows it. The configuration class `TasksSecurityConfiguration` holds the beans and is imported by the api's boundary configuration.
+- Opt-in, with `springSecurity: { matchers: true }` (A42): a `Customizer<HttpSecurity>` bean. Spring Security 7 applies it to every `HttpSecurity` before the app's own rules (spike). It permits the public, optional-auth and signed routes: a signed call carries no credential Spring Security knows, and the boundary checks its signature. It is ordered `Ordered.HIGHEST_PRECEDENCE`, since Spring Security 7 leaves the order among `Customizer<HttpSecurity>` beans undefined without `@Order`, so it also runs before the app's own customizers. It adds `authorizeHttpRequests` to every chain, so a chain that had no authorization rules denies the requests none of its rules matches; the guide says so. A `BearerTokenResolver` would tie the security class to the resource server module, so none is generated: the app's resolver returns no token on the `onRefused: anonymous` matcher, which keeps those routes out of the bearer filter; the guide shows it.
 
 Spring Security answers the hooks as application code, with no adapter package in 1.0 (ADR 0012 "Optional adapters"). The interceptor runs after the filter chain, so an authenticate hook reads the `Authentication` from `SecurityContextHolder`, and a decider delegates to the app's `AuthorizationManager` or `PermissionEvaluator` bean; the README shows both. On an optional-auth route with `onRefused: anonymous`, the app either excludes the route from the bearer filter with the matchers above or verifies the token inside its authenticate hook.
 
@@ -277,7 +277,7 @@ The target imposes no wire shape (A36). Each feature that adds behaviour beyond 
 | the base-path 404 of unserved paths | on | `catchAll: false` |
 | the Spring Security beans | from the classpath | `springSecurity: false` |
 | permitting public and optional routes in Spring Security | off | `springSecurity: { matchers: true }` |
-| springdoc annotations on contract routes | off | `artefacts.nativeDocs: true` |
+| springdoc annotations on contract routes (`@Operation` with the id, docs and successes; the `input` parameter hidden) | off | `artefacts.nativeDocs: true` |
 | springdoc's own document | kept | `frameworkDocs: off`, written as `springdoc.api-docs.enabled=false` in a generated `seampact-<api>.properties` on the resources root the plugins add, which the app loads with `spring.config.import` |
 | access hooks | on | `artefacts.accessHooks: false` with `access.native` |
 | the boot check | on | `artefacts.bootCheck`, or `{ handlers, frameworkRoutes }` |
@@ -307,7 +307,7 @@ The boundary runtime is copied into `spring.runtime` with the generated header, 
 
 | Waits for | What |
 |---|---|
-| spring-4 | form, multipart, download and redirect bodies (ADR 0012 bodies table, a multipart body counted on the raw stream as it arrives); `nativeDocs`; `frameworkDocs: off`; the Spring Security beans and customizer |
+| a consumer that needs them | form, multipart, download and redirect bodies (ADR 0012 bodies table, a multipart body counted on the raw stream as it arrives), refused by name as on every Node target: the reference contract carries none |
 | after 1.0 | Spring Boot 3.x (refused, not waiting); WebFlux; servlet containers other than Tomcat, which Boot 4 also supports (Jetty) but no consumer proves; asynchronous handler signatures; `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs |
 
 ### The consumer and the proof
@@ -326,7 +326,7 @@ The proof is:
 
 - the `node`-absent step;
 - a green suite row per build tool and JDK;
-- the consumer's JUnit `GeneratedRedactionTest` (one record of each kind of "Redaction" holding a known secret, which must be absent while `[redacted]` is present) and `SecurityRefusalsTest` (Spring Security's 401, 403 and CSRF refusal in the api's format, and an optional-auth route reachable with an invalid token);
+- the consumer's JUnit `GeneratedRedactionTest` (one record of each kind of "Redaction" holding a known secret, which must be absent while `[redacted]` is present) and `SecurityRefusalsTest` (Spring Security's 401, 403 and CSRF refusal in the api's format, and a public route the customizer lets through a chain that requires authentication; the reference contract declares no optional-auth operation and no public template beside a literal route, so the generator's golden checks run the matchers in a Spring Security chain on routes of every access kind, and springdoc on the `nativeDocs` and `frameworkDocs: off` output);
 - the plugins lane's `identical-files` diff of both plugins' output.
 
 Suite cases that wait for a later PR carry a refusal naming that PR; the list is empty at spring-4.
@@ -340,7 +340,7 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 | spring-1 | the generator in `jvm/seampact-spring-boot` (Kotlin, Palantir JavaPoet pinned): `SpringBootTarget.generate(ir, entry)`, the options, types, records with redacted `toString()`, interfaces, composed annotations, results and exceptions; `SpringBootOptionsTest` and `SpringBootGoldenTest`, whose golden is compiled by `javac` on 21 and 25 against Spring Boot 4, and whose redaction case checks the `toString()` of one golden record of each kind of "Redaction" |
 | spring-2 | the filter, interceptor, argument resolver, reply handler, exception resolver, outgoing check, hook beans and boot check; the sample app; the suite CLI; the Gradle rows of the workflow, on the core-path operations |
 | spring-3 | paging, idempotency replay, throttle, cache and ETag headers, concurrency, rule proofs, restricted input fields, signed routes, absolute URLs, the `pack:spring` profile, `GeneratedRedactionTest`, the boot check rules of mappings, mount and container, the ECMA-262 pattern search; the entries' filter dropped |
-| spring-4 | the Spring Security beans and customizer, form, multipart, download and redirect bodies, `nativeDocs`, `frameworkDocs: off`, `SecurityRefusalsTest` |
+| spring-4 | the Spring Security beans and customizer, `nativeDocs`, `frameworkDocs: off` through both plugins, the `springSecurity` default read from the compile classpath, `SecurityRefusalsTest`; form, multipart, download and redirect bodies stay refused by name until a consumer needs them |
 
 ## Spike
 

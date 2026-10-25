@@ -8,14 +8,14 @@ targets:
   - id: tasks
     use: io.github.jubasse:seampact-spring-boot
     api: tasks
-    options: { package: com.example.tasks.api }
+    options: { package: com.example.tasks.api, springSecurity: { matchers: true } }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
       - { method: GET, path: /v1/unlisted, reason: "The boot variant's framework route outside the contract." }
   - id: tasksService
     use: io.github.jubasse:seampact-spring-boot
     api: tasksService
-    options: { package: com.example.tasksservice.api }
+    options: { package: com.example.tasksservice.api, springSecurity: false }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
       - { method: GET, path: /v1/unlisted, reason: "The boot variant's framework route outside the contract." }

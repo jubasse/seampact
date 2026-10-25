@@ -27,14 +27,14 @@ internal class SampleApp(val directory: Path) {
         writeBuildScript("")
     }
 
-    /** Writes the build file, with [seampactBlock] after the plugin's setup. */
-    fun writeBuildScript(seampactBlock: String) {
+    /** Writes the build file, with [seampactBlock] after the plugin's setup and [extraDependencies] in `dependencies`. */
+    fun writeBuildScript(seampactBlock: String, extraDependencies: String = "") {
         val classpath = System.getProperty("seampact.sampleAppClasspath").split(java.io.File.pathSeparator)
             .joinToString(", ") { "\"${it.replace("\\", "/")}\"" }
-        write("build.gradle.kts", buildScript(classpath, seampactBlock))
+        write("build.gradle.kts", buildScript(classpath, seampactBlock, extraDependencies))
     }
 
-    private fun buildScript(classpath: String, seampactBlock: String): String =
+    private fun buildScript(classpath: String, seampactBlock: String, extraDependencies: String): String =
         """
         plugins {
             java
@@ -48,6 +48,7 @@ internal class SampleApp(val directory: Path) {
             implementation("org.springframework.boot:spring-boot-starter-webmvc")
             implementation("org.springframework.boot:spring-boot-starter-validation")
             implementation(files($classpath))
+            $extraDependencies
         }
 
         $seampactBlock

@@ -35,7 +35,7 @@ import io.github.jubasse.seampact.ir.model.UnknownKeysPolicy
 import io.github.jubasse.seampact.ir.model.ValueSchemeKey
 
 private const val JSON_MEDIA = "application/json"
-private val SPRING_4_MEDIA = listOf("application/x-www-form-urlencoded", "multipart/form-data")
+private val CONSUMER_BODY_MEDIA = listOf("application/x-www-form-urlencoded", "multipart/form-data")
 private const val INT64_FORMAT = "int64"
 /** The string formats the boundary runtime's structural pass checks. */
 private val CHECKED_STRING_FORMATS = setOf("uuid", "date-time", "date", "decimal")
@@ -86,7 +86,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
 
         operation.input?.let { input ->
             if (input.media.value != JSON_MEDIA) {
-                val delivery = if (input.media.value in SPRING_4_MEDIA) Delivery.SPRING_4 else Delivery.AFTER_1_0
+                val delivery = if (input.media.value in CONSUMER_BODY_MEDIA) Delivery.CONSUMER else Delivery.AFTER_1_0
                 refusals.waiting("input.media", "A '${input.media.value}' body", at.below("input", "media"), delivery)
             }
             if (!input.proofs.isNullOrEmpty() && input.schema !is RefTypeUse) {
@@ -174,7 +174,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
                 refusals.inconsistent("paging.style.missing", "A 'page' response has no paging style", responseAt.below("shape"))
             }
             ResponseShape.BINARY, ResponseShape.REDIRECT ->
-                refusals.waiting("response.shape", "A '${response.shape.value}' response", responseAt.below("shape"), Delivery.SPRING_4)
+                refusals.waiting("response.shape", "A '${response.shape.value}' response", responseAt.below("shape"), Delivery.CONSUMER)
             is ResponseShape.Unknown -> refusals.unknownValue(responseAt.below("shape"), response.shape.value)
         }
 
@@ -273,7 +273,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
                 refusals.inconsistent("enum.undeclared", "The enum '${type.enum}' is not declared", at)
             }
             is ScalarTypeUse -> readScalar(type, at)
-            is FileTypeUse -> refusals.waiting("type.file", "A file value", at, Delivery.SPRING_4)
+            is FileTypeUse -> refusals.waiting("type.file", "A file value", at, Delivery.CONSUMER)
             is OpaqueTypeUse -> Unit
             is TypeUse.Unknown -> refusals.unknownValue(at.below("kind"), type.kind)
         }

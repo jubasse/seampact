@@ -1,10 +1,15 @@
 package io.github.jubasse.seampact.springboot
 
+import io.github.jubasse.seampact.ir.model.Access
 import io.github.jubasse.seampact.ir.model.ArrayTypeUse
 import io.github.jubasse.seampact.ir.model.ContractIR
 import io.github.jubasse.seampact.ir.model.CredentialIdentity
 import io.github.jubasse.seampact.ir.model.IdentityAccess
 import io.github.jubasse.seampact.ir.model.ObjectSchema
+import io.github.jubasse.seampact.ir.model.Operation
+import io.github.jubasse.seampact.ir.model.OptionalAccess
+import io.github.jubasse.seampact.ir.model.PublicAccess
+import io.github.jubasse.seampact.ir.model.RefusedCredential
 import io.github.jubasse.seampact.ir.model.Refinements
 import io.github.jubasse.seampact.ir.model.ScalarType
 import io.github.jubasse.seampact.ir.model.ScalarTypeUse
@@ -27,17 +32,22 @@ import kotlinx.serialization.json.JsonPrimitive
 
 // The reference contract's apis generated with the core-path operations every spring-boot release serves (ADR 0022
 // "The consumer and the proof"), compared byte for byte with the committed tree, which `goldenTest` then compiles
-// against Spring Boot 4. `-PupdateGolden` rewrites the tree instead.
+// against Spring Boot 4. `-PupdateGolden` rewrites the tree instead. The main tree keeps every default, as both build
+// plugins write it; the opt-ins tree holds the tasksService api, in a package of its own, with every opt-in of spring-4.
+private const val TASKS_SERVICE_IR = "tasksService.ir.json"
+private const val OPT_INS_PACKAGE = "com.example.optins.api"
+
 class SpringBootGoldenTest {
     private val repositoryRoot: Path = Path.of(System.getProperty("seampact.repositoryRoot"))
     private val goldenDirectory: Path = Path.of(System.getProperty("seampact.goldenDirectory"))
+    private val optInsGoldenDirectory: Path = Path.of(System.getProperty("seampact.optInsGoldenDirectory"))
     private val updateGolden: Boolean = System.getProperty("seampact.updateGolden").toBoolean()
 
     private class GoldenApi(val irFile: String, val packageName: String, val operations: Set<String>)
 
     private val apis = listOf(
         GoldenApi("tasks.ir.json", "com.example.tasks.api", setOf("health", "getChannel", "getDraft", "deleteDraft", "getPreferences", "updatePreferences", "getTask", "createTask", "updateTask", "assignTask", "archiveTask", "purgeTask", "getTasksBatch", "listChannels", "listTasks", "searchTasks", "payments")),
-        GoldenApi("tasksService.ir.json", "com.example.tasksservice.api", setOf("getTask")),
+        GoldenApi(TASKS_SERVICE_IR, "com.example.tasksservice.api", setOf("getTask")),
     )
 
     private fun referenceIr(file: String): ContractIR {
@@ -56,30 +66,78 @@ class SpringBootGoldenTest {
     private fun entry(packageName: String): SpringBootEntry =
         SpringBootEntry(id = "server", options = JsonObject(mapOf("package" to JsonPrimitive(packageName))), springBootVersion = "4.1.1")
 
+    // The Spring Security beans with the customizer, springdoc's annotations and `frameworkDocs: off`.
+    private fun optInsEntry(packageName: String): SpringBootEntry {
+        val entry = entry(packageName)
+        val matchers = JsonObject(mapOf("matchers" to JsonPrimitive(true)))
+
+        return entry.copy(
+            options = JsonObject(entry.options + ("springSecurity" to matchers)),
+            artefacts = JsonObject(mapOf("nativeDocs" to JsonPrimitive(true))),
+            frameworkDocs = "off",
+        )
+    }
+
     private fun generatedTree(): Map<String, String> = apis
         .flatMap { api -> SpringBootTarget.generate(coreView(api), entry(api.packageName)) }
         .associate { it.path to it.contents }
 
-    private fun committedTree(): Map<String, String> {
-        if (!Files.isDirectory(goldenDirectory)) return emptyMap()
+    private fun optInsTree(): Map<String, String> {
+        val api = apis.single { it.irFile == TASKS_SERVICE_IR }
 
-        return Files.walk(goldenDirectory).use { paths ->
+        return SpringBootTarget.generate(withEveryAccessKind(coreView(api)), optInsEntry(OPT_INS_PACKAGE)).associate { it.path to it.contents }
+    }
+
+    // Copies of getTask under each access kind the Spring Security matchers group: a public template whose `{area}`
+    // also covers getTask's literal `channels` segment, an optional-auth route that calls anonymously on a refused
+    // credential, and a route a signed identity calls.
+    private fun withEveryAccessKind(ir: ContractIR): ContractIR {
+        val getTask = ir.operations.single { it.id == "getTask" }
+        val origin = (getTask.access as IdentityAccess).origin
+        val areaParam = getTask.params.path.first().copy(name = "area")
+
+        val browseTask = getTask.variant("browse", "/internal/v1/{area}/{channelId}/tasks/{taskId}", PublicAccess(reason = "Shared links open it.", origin = origin))
+            .let { it.copy(params = it.params.copy(path = listOf(areaParam) + it.params.path)) }
+        val peekTask = getTask.variant(
+            "peek",
+            "/internal/v1/channels/{channelId}/peeks/{taskId}",
+            OptionalAccess(identity = "service", schemes = listOf("internalToken"), reason = "Previews open it.", onRefused = RefusedCredential.ANONYMOUS, origin = origin),
+        )
+        val signTask = getTask.variant("sign", "/internal/v1/channels/{channelId}/signed/{taskId}", IdentityAccess(identity = "stripe", schemes = listOf("stripeSignature"), origin = origin))
+
+        return ir.copy(operations = ir.operations + listOf(browseTask, peekTask, signTask))
+    }
+
+    private fun Operation.variant(verb: String, path: String, access: Access): Operation =
+        copy(id = "${verb}Task", name = name.copy(segments = listOf(verb, "task")), path = path, access = access)
+
+    private fun committedTree(directory: Path): Map<String, String> {
+        if (!Files.isDirectory(directory)) return emptyMap()
+
+        return Files.walk(directory).use { paths ->
             paths.filter { it.isRegularFile() }
                 .toList()
-                .associate { it.relativeTo(goldenDirectory).joinToString("/") to it.readText() }
+                .associate { it.relativeTo(directory).joinToString("/") to it.readText() }
         }
     }
 
     @Test
     fun generatesTheGoldenTree() {
-        val generated = generatedTree()
+        compareWithGolden(generatedTree(), goldenDirectory)
+    }
 
+    @Test
+    fun generatesTheOptInsGoldenTree() {
+        compareWithGolden(optInsTree(), optInsGoldenDirectory)
+    }
+
+    private fun compareWithGolden(generated: Map<String, String>, directory: Path) {
         if (updateGolden) {
-            rewriteGolden(generated)
+            rewriteGolden(generated, directory)
             return
         }
 
-        val committed = committedTree()
+        val committed = committedTree(directory)
         assertEquals(committed.keys.sorted(), generated.keys.sorted(), "The golden file list differs; run with -PupdateGolden and review the diff.")
         for ((path, contents) in generated) {
             assertEquals(committed[path], contents, "The golden file $path differs; run with -PupdateGolden and review the diff.")
@@ -89,6 +147,7 @@ class SpringBootGoldenTest {
     @Test
     fun generatesTheSameTreeTwice() {
         assertEquals(generatedTree(), generatedTree())
+        assertEquals(optInsTree(), optInsTree())
     }
 
     @Test
@@ -216,11 +275,11 @@ class SpringBootGoldenTest {
         assertTrue(refusalsOf(ownerless).any { it.code == "endpoints.owner.no-segment" && it.operation == "health" })
     }
 
-    private fun rewriteGolden(generated: Map<String, String>) {
-        for (stale in committedTree().keys - generated.keys) goldenDirectory.resolve(stale).deleteExisting()
+    private fun rewriteGolden(generated: Map<String, String>, directory: Path) {
+        for (stale in committedTree(directory).keys - generated.keys) directory.resolve(stale).deleteExisting()
 
         for ((path, contents) in generated) {
-            val file = goldenDirectory.resolve(path)
+            val file = directory.resolve(path)
             file.parent.createDirectories()
             file.writeText(contents)
         }

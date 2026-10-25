@@ -28,6 +28,7 @@ private const val EXEMPT_IDEMPOTENCY = "exempt"
 
 // The one derived header param that is part of the request: it selects the body variant of a header-tagged union.
 private const val UNION_TAG_DERIVATION = "union.headerTag"
+private const val FRAMEWORK_DOCS_KEEP = "keep"
 private const val HOOKS_OFF = "off"
 
 /**
@@ -86,6 +87,7 @@ private fun settings(options: SpringBootOptions, entry: SpringBootEntry, operati
         put("bodyValidation", options.bodyValidation)
         put("frameworkEtag", options.frameworkEtag.wire)
         put("catchAll", options.catchAll)
+        put("frameworkDocs", entry.frameworkDocs ?: FRAMEWORK_DOCS_KEEP)
         put("frameworkRoutes", JsonArray(entry.frameworkRoutes.map { it.toJson() }))
         put(
             BOOT_CHECK,

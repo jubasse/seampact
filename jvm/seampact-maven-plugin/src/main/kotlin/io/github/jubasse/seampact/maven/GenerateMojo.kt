@@ -3,6 +3,7 @@ package io.github.jubasse.seampact.maven
 import io.github.jubasse.seampact.runner.GenerateOutcome
 import io.github.jubasse.seampact.runner.RunSettings
 import io.github.jubasse.seampact.runner.generate
+import org.apache.maven.model.Resource
 import org.apache.maven.plugins.annotations.LifecyclePhase
 import org.apache.maven.plugins.annotations.Mojo
 import org.apache.maven.plugins.annotations.ResolutionScope
@@ -13,8 +14,9 @@ import javax.inject.Inject
 
 /**
  * The `generate` goal, bound to `generate-sources`: generates each JVM target entry of the app config into its
- * output root (ADR 0015 "Writing files") and adds the roots to the project's compile sources. Every entry is planned
- * first; one refusal writes nothing. The goal skips when the stamp of its inputs and outputs is unchanged.
+ * output root (ADR 0015 "Writing files"), adds the roots to the project's compile sources and their properties files
+ * to its resources. Every entry is planned first; one refusal writes nothing. The goal skips when the stamp of its
+ * inputs and outputs is unchanged.
  */
 @Mojo(name = "generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES, threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem) : SeampactMojo(repositorySystem) {
@@ -35,11 +37,20 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
             stamp.record(inputsHash, roots)
         }
 
-        roots.forEach { project.addCompileSourceRoot(it.toString()) }
+        roots.forEach { root ->
+            project.addCompileSourceRoot(root.toString())
+            project.addResource(generatedResources(root))
+        }
+    }
+
+    // The properties files the target writes (`frameworkDocs: off`) go on the classpath; the sources do not.
+    private fun generatedResources(root: Path): Resource = Resource().apply {
+        directory = root.toString()
+        addInclude(GENERATED_RESOURCES)
     }
 
     // Every input of a run: the app config as the POM or the file writes it, the `path` source trees, the binary pin,
-    // SEAMPACT_ALLOW_LOCAL, the Spring Boot version, where each `maven` bundle is served from, and the plugin's code.
+    // SEAMPACT_ALLOW_LOCAL, the Spring Boot and Spring Security versions, where each `maven` bundle is served from, and the plugin's code.
     private fun inputsHash(settings: RunSettings, pathSources: List<Path>, bundleOrigins: List<String>): String {
         val inputs = GenerateStamp.Inputs()
         inputs.code("code", pluginCodeArtefacts())
@@ -52,6 +63,7 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
         inputs.text("binarySha256", settings.binary.sha256)
         inputs.text("allowLocal", settings.allowLocalVariable)
         inputs.text("springBoot", settings.springBootVersion)
+        inputs.text("springSecurityWeb", settings.springSecurityWebVersion)
         inputs.text("bundleOrigins", bundleOrigins.joinToString(","))
 
         return inputs.hash()
@@ -59,5 +71,6 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
 
     private companion object {
         const val STAMP_FILE = "seampact/generate.stamp"
+        const val GENERATED_RESOURCES = "*.properties"
     }
 }

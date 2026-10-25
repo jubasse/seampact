@@ -3,6 +3,7 @@ package io.github.jubasse.seampact.springboot
 import com.palantir.javapoet.AnnotationSpec
 import com.palantir.javapoet.ClassName
 import com.palantir.javapoet.MethodSpec
+import com.palantir.javapoet.ParameterSpec
 import com.palantir.javapoet.TypeSpec
 import io.github.jubasse.seampact.ir.model.HttpMethod
 import io.github.jubasse.seampact.ir.model.Operation
@@ -24,18 +25,24 @@ private const val PATTERN_WILDCARD = '*'
  * The endpoints interface of each resource (ADR 0007 `handlers: perResource`): one synchronous method per operation,
  * taking its input record, returning its result and declaring the exception of every code it lists.
  */
-internal fun endpointsTypes(layout: JavaLayout): List<TypeSpec> {
+internal fun endpointsTypes(layout: JavaLayout, nativeDocs: NativeDocs, operationTypes: OperationTypes, refusals: Refusals): List<TypeSpec> {
     val methods = LinkedHashMap<ClassName, MutableList<MethodSpec>>()
 
-    for ((_, operation) in layout.kept.operations) {
+    for ((index, operation) in layout.kept.operations) {
         val names = layout.operation(operation.id)
+        val input = ParameterSpec.builder(names.input, "input")
         val method = MethodSpec.methodBuilder(names.method)
             .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
             .returns(names.result)
-            .addParameter(names.input, "input")
             .addExceptions(operation.errors.map { it.code }.distinct().mapNotNull { layout.errorClass(it) })
-            .build()
-        methods.getOrPut(names.endpoints) { mutableListOf() } += method
+
+        if (nativeDocs == NativeDocs.SPRINGDOC) {
+            val at = IrPlace.ofOperation(index, operation.id)
+            method.addAnnotation(springdocOperation(operation, at, { response -> operationTypes.responseBody(operation, response) }, refusals))
+            input.addAnnotation(springdocHiddenInput())
+        }
+
+        methods.getOrPut(names.endpoints) { mutableListOf() } += method.addParameter(input.build()).build()
     }
 
     return methods.map { (className, members) ->

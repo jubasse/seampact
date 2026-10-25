@@ -74,6 +74,14 @@ public final class SeampactBoundary {
     }
 
     /**
+     * The id of the operation the boundary filter matched for the request, its most specific route; empty outside the
+     * api's routes. The generated Spring Security matchers read it, so they agree with the boundary on every route.
+     */
+    public Optional<String> operationIdOf(HttpServletRequest request) {
+        return exchangeOf(request).map(exchange -> exchange.route().id());
+    }
+
+    /**
      * Writes [exception], a generated contract exception, as the api's reply on a contract route: for an app's own
      * `@ExceptionHandler` or advice that answers a contract error itself.
      */
@@ -200,6 +208,20 @@ public final class SeampactBoundary {
 
         writeError(exchange.response, route, refusal.code(), refusal.params());
         exchange.markBoundaryWrote();
+    }
+
+    /**
+     * Writes the operation's code for a Spring Security refusal's [role]; a role the operation does not declare is the
+     * api's 500, since the refusal has no contract reply.
+     */
+    void writeRoleRefusal(BoundaryExchange exchange, String role, Throwable cause) {
+        Optional<String> code = exchange.route().codeOfRole(role);
+        if (code.isEmpty()) {
+            writeUnexpected(exchange, "Spring Security refused with a role the operation does not declare (" + role + ")", cause);
+            return;
+        }
+
+        writeRefusal(exchange, new ContractRefusal(code.get(), MissingNode.getInstance()));
     }
 
     /**

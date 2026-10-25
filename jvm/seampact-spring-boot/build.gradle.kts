@@ -25,6 +25,9 @@ val repositoryRoot = rootProject.projectDir.parentFile
 
 val goldenDirectory = layout.projectDirectory.dir("src/test/golden")
 
+// The golden tree of the opt-ins every default leaves off: Spring Security, springdoc, `frameworkDocs: off`.
+val optInsGoldenDirectory = layout.projectDirectory.dir("src/test/golden-opt-ins")
+
 dependencies {
     api(project(":seampact-ir"))
     implementation(libs.javapoet)
@@ -65,9 +68,11 @@ tasks.test {
     useJUnitPlatform()
     systemProperty("seampact.repositoryRoot", repositoryRoot.absolutePath)
     systemProperty("seampact.goldenDirectory", goldenDirectory.asFile.absolutePath)
+    systemProperty("seampact.optInsGoldenDirectory", optInsGoldenDirectory.asFile.absolutePath)
     systemProperty("seampact.updateGolden", updateGolden.toString())
     inputs.dir(repositoryRoot.resolve("fixtures/golden/reference"))
     inputs.dir(goldenDirectory)
+    inputs.dir(optInsGoldenDirectory)
     onTestJdk()
 }
 
@@ -75,13 +80,20 @@ tasks.test {
 // the checks that run the compiled tree: its records' redaction and the boundary runtime on mock requests.
 val golden: SourceSet = sourceSets.create("golden") {
     java.srcDir(goldenDirectory)
+    java.srcDir(optInsGoldenDirectory)
     java.srcDir("src/goldenCheck/java")
+    // The opt-ins tree's `frameworkDocs: off` file, which a golden check hands to springdoc.
+    resources.srcDir(optInsGoldenDirectory)
+    resources.include("*.properties")
 }
 
 dependencies {
     "goldenImplementation"(platform(libs.spring.boot.dependencies))
     "goldenImplementation"(libs.spring.boot.starter.webmvc)
     "goldenImplementation"(libs.spring.boot.starter.validation)
+    "goldenImplementation"(libs.spring.boot.starter.security)
+    "goldenImplementation"(libs.swagger.annotations.jakarta)
+    "goldenImplementation"(libs.springdoc.webmvc.api)
     "goldenImplementation"(project(":seampact-hooks"))
     "goldenImplementation"(libs.spring.test)
     "goldenImplementation"(platform(libs.junit.bom))

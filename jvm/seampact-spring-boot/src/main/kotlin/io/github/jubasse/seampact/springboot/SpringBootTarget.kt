@@ -5,6 +5,9 @@ import com.palantir.javapoet.TypeSpec
 import io.github.jubasse.seampact.ir.model.ContractIR
 import io.github.jubasse.seampact.ir.read.IrSupport
 
+private const val FRAMEWORK_DOCS_OFF = "off"
+private const val SPRINGDOC_API_DOCS_ENABLED = "springdoc.api-docs.enabled"
+
 /** One file the target writes: [path] is a POSIX path relative to the entry's output root, [contents] its text. */
 public data class GeneratedFile(val path: String, val contents: String)
 
@@ -22,7 +25,8 @@ public object SpringBootTarget {
 
     /**
      * The Java files of one api: its types, the endpoints interfaces, the composed annotations, the results, the
-     * exceptions, the boundary's registration and contract table, and the copied boundary runtime, sorted by path.
+     * exceptions, the boundary's registration and contract table, the copied boundary runtime, and under
+     * `frameworkDocs: off` the properties file that turns springdoc's document off, sorted by path.
      *
      * @throws SpringBootRefusedException an option, an entry member or an IR form this release does not serve
      */
@@ -37,16 +41,23 @@ public object SpringBootTarget {
         val layout = JavaLayout(ir, options.packageName, kept, refusals)
         refusals.throwIfAny()
 
-        val types = javaTypes(layout, refusals) + boundaryTypes(layout, options, entry)
+        val types = javaTypes(layout, NativeDocs.of(entry), refusals) + boundaryTypes(layout, options, entry, refusals)
         refusals.throwIfAny()
 
-        val runtime = runtimeFiles(layout)
+        val runtime = runtimeFiles(layout, options)
 
-        return (types.map { (packageName, type) -> javaFile(packageName, type, options) } + runtime)
+        return (types.map { (packageName, type) -> javaFile(packageName, type, options) } + runtime + frameworkDocsFiles(ir, entry))
             .sortedBy { it.path }
     }
 
-    private fun javaTypes(layout: JavaLayout, refusals: Refusals): List<Pair<String, TypeSpec>> {
+    // `frameworkDocs: off` turns springdoc's own document off in a properties file the app imports (ADR 0022).
+    private fun frameworkDocsFiles(ir: ContractIR, entry: SpringBootEntry): List<GeneratedFile> {
+        if (entry.frameworkDocs != FRAMEWORK_DOCS_OFF) return emptyList()
+
+        return listOf(GeneratedFile("seampact-${ir.api.id}.properties", "$SPRINGDOC_API_DOCS_ENABLED=false\n"))
+    }
+
+    private fun javaTypes(layout: JavaLayout, nativeDocs: NativeDocs, refusals: Refusals): List<Pair<String, TypeSpec>> {
         val mapper = TypeMapper(layout)
         val operationTypes = OperationTypes(layout, mapper, refusals)
         val exceptions = ContractExceptions(layout, mapper)
@@ -80,19 +91,20 @@ public object SpringBootTarget {
             composedAnnotation(layout, operation, at, refusals)?.let { types += layout.springPackage to it }
         }
 
-        endpointsTypes(layout).forEach { types += layout.operationsPackage to it }
+        endpointsTypes(layout, nativeDocs, operationTypes, refusals).forEach { types += layout.operationsPackage to it }
 
         return types
     }
 
     // The Spring placement of the api's boundary: its contract table, binding, registration and hook interfaces.
-    private fun boundaryTypes(layout: JavaLayout, options: SpringBootOptions, entry: SpringBootEntry): List<Pair<String, TypeSpec>> =
+    private fun boundaryTypes(layout: JavaLayout, options: SpringBootOptions, entry: SpringBootEntry, refusals: Refusals): List<Pair<String, TypeSpec>> =
         authenticateHookTypes(layout).map { layout.operationsPackage to it } +
             listOf(
                 layout.springPackage to contractTableType(layout, options, entry),
                 layout.springPackage to bindingType(layout),
-                layout.springPackage to configurationType(layout),
-            )
+                layout.springPackage to configurationType(layout, options.springSecurity),
+            ) +
+            securityTypes(layout, options.springSecurity).map { layout.springPackage to it }
 
     private fun javaFile(packageName: String, type: TypeSpec, options: SpringBootOptions): GeneratedFile {
         val contents = JavaFile.builder(packageName, type)
