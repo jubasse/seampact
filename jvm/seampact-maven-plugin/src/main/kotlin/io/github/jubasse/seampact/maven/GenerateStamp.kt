@@ -42,7 +42,30 @@ internal class GenerateStamp(private val file: Path) {
             text(name, treesHash(directories))
         }
 
+        /**
+         * The plugin's own code: each jar by its coordinates, and by its bytes when its version is a snapshot or the
+         * unpublished `0.0.0`, which a new local install replaces under the same coordinates.
+         */
+        fun code(name: String, artefacts: List<CodeArtefact>) {
+            for (artefact in artefacts.sortedBy { it.coordinates }) {
+                text(name, artefact.coordinates)
+                if (artefact.isUnpublished) text(name, fileHash(artefact))
+            }
+        }
+
+        private fun fileHash(artefact: CodeArtefact): String {
+            val file = artefact.file
+                ?: error("Maven resolved no file for the plugin artefact ${artefact.coordinates}; the stamp cannot tell its build.")
+
+            return HexFormat.of().formatHex(MessageDigest.getInstance(SHA_256).digest(Files.readAllBytes(file)))
+        }
+
         fun hash(): String = HexFormat.of().formatHex(digest.digest())
+    }
+
+    /** One jar of the plugin's classpath: `group:artifact:version`, and its file once resolved. */
+    data class CodeArtefact(val coordinates: String, val isSnapshot: Boolean, val file: Path?) {
+        val isUnpublished: Boolean get() = isSnapshot || coordinates.substringAfterLast(':') == UNPUBLISHED_VERSION
     }
 
     private companion object {
@@ -50,6 +73,7 @@ internal class GenerateStamp(private val file: Path) {
         const val OUTPUTS = "outputs"
         const val SHA_256 = "SHA-256"
         const val NONE = "<none>"
+        const val UNPUBLISHED_VERSION = "0.0.0"
 
         fun treesHash(directories: List<Path>): String {
             val digest = MessageDigest.getInstance(SHA_256)

@@ -105,6 +105,15 @@ public abstract class SeampactMojo(private val repositorySystem: RepositorySyste
     /** Where each `maven` bundle source is served from, local or remote repository. */
     protected fun bundleOrigins(layout: AppLayout): List<String> = artefacts.origins(layout.mavenSources)
 
+    /** The jars of the plugin's own classpath, as Maven resolved them for this execution. */
+    internal fun pluginCodeArtefacts(): List<GenerateStamp.CodeArtefact> {
+        val pluginDescriptor = mojoExecution.mojoDescriptor.pluginDescriptor
+
+        return (listOf(pluginDescriptor.pluginArtifact) + pluginDescriptor.artifacts)
+            .distinctBy { it.id }
+            .map { GenerateStamp.CodeArtefact("${it.groupId}:${it.artifactId}:${it.baseVersion}", it.isSnapshot, it.file?.toPath()) }
+    }
+
     /** The config file the run reads when the POM sets no app-config key. */
     protected val configFile: Path get() = appDirectory.resolve(AppConfigReader.FILE_NAME)
 

@@ -3,7 +3,6 @@ package io.github.jubasse.seampact.maven
 import io.github.jubasse.seampact.runner.GenerateOutcome
 import io.github.jubasse.seampact.runner.RunSettings
 import io.github.jubasse.seampact.runner.generate
-import io.github.jubasse.seampact.runner.runnerVersion
 import org.apache.maven.plugins.annotations.LifecyclePhase
 import org.apache.maven.plugins.annotations.Mojo
 import org.apache.maven.plugins.annotations.ResolutionScope
@@ -40,14 +39,17 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
     }
 
     // Every input of a run: the app config as the POM or the file writes it, the `path` source trees, the binary pin,
-    // SEAMPACT_ALLOW_LOCAL, the Spring Boot version, where each `maven` bundle is served from, and the run's version.
+    // SEAMPACT_ALLOW_LOCAL, the Spring Boot version, where each `maven` bundle is served from, and the plugin's code.
     private fun inputsHash(settings: RunSettings, pathSources: List<Path>, bundleOrigins: List<String>): String {
         val inputs = GenerateStamp.Inputs()
-        inputs.text("runner", runnerVersion())
+        inputs.code("code", pluginCodeArtefacts())
         inputs.text("dsl", settings.dslTree)
         inputs.text("file", if (Files.isRegularFile(configFile)) Files.readString(configFile) else null)
         inputs.trees("pathSources", pathSources)
-        inputs.text("binary", settings.binary.toString())
+        inputs.text("binaryVersion", settings.binary.version)
+        inputs.text("binarySha256ByClassifier", settings.binary.sha256ByClassifier.toSortedMap().entries.joinToString(",") { "${it.key}=${it.value}" })
+        inputs.text("binaryPath", settings.binary.path)
+        inputs.text("binarySha256", settings.binary.sha256)
         inputs.text("allowLocal", settings.allowLocalVariable)
         inputs.text("springBoot", settings.springBootVersion)
         inputs.text("bundleOrigins", bundleOrigins.joinToString(","))
