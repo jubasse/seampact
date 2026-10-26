@@ -129,6 +129,19 @@ final class SymfonyRefusalsTest extends TestCase
         self::assertStringContainsString('symfony-4 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');
     }
 
+    public function testAnErrorThatForbidsCachingWaitsForSymfony3(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
+            $errors = $document->errors;
+            self::assertInstanceOf(\stdClass::class, $errors);
+            $notFound = $errors->{'api.not_found'};
+            self::assertInstanceOf(\stdClass::class, $notFound);
+            $notFound->noStore = true;
+        });
+
+        self::assertStringContainsString('symfony-3 generates it', self::refused($document)['error.noStore.unsupported'] ?? '');
+    }
+
     /**
      * Each refusal code and the message of its first place.
      *

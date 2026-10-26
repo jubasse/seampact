@@ -114,6 +114,17 @@ final class InputTree
         return $data;
     }
 
+    /** @return array<string, mixed> each part as decoded, objects preserved, wire names unescaped */
+    public function parts(): array
+    {
+        $parts = [];
+        foreach (get_object_vars($this->root) as $part => $value) {
+            $parts[(string) $part] = $value;
+        }
+
+        return $parts;
+    }
+
     public function record(string $attribute, string $contractRule): void
     {
         $segments = explode(self::SEPARATOR, $attribute);

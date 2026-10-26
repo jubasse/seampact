@@ -7,6 +7,7 @@ namespace Seampact\Laravel;
 use Nette\PhpGenerator\PsrPrinter;
 use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\ArtefactSwitches;
+use Seampact\Codegen\BootCheckSwitches;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\OperationTypes;
@@ -23,8 +24,9 @@ use Seampact\Ir\Write\GeneratedFile;
 
 /**
  * The laravel target (ADR 0023), which `vendor/bin/seampact` finds through `extra.seampact.generator`: per api, the
- * value types, the controller interfaces, the results and exceptions, the FormRequests with their rules, the route
- * table (and `routes.php` under `routes: file`) and the copied runtime.
+ * value types, the controller interfaces, the results and exceptions replying through the boundary, the FormRequests
+ * with their rules, the route table (and `routes.php` under `routes: file`), the contract class, the identity hooks,
+ * the middleware and service provider, and the copied runtime.
  */
 final class LaravelGenerator implements Generator
 {
@@ -44,7 +46,7 @@ final class LaravelGenerator implements Generator
         $options = LaravelOptions::parse($entry->options, $entry->namespace, $entry->id);
         $refusals = new Refusals($entry->id, self::TARGET, self::PACKAGE);
 
-        (new ArtefactSwitches(self::TARGET, LaravelReleases::LARAVEL_2, LaravelReleases::LARAVEL_4))->read($entry->artefacts, $refusals);
+        (new ArtefactSwitches(self::TARGET, null, LaravelReleases::LARAVEL_4))->read($entry->artefacts, $refusals);
 
         $kept = new KeptForms($ir, $refusals, new LaravelReleases());
         $refusals->throwIfAny();
@@ -54,11 +56,19 @@ final class LaravelGenerator implements Generator
         $operationTypes = new OperationTypes($layout->api, $types, $refusals);
         $formRequests = new FormRequests($layout, $options->rules, $refusals);
         $routes = new RouteTable($layout, $options, $refusals);
+        $replies = new LaravelReplies($layout, $operationTypes);
+        $contract = new ContractClass($layout, $kept, $entry->frameworkRoutes);
+
+        $exceptionFiles = (new ContractExceptions($layout->api, $operationTypes, [self::SHOULDNT_REPORT]))->files($kept);
+        $replies->exceptions($exceptionFiles, $kept);
 
         $classFiles = [
             ...(new SchemaTypes($layout, $types, $refusals))->files($kept->enums(), $kept->objects()),
-            ...(new ContractExceptions($layout->api, $operationTypes, [self::SHOULDNT_REPORT]))->files($kept),
+            ...$exceptionFiles,
             ...(new EndpointsTypes($layout))->files($kept),
+            $contract->file(),
+            ...(new IdentityTypes($layout, $contract, $refusals))->files(),
+            ...(new BoundaryClasses($layout, BootCheckSwitches::of($entry->artefacts)))->files(),
         ];
 
         foreach ($kept->operations() as [$index, $operation]) {
@@ -67,7 +77,9 @@ final class LaravelGenerator implements Generator
                 continue;
             }
             $at = IrPlace::ofOperation($index, $operation->id);
-            array_push($classFiles, ...$operationTypes->files($operation, $names, $at));
+            $typeFiles = $operationTypes->files($operation, $names, $at);
+            $replies->results($typeFiles, $names);
+            array_push($classFiles, ...$typeFiles);
             $classFiles[] = $formRequests->file($operation, $at);
             $routes->add($operation, $names, $at);
         }

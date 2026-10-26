@@ -23,7 +23,7 @@ final class SymfonyReleases implements FormReleases
             PendingForm::SignedAccess, PendingForm::Paging, PendingForm::PagingParam, PendingForm::PageResponse,
             PendingForm::Idempotency, PendingForm::Cache, PendingForm::Deadline, PendingForm::Relays, PendingForm::Throttle,
             PendingForm::RawBody, PendingForm::RetryHeader, PendingForm::DerivedResponseHeader, PendingForm::Sensitive,
-            PendingForm::Opaque => FormArrival::inRelease(self::SYMFONY_3),
+            PendingForm::ErrorNoStore, PendingForm::Opaque => FormArrival::inRelease(self::SYMFONY_3),
             PendingForm::AbsoluteUrls, PendingForm::Multipart, PendingForm::File, PendingForm::BinaryResponse,
             PendingForm::RedirectResponse => FormArrival::inRelease(self::SYMFONY_4),
             PendingForm::ListResponse => FormArrival::later(Delivery::AfterOneZero),

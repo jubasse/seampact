@@ -10,6 +10,7 @@ use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\RulesMode;
+use Seampact\Ir\Model\InputProof;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Model\RefuseUnknownQuery;
 
@@ -22,6 +23,7 @@ use Seampact\Ir\Model\RefuseUnknownQuery;
 final class FormRequests
 {
     private const FORM_REQUEST = 'Illuminate\\Foundation\\Http\\FormRequest';
+    private const VALIDATOR = 'Illuminate\\Contracts\\Validation\\Validator';
 
     public function __construct(private readonly PhpLayout $layout, private readonly RulesMode $mode, private readonly Refusals $refusals)
     {
@@ -46,7 +48,8 @@ final class FormRequests
             $rules->refuseUnknownQuery($operation->params->query);
         }
         if ($operation->input !== null) {
-            $rules->body($operation->input->schema, $at->below('input', 'schema'));
+            $proofNames = array_map(static fn (InputProof $proof): string => $proof->name, $operation->input->proofs ?? []);
+            $rules->body($operation->input->schema, $proofNames, $at->below('input', 'schema'));
         }
 
         $class->addConstant('NATIVE_RULE_NAMES', $rules->nativeNames())->setPublic()
@@ -66,12 +69,35 @@ final class FormRequests
             ->addComment('@return array<string, list<mixed>>')
             ->setBody("return self::contractRules({$tree}::of(\$this, self::API));");
 
+        $this->contractSteps($file, $operation);
+
         $contractRules = $class->addMethod('contractRules')->setStatic()->setReturnType('array')
             ->addComment('@return array<string, list<mixed>>')
             ->setBody('return ?;', [new Literal(self::rulesArray($rules->rules()))]);
         $contractRules->addParameter('input')->setType($this->layout->runtime('InputTree'));
 
         return $file;
+    }
+
+    // Steps 6 to 8: a failed validation is the contract's 400, a passed one runs step 7 and builds the typed input.
+    private function contractSteps(PhpClassFile $file, Operation $operation): void
+    {
+        $class = LaravelReplies::classOf($file);
+        $formSteps = $file->name($this->layout->runtime('FormSteps'));
+        $state = $file->name($this->layout->runtime('BoundaryState'));
+        $names = $this->layout->operation($operation->id) ?? throw new \LogicException("The operation '{$operation->id}' has no names.");
+        $input = $file->name($names->input);
+
+        $class->addMethod('failedValidation')->setProtected()->setReturnType('never')
+            ->setBody("throw {$formSteps}::failed(\$this, self::API, \$validator, self::NATIVE_RULE_NAMES);")
+            ->addParameter('validator')->setType($file->type(self::VALIDATOR));
+
+        $class->addMethod('passedValidation')->setProtected()->setReturnType('void')
+            ->setBody("{$formSteps}::passed(\$this, self::API);");
+
+        $class->addMethod('contractInput')->setReturnType($file->type($names->input))
+            ->addComment('The validated input of the operation, typed.')
+            ->setBody("\$input = {$state}::required(\$this, self::API)->contractInput;\n\nreturn \$input instanceof {$input} ? \$input : throw new \\LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');");
     }
 
     /** @param array<string, list<string>> $rules */

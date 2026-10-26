@@ -70,12 +70,12 @@ final class TasksRoutes
     ];
 
     /**
-     * Registers every contract route, in order, inside the caller's route group.
+     * Registers every contract route, in order, inside the caller's route group, each behind the access middleware.
      */
     public static function register(): void
     {
         foreach (self::ROUTES as $route) {
-            Route::match([$route['method']], $route['uri'], $route['action'])->name($route['name']);
+            Route::match([$route['method']], $route['uri'], $route['action'])->name($route['name'])->middleware(TasksAccessMiddleware::class);
         }
     }
 }

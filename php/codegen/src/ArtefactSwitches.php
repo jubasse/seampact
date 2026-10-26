@@ -7,18 +7,20 @@ namespace Seampact\Codegen;
 /**
  * The artefact switches a PHP framework target reads (ADR 0023 and 0024 "Refused by name or waiting"): `bootCheck`
  * and `accessHooks: true` come with the target's boundary release, `accessHooks: false` with its native access
- * release; any other key is refused as unknown.
+ * release; any other key is refused as unknown. Once the boundary release is out, only `bootCheck.hooks: warn` waits.
  */
 final readonly class ArtefactSwitches
 {
     private const BOOT_CHECK = 'bootCheck';
     private const ACCESS_HOOKS = 'accessHooks';
+    private const HOOKS_WARN = 'warn';
 
     /**
-     * @param string $boundaryRelease the release that brings the boot check and hooks access, such as 'symfony-2'
+     * @param ?string $boundaryRelease the release that brings the boot check and hooks access, such as 'symfony-2';
+     *     null once the target generates them
      * @param string $nativeAccessRelease the release that brings native access, such as 'symfony-4'
      */
-    public function __construct(private string $target, private string $boundaryRelease, private string $nativeAccessRelease)
+    public function __construct(private string $target, private ?string $boundaryRelease, private string $nativeAccessRelease)
     {
     }
 
@@ -27,13 +29,8 @@ final readonly class ArtefactSwitches
         foreach (get_object_vars($artefacts) as $artefact => $value) {
             $artefact = (string) $artefact;
             $at = IrPlace::root()->below('artefacts', $artefact);
-            $release = match ($artefact) {
-                self::BOOT_CHECK => $this->boundaryRelease,
-                self::ACCESS_HOOKS => $value === false ? $this->nativeAccessRelease : $this->boundaryRelease,
-                default => null,
-            };
-            if ($release !== null) {
-                $refusals->waitingForRelease("artefacts.{$artefact}", "The artefact switch '{$artefact}: " . json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "'", $at, $release);
+            if ($artefact === self::BOOT_CHECK || $artefact === self::ACCESS_HOOKS) {
+                $this->readKnown($artefact, $value, $at, $refusals);
                 continue;
             }
             $refusals->add(
@@ -42,6 +39,20 @@ final readonly class ArtefactSwitches
                 "Remove '{$artefact}' from the entry's `artefacts`.",
                 $at,
             );
+        }
+    }
+
+    private function readKnown(string $artefact, mixed $value, IrPlace $at, Refusals $refusals): void
+    {
+        $release = $artefact === self::ACCESS_HOOKS && $value === false ? $this->nativeAccessRelease : $this->boundaryRelease;
+        if ($release !== null) {
+            $refusals->waitingForRelease("artefacts.{$artefact}", "The artefact switch '{$artefact}: " . json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "'", $at, $release);
+
+            return;
+        }
+
+        if ($artefact === self::BOOT_CHECK && $value instanceof \stdClass && ($value->hooks ?? null) === self::HOOKS_WARN) {
+            $refusals->waiting('artefacts.bootCheck.hooks.warn', "'bootCheck.hooks: warn' (start with hooks missing)", $at->below('hooks'), Delivery::Consumer);
         }
     }
 }

@@ -95,9 +95,10 @@ final class RouteTable
             ->addComment('@var list<array{operation: string, method: string, uri: string, name: string, access: string, action: array{class-string, string}}>');
 
         $route = $file->name(self::ROUTE_FACADE);
+        $access = $file->name($this->layout->accessMiddleware);
         $class->addMethod('register')->setStatic()->setReturnType('void')
-            ->addComment('Registers every contract route, in order, inside the caller\'s route group.')
-            ->setBody("foreach (self::ROUTES as \$route) {\n\t{$route}::match([\$route['method']], \$route['uri'], \$route['action'])->name(\$route['name']);\n}");
+            ->addComment('Registers every contract route, in order, inside the caller\'s route group, each behind the access middleware.')
+            ->setBody("foreach (self::ROUTES as \$route) {\n\t{$route}::match([\$route['method']], \$route['uri'], \$route['action'])->name(\$route['name'])->middleware({$access}::class);\n}");
 
         return $file;
     }
@@ -109,14 +110,15 @@ final class RouteTable
             return null;
         }
 
-        $imports = [self::ROUTE_FACADE => true];
+        $imports = [self::ROUTE_FACADE => true, $this->layout->accessMiddleware => true];
+        $access = PhpClassFile::shortNameOf($this->layout->accessMiddleware);
         $lines = [];
         foreach ($this->ordered() as $route) {
             $names = $route['names'];
             $imports[$names->endpoints] = true;
             $lines[] = 'Route::' . $route['operation']->method->value . '(' . var_export($route['uri'], true) . ', ['
                 . PhpClassFile::shortNameOf($names->endpoints) . '::class, ' . var_export($names->method, true) . '])->name('
-                . var_export($this->routeName($route['operation']), true) . ');';
+                . var_export($this->routeName($route['operation']), true) . ")->middleware({$access}::class);";
         }
 
         $imports = array_keys($imports);

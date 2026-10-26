@@ -43,6 +43,7 @@ final class MemberRules
     private const CONSISTENT_PATTERN_MODIFIERS = 'uD';
 
     private const QUERY_PART = 'query';
+    private const BODY_PART = 'body';
 
     /** @var array<string, list<string>> each rule key and its rules as PHP expressions */
     private array $rules = [];
@@ -52,6 +53,9 @@ final class MemberRules
 
     /** @var array<string, true> the schemas on the way to the current member */
     private array $visiting = [];
+
+    /** @var list<string> */
+    private array $bodyProofNames = [];
 
     public function __construct(
         private readonly PhpLayout $layout,
@@ -90,9 +94,11 @@ final class MemberRules
         $this->rules[self::QUERY_PART] = [$this->construct('UnknownKeysRule', ['$input', $this->position(Position::Member), self::stringList($names)])];
     }
 
-    public function body(TypeUse $schema, IrPlace $at): void
+    /** @param list<string> $proofNames the body fields of the operation's rule proofs, which the body also takes */
+    public function body(TypeUse $schema, array $proofNames, IrPlace $at): void
     {
-        $this->member('body', $schema, Presence::Required, Nullability::NotNull, Position::Member, $at);
+        $this->bodyProofNames = $proofNames;
+        $this->member(self::BODY_PART, $schema, Presence::Required, Nullability::NotNull, Position::Member, $at);
     }
 
     private function member(string $key, TypeUse $type, Presence $presence, Nullability $declared, Position $position, IrPlace $at): void
@@ -267,6 +273,9 @@ final class MemberRules
 
         if (($type->unknownKeys?->policy->value ?? UnknownKeysPolicy::Refuse) === UnknownKeysPolicy::Refuse) {
             $declared = array_map(static fn ($property): string => $property->name, $schema->properties);
+            if ($key === self::BODY_PART) {
+                $declared = [...$declared, ...$this->bodyProofNames];
+            }
             $this->rules[$key][] = $this->construct('UnknownKeysRule', ['$input', $this->position($position), self::stringList($declared)]);
         }
 

@@ -6,6 +6,8 @@ namespace Seampact\Golden\TasksConsistent;
 
 use Seampact\Golden\TasksConsistent\Laravel\GetTaskRequest;
 use Seampact\Golden\TasksConsistent\Laravel\GetTasksBatchRequest;
+use Seampact\Golden\TasksConsistent\Laravel\PurgeTaskRequest;
+use Seampact\Golden\TasksConsistent\Laravel\UpdateTaskRequest;
 
 /**
  * The handlers a controller implements; each returns a declared success or error, or throws a declared error.
@@ -31,4 +33,35 @@ interface TasksEndpoints
      * @throws ApiInternalError
      */
     public function getTasksBatch(GetTasksBatchRequest $request): GetTasksBatchResult;
+
+    /**
+     * Operation 'purgeTask'.
+     * @throws ApiSchemaInvalidError
+     * @throws ApiReauthenticationRequiredError
+     * @throws ApiUnauthenticatedError
+     * @throws ApiCsrfInvalidError
+     * @throws ApiNotFoundError
+     * @throws ApiIdempotencyInProgressError
+     * @throws ApiPayloadTooLargeError
+     * @throws ApiUnsupportedMediaTypeError
+     * @throws ApiIdempotencyKeyReusedError
+     * @throws ApiInternalError
+     */
+    public function purgeTask(PurgeTaskRequest $request): PurgeTaskResult;
+
+    /**
+     * Operation 'updateTask'.
+     * @throws ApiSchemaInvalidError
+     * @throws ApiUnauthenticatedError
+     * @throws ApiCsrfInvalidError
+     * @throws ApiForbiddenError
+     * @throws ApiNotFoundError
+     * @throws ApiIdempotencyInProgressError
+     * @throws StateConflictError
+     * @throws ApiPayloadTooLargeError
+     * @throws ApiUnsupportedMediaTypeError
+     * @throws ApiIdempotencyKeyReusedError
+     * @throws ApiInternalError
+     */
+    public function updateTask(UpdateTaskRequest $request): UpdateTaskResult;
 }

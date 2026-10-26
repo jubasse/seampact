@@ -105,14 +105,14 @@ A generated exception answers through its own `render()`, which Laravel's handle
 
 Every other exception is rendered by the app's own handler, untouched. The boundary middleware then reads `$response->exception` on the reply and answers, in the api's format, with the role of:
 
-- `AuthenticationException`: `unauthenticated` (401), whether the app rendered JSON or a redirect to `login`;
+- `AuthenticationException`: `unauthenticated` (401) whatever the `Accept` header: on a contract route the provider's render callback answers it before Laravel builds a redirect to `login`, so it never redirects and never becomes a 500 when no `login` route exists. The `auth` middleware with a browser `Accept` still calls `route('login')` while it builds the exception, a 500 without that route; laravel-4, which brings the native layers, closes it;
 - `AuthorizationException` (the `can` middleware, a Policy): `forbidden` (403);
 - `TokenMismatchException` and `OriginMismatchException` from `PreventRequestForgery`: `csrfInvalid` (403, where Laravel answers 419);
 - `ThrottleRequestsException`: `rateLimited` (429), keeping `Retry-After` and the `X-RateLimit-*` headers;
 - `PostTooLargeException` from `ValidatePostSize`: `payloadTooLarge` (413);
 - the `HttpException` 503 of `PreventRequestsDuringMaintenance`: `serviceUnavailable` (503, grammar 05 roles), keeping `Retry-After`.
 
-A role whose status the operation does not declare is the api's 500. Any other exception's reply is checked as written, below. An app's own handler renders a contract error with the exported `renderContractError($request, $exception)`.
+An access hook (authenticate, resolve-scope) that throws an exception of this map keeps its role. A role whose status the operation does not declare is the api's 500. Any other exception that no contract reply rendered is the api's 500 too, in every `responses` mode, so Laravel's error page and its debug trace never reach the client. This differs from Spring on purpose: Spring's resolver leaves an unknown exception to the app's `@ExceptionHandler` and judges that reply, whereas here an app exception's own `render()` is the api's 500 even when it writes a declared code; the mapping stays by exception class, so `abort(401|403|429)` from a handler or an app middleware is the api's 500 until laravel-4. A generated exception renders only on a contract request; an exported `renderContractError($request, $exception)` for an app's own handler waits for a consumer that needs it.
 
 ### The outgoing response check
 
@@ -130,7 +130,7 @@ The verdict rules, the `responses` modes, `bodyValidation` and the completion of
 - **A declared error** is held up to `MAX_CHECKED_ERROR_BODY_BYTES = 65536` and checked for the api's format and a listed code. A body in `gzip` or `deflate` is decoded first; a `br` error body, which PHP's zlib extension cannot decode, is a violation, a parity gap listed in Consequences. A streamed error body is buffered by running its callback into the held bytes before the verdict.
 - **A reply the boundary did not author.** On a contract route:
   - a success status (a 2xx or a 304) that the boundary did not write is a violation: a handler that returned its own `response()->json()` (spike) or its own `StreamedResponse`;
-  - once the access middleware admitted the request, a reply that is neither the boundary's nor the rendering of an exception is a violation.
+  - once the access middleware admitted the request, a reply that is neither the boundary's nor a contract exception's rendering is a violation.
 - **An ETag** that the boundary did not set is stripped, and a 304 that it did not write is a violation (`frameworkEtag: strip`, the default). Laravel's `cache.headers:etag` middleware adds its own ETag to the boundary's reply object (spike), so the boundary compares the header with the value it wrote.
 - **A changed authored reply.** The boundary recognises its reply by object identity, and later middleware or listeners can change that same object. It records the status and the body bytes it wrote, as it records the ETag, and judges a reply whose status or body differs as one it did not author.
 
@@ -244,7 +244,7 @@ Two apis are two providers, each with its own middleware, route table and boot c
 
 The boot check runs in an `$app->booted()` callback of the provider. It runs:
 
-- on an HTTP boot while the routes are not cached, so per request under php-fpm without a route cache (its cost is measured in laravel-2);
+- on an HTTP boot while the routes are not cached, so per request under php-fpm without a route cache. Measured in laravel-2 on the consumer's core operations (10 routes, PHP 8.5, OPcache on): about 0.05 ms per check, lost in the noise of a request's boot of about 10 ms;
 - in `route:cache` and `optimize`, in the fresh application they boot after clearing the cache, so a failing check writes no cache file (spike).
 
 It does not run on other artisan commands, so `migrate` and `tinker` work on a broken app, and it does not run on an HTTP boot that reads a route cache, whose routes `route:cache` already checked. It lists every problem at once with the operation id, the name and the fix, and throws, so the app does not serve:
@@ -262,7 +262,7 @@ It does not run on other artisan commands, so `migrate` and `tinker` work on a b
 - a missing `public_origin` under absolute URLs, or ext-zlib not loaded;
 - a Laravel major other than 13, read from `Application::VERSION`; `generate` already refuses older majors from the Composer lock.
 
-`artefacts.bootCheck: { handlers, frameworkRoutes }` switches those two checks apart (ADR 0011).
+`artefacts.bootCheck: false` turns the whole check off; `{ frameworkRoutes: false }` turns the framework-route check off and `{ hooks: off }` the hook check, as on spring-boot (ADR 0011). `{ hooks: warn }` waits for an app that needs it. The handler check runs whenever the boot check does.
 
 ### Native security layers
 
@@ -300,7 +300,7 @@ The target imposes no wire shape ([A36](../decisions.md#a36)). Each feature that
 | the base-path 404 of unserved paths | on | `catchAll: false` |
 | Laravel's own value rules | native | `rules: seampact-consistent` |
 | access hooks | on | `artefacts.accessHooks: false` with `access.native` |
-| the boot check | on | `artefacts.bootCheck`, or `{ handlers, frameworkRoutes }` |
+| the boot check | on | `artefacts.bootCheck`, or `{ frameworkRoutes, hooks }` |
 | API Resources and paginators | never by default | the contract's `pack:laravel` format and paging styles |
 
 The error format is the api's declared format; `pack:laravel` keeps errors bare problem+json (ADR 0008). Laravel ships no OpenAPI generator, so the target declares no `nativeDocs` artefact and reads no `frameworkDocs`: the app config refuses both keys by name (`config.artefacts.unknown`).
@@ -326,8 +326,8 @@ The boundary runtime is copied into `Laravel\Runtime` with the generated header,
 | Waits for | What |
 |---|---|
 | laravel-2 | rights and rules an operation requires, which the access middleware runs, rule proof fields in the body (`recentAuth` on purgeTask), `artefacts.bootCheck` and `artefacts.accessHooks: true` |
-| laravel-3 | paging, its structured `sort` query parameter (listTasks) and its `page` response, idempotency replay, throttle, cache and ETag headers, the response headers these features derive, retry headers, signed routes and their raw body, absolute URLs, deadline budgets (`budgetMs`), relayed operations (`relays`), sensitive values, opaque values (`PaymentEvent.data` on payments), the `pack:laravel` styles |
-| laravel-4 | multipart (`file`, `mimetypes` and `max` rules; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`response()->streamDownload()`) and redirect (`redirect()->to()`) bodies, native access (`artefacts.accessHooks: false`), the per-kind middleware lists, the published config |
+| laravel-3 | paging, its structured `sort` query parameter (listTasks) and its `page` response, idempotency replay, throttle, cache and ETag headers, the response headers these features derive, retry headers, signed routes and their raw body, absolute URLs, deadline budgets (`budgetMs`), relayed operations (`relays`), sensitive values and the error codes that forbid caching (`noStore`, refused by name until then), opaque values (`PaymentEvent.data` on payments), the `pack:laravel` styles |
+| laravel-4 | the mapping of `abort(401|403|429)` from a handler or an app middleware, revisited with Guards and Gates; multipart (`file`, `mimetypes` and `max` rules; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`response()->streamDownload()`) and redirect (`redirect()->to()`) bodies, native access (`artefacts.accessHooks: false`), the per-kind middleware lists, the published config |
 | a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target: the reference contract carries none; unions (`oneOf`), designed above, until a contract needs one |
 | after 1.0 | Laravel 12 and older (refused, not waiting); Octane (refused, below); `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs, as the Spring target refuses them: `list` responses, response headers the route writes itself, principal requirements, bindings, upstream calls, operation features, extension keys, input field rights below the top level, scope ids not read from the path, bucket keys not read from the path, a scope or the principal, rule proofs outside the body, principals of several variants, signatures verified by the application or keyed from the request, parameter and property defaults, open enums, maps, `int64` and `decimal`, kept unknown keys |
 
@@ -335,15 +335,13 @@ Octane is refused at run time, outside the boot check, since an Octane app usual
 
 ### The consumer and the proof
 
-The sample app lives in `scripts/consumers/targets/laravel/`. It is a Laravel 13 skeleton that holds the developer's controllers and hook doubles, which answer from the suite script, and three control routes: `/__seampact/script`, `hook-calls` and `log-lines`, the last fed by a Monolog handler. It reads the template's credentials from the shared JSON. It installs `seampact/hooks`, `seampact/laravel` and `seampact/ir` from Composer path repositories pointing at the split trees (ADR 0011 "Unpublished installs for test consumers"), and the reference contract's bundle that the workflow built.
+The sample app lives in `scripts/consumers/targets/laravel/`. It is a Laravel 13 skeleton that holds the developer's controllers and hook doubles, which answer from the suite script, and three control routes: `/__seampact/script`, `hook-calls` and `log-lines`, the last fed by a `MessageLogged` listener. Each request of PHP's built-in server starts from nothing, so the script, the hook calls and the log lines live in one file under `storage/`. It reads the template's credentials from the shared JSON. It installs `seampact/hooks`, `seampact/laravel` and `seampact/ir` from Composer path repositories pointing at the split trees (ADR 0011 "Unpublished installs for test consumers"), and the reference contract's bundle that the workflow built.
 
-The workflow `p6-laravel.yml` has five jobs:
+The workflow `p6-laravel.yml` has, beside `changes` and the `packages` tests:
 
-- `changes`;
-- `contract-bundle` (Node), which bundles the reference contract (ADR 0011 "The bundle");
-- `build`, a matrix on the latest PHP 8.3 and 8.5 in glibc `php` images, whose first step fails when `node`, `npm` or `npx` is found. It installs the app with Composer only, generates from that bundle, and runs `route:cache` and `config:cache` as the boot step; the local-YAML rows, through the compiler binary, come with php-core-4;
-- `http-suite`, which serves the app with php-fpm behind nginx, as production does, and runs the `default`, `hand-written` and `boot` profiles, plus `pack:laravel` from laravel-3, through the suite's CLI (ADR 0015 "Suite profiles");
-- `laravel`, the aggregate, failing on any failed or cancelled job.
+- `contract-bundle` (Node), which bundles the reference contract with the compiler binary (ADR 0011 "The bundle"); the consumer fetches it from a local git repository with its integrity pin;
+- `e2e`, a matrix on the latest PHP 8.3 and 8.5, both pull-request rows. Node is removed from the runner first, and the step fails if `node`, `npm` or `npx` is still found. It installs the app and its allow-listed variant with Composer only, generates from the bundle and runs `route:cache` and `config:cache`. Node then comes back for the suite alone, which serves the app with PHP's built-in server (`php -S`, no php-fpm or nginx) and runs the `default`, `hand-written` and `boot` profiles, plus `pack:laravel` from laravel-3, as the spring-boot consumer runs them (ADR 0015 "Suite profiles"); a boot is `route:cache`, which runs the boot check. The local-YAML rows, through the compiler binary, come with php-core-4;
+- `laravel`, the aggregate, failing on any failed or cancelled job, or one skipped although `changes` said run.
 
 The proof is:
 
@@ -358,13 +356,13 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 | PR | Delivers |
 |---|---|
 | laravel-1 | `php/laravel` (`Seampact\Laravel`) and the shared emitters and form walk of `php/codegen` (`Seampact\Codegen`), where each PHP target names the release that brings a refused form: the generator class registered in `extra.seampact.generator`, the options (`routes`, `rules` and the rest), readonly classes with `Field`, controller interfaces, FormRequests with their rules, the routes file and the macro's route table, the exceptions per error; a golden for the reference contract, linted with `php -l` and PHPStan max on PHP 8.3 and 8.5 |
-| laravel-2 | the boundary middleware (steps 1 and 10, the "boundary first" assertion), the access middleware (steps 2 to 5 and its mark), the FormRequest steps 6 to 8 failing closed without that mark, the mapping of "Exceptions on contract routes", the provider with its hook bindings and the Octane refusal, rule proof fields in the body, scopes in request attributes, the 500 on a missing hook, the boot check, `php artisan seampact:generate`; the sample app with path repositories under php-fpm behind nginx, the core suite profile, the e2e job of `p6-laravel.yml`; `BootCheckTest.php` only for a rule that is a brick |
+| laravel-2 | the boundary middleware (steps 1 and 10, the "boundary first" assertion), the access middleware (steps 2 to 5 and its mark), the FormRequest steps 6 to 8 failing closed without that mark, the mapping of "Exceptions on contract routes", the provider with its hook bindings and the Octane refusal, rule proof fields in the body, scopes in request attributes, the 500 on a missing hook, the boot check, `php artisan seampact:generate`; the sample app with path repositories under PHP's built-in server, the `default`, `hand-written` and `boot` profiles on the core operations, the e2e job of `p6-laravel.yml`; `BootCheckTest.php` only for a rule that is a brick |
 | laravel-3 | paging with its `sort` parameter, idempotency, throttle, cache headers and the response headers of these features, retry headers, the signed raw body, absolute URLs, deadline budgets and relayed operations, opaque values, redaction (`__debugInfo()`, `#[\SensitiveParameter]`, the VarDumper caster), the `pack:laravel` profile; the pack and full suite profiles and `RedactionTest.php` |
 | laravel-4 | guards and Sanctum for authenticate, Gates and Policies for decide, native access (`artefacts.accessHooks: false`), `AuthorizationException` in a decider answering the first denial code, coexistence with the native layers and their per-kind middleware lists, multipart, `streamDownload` and `redirect()->to()`, the published `config/seampact.php`; the suite's security and media rows, a Sanctum row in the sample app |
 
 ## Spike
 
-Run on Laravel 13.38.0 (a fresh `laravel/laravel` skeleton, Symfony HttpFoundation and VarDumper 8.1.9) on PHP 8.5.4 CLI under `php artisan serve` with four workers, and not kept. PHP 8.3, php-fpm behind a web server, Sanctum and Octane were not run. The results marked "CLI server" (the base path from the server variables, stream pacing, the chunked bounded read) depend on the server; laravel-2's php-fpm suite proves them. A reduced boundary had:
+Run on Laravel 13.38.0 (a fresh `laravel/laravel` skeleton, Symfony HttpFoundation and VarDumper 8.1.9) on PHP 8.5.4 CLI under `php artisan serve` with four workers, and not kept. PHP 8.3, php-fpm behind a web server, Sanctum and Octane were not run. The results marked "CLI server" (the base path from the server variables, stream pacing, the chunked bounded read) depend on the server; laravel-2's suite runs them under the same built-in server; no row runs php-fpm. A reduced boundary had:
 
 - a global middleware placed first, with a raw-path matcher, a bounded body read with gzip decoding, the authored-reply mark and the exception mapping;
 - a route middleware placed before `SubstituteBindings`;

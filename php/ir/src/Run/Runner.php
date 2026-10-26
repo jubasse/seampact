@@ -270,6 +270,8 @@ final class Runner
                 $entry->artefacts(),
                 $outputDirectory,
                 $namespace,
+                FrameworkRoute::listOf($entry->entry),
+                JsonValue::string($entry->entry, 'mount'),
             ));
         } catch (IrRefusedException $refused) {
             return array_map(
