@@ -32,19 +32,9 @@ final class NumberBounds
      */
     public static function of(Refinements $refinements, IrPlace $at, Refusals $refusals): array
     {
-        $declared = [
-            'minimum' => $refinements->minimum,
-            'maximum' => $refinements->maximum,
-            'exclusiveMinimum' => $refinements->exclusiveMinimum,
-            'exclusiveMaximum' => $refinements->exclusiveMaximum,
-        ];
-
         $bounds = [];
-        foreach ($declared as $rule => $decimal) {
-            if ($decimal === null) {
-                continue;
-            }
-            if (preg_match(self::DECIMAL_LITERAL, $decimal) !== 1) {
+        foreach (self::declared($refinements) as $rule => $decimal) {
+            if (!self::isDecimal($decimal)) {
                 $refusals->inconsistent('ir.value.invalid', "The {$rule} '{$decimal}' is not a decimal number", $at->below('refinements', $rule));
                 continue;
             }
@@ -53,5 +43,28 @@ final class NumberBounds
         }
 
         return $bounds;
+    }
+
+    /**
+     * The bounds `$refinements` declares, by rule, as written in the IR.
+     *
+     * @return array<string, string>
+     */
+    public static function declared(Refinements $refinements): array
+    {
+        $declared = [
+            'minimum' => $refinements->minimum,
+            'maximum' => $refinements->maximum,
+            'exclusiveMinimum' => $refinements->exclusiveMinimum,
+            'exclusiveMaximum' => $refinements->exclusiveMaximum,
+        ];
+
+        return array_filter($declared, static fn (?string $decimal): bool => $decimal !== null);
+    }
+
+    /** Whether `$literal` is a decimal literal PHP reads as a number. */
+    public static function isDecimal(string $literal): bool
+    {
+        return preg_match(self::DECIMAL_LITERAL, $literal) === 1;
     }
 }

@@ -44,10 +44,18 @@ final class SchemaConstraintsTest extends TestCase
         self::assertStringNotContainsString('Regex', self::taskClassWithTitlePattern(['rules' => 'seampact-consistent']));
     }
 
-    /** @param array<string, string> $options */
-    private static function taskClassWithTitlePattern(array $options): string
+    public function testAPatternNoRegexCanWriteIsNamedOnTheClassAndNeverRefused(): void
     {
-        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
+        $taskClass = self::taskClassWithTitlePattern([], '^[/#~%!@;,]+$');
+
+        self::assertStringContainsString("Member 'title' has no Symfony attribute for its pattern, which holds every PCRE delimiter.", $taskClass);
+        self::assertStringNotContainsString('Regex', $taskClass);
+    }
+
+    /** @param array<string, string> $options */
+    private static function taskClassWithTitlePattern(array $options, string $pattern = '^[A-Z]'): string
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document) use ($pattern): void {
             $task = $document->schemas instanceof \stdClass ? $document->schemas->Task : null;
             if (!$task instanceof \stdClass || !is_array($task->properties)) {
                 throw new \LogicException('The reference IR has no Task schema.');
@@ -56,7 +64,7 @@ final class SchemaConstraintsTest extends TestCase
             foreach ($task->properties as $property) {
                 $refinements = $property instanceof \stdClass && $property->name === 'title' && $property->type instanceof \stdClass ? $property->type->refinements : null;
                 if ($refinements instanceof \stdClass) {
-                    $refinements->pattern = (object) ['normalized' => '^[A-Z]', 'source' => '^[A-Z]'];
+                    $refinements->pattern = (object) ['normalized' => $pattern, 'source' => $pattern];
                 }
             }
         });
