@@ -1,21 +1,16 @@
 // seampact-spring-boot (ADR 0022): the Spring Boot server target, a pure generator both build plugins call. Its
 // golden tree is compiled by javac of the test JDK against Spring Boot 4, then its records' redaction is checked.
 
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
+    id("seampact.library-module")
     alias(libs.plugins.kotlin.jvm)
 }
 
-group = "io.github.jubasse"
+description = "The seampact Spring Boot server generator both build plugins call."
 
-apply(from = rootProject.file("gradle/publication.gradle.kts"))
-
-// The lowest Java version A13 supports: the bytecode every consumer runs, and the release the golden tree targets.
-val bytecodeJavaVersion = 21
-
-// `-PtestJdk=<major>` runs the tests and compiles the golden tree on that JDK (CI passes 21 and 25).
+// `-PtestJdk=<major>` also compiles the golden tree on that JDK (the convention plugin runs the tests on it).
 val testJdk: String? = providers.gradleProperty("testJdk").orNull
 
 // `-PupdateGolden` rewrites the golden tree from the generator instead of comparing with it.
@@ -42,25 +37,11 @@ dependencies {
 kotlin {
     explicitApi()
     compilerOptions {
-        jvmTarget = JvmTarget.fromTarget(bytecodeJavaVersion.toString())
-        freeCompilerArgs.add("-Xjdk-release=$bytecodeJavaVersion")
         allWarningsAsErrors = true
         // The Gradle plugin loads this module on the Kotlin its lowest supported Gradle embeds (8.14: Kotlin 2.0).
         apiVersion = KotlinVersion.KOTLIN_2_0
         languageVersion = KotlinVersion.KOTLIN_2_0
         freeCompilerArgs.add("-Xsuppress-version-warnings")
-    }
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    options.release = bytecodeJavaVersion
-}
-
-fun Test.onTestJdk() {
-    if (testJdk != null) {
-        javaLauncher = javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(testJdk)
-        }
     }
 }
 
@@ -73,7 +54,6 @@ tasks.test {
     inputs.dir(repositoryRoot.resolve("fixtures/golden/reference"))
     inputs.dir(goldenDirectory)
     inputs.dir(optInsGoldenDirectory)
-    onTestJdk()
 }
 
 // The golden tree as an app compiles it: the Spring Boot 4 starters the generated code needs, seampact-hooks, and
@@ -119,7 +99,6 @@ val goldenTest = tasks.register<Test>("goldenTest") {
     classpath = golden.runtimeClasspath
     useJUnitPlatform()
     shouldRunAfter(tasks.test)
-    onTestJdk()
 }
 
 tasks.check {

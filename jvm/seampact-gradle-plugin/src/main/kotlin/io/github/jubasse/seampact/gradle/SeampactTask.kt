@@ -119,4 +119,5 @@ internal val GRADLE_BUILD_TOOL = BuildTool(
     pluginName = "the Gradle plugin",
     generateCommand = "gradle seampactGenerate",
     unresolvedBinaryFix = "Add the repository that holds it (mavenCentral(), or your mirror of it), or point `binary { path }` at your own build with its `sha256`.",
+    binaryCacheSetting = "the Gradle user home (`--gradle-user-home` or `GRADLE_USER_HOME`)",
 )

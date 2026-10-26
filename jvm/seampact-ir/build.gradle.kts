@@ -2,23 +2,15 @@
 // contract bundle reader, verifier and channels (ADR 0011), the pinned standalone compiler binary, the app config
 // reader with each target entry's IR view, and the generated-file writer (ADR 0015).
 
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
+    id("seampact.library-module")
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
 }
 
-group = "io.github.jubasse"
-
-apply(from = rootProject.file("gradle/publication.gradle.kts"))
-
-// The lowest Java version A13 supports: the bytecode every consumer runs.
-val bytecodeJavaVersion = 21
-
-// `-PtestJdk=<major>` runs the tests on that JDK (CI passes 21 and 25); without it they run on the build JDK.
-val testJdk: String? = providers.gradleProperty("testJdk").orNull
+description = "The seampact IR model and reader, the contract bundle channels, the pinned compiler binary and the app config reader."
 
 val repositoryRoot = rootProject.projectDir.parentFile
 
@@ -58,18 +50,12 @@ dependencies {
 kotlin {
     explicitApi()
     compilerOptions {
-        jvmTarget = JvmTarget.fromTarget(bytecodeJavaVersion.toString())
-        freeCompilerArgs.add("-Xjdk-release=$bytecodeJavaVersion")
         allWarningsAsErrors = true
         // The Gradle plugin loads this module on the Kotlin its lowest supported Gradle embeds (8.14: Kotlin 2.0).
         apiVersion = KotlinVersion.KOTLIN_2_0
         languageVersion = KotlinVersion.KOTLIN_2_0
         freeCompilerArgs.add("-Xsuppress-version-warnings")
     }
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    options.release = bytecodeJavaVersion
 }
 
 tasks.test {
@@ -83,15 +69,17 @@ tasks.test {
     inputs.file(repositoryRoot.resolve("packages/tools/binary/scripts/binary-names.mjs"))
     // A build environment may set NODE_OPTIONS: the runner must not pass it on, and the binary must ignore it.
     environment("NODE_OPTIONS", "--require ./seampact-test-no-such-module.cjs")
+    // Nor any other variable outside the binary's contract, such as an OpenSSL configuration.
+    environment("OPENSSL_CONF", "./seampact-test-no-such-openssl.cnf")
+    // The binary cache refuses a directory others may write above it, such as /tmp: the tests' temporary files
+    // live under build/ instead.
+    val testTemporaryDirectory = layout.buildDirectory.dir("tmp/test-temporary").get().asFile
+    systemProperty("java.io.tmpdir", testTemporaryDirectory.absolutePath)
+    doFirst { testTemporaryDirectory.mkdirs() }
     // `-PseampactBinary=<path>` runs the binary runner test on that standalone compiler binary.
     val seampactBinary = providers.gradleProperty("seampactBinary").orNull
     if (seampactBinary != null) {
         systemProperty("seampact.binary", seampactBinary)
         inputs.file(seampactBinary)
-    }
-    if (testJdk != null) {
-        javaLauncher = javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(testJdk)
-        }
     }
 }

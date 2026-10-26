@@ -2,21 +2,16 @@
 // api's IR from a pinned bundle or the pinned compiler binary, plans and writes the spring-boot entries, and checks
 // the generated files; each plugin adds only its build tool's inputs, resolution and wording.
 
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
+    id("seampact.library-module")
     alias(libs.plugins.kotlin.jvm)
     // The reference app both plugins' tests build.
     `java-test-fixtures`
 }
 
-group = "io.github.jubasse"
-
-apply(from = rootProject.file("gradle/publication.gradle.kts"))
-
-// The lowest Java version A13 supports: the bytecode every consumer runs.
-val bytecodeJavaVersion = 21
+description = "The seampact run both JVM build plugins share: app config, IR, generation and checks."
 
 // The compiler binaries both plugins pin: `-PseampactBinarySums=<SHA256SUMS>` of the release
 // `-PseampactCompilerVersion=<version>`. Without them the jar embeds no pin, and a `path` source needs a binary
@@ -38,18 +33,12 @@ dependencies {
 kotlin {
     explicitApi()
     compilerOptions {
-        jvmTarget = JvmTarget.fromTarget(bytecodeJavaVersion.toString())
-        freeCompilerArgs.add("-Xjdk-release=$bytecodeJavaVersion")
         allWarningsAsErrors = true
         // The Gradle plugin loads this module on the Kotlin its lowest supported Gradle embeds (8.14: Kotlin 2.0).
         apiVersion = KotlinVersion.KOTLIN_2_0
         languageVersion = KotlinVersion.KOTLIN_2_0
         freeCompilerArgs.add("-Xsuppress-version-warnings")
     }
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    options.release = bytecodeJavaVersion
 }
 
 val generatedResources = layout.buildDirectory.dir("generated/runner-resources")

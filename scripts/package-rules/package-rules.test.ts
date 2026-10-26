@@ -121,6 +121,7 @@ describe("package rules", () => {
     proves("scripts-publish", "namespaces", "package.json", 'script "release" publishes');
 
     expect(fixture("gradle", "pass")).toEqual([]);
+    // The pass fixture holds the plugin ids of the unpublished included build jvm/build-logic.
     const g = fixture("gradle", "fail");
 
     expect(g).toHaveLength(2);

@@ -156,6 +156,7 @@ public abstract class SeampactMojo(private val repositorySystem: RepositorySyste
             pluginName = "the Maven plugin",
             generateCommand = "mvn generate-sources",
             unresolvedBinaryFix = "Add the repository that holds it to the POM or settings.xml (Maven Central, or your mirror of it), or point `<binary><path>` at your own build with its `<sha256>`.",
+            binaryCacheSetting = "the `user.home` system property (the binary cache is `~/.m2/seampact/binaries`)",
         )
     }
 }

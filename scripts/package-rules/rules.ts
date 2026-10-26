@@ -23,6 +23,8 @@ type Role = (typeof ROLES)[number];
 const SCOPE = "@seampact/";
 const GRADLE_GROUP = "io.github.jubasse";
 const GRADLE_PLUGIN_ID = "io.github.jubasse.seampact";
+// An included build of precompiled convention plugins: its plugin ids are never published.
+const GRADLE_INTERNAL_BUILD_PREFIX = "jvm/build-logic/";
 const COMPOSER_VENDOR = "seampact";
 const RUNTIME_SETS = ["dependencies", "peerDependencies", "optionalDependencies"] as const;
 
@@ -378,6 +380,8 @@ function checkGradle(root: string, out: Violation[]): void {
 
     for (const m of text.matchAll(/^\s*group\s*=\s*["']([^"']+)["']/gm))
       if (m[1] !== GRADLE_GROUP) add(`Gradle group "${m[1]}" must be ${GRADLE_GROUP} (A27)`);
+
+    if (file.startsWith(GRADLE_INTERNAL_BUILD_PREFIX)) continue;
 
     for (const m of text.matchAll(/\bid\s*=\s*["']([^"']+)["']/g)) {
       const id = m[1] as string;
