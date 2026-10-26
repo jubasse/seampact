@@ -131,6 +131,22 @@ jobs:
                 static fn (string $tree): array => ["type" => "path", "url" => $tree, "options" => ["symlink" => false]],
                 glob("$trees/*", GLOB_ONLYDIR),
               );
+              // Each seampact package this one needs, transitively, is required "*@dev" by name: the dev stability
+              // of the PR copies never reaches a third-party package.
+              $requires = [];
+              foreach (glob("$trees/*/composer.json") as $manifest) {
+                $read = json_decode(file_get_contents($manifest), true, flags: JSON_THROW_ON_ERROR);
+                $requires[$read["name"]] = array_values(array_filter(array_keys($read["require"] ?? []), static fn (string $name): bool => str_starts_with($name, "seampact/")));
+              }
+              $needed = [$package => "*@dev"];
+              for ($pending = [$package]; $pending !== []; ) {
+                foreach ($requires[array_pop($pending)] ?? [] as $sibling) {
+                  if (!isset($needed[$sibling])) {
+                    $needed[$sibling] = "*@dev";
+                    $pending[] = $sibling;
+                  }
+                }
+              }
               $project = [
                 "name" => "seampact-ci/install-proof",
                 "version" => "0.0.0",
@@ -142,9 +158,7 @@ jobs:
                   ["type" => "composer", "url" => "https://repo.packagist.org", "exclude" => ["seampact/*"]],
                   ["packagist.org" => false],
                 ],
-                "require" => [$package => "*@dev"],
-                "minimum-stability" => "dev",
-                "prefer-stable" => true,
+                "require" => $needed,
               ];
               file_put_contents($target, json_encode($project, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n");
             ' "$package" "$work/trees" "$project/composer.json"
