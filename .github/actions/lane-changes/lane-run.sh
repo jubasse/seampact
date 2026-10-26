@@ -10,7 +10,7 @@ fi
 watched_pattern=$1
 
 # Documentation no lane test reads: Markdown outside the packages and fixtures, and anything under docs/ but the
-# grammar, the IR and the conformance checklist, which the tests of the `ci` workflow read.
+# grammar, the IR and the conformance checklist. The `ci` workflow, which always runs, also reads docs/adr/.
 documentation_pattern='^docs/|\.md$'
 read_by_tests_pattern='^(packages|fixtures|docs/grammar|docs/ir|docs/conformance)/'
 

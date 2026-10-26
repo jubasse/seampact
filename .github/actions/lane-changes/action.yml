@@ -43,8 +43,8 @@ runs:
           range="$PUSH_BEFORE..$PUSH_AFTER"
         fi
 
-        # A schedule, a manual run, a new branch (all-zero sha) or a force push whose old tip is gone has no base:
-        # the lane runs every job.
+        # A schedule, a manual run, a new branch (all-zero sha) or a force push whose old tip the server no longer
+        # holds has no base: the lane runs every job.
         if [ -z "$range" ]; then
           echo "No base to compare with on this $EVENT event: the lane runs."
           echo "run=true" >> "$GITHUB_OUTPUT"
