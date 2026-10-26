@@ -15,6 +15,9 @@
 | `options.reply.invalid` (NestJS) | `reply` is `handler` or `interceptor`. |
 | `input.multipart.unsupported`, `input.form.unsupported`, `type.file.unsupported`, `response.shape.unsupported`, `artefacts.accessHooks.unsupported` (Symfony) | The Symfony target does not generate multipart or form bodies, file values, download or redirect responses, or `accessHooks: false` yet; it waits for an app that needs them. Remove the operation from the entry's `operations` filter, or update `seampact/symfony`. |
 | `options.handlers.unsupported`, `options.naming.unsupported`, `options.layout.unsupported` (Symfony) | `handlers` is `perResource` only; the naming options and `layout` are not options of the PHP targets. Remove them. |
+| `input.multipart.unsupported`, `input.form.unsupported`, `type.file.unsupported`, `response.shape.unsupported` for a download or a redirect (Laravel) | Form, multipart, file, download and redirect bodies wait for an app that needs them. Remove the operation from the entry's `operations` filter, or open an issue with your use case. |
+| `artefacts.accessHooks.unsupported` (Laravel) | `accessHooks: false` (native access) waits for an app that needs it. Keep the hooks, and read Laravel's own guards in the authenticate hook. |
+| `options.layout.unsupported`, `options.handlers.unsupported` (Laravel) | The target writes one PSR-4 file per class and one controller interface per resource. Remove the option. |
 
 A warning does not stop `generate`.
 
