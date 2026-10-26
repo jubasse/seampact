@@ -67,6 +67,28 @@ final class BootCheckPassTest extends TestCase
         self::assertStringNotContainsString('public_origin', $problems);
     }
 
+    public function testUnderAbsoluteUrlsALiteralPublicOriginThatIsNotAnOriginIsRefusedAtBuild(): void
+    {
+        $container = new ContainerBuilder();
+        $container->setParameter('kernel.environment', 'test');
+        $container->setParameter('kernel.build_dir', sys_get_temp_dir());
+        $container->register('event_dispatcher', EventDispatcher::class);
+        $extension = (new SecondBundle())->getContainerExtension();
+        self::assertNotNull($extension);
+        $extension->load([['public_origin' => 'https://api.example.com/v1']], $container);
+        (new ResolveClassPass())->process($container);
+        (new RegisterListenersPass())->process($container);
+
+        $problems = '';
+        try {
+            (new BootCheckPass(TasksContract::class, TasksBoundary::class, TasksInputResolver::class, TasksSettings::class, false))->process($container);
+        } catch (\LogicException $failure) {
+            $problems = $failure->getMessage();
+        }
+
+        self::assertStringContainsString("'seampact_tasks.public_origin' is 'https://api.example.com/v1'", $problems);
+    }
+
     private static function load(Bundle $bundle, ContainerBuilder $container): void
     {
         $extension = $bundle->getContainerExtension();
