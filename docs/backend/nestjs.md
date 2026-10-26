@@ -48,7 +48,9 @@ export class NotesController implements NotesNest.NotesEndpoints {
 
 `listNotes` returns every note; a real app reads `input.query.cursor` to page through them.
 
-A service can also throw. `throw new NotFoundException()` answers the operation's 404 code, when it declares one. For any declared code, throw `new NotesNest.ContractException(code, params)`: it is typed with the api's codes and their params.
+A service can also throw. `throw new NotFoundException()` answers the operation's 404 code, when it declares one. For any declared code, throw `new NotesNest.ContractException(code, params)`: it is typed with the api's codes and their params. A code with required params needs it: a plain `HttpException` of that status answers 500.
+
+On a contract route, seampact's filter catches these exceptions before your global filters, so a global `@Catch(NotFoundException)` filter does not see them there.
 
 Keep `@Controller()` without a path, and do not add `@HttpCode` or `@Header` to a contract method: the contract sets the paths, statuses and headers, and the app refuses to start otherwise.
 

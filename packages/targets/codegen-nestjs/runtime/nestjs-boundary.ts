@@ -77,7 +77,6 @@ import {
 } from "./node-server/boundary-hooks.js";
 import {
   ContractError,
-  codeOfRole,
   renderContractReply,
   unexpectedError,
 } from "./node-server/contract-error.js";
@@ -91,7 +90,13 @@ import {
   matchesContractPath,
   type ResponsesMode,
 } from "./node-server/contract-route.js";
-import { logWriteFailure, notFoundError } from "./node-server/error-reply.js";
+import {
+  declaresStatus,
+  logWriteFailure,
+  notFoundError,
+  type StatusErrorFixes,
+  statusError,
+} from "./node-server/error-reply.js";
 import { routeKey } from "./node-server/framework-route-patterns.js";
 import { frameworkRouteProblems } from "./node-server/framework-routes.js";
 import { handlerReply } from "./node-server/handler-reply.js";
@@ -246,12 +251,11 @@ const NOT_FOUND = 404;
 const TOO_MANY_REQUESTS = 429;
 const INTERNAL_STATUS = 500;
 const ROOT_PATHS: readonly unknown[] = [undefined, "", "/"];
-// The roles an HTTP exception's status takes before its status alone, as the PHP targets map `abort()`.
-const STATUS_ROLES: Readonly<Record<number, string>> = {
-  401: "unauthenticated",
-  403: "forbidden",
-  429: "rateLimited",
-  503: "serviceUnavailable",
+// A thrown code goes into a logged message: longer codes are cut, so an app's input never floods the log.
+const MAX_LOGGED_CODE_LENGTH = 100;
+const NEST_STATUS_FIXES: StatusErrorFixes = {
+  requiredParams: "throw ContractException(code, params) with its params",
+  severalCodes: "throw a ContractException of the one it means",
 };
 const NEST_FIXES: PlatformFixes = {
   rawBody:
@@ -343,24 +347,8 @@ class DeclaredStatusException {
 
     if (!(value instanceof HttpException) || route === undefined) return false;
 
-    return httpExceptionCodes(route, value.getStatus()).length > 0;
+    return declaresStatus(route, value.getStatus());
   }
-}
-
-// The codes an HTTP exception's status answers on a route: the code of the status's role when it has one, else every
-// code of that status.
-function httpExceptionCodes(route: ContractRoute, status: number): readonly string[] {
-  const role = STATUS_ROLES[status];
-
-  if (role !== undefined) {
-    const roleCode = codeOfRole(route, role);
-
-    return roleCode === undefined ? [] : [roleCode];
-  }
-
-  return Object.values(route.errors)
-    .filter((entry) => entry.status === status)
-    .map((entry) => entry.code);
 }
 
 function isFrameworkDenial(error: unknown): boolean {
@@ -1655,7 +1643,7 @@ function asContractError(route: ContractRoute, error: unknown): ContractError {
     return unexpectedError(
       route,
       new Error(
-        `seampact: '${route.id}' declares no code '${error.code}'; throw a ContractException of one of its codes.`,
+        `seampact: '${route.id}' declares no code '${error.code.slice(0, MAX_LOGGED_CODE_LENGTH)}'; throw a ContractException of one of its codes.`,
       ),
     );
   }
@@ -1664,21 +1652,7 @@ function asContractError(route: ContractRoute, error: unknown): ContractError {
 
   if (!(error instanceof HttpException)) return unexpectedError(route, error);
 
-  const status = error.getStatus();
-  const [code, ...otherCodes] = httpExceptionCodes(route, status);
-
-  if (code === undefined) return unexpectedError(route, error);
-
-  if (otherCodes.length > 0) {
-    return unexpectedError(
-      route,
-      new Error(
-        `seampact: a ${status} HttpException on '${route.id}' matches its codes ${[code, ...otherCodes].join(", ")}; throw a ContractException of the one it means.`,
-      ),
-    );
-  }
-
-  return new ContractError(code);
+  return statusError(route, error.getStatus(), error, NEST_STATUS_FIXES);
 }
 
 function declaresCode(route: ContractRoute, code: string): boolean {
