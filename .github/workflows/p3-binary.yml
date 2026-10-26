@@ -1,6 +1,6 @@
 # The standalone compiler binary (ADR 0010): five binaries built on one Linux job, the macOS ones re-signed ad hoc
 # on macOS runners, a SHA-256 manifest of the final files, and a smoke on each platform's own runner. Attestations
-# are made by a release-only job; a pull request builds and smokes with read-only tokens. On a pull request the jobs
+# are made by a release-only job; a pull request builds and smokes with read-only tokens. On a pull request or a push the jobs
 # run only when the change touches a watched path; `binary` is the one check to require.
 name: p3-binary
 
@@ -24,35 +24,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      binary: ${{ steps.detect.outputs.binary }}
+      binary: ${{ steps.detect.outputs.run }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history, so the pull request can be compared with its base.
+          # Full history without file contents: the change list reads commits and trees only.
           fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
       - name: Detect a change the binary is built from
         id: detect
-        shell: bash
-        env:
-          EVENT: ${{ github.event_name }}
-          PR_BASE: ${{ github.base_ref }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT" != "pull_request" ]; then
-            echo "binary=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          watched='^(packages/|fixtures/|\.github/actions/|\.github/workflows/p3-binary\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
-          # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
-          # quote, a backslash, a tab or a non-ASCII byte, still matches.
-          changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')
-          # An empty diff runs every job rather than none.
-          if [ -z "$changed" ] || grep -Eq "$watched" <<< "$changed"; then
-            echo "binary=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "binary=false" >> "$GITHUB_OUTPUT"
-          fi
+        uses: ./.github/actions/lane-changes
+        with:
+          watched-paths: |
+            ^packages/
+            ^fixtures/
+            ^\.github/actions/
+            ^\.github/workflows/p3-binary\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^\.nvmrc$
 
   build:
     name: build (linux, five binaries)

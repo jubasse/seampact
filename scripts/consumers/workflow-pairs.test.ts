@@ -16,6 +16,9 @@ const CONSUMER_WORKFLOWS = [
   "validators-2.yml",
 ];
 
+// The jobs of a consumer workflow that run no consumer: the lane's change filter and its required check.
+const LANE_FILTER_AND_CHECK_JOBS: ReadonlySet<string> = new Set(["changes", "own-validators"]);
+
 // The workflows that run a front consumer: not a server pair, so only the matrix axes are checked.
 const FRONT_CONSUMER_WORKFLOWS = ["p6-react.yml", "p6-vue.yml", "p6-angular.yml", "p4-msw.yml"];
 
@@ -86,7 +89,11 @@ function assertRunPassesEveryAxis(file: string, jobId: string, job: WorkflowJob)
 function workflowPairKeys(file: string): string[] {
   const document: WorkflowDocument = parse(readFileSync(join(WORKFLOWS_DIRECTORY, file), "utf8"));
 
-  return Object.entries(document.jobs).flatMap(([jobId, job]) => {
+  const consumerJobs = Object.entries(document.jobs).filter(
+    ([jobId]) => !LANE_FILTER_AND_CHECK_JOBS.has(jobId),
+  );
+
+  return consumerJobs.flatMap(([jobId, job]) => {
     const matrix = job.strategy?.matrix;
 
     if (matrix === undefined) {

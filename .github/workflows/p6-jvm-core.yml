@@ -5,7 +5,7 @@ name: JVM core
 # binary and its runner, and the compiler's classifier publication, on Java 21 and 25 (A13). A
 # Node job builds the linux x64 binary; the Java job runs with Node removed from the runner and compiles the
 # reference contract with that binary, whose IR must equal the golden IR byte for byte. A Windows job runs the binary
-# cache checks on a real NTFS ACL: the profile, the ACEs, the junctions and the SIDs. On a pull request they run
+# cache checks on a real NTFS ACL: the profile, the ACEs, the junctions and the SIDs. On a pull request or a push they run
 # only when the change touches a watched path; `jvm-core` is the one check to require.
 
 on:
@@ -30,39 +30,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      jvm-core: ${{ steps.detect.outputs.jvm-core }}
+      jvm-core: ${{ steps.detect.outputs.run }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history, so the pull request can be compared with its base.
+          # Full history without file contents: the change list reads commits and trees only.
           fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
       - name: Detect a change to the JVM modules or what they read
         id: detect
-        shell: bash
-        env:
-          EVENT: ${{ github.event_name }}
-          PR_BASE: ${{ github.base_ref }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT" != "pull_request" ]; then
-            echo "jvm-core=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+        uses: ./.github/actions/lane-changes
+        with:
           # The JVM modules, the bundle, config and IR schemas, the bundle vectors, the compatibility matrix, the reference contract and the
           # golden IR, the binary package, the signed webhook vectors, the workspace and toolchain pins and this workflow.
-          watched='^(jvm/|packages/core/spec/schemas/(bundle|config|ir)/|packages/core/spec/vectors/bundle/|packages/core/spec/compatibility/'
-          watched+='|fixtures/reference/|fixtures/golden/|packages/tools/binary/|packages/runtime/signed-webhooks/vectors/|\.github/actions/|\.github/workflows/p6-jvm-core\.yml$'
-          watched+='|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
-          # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
-          # quote, a backslash, a tab or a non-ASCII byte, still matches.
-          changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')
-          # An empty diff runs every job rather than none.
-          if [ -z "$changed" ] || grep -Eq "$watched" <<< "$changed"; then
-            echo "jvm-core=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "jvm-core=false" >> "$GITHUB_OUTPUT"
-          fi
+          watched-paths: |
+            ^jvm/
+            ^packages/core/spec/schemas/(bundle|config|ir)/
+            ^packages/core/spec/vectors/bundle/
+            ^packages/core/spec/compatibility/
+            ^fixtures/reference/
+            ^fixtures/golden/
+            ^packages/tools/binary/
+            ^packages/runtime/signed-webhooks/vectors/
+            ^\.github/actions/
+            ^\.github/workflows/p6-jvm-core\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^\.nvmrc$
 
   binary:
     name: binary (linux x64)

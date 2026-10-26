@@ -1,7 +1,7 @@
 name: Native hooks packages
 
 # The native hooks packages (ADR 0010): the Java package `seampact-hooks` checked against the shared shape manifest on
-# Java 21 and 25 (A13), and the TypeScript package checked against the same manifest. On a pull request they run only
+# Java 21 and 25 (A13), and the TypeScript package checked against the same manifest. On a pull request or a push they run only
 # when the change touches the packages, the manifest, the toolchain pins or this workflow; `hooks-native` is the one
 # check to require.
 
@@ -27,37 +27,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      hooks-native: ${{ steps.detect.outputs.hooks-native }}
+      hooks-native: ${{ steps.detect.outputs.run }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history, so the pull request can be compared with its base.
+          # Full history without file contents: the change list reads commits and trees only.
           fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
       - name: Detect a change to the native hooks packages or their manifest
         id: detect
-        shell: bash
-        env:
-          EVENT: ${{ github.event_name }}
-          PR_BASE: ${{ github.base_ref }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT" != "pull_request" ]; then
-            echo "hooks-native=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+        uses: ./.github/actions/lane-changes
+        with:
           # The hooks packages, the shape manifest, the npm hooks sources, the workspace and toolchain pins and this workflow.
-          watched='^(jvm/|php/hooks/|fixtures/hooks-shape/|packages/runtime/hooks/'
-          watched+='|\.github/actions/|\.github/workflows/p4-hooks-native\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
-          # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
-          # quote, a backslash, a tab or a non-ASCII byte, still matches.
-          changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')
-          # An empty diff runs every job rather than none.
-          if [ -z "$changed" ] || grep -Eq "$watched" <<< "$changed"; then
-            echo "hooks-native=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "hooks-native=false" >> "$GITHUB_OUTPUT"
-          fi
+          watched-paths: |
+            ^jvm/
+            ^php/hooks/
+            ^fixtures/hooks-shape/
+            ^packages/runtime/hooks/
+            ^\.github/actions/
+            ^\.github/workflows/p4-hooks-native\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^\.nvmrc$
 
   typescript:
     needs: changes
