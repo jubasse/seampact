@@ -22,10 +22,16 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { APP_INTERCEPTOR, ApplicationConfig, NestFactory, RouterModule } from "@nestjs/core";
+import { Test } from "@nestjs/testing";
 import { catchError, map, mergeMap, of, tap, throwError } from "rxjs";
 import * as TasksNest from "../generated/server/tasks/nestjs.js";
 
-export { ConflictException, NotFoundException } from "@nestjs/common";
+export {
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  NotFoundException,
+} from "@nestjs/common";
 
 /** The api's typed exception, for the scenario's handlers. */
 export const ContractException = TasksNest.ContractException;
@@ -269,6 +275,13 @@ class ControllerWideInterceptor extends PassThroughInterceptor {}
 class AppModuleInterceptor extends PassThroughInterceptor {}
 
 class LateGlobalInterceptor extends PassThroughInterceptor {}
+
+// An app interceptor that answers by itself, never calling the handler.
+class AnsweringInterceptor {
+  intercept() {
+    return of({ status: 200, body: { status: "ok" } });
+  }
+}
 
 // Every operation bound on one controller class; `aboveComposite` lists the app decorators written above an
 // operation's composite, and `withoutInput` the operations whose method declares no input param.
@@ -638,6 +651,57 @@ export async function startAsyncHooksApp() {
   const registeredHooks = app.get(TasksNest.SEAMPACT_HOOKS);
 
   return { host: "127.0.0.1", port, registeredHooks, close: () => app.close() };
+}
+
+// Listens on a free port with the documented setup 1 (`rawBody: true`).
+async function serveApp(app) {
+  await app.listen(0, "127.0.0.1");
+
+  const { port } = app.getHttpServer().address();
+
+  return { host: "127.0.0.1", port, close: () => app.close() };
+}
+
+/** Serves an app with no global interceptor whose `health` method or controller carries an answering interceptor. */
+export async function startAnsweringInterceptorApp(placement) {
+  const controller = controllerOf(
+    placement === "method" ? { health: [UseInterceptors(AnsweringInterceptor)] } : {},
+  );
+
+  if (placement === "controller") UseInterceptors(AnsweringInterceptor)(controller);
+
+  const app = await NestFactory.create(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controller]),
+    { rawBody: true, logger: recordingLogger },
+  );
+
+  return serveApp(app);
+}
+
+/** Serves a testing module whose hooks `overrideProvider(SEAMPACT_HOOKS)` replaces. */
+export async function startOverriddenHooksApp() {
+  const testHooks = {
+    ...hooks,
+    authenticate: {
+      ...hooks.authenticate,
+      user: {
+        authenticate(request) {
+          calls.events.push("test hooks");
+
+          return authenticateByBearer(request);
+        },
+      },
+    },
+  };
+  const testingModule = await Test.createTestingModule({
+    imports: [TasksNest.SeampactModule.forRoot(hooks)],
+    controllers: [controllerOf()],
+  })
+    .overrideProvider(TasksNest.SEAMPACT_HOOKS)
+    .useValue(testHooks)
+    .compile();
+
+  return serveApp(testingModule.createNestApplication({ rawBody: true, logger: recordingLogger }));
 }
 
 /** Boots the app on a free port with the documented setup 1 (`rawBody: true`). */
