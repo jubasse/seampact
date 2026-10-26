@@ -36,7 +36,10 @@ final class HookSelection
     public static function scopeResolver(HookLookup $hooks, ApiContract $contract, string $scope): ?ScopeResolver
     {
         foreach ($hooks->scopeResolvers($contract) as $resolver) {
-            if ($resolver instanceof ScopeResolver && $resolver->scope() === $scope) {
+            if (!$resolver instanceof ScopeResolver) {
+                throw new \LogicException("seampact: a scope resolver registered for the api '{$contract->api}' (" . get_debug_type($resolver) . ') does not implement ' . ScopeResolver::class . '.');
+            }
+            if ($resolver->scope() === $scope) {
                 return $resolver;
             }
         }

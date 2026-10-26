@@ -24,7 +24,16 @@ final class BoundaryLog
         $failure = $cause === null ? '' : ' (' . $cause::class . ')';
         $logger->error("seampact: api '{$contract->api}' operation '{$operation}': {$reason}{$failure}");
 
-        $hooks->unexpectedErrorListener()?->onUnexpectedError(new UnexpectedFailure($contract->api, $operationId, $reason, $cause));
+        // The 500 is written whatever the listener is: an unusable one is logged, never thrown from here.
+        try {
+            $listener = $hooks->unexpectedErrorListener();
+        } catch (\LogicException $unusable) {
+            $logger->error("seampact: api '{$contract->api}' operation '{$operation}': the unexpected-error listener is unusable: {$unusable->getMessage()}");
+
+            return;
+        }
+
+        $listener?->onUnexpectedError(new UnexpectedFailure($contract->api, $operationId, $reason, $cause));
     }
 
     public static function pointer(string $pointer): string

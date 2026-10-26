@@ -78,6 +78,13 @@ final class RuntimeCopyTest extends TestCase
         $this->copy(new RuntimeSource(self::TARGET_NAMESPACE, $target, self::TARGET_PACKAGE));
     }
 
+    public function testAnEscapedDotAfterTheWordIsNotANamespace(): void
+    {
+        $target = $this->directory(['Rule.php' => "<?php\n\nnamespace Seampact\\Symfony\\Runtime;\n\nconst ROUTE = '/^seampact\\.([^.]+)\\./D';\n"]);
+
+        self::assertCount(1, $this->copy(new RuntimeSource(self::TARGET_NAMESPACE, $target, self::TARGET_PACKAGE)));
+    }
+
     public function testTheHooksPackageInEitherSpellingIsKept(): void
     {
         $target = $this->directory(['Rule.php' => "<?php\n\nnamespace Seampact\\Symfony\\Runtime;\n\nuse Seampact\\Hooks\\Field;\n\nconst HOOK = 'Seampact\\\\Hooks\\\\Field';\n"]);

@@ -18,12 +18,16 @@ final readonly class RuntimeCopy
     private const SHARED_DIRECTORY = __DIR__ . '/../runtime';
     private const SHARED_PACKAGE = 'seampact/codegen';
     private const SHARED_USE_LINE = '/^use Seampact\\\\Codegen\\\\Runtime\\\\[A-Za-z0-9_]+;\n/m';
-    // Any seampact namespace, in source or string spelling, but the hooks package that generated code may import.
-    private const LEFTOVER_REFERENCE = '/Seampact(?:\\\\){1,2}+(?!Hooks\\\\)/';
+    // Any seampact namespace, in source or string spelling and in any case, as PHP reads names, but the hooks package
+    // that generated code may import; a separator followed by a name, so a regex's `seampact\.` is not one.
+    private const LEFTOVER_REFERENCE = '/Seampact(?:\\\\){1,2}+(?!Hooks\\\\)(?=[A-Za-z_])/i';
 
     /** @param list<RuntimeSource> $sources */
     public function __construct(private array $sources)
     {
+        if ($sources === []) {
+            throw new \InvalidArgumentException('A runtime copy needs at least one runtime source; pass the shared source and the target\'s own.');
+        }
     }
 
     /** The framework-neutral boundary runtime that `seampact/codegen` ships for every PHP target. */
@@ -41,10 +45,12 @@ final readonly class RuntimeCopy
         foreach ($this->sources as $source) {
             foreach (self::sourceFiles($source) as $path) {
                 $name = basename($path);
-                if (isset($copiedFrom[$name])) {
-                    throw new \RuntimeException("The runtime source {$name} exists in both {$copiedFrom[$name]} and {$source->package}; rename one of them.");
+                // PHP class names and some file systems ignore case, so `IR.php` clashes with `Ir.php`.
+                $key = strtolower($name);
+                if (isset($copiedFrom[$key])) {
+                    throw new \RuntimeException("The runtime source {$name} exists in both {$copiedFrom[$key]} and {$source->package}; rename one of them.");
                 }
-                $copiedFrom[$name] = $source->package;
+                $copiedFrom[$key] = $source->package;
                 $files[] = new GeneratedFile("{$prefix}/{$name}", self::copied($source, $path, $runtimeNamespace));
             }
         }
@@ -92,7 +98,7 @@ final readonly class RuntimeCopy
     {
         $ownNamespace = [$runtimeNamespace, str_replace('\\', '\\\\', $runtimeNamespace)];
         foreach (explode("\n", $copied) as $index => $line) {
-            if (preg_match(self::LEFTOVER_REFERENCE, str_replace($ownNamespace, '', $line)) === 1) {
+            if (preg_match(self::LEFTOVER_REFERENCE, str_ireplace($ownNamespace, '', $line)) === 1) {
                 $number = $index + 1;
                 throw new \RuntimeException("The runtime source {$path} line {$number} names a seampact namespace other than Seampact\\Hooks, which generated code cannot import; reinstall {$source->package}.");
             }

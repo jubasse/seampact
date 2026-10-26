@@ -72,7 +72,18 @@ final class Hooks implements HookLookup
             return null;
         }
 
-        return $this->container->make(UnexpectedErrorListener::class);
+        $listener = $this->binding(UnexpectedErrorListener::class);
+        if (!$listener instanceof UnexpectedErrorListener) {
+            throw new \LogicException('seampact: the container binds ' . UnexpectedErrorListener::class . ' to ' . get_debug_type($listener) . '; bind it to a class implementing that interface.');
+        }
+
+        return $listener;
+    }
+
+    // What the app bound, of whatever type: the container's own signature assumes the bound class implements the id.
+    private function binding(string $abstract): mixed
+    {
+        return $this->container->make($abstract);
     }
 
     public function logger(): LoggerInterface
