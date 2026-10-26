@@ -83,6 +83,17 @@ final class MatrixCheckTest extends TestCase
         self::assertSame([], $atFloor);
     }
 
+    public function testNamesTheReasonOfAnIncompatibleMajorBelowTheFloorAndTheTagComposerShows(): void
+    {
+        $frameworks = ['seampact/laravel' => new MatrixFramework('laravel', 'laravel/framework', [13], [12 => 'Laravel 12 is too old.'], '13.5')];
+        $installed = ['laravel/framework' => (object) ['name' => 'laravel/framework', 'version' => 'v12.1.0', 'version_normalized' => '12.1.0.0']];
+
+        [$problems] = MatrixCheck::checkAgainst($this->config(''), $installed, $frameworks);
+
+        self::assertStringContainsString('laravel/framework v12.1.0, and', $problems[0]->message);
+        self::assertStringContainsString('Laravel 12 is too old.', $problems[0]->message);
+    }
+
     public function testRefusesAFrameworkComposerDidNotInstall(): void
     {
         self::assertSame([['framework.version.unresolved'], []], $this->codes($this->config(''), []));

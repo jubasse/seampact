@@ -173,6 +173,7 @@ test("generate refuses an edited OpenAPI document, names --force, and --force wr
   expect(refused.exitCode).toBe(EXIT_REFUSED);
   expect(refused.err).toContain("openapi.document.edited");
   expect(refused.err).toContain("seampact generate --force");
+  expect(refused.err).toContain("Delete the edited document");
   expect(readFileSync(document, "utf8")).toBe(`${generated}extra: 1\n`);
 
   expect((await run(app, ["generate", "--force"])).exitCode).toBe(EXIT_SUCCESS);

@@ -50,13 +50,14 @@ final class RunnerDocumentsTest extends TestCase
 
     public function testHandsTheCheckedBundleToTheBinaryAndPrintsItsLines(): void
     {
-        $this->stubBinary('echo "$@" > "' . $this->project . '/arguments"; echo "wrote openapi/t.json"; echo "warning: openapi.untested: a warning" >&2; exit 0');
+        $this->stubBinary('echo "$@" > "' . $this->project . '/arguments"; echo "wrote openapi/t.json"; echo "entry \'stub\' uses \'acme/stub-target\', which its build plugin generates: left to it."; echo "warning: openapi.untested: a warning" >&2; exit 0');
         $this->config('');
 
         [$exit, $stdout, $stderr] = $this->seampact('generate');
 
         self::assertSame(Command::EXIT_PASSED, $exit, $stderr);
         self::assertStringContainsString('seampact: compiler: wrote openapi/t.json', $stdout);
+        self::assertStringNotContainsString('left to it', $stdout);
         self::assertStringContainsString("entry 'stub' wrote 3 file(s)", $stdout);
         self::assertStringContainsString('seampact warning: openapi.untested: a warning', $stderr);
         self::assertMatchesRegularExpression(
