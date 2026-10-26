@@ -95,8 +95,7 @@ final class PaymentsRequest extends FormRequest
             ],
             'body.data' => [
                 'bail',
-                'nullable',
-                new TypeRule($input, Position::Member, TypeRule::ANY, Presence::Required, Nullability::Nullable),
+                new TypeRule($input, Position::Member, TypeRule::ANY, Presence::Required, Nullability::NotNull),
             ],
         ];
     }

@@ -48,13 +48,13 @@ final class StructuralValidator {
     }
 
     void check(JsonNode value, JsonNode typeUse, String in, String pointer, List<InputIssue> issues) {
-        // An opaque value is any JSON, null included, but a number past the range of a double, at any depth.
-        if (OPAQUE.equals(typeUse.path("kind").asString())) {
-            if (!isFiniteThroughout(value)) issues.add(new InputIssue(in, pointer, "type"));
-            return;
-        }
         if (value.isNull()) {
             if (!typeUse.path("nullable").asBoolean(false)) issues.add(new InputIssue(in, pointer, "type"));
+            return;
+        }
+        // An opaque value is any JSON, null only when nullable, but a number past the range of a double, at any depth.
+        if (OPAQUE.equals(typeUse.path("kind").asString())) {
+            if (!isFiniteThroughout(value)) issues.add(new InputIssue(in, pointer, "type"));
             return;
         }
 

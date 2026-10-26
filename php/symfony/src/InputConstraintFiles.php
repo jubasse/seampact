@@ -123,10 +123,8 @@ final class InputConstraintFiles
 
     private function member(TypeUse $type, bool $required, bool $nullable, IrPlace $at, int $depth): string
     {
-        // An opaque value is never checked for null, as on the Spring and Laravel targets.
         $nullable = $nullable || match (true) {
-            $type instanceof OpaqueTypeUse => true,
-            $type instanceof ScalarTypeUse, $type instanceof EnumTypeUse, $type instanceof RefTypeUse, $type instanceof ArrayTypeUse => $type->nullable === true,
+            $type instanceof ScalarTypeUse, $type instanceof EnumTypeUse, $type instanceof RefTypeUse, $type instanceof ArrayTypeUse, $type instanceof OpaqueTypeUse => $type->nullable === true,
             default => false,
         };
 

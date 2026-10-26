@@ -405,7 +405,7 @@ The suite's refusal list is empty: the reference contract carries no form that w
 - **Throttle**: the consumer's decider counts the throttled user's bucket in a `framework.rate_limiter` factory keyed by the bucket key. The `login_throttling` row answers the api's 500 and logs the `rateLimited` role it kept, since no reference operation declares that role (as the `access_control` row does for `forbidden`).
 - **Rule proofs in the body**: the body's top level also takes the proof fields of its rules, which the access steps check, so `unknownKeys` does not refuse them (`purgeTask`'s `reauthToken`).
 - **Header issues** point at the header's name in lower case, as on the other targets.
-- **Opaque values** accept `null` and refuse a non-finite number anywhere inside them as `type`, as on the Laravel target.
+- **Opaque values** accept `null` only when nullable (ADR 0003 section 2) and refuse a non-finite number anywhere inside them as `type`, as on the Laravel target.
 - **Route names** are `seampact.<api id>.<operationId>`, as the boundary reads them; the routing resource and the bundle configuration keep the snake-case api key (`tasks_service`, `seampact_tasks_service`), and the route check's fix names that resource.
 - **Redaction** needed no Symfony code beyond the shared runtime: the bundle's `boot()` registers the VarDumper caster for every generated value class and runtime holder.
 - **Absolute URLs** came with symfony-4, where `public_origin` lives in the bundle configuration and the boot check requires it; the reference contract writes relative URLs.
