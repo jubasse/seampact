@@ -254,7 +254,9 @@ test("a PHP target's floor is <major>.<minor> of a tested major", () => {
   });
 
   expect(phpTargetOf(row("7.4")).framework.floor).toBe("7.4");
+
   for (const target of PHP_TARGETS) expect(phpTargetOf(target)).toBe(target);
+
   expect(() => phpTargetOf(row("6.4"))).toThrow("not <major>.<minor> of a tested major (7)");
   expect(() => phpTargetOf(row("7"))).toThrow("acme/target floor is '7'");
 });
