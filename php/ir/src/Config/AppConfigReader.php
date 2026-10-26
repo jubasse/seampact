@@ -318,8 +318,8 @@ final class AppConfigReader
             return $tree;
         }
 
-        $apps = JsonValue::strings($tree->value, self::ROOT_CONFIG_MARKER_KEY);
-        if ($apps === null) {
+        // A config holding `apps` is a root config, whatever the value: a malformed one refuses the app.
+        if (!$tree->value instanceof \stdClass || !property_exists($tree->value, self::ROOT_CONFIG_MARKER_KEY)) {
             return [];
         }
 
@@ -327,6 +327,9 @@ final class AppConfigReader
         if ($schemaProblems !== []) {
             return $schemaProblems;
         }
+
+        $apps = JsonValue::strings($tree->value, self::ROOT_CONFIG_MARKER_KEY)
+            ?? throw new \LogicException('config: the root schema check passed an `apps` that is not a list of strings.');
 
         foreach ($apps as $app) {
             if (ConfigPath::resolve(dirname($candidate), $app) === $appDirectory) {
