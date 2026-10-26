@@ -93,18 +93,49 @@ final class ContractApis
         return $apis;
     }
 
+    /**
+     * The refusal of each `path` source among `$names` that local sources are refused for, without compiling it:
+     * the sources only the binary's documents run compiles, which gets no `SEAMPACT_ALLOW_LOCAL`.
+     *
+     * @param list<string> $names
+     * @return list<ConfigProblem>
+     */
+    public function localRefusals(AppConfig $config, array $names): array
+    {
+        $problems = [];
+        foreach ($names as $name) {
+            $source = $config->sources[$name];
+            $refused = $source instanceof LocalSource ? $this->localRefusal($name, $source) : null;
+            if ($refused !== null) {
+                $problems[] = $refused;
+            }
+        }
+
+        return $problems;
+    }
+
+    private function localRefusal(string $name, LocalSource $source): ?ConfigProblem
+    {
+        if ($this->localSources !== LocalSourcePolicy::Refuse) {
+            return null;
+        }
+
+        return new ConfigProblem(
+            'config.source.local',
+            "The source '{$name}' is a local path ({$source->directory}), and local sources are refused here (" . LocalSourcePolicy::refusalReason($this->environment) . ').',
+            'Use a pinned bundle source instead: `{ release: { url }, integrity }` or `{ git: { url, tag, directory }, integrity }`.',
+            "source '{$name}'",
+        );
+    }
+
     /** @return list<SourceApi|ConfigProblem> */
     private function compiled(string $name, LocalSource $source): array
     {
         $where = "source '{$name}'";
 
-        if ($this->localSources === LocalSourcePolicy::Refuse) {
-            return [new ConfigProblem(
-                'config.source.local',
-                "The source '{$name}' is a local path ({$source->directory}), and local sources are refused here (" . LocalSourcePolicy::refusalReason($this->environment) . ').',
-                'Use a pinned bundle source instead: `{ release: { url }, integrity }` or `{ git: { url, tag, directory }, integrity }`.',
-                $where,
-            )];
+        $refused = $this->localRefusal($name, $source);
+        if ($refused !== null) {
+            return [$refused];
         }
 
         $binary = $this->binary();

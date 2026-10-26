@@ -18,6 +18,7 @@ use Seampact\Ir\Config\AppConfigReader;
 use Seampact\Ir\Config\ConfigProblem;
 use Seampact\Ir\Config\EntryView;
 use Seampact\Ir\Config\JsonValue;
+use Seampact\Ir\Config\LocalSource;
 use Seampact\Ir\Config\LocalSourcePolicy;
 use Seampact\Ir\Config\SourceApi;
 use Seampact\Ir\Read\IrMalformedException;
@@ -174,12 +175,16 @@ final class Runner
             return $contractApis;
         }
 
-        // The binary's documents run fetches nothing: each source it reads is read here, so each bundle can be handed over.
+        // The binary's documents run fetches nothing: each bundle source it reads is read here, so it can be handed
+        // over. A `path` source only the documents read is compiled by the binary alone, once the local policy allows it.
         $used = EntryView::usedSources($config);
-        $read = [...$used, ...array_values(array_diff(Documents::sources($config), $used))];
-        $apis = $contractApis->read($config, $read);
-        if ($apis !== [] && $apis[0] instanceof ConfigProblem) {
-            return array_values(array_filter($apis, static fn (object $item): bool => $item instanceof ConfigProblem));
+        $documentsOnly = array_values(array_diff(Documents::sources($config), $used));
+        $localRefusals = $contractApis->localRefusals($config, $documentsOnly);
+        $documentBundles = array_values(array_filter($documentsOnly, static fn (string $name): bool => !$config->sources[$name] instanceof LocalSource));
+        $apis = $contractApis->read($config, [...$used, ...$documentBundles]);
+        $readProblems = array_values(array_filter($apis, static fn (object $item): bool => $item instanceof ConfigProblem));
+        if ($readProblems !== [] || $localRefusals !== []) {
+            return [...$readProblems, ...$localRefusals];
         }
 
         $sourceApis = array_values(array_filter($apis, static fn (object $item): bool => $item instanceof SourceApi && in_array($item->source, $used, true)));
