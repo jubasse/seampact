@@ -8,7 +8,8 @@ namespace Seampact\Golden\TasksConsistent\Symfony\Runtime;
  * A member's JSON type, checked on the objects-preserved decoding without coercion: `{}` is never a list and a string
  * is never a number. An integer accepts a whole float up to 2^53 in magnitude (`1.0`); a larger one, which the decode
  * may have changed, is refused as `maximum`, or `minimum` below zero. A JSON integer that fits an `int` decodes to an
- * `int`, so a float here is `1.0` or a number beyond that range.
+ * `int`, so a float here is `1.0` or a number beyond that range. A number beyond the float range, which decodes to
+ * an infinity, is refused as `type`, as on the Node and JVM targets.
  */
 enum JsonType
 {
@@ -26,7 +27,7 @@ enum JsonType
     {
         $matches = match ($this) {
             self::String => is_string($value),
-            self::Integer, self::Number => is_int($value) || is_float($value),
+            self::Integer, self::Number => is_int($value) || (is_float($value) && is_finite($value)),
             self::Boolean => is_bool($value),
             self::Object => $value instanceof \stdClass,
             self::List => is_array($value) && array_is_list($value),
@@ -41,7 +42,7 @@ enum JsonType
 
     private static function wholeFloatIssue(float $value): ?string
     {
-        if (!is_finite($value) || floor($value) !== $value) {
+        if (floor($value) !== $value) {
             return Rule::TYPE;
         }
 

@@ -11,9 +11,6 @@ namespace Seampact\Golden\Tasks\Symfony\Runtime;
  */
 final readonly class Checks
 {
-    // The tolerance of a `multipleOf` on floats, relative to the quotient.
-    private const MULTIPLE_TOLERANCE = 1e-9;
-
     /** @param list<string>|null $enumValues */
     public function __construct(
         public ?array $enumValues = null,
@@ -27,7 +24,7 @@ final readonly class Checks
         public int|float|null $maximum = null,
         public int|float|null $exclusiveMinimum = null,
         public int|float|null $exclusiveMaximum = null,
-        public int|float|null $multipleOf = null,
+        public ?int $multipleOf = null,
         public ?int $minItems = null,
         public ?int $maxItems = null,
     ) {
@@ -122,14 +119,9 @@ final readonly class Checks
         return $found === 1;
     }
 
-    private static function isMultiple(int|float $value, int|float $multipleOf): bool
+    // The step is the exact integer step of an integer member, whose value is an `int` or a whole float up to 2^53.
+    private static function isMultiple(int|float $value, int $multipleOf): bool
     {
-        if (is_int($value) && is_int($multipleOf)) {
-            return $value % $multipleOf === 0;
-        }
-
-        $quotient = $value / $multipleOf;
-
-        return abs($quotient - round($quotient)) <= self::MULTIPLE_TOLERANCE * max(1.0, abs($quotient));
+        return is_int($value) ? $value % $multipleOf === 0 : fmod($value, $multipleOf) === 0.0;
     }
 }
