@@ -55,9 +55,25 @@ final class ReferenceContract
         return self::read(self::kept(self::document(self::TASKS), self::CORE_OPERATIONS));
     }
 
-    /** @param array<string, mixed> $options */
-    public static function entry(string $api, string $namespace, array $options = []): TargetEntry
+    /**
+     * @param array<string, mixed> $options
+     * @param array<string, mixed> $artefacts
+     */
+    public static function entry(string $api, string $namespace, array $options = [], array $artefacts = []): TargetEntry
     {
-        return new TargetEntry('server', 'seampact/laravel', $api, null, (object) $options, new \stdClass(), '/app/generated', $namespace);
+        return new TargetEntry('server', 'seampact/laravel', $api, null, (object) $options, (object) $artefacts, '/app/generated', $namespace);
+    }
+
+    /** The one operation `$operationId` of the reference tasks IR, which `$change` edits in place. */
+    public static function withOperation(string $operationId, \Closure $change): \stdClass
+    {
+        $document = self::kept(self::document(self::TASKS), [$operationId]);
+        $operation = is_array($document->operations) ? ($document->operations[0] ?? null) : null;
+        if (!$operation instanceof \stdClass) {
+            throw new \LogicException("The reference IR has no operation '{$operationId}'.");
+        }
+        $change($operation, $document);
+
+        return $document;
     }
 }

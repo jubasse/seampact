@@ -14,7 +14,7 @@ use Seampact\Laravel\Tests\Support\ReferenceContract;
 /**
  * The rules a generated FormRequest returns, run in Laravel's validator over a decoded body: the getTasksBatch body
  * of the reference contract, with members added for the forms the reference body lacks (a member both optional and
- * nullable, a bounded integer, a number, a string with a length and a pattern).
+ * nullable, a bounded integer, a number, a string with a length and a pattern, an integer with a step).
  */
 final class FormRequestRulesTest extends TestCase
 {
@@ -108,6 +108,34 @@ final class FormRequestRulesTest extends TestCase
         self::assertSame([['body', '/label', 'pattern']], $this->issues(['ids' => [], 'label' => 'label-without-prefix'], self::CONSISTENT_NAMESPACE));
     }
 
+    public function testABlankUuidIsAFormatIssueUnderEitherRuleMode(): void
+    {
+        self::assertSame([['body', '/ids/0', 'format']], $this->issues(['ids' => ['']]));
+        self::assertSame([['body', '/ids/0', 'format']], $this->issues(['ids' => ['   ']]));
+        self::assertSame([['path', '/channelId', 'format']], $this->issuesOfJson('{"ids":[]}', path: ['channelId' => '   ']));
+        self::assertSame([['body', '/ids/0', 'format']], $this->issues(['ids' => ['']], self::CONSISTENT_NAMESPACE));
+    }
+
+    public function testAnUndeclaredQueryKeyIsRefused(): void
+    {
+        self::assertSame([['query', '/foo', 'unknownKeys']], $this->issuesOfJson('{"ids":[]}', query: ['foo' => '1']));
+        self::assertSame([['query', '/foo', 'unknownKeys']], $this->issuesOfJson('{"ids":[]}', self::CONSISTENT_NAMESPACE, query: ['foo' => '1']));
+    }
+
+    public function testANonFiniteNumberIsATypeIssue(): void
+    {
+        self::assertSame([['body', '/ratio', 'type']], $this->issuesOfJson('{"ids":[],"ratio":1e400}'));
+        self::assertSame([['body', '/ratio', 'type']], $this->issuesOfJson('{"ids":[],"ratio":-1e400}', self::CONSISTENT_NAMESPACE));
+    }
+
+    public function testAMultipleOfIsCheckedExactly(): void
+    {
+        self::assertSame([], $this->issuesOfJson('{"ids":[],"step":9}', self::CONSISTENT_NAMESPACE));
+        self::assertSame([], $this->issuesOfJson('{"ids":[],"step":3000000000000000.0}', self::CONSISTENT_NAMESPACE));
+        self::assertSame([['body', '/step', 'multipleOf']], $this->issuesOfJson('{"ids":[],"step":10}', self::CONSISTENT_NAMESPACE));
+        self::assertSame([['body', '/step', 'multipleOf']], $this->issuesOfJson('{"ids":[],"step":3000000000000001.0}', self::CONSISTENT_NAMESPACE));
+    }
+
     public function testNativeRuleFailuresAreNamedWithTheirContractRules(): void
     {
         $failed = $this->failed(['ids' => [], 'count' => 11, 'label' => 'label-without-prefix']);
@@ -132,11 +160,13 @@ final class FormRequestRulesTest extends TestCase
     /**
      * The generated rules' issues, then Laravel's own failures named with the contract rule `NATIVE_RULE_NAMES` gives.
      *
+     * @param array<string, string> $path the path values, the reference channel id when empty
+     * @param array<string, string> $query
      * @return list<array{string, string, string}>
      */
-    private function issuesOfJson(string $json, string $namespace = self::NATIVE_NAMESPACE): array
+    private function issuesOfJson(string $json, string $namespace = self::NATIVE_NAMESPACE, array $path = [], array $query = []): array
     {
-        [$issues, $validator] = $this->validate($json, $namespace);
+        [$issues, $validator] = $this->validate($json, $namespace, $path, $query);
         $names = constant("{$namespace}\\Laravel\\GetTasksBatchRequest::NATIVE_RULE_NAMES");
         self::assertIsArray($names);
 
@@ -174,16 +204,18 @@ final class FormRequestRulesTest extends TestCase
      * Runs the generated request's rules over `$json`; the generated classes are loaded at run time, so their values
      * are read through checks.
      *
+     * @param array<string, string> $path
+     * @param array<string, string> $query
      * @return array{list<array{string, string, string}>, \Illuminate\Validation\Validator}
      */
-    private function validate(string $json, string $namespace): array
+    private function validate(string $json, string $namespace, array $path = [], array $query = []): array
     {
         $withBody = ["{$namespace}\\Laravel\\Runtime\\InputTree", 'withBody'];
         $contractRules = ["{$namespace}\\Laravel\\GetTasksBatchRequest", 'contractRules'];
         self::assertIsCallable($withBody);
         self::assertIsCallable($contractRules);
 
-        $tree = $withBody(['channelId' => self::CHANNEL_ID], [], [], json_decode($json, false, 512, JSON_THROW_ON_ERROR));
+        $tree = $withBody($path === [] ? ['channelId' => self::CHANNEL_ID] : $path, $query, [], json_decode($json, false, 512, JSON_THROW_ON_ERROR));
         self::assertIsObject($tree);
         $data = [$tree, 'validationData'];
         $recorded = [$tree, 'issues'];
@@ -230,6 +262,7 @@ final class FormRequestRulesTest extends TestCase
             ['count', true, false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['minimum' => '1', 'maximum' => '10']]],
             ['ratio', true, false, ['kind' => 'scalar', 'type' => 'number', 'refinements' => new \stdClass()]],
             ['label', true, false, ['kind' => 'scalar', 'type' => 'string', 'refinements' => ['minLength' => 5, 'pattern' => ['source' => '^tag-', 'normalized' => '^tag-']]]],
+            ['step', true, false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['multipleOf' => '3']]],
         ];
         foreach ($added as [$name, $optional, $nullable, $type]) {
             $property = clone $template;
