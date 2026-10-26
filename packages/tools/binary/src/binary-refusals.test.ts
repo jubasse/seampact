@@ -129,3 +129,56 @@ test.each([
   expect(errors).not.toContain("entry 'spring'");
   expect(existsSync(join(app, DOCUMENT_DIRECTORY))).toBe(false);
 });
+
+// The build plugin's run: the config text written elsewhere, read as the app directory's config, and the bundle
+// it already fetched handed over, checked against the source's integrity and never fetched.
+test("reads a handed-over config and bundle for the app directory", async () => {
+  const pathApp = appWith(NATIVE_APP_CONFIG);
+  const bundleDirectory = join(pathApp, "bundle");
+  const bundleIo = capturingIo(pathApp, "node-cli");
+
+  expect(
+    await runCli(
+      ["bundle", "--out", bundleDirectory, "--name", "@acme/contract", "--version", "1.0.0"],
+      bundleIo,
+    ),
+  ).toBe(EXIT_SUCCESS);
+  expect(await runCli(["generate"], capturingIo(pathApp, "binary"))).toBe(EXIT_SUCCESS);
+
+  const integrity = /sha256-[A-Za-z0-9+/=]+/.exec(bundleIo.output.join(""))?.[0];
+
+  expect(integrity).toBeDefined();
+
+  const handedOver = (pin: string | undefined) => `sources:
+  contract: { maven: 'com.example:contract:1.0.0', integrity: '${pin}' }
+targets:
+  - { id: spring, use: '${SPRING_BOOT_USE}', apis: [tasks, tasksService] }
+`;
+  const appDirectory = mkdtempSync(join(tmpdir(), "seampact-binary-app-"));
+  const configFile = join(pathApp, "handed-over.json");
+
+  temporaryDirectories.push(appDirectory);
+  writeFileSync(configFile, handedOver(integrity));
+
+  const pluginRun = [
+    "--config",
+    configFile,
+    "--app-directory",
+    appDirectory,
+    "--bundle-directory",
+    `contract=${bundleDirectory}`,
+  ];
+
+  expect(await runCli(["generate", ...pluginRun], capturingIo(pathApp, "binary"))).toBe(
+    EXIT_SUCCESS,
+  );
+  expect(documentsOf(appDirectory)).toEqual(documentsOf(pathApp));
+  expect(await runCli(["check", ...pluginRun], capturingIo(pathApp, "binary"))).toBe(EXIT_SUCCESS);
+
+  writeFileSync(configFile, handedOver("sha256-AAAA"));
+
+  const refusedIo = capturingIo(pathApp, "binary");
+
+  expect(await runCli(["check", ...pluginRun], refusedIo)).toBe(EXIT_REFUSED);
+  expect(refusedIo.errors.join("")).toContain("source 'contract'");
+});

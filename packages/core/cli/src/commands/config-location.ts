@@ -5,6 +5,9 @@ import { APP_CONFIG_FILE_NAME } from "@seampact/spec/config";
 export interface ConfigLocation {
   file: string;
   displayName: string;
+  // The file whose text is read as `file`, when the config is written elsewhere (`--app-directory`): a build file's
+  // config handed over by its plugin. Paths still resolve against `file`'s directory.
+  textFile?: string;
 }
 
 // `--config` resolved against the working directory, `seampact.config.yaml` there when absent.

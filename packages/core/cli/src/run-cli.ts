@@ -1,9 +1,12 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { type CliIo, EXIT_USAGE, printProblems } from "./cli-io.js";
 import type { CliProblem } from "./cli-problem.js";
 import {
   type BundleCommandOptions,
   bundleCommand,
+  type ConfigLocation,
   checkCommand,
   compileCommand,
   configLocation,
@@ -15,6 +18,7 @@ import {
   initCommand,
   lintCommand,
   type NativeEntryPolicy,
+  type PlanInputs,
   REFUSE_NATIVE_ENTRIES,
 } from "./commands/index.js";
 import { errorCode } from "./error-code.js";
@@ -30,11 +34,11 @@ const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "generate",
-    "  generate [--config <path>] [--force]     Generate every target entry of the app config, or of every app a root config lists; --force overwrites, or removes when stale, a generated file edited by hand.",
+    "  generate [--config <path>] [--force] [--app-directory <dir>] [--bundle-directory <source>=<dir>]\n                                           Generate every target entry of the app config, or of every app a root config lists; --force overwrites, or removes when stale, a generated file edited by hand. A build plugin passes --app-directory (the --config text read as that directory's app config) and --bundle-directory (a bundle it already fetched, checked against the source's integrity, never fetched).",
   ],
   [
     "check",
-    "  check [--config <path>]                  Fail when the committed generated files or documents differ from a fresh run.",
+    "  check [--config <path>] [--app-directory <dir>] [--bundle-directory <source>=<dir>]\n                                           Fail when the committed generated files or documents differ from a fresh run; --app-directory and --bundle-directory as for generate.",
   ],
   [
     "lint",
@@ -187,29 +191,84 @@ async function runCompile(args: readonly string[], io: CliIo): Promise<number> {
   );
 }
 
+const PLUGIN_RUN_OPTIONS: OptionSpec = {
+  config: { type: "string" },
+  "app-directory": { type: "string" },
+  "bundle-directory": { type: "string", multiple: true },
+};
+
 async function runGenerate(args: readonly string[], io: CliIo): Promise<number> {
-  const parsed = parseCommandArgs(args, { config: { type: "string" }, force: { type: "boolean" } });
+  const parsed = parseCommandArgs(args, { ...PLUGIN_RUN_OPTIONS, force: { type: "boolean" } });
 
   if (parsed.status === "refused") return usageError(io, parsed.message);
 
+  const run = pluginRunOf(parsed.values, io, "generate");
+
+  if (run.status === "refused") return usageError(io, run.message);
+
   return generateCommand(
-    configLocation(io.cwd, stringOption(parsed.values.config)),
+    run.location,
     io,
     { onHandEdit: parsed.values.force === true ? "overwrite" : "refuse" },
-    nativeEntryPolicy(io, "generate"),
+    run.inputs,
   );
 }
 
 async function runCheck(args: readonly string[], io: CliIo): Promise<number> {
-  const parsed = parseCommandArgs(args, { config: { type: "string" } });
+  const parsed = parseCommandArgs(args, PLUGIN_RUN_OPTIONS);
 
   if (parsed.status === "refused") return usageError(io, parsed.message);
 
-  return checkCommand(
-    configLocation(io.cwd, stringOption(parsed.values.config)),
-    io,
-    nativeEntryPolicy(io, "check"),
-  );
+  const run = pluginRunOf(parsed.values, io, "check");
+
+  if (run.status === "refused") return usageError(io, run.message);
+
+  return checkCommand(run.location, io, run.inputs);
+}
+
+type PluginRun =
+  | { status: "read"; location: ConfigLocation; inputs: PlanInputs }
+  | { status: "refused"; message: string };
+
+// The config and inputs of `generate` and `check`: `--app-directory` reads the `--config` text as the app config of
+// that directory, and each `--bundle-directory <source>=<dir>` hands over a bundle the build plugin already fetched.
+function pluginRunOf(values: ParsedValues, io: CliIo, command: string): PluginRun {
+  const config = stringOption(values.config);
+  const appDirectory = stringOption(values["app-directory"]);
+  const localBundles = new Map<string, string>();
+
+  for (const pair of listOption(values["bundle-directory"])) {
+    const separator = pair.indexOf("=");
+
+    if (separator <= 0 || separator === pair.length - 1)
+      return {
+        status: "refused",
+        message: `\`--bundle-directory\` takes <source>=<dir>, not '${pair}'.`,
+      };
+
+    localBundles.set(pair.slice(0, separator), resolve(io.cwd, pair.slice(separator + 1)));
+  }
+
+  const inputs: PlanInputs = { nativeEntries: nativeEntryPolicy(io, command), localBundles };
+
+  if (appDirectory === undefined)
+    return { status: "read", location: configLocation(io.cwd, config), inputs };
+
+  if (config === undefined)
+    return {
+      status: "refused",
+      message: "`--app-directory` needs `--config <path>`, the file it reads.",
+    };
+
+  const location = configLocation(resolve(io.cwd, appDirectory), undefined);
+
+  if (existsSync(location.file))
+    return {
+      status: "refused",
+      message: `\`--app-directory\` reads --config as the app config of ${location.file}, which exists; pass that file with \`--config\` instead.`,
+    };
+
+  return { status: "read", location: { ...location, textFile: resolve(io.cwd, config) }, inputs };
 }
 
 // The host's policy for a command it runs on native entries only; the Node CLI's own otherwise.
@@ -308,12 +367,14 @@ function bundleOutput(
   return flag === "tarball" ? { tarball: path } : { npmPackage: path };
 }
 
-type OptionSpec = Record<string, { type: "string" | "boolean" }>;
+type OptionSpec = Record<string, { type: "string" | "boolean"; multiple?: boolean }>;
+
+type ParsedValues = Record<string, string | boolean | (string | boolean)[] | undefined>;
 
 type ParsedArgs =
   | {
       status: "parsed";
-      values: Record<string, string | boolean | undefined>;
+      values: ParsedValues;
       positionals: string[];
     }
   | { status: "refused"; message: string };
@@ -351,8 +412,12 @@ function parseCommandArgs(
   }
 }
 
-function stringOption(value: string | boolean | undefined): string | undefined {
+function stringOption(value: ParsedValues[string]): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+function listOption(value: ParsedValues[string]): string[] {
+  return Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
 }
 
 function usageError(io: CliIo, message: string): number {
