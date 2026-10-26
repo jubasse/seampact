@@ -39,8 +39,8 @@ use Seampact\Ir\Model\UnknownKeysPolicy;
  */
 final class InputConstraintFiles
 {
-    private const NATIVE_PATTERN_MODIFIERS = 'u';
-    private const CONSISTENT_PATTERN_MODIFIERS = 'uD';
+    public const NATIVE_PATTERN_MODIFIERS = 'u';
+    public const CONSISTENT_PATTERN_MODIFIERS = 'uD';
     private const CONSTRAINTS = 'Symfony\\Component\\Validator\\Constraints\\';
 
     private PhpClassFile $file;

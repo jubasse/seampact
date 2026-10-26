@@ -186,7 +186,7 @@ The generated schema classes carry Symfony Validator attributes, such as `#[Asse
 $violations = $validator->validate(new Task(taskId: $id, title: $title));
 ```
 
-The boundary does not use these attributes: it checks the raw JSON with the generated constraint. A `uuid` format, a pattern under `rules: seampact-consistent`, and a member both optional and nullable have no attribute.
+The boundary does not use these attributes: it checks the raw JSON with the generated constraint. A `uuid` format, a length or pattern on a `date-time` member, and a member both optional and nullable have no attribute.
 
 ## The boot check
 

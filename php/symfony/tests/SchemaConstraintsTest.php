@@ -38,12 +38,12 @@ final class SchemaConstraintsTest extends TestCase
         self::assertSame(['items[0].title'], self::violatedPaths(new TaskSearchResult([$consistentTask], 1)));
     }
 
-    public function testAPatternIsARegexUnderNativeRulesOnly(): void
+    public function testAPatternIsARegexWithTheBoundarysModifiers(): void
     {
-        $regex = "#[Assert\\NotNull, Assert\\Length(min: 1, max: 200), Assert\\Regex(pattern: '/^[A-Z]/u')]";
+        $attributes = "#[Assert\\NotNull, Assert\\Length(min: 1, max: 200), Assert\\Regex(pattern: '/^[A-Z]/u%s')]";
 
-        self::assertStringContainsString($regex, self::taskClassWithTitlePattern([]));
-        self::assertStringNotContainsString('Regex', self::taskClassWithTitlePattern(['rules' => 'seampact-consistent']));
+        self::assertStringContainsString(sprintf($attributes, ''), self::taskClassWithTitlePattern([]));
+        self::assertStringContainsString(sprintf($attributes, 'D'), self::taskClassWithTitlePattern(['rules' => 'seampact-consistent']));
     }
 
     public function testAPatternNoRegexCanWriteIsNamedOnTheClassAndNeverRefused(): void
@@ -61,6 +61,7 @@ final class SchemaConstraintsTest extends TestCase
         $task = new $taskClass('6f1d2c34-0000-4000-8000-000000000001', 'Write the report', $taskState::Open, null, 1, new \DateTimeImmutable());
 
         self::assertSame([], self::violatedPaths($task));
+        self::assertStringContainsString("Member 'createdAt' has no Symfony attribute for its maxLength and pattern, which a `DateTimeImmutable` value does not hold.", self::taskSchemaFiles([], 'createdAt', ['maxLength' => 40, 'pattern' => (object) ['normalized' => '^2', 'source' => '^2']])['Task']);
     }
 
     public function testAPatternThatRefusesTheEmptyStringRefusesItInBothModes(): void

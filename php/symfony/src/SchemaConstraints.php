@@ -26,22 +26,19 @@ use Seampact\Ir\Model\TypeUse;
  * Symfony Validator attributes on the members of the generated schema classes, for the app's own `validate()` calls
  * (ADR 0024 "Options"). A rule gets the Symfony constraint whose meaning is the contract's: `NotNull` on a
  * required member that is not nullable, `Valid` on a member that holds objects, `Length` (in code points), `Count`,
- * one comparison per bound, `DivisibleBy` for the integer step, and `All` for list items. `Regex` is added under
- * `rules: native` only, since it passes an empty string unchecked. Left out: the `uuid` format (Symfony's `Uuid`
- * refuses RFC 9562 text the contract takes), enums and `date-time` (their PHP types hold them), opaque values, and a
- * member both optional and nullable, whose `Field` wrapper Symfony does not read. A bound, step or pattern no
- * attribute can write is never refused: the class's docblock names it. The boundary does not use these
+ * one comparison per bound, `DivisibleBy` for the integer step, `All` for list items, and `Regex` with the boundary's
+ * modifiers for the rules mode, beside `NotEqualTo('')` when the pattern refuses the empty string `Regex` skips.
+ * Left out: the `uuid` format (Symfony's `Uuid` refuses RFC 9562 text the contract takes), enums and `date-time`
+ * (their PHP types hold them, so a length or pattern on a `date-time` member is left out too), opaque values, and a
+ * member both optional and nullable, whose `Field` wrapper Symfony does not read. A rule no attribute can write is
+ * never refused: the class's docblock names it. The boundary does not use these
  * attributes: it checks the decoded input with the generated input constraints.
  */
 final class SchemaConstraints implements SchemaMemberAttributes
 {
     private const CONSTRAINTS_NAMESPACE = 'Symfony\\Component\\Validator\\Constraints';
     private const CONSTRAINTS_ALIAS = 'Assert';
-    private const PATTERN_MODIFIERS = 'u';
     private const VALID = 'Valid';
-
-    /** @var list<string> the rules of the current member that no Symfony attribute can write */
-    private array $leftOut = [];
 
     public function __construct(private readonly RulesMode $rules)
     {
@@ -53,27 +50,27 @@ final class SchemaConstraints implements SchemaMemberAttributes
             return;
         }
 
-        $this->leftOut = [];
+        $leftOut = [];
         $notNull = !$property->optional && !$property->nullable;
-        foreach ($this->constraints($property->type, $notNull, $file) as [$constraint, $arguments]) {
+        foreach ($this->constraints($property->type, $notNull, $file, $leftOut) as [$constraint, $arguments]) {
             $file->alias(self::CONSTRAINTS_NAMESPACE, self::CONSTRAINTS_ALIAS);
             $parameter->addAttribute(self::CONSTRAINTS_NAMESPACE . '\\' . $constraint, array_map(static fn (string $code): Literal => new Literal($code), $arguments));
         }
 
         // A rule no attribute can write is named on the class, never refused: the attributes are a convenience.
-        if ($this->leftOut !== []) {
+        if ($leftOut !== []) {
             $file->namespace->getClasses()[$file->shortName]
-                ->addComment("Member '{$property->name}' has no Symfony attribute for " . implode('; ', $this->leftOut) . '.');
+                ->addComment("Member '{$property->name}' has no Symfony attribute for " . implode('; ', $leftOut) . '.');
         }
     }
 
     /**
      * The constraints of a value of `$type`, each its short name and its named arguments as PHP code.
      *
-     * @phpstan-impure it records in `leftOut` each rule no attribute can write
+     * @param list<string> $leftOut receives each rule no attribute can write
      * @return list<array{string, array<string, string>}>
      */
-    private function constraints(TypeUse $type, bool $notNull, PhpClassFile $file): array
+    private function constraints(TypeUse $type, bool $notNull, PhpClassFile $file, array &$leftOut): array
     {
         if ($type instanceof OpaqueTypeUse) {
             return [];
@@ -87,21 +84,39 @@ final class SchemaConstraints implements SchemaMemberAttributes
             $constraints[] = [self::VALID, []];
         }
 
-        if ($type instanceof ScalarTypeUse && $type->type->value === ScalarType::String) {
-            array_push($constraints, ...$this->stringRules($type->refinements));
+        if ($type instanceof ScalarTypeUse && $type->type->value === ScalarType::String && $type->format === PhpTypes::DATE_TIME_FORMAT) {
+            self::leaveOutDateTimeStringRules($type->refinements, $leftOut);
+        } elseif ($type instanceof ScalarTypeUse && $type->type->value === ScalarType::String) {
+            array_push($constraints, ...$this->stringRules($type->refinements, $leftOut));
         }
         if ($type instanceof ScalarTypeUse && in_array($type->type->value, [ScalarType::Integer, ScalarType::Number], true)) {
-            array_push($constraints, ...$this->numberRules($type));
+            array_push($constraints, ...self::numberRules($type, $leftOut));
         }
         if ($type instanceof ArrayTypeUse) {
-            array_push($constraints, ...$this->listRules($type, $file));
+            array_push($constraints, ...$this->listRules($type, $file, $leftOut));
         }
 
         return $constraints;
     }
 
-    /** @return list<array{string, array<string, string>}> */
-    private function stringRules(Refinements $refinements): array
+    /**
+     * `Length` and `Regex` raise a type violation on the `DateTimeImmutable` of a `date-time` member.
+     *
+     * @param list<string> $leftOut
+     */
+    private static function leaveOutDateTimeStringRules(Refinements $refinements, array &$leftOut): void
+    {
+        $declared = array_keys(array_filter(['minLength' => $refinements->minLength, 'maxLength' => $refinements->maxLength, 'pattern' => $refinements->pattern], static fn (mixed $value): bool => $value !== null));
+        if ($declared !== []) {
+            $leftOut[] = 'its ' . implode(' and ', $declared) . ', which a `DateTimeImmutable` value does not hold';
+        }
+    }
+
+    /**
+     * @param list<string> $leftOut
+     * @return list<array{string, array<string, string>}>
+     */
+    private function stringRules(Refinements $refinements, array &$leftOut): array
     {
         $constraints = [];
         $length = array_filter(['min' => $refinements->minLength, 'max' => $refinements->maxLength], static fn (?int $value): bool => $value !== null);
@@ -109,29 +124,38 @@ final class SchemaConstraints implements SchemaMemberAttributes
             $constraints[] = ['Length', array_map(static fn (int $value): string => (string) $value, $length)];
         }
 
-        // Under `seampact-consistent`, no Symfony constraint gives the contract's meaning: `Regex` passes "".
-        if ($refinements->pattern === null || $this->rules !== RulesMode::Native) {
+        if ($refinements->pattern === null) {
             return $constraints;
         }
 
-        $pattern = PcrePattern::of($refinements->pattern->normalized, self::PATTERN_MODIFIERS);
+        $modifiers = $this->rules === RulesMode::Native ? InputConstraintFiles::NATIVE_PATTERN_MODIFIERS : InputConstraintFiles::CONSISTENT_PATTERN_MODIFIERS;
+        $pattern = PcrePattern::of($refinements->pattern->normalized, $modifiers);
         if ($pattern === null) {
-            $this->leftOut[] = 'its pattern, which holds every PCRE delimiter';
+            $leftOut[] = 'its pattern, which holds every PCRE delimiter';
 
             return $constraints;
         }
         $constraints[] = ['Regex', ['pattern' => var_export($pattern, true)]];
 
+        // `Regex` skips "", which the contract checks against the pattern as the boundary does.
+        $refusesEmptyString = preg_match($pattern, '') === 0;
+        if ($refusesEmptyString && ($refinements->minLength ?? 0) < 1) {
+            $constraints[] = ['NotEqualTo', ['value' => "''"]];
+        }
+
         return $constraints;
     }
 
-    /** @return list<array{string, array<string, string>}> */
-    private function numberRules(ScalarTypeUse $type): array
+    /**
+     * @param list<string> $leftOut
+     * @return list<array{string, array<string, string>}>
+     */
+    private static function numberRules(ScalarTypeUse $type, array &$leftOut): array
     {
         $constraints = [];
         foreach (NumberBounds::declared($type->refinements) as $rule => $decimal) {
             if (!NumberBounds::isDecimal($decimal)) {
-                $this->leftOut[] = "its {$rule} '{$decimal}', which is not a decimal number";
+                $leftOut[] = "its {$rule} '{$decimal}', which is not a decimal number";
                 continue;
             }
 
@@ -145,7 +169,7 @@ final class SchemaConstraints implements SchemaMemberAttributes
 
         $integerStep = $type->type->value === ScalarType::Integer && IntegerStep::isNonzeroDecimal($step) ? IntegerStep::of($step) : null;
         if ($integerStep === null) {
-            $this->leftOut[] = "its multipleOf {$step}, which is no integer step within the PHP `int` range";
+            $leftOut[] = "its multipleOf {$step}, which is no integer step within the PHP `int` range";
 
             return $constraints;
         }
@@ -154,8 +178,11 @@ final class SchemaConstraints implements SchemaMemberAttributes
         return $constraints;
     }
 
-    /** @return list<array{string, array<string, string>}> */
-    private function listRules(ArrayTypeUse $type, PhpClassFile $file): array
+    /**
+     * @param list<string> $leftOut
+     * @return list<array{string, array<string, string>}>
+     */
+    private function listRules(ArrayTypeUse $type, PhpClassFile $file, array &$leftOut): array
     {
         $constraints = [];
         $count = array_filter(['min' => $type->minItems, 'max' => $type->maxItems], static fn (?int $value): bool => $value !== null);
@@ -164,7 +191,7 @@ final class SchemaConstraints implements SchemaMemberAttributes
         }
 
         $itemConstraints = [];
-        foreach ($this->constraints($type->items, true, $file) as [$constraint, $arguments]) {
+        foreach ($this->constraints($type->items, true, $file, $leftOut) as [$constraint, $arguments]) {
             if ($constraint === self::VALID) {
                 continue;
             }
