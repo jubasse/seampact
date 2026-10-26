@@ -138,6 +138,8 @@ const GENERAL_CHANNEL = "/v1/channels/10000000-0000-4000-8000-000000000001";
 const TASK_PATH = `${GENERAL_CHANNEL}/tasks/20000000-0000-4000-8000-000000000001`;
 const PROBLEM_JSON = "application/problem+json";
 const ABOVE_BATCH_LIMIT_BYTES = 3_000_000;
+// The token the user hook double answers with Laravel's AuthorizationException (UserHook::GATE_DENIED_TOKEN).
+const GATE_DENIED_TOKEN = "seampact-gate-denied";
 
 async function problemCode(response: Response): Promise<unknown> {
   const body: unknown = await response.json();
@@ -176,6 +178,31 @@ describe("boundary edges of the Laravel runtime", () => {
     });
 
     expect(response.status).toBe(413);
+  });
+});
+
+describe("an AuthorizationException in an authenticate hook", () => {
+  let running: RunningApp | undefined;
+
+  beforeAll(async () => {
+    running = await startLaravelApp(app);
+  }, SUITE_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await running?.close();
+  });
+
+  // The core operations declare no 403, so the reply is the api's 500 either way; the log names the role it kept.
+  test("keeps the forbidden role", async () => {
+    await fetch(`${running?.baseUrl}/__seampact/script`, { method: "PUT", body: "{}" });
+    await fetch(`${running?.baseUrl}${TASK_PATH}`, {
+      headers: { authorization: `Bearer ${GATE_DENIED_TOKEN}` },
+    });
+
+    const logged = await fetch(`${running?.baseUrl}/__seampact/log-lines`);
+    const { lines } = (await logged.json()) as { lines: string[] };
+
+    expect(lines.some((line) => line.includes("the role 'forbidden'"))).toBe(true);
   });
 });
 
