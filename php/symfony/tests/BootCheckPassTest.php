@@ -17,15 +17,19 @@ use Seampact\Golden\TasksConsistent\Symfony\TasksContract;
 use Seampact\Golden\TasksConsistent\Symfony\TasksInputResolver;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSeampactBundle as SecondBundle;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSettings;
+use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\ResolveClassPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
+use Symfony\Component\HttpKernel\DependencyInjection\MergeExtensionConfigurationPass;
 
 /** The container part of the boot check, run on the golden bundles. */
 final class BootCheckPassTest extends TestCase
 {
+    private const RELATIVE_URLS_REFUSAL = "the api writes relative URLs ('api.wire.urls: relative') and 'seampact_tasks.public_origin' is set";
+
     public function testAnEarlierApiWhoseCatchAllCoversThisApisBasePathIsRefused(): void
     {
         // Both golden apis serve under `/v1` with their catch-all on, and the first registered answers first.
@@ -50,76 +54,61 @@ final class BootCheckPassTest extends TestCase
         self::assertStringContainsString("'seampact_tasks.public_origin' is not set", $problems);
     }
 
-    public function testUnderAbsoluteUrlsAConfiguredPublicOriginPassesWhateverItsEnvValue(): void
+    public function testUnderAbsoluteUrlsAnEnvDrivenPublicOriginPassesAtBuild(): void
     {
-        $container = new ContainerBuilder();
-        $container->setParameter('kernel.environment', 'test');
-        $container->setParameter('kernel.build_dir', sys_get_temp_dir());
-        $container->register('event_dispatcher', EventDispatcher::class);
-        $extension = (new SecondBundle())->getContainerExtension();
-        self::assertNotNull($extension);
-        $extension->load([['public_origin' => '%env(SEAMPACT_TASKS_PUBLIC_ORIGIN)%']], $container);
-        (new ResolveClassPass())->process($container);
-        (new RegisterListenersPass())->process($container);
-
-        $problems = '';
-        try {
-            (new BootCheckPass(TasksContract::class, TasksBoundary::class, TasksInputResolver::class, TasksSettings::class, false))->process($container);
-        } catch (\LogicException $failure) {
-            $problems = $failure->getMessage();
-        }
+        $problems = self::compiledProblems(new SecondBundle(), '%env(TASKS_PUBLIC_ORIGIN)%', new BootCheckPass(TasksContract::class, TasksBoundary::class, TasksInputResolver::class, TasksSettings::class, false));
 
         self::assertStringNotContainsString('public_origin', $problems);
     }
 
     public function testUnderAbsoluteUrlsALiteralPublicOriginThatIsNotAnOriginIsRefusedAtBuild(): void
     {
-        $container = new ContainerBuilder();
-        $container->setParameter('kernel.environment', 'test');
-        $container->setParameter('kernel.build_dir', sys_get_temp_dir());
-        $container->register('event_dispatcher', EventDispatcher::class);
-        $extension = (new SecondBundle())->getContainerExtension();
-        self::assertNotNull($extension);
-        $extension->load([['public_origin' => 'https://api.example.com/v1']], $container);
-        (new ResolveClassPass())->process($container);
-        (new RegisterListenersPass())->process($container);
-
-        $problems = '';
-        try {
-            (new BootCheckPass(TasksContract::class, TasksBoundary::class, TasksInputResolver::class, TasksSettings::class, false))->process($container);
-        } catch (\LogicException $failure) {
-            $problems = $failure->getMessage();
-        }
+        $problems = self::compiledProblems(new SecondBundle(), 'https://api.example.com/v1', new BootCheckPass(TasksContract::class, TasksBoundary::class, TasksInputResolver::class, TasksSettings::class, false));
 
         self::assertStringContainsString("'seampact_tasks.public_origin' is 'https://api.example.com/v1'", $problems);
     }
 
     public function testUnderRelativeUrlsAPublicOriginThatIsSetIsRefusedAtBuild(): void
     {
-        $problems = $this->relativeApiProblems('https://api.example.com');
+        $problems = self::compiledProblems(new FirstBundle(), 'https://api.example.com', self::relativeBootCheck());
 
-        self::assertStringContainsString("the api writes relative URLs ('api.wire.urls: relative') and 'seampact_tasks.public_origin' is set", $problems);
+        self::assertStringContainsString(self::RELATIVE_URLS_REFUSAL, $problems);
     }
 
-    public function testUnderRelativeUrlsAnEnvDrivenPublicOriginIsNotSeenAtBuild(): void
+    public function testUnderRelativeUrlsAnEnvDrivenPublicOriginIsRefusedAtBuild(): void
     {
-        self::assertStringNotContainsString('public_origin', $this->relativeApiProblems('%env(TASKS_PUBLIC_ORIGIN)%'));
+        $problems = self::compiledProblems(new FirstBundle(), '%env(TASKS_PUBLIC_ORIGIN)%', self::relativeBootCheck());
+
+        self::assertStringContainsString(self::RELATIVE_URLS_REFUSAL, $problems);
     }
 
-    private function relativeApiProblems(string $publicOrigin): string
+    public function testUnderRelativeUrlsAnUnsetPublicOriginPasses(): void
+    {
+        self::assertStringNotContainsString('public_origin', self::compiledProblems(new FirstBundle(), null, self::relativeBootCheck()));
+    }
+
+    private static function relativeBootCheck(): RelativeBootCheckPass
+    {
+        return new RelativeBootCheckPass(RelativeContract::class, RelativeBoundary::class, RelativeInputResolver::class, RelativeSettings::class, false);
+    }
+
+    /** The boot check's problems on a container built as a Kernel builds it, the bundle configuration merged first. */
+    private static function compiledProblems(Bundle $bundle, ?string $publicOrigin, CompilerPassInterface $bootCheck): string
     {
         $container = new ContainerBuilder();
         $container->setParameter('kernel.environment', 'test');
         $container->setParameter('kernel.build_dir', sys_get_temp_dir());
         $container->register('event_dispatcher', EventDispatcher::class);
-        $extension = (new FirstBundle())->getContainerExtension();
+        $extension = $bundle->getContainerExtension();
         self::assertNotNull($extension);
-        $extension->load([['public_origin' => $publicOrigin]], $container);
+        $container->registerExtension($extension);
+        $container->loadFromExtension($extension->getAlias(), $publicOrigin === null ? [] : ['public_origin' => $publicOrigin]);
+        (new MergeExtensionConfigurationPass([$extension->getAlias()]))->process($container);
         (new ResolveClassPass())->process($container);
         (new RegisterListenersPass())->process($container);
 
         try {
-            (new RelativeBootCheckPass(RelativeContract::class, RelativeBoundary::class, RelativeInputResolver::class, RelativeSettings::class, false))->process($container);
+            $bootCheck->process($container);
         } catch (\LogicException $failure) {
             return $failure->getMessage();
         }
