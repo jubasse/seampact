@@ -8,6 +8,7 @@ use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Auth\Factory;
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\AuthenticateSession;
 use PHPUnit\Framework\TestCase;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\ApiContract;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
@@ -17,7 +18,7 @@ use Seampact\Golden\TasksConsistent\Laravel\TasksContract;
 use Seampact\Hooks\RequestView;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 
-/** Laravel's `auth` middleware in an app with no `login` route: a contract request gets no guest redirect, others keep the app's. */
+/** Laravel's `auth` and `auth.session` middleware in an app with no `login` route: a contract request gets no guest redirect, others keep the app's. */
 final class GuestRedirectsTest extends TestCase
 {
     private const APP_LOGIN = '/app-login';
@@ -25,6 +26,7 @@ final class GuestRedirectsTest extends TestCase
     protected function tearDown(): void
     {
         Authenticate::redirectUsing(static fn (): ?string => null);
+        AuthenticateSession::redirectUsing(static fn (): ?string => null);
     }
 
     public function testAContractRequestSkipsTheDefaultLoginRedirectThatWouldThrow(): void
@@ -45,6 +47,22 @@ final class GuestRedirectsTest extends TestCase
         self::assertNull(self::redirectOf(self::contractRequest()));
     }
 
+    public function testAContractRequestSkipsTheSessionMiddlewaresLoginRedirectToo(): void
+    {
+        AuthenticateSession::redirectUsing(static fn (): string => throw new RouteNotFoundException('Route [login] not defined.'));
+        GuestRedirects::skipOnContractRequests('tasks');
+
+        self::assertNull(self::sessionRedirectOf(self::contractRequest()));
+    }
+
+    public function testAnotherRequestKeepsTheAppsSessionRedirect(): void
+    {
+        AuthenticateSession::redirectUsing(static fn (): string => self::APP_LOGIN);
+        GuestRedirects::skipOnContractRequests('tasks');
+
+        self::assertSame(self::APP_LOGIN, self::sessionRedirectOf(Request::create('/elsewhere')));
+    }
+
     private static function contractRequest(): Request
     {
         $request = Request::create('/v1/tasks');
@@ -57,6 +75,18 @@ final class GuestRedirectsTest extends TestCase
     private static function redirectOf(Request $request): ?string
     {
         $middleware = new class (self::createStub(Factory::class)) extends Authenticate {
+            public function guestRedirect(Request $request): ?string
+            {
+                return $this->redirectTo($request);
+            }
+        };
+
+        return $middleware->guestRedirect($request);
+    }
+
+    private static function sessionRedirectOf(Request $request): ?string
+    {
+        $middleware = new class (self::createStub(Factory::class)) extends AuthenticateSession {
             public function guestRedirect(Request $request): ?string
             {
                 return $this->redirectTo($request);
