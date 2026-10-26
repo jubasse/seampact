@@ -13,6 +13,7 @@ use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Codegen\Runtime\ContractRefusal;
 use Seampact\Codegen\Runtime\RawTarget;
+use Seampact\Codegen\Runtime\IdempotencyStep;
 use Seampact\Codegen\Runtime\ReplyVerdict;
 use Seampact\Codegen\Runtime\RouteMatch;
 use Seampact\Hooks\RequestView;
@@ -78,12 +79,27 @@ abstract class BoundaryMiddleware
         $request->attributes->set(BoundaryState::attributeName($contract->api), $state);
 
         try {
+            $reply = $this->answered($request, $next, $state);
+        } catch (\Throwable $failure) {
+            // A key this request claimed is released, so a retry runs again instead of waiting for its lifetime.
+            IdempotencyStep::abandon($state);
+
+            throw $failure;
+        }
+        IdempotencyStep::settle($state, $reply);
+
+        return $reply;
+    }
+
+    private function answered(Request $request, \Closure $next, BoundaryState $state): Response
+    {
+        try {
             InputStep::read($request, $state);
             $response = self::passed($next($request));
         } catch (ContractRefusal $refusal) {
             return $refusal->render($request);
         } catch (\Throwable $failure) {
-            return ReplyVerdict::internalError($this->hooks(), $contract, $operationId, 'the request failed before a reply was written', $failure);
+            return ReplyVerdict::internalError($this->hooks(), $state->contract, $state->operationId, 'the request failed before a reply was written', $failure);
         }
 
         return $this->checked($request, $state, $response);

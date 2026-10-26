@@ -13,6 +13,7 @@ Route::seampact('tasks');
 Route::put('/__seampact/script', [SuiteControlController::class, 'loadScript']);
 Route::get('/__seampact/hook-calls', [SuiteControlController::class, 'hookCalls']);
 Route::get('/__seampact/log-lines', [SuiteControlController::class, 'logLines']);
+Route::get('/__seampact/dumped-credential', [SuiteControlController::class, 'dumpedCredential']);
 
 if (BootVariant::servesUnlistedRoute()) {
     Route::get('/v1/unlisted', UnlistedRouteController::class);

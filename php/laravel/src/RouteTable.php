@@ -9,19 +9,25 @@ use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\OperationNames;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
+use Seampact\Ir\Model\IdentityAccess;
 use Seampact\Ir\Model\Operation;
+use Seampact\Ir\Model\OptionalAccess;
+use Seampact\Ir\Model\SignedIdentity;
 use Seampact\Ir\Write\GeneratedFile;
 
 /**
  * The contract routes of one api (ADR 0023 "Routes"): Laravel patterns with positional parameter names (`{p1}`), a
  * `:` in a static segment kept literal, registered per depth with literal segments before placeholders, since Laravel
  * matches in registration order. The route table class carries them and the option defaults for the `Route::seampact()`
- * macro; under `routes: file` a `routes.php` with one `Route::` line per operation is written beside it.
+ * macro; under `routes: file` a `routes.php` with one `Route::` line per operation is written beside it. A signed route
+ * is registered without the CSRF middleware, so a `web` group never refuses the webhook it serves.
  */
 final class RouteTable
 {
     public const ROUTES_FILE = 'routes.php';
     private const ROUTE_FACADE = 'Illuminate\\Support\\Facades\\Route';
+    // The CSRF middleware of the `web` group, which a signed route's caller never satisfies (ADR 0013).
+    private const FORGERY_MIDDLEWARE = 'Illuminate\\Foundation\\Http\\Middleware\\PreventRequestForgery';
     private const LITERAL_SEGMENT = 0;
     private const PLACEHOLDER_SEGMENT = 1;
 
@@ -88,17 +94,23 @@ final class RouteTable
                 . "\t\t'uri' => " . var_export($route['uri'], true) . ",\n"
                 . "\t\t'name' => " . var_export($this->routeName($operation), true) . ",\n"
                 . "\t\t'access' => " . var_export($operation->access->tag(), true) . ",\n"
+                . ($this->signed($operation) ? "\t\t'signed' => true,\n" : '')
                 . "\t\t'action' => [" . $file->name($names->endpoints) . '::class, ' . var_export($names->method, true) . "],\n"
                 . "\t],";
         }
         $class->addConstant('ROUTES', new Literal($lines === [] ? '[]' : "[\n" . implode("\n", $lines) . "\n]"))->setPublic()
-            ->addComment('@var list<array{operation: string, method: string, uri: string, name: string, access: string, action: array{class-string, string}}>');
+            ->addComment('@var list<array{operation: string, method: string, uri: string, name: string, access: string, signed?: true, action: array{class-string, string}}>');
 
         $route = $file->name(self::ROUTE_FACADE);
         $access = $file->name($this->layout->accessMiddleware);
+        $registration = "{$route}::match([\$route['method']], \$route['uri'], \$route['action'])->name(\$route['name'])->middleware({$access}::class);";
+        $anySigned = array_filter($this->routes, fn (array $kept): bool => $this->signed($kept['operation'])) !== [];
+        $body = $anySigned
+            ? "\t\$registered = {$registration}\n\tif (\$route['signed'] ?? false) {\n\t\t\$registered->withoutMiddleware(" . $file->name(self::FORGERY_MIDDLEWARE) . "::class);\n\t}\n"
+            : "\t{$registration}\n";
         $class->addMethod('register')->setStatic()->setReturnType('void')
             ->addComment('Registers every contract route, in order, inside the caller\'s route group, each behind the access middleware.')
-            ->setBody("foreach (self::ROUTES as \$route) {\n\t{$route}::match([\$route['method']], \$route['uri'], \$route['action'])->name(\$route['name'])->middleware({$access}::class);\n}");
+            ->setBody("foreach (self::ROUTES as \$route) {\n{$body}}");
 
         return $file;
     }
@@ -118,7 +130,11 @@ final class RouteTable
             $imports[$names->endpoints] = true;
             $lines[] = 'Route::' . $route['operation']->method->value . '(' . var_export($route['uri'], true) . ', ['
                 . PhpClassFile::shortNameOf($names->endpoints) . '::class, ' . var_export($names->method, true) . '])->name('
-                . var_export($this->routeName($route['operation']), true) . ")->middleware({$access}::class);";
+                . var_export($this->routeName($route['operation']), true) . ")->middleware({$access}::class)"
+                . ($this->signed($route['operation']) ? '->withoutMiddleware(' . PhpClassFile::shortNameOf(self::FORGERY_MIDDLEWARE) . '::class)' : '') . ';';
+            if ($this->signed($route['operation'])) {
+                $imports[self::FORGERY_MIDDLEWARE] = true;
+            }
         }
 
         $imports = array_keys($imports);
@@ -129,6 +145,14 @@ final class RouteTable
             . implode("\n", $lines) . "\n";
 
         return new GeneratedFile(self::ROUTES_FILE, $text);
+    }
+
+    private function signed(Operation $operation): bool
+    {
+        $access = $operation->access;
+        $identity = $access instanceof IdentityAccess || $access instanceof OptionalAccess ? $this->layout->ir->identities[$access->identity] ?? null : null;
+
+        return $identity instanceof SignedIdentity;
     }
 
     private function routeName(Operation $operation): string

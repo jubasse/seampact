@@ -9,7 +9,8 @@
     "ext-zlib": "*",
     "laravel/framework": "~13.38.0",
     "seampact/hooks": "dev-develop",
-    "seampact/laravel": "dev-develop"
+    "seampact/laravel": "dev-develop",
+    "seampact/signed-webhooks": "dev-develop"
   },
   "repositories": [
     {
@@ -49,6 +50,16 @@
         "symlink": false,
         "versions": {
           "seampact/hooks": "dev-develop"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../../../../php/signed-webhooks",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/signed-webhooks": "dev-develop"
         }
       }
     }

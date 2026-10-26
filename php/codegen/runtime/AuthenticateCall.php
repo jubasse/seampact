@@ -18,6 +18,7 @@ final readonly class AuthenticateCall implements AuthenticateRequest
         #[\SensitiveParameter] private ?string $csrfToken,
         private RequestView $request,
         private OperationRef $operation,
+        private ?SignedRequest $signature = null,
     ) {
     }
 
@@ -38,7 +39,7 @@ final readonly class AuthenticateCall implements AuthenticateRequest
 
     public function signature(): ?SignedRequest
     {
-        return null;
+        return $this->signature;
     }
 
     public function request(): RequestView
@@ -59,6 +60,6 @@ final readonly class AuthenticateCall implements AuthenticateRequest
     /** @return array<string, mixed> */
     public function __debugInfo(): array
     {
-        return ['identity' => $this->identity, 'credentials' => \Seampact\Hooks\Redaction::REDACTED, 'operation' => $this->operation];
+        return ['identity' => $this->identity, 'credentials' => \Seampact\Hooks\Redaction::REDACTED, 'operation' => $this->operation, 'signature' => $this->signature];
     }
 }

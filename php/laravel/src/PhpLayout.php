@@ -39,7 +39,7 @@ final class PhpLayout implements TypeNames
     /** @var array<string, string> each kept operation's FormRequest */
     private array $requests = [];
 
-    /** @var array<string, array{hook: string, credentials: string}> each identity a kept operation reads */
+    /** @var array<string, array{hook: string, credentials: string, principal: string, principalMembers: string}> each identity a kept operation reads */
     private array $identities = [];
 
     public function __construct(ContractIR $ir, public readonly string $namespace, KeptForms $kept, Refusals $refusals)
@@ -98,7 +98,7 @@ final class PhpLayout implements TypeNames
         return $this->requests[$operationId] ?? throw new \LogicException("The operation '{$operationId}' has no FormRequest name; it is not a kept operation with names.");
     }
 
-    /** @return array<string, array{hook: string, credentials: string}> the hook interface and credentials class of each identity a kept operation reads */
+    /** @return array<string, array{hook: string, credentials: string, principal: string, principalMembers: string}> the hook interface and credentials class of each identity a kept operation reads */
     public function identities(): array
     {
         return $this->identities;
@@ -109,7 +109,7 @@ final class PhpLayout implements TypeNames
         return "{$this->runtimeNamespace}\\{$simpleName}";
     }
 
-    /** @return array{hook: string, credentials: string} */
+    /** @return array{hook: string, credentials: string, principal: string, principalMembers: string} */
     private function claimIdentity(string $identity, IrPlace $at): array
     {
         $segments = SplitName::segmentsOf($identity, NameSource::Name) ?? [$identity];
@@ -117,6 +117,8 @@ final class PhpLayout implements TypeNames
         return [
             'hook' => $this->api->claim($this->laravelNamespace . '\\' . PhpNames::identifier([...$segments, 'authenticate', 'hook'], NamingRole::Schema), "the authenticate hook of identity '{$identity}'", $at),
             'credentials' => $this->api->claim($this->laravelNamespace . '\\' . PhpNames::identifier([...$segments, 'credentials'], NamingRole::Schema), "the credentials of identity '{$identity}'", $at),
+            'principal' => $this->api->claim($this->laravelNamespace . '\\' . PhpNames::identifier([...$segments, 'principal'], NamingRole::Schema), "the principal of identity '{$identity}'", $at),
+            'principalMembers' => $this->api->claim($this->laravelNamespace . '\\' . PhpNames::identifier([...$segments, 'principal', 'members'], NamingRole::Schema), "the principal members interface of identity '{$identity}'", $at),
         ];
     }
 }

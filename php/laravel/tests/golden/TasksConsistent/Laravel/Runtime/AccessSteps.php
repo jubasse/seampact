@@ -11,7 +11,11 @@ use Seampact\Hooks\Purpose;
 use Seampact\Hooks\RequirementKind;
 use Seampact\Hooks\ScopeIdSource;
 use Seampact\Hooks\ScopeResolution;
+use Seampact\Hooks\SignatureEncoding;
+use Seampact\Hooks\SignatureTemplate;
+use Seampact\Hooks\SignedTemplateRequest;
 use Seampact\Hooks\SubjectRef;
+use Seampact\Hooks\ThrottleBucket;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -28,6 +32,7 @@ final class AccessSteps
     private const OPTIONAL_ACCESS = 'optional';
     private const ANONYMOUS = 'anonymous';
     private const COOKIE = 'cookie';
+    private const SIGNATURE = 'signature';
 
     private function __construct()
     {
@@ -129,10 +134,17 @@ final class AccessSteps
             }
         }
 
+        $signature = null;
+        $signedScheme = Ir::string($state->contract->declaration('identities', $identity), 'signed');
+        if ($signedScheme !== null) {
+            $signature = self::signedRequest($state, $signedScheme, $credentials[$signedScheme] ?? null);
+        }
+
         $hook = $state->hooks->authenticateHook($state->contract, $identity);
-        $result = $hook->authenticate(new AuthenticateCall($identity, new $credentialsClass(...$arguments), $csrfToken, $state->view, self::operationRef($state)));
+        $result = $hook->authenticate(new AuthenticateCall($identity, new $credentialsClass(...$arguments), $csrfToken, $state->view, self::operationRef($state), $signature));
         if ($result instanceof AuthenticateResult\Authenticated) {
             $state->principal = $result->principal;
+            $state->principalMembers = PrincipalMembers::read($state->contract, $identity, $result->principal);
 
             return;
         }
@@ -144,6 +156,38 @@ final class AccessSteps
         }
 
         throw self::refusalOf($state, $result->deny);
+    }
+
+    // A bucket keyed by a principal member reads the declared member, never a property the contract does not name.
+    private static function principalMember(BoundaryState $state, string $name): mixed
+    {
+        if ($state->principalMembers === null) {
+            return null;
+        }
+        if (!array_key_exists($name, $state->principalMembers)) {
+            throw new \LogicException("seampact: a bucket of operation '{$state->operationId}' is keyed by the principal member '{$name}', which the identity's principal does not declare.");
+        }
+
+        return $state->principalMembers[$name];
+    }
+
+    /**
+     * A signed route's signature, parsed from its header over the raw body step 1 kept; a missing or malformed header
+     * is the unauthenticated refusal, and the identity's hook verifies the signature (ADR 0013).
+     */
+    private static function signedRequest(BoundaryState $state, string $schemeId, #[\SensitiveParameter] ?string $header): SignedTemplateRequest
+    {
+        $signature = Ir::map($state->contract->declaration('schemes', $schemeId), 'signature');
+        $parsed = SignatureHeader::parse(Ir::string($signature, 'format') ?? '', $header);
+        if ($parsed === null) {
+            throw self::roleRefusal($state, self::UNAUTHENTICATED_ROLE);
+        }
+
+        $encoding = SignatureEncoding::tryFrom(Ir::string($signature, 'encoding') ?? '')
+            ?? throw new \LogicException("seampact: the signature scheme '{$schemeId}' names an encoding the boundary does not know.");
+        $template = new SignatureTemplate(Ir::string($signature, 'algorithm') ?? '', Ir::string($signature, 'payload') ?? '', $encoding, Ir::int($signature, 'toleranceMs'));
+
+        return new SignedTemplateRequest($state->rawBody ?? '', $parsed->candidateSignatures, Ir::string(Ir::map($signature, 'key'), 'value') ?? '', $template, $parsed->timestamp);
     }
 
     /**
@@ -163,7 +207,7 @@ final class AccessSteps
             $value = match (Ir::string($scheme, 'kind')) {
                 'bearer' => self::bearerToken($request),
                 self::COOKIE => self::cookie($request, $name),
-                'header' => $request->headers->get($name),
+                'header', self::SIGNATURE => $request->headers->get($name),
                 default => throw new \LogicException('seampact: the credential scheme kind ' . var_export(Ir::string($scheme, 'kind'), true) . ' is not one the boundary reads.'),
             };
             if ($value === null || $value === '') {
@@ -256,6 +300,7 @@ final class AccessSteps
                 new Purpose\Route(),
                 self::operationRef($state),
                 $state->view,
+                self::throttleBucket($state, Ir::string($requirement, 'bucket')),
             );
 
             $decision = self::decide($state, $call);
@@ -315,6 +360,65 @@ final class AccessSteps
         }
 
         return $value;
+    }
+
+    /**
+     * The bucket a throttle rule counts in: its key is the SHA-256 hex of `[api, bucket, values]` as the Node and
+     * Spring targets write it, so a counter shared across targets counts one client once.
+     */
+    /** The bucket `$bucketId` of a throttle requirement, keyed by its declared values; null when there is none. */
+    public static function throttleBucket(BoundaryState $state, ?string $bucketId): ?ThrottleBucket
+    {
+        if ($bucketId === null) {
+            return null;
+        }
+
+        $bucket = $state->contract->declaration('buckets', $bucketId);
+        $values = [];
+        foreach (Ir::maps($bucket, 'key') as $source) {
+            $values[] = self::bucketKeyValue($state, $source);
+        }
+
+        return new ThrottleBucket($bucketId, Digests::hexOf([$state->contract->api, $bucketId, $values]), $values, Ir::int($bucket, 'limit'), Ir::int($bucket, 'windowMs'));
+    }
+
+    /**
+     * A key value: a path param decoded and checked by its type, a resolved scope's id, a principal member.
+     *
+     * @param array<array-key, mixed> $source
+     */
+    private static function bucketKeyValue(BoundaryState $state, array $source): mixed
+    {
+        $name = Ir::string($source, 'name') ?? '';
+
+        return match (Ir::string($source, 'in')) {
+            'path' => self::pathValue($state, $name, self::pathParamType($state, $name)),
+            'scope' => self::scopeId($state, $name),
+            'principal' => self::principalMember($state, $name),
+            default => throw new \LogicException('seampact: a bucket key read from ' . var_export(Ir::string($source, 'in'), true) . ' is not one the boundary reads.'),
+        };
+    }
+
+    private static function pathParamType(BoundaryState $state, string $name): mixed
+    {
+        foreach (Ir::maps(Ir::map($state->contract->operation($state->operationId), 'params'), 'path') as $param) {
+            if (Ir::string($param, 'name') === $name) {
+                return $param['type'] ?? null;
+            }
+        }
+
+        throw new \LogicException("seampact: the bucket key reads the path param '{$name}', which operation '{$state->operationId}' does not declare.");
+    }
+
+    private static function scopeId(BoundaryState $state, string $scope): mixed
+    {
+        foreach ($state->scopes as $resolved) {
+            if ($resolved->scope === $scope) {
+                return $resolved->id;
+            }
+        }
+
+        return null;
     }
 
     /** @param array<array-key, mixed> $value */

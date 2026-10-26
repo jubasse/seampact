@@ -16,6 +16,9 @@ use Seampact\Ir\Model\ResponseShape;
  */
 final class OperationTypes
 {
+    /** The PHP type of each page fact a paging style reads from the handler (ADR 0002 section 14). */
+    private const PAGE_FACT_TYPES = ['nextCursor' => 'string', 'previousCursor' => 'string', 'nextSince' => 'string', 'total' => 'int', 'more' => 'bool'];
+
     public function __construct(private readonly ApiLayout $layout, private readonly PhpTypes $types, private readonly Refusals $refusals)
     {
     }
@@ -49,6 +52,9 @@ final class OperationTypes
             if ($operation->input !== null) {
                 PhpTypes::promote($constructor, 'body', $this->types->of($operation->input->schema, $input));
             }
+            // A signed route's body is the signed payload, redacted whole (ADR 0023 "Redaction").
+            $bodyRedacted = $operation->input !== null && ($operation->input->rawBody || RedactedMembers::isSensitive($operation->input->schema));
+            RedactedMembers::redact($inputClass, $constructor, $bodyRedacted ? ['body'] : []);
         }
         $files[] = $input;
 
@@ -58,7 +64,10 @@ final class OperationTypes
         $files[] = $result;
 
         foreach ($operation->responses as $index => $response) {
-            $files[] = $this->responseFile($names->responses[$response->status], $names->result, $response, $operation, $at->below('responses', $index));
+            $files[] = $this->responseFile($names, $response, $operation, $at->below('responses', $index));
+        }
+        if ($names->page !== null) {
+            $files[] = $this->pageFile($names->page, $operation, $at);
         }
 
         $files[] = $this->errorsFile($names, $operation);
@@ -76,6 +85,7 @@ final class OperationTypes
         $irPart = $part === 'headers' ? 'header' : $part;
 
         $members = [];
+        $sensitive = [];
 
         foreach ($params as $index => $param) {
             $paramAt = $at->below('params', $irPart, $index);
@@ -93,16 +103,20 @@ final class OperationTypes
 
             $members[strtolower($member)] = $param->name;
             PhpTypes::promote($constructor, $member, $this->types->ofParam($param, $file));
+            if (RedactedMembers::isSensitive($param->type)) {
+                $sensitive[] = $member;
+            }
         }
+        RedactedMembers::redact($class, $constructor, $sensitive);
 
         return $file;
     }
 
-    private function responseFile(string $className, string $resultInterface, Response $response, Operation $operation, IrPlace $at): PhpClassFile
+    private function responseFile(OperationNames $names, Response $response, Operation $operation, IrPlace $at): PhpClassFile
     {
-        $file = new PhpClassFile($className);
+        $file = new PhpClassFile($names->responses[$response->status]);
         $class = $file->namespace->addClass($file->shortName)->setFinal()->setReadOnly();
-        $class->addImplement($resultInterface);
+        $class->addImplement($names->result);
         $class->addComment(DocComments::of($response->docs, "The {$response->status} reply of operation '{$operation->id}'."));
 
         if ($response->body === null) {
@@ -117,7 +131,54 @@ final class OperationTypes
         if ($response->shape->value === ResponseShape::Table) {
             $body = new PhpType('array', "array<string, {$body->doc}>");
         }
-        PhpTypes::promote($class->addMethod('__construct'), 'body', $body);
+        if ($response->shape->value === ResponseShape::Page) {
+            if ($names->page === null) {
+                $this->refusals->inconsistent('response.page.unpaged', "A 'page' response on an operation without paging", $at);
+
+                return $file;
+            }
+            $body = new PhpType($names->page, PhpClassFile::shortNameOf($file->name($names->page)));
+        }
+        $constructor = $class->addMethod('__construct');
+        PhpTypes::promote($constructor, 'body', $body);
+        RedactedMembers::redact($class, $constructor, RedactedMembers::isSensitive($response->body) ? ['body'] : []);
+
+        return $file;
+    }
+
+    /**
+     * The page a paged list's handler returns: its items and the facts its paging style reads from the handler
+     * (`handlerResult`), each optional, which the boundary renders into the style's body, headers and links.
+     */
+    private function pageFile(string $className, Operation $operation, IrPlace $at): PhpClassFile
+    {
+        $file = new PhpClassFile($className);
+        $class = $file->namespace->addClass($file->shortName)->setFinal()->setReadOnly();
+        $class->addComment("The page operation '{$operation->id}' answers: its items and the facts its paging style reads.");
+        $constructor = $class->addMethod('__construct');
+
+        $item = null;
+        foreach ($operation->responses as $response) {
+            if ($response->shape->value === ResponseShape::Page && $response->body !== null) {
+                $item = $this->types->of($response->body, $file);
+            }
+        }
+        PhpTypes::promote($constructor, 'items', new PhpType('array', 'list<' . ($item->doc ?? 'mixed') . '>'));
+
+        $style = $this->layout->ir->pagings[$operation->paging->style ?? ''] ?? null;
+        if ($style === null) {
+            $this->refusals->inconsistent('paging.style.undeclared', "The paging style '" . ($operation->paging->style ?? '') . "' is not declared", $at->below('paging', 'style'));
+
+            return $file;
+        }
+        foreach ($style->handlerResult as $member) {
+            $type = self::PAGE_FACT_TYPES[$member->value] ?? null;
+            if ($type === null) {
+                $this->refusals->waiting('paging.handlerResult', "The page fact '{$member->value}'", $at->below('paging', 'style'), Delivery::AfterOneZero);
+                continue;
+            }
+            $constructor->addPromotedParameter($member->value)->setType($type)->setNullable()->setDefaultValue(null);
+        }
 
         return $file;
     }

@@ -20,7 +20,7 @@ use Seampact\Ir\Run\FrameworkRoute;
 final class ContractClass
 {
     /** The IR members the runtime reads; the others stay out of the constant. */
-    private const IR_MEMBERS = ['api', 'errors', 'formats', 'identities', 'schemes', 'scopes', 'rights', 'rules', 'schemas', 'enums'];
+    private const IR_MEMBERS = ['api', 'errors', 'formats', 'identities', 'schemes', 'scopes', 'rights', 'rules', 'buckets', 'pagings', 'schemas', 'enums'];
 
     /** @param list<FrameworkRoute> $frameworkRoutes */
     public function __construct(private readonly PhpLayout $layout, private readonly KeptForms $kept, private readonly array $frameworkRoutes)
@@ -138,12 +138,16 @@ final class ContractClass
         return $members;
     }
 
-    /** @return array<string, array{hook: string, credentials: string, schemes: array<string, ?string>}> */
+    /** @return array<string, array{hook: string, credentials: string, principal: string, principalMembers: string, schemes: array<string, ?string>, principalAccessors: array<string, string>}> */
     private function identityTypes(): array
     {
         $types = [];
         foreach ($this->layout->identities() as $identity => $classes) {
-            $types[$identity] = [...$classes, 'schemes' => IdentityTypes::schemeMembers($this->schemesOf($identity))];
+            $types[$identity] = [
+                ...$classes,
+                'schemes' => IdentityTypes::schemeMembers($this->schemesOf($identity)),
+                'principalAccessors' => IdentityTypes::principalAccessors($this->layout, $identity),
+            ];
         }
 
         return $types;

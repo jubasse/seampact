@@ -25,7 +25,7 @@ final class TasksRoutes
         'catch_all' => true,
     ];
 
-    /** @var list<array{operation: string, method: string, uri: string, name: string, access: string, action: array{class-string, string}}> */
+    /** @var list<array{operation: string, method: string, uri: string, name: string, access: string, signed?: true, action: array{class-string, string}}> */
     public const ROUTES = [
         [
             'operation' => 'health',

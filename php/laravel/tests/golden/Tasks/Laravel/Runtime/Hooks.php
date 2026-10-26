@@ -8,6 +8,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Container\Container;
 use Psr\Log\LoggerInterface;
 use Seampact\Hooks\AuthenticateHook;
+use Seampact\Hooks\IdempotencyStore;
 
 /**
  * The api's hooks as container bindings, resolved per request: an authenticate hook per identity bound to its
@@ -15,7 +16,7 @@ use Seampact\Hooks\AuthenticateHook;
  * unexpected-error listener and the app's logger. A missing hook is a `LogicException`, which the boundary answers
  * with the api's 500. Laravel's `AuthorizationException` (`Gate::authorize()`) is a decider's access denial.
  */
-final class Hooks implements HookLookup
+final class Hooks implements HookLookup, IdempotencyStoreLookup
 {
     /** The tags are `TAG_PREFIX . <api> . <kind suffix>`; the generated provider builds its constants from these. */
     public const TAG_PREFIX = 'seampact.';
@@ -73,6 +74,19 @@ final class Hooks implements HookLookup
         }
 
         return $listener;
+    }
+
+    public function idempotencyStore(): ?IdempotencyStore
+    {
+        if (!$this->container->bound(IdempotencyStore::class)) {
+            return null;
+        }
+        $store = $this->binding(IdempotencyStore::class);
+        if (!$store instanceof IdempotencyStore) {
+            throw new \LogicException('seampact: the container binds ' . IdempotencyStore::class . ' to ' . get_debug_type($store) . '; bind it to a class implementing that interface.');
+        }
+
+        return $store;
     }
 
     // What the app bound, of whatever type: the container's own signature assumes the bound class implements the id.

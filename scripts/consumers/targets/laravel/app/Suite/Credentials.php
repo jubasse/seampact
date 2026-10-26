@@ -21,6 +21,16 @@ final class Credentials
         return $value;
     }
 
+    public static function number(string $name): int
+    {
+        $value = self::all()[$name] ?? null;
+        if (!is_int($value)) {
+            throw new \UnexpectedValueException("credentials.json holds no integer '{$name}'");
+        }
+
+        return $value;
+    }
+
     /** @return array<string, mixed> */
     private static function all(): array
     {

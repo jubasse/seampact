@@ -134,6 +134,12 @@ final class FormRequestRulesTest extends TestCase
         self::assertSame([['body', '/ratio', 'type']], $this->issuesOfJson('{"ids":[],"ratio":-1e400}', self::CONSISTENT_NAMESPACE));
     }
 
+    public function testAnOpaqueValueTakesAnyJsonButANonFiniteNumber(): void
+    {
+        self::assertSame([], $this->issuesOfJson('{"ids":[],"payload":[1,"two",null,{"nested":true}]}'));
+        self::assertSame([['body', '/payload', 'type']], $this->issuesOfJson('{"ids":[],"payload":{"deep":[1e400]}}'));
+    }
+
     public function testAMultipleOfIsCheckedExactly(): void
     {
         self::assertSame([], $this->issuesOfJson('{"ids":[],"step":9}', self::CONSISTENT_NAMESPACE));
@@ -278,6 +284,7 @@ final class FormRequestRulesTest extends TestCase
             ['label', true, false, ['kind' => 'scalar', 'type' => 'string', 'refinements' => ['minLength' => 5, 'pattern' => ['source' => '^tag-', 'normalized' => '^tag-']]]],
             ['step', true, false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['multipleOf' => '3']]],
             ['halfStep', true, false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['multipleOf' => '2.5']]],
+            ['payload', true, false, ['kind' => 'opaque', 'reason' => 'any webhook payload', 'origin' => ['layer' => 'api', 'pointer' => '/schemas/GetTasksBatchInput/properties/payload']]],
         ];
         foreach ($added as [$name, $optional, $nullable, $type]) {
             $property = clone $template;

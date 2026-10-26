@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Generated\Tasks\Laravel\UserCredentials;
+use App\Suite\Credentials;
 use App\Suite\SuiteControl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,6 +24,15 @@ final class SuiteControlController
     public function hookCalls(): JsonResponse
     {
         return new JsonResponse(['calls' => SuiteControl::hookCalls()]);
+    }
+
+    // Laravel's own `dump()` of a credential, as a developer debugging a hook would write it, captured as text.
+    public function dumpedCredential(): Response
+    {
+        ob_start();
+        dump(new UserCredentials(Credentials::text('userToken'), Credentials::text('userToken')));
+
+        return new Response((string) ob_get_clean(), 200, ['Content-Type' => 'text/plain']);
     }
 
     public function logLines(): JsonResponse

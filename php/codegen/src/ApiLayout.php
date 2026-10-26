@@ -162,6 +162,7 @@ final class ApiLayout implements TypeNames
             errors: $inRoot(NamingRole::Errors),
             endpoints: $this->namespace . '\\' . PhpNames::identifier($owner, NamingRole::Endpoints),
             responses: $responses,
+            page: $operation->paging === null ? null : $this->claim($this->namespace . '\\' . PhpNames::identifier([...$segments, 'page'], NamingRole::Schema), "the page of operation '{$operation->id}'", $at),
         );
     }
 

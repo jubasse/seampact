@@ -7,6 +7,7 @@ namespace Seampact\Codegen;
 use Nette\PhpGenerator\Method;
 use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\EnumTypeUse;
+use Seampact\Ir\Model\OpaqueTypeUse;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\Property;
 use Seampact\Ir\Model\RefTypeUse;
@@ -24,6 +25,7 @@ final class PhpTypes
     public const FIELD_CLASS = 'Seampact\\Hooks\\Field';
     public const DATE_TIME_FORMAT = 'date-time';
     private const DATE_TIME_CLASS = 'DateTimeImmutable';
+    private const MIXED = 'mixed';
 
     public function __construct(private readonly TypeNames $names)
     {
@@ -89,6 +91,11 @@ final class PhpTypes
 
         if ($className !== null) {
             return new PhpType($className, $file->name($className));
+        }
+
+        // An opaque value is any JSON value, so `mixed` already admits null.
+        if ($type instanceof OpaqueTypeUse) {
+            return new PhpType(self::MIXED, self::MIXED, true);
         }
 
         if (!$type instanceof ScalarTypeUse) {

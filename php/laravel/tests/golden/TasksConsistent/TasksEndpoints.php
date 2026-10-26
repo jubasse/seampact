@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent;
 
+use Seampact\Golden\TasksConsistent\Laravel\CreateTaskRequest;
 use Seampact\Golden\TasksConsistent\Laravel\GetTaskRequest;
 use Seampact\Golden\TasksConsistent\Laravel\GetTasksBatchRequest;
+use Seampact\Golden\TasksConsistent\Laravel\ListTasksRequest;
 use Seampact\Golden\TasksConsistent\Laravel\PurgeTaskRequest;
 use Seampact\Golden\TasksConsistent\Laravel\UpdateTaskRequest;
 
@@ -14,6 +16,22 @@ use Seampact\Golden\TasksConsistent\Laravel\UpdateTaskRequest;
  */
 interface TasksEndpoints
 {
+    /**
+     * Operation 'createTask'.
+     * @throws ApiSchemaInvalidError
+     * @throws ApiUnauthenticatedError
+     * @throws ApiCsrfInvalidError
+     * @throws ApiForbiddenError
+     * @throws ApiNotFoundError
+     * @throws ApiIdempotencyInProgressError
+     * @throws ApiPayloadTooLargeError
+     * @throws ApiUnsupportedMediaTypeError
+     * @throws ApiIdempotencyKeyReusedError
+     * @throws ApiRateLimitedError
+     * @throws ApiInternalError
+     */
+    public function createTask(CreateTaskRequest $request): CreateTaskResult;
+
     /**
      * Operation 'getTask'.
      * @throws ApiSchemaInvalidError
@@ -33,6 +51,15 @@ interface TasksEndpoints
      * @throws ApiInternalError
      */
     public function getTasksBatch(GetTasksBatchRequest $request): GetTasksBatchResult;
+
+    /**
+     * Operation 'listTasks'.
+     * @throws ApiSchemaInvalidError
+     * @throws ApiUnauthenticatedError
+     * @throws ApiNotFoundError
+     * @throws ApiInternalError
+     */
+    public function listTasks(ListTasksRequest $request): ListTasksResult;
 
     /**
      * Operation 'purgeTask'.

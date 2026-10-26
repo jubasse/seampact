@@ -40,11 +40,16 @@ final class InputDecoding
         $query = [];
         $declaredQuery = [];
         foreach (Ir::maps($params, 'query') as $param) {
-            $declaredQuery[Ir::string($param, 'name') ?? ''] = $param['type'] ?? null;
+            $declaredQuery[Ir::string($param, 'name') ?? ''] = $param;
         }
-        foreach (WireValues::query(RawTarget::query($request)) as $name => $values) {
-            $query[$name] = array_key_exists($name, $declaredQuery) ? WireValues::queryValue($values, $declaredQuery[$name]) : (count($values) === 1 ? $values[0] : $values);
+        foreach (WireValues::rawQuery(RawTarget::query($request)) as $name => $rawValues) {
+            $declared = $declaredQuery[$name] ?? null;
+            $values = WireValues::listItems($rawValues, $declared['wire'] ?? null);
+            $query[$name] = $declared === null
+                ? (count($values) === 1 ? $values[0] : $values)
+                : WireValues::queryValue($values, $declared['type'] ?? null);
         }
+        $state->query = $query;
 
         $headers = [];
         foreach (Ir::maps($params, 'header') as $param) {
@@ -83,6 +88,9 @@ final class InputDecoding
             throw $read->refusedRole === self::UNSUPPORTED_MEDIA_TYPE_ROLE
                 ? AccessSteps::roleRefusal($state, self::UNSUPPORTED_MEDIA_TYPE_ROLE)
                 : AccessSteps::schemaInvalid($state, [['in' => 'body', 'pointer' => '', 'rule' => 'type']]);
+        }
+        if (Ir::true($input, 'rawBody')) {
+            $state->rawBody = $read->bytes;
         }
         if ($read->bytes === '') {
             return null;

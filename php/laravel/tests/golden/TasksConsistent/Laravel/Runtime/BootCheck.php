@@ -8,6 +8,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
+use Seampact\Hooks\IdempotencyStore;
 
 /**
  * The api's boot check (ADR 0023 "The boot check"): every problem listed at once, with the operation, the name and
@@ -16,6 +17,7 @@ use Illuminate\Routing\Router;
  */
 final class BootCheck
 {
+    private const BOUNDARY_ENFORCED = 'boundary';
     public const HOOKS = 'hooks';
     public const HANDLERS = 'handlers';
     public const FRAMEWORK_ROUTES = 'frameworkRoutes';
@@ -55,8 +57,12 @@ final class BootCheck
         $identities = [];
         $scopes = [];
         $deciderNames = [];
+        $idempotent = [];
         foreach ($contract->operationIds() as $operationId) {
             $operation = $contract->operation($operationId);
+            if (Ir::string(Ir::map($operation, 'idempotency'), 'enforce') === self::BOUNDARY_ENFORCED) {
+                $idempotent[] = $operationId;
+            }
             $identity = Ir::string(Ir::map($operation, 'access'), 'identity');
             if ($identity !== null) {
                 $identities[$identity] = true;
@@ -89,6 +95,10 @@ final class BootCheck
             if (HookSelection::decider(new Hooks($app), $contract, (string) $name) === null) {
                 $problems[] = "no decider for '{$name}': tag a Decider naming it, or '" . Decider::EVERY_NAME . "', with '" . Hooks::decidersTag($contract->api) . "'";
             }
+        }
+
+        if ($idempotent !== [] && (new Hooks($app))->idempotencyStore() === null) {
+            $problems[] = "no idempotency store for '" . implode("', '", $idempotent) . "': bind " . IdempotencyStore::class . ' in the container';
         }
 
         return [...$problems, ...self::claimedTwice($app, $contract)];

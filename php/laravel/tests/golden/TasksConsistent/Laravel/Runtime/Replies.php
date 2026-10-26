@@ -15,8 +15,13 @@ final class Replies
 {
     public const JSON_MEDIA = 'application/json';
     public const JSON_FLAGS = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
+    public const CACHE_CONTROL_HEADER = 'Cache-Control';
+    public const NO_STORE_DIRECTIVE = 'no-store';
+    private const SECONDS_UNIT = 's';
+    private const MILLISECONDS_PER_SECOND = 1000;
     private const NULL_ABSENT = 'null';
     private const NO_CONTENT = 204;
+    private const PAGE_SHAPE = 'page';
 
     private function __construct()
     {
@@ -43,11 +48,37 @@ final class Replies
         $error = Ir::map($format, 'error');
         $body = Templates::render($error['body'] ?? null, $slots, Ir::string($format, 'absent') === self::NULL_ABSENT);
 
-        return new Response(
+        $reply = new Response(
             json_encode($body->present ? $body->value : new \stdClass(), self::JSON_FLAGS),
             $contract->statusOf($code),
             ['Content-Type' => Ir::string($error, 'media') ?? self::JSON_MEDIA],
         );
+        if ($catalog['noStore'] ?? false) {
+            $reply->headers->set(self::CACHE_CONTROL_HEADER, self::NO_STORE_DIRECTIVE);
+        }
+        if ($operationId !== null) {
+            self::writeRetryHeader($reply, $contract->errorDeclaration($operationId, $code), $params);
+        }
+
+        return $reply;
+    }
+
+    /**
+     * The delay param of a refusal, in integer milliseconds, written in its retry header's unit (`Retry-After`).
+     *
+     * @param array<array-key, mixed> $declared
+     */
+    private static function writeRetryHeader(Response $reply, array $declared, ?\stdClass $params): void
+    {
+        $retryHeader = Ir::map($declared, 'retryHeader');
+        $name = Ir::string($retryHeader, 'name');
+        $delayMs = $params->{Ir::string($retryHeader, 'param') ?? ''} ?? null;
+        if ($name === null || !is_int($delayMs) && !is_float($delayMs)) {
+            return;
+        }
+
+        $value = Ir::string($retryHeader, 'unit') === self::SECONDS_UNIT ? (int) ceil($delayMs / self::MILLISECONDS_PER_SECOND) : (int) $delayMs;
+        $reply->headers->set($name, (string) $value);
     }
 
     /**
@@ -86,11 +117,38 @@ final class Replies
             return $state->author(new Response('', $status));
         }
 
+        $media = Ir::string($declared, 'media') ?? Ir::string($contract->format($operationId), 'media') ?? self::JSON_MEDIA;
+        if (Ir::string($declared, 'shape') === self::PAGE_SHAPE) {
+            return $state->author(CacheHeaders::written($request, $state, self::page($request, $state, $declared, self::member($result, 'body'), $status, $media)));
+        }
+
         $body = WireCodec::encodeBody($contract, $declared, self::member($result, 'body'));
         $body = FieldRights::output($state, $declared, $body);
-        $media = Ir::string($declared, 'media') ?? Ir::string($contract->format($operationId), 'media') ?? self::JSON_MEDIA;
 
-        return $state->author(new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media]));
+        $reply = new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media]);
+
+        return $state->author(CacheHeaders::written($request, $state, $reply));
+    }
+
+    /**
+     * A paged list's reply: the page's items encoded and projected, then the body, headers and links of its style.
+     *
+     * @param array<array-key, mixed> $declared
+     */
+    private static function page(Request $request, BoundaryState $state, array $declared, mixed $page, int $status, string $media): Response
+    {
+        if (!is_object($page)) {
+            throw new \LogicException("seampact: the handler of operation '{$state->operationId}' answered its page with " . get_debug_type($page) . ', not its generated page.');
+        }
+
+        $facts = [];
+        foreach (get_object_vars($page) as $name => $value) {
+            $facts[(string) $name] = $value;
+        }
+        $items = FieldRights::output($state, $declared, WireCodec::encodeBody($state->contract, $declared, $facts['items'] ?? []));
+        [$body, $headers] = PageReply::render($state, RawTarget::query($request), RawTarget::path($request), is_array($items) ? array_values($items) : [], $facts, $status);
+
+        return new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media, ...$headers]);
     }
 
     /** The reply of a generated exception a handler threw: one of the operation's codes, written by the boundary. */

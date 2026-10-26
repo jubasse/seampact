@@ -162,6 +162,15 @@ describe("boundary edges of the Laravel runtime", () => {
     await running?.close();
   });
 
+  test("Laravel's dump() of a credential prints it redacted", async () => {
+    const response = await fetch(`${running?.baseUrl}/__seampact/dumped-credential`);
+    const dumped = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(dumped).toContain("[redacted]");
+    expect(dumped).not.toContain(credentials.userToken);
+  });
+
   test("a CORS preflight on a contract path is left to HandleCors", async () => {
     const response = await fetch(`${running?.baseUrl}/v1/health`, {
       method: "OPTIONS",

@@ -42,10 +42,26 @@ final class FormSteps
         return AccessSteps::schemaInvalid($state, array_slice(self::unique($issues), 0, self::MAX_RENDERED_ISSUES));
     }
 
-    /** Step 7, then the typed input of the operation. */
+    /**
+     * Step 7, the typed input of the operation with a paged list's limit filled in, then the idempotency claim: a replayed reply is thrown, so the handler
+     * never runs.
+     *
+     * @throws ReplayedReply
+     */
     public static function passed(Request $request, string $api): object
     {
-        return TypedInput::build(BoundaryState::required($request, $api), InputTree::of($request, $api)->parts());
+        $state = BoundaryState::required($request, $api);
+        $parts = InputTree::of($request, $api)->parts();
+        $query = $parts['query'] ?? new \stdClass();
+        $parts['query'] = PageReply::withFilledLimit($state, $query instanceof \stdClass ? $query : new \stdClass());
+        $input = TypedInput::build($state, $parts);
+
+        $replayed = IdempotencyStep::begin($state, $parts);
+        if ($replayed !== null) {
+            throw new ReplayedReply($replayed);
+        }
+
+        return $input;
     }
 
     /** @param array<string, array<string, string>> $nativeRuleNames */
@@ -64,11 +80,9 @@ final class FormSteps
     /** @return array{in: string, pointer: string, rule: string} */
     private static function issueAt(string $attribute, string $rule): array
     {
-        $segments = explode('.', $attribute);
-        $part = (string) array_shift($segments);
-        $pointer = implode('', array_map(static fn (string $segment): string => '/' . str_replace(['~', '/'], ['~0', '~1'], strtr($segment, ['~1' => '.', '~2' => '*', '~0' => '~'])), $segments));
+        [$part, $pointer] = InputTree::placeOf($attribute);
 
-        return ['in' => $part === 'headers' ? 'header' : $part, 'pointer' => $pointer, 'rule' => $rule];
+        return ['in' => $part, 'pointer' => $pointer, 'rule' => $rule];
     }
 
     /**

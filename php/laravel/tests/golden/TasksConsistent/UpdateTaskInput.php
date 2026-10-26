@@ -13,6 +13,7 @@ final readonly class UpdateTaskInput
 {
     public function __construct(
         public UpdateTaskPath $path,
+        public UpdateTaskHeaders $headers,
         public UpdateTask $body,
     ) {
     }

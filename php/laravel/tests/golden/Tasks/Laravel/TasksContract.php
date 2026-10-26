@@ -407,6 +407,35 @@ final class TasksContract
                 'origin' => ['layer' => 'shared', 'pointer' => '/rules/throttle'],
             ],
         ],
+        'buckets' => [
+            'write' => [
+                'id' => 'write',
+                'key' => [['in' => 'principal', 'name' => 'userId']],
+                'limit' => 60,
+                'windowMs' => 60000,
+                'origin' => ['layer' => 'shared', 'pointer' => '/buckets/write'],
+            ],
+        ],
+        'pagings' => [
+            'cursor' => [
+                'id' => 'cursor',
+                'origin' => ['layer' => 'shared', 'pointer' => '/pagings/cursor'],
+                'position' => 'cursor',
+                'absent' => 'omit',
+                'request' => [
+                    ['role' => 'cursor', 'in' => 'query', 'name' => 'cursor'],
+                    ['role' => 'limit', 'in' => 'query', 'name' => 'limit'],
+                    ['role' => 'sort', 'in' => 'query', 'name' => 'sort', 'style' => 'signed'],
+                ],
+                'response' => [
+                    'body' => ['kind' => 'slot', 'slot' => 'items', 'path' => []],
+                    'meta' => [],
+                    'headers' => [],
+                    'links' => [['rel' => 'next', 'role' => 'next']],
+                ],
+                'handlerResult' => ['nextCursor'],
+            ],
+        ],
         'schemas' => [
             'ApiEmptyBody' => [
                 'kind' => 'object',
@@ -2309,7 +2338,10 @@ final class TasksContract
             'user' => [
                 'hook' => 'Seampact\Golden\Tasks\Laravel\UserAuthenticateHook',
                 'credentials' => 'Seampact\Golden\Tasks\Laravel\UserCredentials',
+                'principal' => 'Seampact\Golden\Tasks\Laravel\UserPrincipal',
+                'principalMembers' => 'Seampact\Golden\Tasks\Laravel\UserPrincipalMembers',
                 'schemes' => ['bearer' => 'bearer', 'sessionCookie' => 'sessionCookie'],
+                'principalAccessors' => ['userId' => 'userId'],
             ],
         ],
     ];

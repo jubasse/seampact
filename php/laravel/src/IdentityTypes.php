@@ -4,14 +4,23 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel;
 
+use Seampact\Codegen\Delivery;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpNames;
+use Seampact\Codegen\PhpTypes;
 use Seampact\Codegen\Refusals;
+use Seampact\Ir\Model\CredentialIdentity;
+use Seampact\Ir\Model\ObjectSchema;
+use Seampact\Ir\Model\Property;
+use Seampact\Ir\Model\ScalarTypeUse;
+use Seampact\Ir\Model\SchemaPrincipal;
+use Seampact\Ir\Model\SignedIdentity;
 
 /**
  * The types of each identity a kept operation reads (ADR 0012 "Hooks"): the authenticate hook interface the app binds
- * in the container, and the credentials class its hook receives, one nullable string per scheme, redacted when dumped.
+ * in the container, the credentials class its hook receives, one nullable string per scheme, redacted when dumped, and
+ * the principal class its hook returns with the interface of its member accessors.
  */
 final class IdentityTypes
 {
@@ -29,9 +38,97 @@ final class IdentityTypes
         foreach ($this->layout->identities() as $identity => $classes) {
             $files[] = $this->hookFile($identity, $classes['hook']);
             $files[] = $this->credentialsFile($identity, $classes['credentials']);
+            array_push($files, ...$this->principalFiles($identity, $classes['principal'], $classes['principalMembers']));
         }
 
         return $files;
+    }
+
+    /**
+     * The principal's members, by wire name, each with its accessor: the only part of a principal the boundary reads
+     * (the idempotency partition, a bucket key), so every principal an app returns is read the same way.
+     *
+     * @return array<string, string>
+     */
+    public static function principalAccessors(PhpLayout $layout, string $identity): array
+    {
+        $accessors = [];
+        foreach (self::principalProperties($layout, $identity) as [$property]) {
+            $accessor = PhpNames::memberIdentifier($property->name, $property->codeName);
+            if ($accessor !== null) {
+                $accessors[$property->name] = $accessor;
+            }
+        }
+
+        return $accessors;
+    }
+
+    /**
+     * The interface with one accessor per principal member, and the generated principal class implementing it.
+     *
+     * @return list<PhpClassFile>
+     */
+    private function principalFiles(string $identity, string $className, string $interfaceName): array
+    {
+        $types = new PhpTypes($this->layout);
+        $interfaceFile = new PhpClassFile($interfaceName);
+        $interface = $interfaceFile->namespace->addInterface($interfaceFile->shortName);
+        $interface->addComment("The principal members of identity '{$identity}' the boundary reads; its authenticate hook returns an object implementing it.");
+
+        $file = new PhpClassFile($className);
+        $class = $file->namespace->addClass($file->shortName)->setFinal()->setReadOnly()->addImplement($interfaceName);
+        $class->addComment("The principal of identity '{$identity}', as the contract declares it.");
+        $constructor = $class->addMethod('__construct');
+
+        $properties = self::principalProperties($this->layout, $identity);
+        if ($properties === []) {
+            // Without a member every caller of the identity would share one idempotency partition and bucket.
+            $this->refusals->add(
+                'principal.members.none',
+                "The principal of identity '{$identity}' is not an object schema with at least one member, so the boundary cannot tell its callers apart.",
+                'Declare the principal as an object schema with the members that identify a caller (an id).',
+                IrPlace::root()->below('identities', $identity, 'principal'),
+            );
+        }
+
+        foreach ($properties as [$property, $at]) {
+            $member = PhpNames::memberIdentifier($property->name, $property->codeName);
+            if ($member === null) {
+                $this->refusals->inconsistent('property.no-segment', "The property '{$property->name}' yields no name segment", $at);
+                continue;
+            }
+            if (!$property->type instanceof ScalarTypeUse) {
+                $this->refusals->waiting('principal.member.type', "The principal member '{$property->name}' of identity '{$identity}', which is not a scalar,", $at->below('type'), Delivery::Consumer);
+                continue;
+            }
+
+            $memberType = $types->ofProperty($property, $file);
+            PhpTypes::promote($constructor, $member, $memberType);
+            $interface->addMethod($member)->setPublic()->setReturnType($memberType->native)->setReturnNullable($memberType->nullable);
+            $class->addMethod($member)->setPublic()->setReturnType($memberType->native)->setReturnNullable($memberType->nullable)
+                ->setBody("return \$this->{$member};");
+        }
+
+        return [$interfaceFile, $file];
+    }
+
+    /** @return list<array{Property, IrPlace}> the properties of the identity's principal schema */
+    private static function principalProperties(PhpLayout $layout, string $identity): array
+    {
+        $declared = $layout->ir->identities[$identity] ?? null;
+        $principal = $declared instanceof CredentialIdentity || $declared instanceof SignedIdentity ? $declared->principal : null;
+        $schemaId = $principal instanceof SchemaPrincipal ? $principal->schema : null;
+        $schema = $schemaId === null ? null : $layout->ir->schemas[$schemaId] ?? null;
+        if (!$schema instanceof ObjectSchema) {
+            return [];
+        }
+
+        $properties = [];
+        foreach ($schema->properties as $index => $property) {
+            $properties[] = [$property, IrPlace::root()->below('schemas', (string) $schemaId, 'properties', $index)];
+        }
+
+        return $properties;
     }
 
     /**

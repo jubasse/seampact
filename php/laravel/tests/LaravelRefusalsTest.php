@@ -59,34 +59,6 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused['response.shape.unsupported'] ?? '');
     }
 
-    public function testAThrottleIsRefusedByItsOwnName(): void
-    {
-        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
-            $operation->requires = [(object) [
-                'bucket' => 'write',
-                'entry' => 'writeThrottle',
-                'kind' => 'rule',
-                'origin' => (object) ['layer' => 'api', 'pointer' => '/surfaces/app/requires/0'],
-                'rule' => 'throttle',
-            ]];
-        });
-
-        self::assertStringContainsString('laravel-3 generates it', self::refused($document)['throttle.unsupported'] ?? '');
-    }
-
-    public function testAnErrorThatForbidsCachingWaitsForLaravel3(): void
-    {
-        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
-            $errors = $document->errors;
-            self::assertInstanceOf(\stdClass::class, $errors);
-            $notFound = $errors->{'api.not_found'};
-            self::assertInstanceOf(\stdClass::class, $notFound);
-            $notFound->noStore = true;
-        });
-
-        self::assertStringContainsString('laravel-3 generates it', self::refused($document)['error.noStore.unsupported'] ?? '');
-    }
-
     public function testAnIntegerStepBeyondThePhpIntRangeIsRefusedByName(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
@@ -96,6 +68,25 @@ final class LaravelRefusalsTest extends TestCase
         });
 
         self::assertStringContainsString('waits for a consumer after 1.0', self::refused($document)['multipleOf.wide.unsupported'] ?? '');
+    }
+
+    public function testASortKeyRestrictedByARightWaitsForAConsumer(): void
+    {
+        $document = ReferenceContract::withOperation('listTasks', static function (\stdClass $operation): void {
+            $sortKey = self::firstOf(self::object($operation->paging)->sortKeys);
+            $sortKey->right = 'tasks.seeEffort';
+        });
+
+        self::assertStringContainsString("The sort key 'createdAt' restricted by the right 'tasks.seeEffort'", self::refused($document)['paging.sortKey.right.unsupported'] ?? '');
+    }
+
+    public function testAPrincipalWithoutMembersIsRefusedByName(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
+            self::object(self::object($document->schemas)->UserPrincipal)->properties = [];
+        });
+
+        self::assertStringContainsString("identity 'user'", self::refused($document)['principal.members.none'] ?? '');
     }
 
     public function testBootCheckHooksWarnWaitsForAConsumer(): void
@@ -109,8 +100,9 @@ final class LaravelRefusalsTest extends TestCase
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => false]);
 
-        self::assertStringContainsString('laravel-3 generates it', $refused['type.opaque.unsupported'] ?? '');
-        self::assertStringContainsString('laravel-3 generates it', $refused['param.query.structured.unsupported'] ?? '');
+        self::assertStringContainsString('laravel-3b generates it', $refused['deadline.unsupported'] ?? '');
+        self::assertArrayNotHasKey('cache.unsupported', $refused);
+        self::assertArrayNotHasKey('access.signed.unsupported', $refused);
         self::assertStringContainsString('laravel-4 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');
     }
 

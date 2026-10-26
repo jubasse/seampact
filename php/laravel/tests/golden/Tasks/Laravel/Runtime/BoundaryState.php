@@ -19,6 +19,8 @@ final class BoundaryState
     private const HEAD = 'HEAD';
 
     public ?object $principal = null;
+    /** @var ?array<string, mixed> the principal's declared members, by wire name, null for an anonymous caller */
+    public ?array $principalMembers = null;
     /** @var list<ResolvedScope> */
     public array $scopes = [];
     public ?object $contractInput = null;
@@ -26,6 +28,12 @@ final class BoundaryState
     public bool $admitted = false;
     /** The body decoded with its objects preserved; null when the request carries none. */
     public mixed $body = null;
+    /** @var array<string, mixed> the query as step 1 decoded it, by parameter name */
+    public array $query = [];
+    /** The idempotency key this request claimed, until its reply settles the record. */
+    public ?string $idempotencyKey = null;
+    /** The body bytes as received, kept for a signed route's signature (ADR 0013), null elsewhere. */
+    public ?string $rawBody = null;
     /** @var \WeakMap<Response, array{int, string, ?string}> */
     private \WeakMap $authored;
 
@@ -82,6 +90,27 @@ final class BoundaryState
         $bodyKept = $written[1] === $content || $content === '' && $this->view->method === self::HEAD;
 
         return $written[0] === $response->getStatusCode() && $bodyKept;
+    }
+
+    /**
+     * The state without the request's values: the body, raw and decoded, the typed input, the query and the
+     * idempotency key may hold a sensitive or signed value (ADR 0023 "Redaction").
+     *
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'operationId' => $this->operationId,
+            'principal' => $this->principal,
+            'scopes' => $this->scopes,
+            'admitted' => $this->admitted,
+            'body' => \Seampact\Hooks\Redaction::REDACTED,
+            'rawBody' => $this->rawBody === null ? null : \Seampact\Hooks\Redaction::REDACTED,
+            'contractInput' => $this->contractInput === null ? null : \Seampact\Hooks\Redaction::REDACTED,
+            'query' => \Seampact\Hooks\Redaction::REDACTED,
+            'idempotencyKey' => $this->idempotencyKey === null ? null : \Seampact\Hooks\Redaction::REDACTED,
+        ];
     }
 
     /** The ETag the boundary wrote on `$response`, null when it wrote none. */
