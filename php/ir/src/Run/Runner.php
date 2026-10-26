@@ -280,6 +280,13 @@ final class Runner
             return [new ConfigProblem('ir.malformed', $malformed->getMessage(), 'Report the source of this IR: it does not read.', $where)];
         } catch (GenerationRefusedException $refused) {
             return $refused->problems;
+        } catch (\Throwable $failure) {
+            return [new ConfigProblem(
+                'config.target.generate-failed',
+                "The generator of '{$target->package}' failed: " . $failure::class . ": {$failure->getMessage()}",
+                "Report it to the maintainers of '{$target->package}', or pin a release of it that generates this api.",
+                $where,
+            )];
         }
 
         $headed = GeneratedHeader::added($files, $target->package, $target->version, $api->api);

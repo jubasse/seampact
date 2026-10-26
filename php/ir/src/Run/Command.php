@@ -49,9 +49,15 @@ final class Command
             $environment,
         );
 
-        $report = $command === 'generate'
-            ? Runner::generate($settings, $force ? HandEditPolicy::Overwrite : HandEditPolicy::Refuse)
-            : Runner::check($settings);
+        try {
+            $report = $command === 'generate'
+                ? Runner::generate($settings, $force ? HandEditPolicy::Overwrite : HandEditPolicy::Refuse)
+                : Runner::check($settings);
+        } catch (\Throwable $unexpected) {
+            fwrite($stderr, self::internalError($unexpected));
+
+            return self::EXIT_REFUSED;
+        }
 
         foreach ($report->lines as $line) {
             fwrite($stdout, "{$line}\n");
@@ -66,6 +72,15 @@ final class Command
         }
 
         return self::EXIT_PASSED;
+    }
+
+    // A failure no refusal names exits as the Node CLI does on an uncaught error: code 1, the error on stderr, on
+    // one line here rather than a stack trace.
+    private static function internalError(\Throwable $unexpected): string
+    {
+        $message = (string) preg_replace('/\s+/', ' ', trim($unexpected->getMessage()));
+
+        return 'seampact: internal error: ' . $unexpected::class . ": {$message}\n";
     }
 
     /**
