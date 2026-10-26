@@ -13,7 +13,8 @@ use App\Generated\Tasks\Schemas\TaskState;
 final class SampleData
 {
     private const CREATED_AT = '2026-10-18T09:00:00.000Z';
-    private const FIRST_VERSION = 1;
+    public const FIRST_VERSION = 1;
+    public const NEW_TASK_ID = '20000000-0000-4000-8000-0000000000ff';
 
     private function __construct()
     {

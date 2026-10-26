@@ -1,5 +1,5 @@
 # The config of the allow-listed-framework-route boot variant: the consumer config with GET /v1/unlisted allow-listed.
-# The consumer's app config: the reference contract and one seampact/laravel entry serving the core operations of the
+# The consumer's app config: the reference contract and one seampact/laravel entry serving the operations of the
 # tasks api, which this release generates; the suite's control routes are allow-listed framework routes.
 outDir: app/Generated
 openapi: none
@@ -10,7 +10,7 @@ targets:
     out: Tasks
     use: seampact/laravel
     api: tasks
-    operations: { include: [health, getChannel, getDraft, getTask, getTasksBatch] }
+    operations: { exclude: [listChannels, listTasks, getPreferences, payments, searchTasks] }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
       - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }

@@ -84,11 +84,9 @@ final class FormSteps
     /** @return array{in: string, pointer: string, rule: string} */
     private static function issueAt(string $attribute, string $rule): array
     {
-        $segments = explode('.', $attribute);
-        $part = (string) array_shift($segments);
-        $pointer = implode('', array_map(static fn (string $segment): string => '/' . str_replace(['~', '/'], ['~0', '~1'], strtr($segment, ['~1' => '.', '~2' => '*', '~0' => '~'])), $segments));
+        [$part, $pointer] = InputTree::placeOf($attribute);
 
-        return ['in' => $part === 'headers' ? 'header' : $part, 'pointer' => $pointer, 'rule' => $rule];
+        return ['in' => $part, 'pointer' => $pointer, 'rule' => $rule];
     }
 
     /**

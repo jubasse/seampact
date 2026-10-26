@@ -127,6 +127,18 @@ final class InputTree
 
     public function record(string $attribute, string $contractRule): void
     {
+        [$part, $pointer] = self::placeOf($attribute);
+        $this->issues[] = new ContractIssue($part, $pointer, $contractRule);
+    }
+
+    /**
+     * The issue part and JSON pointer of a validator attribute; a header's pointer is its lower-case name, since header
+     * names are case-insensitive and every target reports them so.
+     *
+     * @return array{string, string}
+     */
+    public static function placeOf(string $attribute): array
+    {
         $segments = explode(self::SEPARATOR, $attribute);
         $part = array_shift($segments);
         $pointer = implode('', array_map(
@@ -134,7 +146,7 @@ final class InputTree
             $segments,
         ));
 
-        $this->issues[] = new ContractIssue($part === self::HEADERS_PART ? self::HEADER_ISSUE_PART : $part, $pointer, $contractRule);
+        return $part === self::HEADERS_PART ? [self::HEADER_ISSUE_PART, strtolower($pointer)] : [$part, $pointer];
     }
 
     /** @return list<ContractIssue> */
