@@ -26,35 +26,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      symfony: ${{ steps.detect.outputs.symfony }}
+      symfony: ${{ steps.detect.outputs.run }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history, so the pull request can be compared with its base.
+          # Full history without file contents: the change list reads commits and trees only.
           fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
       - name: Detect a change to the PHP packages or the files their tests read
         id: detect
-        shell: bash
-        env:
-          EVENT: ${{ github.event_name }}
-          PR_BASE: ${{ github.base_ref }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT" != "pull_request" ]; then
-            echo "symfony=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          watched='^(php/|fixtures/golden/reference/|packages/core/spec/schemas/ir/'
-          watched+='|\.github/actions/|\.github/workflows/p6-symfony\.yml$)'
-          # Names NUL-separated and never quoted, so that a moved or oddly named path still matches.
-          changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')
-          # An empty diff runs every job rather than none.
-          if [ -z "$changed" ] || grep -Eq "$watched" <<< "$changed"; then
-            echo "symfony=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "symfony=false" >> "$GITHUB_OUTPUT"
-          fi
+        uses: ./.github/actions/lane-changes
+        with:
+          watched-paths: |
+            ^php/
+            ^fixtures/golden/reference/
+            ^packages/core/spec/schemas/ir/
+            ^\.github/actions/
+            ^\.github/workflows/p6-symfony\.yml$
 
   generator:
     needs: changes
