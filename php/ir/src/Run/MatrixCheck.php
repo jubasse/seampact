@@ -31,7 +31,18 @@ final class MatrixCheck
      */
     public static function check(AppConfig $config, array $installed): array
     {
-        $frameworks = self::frameworks();
+        return self::checkAgainst($config, $installed, self::frameworks());
+    }
+
+    /**
+     * The check against `$frameworks`, the PHP targets of a matrix by their `use` package.
+     *
+     * @param array<string, \stdClass> $installed
+     * @param array<string, MatrixFramework> $frameworks
+     * @return array{list<ConfigProblem>, list<ConfigProblem>}
+     */
+    public static function checkAgainst(AppConfig $config, array $installed, array $frameworks): array
+    {
         $untestedIsError = JsonValue::string($config->checks, 'matrix') === self::ERROR_LEVEL;
         $problems = [];
         $warnings = [];
@@ -79,12 +90,22 @@ final class MatrixCheck
             );
         }
 
-        $major = preg_match('/^(\d+)\./', $version, $match) === 1 ? (int) $match[1] : null;
-        if ($major === null) {
+        $parts = preg_match('/^(\d+)\.(\d+)/', $version, $match) === 1 ? [(int) $match[1], (int) $match[2]] : null;
+        if ($parts === null) {
             return new ConfigProblem(
                 'framework.version.unresolved',
                 "Composer installed {$framework->package} '{$version}', a version whose major the compatibility check cannot read.",
                 "Require a released {$framework->package} version, major {$framework->testedText()}.",
+                self::where($entry),
+            );
+        }
+
+        [$major, $minor] = $parts;
+        if ($framework->isBelowFloor($major, $minor)) {
+            return new ConfigProblem(
+                'config.matrix.incompatible',
+                "Composer installed {$framework->package} {$version}, and the target '{$entry->use()}' works on {$framework->id} {$framework->floor} or later only.",
+                "Require {$framework->package} {$framework->floor} or later, major {$framework->testedText()}.",
                 self::where($entry),
             );
         }

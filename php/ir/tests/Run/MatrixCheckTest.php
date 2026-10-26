@@ -9,6 +9,7 @@ use Seampact\Ir\Config\AppConfig;
 use Seampact\Ir\Config\AppConfigReader;
 use Seampact\Ir\Config\ConfigProblem;
 use Seampact\Ir\Run\MatrixCheck;
+use Seampact\Ir\Run\MatrixFramework;
 use Seampact\Ir\Tests\Support\Documents;
 use Seampact\Ir\Tests\Support\TemporaryDirectory;
 
@@ -69,6 +70,17 @@ final class MatrixCheckTest extends TestCase
             [['config.matrix.unknown-framework'], ['config.matrix.allowed-tested']],
             $this->codes($this->config(', allowUntested: [laravel@13, symfony@8]'), ['laravel/framework' => 'v13.38.2']),
         );
+    }
+
+    public function testRefusesAMinorBelowTheFloorOfATestedMajor(): void
+    {
+        $frameworks = ['seampact/laravel' => new MatrixFramework('laravel', 'laravel/framework', [13], [], '13.38')];
+        [$below] = MatrixCheck::checkAgainst($this->config(''), $this->installed(['laravel/framework' => 'v13.37.9']), $frameworks);
+        [$atFloor] = MatrixCheck::checkAgainst($this->config(''), $this->installed(['laravel/framework' => 'v13.38.0']), $frameworks);
+
+        self::assertSame(['config.matrix.incompatible'], array_map(static fn (ConfigProblem $problem): string => $problem->code, $below));
+        self::assertStringContainsString('laravel 13.38 or later only', $below[0]->message);
+        self::assertSame([], $atFloor);
     }
 
     public function testRefusesAFrameworkComposerDidNotInstall(): void

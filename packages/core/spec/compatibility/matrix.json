@@ -361,29 +361,6 @@
           }
         ]
       }
-    },
-    {
-      "package": "seampact/symfony",
-      "framework": {
-        "id": "symfony",
-        "package": "symfony/framework-bundle",
-        "tested": [
-          {
-            "major": 7,
-            "consumer": "symfony"
-          },
-          {
-            "major": 8,
-            "consumer": "symfony"
-          }
-        ],
-        "incompatible": [
-          {
-            "major": 6,
-            "reason": "Symfony 6 lacks the routing, validator and kernel features of Symfony 7.4 that the generated code uses."
-          }
-        ]
-      }
     }
   ]
 }

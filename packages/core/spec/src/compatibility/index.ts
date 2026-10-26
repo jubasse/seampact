@@ -156,6 +156,41 @@ export interface JvmTargetCompatibility {
 
 export const JVM_TARGETS: readonly JvmTargetCompatibility[] = matrix.jvmTargets;
 
+// The targets `vendor/bin/seampact` generates: `package` is the `use` Composer package and `framework.package` the
+// Composer package whose installed version the runner checks. `floor`, when set, is the lowest `<major>.<minor>` of a
+// tested major the target works on; the PHP runner refuses an older minor, and readers that compare majors only
+// ignore it.
+export interface PhpFrameworkSupport extends FrameworkSupport {
+  readonly floor?: string;
+}
+
+export interface PhpTargetCompatibility {
+  readonly package: string;
+  readonly framework: PhpFrameworkSupport;
+}
+
+const FLOOR_PATTERN = /^(\d+)\.(\d+)$/;
+
+// A PHP target row, its `floor` checked: `<major>.<minor>` of a tested major.
+export function phpTargetOf(target: PhpTargetCompatibility): PhpTargetCompatibility {
+  const floor = target.framework.floor;
+
+  if (floor === undefined) return target;
+
+  const floorMajor = FLOOR_PATTERN.exec(floor)?.[1];
+  const testedMajors = target.framework.tested.map((tested) => tested.major);
+
+  if (floorMajor === undefined || !testedMajors.includes(Number(floorMajor))) {
+    throw new Error(
+      `compatibility: matrix.json ${target.package} floor is '${floor}', not <major>.<minor> of a tested major (${testedMajors.join(", ")}).`,
+    );
+  }
+
+  return target;
+}
+
+export const PHP_TARGETS: readonly PhpTargetCompatibility[] = matrix.phpTargets.map(phpTargetOf);
+
 // Every target the matrix records, servers then clients.
 export const ALL_TARGETS: readonly TargetCompatibility[] = [...SERVER_TARGETS, ...CLIENT_TARGETS];
 

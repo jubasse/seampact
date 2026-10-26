@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Run;
 
-/** A PHP target's framework as the compatibility matrix records it: the majors it is tested on and those it does not work on. */
+/**
+ * A PHP target's framework as the compatibility matrix records it: the majors it is tested on, those it does not
+ * work on, and the `floor`, the lowest `<major>.<minor>` it works on, null without one.
+ */
 final readonly class MatrixFramework
 {
+    private const FLOOR_PATTERN = '/^\d+\.\d+$/D';
+
     /**
      * @param list<int> $testedMajors
      * @param array<int, string> $incompatible the reason of each major the target does not work on
      */
-    public function __construct(public string $id, public string $package, public array $testedMajors, public array $incompatible)
+    public function __construct(public string $id, public string $package, public array $testedMajors, public array $incompatible, public ?string $floor = null)
     {
     }
 
@@ -32,13 +37,24 @@ final readonly class MatrixFramework
             $incompatible[self::major($item, $package)] = is_string($reason) ? $reason : throw new \LogicException("resources/compatibility/matrix.json: an incompatible major of {$package} has no reason.");
         }
 
-        return [$package, new self($framework->id, $framework->package, array_values($tested), $incompatible)];
+        $floor = $framework->floor ?? null;
+        if ($floor !== null && (!is_string($floor) || preg_match(self::FLOOR_PATTERN, $floor) !== 1)) {
+            throw new \LogicException("resources/compatibility/matrix.json: the floor of {$package} is not <major>.<minor>; reinstall seampact/ir.");
+        }
+
+        return [$package, new self($framework->id, $framework->package, array_values($tested), $incompatible, $floor)];
     }
 
     /** @return list<string> the `allowUntested` items that name a tested major */
     public function testedItems(): array
     {
         return array_map(fn (int $major): string => "{$this->id}@{$major}", $this->testedMajors);
+    }
+
+    /** Whether `$major`.`$minor` is below the floor. */
+    public function isBelowFloor(int $major, int $minor): bool
+    {
+        return $this->floor !== null && version_compare("{$major}.{$minor}", $this->floor, '<');
     }
 
     public function testedText(): string
