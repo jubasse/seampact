@@ -11,7 +11,7 @@ use App\Generated\Tasks\GetDraftResponse200;
 use App\Generated\Tasks\GetDraftResult;
 use App\Generated\Tasks\Laravel\DeleteDraftRequest;
 use App\Generated\Tasks\Laravel\GetDraftRequest;
-use App\Suite\SampleData;
+use Seampact\ConsumerSuite\SampleData;
 
 final class DraftsController implements DraftsEndpoints
 {

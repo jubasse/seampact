@@ -6,6 +6,7 @@ namespace App\Suite;
 
 use App\Generated\Tasks\Symfony\Runtime\Denial;
 use App\Generated\Tasks\Symfony\Runtime\ScopeResolver;
+use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\ResolvedScope;
 use Seampact\Hooks\ResolveScopeRequest;
 use Seampact\Hooks\ScopeIdSource;

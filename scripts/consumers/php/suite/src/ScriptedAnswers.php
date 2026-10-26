@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Suite;
+namespace Seampact\ConsumerSuite;
 
 /**
  * What a handler answers in place of its own result when the loaded script says so: its declared success built from

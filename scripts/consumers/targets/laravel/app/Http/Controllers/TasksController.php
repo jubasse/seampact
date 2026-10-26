@@ -35,8 +35,8 @@ use App\Generated\Tasks\TasksEndpoints;
 use App\Generated\Tasks\UpdateTaskErrors;
 use App\Generated\Tasks\UpdateTaskResponse200;
 use App\Generated\Tasks\UpdateTaskResult;
-use App\Suite\SampleData;
-use App\Suite\ScriptedAnswers;
+use Seampact\ConsumerSuite\SampleData;
+use Seampact\ConsumerSuite\ScriptedAnswers;
 
 final class TasksController implements TasksEndpoints
 {

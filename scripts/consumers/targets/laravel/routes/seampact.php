@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use App\Http\Controllers\SuiteControlController;
 use App\Http\Controllers\UnlistedRouteController;
-use App\Suite\BootVariant;
 use Illuminate\Support\Facades\Route;
+use Seampact\ConsumerSuite\BootVariant;
 
 Route::seampact('tasks');
 

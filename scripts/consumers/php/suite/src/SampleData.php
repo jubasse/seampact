@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Suite;
+namespace Seampact\ConsumerSuite;
 
 use App\Generated\Tasks\Schemas\Channel;
 use App\Generated\Tasks\Schemas\Draft;

@@ -62,6 +62,7 @@ jobs:
             ^packages/tools/binary/
             ^fixtures/reference/
             ^scripts/dist-smoke/
+            ^scripts/consumers/php/bundle\.sh$
             ^\.github/actions/
             ^\.github/workflows/p6-php-core\.yml$
       - name: Detect a change to what the binary rows prove
@@ -78,6 +79,7 @@ jobs:
             ^packages/core/compiler/
             ^fixtures/reference/
             ^scripts/dist-smoke/
+            ^scripts/consumers/php/bundle\.sh$
             ^\.github/actions/
             ^\.github/workflows/p6-php-core\.yml$
 
@@ -394,7 +396,7 @@ jobs:
           chmod +x "$binary"
           sha256=$(sha256sum "$binary" | cut -d' ' -f1)
           retry() { for delay in 10 30 90; do "$@" && return 0; echo "Retrying in ${delay} s: $*"; sleep "$delay"; done; "$@"; }
-          sh scripts/consumers/targets/laravel/bundle.sh "$binary" "$WORK/bundled"
+          sh scripts/consumers/php/bundle.sh "$binary" "$WORK/bundled"
           integrity=$(cat "$WORK/bundled/integrity")
           contract_repo="$WORK/contract-repo"
           mkdir -p "$contract_repo"

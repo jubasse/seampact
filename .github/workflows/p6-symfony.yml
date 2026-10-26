@@ -47,7 +47,7 @@ jobs:
             ^packages/tools/binary/
             ^packages/tools/http-suite/
             ^scripts/consumers/targets/symfony/
-            ^scripts/consumers/targets/laravel/bundle\.sh$
+            ^scripts/consumers/php/
             ^scripts/consumers/targets/spring-boot/(contract-source\.sh|credentials\.json)$
             ^scripts/consumers/served-app\.ts$
             ^pnpm-lock\.yaml$
@@ -135,7 +135,7 @@ jobs:
         working-directory: packages/tools/binary
         run: pnpm build
       - name: Bundle the reference contract
-        run: scripts/consumers/targets/laravel/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundled"
+        run: scripts/consumers/php/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundled"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: symfony-contract-bundle

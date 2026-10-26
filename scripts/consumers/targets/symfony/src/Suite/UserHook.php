@@ -8,10 +8,12 @@ use App\Generated\Tasks\Symfony\Runtime\Denial;
 use App\Generated\Tasks\Symfony\UserAuthenticateHook;
 use App\Generated\Tasks\Symfony\UserCredentials;
 use App\Generated\Tasks\Symfony\UserPrincipal;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
-use Symfony\Component\Security\Core\Exception\AuthenticationException;
+use Seampact\ConsumerSuite\Credentials;
+use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\AuthenticateRequest;
 use Seampact\Hooks\AuthenticateResult;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\Security\Core\Exception\AuthenticationException;
 
 /**
  * The `user` identity's hook double: a bearer token of the credentials, or the same token as the session cookie. The

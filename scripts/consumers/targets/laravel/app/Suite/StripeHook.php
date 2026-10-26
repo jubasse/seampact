@@ -7,6 +7,8 @@ namespace App\Suite;
 use App\Generated\Tasks\Laravel\Runtime\Denial;
 use App\Generated\Tasks\Laravel\StripeAuthenticateHook;
 use App\Generated\Tasks\Laravel\StripePrincipal;
+use Seampact\ConsumerSuite\Credentials;
+use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\AuthenticateRequest;
 use Seampact\Hooks\AuthenticateResult;
 use Seampact\Hooks\SignedTemplateRequest;

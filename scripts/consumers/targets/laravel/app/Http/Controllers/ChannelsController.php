@@ -12,8 +12,8 @@ use App\Generated\Tasks\Laravel\ListChannelsRequest;
 use App\Generated\Tasks\ListChannelsPage;
 use App\Generated\Tasks\ListChannelsResponse200;
 use App\Generated\Tasks\ListChannelsResult;
-use App\Suite\SampleData;
-use App\Suite\ScriptedAnswers;
+use Seampact\ConsumerSuite\SampleData;
+use Seampact\ConsumerSuite\ScriptedAnswers;
 
 final class ChannelsController implements ChannelsEndpoints
 {

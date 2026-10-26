@@ -2,17 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Suite;
+namespace Seampact\ConsumerSuite;
 
 /**
  * The sample app's side of the suite's control routes (ADR 0015 "The shared black-box HTTP suite"): the script a case
  * loads, the hook calls the doubles record and the log lines the app writes. PHP's built-in server runs each request
- * in a fresh state, so all three live in one JSON file under storage/, read and written under a lock.
+ * in a fresh state, so all three live in one JSON file the app names, read and written under a lock.
  */
 final class SuiteControl
 {
     private const SCRIPT_MEMBERS = ['decisions', 'scopes', 'answers'];
-    private const STATE_FILE = 'suite-control.json';
 
     private function __construct()
     {
@@ -152,7 +151,7 @@ final class SuiteControl
      */
     private static function locked(int $operation, \Closure $use): mixed
     {
-        $path = storage_path(self::STATE_FILE);
+        $path = SuiteFiles::controlStatePath();
         $handle = fopen($path, 'c+');
         if ($handle === false || !flock($handle, $operation)) {
             throw new \RuntimeException("the suite control state {$path} cannot be opened and locked");

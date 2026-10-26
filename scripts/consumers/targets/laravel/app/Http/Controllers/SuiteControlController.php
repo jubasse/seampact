@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Generated\Tasks\Laravel\UserCredentials;
-use App\Suite\Credentials;
-use App\Suite\SuiteControl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Seampact\ConsumerSuite\Credentials;
+use Seampact\ConsumerSuite\SuiteControl;
 
 /** The suite's control routes (ADR 0015 "Control routes"). */
 final class SuiteControlController

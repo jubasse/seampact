@@ -8,8 +8,10 @@ use App\Generated\Tasks\Laravel\Runtime\Decider;
 use App\Generated\Tasks\Laravel\Runtime\Denial;
 use App\Generated\Tasks\Laravel\UserPrincipal;
 use App\Generated\Tasks\Schemas\ApiRateLimitedParams;
+use Seampact\ConsumerSuite\Credentials;
+use Seampact\ConsumerSuite\DecisionPurpose;
+use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\Decision;
-use Seampact\Hooks\Purpose;
 use Seampact\Hooks\RequirementRequest;
 
 /**
@@ -30,7 +32,7 @@ final class TasksDecider implements Decider
     {
         SuiteControl::recordHookCall("decide:{$request->name()}", $request->operation()->api, $request->operation()->id);
 
-        $denied = SuiteControl::scriptedDecision($request->name(), self::purposeName($request->purpose()));
+        $denied = SuiteControl::scriptedDecision($request->name(), DecisionPurpose::name($request->purpose()));
         if ($denied === null && $request->name() === self::THROTTLE_RULE && $request->bucket() !== null && self::isThrottledUser($request->principal())) {
             return new Decision\Denied(new Denial(self::RATE_LIMITED, new ApiRateLimitedParams(Credentials::number('throttleRetryAfterMs'))));
         }
@@ -42,16 +44,5 @@ final class TasksDecider implements Decider
     private static function isThrottledUser(?object $principal): bool
     {
         return $principal instanceof UserPrincipal && $principal->userId === Credentials::text('throttledUserId');
-    }
-
-    /** The purpose as the script names it. */
-    public static function purposeName(Purpose $purpose): string
-    {
-        return match (true) {
-            $purpose instanceof Purpose\Route => 'route',
-            $purpose instanceof Purpose\Field => 'field',
-            $purpose instanceof Purpose\SortKey => 'sortKey',
-            default => throw new \UnexpectedValueException('the decide request has the unknown purpose ' . $purpose::class),
-        };
     }
 }

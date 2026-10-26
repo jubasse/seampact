@@ -10,6 +10,8 @@ use App\Generated\Tasks\Laravel\UserCredentials;
 use App\Generated\Tasks\Laravel\UserPrincipal;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Seampact\ConsumerSuite\Credentials;
+use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\AuthenticateRequest;
 use Seampact\Hooks\AuthenticateResult;
 

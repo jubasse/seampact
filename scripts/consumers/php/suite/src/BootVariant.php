@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Suite;
+namespace Seampact\ConsumerSuite;
 
 /**
  * The boot variant a boot case starts the app with (`SEAMPACT_SUITE_BOOT_VARIANT`, ADR 0015 "Boot tests"); unset, the
@@ -34,7 +34,7 @@ final class BootVariant
         return self::is('unlisted-framework-route') || self::is('allow-listed-framework-route');
     }
 
-    private static function current(): ?string
+    public static function current(): ?string
     {
         $variant = getenv(self::VARIABLE);
         if ($variant === false || $variant === '') {

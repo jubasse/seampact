@@ -1,0 +1,1 @@
+The `seampact/consumer-suite` composer package: the suite doubles the Laravel and Symfony consumer apps share (script, hook-call records, credentials, sample data, boot variant), with the files they read injected through `SuiteFiles::configure`.

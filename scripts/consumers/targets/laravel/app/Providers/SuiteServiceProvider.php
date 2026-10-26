@@ -20,18 +20,19 @@ use App\Http\Controllers\DraftsController;
 use App\Http\Controllers\HooksController;
 use App\Http\Controllers\PreferencesController;
 use App\Http\Controllers\TasksController;
-use App\Suite\BootVariant;
 use App\Suite\ChannelResolver;
 use App\Suite\FileIdempotencyStore;
 use App\Suite\OverriddenRightDecider;
 use App\Suite\StripeHook;
-use App\Suite\SuiteControl;
 use App\Suite\TasksDecider;
 use App\Suite\TasksUnexpectedErrors;
 use App\Suite\UserHook;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Seampact\ConsumerSuite\BootVariant;
+use Seampact\ConsumerSuite\SuiteControl;
+use Seampact\ConsumerSuite\SuiteFiles;
 use Seampact\Hooks\IdempotencyStore;
 
 /**
@@ -43,9 +44,13 @@ final class SuiteServiceProvider extends ServiceProvider
 {
     private const RESPONSES_VARIABLE = 'SEAMPACT_SUITE_RESPONSES';
     private const APP_DEBUG_VARIABLE = 'SEAMPACT_SUITE_APP_DEBUG';
+    private const CONTROL_STATE_FILE = 'suite-control.json';
+    private const CREDENTIALS_FILE = 'credentials.json';
 
     public function register(): void
     {
+        SuiteFiles::configure(storage_path(self::CONTROL_STATE_FILE), base_path(self::CREDENTIALS_FILE));
+
         $responses = getenv(self::RESPONSES_VARIABLE);
         if (is_string($responses) && $responses !== '') {
             $this->app->make('config')->set('seampact.tasks.responses', $responses);

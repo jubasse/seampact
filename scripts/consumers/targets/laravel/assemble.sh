@@ -10,6 +10,7 @@ bundled="$2"
 variant="${3:-}"
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../../../.." && pwd)
+suite_package=$(cd "$here/../../php/suite" && pwd)
 contract_repo="$work/contract-repo"
 
 case "$variant" in
@@ -38,7 +39,7 @@ cp "$here/$config" "$app/seampact.config.yaml"
 cp "$here/../spring-boot/credentials.json" "$app/credentials.json"
 mkdir -p "$app/bootstrap/cache" "$app/storage/logs" "$app/storage/framework/cache" "$app/storage/framework/views"
 
-sed "s#\"\.\./\.\./\.\./\.\./php/#\"$repo/php/#" "$app/composer.json" > "$app/composer.json.new"
+sed -e "s#\"\.\./\.\./php/suite\"#\"$suite_package\"#" -e "s#\"\.\./\.\./\.\./\.\./php/#\"$repo/php/#" "$app/composer.json" > "$app/composer.json.new"
 mv "$app/composer.json.new" "$app/composer.json"
 
 integrity=$(cat "$bundled/integrity")
