@@ -13,6 +13,8 @@
 | `options.springSecurity.unavailable` (Spring Boot) | `springSecurity` is on, but Spring Security is not on the classpath. Add `spring-boot-starter-security`, or set `springSecurity: false`. |
 | `options.springSecurity.matchers.unavailable` (Spring Boot) | `springSecurity: { matchers: true }` needs `spring-security-config`. Add `spring-boot-starter-security`, or set `springSecurity: true`. |
 | `options.reply.invalid` (NestJS) | `reply` is `handler` or `interceptor`. |
+| `input.multipart.unsupported`, `input.form.unsupported`, `type.file.unsupported`, `response.shape.unsupported`, `artefacts.accessHooks.unsupported` (Symfony) | The Symfony target does not generate multipart or form bodies, file values, download or redirect responses, or `accessHooks: false` yet; it waits for an app that needs them. Remove the operation from the entry's `operations` filter, or update `seampact/symfony`. |
+| `options.handlers.unsupported`, `options.naming.unsupported`, `options.layout.unsupported` (Symfony) | `handlers` is `perResource` only; the naming options and `layout` are not options of the PHP targets. Remove them. |
 
 A warning does not stop `generate`.
 

@@ -44,7 +44,7 @@ From the CLI:
 | `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
 | `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
 
-Next: Laravel, Symfony, API Platform. Form, file upload, download and redirect bodies on every server, once an app needs them.
+Next: Laravel, API Platform. Form, file upload, download and redirect bodies on every server, once an app needs them.
 
 ## Example
 
@@ -187,6 +187,25 @@ class NotesController implements NotesEndpoints {
 
 </details>
 
+<details><summary>Symfony</summary>
+
+```php
+final class NotesController implements NotesEndpoints
+{
+    #[SeampactOperation('getNote')]
+    public function getNote(GetNoteInput $input): GetNoteResult
+    {
+        $note = $this->notes->find($input->path->noteId);
+
+        return $note === null
+            ? GetNoteErrors::apiNotFound()
+            : new GetNoteResponse200($note);
+    }
+}
+```
+
+</details>
+
 ---
 
 ### Schemas
@@ -305,6 +324,24 @@ A plain record with standard Jakarta constraints, for your own `@Valid`. The bou
 ```java
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
 public record Note(@NotNull UUID noteId, @NotNull String title, @NotNull OffsetDateTime createdAt) {
+}
+```
+
+</details>
+
+<details><summary>Symfony (PHP class)</summary>
+
+A readonly class, filled by the boundary. The boundary checks the contract's rules (the title's length, the formats) before your controller runs.
+
+```php
+final readonly class Note
+{
+    public function __construct(
+        public string $noteId,
+        public string $title,
+        public DateTimeImmutable $createdAt,
+    ) {
+    }
 }
 ```
 
@@ -446,8 +483,9 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 | AdonisJS | 6, 7 | zod, yup, VineJS |
 | Hono | 4 | zod, yup |
 | Spring Boot | 4 | generated checks, Jakarta constraints on the records |
+| Symfony | 7.4, 8 | generated checks, Symfony Validator constraints on the inputs |
 
-Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `seampact-maven-plugin`. It can also generate Spring Security matchers and refusals, and springdoc annotations. PHP (Laravel, Symfony): planned.
+Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `seampact-maven-plugin`. It can also generate Spring Security matchers and refusals, and springdoc annotations. Symfony (PHP 8.3 to 8.5) is generated with `seampact/symfony`: see the [Symfony guide](docs/backend/symfony.md). Laravel: planned.
 
 ### Clients
 
@@ -484,7 +522,8 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] Frontend: NgRx Signal Store features for Angular
 - [x] Frontend: MSW mocks
 - [x] Java: Spring Boot 4, with a Gradle and a Maven plugin, Spring Security and springdoc
-- [ ] PHP: Laravel, Symfony, API Platform
+- [x] PHP: Symfony 7.4 and 8, with SecurityBundle and RateLimiter
+- [ ] PHP: Laravel, API Platform
 - [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm
 - [ ] Example apps per stack pairing, and an `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
 - Later: a client conformance suite, a kit to write new targets, one shared core per language, then Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Python, Go, .NET, Rust ([full list](docs/roadmap.md))
