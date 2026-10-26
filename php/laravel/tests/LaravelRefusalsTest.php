@@ -36,10 +36,12 @@ final class LaravelRefusalsTest extends TestCase
     {
         $longName = 'theTaskIdentifierOfTheChannelTaskToRead';
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation) use ($longName): void {
-            $operation->path = str_replace('{taskId}', "{{$longName}}", (string) $operation->path);
+            self::assertIsString($operation->path);
+            $operation->path = str_replace('{taskId}', "{{$longName}}", $operation->path);
             self::assertIsArray(self::object($operation->params)->path);
             foreach (self::object($operation->params)->path as $param) {
-                if (self::object($param)->name === 'taskId') {
+                $param = self::object($param);
+                if ($param->name === 'taskId') {
                     $param->name = $longName;
                 }
             }
