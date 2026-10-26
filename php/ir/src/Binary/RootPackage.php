@@ -78,20 +78,20 @@ final readonly class RootPackage
      */
     public static function refuseDependencyOverrides(string $vendorDirectory): void
     {
-        $installedFile = $vendorDirectory . '/composer/installed.json';
-        if (!is_file($installedFile)) {
-            return;
+        $installed = InstalledPackages::read($vendorDirectory);
+        if (is_string($installed)) {
+            throw BinaryRefusedException::of(
+                BinaryFailureCode::PinInvalid,
+                ucfirst($installed) . '.',
+                'Run `composer install` again with Composer 2, then run seampact again.',
+            );
         }
 
-        $installed = self::readJson($installedFile);
-        $packages = $installed->packages ?? [];
-
-        foreach (is_array($packages) ? $packages : [] as $package) {
-            $extra = $package instanceof \stdClass ? $package->extra ?? null : null;
+        foreach ($installed->byName as $name => $package) {
+            $extra = $package->extra ?? null;
             $seampact = $extra instanceof \stdClass ? $extra->seampact ?? null : null;
 
             if ($seampact instanceof \stdClass && property_exists($seampact, 'binary')) {
-                $name = is_string($package->name ?? null) ? $package->name : 'an unnamed package';
                 throw BinaryRefusedException::of(
                     BinaryFailureCode::OverrideNotRoot,
                     "The installed package '{$name}' sets `extra.seampact.binary`; only the root package's composer.json chooses the compiler binary.",

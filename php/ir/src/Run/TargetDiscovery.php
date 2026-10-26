@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Run;
 
+use Seampact\Ir\Binary\InstalledPackages;
 use Seampact\Ir\Config\ConfigProblem;
 
 /**
@@ -13,8 +14,6 @@ use Seampact\Ir\Config\ConfigProblem;
  */
 final class TargetDiscovery
 {
-    private const INSTALLED_FILE = '/composer/installed.json';
-
     /** @var array<string, \stdClass> */
     private array $packages;
 
@@ -24,33 +23,20 @@ final class TargetDiscovery
         $this->packages = $packages;
     }
 
-    /** The installed packages, or the refusal of an `installed.json` that is not readable JSON. */
+    /** The installed packages, or the refusal of an `installed.json` that does not read. */
     public static function of(string $vendorDirectory): self|ConfigProblem
     {
-        $file = $vendorDirectory . self::INSTALLED_FILE;
-        $text = is_file($file) ? file_get_contents($file) : '{"packages": []}';
-
-        try {
-            $installed = json_decode($text === false ? '' : $text, false, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $error) {
+        $installed = InstalledPackages::read($vendorDirectory);
+        if (is_string($installed)) {
             return new ConfigProblem(
                 'config.target.installed-unreadable',
-                "The list of installed packages {$file} is not readable JSON ({$error->getMessage()}).",
-                'Run `composer install` again, then run seampact again.',
-                $file,
+                ucfirst($installed) . '.',
+                'Run `composer install` again with Composer 2, then run seampact again.',
+                $vendorDirectory . InstalledPackages::INSTALLED_FILE,
             );
         }
 
-        // Composer 2 writes `{ packages: [...] }`, Composer 1 a bare list.
-        $list = $installed instanceof \stdClass ? $installed->packages ?? [] : $installed;
-        $packages = [];
-        foreach (is_array($list) ? $list : [] as $package) {
-            if ($package instanceof \stdClass && is_string($package->name ?? null)) {
-                $packages[$package->name] = $package;
-            }
-        }
-
-        return new self($packages);
+        return new self($installed->byName);
     }
 
     public function target(string $use, string $entryId): InstalledTarget|ConfigProblem
