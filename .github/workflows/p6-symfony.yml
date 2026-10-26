@@ -1,0 +1,128 @@
+name: Symfony target
+
+# The Symfony generator (ADR 0024), `seampact/symfony`: validated, installed from its lock file, audited, tested and
+# analysed at PHPStan level max on PHP 8.3 and 8.5 with Symfony 7.4, and on PHP 8.5 with Symfony 8. The tests compare
+# the reference contract's generated tree with the committed golden, run its input constraints in Symfony's Validator
+# and its bundle in a container; PHPStan analyses the golden against each Symfony major and `php -l` lints it. On a
+# pull request they run only when the change touches the PHP packages, the reference contract or this workflow;
+# `symfony` is the one check to require.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: symfony-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      symfony: ${{ steps.detect.outputs.symfony }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history, so the pull request can be compared with its base.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect a change to the PHP packages or the files their tests read
+        id: detect
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "symfony=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          watched='^(php/|fixtures/golden/reference/|packages/core/spec/schemas/ir/'
+          watched+='|\.github/actions/|\.github/workflows/p6-symfony\.yml$)'
+          # Names NUL-separated and never quoted, so that a moved or oddly named path still matches.
+          changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')
+          # An empty diff runs every job rather than none.
+          if [ -z "$changed" ] || grep -Eq "$watched" <<< "$changed"; then
+            echo "symfony=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "symfony=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  generator:
+    needs: changes
+    if: needs.changes.outputs.symfony == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php-version: "8.3"
+            symfony: "7.4"
+          - php-version: "8.5"
+            symfony: "7.4"
+          - php-version: "8.5"
+            symfony: "8"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: composer:2.10.2
+          coverage: none
+      - name: Validate the Composer manifest
+        working-directory: php/symfony
+        run: composer validate --strict --no-interaction
+      - name: Install from the lock file, the sibling packages through their path repositories
+        working-directory: php/symfony
+        run: composer install --no-interaction --no-progress --no-plugins --no-scripts
+      # The lock pins Symfony 7.4 on the PHP 8.3 platform; Symfony 8 needs PHP 8.4, so this row moves both.
+      - name: Move to Symfony 8
+        if: matrix.symfony == '8'
+        working-directory: php/symfony
+        run: |
+          composer config platform.php 8.5.12
+          composer require --dev --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies \
+            symfony/framework-bundle:8.1.9 symfony/http-kernel:8.1.9 symfony/routing:8.1.9 symfony/validator:8.1.9
+      - name: Audit the locked dependencies
+        working-directory: php/symfony
+        run: composer audit --locked --no-interaction
+      - name: Lint the golden tree
+        working-directory: php/symfony
+        shell: bash
+        run: |
+          set -euo pipefail
+          find tests/golden -name '*.php' -print0 | xargs -0 -n 1 php -l > /dev/null
+      - name: Test on PHP ${{ matrix.php-version }} with Symfony ${{ matrix.symfony }}
+        working-directory: php/symfony
+        run: vendor/bin/phpunit
+      - name: Analyse with Symfony ${{ matrix.symfony }}
+        working-directory: php/symfony
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G
+
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
+  symfony:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, generator]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.symfony }}

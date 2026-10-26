@@ -1,6 +1,6 @@
 # ADR 0024: The Symfony server target
 
-Status: proposed
+Status: accepted
 
 ## Context
 
