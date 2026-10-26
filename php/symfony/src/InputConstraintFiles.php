@@ -41,14 +41,7 @@ final class InputConstraintFiles
 {
     private const NATIVE_PATTERN_MODIFIERS = 'u';
     private const CONSISTENT_PATTERN_MODIFIERS = 'uD';
-    private const DECIMAL_LITERAL = '/^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$/D';
     private const CONSTRAINTS = 'Symfony\\Component\\Validator\\Constraints\\';
-    private const NUMBER_CONSTRAINTS = [
-        'minimum' => 'GreaterThanOrEqual',
-        'maximum' => 'LessThanOrEqual',
-        'exclusiveMinimum' => 'GreaterThan',
-        'exclusiveMaximum' => 'LessThan',
-    ];
 
     private PhpClassFile $file;
 
@@ -243,25 +236,9 @@ final class InputConstraintFiles
      */
     private function numberRules(ScalarTypeUse $type, array &$checks, array &$native, IrPlace $at): void
     {
-        $refinements = $type->refinements;
-        $bounds = [
-            'minimum' => $refinements->minimum,
-            'maximum' => $refinements->maximum,
-            'exclusiveMinimum' => $refinements->exclusiveMinimum,
-            'exclusiveMaximum' => $refinements->exclusiveMaximum,
-        ];
-
-        foreach ($bounds as $rule => $decimal) {
-            if ($decimal === null) {
-                continue;
-            }
-            if (preg_match(self::DECIMAL_LITERAL, $decimal) !== 1) {
-                $this->refusals->inconsistent('ir.value.invalid', "The {$rule} '{$decimal}' is not a decimal number", $at->below('refinements', $rule));
-                continue;
-            }
-
+        foreach (NumberBounds::of($type->refinements, $at, $this->refusals) as $rule => $decimal) {
             if ($this->rules === RulesMode::Native) {
-                $native[] = $this->symfonyConstraint(self::NUMBER_CONSTRAINTS[$rule], ["value: {$decimal}"], self::ruleConstant($rule));
+                $native[] = $this->symfonyConstraint(NumberBounds::CONSTRAINTS[$rule], ["value: {$decimal}"], self::ruleConstant($rule));
             } else {
                 $checks[] = "{$rule}: {$decimal}";
             }

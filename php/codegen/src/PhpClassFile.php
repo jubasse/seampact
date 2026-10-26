@@ -68,6 +68,26 @@ final class PhpClassFile
     }
 
     /**
+     * The prefix to write before the names of `$namespace` in this file's code: `$alias`, imported with
+     * `use <namespace> as <alias>` and claimed for the rest of the file, when that short name is free, else the fully
+     * qualified namespace.
+     */
+    public function alias(string $namespace, string $alias): string
+    {
+        $key = strtolower($alias);
+        $claimedBy = $this->taken[$key] ?? null;
+
+        if ($claimedBy === null) {
+            $this->taken[$key] = $namespace;
+            $this->namespace->addUse($namespace, $alias);
+
+            return $alias;
+        }
+
+        return strcasecmp($claimedBy, $namespace) === 0 ? $alias : '\\' . ltrim($namespace, '\\');
+    }
+
+    /**
      * `$className` for a type declaration (`setType`, `setExtends`, `addImplement`), which Nette takes fully qualified
      * and the printer shortens when its `use` line is in the file; claims the short name as `name()` does.
      */
