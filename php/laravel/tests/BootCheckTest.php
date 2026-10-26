@@ -34,4 +34,17 @@ final class BootCheckTest extends TestCase
 
         BootCheck::run($app, ApiContract::of(TasksContract::class), BoundaryMiddleware::class, AccessMiddleware::class, self::SWITCHES);
     }
+
+    public function testARelativeApiRefusesAPublicOriginThatIsSet(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $app->instance('config', new Repository(['seampact' => ['tasks' => ['public_origin' => 'https://api.example.com']]]));
+        $app->singleton(Kernel::class, HttpKernel::class);
+        $app->instance(ExceptionHandler::class, self::createStub(ExceptionHandler::class));
+
+        $this->expectException(BootCheckFailedException::class);
+        $this->expectExceptionMessageMatches("/the api writes relative URLs \\('api.wire.urls: relative'\\) and 'seampact.tasks.public_origin' is set/");
+
+        BootCheck::run($app, ApiContract::of(TasksContract::class), BoundaryMiddleware::class, AccessMiddleware::class, self::SWITCHES);
+    }
 }

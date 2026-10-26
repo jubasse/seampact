@@ -19,7 +19,17 @@ final class PublicOriginTest extends TestCase
         $contract = ApiContract::of(SelectionContract::class);
 
         self::assertNull(PublicOrigin::bootProblem($contract, self::SETTING, null));
+        self::assertNull(PublicOrigin::bootProblem($contract, self::SETTING, ''));
         self::assertNull(PublicOrigin::of($contract, 'https://api.example.com'));
+    }
+
+    public function testRelativeUrlsRefuseAnOriginThatIsSetNamingTheSettingAndTheFix(): void
+    {
+        $problem = PublicOrigin::bootProblem(ApiContract::of(SelectionContract::class), self::SETTING, 'https://api.example.com') ?? '';
+
+        self::assertStringContainsString(self::SETTING, $problem);
+        self::assertStringContainsString("the api writes relative URLs ('api.wire.urls: relative') and '" . self::SETTING . "' is set", $problem);
+        self::assertStringContainsString("remove it, or set 'api.wire.urls: absolute'", $problem);
     }
 
     public function testAbsoluteUrlsWithoutTheOriginAreABootProblemNamingTheSetting(): void
