@@ -15,6 +15,7 @@ use Seampact\Ir\Binary\BinaryRunner;
 use Seampact\Ir\Binary\CacheRoot;
 use Seampact\Ir\Binary\InstalledBinary;
 use Seampact\Ir\Binary\PosixCacheSafety;
+use Seampact\Ir\Binary\UserProfile;
 use Seampact\Ir\Tests\Support\StubBinary;
 use Seampact\Ir\Tests\Support\TemporaryDirectory;
 use Seampact\Ir\Tests\Support\TrustedAncestorFacts;
@@ -211,6 +212,67 @@ final class BinaryStubRunTest extends TestCase
         self::assertSame(['shop' => '{}'], $this->compile($binary, ['shop'])->irTextByApi);
     }
 
+    public function testAcceptsAnAncestorTheProcessPrimaryGroupMayWrite(): void
+    {
+        $team = $this->groupWritableDirectory('team', posix_getgid());
+        $this->cacheRoot = "{$team}/seampact";
+
+        $binary = $this->installed(StubBinary::compiler("{$this->directory}/compiler", ['shop']));
+
+        self::assertSame(['shop' => '{}'], $this->compile($binary, ['shop'])->irTextByApi);
+    }
+
+    public function testRefusesAnAncestorAnotherGroupMayWrite(): void
+    {
+        $otherGroups = array_values(array_diff(posix_getgroups() ?: [], [posix_getgid()]));
+        if ($otherGroups === []) {
+            self::markTestSkipped('The user of this run has no supplementary group to give the directory.');
+        }
+
+        $team = $this->groupWritableDirectory('team', $otherGroups[0]);
+        $this->cacheRoot = "{$team}/seampact";
+
+        $refused = $this->refusal(fn () => $this->installed(StubBinary::compiler("{$this->directory}/compiler", ['shop'])));
+
+        self::assertSame(BinaryFailureCode::CacheUnsafe, $refused->code);
+        self::assertStringContainsString("'{$team}'", $refused->message);
+        self::assertStringContainsString('chmod g-w', $refused->fix);
+    }
+
+    public function testCopiesNothingIntoACacheItRefuses(): void
+    {
+        mkdir("{$this->directory}/cache");
+        chmod("{$this->directory}/cache", 0777);
+
+        $refused = $this->refusal(fn () => $this->installed(StubBinary::compiler("{$this->directory}/compiler", ['shop'])));
+
+        self::assertSame(BinaryFailureCode::CacheUnsafe, $refused->code);
+        foreach (glob("{$this->cacheRoot}/*", GLOB_ONLYDIR) ?: [] as $hashDirectory) {
+            self::assertSame(['.', '..'], scandir($hashDirectory));
+        }
+    }
+
+    public function testHashesThePathSourceBeforeUsingAWarmCache(): void
+    {
+        $source = StubBinary::compiler("{$this->directory}/compiler", ['shop']);
+        $sha256 = StubBinary::sha256($source);
+        $this->installed($source);
+        StubBinary::compiler($source, ['admin']);
+        $safety = new PosixCacheSafety(new TrustedAncestorFacts($this->directory));
+
+        $refused = $this->refusal(fn () => BinaryInstaller::install($source, $sha256, $this->cacheRoot, 'seampact', $safety));
+
+        self::assertSame(BinaryFailureCode::HashMismatch, $refused->code);
+    }
+
+    public function testResolvesTheUserProfileToItsRealPath(): void
+    {
+        mkdir("{$this->directory}/profile", 0700);
+        symlink("{$this->directory}/profile", "{$this->directory}/profile-link");
+
+        self::assertSame("{$this->directory}/profile", UserProfile::locate(['USERPROFILE' => "{$this->directory}/profile-link"]));
+    }
+
     public function testRefusesAnyOtherExitCode(): void
     {
         $binary = $this->installed(StubBinary::script("{$this->directory}/compiler", 'exit 3'));
@@ -260,6 +322,17 @@ final class BinaryStubRunTest extends TestCase
         $this->compile($binary, ['shop']);
 
         self::assertSame($before, glob(sys_get_temp_dir() . '/seampact-compile-*') ?: []);
+    }
+
+    // A directory of the test tree, writable by `$groupId`, whatever the umask and the group of its parent.
+    private function groupWritableDirectory(string $name, int $groupId): string
+    {
+        $path = "{$this->directory}/{$name}";
+        mkdir($path);
+        chgrp($path, $groupId);
+        chmod($path, 0775);
+
+        return $path;
     }
 
     private function installed(string $source): InstalledBinary

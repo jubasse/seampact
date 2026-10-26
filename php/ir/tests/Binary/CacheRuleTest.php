@@ -128,6 +128,8 @@ final class CacheRuleTest extends TestCase
             'a relative xdg cache is ignored' => [['XDG_CACHE_HOME' => 'x', 'HOME' => '/h'], false, '/h/.cache/seampact'],
             'a relative composer cache is refused' => [['COMPOSER_CACHE_DIR' => 'c', 'HOME' => '/h'], false, null],
             'a relative home is refused' => [['HOME' => 'h'], false, null],
+            'a backslash home is refused on POSIX' => [['HOME' => '\\h'], false, null],
+            'a drive composer cache is refused on POSIX' => [['COMPOSER_CACHE_DIR' => 'C:/c', 'HOME' => '/h'], false, null],
             'a relative local app data is refused' => [['LOCALAPPDATA' => 'AppData\\Local'], true, null],
             'none' => [[], false, null],
             'none on windows' => [['HOME' => '/h'], true, null],
