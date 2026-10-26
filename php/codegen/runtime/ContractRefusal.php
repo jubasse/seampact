@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 use Seampact\Codegen\Runtime\BoundaryState;
 use Symfony\Component\HttpFoundation\Request;

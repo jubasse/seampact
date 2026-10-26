@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Laravel\Runtime;
 
-use Illuminate\Http\Request;
 use Seampact\Hooks\AuthenticateResult;
 use Seampact\Hooks\Decision;
 use Seampact\Hooks\OperationRef;
@@ -13,6 +12,7 @@ use Seampact\Hooks\RequirementKind;
 use Seampact\Hooks\ScopeIdSource;
 use Seampact\Hooks\ScopeResolution;
 use Seampact\Hooks\SubjectRef;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Steps 2 to 5 of the check order (ADR 0012 "The check order"): authenticate with the identity's hook (and the CSRF

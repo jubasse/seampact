@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
-use Illuminate\Http\Request;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\AuthenticateCall;
 use Seampact\Codegen\Runtime\BoundaryState;
@@ -22,6 +21,7 @@ use Seampact\Hooks\RequirementKind;
 use Seampact\Hooks\ScopeIdSource;
 use Seampact\Hooks\ScopeResolution;
 use Seampact\Hooks\SubjectRef;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Steps 2 to 5 of the check order (ADR 0012 "The check order"): authenticate with the identity's hook (and the CSRF

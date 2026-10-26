@@ -7,8 +7,8 @@ namespace Seampact\Laravel\Tests;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Exceptions\Handler;
 use PHPUnit\Framework\TestCase;
+use Seampact\Codegen\Runtime\ContractRefusal;
 use Seampact\Laravel\Runtime\ContractExceptionHandling;
-use Seampact\Laravel\Runtime\ContractRefusal;
 
 /** A contract refusal is an answer, not a failure: Laravel's handler must never report it. */
 final class ContractExceptionHandlingTest extends TestCase

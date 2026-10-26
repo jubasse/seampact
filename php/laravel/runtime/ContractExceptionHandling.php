@@ -9,6 +9,7 @@ use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\ContractRefusal;
 
 /**
  * What the api asks of Laravel's exception handler: a contract refusal is an answer, never reported, and an
