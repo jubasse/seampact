@@ -1,0 +1,59 @@
+# The verdict of a lane's required check, shared by every lane aggregate job. A composite action, not a reusable
+# workflow: a reusable workflow would rename the check to `caller / job` and break branch protection.
+name: Lane aggregate
+description: >-
+  Fails when a job the aggregate needs failed or was cancelled, or was skipped although the lane's change filter
+  said run. A skipped job passes only when the filter said the lane has nothing to test.
+
+inputs:
+  needs:
+    description: The aggregate job's `needs` context, as `toJSON(needs)`.
+    required: true
+  should-run:
+    description: >-
+      `true` when the lane's change filter said run (or the lane has no filter), `false` when it said skip.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Check every needed job
+      shell: bash
+      env:
+        NEEDS_JSON: ${{ inputs.needs }}
+        SHOULD_RUN: ${{ inputs.should-run }}
+      run: |
+        set -euo pipefail
+        results=$(jq -r 'to_entries[] | "\(.key)=\(.value.result)"' <<< "$NEEDS_JSON")
+        echo "Needed jobs: $(tr '\n' ' ' <<< "$results")"
+        if [ -z "$results" ]; then
+          echo "The aggregate needs no job, so it would pass with nothing tested. List the lane's jobs under needs."
+          exit 1
+        fi
+
+        failed=$(grep -E '=(failure|cancelled)$' <<< "$results" || true)
+        if [ -n "$failed" ]; then
+          echo "A needed job failed or was cancelled: $(tr '\n' ' ' <<< "$failed")"
+          exit 1
+        fi
+
+        case "$SHOULD_RUN" in
+          true | false) ;;
+          *)
+            echo "should-run is '$SHOULD_RUN', not true or false: the change filter gave no answer. Fix its output."
+            exit 1
+            ;;
+        esac
+
+        skipped=$(grep -E '=skipped$' <<< "$results" || true)
+        if [ "$SHOULD_RUN" = true ] && [ -n "$skipped" ]; then
+          echo "The change filter said run, but these jobs were skipped: $(tr '\n' ' ' <<< "$skipped")"
+          echo "A wiring slip (a wrong if: or needs:) would otherwise pass with nothing tested."
+          exit 1
+        fi
+
+        unknown=$(grep -vE '=(success|skipped)$' <<< "$results" || true)
+        if [ -n "$unknown" ]; then
+          echo "A needed job ended with an unknown result: $(tr '\n' ' ' <<< "$unknown")"
+          exit 1
+        fi

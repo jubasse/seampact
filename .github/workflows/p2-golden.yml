@@ -10,6 +10,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -85,7 +86,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Every matrix job passed
-        env:
-          RESULT: ${{ needs.determinism.result }}
-        run: test "$RESULT" = success
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      # No change filter yet: every needed job must run.
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: true
