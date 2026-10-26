@@ -68,10 +68,17 @@ final class WireCodec
         return $arguments;
     }
 
-    /** A generated PHP value as the wire writes it: objects as `stdClass`, lists as arrays. */
+    /**
+     * A generated PHP value as the wire writes it: objects as `stdClass`, lists as arrays. An opaque value is typed
+     * `mixed`, so its `null` is checked here: it is written only where the contract makes the value nullable.
+     */
     public static function encode(ApiContract $contract, mixed $type, mixed $value): mixed
     {
         if ($value === null) {
+            if (Ir::string($type, 'kind') === self::OPAQUE && !Ir::true($type, 'nullable')) {
+                throw new BoundaryFailure(new \LogicException("seampact: the handler wrote null for an opaque value the contract does not make nullable; return a JSON value, or declare it 'nullable: true'."));
+            }
+
             return null;
         }
 
@@ -143,7 +150,7 @@ final class WireCodec
             } elseif ($held === null && Ir::true($member, 'optional')) {
                 continue;
             }
-            $encoded->{$wireName} = self::encode($contract, $member['type'] ?? null, $held);
+            $encoded->{$wireName} = $held === null && Ir::true($member, 'nullable') ? null : self::encode($contract, $member['type'] ?? null, $held);
         }
 
         return $encoded;

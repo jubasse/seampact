@@ -105,8 +105,7 @@ final class MemberRules
     private function member(string $key, TypeUse $type, Presence $presence, Nullability $declared, Position $position, IrPlace $at): void
     {
         $nullable = $declared === Nullability::Nullable || match (true) {
-            $type instanceof OpaqueTypeUse => true,
-            $type instanceof ScalarTypeUse, $type instanceof EnumTypeUse, $type instanceof RefTypeUse, $type instanceof ArrayTypeUse => $type->nullable === true,
+            $type instanceof ScalarTypeUse, $type instanceof EnumTypeUse, $type instanceof RefTypeUse, $type instanceof ArrayTypeUse, $type instanceof OpaqueTypeUse => $type->nullable === true,
             default => false,
         };
 

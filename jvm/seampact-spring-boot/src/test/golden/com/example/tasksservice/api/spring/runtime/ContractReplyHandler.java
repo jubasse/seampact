@@ -13,6 +13,7 @@ import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.MissingNode;
+import tools.jackson.databind.node.NullNode;
 
 /**
  * Step 10's writer (ADR 0022 "The reply path"), first in Spring's list: it writes the value a contract method
@@ -24,6 +25,8 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
     private static final String ITEMS = "items";
     private static final String TOTAL = "total";
     private static final String PAGE_SHAPE = "page";
+    private static final String ITEM_SHAPE = "item";
+    private static final String EMPTY_SHAPE = "empty";
 
     private final SeampactBoundary boundary;
 
@@ -70,9 +73,18 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
         JsonNode response = exchange.route().response(status);
         CheckingResponse checking = exchange.response;
 
-        if (bodyValue != null) {
-            boolean isPage = PAGE_SHAPE.equals(response.path("shape").asString());
-            JsonNode handlerBody = boundary.mapper().valueToTree(isPage ? boundary.binding().pageFacts(bodyValue) : bodyValue);
+        // A null item is the format's null: its schema decides whether it may be null; PHP refuses a non-nullable opaque null on write, whatever the body check says.
+        if (hasBody(response, status)) {
+            String shape = response.path("shape").asString();
+            if (bodyValue == null && !ITEM_SHAPE.equals(shape)) {
+                exchange.violation = Optional.of("the handler returned a null " + shape);
+                return;
+            }
+
+            boolean isPage = PAGE_SHAPE.equals(shape);
+            JsonNode handlerBody = bodyValue == null
+                    ? NullNode.getInstance()
+                    : boundary.mapper().valueToTree(isPage ? boundary.binding().pageFacts(bodyValue) : bodyValue);
             JsonNode payload = isPage ? handlerBody.path(ITEMS) : handlerBody;
             if (isPage && !payload.isArray()) {
                 exchange.violation = Optional.of("the handler returned a page without items");
@@ -115,6 +127,10 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
 
         checking.setStatus(status);
         exchange.markBoundaryWrote();
+    }
+
+    private static boolean hasBody(JsonNode response, int status) {
+        return !EMPTY_SHAPE.equals(response.path("shape").asString());
     }
 
     // The success body against its schema when the api checks bodies; a list's, a table's and a page's every item.

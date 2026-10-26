@@ -15,6 +15,7 @@ use Seampact\Golden\Tasks\Symfony\TasksContract;
 use Seampact\Golden\Tasks\Symfony\TasksRouteLoader;
 use Seampact\Golden\Tasks\Symfony\TasksSeampactBundle;
 use Seampact\Golden\Tasks\Symfony\TasksSettings;
+use Seampact\Golden\TasksConsistent\Symfony\PaymentsInputConstraint;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSettings as AbsoluteSettings;
 use Seampact\Symfony\Tests\Support\HealthController;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
@@ -65,6 +66,23 @@ final class GeneratedPlacementTest extends TestCase
         sort($issues);
 
         self::assertSame(['/body/extra unknownKeys', '/body/ids maxItems', '/body/ids/3 format', '/path/channelId format', '/query/page unknownKeys'], $issues);
+    }
+
+    public function testAnOpaqueMemberThatIsNotNullableRefusesNull(): void
+    {
+        $input = (object) [
+            'path' => new \stdClass(),
+            'query' => new \stdClass(),
+            'header' => new \stdClass(),
+            'body' => (object) ['id' => 'evt_1', 'type' => 'invoice.paid', 'data' => null],
+        ];
+
+        $issues = [];
+        foreach (Validation::createValidator()->validate($input, new PaymentsInputConstraint()) as $violation) {
+            $issues[] = $violation->getPropertyPath() . ' ' . Issue::ruleOf($violation);
+        }
+
+        self::assertSame(['/body/data type'], $issues);
     }
 
     public function testTheBundleConfiguresItsServicesUnderItsAliasWithTheTargetDefaults(): void

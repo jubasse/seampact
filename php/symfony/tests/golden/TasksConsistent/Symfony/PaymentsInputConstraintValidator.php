@@ -9,7 +9,6 @@ use Seampact\Golden\TasksConsistent\Symfony\Runtime\InputShape;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\JsonType;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\KeyPolicy;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\Member;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\Nullability;
 
 /**
  * The members of the input of operation 'payments', as the contract declares them.
@@ -25,10 +24,7 @@ final class PaymentsInputConstraintValidator extends InputConstraintValidator
         properties: [
           'id' => new Member(JsonType::String),
           'type' => new Member(JsonType::String),
-          'data' => new Member(
-            JsonType::Any,
-            nullability: Nullability::Nullable,
-          ),
+          'data' => new Member(JsonType::Any),
         ],
       ),
     );

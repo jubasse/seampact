@@ -34,4 +34,9 @@ class SuccessEnvelopeTest {
     void aBareFormatWritesThePayloadItself() {
         assertEquals(MAPPER.readTree("[1, 2]"), bodyOf(BARE_FORMAT, "[1, 2]"));
     }
+
+    @Test
+    void anEnvelopedFormatWritesANullPayloadUnderItsMember() {
+        assertEquals(MAPPER.readTree("{\"data\": null, \"status\": 200, \"path\": \"/v1/tasks/t\"}"), bodyOf(ENVELOPED_FORMAT, "null"));
+    }
 }

@@ -94,7 +94,7 @@ The reply handler writes every contract reply:
 - with `setStatus`, `setHeader` and the output stream, its body serialized by the boundary's own Jackson 3 `JsonMapper`, never the app's `HttpMessageConverter`s or mapper bean;
 - one path for a 2xx among several, the derived 304 with the boundary's strong ETag, an idempotent replay and every contract error.
 
-An item, table or list body goes out in its format's success envelope (ADR 0002 section 13), `{ data: $payload }` under `pack:laravel`, the payload itself under a bare format, as the Node and PHP targets write it; the ETag is the enveloped body's. Generation refuses an envelope that does not write `$payload` under named members (`format.success.envelope.unsupported`), a slot beside the payload, the status and the path (`format.success.slot.unsupported`), a success format header (`format.success.headers.unsupported`) and the format's meta members (`format.meta.unsupported`).
+An item, table or list body goes out in its format's success envelope (ADR 0002 section 13), `{ data: $payload }` under `pack:laravel`, the payload itself under a bare format, as the Node and PHP targets write it; the ETag is the enveloped body's. A `null` body is the format's null (`null` bare, the envelope with a null payload), which the body check refuses unless the schema makes it nullable; a `null` list, table or page is a violation. Generation refuses an envelope that does not write `$payload` under named members (`format.success.envelope.unsupported`), a slot beside the payload, the status and the path (`format.success.slot.unsupported`), a success format header (`format.success.headers.unsupported`) and the format's meta members (`format.meta.unsupported`).
 
 Content negotiation is not consulted. A client's `Accept` changes nothing that the contract does not say.
 
@@ -173,7 +173,7 @@ Step 6 decodes path, query, headers and the held body to a Jackson 3 `JsonNode` 
    - `pattern` as an ECMA-262 search, where `@Pattern` matches the whole string;
    - `format`;
    - `multipleOf`.
-   An opaque value takes any JSON, but a number past the range of a double anywhere inside it is a `type` issue, as on the PHP targets.
+   An opaque value takes any JSON, `null` only when nullable (ADR 0003 section 2), but a number past the range of a double anywhere inside it is a `type` issue, as on the PHP targets.
    Each issue carries its `{ in, pointer, rule }` from the tree, and the issues are bounded by `MAX_RENDERED_ISSUES = 100`.
 2. **The boundary's own `JsonMapper` binds** the tree to the input record. After the structural pass the binding cannot fail; a failure is a 500.
 
