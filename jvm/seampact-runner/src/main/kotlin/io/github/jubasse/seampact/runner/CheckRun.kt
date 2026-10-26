@@ -30,7 +30,7 @@ public fun check(settings: RunSettings, buildDirectory: Path): CheckReport {
     }
 
     val bundleLines = prepared.bundles.map { "seampact: source '${it.source}' passes the pinned-bundle check, integrity ${it.integrity}." }
-    val documents = runDocuments(prepared.config, settings, DocumentsCommand.CHECK, prepared.binary)
+    val documents = runDocuments(prepared, settings, DocumentsCommand.CHECK)
     val documentLines = (documents as? DocumentsRun.Done)?.lines.orEmpty()
     val documentWarnings = (documents as? DocumentsRun.Done)?.warnings.orEmpty()
     val documentProblems = (documents as? DocumentsRun.Refused)?.problems.orEmpty()

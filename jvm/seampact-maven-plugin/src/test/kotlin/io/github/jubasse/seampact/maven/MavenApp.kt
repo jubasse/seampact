@@ -25,8 +25,11 @@ internal class MavenApp(val directory: Path) {
         writeSettings()
     }
 
-    /** Writes the POM, with [configuration] as the seampact plugin's `<configuration>` content. */
-    fun writePom(configuration: String) {
+    /**
+     * Writes the POM, with [configuration] as the seampact plugin's `<configuration>` content and [repositories] as
+     * the project's `<repositories>` content.
+     */
+    fun writePom(configuration: String, repositories: String = "") {
         write(
             "pom.xml",
             """
@@ -44,6 +47,9 @@ internal class MavenApp(val directory: Path) {
               <properties>
                 <java.version>21</java.version>
               </properties>
+              <repositories>
+            $repositories
+              </repositories>
               <dependencies>
                 <dependency>
                   <groupId>org.springframework.boot</groupId>

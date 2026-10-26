@@ -7,6 +7,7 @@ import io.github.jubasse.seampact.ir.bundle.MavenArtefactResolver
 import io.github.jubasse.seampact.ir.config.AppConfig
 import io.github.jubasse.seampact.ir.config.AppConfigRead
 import io.github.jubasse.seampact.ir.config.ConfigProblem
+import io.github.jubasse.seampact.ir.config.ConfigSource
 import io.github.jubasse.seampact.ir.config.EntryView
 import io.github.jubasse.seampact.ir.config.LocalSourcePolicy
 import java.nio.file.Path
@@ -16,7 +17,8 @@ import java.util.Properties
  * What one run of a seampact goal or task reads besides the app config: the build's inputs and resolvers.
  * [dslTree] is the app config the build file writes, as JSON, named [dslName] in problems; null reads the file.
  * [springBootVersion], [springSecurityWebVersion] and [springSecurityConfigVersion] are the versions the compile
- * classpath resolves, null without one.
+ * classpath resolves, null without one. [temporaryDirectory] is the build's own temporary directory, where a run
+ * hands the binary the app config the build file writes and removes it afterwards.
  */
 public class RunSettings(
     public val buildTool: BuildTool,
@@ -29,6 +31,7 @@ public class RunSettings(
     public val springSecurityConfigVersion: String?,
     public val binary: BinarySettings,
     public val bundleCacheDirectory: Path,
+    public val temporaryDirectory: Path,
     public val binaryCacheDirectory: Path,
     public val mavenArtefacts: MavenArtefactResolver,
     public val resolveBinaryArtefact: (BinaryPin.Artifact) -> Path,
@@ -38,7 +41,9 @@ public class RunSettings(
 public sealed interface PreparedRun {
     /**
      * [warnings] are the compatibility check's, which generate and check print; [binary] installs the pinned binary
-     * once, when a `path` source or the documents first need it.
+     * once, when a `path` source or the documents first need it. [bundles] holds every bundle source of the app when it
+     * has documents, the used ones otherwise; [verifiedBundleDirectory] gives the checked cache directory of a pinned
+     * bundle, which the documents run hands to the binary.
      */
     public data class Prepared(
         val config: AppConfig,
@@ -46,6 +51,7 @@ public sealed interface PreparedRun {
         val plans: List<EntryPlan>,
         val warnings: List<ConfigProblem>,
         internal val binary: () -> BinaryInstall,
+        internal val verifiedBundleDirectory: (String) -> Path?,
     ) : PreparedRun
 
     public data class Refused(val problems: List<ConfigProblem>) : PreparedRun
@@ -63,31 +69,40 @@ public fun prepareRun(settings: RunSettings): PreparedRun {
     }
 
     val matrix = checkMatrix(config, settings.springBootVersion, jvmFrameworks())
-    val configProblems = documentsWaitingForms(config) + EntryView.unknownSourceProblems(config) + matrix.problems
+    val configProblems = EntryView.unknownSourceProblems(config) + matrix.problems
     if (configProblems.isNotEmpty()) return PreparedRun.Refused(configProblems)
 
     // The build's environment, with SEAMPACT_ALLOW_LOCAL as the build's input holds it (git reads the rest).
     val environment = System.getenv().filterKeys { it != LocalSourcePolicy.ALLOW_LOCAL_VARIABLE } +
         listOfNotNull(settings.allowLocalVariable?.let { LocalSourcePolicy.ALLOW_LOCAL_VARIABLE to it })
     val binary by lazy { installBinary(settings.binary, settings.resolveBinaryArtefact, settings.binaryCacheDirectory, settings.buildTool) }
+    val fetcher = BundleFetcher(settings.bundleCacheDirectory, environment, settings.mavenArtefacts)
     val contractApis = ContractApis(
-        fetcher = BundleFetcher(settings.bundleCacheDirectory, environment, settings.mavenArtefacts),
+        fetcher = fetcher,
         localSources = LocalSourcePolicy.of(config.allowLocal, environment),
         localRefusalReason = LocalSourcePolicy.refusalReason(environment),
         installBinary = { binary },
     )
 
-    return when (val read = contractApis.read(config, EntryView.usedSources(config))) {
-        is ContractApisOutcome.Refused -> PreparedRun.Refused(read.problems)
+    // The binary's documents run fetches nothing: every bundle source is read here, so each can be handed over.
+    val used = EntryView.usedSources(config)
+    val read = if (documentsAsked(config)) used + (bundleSourceNames(config) - used.toSet()) else used
+
+    return when (val outcome = contractApis.read(config, read)) {
+        is ContractApisOutcome.Refused -> PreparedRun.Refused(outcome.problems)
         is ContractApisOutcome.Read -> PreparedRun.Prepared(
             config,
-            read.bundles,
-            planEntries(config, read.apis, settings, runnerVersion()),
+            outcome.bundles,
+            planEntries(config, outcome.apis.filter { it.source in used }, settings, runnerVersion()),
             matrix.warnings,
             { binary },
+            fetcher::verifiedBundleDirectory,
         )
     }
 }
+
+private fun bundleSourceNames(config: AppConfig): List<String> =
+    config.sources.filterValues { it is ConfigSource.Bundle }.keys.sorted()
 
 private const val RUNNER_PROPERTIES = "seampact-runner.properties"
 

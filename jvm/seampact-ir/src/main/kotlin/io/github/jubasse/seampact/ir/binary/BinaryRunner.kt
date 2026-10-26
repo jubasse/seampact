@@ -89,7 +89,7 @@ public object BinaryRunner {
         try {
             val irDirectory = workDirectory.resolve("ir")
 
-            return when (val ran = run(binary, listOf("compile", "--config", appConfig.toAbsolutePath().toString(), "--out", irDirectory.toString()), appConfig, timeout)) {
+            return when (val ran = run(binary, listOf("compile", "--config", appConfig.toAbsolutePath().toString(), "--out", irDirectory.toString()), appConfig.toAbsolutePath().parent, timeout)) {
                 is Ran.NotStarted -> BinaryCompileResult.Refused(ran.failure)
                 is Ran.TimedOut -> BinaryCompileResult.TimedOut(ran.failure)
                 is Ran.UnknownExit -> BinaryCompileResult.OutsideContract(ran.failure)
@@ -101,20 +101,42 @@ public object BinaryRunner {
     }
 
     /**
-     * Runs `generate` or `check` on the app config [appConfig], from its directory, with the same checks and
-     * environment as [compile]: the binary writes or checks the config's OpenAPI documents and its pinned bundles and
-     * leaves the native entries to the plugin. An npm entry is the binary's own refusal (exit 1).
+     * Runs `generate` or `check` on the app config [appConfig] with the same checks and environment as [compile]: the
+     * binary writes or checks the config's OpenAPI documents and leaves the native entries to the plugin. An npm entry
+     * is the binary's own refusal (exit 1). [appDirectory], when set, makes the binary read [appConfig] as the app
+     * config of that directory (`--app-directory`, a config the build file writes) and runs it from there; otherwise
+     * it runs from the config's directory. Each [bundleDirectories] entry hands over a bundle the plugin already
+     * fetched and checked (`--bundle-directory <source>=<dir>`), which the binary checks again and never fetches.
      */
     public fun documents(
         binary: VerifiedBinary,
         appConfig: Path,
         command: DocumentsCommand,
+        appDirectory: Path? = null,
+        bundleDirectories: Map<String, Path> = emptyMap(),
         timeout: Duration = DEFAULT_TIMEOUT,
-    ): BinaryDocumentsResult = when (val ran = run(binary, listOf(command.command, "--config", appConfig.toAbsolutePath().toString()), appConfig, timeout)) {
-        is Ran.NotStarted -> BinaryDocumentsResult.NotRun(ran.failure)
-        is Ran.TimedOut -> BinaryDocumentsResult.NotRun(ran.failure)
-        is Ran.UnknownExit -> BinaryDocumentsResult.NotRun(ran.failure)
-        is Ran.Exited -> if (ran.exitCode == 0) BinaryDocumentsResult.Done(ran.stdout, ran.stderr) else BinaryDocumentsResult.Failed(ran.exitCode, ran.stdout, ran.stderr)
+    ): BinaryDocumentsResult {
+        val arguments = buildList {
+            add(command.command)
+            add("--config")
+            add(appConfig.toAbsolutePath().toString())
+            if (appDirectory != null) {
+                add("--app-directory")
+                add(appDirectory.toAbsolutePath().toString())
+            }
+            for ((source, directory) in bundleDirectories.toSortedMap()) {
+                add("--bundle-directory")
+                add("$source=${directory.toAbsolutePath()}")
+            }
+        }
+        val workingDirectory = appDirectory ?: appConfig.toAbsolutePath().parent
+
+        return when (val ran = run(binary, arguments, workingDirectory, timeout)) {
+            is Ran.NotStarted -> BinaryDocumentsResult.NotRun(ran.failure)
+            is Ran.TimedOut -> BinaryDocumentsResult.NotRun(ran.failure)
+            is Ran.UnknownExit -> BinaryDocumentsResult.NotRun(ran.failure)
+            is Ran.Exited -> if (ran.exitCode == 0) BinaryDocumentsResult.Done(ran.stdout, ran.stderr) else BinaryDocumentsResult.Failed(ran.exitCode, ran.stdout, ran.stderr)
+        }
     }
 
     private sealed interface Ran {
@@ -128,8 +150,8 @@ public object BinaryRunner {
         data class Exited(val exitCode: Int, val stdout: String, val stderr: String) : Ran
     }
 
-    // Checks the cache and the hash right before the start, then runs the binary from the app config's directory.
-    private fun run(binary: VerifiedBinary, arguments: List<String>, appConfig: Path, timeout: Duration): Ran {
+    // Checks the cache and the hash right before the start, then runs the binary from [workingDirectory].
+    private fun run(binary: VerifiedBinary, arguments: List<String>, workingDirectory: Path, timeout: Duration): Ran {
         val unsafeEntry = BinaryCache.unsafeEntry(binary.path, binary.cacheRoot)
         if (unsafeEntry != null) return Ran.NotStarted(unsafeEntry)
         val startedSha256 = BinaryInstaller.sha256Of(binary.path)
@@ -141,7 +163,7 @@ public object BinaryRunner {
             val stderr = streamDirectory.resolve("stderr.txt")
 
             val processBuilder = ProcessBuilder(listOf(binary.path.toString()) + arguments)
-                .directory(appConfig.toAbsolutePath().parent.toFile())
+                .directory(workingDirectory.toAbsolutePath().toFile())
                 .redirectOutput(stdout.toFile())
                 .redirectError(stderr.toFile())
             keepContractVariables(processBuilder.environment(), BinaryCache.isWindows())

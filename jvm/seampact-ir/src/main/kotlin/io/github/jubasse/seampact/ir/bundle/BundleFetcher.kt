@@ -85,6 +85,19 @@ public class BundleFetcher(
         }
     }
 
+    /**
+     * The cache entry of the bundle pinned by [integrity], once it passes the pinned-bundle check again; null when the
+     * value is not a SHA-256 one, when no fetched bundle was cached under it, or when the entry fails the check. A host
+     * that hands a bundle over (the compiler binary's `--bundle-directory`) gets only a path that was just checked.
+     */
+    public fun verifiedBundleDirectory(integrity: String): Path? {
+        val entry = cache.entryOf(integrity) ?: return null
+        if (!Files.isDirectory(entry)) return null
+
+        // A cache entry is a release-layout bundle whatever its channel: only an npm package root differs.
+        return entry.takeIf { BundleVerifier.verify(it, integrity, BundleChannel.RELEASE) is BundleVerifyResult.Verified }
+    }
+
     private fun fetchRelease(source: BundleSource.Release): Fetched = when (val download = downloadReleaseTarball(source, httpClient, releaseDeadline)) {
         is Download.Failed -> Fetched.Failed(download.failure)
         is Download.Bytes -> extracted(download.bytes)

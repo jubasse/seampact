@@ -4,17 +4,17 @@ import io.github.jubasse.seampact.ir.binary.BinaryDocumentsResult
 import io.github.jubasse.seampact.ir.binary.BinaryInstall
 import io.github.jubasse.seampact.ir.binary.BinaryRunner
 import io.github.jubasse.seampact.ir.binary.DocumentsCommand
+import io.github.jubasse.seampact.ir.bundle.BundleFailureCode
 import io.github.jubasse.seampact.ir.config.AppConfig
 import io.github.jubasse.seampact.ir.config.AppConfigReader
 import io.github.jubasse.seampact.ir.config.ConfigProblem
-import io.github.jubasse.seampact.ir.config.ConfigSource
 import kotlinx.serialization.json.JsonPrimitive
 import java.nio.file.Files
 import kotlin.io.path.writeText
 
 private const val NO_DOCUMENTS = "none"
-private const val DSL_CONFIG_PREFIX = ".seampact-build-config-"
-private const val DSL_CONFIG_SUFFIX = ".json"
+private const val RUN_DIRECTORY_PREFIX = "documents-"
+private const val DSL_CONFIG_FILE_NAME = "config.json"
 private const val WARNING_PREFIX = "warning: "
 
 /**
@@ -28,26 +28,6 @@ internal fun documentsAsked(config: AppConfig): Boolean {
     return config.openapi != null || config.entries.isNotEmpty() || config.otherEntries.isNotEmpty()
 }
 
-/**
- * The binary's documents run fetches no bundle source: the binary reads the app config itself and makes no network
- * request, so an app whose documents come from a bundle source waits, refused by name.
- */
-internal fun documentsWaitingForms(config: AppConfig): List<ConfigProblem> {
-    if (!documentsAsked(config)) return emptyList()
-
-    val bundleSources = config.sources.filterValues { it is ConfigSource.Bundle }.keys.sorted()
-    if (bundleSources.isEmpty()) return emptyList()
-
-    return listOf(
-        ConfigProblem(
-            "config.key.waits",
-            "seampact's OpenAPI documents of an app with a bundle source (${bundleSources.joinToString(", ") { "'$it'" }}) are not written by the JVM build plugins yet: the compiler binary writes them from `path` sources only.",
-            "Set `openapi: none` for now, or compile the contract from a `path` source; the framework's own document (springdoc) is not touched.",
-            "${config.displayName} openapi",
-        ),
-    )
-}
-
 /** What the binary's documents run printed, or the problems that refused it. */
 internal sealed interface DocumentsRun {
     data class Done(val lines: List<String>, val warnings: List<String>) : DocumentsRun
@@ -57,36 +37,50 @@ internal sealed interface DocumentsRun {
 
 /**
  * Asks the pinned binary to write or check the app's OpenAPI documents ([command]); a run with no documents does not
- * start it. The binary reads the app config file; an app config the build file writes is handed over as a JSON file
- * in the app directory, so its relative paths stay those of the app, and the file is removed after the run.
+ * start it. The binary makes no network request: each bundle source the run checked is handed over as its verified
+ * cache directory, which the binary checks again against the source's integrity.
+ * An app config the build file writes is handed over as a JSON file in a run directory under the build's temporary
+ * directory, read as the app directory's config, and the run directory is removed after the run.
  */
-internal fun runDocuments(
-    config: AppConfig,
-    settings: RunSettings,
-    command: DocumentsCommand,
-    binary: () -> BinaryInstall,
-): DocumentsRun {
-    if (!documentsAsked(config)) return DocumentsRun.Done(emptyList(), emptyList())
+internal fun runDocuments(prepared: PreparedRun.Prepared, settings: RunSettings, command: DocumentsCommand): DocumentsRun {
+    if (!documentsAsked(prepared.config)) return DocumentsRun.Done(emptyList(), emptyList())
 
-    val installed = when (val install = binary()) {
+    val bundleDirectories = prepared.bundles.associate { it.source to prepared.verifiedBundleDirectory(it.integrity) }
+    val gone = prepared.bundles.filter { bundleDirectories[it.source] == null }
+    if (gone.isNotEmpty()) return DocumentsRun.Refused(gone.map(::cacheEntryGone))
+    val handedBundles = bundleDirectories.mapValues { (_, directory) -> checkNotNull(directory) }
+
+    val installed = when (val install = prepared.binary()) {
         is BinaryInstall.Installed -> install.binary
         is BinaryInstall.Refused -> return DocumentsRun.Refused(listOf(install.failure.toProblem(OPENAPI_WHERE)))
     }
 
     val dslTree = settings.dslTree
     if (dslTree == null) {
-        return documentsOutcome(BinaryRunner.documents(installed, settings.appDirectory.resolve(AppConfigReader.FILE_NAME), command), settings.buildTool)
+        val configFile = settings.appDirectory.resolve(AppConfigReader.FILE_NAME)
+
+        return documentsOutcome(BinaryRunner.documents(installed, configFile, command, bundleDirectories = handedBundles), settings.buildTool)
     }
 
-    val dslConfig = Files.createTempFile(settings.appDirectory, DSL_CONFIG_PREFIX, DSL_CONFIG_SUFFIX)
+    Files.createDirectories(settings.temporaryDirectory)
+    val runDirectory = Files.createTempDirectory(settings.temporaryDirectory, RUN_DIRECTORY_PREFIX)
     try {
+        val dslConfig = runDirectory.resolve(DSL_CONFIG_FILE_NAME)
         dslConfig.writeText(dslTree)
 
-        return documentsOutcome(BinaryRunner.documents(installed, dslConfig, command), settings.buildTool)
+        return documentsOutcome(BinaryRunner.documents(installed, dslConfig, command, settings.appDirectory, handedBundles), settings.buildTool)
     } finally {
-        Files.deleteIfExists(dslConfig)
+        runDirectory.toFile().deleteRecursively()
     }
 }
+
+// The run checked the bundle a moment ago; its cache entry went missing or changed since.
+private fun cacheEntryGone(bundle: CheckedBundle): ConfigProblem = ConfigProblem(
+    BundleFailureCode.CACHE_INVALID.code,
+    "The cached bundle of the source '${bundle.source}' (integrity ${bundle.integrity}) is gone or fails the pinned-bundle check since this run read it; it is not handed to the compiler.",
+    "Check who can write to the bundle cache directory, keep it private to your user, and run the build again.",
+    "source '${bundle.source}'",
+)
 
 private const val OPENAPI_WHERE = "openapi"
 

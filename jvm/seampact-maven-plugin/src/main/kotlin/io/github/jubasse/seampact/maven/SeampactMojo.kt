@@ -96,6 +96,7 @@ public abstract class SeampactMojo(private val repositorySystem: RepositorySyste
             binary = binarySettings,
             bundleCacheDirectory = seampactCache.resolve(BUNDLE_CACHE),
             binaryCacheDirectory = seampactCache.resolve(BINARY_CACHE),
+            temporaryDirectory = buildDirectory.resolve(TEMPORARY_DIRECTORY),
             mavenArtefacts = artefacts,
             resolveBinaryArtefact = artefacts::resolveBinary,
         )
@@ -145,6 +146,7 @@ public abstract class SeampactMojo(private val repositorySystem: RepositorySyste
         private const val CACHE_DIRECTORY = "seampact"
         private const val BUNDLE_CACHE = "bundles"
         private const val BINARY_CACHE = "binaries"
+        private const val TEMPORARY_DIRECTORY = "seampact"
         private const val SPRING_BOOT_GROUP = "org.springframework.boot"
         private const val SPRING_BOOT_ARTIFACT = "spring-boot"
         private const val SPRING_SECURITY_GROUP = "org.springframework.security"

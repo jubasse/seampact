@@ -59,6 +59,7 @@ public class SeampactPlugin : Plugin<Project> {
             this.appDirectory.set(appDirectory)
             bundleCacheDirectory.set(seampactCache.resolve(BUNDLE_CACHE).toString())
             binaryCacheDirectory.set(seampactCache.resolve(BINARY_CACHE).toString())
+            temporaryDirectory.set(project.layout.buildDirectory.dir(TEMPORARY_DIRECTORY).map { it.asFile.absolutePath })
             this.binaryArtefact.from(binaryArtefact)
             this.mavenBundles.from(mavenBundles)
             this.moduleCacheRoots.set(moduleCacheRoots)
@@ -75,6 +76,8 @@ public class SeampactPlugin : Plugin<Project> {
             // In one build, the check compares the files on disk before a generate rewrites them.
             task.mustRunAfter(CHECK_TASK)
             task.entryRoots.from(layout.map { it.entryRoots })
+            task.documentFiles.from(layout.map { it.documentFiles })
+            task.documentDirectories.from(layout.map { it.documentDirectories })
         }
         val check = project.tasks.register(CHECK_TASK, SeampactCheckTask::class.java) { task ->
             task.description = "Checks the pinned bundles and that the generated files match what seampactGenerate writes."
@@ -87,11 +90,12 @@ public class SeampactPlugin : Plugin<Project> {
 
     private fun wireIntoJava(project: Project, generate: TaskProvider<SeampactGenerateTask>, check: TaskProvider<SeampactCheckTask>) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-        sourceSets.named(MAIN_SOURCE_SET) { it.java.srcDir(generate) }
+        // The entry roots only: the task's other outputs are the OpenAPI documents, not sources.
+        sourceSets.named(MAIN_SOURCE_SET) { it.java.srcDir(generate.map { task -> task.entryRoots }) }
 
         // The properties files the target writes (`frameworkDocs: off`) go on the classpath; the sources do not.
         project.tasks.named(PROCESS_RESOURCES_TASK, ProcessResources::class.java) { task ->
-            task.from(generate) { it.include(GENERATED_RESOURCES) }
+            task.from(generate.map { generateTask -> generateTask.entryRoots }) { it.include(GENERATED_RESOURCES) }
         }
 
         val springBootVersion = compileClasspathVersion(project, ClasspathModule.SPRING_BOOT)
@@ -145,6 +149,7 @@ public class SeampactPlugin : Plugin<Project> {
         const val GENERATED_RESOURCES = "*.properties"
         const val CHECK_LIFECYCLE_TASK = "check"
         const val CACHE_DIRECTORY = "caches/seampact"
+        const val TEMPORARY_DIRECTORY = "tmp/seampact"
         const val BUNDLE_CACHE = "bundles"
         const val BINARY_CACHE = "binaries"
         const val MODULE_CACHE_DIRECTORY = "caches/modules-2"

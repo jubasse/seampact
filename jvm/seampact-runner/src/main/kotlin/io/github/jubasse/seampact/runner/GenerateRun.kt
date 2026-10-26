@@ -42,7 +42,7 @@ public fun generate(settings: RunSettings): GenerateOutcome {
     }
     if (problems.isNotEmpty()) return GenerateOutcome.Refused(problems)
 
-    val documents = when (val run = runDocuments(prepared.config, settings, DocumentsCommand.GENERATE, prepared.binary)) {
+    val documents = when (val run = runDocuments(prepared, settings, DocumentsCommand.GENERATE)) {
         is DocumentsRun.Refused -> return GenerateOutcome.Refused(run.problems)
         is DocumentsRun.Done -> run
     }

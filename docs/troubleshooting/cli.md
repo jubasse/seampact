@@ -8,7 +8,11 @@
 | `init.modelines.no-source` | `init --modelines` edits the contract files of `path` sources only. Add `{ path: ./contract }` to `sources`. |
 | `init.ignore-file-link` | `.gitignore` is a symbolic link, and `init` does not write through links. Run `seampact init --no-ignore-files`, then add `.seampact/` to the link's target yourself. |
 | `init.local-sources-refused` | The starter contract is a local folder, and `SEAMPACT_ALLOW_LOCAL=false` or a root config's `allowLocal: false` refuses local sources. Run `init` where they are allowed, or write the app config yourself with a `package` source. |
-| `binary.generate-unavailable`, `binary.check-unavailable` | The standalone binary has no code generator. Run `generate` and `check` with the npm CLI, or with the Gradle, Maven or Composer plugin. |
+| `binary.generate-unavailable`, `binary.check-unavailable` | The standalone binary writes the OpenAPI documents and leaves Maven and Composer entries to their plugin, but it has no npm code generator: an entry the message names uses an npm target. Run `generate` and `check` with the npm CLI for that app. |
+| `binary.documents-refused` | The Gradle or Maven plugin asked the compiler binary for the app's OpenAPI documents and it refused. Fix what the diagnostics under the message say; a document that differs is written again by `gradle seampactGenerate` or `mvn generate-sources`, then committed. |
+| `cli.app-directory.root` | `--app-directory` reads one app's config, and `--config` is a monorepo root config. Pass a root config with `--config` alone, from the root's directory. |
+| `cli.bundle-directory.unpinned` | A bundle handed over with `--bundle-directory` has no `integrity` to check it against. Pin the source's `integrity` in the app config. |
+| `cli.bundle-directory.unknown-source` | `--bundle-directory <source>=<dir>` names a source that is no bundle source of the app config. Name a source declared with `release`, `git`, `package` or `maven`. |
 | `binary.artefact-unresolved` | The Gradle or Maven plugin did not find the compiler binary it pins. Add the repository that serves `io.github.jubasse:seampact-compiler`, or set `binary { path; sha256 }` to a binary on disk. |
 | `binary.compile-refused` | The Gradle or Maven plugin compiled a `path` source and the compiler refused it. Fix the contract as the diagnostics under the message say. |
 | `binary.compile-failed` | The compiler binary exited outside its contract (another exit code, a signal, or no IR). Run the build again; report it with the binary version if it repeats. |
