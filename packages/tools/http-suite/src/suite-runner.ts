@@ -14,7 +14,7 @@ import {
   type SuiteStep,
 } from "./suite-case.js";
 import { type CaseResult, type SuiteReport, suiteReportOf } from "./suite-report.js";
-import { TemplateError, TemplateScope } from "./template.js";
+import { TemplateError, TemplateScope, WHOLE_PLACEHOLDER } from "./template.js";
 
 /**
  * The credentials the sample app's hooks honour, read by the cases as `{{userToken}}`, `{{throttledUserToken}}`,
@@ -48,6 +48,8 @@ export interface SuiteRunOptions {
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const MILLISECONDS_PER_SECOND = 1000;
 const JSON_MEDIA = "application/json";
+// The origin a captured link is resolved under; only the resolved path and query are sent to the target.
+const RESOLUTION_ORIGIN = "http://target.invalid";
 
 interface RunContext {
   readonly baseUrl: string;
@@ -149,6 +151,7 @@ export function caseHeader(suiteCase: SuiteCase): Pick<CaseResult, "id" | "title
 
 async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseResult> {
   const scope = new TemplateScope(context.variables);
+  const captureTargets = new Map<string, string>();
   const failures: string[] = [];
   const reader = suiteCase.profiles.includes("default") ? context.reader : undefined;
 
@@ -159,7 +162,9 @@ async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseR
       const label = `step ${index} (${step.title ?? `${step.request.method} ${step.request.path}`})`;
 
       failures.push(
-        ...(await runStep(step, scope, context, reader)).map((failure) => `${label}: ${failure}`),
+        ...(await runStep(step, scope, captureTargets, context, reader)).map(
+          (failure) => `${label}: ${failure}`,
+        ),
       );
     }
 
@@ -185,15 +190,18 @@ async function checkHookCalls(suiteCase: SuiteCase, context: RunContext): Promis
   return expected === actual ? [] : [`hook calls ${actual}, expected ${expected}`];
 }
 
+// `captureTargets` holds, per capture name, the path and query of the request whose response it came from.
 async function runStep(
   step: SuiteStep,
   scope: TemplateScope,
+  captureTargets: Map<string, string>,
   context: RunContext,
   reader: FormatReader | undefined,
 ): Promise<string[]> {
-  const path = filledPath(step.request.path, scope);
+  const path = filledPath(step.request.path, scope, captureTargets);
+  const target = `${path}${queryOf(step.request.query, path, scope)}`;
   const { response, readFailures } = readThroughFormat(
-    await send(step, path, scope, context),
+    await send(step, target, scope, context),
     { method: step.request.method, path },
     reader,
   );
@@ -204,7 +212,10 @@ async function runStep(
 
     if (value === undefined)
       failures.push(`capture '${name}': the response holds no ${JSON.stringify(source)}`);
-    else scope.capture(name, value);
+    else {
+      scope.capture(name, value);
+      captureTargets.set(name, target);
+    }
   }
 
   // The status often explains a failed capture, so the expectation is checked and reported too.
@@ -271,21 +282,35 @@ function filledExpectation(step: SuiteStep, scope: TemplateScope): SuiteStep["ex
 
 // A path filled from a response (`{{nextPage}}`) must stay on the target: `@host/x` or `//host/x` would send the
 // request and its credentials elsewhere.
-function filledPath(path: string, scope: TemplateScope): string {
+// A path that is one captured link alone is resolved against the URL of the request it came from (RFC 3986), so a
+// query-only or relative-path link stays on the target; a link to another origin is refused.
+function filledPath(
+  path: string,
+  scope: TemplateScope,
+  captureTargets: ReadonlyMap<string, string>,
+): string {
   const filled = scope.fillText(path);
 
-  if (!filled.startsWith("/") || filled.startsWith("//")) {
+  if (filled.startsWith("/") && !filled.startsWith("//")) return filled;
+
+  const captureTarget = captureTargets.get(WHOLE_PLACEHOLDER.exec(path)?.[1] ?? "");
+  const resolved =
+    captureTarget === undefined
+      ? undefined
+      : new URL(filled, `${RESOLUTION_ORIGIN}${captureTarget}`);
+
+  if (resolved?.origin !== RESOLUTION_ORIGIN) {
     throw new Error(
-      `the path '${path}' fills to '${filled}', which does not start with one '/'; the suite only sends a path of the target`,
+      `the path '${path}' fills to '${filled}', which does not start with one '/' and is not a link on the target; the suite only sends a path of the target`,
     );
   }
 
-  return filled;
+  return `${resolved.pathname}${resolved.search}`;
 }
 
 async function send(
   step: SuiteStep,
-  path: string,
+  target: string,
   scope: TemplateScope,
   context: RunContext,
 ): Promise<ReceivedResponse> {
@@ -311,7 +336,7 @@ async function send(
     );
   }
 
-  const answer = await fetch(`${context.baseUrl}${path}${queryOf(request.query, path, scope)}`, {
+  const answer = await fetch(`${context.baseUrl}${target}`, {
     method: request.method,
     headers,
     ...(body === undefined ? {} : { body }),

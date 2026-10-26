@@ -353,27 +353,6 @@ describe("http suite, pack:laravel profile", () => {
   });
 
   testEachCase(pack.cases, () => report, refusals, test);
-
-  // pack-laravel-page-next-link, with its query-only next link resolved against the URL of the page it came from.
-  test("a page's next link, resolved against the page's URL, fetches the next page", async () => {
-    const authorization = { authorization: `Bearer ${credentials.userToken}` };
-    const firstUrl = `${running?.baseUrl}${GENERAL_CHANNEL}/tasks?per_page=2&page=1`;
-    const first = await fetch(firstUrl, { headers: authorization });
-    const firstPage = (await first.json()) as {
-      links: { next: string };
-      meta: { current_page: number };
-    };
-
-    expect(firstPage.meta.current_page).toBe(1);
-
-    const second = await fetch(new URL(firstPage.links.next, firstUrl), { headers: authorization });
-    const secondPage = (await second.json()) as {
-      meta: { current_page: number; per_page: number };
-    };
-
-    expect(second.status).toBe(200);
-    expect(secondPage.meta).toMatchObject({ current_page: 2, per_page: 2 });
-  });
 });
 
 describe("http suite, boot profile", () => {

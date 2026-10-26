@@ -129,6 +129,8 @@ jobs:
         with:
           name: laravel-contract-bundle
           path: ${{ runner.temp }}/bundles
+          # The pack-laravel bundle keeps its packs under `sources/.packs`, which upload-artifact skips by default.
+          include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
 
@@ -170,6 +172,8 @@ jobs:
         with:
           name: laravel-contract-bundle
           path: ${{ runner.temp }}/bundles
+          # The pack-laravel bundle keeps its packs under `sources/.packs`, which upload-artifact skips by default.
+          include-hidden-files: true
       - name: Assemble, install and generate the consumer and its allow-listed and pack-laravel variants
         shell: bash
         run: |
