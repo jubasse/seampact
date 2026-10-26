@@ -94,8 +94,21 @@ final class ConfigReaderTest extends TestCase
             'api and apis together' => ["targets:\n  - { id: a, use: seampact/laravel, api: t, apis: [t] }\n", ['config.schema']],
             'a YAML syntax error' => ["targets: [\n", ['config.yaml.syntax']],
             'a duplicate key' => ["outDir: a\noutDir: b\n", ['config.yaml.syntax']],
-            'a custom tag' => ["outDir: !php/const PHP_EOL\n", ['config.yaml.syntax']],
-            'a merge key' => ["base: &b { id: a }\ntargets:\n  - <<: *b\n", ['config.yaml.syntax']],
+            'a custom tag' => ["outDir: !php/const PHP_EOL\n", ['config.yaml.tag']],
+            'a binary tag' => ["outDir: !!binary aGk=\n", ['config.yaml.tag']],
+            'a tag in a flow mapping' => ["checks: {generated: !foo warning}\n", ['config.yaml.tag']],
+            'a merge key' => ["base: &b { id: a }\ntargets:\n  - <<: *b\n", ['config.yaml.merge-key']],
+            'a merge key in a flow sequence' => ["base: &b { id: a }\ntargets: [<<: *b]\n", ['config.yaml.merge-key']],
+            'a leading-zero integer' => ["outDir: 0755\n", ['config.yaml.leading-zero']],
+            'a negative zero' => ["outDir: -0\n", ['config.yaml.leading-zero']],
+            'a leading-zero key' => ["sources:\n  0755: { path: x }\n", ['config.yaml.leading-zero']],
+            'an underscore in a number' => ["outDir: 1_000\n", ['config.yaml.underscore-number']],
+            'an underscore in a flow sequence' => ["targets: [1_0.5]\n", ['config.yaml.underscore-number']],
+            'a signed octal number' => ["outDir: -0o17\n", ['config.yaml.signed-number']],
+            'a plus before infinity' => ["outDir: +.inf\n", ['config.yaml.signed-number']],
+            'a keyword in mixed case' => ["outDir: nUll\n", ['config.yaml.keyword-case']],
+            'an integer JavaScript rounds' => ["outDir: 9007199254740993\n", ['config.yaml.integer-range']],
+            'a date key' => ["sources:\n  2026-10-26: { path: x }\n", ['config.yaml.date']],
             'a reserved key' => ["sources:\n  __proto__: { path: x }\n", ['config.key.reserved']],
             'an unquoted date' => ["outDir: 2026-10-26\n", ['config.yaml.date']],
             'a root config' => ["apps: [a]\n", ['config.root.not-an-app']],
@@ -124,6 +137,33 @@ final class ConfigReaderTest extends TestCase
 
         self::assertIsArray($problems);
         self::assertSame($codes, array_values(array_unique(array_map(static fn (ConfigProblem $problem): string => $problem->code, $problems))));
+    }
+
+    public function testReadsTheFormsInCommentsQuotedAndBlockScalarsAsText(): void
+    {
+        $config = $this->read("# a <<: *b, 0755, 1_000, !!binary\noutDir: 'src <<: x 0755' # <<: 1_000\n"
+            . "openapi: \"none\"\ntargets:\n  - { id: a, use: x/y, api: \"<<: 0755\", out: >-\n      '1_000 <<: !!binary' }\n");
+
+        self::assertInstanceOf(AppConfig::class, $config);
+        self::assertStringEndsWith('/app/src <<: x 0755', $config->outDir);
+    }
+
+    public function testReadsASexagesimalLookingValueAsTextAsNodeDoes(): void
+    {
+        $config = $this->read("outDir: 1:30\n");
+
+        self::assertInstanceOf(AppConfig::class, $config);
+        self::assertStringEndsWith('/app/1:30', $config->outDir);
+    }
+
+    public function testRefusesAnAncestorRootConfigWhoseAppsIsNotAList(): void
+    {
+        TemporaryDirectory::write($this->project, 'seampact.config.yaml', "apps: app\n");
+
+        $problems = $this->read("outDir: generated\n");
+
+        self::assertIsArray($problems);
+        self::assertSame(['config.schema'], array_values(array_unique(array_map(static fn (ConfigProblem $problem): string => $problem->code, $problems))));
     }
 
     public function testNamesTheUnknownKeyAndItsPlace(): void

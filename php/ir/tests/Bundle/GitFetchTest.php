@@ -71,10 +71,17 @@ final class GitFetchTest extends TestCase
     public function testRefusesUrlsTagsAndDirectoriesByName(): void
     {
         self::assertSame('bundle.git-url', $this->failure(new GitSource('ftp://example.test/contract.git', 'v1', null, null))->code->value);
-        self::assertSame('bundle.git-failed', $this->failure(new GitSource('ext::sh -c touch% /tmp/x', 'v1', null, null))->code->value);
         self::assertSame('bundle.git-tag', $this->failure(new GitSource('../contract', '--upload-pack=x', null, null))->code->value);
         self::assertSame('bundle.git-directory', $this->failure(new GitSource('../contract', 'v1', '../bundle', null))->code->value);
         self::assertSame('bundle.git-failed', $this->failure(new GitSource('../contract', 'v404', 'bundle', null))->code->value);
+    }
+
+    public function testNeverRunsTheCommandOfAnExtUrl(): void
+    {
+        $marker = "{$this->directory}/ext-ran";
+
+        self::assertSame('bundle.git-failed', $this->failure(new GitSource("ext::sh -c touch% {$marker}", 'v1', null, null))->code->value);
+        self::assertFileDoesNotExist($marker);
     }
 
     public function testRefusesALinkInTheTagsTree(): void

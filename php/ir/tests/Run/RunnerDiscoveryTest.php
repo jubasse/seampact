@@ -31,6 +31,7 @@ final class RunnerDiscoveryTest extends TestCase
             ['name' => 'acme/stub-target', 'version' => '1.2.0', 'extra' => ['seampact' => ['generator' => StubGenerator::class]]],
             ['name' => 'acme/not-a-target', 'version' => '1.0.0'],
             ['name' => 'acme/broken-target', 'version' => '1.0.0', 'extra' => ['seampact' => ['generator' => \stdClass::class]]],
+            ['name' => 'acme/throwing-target', 'version' => '1.0.0', 'extra' => ['seampact' => ['generator' => ThrowingGenerator::class]]],
         ]]));
     }
 
@@ -93,6 +94,42 @@ final class RunnerDiscoveryTest extends TestCase
         self::assertStringContainsString("config.target.not-a-target (entry 'b' use)", $stderr);
         self::assertStringContainsString("config.target.load-failed (entry 'c' use)", $stderr);
         self::assertDirectoryDoesNotExist("{$this->project}/src");
+    }
+
+    public function testNamesATargetWhoseGeneratorFails(): void
+    {
+        $this->config('{ id: thrower, use: acme/throwing-target, api: t }');
+
+        [$exit, , $stderr] = $this->seampact('generate');
+
+        self::assertSame(Command::EXIT_REFUSED, $exit);
+        self::assertStringContainsString("config.target.generate-failed (entry 'thrower' api 't')", $stderr);
+        self::assertStringContainsString("'acme/throwing-target'", $stderr);
+        self::assertStringContainsString(ThrowingGenerator::MESSAGE, $stderr);
+        self::assertDirectoryDoesNotExist("{$this->project}/src");
+    }
+
+    public function testReportsAnUnexpectedFailureAsAnInternalErrorOnOneLine(): void
+    {
+        $this->config('{ id: stub, use: acme/stub-target, api: t }');
+        TemporaryDirectory::write($this->project, 'src/Generated', 'a file where the output directory goes');
+
+        [$exit, $stdout, $stderr] = $this->seampact('generate');
+
+        self::assertSame(Command::EXIT_REFUSED, $exit, $stdout);
+        self::assertStringStartsWith('seampact: internal error: ', $stderr);
+        self::assertSame(1, substr_count(rtrim($stderr), "\n") + 1, $stderr);
+    }
+
+    public function testRefusesAnInstalledListInTheComposer1Shape(): void
+    {
+        $this->config('{ id: stub, use: acme/stub-target, api: t }');
+        TemporaryDirectory::write($this->project, 'vendor/composer/installed.json', '[{"name": "acme/stub-target"}]');
+
+        [$exit, , $stderr] = $this->seampact('generate');
+
+        self::assertSame(Command::EXIT_REFUSED, $exit);
+        self::assertStringContainsString('config.target.installed-unreadable', $stderr);
     }
 
     public function testRefusesAnOutDirNoPsr4EntryHolds(): void
