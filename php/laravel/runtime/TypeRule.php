@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel\Runtime;
 
+use Seampact\Codegen\Runtime\Nullability;
+use Seampact\Codegen\Runtime\Presence;
+
 /**
  * The member's presence and JSON type, read on the objects-preserved input with `array_key_exists`, so an explicit
  * null and an absent key never look alike, `{}` is never a list and a string is never a number. An integer accepts a

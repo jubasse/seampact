@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Laravel\Runtime;
 
+use Seampact\Hooks\RequestView;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -12,6 +13,8 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final class RawTarget
 {
+    private const PREFLIGHT_METHOD = 'OPTIONS';
+
     private function __construct()
     {
     }
@@ -38,6 +41,25 @@ final class RawTarget
     public static function query(Request $request): string
     {
         return $request->server->getString('QUERY_STRING');
+    }
+
+    /** What the hooks see of the request: its method, raw path, headers and client address. */
+    public static function view(Request $request): RequestView
+    {
+        $headers = [];
+        foreach ($request->headers->all() as $name => $values) {
+            $headers[(string) $name] = array_values(array_filter($values, is_string(...)));
+        }
+
+        return new RequestView($request->getMethod(), self::path($request), $headers, $request->server->getString('REMOTE_ADDR') ?: null);
+    }
+
+    /** A CORS preflight, which the app's CORS handling answers after the boundary. */
+    public static function isPreflight(Request $request): bool
+    {
+        return $request->getMethod() === self::PREFLIGHT_METHOD
+            && $request->headers->has('Origin')
+            && $request->headers->has('Access-Control-Request-Method');
     }
 
     private static function rooted(string $path): string

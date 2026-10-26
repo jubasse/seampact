@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\PsrPrinter;
+use Seampact\Codegen\ContractClass;
 use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\ArtefactSwitches;
 use Seampact\Codegen\BootCheckSwitches;
 use Seampact\Codegen\Delivery;
+use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\OperationTypes;
@@ -37,6 +39,7 @@ final class LaravelGenerator implements Generator
     private const HTTP_OPERATION = 'httpOperation';
     // Laravel's exception handler does not report a declared error a handler throws.
     private const SHOULDNT_REPORT = 'Illuminate\\Contracts\\Debug\\ShouldntReport';
+    private const HOOK_REGISTRATION = 'bind it in the container';
 
     public function irSupport(): IrSupport
     {
@@ -69,7 +72,7 @@ final class LaravelGenerator implements Generator
             ...$exceptionFiles,
             ...(new EndpointsTypes($layout))->files($kept),
             $contract->file(),
-            ...(new IdentityTypes($layout, $contract, $refusals))->files(),
+            ...(new IdentityTypes($layout, $contract, $refusals, self::HOOK_REGISTRATION))->files(),
             ...(new BoundaryClasses($layout, BootCheckSwitches::of($entry->artefacts)))->files(),
         ];
 

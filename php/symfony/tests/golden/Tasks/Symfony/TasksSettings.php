@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Symfony;
 
+use Seampact\Golden\Tasks\Symfony\Runtime\ContractSettings;
+
 /**
  * The 'seampact_tasks' bundle configuration, each value checked when the boundary reads it, so a value
  * the configuration cannot hold is refused naming its key and the accepted values, never the value.
  */
-final readonly class TasksSettings
+final readonly class TasksSettings implements ContractSettings
 {
     private const RESPONSES_VALUES = ['strict', 'warn'];
     private const TRUE_TEXTS = ['true', '1'];

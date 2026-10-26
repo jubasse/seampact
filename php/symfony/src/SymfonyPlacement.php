@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Seampact\Symfony;
 
 use Seampact\Codegen\ApiLayout;
+use Seampact\Codegen\BoundaryNames;
+use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\OperationNames;
@@ -17,7 +19,7 @@ use Seampact\Ir\Model\Operation;
  * `<namespace>\Symfony\Runtime`, and the api key that names its routes (`seampact.<api>.<operationId>`), its routing
  * resource and its bundle configuration (`seampact_<api>`).
  */
-final class SymfonyPlacement
+final class SymfonyPlacement implements BoundaryNames
 {
     public readonly string $namespace;
     public readonly string $symfonyNamespace;
@@ -28,10 +30,15 @@ final class SymfonyPlacement
     public readonly string $routeLoader;
     public readonly string $inputResolver;
     public readonly string $settings;
+    public readonly string $contract;
+    public readonly string $boundary;
     public readonly string $configurationAlias;
 
     /** @var list<array{int, Operation}> */
     private array $operations = [];
+
+    /** @var array<string, array{hook: string, credentials: string, principal: string, principalMembers: string}> */
+    private array $identities;
 
     /** @var array<string, array{string, string}> each operation's input constraint and its validator */
     private array $inputConstraints = [];
@@ -51,6 +58,8 @@ final class SymfonyPlacement
         $this->routeLoader = $placed('RouteLoader', "the api's route loader");
         $this->inputResolver = $placed('InputResolver', "the api's input resolver");
         $this->settings = $placed('Settings', "the api's settings");
+        $this->contract = $placed('Contract', "the api's contract class");
+        $this->boundary = $placed('Boundary', "the api's boundary subscriber");
 
         foreach ($kept->operations() as [$index, $operation]) {
             $names = $layout->operation($operation->id);
@@ -65,6 +74,35 @@ final class SymfonyPlacement
                 $layout->claim("{$constraint}Validator", "the input constraint validator of operation '{$operation->id}'", $at),
             ];
         }
+        $this->identities = IdentityTypes::claimed($layout, $kept, $this->symfonyNamespace);
+    }
+
+    public function layout(): ApiLayout
+    {
+        return $this->layout;
+    }
+
+    public function contractClass(): string
+    {
+        return $this->contract;
+    }
+
+    /** The route loader, which holds the route table and the run-time defaults. */
+    public function routesClass(): string
+    {
+        return $this->routeLoader;
+    }
+
+    /** @return array<string, array{hook: string, credentials: string, principal: string, principalMembers: string}> */
+    public function identities(): array
+    {
+        return $this->identities;
+    }
+
+    /** @return array<string, string> none: the Symfony placement adds no class per operation the runtime reads */
+    public function operationClasses(string $operationId): array
+    {
+        return [];
     }
 
     /** The api key of an api name's segments: lower-case words joined by `_`. */

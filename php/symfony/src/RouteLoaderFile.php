@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Seampact\Symfony;
 
-use Nette\PhpGenerator\Dumper;
 use Nette\PhpGenerator\Literal;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
+use Seampact\Codegen\TargetOptions;
 use Seampact\Ir\Model\Operation;
 
 /**
@@ -26,6 +26,7 @@ final class RouteLoaderFile
 
     public function __construct(
         private readonly SymfonyPlacement $placement,
+        private readonly TargetOptions $options,
         private readonly Refusals $refusals,
     ) {
     }
@@ -40,33 +41,47 @@ final class RouteLoaderFile
         $class->addConstant('TYPE', 'seampact');
         $class->addConstant('RESOURCE', $this->placement->apiKey);
         $class->addConstant('OPERATION_DEFAULT', '_seampact_operation');
+        $class->addConstant('DEFAULTS', [
+            'responses' => $this->options->responses->value,
+            'body_validation' => $this->options->bodyValidation,
+            'framework_etag' => $this->options->frameworkEtag->value,
+            'catch_all' => $this->options->catchAll,
+        ])->addComment("The run-time defaults the entry's options set; the bundle configuration overrides `responses`.");
 
         $supports = $class->addMethod('supports')->setPublic()->setReturnType('bool');
         $supports->addParameter('resource')->setType('mixed');
         $supports->addParameter('type')->setType('?string')->setDefaultValue(null);
         $supports->setBody('return $type === self::TYPE && $resource === self::RESOURCE;');
 
+        $table = [];
+        foreach ($this->ordered() as [$path, $operation]) {
+            $names = $this->placement->names($operation->id);
+            $table[] = [
+                'operation' => $operation->id,
+                'method' => strtoupper($operation->method->value),
+                'path' => $path,
+                'name' => $this->placement->routeName($operation->id),
+                'controller' => [new Literal($file->name($names->endpoints) . '::class'), $names->method],
+            ];
+        }
+        $class->addConstant('ROUTES', $table)
+            ->addComment('Each operation\'s route, literal segments first per path depth.')
+            ->addComment('@var list<array{operation: string, method: string, path: string, name: string, controller: array{class-string, string}}>');
+
         $routeCollection = $file->name('Symfony\\Component\\Routing\\RouteCollection');
         $route = $file->name('Symfony\\Component\\Routing\\Route');
         $load = $class->addMethod('load')->setPublic()->setReturnType('Symfony\\Component\\Routing\\RouteCollection');
         $load->addParameter('resource')->setType('mixed');
         $load->addParameter('type')->setType('?string')->setDefaultValue(null);
+        $load->setBody(<<<PHP
+            \$routes = new {$routeCollection}();
+            foreach (self::ROUTES as \$route) {
+                \$defaults = ['_controller' => \$route['controller'][0] . '::' . \$route['controller'][1], self::OPERATION_DEFAULT => \$route['operation']];
+                \$routes->add(\$route['name'], new {$route}(\$route['path'], \$defaults, methods: [\$route['method']]));
+            }
 
-        $dumper = new Dumper();
-        $body = "\$routes = new {$routeCollection}();\n";
-        foreach ($this->ordered() as [$path, $operation]) {
-            $names = $this->placement->names($operation->id);
-            $controller = new Literal($file->name($names->endpoints) . '::class . ?', ['::' . $names->method]);
-            $body .= $dumper->format(
-                "\$routes->add(?, new {$route}(?, ['_controller' => ?, self::OPERATION_DEFAULT => ?], methods: [?]));\n",
-                $this->placement->routeName($operation->id),
-                $path,
-                $controller,
-                $operation->id,
-                strtoupper($operation->method->value),
-            );
-        }
-        $load->setBody($body . "\nreturn \$routes;");
+            return \$routes;
+            PHP);
 
         return $file;
     }

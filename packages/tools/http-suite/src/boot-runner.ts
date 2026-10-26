@@ -93,13 +93,21 @@ export function bootFailures(expectation: BootExpectation, attempt: BootAttempt)
     return [`the '${expectation.variant}' app started, expected a refusal; ${quoted}`];
   }
 
-  const missing = expectation.diagnostic.filter((text) => !attempt.output.includes(text));
+  const output = withoutWhitespace(attempt.output);
+  const missing = expectation.diagnostic.filter(
+    (text) => !output.includes(withoutWhitespace(text)),
+  );
 
   return missing.length === 0
     ? []
     : [
         `the '${expectation.variant}' app refused without ${missing.map((text) => JSON.stringify(text)).join(", ")}; ${quoted}`,
       ];
+}
+
+// A console wraps a long diagnostic at its width, even inside a quoted name: its whitespace is presentation.
+function withoutWhitespace(text: string): string {
+  return text.replace(/\s+/g, "");
 }
 
 function startSampleApp(

@@ -177,13 +177,23 @@ final class TextNestingScan
 
     private static function utf8(int $codePoint): string
     {
+        // pack() writes each byte; chr() refuses a value PHPStan cannot bound to one byte.
         return match (true) {
-            $codePoint < 0x80 => chr($codePoint),
-            $codePoint < 0x800 => chr(0xC0 | ($codePoint >> 6)) . chr(0x80 | ($codePoint & 0x3F)),
-            $codePoint < 0x10000 => chr(0xE0 | ($codePoint >> 12)) . chr(0x80 | (($codePoint >> 6) & 0x3F))
-                . chr(0x80 | ($codePoint & 0x3F)),
-            default => chr(0xF0 | ($codePoint >> 18)) . chr(0x80 | (($codePoint >> 12) & 0x3F))
-                . chr(0x80 | (($codePoint >> 6) & 0x3F)) . chr(0x80 | ($codePoint & 0x3F)),
+            $codePoint < 0x80 => pack('C', $codePoint),
+            $codePoint < 0x800 => pack('C*', 0xC0 | ($codePoint >> 6), 0x80 | ($codePoint & 0x3F)),
+            $codePoint < 0x10000 => pack(
+                'C*',
+                0xE0 | ($codePoint >> 12),
+                0x80 | (($codePoint >> 6) & 0x3F),
+                0x80 | ($codePoint & 0x3F),
+            ),
+            default => pack(
+                'C*',
+                0xF0 | ($codePoint >> 18),
+                0x80 | (($codePoint >> 12) & 0x3F),
+                0x80 | (($codePoint >> 6) & 0x3F),
+                0x80 | ($codePoint & 0x3F),
+            ),
         };
     }
 }

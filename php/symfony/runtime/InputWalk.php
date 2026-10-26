@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Symfony\Runtime;
 
+use Seampact\Codegen\Runtime\Nullability;
+use Seampact\Codegen\Runtime\Presence;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 /**

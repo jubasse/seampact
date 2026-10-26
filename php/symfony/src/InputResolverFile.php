@@ -37,7 +37,7 @@ final class InputResolverFile
             ->addComment('@return list<object>');
         $resolve->addParameter('request')->setType($file->type('Symfony\\Component\\HttpFoundation\\Request'));
         $resolve->addParameter('argument')->setType($file->type('Symfony\\Component\\HttpKernel\\ControllerMetadata\\ArgumentMetadata'));
-        $bypassed = $file->name($this->placement->runtime('BoundaryBypassedException'));
+        $bypassed = $file->name($this->placement->runtime('ContractBypassedException'));
         $resolve->setBody(<<<PHP
             \$type = \$argument->getType();
             if (\$type === null || !in_array(\$type, self::INPUT_CLASSES, true)) {

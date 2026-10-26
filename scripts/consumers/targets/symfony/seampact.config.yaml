@@ -1,0 +1,14 @@
+# The consumer's app config: the reference contract and one seampact/symfony entry serving the core operations of the
+# tasks api, which this release generates; the suite's control routes are allow-listed framework routes.
+outDir: src/Generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: Tasks
+    use: seampact/symfony
+    api: tasks
+    operations: { include: [health, getChannel, getDraft, getTask, getTasksBatch] }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }

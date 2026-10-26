@@ -407,14 +407,14 @@
             "dist": {
                 "type": "path",
                 "url": "../ir",
-                "reference": "29f3da4372917cb2ac016f32cd5ee9b3002e9840"
+                "reference": "ff3b82047d640de3d19c2a870b1437859cdbe9b6"
             },
             "require": {
                 "ext-json": "*",
                 "ext-zlib": "*",
                 "opis/json-schema": "~2.6.0",
                 "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
-                "symfony/yaml": "~7.4.0"
+                "symfony/yaml": "~7.4.0 || ^8.0"
             },
             "require-dev": {
                 "phpstan/phpstan": "2.2.16",

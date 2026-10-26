@@ -4,3 +4,6 @@ parameters:
     - src
     - runtime
     - tests
+  # The configurator functions (`service()`, `tagged_iterator()`) live in a class file no autoloader loads for them.
+  scanFiles:
+    - vendor/symfony/dependency-injection/Loader/Configurator/ContainerConfigurator.php

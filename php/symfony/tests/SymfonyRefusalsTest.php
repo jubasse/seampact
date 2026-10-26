@@ -74,7 +74,7 @@ final class SymfonyRefusalsTest extends TestCase
         self::assertStringContainsString('symfony-3 generates it', self::refused($document)['throttle.unsupported'] ?? '');
     }
 
-    public function testARightAndAPlainRuleWaitForTheAccessListener(): void
+    public function testARightAndAPlainRuleAreServedByTheAccessListener(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
             $origin = (object) ['layer' => 'api', 'pointer' => '/surfaces/app/requires'];
@@ -84,10 +84,9 @@ final class SymfonyRefusalsTest extends TestCase
             ];
         });
 
-        $refused = self::refused($document);
+        $files = (new SymfonyGenerator())->generate(ReferenceContract::read(new SymfonyGenerator(), $document), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
 
-        self::assertStringContainsString('symfony-2 generates it', $refused['requires.right.unsupported'] ?? '');
-        self::assertStringContainsString('symfony-2 generates it', $refused['requires.rule.unsupported'] ?? '');
+        self::assertNotSame([], $files);
     }
 
     public function testAnIntegerStepBeyondThePhpIntRangeIsRefusedByName(): void
@@ -112,18 +111,18 @@ final class SymfonyRefusalsTest extends TestCase
         self::assertArrayHasKey('multipleOf.invalid', self::refused($document));
     }
 
-    public function testTheHooksAccessArtefactWaitsForTheAccessListener(): void
+    public function testTheHooksAccessArtefactAndTheBootCheckSwitchesAreRead(): void
     {
-        $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => true]);
+        $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => true, 'bootCheck' => (object) ['frameworkRoutes' => false, 'hooks' => true]]);
 
-        self::assertStringContainsString('symfony-2 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');
+        self::assertArrayNotHasKey('artefacts.accessHooks.unsupported', $refused);
+        self::assertArrayNotHasKey('artefacts.bootCheck.unsupported', $refused);
     }
 
     public function testEachRefusalOfTheFullReferenceNamesTheReleaseThatBringsIt(): void
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => false]);
 
-        self::assertStringContainsString('symfony-2 generates it', $refused['input.proofs.unsupported'] ?? '');
         self::assertStringContainsString('symfony-3 generates it', $refused['type.opaque.unsupported'] ?? '');
         self::assertStringContainsString('symfony-3 generates it', $refused['param.query.structured.unsupported'] ?? '');
         self::assertStringContainsString('symfony-4 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');

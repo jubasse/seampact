@@ -10,9 +10,9 @@ use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\Decider;
-use Seampact\Codegen\Runtime\HookSelection;
+use Seampact\Codegen\Runtime\FrameworkRoutes;
+use Seampact\Codegen\Runtime\HookCheck;
 use Seampact\Codegen\Runtime\Ir;
-use Seampact\Codegen\Runtime\ScopeResolver;
 use Seampact\Hooks\IdempotencyStore;
 
 /**
@@ -30,7 +30,6 @@ final class BootCheck
     private const HEALTH_ACTION = 'Illuminate\\Foundation\\Http\\HealthCheck';
     private const OWN_ROUTE_NAMES = '/^(storage\.[^.]+(\.upload)?|sanctum\.csrf-cookie)$/D';
     private const SUBSTITUTE_BINDINGS = 'Illuminate\\Routing\\Middleware\\SubstituteBindings';
-    private const HEAD = 'HEAD';
     private const GENERATED_ROUTE_NAME = '/^seampact\.([^.]+)\./D';
 
     private function __construct()
@@ -58,73 +57,23 @@ final class BootCheck
     /** @return list<string> */
     private static function hooks(Application $app, ApiContract $contract): array
     {
-        $problems = [];
-        $identities = [];
-        $scopes = [];
-        $deciderNames = [];
+        $problems = HookCheck::problems(
+            new Hooks($app),
+            $contract,
+            'bind %s in the container',
+            "tag a Decider naming it, or '" . Decider::EVERY_NAME . "', with '" . Hooks::decidersTag($contract->api) . "'",
+            "tag a ScopeResolver with '" . Hooks::scopeResolversTag($contract->api) . "'",
+        );
+
         $idempotent = [];
         foreach ($contract->operationIds() as $operationId) {
-            $operation = $contract->operation($operationId);
-            if (Ir::string(Ir::map($operation, 'idempotency'), 'enforce') === self::BOUNDARY_ENFORCED) {
+            if (Ir::string(Ir::map($contract->operation($operationId), 'idempotency'), 'enforce') === self::BOUNDARY_ENFORCED) {
                 $idempotent[] = $operationId;
-            }
-            $identity = Ir::string(Ir::map($operation, 'access'), 'identity');
-            if ($identity !== null) {
-                $identities[$identity] = true;
-            }
-            foreach (Ir::maps($operation, 'scopes') as $scope) {
-                $scopes[Ir::string($scope, 'scope') ?? ''] = true;
-            }
-            foreach (Ir::maps($operation, 'requires') as $requirement) {
-                $deciderNames[Ir::string($requirement, 'right') ?? Ir::string($requirement, 'rule') ?? ''] = true;
-            }
-            foreach (Ir::maps($operation, 'fieldRights') as $fieldRight) {
-                $deciderNames[Ir::string($fieldRight, 'right') ?? ''] = true;
-            }
-        }
-
-        foreach (array_keys($identities) as $identity) {
-            try {
-                (new Hooks($app))->authenticateHook($contract, (string) $identity);
-            } catch (\LogicException) {
-                $interface = Ir::string(Ir::map(Ir::map($contract->types, 'identities'), (string) $identity), 'hook') ?? '';
-                $problems[] = "no authenticate hook for the identity '{$identity}': bind {$interface} in the container";
-            }
-        }
-        foreach (array_keys($scopes) as $scope) {
-            if (HookSelection::scopeResolver(new Hooks($app), $contract, (string) $scope) === null) {
-                $problems[] = "no scope resolver for the scope '{$scope}': tag a ScopeResolver with '" . Hooks::scopeResolversTag($contract->api) . "'";
-            }
-        }
-        foreach (array_keys($deciderNames) as $name) {
-            if (HookSelection::decider(new Hooks($app), $contract, (string) $name) === null) {
-                $problems[] = "no decider for '{$name}': tag a Decider naming it, or '" . Decider::EVERY_NAME . "', with '" . Hooks::decidersTag($contract->api) . "'";
             }
         }
 
         if ($idempotent !== [] && (new Hooks($app))->idempotencyStore() === null) {
             $problems[] = "no idempotency store for '" . implode("', '", $idempotent) . "': bind " . IdempotencyStore::class . ' in the container';
-        }
-
-        return [...$problems, ...self::claimedTwice($app, $contract)];
-    }
-
-    /** @return list<string> */
-    private static function claimedTwice(Application $app, ApiContract $contract): array
-    {
-        $claimed = [];
-        $problems = [];
-        foreach ($app->tagged(Hooks::decidersTag($contract->api)) as $decider) {
-            if (!$decider instanceof Decider) {
-                $problems[] = 'a service tagged ' . Hooks::decidersTag($contract->api) . ' (' . get_debug_type($decider) . ') does not implement ' . Decider::class;
-                continue;
-            }
-            foreach ($decider->names() as $name) {
-                if (isset($claimed[$name]) && $claimed[$name] !== $decider::class) {
-                    $problems[] = "two deciders claim '{$name}': {$claimed[$name]} and " . $decider::class . '; keep one';
-                }
-                $claimed[$name] = $decider::class;
-            }
         }
 
         return $problems;
@@ -226,26 +175,7 @@ final class BootCheck
     // `**` any number) and it names no method, or the route's one method besides the HEAD Laravel adds to GET.
     private static function isAllowListed(ApiContract $contract, Route $route): bool
     {
-        return self::allowsRoute($contract->frameworkRoutes, '/' . ltrim($route->uri(), '/'), array_values(array_filter($route->methods(), is_string(...))));
-    }
-
-    /**
-     * Whether an entry of `$frameworkRoutes` takes the route at `$uri` answering `$methods`.
-     *
-     * @param list<array{path: string, method: ?string}> $frameworkRoutes
-     * @param list<string> $methods
-     */
-    public static function allowsRoute(array $frameworkRoutes, string $uri, array $methods): bool
-    {
-        $methods = array_values(array_diff($methods, [self::HEAD]));
-        foreach ($frameworkRoutes as $allowed) {
-            $methodAllowed = $allowed['method'] === null || $methods === [$allowed['method']];
-            if ($methodAllowed && preg_match(self::pathPattern($allowed['path']), $uri) === 1) {
-                return true;
-            }
-        }
-
-        return false;
+        return FrameworkRoutes::allows($contract->frameworkRoutes, '/' . ltrim($route->uri(), '/'), array_values(array_filter($route->methods(), is_string(...))));
     }
 
     // A generated route of another api of the app: its name is in the route table that api's provider registered.
@@ -259,20 +189,6 @@ final class BootCheck
         $table = is_string($routesClass) && defined("{$routesClass}::ROUTES") ? constant("{$routesClass}::ROUTES") : [];
 
         return is_array($table) && in_array($name, array_column($table, 'name'), true);
-    }
-
-    private static function pathPattern(string $path): string
-    {
-        $segments = array_map(
-            static fn (string $segment): string => match ($segment) {
-                '**' => '(?:/[^/]+)*',
-                '*' => '/[^/]+',
-                default => '/' . preg_quote($segment, '#'),
-            },
-            array_slice(explode('/', $path), 1),
-        );
-
-        return '#^' . ($segments === [] ? '/' : implode('', $segments)) . '$#D';
     }
 
     private static function isLaravelsOwn(Route $route): bool
