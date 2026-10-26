@@ -1,5 +1,6 @@
 import { ExportNames, operationLocation, type Refusal } from "@seampact/codegen-core";
 import {
+  handlerInterfaceName,
   largestBodyLimit,
   operationIdentifier,
   responseSettingsOf,
@@ -15,6 +16,8 @@ const NESTJS_MODULE = "nestjs";
 // The fixed exports; an operation of the same name takes the reserved-name suffix (ADR 0007 section 5).
 const FIXED_EXPORTS = [
   "SeampactModule",
+  "SEAMPACT_HOOKS",
+  "ContractException",
   "responses",
   "renderContractError",
   "isContractRoute",
@@ -27,7 +30,16 @@ const FIXED_EXPORTS = [
 ] as const;
 
 // The module's own local names, which an operation decorator must not shadow either.
-const LOCAL_NAMES = ["boundary", "createNestBoundary", "CONTRACT_API", "SeampactHooks"] as const;
+const LOCAL_NAMES = [
+  "boundary",
+  "createNestBoundary",
+  "CONTRACT_API",
+  "SeampactHooks",
+  "Handlers",
+  "ErrorsOf",
+  "ContractErrors",
+  "BoundaryContractException",
+] as const;
 
 // The exports of the docs module, which the index re-exports beside the operation decorators.
 const DOCS_EXPORTS = [
@@ -69,8 +81,14 @@ export function nestjsModuleSource(
     return `/** The route of '${operation.id}'; \`${name}.input()\` is its validated input. */\nexport const ${name} = ${operationSource(operation.id, docsModule)};`;
   });
 
+  const handlerMethods = ir.operations.map(
+    (operation) =>
+      `Handlers.${handlerInterfaceName(ir, operation)}[${JSON.stringify(operationIdentifier(operation))}]`,
+  );
+
   return [
-    'import { createNestBoundary } from "./nestjs-boundary.js";',
+    'import { ContractException as BoundaryContractException, createNestBoundary, type ErrorsOf } from "./nestjs-boundary.js";',
+    'import type * as Handlers from "./handlers.js";',
     'import type { SeampactHooks } from "./hooks.js";',
     'import { CONTRACT_API } from "./routes.js";',
     ...(docsModule === undefined
@@ -82,8 +100,15 @@ export function nestjsModuleSource(
     "",
     `const boundary = createNestBoundary<SeampactHooks>(CONTRACT_API, ${JSON.stringify({ ...responseSettingsOf(options), reply: options.reply })});`,
     "",
-    "/** The api's dynamic module: `SeampactModule.forRoot(hooks, { logger })`. */",
+    "/** Every error a handler of the api returns. */",
+    `type ContractErrors = ErrorsOf<${handlerMethods.length === 0 ? "never" : handlerMethods.join(" | ")}>;`,
+    "",
+    "/** The api's dynamic module: `SeampactModule.forRoot(hooks, { logger })` or `forRootAsync({ imports, inject, useFactory })`. */",
     "export const SeampactModule = boundary.SeampactModule;",
+    "/** The injection token of the api's hooks, for a test's `overrideProvider`. */",
+    "export const SEAMPACT_HOOKS = boundary.SEAMPACT_HOOKS;",
+    "/** A declared error a handler or a service throws: `new ContractException(code, params)`. */",
+    "export class ContractException extends BoundaryContractException<ContractErrors> {}",
     "/** Overrides the `responses` mode on a controller or a method. */",
     "export const responses = boundary.responses;",
     "/** Writes a contract error in the api's format, for an app filter. */",

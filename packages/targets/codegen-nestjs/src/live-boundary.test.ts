@@ -800,7 +800,7 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
 
     test("a RouterModule path refuses the boot by name", async () => {
       await expect(app.bootWithRouterModulePrefix()).rejects.toThrow(
-        /RouterModule mounts .* under 'tasks'.*remove the RouterModule entry/s,
+        /RouterModule mounts .* under '\/tasks'.*remove the RouterModule entry/s,
       );
     });
 

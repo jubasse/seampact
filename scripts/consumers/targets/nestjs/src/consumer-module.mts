@@ -19,7 +19,8 @@ import { SuiteControlController, UnlistedRouteController } from "./suite-control
 @Module({
   imports: [
     TasksNest.SeampactModule.forRoot(tasksHooks()),
-    TasksServiceNest.SeampactModule.forRoot(tasksServiceHooks()),
+    // Built by a factory, as an app whose hooks need its own providers registers them.
+    TasksServiceNest.SeampactModule.forRootAsync({ useFactory: () => tasksServiceHooks() }),
   ],
   controllers: [
     // The `missing-handler` boot variant leaves out the controller of the `health` operation.
