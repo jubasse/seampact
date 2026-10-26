@@ -24,7 +24,7 @@ final readonly class TasksSettings implements ContractSettings
         private mixed $responses,
         private mixed $bodyValidation,
         private array $operations,
-        public mixed $publicOrigin = null,
+        private mixed $publicOrigin = null,
     ) {
     }
 
@@ -66,10 +66,14 @@ final readonly class TasksSettings implements ContractSettings
     }
 
     /**
-     * The api writes relative URLs, so no origin is read.
+     * The api writes relative URLs, so no origin is set, as the boot check requires.
      */
     public function publicOrigin(): ?string
     {
+        if ($this->publicOrigin !== null && $this->publicOrigin !== '') {
+            throw new \UnexpectedValueException('The bundle configuration key seampact_tasks.public_origin is set, but the api writes relative URLs: remove it, or set api.wire.urls: absolute in the contract.');
+        }
+
         return null;
     }
 }

@@ -188,7 +188,7 @@ The app refuses to start, and lists every problem, when:
 - an app route sits before a contract route on the same path;
 - `framework.http_cache` is on;
 - the contract writes absolute URLs and `public_origin` is missing or is not an origin;
-- the contract writes relative URLs and `public_origin` is set to a literal value.
+- the contract writes relative URLs and `public_origin` is set, from an `%env()%` value too.
 
 `bin/console cache:warmup` runs it: run it at deploy. Allow-list your own routes in the entry, with a reason:
 

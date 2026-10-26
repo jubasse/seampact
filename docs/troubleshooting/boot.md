@@ -78,7 +78,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `operation '<id>' runs without the access middleware: remove the withoutMiddleware() call on its route` | Remove `withoutMiddleware()` from the contract route. |
 | `the exception handler ... has no 'renderable' method` | Make your handler extend Laravel's `Illuminate\Foundation\Exceptions\Handler`. |
 | `'seampact.<api>.public_origin' is not set` or `... is '<value>', which ...` | The contract writes absolute URLs. Set `public_origin` in `config/seampact/<api>.php` to a scheme, host and optional port, such as `https://api.example.com`. |
-| `the api writes relative URLs ... and 'seampact.<api>.public_origin' is set` | Remove `public_origin` from `config/seampact/<api>.php`, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `the api writes relative URLs ... and 'seampact.<api>.public_origin' is set` | Unset `SEAMPACT_<API>_PUBLIC_ORIGIN` (it fills `public_origin` in `config/seampact/<api>.php`) and run `php artisan config:cache` again if the config is cached, or set `api.wire.urls: absolute` in the contract and generate again. |
 | `Laravel <version> runs here, and the generated code serves Laravel 13 only` | Run the app on Laravel 13. |
 | `ext-zlib is not loaded` | Enable the `zlib` PHP extension. |
 | `runtime.octane.unsupported` | Serve the app with php-fpm, or keep this api's provider out of the Octane app. |

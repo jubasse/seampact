@@ -17,8 +17,9 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * does not serve. It checks the handlers (one service per endpoints interface, each method marked with its operation,
  * no access attribute the boundary would run after the input checks), the boundary's listeners and the value resolver,
  * the listeners placed where the outgoing check cannot see them, an api registered before this one whose catch-all
- * answers this api's paths, ext-zlib, the Symfony major, `framework.http_cache`, and under absolute URLs a
- * `public_origin` in the bundle configuration (a literal is checked here, an `%env()%` value by the settings at run time).
+ * answers this api's paths, ext-zlib, the Symfony major, `framework.http_cache`, and the bundle's `public_origin`:
+ * needed under absolute URLs (a literal checked here, an `%env()%` value by the settings at run time), refused under
+ * relative ones.
  */
 final class BootCheckPass implements CompilerPassInterface
 {
@@ -65,15 +66,17 @@ final class BootCheckPass implements CompilerPassInterface
     }
 
     /**
-     * The `public_origin` key the api needs under absolute URLs; a literal is checked here, an `%env()%` value is only known at run time.
+     * The `public_origin` key: under absolute URLs it is needed, a literal is checked here and an `%env()%` value only at
+     * run time; under relative URLs any value, an `%env()%` one included, is refused.
      *
      * @return list<string>
      */
     private function publicOrigin(ContainerBuilder $container, ApiContract $contract): array
     {
         $arguments = $container->hasDefinition($this->settingsClass) ? $container->getDefinition($this->settingsClass)->getArguments() : [];
-        $configured = $arguments[ContractSettings::PUBLIC_ORIGIN_ARGUMENT] ?? null;
-        if (is_string($configured) && preg_match(self::ENV_PLACEHOLDER, $configured) === 1) {
+        // The merge pass has turned each `%env()%` into an `env_<hash>` placeholder; resolving gives the `%env()%` back.
+        $configured = $container->resolveEnvPlaceholders($arguments[ContractSettings::PUBLIC_ORIGIN_ARGUMENT] ?? null);
+        if (PublicOrigin::writesAbsoluteUrls($contract) && is_string($configured) && preg_match(self::ENV_PLACEHOLDER, $configured) === 1) {
             return [];
         }
 

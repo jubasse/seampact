@@ -224,12 +224,8 @@ final class BundleFiles
         $constructor->addPromotedParameter('responses')->setPrivate()->setType('mixed');
         $constructor->addPromotedParameter('bodyValidation')->setPrivate()->setType('mixed');
         $constructor->addPromotedParameter('operations')->setPrivate()->setType('array');
-        if ($this->writesAbsoluteUrls()) {
-            $constructor->addPromotedParameter('publicOrigin')->setPrivate()->setType('mixed');
-        } else {
-            // Held for the boot check, which refuses a value under relative URLs; never read at run time.
-            $constructor->addPromotedParameter('publicOrigin', null)->setPublic()->setType('mixed');
-        }
+        $originParameter = $this->writesAbsoluteUrls() ? $constructor->addPromotedParameter('publicOrigin') : $constructor->addPromotedParameter('publicOrigin', null);
+        $originParameter->setPrivate()->setType('mixed');
 
         $responses = $class->addMethod('responsesOf')->setPublic()->setReturnType('string')
             ->addComment("The outgoing check's mode of an operation: its own value, else the api's.");
@@ -267,7 +263,14 @@ final class BundleFiles
 
         $origin = $class->addMethod('publicOrigin')->setPublic()->setReturnType($this->writesAbsoluteUrls() ? 'string' : '?string');
         if (!$this->writesAbsoluteUrls()) {
-            $origin->addComment('The api writes relative URLs, so no origin is read.')->setBody('return null;');
+            $origin->addComment('The api writes relative URLs, so no origin is set, as the boot check requires.');
+            $origin->setBody(<<<PHP
+                if (\$this->publicOrigin !== null && \$this->publicOrigin !== '') {
+                    throw new \\UnexpectedValueException('The bundle configuration key {$alias}.public_origin is set, but the api writes relative URLs: remove it, or set api.wire.urls: absolute in the contract.');
+                }
+
+                return null;
+                PHP);
 
             return $file;
         }
