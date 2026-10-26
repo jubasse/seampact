@@ -375,18 +375,27 @@ final readonly class Note
 
 <details><summary>Symfony (PHP class)</summary>
 
-A readonly class, filled by the boundary. The boundary checks the contract's rules (the title's length, the formats) before your controller runs.
+A readonly class with Symfony Validator attributes, for your own `$validator->validate()`. The boundary checks the contract's rules on the raw JSON with a generated constraint before your controller runs.
 
 ```php
 final readonly class Note
 {
     public function __construct(
+        #[Assert\NotNull]
         public string $noteId,
+        #[Assert\NotNull, Assert\Length(min: 1, max: 100)]
         public string $title,
+        #[Assert\NotNull]
         public DateTimeImmutable $createdAt,
     ) {
     }
 }
+
+// In GetNoteInputConstraintValidator::shape()
+'noteId' => new Member(
+    JsonType::String,
+    checks: new Checks(format: Format::Uuid),
+),
 ```
 
 </details>

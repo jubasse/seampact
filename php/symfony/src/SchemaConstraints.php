@@ -25,7 +25,7 @@ use Seampact\Ir\Model\TypeUse;
 
 /**
  * Symfony Validator attributes on the members of the generated schema classes, for the app's own `validate()` calls
- * (ADR 0024 "Schema constraints"). A rule gets the Symfony constraint whose meaning is the contract's: `NotNull` on a
+ * (ADR 0024 "Options"). A rule gets the Symfony constraint whose meaning is the contract's: `NotNull` on a
  * required member that is not nullable, `Valid` on a member that holds objects, `Length` (in code points), `Count`,
  * one comparison per bound, `DivisibleBy` for the integer step, and `All` for list items. `Regex` is added under
  * `rules: native` only, since it passes an empty string unchecked. Left out: the `uuid` format (Symfony's `Uuid`
