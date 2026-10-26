@@ -71,7 +71,7 @@ final class SymfonyGenerator implements Generator
         $constraints = new InputConstraintFiles($ir, $placement, $options->rules, $refusals);
         $contract = new ContractClass($placement, $kept, $entry->frameworkRoutes);
         $classFiles = [
-            ...(new SchemaTypes($layout, $types, $refusals))->files($kept->enums(), $kept->objects()),
+            ...(new SchemaTypes($layout, $types, $refusals, new SchemaConstraints($options->rules)))->files($kept->enums(), $kept->objects()),
             ...(new ContractExceptions($layout, $operationTypes))->files($kept),
             ...(new EndpointsInterfaces($placement))->files(),
             $contract->file(),

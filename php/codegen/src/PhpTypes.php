@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Codegen;
 
 use Nette\PhpGenerator\Method;
+use Nette\PhpGenerator\PromotedParameter;
 use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\EnumTypeUse;
 use Seampact\Ir\Model\OpaqueTypeUse;
@@ -34,12 +35,17 @@ final class PhpTypes
     public function of(TypeUse $type, PhpClassFile $file): PhpType
     {
         $plain = $this->plain($type, $file);
-        $nullable = match (true) {
+
+        return self::isNullable($type) ? self::orNull($plain) : $plain;
+    }
+
+    /** Whether the type use itself admits null; an opaque value is `mixed`, which admits it without being nullable. */
+    public static function isNullable(TypeUse $type): bool
+    {
+        return match (true) {
             $type instanceof ScalarTypeUse, $type instanceof EnumTypeUse, $type instanceof RefTypeUse, $type instanceof ArrayTypeUse => $type->nullable === true,
             default => false,
         };
-
-        return $nullable ? self::orNull($plain) : $plain;
     }
 
     /** The type of an object property: `?T` when optional or nullable, `Field<T>` when both. */
@@ -65,13 +71,15 @@ final class PhpTypes
     }
 
     /** Adds `$type` as a promoted constructor parameter, with its PHPDoc line when the native type says less. */
-    public static function promote(Method $constructor, string $name, PhpType $type): void
+    public static function promote(Method $constructor, string $name, PhpType $type): PromotedParameter
     {
-        $constructor->addPromotedParameter($name)->setType($type->native)->setNullable($type->nullable);
+        $parameter = $constructor->addPromotedParameter($name)->setType($type->native)->setNullable($type->nullable);
 
         if ($type->needsDoc()) {
             $constructor->addComment("@param {$type->doc} \${$name}");
         }
+
+        return $parameter;
     }
 
     private function plain(TypeUse $type, PhpClassFile $file): PhpType

@@ -10,11 +10,18 @@ use Seampact\Ir\Naming\NameSource;
 use Seampact\Ir\Naming\NamingRole;
 use Seampact\Ir\Naming\SplitName;
 
-/** The value types of the kept schemas: a `final readonly` class per object and a backed enum per enum. */
+/**
+ * The value types of the kept schemas: a `final readonly` class per object and a backed enum per enum. A target may
+ * add its own attributes to the object members through `$memberAttributes`.
+ */
 final class SchemaTypes
 {
-    public function __construct(private readonly TypeNames $names, private readonly PhpTypes $types, private readonly Refusals $refusals)
-    {
+    public function __construct(
+        private readonly TypeNames $names,
+        private readonly PhpTypes $types,
+        private readonly Refusals $refusals,
+        private readonly ?SchemaMemberAttributes $memberAttributes = null,
+    ) {
     }
 
     /**
@@ -95,7 +102,8 @@ final class SchemaTypes
             }
 
             $members[strtolower($member)] = $property->name;
-            PhpTypes::promote($constructor, $member, $this->types->ofProperty($property, $file));
+            $parameter = PhpTypes::promote($constructor, $member, $this->types->ofProperty($property, $file));
+            $this->memberAttributes?->addTo($parameter, $property, $file, $at);
             if ($property->sensitive || RedactedMembers::isSensitive($property->type)) {
                 $sensitive[] = $member;
             }

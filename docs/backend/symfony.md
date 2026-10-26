@@ -178,6 +178,16 @@ return new GetTaskResponse200(new Task(taskId: $entity->getId(), title: $entity-
 
 A field the contract does not declare never leaves the boundary, so an extra column on your entity is not sent.
 
+## Validate your own objects
+
+The generated schema classes carry Symfony Validator attributes, such as `#[Assert\Length(min: 1, max: 200)]` on a title. Validate an object you build before you send it elsewhere:
+
+```php
+$violations = $validator->validate(new Task(taskId: $id, title: $title));
+```
+
+The boundary does not use these attributes: it checks the raw JSON with the generated constraint. A `uuid` format, a length or pattern on a `date-time` member, and a member both optional and nullable have no attribute.
+
 ## The boot check
 
 The app refuses to start, and lists every problem, when:
