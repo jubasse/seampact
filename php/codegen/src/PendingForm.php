@@ -25,6 +25,7 @@ enum PendingForm
     case RetryHeader;
     case DerivedResponseHeader;
     case Sensitive;
+    case ErrorNoStore;
     case Proofs;
     case Opaque;
     case Multipart;

@@ -457,6 +457,9 @@ final class KeptForms
         }
 
         $this->errors[$code] = $declared;
+        if ($declared->noStore === true) {
+            $this->pending(PendingForm::ErrorNoStore, 'error.noStore', 'An error that forbids caching (noStore)', IrPlace::root()->below('errors', $code, 'noStore'));
+        }
         if ($declared->params !== null) {
             $this->readType(new RefTypeUse($declared->params), IrPlace::root()->below('errors', $code, 'params'));
         }

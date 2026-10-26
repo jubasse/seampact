@@ -226,6 +226,7 @@ describe("a handler exception under responses: warn with APP_DEBUG on", () => {
         answers: { "tasks.getChannel": { throws: "the channel store is down" } },
       }),
     });
+
     expect(script.status).toBe(204);
 
     const response = await fetch(`${running?.baseUrl}${GENERAL_CHANNEL}`, {

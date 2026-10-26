@@ -104,6 +104,12 @@ abstract class BoundaryMiddleware
             return $this->mapped($state, $response, $role, $exception);
         }
 
+        // An exception no role maps and no contract reply rendered answers the api's 500 in every `responses` mode,
+        // so Laravel's error page and its debug trace never reach the client.
+        if ($exception !== null && !$state->authored($response)) {
+            return $this->internalError($contract, $state->operationId, 'an exception reached the boundary unmapped', $exception);
+        }
+
         $etag = $response->headers->get('ETag');
         if ($etag !== null && $etag !== $state->authoredEtag($response) && $this->setting($contract, $state->operationId, 'framework_etag') !== self::KEEP) {
             $response->headers->remove('ETag');

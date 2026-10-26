@@ -22,7 +22,7 @@ final class LaravelReleases implements FormReleases
             PendingForm::AbsoluteUrls, PendingForm::SignedAccess, PendingForm::Paging, PendingForm::PagingParam,
             PendingForm::PageResponse, PendingForm::Idempotency, PendingForm::Cache, PendingForm::Deadline,
             PendingForm::Relays, PendingForm::Throttle, PendingForm::RawBody, PendingForm::RetryHeader,
-            PendingForm::DerivedResponseHeader, PendingForm::Sensitive, PendingForm::Opaque => FormArrival::inRelease(self::LARAVEL_3),
+            PendingForm::DerivedResponseHeader, PendingForm::Sensitive, PendingForm::ErrorNoStore, PendingForm::Opaque => FormArrival::inRelease(self::LARAVEL_3),
             PendingForm::Multipart, PendingForm::File, PendingForm::BinaryResponse, PendingForm::RedirectResponse => FormArrival::inRelease(self::LARAVEL_4),
             PendingForm::ListResponse => FormArrival::later(Delivery::AfterOneZero),
             PendingForm::Union => FormArrival::later(Delivery::ContractNeed),
