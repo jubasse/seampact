@@ -26,7 +26,7 @@ final class CacheRuleTest extends TestCase
     private const USER = 1000;
     private const OTHER_USER = 1001;
     private const ROOT = 0;
-    private const PRIVATE_GROUP = 1000;
+    private const PROCESS_GROUP = 1000;
     private const SHARED_GROUP = 100;
 
     private const COPY = '/home/dev/.cache/composer/seampact/abc/seampact';
@@ -47,13 +47,15 @@ final class CacheRuleTest extends TestCase
             'a copy owned by another user' => [[self::COPY => new PathFact(false, self::OTHER_USER, self::SHARED_GROUP, 0700)], self::COPY],
             'a link as the hash directory' => [[dirname(self::COPY) => new PathFact(true, self::USER, self::SHARED_GROUP, 0777)], dirname(self::COPY)],
             'a cache root its shared group may write' => [[self::CACHE_ROOT => new PathFact(false, self::USER, self::SHARED_GROUP, 0770)], self::CACHE_ROOT],
-            'a cache root its owner private group may write (umask 002)' => [[self::CACHE_ROOT => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0775)], null],
-            'a hash directory others may write, private group or not' => [[dirname(self::COPY) => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0777)], dirname(self::COPY)],
-            'a hash directory its owner private group may write' => [[dirname(self::COPY) => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0770)], dirname(self::COPY)],
-            'a copy its owner private group may write' => [[self::COPY => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0770)], self::COPY],
+            'a cache root the process group may write (umask 002)' => [[self::CACHE_ROOT => new PathFact(false, self::USER, self::PROCESS_GROUP, 0775)], self::CACHE_ROOT],
+            'a hash directory others may write' => [[dirname(self::COPY) => new PathFact(false, self::USER, self::PROCESS_GROUP, 0777)], dirname(self::COPY)],
+            'a hash directory the process group may write' => [[dirname(self::COPY) => new PathFact(false, self::USER, self::PROCESS_GROUP, 0770)], dirname(self::COPY)],
+            'a copy the process group may write' => [[self::COPY => new PathFact(false, self::USER, self::PROCESS_GROUP, 0770)], self::COPY],
             'a link above the real cache root' => [['/home/dev/.cache' => new PathFact(true, self::USER, self::SHARED_GROUP, 0777)], '/home/dev/.cache'],
-            'an ancestor its owner private group may write' => [['/home/dev' => new PathFact(false, self::USER, self::PRIVATE_GROUP, 0775)], null],
-            'an ancestor its shared group may write' => [['/home/dev' => new PathFact(false, self::USER, self::SHARED_GROUP, 0775)], '/home/dev'],
+            'an ancestor the process group may write' => [['/home/dev' => new PathFact(false, self::USER, self::PROCESS_GROUP, 0775)], null],
+            'a root-owned ancestor the process group may write' => [['/home' => new PathFact(false, self::ROOT, self::PROCESS_GROUP, 0775)], null],
+            'an ancestor others may write' => [['/home/dev' => new PathFact(false, self::USER, self::PROCESS_GROUP, 0777)], '/home/dev'],
+            'an ancestor another group may write' => [['/home/dev' => new PathFact(false, self::USER, self::SHARED_GROUP, 0775)], '/home/dev'],
             'a root-owned cache root' => [[self::CACHE_ROOT => new PathFact(false, self::ROOT, self::SHARED_GROUP, 0700)], self::CACHE_ROOT],
             'a shared directory above the root' => [['/home/dev/.cache' => new PathFact(false, self::USER, self::SHARED_GROUP, 01777)], '/home/dev/.cache'],
             'an ancestor owned by another user' => [['/home' => new PathFact(false, self::OTHER_USER, self::SHARED_GROUP, 0755)], '/home'],
@@ -188,9 +190,9 @@ final class CacheRuleTest extends TestCase
                 return 1000;
             }
 
-            public function isPrivateGroup(int $groupId, int $ownerUid): bool
+            public function currentGid(): int
             {
-                return $groupId === 1000 && $ownerUid === 1000;
+                return 1000;
             }
         };
     }

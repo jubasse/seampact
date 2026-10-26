@@ -35,11 +35,12 @@ final class CacheRoot
 
         foreach ($candidates as [$variable, $below]) {
             $base = $environment[$variable] ?? '';
-            if ($base === '' || (!AbsolutePath::isAbsolute($base) && $variable === self::IGNORED_WHEN_RELATIVE)) {
+            $isAbsolute = $windows ? AbsolutePath::isAbsoluteOnWindows($base) : AbsolutePath::isAbsoluteOnPosix($base);
+            if ($base === '' || (!$isAbsolute && $variable === self::IGNORED_WHEN_RELATIVE)) {
                 continue;
             }
 
-            if (!AbsolutePath::isAbsolute($base)) {
+            if (!$isAbsolute) {
                 throw self::relative($variable, $base);
             }
 

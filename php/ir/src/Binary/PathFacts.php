@@ -12,6 +12,6 @@ interface PathFacts
 
     public function currentUid(): int;
 
-    /** Whether the system account files prove `$groupId` private to `$ownerUid` (`SystemAccounts`). */
-    public function isPrivateGroup(int $groupId, int $ownerUid): bool;
+    /** The primary group id of the running process. */
+    public function currentGid(): int;
 }

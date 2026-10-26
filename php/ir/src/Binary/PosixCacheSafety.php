@@ -6,12 +6,10 @@ namespace Seampact\Ir\Binary;
 
 /**
  * The POSIX cache rule, on the real path of the cache root: the copy, its directory and each directory up to the
- * cache root are owned by the current user, are not links and are not writable by group or others; each directory
+ * cache root are owned by the current user, are not links and are not writable by group or others. Each directory
  * above the cache root, up to the filesystem root, is owned by the current user or by root, is not a link and is
- * not writable by group or others, so a shared cache directory is refused and the fix is a private one. On the
- * cache root and above, group write is allowed when the system account files prove the group private to the owner
- * (`SystemAccounts`), as OpenSSH's StrictModes allows it, so a 002 umask with user private groups (Ubuntu) still
- * works; below the cache root it never is.
+ * not writable by others; it may be writable by its group only when that group is the running process's primary
+ * group, since whoever can write there can already change the build tool's own files. No account database is read.
  */
 final readonly class PosixCacheSafety implements CacheSafety
 {
@@ -59,15 +57,17 @@ final readonly class PosixCacheSafety implements CacheSafety
         $uid = $this->facts->currentUid();
 
         for ($path = $copyPath; ; $path = dirname($path)) {
-            $this->refuseUnsafeEntry($path, $uid, $path === $cacheRoot);
+            $this->refuseUnsafeEntry($path, $uid);
 
             if ($path === $cacheRoot || dirname($path) === $path) {
                 break;
             }
         }
 
+        $gid = $this->facts->currentGid();
+
         for ($path = dirname($cacheRoot); ; $path = dirname($path)) {
-            $this->refuseUnsafeAncestor($path, $uid);
+            $this->refuseUnsafeAncestor($path, $uid, $gid);
 
             if (dirname($path) === $path) {
                 break;
@@ -75,7 +75,7 @@ final readonly class PosixCacheSafety implements CacheSafety
         }
     }
 
-    private function refuseUnsafeEntry(string $path, int $uid, bool $isCacheRoot): void
+    private function refuseUnsafeEntry(string $path, int $uid): void
     {
         $fact = $this->facts->of($path);
 
@@ -91,10 +91,12 @@ final readonly class PosixCacheSafety implements CacheSafety
             throw self::unsafe($path, "is owned by the user id {$fact->ownerUid}, not yours ({$uid})", 'Use a cache directory private to your user (COMPOSER_CACHE_DIR).');
         }
 
-        $this->refuseWritableByOthers($path, $fact, $isCacheRoot, "Run `chmod 700 '{$path}'`.");
+        if (($fact->mode & (self::GROUP_WRITE | self::OTHER_WRITE)) !== 0) {
+            throw self::unsafe($path, sprintf('is writable by group or others (mode %o)', $fact->mode), "Run `chmod 700 '{$path}'`.");
+        }
     }
 
-    private function refuseUnsafeAncestor(string $path, int $uid): void
+    private function refuseUnsafeAncestor(string $path, int $uid, int $gid): void
     {
         $fact = $this->facts->of($path);
 
@@ -111,28 +113,15 @@ final readonly class PosixCacheSafety implements CacheSafety
             throw self::unsafe($path, "is owned by the user id {$fact->ownerUid}, neither yours nor root", 'Use a cache directory whose parents only you or root can write (COMPOSER_CACHE_DIR).');
         }
 
-        $this->refuseWritableByOthers($path, $fact, true, 'Use a cache directory private to your user (COMPOSER_CACHE_DIR).');
-    }
-
-    private function refuseWritableByOthers(string $path, PathFact $fact, bool $privateGroupAllowed, string $otherWriteFix): void
-    {
         if (($fact->mode & self::OTHER_WRITE) !== 0) {
-            throw self::unsafe($path, sprintf('is writable by others (mode %o)', $fact->mode), $otherWriteFix);
+            throw self::unsafe($path, sprintf('is writable by others (mode %o)', $fact->mode), 'Use a cache directory private to your user (COMPOSER_CACHE_DIR).');
         }
 
-        if (($fact->mode & self::GROUP_WRITE) === 0) {
-            return;
-        }
-
-        if (!$privateGroupAllowed) {
-            throw self::unsafe($path, sprintf('is writable by its group (mode %o)', $fact->mode), "Run `chmod g-w '{$path}'`.");
-        }
-
-        if (!$this->facts->isPrivateGroup($fact->groupId, $fact->ownerUid)) {
+        if (($fact->mode & self::GROUP_WRITE) !== 0 && $fact->groupId !== $gid) {
             throw self::unsafe(
                 $path,
-                sprintf('is writable by its group (mode %o), which /etc/passwd and /etc/group do not prove private to its owner', $fact->mode),
-                "Run `chmod g-w '{$path}'`.",
+                sprintf('is writable by its group %d (mode %o), which is not the primary group of this process (%d)', $fact->groupId, $fact->mode, $gid),
+                "Run `chmod g-w '{$path}'`, or use a cache directory private to your user (COMPOSER_CACHE_DIR).",
             );
         }
     }

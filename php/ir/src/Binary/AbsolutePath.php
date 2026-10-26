@@ -10,12 +10,26 @@ namespace Seampact\Ir\Binary;
  */
 final class AbsolutePath
 {
+    private const WINDOWS_FAMILY = 'Windows';
+
     private function __construct()
     {
     }
 
-    /** A POSIX root path, a Windows drive path or a UNC path. */
+    /** Whether `$path` is absolute on this host: `isAbsoluteOnWindows` on Windows, else `isAbsoluteOnPosix`. */
     public static function isAbsolute(string $path): bool
+    {
+        return PHP_OS_FAMILY === self::WINDOWS_FAMILY ? self::isAbsoluteOnWindows($path) : self::isAbsoluteOnPosix($path);
+    }
+
+    /** A path from the filesystem root; `\x` and `C:/x` are relative names on POSIX. */
+    public static function isAbsoluteOnPosix(string $path): bool
+    {
+        return str_starts_with($path, '/');
+    }
+
+    /** A drive path, a UNC path or a path from the root of the current drive. */
+    public static function isAbsoluteOnWindows(string $path): bool
     {
         return str_starts_with($path, '/') || str_starts_with($path, '\\') || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
     }

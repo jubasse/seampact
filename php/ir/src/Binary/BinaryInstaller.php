@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Seampact\Ir\Binary;
 
 /**
- * Creates the cache root and resolves its real path once; only that path is checked and run from then on. Copies a
- * binary into `<cache root>/<sha256>/`: streamed into a temporary file created exclusively there and
+ * Hashes the source first, so a warm cache never hides a source that changed. Creates the cache root and resolves
+ * its real path once; only that path is checked and run from then on. Checks the cache before any copy, then copies
+ * a binary into `<cache root>/<sha256>/`: streamed into a temporary file created exclusively there and
  * hashed as it streams, made executable, then renamed atomically to its name. An entry already there with the
  * right hash counts as success, so concurrent runs and a running `.exe` on Windows are safe. A copy whose hash
  * differs is deleted and refused. Only the copy ever runs, never the file it came from.
@@ -24,10 +25,16 @@ final class BinaryInstaller
     /** @throws BinaryRefusedException */
     public static function install(string $source, string $sha256, string $cacheRoot, string $fileName, CacheSafety $safety): InstalledBinary
     {
+        $sourceSha256 = self::sourceSha256($source);
+        if ($sourceSha256 !== $sha256) {
+            throw self::hashMismatch($source, $sha256, $sourceSha256);
+        }
+
         $safety->createPrivateDirectory($cacheRoot);
         $realCacheRoot = self::realCacheRoot($cacheRoot);
         $directory = $realCacheRoot . DIRECTORY_SEPARATOR . $sha256;
         $safety->createPrivateDirectory($directory);
+        $safety->refuseUnsafe($directory, $realCacheRoot);
         $target = $directory . DIRECTORY_SEPARATOR . $fileName;
         $installed = new InstalledBinary($target, $sha256, $realCacheRoot, $safety);
 
@@ -83,16 +90,32 @@ final class BinaryInstaller
         return $real;
     }
 
+    // The source is hashed before any cache lookup, so a warm cache never hides a source that changed.
+    private static function sourceSha256(string $source): string
+    {
+        $sha256 = is_file($source) ? @hash_file('sha256', $source) : false;
+        if ($sha256 === false) {
+            throw self::unreadableSource($source);
+        }
+
+        return $sha256;
+    }
+
+    private static function unreadableSource(string $source): BinaryRefusedException
+    {
+        return BinaryRefusedException::of(
+            BinaryFailureCode::PinInvalid,
+            "The binary override path '{$source}' is not a readable file.",
+            'Point `extra.seampact.binary.path` at your build of the compiler.',
+        );
+    }
+
     // The SHA-256 of the bytes streamed from `$source` into the new file `$temporary`.
     private static function copyHashing(string $source, string $temporary): string
     {
         $input = is_file($source) ? @fopen($source, 'rb') : false;
         if ($input === false) {
-            throw BinaryRefusedException::of(
-                BinaryFailureCode::PinInvalid,
-                "The binary override path '{$source}' is not a readable file.",
-                'Point `extra.seampact.binary.path` at your build of the compiler.',
-            );
+            throw self::unreadableSource($source);
         }
 
         $output = @fopen($temporary, 'xb');

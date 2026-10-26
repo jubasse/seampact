@@ -45,7 +45,7 @@ final class CompilerBinary
 
         $cacheRoot = CacheRoot::locate($environment, $host->isWindows());
         $safety = $host->isWindows()
-            ? new WindowsCacheSafety($environment['USERPROFILE'] ?? throw self::noUserProfile())
+            ? new WindowsCacheSafety(UserProfile::locate($environment))
             : new PosixCacheSafety();
 
         return BinaryInstaller::install(
@@ -71,15 +71,6 @@ final class CompilerBinary
             BinaryFailureCode::Unpublished,
             'The compiler binary is not published yet, so this seampact/ir has no binary to download.',
             self::UNPUBLISHED_FIX,
-        );
-    }
-
-    private static function noUserProfile(): BinaryRefusedException
-    {
-        return BinaryRefusedException::of(
-            BinaryFailureCode::CacheUnavailable,
-            'USERPROFILE is not set, so the ACL of the binary cache cannot be checked up to the user profile.',
-            'Run seampact as a Windows user with a profile.',
         );
     }
 }

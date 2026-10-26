@@ -37,8 +37,8 @@ final readonly class TrustedAncestorFacts implements PathFacts
         return $this->real->currentUid();
     }
 
-    public function isPrivateGroup(int $groupId, int $ownerUid): bool
+    public function currentGid(): int
     {
-        return $this->real->isPrivateGroup($groupId, $ownerUid);
+        return $this->real->currentGid();
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Binary;
 
-/** The facts of the running system: `lstat`, the effective user id of `ext-posix`, and the account files. */
+/** The facts of the running system: `lstat`, and the effective user id and primary group id of `ext-posix`. */
 final class PosixPathFacts implements PathFacts
 {
     public function of(string $path): ?PathFact
@@ -21,28 +21,26 @@ final class PosixPathFacts implements PathFacts
 
     public function currentUid(): int
     {
-        if (!function_exists('posix_geteuid')) {
+        self::refuseWithoutPosix();
+
+        return posix_geteuid();
+    }
+
+    public function currentGid(): int
+    {
+        self::refuseWithoutPosix();
+
+        return posix_getgid();
+    }
+
+    private static function refuseWithoutPosix(): void
+    {
+        if (!function_exists('posix_geteuid') || !function_exists('posix_getgid')) {
             throw BinaryRefusedException::of(
                 BinaryFailureCode::CacheUnsafe,
                 'The owner of the binary cache cannot be checked: PHP has no ext-posix.',
                 'Enable the posix extension of PHP; seampact checks that only your user can write the binary it runs.',
             );
         }
-
-        return posix_geteuid();
-    }
-
-    public function isPrivateGroup(int $groupId, int $ownerUid): bool
-    {
-        $passwd = @file_get_contents(SystemAccounts::PASSWD_FILE);
-        $group = @file_get_contents(SystemAccounts::GROUP_FILE);
-        $nsswitch = is_file(SystemAccounts::NSSWITCH_FILE) ? @file_get_contents(SystemAccounts::NSSWITCH_FILE) : null;
-
-        // An account file that cannot be read proves nothing: the group write is refused.
-        if ($passwd === false || $group === false || $nsswitch === false) {
-            return false;
-        }
-
-        return SystemAccounts::isPrivateGroup($groupId, $ownerUid, $passwd, $group, $nsswitch);
     }
 }
