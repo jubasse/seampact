@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: angular-consumers-${{ github.ref }}
+  group: angular-consumers-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -46,7 +46,7 @@ jobs:
           # The packed packages, the consumer harness, the reference contract, the workspace and toolchain pins and
           # this workflow.
           watched='^(packages/|scripts/consumers/|scripts/golden/|fixtures/reference/'
-          watched+='|\.github/workflows/p6-angular\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|tsconfig\.base\.json$|\.nvmrc$)'
+          watched+='|\.github/actions/|\.github/workflows/p6-angular\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|tsconfig\.base\.json$|\.nvmrc$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.
           changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')

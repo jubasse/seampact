@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nestjs-consumer-${{ github.ref }}
+  group: nestjs-consumer-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

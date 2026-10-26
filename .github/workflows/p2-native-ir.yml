@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: native-ir-${{ github.ref }}
+  group: native-ir-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -46,7 +46,7 @@ jobs:
           # The sources of the models and of `regenerate`: the golden IR files, the IR and naming schemas, code and vectors, the
           # generator, the spec package's exports, the workspace and toolchain pins, the models and this workflow.
           watched='^(jvm/|php/|scripts/ir-models/|fixtures/golden/|packages/core/spec/(schemas/ir|src/ir|vectors/ir|src/naming|vectors/naming)/'
-          watched+='|\.github/workflows/p2-native-ir\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$'
+          watched+='|\.github/actions/|\.github/workflows/p2-native-ir\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$'
           watched+='|packages/core/spec/package\.json$|\.nvmrc$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.

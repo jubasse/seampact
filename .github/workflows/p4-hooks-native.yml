@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: hooks-native-${{ github.ref }}
+  group: hooks-native-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
           fi
           # The hooks packages, the shape manifest, the npm hooks sources, the workspace and toolchain pins and this workflow.
           watched='^(jvm/|php/hooks/|fixtures/hooks-shape/|packages/runtime/hooks/'
-          watched+='|\.github/workflows/p4-hooks-native\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
+          watched+='|\.github/actions/|\.github/workflows/p4-hooks-native\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.
           changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')

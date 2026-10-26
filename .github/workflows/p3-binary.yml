@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: p3-binary-${{ github.ref }}
+  group: p3-binary-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -43,7 +43,7 @@ jobs:
             echo "binary=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          watched='^(packages/|fixtures/|\.github/workflows/p3-binary\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
+          watched='^(packages/|fixtures/|\.github/actions/|\.github/workflows/p3-binary\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.
           changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')
@@ -138,11 +138,12 @@ jobs:
   manifest:
     name: manifest (hash after signing)
     # Runs on the build alone when signing does not run, so the smoke still tests the unsigned binaries; a failed
-    # or cancelled signing stops it, and the aggregate fails on that job.
+    # or cancelled signing stops it, and on a release signing must have succeeded; the aggregate fails on that job.
     needs: [build, sign-macos]
     if: >-
       ${{ !cancelled() && needs.build.result == 'success'
-      && (needs.sign-macos.result == 'success' || needs.sign-macos.result == 'skipped') }}
+      && (needs.sign-macos.result == 'success'
+      || (needs.sign-macos.result == 'skipped' && github.event_name != 'release')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

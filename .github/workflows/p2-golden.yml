@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: golden-${{ github.ref }}
+  group: golden-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

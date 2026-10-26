@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: spring-boot-${{ github.ref }}
+  group: spring-boot-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -50,7 +50,7 @@ jobs:
           # core packages it embeds, the http suite, the lockfile and this workflow.
           watched='^(jvm/|fixtures/reference/|fixtures/golden/reference/|fixtures/golden/pack-spring/|packages/packs/pack-spring/|scripts/consumers/targets/spring-boot/'
           watched+='|packages/core/|packages/tools/binary/|packages/tools/http-suite/|pnpm-lock\.yaml$'
-          watched+='|\.github/workflows/p6-spring-boot\.yml$)'
+          watched+='|\.github/actions/|\.github/workflows/p6-spring-boot\.yml$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.
           changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')

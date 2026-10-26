@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: php-core-${{ github.ref }}
+  group: php-core-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -47,7 +47,7 @@ jobs:
           # The PHP packages, the shape manifest, the signature vectors and this workflow.
           watched='^(php/|fixtures/hooks-shape/|packages/runtime/signed-webhooks/vectors/'
           watched+='|packages/core/spec/schemas/(bundle|ir)/|packages/core/spec/vectors/bundle/'
-          watched+='|\.github/workflows/p6-php-core\.yml$)'
+          watched+='|\.github/actions/|\.github/workflows/p6-php-core\.yml$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.
           changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')

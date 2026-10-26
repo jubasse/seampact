@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: p3-dist-${{ github.ref }}
+  group: p3-dist-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
