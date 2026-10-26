@@ -9,10 +9,10 @@ use Symfony\Component\Yaml\Yaml;
 
 /**
  * One `seampact.config.yaml` read through the pinned YAML parser (`symfony/yaml`), with the Node CLI's rules where
- * they differ from it (ADR 0011 "The app config"): one document, unique keys, no custom tags, no merge keys, a
- * date kept as text only when quoted (YAML 1.2 has no timestamp type), the names that reach a JavaScript object's
- * prototype refused, and an alias that expands past a budget refused, so a config one runner reads the other reads
- * the same or refuses by name.
+ * they differ from it (ADR 0011 "The app config"): one document, unique keys, every plain form the two read to
+ * different values refused by name (`YamlScalarForm`: tags, merge keys, unquoted dates, number spellings), the names
+ * that reach a JavaScript object's prototype refused, and an alias that expands past a budget refused, so a config
+ * one runner reads the other reads the same or refuses by name.
  */
 final class ConfigYaml
 {
@@ -24,9 +24,6 @@ final class ConfigYaml
     private const BYTE_ORDER_MARK = "\u{FEFF}";
 
     private const PARSE_FLAGS = Yaml::PARSE_OBJECT_FOR_MAP | Yaml::PARSE_DATETIME | Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE;
-
-    // A merge key (`<<: *anchor`) at the start of a block or flow mapping entry.
-    private const MERGE_KEY = '/(?:^|[\s{,])<<\s*:/m';
 
     // Aliases share their anchored value; past this many values once expanded the file is an alias bomb.
     private const EXPANDED_VALUES_MAX = 100_000;
@@ -77,11 +74,12 @@ final class ConfigYaml
             $text = substr($text, strlen(self::BYTE_ORDER_MARK));
         }
 
-        $reader = new self($displayName);
-
-        if (preg_match(self::MERGE_KEY, $text) === 1) {
-            return [$reader->syntaxProblem('A merge key (`<<`) is not read; a config writes each key itself.', [])];
+        $formProblems = self::formProblems($text, $displayName);
+        if ($formProblems !== []) {
+            return $formProblems;
         }
+
+        $reader = new self($displayName);
 
         try {
             $parsed = Yaml::parse($text, self::PARSE_FLAGS);
@@ -99,6 +97,21 @@ final class ConfigYaml
         }
 
         return $reader->problems === [] ? new ConfigTree($value, $displayName) : $reader->problems;
+    }
+
+    /** @return list<ConfigProblem> */
+    private static function formProblems(string $text, string $displayName): array
+    {
+        $problems = [];
+
+        foreach (YamlTokens::of($text) as $token) {
+            $form = YamlScalarForm::of($token);
+            if ($form !== null) {
+                $problems[] = new ConfigProblem($form->code(), $form->message($token->text), $form->fix(), "{$displayName}:{$token->line}");
+            }
+        }
+
+        return $problems;
     }
 
     /**
