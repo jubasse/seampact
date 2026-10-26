@@ -1,0 +1,375 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/ir/ir.schema.json",
+  "title": "seampact IR",
+  "description": "The seampact intermediate representation, irVersion 1 (ADR 0004, ADR 0005). Readers ignore unknown members; every string with 'x-seampact-known' is an open enum; unions follow the idiom of README.md.",
+  "$ref": "#/$defs/ContractIR",
+  "$defs": {
+    "ContractIR": {
+      "type": "object",
+      "description": "One IR document per api (ADR 0004 sections 1 and 2).",
+      "required": [
+        "irVersion",
+        "irRevision",
+        "kinds",
+        "features",
+        "api",
+        "packs",
+        "conventions",
+        "formats",
+        "pagings",
+        "schemas",
+        "scalars",
+        "enums",
+        "errors",
+        "natures",
+        "schemes",
+        "headers",
+        "identities",
+        "rights",
+        "rules",
+        "scopes",
+        "buckets",
+        "services",
+        "extensionKeys",
+        "lint",
+        "operations"
+      ],
+      "properties": {
+        "irVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "1 until 1.0 and through 1.x (ADR 0005 section 2)."
+        },
+        "irRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Rises by one with every IR change (ADR 0005 section 2)."
+        },
+        "kinds": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/DeclarationKind" }
+        },
+        "features": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/Feature" } },
+        "api": { "$ref": "#/$defs/Api" },
+        "packs": { "type": "array", "items": { "$ref": "#/$defs/PackRef" } },
+        "conventions": { "$ref": "#/$defs/Conventions" },
+        "formats": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/FormatId" },
+          "additionalProperties": { "$ref": "formats.schema.json#/$defs/WireFormat" }
+        },
+        "pagings": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/PagingId" },
+          "additionalProperties": { "$ref": "formats.schema.json#/$defs/PagingStyle" }
+        },
+        "schemas": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/SchemaId" },
+          "additionalProperties": { "$ref": "schemas.schema.json#/$defs/Schema" }
+        },
+        "scalars": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/ScalarId" },
+          "additionalProperties": { "$ref": "schemas.schema.json#/$defs/Scalar" }
+        },
+        "enums": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/EnumId" },
+          "additionalProperties": { "$ref": "declarations.schema.json#/$defs/Enum" }
+        },
+        "errors": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/ErrorCode" },
+          "additionalProperties": { "$ref": "declarations.schema.json#/$defs/ErrorDecl" }
+        },
+        "natures": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/NatureId" },
+          "additionalProperties": { "$ref": "declarations.schema.json#/$defs/NatureDecl" }
+        },
+        "schemes": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/SchemeId" },
+          "additionalProperties": { "$ref": "declarations.schema.json#/$defs/Scheme" }
+        },
+        "headers": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/HeaderId" },
+          "additionalProperties": { "$ref": "declarations.schema.json#/$defs/HeaderDecl" }
+        },
+        "identities": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/IdentityId" },
+          "additionalProperties": { "$ref": "declarations.schema.json#/$defs/Identity" }
+        },
+        "rights": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/RightId" },
+          "additionalProperties": { "$ref": "declarations.schema.json#/$defs/Right" }
+        },
+        "rules": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/RuleId" },
+          "additionalProperties": { "$ref": "declarations.schema.json#/$defs/Rule" }
+        },
+        "scopes": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/ScopeId" },
+          "additionalProperties": { "$ref": "declarations.schema.json#/$defs/Scope" }
+        },
+        "buckets": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/BucketId" },
+          "additionalProperties": { "$ref": "declarations.schema.json#/$defs/Bucket" }
+        },
+        "services": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/ServiceId" },
+          "additionalProperties": { "$ref": "declarations.schema.json#/$defs/Service" }
+        },
+        "extensionKeys": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/ExtensionKeyId" },
+          "additionalProperties": { "$ref": "#/$defs/ExtensionKeyDecl" }
+        },
+        "lint": { "$ref": "#/$defs/Lint" },
+        "operations": {
+          "type": "array",
+          "items": { "$ref": "operation.schema.json#/$defs/Operation" }
+        }
+      }
+    },
+    "PackRef": {
+      "type": "object",
+      "description": "A pack applied, in application order.",
+      "required": ["name", "version"],
+      "properties": { "name": { "type": "string" }, "version": { "type": "string" } }
+    },
+    "PathVersionMode": {
+      "type": "string",
+      "description": "Whether paths carry the version prefix.",
+      "x-seampact-known": ["prefix", "none"]
+    },
+    "Surface": {
+      "type": "object",
+      "required": ["name", "prefix", "pathVersion", "origin"],
+      "properties": {
+        "name": { "$ref": "common.schema.json#/$defs/Name" },
+        "prefix": { "type": "string" },
+        "pathVersion": { "$ref": "#/$defs/PathVersionMode" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "InternalPolicy": {
+      "type": "string",
+      "description": "Whether a document lists internal operations.",
+      "x-seampact-known": ["include", "exclude"]
+    },
+    "ApiDocument": {
+      "type": "object",
+      "required": ["surfaces", "internal"],
+      "properties": {
+        "surfaces": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/SurfaceId" } },
+        "internal": { "$ref": "#/$defs/InternalPolicy" }
+      }
+    },
+    "PathVersion": {
+      "type": "object",
+      "required": ["value", "origin"],
+      "properties": {
+        "value": { "$ref": "#/$defs/PathVersionMode" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "ApiCaller": {
+      "type": "object",
+      "required": ["identity", "right"],
+      "properties": {
+        "identity": { "$ref": "common.schema.json#/$defs/IdentityId" },
+        "right": { "$ref": "common.schema.json#/$defs/RightId" }
+      }
+    },
+    "ApiVersion": {
+      "type": "object",
+      "description": "The api version: the path version number, or a label when every surface's pathVersion is 'none'.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [{ "$ref": "#/$defs/PathApiVersion" }, { "$ref": "#/$defs/LabelApiVersion" }]
+    },
+    "PathApiVersion": {
+      "type": "object",
+      "required": ["kind", "number"],
+      "properties": {
+        "kind": { "type": "string", "const": "path" },
+        "number": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "The number paths carry ('/v1')."
+        }
+      }
+    },
+    "LabelApiVersion": {
+      "type": "object",
+      "required": ["kind", "label"],
+      "properties": {
+        "kind": { "type": "string", "const": "label" },
+        "label": { "type": "string", "minLength": 1 }
+      }
+    },
+    "ApiKind": {
+      "type": "string",
+      "description": "A product api or a service api.",
+      "x-seampact-known": ["product", "service"]
+    },
+    "ApiRole": {
+      "type": "string",
+      "description": "The role of an api.",
+      "x-seampact-known": ["gateway"]
+    },
+    "CompatPolicy": {
+      "type": "string",
+      "description": "The compatibility policy the diff checks.",
+      "x-seampact-known": ["additive-only", "none"]
+    },
+    "Compat": {
+      "type": "object",
+      "required": ["policy"],
+      "properties": { "policy": { "$ref": "#/$defs/CompatPolicy" } }
+    },
+    "Api": {
+      "type": "object",
+      "description": "The api (ADR 0004 section 2).",
+      "required": [
+        "id",
+        "name",
+        "version",
+        "kind",
+        "pathVersion",
+        "maturity",
+        "compat",
+        "wire",
+        "surfaces",
+        "documents",
+        "docs",
+        "extensions",
+        "origin"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "$ref": "common.schema.json#/$defs/Name" },
+        "version": { "$ref": "#/$defs/ApiVersion" },
+        "kind": { "$ref": "#/$defs/ApiKind" },
+        "pathVersion": { "$ref": "#/$defs/PathVersion" },
+        "role": { "$ref": "#/$defs/ApiRole" },
+        "maturity": { "$ref": "common.schema.json#/$defs/Maturity" },
+        "caller": { "$ref": "#/$defs/ApiCaller" },
+        "compat": { "$ref": "#/$defs/Compat" },
+        "wire": { "$ref": "#/$defs/ApiWire" },
+        "surfaces": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/SurfaceId" },
+          "additionalProperties": { "$ref": "#/$defs/Surface" }
+        },
+        "documents": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/DocumentId" },
+          "additionalProperties": { "$ref": "#/$defs/ApiDocument" }
+        },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "ApiWire": {
+      "type": "object",
+      "description": "The api-wide conventions a target acts on (ADR 0004 section 13).",
+      "required": ["int64", "outputEnums", "urls"],
+      "properties": {
+        "int64": { "$ref": "#/$defs/Int64Wire" },
+        "outputEnums": { "$ref": "#/$defs/OutputEnumForm" },
+        "urls": { "$ref": "#/$defs/UrlForm" }
+      }
+    },
+    "Int64Wire": {
+      "type": "string",
+      "description": "How an int64 value is sent: its string form, or a JSON number.",
+      "x-seampact-known": ["string", "number"]
+    },
+    "OutputEnumForm": {
+      "type": "string",
+      "description": "Whether an output enum is closed, or open with a fallback a client keeps.",
+      "x-seampact-known": ["enum", "open"]
+    },
+    "UrlForm": {
+      "type": "string",
+      "description": "Whether a URL a target writes is a relative reference, or absolute from one configured public origin.",
+      "x-seampact-known": ["relative", "absolute"]
+    },
+    "ConventionValue": {
+      "type": "object",
+      "description": "A resolved convention value with the origin of the node that set it.",
+      "required": ["value", "origin"],
+      "properties": { "value": {}, "origin": { "$ref": "common.schema.json#/$defs/Origin" } }
+    },
+    "Conventions": {
+      "type": "object",
+      "description": "Resolved conventions, keyed by the dotted path of the convention under 'conventions' (for example 'pathVersion', 'idempotency.header'). Informative only: provenance for explain and lint. A target never acts on a convention; every convention a target acts on is a typed member (ADR 0004 section 13).",
+      "additionalProperties": { "$ref": "#/$defs/ConventionValue" }
+    },
+    "ExtensionPlace": {
+      "type": "string",
+      "description": "Where an extension key may appear (ADR 0002 section 12).",
+      "x-seampact-known": ["api", "operation", "schema", "property", "right", "rule", "scope"]
+    },
+    "ExtensionKeyDecl": {
+      "type": "object",
+      "description": "A declared extension key (ADR 0002 section 12).",
+      "required": ["id", "prefix", "key", "schema", "places", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/ExtensionKeyId" },
+        "prefix": { "$ref": "common.schema.json#/$defs/ExtensionPrefix" },
+        "key": { "$ref": "common.schema.json#/$defs/ExtensionKey" },
+        "schema": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
+        "places": { "type": "array", "items": { "$ref": "#/$defs/ExtensionPlace" } },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "LintSeverity": {
+      "type": "string",
+      "description": "A lint severity.",
+      "x-seampact-known": ["disabled", "warning", "error"]
+    },
+    "LintRule": {
+      "type": "object",
+      "description": "A resolved lint severity.",
+      "required": ["severity", "origin"],
+      "properties": {
+        "severity": { "$ref": "#/$defs/LintSeverity" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "LintAllow": {
+      "type": "object",
+      "description": "An allow of ADR 0002 section 12.",
+      "required": ["rule", "at", "reason", "subtree"],
+      "properties": {
+        "rule": { "type": "string" },
+        "at": { "$ref": "common.schema.json#/$defs/Origin" },
+        "reason": { "$ref": "common.schema.json#/$defs/Reason" },
+        "subtree": { "type": "boolean" }
+      }
+    },
+    "Lint": {
+      "type": "object",
+      "required": ["rules", "allows"],
+      "properties": {
+        "rules": { "type": "object", "additionalProperties": { "$ref": "#/$defs/LintRule" } },
+        "allows": { "type": "array", "items": { "$ref": "#/$defs/LintAllow" } }
+      }
+    }
+  }
+}

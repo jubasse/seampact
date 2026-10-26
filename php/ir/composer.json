@@ -5,11 +5,16 @@
   "license": "MIT",
   "require": {
     "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
-    "ext-json": "*"
+    "ext-json": "*",
+    "ext-zlib": "*",
+    "opis/json-schema": "~2.6.0"
   },
   "require-dev": {
     "phpstan/phpstan": "2.2.16",
     "phpunit/phpunit": "11.5.56"
+  },
+  "suggest": {
+    "ext-posix": "Checks that only your user can write the compiler binary cache; needed to run the binary on Linux and macOS."
   },
   "autoload": {
     "psr-4": {
