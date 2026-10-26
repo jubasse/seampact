@@ -5,11 +5,17 @@ declare(strict_types=1);
 namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\TestCase;
+use Seampact\Golden\Tasks\AppEndpoints;
+use Seampact\Golden\Tasks\Symfony\GetTaskInputConstraint;
 use Seampact\Golden\Tasks\Symfony\GetTasksBatchInputConstraint;
 use Seampact\Golden\Tasks\Symfony\Runtime\Issue;
 use Seampact\Golden\Tasks\Symfony\TasksRouteLoader;
 use Seampact\Golden\Tasks\Symfony\TasksSeampactBundle;
 use Seampact\Golden\Tasks\Symfony\TasksSettings;
+use Seampact\Symfony\Tests\Support\HealthController;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
+use Symfony\Component\HttpKernel\DependencyInjection\RegisterControllerArgumentLocatorsPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Validator\Validation;
 
@@ -87,5 +93,48 @@ final class GeneratedPlacementTest extends TestCase
 
         $this->expectExceptionMessage('seampact_tasks.body_validation takes true or false');
         $settings->bodyValidation();
+    }
+
+    public function testANativeUuidTakesEveryRfc9562TextTheContractTakes(): void
+    {
+        $issues = [];
+        foreach (['6f1c2b9e-0a43-02d3-9a51-1f2d3c4b5a69', '6f1c2b9e-0a43-92d3-c456-1f2d3c4b5a69', '00000000-0000-0000-0000-000000000000'] as $taskId) {
+            $input = (object) ['path' => (object) ['channelId' => self::CHANNEL_ID, 'taskId' => $taskId], 'query' => new \stdClass(), 'header' => new \stdClass()];
+            foreach (Validation::createValidator()->validate($input, new GetTaskInputConstraint()) as $violation) {
+                $issues[] = $violation->getPropertyPath() . ' ' . Issue::ruleOf($violation);
+            }
+        }
+
+        self::assertSame([], $issues);
+    }
+
+    public function testAnUnknownOperationIdInTheConfigurationFailsTheContainerBuild(): void
+    {
+        $extension = (new TasksSeampactBundle())->getContainerExtension();
+        self::assertNotNull($extension);
+        $container = new ContainerBuilder();
+        $container->setParameter('kernel.environment', 'test');
+        $container->setParameter('kernel.build_dir', sys_get_temp_dir());
+
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessageMatches("/'getTaks'.*'getTask'/");
+        $extension->load([['operations' => ['getTaks' => ['responses' => 'warn']]]], $container);
+    }
+
+    public function testTheControllerPassRunsBeforeTheControllerLocatorIsBuilt(): void
+    {
+        $container = new ContainerBuilder();
+        $container->register(HealthController::class, HealthController::class);
+        $container->register('argument_resolver.service')->setArguments([null]);
+        (new TasksSeampactBundle())->build($container);
+        // FrameworkBundle registers the locator pass at the default priority of this pass type.
+        $container->addCompilerPass(new RegisterControllerArgumentLocatorsPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION);
+        foreach ($container->getCompilerPassConfig()->getBeforeOptimizationPasses() as $pass) {
+            $pass->process($container);
+        }
+
+        $locator = $container->getDefinition((string) $container->getDefinition('argument_resolver.service')->getArgument(0));
+        self::assertArrayHasKey(AppEndpoints::class . '::health', $locator->getArgument(0));
+        self::assertTrue($container->getAlias(AppEndpoints::class)->isPublic());
     }
 }

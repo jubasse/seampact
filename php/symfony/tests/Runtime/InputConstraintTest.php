@@ -38,12 +38,14 @@ final class InputConstraintTest extends TestCase
         self::assertSame(['/body/note required'], self::issues($body, '{"title":"x"}'));
     }
 
-    public function testAnIntegerTakesAWholeFloatUpTo2Pow53AndRefusesALargerOneAsItsBound(): void
+    public function testAnIntegerTakesAWholeNumberInTheSafeRangeAndRefusesALargerOneAsItsBound(): void
     {
         $body = self::object(['count' => new Member(JsonType::Integer, presence: Presence::Optional)]);
 
         self::assertSame([], self::issues($body, '{"count":1.0}'));
-        self::assertSame([], self::issues($body, '{"count":9007199254740992}'));
+        self::assertSame([], self::issues($body, '{"count":9007199254740991}'));
+        self::assertSame(['/body/count maximum'], self::issues($body, '{"count":9007199254740992}'));
+        self::assertSame(['/body/count minimum'], self::issues($body, '{"count":-9007199254740993}'));
         self::assertSame(['/body/count type'], self::issues($body, '{"count":1.5}'));
         self::assertSame(['/body/count type'], self::issues($body, '{"count":"1"}'));
         self::assertSame(['/body/count maximum'], self::issues($body, '{"count":9007199254740994.0}'));
@@ -101,6 +103,13 @@ final class InputConstraintTest extends TestCase
 
         self::assertSame(['/body/id format'], self::issues($body, '{"id":"   "}'));
         self::assertSame(['/body/id format'], self::issues($body, '{"id":""}'));
+    }
+
+    public function testANativeConstraintBrokenTwiceReportsItsRuleOnce(): void
+    {
+        $body = self::object(['id' => new Member(JsonType::String, native: [new Uuid(payload: Rule::payload(Rule::FORMAT))])]);
+
+        self::assertSame(['/body/id format'], self::issues($body, '{"id":"00000000-0000-0000-0000-000000000000"}'));
     }
 
     public function testANonFiniteNumberIsATypeIssue(): void

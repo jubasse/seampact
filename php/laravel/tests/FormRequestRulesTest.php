@@ -91,6 +91,12 @@ final class FormRequestRulesTest extends TestCase
         self::assertSame([['body', '/label', 'type']], $this->issuesOfJson('{"ids":[],"label":9223372036854775808}'));
     }
 
+    public function testAnIntegerAboveTheSafeRangeIsRefusedAsItsBound(): void
+    {
+        self::assertSame([['body', '/step', 'maximum']], $this->issuesOfJson('{"ids":[],"step":9007199254740993}'));
+        self::assertSame([['body', '/step', 'minimum']], $this->issuesOfJson('{"ids":[],"step":-9007199254740993}'));
+    }
+
     public function testUnknownKeysAndAnObjectInPlaceOfAListAreRefused(): void
     {
         self::assertSame([['body', '/extra', 'unknownKeys']], $this->issues(['ids' => [], 'extra' => 1]));
