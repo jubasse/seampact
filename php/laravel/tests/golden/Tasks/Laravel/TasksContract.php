@@ -416,6 +416,26 @@ final class TasksContract
                 'origin' => ['layer' => 'shared', 'pointer' => '/buckets/write'],
             ],
         ],
+        'pagings' => [
+            'cursor' => [
+                'id' => 'cursor',
+                'origin' => ['layer' => 'shared', 'pointer' => '/pagings/cursor'],
+                'position' => 'cursor',
+                'absent' => 'omit',
+                'request' => [
+                    ['role' => 'cursor', 'in' => 'query', 'name' => 'cursor'],
+                    ['role' => 'limit', 'in' => 'query', 'name' => 'limit'],
+                    ['role' => 'sort', 'in' => 'query', 'name' => 'sort', 'style' => 'signed'],
+                ],
+                'response' => [
+                    'body' => ['kind' => 'slot', 'slot' => 'items', 'path' => []],
+                    'meta' => [],
+                    'headers' => [],
+                    'links' => [['rel' => 'next', 'role' => 'next']],
+                ],
+                'handlerResult' => ['nextCursor'],
+            ],
+        ],
         'schemas' => [
             'ApiEmptyBody' => [
                 'kind' => 'object',

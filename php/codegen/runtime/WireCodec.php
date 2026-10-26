@@ -88,7 +88,11 @@ final class WireCodec
      */
     public static function encodeBody(ApiContract $contract, array $response, mixed $body): mixed
     {
-        if (Ir::string($response, 'shape') !== 'table') {
+        $shape = Ir::string($response, 'shape');
+        if ($shape === 'list' || $shape === 'page') {
+            return array_map(static fn (mixed $item): mixed => self::encode($contract, $response['body'] ?? null, $item), is_array($body) ? array_values($body) : []);
+        }
+        if ($shape !== 'table') {
             return self::encode($contract, $response['body'] ?? null, $body);
         }
 

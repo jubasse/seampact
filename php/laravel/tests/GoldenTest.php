@@ -57,7 +57,7 @@ final class GoldenTest extends TestCase
 
     private static function withAccessOperations(): \stdClass
     {
-        return ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), [...ReferenceContract::CORE_OPERATIONS, 'createTask', 'updateTask', 'purgeTask']);
+        return ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), [...ReferenceContract::CORE_OPERATIONS, 'createTask', 'updateTask', 'purgeTask', 'listTasks']);
     }
 
     public function testTheFullReferenceContractIsRefusedFormByForm(): void
@@ -73,8 +73,7 @@ final class GoldenTest extends TestCase
 
             self::assertSame(
                 [
-                    'access.signed.unsupported', 'cache.unsupported', 'deadline.unsupported', 'input.rawBody.unsupported', 'paging.unsupported',
-                    'param.query.structured.unsupported', 'response.shape.unsupported', 'type.opaque.unsupported',
+                    'access.signed.unsupported', 'cache.unsupported', 'deadline.unsupported', 'input.rawBody.unsupported', 'type.opaque.unsupported',
                 ],
                 $codes,
             );

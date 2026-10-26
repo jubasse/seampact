@@ -9,6 +9,6 @@ targets:
     out: Tasks
     use: seampact/laravel
     api: tasks
-    operations: { exclude: [listChannels, listTasks, getPreferences, payments, searchTasks] }
+    operations: { exclude: [getPreferences, payments, searchTasks] }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }

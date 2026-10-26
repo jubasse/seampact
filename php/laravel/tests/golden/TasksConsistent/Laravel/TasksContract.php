@@ -416,6 +416,26 @@ final class TasksContract
                 'origin' => ['layer' => 'shared', 'pointer' => '/buckets/write'],
             ],
         ],
+        'pagings' => [
+            'cursor' => [
+                'id' => 'cursor',
+                'origin' => ['layer' => 'shared', 'pointer' => '/pagings/cursor'],
+                'position' => 'cursor',
+                'absent' => 'omit',
+                'request' => [
+                    ['role' => 'cursor', 'in' => 'query', 'name' => 'cursor'],
+                    ['role' => 'limit', 'in' => 'query', 'name' => 'limit'],
+                    ['role' => 'sort', 'in' => 'query', 'name' => 'sort', 'style' => 'signed'],
+                ],
+                'response' => [
+                    'body' => ['kind' => 'slot', 'slot' => 'items', 'path' => []],
+                    'meta' => [],
+                    'headers' => [],
+                    'links' => [['rel' => 'next', 'role' => 'next']],
+                ],
+                'handlerResult' => ['nextCursor'],
+            ],
+        ],
         'schemas' => [
             'ApiEmptyBody' => [
                 'kind' => 'object',
@@ -2621,6 +2641,293 @@ final class TasksContract
             ],
             [
                 'kind' => 'httpOperation',
+                'id' => 'listTasks',
+                'name' => ['segments' => ['list', 'tasks'], 'role' => 'operation'],
+                'surface' => 'app',
+                'op' => 'list',
+                'resource' => ['type' => 'tasks', 'idProperty' => 'taskId'],
+                'features' => [],
+                'method' => 'get',
+                'path' => '/v1/channels/{channelId}/tasks',
+                'safe' => true,
+                'params' => [
+                    'path' => [
+                        [
+                            'name' => 'channelId',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'format' => 'uuid', 'refinements' => []],
+                            'required' => true,
+                            'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/id/channelId'],
+                        ],
+                    ],
+                    'query' => [
+                        [
+                            'name' => 'cursor',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                            'required' => false,
+                            'wire' => ['kind' => 'text', 'style' => 'form', 'explode' => true, 'brackets' => false],
+                            'derivedFrom' => [
+                                'derivation' => 'paging.params',
+                                'from' => [
+                                    [
+                                        'layer' => 'api',
+                                        'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+                                    ],
+                                    ['layer' => 'shared', 'pointer' => '/pagings/cursor'],
+                                ],
+                            ],
+                        ],
+                        [
+                            'name' => 'limit',
+                            'type' => [
+                                'kind' => 'scalar',
+                                'type' => 'integer',
+                                'refinements' => ['minimum' => '1', 'maximum' => '50'],
+                            ],
+                            'required' => false,
+                            'wire' => ['kind' => 'number', 'style' => 'form', 'explode' => true, 'brackets' => false],
+                            'derivedFrom' => [
+                                'derivation' => 'paging.params',
+                                'from' => [
+                                    [
+                                        'layer' => 'api',
+                                        'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+                                    ],
+                                    ['layer' => 'shared', 'pointer' => '/pagings/cursor'],
+                                ],
+                            ],
+                        ],
+                        [
+                            'name' => 'sort',
+                            'type' => [
+                                'kind' => 'array',
+                                'items' => [
+                                    'kind' => 'scalar',
+                                    'type' => 'string',
+                                    'refinements' => [
+                                        'pattern' => [
+                                            'source' => '^(?:createdAt|-createdAt)$',
+                                            'normalized' => '^(?:createdAt|-createdAt)$',
+                                        ],
+                                    ],
+                                ],
+                            ],
+                            'required' => false,
+                            'wire' => ['kind' => 'list', 'style' => 'form', 'explode' => false, 'brackets' => false],
+                            'derivedFrom' => [
+                                'derivation' => 'paging.params',
+                                'from' => [
+                                    [
+                                        'layer' => 'api',
+                                        'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+                                    ],
+                                    ['layer' => 'shared', 'pointer' => '/pagings/cursor'],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'header' => [
+                        [
+                            'name' => 'Authorization',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                            'required' => false,
+                            'derivedFrom' => [
+                                'derivation' => 'identity.authenticate',
+                                'from' => [
+                                    ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                                    ['layer' => 'shared', 'pointer' => '/schemes/bearer'],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+                'unknownQuery' => ['policy' => 'refuse'],
+                'access' => [
+                    'kind' => 'identity',
+                    'identity' => 'user',
+                    'schemes' => ['bearer', 'sessionCookie'],
+                    'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                ],
+                'callerKinds' => ['identified'],
+                'principalRequires' => [],
+                'scopes' => [
+                    [
+                        'scope' => 'channel',
+                        'source' => ['in' => 'path', 'name' => 'channelId'],
+                        'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+                    ],
+                ],
+                'requires' => [],
+                'bindings' => [],
+                'responses' => [
+                    [
+                        'status' => 200,
+                        'media' => 'application/json',
+                        'body' => ['kind' => 'ref', 'schema' => 'Task'],
+                        'shape' => 'page',
+                        'headers' => [
+                            [
+                                'name' => 'Link',
+                                'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                                'required' => false,
+                                'derivedFrom' => [
+                                    'derivation' => 'paging.params',
+                                    'from' => [
+                                        [
+                                            'layer' => 'api',
+                                            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+                                        ],
+                                        ['layer' => 'shared', 'pointer' => '/pagings/cursor'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'origin' => [
+                            'layer' => 'api',
+                            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/item',
+                        ],
+                        'derivedFrom' => [
+                            'derivation' => 'response.format',
+                            'from' => [['layer' => 'core', 'pointer' => '/formats/bare']],
+                        ],
+                    ],
+                ],
+                'errors' => [
+                    [
+                        'code' => 'api.schema_invalid',
+                        'roles' => [
+                            [
+                                'role' => 'schemaInvalid',
+                                'params' => [
+                                    'kind' => 'object',
+                                    'members' => [
+                                        [
+                                            'name' => ['kind' => 'text', 'text' => 'issues'],
+                                            'value' => [
+                                                'kind' => 'each',
+                                                'of' => 'issues',
+                                                'as' => [
+                                                    'kind' => 'object',
+                                                    'members' => [
+                                                        [
+                                                            'name' => ['kind' => 'text', 'text' => 'pointer'],
+                                                            'value' => [
+                                                                'kind' => 'slot',
+                                                                'slot' => 'item',
+                                                                'path' => ['pointer'],
+                                                            ],
+                                                        ],
+                                                        [
+                                                            'name' => ['kind' => 'text', 'text' => 'rule'],
+                                                            'value' => [
+                                                                'kind' => 'slot',
+                                                                'slot' => 'item',
+                                                                'path' => ['rule'],
+                                                            ],
+                                                        ],
+                                                    ],
+                                                ],
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'derivedFrom' => [
+                            'derivation' => 'input.invalid',
+                            'from' => [
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list',
+                                ],
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+                                ],
+                                ['layer' => 'shared', 'pointer' => '/conventions/errors/derived/schemaInvalid'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.unauthenticated',
+                        'roles' => [['role' => 'unauthenticated']],
+                        'derivedFrom' => [
+                            'derivation' => 'identity.authenticate',
+                            'from' => [['layer' => 'api', 'pointer' => '/surfaces/app/identity']],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.not_found',
+                        'derivedFrom' => [
+                            'derivation' => 'scope.errors',
+                            'from' => [
+                                ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.internal',
+                        'roles' => [['role' => 'undeclaredStatus']],
+                        'derivedFrom' => [
+                            'derivation' => 'response.undeclared',
+                            'from' => [
+                                ['layer' => 'shared', 'pointer' => '/conventions/errors/every/0'],
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+                'fieldRights' => [
+                    [
+                        'schema' => 'Task',
+                        'pointer' => '/effort',
+                        'right' => 'tasks.seeEffort',
+                        'subject' => ['source' => ['in' => 'holderField', 'name' => 'taskId']],
+                        'direction' => 'output',
+                        'derivedFrom' => [
+                            'derivation' => 'fieldRight.restricted',
+                            'from' => [['layer' => 'shared', 'pointer' => '/schemas/Task/properties/effort/restrictedTo']],
+                        ],
+                    ],
+                ],
+                'paging' => [
+                    'style' => 'cursor',
+                    'maxLimit' => 50,
+                    'defaultLimit' => 50,
+                    'overLimit' => 'reject',
+                    'sortKeys' => [
+                        [
+                            'key' => 'createdAt',
+                            'origin' => [
+                                'layer' => 'api',
+                                'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/sortable/0',
+                            ],
+                        ],
+                    ],
+                    'origin' => [
+                        'layer' => 'api',
+                        'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+                    ],
+                ],
+                'filteredBy' => 'tasks.read',
+                'upstream' => [],
+                'maturity' => [
+                    'level' => 'provisional',
+                    'source' => 'api',
+                    'origin' => ['layer' => 'api', 'pointer' => '/api/maturity'],
+                ],
+                'internal' => false,
+                'format' => 'bare',
+                'tags' => [],
+                'examples' => [],
+                'docs' => [],
+                'extensions' => [],
+                'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list'],
+            ],
+            [
+                'kind' => 'httpOperation',
                 'id' => 'purgeTask',
                 'name' => ['segments' => ['purge', 'task'], 'role' => 'operation'],
                 'surface' => 'app',
@@ -3519,6 +3826,22 @@ final class TasksContract
                 'responses' => [200 => 'Seampact\Golden\TasksConsistent\HealthResponse200'],
                 'errors' => 'Seampact\Golden\TasksConsistent\HealthErrors',
                 'request' => 'Seampact\Golden\TasksConsistent\Laravel\HealthRequest',
+            ],
+            'listTasks' => [
+                'input' => 'Seampact\Golden\TasksConsistent\ListTasksInput',
+                'parts' => [
+                    'path' => [
+                        'class' => 'Seampact\Golden\TasksConsistent\ListTasksPath',
+                        'members' => ['channelId' => 'channelId'],
+                    ],
+                    'query' => [
+                        'class' => 'Seampact\Golden\TasksConsistent\ListTasksQuery',
+                        'members' => ['cursor' => 'cursor', 'limit' => 'limit', 'sort' => 'sort'],
+                    ],
+                ],
+                'responses' => [200 => 'Seampact\Golden\TasksConsistent\ListTasksResponse200'],
+                'errors' => 'Seampact\Golden\TasksConsistent\ListTasksErrors',
+                'request' => 'Seampact\Golden\TasksConsistent\Laravel\ListTasksRequest',
             ],
             'purgeTask' => [
                 'input' => 'Seampact\Golden\TasksConsistent\PurgeTaskInput',

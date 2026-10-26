@@ -7,6 +7,7 @@ namespace Seampact\Golden\TasksConsistent;
 use Seampact\Golden\TasksConsistent\Laravel\CreateTaskRequest;
 use Seampact\Golden\TasksConsistent\Laravel\GetTaskRequest;
 use Seampact\Golden\TasksConsistent\Laravel\GetTasksBatchRequest;
+use Seampact\Golden\TasksConsistent\Laravel\ListTasksRequest;
 use Seampact\Golden\TasksConsistent\Laravel\PurgeTaskRequest;
 use Seampact\Golden\TasksConsistent\Laravel\UpdateTaskRequest;
 
@@ -50,6 +51,15 @@ interface TasksEndpoints
      * @throws ApiInternalError
      */
     public function getTasksBatch(GetTasksBatchRequest $request): GetTasksBatchResult;
+
+    /**
+     * Operation 'listTasks'.
+     * @throws ApiSchemaInvalidError
+     * @throws ApiUnauthenticatedError
+     * @throws ApiNotFoundError
+     * @throws ApiInternalError
+     */
+    public function listTasks(ListTasksRequest $request): ListTasksResult;
 
     /**
      * Operation 'purgeTask'.

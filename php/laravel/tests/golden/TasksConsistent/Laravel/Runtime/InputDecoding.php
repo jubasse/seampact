@@ -40,11 +40,15 @@ final class InputDecoding
         $query = [];
         $declaredQuery = [];
         foreach (Ir::maps($params, 'query') as $param) {
-            $declaredQuery[Ir::string($param, 'name') ?? ''] = $param['type'] ?? null;
+            $declaredQuery[Ir::string($param, 'name') ?? ''] = $param;
         }
         foreach (WireValues::query(RawTarget::query($request)) as $name => $values) {
-            $query[$name] = array_key_exists($name, $declaredQuery) ? WireValues::queryValue($values, $declaredQuery[$name]) : (count($values) === 1 ? $values[0] : $values);
+            $declared = $declaredQuery[$name] ?? null;
+            $query[$name] = $declared === null
+                ? (count($values) === 1 ? $values[0] : $values)
+                : WireValues::queryValue(WireValues::listItems($values, $declared['wire'] ?? null), $declared['type'] ?? null);
         }
+        $state->query = $query;
 
         $headers = [];
         foreach (Ir::maps($params, 'header') as $param) {

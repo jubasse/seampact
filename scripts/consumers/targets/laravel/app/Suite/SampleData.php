@@ -15,6 +15,7 @@ final class SampleData
     private const CREATED_AT = '2026-10-18T09:00:00.000Z';
     public const FIRST_VERSION = 1;
     public const NEW_TASK_ID = '20000000-0000-4000-8000-0000000000ff';
+    public const GENERAL_CHANNEL_ID = '10000000-0000-4000-8000-000000000001';
 
     private function __construct()
     {

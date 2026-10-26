@@ -8,6 +8,10 @@ use App\Generated\Tasks\ChannelsEndpoints;
 use App\Generated\Tasks\GetChannelResponse200;
 use App\Generated\Tasks\GetChannelResult;
 use App\Generated\Tasks\Laravel\GetChannelRequest;
+use App\Generated\Tasks\Laravel\ListChannelsRequest;
+use App\Generated\Tasks\ListChannelsPage;
+use App\Generated\Tasks\ListChannelsResponse200;
+use App\Generated\Tasks\ListChannelsResult;
 use App\Suite\SampleData;
 use App\Suite\ScriptedAnswers;
 
@@ -17,5 +21,10 @@ final class ChannelsController implements ChannelsEndpoints
     {
         return ScriptedAnswers::answer('getChannel', 200, static fn (array $body): GetChannelResult => new GetChannelResponse200(SampleData::channelOf($body)))
             ?? new GetChannelResponse200(SampleData::channel($request->contractInput()->path->channelId));
+    }
+
+    public function listChannels(ListChannelsRequest $request): ListChannelsResult
+    {
+        return new ListChannelsResponse200(new ListChannelsPage([SampleData::channel(SampleData::GENERAL_CHANNEL_ID)]));
     }
 }

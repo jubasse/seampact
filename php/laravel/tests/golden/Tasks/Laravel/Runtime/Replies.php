@@ -21,6 +21,7 @@ final class Replies
     private const MILLISECONDS_PER_SECOND = 1000;
     private const NULL_ABSENT = 'null';
     private const NO_CONTENT = 204;
+    private const PAGE_SHAPE = 'page';
 
     private function __construct()
     {
@@ -116,11 +117,36 @@ final class Replies
             return $state->author(new Response('', $status));
         }
 
+        $media = Ir::string($declared, 'media') ?? Ir::string($contract->format($operationId), 'media') ?? self::JSON_MEDIA;
+        if (Ir::string($declared, 'shape') === self::PAGE_SHAPE) {
+            return $state->author(self::page($request, $state, $declared, self::member($result, 'body'), $status, $media));
+        }
+
         $body = WireCodec::encodeBody($contract, $declared, self::member($result, 'body'));
         $body = FieldRights::output($state, $declared, $body);
-        $media = Ir::string($declared, 'media') ?? Ir::string($contract->format($operationId), 'media') ?? self::JSON_MEDIA;
 
         return $state->author(new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media]));
+    }
+
+    /**
+     * A paged list's reply: the page's items encoded and projected, then the body, headers and links of its style.
+     *
+     * @param array<array-key, mixed> $declared
+     */
+    private static function page(Request $request, BoundaryState $state, array $declared, mixed $page, int $status, string $media): Response
+    {
+        if (!is_object($page)) {
+            throw new \LogicException("seampact: the handler of operation '{$state->operationId}' answered its page with " . get_debug_type($page) . ', not its generated page.');
+        }
+
+        $facts = [];
+        foreach (get_object_vars($page) as $name => $value) {
+            $facts[(string) $name] = $value;
+        }
+        $items = FieldRights::output($state, $declared, WireCodec::encodeBody($state->contract, $declared, $facts['items'] ?? []));
+        [$body, $headers] = PageReply::render($state, RawTarget::query($request), RawTarget::path($request), is_array($items) ? array_values($items) : [], $facts, $status);
+
+        return new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media, ...$headers]);
     }
 
     /** The reply of a generated exception a handler threw: one of the operation's codes, written by the boundary. */

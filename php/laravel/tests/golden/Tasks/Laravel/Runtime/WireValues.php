@@ -69,6 +69,26 @@ final class WireValues
     }
 
     /**
+     * A list parameter's values: a list written with `explode: false` is one comma-separated value (`sort=a,-b`).
+     *
+     * @param list<string> $values
+     * @return list<string>
+     */
+    public static function listItems(array $values, mixed $wire): array
+    {
+        if (!is_array($wire) || Ir::string($wire, 'kind') !== 'list' || ($wire['explode'] ?? true) !== false) {
+            return $values;
+        }
+
+        $items = [];
+        foreach ($values as $value) {
+            array_push($items, ...explode(',', $value));
+        }
+
+        return $items;
+    }
+
+    /**
      * A query parameter's values as its type reads them: an array parameter takes every value, a scalar one its only
      * value, and several values for a scalar stay a list, which the type rule refuses.
      *

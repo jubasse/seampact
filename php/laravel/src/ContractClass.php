@@ -20,7 +20,7 @@ use Seampact\Ir\Run\FrameworkRoute;
 final class ContractClass
 {
     /** The IR members the runtime reads; the others stay out of the constant. */
-    private const IR_MEMBERS = ['api', 'errors', 'formats', 'identities', 'schemes', 'scopes', 'rights', 'rules', 'buckets', 'schemas', 'enums'];
+    private const IR_MEMBERS = ['api', 'errors', 'formats', 'identities', 'schemes', 'scopes', 'rights', 'rules', 'buckets', 'pagings', 'schemas', 'enums'];
 
     /** @param list<FrameworkRoute> $frameworkRoutes */
     public function __construct(private readonly PhpLayout $layout, private readonly KeptForms $kept, private readonly array $frameworkRoutes)

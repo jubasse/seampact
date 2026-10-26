@@ -43,7 +43,7 @@ final class FormSteps
     }
 
     /**
-     * Step 7, the typed input of the operation, then the idempotency claim: a replayed reply is thrown, so the handler
+     * Step 7, the typed input of the operation with a paged list's limit filled in, then the idempotency claim: a replayed reply is thrown, so the handler
      * never runs.
      *
      * @throws ReplayedReply
@@ -52,6 +52,8 @@ final class FormSteps
     {
         $state = BoundaryState::required($request, $api);
         $parts = InputTree::of($request, $api)->parts();
+        $query = $parts['query'] ?? new \stdClass();
+        $parts['query'] = PageReply::withFilledLimit($state, $query instanceof \stdClass ? $query : new \stdClass());
         $input = TypedInput::build($state, $parts);
 
         $replayed = IdempotencyStep::begin($state, $parts);

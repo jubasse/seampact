@@ -60,6 +60,14 @@ final class TasksRoutes
             'action' => [TasksEndpoints::class, 'createTask'],
         ],
         [
+            'operation' => 'listTasks',
+            'method' => 'GET',
+            'uri' => '/v1/channels/{p1}/tasks',
+            'name' => 'seampact.tasks.listTasks',
+            'access' => 'identity',
+            'action' => [TasksEndpoints::class, 'listTasks'],
+        ],
+        [
             'operation' => 'getTasksBatch',
             'method' => 'POST',
             'uri' => '/v1/channels/{p1}/tasks/batch',

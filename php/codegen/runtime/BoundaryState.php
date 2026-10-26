@@ -26,6 +26,8 @@ final class BoundaryState
     public bool $admitted = false;
     /** The body decoded with its objects preserved; null when the request carries none. */
     public mixed $body = null;
+    /** @var array<string, mixed> the query as step 1 decoded it, by parameter name */
+    public array $query = [];
     /** The idempotency key this request claimed, until its reply settles the record. */
     public ?string $idempotencyKey = null;
     /** @var \WeakMap<Response, array{int, string, ?string}> */

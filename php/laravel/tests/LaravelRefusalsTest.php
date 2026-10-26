@@ -82,7 +82,7 @@ final class LaravelRefusalsTest extends TestCase
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => false]);
 
         self::assertStringContainsString('laravel-3 generates it', $refused['type.opaque.unsupported'] ?? '');
-        self::assertStringContainsString('laravel-3 generates it', $refused['param.query.structured.unsupported'] ?? '');
+        self::assertStringContainsString('laravel-3 generates it', $refused['cache.unsupported'] ?? '');
         self::assertStringContainsString('laravel-4 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');
     }
 

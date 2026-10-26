@@ -14,6 +14,7 @@ Route::get('/v1/health', [AppEndpoints::class, 'health'])->name('seampact.tasks.
 Route::get('/v1/channels/{p1}', [ChannelsEndpoints::class, 'getChannel'])->name('seampact.tasks.getChannel')->middleware(TasksAccessMiddleware::class);
 Route::get('/v1/me/drafts/{p1}', [DraftsEndpoints::class, 'getDraft'])->name('seampact.tasks.getDraft')->middleware(TasksAccessMiddleware::class);
 Route::post('/v1/channels/{p1}/tasks', [TasksEndpoints::class, 'createTask'])->name('seampact.tasks.createTask')->middleware(TasksAccessMiddleware::class);
+Route::get('/v1/channels/{p1}/tasks', [TasksEndpoints::class, 'listTasks'])->name('seampact.tasks.listTasks')->middleware(TasksAccessMiddleware::class);
 Route::post('/v1/channels/{p1}/tasks/batch', [TasksEndpoints::class, 'getTasksBatch'])->name('seampact.tasks.getTasksBatch')->middleware(TasksAccessMiddleware::class);
 Route::get('/v1/channels/{p1}/tasks/{p2}', [TasksEndpoints::class, 'getTask'])->name('seampact.tasks.getTask')->middleware(TasksAccessMiddleware::class);
 Route::patch('/v1/channels/{p1}/tasks/{p2}', [TasksEndpoints::class, 'updateTask'])->name('seampact.tasks.updateTask')->middleware(TasksAccessMiddleware::class);

@@ -21,8 +21,12 @@ use App\Generated\Tasks\Laravel\AssignTaskRequest;
 use App\Generated\Tasks\Laravel\CreateTaskRequest;
 use App\Generated\Tasks\Laravel\GetTaskRequest;
 use App\Generated\Tasks\Laravel\GetTasksBatchRequest;
+use App\Generated\Tasks\Laravel\ListTasksRequest;
 use App\Generated\Tasks\Laravel\PurgeTaskRequest;
 use App\Generated\Tasks\Laravel\UpdateTaskRequest;
+use App\Generated\Tasks\ListTasksPage;
+use App\Generated\Tasks\ListTasksResponse200;
+use App\Generated\Tasks\ListTasksResult;
 use App\Generated\Tasks\PurgeTaskResponse204;
 use App\Generated\Tasks\PurgeTaskResult;
 use App\Generated\Tasks\Schemas\Task;
@@ -36,6 +40,8 @@ use App\Suite\ScriptedAnswers;
 
 final class TasksController implements TasksEndpoints
 {
+    private const NEXT_CURSOR = 'page-2';
+
     public function getTask(GetTaskRequest $request): GetTaskResult
     {
         return ScriptedAnswers::answer(
@@ -94,6 +100,21 @@ final class TasksController implements TasksEndpoints
     public function purgeTask(PurgeTaskRequest $request): PurgeTaskResult
     {
         return new PurgeTaskResponse204();
+    }
+
+    // The first page links a second one; the second is the last.
+    public function listTasks(ListTasksRequest $request): ListTasksResult
+    {
+        $nextCursor = $request->contractInput()->query->cursor === null ? self::NEXT_CURSOR : null;
+
+        return ScriptedAnswers::answer(
+            'listTasks',
+            200,
+            static fn (array $body): ListTasksResult => new ListTasksResponse200(new ListTasksPage(
+                array_map(SampleData::taskOf(...), is_array($body['items'] ?? null) ? array_values(array_filter($body['items'], is_array(...))) : []),
+                is_string($body['nextCursor'] ?? null) ? $body['nextCursor'] : null,
+            )),
+        ) ?? new ListTasksResponse200(new ListTasksPage([SampleData::task(SampleData::NEW_TASK_ID)], $nextCursor));
     }
 
     private static function withNextVersion(Task $current, string $title, TaskState $state): Task
