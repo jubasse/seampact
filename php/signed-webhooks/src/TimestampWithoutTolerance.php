@@ -7,7 +7,7 @@ namespace Seampact\SignedWebhooks;
 /** The scheme signs `{ts}` without a tolerance (ADR 0013 requires one): a replay of any age would pass. */
 final class TimestampWithoutTolerance extends \DomainException
 {
-    public const CODE = 'signature.tolerance.missing';
+    public const CODE = 'signature.tolerance.invalid';
 
     public function __construct(public readonly string $payload)
     {

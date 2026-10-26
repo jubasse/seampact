@@ -4,6 +4,8 @@ import vectors from "../vectors/adr-0013.json" with { type: "json" };
 import {
   EmptySignatureSecretError,
   type SignatureFailure,
+  SignaturePayloadInvalidError,
+  SignatureToleranceInvalidError,
   UnsupportedSignatureAlgorithmError,
   verifyTemplateSignature,
 } from "./verify-template-signature.js";
@@ -101,5 +103,44 @@ describe("verifies the ADR 0013 vectors", () => {
     );
 
     await expect(verification).rejects.toBeInstanceOf(UnsupportedSignatureAlgorithmError);
+  });
+  test.each(["{ts}.", "", "{rawBody}{rawBody}", "{ts}{ts}{rawBody}"])(
+    "the payload '%s' is refused by name",
+    async (payload) => {
+      const request = signedRequest("github", vectors.cases[0]?.header ?? "", "");
+      const verification = verifyTemplateSignature(
+        { ...request, template: { ...request.template, payload, toleranceMs: 1000 } },
+        () => ["secret"],
+      );
+
+      await expect(verification).rejects.toBeInstanceOf(SignaturePayloadInvalidError);
+    },
+  );
+
+  test("a payload that signs the timestamp without a tolerance is refused by name", async () => {
+    const request = signedRequest("github", vectors.cases[0]?.header ?? "", "");
+    const { toleranceMs: _tolerance, ...template } = request.template;
+    const verification = verifyTemplateSignature(
+      { ...request, template: { ...template, payload: "{ts}.{rawBody}" } },
+      () => ["secret"],
+    );
+
+    await expect(verification).rejects.toBeInstanceOf(SignatureToleranceInvalidError);
+  });
+
+  test.each([
+    ["a negative tolerance", "{ts}.{rawBody}", -1],
+    ["a tolerance without {ts}", "{rawBody}", 1000],
+    ["a NaN tolerance", "{ts}.{rawBody}", Number.NaN],
+    ["an infinite tolerance", "{ts}.{rawBody}", Number.POSITIVE_INFINITY],
+    ["a fractional tolerance", "{ts}.{rawBody}", 1.5],
+  ])("%s is refused by name", async (_name, payload, toleranceMs) => {
+    const request = signedRequest("github", vectors.cases[0]?.header ?? "", "");
+    const verification = verifyTemplateSignature(
+      { ...request, template: { ...request.template, payload, toleranceMs } },
+      () => ["secret"],
+    );
+
+    await expect(verification).rejects.toMatchObject({ code: "signature.tolerance.invalid" });
   });
 });

@@ -4,6 +4,8 @@ export {
   EmptySignatureSecretError,
   type SecretLookup,
   type SignatureFailure,
+  SignaturePayloadInvalidError,
+  SignatureToleranceInvalidError,
   type SignatureVerification,
   SUPPORTED_ALGORITHM,
   UnsupportedSignatureAlgorithmError,

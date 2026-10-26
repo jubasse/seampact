@@ -16,7 +16,9 @@ final readonly class SignatureScheme
      * @param int|null $toleranceMs the largest distance allowed between the signed timestamp and now, required when
      *     the payload holds `{ts}`
      *
+     * @throws SignaturePayloadInvalid when the payload does not hold `{rawBody}` exactly once and `{ts}` at most once
      * @throws TimestampWithoutTolerance when the payload holds `{ts}` and no tolerance is given
+     * @throws SignatureToleranceInvalid when the tolerance is negative or the payload holds no `{ts}`
      */
     public function __construct(
         public string $algorithm,
@@ -24,8 +26,22 @@ final readonly class SignatureScheme
         public SignatureEncoding $encoding,
         public ?int $toleranceMs = null,
     ) {
-        if ($toleranceMs === null && str_contains($payload, TemplateSignatureVerifier::TIMESTAMP_PLACEHOLDER)) {
+        $timestampCount = substr_count($payload, TemplateSignatureVerifier::TIMESTAMP_PLACEHOLDER);
+
+        if (substr_count($payload, TemplateSignatureVerifier::RAW_BODY_PLACEHOLDER) !== 1 || $timestampCount > 1) {
+            throw new SignaturePayloadInvalid($payload);
+        }
+
+        if ($toleranceMs === null && $timestampCount === 1) {
             throw new TimestampWithoutTolerance($payload);
+        }
+
+        if ($toleranceMs !== null && $toleranceMs < 0) {
+            throw SignatureToleranceInvalid::negative($toleranceMs);
+        }
+
+        if ($toleranceMs !== null && $timestampCount === 0) {
+            throw SignatureToleranceInvalid::withoutTimestamp($payload);
         }
     }
 }

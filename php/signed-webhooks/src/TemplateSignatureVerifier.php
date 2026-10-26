@@ -17,7 +17,7 @@ final class TemplateSignatureVerifier
     private const HMAC_ALGORITHM = 'sha256';
     private const HMAC_SHA256_BYTES = 32;
     public const TIMESTAMP_PLACEHOLDER = '{ts}';
-    private const RAW_BODY_PLACEHOLDER = '{rawBody}';
+    public const RAW_BODY_PLACEHOLDER = '{rawBody}';
     private const MILLISECONDS_PER_SECOND = 1000;
     private const UNIX_SECONDS = '/^[0-9]+$/D';
     private const HEX = '/^(?:[0-9a-fA-F]{2})+$/D';
