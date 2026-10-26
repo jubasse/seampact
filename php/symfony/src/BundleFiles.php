@@ -38,19 +38,32 @@ final class BundleFiles
             ->addComment("The contract's api '{$this->placement->apiKey}' in a Symfony app, configured under '{$this->placement->configurationAlias}'.");
         $class->addProperty('extensionAlias', $this->placement->configurationAlias)->setProtected()->setType('string');
 
+        $operationIds = array_map(static fn (array $kept): string => $kept[1]->id, $this->placement->operations());
+        $class->addConstant('OPERATION_IDS', $operationIds)->setPrivate()->addComment('@var list<string>');
+
         $configure = $class->addMethod('configure')->setPublic()->setReturnType('void');
         $configure->addParameter('definition')->setType($file->type('Symfony\\Component\\Config\\Definition\\Configurator\\DefinitionConfigurator'));
-        $configure->setBody((new Dumper())->format(
+        $invalid = $file->name('Symfony\\Component\\Config\\Definition\\Exception\\InvalidConfigurationException');
+        $configure->setBody(str_replace(['__INVALID__', '__ALIAS__'], [$invalid, $this->placement->configurationAlias], (new Dumper())->format(
             <<<'PHP'
                 // Scalar nodes only, so an %env()% placeholder is never refused here; the settings check each value.
                 $children = $definition->rootNode()->children();
                 $children->scalarNode('responses')->defaultValue(?);
                 $children->scalarNode('body_validation')->defaultValue(?);
-                $children->arrayNode('operations')->useAttributeAsKey('operationId')->arrayPrototype()->children()->scalarNode('responses');
+                // An operation id the api does not declare, such as a typo, fails the container build.
+                $children->arrayNode('operations')->useAttributeAsKey('operationId')
+                    ->validate()
+                    ->ifTrue(static fn (array $operations): bool => array_diff(array_keys($operations), self::OPERATION_IDS) !== [])
+                    ->then(static function (array $operations): never {
+                        $unknown = implode("', '", array_diff(array_keys($operations), self::OPERATION_IDS));
+                        throw new __INVALID__("The bundle configuration key __ALIAS__.operations names '{$unknown}', not an operation of the api; it takes '" . implode("', '", self::OPERATION_IDS) . "'.");
+                    })
+                    ->end()
+                    ->arrayPrototype()->children()->scalarNode('responses');
                 PHP,
             $this->options->responses->value,
             $this->options->bodyValidation,
-        ));
+        )));
 
         $load = $class->addMethod('loadExtension')->setPublic()->setReturnType('void');
         $load->addComment('@param array<mixed> $config');

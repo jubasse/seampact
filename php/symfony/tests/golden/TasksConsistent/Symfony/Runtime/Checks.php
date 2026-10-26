@@ -6,8 +6,8 @@ namespace Seampact\Golden\TasksConsistent\Symfony\Runtime;
 
 /**
  * The value checks the target generates with ADR 0003's meaning, run only once the member has its type: every value
- * rule under `rules: seampact-consistent`; under `native`, the enums, the formats Symfony lacks, and the pattern or
- * format check of the empty string, which Symfony's own constraints pass unchecked. Lengths count code points.
+ * rule under `rules: seampact-consistent`; under `native`, the enums, the formats, and the pattern check of the
+ * empty string, which Symfony's `Regex` passes unchecked. Lengths count code points.
  */
 final readonly class Checks
 {
@@ -19,7 +19,6 @@ final readonly class Checks
         public ?string $pattern = null,
         public ?Format $format = null,
         public PatternScope $patternScope = PatternScope::EveryString,
-        public PatternScope $formatScope = PatternScope::EveryString,
         public int|float|null $minimum = null,
         public int|float|null $maximum = null,
         public int|float|null $exclusiveMinimum = null,
@@ -60,7 +59,7 @@ final readonly class Checks
         if ($this->pattern !== null && self::reads($this->patternScope, $value) && !self::matches($this->pattern, $value)) {
             $issues[] = Rule::PATTERN;
         }
-        if ($this->format !== null && self::reads($this->formatScope, $value) && !$this->format->accepts($value)) {
+        if ($this->format !== null && !$this->format->accepts($value)) {
             $issues[] = Rule::FORMAT;
         }
 

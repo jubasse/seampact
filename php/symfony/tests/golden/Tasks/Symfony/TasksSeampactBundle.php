@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Golden\Tasks\Symfony;
 
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -15,6 +16,9 @@ use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
  */
 final class TasksSeampactBundle extends AbstractBundle
 {
+    /** @var list<string> */
+    private const OPERATION_IDS = ['getChannel', 'getDraft', 'getTask', 'getTasksBatch', 'health'];
+
     protected string $extensionAlias = 'seampact_tasks';
 
     public function configure(DefinitionConfigurator $definition): void
@@ -23,7 +27,16 @@ final class TasksSeampactBundle extends AbstractBundle
         $children = $definition->rootNode()->children();
         $children->scalarNode('responses')->defaultValue('strict');
         $children->scalarNode('body_validation')->defaultValue(false);
-        $children->arrayNode('operations')->useAttributeAsKey('operationId')->arrayPrototype()->children()->scalarNode('responses');
+        // An operation id the api does not declare, such as a typo, fails the container build.
+        $children->arrayNode('operations')->useAttributeAsKey('operationId')
+            ->validate()
+            ->ifTrue(static fn (array $operations): bool => array_diff(array_keys($operations), self::OPERATION_IDS) !== [])
+            ->then(static function (array $operations): never {
+                $unknown = implode("', '", array_diff(array_keys($operations), self::OPERATION_IDS));
+                throw new InvalidConfigurationException("The bundle configuration key seampact_tasks.operations names '{$unknown}', not an operation of the api; it takes '" . implode("', '", self::OPERATION_IDS) . "'.");
+            })
+            ->end()
+            ->arrayPrototype()->children()->scalarNode('responses');
     }
 
     /**

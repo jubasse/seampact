@@ -37,7 +37,10 @@ final readonly class RuntimeCopy
             if ($text === false) {
                 throw new \RuntimeException("The runtime source {$source} could not be read; check its permissions or reinstall {$this->package}.");
             }
-            $copied = str_replace("namespace {$this->sourceNamespace};", "namespace {$runtimeNamespace};", $text);
+            $copied = str_replace("namespace {$this->sourceNamespace};", "namespace {$runtimeNamespace};", $text, $replaced);
+            if ($replaced !== 1) {
+                throw new \RuntimeException("The runtime source {$source} declares 'namespace {$this->sourceNamespace};' {$replaced} times instead of once; reinstall {$this->package}.");
+            }
             $files[] = new GeneratedFile("{$prefix}/" . basename($source), $copied);
         }
 

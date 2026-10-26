@@ -30,9 +30,10 @@ use Seampact\Ir\Model\UnknownKeysPolicy;
  * Each operation's generated input constraint and its validator (ADR 0024 "Types and validation"): the validator
  * declares the operation's input shape, which the copied runtime walks on the decoded input. Under `rules: native` a
  * value rule renders as Symfony's own constraint where Symfony has one (`Length`, `Count`, the comparisons,
- * `DivisibleBy`, `Regex`, `Uuid`), its contract rule in its `payload`, and a string with a pattern or a `uuid` format
- * also gets the generated check of the empty string, which those constraints pass unchecked. Under
- * `seampact-consistent` every rule is generated. Enums, unknown keys and the `date-time` format are generated in both.
+ * `DivisibleBy`, `Regex`), its contract rule in its `payload`, and a string with a pattern also gets the generated
+ * check of the empty string, which `Regex` passes unchecked. Under `seampact-consistent` every rule is generated.
+ * Enums, unknown keys and the formats are generated in both: Symfony's `Uuid` refuses RFC 9562 text the contract
+ * takes (the nil UUID, versions outside 1 to 8).
  */
 final class InputConstraintFiles
 {
@@ -155,7 +156,7 @@ final class InputConstraintFiles
 
         $checks = [];
         $native = [];
-        $this->format($type, $checks, $native);
+        $this->format($type, $checks);
         match ($jsonType) {
             'String' => $this->stringRules($type->refinements, $checks, $native, $at),
             'Integer', 'Number' => $this->numberRules($type, $checks, $native, $at),
@@ -167,19 +168,10 @@ final class InputConstraintFiles
 
     /**
      * @param list<string> $checks
-     * @param list<string> $native
      */
-    private function format(ScalarTypeUse $type, array &$checks, array &$native): void
+    private function format(ScalarTypeUse $type, array &$checks): void
     {
         if ($type->format === null) {
-            return;
-        }
-
-        if ($type->format === KeptForms::FORMAT_UUID && $this->rules === RulesMode::Native) {
-            $native[] = $this->symfonyConstraint('Uuid', [], 'FORMAT');
-            $checks[] = 'format: ' . $this->runtimeCase('Format', 'Uuid');
-            $checks[] = 'formatScope: ' . $this->runtimeCase('PatternScope', 'EmptyStringOnly');
-
             return;
         }
 

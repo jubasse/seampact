@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Symfony\Runtime;
 
-use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 /**
@@ -93,11 +92,15 @@ final readonly class InputWalk
             return;
         }
 
-        foreach ($member->checks->issuesOf($value) as $rule) {
-            $this->issue($pointer, $rule);
-        }
+        // A Symfony constraint can raise several violations for one rule (`Uuid` on the nil UUID): one issue each.
+        $rules = $member->checks->issuesOf($value);
         if ($member->native !== []) {
-            $this->validate($pointer, $value, $member->native);
+            foreach ($this->context->getValidator()->validate($value, $member->native) as $violation) {
+                $rules[] = Issue::ruleOf($violation);
+            }
+        }
+        foreach (array_unique($rules) as $rule) {
+            $this->issue($pointer, $rule);
         }
 
         if ($value instanceof \stdClass) {
@@ -111,12 +114,6 @@ final readonly class InputWalk
 
     private function issue(string $pointer, string $rule): void
     {
-        $this->validate($pointer, null, [new Issue($rule)]);
-    }
-
-    /** @param list<Constraint> $constraints */
-    private function validate(string $pointer, mixed $value, array $constraints): void
-    {
-        $this->context->getValidator()->inContext($this->context)->atPath($pointer)->validate($value, $constraints);
+        $this->context->getValidator()->inContext($this->context)->atPath($pointer)->validate(null, [new Issue($rule)]);
     }
 }

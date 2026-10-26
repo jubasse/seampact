@@ -86,7 +86,7 @@ final class InputConstraintTest extends TestCase
     {
         $body = self::object([
             'code' => new Member(JsonType::String, presence: Presence::Optional, checks: new Checks(pattern: '/^[a-z]+$/u', patternScope: PatternScope::EmptyStringOnly), native: [new Regex('/^[a-z]+$/u', payload: Rule::payload(Rule::PATTERN))]),
-            'id' => new Member(JsonType::String, presence: Presence::Optional, checks: new Checks(format: Format::Uuid, formatScope: PatternScope::EmptyStringOnly), native: [new Uuid(payload: Rule::payload(Rule::FORMAT))]),
+            'id' => new Member(JsonType::String, presence: Presence::Optional, checks: new Checks(format: Format::Uuid)),
             'name' => new Member(JsonType::String, presence: Presence::Optional, native: [new Length(min: 1, payload: Rule::payload(Rule::MIN_LENGTH))]),
         ]);
 
@@ -97,9 +97,7 @@ final class InputConstraintTest extends TestCase
 
     public function testABlankStringNeverPassesAUuidUnderNativeRules(): void
     {
-        $body = self::object([
-            'id' => new Member(JsonType::String, checks: new Checks(format: Format::Uuid, formatScope: PatternScope::EmptyStringOnly), native: [new Uuid(payload: Rule::payload(Rule::FORMAT))]),
-        ]);
+        $body = self::object(['id' => new Member(JsonType::String, checks: new Checks(format: Format::Uuid))]);
 
         self::assertSame(['/body/id format'], self::issues($body, '{"id":"   "}'));
         self::assertSame(['/body/id format'], self::issues($body, '{"id":""}'));

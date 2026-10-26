@@ -6,9 +6,9 @@ namespace Seampact\Golden\TasksConsistent\Symfony\Runtime;
 
 /**
  * A member's JSON type, checked on the objects-preserved decoding without coercion: `{}` is never a list and a string
- * is never a number. An integer accepts a whole float up to 2^53 in magnitude (`1.0`); a larger one, which the decode
- * may have changed, is refused as `maximum`, or `minimum` below zero. A JSON integer that fits an `int` decodes to an
- * `int`, so a float here is `1.0` or a number beyond that range. A number beyond the float range, which decodes to
+ * is never a number. An integer accepts a whole number in the safe range of ADR 0003, up to 2^53 - 1 in magnitude,
+ * whether it decoded to an `int` or a float (`1.0`); a larger one is refused as `maximum`, or `minimum` below zero, as
+ * on the Node targets. A number beyond the float range, which decodes to
  * an infinity, is refused as `type`, as on the Node and JVM targets.
  */
 enum JsonType
@@ -20,7 +20,7 @@ enum JsonType
     case Object;
     case List;
 
-    private const LARGEST_EXACT_FLOAT_INTEGER = 9007199254740992.0;
+    private const LARGEST_SAFE_INTEGER = 9007199254740991;
 
     /** The contract rule `$value` breaks, or null when it has this type; never called with null. */
     public function issueOf(mixed $value): ?string
@@ -37,16 +37,16 @@ enum JsonType
             return Rule::TYPE;
         }
 
-        return $this === self::Integer && is_float($value) ? self::wholeFloatIssue($value) : null;
+        return $this === self::Integer && (is_int($value) || is_float($value)) ? self::integerIssue($value) : null;
     }
 
-    private static function wholeFloatIssue(float $value): ?string
+    private static function integerIssue(int|float $value): ?string
     {
-        if (floor($value) !== $value) {
+        if (is_float($value) && floor($value) !== $value) {
             return Rule::TYPE;
         }
 
-        if (abs($value) > self::LARGEST_EXACT_FLOAT_INTEGER) {
+        if (abs($value) > self::LARGEST_SAFE_INTEGER) {
             return $value < 0 ? Rule::MINIMUM : Rule::MAXIMUM;
         }
 

@@ -6,6 +6,7 @@ namespace Seampact\Symfony;
 
 use Nette\PhpGenerator\PsrPrinter;
 use Seampact\Codegen\ApiLayout;
+use Seampact\Codegen\ArtefactSwitches;
 use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -35,8 +36,6 @@ final class SymfonyGenerator implements Generator
     public const TARGET = 'symfony';
     public const PACKAGE = 'seampact/symfony';
     private const HTTP_OPERATION = 'httpOperation';
-    private const BOOT_CHECK = 'bootCheck';
-    private const ACCESS_HOOKS = 'accessHooks';
     private const RUNTIME_SOURCE_NAMESPACE = 'Seampact\\Symfony\\Runtime';
     private const RUNTIME_SOURCE_DIRECTORY = __DIR__ . '/../runtime';
 
@@ -49,7 +48,7 @@ final class SymfonyGenerator implements Generator
     {
         $refusals = new Refusals($entry->id, self::TARGET, self::PACKAGE);
         $options = TargetOptions::read(new OptionValues($entry->options, self::TARGET, TargetOptions::KEYS, $refusals), $entry->namespace);
-        self::readArtefacts($entry->artefacts, $refusals);
+        (new ArtefactSwitches(self::TARGET, SymfonyReleases::SYMFONY_2, SymfonyReleases::SYMFONY_4))->read($entry->artefacts, $refusals);
         $kept = new KeptForms($ir, $refusals, new SymfonyReleases());
         $refusals->throwIfAny();
         if ($options === null) {
@@ -90,30 +89,5 @@ final class SymfonyGenerator implements Generator
         usort($files, static fn (GeneratedFile $first, GeneratedFile $second): int => strcmp($first->path, $second->path));
 
         return $files;
-    }
-
-    // The boot check and hooks access come with symfony-2, native access (`accessHooks: false`) with symfony-4; the
-    // target declares no other artefact.
-    private static function readArtefacts(\stdClass $artefacts, Refusals $refusals): void
-    {
-        foreach (get_object_vars($artefacts) as $artefact => $value) {
-            $artefact = (string) $artefact;
-            $at = IrPlace::root()->below('artefacts', $artefact);
-            $release = match ($artefact) {
-                self::BOOT_CHECK => SymfonyReleases::SYMFONY_2,
-                self::ACCESS_HOOKS => $value === false ? SymfonyReleases::SYMFONY_4 : SymfonyReleases::SYMFONY_2,
-                default => null,
-            };
-            if ($release !== null) {
-                $refusals->waitingForRelease("artefacts.{$artefact}", "The artefact switch '{$artefact}: " . json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "'", $at, $release);
-                continue;
-            }
-            $refusals->add(
-                'artefacts.unknown',
-                "The artefact '{$artefact}' is not one the symfony target declares; it takes '" . self::BOOT_CHECK . "' and '" . self::ACCESS_HOOKS . "'.",
-                "Remove '{$artefact}' from the entry's `artefacts`.",
-                $at,
-            );
-        }
     }
 }

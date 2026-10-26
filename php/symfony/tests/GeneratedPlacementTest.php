@@ -17,6 +17,7 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\HttpKernel\DependencyInjection\RegisterControllerArgumentLocatorsPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\Validator\Validation;
 
 /** The golden tree's Symfony placement run in Symfony: its routes, its input constraint and its bundle configuration. */
@@ -133,8 +134,11 @@ final class GeneratedPlacementTest extends TestCase
             $pass->process($container);
         }
 
-        $locator = $container->getDefinition((string) $container->getDefinition('argument_resolver.service')->getArgument(0));
-        self::assertArrayHasKey(AppEndpoints::class . '::health', $locator->getArgument(0));
+        $locatorReference = $container->getDefinition('argument_resolver.service')->getArgument(0);
+        self::assertInstanceOf(Reference::class, $locatorReference);
+        $controllers = $container->getDefinition((string) $locatorReference)->getArgument(0);
+        self::assertIsArray($controllers);
+        self::assertArrayHasKey(AppEndpoints::class . '::health', $controllers);
         self::assertTrue($container->getAlias(AppEndpoints::class)->isPublic());
     }
 }
