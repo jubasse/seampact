@@ -57,9 +57,7 @@
       "generator": "Seampact\\Laravel\\LaravelGenerator"
     },
     "laravel": {
-      "providers": [
-        "Seampact\\Laravel\\SeampactCommandsProvider"
-      ]
+      "providers": ["Seampact\\Laravel\\SeampactCommandsProvider"]
     }
   },
   "config": {

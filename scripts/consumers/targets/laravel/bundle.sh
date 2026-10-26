@@ -3,7 +3,8 @@
 # `bundle.sh <binary> <out>` writes the bundle to <out>/bundle and its integrity pin to <out>/integrity; <out> is new.
 set -eu
 
-binary="$1"
+# Absolute, since the binary runs from the sources directory.
+binary="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 out="$2"
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../../../.." && pwd)
