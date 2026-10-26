@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel;
 
+use Seampact\Codegen\Delivery;
+use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\PhpTypes;
+use Seampact\Codegen\Refusals;
 use Seampact\Ir\Model\AccessUnknown;
 use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\ContractIR;
-use Seampact\Ir\Model\EnumTypeUse;
 use Seampact\Ir\Model\Enum_;
+use Seampact\Ir\Model\EnumTypeUse;
 use Seampact\Ir\Model\ErrorDecl;
 use Seampact\Ir\Model\FileTypeUse;
 use Seampact\Ir\Model\HttpMethod;
@@ -39,7 +43,7 @@ use Seampact\Ir\Model\UrlForm;
 final class KeptForms
 {
     public const FORMAT_UUID = 'uuid';
-    public const FORMAT_DATE_TIME = 'date-time';
+    public const FORMAT_DATE_TIME = PhpTypes::DATE_TIME_FORMAT;
     private const SUPPORTED_FORMATS = [self::FORMAT_UUID, self::FORMAT_DATE_TIME];
     private const WIDE_FORMATS = ['int64', 'decimal'];
     private const JSON_MEDIA = 'application/json';

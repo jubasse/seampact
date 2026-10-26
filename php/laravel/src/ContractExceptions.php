@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel;
 
+use Seampact\Codegen\DocComments;
+use Seampact\Codegen\PhpClassFile;
 use Seampact\Ir\Model\ErrorDecl;
 
 /**

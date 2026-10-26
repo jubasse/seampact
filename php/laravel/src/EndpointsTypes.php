@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel;
 
+use Seampact\Codegen\DocComments;
+use Seampact\Codegen\PhpClassFile;
+
 /**
  * The controller interface of each resource (ADR 0007 `handlers: perResource`): one method per operation, taking its
  * FormRequest, returning its result and declaring the exception of every code it lists.

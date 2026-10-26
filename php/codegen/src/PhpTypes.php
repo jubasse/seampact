@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel;
+namespace Seampact\Codegen;
 
 use Nette\PhpGenerator\Method;
 use Seampact\Ir\Model\ArrayTypeUse;
@@ -20,9 +20,10 @@ use Seampact\Ir\Model\TypeUse;
 final class PhpTypes
 {
     public const FIELD_CLASS = 'Seampact\\Hooks\\Field';
+    public const DATE_TIME_FORMAT = 'date-time';
     private const DATE_TIME_CLASS = 'DateTimeImmutable';
 
-    public function __construct(private readonly PhpLayout $layout)
+    public function __construct(private readonly TypeNames $names)
     {
     }
 
@@ -70,9 +71,9 @@ final class PhpTypes
         }
 
         $className = match (true) {
-            $type instanceof EnumTypeUse => $this->layout->enumClass($type->enum),
-            $type instanceof RefTypeUse => $this->layout->schemaClass($type->schema),
-            $type instanceof ScalarTypeUse && $type->format === KeptForms::FORMAT_DATE_TIME => self::DATE_TIME_CLASS,
+            $type instanceof EnumTypeUse => $this->names->enumClass($type->enum),
+            $type instanceof RefTypeUse => $this->names->schemaClass($type->schema),
+            $type instanceof ScalarTypeUse && $type->format === self::DATE_TIME_FORMAT => self::DATE_TIME_CLASS,
             default => null,
         };
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel;
 
+use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\Refusals;
 use Seampact\Ir\Run\GenerationRefusedException;
 
 /**
@@ -50,7 +52,7 @@ final readonly class LaravelOptions
     /** @throws GenerationRefusedException an unknown key, a missing or wrong `namespace`, or a value outside its set */
     public static function parse(\stdClass $raw, string $psr4Namespace, string $entryId): self
     {
-        $refusals = new Refusals($entryId);
+        $refusals = new Refusals($entryId, LaravelGenerator::TARGET, LaravelGenerator::PACKAGE);
         // A numeric option name decodes to an integer key; it is still a name.
         $values = [];
         foreach (get_object_vars($raw) as $key => $value) {

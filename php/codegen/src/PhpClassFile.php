@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel;
+namespace Seampact\Codegen;
 
 use Nette\PhpGenerator\PhpFile;
 use Nette\PhpGenerator\PhpNamespace;

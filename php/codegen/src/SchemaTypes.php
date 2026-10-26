@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel;
+namespace Seampact\Codegen;
 
 use Seampact\Ir\Model\Enum_;
 use Seampact\Ir\Model\ObjectSchema;
@@ -13,24 +13,28 @@ use Seampact\Ir\Naming\SplitName;
 /** The value types of the kept schemas: a `final readonly` class per object and a backed enum per enum. */
 final class SchemaTypes
 {
-    public function __construct(private readonly PhpLayout $layout, private readonly PhpTypes $types, private readonly Refusals $refusals)
+    public function __construct(private readonly TypeNames $names, private readonly PhpTypes $types, private readonly Refusals $refusals)
     {
     }
 
-    /** @return list<PhpClassFile> */
-    public function files(KeptForms $kept): array
+    /**
+     * @param array<string, Enum_> $enums
+     * @param array<string, ObjectSchema> $objects
+     * @return list<PhpClassFile>
+     */
+    public function files(array $enums, array $objects): array
     {
         $files = [];
 
-        foreach ($kept->enums as $enumId => $enum) {
-            $className = $this->layout->enumClass($enumId);
+        foreach ($enums as $enumId => $enum) {
+            $className = $this->names->enumClass($enumId);
             if ($className !== null) {
                 $files[] = $this->enumFile($className, $enumId, $enum);
             }
         }
 
-        foreach ($kept->objects as $schemaId => $schema) {
-            $className = $this->layout->schemaClass($schemaId);
+        foreach ($objects as $schemaId => $schema) {
+            $className = $this->names->schemaClass($schemaId);
             if ($className !== null) {
                 $files[] = $this->objectFile($className, $schemaId, $schema);
             }
@@ -55,7 +59,7 @@ final class SchemaTypes
                 continue;
             }
 
-            $case = PhpLayout::identifier($segments, NamingRole::EnumMember);
+            $case = PhpNames::identifier($segments, NamingRole::EnumMember);
             if (isset($cases[strtolower($case)])) {
                 $this->refusals->add('name.collision', "The enum case '{$case}' would be written for both '{$cases[strtolower($case)]}' and '{$value}' of enum '{$enumId}'.", 'Give one of the values a `codeName` in the contract.', $at);
                 continue;
@@ -78,7 +82,7 @@ final class SchemaTypes
 
         foreach ($schema->properties as $index => $property) {
             $at = IrPlace::root()->below('schemas', $schemaId, 'properties', $index);
-            $member = PhpLayout::memberIdentifier($property->name, $property->codeName);
+            $member = PhpNames::memberIdentifier($property->name, $property->codeName);
             if ($member === null) {
                 $this->refusals->inconsistent('property.no-segment', "The property '{$property->name}' yields no name segment", $at);
                 continue;

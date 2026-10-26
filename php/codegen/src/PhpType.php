@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel;
+namespace Seampact\Codegen;
 
 /** A PHP type as the generated code declares it: the native type (classes fully qualified) and its PHPDoc form. */
 final readonly class PhpType

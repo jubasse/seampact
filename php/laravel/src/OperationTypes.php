@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel;
 
+use Seampact\Codegen\DocComments;
+use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\PhpClassFile;
+use Seampact\Codegen\PhpNames;
+use Seampact\Codegen\PhpType;
+use Seampact\Codegen\PhpTypes;
+use Seampact\Codegen\Refusals;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\Response;
@@ -76,7 +83,7 @@ final class OperationTypes
         $irPart = $part === 'headers' ? 'header' : $part;
 
         foreach ($params as $index => $param) {
-            $member = PhpLayout::memberIdentifier($param->name);
+            $member = PhpNames::memberIdentifier($param->name);
             if ($member === null) {
                 $this->refusals->inconsistent('param.no-segment', "The parameter '{$param->name}' yields no name segment", $at->below('params', $irPart, $index));
                 continue;

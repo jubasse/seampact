@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6a0eca5f32b634a7f4207a232cb63586",
+    "content-hash": "aa371a8975497f34857a61b76e5accfc",
     "packages": [
         {
             "name": "nette/php-generator",
@@ -357,6 +357,51 @@
                 "source": "https://github.com/opis/uri/tree/1.1.0"
             },
             "time": "2021-05-22T15:57:08+00:00"
+        },
+        {
+            "name": "seampact/codegen",
+            "version": "dev-develop",
+            "dist": {
+                "type": "path",
+                "url": "../codegen",
+                "reference": "a0f0dbe6eac58c5d7cc148dd6fe82fe0cb56add5"
+            },
+            "require": {
+                "nette/php-generator": "~4.2.0",
+                "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
+                "seampact/ir": "self.version"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "2.2.16",
+                "phpunit/phpunit": "11.5.56"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Seampact\\Codegen\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Seampact\\Codegen\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit"
+                ],
+                "analyse": [
+                    "phpstan analyse"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "The framework-neutral PHP emitters the Seampact PHP targets share: value types with Field, enums, naming, refusals and the golden tree.",
+            "transport-options": {
+                "symlink": false,
+                "relative": true
+            }
         },
         {
             "name": "seampact/ir",
@@ -8189,14 +8234,15 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
+        "seampact/codegen": 20,
         "seampact/hooks": 20,
         "seampact/ir": 20
     },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
-        "ext-json": "*"
+        "ext-json": "*",
+        "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12"
     },
     "platform-dev": {},
     "platform-overrides": {

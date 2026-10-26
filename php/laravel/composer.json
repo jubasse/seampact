@@ -4,9 +4,10 @@
   "type": "library",
   "license": "MIT",
   "require": {
-    "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
     "ext-json": "*",
+    "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
     "nette/php-generator": "~4.2.0",
+    "seampact/codegen": "self.version",
     "seampact/ir": "self.version"
   },
   "require-dev": {
@@ -16,6 +17,13 @@
     "seampact/hooks": "self.version"
   },
   "repositories": [
+    {
+      "type": "path",
+      "url": "../codegen",
+      "options": {
+        "symlink": false
+      }
+    },
     {
       "type": "path",
       "url": "../ir",

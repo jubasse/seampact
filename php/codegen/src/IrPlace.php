@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel;
+namespace Seampact\Codegen;
 
 /** A place in the IR, or in the target entry for an option: its JSON Pointer and the operation it is in. */
 final readonly class IrPlace

@@ -1,0 +1,44 @@
+{
+  "name": "seampact/codegen",
+  "description": "The framework-neutral PHP emitters the Seampact PHP targets share: value types with Field, enums, naming, refusals and the golden tree.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
+    "nette/php-generator": "~4.2.0",
+    "seampact/ir": "self.version"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "2.2.16",
+    "phpunit/phpunit": "11.5.56"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../ir",
+      "options": {
+        "symlink": false
+      }
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Seampact\\Codegen\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Seampact\\Codegen\\Tests\\": "tests/"
+    }
+  },
+  "config": {
+    "platform": {
+      "php": "8.3.36"
+    },
+    "sort-packages": true
+  },
+  "scripts": {
+    "test": "phpunit",
+    "analyse": "phpstan analyse"
+  }
+}

@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel;
 
+use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\PhpClassFile;
+use Seampact\Codegen\PhpNames;
+use Seampact\Codegen\Refusals;
+use Seampact\Codegen\TypeNames;
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Model\Name;
 use Seampact\Ir\Model\Operation;
-use Seampact\Ir\Naming\Identifier;
-use Seampact\Ir\Naming\IrName;
 use Seampact\Ir\Naming\NameSource;
 use Seampact\Ir\Naming\NamingRole;
 use Seampact\Ir\Naming\SplitName;
@@ -19,7 +22,7 @@ use Seampact\Ir\Naming\SplitName;
  * placement under `<namespace>\Laravel` and the copied runtime under `<namespace>\Laravel\Runtime`, so a declared
  * schema and a placement class never share a namespace. Two classes taking one name are refused by name.
  */
-final class PhpLayout
+final class PhpLayout implements TypeNames
 {
     public readonly string $schemasNamespace;
     public readonly string $laravelNamespace;
@@ -46,7 +49,7 @@ final class PhpLayout
         $this->schemasNamespace = "{$namespace}\\Schemas";
         $this->laravelNamespace = "{$namespace}\\Laravel";
         $this->runtimeNamespace = "{$namespace}\\Laravel\\Runtime";
-        $this->apiTypeName = self::identifier($ir->api->name->segments, NamingRole::Schema);
+        $this->apiTypeName = PhpNames::identifier($ir->api->name->segments, NamingRole::Schema);
         $apiAt = IrPlace::root()->below('api', 'name');
         $this->contractException = $this->claim("{$namespace}\\{$this->apiTypeName}ContractException", "the api's contract exception base", $apiAt);
         $this->routeTable = $this->claim("{$this->laravelNamespace}\\{$this->apiTypeName}Routes", "the api's route table", $apiAt);
@@ -74,8 +77,8 @@ final class PhpLayout
                 $refusals->inconsistent('error.code.no-segment', "The error code '{$code}' yields no name segment", $at);
                 continue;
             }
-            $this->errorClasses[$code] = $this->claim($namespace . '\\' . self::identifier($segments, NamingRole::Error), "the exception of error '{$code}'", $at);
-            $this->errorFactories[$code] = self::identifier($segments, NamingRole::Member);
+            $this->errorClasses[$code] = $this->claim($namespace . '\\' . PhpNames::identifier($segments, NamingRole::Error), "the exception of error '{$code}'", $at);
+            $this->errorFactories[$code] = PhpNames::identifier($segments, NamingRole::Member);
         }
 
         $endpointsClaimed = [];
@@ -94,20 +97,6 @@ final class PhpLayout
                 $this->claim($names->endpoints, 'the endpoints interface ' . PhpClassFile::shortNameOf($names->endpoints), $at->below('name'));
             }
         }
-    }
-
-    /** @param list<string> $segments */
-    public static function identifier(array $segments, NamingRole $role, ?int $status = null): string
-    {
-        return Identifier::of(new IrName($segments, $role, $status));
-    }
-
-    /** The member identifier of a wire name, or of its `codeName` when it has one; null when it yields no segment. */
-    public static function memberIdentifier(string $wireName, ?Name $codeName = null): ?string
-    {
-        $segments = $codeName->segments ?? SplitName::segmentsOf($wireName, NameSource::Name);
-
-        return $segments === null || $segments === [] ? null : self::identifier($segments, NamingRole::Member);
     }
 
     public function schemaClass(string $schemaId): ?string
@@ -144,27 +133,27 @@ final class PhpLayout
     private function operationNamesOf(Operation $operation, array $owner, IrPlace $at): OperationNames
     {
         $segments = $operation->name->segments;
-        $inRoot = fn (NamingRole $role): string => $this->claim($this->namespace . '\\' . self::identifier($segments, $role), "a type of operation '{$operation->id}'", $at);
+        $inRoot = fn (NamingRole $role): string => $this->claim($this->namespace . '\\' . PhpNames::identifier($segments, $role), "a type of operation '{$operation->id}'", $at);
 
         $responses = [];
         foreach ($operation->responses as $response) {
             $responses[$response->status] = $this->claim(
-                $this->namespace . '\\' . self::identifier($segments, NamingRole::Response, $response->status),
+                $this->namespace . '\\' . PhpNames::identifier($segments, NamingRole::Response, $response->status),
                 "the {$response->status} result of operation '{$operation->id}'",
                 $at,
             );
         }
 
         return new OperationNames(
-            method: self::identifier($segments, NamingRole::Operation),
+            method: PhpNames::identifier($segments, NamingRole::Operation),
             input: $inRoot(NamingRole::Input),
             path: $inRoot(NamingRole::Path),
             query: $inRoot(NamingRole::Query),
             headers: $inRoot(NamingRole::Headers),
-            result: $this->claim($this->namespace . '\\' . self::identifier([...$segments, 'result'], NamingRole::Schema), "a type of operation '{$operation->id}'", $at),
+            result: $this->claim($this->namespace . '\\' . PhpNames::identifier([...$segments, 'result'], NamingRole::Schema), "a type of operation '{$operation->id}'", $at),
             errors: $inRoot(NamingRole::Errors),
-            request: $this->claim($this->laravelNamespace . '\\' . self::identifier([...$segments, 'request'], NamingRole::Schema), "the FormRequest of operation '{$operation->id}'", $at),
-            endpoints: $this->namespace . '\\' . self::identifier($owner, NamingRole::Endpoints),
+            request: $this->claim($this->laravelNamespace . '\\' . PhpNames::identifier([...$segments, 'request'], NamingRole::Schema), "the FormRequest of operation '{$operation->id}'", $at),
+            endpoints: $this->namespace . '\\' . PhpNames::identifier($owner, NamingRole::Endpoints),
             responses: $responses,
         );
     }
@@ -196,7 +185,7 @@ final class PhpLayout
         }
 
         try {
-            return self::identifier($name->segments, $role, $name->status);
+            return PhpNames::identifier($name->segments, $role, $name->status);
         } catch (\InvalidArgumentException $error) {
             $this->refusals->inconsistent('name.invalid', "The name is not one ADR 0007 builds an identifier from ({$error->getMessage()})", $at);
 

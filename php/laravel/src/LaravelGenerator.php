@@ -5,6 +5,12 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\PsrPrinter;
+use Seampact\Codegen\Delivery;
+use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\PhpClassFile;
+use Seampact\Codegen\PhpTypes;
+use Seampact\Codegen\Refusals;
+use Seampact\Codegen\SchemaTypes;
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Model\IrModelVersion;
 use Seampact\Ir\Read\IrSupport;
@@ -19,6 +25,8 @@ use Seampact\Ir\Write\GeneratedFile;
  */
 final class LaravelGenerator implements Generator
 {
+    public const TARGET = 'laravel';
+    public const PACKAGE = 'seampact/laravel';
     private const HTTP_OPERATION = 'httpOperation';
 
     public function irSupport(): IrSupport
@@ -29,7 +37,7 @@ final class LaravelGenerator implements Generator
     public function generate(ContractIR $ir, TargetEntry $entry): array
     {
         $options = LaravelOptions::parse($entry->options, $entry->namespace, $entry->id);
-        $refusals = new Refusals($entry->id);
+        $refusals = new Refusals($entry->id, self::TARGET, self::PACKAGE);
 
         foreach (array_keys(get_object_vars($entry->artefacts)) as $artefact) {
             $refusals->waiting('artefacts.' . $artefact, "The artefact switch '{$artefact}'", IrPlace::root()->below('artefacts', $artefact), Delivery::LaterRelease);
@@ -45,7 +53,7 @@ final class LaravelGenerator implements Generator
         $routes = new RouteTable($layout, $options, $refusals);
 
         $classFiles = [
-            ...(new SchemaTypes($layout, $types, $refusals))->files($kept),
+            ...(new SchemaTypes($layout, $types, $refusals))->files($kept->enums, $kept->objects),
             ...(new ContractExceptions($layout, $operationTypes))->files($kept),
             ...(new EndpointsTypes($layout))->files($kept),
         ];

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\Literal;
+use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\PhpClassFile;
+use Seampact\Codegen\Refusals;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Write\GeneratedFile;
 
