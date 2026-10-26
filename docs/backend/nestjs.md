@@ -48,6 +48,10 @@ export class NotesController implements NotesNest.NotesEndpoints {
 
 `listNotes` returns every note; a real app reads `input.query.cursor` to page through them.
 
+A service can also throw. `throw new NotFoundException()` answers the operation's 404 code, when it declares one. For any declared code, throw `new NotesNest.ContractException(code, params)`: it is typed with the api's codes and their params.
+
+Keep `@Controller()` without a path, and do not add `@HttpCode` or `@Header` to a contract method: the contract sets the paths, statuses and headers, and the app refuses to start otherwise.
+
 Types come from `types/notes`. Decorators and handlers come from `server/notes`.
 
 Create `src/app-module.ts`. A public api needs no hooks.
@@ -101,7 +105,7 @@ app.set("trust proxy", ["loopback", "10.0.0.0/8"]);
 
 The client address your hooks get is Express's `req.ip`, so it follows this setting.
 
-The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. With `setGlobalPrefix`, exclude the contract routes: a contract route under the prefix answers a 500 and logs why.
+The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. With `setGlobalPrefix`, exclude the contract routes: the app refuses to start when a contract route is under the prefix. The same goes for a `RouterModule` path on the controller's module.
 
 Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
 
@@ -114,6 +118,16 @@ Every server target takes four options: `bodyValidation` (check request bodies, 
 The NestJS target also takes `reply`. With `handler` (the default), seampact writes the reply when your handler returns. With `interceptor`, your global interceptors (`app.useGlobalInterceptors(...)` or `APP_INTERCEPTOR`) map the result first, and seampact checks the mapped value against the contract.
 
 Pass `{ logger }` as the second argument of `forRoot` to send seampact's warnings to your logger: `TasksNest.SeampactModule.forRoot(tasksHooks(), { logger })`. It needs `warn` and `error` functions.
+
+When your hooks need providers, build them with `forRootAsync`. In a test, replace them with `overrideProvider(TasksNest.SEAMPACT_HOOKS).useValue(testHooks)`.
+
+```ts
+TasksNest.SeampactModule.forRootAsync({
+  imports: [UsersModule],
+  inject: [UsersService],
+  useFactory: (users: UsersService) => tasksHooks(users),
+});
+```
 
 Install `@nestjs/platform-express` (the Fastify platform is refused at boot), `reflect-metadata` and `rxjs`, and set `experimentalDecorators` in `tsconfig.json`. Import the generated module with your hooks, start the app with `rawBody: true` so signed routes see the bytes that were signed, and register `preRoutingFilter`. Without the filter, malformed JSON and unknown routes under the api's prefix answer with NestJS's own error body instead of the contract's format.
 
