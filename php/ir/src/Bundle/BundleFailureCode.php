@@ -35,4 +35,16 @@ enum BundleFailureCode: string
     case ArchiveEntryPath = 'bundle.archive-entry-path';
     case ArchiveEntryType = 'bundle.archive-entry-type';
     case ArchiveEntryDuplicate = 'bundle.archive-entry-duplicate';
+
+    // The channel codes of the Node runner's `fetch-failure.ts` and the JVM fetcher.
+    case ReleaseUrl = 'bundle.release-url';
+    case ReleaseFailed = 'bundle.release-failed';
+    case GitUrl = 'bundle.git-url';
+    case GitTag = 'bundle.git-tag';
+    case GitDirectory = 'bundle.git-directory';
+    case GitFailed = 'bundle.git-failed';
+    case SourceLocal = 'bundle.source-local';
+    case CacheInvalid = 'bundle.cache-invalid';
+    case PackageUnsupported = 'bundle.package-unsupported';
+    case MavenJvmOnly = 'bundle.maven-jvm-only';
 }
