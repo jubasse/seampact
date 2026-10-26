@@ -94,6 +94,8 @@ The reply handler writes every contract reply:
 - with `setStatus`, `setHeader` and the output stream, its body serialized by the boundary's own Jackson 3 `JsonMapper`, never the app's `HttpMessageConverter`s or mapper bean;
 - one path for a 2xx among several, the derived 304 with the boundary's strong ETag, an idempotent replay and every contract error.
 
+An item, table or list body goes out in its format's success envelope (ADR 0002 section 13), `{ data: $payload }` under `pack:laravel`, the payload itself under a bare format, as the Node and PHP targets write it; the ETag is the enveloped body's. Generation refuses an envelope that does not write `$payload` under named members (`format.success.envelope.unsupported`), a slot beside the payload, the status and the path (`format.success.slot.unsupported`), a success format header (`format.success.headers.unsupported`) and the format's meta members (`format.meta.unsupported`).
+
 Content negotiation is not consulted. A client's `Accept` changes nothing that the contract does not say.
 
 The value goes through the same handler after an asynchronous dispatch, since Spring hands the dispatch's concurrent result to the same list (spike).
@@ -171,6 +173,7 @@ Step 6 decodes path, query, headers and the held body to a Jackson 3 `JsonNode` 
    - `pattern` as an ECMA-262 search, where `@Pattern` matches the whole string;
    - `format`;
    - `multipleOf`.
+   An opaque value takes any JSON, but a number past the range of a double anywhere inside it is a `type` issue, as on the PHP targets.
    Each issue carries its `{ in, pointer, rule }` from the tree, and the issues are bounded by `MAX_RENDERED_ISSUES = 100`.
 2. **The boundary's own `JsonMapper` binds** the tree to the input record. After the structural pass the binding cannot fail; a failure is a 500.
 
@@ -307,7 +310,7 @@ The boundary runtime is copied into `spring.runtime` with the generated header, 
 
 | Waits for | What |
 |---|---|
-| a consumer that needs them | form, multipart, download and redirect bodies (ADR 0012 bodies table, a multipart body counted on the raw stream as it arrives), refused by name as on every Node target: the reference contract carries none |
+| a consumer that needs them | form, multipart, download and redirect bodies (ADR 0012 bodies table, a multipart body counted on the raw stream as it arrives), refused by name as on every Node target: the reference contract carries none; a sort key a right restricts (`paging.sortKey.right.unsupported`), as on the PHP targets |
 | after 1.0 | Spring Boot 3.x (refused, not waiting); WebFlux; servlet containers other than Tomcat, which Boot 4 also supports (Jetty) but no consumer proves; asynchronous handler signatures; `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs |
 
 ### The consumer and the proof
