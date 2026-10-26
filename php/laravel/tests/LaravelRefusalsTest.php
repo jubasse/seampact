@@ -145,14 +145,14 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString('it waits for an app that needs it', $refused['artefacts.bootCheck.hooks.warn.unsupported'] ?? '');
     }
 
-    public function testEachRefusalOfTheFullReferenceNamesTheReleaseThatBringsIt(): void
+    public function testTheFullReferenceIsServedAndNativeAccessWaitsForAConsumer(): void
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => false]);
 
         self::assertArrayNotHasKey('deadline.unsupported', $refused);
         self::assertArrayNotHasKey('cache.unsupported', $refused);
         self::assertArrayNotHasKey('access.signed.unsupported', $refused);
-        self::assertStringContainsString('laravel-4 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');
+        self::assertStringContainsString('it waits for an app that needs it', $refused['artefacts.accessHooks.unsupported'] ?? '');
     }
 
     /**

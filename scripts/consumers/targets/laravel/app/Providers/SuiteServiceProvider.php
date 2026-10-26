@@ -53,10 +53,16 @@ final class SuiteServiceProvider extends ServiceProvider
     private const APP_DEBUG_VARIABLE = 'SEAMPACT_SUITE_APP_DEBUG';
     private const CONTROL_STATE_FILE = 'suite-control.json';
     private const CREDENTIALS_FILE = 'credentials.json';
+    // Sanctum's guard reads the `web` session guard first; the app has no database, so its sessions live in memory.
+    private const SESSION_DRIVER = 'array';
+    // The web group's cookie encryption, which Sanctum's CSRF cookie route runs, needs a key; this one guards nothing.
+    private const SUITE_APP_KEY = 'base64:c3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3M=';
 
     public function register(): void
     {
         SuiteFiles::configure(storage_path(self::CONTROL_STATE_FILE), base_path(self::CREDENTIALS_FILE));
+        $this->app->make('config')->set('session.driver', self::SESSION_DRIVER);
+        $this->app->make('config')->set('app.key', self::SUITE_APP_KEY);
 
         $responses = getenv(self::RESPONSES_VARIABLE);
         if (is_string($responses) && $responses !== '') {

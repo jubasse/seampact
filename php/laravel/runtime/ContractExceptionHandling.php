@@ -14,8 +14,8 @@ use Seampact\Codegen\Runtime\ContractRefusal;
 /**
  * What the api asks of Laravel's exception handler: a contract refusal and a replayed reply are answers, never reported, and an
  * `AuthenticationException` on a contract route renders a bare 401, which the boundary maps to `unauthenticated`,
- * where Laravel would redirect a browser `Accept` to `login`, or answer 500 when no such route exists. A handler
- * other than Laravel's own, without these methods, is left as is.
+ * where Laravel would redirect a browser `Accept` to `login`, or answer 500 when no such route exists. The boot check
+ * refuses a handler without `renderable`.
  */
 final class ContractExceptionHandling
 {

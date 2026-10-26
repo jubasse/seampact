@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel\Runtime;
 
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Foundation\Exceptions\Handler as FoundationHandler;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
@@ -44,6 +46,7 @@ final class BootCheck
         $problems = [
             ...($switches[self::HOOKS] ? self::hooks($app, $contract) : []),
             ...self::middleware($app, $boundaryClass, $accessClass),
+            ...self::exceptionHandler($app),
             ...self::routes($app, $contract, $accessClass, $switches),
             ...self::platform(),
             ...self::publicOrigin($app, $contract),
@@ -87,6 +90,17 @@ final class BootCheck
         }
 
         return $problems;
+    }
+
+    /** @return list<string> */
+    private static function exceptionHandler(Application $app): array
+    {
+        $handler = $app->make(ExceptionHandler::class);
+        if (method_exists($handler, 'renderable')) {
+            return [];
+        }
+
+        return ['the exception handler ' . $handler::class . " has no 'renderable' method, so an AuthenticationException on a contract route cannot answer the api's 401: extend " . FoundationHandler::class];
     }
 
     /**

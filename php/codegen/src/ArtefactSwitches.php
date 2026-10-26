@@ -7,7 +7,7 @@ namespace Seampact\Codegen;
 /**
  * The artefact switches a PHP framework target reads (ADR 0023 and 0024 "Refused by name or waiting"): `bootCheck`
  * and `accessHooks: true` come with the target's boundary release, `accessHooks: false` with its native access
- * release; any other key is refused as unknown. Once the boundary release is out, only `bootCheck.hooks: warn` waits.
+ * release or, on a target that names none, waits for a consumer; any other key is refused as unknown. Once the boundary release is out, only `bootCheck.hooks: warn` waits.
  */
 final readonly class ArtefactSwitches
 {
@@ -18,9 +18,10 @@ final readonly class ArtefactSwitches
     /**
      * @param ?string $boundaryRelease the release that brings the boot check and hooks access, such as 'symfony-2';
      *     null once the target generates them
-     * @param string $nativeAccessRelease the release that brings native access, such as 'symfony-4'
+     * @param string|Delivery $nativeAccessRelease the release that brings native access, such as 'symfony-4', or why
+     *     it waits when no release brings it
      */
-    public function __construct(private string $target, private ?string $boundaryRelease, private string $nativeAccessRelease)
+    public function __construct(private string $target, private ?string $boundaryRelease, private string|Delivery $nativeAccessRelease)
     {
     }
 
@@ -45,8 +46,15 @@ final readonly class ArtefactSwitches
     private function readKnown(string $artefact, mixed $value, IrPlace $at, Refusals $refusals): void
     {
         $release = $artefact === self::ACCESS_HOOKS && $value === false ? $this->nativeAccessRelease : $this->boundaryRelease;
+        $switch = "The artefact switch '{$artefact}: " . json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "'";
+        if ($release instanceof Delivery) {
+            $refusals->waiting("artefacts.{$artefact}", $switch, $at, $release);
+
+            return;
+        }
+
         if ($release !== null) {
-            $refusals->waitingForRelease("artefacts.{$artefact}", "The artefact switch '{$artefact}: " . json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "'", $at, $release);
+            $refusals->waitingForRelease("artefacts.{$artefact}", $switch, $at, $release);
 
             return;
         }

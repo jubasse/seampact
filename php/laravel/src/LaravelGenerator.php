@@ -9,6 +9,7 @@ use Seampact\Codegen\ContractClass;
 use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\ArtefactSwitches;
 use Seampact\Codegen\BootCheckSwitches;
+use Seampact\Codegen\Delivery;
 use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -56,7 +57,7 @@ final class LaravelGenerator implements Generator
         $options = LaravelOptions::parse($entry->options, $entry->namespace, $entry->id);
         $refusals = new Refusals($entry->id, self::TARGET, self::PACKAGE);
 
-        (new ArtefactSwitches(self::TARGET, null, LaravelReleases::LARAVEL_4))->read($entry->artefacts, $refusals);
+        (new ArtefactSwitches(self::TARGET, null, Delivery::Consumer))->read($entry->artefacts, $refusals);
 
         $kept = new KeptForms($ir, $refusals, new LaravelReleases());
         $refusals->throwIfAny();
@@ -105,6 +106,7 @@ final class LaravelGenerator implements Generator
             $classFiles,
         );
 
+        $files[] = $routes->configFile();
         $routesFile = $routes->routesFile();
         if ($routesFile !== null) {
             $files[] = $routesFile;

@@ -155,6 +155,8 @@ const ABOVE_BATCH_LIMIT_BYTES = 3_000_000;
 const GATE_DENIED_TOKEN = "seampact-gate-denied";
 // The token it answers with Laravel's AuthenticationException (UserHook::GUARD_DENIED_TOKEN).
 const GUARD_DENIED_TOKEN = "seampact-guard-denied";
+// The header the sample app's NativeLayers middleware reads (NativeLayers::HEADER).
+const NATIVE_LAYER_HEADER = "x-suite-native-layer";
 
 async function problemCode(response: Response): Promise<unknown> {
   const body: unknown = await response.json();
@@ -253,6 +255,70 @@ describe("an AuthenticationException in an authenticate hook", () => {
       expect(await problemCode(response)).toBe("api.unauthenticated");
     });
   }
+});
+
+// The sample app puts its NativeLayers middleware on the tasks api's identity routes only
+// (`seampact.tasks.middleware.identity`); a header picks the layer it runs. The caller signs in with the session
+// cookie, so Sanctum's guard reads no bearer token and needs no database.
+describe("Laravel's native layers on identity routes", () => {
+  let running: RunningApp | undefined;
+
+  beforeAll(async () => {
+    running = await startLaravelApp(app);
+    await fetch(`${running?.baseUrl}/__seampact/script`, { method: "PUT", body: "{}" });
+  }, SUITE_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await running?.close();
+  });
+
+  function signedIn(path: string, layer: string, accept = "application/json"): Promise<Response> {
+    return fetch(`${running?.baseUrl}${path}`, {
+      headers: {
+        cookie: `__Host-session=${credentials.userToken}`,
+        [NATIVE_LAYER_HEADER]: layer,
+        accept,
+      },
+      redirect: "manual",
+    });
+  }
+
+  test("auth:sanctum without a login route answers the unauthenticated role to a browser", async () => {
+    const response = await signedIn(TASK_PATH, "sanctum", "text/html");
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("content-type")).toContain(PROBLEM_JSON);
+    expect(await problemCode(response)).toBe("api.unauthenticated");
+  });
+
+  test("abort(401) from an app middleware answers the unauthenticated role", async () => {
+    const response = await signedIn(TASK_PATH, "abort-401");
+
+    expect(response.status).toBe(401);
+    expect(await problemCode(response)).toBe("api.unauthenticated");
+  });
+
+  // getTask declares no 403, so the reply is the api's 500; the log names the role the abort took.
+  test("abort(403) from an app middleware takes the forbidden role", async () => {
+    await signedIn(TASK_PATH, "abort-403");
+
+    const logged = await fetch(`${running?.baseUrl}/__seampact/log-lines`);
+    const { lines } = (await logged.json()) as { lines: string[] };
+
+    expect(lines.some((line) => line.includes("the role 'forbidden'"))).toBe(true);
+  });
+
+  test("a public route does not carry the identity routes' middleware", async () => {
+    const response = await signedIn("/v1/health", "abort-403");
+
+    expect(response.status).toBe(200);
+  });
+
+  test("Sanctum's CSRF cookie route is served beside the contract routes", async () => {
+    const response = await fetch(`${running?.baseUrl}/sanctum/csrf-cookie`);
+
+    expect(response.status).toBe(204);
+  });
 });
 
 describe("a missing hook under responses: warn", () => {

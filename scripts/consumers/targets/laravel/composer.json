@@ -8,6 +8,7 @@
     "ext-json": "*",
     "ext-zlib": "*",
     "laravel/framework": "~13.38.0",
+    "laravel/sanctum": "^4.3",
     "seampact/consumer-suite": "dev-develop",
     "seampact/hooks": "dev-develop",
     "seampact/laravel": "dev-develop",

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use Seampact\Golden\Tasks\AppEndpoints;
 use Seampact\Golden\Tasks\ChannelsEndpoints;
 use Seampact\Golden\Tasks\DraftsEndpoints;
+use Seampact\Golden\Tasks\Laravel\Runtime\KindMiddleware;
 use Seampact\Golden\Tasks\TasksEndpoints;
 
 /**
@@ -23,6 +24,7 @@ final class TasksRoutes
         'body_validation' => false,
         'framework_etag' => 'strip',
         'catch_all' => true,
+        'middleware' => ['public' => [], 'optional' => [], 'identity' => [], 'signed' => []],
     ];
 
     /** @var list<array{operation: string, method: string, uri: string, name: string, access: string, signed?: true, action: array{class-string, string}}> */
@@ -70,12 +72,12 @@ final class TasksRoutes
     ];
 
     /**
-     * Registers every contract route, in order, inside the caller's route group, each behind the access middleware.
+     * Registers every contract route, in order, inside the caller's route group, each behind the access middleware and the app's list for its access kind.
      */
     public static function register(): void
     {
         foreach (self::ROUTES as $route) {
-            Route::match([$route['method']], $route['uri'], $route['action'])->name($route['name'])->middleware(TasksAccessMiddleware::class);
+            Route::match([$route['method']], $route['uri'], $route['action'])->name($route['name'])->middleware([TasksAccessMiddleware::class, ...KindMiddleware::of(self::API, $route['access'])]);
         }
     }
 }
