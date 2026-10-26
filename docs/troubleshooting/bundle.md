@@ -8,12 +8,17 @@ A bundle is a contract packed to share. See [Sharing a contract](../features/sha
 |---|---|
 | `bundle.integrity-mismatch`, `bundle.pin-missing`, `bundle.pin-mismatch` | The bundle is not the one you pinned. Pin the `integrity` the publisher printed, or ask the publisher whether the release changed. |
 | `bundle.manifest-*`, `bundle.file-*`, `bundle.too-*`, `bundle.ir-*` | The bundle is damaged or was written by another seampact version. Download it again. If it still fails, rebuild it with `seampact bundle`. |
+| `bundle.cache-invalid` | The cached copy changed after it was saved. Remove the folder the message names, then run again. |
+| `bundle.package-unsupported` | PHP: `package` sources are not read yet. Use the same bundle as a `release` or `git` source. |
 | `bundle.maven-jvm-only` | The npm CLI does not read `maven` sources. Run `generate` and `check` with the Gradle or Maven plugin, or use a `package`, `release` or `git` source. |
 
 ## Downloading it
 
 | You see | Do |
 |---|---|
+| `bundle.release-url`, `bundle.release-failed` | The `release` URL must be `https`. Check that it answers with the archive. |
+| `bundle.git-url`, `bundle.git-tag`, `bundle.git-directory`, `bundle.git-failed` | Check the `git` URL, the tag and the folder. The tag must exist. |
+| `bundle.source-local` | Local sources are refused. Use a remote `git` URL or a `release`. |
 | `bundle.archive-*` | The archive is malformed or too large. Download it again from the release. |
 
 ## Publishing it (`seampact bundle`)
