@@ -141,9 +141,12 @@ final class Replies
             throw new \LogicException("seampact: the handler of operation '{$state->operationId}' answered its page with " . get_debug_type($page) . ', not its generated page.');
         }
 
-        $facts = [];
-        foreach (get_object_vars($page) as $name => $value) {
-            $facts[(string) $name] = $value;
+        $facts = $state->pageReader?->factsOf($page);
+        if ($facts === null) {
+            $facts = [];
+            foreach (get_object_vars($page) as $name => $value) {
+                $facts[(string) $name] = $value;
+            }
         }
         $items = FieldRights::output($state, $declared, WireCodec::encodeBody($state->contract, $declared, $facts['items'] ?? []));
         [$body, $headers] = PageReply::render($state, RawTarget::query($request), RawTarget::path($request), is_array($items) ? array_values($items) : [], $facts, $status);

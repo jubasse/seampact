@@ -36,6 +36,8 @@ final class BoundaryState
     public ?string $rawBody = null;
     /** The origin the api's URLs start with under absolute URLs (`PublicOrigin`), null under relative ones. */
     public ?string $publicOrigin = null;
+    /** Reads a framework page class a handler answers under a pack's paging style; null when the target has none. */
+    public ?PageReader $pageReader = null;
     /** @var \WeakMap<Response, array{int, string, ?string}> */
     private \WeakMap $authored;
 

@@ -67,6 +67,7 @@ abstract class BoundaryMiddleware
 
         $state = new BoundaryState($contract, $operationId, $match->rawParameters, RawTarget::view($request), $this->hooks());
         $state->publicOrigin = PublicOrigin::of($contract, $this->setting($contract, null, self::PUBLIC_ORIGIN));
+        $state->pageReader = new PaginatorPages();
         $request->attributes->set(BoundaryState::attributeName($contract->api), $state);
 
         try {

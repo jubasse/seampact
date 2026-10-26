@@ -40,6 +40,12 @@ final class LaravelGenerator implements Generator
     // Laravel's exception handler does not report a declared error a handler throws.
     private const SHOULDNT_REPORT = 'Illuminate\\Contracts\\Debug\\ShouldntReport';
     private const HOOK_REGISTRATION = 'bind it in the container';
+    private const LARAVEL_PACK_LAYER = 'pack:@seampact/pack-laravel';
+    // The paging styles of `@seampact/pack-laravel` whose handler answers Laravel's paginator (ADR 0023 "Paging").
+    private const PACK_PAGINATORS = [
+        'laravelPages' => 'Illuminate\\Contracts\\Pagination\\LengthAwarePaginator',
+        'laravelCursor' => 'Illuminate\\Contracts\\Pagination\\CursorPaginator',
+    ];
 
     public function irSupport(): IrSupport
     {
@@ -58,7 +64,7 @@ final class LaravelGenerator implements Generator
 
         $layout = new PhpLayout($ir, $options->namespace, $kept, $refusals);
         $types = new PhpTypes($layout);
-        $operationTypes = new OperationTypes($layout->api, $types, $refusals);
+        $operationTypes = new OperationTypes($layout->api, $types, $refusals, self::nativePageClasses($ir));
         $formRequests = new FormRequests($layout, $options->rules, $refusals);
         $routes = new RouteTable($layout, $options, $refusals);
         $replies = new LaravelReplies($layout, $operationTypes);
@@ -109,6 +115,23 @@ final class LaravelGenerator implements Generator
         usort($files, static fn (GeneratedFile $first, GeneratedFile $second): int => strcmp($first->path, $second->path));
 
         return $files;
+    }
+
+    /**
+     * The Laravel paginator a handler answers under each paging style of `@seampact/pack-laravel` the IR holds.
+     *
+     * @return array<string, string>
+     */
+    private static function nativePageClasses(ContractIR $ir): array
+    {
+        $classes = [];
+        foreach (self::PACK_PAGINATORS as $styleId => $paginator) {
+            if (($ir->pagings[$styleId]->origin->layer ?? null) === self::LARAVEL_PACK_LAYER) {
+                $classes[$styleId] = $paginator;
+            }
+        }
+
+        return $classes;
     }
 
     // The boundary does not ask a right for a sort key yet (ADR 0012 step 7), as on the Spring target.
