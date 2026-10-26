@@ -27,7 +27,6 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
     private static final String PAGE_SHAPE = "page";
     private static final String ITEM_SHAPE = "item";
     private static final String EMPTY_SHAPE = "empty";
-    private static final int NO_CONTENT = 204;
 
     private final SeampactBoundary boundary;
 
@@ -74,7 +73,7 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
         JsonNode response = exchange.route().response(status);
         CheckingResponse checking = exchange.response;
 
-        // A null item is the format's null, as on the PHP and Node targets: its schema decides whether it may be null.
+        // A null item is the format's null: its schema decides whether it may be null; PHP refuses a non-nullable opaque null on write, whatever the body check says.
         if (hasBody(response, status)) {
             String shape = response.path("shape").asString();
             if (bodyValue == null && !ITEM_SHAPE.equals(shape)) {
@@ -131,7 +130,7 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
     }
 
     private static boolean hasBody(JsonNode response, int status) {
-        return status != NO_CONTENT && !EMPTY_SHAPE.equals(response.path("shape").asString());
+        return !EMPTY_SHAPE.equals(response.path("shape").asString());
     }
 
     // The success body against its schema when the api checks bodies; a list's, a table's and a page's every item.

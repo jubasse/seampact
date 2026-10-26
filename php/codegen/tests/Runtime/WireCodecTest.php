@@ -36,4 +36,20 @@ final class WireCodecTest extends TestCase
         self::assertSame([1, null], WireCodec::encode($contract, ['kind' => 'array', 'items' => self::OPAQUE + ['nullable' => true]], [1, null]));
         self::assertSame([null], WireCodec::encode($contract, self::OPAQUE, [null]));
     }
+
+    public function testAnObjectMemberTakesNullOnlyWhereItsOpaqueTypeIsNullable(): void
+    {
+        $contract = ApiContract::of(OpaqueMembersContract::class);
+        $event = ['kind' => 'ref', 'schema' => 'event'];
+
+        $written = WireCodec::encode($contract, $event, new OpaqueMembersEvent(null, ['a' => 1]));
+
+        self::assertInstanceOf(\stdClass::class, $written);
+        self::assertNull($written->payload);
+        self::assertSame(['a' => 1], $written->meta);
+
+        $this->expectException(BoundaryFailure::class);
+
+        WireCodec::encode($contract, $event, new OpaqueMembersEvent(1, null));
+    }
 }
