@@ -92,6 +92,19 @@ interface ReferenceAppModule {
   bootWithRequestScopedInterceptor(): Promise<void>;
   bootWithLateGlobalInterceptor(): Promise<void>;
   bootWithModuleOptions(moduleOptions: unknown): Promise<void>;
+  bootWithControllerPrefix(): Promise<void>;
+  bootWithGlobalPrefix(prefix: string, exclude?: readonly string[]): Promise<void>;
+  bootWithRouterModulePrefix(): Promise<void>;
+  bootWithReplyDecorators(): Promise<void>;
+  startAsyncHooksApp(): Promise<{
+    host: string;
+    port: number;
+    registeredHooks: unknown;
+    close(): Promise<void>;
+  }>;
+  readonly NotFoundException: new () => Error;
+  readonly ConflictException: new () => Error;
+  readonly ContractException: new (code: string, params?: unknown) => Error;
 }
 
 describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
@@ -534,22 +547,19 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       expect(served.status).toBe(reply === "handler" ? 200 : 500);
     });
 
-    test.runIf(reply === "interceptor")(
-      "an interceptor answering without next.handle() gets 500 in the interceptor mode",
-      async () => {
-        const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    test("an interceptor answering without next.handle() gets 500 with a log", async () => {
+      const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-        app.scenario.interceptor.answer = { status: 200, body: { status: "ok" } };
+      app.scenario.interceptor.answer = { status: 200, body: { status: "ok" } };
 
-        const served = await send("GET", "/v1/health");
+      const served = await send("GET", "/v1/health");
 
-        expect(served.status).toBe(500);
-        expect(app.calls.handled).toEqual([]);
-        expect(error).toHaveBeenCalledWith(
-          expect.stringContaining("answered 'health' without calling next.handle()"),
-        );
-      },
-    );
+      expect(served.status).toBe(500);
+      expect(app.calls.handled).toEqual([]);
+      expect(error).toHaveBeenCalledWith(
+        expect.stringContaining("answered 'health' without calling next.handle()"),
+      );
+    });
 
     test.runIf(reply === "interceptor")(
       "an inner interceptor emitting twice gets one reply and no dropped write",
@@ -570,6 +580,82 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
         "ContractReplyInterceptor",
         "RecordingInterceptor",
       ]);
+    });
+  });
+
+  describe("exceptions a handler throws", () => {
+    test("a NestJS NotFoundException answers the operation's declared 404 code", async () => {
+      app.scenario.answers.getTask = () => {
+        throw new app.NotFoundException();
+      };
+
+      const served = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+        headers: BEARER,
+      });
+
+      expect(served.status).toBe(404);
+      expect(JSON.parse(served.text)).toMatchObject({ code: "api.not_found" });
+    });
+
+    test("an HttpException whose status the operation does not declare stays the app's", async () => {
+      app.scenario.answers.getTask = () => {
+        throw new app.ConflictException();
+      };
+
+      const served = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+        headers: BEARER,
+      });
+
+      expect(served.status).toBe(500);
+    });
+
+    test("a ContractException answers its code in the api's format", async () => {
+      app.scenario.answers.getTask = () => {
+        throw new app.ContractException("api.not_found");
+      };
+
+      const served = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+        headers: BEARER,
+      });
+
+      expect(served.status).toBe(404);
+      expect(JSON.parse(served.text)).toMatchObject({ code: "api.not_found" });
+    });
+
+    test("a ContractException of a code the operation does not declare is a reported 500", async () => {
+      app.scenario.answers.getTask = () => {
+        throw new app.ContractException("state.conflict");
+      };
+
+      const served = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+        headers: BEARER,
+      });
+
+      expect(served.status).toBe(500);
+      expect(String(app.calls.unexpected[0]?.exceptionOrReply)).toContain(
+        "'getTask' declares no code 'state.conflict'",
+      );
+    });
+  });
+
+  describe("hooks built by forRootAsync", () => {
+    test("a hook built from an injected provider serves the request", async () => {
+      const asyncServer = await app.startAsyncHooksApp();
+
+      try {
+        const served = await sendRawRequest(
+          asyncServer,
+          "GET",
+          `/v1/channels/${CHANNEL}/tasks/${TASK}`,
+          { headers: BEARER },
+        );
+
+        expect(served.status).toBe(200);
+        expect(app.calls.events).toContain("users service");
+        expect(asyncServer.registeredHooks).toMatchObject({ idempotencyStore: expect.anything() });
+      } finally {
+        await asyncServer.close();
+      }
     });
   });
 
@@ -703,6 +789,34 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
 
       expect(warn.mock.calls.map((call) => String(call[0]))).toContainEqual(
         expect.stringContaining("request-scoped interceptors ScopedInterceptor"),
+      );
+    });
+
+    test("a controller path prefix refuses the boot by name", async () => {
+      await expect(app.bootWithControllerPrefix()).rejects.toThrow(
+        /@Controller\('tasks'\) on TasksController prefixes the contract route.*use @Controller\(\)/s,
+      );
+    });
+
+    test("a RouterModule path refuses the boot by name", async () => {
+      await expect(app.bootWithRouterModulePrefix()).rejects.toThrow(
+        /RouterModule mounts .* under 'tasks'.*remove the RouterModule entry/s,
+      );
+    });
+
+    test("a global prefix refuses the boot by name", async () => {
+      await expect(app.bootWithGlobalPrefix("api")).rejects.toThrow(
+        /setGlobalPrefix\('api'\) prefixes GET \/v1\/health.*exclude/s,
+      );
+    });
+
+    test("a global prefix that excludes the contract routes boots", async () => {
+      await expect(app.bootWithGlobalPrefix("api", ["v1/{*path}"])).resolves.toBeUndefined();
+    });
+
+    test("@HttpCode and @Header on a contract method refuse the boot by name", async () => {
+      await expect(app.bootWithReplyDecorators()).rejects.toThrow(
+        /@HttpCode on health\(\).*return the status from the handler.*@Header on health\(\).*/s,
       );
     });
 
