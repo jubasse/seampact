@@ -134,6 +134,76 @@ async function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport>
   return suiteReportOf({ target: TARGET, profile: "boot" }, merged);
 }
 
+const GENERAL_CHANNEL = "/v1/channels/10000000-0000-4000-8000-000000000001";
+const TASK_PATH = `${GENERAL_CHANNEL}/tasks/20000000-0000-4000-8000-000000000001`;
+const PROBLEM_JSON = "application/problem+json";
+const ABOVE_BATCH_LIMIT_BYTES = 3_000_000;
+
+async function problemCode(response: Response): Promise<unknown> {
+  const body: unknown = await response.json();
+
+  return typeof body === "object" && body !== null && "code" in body ? body.code : undefined;
+}
+
+// What the shared cases do not reach: a CORS preflight, the order of the body limit and the media type, and the
+// boundary's own failures under `responses: warn`.
+describe("boundary edges of the Laravel runtime", () => {
+  let running: RunningApp | undefined;
+
+  beforeAll(async () => {
+    running = await startLaravelApp(app);
+  }, SUITE_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await running?.close();
+  });
+
+  test("a CORS preflight on a contract path is left to HandleCors", async () => {
+    const response = await fetch(`${running?.baseUrl}/v1/health`, {
+      method: "OPTIONS",
+      headers: { origin: "https://front.example", "access-control-request-method": "GET" },
+    });
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+  });
+
+  test("a body above the limit answers 413 whatever its media type", async () => {
+    const response = await fetch(`${running?.baseUrl}${GENERAL_CHANNEL}/tasks/batch`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${credentials.userToken}`, "content-type": "text/plain" },
+      body: "x".repeat(ABOVE_BATCH_LIMIT_BYTES),
+    });
+
+    expect(response.status).toBe(413);
+  });
+});
+
+describe("a missing hook under responses: warn", () => {
+  let running: RunningApp | undefined;
+
+  beforeAll(async () => {
+    running = await startLaravelApp(app, {
+      SEAMPACT_SUITE_BOOT_VARIANT: "missing-authenticate-hook",
+      SEAMPACT_SUITE_RESPONSES: "warn",
+    });
+  }, SUITE_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await running?.close();
+  });
+
+  test("answers the api's 500, never the framework's error page", async () => {
+    const response = await fetch(`${running?.baseUrl}${TASK_PATH}`, {
+      headers: { authorization: `Bearer ${credentials.userToken}` },
+    });
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toContain(PROBLEM_JSON);
+    expect(await problemCode(response)).toBe("api.internal");
+  });
+});
+
 describeHttpProfile("default");
 describeHttpProfile("hand-written");
 

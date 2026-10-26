@@ -33,7 +33,7 @@ if [ ! -d "$contract_repo" ]; then
 fi
 
 mkdir -p "$app"
-cp -R "$here/app" "$here/bootstrap" "$here/public" "$here/routes" "$here/artisan" "$here/composer.json" "$app/"
+cp -R "$here/app" "$here/bootstrap" "$here/config" "$here/public" "$here/routes" "$here/artisan" "$here/composer.json" "$app/"
 cp "$here/$config" "$app/seampact.config.yaml"
 cp "$here/../spring-boot/credentials.json" "$app/credentials.json"
 mkdir -p "$app/bootstrap/cache" "$app/storage/logs" "$app/storage/framework/cache" "$app/storage/framework/views"

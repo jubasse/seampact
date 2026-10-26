@@ -25,11 +25,21 @@ use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
-/** Binds the handlers and the hook doubles of the `tasks` api, less what the boot variant leaves out. */
+/**
+ * Binds the handlers and the hook doubles of the `tasks` api, less what the boot variant leaves out, and takes the
+ * api's `responses` mode from `SEAMPACT_SUITE_RESPONSES` when it is set, at run time so a config cache keeps it.
+ */
 final class SuiteServiceProvider extends ServiceProvider
 {
+    private const RESPONSES_VARIABLE = 'SEAMPACT_SUITE_RESPONSES';
+
     public function register(): void
     {
+        $responses = getenv(self::RESPONSES_VARIABLE);
+        if (is_string($responses) && $responses !== '') {
+            $this->app->make('config')->set('seampact.tasks.responses', $responses);
+        }
+
         if (!BootVariant::is('missing-handler')) {
             $this->app->bind(AppEndpoints::class, AppController::class);
         }
