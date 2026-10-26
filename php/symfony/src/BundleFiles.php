@@ -6,7 +6,8 @@ namespace Seampact\Symfony;
 
 use Nette\PhpGenerator\Dumper;
 use Nette\PhpGenerator\Literal;
-use Seampact\Symfony\Shared\SharedTypes;
+use Seampact\Codegen\PhpClassFile;
+use Seampact\Codegen\TargetOptions;
 
 /**
  * The api's bundle (ADR 0024 "Options and registration"), which the app lists in `config/bundles.php`: its
@@ -18,21 +19,20 @@ use Seampact\Symfony\Shared\SharedTypes;
 final class BundleFiles
 {
     public function __construct(
-        private readonly SharedTypes $shared,
         private readonly SymfonyPlacement $placement,
-        private readonly SymfonyOptions $options,
+        private readonly TargetOptions $options,
     ) {
     }
 
-    /** @return list<ClassFile> */
+    /** @return list<PhpClassFile> */
     public function files(): array
     {
         return [$this->bundle(), $this->controllerPass(), $this->settings()];
     }
 
-    private function bundle(): ClassFile
+    private function bundle(): PhpClassFile
     {
-        $file = new ClassFile($this->placement->bundle);
+        $file = new PhpClassFile($this->placement->bundle);
         $class = $file->namespace->addClass($file->shortName)->setFinal()
             ->setExtends($file->type('Symfony\\Component\\HttpKernel\\Bundle\\AbstractBundle'))
             ->addComment("The contract's api '{$this->placement->apiKey}' in a Symfony app, configured under '{$this->placement->configurationAlias}'.");
@@ -79,9 +79,9 @@ final class BundleFiles
         return $file;
     }
 
-    private function controllerPass(): ClassFile
+    private function controllerPass(): PhpClassFile
     {
-        $file = new ClassFile($this->placement->controllerPass);
+        $file = new PhpClassFile($this->placement->controllerPass);
         $class = $file->namespace->addClass($file->shortName)->setFinal()
             ->addImplement($file->type('Symfony\\Component\\DependencyInjection\\Compiler\\CompilerPassInterface'))
             ->addComment("Points each endpoints interface at the one service implementing it, a controller the routes name by\n"
@@ -90,8 +90,8 @@ final class BundleFiles
         $class->addConstant('PRIORITY', 1);
 
         $endpoints = [];
-        foreach ($this->shared->operations() as [, $operation]) {
-            $endpoints[$this->shared->operation($operation->id)->endpoints] = true;
+        foreach ($this->placement->operations() as [, $operation]) {
+            $endpoints[$this->placement->names($operation->id)->endpoints] = true;
         }
         $listed = array_map(static fn (string $interface): string => $file->name($interface) . '::class', array_keys($endpoints));
         $class->addConstant('ENDPOINTS', new Literal('[' . implode(', ', $listed) . ']'))->setPrivate();
@@ -125,9 +125,9 @@ final class BundleFiles
         return $file;
     }
 
-    private function settings(): ClassFile
+    private function settings(): PhpClassFile
     {
-        $file = new ClassFile($this->placement->settings);
+        $file = new PhpClassFile($this->placement->settings);
         $alias = $this->placement->configurationAlias;
         $class = $file->namespace->addClass($file->shortName)->setFinal()->setReadOnly()
             ->addComment("The '{$alias}' bundle configuration, each value checked when the boundary reads it, so a value\n"

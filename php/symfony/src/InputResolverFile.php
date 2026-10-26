@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Symfony;
 
 use Nette\PhpGenerator\Literal;
-use Seampact\Symfony\Shared\SharedTypes;
+use Seampact\Codegen\PhpClassFile;
 
 /**
  * The api's input value resolver (ADR 0024 "Placement"), tagged `controller.argument_value_resolver` at priority 150:
@@ -14,13 +14,13 @@ use Seampact\Symfony\Shared\SharedTypes;
  */
 final class InputResolverFile
 {
-    public function __construct(private readonly SharedTypes $shared, private readonly SymfonyPlacement $placement)
+    public function __construct(private readonly SymfonyPlacement $placement)
     {
     }
 
-    public function file(): ClassFile
+    public function file(): PhpClassFile
     {
-        $file = new ClassFile($this->placement->inputResolver);
+        $file = new PhpClassFile($this->placement->inputResolver);
         $class = $file->namespace->addClass($file->shortName)->setFinal()
             ->addImplement($file->type('Symfony\\Component\\HttpKernel\\Controller\\ValueResolverInterface'))
             ->addComment("Hands each contract handler the input the boundary checked for its operation.");
@@ -28,8 +28,8 @@ final class InputResolverFile
         $class->addConstant('PRIORITY', 150);
 
         $inputs = [];
-        foreach ($this->shared->operations() as [, $operation]) {
-            $inputs[] = $file->name($this->shared->operation($operation->id)->input) . '::class';
+        foreach ($this->placement->operations() as [, $operation]) {
+            $inputs[] = $file->name($this->placement->names($operation->id)->input) . '::class';
         }
         $class->addConstant('INPUT_CLASSES', new Literal('[' . implode(', ', $inputs) . ']'))->setPrivate();
 

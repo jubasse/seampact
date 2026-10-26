@@ -6,8 +6,10 @@ namespace Seampact\Symfony;
 
 use Nette\PhpGenerator\Dumper;
 use Nette\PhpGenerator\Literal;
+use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\PhpClassFile;
+use Seampact\Codegen\Refusals;
 use Seampact\Ir\Model\Operation;
-use Seampact\Symfony\Shared\SharedTypes;
 
 /**
  * The api's route loader (ADR 0024 "Routes"), tagged `routing.loader`: it serves the `seampact` type for its own api
@@ -23,15 +25,14 @@ final class RouteLoaderFile
     private const ROUTE_SYNTAX_CHARACTERS = ['{', '}', '?'];
 
     public function __construct(
-        private readonly SharedTypes $shared,
         private readonly SymfonyPlacement $placement,
-        private readonly GenerationProblems $problems,
+        private readonly Refusals $refusals,
     ) {
     }
 
-    public function file(): ClassFile
+    public function file(): PhpClassFile
     {
-        $file = new ClassFile($this->placement->routeLoader);
+        $file = new PhpClassFile($this->placement->routeLoader);
         $class = $file->namespace->addClass($file->shortName)->setFinal()
             ->setExtends($file->type('Symfony\\Component\\Config\\Loader\\Loader'))
             ->addComment("The routes of the contract, imported once from the app's routing configuration:\n")
@@ -54,7 +55,7 @@ final class RouteLoaderFile
         $dumper = new Dumper();
         $body = "\$routes = new {$routeCollection}();\n";
         foreach ($this->ordered() as [$path, $operation]) {
-            $names = $this->shared->operation($operation->id);
+            $names = $this->placement->names($operation->id);
             $controller = new Literal($file->name($names->endpoints) . '::class . ?', ['::' . $names->method]);
             $body .= $dumper->format(
                 "\$routes->add(?, new {$route}(?, ['_controller' => ?, self::OPERATION_DEFAULT => ?], methods: [?]));\n",
@@ -74,7 +75,7 @@ final class RouteLoaderFile
     private function ordered(): array
     {
         $routes = [];
-        foreach ($this->shared->operations() as $position => [$index, $operation]) {
+        foreach ($this->placement->operations() as $position => [$index, $operation]) {
             $converted = $this->symfonyPath($operation, $index);
             if ($converted !== null) {
                 $routes[] = [$converted[0], $operation, $converted[1], $position];
@@ -121,6 +122,6 @@ final class RouteLoaderFile
 
     private function refuse(Operation $operation, int $index, string $code, string $message, string $fix): void
     {
-        $this->problems->add($code, $message, $fix, "/operations/{$index}/path", $operation->id);
+        $this->refusals->add($code, $message, $fix, IrPlace::ofOperation($index, $operation->id)->below('path'));
     }
 }

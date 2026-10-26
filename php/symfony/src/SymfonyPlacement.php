@@ -4,34 +4,67 @@ declare(strict_types=1);
 
 namespace Seampact\Symfony;
 
-use Seampact\Symfony\Shared\OperationTypeNames;
+use Seampact\Codegen\ApiLayout;
+use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\KeptForms;
+use Seampact\Codegen\OperationNames;
+use Seampact\Codegen\PhpClassFile;
+use Seampact\Ir\Model\Operation;
 
 /**
- * The names of one api's Symfony placement (ADR 0024 "Placement"): its classes under `<namespace>\Symfony`, prefixed
- * with the api's type name, the copied runtime under `<namespace>\Symfony\Runtime`, and the api key that names its
- * routes (`seampact.<api>.<operationId>`), its routing resource and its bundle configuration (`seampact_<api>`).
+ * The names of one api's Symfony placement (ADR 0024 "Placement"), claimed beside the shared names of `ApiLayout`:
+ * its classes under `<namespace>\Symfony`, prefixed with the api's type name, the copied runtime under
+ * `<namespace>\Symfony\Runtime`, and the api key that names its routes (`seampact.<api>.<operationId>`), its routing
+ * resource and its bundle configuration (`seampact_<api>`).
  */
-final readonly class SymfonyPlacement
+final class SymfonyPlacement
 {
-    public string $symfonyNamespace;
-    public string $runtimeNamespace;
-    public string $bundle;
-    public string $controllerPass;
-    public string $routeLoader;
-    public string $inputResolver;
-    public string $settings;
-    public string $configurationAlias;
+    public readonly string $namespace;
+    public readonly string $symfonyNamespace;
+    public readonly string $runtimeNamespace;
+    public readonly string $apiKey;
+    public readonly string $bundle;
+    public readonly string $controllerPass;
+    public readonly string $routeLoader;
+    public readonly string $inputResolver;
+    public readonly string $settings;
+    public readonly string $configurationAlias;
 
-    public function __construct(public string $namespace, string $apiTypeName, public string $apiKey)
+    /** @var list<array{int, Operation}> */
+    private array $operations = [];
+
+    /** @var array<string, array{string, string}> each operation's input constraint and its validator */
+    private array $inputConstraints = [];
+
+    public function __construct(public readonly ApiLayout $layout, KeptForms $kept)
     {
-        $this->symfonyNamespace = "{$namespace}\\Symfony";
-        $this->runtimeNamespace = "{$namespace}\\Symfony\\Runtime";
-        $this->bundle = "{$this->symfonyNamespace}\\{$apiTypeName}SeampactBundle";
-        $this->controllerPass = "{$this->symfonyNamespace}\\{$apiTypeName}ControllerPass";
-        $this->routeLoader = "{$this->symfonyNamespace}\\{$apiTypeName}RouteLoader";
-        $this->inputResolver = "{$this->symfonyNamespace}\\{$apiTypeName}InputResolver";
-        $this->settings = "{$this->symfonyNamespace}\\{$apiTypeName}Settings";
-        $this->configurationAlias = "seampact_{$apiKey}";
+        $this->namespace = $layout->namespace;
+        $this->symfonyNamespace = "{$layout->namespace}\\Symfony";
+        $this->runtimeNamespace = "{$this->symfonyNamespace}\\Runtime";
+        $this->apiKey = self::apiKeyOf(...$layout->ir->api->name->segments);
+        $this->configurationAlias = "seampact_{$this->apiKey}";
+
+        $apiAt = IrPlace::root()->below('api', 'name');
+        $placed = fn (string $suffix, string $owner): string => $layout->claim("{$this->symfonyNamespace}\\{$layout->apiTypeName}{$suffix}", $owner, $apiAt);
+        $this->bundle = $placed('SeampactBundle', "the api's bundle");
+        $this->controllerPass = $placed('ControllerPass', "the api's controller pass");
+        $this->routeLoader = $placed('RouteLoader', "the api's route loader");
+        $this->inputResolver = $placed('InputResolver', "the api's input resolver");
+        $this->settings = $placed('Settings', "the api's settings");
+
+        foreach ($kept->operations() as [$index, $operation]) {
+            $names = $layout->operation($operation->id);
+            if ($names === null) {
+                continue;
+            }
+            $this->operations[] = [$index, $operation];
+            $constraint = $this->symfonyNamespace . '\\' . PhpClassFile::shortNameOf($names->input) . 'Constraint';
+            $at = IrPlace::ofOperation($index, $operation->id)->below('name');
+            $this->inputConstraints[$operation->id] = [
+                $layout->claim($constraint, "the input constraint of operation '{$operation->id}'", $at),
+                $layout->claim("{$constraint}Validator", "the input constraint validator of operation '{$operation->id}'", $at),
+            ];
+        }
     }
 
     /** The api key of an api name's segments: lower-case words joined by `_`. */
@@ -40,14 +73,25 @@ final readonly class SymfonyPlacement
         return strtolower(implode('_', $segments));
     }
 
-    public function inputConstraint(OperationTypeNames $names): string
+    /** @return list<array{int, Operation}> each kept operation with its index in the IR */
+    public function operations(): array
     {
-        return $this->symfonyNamespace . '\\' . ClassFile::shortNameOf($names->input) . 'Constraint';
+        return $this->operations;
     }
 
-    public function inputConstraintValidator(OperationTypeNames $names): string
+    public function names(string $operationId): OperationNames
     {
-        return $this->inputConstraint($names) . 'Validator';
+        return $this->layout->operation($operationId) ?? throw new \LogicException("The operation '{$operationId}' has no PHP names; it is not a kept operation.");
+    }
+
+    public function inputConstraint(string $operationId): string
+    {
+        return $this->constraintsOf($operationId)[0];
+    }
+
+    public function inputConstraintValidator(string $operationId): string
+    {
+        return $this->constraintsOf($operationId)[1];
     }
 
     public function routeName(string $operationId): string
@@ -58,5 +102,11 @@ final readonly class SymfonyPlacement
     public function runtime(string $simpleName): string
     {
         return "{$this->runtimeNamespace}\\{$simpleName}";
+    }
+
+    /** @return array{string, string} */
+    private function constraintsOf(string $operationId): array
+    {
+        return $this->inputConstraints[$operationId] ?? throw new \LogicException("The operation '{$operationId}' has no input constraint; it is not a kept operation.");
     }
 }

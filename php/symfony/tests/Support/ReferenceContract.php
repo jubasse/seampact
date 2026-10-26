@@ -15,7 +15,7 @@ final class ReferenceContract
     public const TASKS = 'tasks.ir.json';
 
     // The tasks operations whose forms this release generates; the others carry paging, idempotency, cache headers or
-    // a signed route, which a later release brings.
+    // a signed route, and the tasksService api's one operation a deadline and a relay, which a later release brings.
     public const CORE_OPERATIONS = ['health', 'getChannel', 'getDraft', 'getTask', 'getTasksBatch'];
 
     public static function repositoryRoot(): string
@@ -55,9 +55,25 @@ final class ReferenceContract
         return self::read(self::kept(self::document(self::TASKS), self::CORE_OPERATIONS));
     }
 
-    /** @param array<string, mixed> $options */
-    public static function entry(string $namespace, array $options = []): TargetEntry
+    /**
+     * @param array<string, mixed> $options
+     * @param array<string, mixed> $artefacts
+     */
+    public static function entry(string $api, string $namespace, array $options = [], array $artefacts = []): TargetEntry
     {
-        return new TargetEntry('server', 'seampact/symfony', 'tasks', null, (object) (['namespace' => $namespace] + $options), new \stdClass(), '/app/generated', $namespace);
+        return new TargetEntry('server', 'seampact/symfony', $api, null, (object) $options, (object) $artefacts, '/app/generated', $namespace);
+    }
+
+    /** The one operation `$operationId` of the reference tasks IR, which `$change` edits in place. */
+    public static function withOperation(string $operationId, \Closure $change): \stdClass
+    {
+        $document = self::kept(self::document(self::TASKS), [$operationId]);
+        $operation = is_array($document->operations) ? ($document->operations[0] ?? null) : null;
+        if (!$operation instanceof \stdClass) {
+            throw new \LogicException("The reference IR has no operation '{$operationId}'.");
+        }
+        $change($operation, $document);
+
+        return $document;
     }
 }

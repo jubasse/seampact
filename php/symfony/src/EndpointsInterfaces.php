@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Symfony;
 
-use Seampact\Symfony\Shared\SharedTypes;
+use Seampact\Codegen\PhpClassFile;
+
 
 /**
  * The controller interfaces in their Symfony form (ADR 0024 "Placement"): one per resource, each method taking the
@@ -13,20 +14,20 @@ use Seampact\Symfony\Shared\SharedTypes;
  */
 final class EndpointsInterfaces
 {
-    public function __construct(private readonly SharedTypes $shared)
+    public function __construct(private readonly SymfonyPlacement $placement)
     {
     }
 
-    /** @return list<ClassFile> */
+    /** @return list<PhpClassFile> */
     public function files(): array
     {
         $files = [];
 
-        foreach ($this->shared->operations() as [, $operation]) {
-            $names = $this->shared->operation($operation->id);
+        foreach ($this->placement->operations() as [, $operation]) {
+            $names = $this->placement->names($operation->id);
 
             if (!isset($files[$names->endpoints])) {
-                $file = new ClassFile($names->endpoints);
+                $file = new PhpClassFile($names->endpoints);
                 $file->namespace->addInterface($file->shortName)->addComment(
                     "The handlers a controller service implements, each method marked with the SeampactOperation\n"
                     . 'attribute of its operation; each returns a declared success or error, or throws a declared error.',
@@ -44,7 +45,7 @@ final class EndpointsInterfaces
 
             $thrown = [];
             foreach ($operation->errors as $error) {
-                $exception = $this->shared->errorClass($error->code);
+                $exception = $this->placement->layout->errorClass($error->code);
                 if ($exception !== null && !isset($thrown[$exception])) {
                     $thrown[$exception] = true;
                     $method->addComment('@throws ' . $file->name($exception));

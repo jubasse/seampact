@@ -7,6 +7,7 @@
     "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
     "ext-json": "*",
     "nette/php-generator": "~4.2.0",
+    "seampact/codegen": "self.version",
     "seampact/ir": "self.version"
   },
   "require-dev": {
@@ -19,6 +20,13 @@
     "symfony/validator": "7.4.21"
   },
   "repositories": [
+    {
+      "type": "path",
+      "url": "../codegen",
+      "options": {
+        "symlink": false
+      }
+    },
     {
       "type": "path",
       "url": "../ir",

@@ -4,6 +4,14 @@ declare(strict_types=1);
 
 namespace Seampact\Symfony;
 
+use Seampact\Codegen\KeptForms;
+use Seampact\Codegen\PhpClassFile;
+use Seampact\Codegen\Refusals;
+use Seampact\Codegen\RulesMode;
+use Seampact\Codegen\Delivery;
+use Seampact\Codegen\IntegerStep;
+use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\PcrePattern;
 use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Model\EnumTypeUse;
@@ -11,13 +19,12 @@ use Seampact\Ir\Model\ObjectSchema;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\RefTypeUse;
-use Seampact\Ir\Model\RefuseUnknownQuery;
 use Seampact\Ir\Model\Refinements;
+use Seampact\Ir\Model\RefuseUnknownQuery;
 use Seampact\Ir\Model\ScalarType;
 use Seampact\Ir\Model\ScalarTypeUse;
 use Seampact\Ir\Model\TypeUse;
 use Seampact\Ir\Model\UnknownKeysPolicy;
-use Seampact\Symfony\Shared\SharedTypes;
 
 /**
  * Each operation's generated input constraint and its validator (ADR 0024 "Types and validation"): the validator
@@ -29,11 +36,8 @@ use Seampact\Symfony\Shared\SharedTypes;
  */
 final class InputConstraintFiles
 {
-    private const PATTERN_DELIMITERS = ['/', '#', '~', '%', '!', '@', ';', ','];
     private const NATIVE_PATTERN_MODIFIERS = 'u';
     private const CONSISTENT_PATTERN_MODIFIERS = 'uD';
-    private const FORMAT_UUID = 'uuid';
-    private const FORMAT_DATE_TIME = 'date-time';
     private const DECIMAL_LITERAL = '/^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$/D';
     private const CONSTRAINTS = 'Symfony\\Component\\Validator\\Constraints\\';
     private const NUMBER_CONSTRAINTS = [
@@ -41,54 +45,49 @@ final class InputConstraintFiles
         'maximum' => 'LessThanOrEqual',
         'exclusiveMinimum' => 'GreaterThan',
         'exclusiveMaximum' => 'LessThan',
-        'multipleOf' => 'DivisibleBy',
     ];
 
-    private ClassFile $file;
+    private PhpClassFile $file;
 
     /** @var array<string, true> the schemas on the way to the current member */
     private array $visiting = [];
 
     public function __construct(
         private readonly ContractIR $ir,
-        private readonly SharedTypes $shared,
         private readonly SymfonyPlacement $placement,
         private readonly RulesMode $rules,
-        private readonly GenerationProblems $problems,
+        private readonly Refusals $refusals,
     ) {
-        $this->file = new ClassFile($placement->namespace);
+        $this->file = new PhpClassFile($placement->namespace);
     }
 
-    /** @return list<ClassFile> the operation's constraint and its validator */
-    public function files(Operation $operation, int $index): array
+    /** @return list<PhpClassFile> the operation's constraint and its validator */
+    public function files(Operation $operation, IrPlace $at): array
     {
-        $names = $this->shared->operation($operation->id);
-
-        $constraint = new ClassFile($this->placement->inputConstraint($names));
+        $constraint = new PhpClassFile($this->placement->inputConstraint($operation->id));
         $constraint->namespace->addClass($constraint->shortName)->setFinal()
             ->setExtends($constraint->type($this->placement->runtime('InputConstraint')))
             ->addComment("The contract input of operation '{$operation->id}', checked by its validator on the decoded input.");
 
-        $this->file = new ClassFile($this->placement->inputConstraintValidator($names));
+        $this->file = new PhpClassFile($this->placement->inputConstraintValidator($operation->id));
         $class = $this->file->namespace->addClass($this->file->shortName)->setFinal()
             ->setExtends($this->file->type($this->placement->runtime('InputConstraintValidator')))
             ->addComment("The members of the input of operation '{$operation->id}', as the contract declares them.");
         $shape = $class->addMethod('shape')->setProtected()->setReturnType($this->placement->runtime('InputShape'));
         $this->file->name($this->placement->runtime('InputShape'));
-        $shape->setBody('return ' . $this->inputShape($operation, $index) . ';');
+        $shape->setBody('return ' . $this->inputShape($operation, $at) . ';');
 
         return [$constraint, $this->file];
     }
 
-    private function inputShape(Operation $operation, int $index): string
+    private function inputShape(Operation $operation, IrPlace $at): string
     {
-        $at = "/operations/{$index}";
         $arguments = [];
 
-        $parts = ['path' => $operation->params->path, 'query' => $operation->params->query, 'header' => $this->shared->handlerHeaders($operation)];
+        $parts = ['path' => $operation->params->path, 'query' => $operation->params->query, 'header' => KeptForms::handlerHeaders($operation)];
         foreach ($parts as $part => $params) {
             if ($params !== []) {
-                $arguments[] = "{$part}: " . $this->params($part, $params, $operation, "{$at}/params/{$part}");
+                $arguments[] = "{$part}: " . $this->params($part, $params, $at->below('params', $part));
             }
         }
 
@@ -97,25 +96,25 @@ final class InputConstraintFiles
         }
 
         if ($operation->input !== null) {
-            $arguments[] = 'body: ' . $this->member($operation->input->schema, true, false, $operation, "{$at}/input/schema", 1);
+            $arguments[] = 'body: ' . $this->member($operation->input->schema, true, false, $at->below('input', 'schema'), 1);
         }
 
         return $this->construct('InputShape', $arguments, 0);
     }
 
     /** @param array<int, Param> $params */
-    private function params(string $part, array $params, Operation $operation, string $at): string
+    private function params(string $part, array $params, IrPlace $at): string
     {
         $entries = [];
         foreach ($params as $paramIndex => $param) {
             $required = $part === 'path' || $param->required;
-            $entries[] = var_export($param->name, true) . ' => ' . $this->member($param->type, $required, false, $operation, "{$at}/{$paramIndex}/type", 2);
+            $entries[] = var_export($param->name, true) . ' => ' . $this->member($param->type, $required, false, $at->below($paramIndex, 'type'), 2);
         }
 
         return self::listed($entries, 1);
     }
 
-    private function member(TypeUse $type, bool $required, bool $nullable, Operation $operation, string $at, int $depth): string
+    private function member(TypeUse $type, bool $required, bool $nullable, IrPlace $at, int $depth): string
     {
         $nullable = $nullable || match (true) {
             $type instanceof ScalarTypeUse, $type instanceof EnumTypeUse, $type instanceof RefTypeUse, $type instanceof ArrayTypeUse => $type->nullable === true,
@@ -123,11 +122,11 @@ final class InputConstraintFiles
         };
 
         $arguments = match (true) {
-            $type instanceof ScalarTypeUse => $this->scalar($type, $operation, $at),
+            $type instanceof ScalarTypeUse => $this->scalar($type, $at),
             $type instanceof EnumTypeUse => [$this->runtimeCase('JsonType', 'String'), 'checks: ' . $this->construct('Checks', ['enumValues: ' . $this->enumValues($type)], -1)],
-            $type instanceof RefTypeUse => $this->object($type, $operation, $at, $depth),
-            $type instanceof ArrayTypeUse => $this->list($type, $operation, $at, $depth),
-            default => $this->refused($type, $operation, $at),
+            $type instanceof RefTypeUse => $this->object($type, $at, $depth),
+            $type instanceof ArrayTypeUse => $this->list($type, $at, $depth),
+            default => throw new \LogicException("The {$type->tag()} type use was kept but has no input check."),
         };
 
         if (!$required) {
@@ -141,7 +140,7 @@ final class InputConstraintFiles
     }
 
     /** @return list<string> */
-    private function scalar(ScalarTypeUse $type, Operation $operation, string $at): array
+    private function scalar(ScalarTypeUse $type, IrPlace $at): array
     {
         $jsonType = match ($type->type->value) {
             ScalarType::String => 'String',
@@ -151,20 +150,15 @@ final class InputConstraintFiles
             default => null,
         };
         if ($jsonType === null) {
-            $this->problems->add('ir.value.unknown', "The scalar type '{$type->type->value}' is not one this release of the symfony target knows.", 'Update seampact/symfony to a release that reads this IR revision.', "{$at}/type", $operation->id);
-
-            return [$this->runtimeCase('JsonType', 'String')];
-        }
-        if ($type->content !== null) {
-            $this->waiting('type.content', 'A string member holding encoded JSON content', $operation, "{$at}/content");
+            throw new \LogicException("The scalar type '{$type->type->value}' was kept but has no JSON type.");
         }
 
         $checks = [];
         $native = [];
-        $this->format($type, $checks, $native, $operation, $at);
+        $this->format($type, $checks, $native);
         match ($jsonType) {
-            'String' => $this->stringRules($type->refinements, $checks, $native, $operation, $at),
-            'Integer', 'Number' => $this->numberRules($type->refinements, $checks, $native, $operation, $at),
+            'String' => $this->stringRules($type->refinements, $checks, $native, $at),
+            'Integer', 'Number' => $this->numberRules($type, $checks, $native, $at),
             default => null,
         };
 
@@ -175,13 +169,13 @@ final class InputConstraintFiles
      * @param list<string> $checks
      * @param list<string> $native
      */
-    private function format(ScalarTypeUse $type, array &$checks, array &$native, Operation $operation, string $at): void
+    private function format(ScalarTypeUse $type, array &$checks, array &$native): void
     {
         if ($type->format === null) {
             return;
         }
 
-        if ($type->format === self::FORMAT_UUID && $this->rules === RulesMode::Native) {
+        if ($type->format === KeptForms::FORMAT_UUID && $this->rules === RulesMode::Native) {
             $native[] = $this->symfonyConstraint('Uuid', [], 'FORMAT');
             $checks[] = 'format: ' . $this->runtimeCase('Format', 'Uuid');
             $checks[] = 'formatScope: ' . $this->runtimeCase('PatternScope', 'EmptyStringOnly');
@@ -190,14 +184,12 @@ final class InputConstraintFiles
         }
 
         $case = match ($type->format) {
-            self::FORMAT_UUID => 'Uuid',
-            self::FORMAT_DATE_TIME => 'DateTime',
+            KeptForms::FORMAT_UUID => 'Uuid',
+            KeptForms::FORMAT_DATE_TIME => 'DateTime',
             default => null,
         };
         if ($case === null) {
-            $this->waiting("format.{$type->format}", "The string format '{$type->format}'", $operation, "{$at}/format");
-
-            return;
+            throw new \LogicException("The format '{$type->format}' was kept but has no generated check.");
         }
 
         $checks[] = 'format: ' . $this->runtimeCase('Format', $case);
@@ -207,14 +199,14 @@ final class InputConstraintFiles
      * @param list<string> $checks
      * @param list<string> $native
      */
-    private function stringRules(Refinements $refinements, array &$checks, array &$native, Operation $operation, string $at): void
+    private function stringRules(Refinements $refinements, array &$checks, array &$native, IrPlace $at): void
     {
         $isNative = $this->rules === RulesMode::Native;
         $pattern = null;
         if ($refinements->pattern !== null) {
-            $pattern = self::pcre($refinements->pattern->normalized, $isNative ? self::NATIVE_PATTERN_MODIFIERS : self::CONSISTENT_PATTERN_MODIFIERS);
+            $pattern = PcrePattern::of($refinements->pattern->normalized, $isNative ? self::NATIVE_PATTERN_MODIFIERS : self::CONSISTENT_PATTERN_MODIFIERS);
             if ($pattern === null) {
-                $this->waiting('pattern.delimiter', 'A pattern holding every PCRE delimiter the target uses (' . implode(' ', self::PATTERN_DELIMITERS) . ')', $operation, "{$at}/refinements/pattern");
+                PcrePattern::refuse($this->refusals, $at->below('refinements', 'pattern'));
             }
         }
 
@@ -248,14 +240,14 @@ final class InputConstraintFiles
      * @param list<string> $checks
      * @param list<string> $native
      */
-    private function numberRules(Refinements $refinements, array &$checks, array &$native, Operation $operation, string $at): void
+    private function numberRules(ScalarTypeUse $type, array &$checks, array &$native, IrPlace $at): void
     {
+        $refinements = $type->refinements;
         $bounds = [
             'minimum' => $refinements->minimum,
             'maximum' => $refinements->maximum,
             'exclusiveMinimum' => $refinements->exclusiveMinimum,
             'exclusiveMaximum' => $refinements->exclusiveMaximum,
-            'multipleOf' => $refinements->multipleOf,
         ];
 
         foreach ($bounds as $rule => $decimal) {
@@ -263,31 +255,44 @@ final class InputConstraintFiles
                 continue;
             }
             if (preg_match(self::DECIMAL_LITERAL, $decimal) !== 1) {
-                $this->problems->add('ir.value.invalid', "The {$rule} '{$decimal}' is not a decimal number.", 'Recompile the contract with a matching seampact compiler.', "{$at}/refinements/{$rule}", $operation->id);
+                $this->refusals->inconsistent('ir.value.invalid', "The {$rule} '{$decimal}' is not a decimal number", $at->below('refinements', $rule));
                 continue;
             }
 
             if ($this->rules === RulesMode::Native) {
-                $native[] = $this->symfonyConstraint(self::NUMBER_CONSTRAINTS[$rule], ["value: {$decimal}"], strtoupper((string) preg_replace('/(?<!^)[A-Z]/', '_$0', $rule)));
+                $native[] = $this->symfonyConstraint(self::NUMBER_CONSTRAINTS[$rule], ["value: {$decimal}"], self::ruleConstant($rule));
             } else {
                 $checks[] = "{$rule}: {$decimal}";
             }
         }
+
+        // The exact integer step, which `DivisibleBy` divides exactly as ints and the generated check as well.
+        $step = IntegerStep::ofMember($type, $at->below('refinements', 'multipleOf'), $this->refusals);
+        if ($step === null) {
+            return;
+        }
+        if ($this->rules === RulesMode::Native) {
+            $native[] = $this->symfonyConstraint('DivisibleBy', ["value: {$step}"], self::ruleConstant('multipleOf'));
+        } else {
+            $checks[] = "multipleOf: {$step}";
+        }
+    }
+
+    private static function ruleConstant(string $rule): string
+    {
+        return strtoupper((string) preg_replace('/(?<!^)[A-Z]/', '_$0', $rule));
     }
 
     /** @return list<string> */
-    private function object(RefTypeUse $type, Operation $operation, string $at, int $depth): array
+    private function object(RefTypeUse $type, IrPlace $at, int $depth): array
     {
         $schema = $this->ir->schemas[$type->schema] ?? null;
         if (!$schema instanceof ObjectSchema) {
-            $kind = $schema === null ? 'missing' : $schema->tag();
-            $this->waiting("type.{$kind}", "The {$kind} schema '{$type->schema}' in an input", $operation, $at);
-
-            return [$this->runtimeCase('JsonType', 'Object')];
+            throw new \LogicException("The schema '{$type->schema}' was kept but is not an object.");
         }
 
         if (isset($this->visiting[$type->schema])) {
-            $this->waiting('schema.recursive', "The schema '{$type->schema}', which holds itself, in a request", $operation, $at);
+            $this->refusals->waiting('schema.recursive', "The schema '{$type->schema}', which holds itself, in a request", IrPlace::root()->below('schemas', $type->schema), Delivery::AfterOneZero);
 
             return [$this->runtimeCase('JsonType', 'Object')];
         }
@@ -296,7 +301,7 @@ final class InputConstraintFiles
         $properties = [];
         foreach ($schema->properties as $propertyIndex => $property) {
             $properties[] = var_export($property->name, true) . ' => '
-                . $this->member($property->type, !$property->optional, $property->nullable, $operation, "/schemas/{$type->schema}/properties/{$propertyIndex}/type", $depth + 2);
+                . $this->member($property->type, !$property->optional, $property->nullable, IrPlace::root()->below('schemas', $type->schema, 'properties', $propertyIndex, 'type'), $depth + 2);
         }
         unset($this->visiting[$type->schema]);
 
@@ -312,7 +317,7 @@ final class InputConstraintFiles
     }
 
     /** @return list<string> */
-    private function list(ArrayTypeUse $type, Operation $operation, string $at, int $depth): array
+    private function list(ArrayTypeUse $type, IrPlace $at, int $depth): array
     {
         $checks = [];
         $native = [];
@@ -330,16 +335,8 @@ final class InputConstraintFiles
         return [
             $this->runtimeCase('JsonType', 'List'),
             ...$this->rendered($checks, $native),
-            'items: ' . $this->member($type->items, true, false, $operation, "{$at}/items", $depth + 1),
+            'items: ' . $this->member($type->items, true, false, $at->below('items'), $depth + 1),
         ];
-    }
-
-    /** @return list<string> */
-    private function refused(TypeUse $type, Operation $operation, string $at): array
-    {
-        $this->waiting("type.{$type->tag()}", "A {$type->tag()} type in an input", $operation, $at);
-
-        return [$this->runtimeCase('JsonType', 'String')];
     }
 
     private function enumValues(EnumTypeUse $type): string
@@ -426,28 +423,5 @@ final class InputConstraintFiles
     private function runtimeCase(string $runtimeEnum, string $case): string
     {
         return $this->file->name($this->placement->runtime($runtimeEnum)) . "::{$case}";
-    }
-
-    private function waiting(string $form, string $description, Operation $operation, string $at): void
-    {
-        $this->problems->add(
-            "{$form}.unsupported",
-            "{$description} is not generated by the symfony target: it waits for a contract that needs it.",
-            'Remove it from the operations this entry keeps (its `operations` filter), or wait for a release that generates it.',
-            $at,
-            $operation->id,
-        );
-    }
-
-    /** The PCRE form of a normalised pattern, between the first delimiter it does not hold; null when it holds all. */
-    private static function pcre(string $normalized, string $modifiers): ?string
-    {
-        foreach (self::PATTERN_DELIMITERS as $delimiter) {
-            if (!str_contains($normalized, $delimiter)) {
-                return $delimiter . $normalized . $delimiter . $modifiers;
-            }
-        }
-
-        return null;
     }
 }
