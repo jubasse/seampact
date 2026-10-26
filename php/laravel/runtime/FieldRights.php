@@ -151,7 +151,7 @@ final class FieldRights
         return new RequirementCall(
             RequirementKind::Right,
             $right,
-            is_array($params) ? (object) $params : null,
+            is_array($params) ? AccessSteps::asObject($params) : null,
             $state->principal,
             $subject,
             $state->scopes,

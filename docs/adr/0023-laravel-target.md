@@ -112,7 +112,7 @@ Every other exception is rendered by the app's own handler, untouched. The bound
 - `PostTooLargeException` from `ValidatePostSize`: `payloadTooLarge` (413);
 - the `HttpException` 503 of `PreventRequestsDuringMaintenance`: `serviceUnavailable` (503, grammar 05 roles), keeping `Retry-After`.
 
-A role whose status the operation does not declare is the api's 500. Any other exception's reply is checked as written, below. An app's own handler renders a contract error with the exported `renderContractError($request, $exception)`.
+A role whose status the operation does not declare is the api's 500. Any other exception's reply is checked as written, below. A generated exception renders only on a contract request; an exported `renderContractError($request, $exception)` for an app's own handler waits for a consumer that needs it.
 
 ### The outgoing response check
 

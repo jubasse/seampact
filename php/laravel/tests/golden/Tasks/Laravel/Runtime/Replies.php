@@ -72,7 +72,7 @@ final class Replies
         $contract = $state->contract;
         $answers = $contract->resultOf($result);
         if ($answers === null || $answers[0] !== $state->operationId) {
-            throw new \LogicException('seampact: the handler of operation ' . var_export($state->operationId, true) . ' returned ' . $result::class . ', which is not one of its results.');
+            throw new BoundaryFailure(new \LogicException('seampact: the handler of operation ' . var_export($state->operationId, true) . ' returned ' . $result::class . ', which is not one of its results.'));
         }
 
         [$operationId, $status] = $answers;

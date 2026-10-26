@@ -24,6 +24,7 @@ final class BootCheck
     private const OWN_ROUTE_NAMES = '/^(storage\.[^.]+(\.upload)?|sanctum\.csrf-cookie)$/D';
     private const SUBSTITUTE_BINDINGS = 'Illuminate\\Routing\\Middleware\\SubstituteBindings';
     private const HEAD = 'HEAD';
+    private const GENERATED_ROUTE_NAME = '/^seampact\.([^.]+)\./D';
 
     private function __construct()
     {
@@ -160,16 +161,21 @@ final class BootCheck
             }
         }
 
+        $ownNames = [];
+        foreach ($contract->routeTable as $entry) {
+            $ownNames[$contract->routeName(is_string($entry['operation'] ?? null) ? $entry['operation'] : '')] = true;
+        }
+
         foreach ($router->getRoutes()->getRoutes() as $route) {
             $name = $route->getName() ?? '';
-            if (str_starts_with($name, "seampact.{$contract->api}.")) {
+            if (isset($ownNames[$name])) {
                 $contractRoutes[$name][] = $route;
                 continue;
             }
             $controller = explode('@', $route->getActionName())[0];
             if (isset($contractActions[$controller])) {
                 $problems[] = "the route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " calls a contract handler ({$route->getActionName()}) but no generated registration made it: remove it";
-            } elseif ($switches[self::FRAMEWORK_ROUTES] && !self::isLaravelsOwn($route) && !str_starts_with($name, 'seampact.') && !self::isAllowListed($contract, $route)) {
+            } elseif ($switches[self::FRAMEWORK_ROUTES] && !self::isLaravelsOwn($route) && !self::isOtherApisRoute($app, $name) && !self::isAllowListed($contract, $route)) {
                 $problems[] = "the framework route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it";
             }
         }
@@ -203,9 +209,19 @@ final class BootCheck
     // `**` any number) and it names no method, or the route's one method besides the HEAD Laravel adds to GET.
     private static function isAllowListed(ApiContract $contract, Route $route): bool
     {
-        $uri = '/' . ltrim($route->uri(), '/');
-        $methods = array_values(array_diff(array_filter($route->methods(), is_string(...)), [self::HEAD]));
-        foreach ($contract->frameworkRoutes as $allowed) {
+        return self::allowsRoute($contract->frameworkRoutes, '/' . ltrim($route->uri(), '/'), array_values(array_filter($route->methods(), is_string(...))));
+    }
+
+    /**
+     * Whether an entry of `$frameworkRoutes` takes the route at `$uri` answering `$methods`.
+     *
+     * @param list<array{path: string, method: ?string}> $frameworkRoutes
+     * @param list<string> $methods
+     */
+    public static function allowsRoute(array $frameworkRoutes, string $uri, array $methods): bool
+    {
+        $methods = array_values(array_diff($methods, [self::HEAD]));
+        foreach ($frameworkRoutes as $allowed) {
             $methodAllowed = $allowed['method'] === null || $methods === [$allowed['method']];
             if ($methodAllowed && preg_match(self::pathPattern($allowed['path']), $uri) === 1) {
                 return true;
@@ -213,6 +229,19 @@ final class BootCheck
         }
 
         return false;
+    }
+
+    // A generated route of another api of the app: its name is in the route table that api's provider registered.
+    private static function isOtherApisRoute(Application $app, string $name): bool
+    {
+        $tableKey = preg_match(self::GENERATED_ROUTE_NAME, $name, $parts) === 1 ? ContractServiceProvider::routeTableKey($parts[1]) : null;
+        if ($tableKey === null || !$app->bound($tableKey)) {
+            return false;
+        }
+        $routesClass = $app->make($tableKey);
+        $table = is_string($routesClass) && defined("{$routesClass}::ROUTES") ? constant("{$routesClass}::ROUTES") : [];
+
+        return is_array($table) && in_array($name, array_column($table, 'name'), true);
     }
 
     private static function pathPattern(string $path): string

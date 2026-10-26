@@ -32,7 +32,14 @@ abstract class AccessMiddleware
             throw AccessSteps::roleRefusal($state, self::NOT_FOUND_ROLE);
         }
 
-        AccessSteps::run($this->app, $request, $state);
+        try {
+            AccessSteps::run($this->app, $request, $state);
+        } catch (ContractRefusal $refusal) {
+            throw $refusal;
+        } catch (\Throwable $failure) {
+            throw new BoundaryFailure($failure);
+        }
+        $state->admitted = true;
         $request->attributes->set(BoundaryMark::attributeName($contract->api), $state->operationId);
 
         return $next($request);

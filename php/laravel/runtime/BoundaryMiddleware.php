@@ -21,6 +21,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 abstract class BoundaryMiddleware
 {
     private const NOT_FOUND_ROLE = 'notFound';
+    private const NOT_FOUND_STATUS = 404;
+    private const INTERNAL_STATUS = 500;
+    private const PREFLIGHT_METHOD = 'OPTIONS';
     private const STRICT = 'strict';
     private const KEEP = 'keep';
 
@@ -36,12 +39,23 @@ abstract class BoundaryMiddleware
 
     public function handle(Request $request, \Closure $next): Response
     {
+        // A CORS preflight is the app's HandleCors to answer, which runs after the boundary.
+        if (self::isPreflight($request)) {
+            return self::passed($next($request));
+        }
+
         $contract = ApiContract::of($this->contractClass());
         $match = $contract->match($request->getMethod(), RawTarget::path($request));
         if ($match === null) {
             return self::passed($next($request));
         }
 
+        return $this->served($request, $next, $contract, $match)->prepare($request);
+    }
+
+    // Every reply on a contract or base path, prepared here since the boundary writes some outside the router.
+    private function served(Request $request, \Closure $next, ApiContract $contract, RouteMatch $match): Response
+    {
         if (!$this->isFirst()) {
             return $this->internalError($contract, $match->operationId, 'the boundary middleware is not the first global middleware; let the provider prepend it, and prepend no other global middleware before it', null);
         }
@@ -50,7 +64,7 @@ abstract class BoundaryMiddleware
         if ($operationId === null) {
             return $this->setting($contract, null, 'catch_all') === false
                 ? self::passed($next($request))
-                : Replies::error($contract, null, $contract->roleCode(null, self::NOT_FOUND_ROLE) ?? 'api.not_found');
+                : self::roleReply($contract, null, self::NOT_FOUND_ROLE, self::NOT_FOUND_STATUS);
         }
 
         $state = new BoundaryState($contract, $operationId, $match->rawParameters, self::view($request));
@@ -74,11 +88,15 @@ abstract class BoundaryMiddleware
         $exception = property_exists($response, 'exception') && $response->exception instanceof \Throwable ? $response->exception : null;
 
         if (self::routedElsewhere($request, $state, $exception)) {
-            return $state->author(Replies::error($contract, $state->operationId, $contract->roleCode($state->operationId, self::NOT_FOUND_ROLE) ?? 'api.not_found'));
+            return $state->author(self::roleReply($contract, $state->operationId, self::NOT_FOUND_ROLE, self::NOT_FOUND_STATUS));
         }
 
         if ($exception instanceof ContractBypassedException) {
             return $this->internalError($contract, $state->operationId, 'a contract FormRequest ran without the access middleware\'s mark', $exception);
+        }
+
+        if ($exception instanceof BoundaryFailure) {
+            return $this->internalError($contract, $state->operationId, 'a boundary step failed', $exception->getPrevious() ?? $exception);
         }
 
         $role = $exception === null ? null : ExceptionRoles::roleOf($exception);
@@ -91,7 +109,7 @@ abstract class BoundaryMiddleware
             $response->headers->remove('ETag');
         }
 
-        $violation = OutgoingCheck::violation($state, $response);
+        $violation = OutgoingCheck::violation($state, $response, $exception);
         if ($violation === null) {
             return $response;
         }
@@ -137,7 +155,22 @@ abstract class BoundaryMiddleware
     {
         BoundaryLog::unexpected($contract, $operationId, $reason, $cause, UnexpectedErrorListener::class);
 
-        return Replies::error($contract, $operationId, $contract->roleCode($operationId, ApiContract::UNDECLARED_STATUS_ROLE) ?? 'api.internal');
+        return self::roleReply($contract, $operationId, ApiContract::UNDECLARED_STATUS_ROLE, self::INTERNAL_STATUS);
+    }
+
+    // The role's code in the api's format, or a bare status when the api declares no code for the role.
+    private static function roleReply(ApiContract $contract, ?string $operationId, string $role, int $bareStatus): Response
+    {
+        $code = $contract->roleCode($operationId, $role);
+
+        return $code === null ? new Response('', $bareStatus) : Replies::error($contract, $operationId, $code);
+    }
+
+    private static function isPreflight(Request $request): bool
+    {
+        return $request->getMethod() === self::PREFLIGHT_METHOD
+            && $request->headers->has('Origin')
+            && $request->headers->has('Access-Control-Request-Method');
     }
 
     /** An operation's setting: `config('seampact.<api>.operations.<id>.<name>')`, then the api's, then the default. */

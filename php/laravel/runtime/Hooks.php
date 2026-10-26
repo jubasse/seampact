@@ -53,7 +53,7 @@ final class Hooks
         $everyName = null;
         foreach (self::tagged($container, self::decidersTag($contract->api)) as $decider) {
             if (!$decider instanceof Decider) {
-                continue;
+                throw new \LogicException("seampact: a service tagged '" . self::decidersTag($contract->api) . "' (" . get_debug_type($decider) . ') does not implement ' . Decider::class . '.');
             }
             if (in_array($name, $decider->names(), true)) {
                 return $decider;

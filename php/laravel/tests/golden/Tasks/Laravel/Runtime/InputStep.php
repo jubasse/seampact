@@ -70,16 +70,18 @@ final class InputStep
     /** @param array<array-key, mixed> $input */
     private static function body(Request $request, BoundaryState $state, array $input): mixed
     {
-        $media = strtolower(trim(explode(';', (string) $request->headers->get('Content-Type', ''))[0]));
-        if ($media !== (Ir::string($input, 'media') ?? '')) {
-            throw AccessSteps::roleRefusal($state, self::UNSUPPORTED_MEDIA_TYPE_ROLE);
-        }
-
+        // The bounded read comes first, so an oversized body answers 413 whatever its media type (ADR 0012).
         $limitBytes = Ir::int($input, 'bodyLimitBytes') ?? PHP_INT_MAX;
         $read = BodyReader::read($request, $limitBytes);
         if ($read->refusedRole === self::PAYLOAD_TOO_LARGE_ROLE) {
-            $code = $state->contract->roleCode($state->operationId, self::PAYLOAD_TOO_LARGE_ROLE) ?? 'api.payload_too_large';
+            $code = $state->contract->roleCode($state->operationId, self::PAYLOAD_TOO_LARGE_ROLE)
+                ?? throw new \LogicException("seampact: operation '{$state->operationId}' has a body limit but no code for the role '" . self::PAYLOAD_TOO_LARGE_ROLE . "'.");
             throw new ContractRefusal($state->contract->api, $code, Replies::roleParams($state->contract, $state->operationId, $code, self::PAYLOAD_TOO_LARGE_ROLE, ['limitBytes' => $limitBytes]));
+        }
+
+        $media = strtolower(trim(explode(';', (string) $request->headers->get('Content-Type', ''))[0]));
+        if ($read->bytes !== '' && $media !== (Ir::string($input, 'media') ?? '')) {
+            throw AccessSteps::roleRefusal($state, self::UNSUPPORTED_MEDIA_TYPE_ROLE);
         }
         if ($read->refusedRole !== null) {
             throw $read->refusedRole === self::UNSUPPORTED_MEDIA_TYPE_ROLE

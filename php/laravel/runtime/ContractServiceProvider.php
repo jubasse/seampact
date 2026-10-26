@@ -94,7 +94,8 @@ abstract class ContractServiceProvider extends ServiceProvider
             || (method_exists($this->app, 'runningConsoleCommand') && $this->app->runningConsoleCommand(self::CACHING_COMMANDS));
     }
 
-    private static function routeTableKey(string $api): string
+    /** The container key of the api's generated route table class. */
+    public static function routeTableKey(string $api): string
     {
         return "seampact.{$api}.routes";
     }

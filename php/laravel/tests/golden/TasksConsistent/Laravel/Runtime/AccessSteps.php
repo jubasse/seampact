@@ -230,7 +230,11 @@ final class AccessSteps
             throw self::schemaInvalid($state, [['in' => 'path', 'pointer' => '/' . $name, 'rule' => $rule]]);
         }
 
-        return is_int($value) ? $value : (is_string($value) ? $value : '');
+        if (!is_int($value) && !is_string($value)) {
+            throw new \LogicException("seampact: the path parameter '{$name}' decoded to " . get_debug_type($value) . ', not an id.');
+        }
+
+        return $value;
     }
 
     private static function decideRequirements(Container $container, BoundaryState $state): void
@@ -312,7 +316,7 @@ final class AccessSteps
     }
 
     /** @param array<array-key, mixed> $value */
-    private static function asObject(array $value): \stdClass
+    public static function asObject(array $value): \stdClass
     {
         $object = json_decode(json_encode($value, JSON_THROW_ON_ERROR), false, 512, JSON_THROW_ON_ERROR);
 

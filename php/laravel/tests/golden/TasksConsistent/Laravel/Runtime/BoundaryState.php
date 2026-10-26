@@ -22,6 +22,8 @@ final class BoundaryState
     /** @var list<ResolvedScope> */
     public array $scopes = [];
     public ?object $contractInput = null;
+    /** Whether the access middleware admitted the request (steps 2 to 5 passed). */
+    public bool $admitted = false;
     /** The body decoded with its objects preserved; null when the request carries none. */
     public mixed $body = null;
     /** @var \WeakMap<Response, array{int, string, ?string}> */
