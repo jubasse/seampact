@@ -43,7 +43,7 @@ permissions:
 jobs:
   report:
     if: >-
-      github.event.workflow_run.conclusion == 'failure'
+      contains(fromJSON('["failure", "timed_out", "startup_failure"]'), github.event.workflow_run.conclusion)
       && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'schedule')
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -65,7 +65,7 @@ jobs:
           title="ci-watch: $WORKFLOW_NAME fails on develop"
 
           if failed_jobs=$(gh api --paginate "repos/$GH_REPO/actions/runs/$RUN_ID/jobs" \
-            --jq '.jobs[] | select(.conclusion == "failure") | "- [\(.name)](\(.html_url))"' 2>&1); then
+            --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "cancelled") | "- [\(.name)](\(.html_url))"' 2>&1); then
             if [ -z "$failed_jobs" ]; then failed_jobs="- none listed as failed; see the run"; fi
           else
             failed_jobs="- not listed: the jobs API refused ($failed_jobs); see the run"
