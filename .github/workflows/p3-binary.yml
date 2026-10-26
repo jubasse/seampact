@@ -1,16 +1,23 @@
 # The standalone compiler binary (ADR 0010): five binaries built on one Linux job, the macOS ones re-signed ad hoc
 # on macOS runners, a SHA-256 manifest of the final files, and a smoke on each platform's own runner. Attestations
 # are made by a release-only job; a pull request builds and smokes with read-only tokens. On a pull request or a push the jobs
-# run only when the change touches a watched path; `binary` is the one check to require.
+# run only when the change touches a watched path. A pull request smokes linux-x64 and win32-x64 on unsigned binaries,
+# a push to develop adds linux-arm64, and the nightly, a manual run and a release sign the macOS binaries and smoke
+# them too (an unsigned binary does not run on Apple Silicon); `binary` is the one check to require.
 name: p3-binary
 
 on:
+  push:
+    branches: [main, develop]
   pull_request:
     branches: [main, develop]
   # A published release also pushes its tag, so only the release event builds a release, once.
   release:
     types: [published]
   workflow_dispatch:
+  # The nightly run holds the drift rows (macOS signing and smoke).
+  schedule:
+    - cron: "30 0 * * *"
 
 permissions:
   contents: read
@@ -25,12 +32,16 @@ jobs:
     timeout-minutes: 5
     outputs:
       binary: ${{ steps.detect.outputs.run }}
+      post-merge: ${{ steps.detect.outputs.post-merge }}
+      drift: ${{ steps.detect.outputs.drift }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history without file contents: the change list reads commits and trees only.
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
           fetch-depth: 0
           filter: blob:none
+          sparse-checkout: .github/actions
           persist-credentials: false
       - name: Detect a change the binary is built from
         id: detect
@@ -94,7 +105,8 @@ jobs:
 
   sign-macos:
     name: sign (${{ matrix.id }})
-    needs: build
+    needs: [changes, build]
+    if: needs.changes.outputs.drift == 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 10
     strategy:
@@ -164,9 +176,10 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  # The PR rows; the post-merge and drift jobs below run the same steps on the other platforms.
   smoke:
-    name: smoke (${{ matrix.id }})
-    needs: [sign-macos, manifest]
+    name: &smoke-name smoke (${{ matrix.id }})
+    needs: [changes, sign-macos, manifest]
     if: ${{ !cancelled() && needs.manifest.result == 'success' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
@@ -175,14 +188,11 @@ jobs:
       matrix:
         include:
           - { id: linux-x64, runner: ubuntu-24.04, binary: seampact-linux-x64 }
-          - { id: linux-arm64, runner: ubuntu-24.04-arm, binary: seampact-linux-arm64 }
-          - { id: darwin-arm64, runner: macos-15, binary: seampact-darwin-arm64 }
-          - { id: darwin-x64, runner: macos-15-intel, binary: seampact-darwin-x64 }
           - { id: win32-x64, runner: windows-2025, binary: seampact-win32-x64.exe }
-    defaults:
+    defaults: &smoke-defaults
       run:
         shell: bash
-    steps:
+    steps: &smoke-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -246,10 +256,40 @@ jobs:
           SMOKE_ENV: '{"TZ":"Asia/Kolkata","LANG":"fr_FR.UTF-8","LC_ALL":"fr_FR.UTF-8","LOG_TOKENS":"1","LOG_STREAM":"1"}'
         run: node packages/tools/binary/scripts/smoke.mjs "bin/${{ matrix.binary }}" reference --label "linux-x64 TZ=Asia/Kolkata LANG=fr_FR.UTF-8 LOG_TOKENS LOG_STREAM"
 
+  smoke-post-merge:
+    name: *smoke-name
+    needs: [changes, sign-macos, manifest]
+    if: ${{ !cancelled() && needs.manifest.result == 'success' && needs.changes.outputs.post-merge == 'true' }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: linux-arm64, runner: ubuntu-24.04-arm, binary: seampact-linux-arm64 }
+    defaults: *smoke-defaults
+    steps: *smoke-steps
+
+  smoke-drift:
+    name: *smoke-name
+    needs: [changes, sign-macos, manifest]
+    if: ${{ !cancelled() && needs.manifest.result == 'success' && needs.changes.outputs.drift == 'true' }}
+    runs-on: ${{ matrix.runner }}
+    # macOS runners queue and start slowly.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: darwin-arm64, runner: macos-15, binary: seampact-darwin-arm64 }
+          - { id: darwin-x64, runner: macos-15-intel, binary: seampact-darwin-x64 }
+    defaults: *smoke-defaults
+    steps: *smoke-steps
+
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   binary:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, build, sign-macos, manifest, smoke]
+    needs: [changes, build, sign-macos, manifest, smoke, smoke-post-merge, smoke-drift]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -262,11 +302,13 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.binary }}
+          # Signing is a drift row: a pull request and a push smoke unsigned binaries.
+          allow-skip: ${{ needs.changes.outputs.drift == 'false' && 'sign-macos' || '' }}
 
   attest:
     name: attest (release only)
     if: github.event_name == 'release'
-    needs: smoke
+    needs: [smoke, smoke-post-merge, smoke-drift]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

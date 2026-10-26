@@ -24,12 +24,15 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.detect.outputs.run }}
+      post-merge: ${{ steps.detect.outputs.post-merge }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history without file contents: the change list reads commits and trees only.
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
           fetch-depth: 0
           filter: blob:none
+          sparse-checkout: .github/actions
           persist-credentials: false
       - name: Detect a change beyond documentation no test reads
         id: detect
@@ -39,6 +42,7 @@ jobs:
           watched-paths: |
             .
 
+  # The PR rows: every target and every validator once; the post-merge job below runs the other pairs.
   consumer:
     needs: changes
     if: needs.changes.outputs.run == 'true'
@@ -47,9 +51,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [hono]
-        validators: [zod, yup]
-    steps:
+        include:
+          - { target: hono, validators: zod }
+    steps: &consumer-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -61,3 +65,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} from packed tarballs
         run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
+
+  consumer-post-merge:
+    needs: changes
+    if: needs.changes.outputs.post-merge == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: hono, validators: yup }
+    steps: *consumer-steps

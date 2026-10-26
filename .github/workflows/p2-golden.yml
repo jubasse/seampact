@@ -3,7 +3,9 @@ name: Golden IR determinism
 # `scripts/golden --check` on every golden case: it compiles each case and compares the IR, the side table and the OpenAPI documents byte for
 # byte with the committed files. The matrix runs it on Linux, macOS and Windows, with two time zones and two locales
 # (one of them Turkish, for case mapping), and Windows converts every case source to CRLF before the check. ICU takes its
-# default locale from the OS on Windows, so the Windows `lang` cells vary the time zone only. `golden-determinism` is the check to require.
+# default locale from the OS on Windows, so the Windows `lang` cells vary the time zone only. A pull request runs one
+# Linux and one Windows row, a push to develop the other two, and the nightly the macOS rows (they only ever failed
+# by timing out). `golden-determinism` is the check to require.
 
 on:
   push:
@@ -11,6 +13,9 @@ on:
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
+  # The nightly run holds the drift rows (macOS).
+  schedule:
+    - cron: "30 0 * * *"
 
 permissions:
   contents: read
@@ -25,12 +30,16 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.detect.outputs.run }}
+      post-merge: ${{ steps.detect.outputs.post-merge }}
+      drift: ${{ steps.detect.outputs.drift }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history without file contents: the change list reads commits and trees only.
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
           fetch-depth: 0
           filter: blob:none
+          sparse-checkout: .github/actions
           persist-credentials: false
       - name: Detect a change beyond documentation no test reads
         id: detect
@@ -40,8 +49,9 @@ jobs:
           watched-paths: |
             .
 
+  # The PR rows; the post-merge and drift jobs below run the same steps on the other rows.
   determinism:
-    name: determinism (${{ matrix.os }}, ${{ matrix.tz }}, ${{ matrix.lang }})
+    name: &determinism-name determinism (${{ matrix.os }}, ${{ matrix.tz }}, ${{ matrix.lang }})
     needs: changes
     if: needs.changes.outputs.run == 'true'
     runs-on: ${{ matrix.os }}
@@ -50,17 +60,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest, tz: UTC, lang: en_US.UTF-8 }
           - { os: ubuntu-latest, tz: Pacific/Kiritimati, lang: tr_TR.UTF-8 }
-          - { os: macos-latest, tz: America/Los_Angeles, lang: en_US.UTF-8 }
-          - { os: macos-latest, tz: Asia/Kolkata, lang: tr_TR.UTF-8 }
-          - { os: windows-latest, tz: UTC, lang: en_US.UTF-8 }
           - { os: windows-latest, tz: Pacific/Auckland, lang: tr_TR.UTF-8 }
-    env:
+    env: &determinism-env
       TZ: ${{ matrix.tz }}
       LANG: ${{ matrix.lang }}
       LC_ALL: ${{ matrix.lang }}
-    steps:
+    steps: &determinism-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -102,8 +108,39 @@ jobs:
       - name: Check every golden case
         run: node --experimental-transform-types --import ./scripts/ir-models/register.ts scripts/golden/cli.ts --check
 
+  determinism-post-merge:
+    name: *determinism-name
+    needs: changes
+    if: needs.changes.outputs.post-merge == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, tz: UTC, lang: en_US.UTF-8 }
+          - { os: windows-latest, tz: UTC, lang: en_US.UTF-8 }
+    env: *determinism-env
+    steps: *determinism-steps
+
+  determinism-drift:
+    name: *determinism-name
+    needs: changes
+    if: needs.changes.outputs.drift == 'true'
+    runs-on: ${{ matrix.os }}
+    # macOS runners queue and start slowly: two 15-minute timeouts were runner time, not the check.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, tz: America/Los_Angeles, lang: en_US.UTF-8 }
+          - { os: macos-latest, tz: Asia/Kolkata, lang: tr_TR.UTF-8 }
+    env: *determinism-env
+    steps: *determinism-steps
+
   golden-determinism:
-    needs: [changes, determinism]
+    needs: [changes, determinism, determinism-post-merge, determinism-drift]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

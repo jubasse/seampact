@@ -26,12 +26,15 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.detect.outputs.run }}
+      post-merge: ${{ steps.detect.outputs.post-merge }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history without file contents: the change list reads commits and trees only.
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
           fetch-depth: 0
           filter: blob:none
+          sparse-checkout: .github/actions
           persist-credentials: false
       - name: Detect a change beyond documentation no test reads
         id: detect
@@ -41,6 +44,7 @@ jobs:
           watched-paths: |
             .
 
+  # The PR rows: every target and every validator once; the post-merge job below runs the other pairs.
   nestjs-consumer:
     needs: changes
     if: needs.changes.outputs.run == 'true'
@@ -49,15 +53,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [nestjs]
-        validators: [zod, yup, class-validator]
-        reply: [handler]
-        # A new value of `reply`, so a fourth job rather than an extra key on the zod one.
         include:
-          - target: nestjs
-            validators: zod
-            reply: interceptor
-    steps:
+          - { target: nestjs, validators: class-validator, reply: handler }
+          - { target: nestjs, validators: zod, reply: interceptor }
+    steps: &consumer-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -69,3 +68,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} with reply ${{ matrix.reply }} from packed tarballs
         run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --target-option "reply=${{ matrix.reply }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}-${{ matrix.reply }}"
+
+  nestjs-consumer-post-merge:
+    needs: changes
+    if: needs.changes.outputs.post-merge == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: nestjs, validators: zod, reply: handler }
+          - { target: nestjs, validators: yup, reply: handler }
+    steps: *consumer-steps

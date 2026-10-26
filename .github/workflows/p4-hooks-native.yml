@@ -31,9 +31,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history without file contents: the change list reads commits and trees only.
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
           fetch-depth: 0
           filter: blob:none
+          sparse-checkout: .github/actions
           persist-credentials: false
       - name: Detect a change to the native hooks packages or their manifest
         id: detect
