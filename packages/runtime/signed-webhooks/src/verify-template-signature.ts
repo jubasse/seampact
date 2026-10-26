@@ -54,13 +54,29 @@ export class SignaturePayloadInvalidError extends Error {
   }
 }
 
-/** Thrown when the payload signs `{ts}` and the scheme has no tolerance: a replay of any age would pass. */
-export class SignatureToleranceMissingError extends Error {
-  readonly code = "signature.tolerance.missing";
+/** Thrown when the tolerance does not fit the payload: missing for a `{ts}` payload (a replay of any age would pass), negative (every request would fail) or given for a payload with no `{ts}`. */
+export class SignatureToleranceInvalidError extends Error {
+  readonly code = "signature.tolerance.invalid";
 
-  constructor(readonly payload: string) {
-    super(
+  private constructor(message: string) {
+    super(message);
+  }
+
+  static missing(payload: string): SignatureToleranceInvalidError {
+    return new SignatureToleranceInvalidError(
       `The signed payload '${payload}' holds {ts} but the scheme has no tolerance, so a replayed request of any age would pass. Pass the tolerance of the hook's signature template as toleranceMs.`,
+    );
+  }
+
+  static negative(toleranceMs: number): SignatureToleranceInvalidError {
+    return new SignatureToleranceInvalidError(
+      `The tolerance ${toleranceMs} ms is negative, so every request would fail. Pass the tolerance of the hook's signature template as toleranceMs.`,
+    );
+  }
+
+  static withoutTimestamp(payload: string): SignatureToleranceInvalidError {
+    return new SignatureToleranceInvalidError(
+      `The scheme has a tolerance but its signed payload '${payload}' holds no {ts}, so there is no timestamp to check. Drop the tolerance, as the hook's signature template does.`,
     );
   }
 }
@@ -127,8 +143,18 @@ function refuseInvalidPayload(template: SignatureTemplate): void {
     throw new SignaturePayloadInvalidError(template.payload);
   }
 
-  if (timestampCount === 1 && template.toleranceMs === undefined) {
-    throw new SignatureToleranceMissingError(template.payload);
+  const { toleranceMs } = template;
+
+  if (toleranceMs === undefined && timestampCount === 1) {
+    throw SignatureToleranceInvalidError.missing(template.payload);
+  }
+
+  if (toleranceMs !== undefined && toleranceMs < 0) {
+    throw SignatureToleranceInvalidError.negative(toleranceMs);
+  }
+
+  if (toleranceMs !== undefined && timestampCount === 0) {
+    throw SignatureToleranceInvalidError.withoutTimestamp(template.payload);
   }
 }
 

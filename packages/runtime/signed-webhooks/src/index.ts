@@ -5,7 +5,7 @@ export {
   type SecretLookup,
   type SignatureFailure,
   SignaturePayloadInvalidError,
-  SignatureToleranceMissingError,
+  SignatureToleranceInvalidError,
   type SignatureVerification,
   SUPPORTED_ALGORITHM,
   UnsupportedSignatureAlgorithmError,

@@ -5,7 +5,7 @@ import {
   EmptySignatureSecretError,
   type SignatureFailure,
   SignaturePayloadInvalidError,
-  SignatureToleranceMissingError,
+  SignatureToleranceInvalidError,
   UnsupportedSignatureAlgorithmError,
   verifyTemplateSignature,
 } from "./verify-template-signature.js";
@@ -125,6 +125,19 @@ describe("verifies the ADR 0013 vectors", () => {
       () => ["secret"],
     );
 
-    await expect(verification).rejects.toBeInstanceOf(SignatureToleranceMissingError);
+    await expect(verification).rejects.toBeInstanceOf(SignatureToleranceInvalidError);
+  });
+
+  test.each([
+    ["a negative tolerance", "{ts}.{rawBody}", -1],
+    ["a tolerance without {ts}", "{rawBody}", 1000],
+  ])("%s is refused by name", async (_name, payload, toleranceMs) => {
+    const request = signedRequest("github", vectors.cases[0]?.header ?? "", "");
+    const verification = verifyTemplateSignature(
+      { ...request, template: { ...request.template, payload, toleranceMs } },
+      () => ["secret"],
+    );
+
+    await expect(verification).rejects.toMatchObject({ code: "signature.tolerance.invalid" });
   });
 });

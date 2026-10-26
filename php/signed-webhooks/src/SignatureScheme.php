@@ -18,6 +18,7 @@ final readonly class SignatureScheme
      *
      * @throws SignaturePayloadInvalid when the payload does not hold `{rawBody}` exactly once and `{ts}` at most once
      * @throws TimestampWithoutTolerance when the payload holds `{ts}` and no tolerance is given
+     * @throws SignatureToleranceInvalid when the tolerance is negative or the payload holds no `{ts}`
      */
     public function __construct(
         public string $algorithm,
@@ -33,6 +34,14 @@ final readonly class SignatureScheme
 
         if ($toleranceMs === null && $timestampCount === 1) {
             throw new TimestampWithoutTolerance($payload);
+        }
+
+        if ($toleranceMs !== null && $toleranceMs < 0) {
+            throw SignatureToleranceInvalid::negative($toleranceMs);
+        }
+
+        if ($toleranceMs !== null && $timestampCount === 0) {
+            throw SignatureToleranceInvalid::withoutTimestamp($payload);
         }
     }
 }

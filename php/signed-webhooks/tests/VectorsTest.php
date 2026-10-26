@@ -14,6 +14,7 @@ use Seampact\SignedWebhooks\SignatureEncoding;
 use Seampact\SignedWebhooks\SignatureFailure;
 use Seampact\SignedWebhooks\SignatureScheme;
 use Seampact\SignedWebhooks\TemplateSignatureVerifier;
+use Seampact\SignedWebhooks\SignatureToleranceInvalid;
 use Seampact\SignedWebhooks\TimestampWithoutTolerance;
 use Seampact\SignedWebhooks\UnsupportedSignatureAlgorithm;
 
@@ -139,6 +140,29 @@ final class VectorsTest extends TestCase
         $this->expectException(TimestampWithoutTolerance::class);
 
         new SignatureScheme(TemplateSignatureVerifier::SUPPORTED_ALGORITHM, '{ts}.{rawBody}', SignatureEncoding::Hex);
+    }
+
+    #[DataProvider('tolerancesThatDoNotFitThePayload')]
+    public function testRefusesAToleranceThatDoesNotFitThePayload(string $payload, int $toleranceMs): void
+    {
+        $this->expectException(SignatureToleranceInvalid::class);
+
+        new SignatureScheme(TemplateSignatureVerifier::SUPPORTED_ALGORITHM, $payload, SignatureEncoding::Hex, $toleranceMs);
+    }
+
+    public function testEveryToleranceRefusalCarriesTheSharedCode(): void
+    {
+        self::assertSame('signature.tolerance.invalid', TimestampWithoutTolerance::CODE);
+        self::assertSame('signature.tolerance.invalid', SignatureToleranceInvalid::CODE);
+    }
+
+    /** @return array<string, array{string, int}> */
+    public static function tolerancesThatDoNotFitThePayload(): array
+    {
+        return [
+            'negative' => ['{ts}.{rawBody}', -1],
+            'without a timestamp' => ['{rawBody}', 1000],
+        ];
     }
 
     #[DataProvider('payloadsWithoutOneRawBody')]
