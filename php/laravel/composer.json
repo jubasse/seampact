@@ -6,12 +6,12 @@
   "require": {
     "ext-json": "*",
     "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
+    "laravel/framework": "^13.0",
     "nette/php-generator": "~4.2.0",
     "seampact/codegen": "self.version",
     "seampact/ir": "self.version"
   },
   "require-dev": {
-    "laravel/framework": "13.38.0",
     "phpstan/phpstan": "2.2.16",
     "phpunit/phpunit": "11.5.56",
     "seampact/hooks": "self.version"
@@ -41,12 +41,12 @@
   ],
   "autoload": {
     "psr-4": {
-      "Seampact\\Laravel\\": "src/"
+      "Seampact\\Laravel\\": "src/",
+      "Seampact\\Laravel\\Runtime\\": "runtime/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Seampact\\Laravel\\Runtime\\": "runtime/",
       "Seampact\\Laravel\\Tests\\": "tests/",
       "Seampact\\Golden\\": "tests/golden/"
     }
