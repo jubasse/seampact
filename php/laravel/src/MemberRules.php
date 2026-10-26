@@ -12,6 +12,8 @@ use Seampact\Codegen\PcrePattern;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\RulesMode;
+use Seampact\Codegen\Runtime\Nullability;
+use Seampact\Codegen\Runtime\Presence;
 use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\EnumTypeUse;
 use Seampact\Ir\Model\ObjectSchema;
@@ -25,9 +27,7 @@ use Seampact\Ir\Model\TypeUse;
 use Seampact\Ir\Model\UnknownKeysPolicy;
 use Seampact\Laravel\Runtime\BlankStrings;
 use Seampact\Laravel\Runtime\InputTree;
-use Seampact\Laravel\Runtime\Nullability;
 use Seampact\Laravel\Runtime\Position;
-use Seampact\Laravel\Runtime\Presence;
 
 /**
  * The validation rules of one operation (ADR 0023 "Types and validation"), as PHP source per rule key: `bail`, then

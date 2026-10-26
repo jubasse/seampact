@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "vitest";
 import {
   CLIENT_TARGETS,
@@ -234,11 +236,22 @@ test("the spring-boot JVM target is tested on Spring Boot 4 and refuses Spring B
 });
 
 test("the laravel PHP target is tested on Laravel 13 and refuses Laravel 11 and 12", () => {
-  expect(PHP_TARGETS.map((target) => target.package)).toEqual(["seampact/laravel"]);
+  expect(PHP_TARGETS.map((target) => target.package)).toEqual([
+    "seampact/laravel",
+    "seampact/symfony",
+  ]);
   expect(PHP_TARGETS[0]?.framework.tested.map((tested) => tested.major)).toEqual([13]);
   expect(PHP_TARGETS[0]?.framework.incompatible.map((incompatible) => incompatible.major)).toEqual([
     11, 12,
   ]);
+});
+
+test("the symfony PHP target is tested on Symfony 7.4 and 8 and refuses Symfony 6", () => {
+  const symfony = PHP_TARGETS.find((target) => target.package === "seampact/symfony");
+
+  expect(symfony?.framework.floor).toBe("7.4");
+  expect(symfony?.framework.tested.map((tested) => tested.major)).toEqual([7, 8]);
+  expect(symfony?.framework.incompatible.map((incompatible) => incompatible.major)).toEqual([6]);
 });
 
 test("a PHP target's floor is <major>.<minor> of a tested major", () => {
@@ -259,4 +272,13 @@ test("a PHP target's floor is <major>.<minor> of a tested major", () => {
 
   expect(() => phpTargetOf(row("6.4"))).toThrow("not <major>.<minor> of a tested major (7)");
   expect(() => phpTargetOf(row("7"))).toThrow("acme/target floor is '7'");
+});
+
+// The PHP runner reads its own copy, since a split `seampact/ir` install has no spec package beside it.
+test("php/ir ships an exact copy of the matrix", () => {
+  const repositoryRoot = join(import.meta.dirname, "../../../../..");
+  const matrixOf = (directory: string) =>
+    readFileSync(join(repositoryRoot, directory, "compatibility/matrix.json"), "utf8");
+
+  expect(matrixOf("php/ir/resources")).toBe(matrixOf("packages/core/spec"));
 });

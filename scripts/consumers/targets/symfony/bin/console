@@ -1,0 +1,11 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use App\Kernel;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+exit((new Application(new Kernel('prod', getenv('SEAMPACT_SUITE_APP_DEBUG') === 'true')))->run());

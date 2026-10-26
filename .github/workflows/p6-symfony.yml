@@ -3,8 +3,9 @@ name: Symfony target
 # The Symfony generator (ADR 0024), `seampact/symfony`: validated, installed from its lock file, audited, tested and
 # analysed at PHPStan level max on PHP 8.3 and 8.5 with Symfony 7.4, and on PHP 8.5 with Symfony 8. The tests compare
 # the reference contract's generated tree with the committed golden, run its input constraints in Symfony's Validator
-# and its bundle in a container; PHPStan analyses the golden against each Symfony major and `php -l` lints it. On a
-# pull request they run only when the change touches the PHP packages, the reference contract or this workflow;
+# and its bundle in a container; PHPStan analyses the golden against each Symfony major and `php -l` lints it. The e2e
+# job serves the consumer with PHP's built-in server to the shared http suite on Symfony 7.4 and 8. On a pull request
+# they run only when the change touches the PHP packages, the reference contract, the consumer or this workflow;
 # `symfony` is the one check to require.
 
 on:
@@ -34,14 +35,22 @@ jobs:
           fetch-depth: 0
           filter: blob:none
           persist-credentials: false
-      - name: Detect a change to the PHP packages or the files their tests read
+      - name: Detect a change to the PHP packages, the consumer or the files they read
         id: detect
         uses: ./.github/actions/lane-changes
         with:
           watched-paths: |
             ^php/
+            ^fixtures/reference/
             ^fixtures/golden/reference/
-            ^packages/core/spec/schemas/ir/
+            ^packages/core/
+            ^packages/tools/binary/
+            ^packages/tools/http-suite/
+            ^scripts/consumers/targets/symfony/
+            ^scripts/consumers/targets/laravel/bundle\.sh$
+            ^scripts/consumers/targets/spring-boot/(contract-source\.sh|credentials\.json)$
+            ^scripts/consumers/served-app\.ts$
+            ^pnpm-lock\.yaml$
             ^\.github/actions/
             ^\.github/workflows/p6-symfony\.yml$
 
@@ -85,8 +94,11 @@ jobs:
           COMPOSER_ROOT_VERSION: dev-develop
         run: |
           composer config platform.php 8.5.12
-          composer require --dev --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies \
-            symfony/framework-bundle:8.1.9 symfony/http-kernel:8.1.9 symfony/routing:8.1.9 symfony/validator:8.1.9
+          composer require --no-update --no-interaction symfony/console:8.1.9 symfony/framework-bundle:8.1.9
+          composer require --dev --no-update --no-interaction \
+            symfony/http-kernel:8.1.9 symfony/routing:8.1.9 symfony/validator:8.1.9 symfony/var-dumper:8.1.9
+          composer update --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies \
+            symfony/console symfony/framework-bundle symfony/http-kernel symfony/routing symfony/validator symfony/var-dumper
       - name: Audit the locked dependencies
         working-directory: php/symfony
         run: composer audit --locked --no-interaction
@@ -103,10 +115,118 @@ jobs:
         working-directory: php/symfony
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G
 
+  # The reference contract bundled once by the compiler binary, so the consumer jobs fetch it without Node.
+  contract-bundle:
+    needs: changes
+    if: needs.changes.outputs.symfony == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the binaries
+        working-directory: packages/tools/binary
+        run: pnpm build
+      - name: Bundle the reference contract
+        run: scripts/consumers/targets/laravel/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundled"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: symfony-contract-bundle
+          path: ${{ runner.temp }}/bundled
+          retention-days: 3
+          if-no-files-found: error
+
+  # The consumer generated from the bundle with Node removed, warmed by `cache:warmup` (the boot check), then served by
+  # `php -S` to the http suite's default, hand-written and boot profiles; the floor and the latest are both PR rows.
+  e2e:
+    name: e2e (PHP ${{ matrix.php-version }}, Symfony ${{ matrix.symfony }})
+    needs: [changes, contract-bundle]
+    if: needs.changes.outputs.symfony == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php-version: "8.3"
+            symfony: "7.4"
+          - php-version: "8.5"
+            symfony: "8"
+    env:
+      WORK: ${{ github.workspace }}/../symfony-consumer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: composer:2.10.2
+          coverage: none
+      - name: Remove Node from the runner, so the PHP path is proven to need none
+        shell: bash
+        run: |
+          set -euo pipefail
+          for node in $(which -a node nodejs npm npx corepack 2>/dev/null | sort -u); do
+            sudo rm -f "$node"
+          done
+          if command -v node || command -v npm || command -v npx; then
+            echo "Node is still on the PATH."
+            exit 1
+          fi
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: symfony-contract-bundle
+          path: ${{ runner.temp }}/bundled
+      - name: Assemble, install, generate and warm the consumer and its allow-listed variant
+        shell: bash
+        env:
+          SYMFONY_MAJOR: ${{ matrix.symfony }}
+        run: |
+          set -euo pipefail
+          for variant in "" allow-listed; do
+            scripts/consumers/targets/symfony/assemble.sh "$WORK" "$RUNNER_TEMP/bundled" "$SYMFONY_MAJOR" $variant
+            app="$WORK/app${variant:+-$variant}"
+            (
+              cd "$app"
+              composer update --no-interaction --no-progress --no-plugins --no-scripts
+              "$GITHUB_WORKSPACE/scripts/consumers/targets/symfony/check-majors.sh" . "$SYMFONY_MAJOR"
+              composer audit --no-interaction
+              vendor/bin/seampact generate
+              php bin/console cache:warmup
+            )
+          done
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run the default, hand-written and boot profiles
+        env:
+          SEAMPACT_SYMFONY_APP: ${{ env.WORK }}/app
+          SEAMPACT_SYMFONY_ALLOW_LISTED_APP: ${{ env.WORK }}/app-allow-listed
+          SEAMPACT_SYMFONY_REPORTS: ${{ github.workspace }}/reports
+        run: pnpm vitest run --config scripts/consumers/targets/symfony/suite/vitest.config.ts
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: symfony-http-suite-php${{ matrix.php-version }}-symfony${{ matrix.symfony }}
+          path: reports
+          retention-days: 7
+          if-no-files-found: warn
+
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   symfony:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, generator]
+    needs: [changes, generator, contract-bundle, e2e]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

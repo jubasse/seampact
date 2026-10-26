@@ -1,0 +1,78 @@
+{
+  "name": "seampact/symfony-consumer",
+  "description": "The Symfony consumer of the reference contract, served for the shared http suite; never published.",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "ext-json": "*",
+    "ext-zlib": "*",
+    "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
+    "seampact/hooks": "dev-develop",
+    "seampact/symfony": "dev-develop",
+    "symfony/console": "~7.4.0",
+    "symfony/dependency-injection": "~7.4.0",
+    "symfony/framework-bundle": "~7.4.0",
+    "symfony/http-foundation": "~7.4.0",
+    "symfony/http-kernel": "~7.4.0",
+    "symfony/routing": "~7.4.0",
+    "symfony/security-bundle": "~7.4.0",
+    "symfony/security-core": "~7.4.0",
+    "symfony/security-http": "~7.4.0",
+    "symfony/validator": "~7.4.0"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../../../../php/symfony",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/symfony": "dev-develop"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../../../../php/codegen",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/codegen": "dev-develop"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../../../../php/ir",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/ir": "dev-develop"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../../../../php/hooks",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/hooks": "dev-develop"
+        }
+      }
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "config": {
+    "platform": {
+      "php": "8.3.36"
+    },
+    "sort-packages": true
+  }
+}

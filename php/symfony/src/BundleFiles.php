@@ -6,28 +6,32 @@ namespace Seampact\Symfony;
 
 use Nette\PhpGenerator\Dumper;
 use Nette\PhpGenerator\Literal;
+use Seampact\Codegen\BootCheckSwitches;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\TargetOptions;
 
 /**
  * The api's bundle (ADR 0024 "Options and registration"), which the app lists in `config/bundles.php`: its
  * configuration under `seampact_<api>` (`responses`, `body_validation` and `operations.<operationId>.responses`, all
- * scalar nodes, defaulting to the target options), its services (the route loader, the input resolver and the
- * settings that read that configuration), and the compiler pass that points each endpoints interface at the one
- * service implementing it.
+ * scalar nodes, defaulting to the target options), its services (the route loader, the input resolver, the settings
+ * that read that configuration, the hooks, the boundary subscriber and the boot check's route decorator), the
+ * autoconfiguration tags of the hook interfaces, the compiler passes that point each endpoints interface at the one
+ * service implementing it and run the boot check, and the worker refusal of its `boot()`; then the boundary subscriber
+ * itself, naming the api's classes.
  */
 final class BundleFiles
 {
     public function __construct(
         private readonly SymfonyPlacement $placement,
         private readonly TargetOptions $options,
+        private readonly ?BootCheckSwitches $bootCheck,
     ) {
     }
 
     /** @return list<PhpClassFile> */
     public function files(): array
     {
-        return [$this->bundle(), $this->controllerPass(), $this->settings()];
+        return [$this->bundle(), $this->controllerPass(), $this->settings(), $this->boundary()];
     }
 
     private function bundle(): PhpClassFile
@@ -70,24 +74,71 @@ final class BundleFiles
         $load->addParameter('config')->setType('array');
         $load->addParameter('container')->setType($file->type('Symfony\\Component\\DependencyInjection\\Loader\\Configurator\\ContainerConfigurator'));
         $load->addParameter('builder')->setType($file->type('Symfony\\Component\\DependencyInjection\\ContainerBuilder'));
+        $configurator = 'Symfony\\Component\\DependencyInjection\\Loader\\Configurator';
+        foreach (['service', 'tagged_iterator', 'tagged_locator'] as $function) {
+            $file->namespace->addUseFunction("{$configurator}\\{$function}");
+        }
         $routeLoader = $file->name($this->placement->routeLoader);
         $resolver = $file->name($this->placement->inputResolver);
         $settings = $file->name($this->placement->settings);
-        $load->setBody(<<<PHP
+        $hooks = $file->name($this->placement->runtime('Hooks'));
+        $boundary = $file->name($this->placement->boundary);
+        $listener = $file->name($this->placement->runtime('UnexpectedErrorListener'));
+        $decider = $file->name($this->placement->runtime('Decider'));
+        $scopeResolver = $file->name($this->placement->runtime('ScopeResolver'));
+        $routeCheck = $file->name($this->placement->runtime('RouteCheck'));
+        $contract = $file->name($this->placement->contract);
+        $tag = static fn (string $suffix): string => "{$hooks}::tag(self::API, {$hooks}::{$suffix})";
+        $body = <<<PHP
             \$services = \$container->services();
             \$services->set({$routeLoader}::class)->tag('routing.loader');
             \$services->set({$resolver}::class)->tag('controller.argument_value_resolver', ['priority' => {$resolver}::PRIORITY]);
             \$services->set({$settings}::class)->args([\$config['responses'] ?? null, \$config['body_validation'] ?? null, \$config['operations'] ?? []]);
-            PHP);
+            \$services->set({$hooks}::class)->args([
+                tagged_locator({$tag('AUTHENTICATE_TAG_SUFFIX')}, {$hooks}::HOOK_ATTRIBUTE),
+                tagged_iterator({$tag('DECIDERS_TAG_SUFFIX')}),
+                tagged_iterator({$tag('SCOPE_RESOLVERS_TAG_SUFFIX')}),
+                service({$listener}::class)->nullOnInvalid(),
+                service('logger'),
+            ]);
+            \$services->set({$boundary}::class)->args([service({$hooks}::class), service({$settings}::class), service('validator')])->tag('kernel.event_subscriber');
+            \$builder->registerForAutoconfiguration({$decider}::class)->addTag({$tag('DECIDERS_TAG_SUFFIX')});
+            \$builder->registerForAutoconfiguration({$scopeResolver}::class)->addTag({$tag('SCOPE_RESOLVERS_TAG_SUFFIX')});
+
+            PHP;
+        foreach ($this->placement->identities() as $classes) {
+            $hook = $file->name($classes['hook']);
+            $body .= "\$builder->registerForAutoconfiguration({$hook}::class)->addTag({$tag('AUTHENTICATE_TAG_SUFFIX')}, [{$hooks}::HOOK_ATTRIBUTE => {$hook}::class]);\n";
+        }
+        if ($this->bootCheck !== null && $this->bootCheck->hooks) {
+            $warmer = $file->name($this->placement->runtime('HookCheckWarmer'));
+            $body .= "\$services->set({$warmer}::class)->args([service({$hooks}::class), {$contract}::class])->tag('kernel.cache_warmer');\n";
+        }
+        if ($this->bootCheck !== null) {
+            $body .= "\$services->set({$routeCheck}::class)->decorate('routing.loader')->args([service('.inner'), {$contract}::class, " . var_export($this->bootCheck->frameworkRoutes, true) . ']);';
+        }
+        $load->setBody(rtrim($body));
+        $class->addConstant('API', $this->placement->layout->ir->api->id)->setPrivate();
 
         $build = $class->addMethod('build')->setPublic()->setReturnType('void');
         $build->addParameter('container')->setType($file->type('Symfony\\Component\\DependencyInjection\\ContainerBuilder'));
         $pass = $file->name($this->placement->controllerPass);
         $passConfig = $file->name('Symfony\\Component\\DependencyInjection\\Compiler\\PassConfig');
-        $build->setBody(<<<PHP
+        $buildBody = <<<PHP
             parent::build(\$container);
             \$container->addCompilerPass(new {$pass}(), {$passConfig}::TYPE_BEFORE_OPTIMIZATION, {$pass}::PRIORITY);
-            PHP);
+            PHP;
+        if ($this->bootCheck !== null) {
+            $bootCheckPass = $file->name($this->placement->runtime('BootCheckPass'));
+            $buildBody .= "\n\$container->addCompilerPass(new {$bootCheckPass}({$contract}::class, {$boundary}::class, {$resolver}::class, "
+                . var_export($this->bootCheck->handlers, true) . "), {$passConfig}::TYPE_BEFORE_REMOVING, {$bootCheckPass}::PRIORITY);";
+        }
+        $build->setBody($buildBody);
+
+        $class->addMethod('boot')->setPublic()->setReturnType('void')
+            ->addComment('Refuses a worker runtime, which serves many requests from one container, and redacts credentials in VarDumper.')
+            ->setBody("parent::boot();\n{$file->name($this->placement->runtime('BoundarySubscriber'))}::refuseWorker(\$this->container);\n"
+                . "{$file->name($this->placement->runtime('DumpRedaction'))}::register({$file->name($this->placement->runtime('ApiContract'))}::of({$file->name($this->placement->contract)}::class));");
 
         return $file;
     }
@@ -143,6 +194,7 @@ final class BundleFiles
         $file = new PhpClassFile($this->placement->settings);
         $alias = $this->placement->configurationAlias;
         $class = $file->namespace->addClass($file->shortName)->setFinal()->setReadOnly()
+            ->addImplement($file->type($this->placement->runtime('ContractSettings')))
             ->addComment("The '{$alias}' bundle configuration, each value checked when the boundary reads it, so a value\n"
                 . 'the configuration cannot hold is refused naming its key and the accepted values, never the value.');
         $class->addConstant('RESPONSES_VALUES', ['strict', 'warn'])->setPrivate();
@@ -188,6 +240,34 @@ final class BundleFiles
 
             throw new \\UnexpectedValueException('The bundle configuration key {$alias}.body_validation takes true or false.');
             PHP);
+
+        return $file;
+    }
+
+    private function boundary(): PhpClassFile
+    {
+        $file = new PhpClassFile($this->placement->boundary);
+        $class = $file->namespace->addClass($file->shortName)->setFinal()
+            ->setExtends($file->type($this->placement->runtime('BoundarySubscriber')))
+            ->addComment("The boundary of api '{$this->placement->apiKey}', which the bundle registers as an event subscriber.");
+        $class->addMethod('contractClass')->setProtected()->setReturnType('string')
+            ->setBody('return ' . $file->name($this->placement->contract) . '::class;');
+
+        $arms = [];
+        foreach ($this->placement->operations() as [, $operation]) {
+            $arms[] = var_export($operation->id, true) . ' => new ' . $file->name($this->placement->inputConstraint($operation->id)) . '(),';
+        }
+        $arms[] = 'default => throw new \\LogicException("seampact: the api ' . "'{$this->placement->apiKey}'" . ' has no operation \'{$operationId}\'."),';
+        $constraint = $class->addMethod('inputConstraint')->setProtected()->setReturnType($file->type('Symfony\\Component\\Validator\\Constraint'))
+            ->setBody("return match (\$operationId) {\n\t" . implode("\n\t", $arms) . "\n};");
+        $constraint->addParameter('operationId')->setType('string');
+
+        $class->addMethod('inputAttribute')->setProtected()->setReturnType('string')
+            ->setBody('return ' . $file->name($this->placement->inputResolver) . '::INPUT_ATTRIBUTE;');
+        $class->addMethod('contractExceptionClass')->setProtected()->setReturnType('string')
+            ->setBody('return ' . $file->name($this->placement->layout->contractException) . '::class;');
+        $class->addMethod('checksHooks')->setProtected()->setReturnType('bool')
+            ->setBody('return ' . var_export($this->bootCheck !== null && $this->bootCheck->hooks, true) . ';');
 
         return $file;
     }

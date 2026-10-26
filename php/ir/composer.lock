@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "aa6a1061407e7954c22035d83bb33e5a",
+    "content-hash": "9036fc594e646ce1a91c23e28757b29a",
     "packages": [
         {
             "name": "opis/json-schema",

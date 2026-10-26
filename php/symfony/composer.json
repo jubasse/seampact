@@ -8,16 +8,18 @@
     "ext-json": "*",
     "nette/php-generator": "~4.2.0",
     "seampact/codegen": "self.version",
-    "seampact/ir": "self.version"
+    "seampact/ir": "self.version",
+    "symfony/console": "^7.4 || ^8.0",
+    "symfony/framework-bundle": "^7.4 || ^8.0"
   },
   "require-dev": {
     "phpstan/phpstan": "2.2.16",
     "phpunit/phpunit": "11.5.56",
     "seampact/hooks": "self.version",
-    "symfony/framework-bundle": "7.4.21",
     "symfony/http-kernel": "7.4.21",
     "symfony/routing": "7.4.21",
-    "symfony/validator": "7.4.21"
+    "symfony/validator": "7.4.21",
+    "symfony/var-dumper": "7.4.21"
   },
   "repositories": [
     {

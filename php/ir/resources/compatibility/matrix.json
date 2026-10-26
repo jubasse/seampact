@@ -361,6 +361,30 @@
           }
         ]
       }
+    },
+    {
+      "package": "seampact/symfony",
+      "framework": {
+        "id": "symfony",
+        "package": "symfony/http-kernel",
+        "floor": "7.4",
+        "tested": [
+          {
+            "major": 7,
+            "consumer": "symfony"
+          },
+          {
+            "major": 8,
+            "consumer": "symfony"
+          }
+        ],
+        "incompatible": [
+          {
+            "major": 6,
+            "reason": "The generated boundary is written and tested for Symfony 7.4 LTS and 8 only."
+          }
+        ]
+      }
     }
   ]
 }

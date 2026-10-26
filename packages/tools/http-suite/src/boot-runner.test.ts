@@ -3,11 +3,13 @@ import { runBootSuite } from "./boot-runner.js";
 import { BOOT_STARTED_LINE, BOOT_VARIANT_ENV } from "./boot-variant.js";
 import { parseSuiteCase, type SuiteCase } from "./suite-case.js";
 
-// A sample app double: the allow-listed variant starts, `missing-handler` never ends, every other variant refuses.
+// A sample app double: the allow-listed variant starts, `missing-handler` never ends, `missing-scope-resolver` refuses
+// with its message wrapped as a console wraps it at 80 columns, every other variant refuses.
 const SAMPLE_APP = `
 const variant = process.env.${BOOT_VARIANT_ENV};
 if (variant === "allow-listed-framework-route") console.log(${JSON.stringify(BOOT_STARTED_LINE)});
 else if (variant === "missing-handler") setInterval(() => {}, 1000);
+else if (variant === "missing-scope-resolver") { console.error("  seampact: the api 'tasks' cannot\\n  start: no scope resolver for the scope 'chan  \\n  nel'  "); process.exit(1); }
 else { console.error("seampact: the api 'tasks' cannot start: no decider for 'roles'"); process.exit(1); }
 `;
 // A started process gets room to start on a busy machine; only the hanging app needs a short wait.
@@ -83,6 +85,18 @@ describe("runBootSuite", { timeout: TEST_TIMEOUT_MS }, () => {
       [expect.stringContaining("did not start (exit 1)")],
       [expect.stringContaining("started, expected a refusal")],
     ]);
+  });
+
+  test("matches a diagnostic whatever whitespace the console wraps it with", async () => {
+    const report = await run([
+      bootCase("wrapped", {
+        variant: "missing-scope-resolver",
+        outcome: "refuses",
+        diagnostic: ["the api 'tasks' cannot start", "no scope resolver for the scope 'channel'"],
+      }),
+    ]);
+
+    expect(report.cases.map((result) => result.failures)).toEqual([[]]);
   });
 
   test("stops an app that neither starts nor exits", async () => {

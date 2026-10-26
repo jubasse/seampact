@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Seampact\Codegen\ApiLayout;
+use Seampact\Codegen\BoundaryNames;
+use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\OperationNames;
@@ -12,11 +14,7 @@ use Seampact\Codegen\PhpNames;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\TypeNames;
 use Seampact\Ir\Model\ContractIR;
-use Seampact\Ir\Model\IdentityAccess;
-use Seampact\Ir\Model\OptionalAccess;
-use Seampact\Ir\Naming\NameSource;
 use Seampact\Ir\Naming\NamingRole;
-use Seampact\Ir\Naming\SplitName;
 
 /**
  * Every PHP name the target writes for one api, computed once (ADR 0023 "Placement"): the shared names of
@@ -24,7 +22,7 @@ use Seampact\Ir\Naming\SplitName;
  * `<namespace>\Laravel\Runtime`, so a declared schema and a placement class never share a namespace. Two classes
  * taking one name are refused by name.
  */
-final class PhpLayout implements TypeNames
+final class PhpLayout implements TypeNames, BoundaryNames
 {
     public readonly ApiLayout $api;
     public readonly ContractIR $ir;
@@ -63,13 +61,29 @@ final class PhpLayout implements TypeNames
                     IrPlace::ofOperation($index, $operation->id)->below('name'),
                 );
             }
-
-            $identity = $operation->access instanceof IdentityAccess || $operation->access instanceof OptionalAccess ? $operation->access->identity : null;
-            if ($identity !== null && !isset($this->identities[$identity])) {
-                $this->identities[$identity] = $this->claimIdentity($identity, IrPlace::ofOperation($index, $operation->id)->below('access', 'identity'));
-            }
         }
-        ksort($this->identities);
+        $this->identities = IdentityTypes::claimed($this->api, $kept, $this->laravelNamespace);
+    }
+
+    public function layout(): ApiLayout
+    {
+        return $this->api;
+    }
+
+    public function contractClass(): string
+    {
+        return $this->contract;
+    }
+
+    public function routesClass(): string
+    {
+        return $this->routeTable;
+    }
+
+    /** @return array<string, string> the operation's FormRequest */
+    public function operationClasses(string $operationId): array
+    {
+        return ['request' => $this->request($operationId)];
     }
 
     public function schemaClass(string $schemaId): ?string
@@ -107,18 +121,5 @@ final class PhpLayout implements TypeNames
     public function runtime(string $simpleName): string
     {
         return "{$this->runtimeNamespace}\\{$simpleName}";
-    }
-
-    /** @return array{hook: string, credentials: string, principal: string, principalMembers: string} */
-    private function claimIdentity(string $identity, IrPlace $at): array
-    {
-        $segments = SplitName::segmentsOf($identity, NameSource::Name) ?? [$identity];
-
-        return [
-            'hook' => $this->api->claim($this->laravelNamespace . '\\' . PhpNames::identifier([...$segments, 'authenticate', 'hook'], NamingRole::Schema), "the authenticate hook of identity '{$identity}'", $at),
-            'credentials' => $this->api->claim($this->laravelNamespace . '\\' . PhpNames::identifier([...$segments, 'credentials'], NamingRole::Schema), "the credentials of identity '{$identity}'", $at),
-            'principal' => $this->api->claim($this->laravelNamespace . '\\' . PhpNames::identifier([...$segments, 'principal'], NamingRole::Schema), "the principal of identity '{$identity}'", $at),
-            'principalMembers' => $this->api->claim($this->laravelNamespace . '\\' . PhpNames::identifier([...$segments, 'principal', 'members'], NamingRole::Schema), "the principal members interface of identity '{$identity}'", $at),
-        ];
     }
 }

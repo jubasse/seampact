@@ -7,7 +7,6 @@ namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
-use Seampact\Hooks\RequestView;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -22,7 +21,6 @@ abstract class BoundaryMiddleware
 {
     private const NOT_FOUND_ROLE = 'notFound';
     private const NOT_FOUND_STATUS = 404;
-    private const PREFLIGHT_METHOD = 'OPTIONS';
 
     private ?Hooks $hooks = null;
 
@@ -39,7 +37,7 @@ abstract class BoundaryMiddleware
     public function handle(Request $request, \Closure $next): Response
     {
         // A CORS preflight is the app's HandleCors to answer, which runs after the boundary.
-        if (self::isPreflight($request)) {
+        if (RawTarget::isPreflight($request)) {
             return self::passed($next($request));
         }
 
@@ -66,7 +64,7 @@ abstract class BoundaryMiddleware
                 : ReplyVerdict::roleReply($contract, null, self::NOT_FOUND_ROLE, self::NOT_FOUND_STATUS);
         }
 
-        $state = new BoundaryState($contract, $operationId, $match->rawParameters, self::view($request), $this->hooks());
+        $state = new BoundaryState($contract, $operationId, $match->rawParameters, RawTarget::view($request), $this->hooks());
         $request->attributes->set(BoundaryState::attributeName($contract->api), $state);
 
         try {
@@ -154,13 +152,6 @@ abstract class BoundaryMiddleware
         return is_string($setting) ? $setting : null;
     }
 
-    private static function isPreflight(Request $request): bool
-    {
-        return $request->getMethod() === self::PREFLIGHT_METHOD
-            && $request->headers->has('Origin')
-            && $request->headers->has('Access-Control-Request-Method');
-    }
-
     /** An operation's setting: `config('seampact.<api>.operations.<id>.<name>')`, then the api's, then the default. */
     private function setting(ApiContract $contract, ?string $operationId, string $name): mixed
     {
@@ -186,16 +177,6 @@ abstract class BoundaryMiddleware
         self::$placed[static::class] = true;
 
         return true;
-    }
-
-    private static function view(Request $request): RequestView
-    {
-        $headers = [];
-        foreach ($request->headers->all() as $name => $values) {
-            $headers[(string) $name] = array_values(array_filter($values, is_string(...)));
-        }
-
-        return new RequestView($request->getMethod(), RawTarget::path($request), $headers, $request->server->getString('REMOTE_ADDR') ?: null);
     }
 
     private static function passed(mixed $response): Response

@@ -24,6 +24,56 @@ final class TasksRouteLoader extends Loader
     public const RESOURCE = 'tasks';
     public const OPERATION_DEFAULT = '_seampact_operation';
 
+    /** The run-time defaults the entry's options set; the bundle configuration overrides `responses`. */
+    public const DEFAULTS = [
+        'responses' => 'strict',
+        'body_validation' => false,
+        'framework_etag' => 'strip',
+        'catch_all' => true,
+    ];
+
+    /**
+     * Each operation's route, literal segments first per path depth.
+     * @var list<array{operation: string, method: string, path: string, name: string, controller: array{class-string, string}}>
+     */
+    public const ROUTES = [
+        [
+            'operation' => 'health',
+            'method' => 'GET',
+            'path' => '/v1/health',
+            'name' => 'seampact.tasks.health',
+            'controller' => [AppEndpoints::class, 'health'],
+        ],
+        [
+            'operation' => 'getChannel',
+            'method' => 'GET',
+            'path' => '/v1/channels/{p1}',
+            'name' => 'seampact.tasks.getChannel',
+            'controller' => [ChannelsEndpoints::class, 'getChannel'],
+        ],
+        [
+            'operation' => 'getDraft',
+            'method' => 'GET',
+            'path' => '/v1/me/drafts/{p1}',
+            'name' => 'seampact.tasks.getDraft',
+            'controller' => [DraftsEndpoints::class, 'getDraft'],
+        ],
+        [
+            'operation' => 'getTasksBatch',
+            'method' => 'POST',
+            'path' => '/v1/channels/{p1}/tasks/batch',
+            'name' => 'seampact.tasks.getTasksBatch',
+            'controller' => [TasksEndpoints::class, 'getTasksBatch'],
+        ],
+        [
+            'operation' => 'getTask',
+            'method' => 'GET',
+            'path' => '/v1/channels/{p1}/tasks/{p2}',
+            'name' => 'seampact.tasks.getTask',
+            'controller' => [TasksEndpoints::class, 'getTask'],
+        ],
+    ];
+
     public function supports(mixed $resource, ?string $type = null): bool
     {
         return $type === self::TYPE && $resource === self::RESOURCE;
@@ -32,11 +82,10 @@ final class TasksRouteLoader extends Loader
     public function load(mixed $resource, ?string $type = null): RouteCollection
     {
         $routes = new RouteCollection();
-        $routes->add('seampact.tasks.health', new Route('/v1/health', ['_controller' => AppEndpoints::class . '::health', self::OPERATION_DEFAULT => 'health'], methods: ['GET']));
-        $routes->add('seampact.tasks.getChannel', new Route('/v1/channels/{p1}', ['_controller' => ChannelsEndpoints::class . '::getChannel', self::OPERATION_DEFAULT => 'getChannel'], methods: ['GET']));
-        $routes->add('seampact.tasks.getDraft', new Route('/v1/me/drafts/{p1}', ['_controller' => DraftsEndpoints::class . '::getDraft', self::OPERATION_DEFAULT => 'getDraft'], methods: ['GET']));
-        $routes->add('seampact.tasks.getTasksBatch', new Route('/v1/channels/{p1}/tasks/batch', ['_controller' => TasksEndpoints::class . '::getTasksBatch', self::OPERATION_DEFAULT => 'getTasksBatch'], methods: ['POST']));
-        $routes->add('seampact.tasks.getTask', new Route('/v1/channels/{p1}/tasks/{p2}', ['_controller' => TasksEndpoints::class . '::getTask', self::OPERATION_DEFAULT => 'getTask'], methods: ['GET']));
+        foreach (self::ROUTES as $route) {
+            $defaults = ['_controller' => $route['controller'][0] . '::' . $route['controller'][1], self::OPERATION_DEFAULT => $route['operation']];
+            $routes->add($route['name'], new Route($route['path'], $defaults, methods: [$route['method']]));
+        }
 
         return $routes;
     }

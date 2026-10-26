@@ -9,7 +9,7 @@ use Seampact\Golden\Tasks\GetDraftInput;
 use Seampact\Golden\Tasks\GetTaskInput;
 use Seampact\Golden\Tasks\GetTasksBatchInput;
 use Seampact\Golden\Tasks\HealthInput;
-use Seampact\Golden\Tasks\Symfony\Runtime\BoundaryBypassedException;
+use Seampact\Golden\Tasks\Symfony\Runtime\ContractBypassedException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
@@ -35,7 +35,7 @@ final class TasksInputResolver implements ValueResolverInterface
 
         $input = $request->attributes->get(self::INPUT_ATTRIBUTE);
         if (!$input instanceof $type) {
-            throw new BoundaryBypassedException("The handler parameter '{$argument->getName()}' takes the contract input {$type}, but no checked input of that operation is stored: the request did not pass the boundary, as a sub-request from forward() or a direct call does.");
+            throw new ContractBypassedException("The handler parameter '{$argument->getName()}' takes the contract input {$type}, but no checked input of that operation is stored: the request did not pass the boundary, as a sub-request from forward() or a direct call does.");
         }
 
         return [$input];
