@@ -51,7 +51,7 @@ Codegen emits, per api, under the target entry's `out` and the `package` option:
 - **The interceptor**, a `HandlerInterceptor` on the api's contract routes, which runs steps 2 to 8:
   - authenticate, principal requirements, scopes and requirements;
   - step 6 on the decoded body;
-  - restricted input fields, sort keys and principal bindings;
+  - restricted input fields and principal bindings (a sort key a right restricts is refused at generation, see "Waits for");
   - then the idempotency claim or replay.
   A refusal or a replay is written by the boundary, and `preHandle` returns `false`. It runs its steps on the `REQUEST` dispatch only, since Spring calls `preHandle` again on an `ASYNC` dispatch (spike). It first checks that the handler Spring chose is a `HandlerMethod` carrying the operation that the raw path matched ("Routes"). On a contract route, any other handler (a router function, an app `HttpRequestHandler`) answers 500, and so does a contract handler reached on a `FORWARD` or `INCLUDE` dispatch, which the filter does not see.
 - **The argument resolver**, a `HandlerMethodArgumentResolver` that hands the validated input record to the method. It claims parameters of the api's generated input types only, and answers 500 when the interceptor did not validate the input.

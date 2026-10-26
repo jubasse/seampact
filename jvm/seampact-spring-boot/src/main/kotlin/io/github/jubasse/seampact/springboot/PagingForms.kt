@@ -36,6 +36,9 @@ private val RENDERED_PAGE_SLOTS = setOf(
 // The page slots whose value is an array or an object, never a header value.
 private val STRUCTURED_PAGE_SLOTS = setOf("items", "meta")
 private const val PAGE_SLOT = "page"
+
+// The slot `$each` binds to each item inside its `$as` (ADR 0002 section 13); the renderer fills it, so it is never a page or envelope slot.
+private const val EACH_ITEM_SLOT = "item"
 private const val ITEMS_MEMBER = "items"
 private const val SPRING_PAGE_STYLE = "springPage"
 private const val SPRING_PACK_LAYER = "pack:@seampact/pack-spring"
@@ -173,10 +176,10 @@ private fun checkSlots(style: PagingStyle, template: Template, at: IrPlace, refu
     )
 }
 
-/** The slot names a template writes, at any depth. */
+/** The slot names a template writes, at any depth, without the item each `$each` binds. */
 internal fun templateSlots(template: Template): List<String> = when (template) {
     is SlotTemplate -> listOf(template.slot)
-    is EachTemplate -> listOf(template.of) + templateSlots(template.as_)
+    is EachTemplate -> listOf(template.of) + templateSlots(template.as_).filterNot { it == EACH_ITEM_SLOT }
     is ObjectTemplate -> template.members.flatMap { member -> listOfNotNull((member.name as? SlotMemberName)?.slot) + templateSlots(member.value) }
     is ArrayTemplate -> template.items.flatMap(::templateSlots)
     is TextTemplate -> template.parts.filterIsInstance<SlotTextPart>().map { it.slot }
