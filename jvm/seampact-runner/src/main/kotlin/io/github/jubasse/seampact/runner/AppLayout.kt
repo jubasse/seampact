@@ -13,7 +13,7 @@ import java.nio.file.Path
 
 /**
  * What the build must know of the app config before a run: the output root of each JVM entry (the generated Java
- * sources), the `path` sources a run compiles (its inputs), the `maven` bundle sources it resolves (also those the
+ * sources), the `path` sources a run or its documents read (its inputs), the `maven` bundle sources it resolves (also those the
  * documents read, which the binary gets as handed-over bundles), and whether it has seampact OpenAPI
  * documents, with the files and directories they are written to. The binary is needed for a `path` source or a
  * document only. An app config that does not read has an empty layout; the run then refuses it with its problems.
@@ -34,16 +34,15 @@ public data class AppLayout(
         public val EMPTY: AppLayout = AppLayout(emptyList(), emptyList(), emptyList(), documents = false, emptyList(), emptyList())
 
         public fun of(config: AppConfig): AppLayout {
-            val usedNames = EntryView.usedSources(config)
-            val used = usedNames.mapNotNull { config.sources[it] }
+            // The sources a run reads: those of this runner's entries, and those the binary reads for the documents.
+            val read = (EntryView.usedSources(config) + documentSources(config)).distinct().mapNotNull { config.sources[it] }
             val documents = documentsAsked(config)
-            val bundled = (usedNames + documentSources(config)).distinct().mapNotNull { config.sources[it] }
             val outputs = if (documents) DocumentOutputs.of(config) else DocumentOutputs.NONE
 
             return AppLayout(
                 entryRoots = config.entries.map { it.root.toString() },
-                pathSources = used.filterIsInstance<ConfigSource.Local>().map { it.directory.toString() },
-                mavenSources = bundled.filterIsInstance<ConfigSource.Bundle>()
+                pathSources = read.filterIsInstance<ConfigSource.Local>().map { it.directory.toString() },
+                mavenSources = read.filterIsInstance<ConfigSource.Bundle>()
                     .map { it.source }
                     .filterIsInstance<BundleSource.MavenArtefact>()
                     .map { it.coordinates }

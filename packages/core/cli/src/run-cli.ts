@@ -261,6 +261,12 @@ function pluginRunOf(values: ParsedValues, io: CliIo, command: string): PluginRu
 
   const inputs: PlanInputs = { nativeEntries: nativeEntryPolicy(io, command), localBundles };
 
+  if (configName !== undefined && (configName.trim() === "" || /[\r\n]/.test(configName)))
+    return {
+      status: "refused",
+      message: "`--config-name` takes a non-empty, one-line label, the name problems give the config.",
+    };
+
   if (appDirectory === undefined && configName !== undefined)
     return {
       status: "refused",

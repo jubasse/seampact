@@ -82,13 +82,17 @@ internal class GenerateStamp(private val file: Path) {
         const val NONE = "<none>"
         const val UNPUBLISHED_VERSION = "0.0.0"
         const val LOOP = "<symbolic link loop>"
+        const val PRESENT_FILE = "<file>\n"
 
         fun treesHash(directories: List<Path>): String {
             val digest = MessageDigest.getInstance(SHA_256)
             for (directory in directories) {
                 digest.update("${directory.toAbsolutePath().normalize()}\n".toByteArray())
                 // An output given as a file (a listed OpenAPI document) counts by its bytes.
-                if (Files.isRegularFile(directory)) digest.update(Files.readAllBytes(directory))
+                if (Files.isRegularFile(directory)) {
+                    digest.update(PRESENT_FILE.toByteArray())
+                    digest.update(Files.readAllBytes(directory))
+                }
                 if (!directory.isDirectory()) continue
 
                 val entries = TreeEntries(directory).also { Files.walkFileTree(directory, setOf(FileVisitOption.FOLLOW_LINKS), Int.MAX_VALUE, it) }

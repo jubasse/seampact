@@ -67,7 +67,7 @@ internal fun runDocuments(prepared: PreparedRun.Prepared, settings: RunSettings,
     val cached = prepared.bundles.associateWith { prepared.cachedBundle(it.integrity) }
     val gone = cached.mapNotNull { (bundle, entry) -> (entry as? CachedBundle.Unavailable)?.let { cacheEntryGone(bundle, it.entry) } }
     if (gone.isNotEmpty()) return DocumentsRun.Refused(gone)
-    val handedBundles = cached.entries.associate { (bundle, entry) -> bundle.source to (entry as CachedBundle.Verified).directory }
+    val handedBundles = cached.mapNotNull { (bundle, entry) -> (entry as? CachedBundle.Verified)?.let { bundle.source to it.directory } }.toMap()
 
     val installed = when (val install = prepared.binary()) {
         is BinaryInstall.Installed -> install.binary
