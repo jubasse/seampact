@@ -166,7 +166,10 @@ final readonly class GitFetch
             return $url;
         }
 
-        return 'file://' . ConfigPath::resolve($baseDirectory, $url);
+        $path = ConfigPath::resolve($baseDirectory, $url);
+
+        // A drive path takes a third slash: `file:///C:/repository`.
+        return 'file://' . (str_starts_with($path, '/') ? $path : "/{$path}");
     }
 
     // `$directory` as a tree path prefix (`''` for the root, else `a/b/`), or null when it is not a plain relative path.

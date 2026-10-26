@@ -140,6 +140,10 @@ final class Runner
         }
 
         $discovery = TargetDiscovery::of($settings->vendorDirectory);
+        if ($discovery instanceof ConfigProblem) {
+            return [...$problems, $discovery];
+        }
+
         $targets = [];
         foreach ($config->entries as $entry) {
             $target = $discovery->target($entry->use(), $entry->id());

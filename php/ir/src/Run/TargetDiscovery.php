@@ -24,19 +24,21 @@ final class TargetDiscovery
         $this->packages = $packages;
     }
 
-    /** @throws \RuntimeException when `installed.json` is not readable JSON */
-    public static function of(string $vendorDirectory): self
+    /** The installed packages, or the refusal of an `installed.json` that is not readable JSON. */
+    public static function of(string $vendorDirectory): self|ConfigProblem
     {
         $file = $vendorDirectory . self::INSTALLED_FILE;
         $text = is_file($file) ? file_get_contents($file) : '{"packages": []}';
-        if ($text === false) {
-            throw new \RuntimeException("seampact: '{$file}' cannot be read; run `composer install` again.");
-        }
 
         try {
-            $installed = json_decode($text, false, 512, JSON_THROW_ON_ERROR);
+            $installed = json_decode($text === false ? '' : $text, false, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $error) {
-            throw new \RuntimeException("seampact: '{$file}' is not JSON ({$error->getMessage()}); run `composer install` again.", 0, $error);
+            return new ConfigProblem(
+                'config.target.installed-unreadable',
+                "The list of installed packages {$file} is not readable JSON ({$error->getMessage()}).",
+                'Run `composer install` again, then run seampact again.',
+                $file,
+            );
         }
 
         // Composer 2 writes `{ packages: [...] }`, Composer 1 a bare list.
