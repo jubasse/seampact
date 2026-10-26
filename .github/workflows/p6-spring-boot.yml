@@ -63,6 +63,7 @@ jobs:
             ^fixtures/golden/pack-spring/
             ^packages/packs/pack-spring/
             ^scripts/consumers/targets/spring-boot/
+            ^scripts/consumers/served-app\.ts$
             ^packages/core/
             ^packages/tools/binary/
             ^packages/tools/http-suite/
