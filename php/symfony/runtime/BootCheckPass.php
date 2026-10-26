@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Symfony\Runtime;
 
 use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\PublicOrigin;
 use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -18,7 +19,8 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * does not serve. It checks the handlers (one service per endpoints interface, each method marked with its operation,
  * no access attribute the boundary would run after the input checks), the boundary's listeners and the value resolver,
  * the listeners placed where the outgoing check cannot see them, an api registered before this one whose catch-all
- * answers this api's paths, ext-zlib, the Symfony major and `framework.http_cache`.
+ * answers this api's paths, ext-zlib, the Symfony major, `framework.http_cache`, and under absolute URLs a
+ * `public_origin` in the bundle configuration (a literal is checked here, an `%env()%` value by the settings at run time).
  */
 final class BootCheckPass implements CompilerPassInterface
 {
@@ -35,6 +37,7 @@ final class BootCheckPass implements CompilerPassInterface
         'Symfony\\Component\\Security\\Http\\Attribute\\IsCsrfTokenValid' => 'the authenticate hook with the CSRF companion value',
         'Symfony\\Component\\HttpKernel\\Attribute\\IsSignatureValid' => 'nothing: a signed URI is not a form the contract declares',
     ];
+    private const ENV_PLACEHOLDER = '/%env\(/';
     private const SUPPORTED_MAJORS = ['/^7\.4\./', '/^8\./'];
 
     /** @param bool $checksHandlers the `handlers` switch of `artefacts.bootCheck` */
@@ -42,6 +45,7 @@ final class BootCheckPass implements CompilerPassInterface
         private readonly string $contractClass,
         private readonly string $boundaryClass,
         private readonly string $resolverClass,
+        private readonly string $settingsClass,
         private readonly bool $checksHandlers,
     ) {
     }
@@ -54,11 +58,36 @@ final class BootCheckPass implements CompilerPassInterface
             ...$this->listeners($container),
             ...$this->shadowingBoundaries($container, $contract),
             ...$this->platform($container),
+            ...$this->publicOrigin($container, $contract),
         ];
 
         if ($problems !== []) {
             throw new \LogicException("seampact: the api '{$contract->api}' cannot start:\n- " . implode("\n- ", $problems));
         }
+    }
+
+    /**
+     * The `public_origin` key the api needs under absolute URLs; a literal is checked here, an `%env()%` value is only known at run time.
+     *
+     * @return list<string>
+     */
+    private function publicOrigin(ContainerBuilder $container, ApiContract $contract): array
+    {
+        $arguments = $container->hasDefinition($this->settingsClass) ? $container->getDefinition($this->settingsClass)->getArguments() : [];
+        $configured = $arguments[ContractSettings::PUBLIC_ORIGIN_ARGUMENT] ?? null;
+        if (is_string($configured) && preg_match(self::ENV_PLACEHOLDER, $configured) === 1) {
+            return [];
+        }
+
+        $aliasConstant = "{$this->settingsClass}::" . ContractSettings::ALIAS_CONSTANT;
+        $alias = defined($aliasConstant) ? constant($aliasConstant) : null;
+        if (!is_string($alias)) {
+            throw new \LogicException("seampact: the generated settings class {$this->settingsClass} lacks its ALIAS constant; regenerate the code.");
+        }
+
+        $problem = PublicOrigin::bootProblem($contract, "{$alias}.public_origin", $configured);
+
+        return $problem === null ? [] : [$problem];
     }
 
     /** @return list<string> */

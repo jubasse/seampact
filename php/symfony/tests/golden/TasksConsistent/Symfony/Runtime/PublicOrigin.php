@@ -56,6 +56,12 @@ final class PublicOrigin
         return "'{$setting}' is '{$shown}', which {$problem}: set a scheme (http or https), a host and an optional port, such as https://api.example.com";
     }
 
+    /** Whether `$configured` is an origin the boot check accepts: a scheme (http or https), a host and an optional port. */
+    public static function isOrigin(string $configured): bool
+    {
+        return self::problemOf($configured) === null;
+    }
+
     private static function problemOf(string $configured): ?string
     {
         $origin = parse_url($configured);

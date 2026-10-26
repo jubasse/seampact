@@ -2,6 +2,7 @@
 // (ADR 0015 "Suite profiles") served by PHP's built-in server, and writes one report per profile. The app
 // directories and the report directory come from the environment: SEAMPACT_SYMFONY_APP,
 // SEAMPACT_SYMFONY_ALLOW_LISTED_APP and SEAMPACT_SYMFONY_REPORTS.
+import { randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -160,6 +161,14 @@ const UNDECLARED_STATUS = 418;
 const MUTATE_HEADER = "x-seampact-suite-mutate";
 // The channel whose scope resolver throws AccessDeniedException (ChannelResolver::ACCESS_DENIED_CHANNEL).
 const ACCESS_DENIED_CHANNEL = "/v1/channels/10000000-0000-4000-8000-0000000000ad";
+// The session token the user hook answers with the firewall's user from the token storage (UserHook::FIREWALL_USER_TOKEN).
+const FIREWALL_USER_COOKIE = "__Host-session=seampact-firewall-user";
+// The header of the access_control rule on the generated identity matcher (Kernel::IDENTITY_PROBE_HEADER).
+const IDENTITY_PROBE_HEADER = "x-seampact-suite-identity-probe";
+// The header on which the app's listener throws an HttpException on identity routes (NativeLayersListener::HEADER).
+const NATIVE_LAYER_HEADER = "x-suite-native-layer";
+// The header naming the right the app's voter denies (SuiteVoter::DENY_HEADER).
+const VOTER_DENY_HEADER = "x-suite-voter-deny";
 
 async function problemCode(response: Response): Promise<unknown> {
   const body: unknown = await response.json();
@@ -336,6 +345,99 @@ describeServed("boundary edges of the Symfony runtime", {}, (running) => {
       expect(await problemCode(response)).toBe("api.unauthenticated");
     });
   }
+});
+
+// Symfony's own layers beside the boundary: the firewall's user read by the authenticate hook, the app's voters asked
+// by a decider, an access_control rule and an app listener on the generated identity request matcher.
+describeServed("Symfony's native layers on identity routes", {}, (running) => {
+  function signedIn(path: string, headers: Record<string, string> = {}): Promise<Response> {
+    return fetch(`${running()?.baseUrl}${path}`, {
+      headers: { authorization: SUITE_USER_BASIC, cookie: FIREWALL_USER_COOKIE, ...headers },
+    });
+  }
+
+  function withBearer(path: string, headers: Record<string, string>): Promise<Response> {
+    return fetch(`${running()?.baseUrl}${path}`, {
+      headers: { authorization: `Bearer ${credentials.userToken}`, ...headers },
+    });
+  }
+
+  async function loggedRole(role: string): Promise<boolean> {
+    return (await logLines(running())).some((line) => line.includes(`the role '${role}'`));
+  }
+
+  test("an authenticate hook reads the user the firewall authenticated from the token storage", async () => {
+    await loadScript(running(), {});
+    const response = await signedIn(TASK_PATH);
+
+    expect(response.status).toBe(200);
+  });
+
+  test("without a firewall user the token storage hook answers the unauthenticated role", async () => {
+    const response = await fetch(`${running()?.baseUrl}${TASK_PATH}`, {
+      headers: { cookie: FIREWALL_USER_COOKIE },
+    });
+
+    expect(response.status).toBe(401);
+    expect(await problemCode(response)).toBe("api.unauthenticated");
+  });
+
+  test("a right the app's voter denies through isGranted answers the right's first denial code", async () => {
+    await loadScript(running(), {});
+    const response = await fetch(`${running()?.baseUrl}${GENERAL_CHANNEL}/tasks`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${credentials.userToken}`,
+        "content-type": "application/json",
+        "idempotency-key": randomUUID(),
+        [VOTER_DENY_HEADER]: "roles",
+      },
+      body: JSON.stringify({ title: "Denied by a voter" }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(await problemCode(response)).toBe("api.forbidden");
+  });
+
+  // getTask declares no 403, so the reply is the api's 500; the log names the role it kept.
+  test("an access_control rule on the identity request matcher keeps the forbidden role", async () => {
+    await loadScript(running(), {});
+    const response = await signedIn(TASK_PATH, { [IDENTITY_PROBE_HEADER]: "1" });
+
+    expect(response.status).toBe(500);
+    expect(await loggedRole("forbidden")).toBe(true);
+  });
+
+  test("the identity request matcher does not match a public route", async () => {
+    const response = await signedIn("/v1/health", { [IDENTITY_PROBE_HEADER]: "1" });
+
+    expect(response.status).toBe(200);
+  });
+
+  test("an HttpException 401 from an app listener answers the unauthenticated role", async () => {
+    const response = await withBearer(TASK_PATH, { [NATIVE_LAYER_HEADER]: "abort-401" });
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("content-type")).toContain(PROBLEM_JSON);
+    expect(await problemCode(response)).toBe("api.unauthenticated");
+  });
+
+  // getTask declares neither 403 nor 429, so the replies are the api's 500; the log names the roles they kept.
+  test("an HttpException 403 or 429 from an app listener takes the forbidden or rateLimited role", async () => {
+    await loadScript(running(), {});
+    const forbidden = await withBearer(TASK_PATH, { [NATIVE_LAYER_HEADER]: "abort-403" });
+    const rateLimited = await withBearer(TASK_PATH, { [NATIVE_LAYER_HEADER]: "abort-429" });
+
+    expect([forbidden.status, rateLimited.status]).toEqual([500, 500]);
+    expect(await loggedRole("forbidden")).toBe(true);
+    expect(await loggedRole("rateLimited")).toBe(true);
+  });
+
+  test("the app listener on the identity request matcher leaves a public route alone", async () => {
+    const response = await withBearer("/v1/health", { [NATIVE_LAYER_HEADER]: "abort-403" });
+
+    expect(response.status).toBe(200);
+  });
 });
 
 describeServed(

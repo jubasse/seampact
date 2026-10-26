@@ -66,6 +66,13 @@ final class GoldenTest extends TestCase
         }
         $title->sensitive = true;
 
+        // Absolute URLs, so the golden settings read and check the bundle's public_origin.
+        $api = $document->api ?? null;
+        if (!$api instanceof \stdClass || !$api->wire instanceof \stdClass) {
+            throw new \LogicException('The reference IR lost its api wire.');
+        }
+        $api->wire->urls = 'absolute';
+
         return $document;
     }
 

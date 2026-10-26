@@ -9,6 +9,7 @@ use Nette\PhpGenerator\Literal;
 use Seampact\Codegen\BootCheckSwitches;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\TargetOptions;
+use Seampact\Ir\Model\UrlForm;
 
 /**
  * The api's bundle (ADR 0024 "Options and registration"), which the app lists in `config/bundles.php`: its
@@ -33,7 +34,7 @@ final class BundleFiles
     /** @return list<PhpClassFile> */
     public function files(): array
     {
-        return [$this->bundle(), $this->controllerPass(), $this->settings(), $this->boundary()];
+        return [$this->bundle(), $this->controllerPass(), $this->settings(), $this->boundary(), (new AccessTableFile($this->placement))->file()];
     }
 
     private function bundle(): PhpClassFile
@@ -56,6 +57,7 @@ final class BundleFiles
                 $children = $definition->rootNode()->children();
                 $children->scalarNode('responses')->defaultValue(?);
                 $children->scalarNode('body_validation')->defaultValue(?);
+                $children->scalarNode('public_origin');
                 // An operation id the api does not declare, such as a typo, fails the container build.
                 $children->arrayNode('operations')->useAttributeAsKey('operationId')
                     ->validate()
@@ -92,12 +94,21 @@ final class BundleFiles
         $routeCheck = $file->name($this->placement->runtime('RouteCheck'));
         $contract = $file->name($this->placement->contract);
         $bootCheck = $file->name($this->placement->runtime('BootCheckPass'));
+        $publicOriginArgument = $this->writesAbsoluteUrls()
+            ? "\n    {$file->name($this->placement->runtime('ContractSettings'))}::PUBLIC_ORIGIN_ARGUMENT => \$config['public_origin'] ?? null,"
+            : '';
+        $matcher = $file->name($this->placement->runtime('KindRequestMatcher'));
+        $access = $file->name($this->placement->access);
         $tag = static fn (string $suffix): string => "{$hooks}::tag(self::API, {$hooks}::{$suffix})";
         $body = <<<PHP
             \$services = \$container->services();
             \$services->set({$routeLoader}::class)->tag('routing.loader');
             \$services->set({$resolver}::class)->tag('controller.argument_value_resolver', ['priority' => {$resolver}::PRIORITY]);
-            \$services->set({$settings}::class)->args([\$config['responses'] ?? null, \$config['body_validation'] ?? null, \$config['operations'] ?? []]);
+            \$services->set({$settings}::class)->args([
+                '\$responses' => \$config['responses'] ?? null,
+                '\$bodyValidation' => \$config['body_validation'] ?? null,
+                '\$operations' => \$config['operations'] ?? [],{$publicOriginArgument}
+            ]);
             \$services->set({$hooks}::class)->args([
                 tagged_locator({$tag('AUTHENTICATE_TAG_SUFFIX')}, {$hooks}::HOOK_ATTRIBUTE),
                 tagged_iterator({$tag('DECIDERS_TAG_SUFFIX')}),
@@ -107,6 +118,9 @@ final class BundleFiles
                 service({$idempotencyStore}::class)->nullOnInvalid(),
             ]);
             \$services->set({$boundary}::class)->args([service({$hooks}::class), service({$settings}::class), service('validator')])->tag('kernel.event_subscriber')->tag({$bootCheck}::BOUNDARY_TAG, [{$bootCheck}::CONTRACT_ATTRIBUTE => {$contract}::class]);
+            foreach ({$access}::KINDS as \$kind) {
+                \$services->set({$matcher}::serviceId(self::API, \$kind), {$matcher}::class)->args([{$contract}::class, {$access}::ROUTES, \$kind]);
+            }
             \$builder->registerForAutoconfiguration({$decider}::class)->addTag({$tag('DECIDERS_TAG_SUFFIX')});
             \$builder->registerForAutoconfiguration({$scopeResolver}::class)->addTag({$tag('SCOPE_RESOLVERS_TAG_SUFFIX')});
 
@@ -135,7 +149,7 @@ final class BundleFiles
             PHP;
         if ($this->bootCheck !== null) {
             $bootCheckPass = $file->name($this->placement->runtime('BootCheckPass'));
-            $buildBody .= "\n\$container->addCompilerPass(new {$bootCheckPass}({$contract}::class, {$boundary}::class, {$resolver}::class, "
+            $buildBody .= "\n\$container->addCompilerPass(new {$bootCheckPass}({$contract}::class, {$boundary}::class, {$resolver}::class, {$settings}::class, "
                 . var_export($this->bootCheck->handlers, true) . "), {$passConfig}::TYPE_BEFORE_REMOVING, {$bootCheckPass}::PRIORITY);";
         }
         $build->setBody($buildBody);
@@ -202,6 +216,7 @@ final class BundleFiles
             ->addImplement($file->type($this->placement->runtime('ContractSettings')))
             ->addComment("The '{$alias}' bundle configuration, each value checked when the boundary reads it, so a value\n"
                 . 'the configuration cannot hold is refused naming its key and the accepted values, never the value.');
+        $class->addConstant('ALIAS', $alias);
         $class->addConstant('RESPONSES_VALUES', ['strict', 'warn'])->setPrivate();
         $class->addConstant('TRUE_TEXTS', ['true', '1'])->setPrivate();
         $class->addConstant('FALSE_TEXTS', ['false', '0', ''])->setPrivate();
@@ -211,6 +226,9 @@ final class BundleFiles
         $constructor->addPromotedParameter('responses')->setPrivate()->setType('mixed');
         $constructor->addPromotedParameter('bodyValidation')->setPrivate()->setType('mixed');
         $constructor->addPromotedParameter('operations')->setPrivate()->setType('array');
+        if ($this->writesAbsoluteUrls()) {
+            $constructor->addPromotedParameter('publicOrigin')->setPrivate()->setType('mixed');
+        }
 
         $responses = $class->addMethod('responsesOf')->setPublic()->setReturnType('string')
             ->addComment("The outgoing check's mode of an operation: its own value, else the api's.");
@@ -246,6 +264,24 @@ final class BundleFiles
             throw new \\UnexpectedValueException('The bundle configuration key {$alias}.body_validation takes true or false.');
             PHP);
 
+        $origin = $class->addMethod('publicOrigin')->setPublic()->setReturnType($this->writesAbsoluteUrls() ? 'string' : '?string');
+        if (!$this->writesAbsoluteUrls()) {
+            $origin->addComment('The api writes relative URLs, so no origin is read.')->setBody('return null;');
+
+            return $file;
+        }
+
+        $publicOrigin = $file->name($this->placement->runtime('PublicOrigin'));
+        $origin->addComment('The origin absolute URLs start with, never read from the request.');
+        $origin->setBody(<<<PHP
+            \$origin = \$this->publicOrigin;
+            if (!is_string(\$origin) || !{$publicOrigin}::isOrigin(\$origin)) {
+                throw new \\UnexpectedValueException('The bundle configuration key {$alias}.public_origin takes the origin clients call: a scheme (http or https), a host and an optional port, such as https://api.example.com.');
+            }
+
+            return \$origin;
+            PHP);
+
         return $file;
     }
 
@@ -275,5 +311,10 @@ final class BundleFiles
             ->setBody('return ' . var_export($this->bootCheck !== null && $this->bootCheck->hooks, true) . ';');
 
         return $file;
+    }
+
+    private function writesAbsoluteUrls(): bool
+    {
+        return $this->placement->layout->ir->api->wire->urls->value === UrlForm::Absolute;
     }
 }

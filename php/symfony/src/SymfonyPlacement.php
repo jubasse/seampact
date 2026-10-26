@@ -32,6 +32,7 @@ final class SymfonyPlacement implements BoundaryNames
     public readonly string $settings;
     public readonly string $contract;
     public readonly string $boundary;
+    public readonly string $access;
     public readonly string $configurationAlias;
 
     /** @var list<array{int, Operation}> */
@@ -60,6 +61,7 @@ final class SymfonyPlacement implements BoundaryNames
         $this->settings = $placed('Settings', "the api's settings");
         $this->contract = $placed('Contract', "the api's contract class");
         $this->boundary = $placed('Boundary', "the api's boundary subscriber");
+        $this->access = $placed('Access', "the api's access table");
 
         foreach ($kept->operations() as [$index, $operation]) {
             $names = $layout->operation($operation->id);

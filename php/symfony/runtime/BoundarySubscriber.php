@@ -153,6 +153,13 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         }
 
         $state = new BoundaryState($contract, $operationId, $match->rawParameters, RawTarget::view($request), $this->hooks);
+        try {
+            $state->publicOrigin = $this->settings->publicOrigin();
+        } catch (\UnexpectedValueException $invalid) {
+            $this->answer($event, ReplyVerdict::internalError($this->hooks, $contract, $operationId, $invalid->getMessage(), null));
+
+            return;
+        }
         $request->attributes->set(BoundaryState::attributeName($contract->api), $state);
 
         try {

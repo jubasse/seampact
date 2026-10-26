@@ -12,6 +12,7 @@ use Seampact\Golden\Tasks\Symfony\Runtime\ContractSettings;
  */
 final readonly class TasksSettings implements ContractSettings
 {
+    public const ALIAS = 'seampact_tasks';
     private const RESPONSES_VALUES = ['strict', 'warn'];
     private const TRUE_TEXTS = ['true', '1'];
     private const FALSE_TEXTS = ['false', '0', ''];
@@ -61,5 +62,13 @@ final readonly class TasksSettings implements ContractSettings
         }
 
         throw new \UnexpectedValueException('The bundle configuration key seampact_tasks.body_validation takes true or false.');
+    }
+
+    /**
+     * The api writes relative URLs, so no origin is read.
+     */
+    public function publicOrigin(): ?string
+    {
+        return null;
     }
 }

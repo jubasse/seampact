@@ -24,15 +24,21 @@ use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Bundle\SecurityBundle\SecurityBundle;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Symfony\Component\HttpFoundation\ChainRequestMatcher;
+use Symfony\Component\HttpFoundation\RequestMatcher\HeaderRequestMatcher;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
 use Symfony\Component\Security\Core\User\InMemoryUser;
 
+use function Symfony\Component\DependencyInjection\Loader\Configurator\inline_service;
+use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
+
 /**
  * The consumer app: FrameworkBundle, SecurityBundle with one lazy `http_basic` firewall on the tasks api's paths, its
- * `login_throttling` and one `access_control` rule keyed on a suite header, the RateLimiter the throttle decider counts
- * in, the file idempotency store, and the bundles of the `tasks` and `tasksService` apis. The boot variant leaves out the service
- * it names and gets a cache directory of its own; `SEAMPACT_SUITE_CACHE_DIR` moves the cache for a boot run.
+ * `login_throttling` and two `access_control` rules keyed on suite headers, the second on the generated identity
+ * request matcher, the RateLimiter the throttle decider counts in, the file idempotency store, and the bundles of the
+ * `tasks` and `tasksService` apis. The boot variant leaves out the service it names and gets a cache directory of its
+ * own; `SEAMPACT_SUITE_CACHE_DIR` moves the cache for a boot run.
  */
 final class Kernel extends BaseKernel
 {
@@ -43,6 +49,10 @@ final class Kernel extends BaseKernel
     /** Failed `http_basic` logins of one user name a client may send per window before `login_throttling` answers 429. */
     public const LOGIN_ATTEMPTS = 3;
     private const LOGIN_WINDOW = '10 seconds';
+    /** The header of the `access_control` rule on the generated identity matcher; public routes never match it. */
+    public const IDENTITY_PROBE_HEADER = 'x-seampact-suite-identity-probe';
+    private const IDENTITY_PROBE_MATCHER = 'suite.identity_probe_matcher';
+    private const ADMIN_ROLE = 'ROLE_SUITE_ADMIN';
     private const CONTROL_STATE_FILE = '/var/suite-control.json';
     private const CREDENTIALS_FILE = '/credentials.json';
     private const CACHE_VARIABLE = 'SEAMPACT_SUITE_CACHE_DIR';
@@ -101,7 +111,10 @@ final class Kernel extends BaseKernel
             'password_hashers' => [InMemoryUser::class => 'plaintext'],
             'providers' => ['suite_users' => ['memory' => ['users' => [self::SUITE_USER => ['password' => self::SUITE_PASSWORD, 'roles' => ['ROLE_USER']]]]]],
             'firewalls' => ['contract' => ['pattern' => '^/v1', 'lazy' => true, 'stateless' => true, 'provider' => 'suite_users', 'http_basic' => ['realm' => 'seampact suite'], 'login_throttling' => ['max_attempts' => self::LOGIN_ATTEMPTS, 'interval' => self::LOGIN_WINDOW]]],
-            'access_control' => [['request_matcher' => ForbiddenProbeMatcher::class, 'roles' => ['ROLE_SUITE_ADMIN']]],
+            'access_control' => [
+                ['request_matcher' => ForbiddenProbeMatcher::class, 'roles' => [self::ADMIN_ROLE]],
+                ['request_matcher' => self::IDENTITY_PROBE_MATCHER, 'roles' => [self::ADMIN_ROLE]],
+            ],
         ]);
         // Read at run time, so one container serves every responses mode.
         $container->extension('seampact_tasks', ['responses' => '%env(default:seampact_suite.responses:' . self::RESPONSES_VARIABLE . ')%']);
@@ -112,6 +125,11 @@ final class Kernel extends BaseKernel
             ->exclude([__DIR__ . '/Generated', __DIR__ . '/Kernel.php', ...($leftOut === null ? [] : [self::sourceFileOf($leftOut)])]);
         $services->set('logger', SuiteLogger::class);
         $services->set(IdempotencyStore::class, FileIdempotencyStore::class);
+        // The generated request matcher of the tasks api's identity routes, narrowed to the suite's probe header.
+        $services->set(self::IDENTITY_PROBE_MATCHER, ChainRequestMatcher::class)->args([[
+            service('seampact.tasks.matcher.identity'),
+            inline_service(HeaderRequestMatcher::class)->args([self::IDENTITY_PROBE_HEADER]),
+        ]]);
     }
 
     private function configureRoutes(RoutingConfigurator $routes): void

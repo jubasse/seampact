@@ -33,7 +33,7 @@ final class IdempotencySettleTest extends TestCase
     {
         $store = new RecordingStore();
         $hooks = new Hooks(new ServiceLocator([]), [], [], null, new NullLogger(), $store);
-        $boundary = new TasksBoundary($hooks, new TasksSettings(null, null, []), Validation::createValidator());
+        $boundary = new TasksBoundary($hooks, new TasksSettings(null, null, [], 'https://api.example.com'), Validation::createValidator());
         $contract = ApiContract::of(TasksContract::class);
         $operationId = $contract->operationIds()[0];
 
