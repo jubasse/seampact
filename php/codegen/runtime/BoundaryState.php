@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Runtime;
 
-use Seampact\Codegen\Runtime\ApiContract;
-use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Hooks\RequestView;
 use Seampact\Hooks\ResolvedScope;
 use Symfony\Component\HttpFoundation\Request;

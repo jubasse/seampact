@@ -32,6 +32,8 @@ abstract class BoundaryMiddleware
     private const NOT_FOUND_STATUS = 404;
     private const PREFLIGHT_METHOD = 'OPTIONS';
 
+    private ?Hooks $hooks = null;
+
     /** @var array<class-string, true> the boundaries found first in the global stack, once per booted application */
     private static array $placed = [];
 
@@ -62,7 +64,7 @@ abstract class BoundaryMiddleware
     private function served(Request $request, \Closure $next, ApiContract $contract, RouteMatch $match): Response
     {
         if (!$this->isFirst()) {
-            return ReplyVerdict::internalError(new Hooks($this->app), $contract, $match->operationId, 'the boundary middleware is not the first global middleware; let the provider prepend it, and prepend no other global middleware before it', null);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $match->operationId, 'the boundary middleware is not the first global middleware; let the provider prepend it, and prepend no other global middleware before it', null);
         }
 
         $operationId = $match->operationId;
@@ -72,7 +74,7 @@ abstract class BoundaryMiddleware
                 : ReplyVerdict::roleReply($contract, null, self::NOT_FOUND_ROLE, self::NOT_FOUND_STATUS);
         }
 
-        $state = new BoundaryState($contract, $operationId, $match->rawParameters, self::view($request), new Hooks($this->app));
+        $state = new BoundaryState($contract, $operationId, $match->rawParameters, self::view($request), $this->hooks());
         $request->attributes->set(BoundaryState::attributeName($contract->api), $state);
 
         try {
@@ -81,7 +83,7 @@ abstract class BoundaryMiddleware
         } catch (ContractRefusal $refusal) {
             return $refusal->render($request);
         } catch (\Throwable $failure) {
-            return ReplyVerdict::internalError(new Hooks($this->app), $contract, $operationId, 'the request failed before a reply was written', $failure);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $operationId, 'the request failed before a reply was written', $failure);
         }
 
         return $this->checked($request, $state, $response);
@@ -97,11 +99,11 @@ abstract class BoundaryMiddleware
         }
 
         if ($exception instanceof ContractBypassedException) {
-            return ReplyVerdict::internalError(new Hooks($this->app), $contract, $state->operationId, 'a contract FormRequest ran without the access middleware\'s mark', $exception);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $state->operationId, 'a contract FormRequest ran without the access middleware\'s mark', $exception);
         }
 
         if ($exception instanceof BoundaryFailure) {
-            return ReplyVerdict::internalError(new Hooks($this->app), $contract, $state->operationId, 'a boundary step failed', $exception->getPrevious() ?? $exception);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $state->operationId, 'a boundary step failed', $exception->getPrevious() ?? $exception);
         }
 
         $role = $exception === null ? null : ExceptionRoles::roleOf($exception);
@@ -112,15 +114,15 @@ abstract class BoundaryMiddleware
         // An exception no role maps and no contract reply rendered answers the api's 500 in every `responses` mode,
         // so Laravel's error page and its debug trace never reach the client.
         if ($exception !== null && !$state->authored($response)) {
-            return ReplyVerdict::internalError(new Hooks($this->app), $contract, $state->operationId, 'an exception reached the boundary unmapped', $exception);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $state->operationId, 'an exception reached the boundary unmapped', $exception);
         }
 
         return ReplyVerdict::checked(
             $state,
             $response,
             $exception,
-            $this->setting($contract, $state->operationId, 'responses'),
-            $this->setting($contract, $state->operationId, 'framework_etag'),
+            self::text($this->setting($contract, $state->operationId, 'responses')),
+            self::text($this->setting($contract, $state->operationId, 'framework_etag')),
         );
     }
 
@@ -133,6 +135,16 @@ abstract class BoundaryMiddleware
         }
 
         return $exception instanceof NotFoundHttpException || $exception instanceof MethodNotAllowedHttpException;
+    }
+
+    private function hooks(): Hooks
+    {
+        return $this->hooks ??= new Hooks($this->app);
+    }
+
+    private static function text(mixed $setting): ?string
+    {
+        return is_string($setting) ? $setting : null;
     }
 
     private static function isPreflight(Request $request): bool

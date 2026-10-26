@@ -24,10 +24,10 @@ final class ReplyVerdict
     /**
      * Step 10 on a reply that no exception rule answered.
      *
-     * @param mixed $responsesMode the operation's `responses` setting, `strict` unless it says otherwise
-     * @param mixed $etagMode the operation's `frameworkEtag` setting, `strip` unless it says `keep`
+     * @param ?string $responsesMode the operation's `responses` setting: `strict` replaces a violation, any other value lets it through
+     * @param ?string $etagMode the operation's `frameworkEtag` setting: `keep` keeps a foreign ETag, any other value strips it
      */
-    public static function checked(BoundaryState $state, Response $response, ?\Throwable $exception, mixed $responsesMode, mixed $etagMode): Response
+    public static function checked(BoundaryState $state, Response $response, ?\Throwable $exception, ?string $responsesMode, ?string $etagMode): Response
     {
         $etag = $response->headers->get('ETag');
         if ($etag !== null && $etag !== $state->authoredEtag($response) && $etagMode !== self::KEEP) {

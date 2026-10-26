@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Runtime;
 
-use Seampact\Codegen\Runtime\BodyRead;
 use Symfony\Component\HttpFoundation\Request;
 
 /**

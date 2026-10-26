@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Runtime;
 
-use Seampact\Codegen\Runtime\BoundaryState;
-use Seampact\Codegen\Runtime\Ir;
-use Seampact\Codegen\Runtime\RequirementCall;
 use Seampact\Hooks\Decision;
 use Seampact\Hooks\FieldDirection;
 use Seampact\Hooks\Purpose;

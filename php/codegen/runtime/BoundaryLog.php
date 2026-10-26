@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Runtime;
 
-use Seampact\Codegen\Runtime\ApiContract;
-use Seampact\Codegen\Runtime\HookLookup;
-use Seampact\Codegen\Runtime\UnexpectedFailure;
-
 /**
  * The boundary's own log lines, written to the app's PSR-3 logger, and the unexpected-error listener: a line carries
  * the api, the operation, the reason and a pointer, never an input value. A pointer can hold client text, so a
