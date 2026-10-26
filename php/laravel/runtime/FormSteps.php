@@ -6,6 +6,7 @@ namespace Seampact\Laravel\Runtime;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Request;
+use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\Ir;
 use Seampact\Codegen\Runtime\WireCodec;
 

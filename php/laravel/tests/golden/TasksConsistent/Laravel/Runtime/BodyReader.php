@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 
-use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Step 1's bounded body read: a declared `Content-Length` above the route's limit is refused before reading; the body

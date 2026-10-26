@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Laravel\Runtime;
 
 use Illuminate\Container\Container;
+use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\Ir;
 use Seampact\Codegen\Runtime\RequirementCall;
 use Seampact\Hooks\Decision;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Laravel\Runtime;
 
-use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**

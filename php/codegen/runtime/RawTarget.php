@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
-use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * The raw request target as the client sent it: `REQUEST_URI` without its query, minus the front controller's base

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
-use Illuminate\Http\Request;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Hooks\RequestView;
 use Seampact\Hooks\ResolvedScope;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**

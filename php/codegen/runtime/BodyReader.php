@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
-use Illuminate\Http\Request;
 use Seampact\Codegen\Runtime\BodyRead;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Step 1's bounded body read: a declared `Content-Length` above the route's limit is refused before reading; the body

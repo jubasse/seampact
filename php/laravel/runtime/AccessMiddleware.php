@@ -8,6 +8,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\BoundaryFailure;
+use Seampact\Codegen\Runtime\BoundaryState;
 
 /**
  * The api's route middleware, placed before `SubstituteBindings`: it checks that the route Laravel chose carries the

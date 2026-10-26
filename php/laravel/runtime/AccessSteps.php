@@ -9,6 +9,7 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\Request;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\AuthenticateCall;
+use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\Denial;
 use Seampact\Codegen\Runtime\Ir;
 use Seampact\Codegen\Runtime\RequirementCall;

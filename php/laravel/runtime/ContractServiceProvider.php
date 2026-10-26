@@ -14,6 +14,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\BoundaryState;
 
 /**
  * The base of an api's generated service provider: it merges the api's run-time defaults into

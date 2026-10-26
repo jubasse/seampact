@@ -6,6 +6,7 @@ namespace Seampact\Laravel\Runtime;
 
 use Illuminate\Contracts\Debug\ShouldntReport;
 use Illuminate\Http\Request;
+use Seampact\Codegen\Runtime\BoundaryState;
 use Symfony\Component\HttpFoundation\Response;
 
 /**

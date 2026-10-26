@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 
-use Illuminate\Http\Request;
 use Seampact\Hooks\RequestView;
 use Seampact\Hooks\ResolvedScope;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
