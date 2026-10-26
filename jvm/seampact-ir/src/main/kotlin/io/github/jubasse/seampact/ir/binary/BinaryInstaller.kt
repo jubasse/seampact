@@ -20,7 +20,6 @@ public class VerifiedBinary internal constructor(
     public val path: Path,
     public val sha256: String,
     internal val cacheRoot: Path,
-    internal val accounts: () -> PosixAccounts,
 )
 
 /** The outcome of [BinaryInstaller.install]. */
@@ -34,7 +33,8 @@ public sealed interface BinaryInstall {
  * Installs a resolved binary for use (ADR 0010, "Amendment 2026-10-21: the JVM channels", Cache): hashes it and
  * refuses one whose SHA-256 differs from the pin (`binary.hash-mismatch`, naming both), then copies it into
  * `<cache root>/<sha256>/`, the only copy that runs. A resolved artefact and a `path` override are copied alike, so a
- * file someone else may change is never started. A relative cache directory is refused (`binary.cache-unavailable`,
+ * file someone else may change is never started. The source is hashed before the cache is looked at, so a warm cache
+ * never hides a changed source. A relative cache directory is refused (`binary.cache-unavailable`,
  * naming the setting it comes from). The cache root and each directory the runner creates are owner-only whatever
  * the umask; the cache root is then resolved to its real path once, and only that path is checked and run, so a link
  * on the way cannot be swapped between the check and the start; an unsafe cache entry is refused
@@ -50,16 +50,7 @@ public object BinaryInstaller {
     private val OWNER_ONLY_EXECUTABLE = PosixFilePermissions.fromString("rwx------")
 
     /** @param cacheDirectorySetting the setting [cacheDirectory] comes from, which a refusal names */
-    public fun install(resolved: Path, pin: BinaryPin, cacheDirectory: Path, cacheDirectorySetting: String): BinaryInstall =
-        install(resolved, pin, cacheDirectory, cacheDirectorySetting, PosixAccounts::ofHost)
-
-    internal fun install(
-        resolved: Path,
-        pin: BinaryPin,
-        cacheDirectory: Path,
-        cacheDirectorySetting: String,
-        accounts: () -> PosixAccounts,
-    ): BinaryInstall {
+    public fun install(resolved: Path, pin: BinaryPin, cacheDirectory: Path, cacheDirectorySetting: String): BinaryInstall {
         if (!cacheDirectory.isAbsolute) return BinaryInstall.Refused(cacheUnavailable(cacheDirectory, cacheDirectorySetting))
 
         // Absolute before any check, so the hash and the copy read one file.
@@ -71,10 +62,10 @@ public object BinaryInstaller {
         val cacheRoot = cacheDirectory.toRealPath()
         val directory = cacheRoot.resolve(pin.sha256)
         val installed = directory.resolve(binaryFileName())
-        val unsafeEntry = BinaryCache.unsafeEntry(installed, cacheRoot, accounts)
+        val unsafeEntry = BinaryCache.unsafeEntry(installed, cacheRoot)
         if (unsafeEntry != null) return BinaryInstall.Refused(unsafeEntry)
 
-        val verified = VerifiedBinary(installed, pin.sha256, cacheRoot, accounts)
+        val verified = VerifiedBinary(installed, pin.sha256, cacheRoot)
         if (isInstalled(installed, pin.sha256)) return BinaryInstall.Installed(verified)
 
         val partial = createOwnerOnlyFile(directory)

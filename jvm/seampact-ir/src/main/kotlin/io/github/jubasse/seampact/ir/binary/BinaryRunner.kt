@@ -65,7 +65,7 @@ public object BinaryRunner {
         support: IrSupport,
         timeout: Duration = DEFAULT_TIMEOUT,
     ): BinaryCompileResult {
-        val unsafeEntry = BinaryCache.unsafeEntry(binary.path, binary.cacheRoot, binary.accounts)
+        val unsafeEntry = BinaryCache.unsafeEntry(binary.path, binary.cacheRoot)
         if (unsafeEntry != null) return BinaryCompileResult.Refused(unsafeEntry)
         val startedSha256 = BinaryInstaller.sha256Of(binary.path)
         if (startedSha256 != binary.sha256) return BinaryCompileResult.Refused(changedSinceInstall(binary, startedSha256))

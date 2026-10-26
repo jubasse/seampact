@@ -2,8 +2,10 @@ package io.github.jubasse.seampact.ir.binary
 
 import com.sun.security.auth.module.NTSystem
 import com.sun.security.auth.module.UnixSystem
+import java.io.IOException
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.attribute.AclEntryFlag
@@ -20,10 +22,10 @@ import java.nio.file.attribute.UserPrincipal
  * each missing directory owner-only whatever the umask, and checks the cache root by its real path only. Before each
  * start, the copy, its directory and each directory above it up to the cache root must be owned by the current user,
  * not be a link and not be writable by group or others; each directory above the cache root must be owned by the
- * current user or root, not be a link and not be writable by group or others. Group write is allowed when the group is
- * proven to be the owner's private group ([PosixAccounts]). On Windows, from the copy up to `%USERPROFILE%`, or up to
- * the drive root outside it, none may be a reparse point and no ACL may grant write to another account than the
- * current user, SYSTEM and Administrators.
+ * current user or root and not be a link, may be writable by its group only when that group is the running process's
+ * primary group, and may be writable by others only when it is the filesystem root. On Windows, from the copy up to
+ * the real path of `%USERPROFILE%`, or up to the drive root outside it, none may be a reparse point and no ACL may
+ * grant write to another account than the current user, SYSTEM and Administrators.
  */
 internal object BinaryCache {
     private const val POSIX_VIEW = "posix"
@@ -84,57 +86,69 @@ internal object BinaryCache {
      * The first unsafe entry from [copy] (when it exists) up to [cacheRoot] and above it, or null. [cacheRoot] is the
      * real path the installer resolved: a link anywhere on the way, a swapped one included, is refused.
      */
-    fun unsafeEntry(copy: Path, cacheRoot: Path, accounts: () -> PosixAccounts = PosixAccounts::ofHost): BinaryFailure? {
+    fun unsafeEntry(copy: Path, cacheRoot: Path): BinaryFailure? {
         val root = cacheRoot.normalize()
         val entry = copy.normalize()
         if (!entry.isAbsolute || !entry.startsWith(root)) return cacheUnsafe(entry, "is not under the cache root '$root'")
 
-        return if (isWindows()) unsafeOnWindows(entry, root) else unsafeOnPosix(entry, root, lazy(accounts))
+        return if (isWindows()) unsafeOnWindows(entry, root) else unsafeOnPosix(entry, root)
     }
 
-    private fun unsafeOnPosix(copy: Path, root: Path, accounts: Lazy<PosixAccounts>): BinaryFailure? {
+    private fun unsafeOnPosix(copy: Path, root: Path): BinaryFailure? {
         if (UNIX_VIEW !in copy.fileSystem.supportedFileAttributeViews()) {
             return cacheUnsafe(copy, "is on a file system whose owner and modes cannot be read")
         }
-        val currentUid = UnixSystem().uid
+        val process = UnixSystem()
 
         for (entry in pathsUpTo(copy, root)) {
             if (!Files.exists(entry, LinkOption.NOFOLLOW_LINKS)) continue
             if (Files.isSymbolicLink(entry)) return cacheUnsafe(entry, "is a link")
 
-            val ownerUid = unixNumber(entry, UNIX_UID_ATTRIBUTE, LinkOption.NOFOLLOW_LINKS)
-            if (ownerUid != currentUid) return cacheUnsafe(entry, "is owned by the user id $ownerUid, not by the current user ($currentUid)")
-            writableByOthers(entry, ownerUid, accounts, LinkOption.NOFOLLOW_LINKS)?.let { return it }
+            val ownerUid = unixNumber(entry, UNIX_UID_ATTRIBUTE)
+            if (ownerUid != process.uid) return cacheUnsafe(entry, "is owned by the user id $ownerUid, not by the current user (${process.uid})")
+            writableByGroupOrOthers(entry)?.let { return it }
         }
 
         // The cache root is a real path, so a link above it was put there after the install resolved it.
         for (ancestor in generateSequence(root.parent) { it.parent }) {
             if (Files.isSymbolicLink(ancestor)) return cacheUnsafe(ancestor, "is above the cache and is a link")
 
-            val ownerUid = unixNumber(ancestor, UNIX_UID_ATTRIBUTE, LinkOption.NOFOLLOW_LINKS)
-            if (ownerUid != currentUid && ownerUid != ROOT_UID) {
-                return cacheUnsafe(ancestor, "is above the cache and owned by the user id $ownerUid, neither the current user ($currentUid) nor root; use a private cache directory")
+            val ownerUid = unixNumber(ancestor, UNIX_UID_ATTRIBUTE)
+            if (ownerUid != process.uid && ownerUid != ROOT_UID) {
+                return cacheUnsafe(ancestor, "is above the cache and owned by the user id $ownerUid, neither the current user (${process.uid}) nor root; use a private cache directory")
             }
-            writableByOthers(ancestor, ownerUid, accounts, LinkOption.NOFOLLOW_LINKS)?.let { return it }
+            ancestorWritableByOthers(ancestor, process.gid)?.let { return it }
         }
 
         return null
     }
 
-    // Group write is allowed when the group is proven to be the owner's private group, as OpenSSH's StrictModes allows.
-    private fun writableByOthers(entry: Path, ownerUid: Long, accounts: Lazy<PosixAccounts>, vararg options: LinkOption): BinaryFailure? {
-        val permissions = Files.getPosixFilePermissions(entry, *options)
-        if (PosixFilePermission.OTHERS_WRITE in permissions) return cacheUnsafe(entry, "may be written by others; run `chmod 700 '$entry'`")
-        if (PosixFilePermission.GROUP_WRITE !in permissions) return null
+    // Inside the cache, which the runner creates owner-only, no group write is accepted.
+    private fun writableByGroupOrOthers(entry: Path): BinaryFailure? {
+        val permissions = Files.getPosixFilePermissions(entry, LinkOption.NOFOLLOW_LINKS)
+        if (PosixFilePermission.GROUP_WRITE !in permissions && PosixFilePermission.OTHERS_WRITE !in permissions) return null
 
-        val groupId = unixNumber(entry, UNIX_GID_ATTRIBUTE, *options)
-        if (accounts.value.isPrivateGroup(groupId, ownerUid)) return null
-
-        return cacheUnsafe(entry, "may be written by the group id $groupId, which is not proven to be its owner's private group; run `chmod g-w '$entry'`")
+        return cacheUnsafe(entry, "may be written by its group or others; run `chmod 700 '$entry'`")
     }
 
-    private fun unixNumber(entry: Path, attribute: String, vararg options: LinkOption): Long =
-        (Files.getAttribute(entry, attribute, *options) as Int).toLong()
+    // Above the cache, whoever shares the process's primary group can already change the build tool's own files, so
+    // that group may write; no account database is read.
+    private fun ancestorWritableByOthers(ancestor: Path, processGroupId: Long): BinaryFailure? {
+        val permissions = Files.getPosixFilePermissions(ancestor, LinkOption.NOFOLLOW_LINKS)
+        val isFilesystemRoot = ancestor.parent == null
+        if (PosixFilePermission.OTHERS_WRITE in permissions && !isFilesystemRoot) {
+            return cacheUnsafe(ancestor, "is above the cache and may be written by others; run `chmod o-w '$ancestor'`")
+        }
+        if (PosixFilePermission.GROUP_WRITE !in permissions) return null
+
+        val groupId = unixNumber(ancestor, UNIX_GID_ATTRIBUTE)
+        if (groupId == processGroupId) return null
+
+        return cacheUnsafe(ancestor, "is above the cache and may be written by the group id $groupId, not the primary group of the current process ($processGroupId); run `chmod g-w '$ancestor'`")
+    }
+
+    private fun unixNumber(entry: Path, attribute: String): Long =
+        (Files.getAttribute(entry, attribute, LinkOption.NOFOLLOW_LINKS) as Int).toLong()
 
     private fun unsafeOnWindows(copy: Path, root: Path): BinaryFailure? {
         if (ACL_VIEW !in copy.fileSystem.supportedFileAttributeViews()) {
@@ -170,8 +184,22 @@ internal object BinaryCache {
     private fun isAllowedWriter(principal: UserPrincipal, currentUserSid: String): Boolean =
         (WELL_KNOWN_WRITER_SIDS + currentUserSid).any { sid -> principal.hashCode() == sid.hashCode() }
 
-    // The user profile, which Windows creates private, ends the walk; a cache outside it is checked up to its drive.
-    fun profileDirectory(userProfileValue: String?): Path? = userProfileValue?.let { Path.of(it).toAbsolutePath().normalize() }
+    /**
+     * The real path of the user profile, which Windows creates private and which ends the walk, so a profile reached
+     * through a junction or an 8.3 name compares like the cache root. A profile that cannot be resolved counts as none:
+     * the cache is then checked up to its drive root, which is stricter.
+     */
+    fun profileDirectory(userProfileValue: String?): Path? {
+        if (userProfileValue == null) return null
+
+        return try {
+            Path.of(userProfileValue).toRealPath()
+        } catch (_: IOException) {
+            null
+        } catch (_: InvalidPathException) {
+            null
+        }
+    }
 
     private fun pathsUpTo(entry: Path, limit: Path): List<Path> =
         generateSequence(entry) { it.parent }.takeWhile { it.startsWith(limit) }.toList()

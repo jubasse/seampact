@@ -238,64 +238,6 @@ class BinaryPinTest {
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS)
-    fun aGroupWritableTreeOfTheOwnersPrivateGroupIsAccepted() {
-        val (cacheRoot, copy) = groupWritableCache()
-
-        val unsafe = BinaryCache.unsafeEntry(copy, cacheRoot) { accountsWithGroupMembers("") }
-
-        assertEquals(null, unsafe)
-    }
-
-    @Test
-    @DisabledOnOs(OS.WINDOWS)
-    fun aGroupWritableTreeIsRefusedWhenADirectoryServiceMayListOtherMembers() {
-        val (cacheRoot, copy) = groupWritableCache()
-
-        val unsafe = BinaryCache.unsafeEntry(copy, cacheRoot) { accountsWithGroupMembers("", "passwd: files sss\ngroup: files sss\n") }
-
-        assertEquals(BinaryFailureCode.CACHE_UNSAFE, unsafe?.code)
-        assertTrue(unsafe!!.message.contains("chmod g-w"), unsafe.message)
-    }
-
-    @Test
-    @DisabledOnOs(OS.WINDOWS)
-    fun aGroupWritableTreeOfASharedGroupIsRefused() {
-        val (cacheRoot, copy) = groupWritableCache()
-
-        val unsafe = BinaryCache.unsafeEntry(copy, cacheRoot) { accountsWithGroupMembers("me,someone-else") }
-
-        assertEquals(BinaryFailureCode.CACHE_UNSAFE, unsafe?.code)
-        assertTrue(unsafe!!.message.contains("not proven to be its owner's private group"), unsafe.message)
-        assertTrue(unsafe.message.contains("chmod g-w"), unsafe.message)
-    }
-
-    @Test
-    fun aPrivateGroupHasTheOwnerAsItsOnlyMember() {
-        val passwd = "me:x:1000:1000::/home/me:/bin/sh\nother:x:1001:1000::/home/other:/bin/sh\nthird:x:1002:1002::/h:/bin/sh\n"
-        val accounts = PosixAccounts(passwd, "me:x:1000:\nthird:x:1002:third\nstaff:x:50:me,other\nghost:x:1003:\n", FILES_ONLY)
-
-        assertFalse(accounts.isPrivateGroup(1000, 1000), "another user has it as primary group")
-        assertTrue(accounts.isPrivateGroup(1002, 1002))
-        assertFalse(accounts.isPrivateGroup(50, 1000), "it lists two members")
-        assertFalse(accounts.isPrivateGroup(77, 1000), "the group file does not list it")
-        assertFalse(accounts.isPrivateGroup(1003, 1003), "the passwd file does not list its owner")
-    }
-
-    @Test
-    fun noGroupIsPrivateWhenTheAccountsMayComeFromADirectoryService() {
-        val passwd = "me:x:1000:1000::/home/me:/bin/sh\n"
-
-        val ldap = PosixAccounts(passwd, "me:x:1000:\n", "passwd: files ldap\ngroup: files ldap\n")
-        val nisLines = PosixAccounts(passwd + "+::::::\n", "me:x:1000:\n", "passwd: compat\ngroup: compat\n")
-        val local = PosixAccounts(passwd, "me:x:1000:\n", "passwd: files systemd\ngroup: files [SUCCESS=merge] systemd\n")
-
-        assertFalse(ldap.isPrivateGroup(1000, 1000), "LDAP may list other members")
-        assertFalse(nisLines.isPrivateGroup(1000, 1000), "NIS may list other members")
-        assertTrue(local.isPrivateGroup(1000, 1000))
-    }
-
-    @Test
     fun aRelativeCacheDirectoryIsRefusedNamingItsSetting() {
         val install = install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), Path.of("relative-cache"))
 
@@ -320,22 +262,11 @@ class BinaryPinTest {
     }
 
     @Test
-    fun aPrivateGroupIsNamedAfterItsOwner() {
-        val passwd = "me:x:1000:1000::/home/me:/bin/sh\n"
-
-        val renamed = PosixAccounts(passwd, "devs:x:1000:\n", FILES_ONLY)
-        val listedTwice = PosixAccounts(passwd, "me:x:1000:\nme:x:1000:bob\n", FILES_ONLY)
-
-        assertFalse(renamed.isPrivateGroup(1000, 1000), "its name is not the owner's login")
-        assertFalse(listedTwice.isPrivateGroup(1000, 1000), "a second line with its id lists another member")
-    }
-
-    @Test
     @DisabledOnOs(OS.WINDOWS)
     fun aGroupWritableTreeAboveTheCacheIsAcceptedWhenItsGroupIsTheProcessGroup() {
         val project = groupWritableTree(UnixSystem().gid)
 
-        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), project.resolve("cache"), TEST_CACHE_SETTING)
+        val install = install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), project.resolve("cache"))
 
         assertTrue(install is BinaryInstall.Installed, "$install")
     }
@@ -348,12 +279,12 @@ class BinaryPinTest {
         assumeTrue(otherGroup != null, "the user has no supplementary group to give the directory")
         val project = groupWritableTree(otherGroup!!)
 
-        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), project.resolve("cache"), TEST_CACHE_SETTING)
+        val install = install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), project.resolve("cache"))
 
         val failure = (install as BinaryInstall.Refused).failure
         assertEquals(BinaryFailureCode.CACHE_UNSAFE, failure.code)
         assertEquals(project.toRealPath().toString(), failure.actual)
-        assertTrue(failure.fix.contains("chmod g-w") || failure.message.contains("chmod g-w"), failure.message)
+        assertTrue(failure.message.contains("chmod g-w"), failure.message)
     }
 
     @Test
@@ -363,7 +294,7 @@ class BinaryPinTest {
         Files.setAttribute(cacheRoot, UNIX_GID, UnixSystem().gid.toInt())
         Files.setPosixFilePermissions(cacheRoot, PosixFilePermissions.fromString("rwxrwxr-x"))
 
-        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), cacheRoot, TEST_CACHE_SETTING)
+        val install = install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), cacheRoot)
 
         val failure = (install as BinaryInstall.Refused).failure
         assertEquals(BinaryFailureCode.CACHE_UNSAFE, failure.code)
@@ -404,39 +335,12 @@ class BinaryPinTest {
         return project
     }
 
-    // A cache whose every directory, and the cache root's parent, is group-writable (umask 002).
-    private fun groupWritableCache(): Pair<Path, Path> {
-        val parent = Files.createDirectory(work.resolve("umask-002"))
-        val cacheRoot = parent.resolve("cache")
-        val install = install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), cacheRoot)
-        check(install is BinaryInstall.Installed) { "$install" }
-        for (directory in listOf(parent, cacheRoot, install.binary.path.parent)) {
-            Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("rwxrwxr-x"))
-        }
-
-        return install.binary.path.parent.parent to install.binary.path
-    }
-
-    // The current user as `me`, whose primary group is the test directory's group, which lists [members].
-    private fun accountsWithGroupMembers(members: String, nameService: String = FILES_ONLY): PosixAccounts {
-        val uid = Files.getAttribute(work, "unix:uid") as Int
-        val gid = Files.getAttribute(work, "unix:gid") as Int
-
-        return PosixAccounts("me:x:$uid:$gid::/home/me:/bin/sh\n", "me:x:$gid:$members\n", nameService)
-    }
-
-    // The host's account files read as the only name service, so a developer host with a directory service and a
-    // 002 umask runs these tests as a CI runner does.
     private fun install(binary: Path, pin: BinaryPin, cacheRoot: Path): BinaryInstall =
-        BinaryInstaller.install(binary, pin, cacheRoot, TEST_CACHE_SETTING) { hostAccountFiles() }
-
-    private fun hostAccountFiles(): PosixAccounts =
-        PosixAccounts(Files.readString(Path.of("/etc/passwd")), Files.readString(Path.of("/etc/group")), FILES_ONLY)
+        BinaryInstaller.install(binary, pin, cacheRoot, TEST_CACHE_SETTING)
 
     private companion object {
         const val TEST_CACHE_SETTING = "the test cache setting"
         const val UNIX_GID = "unix:gid"
-        const val FILES_ONLY = "passwd: files\ngroup: files\n"
     }
 
     @Test
