@@ -279,6 +279,15 @@ describeServed("boundary edges of the Symfony runtime", {}, (running) => {
     expect(await problemCode(response)).toBe("api.internal");
   });
 
+  test("an app's response listener cannot replace the boundary's own reply unchecked", async () => {
+    const response = await fetch(`${running()?.baseUrl}/v1/no-such-operation`, {
+      headers: { [MUTATE_HEADER]: "replace" },
+    });
+
+    expect(response.status).toBe(500);
+    expect(await problemCode(response)).toBe("api.internal");
+  });
+
   // The core operations declare no 403, so the reply is the api's 500; the log names the role it kept.
   test("an AccessDeniedException from a scope resolver after the hook admitted the caller keeps the forbidden role", async () => {
     await loadScript(running(), {});
