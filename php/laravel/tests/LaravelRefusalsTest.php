@@ -32,6 +32,24 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString("'page-size' and 'pageSize'", $refused['name.collision']);
     }
 
+    public function testAPlaceholderLongerThanTheRouterAcceptsIsRefusedByName(): void
+    {
+        $longName = 'theTaskIdentifierOfTheChannelTaskToRead';
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation) use ($longName): void {
+            $operation->path = str_replace('{taskId}', "{{$longName}}", (string) $operation->path);
+            self::assertIsArray(self::object($operation->params)->path);
+            foreach (self::object($operation->params)->path as $param) {
+                if (self::object($param)->name === 'taskId') {
+                    $param->name = $longName;
+                }
+            }
+        });
+
+        $refused = self::refused($document);
+
+        self::assertStringContainsString("'{$longName}'", $refused['path.parameter.long.unsupported'] ?? '');
+    }
+
     public function testFormsAbsentFromTheReferenceWaitForAConsumerAfterOneZero(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {

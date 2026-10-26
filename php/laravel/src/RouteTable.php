@@ -10,16 +10,19 @@ use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\OperationNames;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
+use Seampact\Codegen\RoutePlaceholder;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Write\GeneratedFile;
 
 /**
- * The contract routes of one api (ADR 0023 "Routes"): Laravel patterns with positional parameter names (`{p1}`), a
- * `:` in a static segment kept literal, registered per depth with literal segments before placeholders, since Laravel
+ * The contract routes of one api (ADR 0023 "Routes"): Laravel patterns with each placeholder named after its input
+ * property (`{taskId}`), a `:` in a static segment kept literal, registered per depth with literal segments before placeholders, since Laravel
  * matches in registration order. The route table class carries them and the option defaults for the `Route::seampact()`
  * macro; under `routes: file` a `routes.php` with one `Route::` line per operation is written beside it. Each route
  * carries the access middleware, then the app's list for its access kind (`config('seampact.<api>.middleware.<kind>')`).
- * A signed route is registered without the CSRF middleware, so a `web` group never refuses the webhook it serves.
+ * A route that reads no cookie credential (a bearer, header or signed caller, or a public one) is registered without
+ * the CSRF middleware, so a `web` group never refuses a client that cannot hold its token; the boundary still checks
+ * the contract's CSRF header for a cookie-only caller.
  */
 final class RouteTable
 {
@@ -27,7 +30,7 @@ final class RouteTable
     public const CONFIG_FILE = 'config.php';
     private const PUBLIC_ORIGIN = 'public_origin';
     private const ROUTE_FACADE = 'Illuminate\\Support\\Facades\\Route';
-    // The CSRF middleware of the `web` group, which a signed route's caller never satisfies (ADR 0013).
+    // The CSRF middleware of the `web` group, which only a cookie credential needs (ADR 0013).
     private const FORGERY_MIDDLEWARE = 'Illuminate\\Foundation\\Http\\Middleware\\PreventRequestForgery';
     private const LITERAL_SEGMENT = 0;
     private const PLACEHOLDER_SEGMENT = 1;
@@ -44,12 +47,14 @@ final class RouteTable
     {
         $segments = [];
         $depthKey = [];
-        $position = 0;
 
         foreach (explode('/', $operation->path) as $segment) {
             if (preg_match('/^\{[^{}\/]+\}$/D', $segment) === 1) {
-                $position++;
-                $segments[] = "{p{$position}}";
+                $placeholder = $this->placeholder(substr($segment, 1, -1), $at);
+                if ($placeholder === null) {
+                    return;
+                }
+                $segments[] = "{{$placeholder}}";
                 $depthKey[] = self::PLACEHOLDER_SEGMENT;
                 continue;
             }
@@ -92,11 +97,12 @@ final class RouteTable
                 . "\t\t'name' => " . var_export($this->routeName($operation), true) . ",\n"
                 . "\t\t'access' => " . var_export($operation->access->tag(), true) . ",\n"
                 . (AccessKind::isSigned($this->layout->ir, $operation) ? "\t\t'signed' => true,\n" : '')
+                . ($this->skipsForgeryCheck($operation) ? "\t\t'cookieless' => true,\n" : '')
                 . "\t\t'action' => [" . $file->name($names->endpoints) . '::class, ' . var_export($names->method, true) . "],\n"
                 . "\t],";
         }
         $class->addConstant('ROUTES', new Literal($lines === [] ? '[]' : "[\n" . implode("\n", $lines) . "\n]"))->setPublic()
-            ->addComment('@var list<array{operation: string, method: string, uri: string, name: string, access: string, signed?: true, action: array{class-string, string}}>');
+            ->addComment('@var list<array{operation: string, method: string, uri: string, name: string, access: string, signed?: true, cookieless?: true, action: array{class-string, string}}>');
 
         $route = $file->name(self::ROUTE_FACADE);
         $access = $file->name($this->layout->accessMiddleware);
@@ -105,8 +111,9 @@ final class RouteTable
         $kind = $anySigned ? "(\$route['signed'] ?? false) ? " . var_export(AccessKind::SIGNED, true) . " : \$route['access']" : "\$route['access']";
         $registration = "{$route}::match([\$route['method']], \$route['uri'], \$route['action'])->name(\$route['name'])"
             . "->middleware([{$access}::class, ...{$kindMiddleware}::of(self::API, {$kind})]);";
-        $body = $anySigned
-            ? "\t\$registered = {$registration}\n\tif (\$route['signed'] ?? false) {\n\t\t\$registered->withoutMiddleware(" . $file->name(self::FORGERY_MIDDLEWARE) . "::class);\n\t}\n"
+        $anyCookieless = array_filter($this->routes, fn (array $kept): bool => $this->skipsForgeryCheck($kept['operation'])) !== [];
+        $body = $anyCookieless
+            ? "\t\$registered = {$registration}\n\tif (\$route['cookieless'] ?? false) {\n\t\t\$registered->withoutMiddleware(" . $file->name(self::FORGERY_MIDDLEWARE) . "::class);\n\t}\n"
             : "\t{$registration}\n";
         $class->addMethod('register')->setStatic()->setReturnType('void')
             ->addComment('Registers every contract route, in order, inside the caller\'s route group, each behind the access middleware and the app\'s list for its access kind.')
@@ -135,8 +142,8 @@ final class RouteTable
                 . PhpClassFile::shortNameOf($names->endpoints) . '::class, ' . var_export($names->method, true) . '])->name('
                 . var_export($this->routeName($route['operation']), true) . ")->middleware([{$access}::class, ...{$kindMiddleware}::of({$api}, "
                 . var_export(AccessKind::of($this->layout->ir, $route['operation']), true) . ')])'
-                . (AccessKind::isSigned($this->layout->ir, $route['operation']) ? '->withoutMiddleware(' . PhpClassFile::shortNameOf(self::FORGERY_MIDDLEWARE) . '::class)' : '') . ';';
-            if (AccessKind::isSigned($this->layout->ir, $route['operation'])) {
+                . ($this->skipsForgeryCheck($route['operation']) ? '->withoutMiddleware(' . PhpClassFile::shortNameOf(self::FORGERY_MIDDLEWARE) . '::class)' : '') . ';';
+            if ($this->skipsForgeryCheck($route['operation'])) {
                 $imports[self::FORGERY_MIDDLEWARE] = true;
             }
         }
@@ -190,6 +197,11 @@ final class RouteTable
         ];
     }
 
+    private function skipsForgeryCheck(Operation $operation): bool
+    {
+        return AccessKind::isSigned($this->layout->ir, $operation) || !AccessKind::readsCookie($this->layout->ir, $operation);
+    }
+
     private function routeName(Operation $operation): string
     {
         return "seampact.{$this->layout->ir->api->id}.{$operation->id}";
@@ -202,6 +214,19 @@ final class RouteTable
         usort($routes, static fn (array $first, array $second): int => $first['depthKey'] <=> $second['depthKey']);
 
         return $routes;
+    }
+
+    // A parameter that yields no name is refused with its input type, so its route is only left out here.
+    private function placeholder(string $parameter, IrPlace $at): ?string
+    {
+        $placeholder = RoutePlaceholder::nameOf($parameter);
+        if ($placeholder !== null && RoutePlaceholder::isTooLong($placeholder)) {
+            $this->refusals->add(RoutePlaceholder::TOO_LONG_RULE, RoutePlaceholder::tooLongMessage($parameter, $placeholder), RoutePlaceholder::tooLongFix(), $at->below('path'));
+
+            return null;
+        }
+
+        return $placeholder;
     }
 
     private function refusePath(string $form, string $description, IrPlace $at): void

@@ -30,7 +30,7 @@ final class TasksRoutes
         'middleware' => ['public' => [], 'optional' => [], 'identity' => [], 'signed' => []],
     ];
 
-    /** @var list<array{operation: string, method: string, uri: string, name: string, access: string, signed?: true, action: array{class-string, string}}> */
+    /** @var list<array{operation: string, method: string, uri: string, name: string, access: string, signed?: true, cookieless?: true, action: array{class-string, string}}> */
     public const ROUTES = [
         [
             'operation' => 'health',
@@ -38,6 +38,7 @@ final class TasksRoutes
             'uri' => '/v1/health',
             'name' => 'seampact.tasks.health',
             'access' => 'public',
+            'cookieless' => true,
             'action' => [AppEndpoints::class, 'health'],
         ],
         [
@@ -55,12 +56,13 @@ final class TasksRoutes
             'name' => 'seampact.tasks.payments',
             'access' => 'identity',
             'signed' => true,
+            'cookieless' => true,
             'action' => [HooksEndpoints::class, 'payments'],
         ],
         [
             'operation' => 'getChannel',
             'method' => 'GET',
-            'uri' => '/v1/channels/{p1}',
+            'uri' => '/v1/channels/{channelId}',
             'name' => 'seampact.tasks.getChannel',
             'access' => 'identity',
             'action' => [ChannelsEndpoints::class, 'getChannel'],
@@ -68,7 +70,7 @@ final class TasksRoutes
         [
             'operation' => 'getDraft',
             'method' => 'GET',
-            'uri' => '/v1/me/drafts/{p1}',
+            'uri' => '/v1/me/drafts/{draftId}',
             'name' => 'seampact.tasks.getDraft',
             'access' => 'identity',
             'action' => [DraftsEndpoints::class, 'getDraft'],
@@ -76,7 +78,7 @@ final class TasksRoutes
         [
             'operation' => 'createTask',
             'method' => 'POST',
-            'uri' => '/v1/channels/{p1}/tasks',
+            'uri' => '/v1/channels/{channelId}/tasks',
             'name' => 'seampact.tasks.createTask',
             'access' => 'identity',
             'action' => [TasksEndpoints::class, 'createTask'],
@@ -84,7 +86,7 @@ final class TasksRoutes
         [
             'operation' => 'listTasks',
             'method' => 'GET',
-            'uri' => '/v1/channels/{p1}/tasks',
+            'uri' => '/v1/channels/{channelId}/tasks',
             'name' => 'seampact.tasks.listTasks',
             'access' => 'identity',
             'action' => [TasksEndpoints::class, 'listTasks'],
@@ -92,7 +94,7 @@ final class TasksRoutes
         [
             'operation' => 'getTasksBatch',
             'method' => 'POST',
-            'uri' => '/v1/channels/{p1}/tasks/batch',
+            'uri' => '/v1/channels/{channelId}/tasks/batch',
             'name' => 'seampact.tasks.getTasksBatch',
             'access' => 'identity',
             'action' => [TasksEndpoints::class, 'getTasksBatch'],
@@ -100,7 +102,7 @@ final class TasksRoutes
         [
             'operation' => 'searchTasks',
             'method' => 'POST',
-            'uri' => '/v1/channels/{p1}/tasks/search',
+            'uri' => '/v1/channels/{channelId}/tasks/search',
             'name' => 'seampact.tasks.searchTasks',
             'access' => 'identity',
             'action' => [TasksEndpoints::class, 'searchTasks'],
@@ -108,7 +110,7 @@ final class TasksRoutes
         [
             'operation' => 'getTask',
             'method' => 'GET',
-            'uri' => '/v1/channels/{p1}/tasks/{p2}',
+            'uri' => '/v1/channels/{channelId}/tasks/{taskId}',
             'name' => 'seampact.tasks.getTask',
             'access' => 'identity',
             'action' => [TasksEndpoints::class, 'getTask'],
@@ -116,7 +118,7 @@ final class TasksRoutes
         [
             'operation' => 'updateTask',
             'method' => 'PATCH',
-            'uri' => '/v1/channels/{p1}/tasks/{p2}',
+            'uri' => '/v1/channels/{channelId}/tasks/{taskId}',
             'name' => 'seampact.tasks.updateTask',
             'access' => 'identity',
             'action' => [TasksEndpoints::class, 'updateTask'],
@@ -124,7 +126,7 @@ final class TasksRoutes
         [
             'operation' => 'purgeTask',
             'method' => 'POST',
-            'uri' => '/v1/channels/{p1}/tasks/{p2}/purge',
+            'uri' => '/v1/channels/{channelId}/tasks/{taskId}/purge',
             'name' => 'seampact.tasks.purgeTask',
             'access' => 'identity',
             'action' => [TasksEndpoints::class, 'purgeTask'],
@@ -138,7 +140,7 @@ final class TasksRoutes
     {
         foreach (self::ROUTES as $route) {
             $registered = Route::match([$route['method']], $route['uri'], $route['action'])->name($route['name'])->middleware([TasksAccessMiddleware::class, ...KindMiddleware::of(self::API, ($route['signed'] ?? false) ? 'signed' : $route['access'])]);
-            if ($route['signed'] ?? false) {
+            if ($route['cookieless'] ?? false) {
                 $registered->withoutMiddleware(PreventRequestForgery::class);
             }
         }

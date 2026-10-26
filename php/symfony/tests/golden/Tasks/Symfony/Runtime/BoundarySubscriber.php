@@ -351,7 +351,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         }
 
         $role = $exception === null ? null : $this->roleOf($state, $exception, $response);
-        if ($exception !== null && $role !== null) {
+        if ($exception !== null && ($role !== null || FrameworkRefusal::statusOf($exception) !== null)) {
             $reply = ReplyVerdict::mapped($state, $response, $role, $exception, ExceptionRoles::KEPT_HEADERS);
             $retryAfter = ExceptionRoles::retryAfter($exception);
             if ($retryAfter !== null && !$reply->headers->has('Retry-After')) {
@@ -361,7 +361,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
             return $reply;
         }
 
-        // A reply an app's own `kernel.exception` listener wrote for an exception no role maps is judged as written below.
+        // A reply an app's own `kernel.exception` listener wrote for an exception no role or status maps is judged as written below.
         try {
             $responses = $this->settings->responsesOf($state->operationId);
         } catch (\UnexpectedValueException $invalid) {

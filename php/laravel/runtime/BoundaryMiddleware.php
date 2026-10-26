@@ -126,12 +126,11 @@ abstract class BoundaryMiddleware
             return ReplyVerdict::internalError($this->hooks(), $contract, $state->operationId, 'a boundary step failed', $exception->getPrevious() ?? $exception);
         }
 
-        $role = $exception === null ? null : ExceptionRoles::roleOf($exception);
-        if ($role !== null) {
-            return ReplyVerdict::mapped($state, $response, $role, $exception, ExceptionRoles::KEPT_HEADERS);
+        if ($exception !== null && ExceptionRoles::isNativeRefusal($exception)) {
+            return ReplyVerdict::mapped($state, $response, ExceptionRoles::roleOf($exception), $exception, ExceptionRoles::KEPT_HEADERS);
         }
 
-        // An exception no role maps and no contract reply rendered answers the api's 500 in every `responses` mode,
+        // An exception no role or status maps and no contract reply rendered answers the api's 500 in every `responses` mode,
         // so Laravel's error page and its debug trace never reach the client.
         if ($exception !== null && !$state->authored($response)) {
             return ReplyVerdict::internalError($this->hooks(), $contract, $state->operationId, 'an exception reached the boundary unmapped', $exception);

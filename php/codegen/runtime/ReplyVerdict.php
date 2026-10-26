@@ -49,15 +49,19 @@ final class ReplyVerdict
     }
 
     /**
-     * A native layer's refusal answered with its role's code, keeping the named headers of the framework's reply.
+     * A native layer's refusal answered with the code `FrameworkRefusal` picks for its role or its HTTP status, keeping
+     * the named headers of the framework's reply.
      *
      * @param list<string> $keptHeaders
      */
-    public static function mapped(BoundaryState $state, Response $response, string $role, ?\Throwable $exception, array $keptHeaders): Response
+    public static function mapped(BoundaryState $state, Response $response, ?string $role, ?\Throwable $exception, array $keptHeaders): Response
     {
-        $code = $state->contract->roleCode($state->operationId, $role);
+        $status = FrameworkRefusal::statusOf($exception);
+        $code = FrameworkRefusal::codeOf($state->contract, $state->operationId, $role, $status);
         if ($code === null) {
-            return self::internalError($state->hooks, $state->contract, $state->operationId, "a native layer refused with the role '{$role}', which the operation does not declare", $exception);
+            $refusal = $role === null ? "with the status {$status}" : "with the role '{$role}'";
+
+            return self::internalError($state->hooks, $state->contract, $state->operationId, "a native layer refused {$refusal}, and the operation declares no code that answers it", $exception);
         }
 
         $reply = Replies::error($state->contract, $state->operationId, $code);
