@@ -65,9 +65,63 @@ const APP_STEPS = [
 ];
 const GLOBAL_STEPS = [["help"], ["init"], ["explain", "tasks.updateTask"]];
 
-// The commands the binary refuses by name (`binary-refusals.ts`); the Node CLI lists them in `help` and in the
-// not-available fix, so the smoke derives the binary's expected answer from the reference.
-export const BINARY_REFUSED_COMMANDS = ["generate", "check"];
+// The commands the binary runs only on an app config whose target entries are all native (`binary-refusals.ts`):
+// on a smoke app, whose entry is an npm target, each is refused by name.
+export const NATIVE_ONLY_COMMANDS = ["generate", "check"];
+
+// The native app: the reference contract served by a Maven and a Composer entry, whose default documents the binary
+// writes and checks; the Node CLI refuses a native entry, so its reference is an app with no target that lists the
+// same documents at the same paths.
+export const NATIVE_APP = {
+  name: "native-app",
+  contract: "fixtures/reference",
+  binaryConfig: `sources:
+  contract: { path: ./${CONTRACT_DIRECTORY} }
+targets:
+  - { id: spring, use: 'io.github.jubasse:seampact-spring-boot', apis: [${APIS.join(", ")}] }
+  - { id: laravel, use: seampact/laravel, api: tasks }
+`,
+  referenceConfig: `sources:
+  contract: { path: ./${CONTRACT_DIRECTORY} }
+targets: []
+openapi:
+  tasks: { public: openapi/tasks.public.yaml, full: openapi/tasks.full.yaml }
+  tasksService: openapi/tasksService.yaml
+`,
+};
+
+const DOCUMENT_DIRECTORY = "openapi";
+const NATIVE_APP_STEPS = [["generate"], ["check"]];
+
+// Writes the native app with `config` into `directory`, runs `generate` then `check`; the result holds both exit
+// codes and the bytes of every file the documents directory holds.
+export function runNativeApp({ executable, prefixArguments = [], environment, config, directory }) {
+  mkdirSync(directory, { recursive: true });
+  cpSync(join(repositoryRoot, NATIVE_APP.contract), join(directory, CONTRACT_DIRECTORY), {
+    recursive: true,
+  });
+  writeFileSync(join(directory, "seampact.config.yaml"), config);
+
+  const answer = answerIn({ executable, prefixArguments, environment, directory });
+  const steps = {};
+
+  for (const step of NATIVE_APP_STEPS) {
+    const { status, stderr } = answer(step);
+
+    steps[step.join(" ")] = { status, stderr };
+  }
+
+  const documentDirectory = join(directory, DOCUMENT_DIRECTORY);
+  const writtenFiles = existsSync(documentDirectory)
+    ? Object.fromEntries(
+        readdirSync(documentDirectory)
+          .sort()
+          .map((file) => [file, readFileSync(join(documentDirectory, file))]),
+      )
+    : {};
+
+  return { steps, writtenFiles };
+}
 
 // Runs every shared step with `executable` (`prefixArguments` first) in the app directory; the result holds the
 // answers and the bytes of each compared file.

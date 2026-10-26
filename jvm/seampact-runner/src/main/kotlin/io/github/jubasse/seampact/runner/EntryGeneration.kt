@@ -25,29 +25,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-private const val WAITS_CODE = "config.key.waits"
-private const val NO_DOCUMENTS = "none"
-
-/**
- * The app config's forms this plugin release does not serve yet, each refused by name with what brings it: seampact's
- * OpenAPI documents (written by the pinned binary in a later release).
- */
-internal fun waitingForms(config: AppConfig): List<ConfigProblem> {
-    if (config.entries.isEmpty()) return emptyList()
-
-    val problems = mutableListOf<ConfigProblem>()
-    if (config.openapi != JsonPrimitive(NO_DOCUMENTS)) {
-        problems += ConfigProblem(
-            WAITS_CODE,
-            "seampact's OpenAPI documents are not written by the JVM build plugins yet; they come with the documents of the pinned compiler binary. An app with a server target writes them unless `openapi` is `none`.",
-            "Set `openapi: none` for now; the framework's own document (springdoc) is not touched.",
-            "${config.displayName} openapi",
-        )
-    }
-
-    return problems
-}
-
 // The entry's `frameworkRoutes`, already checked against the app config schema.
 private fun frameworkRoutesOf(entry: AppConfigEntry): List<FrameworkRoute> =
     (entry.entry["frameworkRoutes"] as? JsonArray).orEmpty().map { item ->

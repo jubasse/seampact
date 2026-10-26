@@ -20,6 +20,7 @@ import type { CliIo } from "../cli-io.js";
 import type { CliProblem } from "../cli-problem.js";
 import type { LoadedAppConfig } from "../config/index.js";
 import { type EditorDeclaration, editorDeclarations } from "../editor-schemas/index.js";
+import { type LocalBundles, NO_LOCAL_BUNDLES, verifyLocalBundle } from "./local-bundle.js";
 import { SINGLE_API_ENTRY, sourceEntryFile, WORKSPACE_ENTRY } from "./workspace-api-names.js";
 
 export interface CompiledApi {
@@ -45,6 +46,7 @@ interface SourceRun {
   readonly compiled: CompiledSources;
   readonly localSources: LocalSourcePolicy;
   readonly configDirectory: string;
+  readonly localBundles: LocalBundles;
 }
 
 // Each named source, by its kind: a contract workspace directory is compiled (its `workspace.imports` fetched
@@ -55,12 +57,14 @@ export async function compileSources(
   config: Pick<LoadedAppConfig, "file" | "sources" | "allowLocal">,
   names: readonly string[],
   io: CliIo,
+  localBundles: LocalBundles = NO_LOCAL_BUNDLES,
 ): Promise<CompiledSources> {
   const run: SourceRun = {
     io,
     compiled: { failed: false, problems: [], apis: [] },
     localSources: localSourcePolicy(config.allowLocal, process.env),
     configDirectory: dirname(config.file),
+    localBundles,
   };
 
   for (const name of names) {
@@ -76,7 +80,23 @@ export async function compileSources(
 }
 
 async function takeBundle(name: string, bundle: BundleSource, run: SourceRun): Promise<void> {
-  const fetched = await fetchBundle(bundle, fetchOptions(run.configDirectory, run));
+  const localDirectory = run.localBundles.get(name);
+  const local =
+    localDirectory === undefined
+      ? undefined
+      : verifyLocalBundle(name, localDirectory, bundle.integrity);
+
+  if (local?.status === "refused") {
+    run.compiled.failed = true;
+    run.compiled.problems.push(local.problem);
+
+    return;
+  }
+
+  const fetched =
+    local === undefined
+      ? await fetchBundle(bundle, fetchOptions(run.configDirectory, run))
+      : local.result;
 
   if (!fetched.ok) {
     run.compiled.failed = true;

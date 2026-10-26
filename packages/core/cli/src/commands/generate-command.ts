@@ -1,5 +1,6 @@
 import type { PlanWriteOptions } from "@seampact/codegen-core";
 import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, printProblems } from "../cli-io.js";
+import { NODE_CLI_PLAN_INPUTS, type PlanInputs } from "./app-plan.js";
 import type { ConfigLocation } from "./config-location.js";
 import { prepareRun } from "./run-preparation.js";
 import { committableWrites, commitWrites } from "./write-plan.js";
@@ -11,8 +12,9 @@ export async function generateCommand(
   location: ConfigLocation,
   io: CliIo,
   writeOptions: PlanWriteOptions = { onHandEdit: "refuse" },
+  inputs: PlanInputs = NODE_CLI_PLAN_INPUTS,
 ): Promise<number> {
-  const prepared = await prepareRun(location, io, writeOptions);
+  const prepared = await prepareRun(location, io, writeOptions, inputs);
 
   if (prepared.status === "refused") {
     printProblems(io, prepared.problems);

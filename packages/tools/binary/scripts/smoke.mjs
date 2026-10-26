@@ -1,6 +1,6 @@
 // Runs one binary on the smoke apps and compares it with the reference the Node CLI produced on Linux: the IR
-// files, each app's bundle and its editor schemas, and every file of each `init` run, byte for byte, and the answers of
-// the commands both carry. The apps are copied outside the repository,
+// files, each app's bundle and its editor schemas, the native app's OpenAPI documents, and every file of each `init`
+// run, byte for byte, and the answers of the commands both carry. The apps are copied outside the repository,
 // so a pack can only come from the packs embedded in the binary.
 // Usage: node scripts/smoke.mjs <binary> <reference-dir> [--label <name>]
 // Env: SMOKE_ENV='{"TZ":"Asia/Kolkata","LOG_TOKENS":"1"}' extra environment for the binary.
@@ -19,10 +19,12 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
-  BINARY_REFUSED_COMMANDS,
   EDITOR_SCHEMAS_PREFIX,
   INIT_RUNS,
+  NATIVE_APP,
+  NATIVE_ONLY_COMMANDS,
   runInit,
+  runNativeApp,
   runSmokeApp,
   SMOKE_APPS,
   writeSmokeApp,
@@ -54,23 +56,6 @@ spawnSync(binary, ["help"], { env: environment, stdio: "ignore" });
 
 const firstLaunchMs = Number(process.hrtime.bigint() - firstStarted) / 1e6;
 
-// The Node CLI's answers, less the commands the binary does not carry: its `help` and the not-available fix list
-// only the binary's own commands.
-function withoutRefusedCommands(referenceSteps) {
-  const steps = structuredClone(referenceSteps);
-
-  if (steps.help !== undefined) {
-    steps.help.stdout = steps.help.stdout
-      .split("\n")
-      .filter(
-        (line) => !BINARY_REFUSED_COMMANDS.some((command) => line.startsWith(`  ${command} `)),
-      )
-      .join("\n");
-  }
-
-  return steps;
-}
-
 for (const app of SMOKE_APPS) {
   const directory = join(scratch, app.name);
 
@@ -85,6 +70,18 @@ for (const app of SMOKE_APPS) {
     `${app.name}: compile --editor-schemas wrote no editor schema`,
   );
 }
+
+const native = runNativeApp({
+  executable: binary,
+  environment,
+  config: NATIVE_APP.binaryConfig,
+  directory: join(scratch, NATIVE_APP.name),
+});
+
+check(
+  compareWithReference(NATIVE_APP.name, native.steps, native.writtenFiles).length > 0,
+  `${NATIVE_APP.name}: the reference holds no document`,
+);
 
 for (const run of INIT_RUNS) {
   const { steps, writtenFiles } = runInit({
@@ -110,8 +107,8 @@ function compareWithReference(name, steps, writtenFiles) {
   );
 
   check(
-    JSON.stringify(steps) === JSON.stringify(withoutRefusedCommands(referenceSteps)),
-    `${name}: command answers differ from the Node CLI:\n${JSON.stringify(steps)}\n${JSON.stringify(withoutRefusedCommands(referenceSteps))}`,
+    JSON.stringify(steps) === JSON.stringify(referenceSteps),
+    `${name}: command answers differ from the Node CLI:\n${JSON.stringify(steps)}\n${JSON.stringify(referenceSteps)}`,
   );
 
   const referenceFiles = referenceFileNames(join(referenceDirectory, name));
@@ -143,14 +140,15 @@ function referenceFileNames(appReference) {
     .sort();
 }
 
-for (const command of BINARY_REFUSED_COMMANDS) {
+// A smoke app's entry is an npm target, which the binary cannot load.
+for (const command of NATIVE_ONLY_COMMANDS) {
   const refused = spawnSync(binary, [command], {
     cwd: join(scratch, SMOKE_APPS[0].name),
     env: environment,
     encoding: "utf8",
   });
 
-  check(refused.status === 2, `${command} exited ${refused.status}, not 2`);
+  check(refused.status === 1, `${command} exited ${refused.status}, not 1`);
   check(
     refused.stderr.startsWith(`binary.${command}-unavailable: `) &&
       refused.stderr.includes("Fix: "),

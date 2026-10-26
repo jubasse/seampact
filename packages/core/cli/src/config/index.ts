@@ -41,5 +41,5 @@ export {
   type LoadedWorkspaceApp,
   readWorkspaceConfigs,
 } from "./read-workspace-configs.js";
-export { resolveTarget } from "./resolve-target.js";
+export { isNativeTargetUse, resolveTarget } from "./resolve-target.js";
 export type { ResolvedSource } from "./resolved-source.js";

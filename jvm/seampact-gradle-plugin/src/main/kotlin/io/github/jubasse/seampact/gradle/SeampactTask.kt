@@ -79,6 +79,10 @@ public abstract class SeampactTask : DefaultTask() {
     @get:Internal
     public abstract val binaryCacheDirectory: Property<String>
 
+    /** Where a run hands the binary the DSL's app config, under the build directory; removed after each run. */
+    @get:Internal
+    public abstract val temporaryDirectory: Property<String>
+
     /** The pinned binary's artefact, resolved only when a `path` source needs it. */
     @get:Internal
     public abstract val binaryArtefact: ConfigurableFileCollection
@@ -109,6 +113,7 @@ public abstract class SeampactTask : DefaultTask() {
         binary = BinarySettings(binaryVersion.orNull, binarySha256ByClassifier.get(), binaryPath.orNull, binarySha256.orNull),
         bundleCacheDirectory = Path.of(bundleCacheDirectory.get()),
         binaryCacheDirectory = Path.of(binaryCacheDirectory.get()),
+        temporaryDirectory = Path.of(temporaryDirectory.get()),
         mavenArtefacts = GradleBundleArtefacts(mavenBundles, moduleCacheRoots.get().map { Path.of(it) }),
         resolveBinaryArtefact = { resolvedSingleFile(binaryArtefact) },
     )

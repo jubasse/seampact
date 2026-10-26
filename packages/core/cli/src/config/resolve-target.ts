@@ -13,7 +13,7 @@ export type ResolveTargetOutcome =
 
 // A Maven `group:artifact` coordinate or a Composer `vendor/name`; npm names never hold a colon, and an unscoped
 // npm name never holds a slash.
-function isNativeTargetUse(use: string): boolean {
+export function isNativeTargetUse(use: string): boolean {
   const isMavenCoordinate = use.includes(":");
   const isComposerPackage = !use.startsWith("@") && !use.startsWith(".") && use.includes("/");
 

@@ -2,7 +2,7 @@
 
 The standalone compiler binary (ADR 0010): the seampact CLI as a Node single executable application (SEA) on Node 24.21.0, for linux x64 and arm64 (glibc), macOS x64 and arm64 and Windows x64. It runs `init`, `compile`, `lint` (core rules), `diff`, `bundle` and `explain` with the first-party packs embedded, and needs no Node.js or `node_modules`.
 
-`generate` and `check` need a codegen target, so they are refused by name (`binary.generate-unavailable`, `binary.check-unavailable`): use the npm CLI or the ecosystem plugin. The binary's `help` lists only its own commands.
+`generate` and `check` run only on an app config whose target entries are all native (a Maven coordinate or a Composer package): the binary writes or checks the config's OpenAPI documents and pinned bundles and leaves each entry to its build plugin. An npm entry is refused by name (`binary.generate-unavailable`, `binary.check-unavailable`): use the npm CLI.
 
 ## Build
 
@@ -10,7 +10,7 @@ From this directory, on Linux, with Node 24.21.0 (the `.nvmrc` pin), `gpg`, `cur
 
 1. `pnpm build` bundles `src/main.ts` with esbuild (CommonJS), writes the SEA blob, downloads the five official Node 24.21.0 archives, verifies the signed `SHASUMS256.txt.asc` with gpg against `node-release-keys.asc` (the keys of nodejs/release-keys, keep it in step with that list) and each archive against it, strips the Authenticode signature of `node.exe`, and injects the blob with `postject`. Output: `dist/bin/seampact-<platform>` (unsigned).
 2. `pnpm reference` compiles the smoke apps with the Node CLI and writes `dist/reference`.
-3. `node scripts/smoke.mjs dist/bin/seampact-linux-x64 dist/reference` runs a binary on the same apps (copied outside the repository, so packs come from the binary) and compares the IR, the bundle tarball and the editor schemas of `compile --editor-schemas`, and every file `init` and `init --blank` write in an empty folder, byte for byte and the command answers with the reference.
+3. `node scripts/smoke.mjs dist/bin/seampact-linux-x64 dist/reference` runs a binary on the same apps (copied outside the repository, so packs come from the binary) and compares the IR, the bundle tarball and the editor schemas of `compile --editor-schemas`, the OpenAPI documents `generate` writes for an app of native entries (the Node CLI's reference lists the same documents in an app with no target), and every file `init` and `init --blank` write in an empty folder, byte for byte and the command answers with the reference.
 4. On a macOS runner: `codesign --force --sign -` then `codesign --verify --strict` (hosted runners run an unsigned binary, so only this gate proves the signature).
 5. `node scripts/manifest.mjs write <dir>` writes `SHA256SUMS` after signing.
 

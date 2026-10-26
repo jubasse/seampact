@@ -7,6 +7,7 @@ import kotlin.io.path.deleteIfExists
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import org.junit.jupiter.api.io.TempDir
 
@@ -15,6 +16,18 @@ import org.junit.jupiter.api.io.TempDir
 class GenerateStampTest {
     @TempDir
     lateinit var directory: Path
+
+    @Test
+    fun aListedDocumentWrittenEmptyIsNotTheAbsentOne() {
+        val stamp = GenerateStamp(directory.resolve("generate.stamp"))
+        val document = directory.resolve("openapi/tasks.yaml")
+        stamp.record(INPUTS_HASH, listOf(document))
+
+        document.parent.createDirectories()
+        document.writeText("")
+
+        assertFalse(stamp.isCurrent(INPUTS_HASH, listOf(document)), "an empty document is an output change")
+    }
 
     @Test
     fun aRebuiltUnpublishedJarChangesTheInputsHash() {
@@ -108,5 +121,9 @@ class GenerateStampTest {
         inputs.code("code", listOf(artefact))
 
         return inputs.hash()
+    }
+
+    private companion object {
+        const val INPUTS_HASH = "inputs"
     }
 }

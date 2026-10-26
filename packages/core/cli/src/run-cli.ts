@@ -1,9 +1,12 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { type CliIo, EXIT_USAGE, printProblems } from "./cli-io.js";
 import type { CliProblem } from "./cli-problem.js";
 import {
   type BundleCommandOptions,
   bundleCommand,
+  type ConfigLocation,
   checkCommand,
   compileCommand,
   configLocation,
@@ -14,6 +17,9 @@ import {
   generateCommand,
   initCommand,
   lintCommand,
+  type NativeEntryPolicy,
+  type PlanInputs,
+  REFUSE_NATIVE_ENTRIES,
 } from "./commands/index.js";
 import { errorCode } from "./error-code.js";
 
@@ -28,11 +34,11 @@ const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "generate",
-    "  generate [--config <path>] [--force]     Generate every target entry of the app config, or of every app a root config lists; --force overwrites, or removes when stale, a generated file edited by hand.",
+    "  generate [--config <path>] [--force] [--app-directory <dir> [--config-name <label>]] [--bundle-directory <source>=<dir>]\n                                           Generate every target entry of the app config, or of every app a root config lists; --force overwrites, or removes when stale, a generated file edited by hand. A build plugin passes --app-directory (the --config text read as that directory's app config, named --config-name in problems) and --bundle-directory (a bundle it already fetched, checked against the source's integrity, never fetched).",
   ],
   [
     "check",
-    "  check [--config <path>]                  Fail when the committed generated files or documents differ from a fresh run.",
+    "  check [--config <path>] [--app-directory <dir> [--config-name <label>]] [--bundle-directory <source>=<dir>]\n                                           Fail when the committed generated files or documents differ from a fresh run; --app-directory, --config-name and --bundle-directory as for generate.",
   ],
   [
     "lint",
@@ -65,17 +71,9 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
   if (command === undefined) return usageError(io, "No command given.");
 
   if (HELP_ARGUMENTS.has(command)) {
-    io.stdout(usageText(io));
+    io.stdout(usageText());
 
     return 0;
-  }
-
-  const refusal = io.refusedCommands?.get(command);
-
-  if (refusal !== undefined) {
-    printProblems(io, [refusal]);
-
-    return EXIT_USAGE;
   }
 
   const waitingFlag = rest.find((argument) =>
@@ -193,22 +191,122 @@ async function runCompile(args: readonly string[], io: CliIo): Promise<number> {
   );
 }
 
+const PLUGIN_RUN_OPTIONS: OptionSpec = {
+  config: { type: "string" },
+  "app-directory": { type: "string" },
+  "bundle-directory": { type: "string", multiple: true },
+  "config-name": { type: "string" },
+};
+
 async function runGenerate(args: readonly string[], io: CliIo): Promise<number> {
-  const parsed = parseCommandArgs(args, { config: { type: "string" }, force: { type: "boolean" } });
+  const parsed = parseCommandArgs(args, { ...PLUGIN_RUN_OPTIONS, force: { type: "boolean" } });
 
   if (parsed.status === "refused") return usageError(io, parsed.message);
 
-  return generateCommand(configLocation(io.cwd, stringOption(parsed.values.config)), io, {
-    onHandEdit: parsed.values.force === true ? "overwrite" : "refuse",
-  });
+  const run = pluginRunOf(parsed.values, io, "generate");
+
+  if (run.status === "refused") return usageError(io, run.message);
+
+  return generateCommand(
+    run.location,
+    io,
+    { onHandEdit: parsed.values.force === true ? "overwrite" : "refuse" },
+    run.inputs,
+  );
 }
 
 async function runCheck(args: readonly string[], io: CliIo): Promise<number> {
-  const parsed = parseCommandArgs(args, { config: { type: "string" } });
+  const parsed = parseCommandArgs(args, PLUGIN_RUN_OPTIONS);
 
   if (parsed.status === "refused") return usageError(io, parsed.message);
 
-  return checkCommand(configLocation(io.cwd, stringOption(parsed.values.config)), io);
+  const run = pluginRunOf(parsed.values, io, "check");
+
+  if (run.status === "refused") return usageError(io, run.message);
+
+  return checkCommand(run.location, io, run.inputs);
+}
+
+type PluginRun =
+  | { status: "read"; location: ConfigLocation; inputs: PlanInputs }
+  | { status: "refused"; message: string };
+
+// The config and inputs of `generate` and `check`: `--app-directory` reads the `--config` text as the app config of
+// that directory, and each `--bundle-directory <source>=<dir>` hands over a bundle the build plugin already fetched.
+function pluginRunOf(values: ParsedValues, io: CliIo, command: string): PluginRun {
+  const config = stringOption(values.config);
+  const appDirectory = stringOption(values["app-directory"]);
+  const configName = stringOption(values["config-name"]);
+  const localBundles = new Map<string, string>();
+
+  for (const pair of listOption(values["bundle-directory"])) {
+    const separator = pair.indexOf("=");
+
+    if (separator <= 0 || separator === pair.length - 1)
+      return {
+        status: "refused",
+        message: `\`--bundle-directory\` takes <source>=<dir>, not '${pair}'.`,
+      };
+
+    const source = pair.slice(0, separator);
+
+    if (localBundles.has(source))
+      return {
+        status: "refused",
+        message: `\`--bundle-directory\` hands over the source '${source}' twice; pass one directory per source.`,
+      };
+
+    localBundles.set(source, resolve(io.cwd, pair.slice(separator + 1)));
+  }
+
+  const inputs: PlanInputs = { nativeEntries: nativeEntryPolicy(io, command), localBundles };
+
+  if (configName !== undefined && (configName.trim() === "" || /[\r\n]/.test(configName)))
+    return {
+      status: "refused",
+      message:
+        "`--config-name` takes a non-empty, one-line label, the name problems give the config.",
+    };
+
+  if (appDirectory === undefined && configName !== undefined)
+    return {
+      status: "refused",
+      message: "`--config-name` names the config `--app-directory` reads; pass both.",
+    };
+
+  if (appDirectory === undefined)
+    return { status: "read", location: configLocation(io.cwd, config), inputs };
+
+  if (config === undefined)
+    return {
+      status: "refused",
+      message: "`--app-directory` needs `--config <path>`, the file it reads.",
+    };
+
+  const location = configLocation(resolve(io.cwd, appDirectory), undefined);
+
+  if (existsSync(location.file))
+    return {
+      status: "refused",
+      message: `\`--app-directory\` reads --config as the app config of ${location.file}, which exists; pass that file with \`--config\` instead.`,
+    };
+
+  return {
+    status: "read",
+    location: {
+      ...location,
+      displayName: configName ?? location.displayName,
+      textFile: resolve(io.cwd, config),
+    },
+    inputs,
+  };
+}
+
+// The host's policy for a command it runs on native entries only; the Node CLI's own otherwise.
+function nativeEntryPolicy(io: CliIo, command: string): NativeEntryPolicy {
+  const npmEntryRefusal = io.nativeOnlyCommands?.get(command);
+
+  return npmEntryRefusal === undefined ? REFUSE_NATIVE_ENTRIES : { kind: "leave", npmEntryRefusal };
 }
 
 async function runLint(args: readonly string[], io: CliIo): Promise<number> {
@@ -300,12 +398,14 @@ function bundleOutput(
   return flag === "tarball" ? { tarball: path } : { npmPackage: path };
 }
 
-type OptionSpec = Record<string, { type: "string" | "boolean" }>;
+type OptionSpec = Record<string, { type: "string" | "boolean"; multiple?: boolean }>;
+
+type ParsedValues = Record<string, string | boolean | (string | boolean)[] | undefined>;
 
 type ParsedArgs =
   | {
       status: "parsed";
-      values: Record<string, string | boolean | undefined>;
+      values: ParsedValues;
       positionals: string[];
     }
   | { status: "refused"; message: string };
@@ -343,8 +443,12 @@ function parseCommandArgs(
   }
 }
 
-function stringOption(value: string | boolean | undefined): string | undefined {
+function stringOption(value: ParsedValues[string]): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+function listOption(value: ParsedValues[string]): string[] {
+  return Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
 }
 
 function usageError(io: CliIo, message: string): number {
@@ -355,7 +459,7 @@ function usageError(io: CliIo, message: string): number {
   };
 
   printProblems(io, [problem]);
-  io.stderr(usageText(io));
+  io.stderr(usageText());
 
   return EXIT_USAGE;
 }
@@ -365,27 +469,22 @@ function notAvailable(io: CliIo, subject: string): number {
     {
       code: "cli.not-available",
       message: `${subject} is not available yet.`,
-      fix: `Use ${listed(quotedCommands(io))}.`,
+      fix: `Use ${listed(quotedCommands())}.`,
     },
   ]);
 
   return EXIT_USAGE;
 }
 
-// The commands this run carries: all of them, less the ones the host refuses by name.
-function availableCommands(io: CliIo): string[] {
-  return [...COMMAND_USAGE.keys()].filter((name) => !io.refusedCommands?.has(name));
-}
-
-function usageText(io: CliIo): string {
-  const lines = availableCommands(io).map((name) => COMMAND_USAGE.get(name));
+function usageText(): string {
+  const lines = [...COMMAND_USAGE.values()];
 
   return `Usage: seampact <command> [options]\n\nCommands:\n${lines.join("\n")}\n`;
 }
 
 // `seampact compile`, then the other names, each in backticks.
-function quotedCommands(io: CliIo): string[] {
-  return availableCommands(io).map(
+function quotedCommands(): string[] {
+  return [...COMMAND_USAGE.keys()].map(
     (name) => `\`${name === "compile" ? "seampact compile" : name}\``,
   );
 }

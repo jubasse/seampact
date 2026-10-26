@@ -1,15 +1,15 @@
-import apiPlatformManifest from "@seampact/pack-api-platform/package.json?text";
 import apiPlatformPack from "@seampact/pack-api-platform/pack.yaml";
-import crudRightsManifest from "@seampact/pack-crud-rights/package.json?text";
+import apiPlatformManifest from "@seampact/pack-api-platform/package.json?text";
 import crudRightsPack from "@seampact/pack-crud-rights/pack.yaml";
-import halManifest from "@seampact/pack-hal/package.json?text";
+import crudRightsManifest from "@seampact/pack-crud-rights/package.json?text";
 import halPack from "@seampact/pack-hal/pack.yaml";
-import jsonapiManifest from "@seampact/pack-jsonapi/package.json?text";
+import halManifest from "@seampact/pack-hal/package.json?text";
 import jsonapiPack from "@seampact/pack-jsonapi/pack.yaml";
-import laravelManifest from "@seampact/pack-laravel/package.json?text";
+import jsonapiManifest from "@seampact/pack-jsonapi/package.json?text";
 import laravelPack from "@seampact/pack-laravel/pack.yaml";
-import springManifest from "@seampact/pack-spring/package.json?text";
+import laravelManifest from "@seampact/pack-laravel/package.json?text";
 import springPack from "@seampact/pack-spring/pack.yaml";
+import springManifest from "@seampact/pack-spring/package.json?text";
 import type { EmbeddedPackage } from "./embedded-pack-reader.js";
 
 const PACK_FILE_NAME = "pack.yaml";

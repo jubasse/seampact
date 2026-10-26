@@ -75,8 +75,9 @@ type ReadAloneOutcome =
 export async function readAppConfig(
   file: string,
   displayName: string,
+  textFile?: string,
 ): Promise<ReadAppConfigOutcome> {
-  const alone = await readAppConfigAlone(file, displayName);
+  const alone = await readAppConfigAlone(file, displayName, textFile);
 
   if (alone.status === "refused") return alone;
 
@@ -104,8 +105,13 @@ export async function readListedAppConfig(
   return foldRootConfig(alone.app, root);
 }
 
-async function readAppConfigAlone(file: string, displayName: string): Promise<ReadAloneOutcome> {
-  const parsedFile = await parseConfigFile(file, displayName, "app config");
+// `textFile`, when given, is read as `file`'s text; paths still resolve against `file`.
+async function readAppConfigAlone(
+  file: string,
+  displayName: string,
+  textFile?: string,
+): Promise<ReadAloneOutcome> {
+  const parsedFile = await parseConfigFile(textFile ?? file, displayName, "app config");
 
   if (parsedFile.status === "refused") return parsedFile;
 

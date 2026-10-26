@@ -26,6 +26,7 @@ dependencies {
     api(project(":seampact-ir"))
     api(project(":seampact-spring-boot"))
     implementation(libs.kotlinx.serialization.json)
+    testFixturesImplementation(libs.kotlinx.serialization.json)
 
     "pinsImplementation"(project(":seampact-ir"))
 }

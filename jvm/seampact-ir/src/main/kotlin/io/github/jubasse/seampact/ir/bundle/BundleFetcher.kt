@@ -13,6 +13,14 @@ import java.time.Duration
  */
 public data class ResolvedArtefact(val file: Path, val fromLocalRepository: Boolean)
 
+/** A bundle's cache entry: [Verified] when it passed the pinned-bundle check just now, else [Unavailable]. */
+public sealed interface CachedBundle {
+    public data class Verified(val directory: Path) : CachedBundle
+
+    /** The entry is missing or fails the check; [entry] is null when the integrity is not a SHA-256 one. */
+    public data class Unavailable(val entry: Path?) : CachedBundle
+}
+
 /** Resolves a Maven artefact through the build's own repositories to its local file (the plugin's resolver). */
 public fun interface MavenArtefactResolver {
     /** The file of [coordinates], `groupId:artifactId:version`; an [IOException] when it cannot be resolved. */
@@ -83,6 +91,21 @@ public class BundleFetcher(
                 fetched.temporary.toFile().deleteRecursively()
             }
         }
+    }
+
+    /**
+     * The cache entry of the bundle pinned by [integrity], once it passes the pinned-bundle check again. A host that
+     * hands a bundle over (the compiler binary's `--bundle-directory`) gets only a path that was just checked; an
+     * entry that is missing or fails the check is named for the message only.
+     */
+    public fun cachedBundle(integrity: String): CachedBundle {
+        val entry = cache.entryOf(integrity) ?: return CachedBundle.Unavailable(null)
+        if (!Files.isDirectory(entry)) return CachedBundle.Unavailable(entry)
+
+        // A cache entry is a release-layout bundle whatever its channel: only an npm package root differs.
+        val verified = BundleVerifier.verify(entry, integrity, BundleChannel.RELEASE)
+
+        return if (verified is BundleVerifyResult.Verified) CachedBundle.Verified(entry) else CachedBundle.Unavailable(entry)
     }
 
     private fun fetchRelease(source: BundleSource.Release): Fetched = when (val download = downloadReleaseTarball(source, httpClient, releaseDeadline)) {

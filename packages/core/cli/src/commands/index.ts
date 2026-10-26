@@ -1,6 +1,7 @@
 // The commands the CLI runs, `init`, `compile`, `generate`, `check`, `lint`, `diff`, `bundle` and `explain`, and the steps between the app config and the target
 // packages: the sources compiled, the IR filtered per entry, the link checks and the link set.
 
+export { NODE_CLI_PLAN_INPUTS, type PlanInputs } from "./app-plan.js";
 export { type BundleCommandOptions, bundleCommand } from "./bundle-command.js";
 export { checkCommand } from "./check-command.js";
 export { compileCommand } from "./compile-command.js";
@@ -15,3 +16,5 @@ export {
   initCommand,
 } from "./init-command.js";
 export { lintCommand } from "./lint-command.js";
+export { type LocalBundles, NO_LOCAL_BUNDLES } from "./local-bundle.js";
+export { type NativeEntryPolicy, REFUSE_NATIVE_ENTRIES } from "./native-entries.js";

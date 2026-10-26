@@ -19,12 +19,28 @@ export type ReadRunConfigOutcome =
 export async function readRunConfig(
   file: string,
   displayName: string,
+  textFile?: string,
 ): Promise<ReadRunConfigOutcome> {
-  const parsed = await parseConfigFile(file, displayName, "app config");
+  const parsed = await parseConfigFile(textFile ?? file, displayName, "app config");
 
   if (parsed.status === "refused") return parsed;
 
-  if (isRecord(parsed.value) && Object.hasOwn(parsed.value, ROOT_CONFIG_MARKER_KEY)) {
+  const isRoot = isRecord(parsed.value) && Object.hasOwn(parsed.value, ROOT_CONFIG_MARKER_KEY);
+
+  if (isRoot && textFile !== undefined) {
+    return {
+      status: "refused",
+      problems: [
+        {
+          code: "cli.app-directory.root",
+          message: `${displayName} is a monorepo root config, and \`--app-directory\` reads one app's config.`,
+          fix: "Pass a root config with `--config` alone, from the root's directory.",
+        },
+      ],
+    };
+  }
+
+  if (isRoot) {
     const workspace = await readWorkspaceConfigs(file, displayName);
 
     if (workspace.status === "refused") return workspace;
@@ -32,7 +48,7 @@ export async function readRunConfig(
     return { status: "read", run: { kind: "root", workspace: workspace.workspace } };
   }
 
-  const app = await readAppConfig(file, displayName);
+  const app = await readAppConfig(file, displayName, textFile);
 
   if (app.status === "refused") return app;
 
