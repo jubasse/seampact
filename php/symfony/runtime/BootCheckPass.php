@@ -20,7 +20,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * no access attribute the boundary would run after the input checks), the boundary's listeners and the value resolver,
  * the listeners placed where the outgoing check cannot see them, an api registered before this one whose catch-all
  * answers this api's paths, ext-zlib, the Symfony major, `framework.http_cache`, and under absolute URLs a
- * `public_origin` in the bundle configuration, whose value the settings check at run time.
+ * `public_origin` in the bundle configuration (a literal is checked here, an `%env()%` value by the settings at run time).
  */
 final class BootCheckPass implements CompilerPassInterface
 {
@@ -37,6 +37,7 @@ final class BootCheckPass implements CompilerPassInterface
         'Symfony\\Component\\Security\\Http\\Attribute\\IsCsrfTokenValid' => 'the authenticate hook with the CSRF companion value',
         'Symfony\\Component\\HttpKernel\\Attribute\\IsSignatureValid' => 'nothing: a signed URI is not a form the contract declares',
     ];
+    private const ENV_PLACEHOLDER = '/%env\(/';
     private const SUPPORTED_MAJORS = ['/^7\.4\./', '/^8\./'];
 
     /** @param bool $checksHandlers the `handlers` switch of `artefacts.bootCheck` */
@@ -66,7 +67,7 @@ final class BootCheckPass implements CompilerPassInterface
     }
 
     /**
-     * The `public_origin` key the api needs under absolute URLs; an `%env()%` value is only known at run time.
+     * The `public_origin` key the api needs under absolute URLs; a literal is checked here, an `%env()%` value is only known at run time.
      *
      * @return list<string>
      */
@@ -74,7 +75,7 @@ final class BootCheckPass implements CompilerPassInterface
     {
         $arguments = $container->hasDefinition($this->settingsClass) ? $container->getDefinition($this->settingsClass)->getArguments() : [];
         $configured = $arguments[ContractSettings::PUBLIC_ORIGIN_ARGUMENT] ?? null;
-        if ($configured !== null && $configured !== '') {
+        if (is_string($configured) && preg_match(self::ENV_PLACEHOLDER, $configured) === 1) {
             return [];
         }
 
@@ -84,7 +85,7 @@ final class BootCheckPass implements CompilerPassInterface
             throw new \LogicException("seampact: the generated settings class {$this->settingsClass} lacks its ALIAS constant; regenerate the code.");
         }
 
-        $problem = PublicOrigin::bootProblem($contract, "{$alias}.public_origin", null);
+        $problem = PublicOrigin::bootProblem($contract, "{$alias}.public_origin", $configured);
 
         return $problem === null ? [] : [$problem];
     }

@@ -22,6 +22,7 @@ final class NativeLayersListener
 {
     public const HEADER = 'x-suite-native-layer';
     private const ABORT_PREFIX = 'abort-';
+    private const ABORT_STATUSES = [401, 403, 429];
 
     public function __construct(
         #[Autowire(service: 'seampact.tasks.matcher.identity')] private readonly RequestMatcherInterface $identityRoutes,
@@ -36,6 +37,11 @@ final class NativeLayersListener
             return;
         }
 
-        throw new HttpException((int) substr($layer, strlen(self::ABORT_PREFIX)), 'the app layer refuses this request');
+        $status = (int) substr($layer, strlen(self::ABORT_PREFIX));
+        if (!in_array($status, self::ABORT_STATUSES, true)) {
+            throw new \LogicException(self::HEADER . " '{$layer}' is not abort-401, abort-403 or abort-429");
+        }
+
+        throw new HttpException($status, 'the app layer refuses this request');
     }
 }

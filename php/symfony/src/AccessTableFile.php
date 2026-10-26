@@ -33,7 +33,7 @@ final class AccessTableFile
 
         $routes = [];
         foreach ($this->placement->operations() as [, $operation]) {
-            $routes["seampact.{$this->placement->layout->ir->api->id}.{$operation->id}"] = $this->row($operation);
+            $routes[$this->placement->routeName($operation->id)] = $this->row($operation);
         }
         $class->addConstant('KINDS', AccessKind::ALL)->addComment('@var list<string>');
         $class->addConstant('ROUTES', $routes)
