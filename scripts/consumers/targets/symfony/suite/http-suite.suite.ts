@@ -256,10 +256,12 @@ describeServed("boundary edges of the Symfony runtime", {}, (running) => {
   test("login_throttling keeps the rateLimited role once a user name spent its attempts", async () => {
     await loadScript(running(), {});
     const statuses: number[] = [];
+
     for (let attempt = 0; attempt <= LOGIN_ATTEMPTS; attempt++) {
       const response = await fetch(`${running()?.baseUrl}${TASK_PATH}`, {
         headers: { authorization: THROTTLED_LOGIN_BASIC, accept: "application/json" },
       });
+
       statuses.push(response.status);
       await response.body?.cancel();
     }

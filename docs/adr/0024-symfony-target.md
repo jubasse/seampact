@@ -345,7 +345,6 @@ The boundary runtime is copied into `Symfony\Runtime` with the generated header 
 | Waits for | What |
 |---|---|
 | symfony-2 | rights and rules an operation requires, which the access listener runs, rule proof fields in the body (`recentAuth` on purgeTask), `artefacts.bootCheck` and `artefacts.accessHooks: true` |
-| symfony-3 | paging, its structured `sort` query parameter (listTasks) and its `page` response, idempotency replay, throttle, cache and ETag headers, the response headers these features derive, retry headers, signed routes and their raw body, deadline budgets (`budgetMs`), relayed operations (`relays`), sensitive values, opaque values (`PaymentEvent.data` on payments) |
 | symfony-4 | the security exports (per-kind request matchers, the `TasksAccess` table), multipart (`UploadedFile` with the `File` constraint; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`BinaryFileResponse`, `StreamedResponse`) and redirect (`RedirectResponse`) bodies, native access (`artefacts.accessHooks: false`), the bundle configuration with `%env()%` values, absolute URLs (their `public_origin` lives in that configuration, and the boot check requires it) |
 | a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target; string formats other than `uuid` and `date-time`; NelmioApiDocBundle `nativeDocs`; unions (`oneOf`) until a contract needs one |
 | after 1.0 | Symfony 7.3 and older (refused, not waiting); worker runtimes (refused, below); `framework.http_cache` (refused by the boot check); `hooks: vendored` ([A40](../decisions.md#a40)); API Platform, its own target; every IR form absent from the reference contract's golden IRs, as the Spring and Laravel targets refuse them: `list` responses, response headers the route writes itself, principal requirements, bindings, upstream calls, operation features, extension keys, input field rights below the top level, scope ids not read from the path, bucket keys not read from the path, a scope or the principal, rule proofs outside the body, principals of several variants, signatures verified by the application or keyed from the request, parameter and property defaults, open enums, maps, `int64` and `decimal`, kept unknown keys, recursive input schemas, integer steps beyond the PHP `int` range |
@@ -373,11 +372,11 @@ The proof is:
 
 - the `node`-absent step;
 - a green suite row per matrix entry;
-- the consumer's `RedactionTest.php` (one class of each kind of "Redaction" holding a known secret, which `var_dump`, `print_r` and VarDumper must not show while `[redacted]` is present);
+- `php/symfony/tests/RedactionTest.php`, on the golden classes (one class of each kind of "Redaction" holding a known secret, which `var_dump`, `print_r` and VarDumper must not show while `[redacted]` is present);
 - the suite's security rows: from symfony-2, a bad-credentials `http_basic` row answering `unauthenticated` through `LoginFailureEvent` and an `access_control` row answering `forbidden`; from symfony-3, a `login_throttling` row answering `rateLimited`; from symfony-4, an `access_control` row on a per-kind matcher;
 - the suite's media rows.
 
-Suite cases that wait for a later PR carry a refusal naming that PR; the list is empty at symfony-4.
+Suite cases that wait for a later PR carry a refusal naming that PR; the list is empty from symfony-3, since the reference contract carries none of symfony-4's forms.
 
 ### Delivery
 
@@ -399,6 +398,18 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 ### Amendment 2026-10-26: what the shared PHP code gives Symfony from laravel-3b
 
 - The edits laravel-3b made to `php/codegen` serve Symfony too: success envelopes rendered around the payload (a bare format still answers a `null` payload as `null`), enum principal members written as their wire values, and the refusals by name of `format.meta`, `format.success.headers` on a shape a response takes, `format.success.slot`, `format.success.envelope` (an envelope that does not write `$payload` under named members) and `degradable`, each after 1.0.
+
+### Amendment 2026-10-26: what symfony-3 built
+
+- **Idempotency** runs in the `kernel.controller` listener after step 8: a replayed reply takes the controller's place, so the handler never runs. The reply is settled at `kernel.response` once step 10 has checked it; a failure of that check releases the key. The store is the service `Seampact\Hooks\IdempotencyStore`, an alias the app sets; the boot check refuses an api with boundary-enforced idempotency and no store, on both PHP targets.
+- **Throttle**: the consumer's decider counts the throttled user's bucket in a `framework.rate_limiter` factory keyed by the bucket key. The `login_throttling` row answers the api's 500 and logs the `rateLimited` role it kept, since no reference operation declares that role (as the `access_control` row does for `forbidden`).
+- **Rule proofs in the body**: the body's top level also takes the proof fields of its rules, which the access steps check, so `unknownKeys` does not refuse them (`purgeTask`'s `reauthToken`).
+- **Header issues** point at the header's name in lower case, as on the other targets.
+- **Opaque values** accept `null` and refuse a non-finite number anywhere inside them as `type`, as on the Laravel target.
+- **Route names** are `seampact.<api id>.<operationId>`, as the boundary reads them; the routing resource and the bundle configuration keep the snake-case api key (`tasks_service`, `seampact_tasks_service`), and the route check's fix names that resource.
+- **Redaction** needed no Symfony code beyond the shared runtime: the bundle's `boot()` registers the VarDumper caster for every generated value class and runtime holder.
+- **Absolute URLs** stay with symfony-4, where `public_origin` lives in the bundle configuration and the boot check requires it; the reference contract writes relative URLs.
+- The consumer serves both apis of the reference contract, with the `tasksService` bundle beside the `tasks` one.
 
 ## Spike
 
