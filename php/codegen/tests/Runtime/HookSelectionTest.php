@@ -64,6 +64,13 @@ final class HookSelectionTest extends TestCase
         self::assertNull(HookSelection::scopeResolver($hooks, self::contract(), 'team'));
     }
 
+    public function testARegisteredScopeResolverOfTheWrongTypeIsRefusedByName(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage("a scope resolver registered for the api 'tasks' (stdClass) does not implement");
+        HookSelection::scopeResolver(self::lookup([], [new \stdClass()]), self::contract(), 'project');
+    }
+
     private static function contract(): ApiContract
     {
         return ApiContract::of(SelectionContract::class);

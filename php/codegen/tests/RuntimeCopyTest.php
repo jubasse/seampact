@@ -64,6 +64,8 @@ final class RuntimeCopyTest extends TestCase
         yield 'an aliased shared use' => ["use Seampact\\Codegen\\Runtime\\Ir as SharedIr;\n"];
         yield 'a fully qualified target name' => ["/** @see \\Seampact\\Laravel\\Runtime\\Hooks */\n"];
         yield 'a string spelling' => ["const NAME = 'Seampact\\\\Symfony\\\\Runtime\\\\Rule';\n"];
+        yield 'a lower-case name' => ["/** @see \\seampact\\laravel\\Runtime\\Hooks */\n"];
+        yield 'an upper-case name' => ["/** @see \\SEAMPACT\\LARAVEL\\RUNTIME\\Hooks */\n"];
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('leftoverReferences')]
@@ -92,6 +94,32 @@ final class RuntimeCopyTest extends TestCase
         $files = (new RuntimeCopy([new RuntimeSource(self::TARGET_NAMESPACE, $target, self::TARGET_PACKAGE)]))->files('Seampact\\Golden', 'Seampact\\Golden\\Symfony\\Runtime');
 
         self::assertStringContainsString("namespace Seampact\\Golden\\Symfony\\Runtime;\n", $files[0]->contents);
+    }
+
+    public function testTheAppNamespaceInAnotherCaseIsNotALeftover(): void
+    {
+        $target = $this->directory(['Rule.php' => "<?php\n\nnamespace Seampact\\Symfony\\Runtime;\n\n/** @see \\seampact\\golden\\symfony\\runtime\\Rule */\nfinal class Rule {}\n"]);
+
+        $files = (new RuntimeCopy([new RuntimeSource(self::TARGET_NAMESPACE, $target, self::TARGET_PACKAGE)]))->files('Seampact\\Golden', 'Seampact\\Golden\\Symfony\\Runtime');
+
+        self::assertCount(1, $files);
+    }
+
+    public function testOneFileNameInTwoSourcesIsRefusedWhateverItsCase(): void
+    {
+        $shared = $this->directory(['Ir.php' => "<?php\n\nnamespace Seampact\\Codegen\\Runtime;\n\nfinal class Ir {}\n"]);
+        $target = $this->directory(['IR.php' => "<?php\n\nnamespace Seampact\\Symfony\\Runtime;\n\nfinal class IR {}\n"]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('IR.php exists in both seampact/codegen and seampact/symfony');
+        $this->copy(new RuntimeSource(RuntimeCopy::SHARED_NAMESPACE, $shared, 'seampact/codegen'), new RuntimeSource(self::TARGET_NAMESPACE, $target, self::TARGET_PACKAGE));
+    }
+
+    public function testNoSourceIsRefused(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('at least one runtime source');
+        new RuntimeCopy([]);
     }
 
     public function testOneFileNameInTwoSourcesIsRefused(): void
