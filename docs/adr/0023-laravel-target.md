@@ -262,7 +262,7 @@ It does not run on other artisan commands, so `migrate` and `tinker` work on a b
 - a missing `public_origin` under absolute URLs, or ext-zlib not loaded;
 - a Laravel major other than 13, read from `Application::VERSION`; `generate` already refuses older majors from the Composer lock.
 
-`artefacts.bootCheck: { handlers, frameworkRoutes }` switches those two checks apart (ADR 0011).
+`artefacts.bootCheck: false` turns the whole check off; `{ frameworkRoutes: false }` turns the framework-route check off and `{ hooks: off }` the hook check, as on spring-boot (ADR 0011). `{ hooks: warn }` waits for an app that needs it. The handler check runs whenever the boot check does.
 
 ### Native security layers
 
@@ -300,7 +300,7 @@ The target imposes no wire shape ([A36](../decisions.md#a36)). Each feature that
 | the base-path 404 of unserved paths | on | `catchAll: false` |
 | Laravel's own value rules | native | `rules: seampact-consistent` |
 | access hooks | on | `artefacts.accessHooks: false` with `access.native` |
-| the boot check | on | `artefacts.bootCheck`, or `{ handlers, frameworkRoutes }` |
+| the boot check | on | `artefacts.bootCheck`, or `{ frameworkRoutes, hooks }` |
 | API Resources and paginators | never by default | the contract's `pack:laravel` format and paging styles |
 
 The error format is the api's declared format; `pack:laravel` keeps errors bare problem+json (ADR 0008). Laravel ships no OpenAPI generator, so the target declares no `nativeDocs` artefact and reads no `frameworkDocs`: the app config refuses both keys by name (`config.artefacts.unknown`).
