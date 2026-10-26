@@ -136,6 +136,14 @@ final class FormRequestRulesTest extends TestCase
         self::assertSame([['body', '/step', 'multipleOf']], $this->issuesOfJson('{"ids":[],"step":3000000000000001.0}', self::CONSISTENT_NAMESPACE));
     }
 
+    public function testADecimalStepOnAnIntegerIsItsExactIntegerStep(): void
+    {
+        foreach ([self::NATIVE_NAMESPACE, self::CONSISTENT_NAMESPACE] as $namespace) {
+            self::assertSame([], $this->issuesOfJson('{"ids":[],"halfStep":10}', $namespace));
+            self::assertSame([['body', '/halfStep', 'multipleOf']], $this->issuesOfJson('{"ids":[],"halfStep":6}', $namespace));
+        }
+    }
+
     public function testNativeRuleFailuresAreNamedWithTheirContractRules(): void
     {
         $failed = $this->failed(['ids' => [], 'count' => 11, 'label' => 'label-without-prefix']);
@@ -263,6 +271,7 @@ final class FormRequestRulesTest extends TestCase
             ['ratio', true, false, ['kind' => 'scalar', 'type' => 'number', 'refinements' => new \stdClass()]],
             ['label', true, false, ['kind' => 'scalar', 'type' => 'string', 'refinements' => ['minLength' => 5, 'pattern' => ['source' => '^tag-', 'normalized' => '^tag-']]]],
             ['step', true, false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['multipleOf' => '3']]],
+            ['halfStep', true, false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['multipleOf' => '2.5']]],
         ];
         foreach ($added as [$name, $optional, $nullable, $type]) {
             $property = clone $template;

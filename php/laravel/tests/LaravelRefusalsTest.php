@@ -90,6 +90,24 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString('laravel-2 generates it', $refused['requires.rule.unsupported'] ?? '');
     }
 
+    public function testAnIntegerStepBeyondThePhpIntRangeIsRefusedByName(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            self::object($operation->params)->query = [
+                self::param('page', false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['multipleOf' => '100000000000000000000']]),
+            ];
+        });
+
+        self::assertStringContainsString('waits for a consumer after 1.0', self::refused($document)['multipleOf.wide.unsupported'] ?? '');
+    }
+
+    public function testTheHooksAccessArtefactWaitsForTheAccessMiddleware(): void
+    {
+        $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => true]);
+
+        self::assertStringContainsString('laravel-2 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');
+    }
+
     public function testEachRefusalOfTheFullReferenceNamesTheReleaseThatBringsIt(): void
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => false]);
