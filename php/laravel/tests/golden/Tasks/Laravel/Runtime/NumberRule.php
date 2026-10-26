@@ -45,7 +45,7 @@ final class NumberRule extends ContractRule
         }
     }
 
-    // The type rule let through only whole floats up to 2^53 in magnitude, which convert to an int exactly.
+    // The type rule let through only whole floats up to 2^53 - 1 in magnitude, which convert to an int exactly.
     private static function isMultiple(int|float $number, int $step): bool
     {
         if (is_float($number) && floor($number) !== $number) {

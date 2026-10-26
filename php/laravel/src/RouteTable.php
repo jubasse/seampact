@@ -6,6 +6,7 @@ namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\Literal;
 use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\OperationNames;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
 use Seampact\Ir\Model\Operation;

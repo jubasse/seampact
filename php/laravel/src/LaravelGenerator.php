@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\PsrPrinter;
+use Seampact\Codegen\ContractExceptions;
+use Seampact\Codegen\ArtefactSwitches;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
+use Seampact\Codegen\OperationTypes;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpTypes;
 use Seampact\Codegen\Refusals;
@@ -28,8 +31,8 @@ final class LaravelGenerator implements Generator
     public const TARGET = 'laravel';
     public const PACKAGE = 'seampact/laravel';
     private const HTTP_OPERATION = 'httpOperation';
-    private const BOOT_CHECK = 'bootCheck';
-    private const ACCESS_HOOKS = 'accessHooks';
+    // Laravel's exception handler does not report a declared error a handler throws.
+    private const SHOULDNT_REPORT = 'Illuminate\\Contracts\\Debug\\ShouldntReport';
 
     public function irSupport(): IrSupport
     {
@@ -41,20 +44,20 @@ final class LaravelGenerator implements Generator
         $options = LaravelOptions::parse($entry->options, $entry->namespace, $entry->id);
         $refusals = new Refusals($entry->id, self::TARGET, self::PACKAGE);
 
-        self::readArtefacts($entry->artefacts, $refusals);
+        (new ArtefactSwitches(self::TARGET, LaravelReleases::LARAVEL_2, LaravelReleases::LARAVEL_4))->read($entry->artefacts, $refusals);
 
         $kept = new KeptForms($ir, $refusals, new LaravelReleases());
         $refusals->throwIfAny();
 
         $layout = new PhpLayout($ir, $options->namespace, $kept, $refusals);
         $types = new PhpTypes($layout);
-        $operationTypes = new OperationTypes($layout, $types, $refusals);
+        $operationTypes = new OperationTypes($layout->api, $types, $refusals);
         $formRequests = new FormRequests($layout, $options->rules, $refusals);
         $routes = new RouteTable($layout, $options, $refusals);
 
         $classFiles = [
             ...(new SchemaTypes($layout, $types, $refusals))->files($kept->enums(), $kept->objects()),
-            ...(new ContractExceptions($layout, $operationTypes))->files($kept),
+            ...(new ContractExceptions($layout->api, $operationTypes, [self::SHOULDNT_REPORT]))->files($kept),
             ...(new EndpointsTypes($layout))->files($kept),
         ];
 
@@ -65,7 +68,7 @@ final class LaravelGenerator implements Generator
             }
             $at = IrPlace::ofOperation($index, $operation->id);
             array_push($classFiles, ...$operationTypes->files($operation, $names, $at));
-            $classFiles[] = $formRequests->file($operation, $names, $at);
+            $classFiles[] = $formRequests->file($operation, $at);
             $routes->add($operation, $names, $at);
         }
         $classFiles[] = $routes->tableFile();
@@ -88,32 +91,5 @@ final class LaravelGenerator implements Generator
         usort($files, static fn (GeneratedFile $first, GeneratedFile $second): int => strcmp($first->path, $second->path));
 
         return $files;
-    }
-
-    // The boot check and hooks access come with laravel-2, native access (`accessHooks: false`) with laravel-4; the
-    // target declares no other artefact.
-    private static function readArtefacts(\stdClass $artefacts, Refusals $refusals): void
-    {
-        foreach (get_object_vars($artefacts) as $artefact => $value) {
-            $artefact = (string) $artefact;
-            $at = IrPlace::root()->below('artefacts', $artefact);
-            $release = match ($artefact) {
-                self::BOOT_CHECK => LaravelReleases::LARAVEL_2,
-                self::ACCESS_HOOKS => $value === false ? LaravelReleases::LARAVEL_4 : LaravelReleases::LARAVEL_2,
-                default => null,
-            };
-
-            if ($release !== null) {
-                $refusals->waitingForRelease("artefacts.{$artefact}", "The artefact switch '{$artefact}: " . json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "'", $at, $release);
-                continue;
-            }
-
-            $refusals->add(
-                'artefacts.unknown',
-                "The artefact '{$artefact}' is not one the laravel target declares; it takes '" . self::BOOT_CHECK . "' and '" . self::ACCESS_HOOKS . "'.",
-                "Remove '{$artefact}' from the entry's `artefacts`.",
-                $at,
-            );
-        }
     }
 }

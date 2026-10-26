@@ -6,9 +6,9 @@ namespace Seampact\Laravel\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\GoldenTree;
+use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Ir\Run\GenerationRefusedException;
 use Seampact\Laravel\LaravelGenerator;
-use Seampact\Laravel\Tests\Support\ReferenceContract;
 
 /**
  * The reference contract's apis generated with the operations this release serves, compared byte for byte with the
@@ -25,10 +25,10 @@ final class GoldenTest extends TestCase
     {
         $generator = new LaravelGenerator();
         $trees = [
-            'Tasks' => $generator->generate(ReferenceContract::core(), ReferenceContract::entry('tasks', 'Seampact\\Golden\\Tasks')),
+            'Tasks' => $generator->generate(ReferenceContract::core(new LaravelGenerator()), ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'Seampact\\Golden\\Tasks')),
             'TasksConsistent' => $generator->generate(
-                ReferenceContract::core(),
-                ReferenceContract::entry('tasks', 'Seampact\\Golden\\TasksConsistent', ['routes' => 'file', 'rules' => 'seampact-consistent']),
+                ReferenceContract::core(new LaravelGenerator()),
+                ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'Seampact\\Golden\\TasksConsistent', ['routes' => 'file', 'rules' => 'seampact-consistent']),
             ),
         ];
 
@@ -47,10 +47,10 @@ final class GoldenTest extends TestCase
 
     public function testTheFullReferenceContractIsRefusedFormByForm(): void
     {
-        $ir = ReferenceContract::read(ReferenceContract::document(ReferenceContract::TASKS));
+        $ir = ReferenceContract::read(new LaravelGenerator(), ReferenceContract::document(ReferenceContract::TASKS));
 
         try {
-            (new LaravelGenerator())->generate($ir, ReferenceContract::entry('tasks', 'App\\Tasks'));
+            (new LaravelGenerator())->generate($ir, ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
             self::fail('The full reference contract was generated, but it carries forms a later release brings.');
         } catch (GenerationRefusedException $refused) {
             $codes = array_values(array_unique(array_map(static fn ($problem): string => $problem->code, $refused->problems)));

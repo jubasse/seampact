@@ -39,8 +39,9 @@ final class EndpointsTypes
             $file = $files[$names->endpoints];
             $interface = $file->namespace->getClasses()[$file->shortName];
             $method = $interface->addMethod($names->method)->setPublic()->setReturnType($names->result);
-            $method->addParameter('request')->setType($names->request);
-            $file->name($names->request);
+            $request = $this->layout->request($operation->id);
+            $method->addParameter('request')->setType($request);
+            $file->name($request);
             $file->name($names->result);
             $method->addComment(DocComments::of($operation->docs, "Operation '{$operation->id}'."));
 

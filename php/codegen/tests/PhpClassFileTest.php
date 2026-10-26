@@ -19,6 +19,14 @@ final class PhpClassFileTest extends TestCase
         self::assertSame(['Field' => self::FIELD], $file->namespace->getUses());
     }
 
+    public function testATypeDeclarationStaysQualifiedAndImportsItsShortName(): void
+    {
+        $file = new PhpClassFile('App\\Symfony\\TasksRouteLoader');
+
+        self::assertSame('Symfony\\Component\\Config\\Loader\\Loader', $file->type('Symfony\\Component\\Config\\Loader\\Loader'));
+        self::assertSame(['Loader' => 'Symfony\\Component\\Config\\Loader\\Loader'], $file->namespace->getUses());
+    }
+
     public function testASameNamespaceClassKeepsItsShortNameFromALaterImport(): void
     {
         $file = new PhpClassFile('App\\Schemas\\Task');

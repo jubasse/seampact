@@ -48,6 +48,7 @@
   "autoload-dev": {
     "psr-4": {
       "Seampact\\Laravel\\Tests\\": "tests/",
+      "Seampact\\Codegen\\Tests\\Support\\": "../codegen/tests/Support/",
       "Seampact\\Golden\\": "tests/golden/"
     }
   },

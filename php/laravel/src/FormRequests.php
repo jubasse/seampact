@@ -9,6 +9,7 @@ use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
+use Seampact\Codegen\RulesMode;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Model\RefuseUnknownQuery;
 
@@ -26,9 +27,9 @@ final class FormRequests
     {
     }
 
-    public function file(Operation $operation, OperationNames $names, IrPlace $at): PhpClassFile
+    public function file(Operation $operation, IrPlace $at): PhpClassFile
     {
-        $file = new PhpClassFile($names->request);
+        $file = new PhpClassFile($this->layout->request($operation->id));
         $class = $file->namespace->addClass($file->shortName)->setFinal()->setExtends(self::FORM_REQUEST);
         $file->name(self::FORM_REQUEST);
         $class->addComment("The request of operation '{$operation->id}': its access mark and its validation rules.");

@@ -28,6 +28,7 @@ on:
       - JVM plugins
       - PHP core packages
       - Laravel target
+      - Symfony target
       - Front consumers
       - Spring Boot target
       - Vue consumers

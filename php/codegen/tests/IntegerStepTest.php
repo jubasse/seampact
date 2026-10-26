@@ -6,6 +6,13 @@ namespace Seampact\Codegen\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\IntegerStep;
+use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\Refusals;
+use Seampact\Ir\Config\ConfigProblem;
+use Seampact\Ir\Model\Refinements;
+use Seampact\Ir\Model\ScalarType;
+use Seampact\Ir\Model\ScalarTypeUse;
+use Seampact\Ir\Run\GenerationRefusedException;
 
 final class IntegerStepTest extends TestCase
 {
@@ -32,5 +39,27 @@ final class IntegerStepTest extends TestCase
         self::assertTrue(IntegerStep::isNonzeroDecimal('2.5'));
         self::assertFalse(IntegerStep::isNonzeroDecimal('0.00'));
         self::assertFalse(IntegerStep::isNonzeroDecimal('two'));
+    }
+
+    public function testAMemberStepIsRefusedOnANumberAndBeyondTheIntRange(): void
+    {
+        self::assertSame(['multipleOf.invalid'], self::refusedCodes(ScalarType::Number, '0.5'));
+        self::assertSame(['multipleOf.wide.unsupported'], self::refusedCodes(ScalarType::Integer, '1e19'));
+        self::assertSame([], self::refusedCodes(ScalarType::Integer, '2.5'));
+    }
+
+    /** @return list<string> */
+    private static function refusedCodes(string $scalar, string $multipleOf): array
+    {
+        $refusals = new Refusals('server', 'symfony', 'seampact/symfony');
+        IntegerStep::ofMember(new ScalarTypeUse(ScalarType::of($scalar), new Refinements(multipleOf: $multipleOf)), IrPlace::root(), $refusals);
+
+        try {
+            $refusals->throwIfAny();
+        } catch (GenerationRefusedException $refused) {
+            return array_map(static fn (ConfigProblem $problem): string => $problem->code, $refused->problems);
+        }
+
+        return [];
     }
 }

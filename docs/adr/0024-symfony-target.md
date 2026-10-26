@@ -1,6 +1,6 @@
 # ADR 0024: The Symfony server target
 
-Status: proposed
+Status: accepted
 
 ## Context
 
@@ -39,7 +39,7 @@ final class TasksController implements TasksEndpoints
 }
 ```
 
-Codegen emits, per api, under the target entry's `out` and the `namespace` option:
+Codegen emits, per api, under the target entry's `out`, in its PSR-4 namespace:
 
 - **Per operation**: the input class, the result classes, one exception class per code, and the operation's generated constraint (`UpdateTaskInputConstraint`) with its validator.
 - **The boundary subscriber** (`TasksBoundary`), one event subscriber with the listeners below. Step 1, the routed marker, the exception record and the outgoing check act on the main request only, so the sub-request through which `ErrorListener` renders an exception, and a fragment's sub-request, are neither matched again nor checked twice:
@@ -53,14 +53,14 @@ Codegen emits, per api, under the target entry's `out` and the `namespace` optio
 - **The input value resolver** (`TasksInputResolver`), tagged `controller.argument_value_resolver` at priority 150, above `RequestAttributeValueResolver` (100). For a parameter typed with one of the api's input classes, it returns the input the `kernel.controller` listener stored, and nothing else.
 - **The route loader** (`TasksRouteLoader`), tagged `routing.loader`, which registers each operation ("Routes").
 - **The registration**: one bundle per api (`TasksSeampactBundle`), which the app lists in `config/bundles.php`. Its extension registers the services above, and its compiler passes:
-  - find the one service implementing each generated interface (the autowiring alias or the app's own alias), tag it `controller.service_arguments` and register the interface id as a public alias, so the routes can name the interface (spike);
+  - find the one service definition implementing each generated interface, tag it `controller.service_arguments` and register the interface id as a public alias, so the routes can name the interface (spike). This pass runs at `TYPE_BEFORE_OPTIMIZATION` with priority 1, before Symfony's own pass that registers controller arguments; an interface with no implementer or several is left as is, for the boot check to refuse;
   - run the container part of the boot check ("The boot check").
 
   Its `boot()` refuses a declared worker runtime ("Refused by name or waiting").
 
 The routes point at the interface (`TasksEndpoints::updateTask`), which the container resolves to the implementing service (spike). Each route is named `seampact.<api>.<operationId>` and carries the operation id in its defaults, under `_seampact_operation`.
 
-The generated types go into the `namespace` option (no default: ADR 0010 "Namespaces"). The Symfony placement goes into its `Symfony` sub-namespace, and the copied runtime into `Symfony\Runtime`. A declared schema `UpdateTask` and a placement class never share a namespace. Fixed class names that ADR 0007 has no role for are Pascal-case words prefixed by the api's type name, and constants are upper snake case (`MAX_CHECKED_ERROR_BODY_BYTES`).
+The generated types go into the PSR-4 namespace `composer.json` gives the entry's output directory, which the runner derives (ADR 0010 "Namespaces"), so no option names it; the schema types go into its `Schemas` sub-namespace. The Symfony placement goes into its `Symfony` sub-namespace, and the copied runtime into `Symfony\Runtime`. A declared schema `UpdateTask` and a placement class never share a namespace. Fixed class names that ADR 0007 has no role for are Pascal-case words prefixed by the api's type name, and constants are upper snake case (`MAX_CHECKED_ERROR_BODY_BYTES`).
 
 The handler method returns the operation's generated result: an interface implemented by one final class per declared success status and by the typed error result (ADR 0007 `errors` role). It may instead throw one of the generated exceptions, declared with `@throws` on the interface method (ADR 0012 "Errors the handler answers"). A decide hook that throws Symfony's `AccessDeniedException` (`denyAccessUnlessGranted()`) answers the requirement's first declared denial code. Any other exception from a hook is a 500 with `onUnexpectedError` called (ADR 0012 "Failures inside hooks").
 
@@ -80,7 +80,7 @@ seampact_tasks:
     type: seampact
 ```
 
-Each api's loader supports the `seampact` type for its own api name only, so two apis load apart. `mount` is the path prefix that the loader applies itself; an import `prefix`, `host`, `schemes` or `condition` that changes a contract route is refused by the boot check.
+Each api's loader supports the `seampact` type for its own api name only, so two apis load apart. No `mount` reaches the generator in symfony-1, so the loader writes each contract path as declared and the app prefixes the routes with its routing import's `prefix`. From symfony-2 the runner passes `mount` and `frameworkRoutes` to the generator through the target entry, and the boot check refuses a contract route whose path is not `mount` followed by the contract path, so the import `prefix` must equal `mount`; an import `host`, `schemes` or `condition` on a contract route is refused too.
 
 The `kernel.request` listener matches the raw path, `getPathInfo()`, against the contract templates. That path is the request target without the query, minus the front controller's own base path; a trusted `X-Forwarded-Prefix` does not change it (spike). The `kernel.controller` listener then compares the operation of the route the router chose with that match. The router decodes the path before matching, so the two can differ:
 
@@ -159,7 +159,7 @@ Generated value types are ADR 0023's:
 - backed enums;
 - `?T` for an optional or a nullable member, and `seampact/hooks`'s `Field` for a member both optional and nullable (CHK-158);
 - `DateTimeImmutable` for a `date-time`, kept with its offset;
-- integers as `int` in the IR's safe range, checked as whole numbers, so `1.0` is an integer.
+- integers as `int` in the IR's safe range, checked as whole numbers, so `1.0` is an integer; a JSON integer above 2^53 - 1 in magnitude is refused as `maximum`, or `minimum` below zero, whether it decodes to an `int` or a float, as on the Node targets (ADR 0003).
 
 Wire names that differ from the PHP property name are carried by the generated decoder and encoder; no Serializer attribute is needed.
 
@@ -182,10 +182,10 @@ The boundary decodes the held body with `json_decode($bytes, false, 512, JSON_TH
 
 The target takes `rules` (ADR 0009), as the Laravel target does:
 
-- **`native`, the default.** A value rule renders as Symfony's own constraint wherever Symfony has one: `Length` on strings (counted in code points, as the contract counts, spike), `Count` on arrays, `Range`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan` and `LessThanOrEqual` on members carried as JSON numbers, `DivisibleBy` for `multipleOf`, `Regex` (with the `u` modifier; a search, spike), `Uuid`, `Email`, `Url`, `Ip`. An `int64` or `decimal` member carried as a string on the wire never gets a number constraint, which compares its value as a float (`Range` passed `"9223372036854775808"` under a `PHP_INT_MAX` maximum, spike): its limits stay generated constraints on its decimal text. A format Symfony has no constraint for (`date-time`) stays generated. `Ip` takes the format's version (`version: 6` for `ipv6`, since it defaults to IPv4), and `Count` throws on an object, so `minProperties` and `maxProperties` stay generated. The Symfony guide lists the differences in a few lines (the `Email` modes; `Url`'s protocols and its `requireTld` default, which changes in 8.0; `Regex` on PCRE; `Uuid` refusing the nil and max UUIDs).
+- **`native`, the default.** A value rule renders as Symfony's own constraint wherever Symfony has one: `Length` on strings (counted in code points, as the contract counts, spike), `Count` on arrays, one comparison constraint per bound on members carried as JSON numbers (`GreaterThanOrEqual`, `LessThanOrEqual`, `GreaterThan`, `LessThan`, never `Range`, so each violation carries its own rule), `DivisibleBy` for `multipleOf`, and `Regex` (with the `u` modifier; a search, spike). The `uuid` format stays generated in both modes: Symfony's `Uuid` refuses RFC 9562 text that ADR 0003 accepts (the nil and max UUIDs, version digits outside 1 to 8, variant digits outside 8 to b), and a native constraint that raises several violations for one rule gives one issue. `multipleOf` is the exact integer step that ADR 0003 keeps on `integer` (`2.5` gives 5, as on the Node targets); a step on a `number` is refused as an inconsistent IR, and a step beyond the PHP `int` range waits for a consumer after 1.0. A format other than `uuid` and `date-time` is refused by name (`format.string.unsupported`), as the shared form walk refuses it for Laravel, and `int64` and `decimal` wait for a consumer after 1.0 (`format.wide.unsupported`): a number constraint would compare their decimal text as a float (`Range` passed `"9223372036854775808"` under a `PHP_INT_MAX` maximum, spike). `date-time`, which Symfony has no constraint for, stays generated. The Symfony guide lists the differences in a few lines (`Regex` on PCRE).
 - **`seampact-consistent`.** Every value rule is a generated constraint with ADR 0003's meaning, patterns searched as ECMA-262 does through the normalised pattern of ADR 0003 section 9, rendered for PCRE with the `u` and `D` modifiers.
 
-`Regex`, `Email`, `Url`, `Uuid` and `Ip` pass an empty string without checking it, while `Length` checks it and counts whitespace (spike). Under `native`, a string member with a pattern or a format therefore also gets a generated constraint that applies the contract's rule to `""`, so an empty string never passes a `pattern` or a `format` unchecked.
+`Regex` passes an empty string without checking it, as `Email`, `Url`, `Uuid` and `Ip` do, while `Length` checks it and counts whitespace (spike). Under `native`, a string member with a pattern therefore also gets a generated check that applies the pattern to `""`, so an empty string never passes a `pattern` unchecked; a string of spaces reaches `Regex`, which checks it.
 
 The contract input is the boundary's decoding. `$request->getContent()`, `getPayload()` and `toArray()` keep their Symfony meaning for app code: `getContent()` returns the bytes as received after the boundary's streamed read (spike), and the compressed bytes for a `gzip` or `deflate` body.
 
@@ -224,14 +224,15 @@ The boundary's own logs, written to the app's PSR-3 logger, carry the operation 
 
 The target options, validated against the schema the target publishes, with unknown keys refused by name:
 
-- `namespace`, required;
-- the naming options of ADR 0007: `suffixes`, `escape`, `enumCase`, `handlers` (`perOperation` gives one interface per operation, for an `__invoke` controller);
-- `indent` and `layout`;
+- `handlers`, `perResource` only: `perOperation`, one interface per operation for an `__invoke` controller, waits for an app that needs it (`options.handlers.unsupported`);
+- `indent`;
 - `rules` (`native`, the default, or `seampact-consistent`);
 - `responses` (`strict`, the default, or `warn`);
 - `bodyValidation` (`false`, the default, or `true`);
 - `frameworkEtag` (`strip`, the default, or `keep`);
 - `catchAll` (`true`, the default, or `false`).
+
+The naming options of ADR 0007 (`suffixes`, `escape`, `enumCase`) are refused by name (`options.naming.unsupported`): the target names PHP with the ADR 0007 defaults, which the shared naming vectors test. `layout` is refused too (`options.layout.unsupported`): one file per class under the PSR-4 directory is the only layout Composer loads. `namespace` is no option: the runner derives it from PSR-4, and the key is refused as unknown. These options are the same on every PHP target, read by `seampact/codegen`.
 
 At run time, the generated code reads the bundle's configuration, under the extension alias `seampact_<api>`:
 
@@ -246,7 +247,7 @@ seampact_tasks:
 ```
 
 - `responses` and `body_validation` for the api;
-- `operations.<operationId>.responses` per operation;
+- `operations.<operationId>.responses` per operation; an operation id the api does not declare fails the container build, naming it and the declared ids;
 - `public_origin`.
 
 An operation's value wins over the api's value, which wins over the target option. Every value may be an `%env()%` placeholder. The bundle's `Configuration` declares scalar nodes, never enum or typed nodes that would reject a placeholder, and `load()` passes the values unchanged as arguments of the generated settings service. That service checks them when the boundary first reads them, on each kernel boot: an invalid value answers the api's 500 on every contract route and logs the key and the accepted values, never the value. A value changed in the environment applies without a cache clear (spike).
@@ -279,7 +280,7 @@ From symfony-4, under absolute URLs, the pass also requires a `public_origin` ke
   - `_logout_<firewall>`, which SecurityBundle registers for a firewall's `logout.path`, by its name and its missing controller (spike);
   - the WebProfilerBundle routes `_wdt*` and `_profiler*`, by their names and their `web_profiler.controller.*` controllers (read from the bundle, not run; symfony-2 checks the list on both majors);
 - a route that the loader did not make whose controller is a contract interface's method or a method of the service implementing one, whatever `frameworkRoutes` allow-lists and whether that check is on; at run time the listener refuses such a request anyway (spike);
-- a contract route whose path differs from `mount` followed by the contract path, or that carries a host, a scheme or a condition the loader did not set.
+- a contract route whose path differs from `mount` followed by the contract path, `mount` being the one the generator receives through the target entry, or that carries a host, a scheme or a condition the loader did not set.
 
 `artefacts.bootCheck: { handlers, frameworkRoutes }` switches those two checks apart (ADR 0011). Once both parts pass, neither runs per request, so a php-fpm serve pays nothing for them. While the route part fails, no router cache exists, so the loader and the check run again on every request until it passes. Production apps run `cache:warmup` at deploy or container start.
 
@@ -325,7 +326,7 @@ The error format is the api's declared format. Symfony ships no OpenAPI generato
 
 ### Links and the client
 
-The target consumes no link (ADR 0009 "The provider seam"): it generates its own types and constraints in PHP. A link on its entry fails `generate` with `link.kind.not-consumed`, naming the entry and the link. It generates no client.
+The target consumes no link (ADR 0009 "The provider seam"): it generates its own types and constraints in PHP. A link on its entry is refused by the runner with `link.kind.not-consumed`, naming the entry and the link, before any generator runs: no link reaches the generator. It generates no client.
 
 ### What the generated code depends on
 
@@ -343,10 +344,11 @@ The boundary runtime is copied into `Symfony\Runtime` with the generated header 
 
 | Waits for | What |
 |---|---|
-| symfony-3 | paging, idempotency replay, throttle, cache and ETag headers, signed routes |
-| symfony-4 | the security exports (per-kind request matchers, the `TasksAccess` table), multipart (`UploadedFile` with the `File` constraint; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`BinaryFileResponse`, `StreamedResponse`) and redirect (`RedirectResponse`) bodies, the bundle configuration with `%env()%` values, absolute URLs (their `public_origin` lives in that configuration, and the boot check requires it) |
-| a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target; NelmioApiDocBundle `nativeDocs` |
-| after 1.0 | Symfony 7.3 and older (refused, not waiting); worker runtimes (refused, below); `framework.http_cache` (refused by the boot check); `hooks: vendored` ([A40](../decisions.md#a40)); API Platform, its own target; every IR form absent from the reference contract's golden IRs |
+| symfony-2 | rights and rules an operation requires, which the access listener runs, rule proof fields in the body (`recentAuth` on purgeTask), `artefacts.bootCheck` and `artefacts.accessHooks: true` |
+| symfony-3 | paging, its structured `sort` query parameter (listTasks) and its `page` response, idempotency replay, throttle, cache and ETag headers, the response headers these features derive, retry headers, signed routes and their raw body, deadline budgets (`budgetMs`), relayed operations (`relays`), sensitive values, opaque values (`PaymentEvent.data` on payments) |
+| symfony-4 | the security exports (per-kind request matchers, the `TasksAccess` table), multipart (`UploadedFile` with the `File` constraint; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`BinaryFileResponse`, `StreamedResponse`) and redirect (`RedirectResponse`) bodies, native access (`artefacts.accessHooks: false`), the bundle configuration with `%env()%` values, absolute URLs (their `public_origin` lives in that configuration, and the boot check requires it) |
+| a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target; string formats other than `uuid` and `date-time`; NelmioApiDocBundle `nativeDocs`; unions (`oneOf`) until a contract needs one |
+| after 1.0 | Symfony 7.3 and older (refused, not waiting); worker runtimes (refused, below); `framework.http_cache` (refused by the boot check); `hooks: vendored` ([A40](../decisions.md#a40)); API Platform, its own target; every IR form absent from the reference contract's golden IRs, as the Spring and Laravel targets refuse them: `list` responses, response headers the route writes itself, principal requirements, bindings, upstream calls, operation features, extension keys, input field rights below the top level, scope ids not read from the path, bucket keys not read from the path, a scope or the principal, rule proofs outside the body, principals of several variants, signatures verified by the application or keyed from the request, parameter and property defaults, open enums, maps, `int64` and `decimal`, kept unknown keys, recursive input schemas, integer steps beyond the PHP `int` range |
 
 A worker runtime is refused, since serving many requests from one container is unproven in 1.0 ([A47](../decisions.md#a47)): services keep per-request state, and resetting the boundary's services through `kernel.reset` is not tested. Two guards apply, both outside the boot check:
 
@@ -381,10 +383,10 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 
 | PR | Delivers |
 |---|---|
-| symfony-1 | `php/symfony` (`Seampact\Symfony`): the generator class registered in `extra.seampact.generator`, the options, readonly classes with `Field`, controller interfaces, the `#[SeampactOperation]` attribute, the route loader, the generated constraints with their validators under both `rules` modes, the exceptions per error, the api's bundle and its extension; a golden for the reference contract, linted with `php -l` and PHPStan max on PHP 8.3 with Symfony 7.4 and PHP 8.5 with Symfony 7.4 and 8.x |
-| symfony-2 | the boundary subscriber (step 1, steps 2 to 8 in the `kernel.controller` listener with its fail-closed checks, the `kernel.view` reply, the exception listeners, the `LoginFailureEvent` record and the mapping, step 10, on the main request only), the value resolver, tagged-service hooks, scopes in request attributes, the 500 on a missing hook, the boot check's compiler pass, with the attribute refusal, and its routing-loader decorator, the worker refusal and the second-main-request guard, `bin/console seampact:generate`; the sample app with path repositories under php-fpm behind nginx, SecurityBundle with `http_basic` and one `access_control` path, the core suite profile with the bad-credentials 401 row and the `access_control` 403 row, the e2e job of `p6-symfony.yml` |
-| symfony-3 | paging, idempotency, throttle through a RateLimiter factory, cache headers, the signed raw body, redaction (`__debugInfo()`, `#[\SensitiveParameter]`, the VarDumper caster); the full suite profile with the `login_throttling` 429 row, and `RedactionTest.php` |
-| symfony-4 | the user from the token storage after the firewall, `isGranted` with a subject carrying params and scopes, `AccessDeniedException` answering the first denial code, the per-kind request matchers and the `TasksAccess` table, multipart with the `File` constraint, `BinaryFileResponse`, `StreamedResponse` and `RedirectResponse`, the bundle configuration with `%env()%` values checked at run time, absolute URLs with the boot check's `public_origin` rule; the suite's remaining security rows and its media rows |
+| symfony-1 | `php/symfony` (`Seampact\Symfony`), on the shared emitters and form walk of `php/codegen` (`Seampact\Codegen`), where each PHP target names the release that brings a refused form: the generator class registered in `extra.seampact.generator`, the options, readonly classes with `Field`, controller interfaces, the `#[SeampactOperation]` attribute, the route loader, the input value resolver, the generated constraints with their validators under both `rules` modes, the exceptions per error, the api's bundle and its extension; a golden for the reference contract, linted with `php -l` and PHPStan max on PHP 8.3 with Symfony 7.4 and PHP 8.5 with Symfony 7.4 and 8.x |
+| symfony-2 | the boundary subscriber (step 1, steps 2 to 8 in the `kernel.controller` listener with its fail-closed checks, the `kernel.view` reply, the exception listeners, the `LoginFailureEvent` record and the mapping, step 10, on the main request only), tagged-service hooks, the rights and rules an operation requires with rule proof fields in the body, scopes in request attributes, the 500 on a missing hook, the boot check's compiler pass, with the attribute refusal, and its routing-loader decorator, the worker refusal and the second-main-request guard, `bin/console seampact:generate`; the sample app with path repositories under php-fpm behind nginx, SecurityBundle with `http_basic` and one `access_control` path, the core suite profile with the bad-credentials 401 row and the `access_control` 403 row, the e2e job of `p6-symfony.yml` |
+| symfony-3 | paging with its `sort` parameter, idempotency, throttle through a RateLimiter factory, cache headers and the response headers of these features, retry headers, the signed raw body, deadline budgets and relayed operations, opaque values, redaction (`__debugInfo()`, `#[\SensitiveParameter]`, the VarDumper caster); the full suite profile with the `login_throttling` 429 row, and `RedactionTest.php` |
+| symfony-4 | the user from the token storage after the firewall, native access (`artefacts.accessHooks: false`), `isGranted` with a subject carrying params and scopes, `AccessDeniedException` answering the first denial code, the per-kind request matchers and the `TasksAccess` table, multipart with the `File` constraint, `BinaryFileResponse`, `StreamedResponse` and `RedirectResponse`, the bundle configuration with `%env()%` values checked at run time, absolute URLs with the boot check's `public_origin` rule; the suite's remaining security rows and its media rows |
 
 ## Spike
 

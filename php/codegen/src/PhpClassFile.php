@@ -67,6 +67,17 @@ final class PhpClassFile
         return strcasecmp($claimedBy, $className) === 0 ? self::shortNameOf($claimedBy) : '\\' . ltrim($className, '\\');
     }
 
+    /**
+     * `$className` for a type declaration (`setType`, `setExtends`, `addImplement`), which Nette takes fully qualified
+     * and the printer shortens when its `use` line is in the file; claims the short name as `name()` does.
+     */
+    public function type(string $className): string
+    {
+        $this->name($className);
+
+        return $className;
+    }
+
     /** The relative path of the file under the output directory, from the namespace below `$rootNamespace`. */
     public function path(string $rootNamespace): string
     {

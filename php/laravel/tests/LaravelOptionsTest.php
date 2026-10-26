@@ -8,11 +8,11 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Seampact\Ir\Config\ConfigProblem;
 use Seampact\Ir\Run\GenerationRefusedException;
-use Seampact\Laravel\FrameworkEtagMode;
+use Seampact\Codegen\FrameworkEtagMode;
 use Seampact\Laravel\LaravelOptions;
-use Seampact\Laravel\ResponsesMode;
+use Seampact\Codegen\ResponsesMode;
 use Seampact\Laravel\RoutesForm;
-use Seampact\Laravel\RulesMode;
+use Seampact\Codegen\RulesMode;
 
 final class LaravelOptionsTest extends TestCase
 {
