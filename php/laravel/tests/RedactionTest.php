@@ -104,6 +104,23 @@ final class RedactionTest extends TestCase
         self::assertRedacted($dumped);
     }
 
+    public function testADumpHandlerInstalledEarlierIsKept(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $app->instance('config', new Repository(['view' => ['compiled' => sys_get_temp_dir()]]));
+        $app->register(FoundationServiceProvider::class);
+        $received = [];
+        VarDumper::setHandler(static function (mixed $value) use (&$received): void {
+            $received[] = $value;
+        });
+
+        RedactingDumper::install($app, ApiContract::of(TasksContract::class));
+        VarDumper::dump('marker');
+        VarDumper::setHandler(null);
+
+        self::assertSame(['marker'], $received);
+    }
+
     private static function assertRedacted(string $dumped): void
     {
         self::assertStringNotContainsString(self::SECRET, $dumped);

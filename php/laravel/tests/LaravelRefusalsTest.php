@@ -80,6 +80,15 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString("The sort key 'createdAt' restricted by the right 'tasks.seeEffort'", self::refused($document)['paging.sortKey.right.unsupported'] ?? '');
     }
 
+    public function testAPrincipalWithoutMembersIsRefusedByName(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
+            self::object(self::object($document->schemas)->UserPrincipal)->properties = [];
+        });
+
+        self::assertStringContainsString("identity 'user'", self::refused($document)['principal.members.none'] ?? '');
+    }
+
     public function testBootCheckHooksWarnWaitsForAConsumer(): void
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['bootCheck' => (object) ['hooks' => 'warn']]);
