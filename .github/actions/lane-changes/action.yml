@@ -1,0 +1,58 @@
+# The change filter of a lane, shared by every lane's `changes` job: it says whether the lane has something to test.
+# A composite action, not a reusable workflow: a reusable workflow would rename the check to `caller / job`.
+name: Lane changes
+description: >-
+  Says run=true when a changed path matches the lane's watched paths, run=false when none does or when the change
+  only touches documentation no lane test reads. The calling job checks out the full history first.
+
+inputs:
+  watched-paths:
+    description: >-
+      Extended regular expressions, one per line, matched against each changed path; the lane runs when one matches.
+    required: true
+
+outputs:
+  run:
+    description: "`true` when the lane has something to test, `false` when it has nothing."
+    value: ${{ steps.decide.outputs.run }}
+
+runs:
+  using: composite
+  steps:
+    - name: Decide whether the lane runs
+      id: decide
+      shell: bash
+      env:
+        WATCHED_PATHS: ${{ inputs.watched-paths }}
+        EVENT: ${{ github.event_name }}
+        PR_BASE: ${{ github.base_ref }}
+        PUSH_BEFORE: ${{ github.event.before }}
+        PUSH_AFTER: ${{ github.sha }}
+      run: |
+        set -euo pipefail
+        watched_pattern=$(grep -v '^[[:space:]]*$' <<< "$WATCHED_PATHS" | paste -sd '|')
+        if [ -z "$watched_pattern" ]; then
+          echo "watched-paths is empty, so the lane would never run. List the paths its tests read."
+          exit 1
+        fi
+
+        range=""
+        if [ "$EVENT" = "pull_request" ]; then
+          range="origin/$PR_BASE...HEAD"
+        elif [ "$EVENT" = "push" ] && git cat-file -e "${PUSH_BEFORE}^{commit}" 2>/dev/null; then
+          range="$PUSH_BEFORE..$PUSH_AFTER"
+        fi
+
+        # A schedule, a manual run, a new branch (all-zero sha) or a force push whose old tip the server no longer
+        # holds has no base: the lane runs every job.
+        if [ -z "$range" ]; then
+          echo "No base to compare with on this $EVENT event: the lane runs."
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
+        # quote, a backslash, a tab or a non-ASCII byte, still matches.
+        run=$(git diff -z --name-only --no-renames "$range" | bash "$GITHUB_ACTION_PATH/lane-run.sh" "$watched_pattern")
+        echo "Changes in $range: run=$run"
+        echo "run=$run" >> "$GITHUB_OUTPUT"

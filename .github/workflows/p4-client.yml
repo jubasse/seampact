@@ -19,7 +19,29 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only.
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - name: Detect a change beyond documentation no test reads
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          # Every path: only a change to documentation no test reads skips this lane.
+          watched-paths: |
+            .
+
   stub-consumer:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -2,7 +2,9 @@ name: Own validators consumer
 
 # Builds and packs the seampact packages, then installs them from the tarballs into a test consumer whose server
 # entry gives no `validators` link, generates the validators the target writes itself (Ajv on Fastify, VineJS on AdonisJS), typechecks,
-# boots the server and runs `reference slice answers` against it.
+# boots the server and runs `reference slice answers` against it. On a pull request or a push they run only when the
+# change touches the packages, the consumer harness, the reference contract, the toolchain pins or this workflow;
+# `own-validators` is the one check to require.
 
 on:
   push:
@@ -19,7 +21,40 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      own-validators: ${{ steps.detect.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only.
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - name: Detect a change the own validators consumers depend on
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          # The packed packages, the consumer harness, the reference contract, the workspace and toolchain pins and
+          # this workflow.
+          watched-paths: |
+            ^packages/
+            ^scripts/consumers/
+            ^scripts/golden/
+            ^fixtures/reference/
+            ^\.github/actions/
+            ^\.github/workflows/validators-2\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^tsconfig\.base\.json$
+            ^\.nvmrc$
+
   own-validators-consumer:
+    needs: changes
+    if: needs.changes.outputs.own-validators == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -41,6 +76,8 @@ jobs:
         run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
 
   own-validators-consumer-vinejs:
+    needs: changes
+    if: needs.changes.outputs.own-validators == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -60,3 +97,21 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} from packed tarballs
         run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
+
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
+  # The matrix rows are not required checks: a skipped matrix job reports one unexpanded name, never the row names.
+  own-validators:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, own-validators-consumer, own-validators-consumer-vinejs]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.own-validators }}
