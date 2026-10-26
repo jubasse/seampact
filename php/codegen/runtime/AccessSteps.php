@@ -11,6 +11,9 @@ use Seampact\Hooks\Purpose;
 use Seampact\Hooks\RequirementKind;
 use Seampact\Hooks\ScopeIdSource;
 use Seampact\Hooks\ScopeResolution;
+use Seampact\Hooks\SignatureEncoding;
+use Seampact\Hooks\SignatureTemplate;
+use Seampact\Hooks\SignedTemplateRequest;
 use Seampact\Hooks\SubjectRef;
 use Seampact\Hooks\ThrottleBucket;
 use Symfony\Component\HttpFoundation\Request;
@@ -29,6 +32,7 @@ final class AccessSteps
     private const OPTIONAL_ACCESS = 'optional';
     private const ANONYMOUS = 'anonymous';
     private const COOKIE = 'cookie';
+    private const SIGNATURE = 'signature';
 
     private function __construct()
     {
@@ -130,8 +134,14 @@ final class AccessSteps
             }
         }
 
+        $signature = null;
+        $signedScheme = Ir::string($state->contract->declaration('identities', $identity), 'signed');
+        if ($signedScheme !== null) {
+            $signature = self::signedRequest($state, $signedScheme, $credentials[$signedScheme] ?? null);
+        }
+
         $hook = $state->hooks->authenticateHook($state->contract, $identity);
-        $result = $hook->authenticate(new AuthenticateCall($identity, new $credentialsClass(...$arguments), $csrfToken, $state->view, self::operationRef($state)));
+        $result = $hook->authenticate(new AuthenticateCall($identity, new $credentialsClass(...$arguments), $csrfToken, $state->view, self::operationRef($state), $signature));
         if ($result instanceof AuthenticateResult\Authenticated) {
             $state->principal = $result->principal;
 
@@ -145,6 +155,25 @@ final class AccessSteps
         }
 
         throw self::refusalOf($state, $result->deny);
+    }
+
+    /**
+     * A signed route's signature, parsed from its header over the raw body step 1 kept; a missing or malformed header
+     * is the unauthenticated refusal, and the identity's hook verifies the signature (ADR 0013).
+     */
+    private static function signedRequest(BoundaryState $state, string $schemeId, #[\SensitiveParameter] ?string $header): SignedTemplateRequest
+    {
+        $signature = Ir::map($state->contract->declaration('schemes', $schemeId), 'signature');
+        $parsed = SignatureHeader::parse(Ir::string($signature, 'format') ?? '', $header);
+        if ($parsed === null) {
+            throw self::roleRefusal($state, self::UNAUTHENTICATED_ROLE);
+        }
+
+        $encoding = SignatureEncoding::tryFrom(Ir::string($signature, 'encoding') ?? '')
+            ?? throw new \LogicException("seampact: the signature scheme '{$schemeId}' names an encoding the boundary does not know.");
+        $template = new SignatureTemplate(Ir::string($signature, 'algorithm') ?? '', Ir::string($signature, 'payload') ?? '', $encoding, Ir::int($signature, 'toleranceMs'));
+
+        return new SignedTemplateRequest($state->rawBody ?? '', $parsed->candidateSignatures, Ir::string(Ir::map($signature, 'key'), 'value') ?? '', $template, $parsed->timestamp);
     }
 
     /**
@@ -164,7 +193,7 @@ final class AccessSteps
             $value = match (Ir::string($scheme, 'kind')) {
                 'bearer' => self::bearerToken($request),
                 self::COOKIE => self::cookie($request, $name),
-                'header' => $request->headers->get($name),
+                'header', self::SIGNATURE => $request->headers->get($name),
                 default => throw new \LogicException('seampact: the credential scheme kind ' . var_export(Ir::string($scheme, 'kind'), true) . ' is not one the boundary reads.'),
             };
             if ($value === null || $value === '') {

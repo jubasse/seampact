@@ -19,6 +19,8 @@ final class TypeRule extends ContractRule
     public const BOOLEAN = 'boolean';
     public const OBJECT = 'object';
     public const ARRAY = 'array';
+    // An opaque value: any JSON value, so only its presence is checked.
+    public const ANY = 'any';
 
     // ADR 0003 keeps a plain integer in the safe range of a double, as the Node targets check it.
     private const LARGEST_SAFE_INTEGER = 9007199254740991;
@@ -72,6 +74,7 @@ final class TypeRule extends ContractRule
             self::BOOLEAN => is_bool($value),
             self::OBJECT => $value instanceof \stdClass,
             self::ARRAY => is_array($value) && array_is_list($value),
+            self::ANY => true,
             default => throw new \LogicException("The generated type rule names the unknown type '{$this->type}'."),
         };
 

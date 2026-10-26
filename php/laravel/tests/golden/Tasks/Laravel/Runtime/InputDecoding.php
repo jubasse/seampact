@@ -88,6 +88,9 @@ final class InputDecoding
                 ? AccessSteps::roleRefusal($state, self::UNSUPPORTED_MEDIA_TYPE_ROLE)
                 : AccessSteps::schemaInvalid($state, [['in' => 'body', 'pointer' => '', 'rule' => 'type']]);
         }
+        if (Ir::true($input, 'rawBody')) {
+            $state->rawBody = $read->bytes;
+        }
         if ($read->bytes === '') {
             return null;
         }

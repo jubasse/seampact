@@ -16,6 +16,7 @@ use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\EnumTypeUse;
 use Seampact\Ir\Model\ObjectSchema;
 use Seampact\Ir\Model\Param;
+use Seampact\Ir\Model\OpaqueTypeUse;
 use Seampact\Ir\Model\RefTypeUse;
 use Seampact\Ir\Model\Refinements;
 use Seampact\Ir\Model\ScalarType;
@@ -104,6 +105,7 @@ final class MemberRules
     private function member(string $key, TypeUse $type, Presence $presence, Nullability $declared, Position $position, IrPlace $at): void
     {
         $nullable = $declared === Nullability::Nullable || match (true) {
+            $type instanceof OpaqueTypeUse => true,
             $type instanceof ScalarTypeUse, $type instanceof EnumTypeUse, $type instanceof RefTypeUse, $type instanceof ArrayTypeUse => $type->nullable === true,
             default => false,
         };
@@ -127,6 +129,7 @@ final class MemberRules
             $type instanceof EnumTypeUse => $this->enum($key, $type, $position),
             $type instanceof RefTypeUse => $this->object($key, $type, $position, $at),
             $type instanceof ArrayTypeUse => $this->list($key, $type, $position, $at),
+            $type instanceof OpaqueTypeUse => null,
             default => throw new \LogicException("The {$type->tag()} type use was kept but has no rule."),
         };
     }
@@ -145,6 +148,7 @@ final class MemberRules
         return match (true) {
             $type instanceof RefTypeUse => 'OBJECT',
             $type instanceof ArrayTypeUse => 'ARRAY',
+            $type instanceof OpaqueTypeUse => 'ANY',
             default => 'STRING',
         };
     }

@@ -16,8 +16,8 @@ use Seampact\Laravel\LaravelGenerator;
  * committed tree under `tests/golden`, which PHPStan then analyses at level max against Laravel 13 and CI lints with
  * `php -l`. `SEAMPACT_UPDATE_GOLDEN=1` rewrites the tree instead. The tasks api is generated twice: with every default, and in
  * a namespace of its own with `routes: file`, `rules: seampact-consistent`, two framework routes and, beside the core
- * operations, a right and a rule with its body proof (`updateTask` and `purgeTask`, without the idempotency and
- * response headers a later release brings).
+ * operations, a right and a rule with its body proof (`updateTask` and `purgeTask`), the paged `listTasks`, the cached
+ * `getPreferences` and the signed `payments`.
  */
 final class GoldenTest extends TestCase
 {
@@ -57,7 +57,7 @@ final class GoldenTest extends TestCase
 
     private static function withAccessOperations(): \stdClass
     {
-        return ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), [...ReferenceContract::CORE_OPERATIONS, 'createTask', 'updateTask', 'purgeTask', 'listTasks']);
+        return ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), [...ReferenceContract::CORE_OPERATIONS, 'createTask', 'updateTask', 'purgeTask', 'listTasks', 'getPreferences', 'payments']);
     }
 
     public function testTheFullReferenceContractIsRefusedFormByForm(): void
@@ -71,12 +71,7 @@ final class GoldenTest extends TestCase
             $codes = array_values(array_unique(array_map(static fn ($problem): string => $problem->code, $refused->problems)));
             sort($codes);
 
-            self::assertSame(
-                [
-                    'access.signed.unsupported', 'cache.unsupported', 'deadline.unsupported', 'input.rawBody.unsupported', 'type.opaque.unsupported',
-                ],
-                $codes,
-            );
+            self::assertSame(['deadline.unsupported'], $codes);
             self::assertStringContainsString("entry 'server' /operations/", $refused->getMessage());
         }
     }

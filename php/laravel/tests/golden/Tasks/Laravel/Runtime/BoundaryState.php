@@ -30,6 +30,8 @@ final class BoundaryState
     public array $query = [];
     /** The idempotency key this request claimed, until its reply settles the record. */
     public ?string $idempotencyKey = null;
+    /** The body bytes as received, kept for a signed route's signature (ADR 0013), null elsewhere. */
+    public ?string $rawBody = null;
     /** @var \WeakMap<Response, array{int, string, ?string}> */
     private \WeakMap $authored;
 

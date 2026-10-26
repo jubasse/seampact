@@ -119,13 +119,15 @@ final class Replies
 
         $media = Ir::string($declared, 'media') ?? Ir::string($contract->format($operationId), 'media') ?? self::JSON_MEDIA;
         if (Ir::string($declared, 'shape') === self::PAGE_SHAPE) {
-            return $state->author(self::page($request, $state, $declared, self::member($result, 'body'), $status, $media));
+            return $state->author(CacheHeaders::written($request, $state, self::page($request, $state, $declared, self::member($result, 'body'), $status, $media)));
         }
 
         $body = WireCodec::encodeBody($contract, $declared, self::member($result, 'body'));
         $body = FieldRights::output($state, $declared, $body);
 
-        return $state->author(new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media]));
+        $reply = new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media]);
+
+        return $state->author(CacheHeaders::written($request, $state, $reply));
     }
 
     /**

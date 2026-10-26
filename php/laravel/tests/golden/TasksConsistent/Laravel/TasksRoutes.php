@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel;
 
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 use Seampact\Golden\TasksConsistent\AppEndpoints;
 use Seampact\Golden\TasksConsistent\ChannelsEndpoints;
 use Seampact\Golden\TasksConsistent\DraftsEndpoints;
+use Seampact\Golden\TasksConsistent\HooksEndpoints;
+use Seampact\Golden\TasksConsistent\PreferencesEndpoints;
 use Seampact\Golden\TasksConsistent\TasksEndpoints;
 
 /**
@@ -25,7 +28,7 @@ final class TasksRoutes
         'catch_all' => true,
     ];
 
-    /** @var list<array{operation: string, method: string, uri: string, name: string, access: string, action: array{class-string, string}}> */
+    /** @var list<array{operation: string, method: string, uri: string, name: string, access: string, signed?: true, action: array{class-string, string}}> */
     public const ROUTES = [
         [
             'operation' => 'health',
@@ -34,6 +37,23 @@ final class TasksRoutes
             'name' => 'seampact.tasks.health',
             'access' => 'public',
             'action' => [AppEndpoints::class, 'health'],
+        ],
+        [
+            'operation' => 'getPreferences',
+            'method' => 'GET',
+            'uri' => '/v1/me/preferences',
+            'name' => 'seampact.tasks.getPreferences',
+            'access' => 'identity',
+            'action' => [PreferencesEndpoints::class, 'getPreferences'],
+        ],
+        [
+            'operation' => 'payments',
+            'method' => 'POST',
+            'uri' => '/v1/hooks/payments',
+            'name' => 'seampact.tasks.payments',
+            'access' => 'identity',
+            'signed' => true,
+            'action' => [HooksEndpoints::class, 'payments'],
         ],
         [
             'operation' => 'getChannel',
@@ -107,7 +127,10 @@ final class TasksRoutes
     public static function register(): void
     {
         foreach (self::ROUTES as $route) {
-            Route::match([$route['method']], $route['uri'], $route['action'])->name($route['name'])->middleware(TasksAccessMiddleware::class);
+            $registered = Route::match([$route['method']], $route['uri'], $route['action'])->name($route['name'])->middleware(TasksAccessMiddleware::class);
+            if ($route['signed'] ?? false) {
+                $registered->withoutMiddleware(PreventRequestForgery::class);
+            }
         }
     }
 }

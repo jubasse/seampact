@@ -15,6 +15,7 @@ final class WireCodec
 {
     private const DATE_TIME = 'date-time';
     private const DATE_TIME_WIRE = 'Y-m-d\TH:i:s.vP';
+    private const OPAQUE = 'opaque';
 
     private function __construct()
     {
@@ -32,6 +33,8 @@ final class WireCodec
             'enum' => self::enumClass($contract, Ir::string($type, 'enum') ?? '')::from(is_int($value) ? $value : (is_string($value) ? $value : '')),
             'ref' => self::decodeObject($contract, Ir::string($type, 'schema') ?? '', $value),
             'array' => array_map(static fn (mixed $item): mixed => self::decode($contract, Ir::map($type, 'items'), $item), is_array($value) ? array_values($value) : []),
+            // An opaque value is handed over as the JSON decode wrote it, objects as `stdClass`.
+            self::OPAQUE => $value,
             default => throw new \LogicException('seampact: the type kind ' . var_export(Ir::string($type, 'kind'), true) . ' is not one the boundary decodes.'),
         };
     }
@@ -77,6 +80,7 @@ final class WireCodec
             'enum' => $value instanceof \BackedEnum ? $value->value : $value,
             'ref' => is_object($value) ? self::encodeObject($contract, Ir::string($type, 'schema') ?? '', $value) : $value,
             'array' => array_map(static fn (mixed $item): mixed => self::encode($contract, Ir::map($type, 'items'), $item), is_array($value) ? array_values($value) : []),
+            self::OPAQUE => $value,
             default => throw new \LogicException('seampact: the type kind ' . var_export(Ir::string($type, 'kind'), true) . ' is not one the boundary encodes.'),
         };
     }
