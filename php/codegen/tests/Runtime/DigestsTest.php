@@ -39,4 +39,10 @@ final class DigestsTest extends TestCase
     {
         self::assertSame('[0.5,-0.25,123456.789,1e+300,2.5e-9,0]', Digests::canonical([0.5, -0.25, 123456.789, 1e300, 2.5e-9, -0.0]));
     }
+
+    public function testAStringThatIsNotUtf8IsRefusedRatherThanFoldedIntoAnother(): void
+    {
+        $this->expectException(\JsonException::class);
+        Digests::hexOf(["\xFF"]);
+    }
 }

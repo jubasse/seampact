@@ -49,4 +49,13 @@ final class QueryLinksTest extends TestCase
         self::assertSame(['limit=1', 'q=a%3E;rel=%22evil%22,%3Chttps://evil.example/'], $kept);
         self::assertStringNotContainsString('>', implode('&', $kept));
     }
+
+    public function testAnUnexplodedListSplitsOnRawCommasOnlyThenDecodesEachItem(): void
+    {
+        $unexploded = ['kind' => 'list', 'explode' => false];
+
+        self::assertSame(['createdAt,createdAt'], WireValues::listItems(['createdAt%2CcreatedAt'], $unexploded));
+        self::assertSame(['a', 'b c'], WireValues::listItems(['a,b%20c'], $unexploded));
+        self::assertSame(['a,b'], WireValues::listItems(['a%2Cb'], null));
+    }
 }
