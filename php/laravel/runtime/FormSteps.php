@@ -9,9 +9,8 @@ use Illuminate\Http\Request;
 use Seampact\Codegen\Runtime\AccessSteps;
 use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\ContractRefusal;
-use Seampact\Codegen\Runtime\FieldRights;
 use Seampact\Codegen\Runtime\Ir;
-use Seampact\Codegen\Runtime\WireCodec;
+use Seampact\Codegen\Runtime\TypedInput;
 
 /**
  * The FormRequest's side of the check order: a failed validation becomes the operation's `schemaInvalid` 400 with
@@ -51,42 +50,7 @@ final class FormSteps
     /** Step 7, then the typed input of the operation. */
     public static function passed(Request $request, string $api): object
     {
-        $state = BoundaryState::required($request, $api);
-        FieldRights::input($state);
-
-        $types = $state->contract->operationTypes($state->operationId);
-        $operation = $state->contract->operation($state->operationId);
-        $inputClass = Ir::string($types, 'input') ?? throw new \LogicException("seampact: no generated input class for operation '{$state->operationId}'.");
-        $data = InputTree::of($request, $api)->parts();
-        $arguments = [];
-        foreach (Ir::map($types, 'parts') as $part => $partTypes) {
-            $class = Ir::string($partTypes, 'class');
-            if ($class === null) {
-                continue;
-            }
-            $declared = self::paramMembers(Ir::maps(Ir::map($operation, 'params'), $part === 'headers' ? 'header' : $part));
-            $values = $data[$part] ?? new \stdClass();
-            $arguments[$part] = new $class(...WireCodec::arguments($state->contract, Ir::map($partTypes, 'members'), $declared, $values instanceof \stdClass ? $values : new \stdClass()));
-        }
-        if (Ir::has($operation, 'input') && is_array($operation['input'])) {
-            $arguments['body'] = WireCodec::decode($state->contract, Ir::map($operation['input'], 'schema'), $state->body);
-        }
-
-        return $state->contractInput = new $inputClass(...$arguments);
-    }
-
-    /**
-     * Params read as object members: a required param is never optional, an optional one is absent when not sent.
-     *
-     * @param list<array<array-key, mixed>> $params
-     * @return list<array<array-key, mixed>>
-     */
-    private static function paramMembers(array $params): array
-    {
-        return array_map(
-            static fn (array $param): array => ['name' => $param['name'] ?? '', 'type' => $param['type'] ?? null, 'optional' => !Ir::true($param, 'required'), 'nullable' => false],
-            $params,
-        );
+        return TypedInput::build(BoundaryState::required($request, $api), InputTree::of($request, $api)->parts());
     }
 
     /** @param array<string, array<string, string>> $nativeRuleNames */
