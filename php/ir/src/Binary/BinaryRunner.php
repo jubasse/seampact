@@ -9,9 +9,10 @@ namespace Seampact\Ir\Binary;
  * array command, so no shell reads it, from the app config's directory, with the contract's environment only.
  * Every path is made absolute before any check, so the child, which starts in another directory, gets the files
  * checked. The output directory is a fresh one created owner-only in the system temporary directory; only the
- * `<api>.ir.json` of each api asked for is read from it, then it is removed. Standard input and output are the
- * null device: the diagnostics are on standard error. Exits 1 (refused) and 2 (a usage error) are refused as
- * `binary.compile-refused` with the binary's diagnostics.
+ * `<api>.ir.json` of each api asked for is read from it, then it is removed. Standard input is the null device;
+ * the diagnostics are on standard error. Exits 1 (refused) and 2 (a usage error) are refused as
+ * `binary.compile-refused` with the binary's diagnostics. `generate` and `check` on the app's OpenAPI documents run
+ * the same way, their standard output kept as the lines to print.
  */
 final class BinaryRunner
 {
@@ -21,7 +22,7 @@ final class BinaryRunner
 
     private const KILL_SIGNAL = 9;
 
-    // Standard error is kept up to this many bytes; the rest is counted.
+    // Each output stream is kept up to this many bytes; the rest is counted.
     private const DIAGNOSTICS_BYTES_MAX = 1024 * 1024;
 
     private const POLL_MICROSECONDS = 20_000;
@@ -67,7 +68,7 @@ final class BinaryRunner
         $outputDirectory = self::newOutputDirectory();
 
         try {
-            [$exit, $diagnostics] = self::run(
+            [$exit, , $diagnostics] = self::run(
                 [$binary->path, 'compile', '--config', $configFile, '--out', $outputDirectory],
                 dirname($configFile),
                 ChildEnvironment::of($parentEnvironment, $windows),
@@ -79,6 +80,58 @@ final class BinaryRunner
         } finally {
             self::removeOutputDirectory($outputDirectory);
         }
+    }
+
+    /**
+     * Runs `generate` or `check` on the app config `$configFile`, from its directory, with the checks, environment
+     * and deadline of `compile`: the binary writes or checks the config's OpenAPI documents and leaves the Composer
+     * entries to this runner; an npm entry is its own refusal. Each `$bundleDirectories` item hands over, by source
+     * name, a bundle this runner already fetched and checked (`--bundle-directory <source>=<dir>`); the binary checks
+     * it again against the source's integrity and fetches nothing.
+     *
+     * @param array<string, string> $bundleDirectories
+     * @param array<string, string> $parentEnvironment the variables of this process, filtered to the contract's
+     * @throws BinaryRefusedException `binary.cache-unsafe`, `binary.hash-mismatch`, `binary.documents-refused`,
+     *     `binary.compile-timeout` or `binary.compile-failed`
+     */
+    public static function documents(
+        InstalledBinary $binary,
+        string $configFile,
+        DocumentsCommand $command,
+        array $bundleDirectories,
+        float $timeoutSeconds,
+        array $parentEnvironment,
+        bool $windows,
+    ): BinaryDocumentsOutput {
+        $configFile = AbsolutePath::resolved($configFile);
+        self::refuseRelativeBinary($binary);
+        $binary->refuseUnlessIntact();
+
+        $arguments = [$binary->path, $command->value, '--config', $configFile];
+        ksort($bundleDirectories, SORT_STRING);
+        foreach ($bundleDirectories as $source => $directory) {
+            array_push($arguments, '--bundle-directory', $source . '=' . AbsolutePath::resolved($directory));
+        }
+
+        [$exit, $stdout, $stderr] = self::run($arguments, dirname($configFile), ChildEnvironment::of($parentEnvironment, $windows), $timeoutSeconds, $windows);
+
+        if ($exit['signal'] !== null) {
+            throw self::failed("was stopped by the signal {$exit['signal']}", $stderr);
+        }
+
+        if ($exit['code'] === self::EXIT_REFUSED || $exit['code'] === self::EXIT_USAGE) {
+            throw BinaryRefusedException::of(
+                BinaryFailureCode::DocumentsRefused,
+                rtrim("The compiler binary exited with {$exit['code']} on the app's OpenAPI documents:\n{$stderr}{$stdout}"),
+                'Fix what the diagnostics say, reading `seampact generate` there as `vendor/bin/seampact generate`: a document that differs is written again by it, then committed; a document edited by hand is not overwritten, so delete it first.',
+            );
+        }
+
+        if ($exit['code'] !== self::EXIT_COMPILED) {
+            throw self::failed("exited with the code {$exit['code']}", $stderr);
+        }
+
+        return new BinaryDocumentsOutput($stdout, $stderr);
     }
 
     /**
@@ -115,20 +168,27 @@ final class BinaryRunner
     }
 
     /**
-     * Standard error goes to a private temporary file, read once the child exits: a pipe would block on Windows,
-     * where pipes cannot be read without blocking, and the deadline would not hold.
+     * Standard output and error go to private temporary files, read once the child exits: a pipe would block on
+     * Windows, where pipes cannot be read without blocking, and the deadline would not hold.
      *
      * @param list<string> $command
      * @param array<string, string> $environment
-     * @return array{array{code: int, signal: ?int}, string}
+     * @return array{array{code: int, signal: ?int}, string, string} the exit, standard output and standard error
      */
     private static function run(array $command, string $directory, array $environment, float $timeoutSeconds, bool $windows): array
     {
         $nullDevice = $windows ? 'NUL' : '/dev/null';
-        $errorFile = self::newErrorFile();
+        $outputFile = self::newStreamFile('.stdout');
 
         try {
-            $descriptors = [0 => ['file', $nullDevice, 'r'], 1 => ['file', $nullDevice, 'w'], 2 => ['file', $errorFile, 'w']];
+            $errorFile = self::newStreamFile('.stderr');
+        } catch (BinaryRefusedException $refused) {
+            unlink($outputFile);
+            throw $refused;
+        }
+
+        try {
+            $descriptors = [0 => ['file', $nullDevice, 'r'], 1 => ['file', $outputFile, 'w'], 2 => ['file', $errorFile, 'w']];
             $process = proc_open($command, $descriptors, $pipes, $directory, $environment, ['bypass_shell' => true]);
 
             if (!is_resource($process)) {
@@ -139,9 +199,11 @@ final class BinaryRunner
 
             return [
                 ['code' => $status['exitcode'], 'signal' => $status['signaled'] ? $status['termsig'] : null],
-                self::diagnosticsOf($errorFile),
+                self::streamTextOf($outputFile),
+                self::streamTextOf($errorFile),
             ];
         } finally {
+            unlink($outputFile);
             unlink($errorFile);
         }
     }
@@ -177,23 +239,23 @@ final class BinaryRunner
         }
     }
 
-    private static function diagnosticsOf(string $errorFile): string
+    private static function streamTextOf(string $streamFile): string
     {
-        $size = filesize($errorFile);
-        $kept = file_get_contents($errorFile, false, null, 0, self::DIAGNOSTICS_BYTES_MAX);
+        $size = filesize($streamFile);
+        $kept = file_get_contents($streamFile, false, null, 0, self::DIAGNOSTICS_BYTES_MAX);
         $shown = self::withoutControlCharacters($kept === false ? '' : $kept);
         $dropped = ($size === false ? 0 : $size) - self::DIAGNOSTICS_BYTES_MAX;
 
         return $dropped > 0 ? $shown . "\n[{$dropped} more bytes of diagnostics not shown]\n" : $shown;
     }
 
-    private static function newErrorFile(): string
+    private static function newStreamFile(string $suffix): string
     {
-        $file = self::temporaryPath('.stderr');
+        $file = self::temporaryPath($suffix);
         $handle = @fopen($file, 'x');
 
         if ($handle === false || !fclose($handle) || !chmod($file, 0600)) {
-            throw self::failed("could not be given a diagnostics file ('{$file}' cannot be created)", '');
+            throw self::failed("could not be given a file for its output ('{$file}' cannot be created)", '');
         }
 
         return $file;

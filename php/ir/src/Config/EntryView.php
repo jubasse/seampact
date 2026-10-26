@@ -58,17 +58,27 @@ final class EntryView
      */
     public static function usedSources(AppConfig $config): array
     {
+        return self::sourcesHoldingRefs($config, array_merge([], ...array_map(static fn (AppConfigEntry $entry): array => $entry->apiRefs(), $config->entries)));
+    }
+
+    /**
+     * The sources that may hold one of `$refs` (each an api name alone or `<source>/<api>`), in the order the app
+     * config defines them, by the rule of `usedSources`.
+     *
+     * @param list<string> $refs
+     * @return list<string>
+     */
+    public static function sourcesHoldingRefs(AppConfig $config, array $refs): array
+    {
         $named = [];
         $bareApis = [];
 
-        foreach ($config->entries as $entry) {
-            foreach ($entry->apiRefs() as $text) {
-                [$source, $api] = self::parsed($text);
-                if ($source === null) {
-                    $bareApis[] = $api;
-                } else {
-                    $named[] = $source;
-                }
+        foreach ($refs as $text) {
+            [$source, $api] = self::parsed($text);
+            if ($source === null) {
+                $bareApis[] = $api;
+            } else {
+                $named[] = $source;
             }
         }
 

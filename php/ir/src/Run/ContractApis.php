@@ -26,7 +26,7 @@ use Seampact\Ir\Config\WorkspaceApiNames;
 /**
  * Gets the IR of each source the PHP entries use (ADR 0010 "How a native plugin gets the IR"): a bundle source
  * through its channel and the pinned-bundle check, a `path` source compiled by the pinned binary, installed only when
- * such a source is used. Every source is tried, so one run names every problem.
+ * such a source or the documents need it. Every source is tried, so one run names every problem.
  */
 final class ContractApis
 {
@@ -148,8 +148,31 @@ final class ContractApis
         return $apis;
     }
 
-    // The binary is installed once, on the first `path` source, and only then (ADR 0010 "Lazy").
-    private function binary(): InstalledBinary|BinaryFailure
+    /**
+     * The checked cache entry of each bundle source this run read, by source name, for the binary's documents run;
+     * and the problems of the entries that are gone or changed since.
+     *
+     * @return array{array<string, string>, list<ConfigProblem>}
+     */
+    public function handedBundles(): array
+    {
+        $directories = [];
+        $problems = [];
+
+        foreach ($this->checkedBundles as [$name, $integrity]) {
+            $entry = $this->fetcher->verifiedCacheEntry($integrity);
+            if ($entry instanceof BundleFailure) {
+                $problems[] = RunProblems::ofBundle($entry, $name);
+            } else {
+                $directories[$name] = $entry;
+            }
+        }
+
+        return [$directories, $problems];
+    }
+
+    // The binary is installed once, on the first `path` source or the documents, and only then (ADR 0010 "Lazy").
+    public function binary(): InstalledBinary|BinaryFailure
     {
         if ($this->binary === null) {
             try {

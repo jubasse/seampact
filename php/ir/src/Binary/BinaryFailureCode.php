@@ -21,5 +21,6 @@ enum BinaryFailureCode: string
     case CompileRefused = 'binary.compile-refused';
     case CompileTimeout = 'binary.compile-timeout';
     case CompileFailed = 'binary.compile-failed';
+    case DocumentsRefused = 'binary.documents-refused';
     case PhpUnpatched = 'php.unpatched';
 }

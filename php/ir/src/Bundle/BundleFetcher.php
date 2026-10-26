@@ -71,6 +71,30 @@ final readonly class BundleFetcher
         }
     }
 
+    /**
+     * The cache entry of the bundle pinned by `$integrity`, once it passes the pinned-bundle check again, so a host
+     * that hands the bundle over (the compiler binary's `--bundle-directory`) gets only a path just checked; an entry
+     * that is missing or fails the check is refused as `bundle.cache-invalid`, naming it. A cache entry has the
+     * release layout whatever its channel.
+     */
+    public function verifiedCacheEntry(string $integrity): string|BundleFailure
+    {
+        $entry = $this->cache->entryOf($integrity);
+        $verified = $entry !== null && is_dir($entry) && !is_link($entry) && BundleVerifier::verify($entry, $integrity, BundleChannel::Release)->ok;
+        if ($verified) {
+            return $entry;
+        }
+
+        $named = $entry ?? "(no cache entry for {$integrity})";
+
+        return new BundleFailure(
+            BundleFailureCode::CacheInvalid,
+            "The cached bundle at {$named} is gone or fails the pinned-bundle check since this run read it; it is not handed to the compiler binary.",
+            $entry === null ? 'Pin the source with a `sha256-` integrity, then run again.' : "Remove {$entry}, then run again to fetch the bundle afresh.",
+            $entry,
+        );
+    }
+
     /** @return array{string, string}|BundleFailure the bundle directory and the temporary directory to remove */
     private function fetchedDirectory(BundleSource $source, string $baseDirectory, LocalSourcePolicy $localSources): array|BundleFailure
     {

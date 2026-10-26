@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Ir\Run;
 
 use Seampact\Ir\Binary\BinaryRefusedException;
+use Seampact\Ir\Binary\DocumentsCommand;
 use Seampact\Ir\Binary\CacheRoot;
 use Seampact\Ir\Binary\PhpRuntimeCheck;
 use Seampact\Ir\Binary\RootPackage;
@@ -32,16 +33,13 @@ use Seampact\Ir\Write\WriterRefusal;
 
 /**
  * `vendor/bin/seampact generate` and `check`: reads the app config, gets the IR of each source the PHP entries use,
- * then generates each entry with the target its `use` names and plans its write (ADR 0015 "Writing files"). Generate
- * writes only when every entry planned, so one refusal leaves every directory as it was; check compares the plans
+ * then generates each entry with the target its `use` names and plans its write (ADR 0015 "Writing files"). The
+ * pinned binary then writes or checks the app's OpenAPI documents. Generate writes the entries only when every entry
+ * planned and the documents passed, so one refusal leaves every entry directory as it was; check compares the plans
  * with the files on disk at the `checks.generated` level and writes nothing. The PHP version check runs first.
  */
 final class Runner
 {
-    private const WAITS_CODE = 'config.key.waits';
-
-    private const NO_DOCUMENTS = 'none';
-
     private const ERROR = 'error';
 
     private const DISABLED = 'disabled';
@@ -66,6 +64,11 @@ final class Runner
             return RunReport::refused($problems);
         }
 
+        $documents = Documents::run($prepared, $settings, DocumentsCommand::Generate);
+        if (is_array($documents)) {
+            return RunReport::refused($documents);
+        }
+
         $lines = [];
         foreach ($prepared->plans as $plan) {
             if ($plan->write !== null) {
@@ -75,7 +78,7 @@ final class Runner
             }
         }
 
-        return new RunReport([...$lines, ...self::leftEntries($prepared->config)], [], []);
+        return new RunReport([...$documents->lines, ...$lines, ...self::leftEntries($prepared->config)], [], [], $documents->warnings);
     }
 
     public static function check(RunSettings $settings): RunReport
@@ -87,7 +90,7 @@ final class Runner
 
         $lines = array_map(
             static fn (array $bundle): string => "seampact: source '{$bundle[0]}' passes the pinned-bundle check, integrity {$bundle[1]}.",
-            $prepared->checkedBundles,
+            $prepared->contractApis->checkedBundles,
         );
         $level = JsonValue::string($prepared->config->checks, 'generated') ?? self::ERROR;
         $errors = [];
@@ -112,7 +115,12 @@ final class Runner
         $printed = array_values(array_filter($warnings, static fn (ConfigProblem $warning): bool => !in_array($warning->code, $ignored, true)));
         $matched = $errors === [] ? ['seampact: the generated files match the files on disk.'] : [];
 
-        return new RunReport([...$lines, ...$matched, ...self::leftEntries($prepared->config)], $printed, $errors);
+        $documents = Documents::run($prepared, $settings, DocumentsCommand::Check);
+        if (is_array($documents)) {
+            return new RunReport([...$lines, ...self::leftEntries($prepared->config)], $printed, [...$errors, ...$documents]);
+        }
+
+        return new RunReport([...$lines, ...$documents->lines, ...$matched, ...self::leftEntries($prepared->config)], $printed, $errors, $documents->warnings);
     }
 
     /** @return PreparedRun|list<ConfigProblem> */
@@ -130,7 +138,7 @@ final class Runner
             return $config;
         }
 
-        $problems = [...self::waitingForms($config), ...EntryView::unknownSourceProblems($config)];
+        $problems = EntryView::unknownSourceProblems($config);
         $psr4 = Psr4Namespaces::of($root->composerFile);
         if ($config->entries !== []) {
             $outDirProblem = $psr4->outDirProblem($config->outDir, $config->displayName);
@@ -163,18 +171,21 @@ final class Runner
             return $contractApis;
         }
 
-        $apis = $contractApis->read($config, EntryView::usedSources($config));
+        // The binary's documents run fetches nothing: each source it reads is read here, so each bundle can be handed over.
+        $used = EntryView::usedSources($config);
+        $read = [...$used, ...array_values(array_diff(Documents::sources($config), $used))];
+        $apis = $contractApis->read($config, $read);
         if ($apis !== [] && $apis[0] instanceof ConfigProblem) {
             return array_values(array_filter($apis, static fn (object $item): bool => $item instanceof ConfigProblem));
         }
 
-        $sourceApis = array_values(array_filter($apis, static fn (object $item): bool => $item instanceof SourceApi));
+        $sourceApis = array_values(array_filter($apis, static fn (object $item): bool => $item instanceof SourceApi && in_array($item->source, $used, true)));
         $plans = array_map(
             static fn (AppConfigEntry $entry): EntryPlan => self::plan($entry, $targets[$entry->id()], $sourceApis, $psr4, $onHandEdit),
             $config->entries,
         );
 
-        return new PreparedRun($config, $contractApis->checkedBundles, $plans);
+        return new PreparedRun($config, $contractApis, $plans);
     }
 
     /** @return ContractApis|list<ConfigProblem> */
@@ -195,26 +206,6 @@ final class Runner
             $settings->vendorDirectory,
             $settings->environment,
         );
-    }
-
-    /**
-     * The app config's forms this release does not serve yet, each refused by name with what brings it: seampact's
-     * OpenAPI documents, written by the pinned binary in a later release.
-     *
-     * @return list<ConfigProblem>
-     */
-    private static function waitingForms(AppConfig $config): array
-    {
-        if ($config->entries === [] || $config->openapi === self::NO_DOCUMENTS) {
-            return [];
-        }
-
-        return [new ConfigProblem(
-            self::WAITS_CODE,
-            "seampact's OpenAPI documents are not written by vendor/bin/seampact yet; they come with the documents of the pinned compiler binary. An app with a server target writes them unless `openapi` is `none`.",
-            'Set `openapi: none` for now; the framework\'s own document is not touched.',
-            "{$config->displayName} openapi",
-        )];
     }
 
     /** @param list<SourceApi> $apis */
