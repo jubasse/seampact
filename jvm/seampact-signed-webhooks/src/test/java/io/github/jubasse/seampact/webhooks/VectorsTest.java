@@ -115,6 +115,7 @@ class VectorsTest {
             () -> new SignatureScheme(TemplateSignatureVerifier.SUPPORTED_ALGORITHM, "{ts}.{rawBody}", SignatureEncoding.HEX)
         );
         assertTrue(refused.getMessage().contains("'{ts}.{rawBody}'"));
+        assertEquals("signature.tolerance.invalid", TimestampWithoutToleranceException.CODE);
     }
 
     @Test
