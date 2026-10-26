@@ -326,14 +326,10 @@ The boundary runtime is copied into `Laravel\Runtime` with the generated header,
 
 ### Refused by name or waiting
 
-`generate` refuses by name, with its code and fix, every input the delivered PRs do not serve ([A47](../decisions.md#a47)), each with the PR that brings it. It reads only the operations the target entry's `operations` filter keeps (ADR 0011): a form that no kept operation carries is neither generated nor refused.
+`generate` refuses by name, with its code and fix, every input the target does not serve ([A47](../decisions.md#a47)), each with what it waits for. It reads only the operations the target entry's `operations` filter keeps (ADR 0011): a form that no kept operation carries is neither generated nor refused.
 
 | Waits for | What |
 |---|---|
-| laravel-2 | rights and rules an operation requires, which the access middleware runs, rule proof fields in the body (`recentAuth` on purgeTask), `artefacts.bootCheck` and `artefacts.accessHooks: true` |
-| laravel-3 | paging, its structured `sort` query parameter (listTasks) and its `page` response, idempotency replay, throttle, cache and ETag headers, the response headers these features derive, retry headers, signed routes and their raw body, sensitive values and the error codes that forbid caching (`noStore`, refused by name until then), opaque values (`PaymentEvent.data` on payments) |
-| laravel-3b | absolute URLs, deadline budgets (`budgetMs`) and headers, relayed operations (`relays`), the `pack:laravel` styles and success envelopes |
-| laravel-4 | the mapping of `abort(401|403|429)` from a handler or an app middleware to its role, the guest redirect of `auth` and `auth.session` skipped on a contract request, the per-kind middleware lists, the published `config/seampact/<api>.php` |
 | a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target: the reference contract carries none; multipart and `file` (when it comes: `file`, `mimetypes` and `max` rules; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`response()->streamDownload()`) and redirect (`redirect()->to()`) bodies and native access (`artefacts.accessHooks: false`), which the Spring target refuses the same way and the reference contract does not carry; sort keys restricted by a right (step 7), which the Spring target does not check either; unions (`oneOf`), designed above, until a contract needs one |
 | after 1.0 | Laravel 12 and older (refused, not waiting); Octane (refused, below); `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs, as the Spring target refuses them: `list` responses, response headers the route writes itself, principal requirements, bindings, upstream calls, degradable operations, operation features, format meta members, success format headers, success envelope slots other than the payload, the status and the path, extension keys, input field rights below the top level, scope ids not read from the path, bucket keys not read from the path, a scope or the principal, rule proofs outside the body, principals of several variants, signatures verified by the application or keyed from the request, parameter and property defaults, open enums, maps, `int64` and `decimal`, kept unknown keys |
 
@@ -355,7 +351,7 @@ The proof is:
 - a green suite row per PHP version;
 - `php/laravel`'s `RedactionTest.php` (one generated class of each kind of "Redaction" in the golden, holding a known secret, which `var_dump`, `print_r` and VarDumper must not show while `[redacted]` is present) and the suite's security and media rows, a Sanctum route among them.
 
-Suite cases that wait for a later PR carry a refusal naming that PR; none waits from laravel-3b. The suite resolves a captured link against the URL of the request it came from (RFC 3986), so `pack-laravel-page-next-link` follows the query-only next link a relative-URL page writes.
+The suite runs every case of the reference contract: the consumer's refusal list is empty. The suite resolves a captured link against the URL of the request it came from (RFC 3986), so `pack-laravel-page-next-link` follows the query-only next link a relative-URL page writes.
 
 ### Delivery
 

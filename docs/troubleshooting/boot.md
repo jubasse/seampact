@@ -58,3 +58,27 @@ Same start check, run by `bin/console cache:warmup` and on the first request. Th
 | `operation '<id>' has no route`, `operation '<id>' has <n> routes` | Import the api's resource, type `seampact`, once in your routing configuration. |
 
 An invalid `%env()%` value of the bundle configuration does not stop the start: the api answers 500 on its routes and the log names the key.
+
+## Laravel
+
+The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. It comes at `php artisan route:cache` and at the first HTTP boot while the routes are not cached.
+
+| You see | Do |
+|---|---|
+| `no authenticate hook for the identity 'user': bind <Interface> in the container` | Bind the generated `<Identity>AuthenticateHook` to your class in a service provider. |
+| `no decider for '<name>': tag a Decider naming it, or '*', with 'seampact.<api>.deciders'` | Tag a class implementing the generated `Decider` with that tag. |
+| `no scope resolver for the scope '<scope>': tag a ScopeResolver with ...` | Tag a scope resolver with `seampact.<api>.scope-resolvers`. |
+| `no idempotency store for ...: bind Seampact\Hooks\IdempotencyStore in the container` | Bind an `IdempotencyStore` implementation. |
+| `operation '<id>' has no handler: bind <Endpoints> to a controller in the container` | Bind the generated `<Resource>Endpoints` interface to your controller. |
+| `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | List the route under `frameworkRoutes` of the entry, with a reason, then run `seampact generate`. |
+| `operation '<id>' has 0 contract routes: call Route::seampact('<api>') once in the app's routes` | Call `Route::seampact('<api>')` once in `routes/web.php` or `routes/api.php`. Call it outside any route group prefix. |
+| `the boundary middleware ... is not the first global middleware` | Remove the global middleware you prepended before it. Two apis whose base paths overlap: set `catch_all: false` on the broader one. |
+| `the access middleware ... is not before SubstituteBindings in the middleware priority` | Do not reorder the middleware priority; put your own entries after the contract's. |
+| `operation '<id>' runs without the access middleware: remove the withoutMiddleware() call on its route` | Remove `withoutMiddleware()` from the contract route. |
+| `the exception handler ... has no 'renderable' method` | Make your handler extend Laravel's `Illuminate\Foundation\Exceptions\Handler`. |
+| `'seampact.<api>.public_origin' is not set` or `... is '<value>', which ...` | The contract writes absolute URLs. Set `public_origin` in `config/seampact/<api>.php` to a scheme, host and optional port, such as `https://api.example.com`. |
+| `Laravel <version> runs here, and the generated code serves Laravel 13 only` | Run the app on Laravel 13. |
+| `ext-zlib is not loaded` | Enable the `zlib` PHP extension. |
+| `runtime.octane.unsupported` | Serve the app with php-fpm, or keep this api's provider out of the Octane app. |
+| `seampact: no generated routes for the api '<api>'; list its service provider in bootstrap/providers.php.` | Add the generated `<Api>SeampactServiceProvider` to `bootstrap/providers.php`. |
+| `config('seampact.<api>.middleware.<kind>') is not a list of middleware names` | Set that key in `config/seampact/<api>.php` to a list of strings such as `['auth:sanctum']`, or to `[]`. |
