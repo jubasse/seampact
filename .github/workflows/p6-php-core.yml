@@ -68,12 +68,14 @@ jobs:
         id: binary-rows
         uses: ./.github/actions/lane-changes
         with:
-          # The runner, the targets and their shared code, the binary, the reference contract, the smoke's channels,
-          # and this workflow.
+          # The runner, the targets and their shared code, the binary and the CLI and compiler it embeds, the
+          # reference contract, the smoke's channels, and this workflow.
           watched-paths: |
             ^php/ir/(src|bin|resources)/
             ^php/(codegen|laravel|symfony|hooks)/
             ^packages/tools/binary/
+            ^packages/core/cli/
+            ^packages/core/compiler/
             ^fixtures/reference/
             ^scripts/dist-smoke/
             ^\.github/actions/
@@ -348,6 +350,96 @@ jobs:
             echo "$target: generated and checked from the local YAML, documents included."
           done
 
+  # The runner's hand-over to the binary: the reference contract bundled by the binary and pinned as a local git tag,
+  # a Laravel project with no `openapi` key, so `vendor/bin/seampact` fetches and checks the bundle, then hands its
+  # cache entry to the binary's documents run. With the git repository removed, check still passes: the binary
+  # fetched nothing. Node is removed first.
+  bundle-hand-over:
+    name: bundle hand-over (php)
+    needs: [changes, binary]
+    if: needs.changes.outputs.php-core == 'true' && needs.changes.outputs.binary-rows == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Remove Node from the runner, so the PHP path is proven to need none
+        shell: bash
+        run: |
+          set -euo pipefail
+          for node in $(which -a node nodejs npm npx corepack 2>/dev/null | sort -u); do
+            sudo rm -f "$node"
+          done
+          if command -v node || command -v npm || command -v npx; then
+            echo "Node is still on the PATH."
+            exit 1
+          fi
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: php-core-binary-linux-x64
+          path: bin
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.3"
+          tools: composer:2.10.2
+          coverage: none
+      - name: Generate and check the documents from a handed-over bundle
+        shell: bash
+        env:
+          WORK: ${{ runner.temp }}/hand-over
+        run: |
+          set -euo pipefail
+          binary="$GITHUB_WORKSPACE/bin/seampact-linux-x64"
+          chmod +x "$binary"
+          sha256=$(sha256sum "$binary" | cut -d' ' -f1)
+          retry() { for delay in 10 30 90; do "$@" && return 0; echo "Retrying in ${delay} s: $*"; sleep "$delay"; done; "$@"; }
+          sh scripts/consumers/targets/laravel/bundle.sh "$binary" "$WORK/bundled"
+          integrity=$(cat "$WORK/bundled/integrity")
+          contract_repo="$WORK/contract-repo"
+          mkdir -p "$contract_repo"
+          cp -R "$WORK/bundled/bundle" "$contract_repo/bundle"
+          git -C "$contract_repo" init -q
+          git -C "$contract_repo" add bundle
+          git -C "$contract_repo" -c user.name=seampact -c user.email=seampact@localhost commit -qm "Bundle the reference contract."
+          git -C "$contract_repo" tag v1.0.0
+          app="$WORK/app"
+          mkdir -p "$app/src"
+          repositories=""
+          for package in ir codegen hooks laravel; do
+            repositories="$repositories{\"type\": \"path\", \"url\": \"$GITHUB_WORKSPACE/php/$package\", \"options\": {\"symlink\": false, \"versions\": {\"seampact/$package\": \"dev-develop\"}}},"
+          done
+          cat > "$app/composer.json" <<JSON
+          {
+            "name": "seampact-ci/bundle-hand-over",
+            "type": "project",
+            "require": {"php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12", "laravel/framework": "~13.38.0", "seampact/laravel": "dev-develop"},
+            "repositories": [${repositories%,}],
+            "autoload": {"psr-4": {"App\\\\": "src/"}},
+            "minimum-stability": "dev",
+            "prefer-stable": true,
+            "config": {"platform": {"php": "8.3.36"}},
+            "extra": {"seampact": {"binary": {"path": "$binary", "sha256": "$sha256"}}}
+          }
+          JSON
+          # No `openapi` key: the binary writes the default documents of the entry's api from the handed-over bundle.
+          cat > "$app/seampact.config.yaml" <<YAML
+          outDir: src/Generated
+          allowLocal: true
+          sources:
+            contract:
+              git: { url: "$contract_repo", tag: v1.0.0, directory: bundle }
+              integrity: "$integrity"
+          targets:
+            - { id: tasks, out: Tasks, use: seampact/laravel, api: tasks, operations: { include: [health, getTask] } }
+          YAML
+          retry composer update --working-dir="$app" --no-interaction --no-progress
+          (cd "$app" && vendor/bin/seampact generate && vendor/bin/seampact check)
+          test -n "$(ls "$app/openapi")" || { echo "The binary wrote no OpenAPI document."; exit 1; }
+          rm -rf "$contract_repo"
+          (cd "$app" && vendor/bin/seampact check)
+          echo "The bundle was handed over: check passes with the contract repository removed."
+
   # The PHP leg of the channel smoke tests: a Laravel project generates and checks from the release and git channels
   # that `scripts/dist-smoke/cli.ts serve` starts, with `openapi: none` and no binary, and each tampered copy is
   # refused as `bundle.file-hash`, naming the file. The bundle cache is emptied before each case: it is keyed by
@@ -457,7 +549,7 @@ jobs:
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   php-core:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, packages, split, split-drift, binary, local-yaml, channel-smoke]
+    needs: [changes, packages, split, split-drift, binary, local-yaml, bundle-hand-over, channel-smoke]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -470,4 +562,4 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.php-core }}
-          allow-skip: ${{ needs.changes.outputs.binary-rows == 'false' && 'binary local-yaml channel-smoke' || '' }}
+          allow-skip: ${{ needs.changes.outputs.binary-rows == 'false' && 'binary local-yaml bundle-hand-over channel-smoke' || '' }}
