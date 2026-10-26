@@ -1,6 +1,6 @@
 # ADR 0023: The Laravel server target
 
-Status: proposed
+Status: accepted
 
 ## Context
 
@@ -42,7 +42,7 @@ Codegen emits, per api, under the target entry's `out` and the `namespace` optio
 
 - **Per operation**:
   - the FormRequest (`UpdateTaskRequest`), which runs steps 6 to 8 and hands over the typed input with `contractInput()`;
-  - the input class, the result classes and one exception class per code.
+  - the input class, the result classes and one exception class per code. The input holds the path, query and header parameters and the body; the credential and CSRF headers, which the boundary reads, are not in it.
 - **The boundary middleware** (`TasksBoundary`), a global middleware prepended before every other one, `ValidatePathEncoding` and `TrustProxies` included (spike). It runs step 1:
   - the request context;
   - the raw-path match of "Routes" below;
@@ -61,7 +61,7 @@ Codegen emits, per api, under the target entry's `out` and the `namespace` optio
 
 Both middleware are registered from the provider, with no edit to `bootstrap/app.php` (spike). The routes point at the interface (`[TasksEndpoints::class, 'updateTask']`), which the container resolves to the bound controller, cached routes included (spike). Each route is named `seampact.<api>.<operationId>`.
 
-The generated types go into the `namespace` option (no default: ADR 0010 "Namespaces"). The Laravel placement goes into its `Laravel` sub-namespace, and the copied runtime into `Laravel\Runtime`. A declared schema `UpdateTask` and a placement class never share a namespace. Fixed class names that ADR 0007 has no role for are Pascal-case words prefixed by the api's type name, and constants are upper snake case (`MAX_CHECKED_ERROR_BODY_BYTES`).
+The generated types go into the `namespace` option (no default: ADR 0010 "Namespaces"), which must be the PSR-4 namespace `composer.json` gives the entry's output directory; the schema types go into its `Schemas` sub-namespace. The Laravel placement goes into its `Laravel` sub-namespace, and the copied runtime into `Laravel\Runtime`. A declared schema `UpdateTask` and a placement class never share a namespace. Fixed class names that ADR 0007 has no role for are Pascal-case words prefixed by the api's type name, and constants are upper snake case (`MAX_CHECKED_ERROR_BODY_BYTES`).
 
 The handler method returns the operation's generated result: an interface implemented by one final class per declared success status and by the typed error result (ADR 0007 `errors` role). It may instead throw one of the generated exceptions, declared with `@throws` on the interface method (ADR 0012 "Errors the handler answers"). A decide hook that throws Laravel's `AuthorizationException` (`Gate::authorize()`) answers the requirement's first declared denial code. Any other exception from a hook is a 500 with `onUnexpectedError` called (ADR 0012 "Failures inside hooks").
 
@@ -161,7 +161,7 @@ The boundary decodes the held body with `json_decode($bytes, false, 512, JSON_TH
 
 1. `authorize()` fails closed: unless the request carries the access middleware's mark for the FormRequest's own operation id, it throws the boundary's internal exception before any input is read (never `false`, which Laravel would answer 403), and the reply is the api's 500 with `onUnexpectedError` called. An app route to the interface or to the bound controller, a route without the access middleware, or a request under the `middleware.disable` binding that `withoutMiddleware()` sets in tests, therefore never reaches the handler; the Laravel guide says so for feature tests.
 2. `validationData()` returns the boundary's decoded input as arrays, keyed `path`, `query`, `headers` and `body`. `.`, `*` and `~` in a wire name are escaped (`~1`, `~2`, `~0`) in the data and the rule keys, so Laravel's validator reads no wire name as a path (spike); the issue pointer decodes them back.
-3. `rules()` returns, per member, `bail` and a generated rule object that checks the member's type on the objects-preserved tree (no coercion, `{}` versus `[]`, whole numbers), then the value rules. Unknown keys, `enum`, `const`, `oneOf` and the discriminator are generated rule objects. A required member is `present`, never `required`, which fails on `""` (ADR 0003 Consequences).
+3. `rules()` returns, per member, `bail` and a generated rule object that checks the member's type on the objects-preserved tree (no coercion, `{}` versus `[]`, whole numbers), then the value rules. Unknown keys, `enum`, `const`, `oneOf` and the discriminator are generated rule objects. The type rule also checks that a required member is there, never Laravel's `required`, which fails on `""` (ADR 0003 Consequences), nor `present`, which fails on a member of an absent optional object or of a parent of another type.
    - A nullable member, at the top level, nested or a `*` item, also gets `nullable` after `bail`, since Laravel runs its non-implicit rules on `null` otherwise. The generated rule objects, which are implicit, accept `null` on a nullable member and pass an absent optional member, so it stays absent.
    - A number or integer member carried as a JSON number that has a Laravel value rule also gets `numeric:strict` after the type rule, so `between`, `size`, `gt`, `gte`, `lt`, `lte` and `multiple_of` compare its value, never the length of its decimal text. `numeric:strict` accepts `1.0`, which `integer:strict` would refuse. An `int64` or `decimal` member carried as a string on the wire never gets `numeric:strict`, which refuses `"42"`: its limits stay generated rules on its decimal text. The body is decoded without `JSON_BIGINT_AS_STRING`, which would turn a large JSON number into the same string as a JSON string, so a JSON integer beyond the `int` range decodes to a float: it is a type issue on a string member, including an `int64` or `decimal` member carried as a string, and read as a float on a `number` member. On an `integer` member, the type rule accepts a float (`is_float()`) only when it is whole and its magnitude is at most 2^53, such as `1.0`: a whole float whose magnitude is at least 2^63 (so -2^63 too, since `-9223372036854775809` decodes to a float equal to `PHP_INT_MIN`) is 400 `maximum`, or `minimum` below zero, as on the JVM, and a whole float of smaller magnitude above 2^53 is refused the same way, since its value may have changed in the decode; a JSON integer that fits an `int` decodes to an `int` and is never a float.
    - The generated type rule reads presence with `array_key_exists` on the decoded tree, so an explicit `null` and an absent key never look alike.
