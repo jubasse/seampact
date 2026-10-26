@@ -140,6 +140,8 @@ const PROBLEM_JSON = "application/problem+json";
 const ABOVE_BATCH_LIMIT_BYTES = 3_000_000;
 // The token the user hook double answers with Laravel's AuthorizationException (UserHook::GATE_DENIED_TOKEN).
 const GATE_DENIED_TOKEN = "seampact-gate-denied";
+// The token it answers with Laravel's AuthenticationException (UserHook::GUARD_DENIED_TOKEN).
+const GUARD_DENIED_TOKEN = "seampact-guard-denied";
 
 async function problemCode(response: Response): Promise<unknown> {
   const body: unknown = await response.json();
@@ -204,6 +206,31 @@ describe("an AuthorizationException in an authenticate hook", () => {
 
     expect(lines.some((line) => line.includes("the role 'forbidden'"))).toBe(true);
   });
+});
+
+describe("an AuthenticationException in an authenticate hook", () => {
+  let running: RunningApp | undefined;
+
+  beforeAll(async () => {
+    running = await startLaravelApp(app);
+  }, SUITE_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await running?.close();
+  });
+
+  for (const accept of ["application/json", "text/html"]) {
+    test(`answers the unauthenticated role to Accept: ${accept}`, async () => {
+      const response = await fetch(`${running?.baseUrl}${TASK_PATH}`, {
+        headers: { authorization: `Bearer ${GUARD_DENIED_TOKEN}`, accept },
+        redirect: "manual",
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.headers.get("content-type")).toContain(PROBLEM_JSON);
+      expect(await problemCode(response)).toBe("api.unauthenticated");
+    });
+  }
 });
 
 describe("a missing hook under responses: warn", () => {
