@@ -77,7 +77,7 @@ final class TasksSeampactBundle extends AbstractBundle
         $builder->registerForAutoconfiguration(ScopeResolver::class)->addTag(Hooks::tag(self::API, Hooks::SCOPE_RESOLVERS_TAG_SUFFIX));
         $builder->registerForAutoconfiguration(UserAuthenticateHook::class)->addTag(Hooks::tag(self::API, Hooks::AUTHENTICATE_TAG_SUFFIX), [Hooks::HOOK_ATTRIBUTE => UserAuthenticateHook::class]);
         $services->set(HookCheckWarmer::class)->args([service(Hooks::class), TasksContract::class])->tag('kernel.cache_warmer');
-        $services->set(RouteCheck::class)->decorate('routing.loader')->args([service('.inner'), TasksContract::class, true]);
+        $services->set(RouteCheck::class)->decorate('routing.loader')->args([service('.inner'), TasksContract::class, TasksRouteLoader::RESOURCE, true]);
     }
 
     public function build(ContainerBuilder $container): void

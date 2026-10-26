@@ -16,8 +16,8 @@ use Seampact\Ir\Model\Operation;
 /**
  * The names of one api's Symfony placement (ADR 0024 "Placement"), claimed beside the shared names of `ApiLayout`:
  * its classes under `<namespace>\Symfony`, prefixed with the api's type name, the copied runtime under
- * `<namespace>\Symfony\Runtime`, and the api key that names its routes (`seampact.<api>.<operationId>`), its routing
- * resource and its bundle configuration (`seampact_<api>`).
+ * `<namespace>\Symfony\Runtime`, its routes (`seampact.<api id>.<operationId>`), and the api key that names its routing
+ * resource and its bundle configuration (`seampact_<api key>`).
  */
 final class SymfonyPlacement implements BoundaryNames
 {
@@ -132,9 +132,10 @@ final class SymfonyPlacement implements BoundaryNames
         return $this->constraintsOf($operationId)[1];
     }
 
+    /** Named by the api's id, as the boundary reads it (`ApiContract::routeName`), not by its routing resource key. */
     public function routeName(string $operationId): string
     {
-        return "seampact.{$this->apiKey}.{$operationId}";
+        return "seampact.{$this->layout->ir->api->id}.{$operationId}";
     }
 
     public function runtime(string $simpleName): string

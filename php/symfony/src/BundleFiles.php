@@ -119,7 +119,7 @@ final class BundleFiles
             $body .= "\$services->set({$warmer}::class)->args([service({$hooks}::class), {$contract}::class])->tag('kernel.cache_warmer');\n";
         }
         if ($this->bootCheck !== null) {
-            $body .= "\$services->set({$routeCheck}::class)->decorate('routing.loader')->args([service('.inner'), {$contract}::class, " . var_export($this->bootCheck->frameworkRoutes, true) . ']);';
+            $body .= "\$services->set({$routeCheck}::class)->decorate('routing.loader')->args([service('.inner'), {$contract}::class, {$routeLoader}::RESOURCE, " . var_export($this->bootCheck->frameworkRoutes, true) . ']);';
         }
         $load->setBody(rtrim($body));
         $class->addConstant('API', $this->placement->layout->ir->api->id)->setPrivate();

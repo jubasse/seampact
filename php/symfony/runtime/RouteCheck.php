@@ -27,10 +27,14 @@ final class RouteCheck implements LoaderInterface
     private const PROFILER_NAME = '/^_(wdt|profiler)/';
     private const PROFILER_CONTROLLER = 'web_profiler.controller.';
 
-    /** @param bool $checksFrameworkRoutes the `frameworkRoutes` switch of `artefacts.bootCheck` */
+    /**
+     * @param string $routingResource the resource the api's route loader answers, which the app imports
+     * @param bool $checksFrameworkRoutes the `frameworkRoutes` switch of `artefacts.bootCheck`
+     */
     public function __construct(
         private readonly LoaderInterface $inner,
         private readonly string $contractClass,
+        private readonly string $routingResource,
         private readonly bool $checksFrameworkRoutes,
     ) {
     }
@@ -83,7 +87,7 @@ final class RouteCheck implements LoaderInterface
         $seen = [];
         foreach ($routes->all() as $name => $route) {
             $operation = $route->getDefault(self::OPERATION_DEFAULT);
-            if (is_string($operation) && !str_starts_with($name, "seampact.{$contract->api}.")) {
+            if (is_string($operation) && $name !== $contract->routeName($operation)) {
                 // A contract route of another api of the app, which that api's own check reads.
                 continue;
             }
@@ -103,8 +107,8 @@ final class RouteCheck implements LoaderInterface
             $count = $found[$operation] ?? 0;
             if ($count !== 1) {
                 $problems[] = $count === 0
-                    ? "operation '{$operation}' has no route: import the resource '{$contract->api}' of type 'seampact' in the app's routing configuration"
-                    : "operation '{$operation}' has {$count} routes: import the resource '{$contract->api}' of type 'seampact' once";
+                    ? "operation '{$operation}' has no route: import the resource '{$this->routingResource}' of type 'seampact' in the app's routing configuration"
+                    : "operation '{$operation}' has {$count} routes: import the resource '{$this->routingResource}' of type 'seampact' once";
             }
         }
 
