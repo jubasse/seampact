@@ -86,7 +86,7 @@ final class TasksSeampactBundle extends AbstractBundle
         service('logger'),
         service(IdempotencyStore::class)->nullOnInvalid(),
     ]);
-    $services->set(TasksBoundary::class)->args([service(Hooks::class), service(TasksSettings::class), service('validator')])->tag('kernel.event_subscriber');
+    $services->set(TasksBoundary::class)->args([service(Hooks::class), service(TasksSettings::class), service('validator')])->tag('kernel.event_subscriber')->tag(BootCheckPass::BOUNDARY_TAG, [BootCheckPass::CONTRACT_ATTRIBUTE => TasksContract::class]);
     $builder->registerForAutoconfiguration(Decider::class)->addTag(Hooks::tag(self::API, Hooks::DECIDERS_TAG_SUFFIX));
     $builder->registerForAutoconfiguration(ScopeResolver::class)->addTag(Hooks::tag(self::API, Hooks::SCOPE_RESOLVERS_TAG_SUFFIX));
     $builder->registerForAutoconfiguration(StripeAuthenticateHook::class)->addTag(Hooks::tag(self::API, Hooks::AUTHENTICATE_TAG_SUFFIX), [Hooks::HOOK_ATTRIBUTE => StripeAuthenticateHook::class]);

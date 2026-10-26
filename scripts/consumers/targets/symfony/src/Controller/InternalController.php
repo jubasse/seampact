@@ -21,7 +21,6 @@ final class InternalController implements InternalEndpoints
     #[SeampactOperation('getTask')]
     public function getTask(GetTaskInput $input): GetTaskResult
     {
-        $input = $input;
         // An unparseable deadline is no deadline, as the Node sample handler reads it, never a 500.
         $deadline = date_create_immutable($input->headers->xDeadline);
         if ($deadline !== false && $deadline <= new \DateTimeImmutable()) {

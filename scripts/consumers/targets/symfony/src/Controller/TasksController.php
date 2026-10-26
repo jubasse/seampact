@@ -76,7 +76,6 @@ final class TasksController implements TasksEndpoints
     #[SeampactOperation('updateTask')]
     public function updateTask(UpdateTaskInput $input): UpdateTaskResult
     {
-        $input = $input;
         // Every task is at its first version, so another expected version is stale.
         if ($input->body->expectedVersion !== SampleData::FIRST_VERSION) {
             return UpdateTaskErrors::stateConflict();
@@ -95,7 +94,6 @@ final class TasksController implements TasksEndpoints
     #[SeampactOperation('archiveTask')]
     public function archiveTask(ArchiveTaskInput $input): ArchiveTaskResult
     {
-        $input = $input;
         if ($input->body->expectedVersion !== SampleData::FIRST_VERSION) {
             return ArchiveTaskErrors::stateConflict();
         }

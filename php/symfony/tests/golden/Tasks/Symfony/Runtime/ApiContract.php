@@ -123,6 +123,26 @@ final class ApiContract
         return $this->resultClasses[$result::class] ?? null;
     }
 
+    /**
+     * Whether a catch-all under one of `$claimingBasePaths` answers paths under one of `$basePaths`: a claiming base
+     * path that is empty, equal or a prefix.
+     *
+     * @param list<string> $claimingBasePaths
+     * @param list<string> $basePaths
+     */
+    public static function basePathsCover(array $claimingBasePaths, array $basePaths): bool
+    {
+        foreach ($claimingBasePaths as $claimingBasePath) {
+            foreach ($basePaths as $basePath) {
+                if ($claimingBasePath === '' || $claimingBasePath === $basePath || str_starts_with($basePath, "{$claimingBasePath}/")) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     /** The match of a raw path, or null when the path is under none of the api's base paths. */
     public function match(string $method, string $rawPath): ?RouteMatch
     {

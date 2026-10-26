@@ -91,6 +91,7 @@ final class BundleFiles
         $scopeResolver = $file->name($this->placement->runtime('ScopeResolver'));
         $routeCheck = $file->name($this->placement->runtime('RouteCheck'));
         $contract = $file->name($this->placement->contract);
+        $bootCheck = $file->name($this->placement->runtime('BootCheckPass'));
         $tag = static fn (string $suffix): string => "{$hooks}::tag(self::API, {$hooks}::{$suffix})";
         $body = <<<PHP
             \$services = \$container->services();
@@ -105,7 +106,7 @@ final class BundleFiles
                 service('logger'),
                 service({$idempotencyStore}::class)->nullOnInvalid(),
             ]);
-            \$services->set({$boundary}::class)->args([service({$hooks}::class), service({$settings}::class), service('validator')])->tag('kernel.event_subscriber');
+            \$services->set({$boundary}::class)->args([service({$hooks}::class), service({$settings}::class), service('validator')])->tag('kernel.event_subscriber')->tag({$bootCheck}::BOUNDARY_TAG, [{$bootCheck}::CONTRACT_ATTRIBUTE => {$contract}::class]);
             \$builder->registerForAutoconfiguration({$decider}::class)->addTag({$tag('DECIDERS_TAG_SUFFIX')});
             \$builder->registerForAutoconfiguration({$scopeResolver}::class)->addTag({$tag('SCOPE_RESOLVERS_TAG_SUFFIX')});
 

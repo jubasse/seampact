@@ -322,6 +322,11 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         // Whatever the event holds now is compared, so a listener that replaced the reply object is caught too.
         if ($event->isMainRequest() && $request->attributes->has($this->attribute('final_signature'))) {
             $this->refuseRewrittenReply($event, $response);
+            // The boundary's own 500 after a claim (an unmapped exception): the key is released, as on any 5xx.
+            $answered = BoundaryState::of($request, $this->contract()->api);
+            if ($answered !== null) {
+                IdempotencyStep::settle($answered, $event->getResponse());
+            }
 
             return;
         }

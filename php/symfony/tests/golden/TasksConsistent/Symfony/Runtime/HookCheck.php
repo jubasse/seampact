@@ -100,7 +100,8 @@ final class HookCheck
     }
 
     /**
-     * The problem of an api whose operations the boundary enforces idempotency on, when the app registers no store.
+     * The problem of an api whose operations the boundary enforces idempotency on, when the app registers no store or
+     * one of the wrong type.
      *
      * @param string $storeFix how the app registers its idempotency store, ending the problem line
      * @return list<string>
@@ -114,8 +115,16 @@ final class HookCheck
             }
         }
 
-        if ($idempotent === [] || ($hooks instanceof IdempotencyStoreLookup && $hooks->idempotencyStore() !== null)) {
+        if ($idempotent === []) {
             return [];
+        }
+
+        try {
+            if ($hooks instanceof IdempotencyStoreLookup && $hooks->idempotencyStore() !== null) {
+                return [];
+            }
+        } catch (\LogicException $wrongType) {
+            return [$wrongType->getMessage()];
         }
 
         return ["no idempotency store for '" . implode("', '", $idempotent) . "': {$storeFix}"];
