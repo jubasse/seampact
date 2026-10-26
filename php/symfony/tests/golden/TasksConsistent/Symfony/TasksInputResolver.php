@@ -4,12 +4,19 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Symfony;
 
+use Seampact\Golden\TasksConsistent\CreateTaskInput;
 use Seampact\Golden\TasksConsistent\GetChannelInput;
 use Seampact\Golden\TasksConsistent\GetDraftInput;
+use Seampact\Golden\TasksConsistent\GetPreferencesInput;
 use Seampact\Golden\TasksConsistent\GetTaskInput;
 use Seampact\Golden\TasksConsistent\GetTasksBatchInput;
 use Seampact\Golden\TasksConsistent\HealthInput;
+use Seampact\Golden\TasksConsistent\ListTasksInput;
+use Seampact\Golden\TasksConsistent\PaymentsInput;
+use Seampact\Golden\TasksConsistent\PurgeTaskInput;
+use Seampact\Golden\TasksConsistent\SearchTasksInput;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\ContractBypassedException;
+use Seampact\Golden\TasksConsistent\UpdateTaskInput;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
@@ -21,7 +28,7 @@ final class TasksInputResolver implements ValueResolverInterface
 {
   public const INPUT_ATTRIBUTE = '_seampact_tasks_input';
   public const PRIORITY = 150;
-  private const INPUT_CLASSES = [GetChannelInput::class, GetDraftInput::class, GetTaskInput::class, GetTasksBatchInput::class, HealthInput::class];
+  private const INPUT_CLASSES = [CreateTaskInput::class, GetChannelInput::class, GetDraftInput::class, GetPreferencesInput::class, GetTaskInput::class, GetTasksBatchInput::class, HealthInput::class, ListTasksInput::class, PaymentsInput::class, PurgeTaskInput::class, SearchTasksInput::class, UpdateTaskInput::class];
 
   /**
    * @return list<object>

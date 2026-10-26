@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Suite;
+namespace Seampact\ConsumerSuite;
 
 use Seampact\Hooks\IdempotencyBegin;
 use Seampact\Hooks\IdempotencyClaim;
@@ -10,12 +10,11 @@ use Seampact\Hooks\IdempotencyStore;
 use Seampact\Hooks\StoredResponse;
 
 /**
- * The app's idempotency store for the suite: one file under `storage/`, since each request of PHP's built-in server
+ * The app's idempotency store for the suite: one file beside the suite's control state, since each request of PHP's built-in server
  * starts from nothing; entries are kept for their lifetime.
  */
 final class FileIdempotencyStore implements IdempotencyStore
 {
-    private const STORE_FILE = 'suite-idempotency.json';
     private const MILLISECONDS_PER_SECOND = 1000;
 
     public function begin(IdempotencyClaim $claim): IdempotencyBegin
@@ -88,7 +87,7 @@ final class FileIdempotencyStore implements IdempotencyStore
      */
     private static function changed(\Closure $change): mixed
     {
-        $path = storage_path(self::STORE_FILE);
+        $path = SuiteFiles::idempotencyStorePath();
         $handle = fopen($path, 'c+');
         if ($handle === false || !flock($handle, LOCK_EX)) {
             throw new \RuntimeException("the suite idempotency store {$path} cannot be opened and locked");

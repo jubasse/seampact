@@ -7,15 +7,16 @@ namespace Seampact\Golden\TasksConsistent\Symfony\Runtime;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Seampact\Hooks\AuthenticateHook;
+use Seampact\Hooks\IdempotencyStore;
 
 /**
  * The api's hooks as tagged services, which the bundle autoconfigures from the hook interfaces: a service locator of
  * the authenticate hooks keyed by their generated interface, the deciders and scope resolvers as tagged iterators, the
- * optional unexpected-error listener and the app's logger. A missing hook is a `LogicException`, which the boundary
+ * optional unexpected-error listener and idempotency store, and the app's logger. A missing hook is a `LogicException`, which the boundary
  * answers with the api's 500. Symfony's `AccessDeniedException` (`denyAccessUnlessGranted()`) is a decider's access
  * denial, named as a string so an app without SecurityBundle still loads this class.
  */
-final class Hooks implements HookLookup
+final class Hooks implements HookLookup, IdempotencyStoreLookup
 {
     /** The tags are `TAG_PREFIX . <api> . <kind suffix>`; the generated bundle builds its tags from these. */
     public const TAG_PREFIX = 'seampact.';
@@ -27,6 +28,7 @@ final class Hooks implements HookLookup
     public const DECIDER_FIX = "register a service implementing the api's Decider and naming it, or '" . Decider::EVERY_NAME . "', with autoconfiguration on";
     public const AUTHENTICATE_HOOK_FIX = 'register one service implementing %s, with autoconfiguration on';
     public const SCOPE_RESOLVER_FIX = "register a service implementing the api's ScopeResolver, with autoconfiguration on";
+    public const IDEMPOTENCY_STORE_FIX = 'alias ' . IdempotencyStore::class . ' to a service implementing it';
     private const ACCESS_DENIED = 'Symfony\\Component\\Security\\Core\\Exception\\AccessDeniedException';
 
     /**
@@ -39,6 +41,7 @@ final class Hooks implements HookLookup
         private readonly iterable $scopeResolvers,
         private readonly mixed $unexpectedErrorListener,
         private readonly LoggerInterface $logger,
+        private readonly mixed $idempotencyStore = null,
     ) {
     }
 
@@ -80,6 +83,16 @@ final class Hooks implements HookLookup
         }
 
         throw new \LogicException('seampact: the service ' . UnexpectedErrorListener::class . ' is ' . get_debug_type($listener) . '; alias it to a class implementing that interface.');
+    }
+
+    public function idempotencyStore(): ?IdempotencyStore
+    {
+        $store = $this->idempotencyStore;
+        if ($store === null || $store instanceof IdempotencyStore) {
+            return $store;
+        }
+
+        throw new \LogicException('seampact: the service ' . IdempotencyStore::class . ' is ' . get_debug_type($store) . '; ' . self::IDEMPOTENCY_STORE_FIX . '.');
     }
 
     public function logger(): LoggerInterface

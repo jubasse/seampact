@@ -9,7 +9,6 @@ use Seampact\Codegen\ContractClass;
 use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\ArtefactSwitches;
 use Seampact\Codegen\BootCheckSwitches;
-use Seampact\Codegen\Delivery;
 use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -17,10 +16,10 @@ use Seampact\Codegen\OperationTypes;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpTypes;
 use Seampact\Codegen\Refusals;
+use Seampact\Codegen\RestrictedSortKeys;
 use Seampact\Codegen\SchemaTypes;
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Model\IrModelVersion;
-use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Read\IrSupport;
 use Seampact\Ir\Run\Generator;
 use Seampact\Ir\Run\TargetEntry;
@@ -88,7 +87,7 @@ final class LaravelGenerator implements Generator
                 continue;
             }
             $at = IrPlace::ofOperation($index, $operation->id);
-            self::refuseRestrictedSortKeys($operation, $at, $refusals);
+            RestrictedSortKeys::refuse($operation, $at, $refusals);
             $typeFiles = $operationTypes->files($operation, $names, $at);
             $replies->results($typeFiles, $names);
             array_push($classFiles, ...$typeFiles);
@@ -132,15 +131,5 @@ final class LaravelGenerator implements Generator
         }
 
         return $classes;
-    }
-
-    // The boundary does not ask a right for a sort key yet (ADR 0012 step 7), as on the Spring target.
-    private static function refuseRestrictedSortKeys(Operation $operation, IrPlace $at, Refusals $refusals): void
-    {
-        foreach ($operation->paging->sortKeys ?? [] as $index => $sortKey) {
-            if ($sortKey->right !== null) {
-                $refusals->waiting('paging.sortKey.right', "The sort key '{$sortKey->key}' restricted by the right '{$sortKey->right}'", $at->below('paging', 'sortKeys', $index, 'right'), Delivery::Consumer);
-            }
-        }
     }
 }

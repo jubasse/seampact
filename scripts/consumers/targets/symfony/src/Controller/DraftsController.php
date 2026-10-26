@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Generated\Tasks\DeleteDraftInput;
+use App\Generated\Tasks\DeleteDraftResponse200;
+use App\Generated\Tasks\DeleteDraftResult;
 use App\Generated\Tasks\DraftsEndpoints;
 use App\Generated\Tasks\GetDraftInput;
 use App\Generated\Tasks\GetDraftResponse200;
@@ -17,5 +20,11 @@ final class DraftsController implements DraftsEndpoints
     public function getDraft(GetDraftInput $input): GetDraftResult
     {
         return new GetDraftResponse200(SampleData::draft($input->path->draftId));
+    }
+
+    #[SeampactOperation('deleteDraft')]
+    public function deleteDraft(DeleteDraftInput $input): DeleteDraftResult
+    {
+        return new DeleteDraftResponse200(SampleData::draft($input->path->draftId));
     }
 }

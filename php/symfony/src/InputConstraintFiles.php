@@ -15,7 +15,9 @@ use Seampact\Codegen\PcrePattern;
 use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Model\EnumTypeUse;
+use Seampact\Ir\Model\InputProof;
 use Seampact\Ir\Model\ObjectSchema;
+use Seampact\Ir\Model\OpaqueTypeUse;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\RefTypeUse;
@@ -98,6 +100,10 @@ final class InputConstraintFiles
 
         if ($operation->input !== null) {
             $arguments[] = 'body: ' . $this->member($operation->input->schema, true, false, $at->below('input', 'schema'), 1);
+            $proofNames = array_map(static fn (InputProof $proof): string => var_export($proof->name, true), $operation->input->proofs ?? []);
+            if ($proofNames !== []) {
+                $arguments[] = 'bodyProofs: [' . implode(', ', $proofNames) . ']';
+            }
         }
 
         return $this->construct('InputShape', $arguments, 0);
@@ -117,7 +123,9 @@ final class InputConstraintFiles
 
     private function member(TypeUse $type, bool $required, bool $nullable, IrPlace $at, int $depth): string
     {
+        // An opaque value is never checked for null, as on the Spring and Laravel targets.
         $nullable = $nullable || match (true) {
+            $type instanceof OpaqueTypeUse => true,
             $type instanceof ScalarTypeUse, $type instanceof EnumTypeUse, $type instanceof RefTypeUse, $type instanceof ArrayTypeUse => $type->nullable === true,
             default => false,
         };
@@ -127,6 +135,7 @@ final class InputConstraintFiles
             $type instanceof EnumTypeUse => [$this->runtimeCase('JsonType', 'String'), 'checks: ' . $this->construct('Checks', ['enumValues: ' . $this->enumValues($type)], -1)],
             $type instanceof RefTypeUse => $this->object($type, $at, $depth),
             $type instanceof ArrayTypeUse => $this->list($type, $at, $depth),
+            $type instanceof OpaqueTypeUse => [$this->runtimeCase('JsonType', 'Any')],
             default => throw new \LogicException("The {$type->tag()} type use was kept but has no input check."),
         };
 

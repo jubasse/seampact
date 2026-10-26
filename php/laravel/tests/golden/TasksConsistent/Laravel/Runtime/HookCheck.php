@@ -7,10 +7,12 @@ namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 /**
  * The hook problems of the boot check (ADR 0016 "The boot check"): an identity without its authenticate hook, a scope
  * without its resolver, a right or rule without a decider, a registered hook of the wrong type, and two deciders
- * claiming one name. Each problem names the hook and the fix the target gives.
+ * claiming one name, and idempotent writes without a store. Each problem names the hook and the fix the target gives.
  */
 final class HookCheck
 {
+    private const BOUNDARY_ENFORCED = 'boundary';
+
     private function __construct()
     {
     }
@@ -95,5 +97,36 @@ final class HookCheck
         }
 
         return $problems;
+    }
+
+    /**
+     * The problem of an api whose operations the boundary enforces idempotency on, when the app registers no store or
+     * one of the wrong type.
+     *
+     * @param string $storeFix how the app registers its idempotency store, ending the problem line
+     * @return list<string>
+     */
+    public static function idempotencyStoreProblems(HookLookup $hooks, ApiContract $contract, string $storeFix): array
+    {
+        $idempotent = [];
+        foreach ($contract->operationIds() as $operationId) {
+            if (Ir::string(Ir::map($contract->operation($operationId), 'idempotency'), 'enforce') === self::BOUNDARY_ENFORCED) {
+                $idempotent[] = $operationId;
+            }
+        }
+
+        if ($idempotent === []) {
+            return [];
+        }
+
+        try {
+            if ($hooks instanceof IdempotencyStoreLookup && $hooks->idempotencyStore() !== null) {
+                return [];
+            }
+        } catch (\LogicException $wrongType) {
+            return [$wrongType->getMessage()];
+        }
+
+        return ["no idempotency store for '" . implode("', '", $idempotent) . "': {$storeFix}"];
     }
 }

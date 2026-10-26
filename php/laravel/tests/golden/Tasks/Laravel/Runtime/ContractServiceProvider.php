@@ -139,15 +139,7 @@ abstract class ContractServiceProvider extends ServiceProvider
             return false;
         }
 
-        foreach ($earlier['basePaths'] as $earlierBasePath) {
-            foreach ($basePaths as $basePath) {
-                if ($earlierBasePath === '' || $earlierBasePath === $basePath || str_starts_with($basePath, "{$earlierBasePath}/")) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return ApiContract::basePathsCover($earlier['basePaths'], $basePaths);
     }
 
     /** @return array<string, array{api: string, basePaths: list<string>}> the api and base paths of each registered boundary */

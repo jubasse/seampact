@@ -150,6 +150,9 @@ const GUARD_DENIED_TOKEN = "seampact-guard-denied";
 // The in-memory user of the app's `http_basic` firewall (Kernel::SUITE_USER and SUITE_PASSWORD).
 const SUITE_USER_BASIC = `Basic ${Buffer.from("suite-user:suite-password").toString("base64")}`;
 const WRONG_PASSWORD_BASIC = `Basic ${Buffer.from("suite-user:wrong").toString("base64")}`;
+// A user name of its own per run, so only this row spends its `login_throttling` attempts (Kernel::LOGIN_ATTEMPTS).
+const THROTTLED_LOGIN_BASIC = `Basic ${Buffer.from(`throttled-login-${Date.now()}:wrong`).toString("base64")}`;
+const LOGIN_ATTEMPTS = 3;
 // The header the app's `access_control` rule matches (ForbiddenProbeMatcher::HEADER).
 const FORBIDDEN_PROBE_HEADER = "x-seampact-suite-forbidden";
 const UNDECLARED_STATUS = 418;
@@ -247,6 +250,26 @@ describeServed("boundary edges of the Symfony runtime", {}, (running) => {
     expect((await logLines(running())).some((line) => line.includes("the role 'forbidden'"))).toBe(
       true,
     );
+  });
+
+  // No operation declares the rateLimited role, so the reply is the api's 500; the log names the role it kept.
+  test("login_throttling keeps the rateLimited role once a user name spent its attempts", async () => {
+    await loadScript(running(), {});
+    const statuses: number[] = [];
+
+    for (let attempt = 0; attempt <= LOGIN_ATTEMPTS; attempt++) {
+      const response = await fetch(`${running()?.baseUrl}${TASK_PATH}`, {
+        headers: { authorization: THROTTLED_LOGIN_BASIC, accept: "application/json" },
+      });
+
+      statuses.push(response.status);
+      await response.body?.cancel();
+    }
+
+    expect(statuses).toEqual([...Array(LOGIN_ATTEMPTS).fill(401), 500]);
+    expect(
+      (await logLines(running())).some((line) => line.includes("the role 'rateLimited'")),
+    ).toBe(true);
   });
 
   // The caller is anonymous to the firewall, whose listener answers the denial with its entry point (ADR 0024).

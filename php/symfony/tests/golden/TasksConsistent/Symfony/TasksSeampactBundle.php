@@ -14,6 +14,7 @@ use Seampact\Golden\TasksConsistent\Symfony\Runtime\Hooks;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\RouteCheck;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\ScopeResolver;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\UnexpectedErrorListener;
+use Seampact\Hooks\IdempotencyStore;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
@@ -31,7 +32,21 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\tagged_lo
 final class TasksSeampactBundle extends AbstractBundle
 {
   /** @var list<string> */
-  private const OPERATION_IDS = ['getChannel', 'getDraft', 'getTask', 'getTasksBatch', 'health'];
+  private const OPERATION_IDS = [
+    'createTask',
+    'getChannel',
+    'getDraft',
+    'getPreferences',
+    'getTask',
+    'getTasksBatch',
+    'health',
+    'listTasks',
+    'payments',
+    'purgeTask',
+    'searchTasks',
+    'updateTask',
+  ];
+
   private const API = 'tasks';
 
   protected string $extensionAlias = 'seampact_tasks';
@@ -69,13 +84,15 @@ final class TasksSeampactBundle extends AbstractBundle
         tagged_iterator(Hooks::tag(self::API, Hooks::SCOPE_RESOLVERS_TAG_SUFFIX)),
         service(UnexpectedErrorListener::class)->nullOnInvalid(),
         service('logger'),
+        service(IdempotencyStore::class)->nullOnInvalid(),
     ]);
-    $services->set(TasksBoundary::class)->args([service(Hooks::class), service(TasksSettings::class), service('validator')])->tag('kernel.event_subscriber');
+    $services->set(TasksBoundary::class)->args([service(Hooks::class), service(TasksSettings::class), service('validator')])->tag('kernel.event_subscriber')->tag(BootCheckPass::BOUNDARY_TAG, [BootCheckPass::CONTRACT_ATTRIBUTE => TasksContract::class]);
     $builder->registerForAutoconfiguration(Decider::class)->addTag(Hooks::tag(self::API, Hooks::DECIDERS_TAG_SUFFIX));
     $builder->registerForAutoconfiguration(ScopeResolver::class)->addTag(Hooks::tag(self::API, Hooks::SCOPE_RESOLVERS_TAG_SUFFIX));
+    $builder->registerForAutoconfiguration(StripeAuthenticateHook::class)->addTag(Hooks::tag(self::API, Hooks::AUTHENTICATE_TAG_SUFFIX), [Hooks::HOOK_ATTRIBUTE => StripeAuthenticateHook::class]);
     $builder->registerForAutoconfiguration(UserAuthenticateHook::class)->addTag(Hooks::tag(self::API, Hooks::AUTHENTICATE_TAG_SUFFIX), [Hooks::HOOK_ATTRIBUTE => UserAuthenticateHook::class]);
     $services->set(HookCheckWarmer::class)->args([service(Hooks::class), TasksContract::class])->tag('kernel.cache_warmer');
-    $services->set(RouteCheck::class)->decorate('routing.loader')->args([service('.inner'), TasksContract::class, true]);
+    $services->set(RouteCheck::class)->decorate('routing.loader')->args([service('.inner'), TasksContract::class, TasksRouteLoader::RESOURCE, true]);
   }
 
   public function build(ContainerBuilder $container): void

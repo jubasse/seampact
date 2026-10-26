@@ -7,6 +7,8 @@ namespace Seampact\Golden\TasksConsistent\Symfony;
 use Seampact\Golden\TasksConsistent\AppEndpoints;
 use Seampact\Golden\TasksConsistent\ChannelsEndpoints;
 use Seampact\Golden\TasksConsistent\DraftsEndpoints;
+use Seampact\Golden\TasksConsistent\HooksEndpoints;
+use Seampact\Golden\TasksConsistent\PreferencesEndpoints;
 use Seampact\Golden\TasksConsistent\TasksEndpoints;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -18,7 +20,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 final class TasksControllerPass implements CompilerPassInterface
 {
   public const PRIORITY = 1;
-  private const ENDPOINTS = [ChannelsEndpoints::class, DraftsEndpoints::class, TasksEndpoints::class, AppEndpoints::class];
+  private const ENDPOINTS = [TasksEndpoints::class, ChannelsEndpoints::class, DraftsEndpoints::class, PreferencesEndpoints::class, AppEndpoints::class, HooksEndpoints::class];
 
   public function process(ContainerBuilder $container): void
   {

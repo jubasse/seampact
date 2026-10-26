@@ -21,6 +21,8 @@ use Seampact\Codegen\TargetOptions;
  */
 final class BundleFiles
 {
+    private const IDEMPOTENCY_STORE = 'Seampact\\Hooks\\IdempotencyStore';
+
     public function __construct(
         private readonly SymfonyPlacement $placement,
         private readonly TargetOptions $options,
@@ -84,10 +86,12 @@ final class BundleFiles
         $hooks = $file->name($this->placement->runtime('Hooks'));
         $boundary = $file->name($this->placement->boundary);
         $listener = $file->name($this->placement->runtime('UnexpectedErrorListener'));
+        $idempotencyStore = $file->name(self::IDEMPOTENCY_STORE);
         $decider = $file->name($this->placement->runtime('Decider'));
         $scopeResolver = $file->name($this->placement->runtime('ScopeResolver'));
         $routeCheck = $file->name($this->placement->runtime('RouteCheck'));
         $contract = $file->name($this->placement->contract);
+        $bootCheck = $file->name($this->placement->runtime('BootCheckPass'));
         $tag = static fn (string $suffix): string => "{$hooks}::tag(self::API, {$hooks}::{$suffix})";
         $body = <<<PHP
             \$services = \$container->services();
@@ -100,8 +104,9 @@ final class BundleFiles
                 tagged_iterator({$tag('SCOPE_RESOLVERS_TAG_SUFFIX')}),
                 service({$listener}::class)->nullOnInvalid(),
                 service('logger'),
+                service({$idempotencyStore}::class)->nullOnInvalid(),
             ]);
-            \$services->set({$boundary}::class)->args([service({$hooks}::class), service({$settings}::class), service('validator')])->tag('kernel.event_subscriber');
+            \$services->set({$boundary}::class)->args([service({$hooks}::class), service({$settings}::class), service('validator')])->tag('kernel.event_subscriber')->tag({$bootCheck}::BOUNDARY_TAG, [{$bootCheck}::CONTRACT_ATTRIBUTE => {$contract}::class]);
             \$builder->registerForAutoconfiguration({$decider}::class)->addTag({$tag('DECIDERS_TAG_SUFFIX')});
             \$builder->registerForAutoconfiguration({$scopeResolver}::class)->addTag({$tag('SCOPE_RESOLVERS_TAG_SUFFIX')});
 
@@ -115,7 +120,7 @@ final class BundleFiles
             $body .= "\$services->set({$warmer}::class)->args([service({$hooks}::class), {$contract}::class])->tag('kernel.cache_warmer');\n";
         }
         if ($this->bootCheck !== null) {
-            $body .= "\$services->set({$routeCheck}::class)->decorate('routing.loader')->args([service('.inner'), {$contract}::class, " . var_export($this->bootCheck->frameworkRoutes, true) . ']);';
+            $body .= "\$services->set({$routeCheck}::class)->decorate('routing.loader')->args([service('.inner'), {$contract}::class, {$routeLoader}::RESOURCE, " . var_export($this->bootCheck->frameworkRoutes, true) . ']);';
         }
         $load->setBody(rtrim($body));
         $class->addConstant('API', $this->placement->layout->ir->api->id)->setPrivate();

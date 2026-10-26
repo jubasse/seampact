@@ -7,6 +7,8 @@ namespace Seampact\Golden\TasksConsistent\Symfony;
 use Seampact\Golden\TasksConsistent\AppEndpoints;
 use Seampact\Golden\TasksConsistent\ChannelsEndpoints;
 use Seampact\Golden\TasksConsistent\DraftsEndpoints;
+use Seampact\Golden\TasksConsistent\HooksEndpoints;
+use Seampact\Golden\TasksConsistent\PreferencesEndpoints;
 use Seampact\Golden\TasksConsistent\TasksEndpoints;
 use Symfony\Component\Config\Loader\Loader;
 use Symfony\Component\Routing\Route;
@@ -45,6 +47,20 @@ final class TasksRouteLoader extends Loader
       'controller' => [AppEndpoints::class, 'health'],
     ],
     [
+      'operation' => 'getPreferences',
+      'method' => 'GET',
+      'path' => '/v1/me/preferences',
+      'name' => 'seampact.tasks.getPreferences',
+      'controller' => [PreferencesEndpoints::class, 'getPreferences'],
+    ],
+    [
+      'operation' => 'payments',
+      'method' => 'POST',
+      'path' => '/v1/hooks/payments',
+      'name' => 'seampact.tasks.payments',
+      'controller' => [HooksEndpoints::class, 'payments'],
+    ],
+    [
       'operation' => 'getChannel',
       'method' => 'GET',
       'path' => '/v1/channels/{p1}',
@@ -59,6 +75,20 @@ final class TasksRouteLoader extends Loader
       'controller' => [DraftsEndpoints::class, 'getDraft'],
     ],
     [
+      'operation' => 'createTask',
+      'method' => 'POST',
+      'path' => '/v1/channels/{p1}/tasks',
+      'name' => 'seampact.tasks.createTask',
+      'controller' => [TasksEndpoints::class, 'createTask'],
+    ],
+    [
+      'operation' => 'listTasks',
+      'method' => 'GET',
+      'path' => '/v1/channels/{p1}/tasks',
+      'name' => 'seampact.tasks.listTasks',
+      'controller' => [TasksEndpoints::class, 'listTasks'],
+    ],
+    [
       'operation' => 'getTasksBatch',
       'method' => 'POST',
       'path' => '/v1/channels/{p1}/tasks/batch',
@@ -66,11 +96,32 @@ final class TasksRouteLoader extends Loader
       'controller' => [TasksEndpoints::class, 'getTasksBatch'],
     ],
     [
+      'operation' => 'searchTasks',
+      'method' => 'POST',
+      'path' => '/v1/channels/{p1}/tasks/search',
+      'name' => 'seampact.tasks.searchTasks',
+      'controller' => [TasksEndpoints::class, 'searchTasks'],
+    ],
+    [
       'operation' => 'getTask',
       'method' => 'GET',
       'path' => '/v1/channels/{p1}/tasks/{p2}',
       'name' => 'seampact.tasks.getTask',
       'controller' => [TasksEndpoints::class, 'getTask'],
+    ],
+    [
+      'operation' => 'updateTask',
+      'method' => 'PATCH',
+      'path' => '/v1/channels/{p1}/tasks/{p2}',
+      'name' => 'seampact.tasks.updateTask',
+      'controller' => [TasksEndpoints::class, 'updateTask'],
+    ],
+    [
+      'operation' => 'purgeTask',
+      'method' => 'POST',
+      'path' => '/v1/channels/{p1}/tasks/{p2}/purge',
+      'name' => 'seampact.tasks.purgeTask',
+      'controller' => [TasksEndpoints::class, 'purgeTask'],
     ],
   ];
 

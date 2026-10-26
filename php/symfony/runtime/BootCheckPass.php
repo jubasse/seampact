@@ -17,12 +17,16 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * are registered: every problem listed at once, with the fix, then thrown, so no container is written and the app
  * does not serve. It checks the handlers (one service per endpoints interface, each method marked with its operation,
  * no access attribute the boundary would run after the input checks), the boundary's listeners and the value resolver,
- * the listeners placed where the outgoing check cannot see them, ext-zlib, the Symfony major and `framework.http_cache`.
+ * the listeners placed where the outgoing check cannot see them, an api registered before this one whose catch-all
+ * answers this api's paths, ext-zlib, the Symfony major and `framework.http_cache`.
  */
 final class BootCheckPass implements CompilerPassInterface
 {
     /** After Symfony's RegisterListenersPass (priority 0 of the same type), which writes the dispatcher's listeners. */
     public const PRIORITY = -32;
+    /** The tag of each api's boundary, whose attribute names the api's contract class. */
+    public const BOUNDARY_TAG = 'seampact.boundary';
+    public const CONTRACT_ATTRIBUTE = 'contract';
     private const DEBUG_HANDLERS_LISTENER = 'debug.debug_handlers_listener';
     private const HTTP_CACHE = 'http_cache';
     private const VALUE_RESOLVER_TAG = 'controller.argument_value_resolver';
@@ -48,6 +52,7 @@ final class BootCheckPass implements CompilerPassInterface
         $problems = [
             ...($this->checksHandlers ? $this->handlers($container, $contract) : []),
             ...$this->listeners($container),
+            ...$this->shadowingBoundaries($container, $contract),
             ...$this->platform($container),
         ];
 
@@ -151,6 +156,54 @@ final class BootCheckPass implements CompilerPassInterface
         }
 
         return $problems;
+    }
+
+    /**
+     * Each api whose boundary runs before this one at the same priority with its catch-all on, under a base path that
+     * is empty, equal to or a prefix of one of this api's: it answers its 404 on this api's paths.
+     *
+     * @return list<string>
+     */
+    private function shadowingBoundaries(ContainerBuilder $container, ApiContract $contract): array
+    {
+        $contractClasses = self::boundaryContractClasses($container);
+        $problems = [];
+        foreach (self::dispatcherListeners($container) as [$event, $service, $priority]) {
+            if ($event !== KernelEvents::REQUEST || $priority !== BoundarySubscriber::REQUEST_PRIORITY) {
+                continue;
+            }
+            if ($service === $this->boundaryClass) {
+                break;
+            }
+
+            $earlierContractClass = $contractClasses[$service] ?? null;
+            if ($earlierContractClass === null) {
+                continue;
+            }
+
+            $earlier = ApiContract::of($earlierContractClass);
+            if (($earlier->defaults['catch_all'] ?? true) !== false && ApiContract::basePathsCover($earlier->basePaths(), $contract->basePaths())) {
+                $basePaths = implode(', ', array_map(static fn (string $basePath): string => $basePath === '' ? '/' : $basePath, $earlier->basePaths()));
+                $problems[] = "the api '{$earlier->api}' registered before this one answers its catch-all 404 under {$basePaths}, which covers this api's paths; set catchAll to false on the api whose base path equals or prefixes this api's";
+            }
+        }
+
+        return $problems;
+    }
+
+    /** @return array<string, string> the contract class of each api's boundary, by service id */
+    private static function boundaryContractClasses(ContainerBuilder $container): array
+    {
+        $contractClasses = [];
+        foreach ($container->findTaggedServiceIds(self::BOUNDARY_TAG) as $id => $tags) {
+            $attributes = $tags[0] ?? null;
+            $contractClass = is_array($attributes) ? ($attributes[self::CONTRACT_ATTRIBUTE] ?? null) : null;
+            if (is_string($contractClass)) {
+                $contractClasses[$id] = $contractClass;
+            }
+        }
+
+        return $contractClasses;
     }
 
     /** @return list<string> */

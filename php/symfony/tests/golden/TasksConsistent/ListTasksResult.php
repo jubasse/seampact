@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Seampact\Golden\TasksConsistent;
+
+/**
+ * What the handler of operation 'listTasks' returns: a declared success, or a declared error.
+ */
+interface ListTasksResult
+{
+}
