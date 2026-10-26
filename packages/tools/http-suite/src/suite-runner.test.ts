@@ -67,10 +67,16 @@ async function answer(request: IncomingMessage, response: ServerResponse): Promi
     json(200, { cursor: url.searchParams.get("cursor"), limit: url.searchParams.get("limit") });
   } else if (url.pathname === "/links") {
     json(200, {
+      cursor: url.searchParams.get("cursor"),
       offsite: "@evil.example/x",
       schemeRelative: "//evil.example/x",
+      absolute: "https://evil.example/x",
+      queryOnly: "?cursor=b",
+      relativePath: "items?cursor=r",
       self: "/items?cursor=a",
     });
+  } else if (url.pathname.startsWith("/@")) {
+    json(200, { reached: url.pathname });
   } else if (url.pathname === "/echo") {
     json(201, {
       body: JSON.parse(body),
@@ -351,7 +357,7 @@ describe("runSuite", () => {
     ]);
   });
 
-  test.each(["offsite", "schemeRelative"])(
+  test.each(["schemeRelative", "absolute"])(
     "fails a path filled from the %s link, which leaves the target",
     async (link) => {
       const report = await run([
@@ -371,6 +377,30 @@ describe("runSuite", () => {
         expect.stringContaining("the path '{{link}}' fills to '"),
       ]);
       expect(report.cases[0]?.failures[0]).toContain("which does not start with one '/'");
+    },
+  );
+
+  test.each([
+    ["queryOnly", { cursor: "b" }],
+    ["relativePath", { cursor: "r", limit: null }],
+    ["offsite", { reached: "/@evil.example/x" }],
+  ])(
+    "resolves the captured %s link against the URL of the request it came from",
+    async (link, body) => {
+      const report = await run([
+        suiteCase("resolved-link", {
+          steps: [
+            {
+              request: { method: "GET", path: "/links", query: { cursor: "a" } },
+              capture: { link: { body: `/${link}` } },
+              expect: { status: 200, body: { cursor: "a" } },
+            },
+            { request: { method: "GET", path: "{{link}}" }, expect: { status: 200, body } },
+          ],
+        }),
+      ]);
+
+      expect(report.cases[0]).toMatchObject({ outcome: "passed", failures: [] });
     },
   );
 

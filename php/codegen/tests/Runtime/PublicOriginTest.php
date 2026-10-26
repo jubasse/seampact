@@ -39,6 +39,13 @@ final class PublicOriginTest extends TestCase
         yield 'another scheme' => ['ftp://api.example.com'];
         yield 'user info' => ['https://user@api.example.com'];
         yield 'a query' => ['https://api.example.com?x=1'];
+        yield 'a space in the host' => ['https://exa mple.com'];
+        yield 'a line break' => ["https://a.com\r\nX-Evil: 1"];
+        yield 'angle brackets' => ['https://a<b>.com'];
+        yield 'a NUL byte' => ["https://a.com\0"];
+        yield 'an empty port' => ['https://a.com:'];
+        yield 'a port past 65535' => ['https://a.com:70000'];
+        yield 'port zero' => ['https://a.com:0'];
     }
 
     #[DataProvider('refusedOrigins')]

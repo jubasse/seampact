@@ -111,6 +111,33 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString("slot '\$total'", self::refused($document)['format.success.slot.unsupported'] ?? '');
     }
 
+    public function testASuccessEnvelopeThatDoesNotWriteThePayloadIsRefused(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
+            $format = self::object(self::object($document->formats)->{$operation->format});
+            self::object(self::object($format->success)->item)->body = (object) ['kind' => 'object', 'members' => [
+                (object) ['name' => (object) ['kind' => 'text', 'text' => 'ok'], 'value' => (object) ['kind' => 'slot', 'path' => [], 'slot' => 'status']],
+            ]];
+        });
+
+        self::assertStringContainsString('does not write `$payload`', self::refused($document)['format.success.envelope.unsupported'] ?? '');
+    }
+
+    public function testASuccessHeaderOnAShapeNoResponseOfTheOperationTakesIsNotRefused(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
+            $formats = self::object($document->formats);
+            $itemOnly = self::object(json_decode(json_encode($formats->{$operation->format}, JSON_THROW_ON_ERROR), false, 512, JSON_THROW_ON_ERROR));
+            self::object(self::object($itemOnly->success)->page)->headers = [
+                (object) ['name' => 'X-Total', 'value' => (object) ['kind' => 'slot', 'path' => [], 'slot' => 'total']],
+            ];
+            $formats->itemOnly = $itemOnly;
+            $operation->format = 'itemOnly';
+        });
+
+        self::assertArrayNotHasKey('format.success.headers.unsupported', self::refused($document, ['accessHooks' => false]));
+    }
+
     public function testBootCheckHooksWarnWaitsForAConsumer(): void
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['bootCheck' => (object) ['hooks' => 'warn']]);
