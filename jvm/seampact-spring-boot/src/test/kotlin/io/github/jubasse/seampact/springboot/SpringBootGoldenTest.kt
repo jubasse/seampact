@@ -5,9 +5,13 @@ import io.github.jubasse.seampact.ir.model.ArrayTypeUse
 import io.github.jubasse.seampact.ir.model.ContractIR
 import io.github.jubasse.seampact.ir.model.CredentialIdentity
 import io.github.jubasse.seampact.ir.model.IdentityAccess
+import io.github.jubasse.seampact.ir.model.LiteralTemplate
 import io.github.jubasse.seampact.ir.model.ObjectSchema
+import io.github.jubasse.seampact.ir.model.ObjectTemplate
+import io.github.jubasse.seampact.ir.model.ObjectTemplateMember
 import io.github.jubasse.seampact.ir.model.Operation
 import io.github.jubasse.seampact.ir.model.OptionalAccess
+import io.github.jubasse.seampact.ir.model.PlainMemberName
 import io.github.jubasse.seampact.ir.model.PublicAccess
 import io.github.jubasse.seampact.ir.model.RefusedCredential
 import io.github.jubasse.seampact.ir.model.Refinements
@@ -273,6 +277,31 @@ class SpringBootGoldenTest {
         val ownerless = ir.copy(operations = ir.operations.map { if (it.id == "health") it.copy(resource = null, surface = "_") else it })
 
         assertTrue(refusalsOf(ownerless).any { it.code == "endpoints.owner.no-segment" && it.operation == "health" })
+    }
+
+    @Test
+    fun refusesASortKeyRestrictedByARight() {
+        val ir = coreView(apis.first())
+        val restricted = ir.copy(operations = ir.operations.map { operation ->
+            val paging = operation.paging
+            if (operation.id != "listTasks" || paging == null) return@map operation
+            operation.copy(paging = paging.copy(sortKeys = paging.sortKeys.map { it.copy(right = "tasks.seeEffort") }))
+        })
+
+        val refusal = refusalsOf(restricted).single { it.code == "paging.sortKey.right.unsupported" }
+        assertTrue(refusal.message.contains("The sort key 'createdAt' restricted by the right 'tasks.seeEffort'"), refusal.message)
+        assertEquals("listTasks", refusal.operation)
+    }
+
+    @Test
+    fun refusesASuccessEnvelopeThatNeverWritesThePayload() {
+        val ir = coreView(apis.first())
+        val bare = ir.formats.getValue("bare")
+        val noPayload = ObjectTemplate(members = listOf(ObjectTemplateMember(PlainMemberName(text = "data"), LiteralTemplate(value = JsonPrimitive("none")))))
+        val withoutPayload = bare.copy(success = bare.success.copy(item = bare.success.item.copy(body = noPayload)))
+
+        val refusal = refusalsOf(ir.copy(formats = ir.formats + ("bare" to withoutPayload))).single { it.code == "format.success.envelope.unsupported" }
+        assertEquals("/formats/bare/success/item/body", refusal.member)
     }
 
     private fun rewriteGolden(generated: Map<String, String>, directory: Path) {
