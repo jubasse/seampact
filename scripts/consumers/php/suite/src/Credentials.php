@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Suite;
+namespace Seampact\ConsumerSuite;
 
 /** The suite's shared credentials (`credentials.json`, the file the suite sends them from). */
 final class Credentials
@@ -34,7 +34,7 @@ final class Credentials
     /** @return array<string, mixed> */
     private static function all(): array
     {
-        $contents = file_get_contents(base_path('credentials.json'));
+        $contents = file_get_contents(SuiteFiles::credentialsPath());
         if ($contents === false) {
             throw new \RuntimeException('credentials.json cannot be read: assemble.sh copies it beside composer.json');
         }

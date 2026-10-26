@@ -2,7 +2,7 @@
 # Assembles the Symfony consumer in <work>: `assemble.sh <work> <bundled> <symfony> [allow-listed]` copies the app into
 # <work>/app (or <work>/app-allow-listed, built from `seampact.allow-listed.config.yaml`) on Symfony <symfony> (7.4,
 # or 8 on the PHP 8.5 platform), points its path repositories at the repository's php/ packages, and points its
-# contract at the bundle that `../laravel/bundle.sh` wrote to <bundled>, committed into the local git repository
+# contract at the bundle that `../../php/bundle.sh` wrote to <bundled>, committed into the local git repository
 # <work>/contract-repo with the tag v1.0.0. The app directory is new.
 set -eu
 
@@ -12,6 +12,7 @@ symfony="$3"
 variant="${4:-}"
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../../../.." && pwd)
+suite_package=$(cd "$here/../../php/suite" && pwd)
 contract_repo="$work/contract-repo"
 
 case "$variant" in
@@ -46,7 +47,7 @@ cp -R "$here/bin" "$here/public" "$here/src" "$here/composer.json" "$app/"
 cp "$here/$config" "$app/seampact.config.yaml"
 cp "$here/../spring-boot/credentials.json" "$app/credentials.json"
 
-sed -e "s#\"\.\./\.\./\.\./\.\./php/#\"$repo/php/#" -e "s#\"~7\.4\.0\"#\"$constraint\"#" -e "s#\"php\": \"8\.3\.36\"#\"php\": \"$platform\"#" \
+sed -e "s#\"\.\./\.\./php/suite\"#\"$suite_package\"#" -e "s#\"\.\./\.\./\.\./\.\./php/#\"$repo/php/#" -e "s#\"~7\.4\.0\"#\"$constraint\"#" -e "s#\"php\": \"8\.3\.36\"#\"php\": \"$platform\"#" \
   "$app/composer.json" > "$app/composer.json.new"
 mv "$app/composer.json.new" "$app/composer.json"
 

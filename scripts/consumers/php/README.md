@@ -1,0 +1,1 @@
+Shared by the PHP consumer apps (Laravel and Symfony): `bundle.sh` bundles the reference contract with the compiler binary, `php-app.ts` serves an assembled app for the suite, and `suite/` is the composer package of the suite doubles both apps require.

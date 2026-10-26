@@ -7,7 +7,7 @@ set -eu
 binary="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 out="$2"
 here=$(cd "$(dirname "$0")" && pwd)
-repo=$(cd "$here/../../../.." && pwd)
+repo=$(cd "$here/../../.." && pwd)
 sources="$out/sources"
 
 if [ -e "$out" ]; then

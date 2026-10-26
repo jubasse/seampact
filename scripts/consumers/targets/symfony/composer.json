@@ -7,6 +7,7 @@
     "ext-json": "*",
     "ext-zlib": "*",
     "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
+    "seampact/consumer-suite": "dev-develop",
     "seampact/hooks": "dev-develop",
     "seampact/symfony": "dev-develop",
     "symfony/console": "~7.4.0",
@@ -21,6 +22,16 @@
     "symfony/validator": "~7.4.0"
   },
   "repositories": [
+    {
+      "type": "path",
+      "url": "../../php/suite",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/consumer-suite": "dev-develop"
+        }
+      }
+    },
     {
       "type": "path",
       "url": "../../../../php/symfony",

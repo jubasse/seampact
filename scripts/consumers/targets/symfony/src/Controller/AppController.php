@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Generated\Tasks\AppEndpoints;
+use App\Generated\Tasks\HealthInput;
 use App\Generated\Tasks\HealthResponse200;
 use App\Generated\Tasks\HealthResult;
-use App\Generated\Tasks\HealthInput;
 use App\Generated\Tasks\Schemas\Health;
 use App\Generated\Tasks\Symfony\Runtime\SeampactOperation;
-use App\Suite\SampleData;
-use App\Suite\ScriptedAnswers;
+use Seampact\ConsumerSuite\SampleData;
+use Seampact\ConsumerSuite\ScriptedAnswers;
 
 final class AppController implements AppEndpoints
 {

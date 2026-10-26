@@ -9,12 +9,13 @@ use App\Controller\SuiteControlController;
 use App\Controller\UnlistedRouteController;
 use App\Generated\Tasks\Symfony\TasksRouteLoader;
 use App\Generated\Tasks\Symfony\TasksSeampactBundle;
-use App\Suite\BootVariant;
 use App\Suite\ChannelResolver;
 use App\Suite\ForbiddenProbeMatcher;
 use App\Suite\SuiteLogger;
 use App\Suite\TasksDecider;
 use App\Suite\UserHook;
+use Seampact\ConsumerSuite\BootVariant;
+use Seampact\ConsumerSuite\SuiteFiles;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Bundle\SecurityBundle\SecurityBundle;
@@ -34,6 +35,8 @@ final class Kernel extends BaseKernel
 
     public const SUITE_USER = 'suite-user';
     public const SUITE_PASSWORD = 'suite-password';
+    private const CONTROL_STATE_FILE = '/var/suite-control.json';
+    private const CREDENTIALS_FILE = '/credentials.json';
     private const CACHE_VARIABLE = 'SEAMPACT_SUITE_CACHE_DIR';
     private const RESPONSES_VARIABLE = 'SEAMPACT_SUITE_RESPONSES';
     private const LEFT_OUT_BY_VARIANT = [
@@ -48,6 +51,13 @@ final class Kernel extends BaseKernel
         yield new FrameworkBundle();
         yield new SecurityBundle();
         yield new TasksSeampactBundle();
+    }
+
+    public function boot(): void
+    {
+        SuiteFiles::configure($this->getProjectDir() . self::CONTROL_STATE_FILE, $this->getProjectDir() . self::CREDENTIALS_FILE);
+
+        parent::boot();
     }
 
     public function getCacheDir(): string

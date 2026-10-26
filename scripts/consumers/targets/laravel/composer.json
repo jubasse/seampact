@@ -8,11 +8,22 @@
     "ext-json": "*",
     "ext-zlib": "*",
     "laravel/framework": "~13.38.0",
+    "seampact/consumer-suite": "dev-develop",
     "seampact/hooks": "dev-develop",
     "seampact/laravel": "dev-develop",
     "seampact/signed-webhooks": "dev-develop"
   },
   "repositories": [
+    {
+      "type": "path",
+      "url": "../../php/suite",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/consumer-suite": "dev-develop"
+        }
+      }
+    },
     {
       "type": "path",
       "url": "../../../../php/laravel",

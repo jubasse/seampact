@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Generated\Tasks\GetTaskErrors;
+use App\Generated\Tasks\GetTaskInput;
 use App\Generated\Tasks\GetTaskResponse200;
 use App\Generated\Tasks\GetTaskResult;
+use App\Generated\Tasks\GetTasksBatchInput;
 use App\Generated\Tasks\GetTasksBatchResponse200;
 use App\Generated\Tasks\GetTasksBatchResult;
-use App\Generated\Tasks\GetTaskInput;
-use App\Generated\Tasks\GetTasksBatchInput;
-use App\Generated\Tasks\TasksEndpoints;
 use App\Generated\Tasks\Symfony\Runtime\SeampactOperation;
-use App\Suite\SampleData;
-use App\Suite\ScriptedAnswers;
+use App\Generated\Tasks\TasksEndpoints;
+use Seampact\ConsumerSuite\SampleData;
+use Seampact\ConsumerSuite\ScriptedAnswers;
 
 final class TasksController implements TasksEndpoints
 {
