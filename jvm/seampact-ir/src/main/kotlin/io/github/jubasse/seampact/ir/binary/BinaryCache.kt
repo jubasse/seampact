@@ -23,7 +23,7 @@ import java.nio.file.attribute.UserPrincipal
  * start, the copy, its directory and each directory above it up to the cache root must be owned by the current user,
  * not be a link and not be writable by group or others; each directory above the cache root must be owned by the
  * current user or root and not be a link, may be writable by its group only when that group is the running process's
- * primary group, and may be writable by others only when it is the filesystem root. On Windows, from the copy up to
+ * primary group, and may never be writable by others. On Windows, from the copy up to
  * the real path of `%USERPROFILE%`, or up to the drive root outside it, none may be a reparse point and no ACL may
  * grant write to another account than the current user, SYSTEM and Administrators.
  */
@@ -135,8 +135,7 @@ internal object BinaryCache {
     // that group may write; no account database is read.
     private fun ancestorWritableByOthers(ancestor: Path, processGroupId: Long): BinaryFailure? {
         val permissions = Files.getPosixFilePermissions(ancestor, LinkOption.NOFOLLOW_LINKS)
-        val isFilesystemRoot = ancestor.parent == null
-        if (PosixFilePermission.OTHERS_WRITE in permissions && !isFilesystemRoot) {
+        if (PosixFilePermission.OTHERS_WRITE in permissions) {
             return cacheUnsafe(ancestor, "is above the cache and may be written by others; run `chmod o-w '$ancestor'`")
         }
         if (PosixFilePermission.GROUP_WRITE !in permissions) return null
