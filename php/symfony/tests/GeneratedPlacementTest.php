@@ -24,6 +24,8 @@ use Symfony\Component\HttpKernel\DependencyInjection\RegisterControllerArgumentL
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Generator\UrlGenerator;
+use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Validator\Validation;
 
 /** The golden tree's Symfony placement run in Symfony: its routes, its input constraint and its bundle configuration. */
@@ -43,9 +45,16 @@ final class GeneratedPlacementTest extends TestCase
 
         $batch = $routes->get('seampact.tasks.getTasksBatch');
         self::assertNotNull($batch);
-        self::assertSame('/v1/channels/{p1}/tasks/batch', $batch->getPath());
+        self::assertSame('/v1/channels/{channelId}/tasks/batch', $batch->getPath());
         self::assertSame(['POST'], $batch->getMethods());
         self::assertSame('getTasksBatch', $batch->getDefault(TasksRouteLoader::OPERATION_DEFAULT));
+    }
+
+    public function testPlaceholdersAreNamedAfterTheInputPropertiesSoTheRouterBuildsTheUrl(): void
+    {
+        $urls = new UrlGenerator((new TasksRouteLoader())->load('tasks', 'seampact'), new RequestContext());
+
+        self::assertSame('/v1/channels/c1/tasks/t1', $urls->generate('seampact.tasks.getTask', ['channelId' => 'c1', 'taskId' => 't1']));
     }
 
     public function testTheInputConstraintReportsEachIssueWithItsRuleAndPointer(): void
