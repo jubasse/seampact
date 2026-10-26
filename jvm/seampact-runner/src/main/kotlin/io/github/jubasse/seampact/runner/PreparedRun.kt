@@ -1,5 +1,6 @@
 package io.github.jubasse.seampact.runner
 
+import io.github.jubasse.seampact.ir.binary.BinaryInstall
 import io.github.jubasse.seampact.ir.binary.BinaryPin
 import io.github.jubasse.seampact.ir.bundle.BundleFetcher
 import io.github.jubasse.seampact.ir.bundle.MavenArtefactResolver
@@ -35,12 +36,16 @@ public class RunSettings(
 
 /** A run with every entry planned (or refused one by one), or the problems that stop it before any entry. */
 public sealed interface PreparedRun {
-    /** [warnings] are the compatibility check's, which generate and check print. */
+    /**
+     * [warnings] are the compatibility check's, which generate and check print; [binary] installs the pinned binary
+     * once, when a `path` source or the documents first need it.
+     */
     public data class Prepared(
         val config: AppConfig,
         val bundles: List<CheckedBundle>,
         val plans: List<EntryPlan>,
         val warnings: List<ConfigProblem>,
+        internal val binary: () -> BinaryInstall,
     ) : PreparedRun
 
     public data class Refused(val problems: List<ConfigProblem>) : PreparedRun
@@ -48,7 +53,8 @@ public sealed interface PreparedRun {
 
 /**
  * Reads the app config, gets the IR of each source the JVM entries use, and plans each entry's files, writing
- * nothing: the steps generate and check share, as the Node CLI's `prepareRun`.
+ * nothing: the steps generate and check share, as the Node CLI's `prepareRun`. The documents are the binary's, asked
+ * by generate and check after this.
  */
 public fun prepareRun(settings: RunSettings): PreparedRun {
     val config = when (val read = readAppConfig(settings.appDirectory, settings.dslTree, settings.dslName)) {
@@ -57,17 +63,18 @@ public fun prepareRun(settings: RunSettings): PreparedRun {
     }
 
     val matrix = checkMatrix(config, settings.springBootVersion, jvmFrameworks())
-    val configProblems = waitingForms(config) + EntryView.unknownSourceProblems(config) + matrix.problems
+    val configProblems = documentsWaitingForms(config) + EntryView.unknownSourceProblems(config) + matrix.problems
     if (configProblems.isNotEmpty()) return PreparedRun.Refused(configProblems)
 
     // The build's environment, with SEAMPACT_ALLOW_LOCAL as the build's input holds it (git reads the rest).
     val environment = System.getenv().filterKeys { it != LocalSourcePolicy.ALLOW_LOCAL_VARIABLE } +
         listOfNotNull(settings.allowLocalVariable?.let { LocalSourcePolicy.ALLOW_LOCAL_VARIABLE to it })
+    val binary by lazy { installBinary(settings.binary, settings.resolveBinaryArtefact, settings.binaryCacheDirectory, settings.buildTool) }
     val contractApis = ContractApis(
         fetcher = BundleFetcher(settings.bundleCacheDirectory, environment, settings.mavenArtefacts),
         localSources = LocalSourcePolicy.of(config.allowLocal, environment),
         localRefusalReason = LocalSourcePolicy.refusalReason(environment),
-        installBinary = { installBinary(settings.binary, settings.resolveBinaryArtefact, settings.binaryCacheDirectory, settings.buildTool) },
+        installBinary = { binary },
     )
 
     return when (val read = contractApis.read(config, EntryView.usedSources(config))) {
@@ -77,6 +84,7 @@ public fun prepareRun(settings: RunSettings): PreparedRun {
             read.bundles,
             planEntries(config, read.apis, settings, runnerVersion()),
             matrix.warnings,
+            { binary },
         )
     }
 }

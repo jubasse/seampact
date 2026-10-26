@@ -206,7 +206,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/binary`
 
-- `packages/tools/binary/src`: The standalone compiler binary: the CLI entry the single executable wraps, the commands it refuses, and the reader serving the embedded first-party packs.
+- `packages/tools/binary/src`: The standalone compiler binary: the CLI entry the single executable wraps, the commands it runs on native target entries only, and the reader serving the embedded first-party packs.
 
 ### `@seampact/http-suite`
 

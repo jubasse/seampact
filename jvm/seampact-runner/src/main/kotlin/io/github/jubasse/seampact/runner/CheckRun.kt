@@ -1,5 +1,6 @@
 package io.github.jubasse.seampact.runner
 
+import io.github.jubasse.seampact.ir.binary.DocumentsCommand
 import io.github.jubasse.seampact.ir.config.AppConfig
 import io.github.jubasse.seampact.ir.config.ConfigProblem
 import io.github.jubasse.seampact.ir.write.PlanOutcome
@@ -20,7 +21,7 @@ public data class CheckReport(val lines: List<String>, val warnings: List<String
  * through the pinned-bundle check (its integrity printed), then compares the files a run would write with those on
  * disk at the `checks.generated` level (ADR 0011 `checks`, ADR 0015): drift at `error` fails, at `warning` is
  * printed, `disabled` is not looked for. An `outDir` under [buildDirectory] is not committed, so its files are not
- * compared. Nothing is written.
+ * compared. The pinned binary checks the app's OpenAPI documents at `checks.openapi`. Nothing is written.
  */
 public fun check(settings: RunSettings, buildDirectory: Path): CheckReport {
     val prepared = when (val run = prepareRun(settings)) {
@@ -28,22 +29,27 @@ public fun check(settings: RunSettings, buildDirectory: Path): CheckReport {
         is PreparedRun.Prepared -> run
     }
 
-    val lines = prepared.bundles.map { "seampact: source '${it.source}' passes the pinned-bundle check, integrity ${it.integrity}." }
+    val bundleLines = prepared.bundles.map { "seampact: source '${it.source}' passes the pinned-bundle check, integrity ${it.integrity}." }
+    val documents = runDocuments(prepared.config, settings, DocumentsCommand.CHECK, prepared.binary)
+    val documentLines = (documents as? DocumentsRun.Done)?.lines.orEmpty()
+    val documentWarnings = (documents as? DocumentsRun.Done)?.warnings.orEmpty()
+    val documentProblems = (documents as? DocumentsRun.Refused)?.problems.orEmpty()
+    val lines = bundleLines + documentLines
 
     val outDir = prepared.config.outDir.toAbsolutePath().normalize()
     if (outDir.startsWith(buildDirectory.toAbsolutePath().normalize())) {
         // A refused entry still fails the check: generate would refuse it too.
-        val refusals = prepared.plans.filterIsInstance<EntryPlan.Refused>().flatMap { it.problems }
+        val refusals = prepared.plans.filterIsInstance<EntryPlan.Refused>().flatMap { it.problems } + documentProblems
         val skipped = "seampact: checks.generated is not compared: outDir $outDir is under the build directory, so its files are not committed."
 
-        return CheckReport(if (refusals.isEmpty()) lines + skipped else lines, printedWarnings(prepared), refusals)
+        return CheckReport(if (refusals.isEmpty()) lines + skipped else lines, printedWarnings(prepared) + documentWarnings, refusals)
     }
 
-    val errors = mutableListOf<ConfigProblem>()
+    val errors = documentProblems.toMutableList()
     val warnings = mutableListOf<ConfigProblem>()
     collectDrift(prepared, settings.buildTool, errors, warnings)
 
-    val printed = printedWarnings(prepared, warnings)
+    val printed = printedWarnings(prepared, warnings) + documentWarnings
     val matched = if (errors.isEmpty()) listOf("seampact: the generated files match the files on disk.") else emptyList()
 
     return CheckReport(lines + matched, printed, errors)

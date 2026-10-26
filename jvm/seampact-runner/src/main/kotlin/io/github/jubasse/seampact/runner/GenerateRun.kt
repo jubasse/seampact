@@ -1,5 +1,6 @@
 package io.github.jubasse.seampact.runner
 
+import io.github.jubasse.seampact.ir.binary.DocumentsCommand
 import io.github.jubasse.seampact.ir.config.ConfigProblem
 import io.github.jubasse.seampact.ir.write.GeneratedWriter
 import io.github.jubasse.seampact.ir.write.PlanOutcome
@@ -17,7 +18,8 @@ public sealed interface GenerateOutcome {
 
 /**
  * Generates each JVM target entry of the app config into its output root (ADR 0015 "Writing files"). Every entry is
- * planned first; one refusal writes nothing.
+ * planned first; one refusal writes nothing. The pinned binary then writes the app's OpenAPI documents, before any
+ * entry is written, so a refused document leaves the entries as they were too.
  */
 public fun generate(settings: RunSettings): GenerateOutcome {
     val prepared = when (val run = prepareRun(settings)) {
@@ -40,6 +42,11 @@ public fun generate(settings: RunSettings): GenerateOutcome {
     }
     if (problems.isNotEmpty()) return GenerateOutcome.Refused(problems)
 
+    val documents = when (val run = runDocuments(prepared.config, settings, DocumentsCommand.GENERATE, prepared.binary)) {
+        is DocumentsRun.Refused -> return GenerateOutcome.Refused(run.problems)
+        is DocumentsRun.Done -> run
+    }
+
     val lines = writes.map { write ->
         val written = GeneratedWriter.commit(write)
         "seampact: entry '${write.owner}' wrote ${written.written.size} file(s), kept ${written.unchanged.size}, removed ${written.removed.size} in ${write.rootDir}."
@@ -48,5 +55,5 @@ public fun generate(settings: RunSettings): GenerateOutcome {
         "seampact: entry '${other.id}' uses '${other.use}', which its own runner generates; ${settings.buildTool.pluginName} leaves it."
     }
 
-    return GenerateOutcome.Generated(lines + left, printedWarnings(prepared))
+    return GenerateOutcome.Generated(documents.lines + lines + left, printedWarnings(prepared) + documents.warnings)
 }

@@ -33,6 +33,24 @@ public sealed interface BinaryCompileResult {
     public data class TimedOut(val failure: BinaryFailure) : BinaryCompileResult
 }
 
+/** The binary's commands on an app config's OpenAPI documents (ADR 0010 "The standalone compiler binary"). */
+public enum class DocumentsCommand(public val command: String) {
+    GENERATE("generate"),
+    CHECK("check"),
+}
+
+/** The outcome of [BinaryRunner.documents]. */
+public sealed interface BinaryDocumentsResult {
+    /** The binary wrote or checked the documents (exit 0); [stdout] holds its lines and [stderr] its warnings. */
+    public data class Done(val stdout: String, val stderr: String) : BinaryDocumentsResult
+
+    /** The binary refused the run (exit 1) or its usage (exit 2); its two streams hold its diagnostics. */
+    public data class Failed(val exitCode: Int, val stdout: String, val stderr: String) : BinaryDocumentsResult
+
+    /** The binary did not start, left its contract or was stopped at the deadline. */
+    public data class NotRun(val failure: BinaryFailure) : BinaryDocumentsResult
+}
+
 /**
  * Compiles local YAML sources with the pinned standalone binary (ADR 0010, "Amendment 2026-10-21: the JVM channels",
  * Runner and Exits): checks the private cache and hashes the copy right before it starts, runs
@@ -65,22 +83,65 @@ public object BinaryRunner {
         support: IrSupport,
         timeout: Duration = DEFAULT_TIMEOUT,
     ): BinaryCompileResult {
-        val unsafeEntry = BinaryCache.unsafeEntry(binary.path, binary.cacheRoot)
-        if (unsafeEntry != null) return BinaryCompileResult.Refused(unsafeEntry)
-        val startedSha256 = BinaryInstaller.sha256Of(binary.path)
-        if (startedSha256 != binary.sha256) return BinaryCompileResult.Refused(changedSinceInstall(binary, startedSha256))
-
         // Absolute before the start, so the paths the binary receives name the files the runner reads, whatever the
         // child's working directory.
         val workDirectory = Files.createTempDirectory("seampact-compile-").toAbsolutePath()
         try {
             val irDirectory = workDirectory.resolve("ir")
-            val stdout = workDirectory.resolve("stdout.txt")
-            val stderr = workDirectory.resolve("stderr.txt")
-            val configFile = appConfig.toAbsolutePath()
 
-            val processBuilder = ProcessBuilder(binary.path.toString(), "compile", "--config", configFile.toString(), "--out", irDirectory.toString())
-                .directory(configFile.parent.toFile())
+            return when (val ran = run(binary, listOf("compile", "--config", appConfig.toAbsolutePath().toString(), "--out", irDirectory.toString()), appConfig, timeout)) {
+                is Ran.NotStarted -> BinaryCompileResult.Refused(ran.failure)
+                is Ran.TimedOut -> BinaryCompileResult.TimedOut(ran.failure)
+                is Ran.UnknownExit -> BinaryCompileResult.OutsideContract(ran.failure)
+                is Ran.Exited -> if (ran.exitCode == 0) readIrs(irDirectory, support) else BinaryCompileResult.Failed(ran.exitCode, ran.stdout, ran.stderr)
+            }
+        } finally {
+            workDirectory.toFile().deleteRecursively()
+        }
+    }
+
+    /**
+     * Runs `generate` or `check` on the app config [appConfig], from its directory, with the same checks and
+     * environment as [compile]: the binary writes or checks the config's OpenAPI documents and its pinned bundles and
+     * leaves the native entries to the plugin. An npm entry is the binary's own refusal (exit 1).
+     */
+    public fun documents(
+        binary: VerifiedBinary,
+        appConfig: Path,
+        command: DocumentsCommand,
+        timeout: Duration = DEFAULT_TIMEOUT,
+    ): BinaryDocumentsResult = when (val ran = run(binary, listOf(command.command, "--config", appConfig.toAbsolutePath().toString()), appConfig, timeout)) {
+        is Ran.NotStarted -> BinaryDocumentsResult.NotRun(ran.failure)
+        is Ran.TimedOut -> BinaryDocumentsResult.NotRun(ran.failure)
+        is Ran.UnknownExit -> BinaryDocumentsResult.NotRun(ran.failure)
+        is Ran.Exited -> if (ran.exitCode == 0) BinaryDocumentsResult.Done(ran.stdout, ran.stderr) else BinaryDocumentsResult.Failed(ran.exitCode, ran.stdout, ran.stderr)
+    }
+
+    private sealed interface Ran {
+        data class NotStarted(val failure: BinaryFailure) : Ran
+
+        data class TimedOut(val failure: BinaryFailure) : Ran
+
+        data class UnknownExit(val failure: BinaryFailure) : Ran
+
+        /** Exit 0, or one of the contract's refusal exits; both streams without control characters. */
+        data class Exited(val exitCode: Int, val stdout: String, val stderr: String) : Ran
+    }
+
+    // Checks the cache and the hash right before the start, then runs the binary from the app config's directory.
+    private fun run(binary: VerifiedBinary, arguments: List<String>, appConfig: Path, timeout: Duration): Ran {
+        val unsafeEntry = BinaryCache.unsafeEntry(binary.path, binary.cacheRoot)
+        if (unsafeEntry != null) return Ran.NotStarted(unsafeEntry)
+        val startedSha256 = BinaryInstaller.sha256Of(binary.path)
+        if (startedSha256 != binary.sha256) return Ran.NotStarted(changedSinceInstall(binary, startedSha256))
+
+        val streamDirectory = Files.createTempDirectory("seampact-run-").toAbsolutePath()
+        try {
+            val stdout = streamDirectory.resolve("stdout.txt")
+            val stderr = streamDirectory.resolve("stderr.txt")
+
+            val processBuilder = ProcessBuilder(listOf(binary.path.toString()) + arguments)
+                .directory(appConfig.toAbsolutePath().parent.toFile())
                 .redirectOutput(stdout.toFile())
                 .redirectError(stderr.toFile())
             keepContractVariables(processBuilder.environment(), BinaryCache.isWindows())
@@ -91,18 +152,15 @@ public object BinaryRunner {
 
             if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
                 process.destroyForcibly().waitFor()
-                return BinaryCompileResult.TimedOut(timedOut(timeout))
+                return Ran.TimedOut(timedOut(timeout))
             }
 
             val exitCode = process.exitValue()
-            if (exitCode in CONTRACT_REFUSAL_EXITS) {
-                return BinaryCompileResult.Failed(exitCode, withoutControlCharacters(Files.readString(stdout)), withoutControlCharacters(Files.readString(stderr)))
-            }
-            if (exitCode != 0) return BinaryCompileResult.OutsideContract(unknownExit(exitCode))
+            if (exitCode != 0 && exitCode !in CONTRACT_REFUSAL_EXITS) return Ran.UnknownExit(unknownExit(exitCode))
 
-            return readIrs(irDirectory, support)
+            return Ran.Exited(exitCode, withoutControlCharacters(Files.readString(stdout)), withoutControlCharacters(Files.readString(stderr)))
         } finally {
-            workDirectory.toFile().deleteRecursively()
+            streamDirectory.toFile().deleteRecursively()
         }
     }
 

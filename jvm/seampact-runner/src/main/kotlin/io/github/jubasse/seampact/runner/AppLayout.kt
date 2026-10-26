@@ -13,21 +13,22 @@ import java.nio.file.Path
 
 /**
  * What the build must know of the app config before a run: the output root of each JVM entry (the generated Java
- * sources), the `path` sources a run compiles (its inputs, and whether the binary is needed at all) and the `maven`
- * bundle sources it resolves. An app config that does not read has an empty layout; the run then refuses it with its
- * problems.
+ * sources), the `path` sources a run compiles (its inputs), the `maven` bundle sources it resolves, and whether it has
+ * seampact OpenAPI documents. The binary is needed for a `path` source or a document only. An app config that does not
+ * read has an empty layout; the run then refuses it with its problems.
  */
 public data class AppLayout(
     val entryRoots: List<String>,
     val pathSources: List<String>,
     val mavenSources: List<String>,
+    val documents: Boolean,
 ) : Serializable {
-    val needsBinary: Boolean get() = pathSources.isNotEmpty()
+    val needsBinary: Boolean get() = pathSources.isNotEmpty() || documents
 
     public companion object {
-        private const val serialVersionUID: Long = 1
+        private const val serialVersionUID: Long = 2
 
-        public val EMPTY: AppLayout = AppLayout(emptyList(), emptyList(), emptyList())
+        public val EMPTY: AppLayout = AppLayout(emptyList(), emptyList(), emptyList(), documents = false)
 
         public fun of(config: AppConfig): AppLayout {
             val used = EntryView.usedSources(config).mapNotNull { config.sources[it] }
@@ -39,6 +40,7 @@ public data class AppLayout(
                     .map { it.source }
                     .filterIsInstance<BundleSource.MavenArtefact>()
                     .map { it.coordinates },
+                documents = documentsAsked(config),
             )
         }
 

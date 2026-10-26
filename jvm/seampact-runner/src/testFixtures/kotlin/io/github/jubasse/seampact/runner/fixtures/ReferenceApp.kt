@@ -35,15 +35,18 @@ public object ReferenceApp {
     }
 
     /**
-     * Writes at [binary] a stub of the compiler binary: it touches [marker], then writes the golden IR where `--out`
-     * points.
+     * Writes at [binary] a stub of the compiler binary: it adds its command to [marker], one line per run; on
+     * `generate` or `check` it prints one line and exits 0, else it writes the golden IR where `--out` points.
      */
     public fun writeStubBinary(binary: Path, marker: Path) {
         val golden = repositoryRoot.resolve("fixtures/golden/reference")
         binary.writeText(
             """
             #!/bin/sh
-            touch '${marker.absolutePathString()}'
+            echo "${'$'}1" >> '${marker.absolutePathString()}'
+            case "${'$'}1" in
+              generate|check) echo "$STUB_DOCUMENTS_LINE ${'$'}1"; exit 0 ;;
+            esac
             out=""
             while [ "${'$'}#" -gt 0 ]; do
               if [ "${'$'}1" = "--out" ]; then out="${'$'}2"; fi
@@ -55,6 +58,9 @@ public object ReferenceApp {
         )
         binary.toFile().setExecutable(true)
     }
+
+    /** What the stub prints on `generate` and `check`, before the command. */
+    public const val STUB_DOCUMENTS_LINE: String = "stub documents:"
 
     /** Writes [text], its indent trimmed, to [relativePath] under [directory], creating the directories it needs. */
     public fun writeFile(directory: Path, relativePath: String, text: String) {
