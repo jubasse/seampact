@@ -8,8 +8,8 @@ use Illuminate\Translation\ArrayLoader;
 use Illuminate\Translation\Translator;
 use Illuminate\Validation\Factory;
 use PHPUnit\Framework\TestCase;
+use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Laravel\LaravelGenerator;
-use Seampact\Laravel\Tests\Support\ReferenceContract;
 
 /**
  * The rules a generated FormRequest returns, run in Laravel's validator over a decoded body: the getTasksBatch body
@@ -29,11 +29,11 @@ final class FormRequestRulesTest extends TestCase
     {
         self::$generatedDirectory = sys_get_temp_dir() . '/seampact-laravel-rules-' . bin2hex(random_bytes(6));
         $generator = new LaravelGenerator();
-        $ir = ReferenceContract::read(self::withAddedMembers(ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), ['getTasksBatch'])));
+        $ir = ReferenceContract::read(new LaravelGenerator(), self::withAddedMembers(ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), ['getTasksBatch'])));
 
         foreach ([self::NATIVE_NAMESPACE => [], self::CONSISTENT_NAMESPACE => ['rules' => 'seampact-consistent']] as $namespace => $options) {
             $root = self::$generatedDirectory . '/' . str_replace('\\', '/', $namespace);
-            foreach ($generator->generate($ir, ReferenceContract::entry('tasks', $namespace, $options)) as $file) {
+            foreach ($generator->generate($ir, ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', $namespace, $options)) as $file) {
                 $target = "{$root}/{$file->path}";
                 if (!is_dir(dirname($target))) {
                     mkdir(dirname($target), 0o700, true);

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Seampact\Laravel\Tests;
 
 use PHPUnit\Framework\TestCase;
+use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Ir\Run\GenerationRefusedException;
 use Seampact\Laravel\LaravelGenerator;
-use Seampact\Laravel\Tests\Support\ReferenceContract;
 
 /**
  * What `generate` refuses by name: each form with the release that brings it (ADR 0023 "Refused by name or waiting"),
@@ -127,7 +127,7 @@ final class LaravelRefusalsTest extends TestCase
     private static function refused(\stdClass $document, array $artefacts = []): array
     {
         try {
-            (new LaravelGenerator())->generate(ReferenceContract::read($document), ReferenceContract::entry('tasks', 'App\\Tasks', [], $artefacts));
+            (new LaravelGenerator())->generate(ReferenceContract::read(new LaravelGenerator(), $document), ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'App\\Tasks', [], $artefacts));
         } catch (GenerationRefusedException $refused) {
             $messages = [];
             foreach ($refused->problems as $problem) {

@@ -2,14 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Tests\Support;
+namespace Seampact\Codegen\Tests\Support;
 
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Read\IrReader;
+use Seampact\Ir\Run\Generator;
 use Seampact\Ir\Run\TargetEntry;
-use Seampact\Laravel\LaravelGenerator;
 
-/** The reference contract's IRs as an entry's `operations` filter keeps them, and target entries to generate them. */
+/**
+ * The reference contract's IRs as an entry's `operations` filter keeps them, read with a PHP target's IR support, and
+ * that target's entries to generate them; shared by the PHP targets' tests through their `autoload-dev`.
+ */
 final class ReferenceContract
 {
     public const TASKS = 'tasks.ir.json';
@@ -45,23 +48,23 @@ final class ReferenceContract
         return $copy;
     }
 
-    public static function read(\stdClass $document): ContractIR
+    public static function read(Generator $generator, \stdClass $document): ContractIR
     {
-        return IrReader::readDocument($document, (new LaravelGenerator())->irSupport());
+        return IrReader::readDocument($document, $generator->irSupport());
     }
 
-    public static function core(): ContractIR
+    public static function core(Generator $generator): ContractIR
     {
-        return self::read(self::kept(self::document(self::TASKS), self::CORE_OPERATIONS));
+        return self::read($generator, self::kept(self::document(self::TASKS), self::CORE_OPERATIONS));
     }
 
     /**
      * @param array<string, mixed> $options
      * @param array<string, mixed> $artefacts
      */
-    public static function entry(string $api, string $namespace, array $options = [], array $artefacts = []): TargetEntry
+    public static function entry(string $package, string $api, string $namespace, array $options = [], array $artefacts = []): TargetEntry
     {
-        return new TargetEntry('server', 'seampact/laravel', $api, null, (object) $options, (object) $artefacts, '/app/generated', $namespace);
+        return new TargetEntry('server', $package, $api, null, (object) $options, (object) $artefacts, '/app/generated', $namespace);
     }
 
     /** The one operation `$operationId` of the reference tasks IR, which `$change` edits in place. */

@@ -6,10 +6,10 @@ namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\GoldenTree;
+use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Ir\Config\ConfigProblem;
 use Seampact\Ir\Run\GenerationRefusedException;
 use Seampact\Symfony\SymfonyGenerator;
-use Seampact\Symfony\Tests\Support\ReferenceContract;
 
 /**
  * The reference contract's apis generated with the operations this release serves, compared byte for byte with the
@@ -26,10 +26,10 @@ final class GoldenTest extends TestCase
     {
         $generator = new SymfonyGenerator();
         $trees = [
-            'Tasks' => $generator->generate(ReferenceContract::core(), ReferenceContract::entry('tasks', 'Seampact\\Golden\\Tasks')),
+            'Tasks' => $generator->generate(ReferenceContract::core(new SymfonyGenerator()), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'Seampact\\Golden\\Tasks')),
             'TasksConsistent' => $generator->generate(
-                ReferenceContract::core(),
-                ReferenceContract::entry('tasks', 'Seampact\\Golden\\TasksConsistent', ['rules' => 'seampact-consistent', 'indent' => 2]),
+                ReferenceContract::core(new SymfonyGenerator()),
+                ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'Seampact\\Golden\\TasksConsistent', ['rules' => 'seampact-consistent', 'indent' => 2]),
             ),
         ];
 
@@ -48,10 +48,10 @@ final class GoldenTest extends TestCase
 
     public function testTheFullReferenceContractIsRefusedFormByForm(): void
     {
-        $ir = ReferenceContract::read(ReferenceContract::document(ReferenceContract::TASKS));
+        $ir = ReferenceContract::read(new SymfonyGenerator(), ReferenceContract::document(ReferenceContract::TASKS));
 
         try {
-            (new SymfonyGenerator())->generate($ir, ReferenceContract::entry('tasks', 'App\\Tasks'));
+            (new SymfonyGenerator())->generate($ir, ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
             self::fail('The full reference contract was generated, but it carries forms a later release brings.');
         } catch (GenerationRefusedException $refused) {
             $codes = array_values(array_unique(array_map(static fn (ConfigProblem $problem): string => $problem->code, $refused->problems)));
@@ -77,7 +77,7 @@ final class GoldenTest extends TestCase
         });
 
         try {
-            (new SymfonyGenerator())->generate(ReferenceContract::read($document), ReferenceContract::entry('tasks', 'App\\Tasks'));
+            (new SymfonyGenerator())->generate(ReferenceContract::read(new SymfonyGenerator(), $document), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
             self::fail('A mixed path segment was generated.');
         } catch (GenerationRefusedException $refused) {
             self::assertSame(['path.segment.mixed.unsupported'], array_map(static fn (ConfigProblem $problem): string => $problem->code, $refused->problems));

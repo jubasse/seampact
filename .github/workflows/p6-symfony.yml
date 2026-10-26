@@ -79,6 +79,10 @@ jobs:
       - name: Move to Symfony 8
         if: matrix.symfony == '8'
         working-directory: php/symfony
+        env:
+          # The siblings are required at `self.version`, locked at dev-develop: a partial update keeps them there, so
+          # the root takes that version too rather than the `dev-<sha>` of a pull request checkout.
+          COMPOSER_ROOT_VERSION: dev-develop
         run: |
           composer config platform.php 8.5.12
           composer require --dev --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies \

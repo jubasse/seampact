@@ -44,13 +44,14 @@
   ],
   "autoload": {
     "psr-4": {
-      "Seampact\\Symfony\\": "src/",
-      "Seampact\\Symfony\\Runtime\\": "runtime/"
+      "Seampact\\Symfony\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
+      "Seampact\\Symfony\\Runtime\\": "runtime/",
       "Seampact\\Symfony\\Tests\\": "tests/",
+      "Seampact\\Codegen\\Tests\\Support\\": "../codegen/tests/Support/",
       "Seampact\\Golden\\": "tests/golden/"
     }
   },
