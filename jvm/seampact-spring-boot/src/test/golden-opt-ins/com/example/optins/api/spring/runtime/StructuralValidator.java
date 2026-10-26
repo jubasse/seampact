@@ -48,8 +48,11 @@ final class StructuralValidator {
     }
 
     void check(JsonNode value, JsonNode typeUse, String in, String pointer, List<InputIssue> issues) {
-        // An opaque value is any JSON, null included.
-        if (OPAQUE.equals(typeUse.path("kind").asString())) return;
+        // An opaque value is any JSON, null included, but a number past the range of a double, at any depth.
+        if (OPAQUE.equals(typeUse.path("kind").asString())) {
+            if (!isFiniteThroughout(value)) issues.add(new InputIssue(in, pointer, "type"));
+            return;
+        }
         if (value.isNull()) {
             if (!typeUse.path("nullable").asBoolean(false)) issues.add(new InputIssue(in, pointer, "type"));
             return;
@@ -101,6 +104,16 @@ final class StructuralValidator {
             default -> throw new IllegalStateException(
                     "seampact: the scalar type '" + typeUse.path("type").asString() + "' is not one the boundary validates");
         }
+    }
+
+    private static boolean isFiniteThroughout(JsonNode value) {
+        if (value.isNumber()) return Double.isFinite(value.doubleValue());
+
+        for (JsonNode member : value) {
+            if (!isFiniteThroughout(member)) return false;
+        }
+
+        return true;
     }
 
     private static boolean isBeyondSafeInteger(BigInteger integer) {

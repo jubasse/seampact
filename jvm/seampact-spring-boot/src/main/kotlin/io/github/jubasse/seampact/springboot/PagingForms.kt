@@ -17,7 +17,9 @@ import io.github.jubasse.seampact.ir.model.PagingRole
 import io.github.jubasse.seampact.ir.model.PagingStyle
 import io.github.jubasse.seampact.ir.model.RefTypeUse
 import io.github.jubasse.seampact.ir.model.ResponseShape
+import io.github.jubasse.seampact.ir.model.SlotMemberName
 import io.github.jubasse.seampact.ir.model.SlotTemplate
+import io.github.jubasse.seampact.ir.model.SlotTextPart
 import io.github.jubasse.seampact.ir.model.Template
 import io.github.jubasse.seampact.ir.model.TextTemplate
 import io.github.jubasse.seampact.ir.model.UrlRole
@@ -76,6 +78,8 @@ internal fun springSortProperties(ir: ContractIR, operation: Operation): Map<Str
  */
 internal fun checkPaging(ir: ContractIR, operation: Operation, at: IrPlace, refusals: Refusals) {
     val paging = operation.paging ?: return
+    checkRestrictedSortKeys(operation, at, refusals)
+
     val styleId = paging.style ?: return
     val style = ir.pagings[styleId]
     if (style == null) {
@@ -106,6 +110,19 @@ internal fun checkPaging(ir: ContractIR, operation: Operation, at: IrPlace, refu
 
     checkPageTemplates(ir, operation, style, styleAt, refusals)
     if (isSpringPageList(ir, operation)) checkSpringSortKeys(ir, operation, at, refusals)
+}
+
+// A sort key a right restricts: the boundary does not ask that right yet (ADR 0012 step 7), as on the PHP targets.
+private fun checkRestrictedSortKeys(operation: Operation, at: IrPlace, refusals: Refusals) {
+    operation.paging?.sortKeys.orEmpty().forEachIndexed { index, sortKey ->
+        val right = sortKey.right ?: return@forEachIndexed
+        refusals.waiting(
+            "paging.sortKey.right",
+            "The sort key '${sortKey.key}' restricted by the right '$right'",
+            at.below("paging", "sortKeys", index, "right"),
+            Delivery.CONSUMER,
+        )
+    }
 }
 
 private fun checkSpringSortKeys(ir: ContractIR, operation: Operation, at: IrPlace, refusals: Refusals) {
@@ -156,11 +173,13 @@ private fun checkSlots(style: PagingStyle, template: Template, at: IrPlace, refu
     )
 }
 
-private fun templateSlots(template: Template): List<String> = when (template) {
+/** The slot names a template writes, at any depth. */
+internal fun templateSlots(template: Template): List<String> = when (template) {
     is SlotTemplate -> listOf(template.slot)
     is EachTemplate -> listOf(template.of) + templateSlots(template.as_)
-    is ObjectTemplate -> template.members.flatMap { templateSlots(it.value) }
+    is ObjectTemplate -> template.members.flatMap { member -> listOfNotNull((member.name as? SlotMemberName)?.slot) + templateSlots(member.value) }
     is ArrayTemplate -> template.items.flatMap(::templateSlots)
+    is TextTemplate -> template.parts.filterIsInstance<SlotTextPart>().map { it.slot }
     else -> emptyList()
 }
 

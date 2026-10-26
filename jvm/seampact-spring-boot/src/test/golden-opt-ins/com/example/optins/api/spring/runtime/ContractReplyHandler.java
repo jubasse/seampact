@@ -92,11 +92,13 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
                 return;
             }
 
-            JsonNode body = payload;
+            JsonNode body;
             if (isPage) {
                 PageReply.RenderedPage page = PageReply.render(boundary.table(), exchange, request.getQueryString(), request.getRequestURI(), boundary.publicOrigin(), handlerBody, payload, status);
                 page.headers().forEach(header -> checking.addHeader(header.getKey(), header.getValue()));
                 body = page.body();
+            } else {
+                body = SuccessEnvelope.body(boundary.table().format(exchange.route()), response.path("shape").asString(), payload, status, request.getRequestURI());
             }
 
             byte[] bodyBytes = boundary.mapper().writeValueAsBytes(body);

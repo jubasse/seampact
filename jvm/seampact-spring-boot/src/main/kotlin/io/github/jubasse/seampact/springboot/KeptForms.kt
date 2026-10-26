@@ -192,6 +192,8 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
             refusals.inconsistent("response.body.missing", "A '${response.shape.value}' response has no body", responseAt)
         }
 
+        if (response.shape in PAYLOAD_SHAPES && response.body != null) checkSuccessFormat(ir, operation, response.shape, refusals)
+
         response.body?.let { readType(it, responseAt.below("body")) }
     }
 
