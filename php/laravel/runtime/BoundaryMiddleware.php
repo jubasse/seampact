@@ -79,6 +79,8 @@ abstract class BoundaryMiddleware
         $state->publicOrigin = PublicOrigin::of($contract, $this->setting($contract, null, self::PUBLIC_ORIGIN));
         $state->pageReader = new PaginatorPages();
         $request->attributes->set(BoundaryState::attributeName($contract->api), $state);
+        // Installed here, after the app's `withMiddleware` set its guest redirect, so the app's callback is kept.
+        GuestRedirects::skipOnContractRequests($contract->api);
 
         try {
             $reply = $this->answered($request, $next, $state);
