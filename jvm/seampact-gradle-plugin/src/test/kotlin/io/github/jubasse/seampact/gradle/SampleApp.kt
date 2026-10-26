@@ -3,6 +3,7 @@ package io.github.jubasse.seampact.gradle
 import io.github.jubasse.seampact.runner.fixtures.ReferenceApp
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
+import java.nio.file.Files
 import java.nio.file.Path
 
 /**
@@ -74,6 +75,8 @@ internal class SampleApp(val directory: Path) {
         runner(arguments, environment).buildAndFail()
 
     private fun runner(arguments: Array<out String>, environment: Map<String, String>): GradleRunner {
+        writeRetryKeysIntoTestKitHome()
+
         val runner = GradleRunner.create()
             .withProjectDir(directory.toFile())
             .withPluginClasspath()
@@ -86,7 +89,24 @@ internal class SampleApp(val directory: Path) {
         return if (gradleVersion == null) runner else runner.withGradleVersion(gradleVersion)
     }
 
+    // The TestKit Gradle user home is not the runner's, so it gets the repository's retry keys itself.
+    private fun writeRetryKeysIntoTestKitHome() {
+        val testKitDirectory = Path.of(System.getProperty("seampact.testKitDirectory"))
+        val propertiesFile = testKitDirectory.resolve("gradle.properties")
+
+        Files.createDirectories(testKitDirectory)
+        val retryLines = Files.readAllLines(REPOSITORY_PROPERTIES).filter { it.startsWith(RETRY_KEY_PREFIX) }
+
+        check(retryLines.isNotEmpty()) { "No retry keys found in $REPOSITORY_PROPERTIES" }
+        Files.write(propertiesFile, retryLines)
+    }
+
     companion object {
+        // Gradle runs tests from the project directory, so the shared properties file is one level up.
+        private val REPOSITORY_PROPERTIES: Path = Path.of("..", "gradle.properties")
+
+        private const val RETRY_KEY_PREFIX = "systemProp.org.gradle.internal.repository."
+
         const val ALLOW_LOCAL_VARIABLE = "SEAMPACT_ALLOW_LOCAL"
 
         const val REFERENCE_CONFIG = ReferenceApp.CONFIG

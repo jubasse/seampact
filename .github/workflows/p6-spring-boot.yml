@@ -96,6 +96,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-read-only: ${{ github.event_name != 'schedule' }}
+      - uses: ./.github/actions/gradle-retry
       - name: Generate, compare and compile the golden tree on Java ${{ matrix.test-jdk }}
         working-directory: jvm
         run: ./gradlew :seampact-spring-boot:check -PtestJdk=${{ matrix.test-jdk }}
@@ -172,6 +173,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-read-only: ${{ github.event_name != 'schedule' }}
+      - uses: ./.github/actions/gradle-retry
       # The Maven build takes the plugin and seampact-hooks from Maven local (ADR 0011 "Unpublished installs").
       - name: Publish the JVM modules to Maven local
         if: matrix.build-tool == 'maven'
