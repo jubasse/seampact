@@ -6,6 +6,7 @@ namespace Seampact\Codegen\Tests\Support;
 
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Read\IrReader;
+use Seampact\Ir\Run\FrameworkRoute;
 use Seampact\Ir\Run\Generator;
 use Seampact\Ir\Run\TargetEntry;
 
@@ -61,10 +62,11 @@ final class ReferenceContract
     /**
      * @param array<string, mixed> $options
      * @param array<string, mixed> $artefacts
+     * @param list<FrameworkRoute> $frameworkRoutes
      */
-    public static function entry(string $package, string $api, string $namespace, array $options = [], array $artefacts = []): TargetEntry
+    public static function entry(string $package, string $api, string $namespace, array $options = [], array $artefacts = [], array $frameworkRoutes = []): TargetEntry
     {
-        return new TargetEntry('server', $package, $api, null, (object) $options, (object) $artefacts, '/app/generated', $namespace);
+        return new TargetEntry('server', $package, $api, null, (object) $options, (object) $artefacts, '/app/generated', $namespace, $frameworkRoutes, null);
     }
 
     /** The one operation `$operationId` of the reference tasks IR, which `$change` edits in place. */
