@@ -325,7 +325,7 @@ The boundary runtime is copied into `Laravel\Runtime` with the generated header,
 
 | Waits for | What |
 |---|---|
-| laravel-2 | rule proof fields in the body (`recentAuth` on purgeTask), `artefacts.bootCheck` |
+| laravel-2 | rights and rules an operation requires, which the access middleware runs, rule proof fields in the body (`recentAuth` on purgeTask), `artefacts.bootCheck` |
 | laravel-3 | paging, its structured `sort` query parameter (listTasks) and its `page` response, idempotency replay, throttle, cache and ETag headers, the response headers these features derive, retry headers, signed routes and their raw body, absolute URLs, deadline budgets (`budgetMs`), relayed operations (`relays`), sensitive values, opaque values (`PaymentEvent.data` on payments), the `pack:laravel` styles |
 | laravel-4 | multipart (`file`, `mimetypes` and `max` rules; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`response()->streamDownload()`) and redirect (`redirect()->to()`) bodies, native access (`artefacts.accessHooks: false`), the per-kind middleware lists, the published config |
 | a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target: the reference contract carries none; unions (`oneOf`), designed above, until a contract needs one |

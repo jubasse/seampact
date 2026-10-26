@@ -24,6 +24,7 @@ use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\ProofPlacement;
 use Seampact\Ir\Model\RefTypeUse;
 use Seampact\Ir\Model\RequirementUnknown;
+use Seampact\Ir\Model\RightRequirement;
 use Seampact\Ir\Model\Response;
 use Seampact\Ir\Model\ResponseShape;
 use Seampact\Ir\Model\RuleRequirement;
@@ -285,6 +286,11 @@ final class KeptForms
                 continue;
             }
 
+            if ($requirement instanceof RightRequirement) {
+                $this->pending(PendingForm::RightRequirement, 'requires.right', "The right '{$requirement->right}'", $requirementAt);
+                continue;
+            }
+
             if (!$requirement instanceof RuleRequirement) {
                 continue;
             }
@@ -292,6 +298,8 @@ final class KeptForms
             if ($requirement->bucket !== null) {
                 $this->pending(PendingForm::Throttle, 'throttle', "The rule '{$requirement->rule}', which throttles,", $requirementAt);
                 $this->readBucket($requirement->bucket, $requirementAt->below('bucket'));
+            } else {
+                $this->pending(PendingForm::RuleRequirement, 'requires.rule', "The rule '{$requirement->rule}'", $requirementAt);
             }
 
             $proof = ($this->ir->rules[$requirement->rule] ?? null)?->proof;

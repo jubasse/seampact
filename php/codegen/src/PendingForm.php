@@ -19,6 +19,8 @@ enum PendingForm
     case Deadline;
     case Relays;
     case Throttle;
+    case RightRequirement;
+    case RuleRequirement;
     case RawBody;
     case RetryHeader;
     case DerivedResponseHeader;

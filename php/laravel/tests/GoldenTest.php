@@ -60,6 +60,7 @@ final class GoldenTest extends TestCase
                 [
                     'access.signed.unsupported', 'cache.unsupported', 'deadline.unsupported', 'error.retryHeader.unsupported', 'idempotency.unsupported',
                     'input.proofs.unsupported', 'input.rawBody.unsupported', 'paging.unsupported', 'param.query.structured.unsupported',
+                    'requires.right.unsupported', 'requires.rule.unsupported',
                     'response.header.unsupported', 'response.shape.unsupported', 'throttle.unsupported', 'type.opaque.unsupported',
                 ],
                 $codes,

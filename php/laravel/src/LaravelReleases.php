@@ -19,7 +19,7 @@ final class LaravelReleases implements FormReleases
     public function arrivalOf(PendingForm $form): FormArrival
     {
         return match ($form) {
-            PendingForm::Proofs => FormArrival::inRelease(self::LARAVEL_2),
+            PendingForm::Proofs, PendingForm::RightRequirement, PendingForm::RuleRequirement => FormArrival::inRelease(self::LARAVEL_2),
             PendingForm::AbsoluteUrls, PendingForm::SignedAccess, PendingForm::Paging, PendingForm::PagingParam,
             PendingForm::PageResponse, PendingForm::Idempotency, PendingForm::Cache, PendingForm::Deadline,
             PendingForm::Relays, PendingForm::Throttle, PendingForm::RawBody, PendingForm::RetryHeader,
