@@ -337,5 +337,53 @@
         ]
       }
     }
+  ],
+  "phpTargets": [
+    {
+      "package": "seampact/laravel",
+      "framework": {
+        "id": "laravel",
+        "package": "laravel/framework",
+        "tested": [
+          {
+            "major": 13,
+            "consumer": "laravel"
+          }
+        ],
+        "incompatible": [
+          {
+            "major": 11,
+            "reason": "Laravel 11 has no bug fixes left, and the generated middleware and exception handling are written for Laravel 13."
+          },
+          {
+            "major": 12,
+            "reason": "Laravel 12's bug fixes ended on 2026-08-13, and the generated middleware and exception handling are written for Laravel 13."
+          }
+        ]
+      }
+    },
+    {
+      "package": "seampact/symfony",
+      "framework": {
+        "id": "symfony",
+        "package": "symfony/framework-bundle",
+        "tested": [
+          {
+            "major": 7,
+            "consumer": "symfony"
+          },
+          {
+            "major": 8,
+            "consumer": "symfony"
+          }
+        ],
+        "incompatible": [
+          {
+            "major": 6,
+            "reason": "Symfony 6 lacks the routing, validator and kernel features of Symfony 7.4 that the generated code uses."
+          }
+        ]
+      }
+    }
   ]
 }

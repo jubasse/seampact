@@ -78,7 +78,7 @@ final class Runner
             }
         }
 
-        return new RunReport([...$documents->lines, ...$lines, ...self::leftEntries($prepared->config)], [], [], $documents->warnings);
+        return new RunReport([...$documents->lines, ...$lines, ...self::leftEntries($prepared->config)], self::printedWarnings($prepared->config, $prepared->warnings), [], $documents->warnings);
     }
 
     public static function check(RunSettings $settings): RunReport
@@ -94,7 +94,7 @@ final class Runner
         );
         $level = JsonValue::string($prepared->config->checks, 'generated') ?? self::ERROR;
         $errors = [];
-        $warnings = [];
+        $warnings = $prepared->warnings;
 
         foreach ($prepared->plans as $plan) {
             [$unreadable, $drift] = self::drift($plan);
@@ -111,8 +111,7 @@ final class Runner
             }
         }
 
-        $ignored = JsonValue::strings($prepared->config->warnings, 'ignore') ?? [];
-        $printed = array_values(array_filter($warnings, static fn (ConfigProblem $warning): bool => !in_array($warning->code, $ignored, true)));
+        $printed = self::printedWarnings($prepared->config, $warnings);
         $matched = $errors === [] ? ['seampact: the generated files match the files on disk.'] : [];
 
         $documents = Documents::run($prepared, $settings, DocumentsCommand::Check);
@@ -152,6 +151,9 @@ final class Runner
             return [...$problems, $discovery];
         }
 
+        [$matrixProblems, $matrixWarnings] = MatrixCheck::check($config, $discovery->installedPackages());
+        array_push($problems, ...$matrixProblems);
+
         $targets = [];
         foreach ($config->entries as $entry) {
             $target = $discovery->target($entry->use(), $entry->id());
@@ -185,7 +187,7 @@ final class Runner
             $config->entries,
         );
 
-        return new PreparedRun($config, $contractApis, $plans);
+        return new PreparedRun($config, $contractApis, $plans, $matrixWarnings);
     }
 
     /** @return ContractApis|list<ConfigProblem> */
@@ -340,6 +342,19 @@ final class Runner
             $fix,
             "entry '{$entryId}'",
         );
+    }
+
+    /**
+     * The warnings `warnings.ignore` does not silence.
+     *
+     * @param list<ConfigProblem> $warnings
+     * @return list<ConfigProblem>
+     */
+    private static function printedWarnings(AppConfig $config, array $warnings): array
+    {
+        $ignored = JsonValue::strings($config->warnings, 'ignore') ?? [];
+
+        return array_values(array_filter($warnings, static fn (ConfigProblem $warning): bool => !in_array($warning->code, $ignored, true)));
     }
 
     /** @return list<string> */

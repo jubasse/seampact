@@ -1,0 +1,389 @@
+{
+  "firstPartyProviders": [
+    {
+      "id": "zod",
+      "package": "@seampact/codegen-zod",
+      "kind": "validators",
+      "style": "standard-schema"
+    },
+    {
+      "id": "yup",
+      "package": "@seampact/codegen-yup",
+      "kind": "validators",
+      "style": "standard-schema"
+    },
+    {
+      "id": "class-validator",
+      "package": "@seampact/codegen-class-validator",
+      "kind": "validators",
+      "style": "class-validator"
+    },
+    {
+      "id": "ts",
+      "package": "@seampact/codegen-ts",
+      "kind": "types",
+      "style": "typescript"
+    },
+    {
+      "id": "fetch",
+      "package": "@seampact/codegen-fetch",
+      "kind": "client",
+      "style": "fetch"
+    }
+  ],
+  "serverTargets": [
+    {
+      "package": "@seampact/codegen-nestjs",
+      "framework": {
+        "id": "nestjs",
+        "package": "@nestjs/core",
+        "tested": [
+          {
+            "major": 12,
+            "consumer": "nestjs"
+          }
+        ],
+        "incompatible": []
+      },
+      "libraries": [
+        {
+          "id": "nestjs-swagger",
+          "package": "@nestjs/swagger",
+          "artefact": "nativeDocs",
+          "testedMajors": [12]
+        }
+      ],
+      "validatorStyles": ["standard-schema", "class-validator"],
+      "ownValidators": []
+    },
+    {
+      "package": "@seampact/codegen-express",
+      "framework": {
+        "id": "express",
+        "package": "express",
+        "tested": [
+          {
+            "major": 4,
+            "consumer": "express4"
+          },
+          {
+            "major": 5,
+            "consumer": "express"
+          }
+        ],
+        "incompatible": []
+      },
+      "validatorStyles": ["standard-schema"],
+      "ownValidators": []
+    },
+    {
+      "package": "@seampact/codegen-fastify",
+      "framework": {
+        "id": "fastify",
+        "package": "fastify",
+        "tested": [
+          {
+            "major": 5,
+            "consumer": "fastify"
+          }
+        ],
+        "incompatible": []
+      },
+      "libraries": [
+        {
+          "id": "fastify-swagger",
+          "package": "@fastify/swagger",
+          "artefact": "nativeDocs",
+          "testedMajors": [9]
+        }
+      ],
+      "validatorStyles": ["standard-schema"],
+      "ownValidators": [
+        {
+          "id": "ajv",
+          "library": "ajv"
+        }
+      ]
+    },
+    {
+      "package": "@seampact/codegen-adonis",
+      "framework": {
+        "id": "adonis",
+        "package": "@adonisjs/core",
+        "tested": [
+          {
+            "major": 6,
+            "consumer": "adonis6"
+          },
+          {
+            "major": 7,
+            "consumer": "adonis"
+          }
+        ],
+        "incompatible": []
+      },
+      "validatorStyles": ["standard-schema"],
+      "ownValidators": [
+        {
+          "id": "vinejs",
+          "library": "@vinejs/vine"
+        }
+      ]
+    },
+    {
+      "package": "@seampact/codegen-hono",
+      "framework": {
+        "id": "hono",
+        "package": "hono",
+        "tested": [
+          {
+            "major": 4,
+            "consumer": "hono"
+          }
+        ],
+        "incompatible": []
+      },
+      "validatorStyles": ["standard-schema"],
+      "ownValidators": []
+    }
+  ],
+  "clientTargets": [
+    {
+      "package": "@seampact/codegen-react",
+      "framework": {
+        "id": "react",
+        "package": "react",
+        "tested": [
+          {
+            "major": 19,
+            "consumer": "react-tanstack"
+          }
+        ],
+        "incompatible": []
+      },
+      "libraries": [
+        {
+          "id": "tanstack-query",
+          "package": "@tanstack/react-query",
+          "artefact": "queries",
+          "testedMajors": [5],
+          "selectedBy": {
+            "option": "query",
+            "value": "tanstack"
+          }
+        },
+        {
+          "id": "swr",
+          "package": "swr",
+          "artefact": "queries",
+          "testedMajors": [2],
+          "selectedBy": {
+            "option": "query",
+            "value": "swr"
+          }
+        },
+        {
+          "id": "reduxjs-toolkit",
+          "package": "@reduxjs/toolkit",
+          "artefact": "queries",
+          "testedMajors": [2],
+          "selectedBy": {
+            "option": "query",
+            "value": "rtk"
+          }
+        },
+        {
+          "id": "react-redux",
+          "package": "react-redux",
+          "artefact": "queries",
+          "testedMajors": [9],
+          "selectedBy": {
+            "option": "query",
+            "value": "rtk"
+          }
+        }
+      ],
+      "validatorStyles": [],
+      "ownValidators": [],
+      "clientStyles": ["fetch"]
+    },
+    {
+      "package": "@seampact/codegen-vue",
+      "framework": {
+        "id": "vue",
+        "package": "vue",
+        "tested": [
+          {
+            "major": 3,
+            "consumer": "vue-tanstack"
+          }
+        ],
+        "incompatible": []
+      },
+      "libraries": [
+        {
+          "id": "tanstack-vue-query",
+          "package": "@tanstack/vue-query",
+          "artefact": "queries",
+          "testedMajors": [5],
+          "selectedBy": {
+            "option": "query",
+            "value": "tanstack"
+          }
+        },
+        {
+          "id": "pinia-colada",
+          "package": "@pinia/colada",
+          "artefact": "queries",
+          "testedMajors": [1],
+          "selectedBy": {
+            "option": "query",
+            "value": "pinia-colada"
+          }
+        }
+      ],
+      "validatorStyles": [],
+      "ownValidators": [],
+      "clientStyles": ["fetch"]
+    },
+    {
+      "package": "@seampact/codegen-angular",
+      "framework": {
+        "id": "angular",
+        "package": "@angular/core",
+        "tested": [
+          {
+            "major": 22,
+            "consumer": "angular-fetch"
+          }
+        ],
+        "incompatible": []
+      },
+      "libraries": [
+        {
+          "id": "ngrx-store",
+          "package": "@ngrx/store",
+          "artefact": "service",
+          "testedMajors": [22],
+          "selectedBy": {
+            "option": "state",
+            "value": "ngrx"
+          }
+        },
+        {
+          "id": "ngrx-effects",
+          "package": "@ngrx/effects",
+          "artefact": "service",
+          "testedMajors": [22],
+          "selectedBy": {
+            "option": "state",
+            "value": "ngrx"
+          }
+        },
+        {
+          "id": "ngrx-signals",
+          "package": "@ngrx/signals",
+          "artefact": "service",
+          "testedMajors": [22],
+          "selectedBy": {
+            "option": "state",
+            "value": "ngrx-signals"
+          }
+        }
+      ],
+      "validatorStyles": [],
+      "ownValidators": [],
+      "clientStyles": ["fetch"]
+    },
+    {
+      "package": "@seampact/codegen-msw",
+      "framework": {
+        "id": "msw",
+        "package": "msw",
+        "tested": [
+          {
+            "major": 2,
+            "consumer": "front-msw"
+          }
+        ],
+        "incompatible": []
+      },
+      "validatorStyles": [],
+      "ownValidators": [],
+      "clientStyles": []
+    }
+  ],
+  "jvmTargets": [
+    {
+      "package": "io.github.jubasse:seampact-spring-boot",
+      "framework": {
+        "id": "spring-boot",
+        "package": "org.springframework.boot:spring-boot",
+        "tested": [
+          {
+            "major": 4,
+            "consumer": "spring-boot"
+          }
+        ],
+        "incompatible": [
+          {
+            "major": 2,
+            "reason": "Spring Boot 2 runs Spring Framework 5 on javax, and the generated code needs Spring Framework 7 on jakarta and Jackson 3."
+          },
+          {
+            "major": 3,
+            "reason": "Spring Boot 3 runs Spring Framework 6 and Jackson 2, and the generated code needs Spring Framework 7 and Jackson 3."
+          }
+        ]
+      }
+    }
+  ],
+  "phpTargets": [
+    {
+      "package": "seampact/laravel",
+      "framework": {
+        "id": "laravel",
+        "package": "laravel/framework",
+        "tested": [
+          {
+            "major": 13,
+            "consumer": "laravel"
+          }
+        ],
+        "incompatible": [
+          {
+            "major": 11,
+            "reason": "Laravel 11 has no bug fixes left, and the generated middleware and exception handling are written for Laravel 13."
+          },
+          {
+            "major": 12,
+            "reason": "Laravel 12's bug fixes ended on 2026-08-13, and the generated middleware and exception handling are written for Laravel 13."
+          }
+        ]
+      }
+    },
+    {
+      "package": "seampact/symfony",
+      "framework": {
+        "id": "symfony",
+        "package": "symfony/framework-bundle",
+        "tested": [
+          {
+            "major": 7,
+            "consumer": "symfony"
+          },
+          {
+            "major": 8,
+            "consumer": "symfony"
+          }
+        ],
+        "incompatible": [
+          {
+            "major": 6,
+            "reason": "Symfony 6 lacks the routing, validator and kernel features of Symfony 7.4 that the generated code uses."
+          }
+        ]
+      }
+    }
+  ]
+}
