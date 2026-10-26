@@ -68,9 +68,9 @@ export class SignatureToleranceInvalidError extends Error {
     );
   }
 
-  static negative(toleranceMs: number): SignatureToleranceInvalidError {
+  static notWholeMilliseconds(toleranceMs: number): SignatureToleranceInvalidError {
     return new SignatureToleranceInvalidError(
-      `The tolerance ${toleranceMs} ms is negative, so every request would fail. Pass the tolerance of the hook's signature template as toleranceMs.`,
+      `The tolerance ${toleranceMs} ms is not a whole number of milliseconds of at least 0, so the timestamp check would not hold. Pass the tolerance of the hook's signature template as toleranceMs.`,
     );
   }
 
@@ -104,11 +104,11 @@ export async function verifyTemplateSignature(
 ): Promise<SignatureVerification> {
   const { template } = request;
 
+  refuseInvalidPayload(template);
+
   if (template.algorithm !== SUPPORTED_ALGORITHM) {
     throw new UnsupportedSignatureAlgorithmError(template.algorithm);
   }
-
-  refuseInvalidPayload(template);
 
   const payload = signedPayload(template, request);
 
@@ -149,8 +149,9 @@ function refuseInvalidPayload(template: SignatureTemplate): void {
     throw SignatureToleranceInvalidError.missing(template.payload);
   }
 
-  if (toleranceMs !== undefined && toleranceMs < 0) {
-    throw SignatureToleranceInvalidError.negative(toleranceMs);
+  // NaN or Infinity would make every age pass the window check; the JVM and PHP helpers hold whole milliseconds.
+  if (toleranceMs !== undefined && (!Number.isSafeInteger(toleranceMs) || toleranceMs < 0)) {
+    throw SignatureToleranceInvalidError.notWholeMilliseconds(toleranceMs);
   }
 
   if (toleranceMs !== undefined && timestampCount === 0) {
