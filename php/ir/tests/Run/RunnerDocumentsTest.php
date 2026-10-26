@@ -77,6 +77,17 @@ final class RunnerDocumentsTest extends TestCase
         self::assertSame("generate\ncheck\n", file_get_contents("{$this->project}/commands"));
     }
 
+    public function testPassesForceToTheBinary(): void
+    {
+        $this->stubBinary('echo "$1 $2" > "' . $this->project . '/arguments"; exit 0');
+        $this->config('');
+
+        [$exit, , $stderr] = $this->seampact('generate', '--force');
+
+        self::assertSame(Command::EXIT_PASSED, $exit, $stderr);
+        self::assertSame("generate --force\n", file_get_contents("{$this->project}/arguments"));
+    }
+
     public function testARefusedDocumentWritesNoEntry(): void
     {
         $this->stubBinary('echo "check.openapi.drift: openapi/t.json differs" >&2; exit 1');

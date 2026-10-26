@@ -64,7 +64,8 @@ final class Runner
             return RunReport::refused($problems);
         }
 
-        $documents = Documents::run($prepared, $settings, DocumentsCommand::Generate);
+        $documentsCommand = $onHandEdit === HandEditPolicy::Overwrite ? DocumentsCommand::GenerateOverwritingHandEdits : DocumentsCommand::Generate;
+        $documents = Documents::run($prepared, $settings, $documentsCommand);
         if (is_array($documents)) {
             return RunReport::refused($documents);
         }

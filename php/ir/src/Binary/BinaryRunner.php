@@ -107,7 +107,7 @@ final class BinaryRunner
         self::refuseRelativeBinary($binary);
         $binary->refuseUnlessIntact();
 
-        $arguments = [$binary->path, $command->value, '--config', $configFile];
+        $arguments = [$binary->path, ...$command->arguments(), '--config', $configFile];
         ksort($bundleDirectories, SORT_STRING);
         foreach ($bundleDirectories as $source => $directory) {
             array_push($arguments, '--bundle-directory', $source . '=' . AbsolutePath::resolved($directory));
