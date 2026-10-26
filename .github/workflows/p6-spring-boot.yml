@@ -13,12 +13,13 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: spring-boot-${{ github.ref }}
+  group: spring-boot-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -49,7 +50,7 @@ jobs:
           # core packages it embeds, the http suite, the lockfile and this workflow.
           watched='^(jvm/|fixtures/reference/|fixtures/golden/reference/|fixtures/golden/pack-spring/|packages/packs/pack-spring/|scripts/consumers/targets/spring-boot/'
           watched+='|packages/core/|packages/tools/binary/|packages/tools/http-suite/|pnpm-lock\.yaml$'
-          watched+='|\.github/workflows/p6-spring-boot\.yml$)'
+          watched+='|\.github/actions/|\.github/workflows/p6-spring-boot\.yml$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.
           changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')
@@ -255,7 +256,7 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-  # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   spring-boot:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
     needs: [changes, golden, binary, build, http-suite]
@@ -263,15 +264,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Fail when a needed job failed or was cancelled
-        shell: bash
-        env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          set -euo pipefail
-          for result in $RESULTS; do
-            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
-              echo "A spring-boot job ended in $result (results: $RESULTS)."
-              exit 1
-            fi
-          done
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.spring-boot }}

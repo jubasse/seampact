@@ -10,12 +10,13 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: native-ir-${{ github.ref }}
+  group: native-ir-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -45,7 +46,7 @@ jobs:
           # The sources of the models and of `regenerate`: the golden IR files, the IR and naming schemas, code and vectors, the
           # generator, the spec package's exports, the workspace and toolchain pins, the models and this workflow.
           watched='^(jvm/|php/|scripts/ir-models/|fixtures/golden/|packages/core/spec/(schemas/ir|src/ir|vectors/ir|src/naming|vectors/naming)/'
-          watched+='|\.github/workflows/p2-native-ir\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$'
+          watched+='|\.github/actions/|\.github/workflows/p2-native-ir\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$'
           watched+='|packages/core/spec/package\.json$|\.nvmrc$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.
@@ -129,7 +130,7 @@ jobs:
         working-directory: php/ir
         run: vendor/bin/phpstan analyse --no-progress
 
-  # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   native-ir:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
     needs: [changes, regenerate, kotlin, php]
@@ -137,15 +138,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Fail when a needed job failed or was cancelled
-        shell: bash
-        env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          set -euo pipefail
-          for result in $RESULTS; do
-            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
-              echo "A native IR job ended in $result (results: $RESULTS)."
-              exit 1
-            fi
-          done
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.native-ir }}

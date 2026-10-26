@@ -13,12 +13,13 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: jvm-core-${{ github.ref }}
+  group: jvm-core-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -48,7 +49,7 @@ jobs:
           # The JVM modules, the bundle, config and IR schemas, the bundle vectors, the compatibility matrix, the reference contract and the
           # golden IR, the binary package, the signed webhook vectors, the workspace and toolchain pins and this workflow.
           watched='^(jvm/|packages/core/spec/schemas/(bundle|config|ir)/|packages/core/spec/vectors/bundle/|packages/core/spec/compatibility/'
-          watched+='|fixtures/reference/|fixtures/golden/|packages/tools/binary/|packages/runtime/signed-webhooks/vectors/|\.github/workflows/p6-jvm-core\.yml$'
+          watched+='|fixtures/reference/|fixtures/golden/|packages/tools/binary/|packages/runtime/signed-webhooks/vectors/|\.github/actions/|\.github/workflows/p6-jvm-core\.yml$'
           watched+='|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$|\.nvmrc$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.
@@ -155,7 +156,7 @@ jobs:
         shell: bash
         run: ./gradlew :seampact-ir:test --tests 'io.github.jubasse.seampact.ir.binary.*'
 
-  # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   jvm-core:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
     needs: [changes, binary, java, windows-cache]
@@ -163,15 +164,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Fail when a needed job failed or was cancelled
-        shell: bash
-        env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          set -euo pipefail
-          for result in $RESULTS; do
-            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
-              echo "A JVM core job ended in $result (results: $RESULTS)."
-              exit 1
-            fi
-          done
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.jvm-core }}
