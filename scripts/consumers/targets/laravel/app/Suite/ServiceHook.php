@@ -10,6 +10,7 @@ use App\Generated\TasksService\Laravel\ServiceCredentials;
 use App\Generated\TasksService\Laravel\ServicePrincipal;
 use App\Generated\TasksService\Schemas\Service;
 use Seampact\ConsumerSuite\Credentials;
+use Seampact\ConsumerSuite\ServiceTokens;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\AuthenticateRequest;
 use Seampact\Hooks\AuthenticateResult;
@@ -21,13 +22,9 @@ final class ServiceHook implements ServiceAuthenticateHook
     {
         SuiteControl::recordHookCall('authenticate:service', $request->operation()->api, $request->operation()->id);
 
-        $services = [
-            Credentials::text('serviceJwt') => Service::from(Credentials::text('serviceName')),
-            Credentials::text('foreignServiceJwt') => Service::from(Credentials::text('foreignServiceName')),
-        ];
         $credentials = $request->credentials();
-        $token = $credentials instanceof ServiceCredentials ? $credentials->internalToken : null;
-        $service = $token === null ? null : ($services[$token] ?? null);
+        $serviceName = ServiceTokens::serviceNameOf($credentials instanceof ServiceCredentials ? $credentials->internalToken : null);
+        $service = $serviceName === null ? null : Service::from($serviceName);
 
         return $service === null
             ? new AuthenticateResult\Denied(new Denial('api.unauthenticated'))

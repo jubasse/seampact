@@ -35,6 +35,7 @@ final class PurgeTaskInputConstraintValidator extends InputConstraintValidator
       ],
       unknownQuery: KeyPolicy::Refuse,
       body: new Member(JsonType::Object),
+      bodyProofs: ['reauthToken'],
     );
   }
 }

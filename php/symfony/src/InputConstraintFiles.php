@@ -15,6 +15,7 @@ use Seampact\Codegen\PcrePattern;
 use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Model\EnumTypeUse;
+use Seampact\Ir\Model\InputProof;
 use Seampact\Ir\Model\ObjectSchema;
 use Seampact\Ir\Model\OpaqueTypeUse;
 use Seampact\Ir\Model\Operation;
@@ -99,6 +100,10 @@ final class InputConstraintFiles
 
         if ($operation->input !== null) {
             $arguments[] = 'body: ' . $this->member($operation->input->schema, true, false, $at->below('input', 'schema'), 1);
+            $proofNames = array_map(static fn (InputProof $proof): string => var_export($proof->name, true), $operation->input->proofs ?? []);
+            if ($proofNames !== []) {
+                $arguments[] = 'bodyProofs: [' . implode(', ', $proofNames) . ']';
+            }
         }
 
         return $this->construct('InputShape', $arguments, 0);

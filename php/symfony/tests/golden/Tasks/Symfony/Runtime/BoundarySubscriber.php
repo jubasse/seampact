@@ -49,6 +49,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
     private const UNAUTHENTICATED_ROLE = 'unauthenticated';
     private const FORBIDDEN_ROLE = 'forbidden';
     private const PARTS = ['path', 'query', 'header', 'body'];
+    private const HEADER_PART = 'header';
 
     private int $mainRequests = 0;
     /** @var list<string>|null the hook problems, read once per container instance */
@@ -446,7 +447,10 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
             throw new \LogicException("seampact: a violation of the contract input is at '{$path}', outside the input's parts; regenerate the code.");
         }
 
-        return ['in' => $part, 'pointer' => isset($tokens[2]) ? '/' . $tokens[2] : '', 'rule' => $rule];
+        $pointer = isset($tokens[2]) ? '/' . $tokens[2] : '';
+
+        // Header names are case-insensitive, so every target reports a header's pointer in lower case.
+        return ['in' => $part, 'pointer' => $part === self::HEADER_PART ? strtolower($pointer) : $pointer, 'rule' => $rule];
     }
 
     /**

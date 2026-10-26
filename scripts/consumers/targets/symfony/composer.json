@@ -9,12 +9,14 @@
     "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
     "seampact/consumer-suite": "dev-develop",
     "seampact/hooks": "dev-develop",
+    "seampact/signed-webhooks": "dev-develop",
     "seampact/symfony": "dev-develop",
     "symfony/console": "~7.4.0",
     "symfony/dependency-injection": "~7.4.0",
     "symfony/framework-bundle": "~7.4.0",
     "symfony/http-foundation": "~7.4.0",
     "symfony/http-kernel": "~7.4.0",
+    "symfony/rate-limiter": "~7.4.0",
     "symfony/routing": "~7.4.0",
     "symfony/security-bundle": "~7.4.0",
     "symfony/security-core": "~7.4.0",
@@ -69,6 +71,16 @@
         "symlink": false,
         "versions": {
           "seampact/hooks": "dev-develop"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../../../../php/signed-webhooks",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/signed-webhooks": "dev-develop"
         }
       }
     }

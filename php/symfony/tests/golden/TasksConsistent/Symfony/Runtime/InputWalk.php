@@ -34,12 +34,12 @@ final readonly class InputWalk
             }
 
             $keys = $part === 'query' ? $shape->unknownQuery : KeyPolicy::Keep;
-            $this->members($values, $shape->{$part}, $keys, '/' . $part);
+            $this->members($values, $shape->{$part}, $keys, '/' . $part, []);
         }
 
         if ($shape->body !== null) {
             $sent = property_exists($input, 'body');
-            $this->member($sent, $sent ? $input->body : null, $shape->body, '/body');
+            $this->member($sent, $sent ? $input->body : null, $shape->body, '/body', $shape->bodyProofs);
         }
     }
 
@@ -48,8 +48,11 @@ final readonly class InputWalk
         return str_replace(['~', '/'], ['~0', '~1'], $token);
     }
 
-    /** @param array<string, Member> $members */
-    private function members(\stdClass $value, array $members, KeyPolicy $unknownKeys, string $pointer): void
+    /**
+     * @param array<string, Member> $members
+     * @param list<string> $proofKeys the keys the object also takes, read as rule proofs
+     */
+    private function members(\stdClass $value, array $members, KeyPolicy $unknownKeys, string $pointer, array $proofKeys): void
     {
         foreach ($members as $name => $member) {
             $present = property_exists($value, (string) $name);
@@ -61,13 +64,14 @@ final readonly class InputWalk
         }
 
         foreach (array_keys(get_object_vars($value)) as $key) {
-            if (!array_key_exists((string) $key, $members)) {
+            if (!array_key_exists((string) $key, $members) && !in_array((string) $key, $proofKeys, true)) {
                 $this->issue($pointer . '/' . self::escape((string) $key), Rule::UNKNOWN_KEYS);
             }
         }
     }
 
-    private function member(bool $present, mixed $value, Member $member, string $pointer): void
+    /** @param list<string> $proofKeys the keys an object value also takes, read as rule proofs */
+    private function member(bool $present, mixed $value, Member $member, string $pointer, array $proofKeys = []): void
     {
         if (!$present) {
             if ($member->presence === Presence::Required) {
@@ -104,7 +108,7 @@ final readonly class InputWalk
         }
 
         if ($value instanceof \stdClass) {
-            $this->members($value, $member->properties, $member->unknownKeys, $pointer);
+            $this->members($value, $member->properties, $member->unknownKeys, $pointer, $proofKeys);
         } elseif (is_array($value) && $member->items !== null) {
             foreach (array_values($value) as $index => $item) {
                 $this->member(true, $item, $member->items, "{$pointer}/{$index}");
