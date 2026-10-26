@@ -298,9 +298,21 @@ export const NoteSchema = ajvStandardSchema({
 
 </details>
 
+<details><summary>Spring Boot (Java record)</summary>
+
+A plain record with standard Jakarta constraints, for your own `@Valid`. The boundary checks the contract's rules (the title's length, the formats) before your controller runs.
+
+```java
+@JsonInclude(JsonInclude.Include.NON_ABSENT)
+public record Note(@NotNull UUID noteId, @NotNull String title, @NotNull OffsetDateTime createdAt) {
+}
+```
+
+</details>
+
 These are the default `rules: native` output, each library's own rules. `rules: seampact-consistent` gives the contract's exact checks on every library ([validators](docs/configuration/validators.md)).
 
-Spring Boot records carry standard Jakarta constraints for your own `@Valid`; the boundary checks the contract's rules itself. Planned: validation rules for Laravel.
+Planned: validation rules for Laravel.
 
 ---
 
