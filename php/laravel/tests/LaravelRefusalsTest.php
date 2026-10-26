@@ -74,6 +74,19 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString('laravel-3 generates it', self::refused($document)['throttle.unsupported'] ?? '');
     }
 
+    public function testAnErrorThatForbidsCachingWaitsForLaravel3(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
+            $errors = $document->errors;
+            self::assertInstanceOf(\stdClass::class, $errors);
+            $notFound = $errors->{'api.not_found'};
+            self::assertInstanceOf(\stdClass::class, $notFound);
+            $notFound->noStore = true;
+        });
+
+        self::assertStringContainsString('laravel-3 generates it', self::refused($document)['error.noStore.unsupported'] ?? '');
+    }
+
     public function testAnIntegerStepBeyondThePhpIntRangeIsRefusedByName(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {

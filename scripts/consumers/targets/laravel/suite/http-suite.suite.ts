@@ -204,6 +204,40 @@ describe("a missing hook under responses: warn", () => {
   });
 });
 
+describe("a handler exception under responses: warn with APP_DEBUG on", () => {
+  let running: RunningApp | undefined;
+
+  beforeAll(async () => {
+    running = await startLaravelApp(app, {
+      SEAMPACT_SUITE_RESPONSES: "warn",
+      SEAMPACT_SUITE_APP_DEBUG: "true",
+    });
+  }, SUITE_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await running?.close();
+  });
+
+  test("answers the api's 500, never the framework's error page or trace", async () => {
+    const script = await fetch(`${running?.baseUrl}/__seampact/script`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        answers: { "tasks.getChannel": { throws: "the channel store is down" } },
+      }),
+    });
+    expect(script.status).toBe(204);
+
+    const response = await fetch(`${running?.baseUrl}${GENERAL_CHANNEL}`, {
+      headers: { authorization: `Bearer ${credentials.userToken}` },
+    });
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toContain(PROBLEM_JSON);
+    expect(await problemCode(response)).toBe("api.internal");
+  });
+});
+
 describeHttpProfile("default");
 describeHttpProfile("hand-written");
 

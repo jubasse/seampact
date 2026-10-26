@@ -27,17 +27,22 @@ use Illuminate\Support\ServiceProvider;
 
 /**
  * Binds the handlers and the hook doubles of the `tasks` api, less what the boot variant leaves out, and takes the
- * api's `responses` mode from `SEAMPACT_SUITE_RESPONSES` when it is set, at run time so a config cache keeps it.
+ * api's `responses` mode from `SEAMPACT_SUITE_RESPONSES` and `app.debug` from `SEAMPACT_SUITE_APP_DEBUG` when they
+ * are set, at run time so a config cache keeps them.
  */
 final class SuiteServiceProvider extends ServiceProvider
 {
     private const RESPONSES_VARIABLE = 'SEAMPACT_SUITE_RESPONSES';
+    private const APP_DEBUG_VARIABLE = 'SEAMPACT_SUITE_APP_DEBUG';
 
     public function register(): void
     {
         $responses = getenv(self::RESPONSES_VARIABLE);
         if (is_string($responses) && $responses !== '') {
             $this->app->make('config')->set('seampact.tasks.responses', $responses);
+        }
+        if (getenv(self::APP_DEBUG_VARIABLE) === 'true') {
+            $this->app->make('config')->set('app.debug', true);
         }
 
         if (!BootVariant::is('missing-handler')) {
