@@ -105,14 +105,14 @@ A generated exception answers through its own `render()`, which Laravel's handle
 
 Every other exception is rendered by the app's own handler, untouched. The boundary middleware then reads `$response->exception` on the reply and answers, in the api's format, with the role of:
 
-- `AuthenticationException`: `unauthenticated` (401), whether the app rendered JSON or a redirect to `login`;
+- `AuthenticationException`: `unauthenticated` (401) whatever the `Accept` header: on a contract route the provider's render callback answers it before Laravel builds a redirect to `login`, so it never redirects and never becomes a 500 when no `login` route exists. The `auth` middleware with a browser `Accept` still calls `route('login')` while it builds the exception, a 500 without that route; laravel-4, which brings the native layers, closes it;
 - `AuthorizationException` (the `can` middleware, a Policy): `forbidden` (403);
 - `TokenMismatchException` and `OriginMismatchException` from `PreventRequestForgery`: `csrfInvalid` (403, where Laravel answers 419);
 - `ThrottleRequestsException`: `rateLimited` (429), keeping `Retry-After` and the `X-RateLimit-*` headers;
 - `PostTooLargeException` from `ValidatePostSize`: `payloadTooLarge` (413);
 - the `HttpException` 503 of `PreventRequestsDuringMaintenance`: `serviceUnavailable` (503, grammar 05 roles), keeping `Retry-After`.
 
-A role whose status the operation does not declare is the api's 500. Any other exception that no contract reply rendered is the api's 500 too, in every `responses` mode, so Laravel's error page and its debug trace never reach the client. This differs from Spring on purpose: Spring's resolver leaves an unknown exception to the app's `@ExceptionHandler` and judges that reply, whereas here an app exception's own `render()` is the api's 500 even when it writes a declared code; the mapping stays by exception class, so `abort(401|403|429)` from a handler or an app middleware is the api's 500 until laravel-4. A generated exception renders only on a contract request; an exported `renderContractError($request, $exception)` for an app's own handler waits for a consumer that needs it.
+An access hook (authenticate, resolve-scope) that throws an exception of this map keeps its role. A role whose status the operation does not declare is the api's 500. Any other exception that no contract reply rendered is the api's 500 too, in every `responses` mode, so Laravel's error page and its debug trace never reach the client. This differs from Spring on purpose: Spring's resolver leaves an unknown exception to the app's `@ExceptionHandler` and judges that reply, whereas here an app exception's own `render()` is the api's 500 even when it writes a declared code; the mapping stays by exception class, so `abort(401|403|429)` from a handler or an app middleware is the api's 500 until laravel-4. A generated exception renders only on a contract request; an exported `renderContractError($request, $exception)` for an app's own handler waits for a consumer that needs it.
 
 ### The outgoing response check
 

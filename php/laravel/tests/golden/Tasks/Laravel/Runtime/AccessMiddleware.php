@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Laravel\Runtime;
 
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 
@@ -35,10 +34,12 @@ abstract class AccessMiddleware
 
         try {
             AccessSteps::run($this->app, $request, $state);
-        } catch (ContractRefusal|AuthorizationException $refusal) {
-            // A refusal keeps its role: Laravel's AuthorizationException maps to `forbidden` (ADR 0023).
-            throw $refusal;
         } catch (\Throwable $failure) {
+            // A refusal keeps its role, read from the role map the boundary maps native exceptions with (ADR 0023).
+            if ($failure instanceof ContractRefusal || ExceptionRoles::roleOf($failure) !== null) {
+                throw $failure;
+            }
+
             throw new BoundaryFailure($failure);
         }
         $state->admitted = true;
