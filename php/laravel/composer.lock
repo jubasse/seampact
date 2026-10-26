@@ -3333,7 +3333,7 @@
             "dist": {
                 "type": "path",
                 "url": "../codegen",
-                "reference": "a7035e87e893b06c50dcee7f89703f67c1589847"
+                "reference": "6eafcb2d37ce499a801b1e7b5dde47933664e920"
             },
             "require": {
                 "nette/php-generator": "~4.2.0",
@@ -3350,7 +3350,8 @@
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "Seampact\\Codegen\\": "src/"
+                    "Seampact\\Codegen\\": "src/",
+                    "Seampact\\Codegen\\Runtime\\": "runtime/"
                 }
             },
             "autoload-dev": {

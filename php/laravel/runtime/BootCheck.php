@@ -8,6 +8,10 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\Decider;
+use Seampact\Codegen\Runtime\Ir;
+use Seampact\Codegen\Runtime\ScopeResolver;
 
 /**
  * The api's boot check (ADR 0023 "The boot check"): every problem listed at once, with the operation, the name and

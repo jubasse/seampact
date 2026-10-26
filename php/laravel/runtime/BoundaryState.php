@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Seampact\Laravel\Runtime;
 
 use Illuminate\Http\Request;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Hooks\RequestView;
 use Seampact\Hooks\ResolvedScope;
 use Symfony\Component\HttpFoundation\Response;

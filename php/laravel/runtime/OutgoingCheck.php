@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel\Runtime;
 
+use Seampact\Codegen\Runtime\Ir;
 use Symfony\Component\HttpFoundation\Response;
 
 /**

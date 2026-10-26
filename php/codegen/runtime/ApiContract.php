@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 /**
  * The api's contract as the boundary reads it: the IR view of the kept operations and the declarations they read,

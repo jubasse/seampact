@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 /**
  * A contract FormRequest ran for a request the boundary did not admit: an app route to the controller, a route

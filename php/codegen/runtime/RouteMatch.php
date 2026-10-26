@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 /**
  * What the raw request target matched: an operation with its raw path parameters, or, for a path under one of the

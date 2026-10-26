@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 /**
  * A failure of the boundary's own steps on a contract request (a missing or failing hook, a handler result that is not

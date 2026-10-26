@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 /** The bytes a bounded read held, or the role of the refusal it answers. */
 final readonly class BodyRead

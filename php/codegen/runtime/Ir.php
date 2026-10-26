@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 /**
  * Typed reads of the IR view the generator wrote as PHP arrays: a missing member reads as an empty map or list, or

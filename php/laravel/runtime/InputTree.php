@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Laravel\Runtime;
 
 use Illuminate\Http\Request;
+use Seampact\Codegen\Runtime\ContractBypassedException;
 
 /**
  * The input of one contract request as the boundary decoded it: the path, query and header values by wire name, and

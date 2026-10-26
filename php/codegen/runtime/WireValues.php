@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 /**
  * The IR's wire form of path, query and header values (ADR 0003): each is text on the wire, read as the integer,

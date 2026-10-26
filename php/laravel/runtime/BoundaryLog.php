@@ -6,6 +6,8 @@ namespace Seampact\Laravel\Runtime;
 
 use Illuminate\Container\Container;
 use Psr\Log\LoggerInterface;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\UnexpectedFailure;
 
 /**
  * The boundary's own log lines, written to the app's PSR-3 logger, and the unexpected-error listener: a line carries

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Seampact\Laravel\Runtime;
 
 use Illuminate\Http\Request;
+use Seampact\Codegen\Runtime\Ir;
+use Seampact\Codegen\Runtime\WireValues;
 
 /**
  * Step 1's decoding: the path parameters percent-decoded from the raw path, the query from the raw query string, the

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 use Seampact\Hooks\OperationRef;
 use Seampact\Hooks\Purpose;

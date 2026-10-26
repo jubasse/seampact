@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 /** One contract operation as the boundary matches it: its method and its path template split into segments. */
 final readonly class ContractRoute

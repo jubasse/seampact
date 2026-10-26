@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 /**
  * Renders an IR template (ADR 0004 section 8) over its slots: the format's error body and a role's params. A slot

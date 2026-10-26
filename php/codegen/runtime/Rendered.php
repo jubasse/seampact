@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 /** A rendered template value, or missing: a slot with no value renders as missing, never as `null`. */
 final readonly class Rendered

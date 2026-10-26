@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel\Runtime;
+namespace Seampact\Codegen\Runtime;
 
 /** One failure answered with the api's 500: the operation, a reason without input values, and the exception. */
 final readonly class UnexpectedFailure

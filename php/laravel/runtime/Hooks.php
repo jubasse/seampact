@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Seampact\Laravel\Runtime;
 
 use Illuminate\Contracts\Container\Container;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\AuthenticateCall;
+use Seampact\Codegen\Runtime\Decider;
+use Seampact\Codegen\Runtime\Ir;
+use Seampact\Codegen\Runtime\ScopeResolver;
 use Seampact\Hooks\AuthenticateHook;
 
 /**

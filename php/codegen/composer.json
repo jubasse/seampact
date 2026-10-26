@@ -33,7 +33,8 @@
   ],
   "autoload": {
     "psr-4": {
-      "Seampact\\Codegen\\": "src/"
+      "Seampact\\Codegen\\": "src/",
+      "Seampact\\Codegen\\Runtime\\": "runtime/"
     }
   },
   "autoload-dev": {
