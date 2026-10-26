@@ -11,6 +11,8 @@ import java.nio.file.attribute.PosixFilePermissions
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.sun.security.auth.module.UnixSystem
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
 
@@ -328,6 +330,80 @@ class BinaryPinTest {
         assertFalse(listedTwice.isPrivateGroup(1000, 1000), "a second line with its id lists another member")
     }
 
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun aGroupWritableTreeAboveTheCacheIsAcceptedWhenItsGroupIsTheProcessGroup() {
+        val project = groupWritableTree(UnixSystem().gid)
+
+        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), project.resolve("cache"), TEST_CACHE_SETTING)
+
+        assertTrue(install is BinaryInstall.Installed, "$install")
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun aGroupWritableDirectoryAboveTheCacheIsRefusedWhenItsGroupIsAnother() {
+        val process = UnixSystem()
+        val otherGroup = process.groups.firstOrNull { it != process.gid }
+        assumeTrue(otherGroup != null, "the user has no supplementary group to give the directory")
+        val project = groupWritableTree(otherGroup!!)
+
+        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), project.resolve("cache"), TEST_CACHE_SETTING)
+
+        val failure = (install as BinaryInstall.Refused).failure
+        assertEquals(BinaryFailureCode.CACHE_UNSAFE, failure.code)
+        assertEquals(project.toRealPath().toString(), failure.actual)
+        assertTrue(failure.fix.contains("chmod g-w") || failure.message.contains("chmod g-w"), failure.message)
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun aCacheRootItsGroupMayWriteIsRefusedNamingChmod700EvenForTheProcessGroup() {
+        val cacheRoot = Files.createDirectory(work.resolve("group-cache"))
+        Files.setAttribute(cacheRoot, UNIX_GID, UnixSystem().gid.toInt())
+        Files.setPosixFilePermissions(cacheRoot, PosixFilePermissions.fromString("rwxrwxr-x"))
+
+        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub)), cacheRoot, TEST_CACHE_SETTING)
+
+        val failure = (install as BinaryInstall.Refused).failure
+        assertEquals(BinaryFailureCode.CACHE_UNSAFE, failure.code)
+        assertTrue(failure.message.contains("chmod 700"), failure.message)
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun aChangedSourceIsRefusedEvenWhenTheCacheHoldsThePinnedCopy() {
+        val pin = BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub))
+        check(install(stub, pin, work.resolve("cache")) is BinaryInstall.Installed)
+        Files.writeString(stub, "#!/bin/sh\nexit 5\n")
+
+        val again = install(stub, pin, work.resolve("cache"))
+
+        assertEquals(BinaryFailureCode.HASH_MISMATCH, (again as BinaryInstall.Refused).failure.code)
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun theProfileIsReadByItsRealPath() {
+        val profile = Files.createDirectory(work.resolve("profile"))
+        val junction = Files.createSymbolicLink(work.resolve("profile-link"), profile)
+
+        assertEquals(profile.toRealPath(), BinaryCache.profileDirectory(junction.toString()))
+        assertEquals(null, BinaryCache.profileDirectory(null))
+    }
+
+    // Two group-writable directories (umask 002) of group [groupId], the second being the cache root's parent.
+    private fun groupWritableTree(groupId: Long): Path {
+        val team = Files.createDirectory(work.resolve("team"))
+        val project = Files.createDirectory(team.resolve("project"))
+        for (directory in listOf(team, project)) {
+            Files.setAttribute(directory, UNIX_GID, groupId.toInt())
+            Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("rwxrwxr-x"))
+        }
+
+        return project
+    }
+
     // A cache whose every directory, and the cache root's parent, is group-writable (umask 002).
     private fun groupWritableCache(): Pair<Path, Path> {
         val parent = Files.createDirectory(work.resolve("umask-002"))
@@ -359,6 +435,7 @@ class BinaryPinTest {
 
     private companion object {
         const val TEST_CACHE_SETTING = "the test cache setting"
+        const val UNIX_GID = "unix:gid"
         const val FILES_ONLY = "passwd: files\ngroup: files\n"
     }
 

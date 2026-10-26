@@ -142,7 +142,7 @@ internal object BinaryCache {
         }
         // The process token's own SID, never a name Windows resolves, which may find a local account of the same name.
         val currentUserSid = NTSystem().userSID
-        val profile = userProfile()
+        val profile = profileDirectory(System.getenv(USER_PROFILE_VARIABLE))
         val insideProfile = profile != null && root.startsWith(profile)
         val fix = if (insideProfile) PRIVATE_CACHE_FIX else OUTSIDE_PROFILE_FIX
 
@@ -171,7 +171,7 @@ internal object BinaryCache {
         (WELL_KNOWN_WRITER_SIDS + currentUserSid).any { sid -> principal.hashCode() == sid.hashCode() }
 
     // The user profile, which Windows creates private, ends the walk; a cache outside it is checked up to its drive.
-    private fun userProfile(): Path? = System.getenv(USER_PROFILE_VARIABLE)?.let { Path.of(it).toAbsolutePath().normalize() }
+    fun profileDirectory(userProfileValue: String?): Path? = userProfileValue?.let { Path.of(it).toAbsolutePath().normalize() }
 
     private fun pathsUpTo(entry: Path, limit: Path): List<Path> =
         generateSequence(entry) { it.parent }.takeWhile { it.startsWith(limit) }.toList()
