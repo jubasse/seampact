@@ -7,6 +7,7 @@ namespace App\Suite;
 use App\Generated\Tasks\Laravel\Runtime\Denial;
 use App\Generated\Tasks\Laravel\UserAuthenticateHook;
 use App\Generated\Tasks\Laravel\UserCredentials;
+use App\Generated\Tasks\Laravel\UserPrincipal;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Seampact\Hooks\AuthenticateRequest;

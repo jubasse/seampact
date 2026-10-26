@@ -54,13 +54,7 @@ final class IdempotencyStep
             return null;
         }
 
-        $key = Digests::hexOf([
-            $state->contract->api,
-            $state->operationId,
-            Ir::string(Ir::map($operation, 'access'), 'identity') ?? '',
-            $state->principal === null ? '' : Digests::hexOf([$state->principal]),
-            $clientKey,
-        ]);
+        $key = self::partitionKey($state, $clientKey);
         $claim = new IdempotencyClaim($key, self::fingerprint($state, $input), Ir::int($idempotency, 'lifetimeMs') ?? 0, AccessSteps::operationRef($state));
 
         $begun = self::store($state)->begin($claim);
@@ -78,6 +72,18 @@ final class IdempotencyStep
      * Completes the claimed record with the reply that went out, or abandons it; a store failure is logged, since the
      * reply already stands.
      */
+    /** The stored key of a client key: the api, operation, identity and principal members partition it (ADR 0012). */
+    public static function partitionKey(BoundaryState $state, string $clientKey): string
+    {
+        return Digests::hexOf([
+            $state->contract->api,
+            $state->operationId,
+            Ir::string(Ir::map($state->contract->operation($state->operationId), 'access'), 'identity') ?? '',
+            $state->principalMembers === null ? '' : Digests::hexOf([(object) $state->principalMembers]),
+            $clientKey,
+        ]);
+    }
+
     public static function settle(BoundaryState $state, Response $response): void
     {
         $key = $state->idempotencyKey;

@@ -144,6 +144,7 @@ final class AccessSteps
         $result = $hook->authenticate(new AuthenticateCall($identity, new $credentialsClass(...$arguments), $csrfToken, $state->view, self::operationRef($state), $signature));
         if ($result instanceof AuthenticateResult\Authenticated) {
             $state->principal = $result->principal;
+            $state->principalMembers = PrincipalMembers::read($state->contract, $identity, $result->principal);
 
             return;
         }
@@ -155,6 +156,19 @@ final class AccessSteps
         }
 
         throw self::refusalOf($state, $result->deny);
+    }
+
+    // A bucket keyed by a principal member reads the declared member, never a property the contract does not name.
+    private static function principalMember(BoundaryState $state, string $name): mixed
+    {
+        if ($state->principalMembers === null) {
+            return null;
+        }
+        if (!array_key_exists($name, $state->principalMembers)) {
+            throw new \LogicException("seampact: a bucket of operation '{$state->operationId}' is keyed by the principal member '{$name}', which the identity's principal does not declare.");
+        }
+
+        return $state->principalMembers[$name];
     }
 
     /**
@@ -352,7 +366,8 @@ final class AccessSteps
      * The bucket a throttle rule counts in: its key is the SHA-256 hex of `[api, bucket, values]` as the Node and
      * Spring targets write it, so a counter shared across targets counts one client once.
      */
-    private static function throttleBucket(BoundaryState $state, ?string $bucketId): ?ThrottleBucket
+    /** The bucket `$bucketId` of a throttle requirement, keyed by its declared values; null when there is none. */
+    public static function throttleBucket(BoundaryState $state, ?string $bucketId): ?ThrottleBucket
     {
         if ($bucketId === null) {
             return null;
@@ -379,7 +394,7 @@ final class AccessSteps
         return match (Ir::string($source, 'in')) {
             'path' => self::pathValue($state, $name, self::pathParamType($state, $name)),
             'scope' => self::scopeId($state, $name),
-            'principal' => $state->principal === null ? null : (get_object_vars($state->principal)[$name] ?? null),
+            'principal' => self::principalMember($state, $name),
             default => throw new \LogicException('seampact: a bucket key read from ' . var_export(Ir::string($source, 'in'), true) . ' is not one the boundary reads.'),
         };
     }

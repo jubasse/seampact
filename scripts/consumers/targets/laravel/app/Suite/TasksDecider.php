@@ -6,6 +6,7 @@ namespace App\Suite;
 
 use App\Generated\Tasks\Laravel\Runtime\Decider;
 use App\Generated\Tasks\Laravel\Runtime\Denial;
+use App\Generated\Tasks\Laravel\UserPrincipal;
 use App\Generated\Tasks\Schemas\ApiRateLimitedParams;
 use Seampact\Hooks\Decision;
 use Seampact\Hooks\Purpose;

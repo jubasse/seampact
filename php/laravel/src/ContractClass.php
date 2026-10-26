@@ -138,12 +138,16 @@ final class ContractClass
         return $members;
     }
 
-    /** @return array<string, array{hook: string, credentials: string, schemes: array<string, ?string>}> */
+    /** @return array<string, array{hook: string, credentials: string, principal: string, principalMembers: string, schemes: array<string, ?string>, principalAccessors: array<string, string>}> */
     private function identityTypes(): array
     {
         $types = [];
         foreach ($this->layout->identities() as $identity => $classes) {
-            $types[$identity] = [...$classes, 'schemes' => IdentityTypes::schemeMembers($this->schemesOf($identity))];
+            $types[$identity] = [
+                ...$classes,
+                'schemes' => IdentityTypes::schemeMembers($this->schemesOf($identity)),
+                'principalAccessors' => IdentityTypes::principalAccessors($this->layout, $identity),
+            ];
         }
 
         return $types;

@@ -4312,12 +4312,18 @@ final class TasksContract
             'stripe' => [
                 'hook' => 'Seampact\Golden\TasksConsistent\Laravel\StripeAuthenticateHook',
                 'credentials' => 'Seampact\Golden\TasksConsistent\Laravel\StripeCredentials',
+                'principal' => 'Seampact\Golden\TasksConsistent\Laravel\StripePrincipal',
+                'principalMembers' => 'Seampact\Golden\TasksConsistent\Laravel\StripePrincipalMembers',
                 'schemes' => ['stripeSignature' => 'stripeSignature'],
+                'principalAccessors' => ['account' => 'account'],
             ],
             'user' => [
                 'hook' => 'Seampact\Golden\TasksConsistent\Laravel\UserAuthenticateHook',
                 'credentials' => 'Seampact\Golden\TasksConsistent\Laravel\UserCredentials',
+                'principal' => 'Seampact\Golden\TasksConsistent\Laravel\UserPrincipal',
+                'principalMembers' => 'Seampact\Golden\TasksConsistent\Laravel\UserPrincipalMembers',
                 'schemes' => ['bearer' => 'bearer', 'sessionCookie' => 'sessionCookie'],
+                'principalAccessors' => ['userId' => 'userId'],
             ],
         ],
     ];

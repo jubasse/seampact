@@ -2338,7 +2338,10 @@ final class TasksContract
             'user' => [
                 'hook' => 'Seampact\Golden\Tasks\Laravel\UserAuthenticateHook',
                 'credentials' => 'Seampact\Golden\Tasks\Laravel\UserCredentials',
+                'principal' => 'Seampact\Golden\Tasks\Laravel\UserPrincipal',
+                'principalMembers' => 'Seampact\Golden\Tasks\Laravel\UserPrincipalMembers',
                 'schemes' => ['bearer' => 'bearer', 'sessionCookie' => 'sessionCookie'],
+                'principalAccessors' => ['userId' => 'userId'],
             ],
         ],
     ];

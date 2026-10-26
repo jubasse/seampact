@@ -19,6 +19,8 @@ final class BoundaryState
     private const HEAD = 'HEAD';
 
     public ?object $principal = null;
+    /** @var ?array<string, mixed> the principal's declared members, by wire name, null for an anonymous caller */
+    public ?array $principalMembers = null;
     /** @var list<ResolvedScope> */
     public array $scopes = [];
     public ?object $contractInput = null;

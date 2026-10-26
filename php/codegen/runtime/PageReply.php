@@ -325,15 +325,13 @@ final class PageReply
     /** @param list<string> $names */
     private static function withoutQueryMembers(string $rawQuery, array $names): string
     {
-        $kept = array_filter(explode('&', $rawQuery), static fn (string $pair): bool => $pair !== '' && !in_array(urldecode(explode('=', $pair, 2)[0]), $names, true));
-
-        return implode('&', $kept);
+        return implode('&', WireValues::keptQueryPairs($rawQuery, $names));
     }
 
     private static function withQueryMember(string $rawQuery, string $name, string $value): string
     {
         $kept = self::withoutQueryMembers($rawQuery, [$name]);
-        $member = rawurlencode($name) . '=' . rawurlencode($value);
+        $member = WireValues::componentEncoded($name) . '=' . WireValues::componentEncoded($value);
 
         return $kept === '' ? $member : "{$kept}&{$member}";
     }

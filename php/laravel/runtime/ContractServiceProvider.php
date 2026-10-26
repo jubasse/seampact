@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\BoundaryState;
-use Seampact\Codegen\Runtime\DumpRedaction;
 
 /**
  * The base of an api's generated service provider: it merges the api's run-time defaults into
@@ -53,7 +52,7 @@ abstract class ContractServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $contract = ApiContract::of($this->contractClass());
-        DumpRedaction::register($contract);
+        RedactingDumper::install($this->app, $contract);
         $kernel = $this->app->make(Kernel::class);
         if (method_exists($kernel, 'prependMiddleware') && method_exists($kernel, 'addToMiddlewarePriorityBefore')) {
             $kernel->prependMiddleware($this->boundaryClass());

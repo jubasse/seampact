@@ -14,9 +14,62 @@ final class WireValues
     private const UUID = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iD';
     private const INTEGER = '/^-?(0|[1-9][0-9]*)$/D';
     private const NUMBER = '/^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$/D';
+    private const ALPHANUMERIC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    // `encodeURIComponent` keeps the unreserved set and `!*'()`; the RFC 3986 query set adds the sub-delims, `:@/?`.
+    private const COMPONENT_SAFE = self::ALPHANUMERIC . '-_.!~*\'()';
+    private const QUERY_SAFE = self::ALPHANUMERIC . '-._~!$&\'()*+,;=:@/?';
 
     private function __construct()
     {
+    }
+
+    /**
+     * The raw query's pairs without the members `$names`, every other pair kept as received and made link-safe.
+     *
+     * @param list<string> $names
+     * @return list<string>
+     */
+    public static function keptQueryPairs(string $rawQuery, array $names): array
+    {
+        $kept = [];
+        foreach (explode('&', $rawQuery) as $pair) {
+            if ($pair === '' || in_array(urldecode(explode('=', $pair, 2)[0]), $names, true)) {
+                continue;
+            }
+            $kept[] = self::linkSafe($pair);
+        }
+
+        return $kept;
+    }
+
+    /**
+     * Bytes outside the RFC 3986 query set, and a `%` that starts no escape, percent-encoded, so a raw `>` or `"` the
+     * server accepted cannot break a `Link` target built from the pair.
+     */
+    public static function linkSafe(string $pair): string
+    {
+        $safe = '';
+        $length = strlen($pair);
+        for ($index = 0; $index < $length; $index++) {
+            $byte = $pair[$index];
+            $escapeStart = $byte === '%' && $index + 2 < $length && ctype_xdigit(substr($pair, $index + 1, 2));
+            $safe .= $escapeStart || ($byte !== '%' && str_contains(self::QUERY_SAFE, $byte)) ? $byte : sprintf('%%%02X', ord($byte));
+        }
+
+        return $safe;
+    }
+
+    /** `$text` as `encodeURIComponent` writes it: every byte outside the unreserved set and `!*'()` percent-encoded. */
+    public static function componentEncoded(string $text): string
+    {
+        $encoded = '';
+        $length = strlen($text);
+        for ($index = 0; $index < $length; $index++) {
+            $byte = $text[$index];
+            $encoded .= str_contains(self::COMPONENT_SAFE, $byte) ? $byte : sprintf('%%%02X', ord($byte));
+        }
+
+        return $encoded;
     }
 
     /** A raw path segment percent-decoded, or null when its bytes are not UTF-8. */

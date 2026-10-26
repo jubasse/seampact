@@ -6,6 +6,7 @@ namespace App\Suite;
 
 use App\Generated\Tasks\Laravel\Runtime\Denial;
 use App\Generated\Tasks\Laravel\StripeAuthenticateHook;
+use App\Generated\Tasks\Laravel\StripePrincipal;
 use Seampact\Hooks\AuthenticateRequest;
 use Seampact\Hooks\AuthenticateResult;
 use Seampact\Hooks\SignedTemplateRequest;
@@ -31,7 +32,7 @@ final class StripeHook implements StripeAuthenticateHook, SecretLookup
         $verified = $signed instanceof SignedTemplateRequest && $this->verified($signed);
 
         return $verified
-            ? new AuthenticateResult\Authenticated(new WebhookCaller(self::ACCOUNT))
+            ? new AuthenticateResult\Authenticated(new StripePrincipal(self::ACCOUNT))
             : new AuthenticateResult\Denied(new Denial('api.unauthenticated'));
     }
 

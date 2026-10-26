@@ -50,7 +50,7 @@ abstract class ContractServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $contract = ApiContract::of($this->contractClass());
-        DumpRedaction::register($contract);
+        RedactingDumper::install($this->app, $contract);
         $kernel = $this->app->make(Kernel::class);
         if (method_exists($kernel, 'prependMiddleware') && method_exists($kernel, 'addToMiddlewarePriorityBefore')) {
             $kernel->prependMiddleware($this->boundaryClass());
