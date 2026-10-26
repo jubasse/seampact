@@ -37,6 +37,7 @@ final class GeneratedPaths
 
         foreach ($files as $file) {
             $reason = self::unsafeReason($file->path) ?? match (true) {
+                preg_match('//u', $file->path) !== 1 => 'it is not UTF-8',
                 isset($seen[$file->path]) => 'it is generated twice',
                 basename($file->path) === WriterManifest::FILE_NAME => "'" . WriterManifest::FILE_NAME . "' is the writer's manifest",
                 default => null,
@@ -56,7 +57,7 @@ final class GeneratedPaths
             return $refusals;
         }
 
-        usort($files, static fn (GeneratedFile $left, GeneratedFile $right): int => strcmp($left->path, $right->path));
+        usort($files, static fn (GeneratedFile $left, GeneratedFile $right): int => CodeUnitOrder::compare($left->path, $right->path));
 
         return $files;
     }

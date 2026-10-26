@@ -74,9 +74,18 @@ final class TargetDiscovery
             );
         }
 
+        // The version goes into every generated file's header, so a package without one is refused, never guessed.
         $version = $package->version ?? null;
+        if (!is_string($version) || $version === '') {
+            return new ConfigProblem(
+                'config.target.installed-unreadable',
+                "The installed package '{$use}' has no version in the list of installed packages.",
+                'Run `composer install` again with Composer 2, then run seampact again.',
+                $where,
+            );
+        }
 
-        return new InstalledTarget($use, is_string($version) ? $version : 'unknown', $generator);
+        return new InstalledTarget($use, $version, $generator);
     }
 
     /** @return Generator|string the generator, or why it cannot be built */

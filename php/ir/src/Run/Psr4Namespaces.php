@@ -16,8 +16,8 @@ final readonly class Psr4Namespaces
 {
     private const IDENTIFIER = '/^[A-Za-z_][A-Za-z0-9_]*$/D';
 
-    /** @param array<string, string> $prefixByDirectory each absolute directory and its namespace prefix */
-    private function __construct(private string $composerFile, private array $prefixByDirectory)
+    /** @param array<string, list<string>> $prefixesByDirectory each absolute directory and its namespace prefixes */
+    private function __construct(private string $composerFile, private array $prefixesByDirectory)
     {
     }
 
@@ -27,17 +27,17 @@ final readonly class Psr4Namespaces
         $document = $text === false ? null : json_decode($text, false);
         $autoload = $document instanceof \stdClass ? $document->autoload ?? null : null;
         $psr4 = $autoload instanceof \stdClass ? $autoload->{'psr-4'} ?? null : null;
-        $prefixByDirectory = [];
+        $prefixesByDirectory = [];
 
         foreach ($psr4 instanceof \stdClass ? get_object_vars($psr4) : [] as $prefix => $directories) {
             foreach (is_array($directories) ? $directories : [$directories] as $directory) {
                 if (is_string($directory)) {
-                    $prefixByDirectory[ConfigPath::resolve(dirname($composerFile), $directory)] = rtrim((string) $prefix, '\\');
+                    $prefixesByDirectory[ConfigPath::resolve(dirname($composerFile), $directory)][] = rtrim((string) $prefix, '\\');
                 }
             }
         }
 
-        return new self($composerFile, $prefixByDirectory);
+        return new self($composerFile, array_map(static fn (array $prefixes): array => array_values(array_unique($prefixes)), $prefixesByDirectory));
     }
 
     /** The refusal of an `outDir` no PSR-4 directory holds, or null. */
@@ -63,6 +63,16 @@ final readonly class Psr4Namespaces
             throw new \LogicException('seampact: the namespace of a directory outside every PSR-4 entry was asked.');
         }
 
+        $prefixes = $this->prefixesByDirectory[$root];
+        if (count($prefixes) > 1) {
+            return new ConfigProblem(
+                'config.php.namespace-ambiguous',
+                "The PSR-4 entries of {$this->composerFile} map {$root} to several namespaces (" . implode(', ', $prefixes) . "), so the namespace of {$directory} is not one.",
+                'Map the directory to one namespace prefix, or set `outDir` below a directory one prefix maps, then run `composer dump-autoload`.',
+                $where,
+            );
+        }
+
         $segments = $directory === $root ? [] : explode('/', substr($directory, strlen($root) + 1));
         foreach ($segments as $segment) {
             if (preg_match(self::IDENTIFIER, $segment) !== 1) {
@@ -75,14 +85,14 @@ final readonly class Psr4Namespaces
             }
         }
 
-        return implode('\\', array_filter([$this->prefixByDirectory[$root], ...$segments], static fn (string $part): bool => $part !== ''));
+        return implode('\\', array_filter([$prefixes[0], ...$segments], static fn (string $part): bool => $part !== ''));
     }
 
     private function deepestDirectory(string $directory): ?string
     {
         $deepest = null;
 
-        foreach (array_keys($this->prefixByDirectory) as $candidate) {
+        foreach (array_keys($this->prefixesByDirectory) as $candidate) {
             $candidate = (string) $candidate;
             if (ConfigPath::isAtOrBelow($directory, $candidate) && ($deepest === null || strlen($candidate) > strlen($deepest))) {
                 $deepest = $candidate;

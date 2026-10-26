@@ -112,7 +112,7 @@ final class Runner
         $printed = array_values(array_filter($warnings, static fn (ConfigProblem $warning): bool => !in_array($warning->code, $ignored, true)));
         $matched = $errors === [] ? ['seampact: the generated files match the files on disk.'] : [];
 
-        return new RunReport([...$lines, ...$matched], $printed, $errors);
+        return new RunReport([...$lines, ...$matched, ...self::leftEntries($prepared->config)], $printed, $errors);
     }
 
     /** @return PreparedRun|list<ConfigProblem> */

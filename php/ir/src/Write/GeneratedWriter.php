@@ -210,8 +210,11 @@ final class GeneratedWriter
     {
         if (self::exists($directory)) {
             $real = realpath($directory);
+            if ($real === false) {
+                throw new \RuntimeException("seampact: the real path of '{$directory}' cannot be resolved; check that this user can read every directory above it.");
+            }
 
-            return $real === false ? $directory : $real;
+            return $real;
         }
 
         $parent = dirname($directory);

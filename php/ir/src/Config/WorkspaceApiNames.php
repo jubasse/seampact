@@ -29,6 +29,11 @@ final class WorkspaceApiNames
                 continue;
             }
 
+            $size = filesize($entry);
+            if ($size === false || $size > ConfigYaml::MAX_CONFIG_BYTES) {
+                return null;
+            }
+
             $text = @file_get_contents($entry);
             $tree = $text === false ? [] : ConfigYaml::parseText($text, $entry);
             if (!$tree instanceof ConfigTree) {

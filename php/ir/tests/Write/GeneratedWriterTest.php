@@ -11,6 +11,7 @@ use Seampact\Ir\Write\GeneratedHeader;
 use Seampact\Ir\Write\GeneratedWriter;
 use Seampact\Ir\Write\HandEditPolicy;
 use Seampact\Ir\Write\PlannedWrite;
+use Seampact\Ir\Write\WriterManifest;
 use Seampact\Ir\Write\WriterRefusal;
 
 /** The writer rules of ADR 0015 "Writing files" and "The generated header", with the Node writer's codes. */
@@ -64,6 +65,23 @@ final class GeneratedWriterTest extends TestCase
                 . "\"\n    },\n    {\n      \"path\": \"b/B.php\",\n      \"sha256\": \"" . hash('sha256', "<?php\necho 1;\n") . "\"\n    }\n  ]\n}\n",
             file_get_contents("{$this->outDir}/.seampact-manifest.json"),
         );
+    }
+
+    public function testOrdersTheManifestByCodeUnitAndKeepsLineSeparatorsAsJavaScriptDoes(): void
+    {
+        $serialized = WriterManifest::serialized('acme/target', ["\u{FF01}.php" => 'b', "\u{1F600}.php" => 'a', "x\u{2028}.php" => 'c']);
+
+        self::assertLessThan(strpos($serialized, "\u{FF01}.php"), strpos($serialized, "\u{1F600}.php"));
+        self::assertStringContainsString("\"x\u{2028}.php\"", $serialized);
+    }
+
+    public function testRefusesAHeaderValueThatWouldLeaveTheCommentLine(): void
+    {
+        $headed = GeneratedHeader::added([new GeneratedFile('Api.php', "<?php\n")], 'acme/target', "1.0 ?" . ">\n", 't');
+
+        self::assertCount(1, $headed);
+        self::assertInstanceOf(WriterRefusal::class, $headed[0]);
+        self::assertSame('file.header.unsafe', $headed[0]->code);
     }
 
     public function testKeepsUnchangedFilesAndRemovesStaleOnesWithTheirEmptyDirectories(): void

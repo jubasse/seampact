@@ -87,7 +87,7 @@ final readonly class WriterManifest
      */
     public static function serialized(string $owner, array $hashByPath): string
     {
-        ksort($hashByPath, SORT_STRING);
+        uksort($hashByPath, static fn (int|string $left, int|string $right): int => CodeUnitOrder::compare((string) $left, (string) $right));
         $entries = [];
         foreach ($hashByPath as $path => $sha256) {
             $entries[] = "    {\n      \"path\": " . self::jsonString((string) $path) . ",\n      \"sha256\": " . self::jsonString($sha256) . "\n    }";
@@ -99,6 +99,6 @@ final readonly class WriterManifest
 
     private static function jsonString(string $value): string
     {
-        return json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        return json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_LINE_TERMINATORS | JSON_THROW_ON_ERROR);
     }
 }

@@ -18,6 +18,9 @@ final class GeneratedHeader
     // The extensions the PHP targets emit, each with the line comment that carries the header.
     private const LINE_COMMENT_BY_EXTENSION = ['.php' => '//', '.yaml' => '#', '.json' => self::NO_COMMENT];
 
+    // A control character ends the comment line; a PHP close tag ends PHP mode even inside a line comment.
+    private const UNSAFE_HEADER_VALUE = '/[\x00-\x1F\x7F]|\?>/';
+
     private const REPORT_FIX = "Report this to the target's maintainers: the writer must learn the extension before a target emits it.";
 
     private function __construct()
@@ -37,6 +40,16 @@ final class GeneratedHeader
      */
     public static function added(array $files, string $generator, string $version, string $api): array
     {
+        foreach (['package' => $generator, 'version' => $version, 'api' => $api] as $name => $value) {
+            if (preg_match(self::UNSAFE_HEADER_VALUE, $value) === 1) {
+                return [new WriterRefusal(
+                    'file.header.unsafe',
+                    "The {$name} " . json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ' holds a control character or `?>`, which would break the generated header line.',
+                    "Correct the {$name} in the target's composer.json or in the contract, then run again.",
+                )];
+            }
+        }
+
         $line = self::line($generator, $version, $api);
         $finished = [];
         $refusals = [];
