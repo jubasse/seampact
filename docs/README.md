@@ -29,6 +29,7 @@
 - [AdonisJS](backend/adonisjs.md)
 - [Hono](backend/hono.md)
 - [Spring Boot](backend/spring-boot.md): the Gradle or Maven plugin, controllers and hooks.
+- [Symfony](backend/symfony.md): the Composer package, bundle, controllers, hooks and SecurityBundle.
 
 ## Frontend
 

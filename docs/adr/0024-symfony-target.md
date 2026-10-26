@@ -1,6 +1,6 @@
 # ADR 0024: The Symfony server target
 
-Status: accepted
+Status: accepted, delivered by symfony-1 to symfony-4
 
 ## Context
 
@@ -80,7 +80,7 @@ seampact_tasks:
     type: seampact
 ```
 
-Each api's loader supports the `seampact` type for its own api name only, so two apis load apart. No `mount` reaches the generator in symfony-1, so the loader writes each contract path as declared and the app prefixes the routes with its routing import's `prefix`. From symfony-2 the runner passes `mount` and `frameworkRoutes` to the generator through the target entry, and the boot check refuses a contract route whose path is not `mount` followed by the contract path, so the import `prefix` must equal `mount`; an import `host`, `schemes` or `condition` on a contract route is refused too.
+Each api's loader supports the `seampact` type for its own api name only, so two apis load apart. The loader writes each contract path as declared, and the app prefixes the routes with its routing import's `prefix`. The runner passes `mount` and `frameworkRoutes` to the generator through the target entry, and the boot check refuses a contract route whose path is not `mount` followed by the contract path, so the import `prefix` must equal `mount`; an import `host`, `schemes` or `condition` on a contract route is refused too.
 
 The `kernel.request` listener matches the raw path, `getPathInfo()`, against the contract templates. That path is the request target without the query, minus the front controller's own base path; a trusted `X-Forwarded-Prefix` does not change it (spike). The `kernel.controller` listener then compares the operation of the route the router chose with that match. The router decodes the path before matching, so the two can differ:
 
@@ -270,7 +270,7 @@ The boot check has two parts, each of which keeps a failing app from serving.
 - no `#[IsGranted]`, `#[IsCsrfTokenValid]` or `#[IsSignatureValid]` on a contract method or on the class of its controller service, read by reflection: the first two would refuse a request after steps 6 to 8 ("Exceptions on contract routes"), and a signed URI is not a form the contract declares. The refusal names the method and the attribute, with the fix: an `access_control` rule on the per-kind request matchers ("Native security layers") or a decider for `#[IsGranted]`, the authenticate hook with the CSRF companion value for `#[IsCsrfTokenValid]`;
 - `framework.http_cache` off: Symfony's HttpCache wraps the kernel, so a reply it serves from its store is never seen by the boundary. An `HttpCache` wrapped by hand in the front controller is not seen ("The outgoing response check").
 
-From symfony-4, under absolute URLs, the pass also requires a `public_origin` key (its value is checked at run time).
+Under absolute URLs, the pass also requires a `public_origin` key (its value is checked at run time).
 
 **The route part**, a decorator of the `routing.loader` service. The router calls it with its root resource whenever it builds the route collection: in `cache:warmup`, on the first request after the router cache is cleared, and in debug mode when a routing file changes. It sees the whole collection once per build (spike). A failing check throws, so no router cache is written and every request answers 500 until the check passes (spike, prod). It checks:
 
@@ -279,7 +279,7 @@ From symfony-4, under absolute URLs, the pass also requires a `public_origin` ke
 - a route that the loader did not make and that `frameworkRoutes` does not allow-list (FR-25). The check skips Symfony's own routes, each matched by its name together with its controller, never by path:
   - `_preview_error`, the error preview of the `dev` environment, by its controller `error_controller::preview` (spike);
   - `_logout_<firewall>`, which SecurityBundle registers for a firewall's `logout.path`, by its name and its missing controller (spike);
-  - the WebProfilerBundle routes `_wdt*` and `_profiler*`, by their names and their `web_profiler.controller.*` controllers (read from the bundle, not run; symfony-2 checks the list on both majors);
+  - the WebProfilerBundle routes `_wdt*` and `_profiler*`, by their names and their `web_profiler.controller.*` controllers (read from the bundle, not run);
 - a route that the loader did not make whose controller is a contract interface's method or a method of the service implementing one, whatever `frameworkRoutes` allow-lists and whether that check is on; at run time the listener refuses such a request anyway (spike);
 - a contract route whose path differs from `mount` followed by the contract path, `mount` being the one the generator receives through the target entry, or that carries a host, a scheme or a condition the loader did not set.
 
@@ -341,12 +341,10 @@ The boundary runtime is copied into `Symfony\Runtime` with the generated header 
 
 ### Refused by name or waiting
 
-`generate` refuses by name, with its code and fix, every input the delivered PRs do not serve ([A47](../decisions.md#a47)), each with the PR that brings it. It reads only the operations the target entry's `operations` filter keeps (ADR 0011): a form that no kept operation carries is neither generated nor refused.
+`generate` refuses by name, with its code and fix, every input the target does not serve yet ([A47](../decisions.md#a47)): `input.multipart.unsupported`, `input.form.unsupported`, `type.file.unsupported`, `response.shape.unsupported` and `artefacts.accessHooks.unsupported`, each saying it waits for an app that needs it. It reads only the operations the target entry's `operations` filter keeps (ADR 0011): a form that no kept operation carries is neither generated nor refused.
 
 | Waits for | What |
 |---|---|
-| symfony-2 | rights and rules an operation requires, which the access listener runs, rule proof fields in the body (`recentAuth` on purgeTask), `artefacts.bootCheck` and `artefacts.accessHooks: true` |
-| symfony-4 | the security exports (per-kind request matchers, the `TasksAccess` table), the mapping of an `HttpException` 401, 403 or 429 to its role, absolute URLs (their `public_origin` lives in the bundle configuration, and the boot check requires it) |
 | a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target; multipart (when it comes: `UploadedFile` with the `File` constraint; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`BinaryFileResponse`, `StreamedResponse`) and redirect (`RedirectResponse`) bodies and native access (`artefacts.accessHooks: false`), which the Spring and Laravel targets refuse the same way and the reference contract does not carry; string formats other than `uuid` and `date-time`; NelmioApiDocBundle `nativeDocs`; unions (`oneOf`) until a contract needs one |
 | after 1.0 | Symfony 7.3 and older (refused, not waiting); worker runtimes (refused, below); `framework.http_cache` (refused by the boot check); `hooks: vendored` ([A40](../decisions.md#a40)); API Platform, its own target; every IR form absent from the reference contract's golden IRs, as the Spring and Laravel targets refuse them: `list` responses, response headers the route writes itself, principal requirements, bindings, upstream calls, operation features, extension keys, input field rights below the top level, scope ids not read from the path, bucket keys not read from the path, a scope or the principal, rule proofs outside the body, principals of several variants, signatures verified by the application or keyed from the request, parameter and property defaults, open enums, maps, `int64` and `decimal`, kept unknown keys, recursive input schemas, integer steps beyond the PHP `int` range |
 
@@ -374,10 +372,10 @@ The proof is:
 - the `node`-absent step;
 - a green suite row per matrix entry;
 - `php/symfony/tests/RedactionTest.php`, on the golden classes (one class of each kind of "Redaction" holding a known secret, which `var_dump`, `print_r` and VarDumper must not show while `[redacted]` is present);
-- the suite's security rows: from symfony-2, a bad-credentials `http_basic` row answering `unauthenticated` through `LoginFailureEvent` and an `access_control` row answering `forbidden`; from symfony-3, a `login_throttling` row answering `rateLimited`; from symfony-4, an `access_control` row on a per-kind matcher;
+- the suite's security rows: symfony-2 added a bad-credentials `http_basic` row answering `unauthenticated` through `LoginFailureEvent` and an `access_control` row answering `forbidden`; symfony-3 added a `login_throttling` row answering `rateLimited`; symfony-4 added an `access_control` row on a per-kind matcher;
 - the suite's media rows.
 
-Suite cases that wait for a later PR carry a refusal naming that PR; the list is empty from symfony-3, since the reference contract carries none of symfony-4's forms.
+The suite's refusal list is empty: the reference contract carries no form that waits.
 
 ### Delivery
 
@@ -393,7 +391,7 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 - **The hook part of the boot check** runs in a non-optional cache warmer of the api's bundle, not in the compiler pass, since a pass cannot ask the hooks their names without building services. `cache:clear` and `cache:warmup` fail with "the api 'tasks' cannot start" and every hook problem; a request that builds the container runs the warmer too and fails with a bare 500, while the container it wrote stays. That 500's body is the app's error display (empty in production, PHP's or Symfony's error page with the message in debug), so nothing of the contract shows there. The boundary asks the same on the first contract request of each container instance and answers the api's 500 with a log line, so under php-fpm and PHP's built-in server the hook part runs on every request. On the consumer (PHP 8.5, Symfony 7.4, built-in server) the whole boot check adds under 10 ms to a cold `cache:warmup` of about 220 ms, and no measurable time to a contract request (10 to 13 ms with or without it, over 300 requests).
 - **Exceptions on contract routes**: the generated exceptions and the boundary's own failures are still answered at priority 128. An exception no role maps is answered by a second `kernel.exception` listener at priority -64, after the app's listeners at the default priority and before `ErrorListener` (-128): the app's listeners see every exception, a reply one of them sets is judged by the outgoing check as written, and otherwise the reply is the api's 500, never Symfony's error page. A native refusal is left to the firewall and `ErrorListener` and mapped at `kernel.response`; it is read from the recorded first exception, since the firewall's listener replaces an `AccessDeniedException` with an `AccessDeniedHttpException`. An `AccessDeniedException` from the authenticate hook goes to the firewall's entry point and answers `unauthenticated`. Once the authenticate hook has admitted the caller, whom the firewall still sees as anonymous, an `AccessDeniedException` from a scope resolver or a decider answers `forbidden`, as on Laravel. The router's 404 or 405 for a path step 1 matched raw (`a%2Fb`) is left to `ErrorListener` and answers `notFound` on the way out.
 - **The boundary's own replies** (its refusals, the catch-all 404, the api's 500) are checked again at `kernel.response`: an app listener that changes their status, media type or body gets the api's 500; headers it adds stay.
-- **Redaction**: the VarDumper caster comes with symfony-2. The bundle's `boot()` registers it for each identity's generated credentials class and the hook calls that hold credentials; it dumps the object's `__debugInfo()`. The rest of "Redaction" stays with symfony-3.
+- **Redaction**: the VarDumper caster came with symfony-2. The bundle's `boot()` registers it for each identity's generated credentials class and the hook calls that hold credentials; it dumps the object's `__debugInfo()`. The rest of "Redaction" came with symfony-3.
 - **The consumer** is served by PHP's built-in server, as the Laravel one is (ADR 0023), not by php-fpm behind nginx. `p6-symfony.yml` gains a `contract-bundle` job and one `e2e` job, gated by `changes` and needed by `symfony`, with the PR rows Symfony 7.4 on PHP 8.3 and Symfony 8 on PHP 8.5. The app is a `MicroKernelTrait` kernel without Flex, Monolog or RateLimiter: its `logger` service feeds the `log-lines` route, its `access_control` rule uses a request matcher keyed on a suite header, and a boot case runs `cache:warmup` into a cache directory of its own. The core operations declare no 403, so the `access_control` row answers the api's 500 and logs the `forbidden` role it kept. The spike's "CLI server" results stay proven on that server only.
 
 ### Amendment 2026-10-26: what the shared PHP code gives Symfony from laravel-3b
@@ -410,7 +408,7 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 - **Opaque values** accept `null` and refuse a non-finite number anywhere inside them as `type`, as on the Laravel target.
 - **Route names** are `seampact.<api id>.<operationId>`, as the boundary reads them; the routing resource and the bundle configuration keep the snake-case api key (`tasks_service`, `seampact_tasks_service`), and the route check's fix names that resource.
 - **Redaction** needed no Symfony code beyond the shared runtime: the bundle's `boot()` registers the VarDumper caster for every generated value class and runtime holder.
-- **Absolute URLs** stay with symfony-4, where `public_origin` lives in the bundle configuration and the boot check requires it; the reference contract writes relative URLs.
+- **Absolute URLs** came with symfony-4, where `public_origin` lives in the bundle configuration and the boot check requires it; the reference contract writes relative URLs.
 - The consumer serves both apis of the reference contract, with the `tasksService` bundle beside the `tasks` one.
 
 ### Amendment 2026-10-27: what symfony-4 built

@@ -9,6 +9,7 @@ Find your error by its code. The code is the first word of the message, such as 
 | `link.` | linking target entries | [Link errors](link.md) |
 | `bundle.` | publishing or reading a contract bundle | [Bundle errors](bundle.md) |
 | `options.`, `paging.` | setting a target's `options`, or reading a generate warning | [Target option errors](generate.md) |
+| `input.`, `type.`, `response.`, `artefacts.` (PHP targets) | generating a form the target does not serve yet | [Target option errors](generate.md) |
 | `check.`, `writer.` | running `check` or `generate` on files that changed | [Check errors](check.md) |
 | `seampact/load/` | reading your contract YAML | [Contract file errors](load.md) |
 | `seampact/validate/` | writing a key or value the grammar does not allow | [Contract key errors](validate.md) |
