@@ -14,6 +14,7 @@ use Seampact\Golden\TasksConsistent\Symfony\Runtime\Hooks;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\RouteCheck;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\ScopeResolver;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\UnexpectedErrorListener;
+use Seampact\Hooks\IdempotencyStore;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
@@ -83,6 +84,7 @@ final class TasksSeampactBundle extends AbstractBundle
         tagged_iterator(Hooks::tag(self::API, Hooks::SCOPE_RESOLVERS_TAG_SUFFIX)),
         service(UnexpectedErrorListener::class)->nullOnInvalid(),
         service('logger'),
+        service(IdempotencyStore::class)->nullOnInvalid(),
     ]);
     $services->set(TasksBoundary::class)->args([service(Hooks::class), service(TasksSettings::class), service('validator')])->tag('kernel.event_subscriber');
     $builder->registerForAutoconfiguration(Decider::class)->addTag(Hooks::tag(self::API, Hooks::DECIDERS_TAG_SUFFIX));

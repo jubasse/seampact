@@ -200,11 +200,18 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         $state->admitted = true;
 
         try {
-            $request->attributes->set($this->inputAttribute(), $this->checkedInput($request, $state));
+            [$input, $parts] = $this->checkedInput($request, $state);
+            $request->attributes->set($this->inputAttribute(), $input);
+            $replayed = IdempotencyStep::begin($state, $parts);
         } catch (ContractRefusal $refusal) {
             throw $refusal;
         } catch (\Throwable $failure) {
             throw new BoundaryFailure($failure);
+        }
+
+        // A replayed write never runs its handler: the stored reply stands in for it.
+        if ($replayed !== null) {
+            $event->setController(static fn (): Response => $replayed);
         }
     }
 
@@ -309,10 +316,18 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         }
 
         $recorded = $request->attributes->get($this->attribute('exception'));
-        $checked = $this->checked($request, $state, $response, $recorded instanceof \Throwable ? $recorded : null);
+        try {
+            $checked = $this->checked($request, $state, $response, $recorded instanceof \Throwable ? $recorded : null);
+        } catch (\Throwable $failure) {
+            // A key this request claimed is released, so a retry runs again instead of waiting for its lifetime.
+            IdempotencyStep::abandon($state);
+
+            throw $failure;
+        }
         if ($checked !== $response) {
             $event->setResponse($checked->prepare($request));
         }
+        IdempotencyStep::settle($state, $checked);
     }
 
     private function checked(Request $request, BoundaryState $state, Response $response, ?\Throwable $exception): Response
@@ -387,8 +402,13 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         return Replies::thrown($request, $state->contract->api, is_string($code) ? $code : '', $params);
     }
 
-    /** Step 6 through the app's validator, then steps 7 and 8: the typed input. */
-    private function checkedInput(Request $request, BoundaryState $state): object
+    /**
+     * Step 6 through the app's validator, then steps 7 and 8: the typed input, with a paged list's limit filled in, and
+     * the decoded input by part, which the idempotency claim digests.
+     *
+     * @return array{object, array<string, mixed>}
+     */
+    private function checkedInput(Request $request, BoundaryState $state): array
     {
         $decoded = $request->attributes->get($this->attribute('decoded'));
         if (!$decoded instanceof DecodedInput) {
@@ -408,7 +428,13 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
             throw AccessSteps::schemaInvalid($state, array_slice(array_values(array_unique($issues, SORT_REGULAR)), 0, self::MAX_RENDERED_ISSUES));
         }
 
-        return TypedInput::build($state, ['path' => $tree->path, 'query' => $tree->query, 'headers' => $tree->header]);
+        $parts = ['path' => $tree->path, 'query' => PageReply::withFilledLimit($state, $tree->query), 'headers' => $tree->header];
+        $input = TypedInput::build($state, $parts);
+        if ($state->body !== null) {
+            $parts['body'] = $state->body;
+        }
+
+        return [$input, $parts];
     }
 
     /** @return array{in: string, pointer: string, rule: string} */

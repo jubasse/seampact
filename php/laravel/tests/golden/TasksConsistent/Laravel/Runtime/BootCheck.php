@@ -17,7 +17,6 @@ use Seampact\Hooks\IdempotencyStore;
  */
 final class BootCheck
 {
-    private const BOUNDARY_ENFORCED = 'boundary';
     public const HOOKS = 'hooks';
     public const HANDLERS = 'handlers';
     public const FRAMEWORK_ROUTES = 'frameworkRoutes';
@@ -61,18 +60,7 @@ final class BootCheck
             "tag a ScopeResolver with '" . Hooks::scopeResolversTag($contract->api) . "'",
         );
 
-        $idempotent = [];
-        foreach ($contract->operationIds() as $operationId) {
-            if (Ir::string(Ir::map($contract->operation($operationId), 'idempotency'), 'enforce') === self::BOUNDARY_ENFORCED) {
-                $idempotent[] = $operationId;
-            }
-        }
-
-        if ($idempotent !== [] && (new Hooks($app))->idempotencyStore() === null) {
-            $problems[] = "no idempotency store for '" . implode("', '", $idempotent) . "': bind " . IdempotencyStore::class . ' in the container';
-        }
-
-        return $problems;
+        return [...$problems, ...HookCheck::idempotencyStoreProblems(new Hooks($app), $contract, 'bind ' . IdempotencyStore::class . ' in the container')];
     }
 
     /** @return list<string> */

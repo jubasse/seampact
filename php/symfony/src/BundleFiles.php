@@ -21,6 +21,8 @@ use Seampact\Codegen\TargetOptions;
  */
 final class BundleFiles
 {
+    private const IDEMPOTENCY_STORE = 'Seampact\\Hooks\\IdempotencyStore';
+
     public function __construct(
         private readonly SymfonyPlacement $placement,
         private readonly TargetOptions $options,
@@ -84,6 +86,7 @@ final class BundleFiles
         $hooks = $file->name($this->placement->runtime('Hooks'));
         $boundary = $file->name($this->placement->boundary);
         $listener = $file->name($this->placement->runtime('UnexpectedErrorListener'));
+        $idempotencyStore = $file->name(self::IDEMPOTENCY_STORE);
         $decider = $file->name($this->placement->runtime('Decider'));
         $scopeResolver = $file->name($this->placement->runtime('ScopeResolver'));
         $routeCheck = $file->name($this->placement->runtime('RouteCheck'));
@@ -100,6 +103,7 @@ final class BundleFiles
                 tagged_iterator({$tag('SCOPE_RESOLVERS_TAG_SUFFIX')}),
                 service({$listener}::class)->nullOnInvalid(),
                 service('logger'),
+                service({$idempotencyStore}::class)->nullOnInvalid(),
             ]);
             \$services->set({$boundary}::class)->args([service({$hooks}::class), service({$settings}::class), service('validator')])->tag('kernel.event_subscriber');
             \$builder->registerForAutoconfiguration({$decider}::class)->addTag({$tag('DECIDERS_TAG_SUFFIX')});
