@@ -77,7 +77,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `no idempotency store for ...: bind Seampact\Hooks\IdempotencyStore in the container` | Bind an `IdempotencyStore` implementation. |
 | `operation '<id>' has no handler: bind <Endpoints> to a controller in the container` | Bind the generated `<Resource>Endpoints` interface to your controller. |
 | `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | List the route under `frameworkRoutes` of the entry, with a reason, then run `seampact generate`. |
-| `operation '<id>' has 0 contract routes: call Route::seampact('<api>') once in the app's routes` | Call `Route::seampact('<api>')` once in `routes/web.php` or `routes/api.php`. Call it outside any route group prefix. |
+| `operation '<id>' has 0 contract routes: call Route::seampact('<api>') once in the app's routes` | Call `Route::seampact('<api>')` once, from `withRouting(then: ...)` in `bootstrap/app.php`. Call it outside any route group prefix. |
 | `the boundary middleware ... is not the first global middleware` | Remove the global middleware you prepended before it. Two apis whose base paths overlap: set `catch_all: false` on the broader one. |
 | `the access middleware ... is not before SubstituteBindings in the middleware priority` | Do not reorder the middleware priority; put your own entries after the contract's. |
 | `operation '<id>' runs without the access middleware: remove the withoutMiddleware() call on its route` | Remove `withoutMiddleware()` from the contract route. |
