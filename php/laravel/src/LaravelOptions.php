@@ -10,8 +10,8 @@ use Seampact\Ir\Run\GenerationRefusedException;
 
 /**
  * The validated options of a laravel target entry (ADR 0023 "Options and registration"), every unknown key refused
- * by name. `namespace` is required and must be the PSR-4 namespace of the entry's output directory, where Composer
- * loads the classes from. `responses`, `bodyValidation`, `frameworkEtag` and `catchAll` are the run-time defaults
+ * by name. The generated namespace is not an option: it is the PSR-4 namespace `composer.json` gives the entry's
+ * output directory, where Composer loads the classes from. `responses`, `bodyValidation`, `frameworkEtag` and `catchAll` are the run-time defaults
  * the generated route table carries.
  */
 final readonly class LaravelOptions
@@ -19,7 +19,6 @@ final readonly class LaravelOptions
     public const DEFAULT_INDENT_SPACES = 4;
     private const MAX_INDENT_SPACES = 8;
 
-    private const NAMESPACE = 'namespace';
     private const INDENT = 'indent';
     private const LAYOUT = 'layout';
     private const ROUTES = 'routes';
@@ -32,10 +31,9 @@ final readonly class LaravelOptions
     private const PER_RESOURCE = 'perResource';
     private const NAMING_KEYS = ['suffixes', 'escape', 'enumCase'];
     private const KNOWN_KEYS = [
-        self::NAMESPACE, self::INDENT, self::LAYOUT, self::ROUTES, self::RULES, self::RESPONSES, self::BODY_VALIDATION,
+        self::INDENT, self::LAYOUT, self::ROUTES, self::RULES, self::RESPONSES, self::BODY_VALIDATION,
         self::FRAMEWORK_ETAG, self::CATCH_ALL, self::HANDLERS, ...self::NAMING_KEYS,
     ];
-    private const NAMESPACE_PATTERN = '/^[A-Za-z_\x80-\xff][A-Za-z0-9_\x80-\xff]*(\\\\[A-Za-z_\x80-\xff][A-Za-z0-9_\x80-\xff]*)*$/D';
 
     public function __construct(
         public string $namespace,
@@ -49,7 +47,7 @@ final readonly class LaravelOptions
     ) {
     }
 
-    /** @throws GenerationRefusedException an unknown key, a missing or wrong `namespace`, or a value outside its set */
+    /** @throws GenerationRefusedException an unknown key, or a value outside its set */
     public static function parse(\stdClass $raw, string $psr4Namespace, string $entryId): self
     {
         $refusals = new Refusals($entryId, LaravelGenerator::TARGET, LaravelGenerator::PACKAGE);
@@ -65,7 +63,6 @@ final readonly class LaravelOptions
             }
         }
 
-        $namespace = self::namespaceOf($values[self::NAMESPACE] ?? null, $psr4Namespace, $refusals);
         $indent = self::indentOf($values[self::INDENT] ?? null, $refusals);
         $routes = self::choice($values, self::ROUTES, RoutesForm::Macro, RoutesForm::tryFrom(...), array_column(RoutesForm::cases(), 'value'), $refusals);
         $rules = self::choice($values, self::RULES, RulesMode::Native, RulesMode::tryFrom(...), array_column(RulesMode::cases(), 'value'), $refusals);
@@ -90,34 +87,11 @@ final readonly class LaravelOptions
 
         $refusals->throwIfAny();
 
-        if ($namespace === null || $indent === null || $routes === null || $rules === null || $responses === null || $etag === null || $bodyValidation === null || $catchAll === null) {
+        if ($indent === null || $routes === null || $rules === null || $responses === null || $etag === null || $bodyValidation === null || $catchAll === null) {
             throw new \LogicException('An option without a value was not refused.');
         }
 
-        return new self($namespace, $indent, $routes, $rules, $responses, $bodyValidation, $etag, $catchAll);
-    }
-
-    private static function namespaceOf(mixed $value, string $psr4Namespace, Refusals $refusals): ?string
-    {
-        if ($value === null) {
-            self::refuse($refusals, 'options.namespace.missing', self::NAMESPACE, "The option 'namespace' is missing; the laravel target has no default namespace.", "Set 'namespace' to the PSR-4 namespace of the entry's output directory" . ($psr4Namespace === '' ? '' : ", '{$psr4Namespace}'") . '.');
-
-            return null;
-        }
-
-        if (!is_string($value) || preg_match(self::NAMESPACE_PATTERN, $value) !== 1) {
-            self::refuse($refusals, 'options.namespace.invalid', self::NAMESPACE, "The option 'namespace' is " . self::shown($value) . ', not a PHP namespace.', "Set 'namespace' to backslash-separated PHP names, such as 'App\\Contracts\\Tasks'.");
-
-            return null;
-        }
-
-        if ($value !== $psr4Namespace) {
-            self::refuse($refusals, 'options.namespace.mismatch', self::NAMESPACE, "The option 'namespace' is '{$value}', but composer.json maps the entry's output directory to '{$psr4Namespace}', so Composer would not load the generated classes.", "Set 'namespace' to '{$psr4Namespace}', or change the entry's `out` or the PSR-4 entry of composer.json.");
-
-            return null;
-        }
-
-        return $value;
+        return new self($psr4Namespace, $indent, $routes, $rules, $responses, $bodyValidation, $etag, $catchAll);
     }
 
     private static function indentOf(mixed $value, Refusals $refusals): ?int

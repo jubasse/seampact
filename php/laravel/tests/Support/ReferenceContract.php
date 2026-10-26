@@ -58,6 +58,6 @@ final class ReferenceContract
     /** @param array<string, mixed> $options */
     public static function entry(string $api, string $namespace, array $options = []): TargetEntry
     {
-        return new TargetEntry('server', 'seampact/laravel', $api, null, (object) (['namespace' => $namespace] + $options), new \stdClass(), '/app/generated', $namespace);
+        return new TargetEntry('server', 'seampact/laravel', $api, null, (object) $options, new \stdClass(), '/app/generated', $namespace);
     }
 }

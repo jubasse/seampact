@@ -38,7 +38,7 @@ final class TasksController implements TasksEndpoints
 }
 ```
 
-Codegen emits, per api, under the target entry's `out` and the `namespace` option:
+Codegen emits, per api, under the target entry's `out`, in its PSR-4 namespace:
 
 - **Per operation**:
   - the FormRequest (`UpdateTaskRequest`), which runs steps 6 to 8 and hands over the typed input with `contractInput()`;
@@ -61,7 +61,7 @@ Codegen emits, per api, under the target entry's `out` and the `namespace` optio
 
 Both middleware are registered from the provider, with no edit to `bootstrap/app.php` (spike). The routes point at the interface (`[TasksEndpoints::class, 'updateTask']`), which the container resolves to the bound controller, cached routes included (spike). Each route is named `seampact.<api>.<operationId>`.
 
-The generated types go into the `namespace` option (no default: ADR 0010 "Namespaces"), which must be the PSR-4 namespace `composer.json` gives the entry's output directory; the schema types go into its `Schemas` sub-namespace. The Laravel placement goes into its `Laravel` sub-namespace, and the copied runtime into `Laravel\Runtime`. A declared schema `UpdateTask` and a placement class never share a namespace. Fixed class names that ADR 0007 has no role for are Pascal-case words prefixed by the api's type name, and constants are upper snake case (`MAX_CHECKED_ERROR_BODY_BYTES`).
+The generated types go into the PSR-4 namespace `composer.json` gives the entry's output directory, which the runner derives (ADR 0010 "Namespaces"), so no option names it; the schema types go into its `Schemas` sub-namespace. The Laravel placement goes into its `Laravel` sub-namespace, and the copied runtime into `Laravel\Runtime`. A declared schema `UpdateTask` and a placement class never share a namespace. Fixed class names that ADR 0007 has no role for are Pascal-case words prefixed by the api's type name, and constants are upper snake case (`MAX_CHECKED_ERROR_BODY_BYTES`).
 
 The handler method returns the operation's generated result: an interface implemented by one final class per declared success status and by the typed error result (ADR 0007 `errors` role). It may instead throw one of the generated exceptions, declared with `@throws` on the interface method (ADR 0012 "Errors the handler answers"). A decide hook that throws Laravel's `AuthorizationException` (`Gate::authorize()`) answers the requirement's first declared denial code. Any other exception from a hook is a 500 with `onUnexpectedError` called (ADR 0012 "Failures inside hooks").
 
@@ -214,7 +214,6 @@ The boundary's own logs, written to the app's PSR-3 logger, carry the operation 
 
 The target options, validated against the schema the target publishes, with unknown keys refused by name:
 
-- `namespace`, required;
 - the naming options of ADR 0007: `suffixes`, `escape`, `enumCase`, `handlers` (`perOperation` gives one interface per operation, for an `__invoke` controller);
 - `indent` and `layout`;
 - `routes` (`macro`, the default, or `file`);
@@ -324,9 +323,9 @@ The boundary runtime is copied into `Laravel\Runtime` with the generated header,
 
 | Waits for | What |
 |---|---|
-| laravel-3 | paging, idempotency replay, throttle, cache and ETag headers, signed routes, absolute URLs, the `pack:laravel` styles |
+| laravel-3 | paging, idempotency replay, throttle, cache and ETag headers, signed routes, absolute URLs, deadline budgets (`budgetMs`), relayed operations (`relays`), the `pack:laravel` styles |
 | laravel-4 | multipart (`file`, `mimetypes` and `max` rules; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`response()->streamDownload()`) and redirect (`redirect()->to()`) bodies, the per-kind middleware lists, the published config |
-| a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target: the reference contract carries none |
+| a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target: the reference contract carries none; unions (`oneOf`), designed above, until a contract needs one |
 | after 1.0 | Laravel 12 and older (refused, not waiting); Octane (refused, below); `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs |
 
 Octane is refused at run time, outside the boot check, since an Octane app usually serves from a route cache, where the boot check does not run. The provider's `boot()` listens for Octane's `Laravel\Octane\Events\WorkerStarting`, named as a string so the generated code needs no Octane package, and throws `runtime.octane.unsupported` with the fix "serve the app with php-fpm, or keep this api's provider out of the Octane app": the worker does not start.
@@ -355,9 +354,9 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 
 | PR | Delivers |
 |---|---|
-| laravel-1 | `php/laravel` (`Seampact\Laravel`): the generator class registered in `extra.seampact.generator`, the options (`namespace`, `routes` and the rest), readonly classes with `Field`, controller interfaces, FormRequests with their rules, the routes file and the macro's route table, the exceptions per error; a golden for the reference contract, linted with `php -l` and PHPStan max on PHP 8.3 and 8.5 |
+| laravel-1 | `php/laravel` (`Seampact\Laravel`) and the shared emitters of `php/codegen` (`Seampact\Codegen`): the generator class registered in `extra.seampact.generator`, the options (`routes`, `rules` and the rest), readonly classes with `Field`, controller interfaces, FormRequests with their rules, the routes file and the macro's route table, the exceptions per error; a golden for the reference contract, linted with `php -l` and PHPStan max on PHP 8.3 and 8.5 |
 | laravel-2 | the boundary middleware (steps 1 and 10, the "boundary first" assertion), the access middleware (steps 2 to 5 and its mark), the FormRequest steps 6 to 8 failing closed without that mark, the mapping of "Exceptions on contract routes", the provider with its hook bindings and the Octane refusal, scopes in request attributes, the 500 on a missing hook, the boot check, `php artisan seampact:generate`; the sample app with path repositories under php-fpm behind nginx, the core suite profile, the e2e job of `p6-laravel.yml`; `BootCheckTest.php` only for a rule that is a brick |
-| laravel-3 | paging, idempotency, throttle, cache headers, the signed raw body, absolute URLs, redaction (`__debugInfo()`, `#[\SensitiveParameter]`, the VarDumper caster), the `pack:laravel` profile; the pack and full suite profiles and `RedactionTest.php` |
+| laravel-3 | paging, idempotency, throttle, cache headers, the signed raw body, absolute URLs, deadline budgets and relayed operations, redaction (`__debugInfo()`, `#[\SensitiveParameter]`, the VarDumper caster), the `pack:laravel` profile; the pack and full suite profiles and `RedactionTest.php` |
 | laravel-4 | guards and Sanctum for authenticate, Gates and Policies for decide, `AuthorizationException` in a decider answering the first denial code, coexistence with the native layers and their per-kind middleware lists, multipart, `streamDownload` and `redirect()->to()`, the published `config/seampact.php`; the suite's security and media rows, a Sanctum row in the sample app |
 
 ## Spike

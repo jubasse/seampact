@@ -44,6 +44,9 @@ final class KeptForms
 {
     public const FORMAT_UUID = 'uuid';
     public const FORMAT_DATE_TIME = PhpTypes::DATE_TIME_FORMAT;
+    public const LARAVEL_2 = 'laravel-2';
+    private const LARAVEL_3 = 'laravel-3';
+    private const LARAVEL_4 = 'laravel-4';
     private const SUPPORTED_FORMATS = [self::FORMAT_UUID, self::FORMAT_DATE_TIME];
     private const WIDE_FORMATS = ['int64', 'decimal'];
     private const JSON_MEDIA = 'application/json';
@@ -68,7 +71,7 @@ final class KeptForms
     public function __construct(private readonly ContractIR $ir, private readonly Refusals $refusals)
     {
         if ($ir->api->wire->urls->value === UrlForm::Absolute) {
-            $refusals->waiting('urls.absolute', 'Absolute URLs (`api.wire.urls: absolute`)', IrPlace::root()->below('api', 'wire', 'urls'), Delivery::LaterRelease);
+            $refusals->waitingForRelease('urls.absolute', 'Absolute URLs (`api.wire.urls: absolute`)', IrPlace::root()->below('api', 'wire', 'urls'), self::LARAVEL_3);
         }
 
         foreach ($ir->operations as $index => $operation) {
@@ -119,13 +122,13 @@ final class KeptForms
             $inputAt = $at->below('input');
             $media = $operation->input->media->value;
             match (true) {
-                $media === InputMediaType::MultipartFormData => $this->refusals->waiting('input.multipart', 'A multipart body', $inputAt->below('media'), Delivery::LaterRelease),
+                $media === InputMediaType::MultipartFormData => $this->refusals->waitingForRelease('input.multipart', 'A multipart body', $inputAt->below('media'), self::LARAVEL_4),
                 $media === InputMediaType::ApplicationXWwwFormUrlencoded => $this->refusals->waiting('input.form', 'A form body', $inputAt->below('media'), Delivery::Consumer),
                 $media !== InputMediaType::ApplicationJson => $this->refusals->unknownValue($inputAt->below('media'), $media),
                 default => null,
             };
             if ($operation->input->rawBody) {
-                $this->refusals->waiting('input.rawBody', 'A raw body kept for a signature', $inputAt->below('rawBody'), Delivery::LaterRelease);
+                $this->refusals->waitingForRelease('input.rawBody', 'A raw body kept for a signature', $inputAt->below('rawBody'), self::LARAVEL_3);
             }
             if (($operation->input->fields ?? []) !== [] || ($operation->input->proofs ?? []) !== []) {
                 $this->refusals->waiting('input.proofs', 'Body fields beside the input schema', $inputAt, Delivery::AfterOneZero);
@@ -140,7 +143,7 @@ final class KeptForms
         foreach ($operation->errors as $errorIndex => $error) {
             $errorAt = $at->below('errors', $errorIndex);
             if ($error->retryHeader !== null) {
-                $this->refusals->waiting('error.retryHeader', 'A retry header on an error', $errorAt->below('retryHeader'), Delivery::LaterRelease);
+                $this->refusals->waitingForRelease('error.retryHeader', 'A retry header on an error', $errorAt->below('retryHeader'), self::LARAVEL_3);
             }
             $this->readError($error->code, $errorAt);
         }
@@ -162,23 +165,23 @@ final class KeptForms
         };
 
         if ($identityId !== null && ($this->ir->identities[$identityId] ?? null) instanceof SignedIdentity) {
-            $this->refusals->waiting('access.signed', "A route signed by identity '{$identityId}'", $at->below('access'), Delivery::LaterRelease);
+            $this->refusals->waitingForRelease('access.signed', "A route signed by identity '{$identityId}'", $at->below('access'), self::LARAVEL_3);
         }
     }
 
     private function readWaitingMembers(Operation $operation, IrPlace $at): void
     {
         $waiting = [
-            ['paging', $operation->paging, 'Paging', Delivery::LaterRelease],
-            ['idempotency', $operation->idempotency, 'Idempotency', Delivery::LaterRelease],
-            ['cache', $operation->cache, 'Cache and ETag headers', Delivery::LaterRelease],
-            ['deadline', $operation->budgetMs ?? $operation->deadlineHeader ?? $operation->degradable, 'A deadline budget', Delivery::LaterRelease],
-            ['relays', $operation->relays, 'A relayed operation', Delivery::LaterRelease],
+            ['paging', $operation->paging, 'Paging'],
+            ['idempotency', $operation->idempotency, 'Idempotency'],
+            ['cache', $operation->cache, 'Cache and ETag headers'],
+            ['deadline', $operation->budgetMs ?? $operation->deadlineHeader ?? $operation->degradable, 'A deadline budget'],
+            ['relays', $operation->relays, 'A relayed operation'],
         ];
 
-        foreach ($waiting as [$form, $value, $description, $delivery]) {
+        foreach ($waiting as [$form, $value, $description]) {
             if ($value !== null) {
-                $this->refusals->waiting($form, $description, $at->below($form === 'deadline' ? 'budgetMs' : $form), $delivery);
+                $this->refusals->waitingForRelease($form, $description, $at->below($form === 'deadline' ? 'budgetMs' : $form), self::LARAVEL_3);
             }
         }
     }
@@ -203,13 +206,13 @@ final class KeptForms
         $shape = $response->shape->value;
 
         if (in_array($shape, self::LATER_SHAPES, true)) {
-            $this->refusals->waiting('response.shape', "A '{$shape}' response", $at->below('shape'), Delivery::LaterRelease);
+            $this->refusals->waitingForRelease('response.shape', "A '{$shape}' response", $at->below('shape'), $shape === ResponseShape::Page ? self::LARAVEL_3 : self::LARAVEL_4);
         } elseif (!in_array($shape, self::SUPPORTED_SHAPES, true)) {
             $this->refusals->unknownValue($at->below('shape'), $shape);
         }
 
         if ($response->headers !== []) {
-            $this->refusals->waiting('response.header', "The response header '{$response->headers[0]->name}'", $at->below('headers', 0), Delivery::LaterRelease);
+            $this->refusals->waitingForRelease('response.header', "The response header '{$response->headers[0]->name}'", $at->below('headers', 0), self::LARAVEL_3);
         }
 
         if ($response->body === null) {
@@ -249,7 +252,7 @@ final class KeptForms
             $type instanceof EnumTypeUse => $this->readEnum($type, $at),
             $type instanceof RefTypeUse => $this->readRef($type, $at),
             $type instanceof ArrayTypeUse => $this->readType($type->items, $at->below('items')),
-            $type instanceof FileTypeUse => $this->refusals->waiting('type.file', 'A file value', $at, Delivery::LaterRelease),
+            $type instanceof FileTypeUse => $this->refusals->waitingForRelease('type.file', 'A file value', $at, self::LARAVEL_4),
             $type instanceof OpaqueTypeUse => $this->refusals->waiting('type.opaque', 'An opaque value', $at, Delivery::AfterOneZero),
             default => $this->refusals->unknownValue($at->below('kind'), $type->tag()),
         };
@@ -273,7 +276,7 @@ final class KeptForms
         }
 
         if ($type->sensitive === true) {
-            $this->refusals->waiting('type.sensitive', 'A sensitive value, which needs redaction', $at, Delivery::LaterRelease);
+            $this->refusals->waitingForRelease('type.sensitive', 'A sensitive value, which needs redaction', $at, self::LARAVEL_3);
         }
     }
 
@@ -305,7 +308,7 @@ final class KeptForms
 
         match (true) {
             $schema === null => $this->refusals->inconsistent('schema.undeclared', "The schema '{$type->schema}' is not declared", $at),
-            $schema instanceof UnionSchema => $this->refusals->waiting('schema.union', 'A union', $schemaAt, Delivery::AfterOneZero),
+            $schema instanceof UnionSchema => $this->refusals->waiting('schema.union', 'A union', $schemaAt, Delivery::ContractNeed),
             $schema instanceof MapSchema => $this->refusals->waiting('schema.map', 'A map', $schemaAt, Delivery::AfterOneZero),
             $schema instanceof ObjectSchema => $this->readObject($type->schema, $schema, $schemaAt),
             default => $this->refusals->unknownValue($schemaAt->below('kind'), $schema->tag()),
@@ -323,7 +326,7 @@ final class KeptForms
         foreach ($schema->properties as $index => $property) {
             $propertyAt = $at->below('properties', $index);
             if ($property->sensitive) {
-                $this->refusals->waiting('type.sensitive', "The sensitive property '{$property->name}', which needs redaction", $propertyAt, Delivery::LaterRelease);
+                $this->refusals->waitingForRelease('type.sensitive', "The sensitive property '{$property->name}', which needs redaction", $propertyAt, self::LARAVEL_3);
             }
             if ($property->default !== null) {
                 $this->refusals->waiting('property.default', "The default of property '{$property->name}'", $propertyAt->below('default'), Delivery::AfterOneZero);

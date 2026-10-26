@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\PsrPrinter;
-use Seampact\Codegen\Delivery;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpTypes;
@@ -40,7 +39,7 @@ final class LaravelGenerator implements Generator
         $refusals = new Refusals($entry->id, self::TARGET, self::PACKAGE);
 
         foreach (array_keys(get_object_vars($entry->artefacts)) as $artefact) {
-            $refusals->waiting('artefacts.' . $artefact, "The artefact switch '{$artefact}'", IrPlace::root()->below('artefacts', $artefact), Delivery::LaterRelease);
+            $refusals->waitingForRelease('artefacts.' . $artefact, "The artefact switch '{$artefact}'", IrPlace::root()->below('artefacts', $artefact), KeptForms::LARAVEL_2);
         }
 
         $kept = new KeptForms($ir, $refusals);

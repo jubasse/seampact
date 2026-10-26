@@ -41,12 +41,12 @@
   ],
   "autoload": {
     "psr-4": {
-      "Seampact\\Laravel\\": "src/",
-      "Seampact\\Laravel\\Runtime\\": "runtime/"
+      "Seampact\\Laravel\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
+      "Seampact\\Laravel\\Runtime\\": "runtime/",
       "Seampact\\Laravel\\Tests\\": "tests/",
       "Seampact\\Golden\\": "tests/golden/"
     }
