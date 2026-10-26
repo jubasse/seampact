@@ -10,7 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, runCli } from "@seampact/cli";
+import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, EXIT_USAGE, runCli } from "@seampact/cli";
 import { afterEach, expect, test } from "vitest";
 import { BINARY_NATIVE_ONLY_COMMANDS } from "./binary-refusals.js";
 
@@ -181,4 +181,39 @@ targets:
 
   expect(await runCli(["check", ...pluginRun], refusedIo)).toBe(EXIT_REFUSED);
   expect(refusedIo.errors.join("")).toContain("source 'contract'");
+});
+
+// One bundle per source: a second `--bundle-directory` for the same source is a usage error, never a silent override.
+test("refuses a source handed over twice", async () => {
+  const app = appWith(NATIVE_APP_CONFIG);
+  const io = capturingIo(app, "binary");
+
+  expect(
+    await runCli(
+      ["generate", "--bundle-directory", "contract=a", "--bundle-directory", "contract=b"],
+      io,
+    ),
+  ).toBe(EXIT_USAGE);
+  expect(io.errors.join("")).toContain("contract");
+});
+
+// A build plugin names the config it hands over as its build file writes it, so its problems point there.
+test("names a handed-over config by its label", async () => {
+  const app = appWith(NATIVE_APP_CONFIG);
+  const appDirectory = mkdtempSync(join(tmpdir(), "seampact-binary-app-"));
+  const configFile = join(app, "handed-over.json");
+  const label = "build.gradle.kts seampact { }";
+  const io = capturingIo(app, "binary");
+
+  temporaryDirectories.push(appDirectory);
+  writeFileSync(configFile, JSON.stringify({ sources: 3 }));
+
+  expect(
+    await runCli(
+      ["check", "--config", configFile, "--app-directory", appDirectory, "--config-name", label],
+      io,
+    ),
+  ).toBe(EXIT_REFUSED);
+  expect(io.errors.join("")).toContain(label);
+  expect(io.errors.join("")).not.toContain("seampact.config.yaml");
 });

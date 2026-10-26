@@ -1,11 +1,11 @@
 package io.github.jubasse.seampact.gradle
 
 import io.github.jubasse.seampact.runner.fixtures.ReferenceApp
+import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.io.path.name
 import kotlin.io.path.readLines
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
@@ -91,13 +91,47 @@ class DocumentsTest {
         )
     }
 
+    @Test
+    fun fetchesNoBundleSourceTheDocumentsDoNotRead() {
+        val app = SampleApp(directory)
+        ReferenceApp.publishValidBundle(directory.resolve("repository"))
+        app.write(
+            "seampact.config.yaml",
+            """
+            allowLocal: true
+            outDir: build/generated/sources/seampact/main
+            sources:
+              contract: { maven: '${ReferenceApp.VALID_BUNDLE_COORDINATES}', integrity: '${ReferenceApp.VALID_BUNDLE_INTEGRITY}' }
+              staging: { maven: 'com.example:unpublished:9.9.9', integrity: '$UNPUBLISHED_INTEGRITY' }
+            targets:
+              - { id: web, use: '@seampact/nestjs', api: contract/t }
+            """,
+        )
+        app.writeBuildScript("repositories { maven { url = uri(\"repository\") } }\nseampact {\n${app.stubBinaryBlock()}\n}")
+
+        app.run("seampactGenerate")
+
+        assertEquals(listOf(GENERATE, "$BUNDLE_DIRECTORY contract"), app.stubMarker.readLines(), "only the source the documents read is fetched")
+    }
+
+    @Test
+    fun runsAgainWhileTheDefaultDocumentsAreUnlisted() {
+        val app = SampleApp(directory)
+        app.write("seampact.config.yaml", withoutOpenApiNone(SampleApp.REFERENCE_CONFIG))
+        app.writeBuildScript("seampact {\n${app.stubBinaryBlock()}\n}")
+
+        app.run("seampactGenerate")
+        val again = app.run("seampactGenerate")
+
+        assertEquals(TaskOutcome.SUCCESS, again.task(":seampactGenerate")?.outcome, "a deleted default document is written again")
+    }
+
     // The run directories a documents run leaves under the build's temporary directory.
     private fun runDirectoriesLeft(): List<Path> {
         val temporaryDirectory = directory.resolve(TEMPORARY_DIRECTORY)
         if (!Files.exists(temporaryDirectory)) return emptyList()
 
-        return Files.list(temporaryDirectory).use { it.toList() } +
-            Files.list(directory).use { files -> files.filter { it.name.startsWith(OLD_DSL_CONFIG_PREFIX) }.toList() }
+        return Files.list(temporaryDirectory).use { it.toList() }
     }
 
     private fun withoutOpenApiNone(config: String): String = config.lines().filterNot { it.trim() == OPENAPI_NONE }.joinToString("\n")
@@ -108,9 +142,9 @@ class DocumentsTest {
         const val CHECK = "check"
         const val OPENAPI_NONE = "openapi: none"
         const val APP_DIRECTORY = "app-directory"
+        const val UNPUBLISHED_INTEGRITY = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
         const val BUNDLE_DIRECTORY = "bundle-directory"
         const val TEMPORARY_DIRECTORY = "build/tmp/seampact"
-        const val OLD_DSL_CONFIG_PREFIX = ".seampact-build-config-"
 
         const val REFERENCE_DSL = """
             outDir = "build/generated/sources/seampact/main"

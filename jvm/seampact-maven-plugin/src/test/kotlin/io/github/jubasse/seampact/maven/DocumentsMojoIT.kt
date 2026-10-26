@@ -65,6 +65,12 @@ class DocumentsMojoIT {
         )
         assertEquals(emptyList(), runDirectoriesLeft(), "the config handed to the binary is removed")
 
+        app.stubMarker.deleteIfExists()
+        app.write("openapi/t.yaml", "openapi: 3.1.0")
+        val drifted = app.run("generate-sources")
+        assertTrue(drifted.succeeded, drifted.output)
+        assertTrue(GENERATE in app.stubMarker.readLines(), "a drifted document makes generate run again")
+
         ReferenceApp.failMarkerOf(app.stubMarker).writeText("")
         val refused = app.run("verify")
         assertFalse(refused.succeeded, "the binary's refusal fails the build")
