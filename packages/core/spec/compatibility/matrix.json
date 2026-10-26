@@ -337,5 +337,30 @@
         ]
       }
     }
+  ],
+  "phpTargets": [
+    {
+      "package": "seampact/laravel",
+      "framework": {
+        "id": "laravel",
+        "package": "laravel/framework",
+        "tested": [
+          {
+            "major": 13,
+            "consumer": "laravel"
+          }
+        ],
+        "incompatible": [
+          {
+            "major": 11,
+            "reason": "Laravel 11 has no bug fixes left, and the generated middleware and exception handling are written for Laravel 13."
+          },
+          {
+            "major": 12,
+            "reason": "Laravel 12's bug fixes ended on 2026-08-13, and the generated middleware and exception handling are written for Laravel 13."
+          }
+        ]
+      }
+    }
   ]
 }

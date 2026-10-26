@@ -158,6 +158,29 @@ test("check names an edited OpenAPI document and the line it differs at", async 
   expect(edited.err).toContain("tasks.full.yaml");
 });
 
+test("generate refuses an edited OpenAPI document, names --force, and --force writes it again", async () => {
+  const app = makeServerApp();
+
+  await run(app, ["generate"]);
+
+  const document = join(app, "openapi/tasks.full.yaml");
+  const generated = readFileSync(document, "utf8");
+
+  writeFileSync(document, `${generated}extra: 1\n`);
+
+  const refused = await run(app, ["generate"]);
+
+  expect(refused.exitCode).toBe(EXIT_REFUSED);
+  expect(refused.err).toContain("openapi.document.edited");
+  expect(refused.err).toContain("seampact generate --force");
+  expect(refused.err).toContain("Delete the edited document");
+  expect(readFileSync(document, "utf8")).toBe(`${generated}extra: 1\n`);
+
+  expect((await run(app, ["generate", "--force"])).exitCode).toBe(EXIT_SUCCESS);
+  expect(readFileSync(document, "utf8")).toBe(generated);
+  expect(await run(app, ["check"])).toMatchObject({ exitCode: EXIT_SUCCESS });
+});
+
 test("check writes nothing", async () => {
   const app = makeServerApp();
 

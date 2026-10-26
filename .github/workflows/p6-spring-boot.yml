@@ -182,6 +182,20 @@ jobs:
       - name: Serve the contract bundles over HTTPS
         if: matrix.contract == 'bundle'
         run: sh scripts/consumers/targets/spring-boot/bundle-over-https.sh start "$RUNNER_TEMP/https"
+      # The Maven wrapper downloads its Maven from Maven Central with no retry of its own; this step fetches it into
+      # ~/.m2/wrapper with retries and backoff, so the builds below find it there.
+      - name: Download the Maven wrapper's distribution with retries
+        if: matrix.build-tool == 'maven'
+        shell: bash
+        working-directory: scripts/consumers/targets/spring-boot/maven
+        run: |
+          set -euo pipefail
+          for delay in 10 30 90; do
+            if ./mvnw -B --version; then exit 0; fi
+            echo "Retrying the Maven download in ${delay} s."
+            sleep "$delay"
+          done
+          ./mvnw -B --version
       - name: Build the consumer and its allow-listed and pack-spring variants
         shell: bash
         env:

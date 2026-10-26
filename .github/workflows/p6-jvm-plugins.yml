@@ -255,6 +255,20 @@ jobs:
           echo "The channels did not start; their log:"
           cat "$RUNNER_TEMP/channels.log"
           exit 1
+      # The Maven wrapper downloads its Maven from Maven Central with no retry of its own; this step fetches it into
+      # ~/.m2/wrapper with retries and backoff, so the smoke's runs find it there.
+      - name: Download the Maven wrapper's distribution with retries
+        if: matrix.build-tool == 'maven'
+        shell: bash
+        working-directory: scripts/consumers/targets/spring-boot/maven
+        run: |
+          set -euo pipefail
+          for delay in 10 30 90; do
+            if ./mvnw -B --version; then exit 0; fi
+            echo "Retrying the Maven download in ${delay} s."
+            sleep "$delay"
+          done
+          ./mvnw -B --version
       - name: Generate and check from each channel with the ${{ matrix.build-tool }} plugin
         env:
           BUILD_TOOL: ${{ matrix.build-tool }}

@@ -26,12 +26,10 @@ use Seampact\Ir\Config\WorkspaceApiNames;
 /**
  * Gets the IR of each source the PHP entries use (ADR 0010 "How a native plugin gets the IR"): a bundle source
  * through its channel and the pinned-bundle check, a `path` source compiled by the pinned binary, installed only when
- * such a source is used. Every source is tried, so one run names every problem.
+ * such a source or the documents need it. Every source is tried, so one run names every problem.
  */
 final class ContractApis
 {
-    private const COMPILE_TIMEOUT_SECONDS = 120.0;
-
     private const COMPILE_ENTRY_ID = 'compile';
 
     private const COMPILE_PREFIX = 'seampact-source-';
@@ -95,18 +93,49 @@ final class ContractApis
         return $apis;
     }
 
+    /**
+     * The refusal of each `path` source among `$names` that local sources are refused for, without compiling it:
+     * the sources only the binary's documents run compiles, which gets no `SEAMPACT_ALLOW_LOCAL`.
+     *
+     * @param list<string> $names
+     * @return list<ConfigProblem>
+     */
+    public function localRefusals(AppConfig $config, array $names): array
+    {
+        $problems = [];
+        foreach ($names as $name) {
+            $source = $config->sources[$name];
+            $refused = $source instanceof LocalSource ? $this->localRefusal($name, $source) : null;
+            if ($refused !== null) {
+                $problems[] = $refused;
+            }
+        }
+
+        return $problems;
+    }
+
+    private function localRefusal(string $name, LocalSource $source): ?ConfigProblem
+    {
+        if ($this->localSources !== LocalSourcePolicy::Refuse) {
+            return null;
+        }
+
+        return new ConfigProblem(
+            'config.source.local',
+            "The source '{$name}' is a local path ({$source->directory}), and local sources are refused here (" . LocalSourcePolicy::refusalReason($this->environment) . ').',
+            'Use a pinned bundle source instead: `{ release: { url }, integrity }` or `{ git: { url, tag, directory }, integrity }`.',
+            "source '{$name}'",
+        );
+    }
+
     /** @return list<SourceApi|ConfigProblem> */
     private function compiled(string $name, LocalSource $source): array
     {
         $where = "source '{$name}'";
 
-        if ($this->localSources === LocalSourcePolicy::Refuse) {
-            return [new ConfigProblem(
-                'config.source.local',
-                "The source '{$name}' is a local path ({$source->directory}), and local sources are refused here (" . LocalSourcePolicy::refusalReason($this->environment) . ').',
-                'Use a pinned bundle source instead: `{ release: { url }, integrity }` or `{ git: { url, tag, directory }, integrity }`.',
-                $where,
-            )];
+        $refused = $this->localRefusal($name, $source);
+        if ($refused !== null) {
+            return [$refused];
         }
 
         $binary = $this->binary();
@@ -120,7 +149,7 @@ final class ContractApis
         try {
             $configFile = $workDirectory . '/seampact.config.yaml';
             file_put_contents($configFile, self::compileConfig($name, $source->directory));
-            $output = BinaryRunner::compile($binary, $configFile, $apiNames ?? [], self::COMPILE_TIMEOUT_SECONDS, $this->environment, PHP_OS_FAMILY === 'Windows');
+            $output = BinaryRunner::compile($binary, $configFile, $apiNames ?? [], BinaryRunner::DEADLINE_SECONDS, $this->environment, PHP_OS_FAMILY === 'Windows');
         } catch (BinaryRefusedException $refused) {
             return [RunProblems::ofBinary($refused->failure, $where)];
         } finally {
@@ -148,8 +177,31 @@ final class ContractApis
         return $apis;
     }
 
-    // The binary is installed once, on the first `path` source, and only then (ADR 0010 "Lazy").
-    private function binary(): InstalledBinary|BinaryFailure
+    /**
+     * The checked cache entry of each bundle source this run read, by source name, for the binary's documents run;
+     * and the problems of the entries that are gone or changed since.
+     *
+     * @return array{array<string, string>, list<ConfigProblem>}
+     */
+    public function handedBundles(): array
+    {
+        $directories = [];
+        $problems = [];
+
+        foreach ($this->checkedBundles as [$name, $integrity]) {
+            $entry = $this->fetcher->verifiedCacheEntry($integrity);
+            if ($entry instanceof BundleFailure) {
+                $problems[] = RunProblems::ofBundle($entry, $name);
+            } else {
+                $directories[$name] = $entry;
+            }
+        }
+
+        return [$directories, $problems];
+    }
+
+    // The binary is installed once, on the first `path` source or the documents, and only then (ADR 0010 "Lazy").
+    public function binary(): InstalledBinary|BinaryFailure
     {
         if ($this->binary === null) {
             try {

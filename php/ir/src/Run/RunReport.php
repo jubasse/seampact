@@ -13,8 +13,9 @@ final readonly class RunReport
      * @param list<string> $lines
      * @param list<ConfigProblem> $warnings
      * @param list<ConfigProblem> $problems
+     * @param list<string> $compilerWarnings the compiler binary's warnings on the documents, as it printed them
      */
-    public function __construct(public array $lines, public array $warnings, public array $problems)
+    public function __construct(public array $lines, public array $warnings, public array $problems, public array $compilerWarnings = [])
     {
     }
 

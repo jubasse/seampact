@@ -6,6 +6,8 @@ import {
   firstPartyPackagesOfStyle,
   JVM_TARGETS,
   offeredValidatorPairs,
+  PHP_TARGETS,
+  phpTargetOf,
   SERVER_TARGETS,
   serverTargetCompatibility,
   supportedMajorsOf,
@@ -229,4 +231,32 @@ test("the spring-boot JVM target is tested on Spring Boot 4 and refuses Spring B
   expect(SERVER_TARGETS.map((target) => target.package)).not.toContain(
     "io.github.jubasse:seampact-spring-boot",
   );
+});
+
+test("the laravel PHP target is tested on Laravel 13 and refuses Laravel 11 and 12", () => {
+  expect(PHP_TARGETS.map((target) => target.package)).toEqual(["seampact/laravel"]);
+  expect(PHP_TARGETS[0]?.framework.tested.map((tested) => tested.major)).toEqual([13]);
+  expect(PHP_TARGETS[0]?.framework.incompatible.map((incompatible) => incompatible.major)).toEqual([
+    11, 12,
+  ]);
+});
+
+test("a PHP target's floor is <major>.<minor> of a tested major", () => {
+  const row = (floor: string) => ({
+    package: "acme/target",
+    framework: {
+      id: "acme",
+      package: "acme/framework",
+      tested: [{ major: 7, consumer: "acme" }],
+      incompatible: [],
+      floor,
+    },
+  });
+
+  expect(phpTargetOf(row("7.4")).framework.floor).toBe("7.4");
+
+  for (const target of PHP_TARGETS) expect(phpTargetOf(target)).toBe(target);
+
+  expect(() => phpTargetOf(row("6.4"))).toThrow("not <major>.<minor> of a tested major (7)");
+  expect(() => phpTargetOf(row("7"))).toThrow("acme/target floor is '7'");
 });

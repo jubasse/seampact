@@ -39,6 +39,12 @@ final class TargetDiscovery
         return new self($installed->byName);
     }
 
+    /** @return array<string, \stdClass> every installed package, by name */
+    public function installedPackages(): array
+    {
+        return $this->packages;
+    }
+
     public function target(string $use, string $entryId): InstalledTarget|ConfigProblem
     {
         $where = "entry '{$entryId}' use";

@@ -1,0 +1,137 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Seampact\Ir\Tests\Run;
+
+use PHPUnit\Framework\TestCase;
+use Seampact\Ir\Config\AppConfig;
+use Seampact\Ir\Config\AppConfigReader;
+use Seampact\Ir\Config\ConfigProblem;
+use Seampact\Ir\Run\MatrixCheck;
+use Seampact\Ir\Run\MatrixFramework;
+use Seampact\Ir\Tests\Support\Documents;
+use Seampact\Ir\Tests\Support\TemporaryDirectory;
+
+/**
+ * The framework version Composer installed against the `phpTargets` of the compatibility matrix, with the codes of
+ * the Node CLI and the JVM plugins, and the matrix copy this package ships.
+ */
+final class MatrixCheckTest extends TestCase
+{
+    private string $directory;
+
+    protected function setUp(): void
+    {
+        $this->directory = TemporaryDirectory::create('seampact-matrix-');
+    }
+
+    protected function tearDown(): void
+    {
+        TemporaryDirectory::remove($this->directory);
+    }
+
+    public function testShipsAnExactCopyOfTheSpecMatrix(): void
+    {
+        self::assertSame(
+            file_get_contents(Documents::repositoryRoot() . '/packages/core/spec/compatibility/matrix.json'),
+            file_get_contents(__DIR__ . '/../../resources/compatibility/matrix.json'),
+            'Copy packages/core/spec/compatibility/matrix.json to php/ir/resources/compatibility/matrix.json.',
+        );
+    }
+
+    public function testPassesATestedMajor(): void
+    {
+        self::assertSame([[], []], $this->codes($this->config(''), ['laravel/framework' => 'v13.38.2']));
+    }
+
+    public function testRefusesAnIncompatibleMajorWithItsReason(): void
+    {
+        [$problems] = MatrixCheck::check($this->config(''), $this->installed(['laravel/framework' => 'v12.9.0']));
+
+        self::assertSame('config.matrix.incompatible', $problems[0]->code);
+        self::assertStringContainsString('does not work on laravel 12', $problems[0]->message);
+    }
+
+    public function testWarnsOnAnUntestedMajorUnlessTheChecksMakeItAnError(): void
+    {
+        self::assertSame([[], ['config.matrix.untested']], $this->codes($this->config(''), ['laravel/framework' => 'v14.0.0']));
+        self::assertSame([['config.matrix.untested'], []], $this->codes($this->config('', "checks: { matrix: error }\n"), ['laravel/framework' => 'v14.0.0']));
+    }
+
+    public function testAcceptsAnUntestedMajorTheEntryAllows(): void
+    {
+        self::assertSame([[], []], $this->codes($this->config(', allowUntested: [laravel@14]'), ['laravel/framework' => 'v14.0.0']));
+    }
+
+    public function testNamesUselessAndForeignAllowUntestedItems(): void
+    {
+        self::assertSame(
+            [['config.matrix.unknown-framework'], ['config.matrix.allowed-tested']],
+            $this->codes($this->config(', allowUntested: [laravel@13, symfony@8]'), ['laravel/framework' => 'v13.38.2']),
+        );
+    }
+
+    public function testRefusesAMinorBelowTheFloorOfATestedMajor(): void
+    {
+        $frameworks = ['seampact/laravel' => new MatrixFramework('laravel', 'laravel/framework', [13], [], '13.38')];
+        [$below] = MatrixCheck::checkAgainst($this->config(''), $this->installed(['laravel/framework' => 'v13.37.9']), $frameworks);
+        [$atFloor] = MatrixCheck::checkAgainst($this->config(''), $this->installed(['laravel/framework' => 'v13.38.0']), $frameworks);
+
+        self::assertSame(['config.matrix.incompatible'], array_map(static fn (ConfigProblem $problem): string => $problem->code, $below));
+        self::assertStringContainsString('laravel 13.38 or later only', $below[0]->message);
+        self::assertSame([], $atFloor);
+    }
+
+    public function testNamesTheReasonOfAnIncompatibleMajorBelowTheFloorAndTheTagComposerShows(): void
+    {
+        $frameworks = ['seampact/laravel' => new MatrixFramework('laravel', 'laravel/framework', [13], [12 => 'Laravel 12 is too old.'], '13.5')];
+        $installed = ['laravel/framework' => (object) ['name' => 'laravel/framework', 'version' => 'v12.1.0', 'version_normalized' => '12.1.0.0']];
+
+        [$problems] = MatrixCheck::checkAgainst($this->config(''), $installed, $frameworks);
+
+        self::assertStringContainsString('laravel/framework v12.1.0, and', $problems[0]->message);
+        self::assertStringContainsString('Laravel 12 is too old.', $problems[0]->message);
+    }
+
+    public function testRefusesAFrameworkComposerDidNotInstall(): void
+    {
+        self::assertSame([['framework.version.unresolved'], []], $this->codes($this->config(''), []));
+    }
+
+    private function config(string $entryMembers, string $more = ''): AppConfig
+    {
+        $file = TemporaryDirectory::write($this->directory, 'seampact.config.yaml', "sources:\n  contract: { path: contract }\n"
+            . "outDir: src/Generated\nopenapi: none\n{$more}targets:\n  - { id: api, use: seampact/laravel, api: tasks{$entryMembers} }\n");
+        $config = AppConfigReader::readFile($file);
+        self::assertInstanceOf(AppConfig::class, $config, is_array($config) ? ConfigProblem::text($config) : '');
+
+        return $config;
+    }
+
+    /**
+     * @param array<string, string> $versions
+     * @return array{list<string>, list<string>}
+     */
+    private function codes(AppConfig $config, array $versions): array
+    {
+        [$problems, $warnings] = MatrixCheck::check($config, $this->installed($versions));
+        $code = static fn (ConfigProblem $problem): string => $problem->code;
+
+        return [array_map($code, $problems), array_map($code, $warnings)];
+    }
+
+    /**
+     * @param array<string, string> $versions
+     * @return array<string, \stdClass>
+     */
+    private function installed(array $versions): array
+    {
+        $packages = [];
+        foreach ($versions as $name => $version) {
+            $packages[$name] = (object) ['name' => $name, 'version' => $version];
+        }
+
+        return $packages;
+    }
+}

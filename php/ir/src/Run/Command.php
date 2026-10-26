@@ -65,6 +65,9 @@ final class Command
         foreach ($report->warnings as $warning) {
             fwrite($stderr, 'seampact warning: ' . ConfigProblem::text([$warning]) . "\n");
         }
+        foreach ($report->compilerWarnings as $line) {
+            fwrite($stderr, "seampact warning: {$line}\n");
+        }
         if ($report->problems !== []) {
             fwrite($stderr, ConfigProblem::text($report->problems) . "\n");
 

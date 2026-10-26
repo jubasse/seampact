@@ -157,7 +157,7 @@ export function documentProblem(directory: string): (refusal: Refusal) => CliPro
       return {
         code: "openapi.document.edited",
         message: refusal.message,
-        fix: "Delete the edited document so that `generate` writes it again, or give the document another path in `openapi`.",
+        fix: "Delete the edited document so that `generate` writes it again, run `seampact generate --force` to write it over the edit, or give the document another path in `openapi`.",
         where,
       };
     }
