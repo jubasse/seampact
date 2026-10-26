@@ -244,7 +244,7 @@ Two apis are two providers, each with its own middleware, route table and boot c
 
 The boot check runs in an `$app->booted()` callback of the provider. It runs:
 
-- on an HTTP boot while the routes are not cached, so per request under php-fpm without a route cache (its cost is measured in laravel-2);
+- on an HTTP boot while the routes are not cached, so per request under php-fpm without a route cache. Measured in laravel-2 on the consumer's core operations (10 routes, PHP 8.5, OPcache on): about 0.05 ms per check, lost in the noise of a request's boot of about 10 ms;
 - in `route:cache` and `optimize`, in the fresh application they boot after clearing the cache, so a failing check writes no cache file (spike).
 
 It does not run on other artisan commands, so `migrate` and `tinker` work on a broken app, and it does not run on an HTTP boot that reads a route cache, whose routes `route:cache` already checked. It lists every problem at once with the operation id, the name and the fix, and throws, so the app does not serve:
@@ -335,15 +335,13 @@ Octane is refused at run time, outside the boot check, since an Octane app usual
 
 ### The consumer and the proof
 
-The sample app lives in `scripts/consumers/targets/laravel/`. It is a Laravel 13 skeleton that holds the developer's controllers and hook doubles, which answer from the suite script, and three control routes: `/__seampact/script`, `hook-calls` and `log-lines`, the last fed by a Monolog handler. It reads the template's credentials from the shared JSON. It installs `seampact/hooks`, `seampact/laravel` and `seampact/ir` from Composer path repositories pointing at the split trees (ADR 0011 "Unpublished installs for test consumers"), and the reference contract's bundle that the workflow built.
+The sample app lives in `scripts/consumers/targets/laravel/`. It is a Laravel 13 skeleton that holds the developer's controllers and hook doubles, which answer from the suite script, and three control routes: `/__seampact/script`, `hook-calls` and `log-lines`, the last fed by a `MessageLogged` listener. Each request of PHP's built-in server starts from nothing, so the script, the hook calls and the log lines live in one file under `storage/`. It reads the template's credentials from the shared JSON. It installs `seampact/hooks`, `seampact/laravel` and `seampact/ir` from Composer path repositories pointing at the split trees (ADR 0011 "Unpublished installs for test consumers"), and the reference contract's bundle that the workflow built.
 
-The workflow `p6-laravel.yml` has five jobs:
+The workflow `p6-laravel.yml` has, beside `changes` and the `packages` tests:
 
-- `changes`;
-- `contract-bundle` (Node), which bundles the reference contract (ADR 0011 "The bundle");
-- `build`, a matrix on the latest PHP 8.3 and 8.5 in glibc `php` images, whose first step fails when `node`, `npm` or `npx` is found. It installs the app with Composer only, generates from that bundle, and runs `route:cache` and `config:cache` as the boot step; the local-YAML rows, through the compiler binary, come with php-core-4;
-- `http-suite`, which serves the app with php-fpm behind nginx, as production does, and runs the `default`, `hand-written` and `boot` profiles, plus `pack:laravel` from laravel-3, through the suite's CLI (ADR 0015 "Suite profiles");
-- `laravel`, the aggregate, failing on any failed or cancelled job.
+- `contract-bundle` (Node), which bundles the reference contract with the compiler binary (ADR 0011 "The bundle"); the consumer fetches it from a local git repository with its integrity pin;
+- `e2e`, a matrix on the latest PHP 8.3 and 8.5, both pull-request rows. Node is removed from the runner first, and the step fails if `node`, `npm` or `npx` is still found. It installs the app and its allow-listed variant with Composer only, generates from the bundle and runs `route:cache` and `config:cache`. Node then comes back for the suite alone, which serves the app with PHP's built-in server (`php -S`, no php-fpm or nginx) and runs the `default`, `hand-written` and `boot` profiles, plus `pack:laravel` from laravel-3, as the spring-boot consumer runs them (ADR 0015 "Suite profiles"); a boot is `route:cache`, which runs the boot check. The local-YAML rows, through the compiler binary, come with php-core-4;
+- `laravel`, the aggregate, failing on any failed or cancelled job, or one skipped although `changes` said run.
 
 The proof is:
 
@@ -358,13 +356,13 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 | PR | Delivers |
 |---|---|
 | laravel-1 | `php/laravel` (`Seampact\Laravel`) and the shared emitters and form walk of `php/codegen` (`Seampact\Codegen`), where each PHP target names the release that brings a refused form: the generator class registered in `extra.seampact.generator`, the options (`routes`, `rules` and the rest), readonly classes with `Field`, controller interfaces, FormRequests with their rules, the routes file and the macro's route table, the exceptions per error; a golden for the reference contract, linted with `php -l` and PHPStan max on PHP 8.3 and 8.5 |
-| laravel-2 | the boundary middleware (steps 1 and 10, the "boundary first" assertion), the access middleware (steps 2 to 5 and its mark), the FormRequest steps 6 to 8 failing closed without that mark, the mapping of "Exceptions on contract routes", the provider with its hook bindings and the Octane refusal, rule proof fields in the body, scopes in request attributes, the 500 on a missing hook, the boot check, `php artisan seampact:generate`; the sample app with path repositories under php-fpm behind nginx, the core suite profile, the e2e job of `p6-laravel.yml`; `BootCheckTest.php` only for a rule that is a brick |
+| laravel-2 | the boundary middleware (steps 1 and 10, the "boundary first" assertion), the access middleware (steps 2 to 5 and its mark), the FormRequest steps 6 to 8 failing closed without that mark, the mapping of "Exceptions on contract routes", the provider with its hook bindings and the Octane refusal, rule proof fields in the body, scopes in request attributes, the 500 on a missing hook, the boot check, `php artisan seampact:generate`; the sample app with path repositories under PHP's built-in server, the `default`, `hand-written` and `boot` profiles on the core operations, the e2e job of `p6-laravel.yml`; `BootCheckTest.php` only for a rule that is a brick |
 | laravel-3 | paging with its `sort` parameter, idempotency, throttle, cache headers and the response headers of these features, retry headers, the signed raw body, absolute URLs, deadline budgets and relayed operations, opaque values, redaction (`__debugInfo()`, `#[\SensitiveParameter]`, the VarDumper caster), the `pack:laravel` profile; the pack and full suite profiles and `RedactionTest.php` |
 | laravel-4 | guards and Sanctum for authenticate, Gates and Policies for decide, native access (`artefacts.accessHooks: false`), `AuthorizationException` in a decider answering the first denial code, coexistence with the native layers and their per-kind middleware lists, multipart, `streamDownload` and `redirect()->to()`, the published `config/seampact.php`; the suite's security and media rows, a Sanctum row in the sample app |
 
 ## Spike
 
-Run on Laravel 13.38.0 (a fresh `laravel/laravel` skeleton, Symfony HttpFoundation and VarDumper 8.1.9) on PHP 8.5.4 CLI under `php artisan serve` with four workers, and not kept. PHP 8.3, php-fpm behind a web server, Sanctum and Octane were not run. The results marked "CLI server" (the base path from the server variables, stream pacing, the chunked bounded read) depend on the server; laravel-2's php-fpm suite proves them. A reduced boundary had:
+Run on Laravel 13.38.0 (a fresh `laravel/laravel` skeleton, Symfony HttpFoundation and VarDumper 8.1.9) on PHP 8.5.4 CLI under `php artisan serve` with four workers, and not kept. PHP 8.3, php-fpm behind a web server, Sanctum and Octane were not run. The results marked "CLI server" (the base path from the server variables, stream pacing, the chunked bounded read) depend on the server; laravel-2's suite runs them under the same built-in server; no row runs php-fpm. A reduced boundary had:
 
 - a global middleware placed first, with a raw-path matcher, a bounded body read with gzip decoding, the authored-reply mark and the exception mapping;
 - a route middleware placed before `SubstituteBindings`;
