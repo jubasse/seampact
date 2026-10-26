@@ -23,13 +23,17 @@ use App\Generated\Tasks\Laravel\GetTaskRequest;
 use App\Generated\Tasks\Laravel\GetTasksBatchRequest;
 use App\Generated\Tasks\Laravel\ListTasksRequest;
 use App\Generated\Tasks\Laravel\PurgeTaskRequest;
+use App\Generated\Tasks\Laravel\SearchTasksRequest;
 use App\Generated\Tasks\Laravel\UpdateTaskRequest;
 use App\Generated\Tasks\ListTasksPage;
 use App\Generated\Tasks\ListTasksResponse200;
 use App\Generated\Tasks\ListTasksResult;
 use App\Generated\Tasks\PurgeTaskResponse204;
 use App\Generated\Tasks\PurgeTaskResult;
+use App\Generated\Tasks\SearchTasksResponse200;
+use App\Generated\Tasks\SearchTasksResult;
 use App\Generated\Tasks\Schemas\Task;
+use App\Generated\Tasks\Schemas\TaskSearchResult;
 use App\Generated\Tasks\Schemas\TaskState;
 use App\Generated\Tasks\TasksEndpoints;
 use App\Generated\Tasks\UpdateTaskErrors;
@@ -120,5 +124,10 @@ final class TasksController implements TasksEndpoints
     private static function withNextVersion(Task $current, string $title, TaskState $state): Task
     {
         return new Task($current->taskId, $title, $state, $current->effort, $current->version + 1, $current->createdAt);
+    }
+
+    public function searchTasks(SearchTasksRequest $request): SearchTasksResult
+    {
+        return new SearchTasksResponse200(new TaskSearchResult([SampleData::task(SampleData::NEW_TASK_ID)], 1));
     }
 }

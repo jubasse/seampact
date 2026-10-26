@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 
 use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
 use Illuminate\Foundation\Http\Middleware\TrimStrings;
@@ -25,6 +26,8 @@ abstract class ContractServiceProvider extends ServiceProvider
     private const SUBSTITUTE_BINDINGS = 'Illuminate\\Routing\\Middleware\\SubstituteBindings';
     private const OCTANE_WORKER_STARTING = 'Laravel\\Octane\\Events\\WorkerStarting';
     private const CACHING_COMMANDS = ['route:cache', 'optimize'];
+    // The same key in every api's copied runtime, so each api's provider sees the others' boundaries.
+    private const BOUNDARIES_KEY = 'seampact.boundaries';
 
     abstract protected function contractClass(): string;
 
@@ -39,6 +42,7 @@ abstract class ContractServiceProvider extends ServiceProvider
     {
         $contract = ApiContract::of($this->contractClass());
         $this->app->instance(self::routeTableKey($contract->api), $contract->routesClass);
+        $this->app->instance(self::BOUNDARIES_KEY, [...self::boundaries($this->app), $this->boundaryClass()]);
 
         if (!method_exists($this->app, 'configurationIsCached') || !$this->app->configurationIsCached()) {
             $config = Services::config($this->app);
@@ -97,6 +101,35 @@ abstract class ContractServiceProvider extends ServiceProvider
 
         return !$this->app->runningInConsole()
             || (method_exists($this->app, 'runningConsoleCommand') && $this->app->runningConsoleCommand(self::CACHING_COMMANDS));
+    }
+
+    /**
+     * Whether `$boundaryClass` leads the global middleware stack: only the boundaries of the app's other apis, which
+     * pass on every request outside their own paths, may come before it.
+     *
+     * @param array<mixed> $global the kernel's global middleware, in order
+     */
+    public static function leadsGlobalStack(Application $app, array $global, string $boundaryClass): bool
+    {
+        $boundaries = self::boundaries($app);
+        foreach ($global as $middleware) {
+            if ($middleware === $boundaryClass) {
+                return true;
+            }
+            if (!in_array($middleware, $boundaries, true)) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    /** @return list<string> the boundary middleware of each api whose provider registered */
+    private static function boundaries(Application $app): array
+    {
+        $boundaries = $app->bound(self::BOUNDARIES_KEY) ? $app->make(self::BOUNDARIES_KEY) : [];
+
+        return is_array($boundaries) ? array_values(array_filter($boundaries, is_string(...))) : [];
     }
 
     /** The container key of the api's generated route table class. */

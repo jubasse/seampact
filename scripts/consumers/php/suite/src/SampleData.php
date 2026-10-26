@@ -8,6 +8,8 @@ use App\Generated\Tasks\Schemas\Channel;
 use App\Generated\Tasks\Schemas\Draft;
 use App\Generated\Tasks\Schemas\Task;
 use App\Generated\Tasks\Schemas\TaskState;
+use App\Generated\TasksService\Schemas\Task as ServiceTask;
+use App\Generated\TasksService\Schemas\TaskState as ServiceTaskState;
 
 /** The values the handlers answer without a script, and the scripted bodies read into the generated types. */
 final class SampleData
@@ -24,6 +26,19 @@ final class SampleData
     public static function task(string $taskId): Task
     {
         return new Task($taskId, 'Write the slice test', TaskState::Open, null, self::FIRST_VERSION, new \DateTimeImmutable(self::CREATED_AT));
+    }
+
+    public static function serviceTask(string $taskId): ServiceTask
+    {
+        return new ServiceTask($taskId, 'Write the slice test', ServiceTaskState::Open, null, self::FIRST_VERSION, new \DateTimeImmutable(self::CREATED_AT));
+    }
+
+    /** @param array<mixed> $body */
+    public static function serviceTaskOf(array $body): ServiceTask
+    {
+        $task = self::taskOf($body);
+
+        return new ServiceTask($task->taskId, $task->title, ServiceTaskState::from($task->state->value), $task->effort, $task->version, $task->createdAt);
     }
 
     public static function channel(string $channelId): Channel

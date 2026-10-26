@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use Seampact\ConsumerSuite\BootVariant;
 
 Route::seampact('tasks');
+Route::seampact('tasksService');
 
 // The suite's control routes (ADR 0015 "Control routes"), allow-listed in seampact.config.yaml.
 Route::put('/__seampact/script', [SuiteControlController::class, 'loadScript']);

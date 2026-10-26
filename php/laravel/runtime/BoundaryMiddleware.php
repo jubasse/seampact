@@ -65,7 +65,7 @@ abstract class BoundaryMiddleware
     private function served(Request $request, \Closure $next, ApiContract $contract, RouteMatch $match): Response
     {
         if (!$this->isFirst()) {
-            return ReplyVerdict::internalError($this->hooks(), $contract, $match->operationId, 'the boundary middleware is not the first global middleware; let the provider prepend it, and prepend no other global middleware before it', null);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $match->operationId, 'the boundary middleware is not the first global middleware (only other apis\' boundaries may come before it); let the provider prepend it, and prepend no other global middleware before it', null);
         }
 
         $operationId = $match->operationId;
@@ -182,8 +182,7 @@ abstract class BoundaryMiddleware
 
         $kernel = $this->app->make(Kernel::class);
         $global = method_exists($kernel, 'getGlobalMiddleware') ? $kernel->getGlobalMiddleware() : null;
-        $first = is_array($global) ? ($global[0] ?? null) : null;
-        if ($first !== static::class) {
+        if (!is_array($global) || !ContractServiceProvider::leadsGlobalStack($this->app, $global, static::class)) {
             return false;
         }
         self::$placed[static::class] = true;

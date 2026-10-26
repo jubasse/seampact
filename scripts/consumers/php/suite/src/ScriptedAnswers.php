@@ -12,7 +12,7 @@ namespace Seampact\ConsumerSuite;
  */
 final class ScriptedAnswers
 {
-    private const API = 'tasks';
+    private const DEFAULT_API = 'tasks';
 
     private function __construct()
     {
@@ -24,9 +24,9 @@ final class ScriptedAnswers
      * @param array<string, \Closure(): Result> $errorArms the declared error arms, by code
      * @return Result|null null when the script gives the operation no answer
      */
-    public static function answer(string $operation, int $successStatus, \Closure $success, array $errorArms = []): ?object
+    public static function answer(string $operation, int $successStatus, \Closure $success, array $errorArms = [], string $api = self::DEFAULT_API): ?object
     {
-        $answer = SuiteControl::scriptedAnswer(self::API, $operation);
+        $answer = SuiteControl::scriptedAnswer($api, $operation);
         if ($answer === null) {
             return null;
         }

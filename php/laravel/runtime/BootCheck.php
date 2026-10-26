@@ -87,8 +87,8 @@ final class BootCheck
         $kernel = $app->make(Kernel::class);
         $problems = [];
         $global = method_exists($kernel, 'getGlobalMiddleware') ? $kernel->getGlobalMiddleware() : [];
-        if (!is_array($global) || ($global[0] ?? null) !== $boundaryClass) {
-            $problems[] = "the boundary middleware {$boundaryClass} is not the first global middleware: prepend no global middleware before it";
+        if (!is_array($global) || !ContractServiceProvider::leadsGlobalStack($app, $global, $boundaryClass)) {
+            $problems[] = "the boundary middleware {$boundaryClass} is not the first global middleware (only other apis' boundaries may come before it): prepend no global middleware before it";
         }
 
         $priority = method_exists($kernel, 'getMiddlewarePriority') ? $kernel->getMiddlewarePriority() : [];

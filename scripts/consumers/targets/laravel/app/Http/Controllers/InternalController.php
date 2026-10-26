@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers;
+
+use App\Generated\TasksService\ApiDeadlineExceededError;
+use App\Generated\TasksService\GetTaskResponse200;
+use App\Generated\TasksService\GetTaskResult;
+use App\Generated\TasksService\InternalEndpoints;
+use App\Generated\TasksService\Laravel\GetTaskRequest;
+use App\Suite\SampleData;
+use App\Suite\ScriptedAnswers;
+
+/** The `tasksService` api's controller; stopping the work once the deadline has passed is the handler's part. */
+final class InternalController implements InternalEndpoints
+{
+    private const API = 'tasksService';
+
+    public function getTask(GetTaskRequest $request): GetTaskResult
+    {
+        $input = $request->contractInput();
+        if (new \DateTimeImmutable($input->headers->xDeadline) <= new \DateTimeImmutable()) {
+            throw new ApiDeadlineExceededError();
+        }
+
+        return ScriptedAnswers::answer(
+            'getTask',
+            200,
+            static fn (array $body): GetTaskResult => new GetTaskResponse200(SampleData::serviceTaskOf($body)),
+            [],
+            self::API,
+        ) ?? new GetTaskResponse200(SampleData::serviceTask($input->path->taskId));
+    }
+}
