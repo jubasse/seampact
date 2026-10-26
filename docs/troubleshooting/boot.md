@@ -36,14 +36,15 @@ Same start check, run by `bin/console cache:warmup` and on the first request. Th
 
 | You see | Do |
 |---|---|
-| `no authenticate hook for the identity '<id>'` | Register one service implementing the generated `<Id>AuthenticateHook`, with autoconfiguration on. |
+| `no authenticate hook for the identity '<id>'` | Register one service implementing the generated `<Id>AuthenticateHook`, with autoconfiguration on. At run time the same error reads `seampact: the api '<api>' has no authenticate hook for the identity '<id>'; ...`. |
 | `no decider for '<name>'` | Register a service implementing the api's `Decider` that names it, or `[Decider::EVERY_NAME]`. |
 | `no scope resolver for the scope '<scope>'` | Register a service implementing the api's `ScopeResolver`. |
 | `two deciders claim '<name>'` | Keep the name in one decider. |
 | `no idempotency store for '<operation>'` | Alias `Seampact\Hooks\IdempotencyStore` to a service implementing it. |
 | `operation '<id>' has no handler` | Register one controller service implementing the `<Resource>Endpoints` interface. |
 | `the method <class>::<method> handles operation '<id>' but is not marked #[SeampactOperation('<id>')]` | Add the attribute. |
-| `the controller <class> carries #[IsGranted]`, `... #[IsCsrfTokenValid]`, `... #[IsSignatureValid]` | Remove it. Use an `access_control` rule on `seampact.<api>.matcher.<kind>`, or a decider. |
+| `the controller <class> carries #[IsGranted]` or `#[IsCsrfTokenValid]`, and the same with `the method <class>::<method> carries` | Remove it. Use an `access_control` rule on `seampact.<api>.matcher.<kind>`, or a decider. |
+| `the controller <class> carries #[IsSignatureValid]`, or the method form | Remove it and use nothing instead: a signed URI is not a form the contract declares. |
 | `framework.http_cache is on` | Turn it off: a reply HttpCache serves never reaches the boundary. |
 | `the input resolver ... is not registered as a value resolver` | List the api's bundle in `config/bundles.php`. |
 | `the service <id> listens to kernel.request at priority ...`, `... kernel.response at priority ...` | Move your listener inside the boundary's priorities, as the message says. |

@@ -42,7 +42,7 @@ seampact_tasks:
     type: seampact
 ```
 
-The resource is the api name. Do not set a `prefix` or a `host` on the import. Two apis are two bundles and two imports.
+The resource is the api key, the snake case of the api name (`tasks_service` for `tasksService`). Do not set a `prefix` or a `host` on the import. Two apis are two bundles and two imports.
 
 `bin/console seampact:generate` does the same as the vendor binary. To use it, list `Seampact\Symfony\SeampactCommandsBundle` in `config/bundles.php` for `dev` only.
 
@@ -139,7 +139,7 @@ services:
 ```
 
   A replayed request gets the saved reply and your handler does not run. A 5xx reply releases the key.
-- **Throttle.** Count the bucket in your decider, with a RateLimiter factory (`framework.rate_limiter`), keyed by `$request->bucket()->key`. Return a denial with the `rateLimited` code when the limiter refuses.
+- **Throttle.** Count the bucket in your decider, with a RateLimiter factory (`framework.rate_limiter`), keyed by `$request->bucket()->key`. `bucket()` can be null, so check it first. Return a denial with the `rateLimited` code when the limiter refuses.
 
 ## Signed webhooks
 
