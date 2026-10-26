@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel;
 
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Seampact\Golden\TasksConsistent\GetDraftInput;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BlankStrings;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryMark;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormSteps;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormatRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\InputTree;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\Nullability;
@@ -47,6 +51,26 @@ final class GetDraftRequest extends FormRequest
     public function rules(): array
     {
         return self::contractRules(InputTree::of($this, self::API));
+    }
+
+    protected function failedValidation(Validator $validator): never
+    {
+        throw FormSteps::failed($this, self::API, $validator, self::NATIVE_RULE_NAMES);
+    }
+
+    protected function passedValidation(): void
+    {
+        FormSteps::passed($this, self::API);
+    }
+
+    /**
+     * The validated input of the operation, typed.
+     */
+    public function contractInput(): GetDraftInput
+    {
+        $input = BoundaryState::required($this, self::API)->contractInput;
+
+        return $input instanceof GetDraftInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
     }
 
     /**

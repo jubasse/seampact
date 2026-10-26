@@ -30,7 +30,7 @@ abstract class ContractServiceProvider extends ServiceProvider
 
     abstract protected function accessClass(): string;
 
-    /** @return array{handlers: bool, frameworkRoutes: bool}|null the boot check's switches, null when it is off */
+    /** @return array{hooks: bool, handlers: bool, frameworkRoutes: bool}|null the boot check's switches, null when it is off */
     abstract protected function bootCheck(): ?array;
 
     public function register(): void

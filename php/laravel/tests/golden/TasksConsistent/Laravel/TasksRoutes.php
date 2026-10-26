@@ -67,15 +67,31 @@ final class TasksRoutes
             'access' => 'identity',
             'action' => [TasksEndpoints::class, 'getTask'],
         ],
+        [
+            'operation' => 'updateTask',
+            'method' => 'PATCH',
+            'uri' => '/v1/channels/{p1}/tasks/{p2}',
+            'name' => 'seampact.tasks.updateTask',
+            'access' => 'identity',
+            'action' => [TasksEndpoints::class, 'updateTask'],
+        ],
+        [
+            'operation' => 'purgeTask',
+            'method' => 'POST',
+            'uri' => '/v1/channels/{p1}/tasks/{p2}/purge',
+            'name' => 'seampact.tasks.purgeTask',
+            'access' => 'identity',
+            'action' => [TasksEndpoints::class, 'purgeTask'],
+        ],
     ];
 
     /**
-     * Registers every contract route, in order, inside the caller's route group.
+     * Registers every contract route, in order, inside the caller's route group, each behind the access middleware.
      */
     public static function register(): void
     {
         foreach (self::ROUTES as $route) {
-            Route::match([$route['method']], $route['uri'], $route['action'])->name($route['name']);
+            Route::match([$route['method']], $route['uri'], $route['action'])->name($route['name'])->middleware(TasksAccessMiddleware::class);
         }
     }
 }

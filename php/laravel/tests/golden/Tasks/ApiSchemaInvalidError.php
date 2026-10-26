@@ -29,4 +29,9 @@ final class ApiSchemaInvalidError extends TasksContractException
     {
         return self::STATUS;
     }
+
+    public function contractParams(): ApiSchemaInvalidParams
+    {
+        return $this->params;
+    }
 }

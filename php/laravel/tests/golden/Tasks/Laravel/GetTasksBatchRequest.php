@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Laravel;
 
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Seampact\Golden\Tasks\GetTasksBatchInput;
 use Seampact\Golden\Tasks\Laravel\Runtime\BlankStrings;
 use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryMark;
+use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryState;
+use Seampact\Golden\Tasks\Laravel\Runtime\FormSteps;
 use Seampact\Golden\Tasks\Laravel\Runtime\FormatRule;
 use Seampact\Golden\Tasks\Laravel\Runtime\InputTree;
 use Seampact\Golden\Tasks\Laravel\Runtime\Nullability;
@@ -51,6 +55,26 @@ final class GetTasksBatchRequest extends FormRequest
     public function rules(): array
     {
         return self::contractRules(InputTree::of($this, self::API));
+    }
+
+    protected function failedValidation(Validator $validator): never
+    {
+        throw FormSteps::failed($this, self::API, $validator, self::NATIVE_RULE_NAMES);
+    }
+
+    protected function passedValidation(): void
+    {
+        FormSteps::passed($this, self::API);
+    }
+
+    /**
+     * The validated input of the operation, typed.
+     */
+    public function contractInput(): GetTasksBatchInput
+    {
+        $input = BoundaryState::required($this, self::API)->contractInput;
+
+        return $input instanceof GetTasksBatchInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
     }
 
     /**

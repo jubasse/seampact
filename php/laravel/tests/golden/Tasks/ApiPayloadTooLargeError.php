@@ -29,4 +29,9 @@ final class ApiPayloadTooLargeError extends TasksContractException
     {
         return self::STATUS;
     }
+
+    public function contractParams(): ApiPayloadTooLargeParams
+    {
+        return $this->params;
+    }
 }

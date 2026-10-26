@@ -16,25 +16,27 @@ use Illuminate\Routing\Router;
  */
 final class BootCheck
 {
+    public const HOOKS = 'hooks';
     public const HANDLERS = 'handlers';
     public const FRAMEWORK_ROUTES = 'frameworkRoutes';
     private const LARAVEL_MAJOR = '13.';
     private const HEALTH_ACTION = 'Illuminate\\Foundation\\Http\\HealthCheck';
     private const OWN_ROUTE_NAMES = '/^(storage\.[^.]+(\.upload)?|sanctum\.csrf-cookie)$/D';
     private const SUBSTITUTE_BINDINGS = 'Illuminate\\Routing\\Middleware\\SubstituteBindings';
+    private const HEAD = 'HEAD';
 
     private function __construct()
     {
     }
 
     /**
-     * @param array{handlers: bool, frameworkRoutes: bool} $switches
+     * @param array{hooks: bool, handlers: bool, frameworkRoutes: bool} $switches
      * @throws BootCheckFailedException
      */
     public static function run(Application $app, ApiContract $contract, string $boundaryClass, string $accessClass, array $switches): void
     {
         $problems = [
-            ...self::hooks($app, $contract),
+            ...($switches[self::HOOKS] ? self::hooks($app, $contract) : []),
             ...self::middleware($app, $boundaryClass, $accessClass),
             ...self::routes($app, $contract, $accessClass, $switches),
             ...self::platform(),
@@ -134,7 +136,7 @@ final class BootCheck
     }
 
     /**
-     * @param array{handlers: bool, frameworkRoutes: bool} $switches
+     * @param array{hooks: bool, handlers: bool, frameworkRoutes: bool} $switches
      * @return list<string>
      */
     private static function routes(Application $app, ApiContract $contract, string $accessClass, array $switches): array
@@ -167,7 +169,7 @@ final class BootCheck
             $controller = explode('@', $route->getActionName())[0];
             if (isset($contractActions[$controller])) {
                 $problems[] = "the route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " calls a contract handler ({$route->getActionName()}) but no generated registration made it: remove it";
-            } elseif ($switches[self::FRAMEWORK_ROUTES] && !self::isLaravelsOwn($route) && !str_starts_with($name, 'seampact.')) {
+            } elseif ($switches[self::FRAMEWORK_ROUTES] && !self::isLaravelsOwn($route) && !str_starts_with($name, 'seampact.') && !self::isAllowListed($contract, $route)) {
                 $problems[] = "the framework route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it";
             }
         }
@@ -195,6 +197,36 @@ final class BootCheck
     private static function methods(Route $route): string
     {
         return implode('|', array_filter($route->methods(), is_string(...)));
+    }
+
+    // An entry of `frameworkRoutes` takes the route when its path pattern matches the route's URI (`*` one segment,
+    // `**` any number) and it names no method, or the route's one method besides the HEAD Laravel adds to GET.
+    private static function isAllowListed(ApiContract $contract, Route $route): bool
+    {
+        $uri = '/' . ltrim($route->uri(), '/');
+        $methods = array_values(array_diff(array_filter($route->methods(), is_string(...)), [self::HEAD]));
+        foreach ($contract->frameworkRoutes as $allowed) {
+            $methodAllowed = $allowed['method'] === null || $methods === [$allowed['method']];
+            if ($methodAllowed && preg_match(self::pathPattern($allowed['path']), $uri) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function pathPattern(string $path): string
+    {
+        $segments = array_map(
+            static fn (string $segment): string => match ($segment) {
+                '**' => '(?:/[^/]+)*',
+                '*' => '/[^/]+',
+                default => '/' . preg_quote($segment, '#'),
+            },
+            array_slice(explode('/', $path), 1),
+        );
+
+        return '#^' . ($segments === [] ? '/' : implode('', $segments)) . '$#D';
     }
 
     private static function isLaravelsOwn(Route $route): bool

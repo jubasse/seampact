@@ -12,7 +12,11 @@ use Seampact\Codegen\PhpNames;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\TypeNames;
 use Seampact\Ir\Model\ContractIR;
+use Seampact\Ir\Model\IdentityAccess;
+use Seampact\Ir\Model\OptionalAccess;
+use Seampact\Ir\Naming\NameSource;
 use Seampact\Ir\Naming\NamingRole;
+use Seampact\Ir\Naming\SplitName;
 
 /**
  * Every PHP name the target writes for one api, computed once (ADR 0023 "Placement"): the shared names of
@@ -27,9 +31,16 @@ final class PhpLayout implements TypeNames
     public readonly string $laravelNamespace;
     public readonly string $runtimeNamespace;
     public readonly string $routeTable;
+    public readonly string $contract;
+    public readonly string $boundary;
+    public readonly string $accessMiddleware;
+    public readonly string $serviceProvider;
 
     /** @var array<string, string> each kept operation's FormRequest */
     private array $requests = [];
+
+    /** @var array<string, array{hook: string, credentials: string}> each identity a kept operation reads */
+    private array $identities = [];
 
     public function __construct(ContractIR $ir, public readonly string $namespace, KeptForms $kept, Refusals $refusals)
     {
@@ -37,7 +48,12 @@ final class PhpLayout implements TypeNames
         $this->ir = $ir;
         $this->laravelNamespace = "{$namespace}\\Laravel";
         $this->runtimeNamespace = "{$namespace}\\Laravel\\Runtime";
-        $this->routeTable = $this->api->claim("{$this->laravelNamespace}\\{$this->api->apiTypeName}Routes", "the api's route table", IrPlace::root()->below('api', 'name'));
+        $apiName = IrPlace::root()->below('api', 'name');
+        $this->routeTable = $this->api->claim("{$this->laravelNamespace}\\{$this->api->apiTypeName}Routes", "the api's route table", $apiName);
+        $this->contract = $this->api->claim("{$this->laravelNamespace}\\{$this->api->apiTypeName}Contract", "the api's contract class", $apiName);
+        $this->boundary = $this->api->claim("{$this->laravelNamespace}\\{$this->api->apiTypeName}Boundary", "the api's boundary middleware", $apiName);
+        $this->accessMiddleware = $this->api->claim("{$this->laravelNamespace}\\{$this->api->apiTypeName}AccessMiddleware", "the api's access middleware", $apiName);
+        $this->serviceProvider = $this->api->claim("{$this->laravelNamespace}\\{$this->api->apiTypeName}SeampactServiceProvider", "the api's service provider", $apiName);
 
         foreach ($kept->operations() as [$index, $operation]) {
             if ($this->api->operation($operation->id) !== null) {
@@ -47,7 +63,13 @@ final class PhpLayout implements TypeNames
                     IrPlace::ofOperation($index, $operation->id)->below('name'),
                 );
             }
+
+            $identity = $operation->access instanceof IdentityAccess || $operation->access instanceof OptionalAccess ? $operation->access->identity : null;
+            if ($identity !== null && !isset($this->identities[$identity])) {
+                $this->identities[$identity] = $this->claimIdentity($identity, IrPlace::ofOperation($index, $operation->id)->below('access', 'identity'));
+            }
         }
+        ksort($this->identities);
     }
 
     public function schemaClass(string $schemaId): ?string
@@ -76,8 +98,25 @@ final class PhpLayout implements TypeNames
         return $this->requests[$operationId] ?? throw new \LogicException("The operation '{$operationId}' has no FormRequest name; it is not a kept operation with names.");
     }
 
+    /** @return array<string, array{hook: string, credentials: string}> the hook interface and credentials class of each identity a kept operation reads */
+    public function identities(): array
+    {
+        return $this->identities;
+    }
+
     public function runtime(string $simpleName): string
     {
         return "{$this->runtimeNamespace}\\{$simpleName}";
+    }
+
+    /** @return array{hook: string, credentials: string} */
+    private function claimIdentity(string $identity, IrPlace $at): array
+    {
+        $segments = SplitName::segmentsOf($identity, NameSource::Name) ?? [$identity];
+
+        return [
+            'hook' => $this->api->claim($this->laravelNamespace . '\\' . PhpNames::identifier([...$segments, 'authenticate', 'hook'], NamingRole::Schema), "the authenticate hook of identity '{$identity}'", $at),
+            'credentials' => $this->api->claim($this->laravelNamespace . '\\' . PhpNames::identifier([...$segments, 'credentials'], NamingRole::Schema), "the credentials of identity '{$identity}'", $at),
+        ];
     }
 }

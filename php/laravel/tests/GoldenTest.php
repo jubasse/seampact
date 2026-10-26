@@ -7,19 +7,23 @@ namespace Seampact\Laravel\Tests;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\GoldenTree;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
+use Seampact\Ir\Run\FrameworkRoute;
 use Seampact\Ir\Run\GenerationRefusedException;
 use Seampact\Laravel\LaravelGenerator;
 
 /**
  * The reference contract's apis generated with the operations this release serves, compared byte for byte with the
  * committed tree under `tests/golden`, which PHPStan then analyses at level max against Laravel 13 and CI lints with
- * `php -l`. `SEAMPACT_UPDATE_GOLDEN=1` rewrites the tree instead. The tasks api is generated twice: with every default,
- * and with `routes: file` and `rules: seampact-consistent` in a namespace of its own.
+ * `php -l`. `SEAMPACT_UPDATE_GOLDEN=1` rewrites the tree instead. The tasks api is generated twice: with every default, and in
+ * a namespace of its own with `routes: file`, `rules: seampact-consistent`, two framework routes and, beside the core
+ * operations, a right and a rule with its body proof (`updateTask` and `purgeTask`, without the idempotency and
+ * response headers a later release brings).
  */
 final class GoldenTest extends TestCase
 {
     private const GOLDEN_DIRECTORY = __DIR__ . '/golden';
     private const UPDATE_VARIABLE = 'SEAMPACT_UPDATE_GOLDEN';
+    private const IDEMPOTENCY_KEY = 'Idempotency-Key';
 
     public function testTheGeneratedTreeIsTheCommittedGolden(): void
     {
@@ -27,8 +31,15 @@ final class GoldenTest extends TestCase
         $trees = [
             'Tasks' => $generator->generate(ReferenceContract::core(new LaravelGenerator()), ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'Seampact\\Golden\\Tasks')),
             'TasksConsistent' => $generator->generate(
-                ReferenceContract::core(new LaravelGenerator()),
-                ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'Seampact\\Golden\\TasksConsistent', ['routes' => 'file', 'rules' => 'seampact-consistent']),
+                ReferenceContract::read(new LaravelGenerator(), self::withAccessOperations()),
+                ReferenceContract::entry(
+                    LaravelGenerator::PACKAGE,
+                    'tasks',
+                    'Seampact\\Golden\\TasksConsistent',
+                    ['routes' => 'file', 'rules' => 'seampact-consistent'],
+                    ['accessHooks' => true],
+                    [new FrameworkRoute('/up', 'health', null), new FrameworkRoute('/admin/**', 'back office', 'GET')],
+                ),
             ),
         ];
 
@@ -45,6 +56,30 @@ final class GoldenTest extends TestCase
         }
     }
 
+    private static function withAccessOperations(): \stdClass
+    {
+        $document = ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), [...ReferenceContract::CORE_OPERATIONS, 'updateTask', 'purgeTask']);
+        foreach (is_array($document->operations) ? $document->operations : [] as $operation) {
+            self::assertInstanceOf(\stdClass::class, $operation);
+            if (in_array($operation->id, ReferenceContract::CORE_OPERATIONS, true)) {
+                continue;
+            }
+            unset($operation->idempotency, $operation->concurrency);
+            $params = $operation->params;
+            self::assertInstanceOf(\stdClass::class, $params);
+            $params->header = array_values(array_filter(
+                is_array($params->header ?? null) ? $params->header : [],
+                static fn (mixed $param): bool => $param instanceof \stdClass && $param->name !== self::IDEMPOTENCY_KEY,
+            ));
+            foreach (is_array($operation->responses) ? $operation->responses : [] as $response) {
+                self::assertInstanceOf(\stdClass::class, $response);
+                $response->headers = [];
+            }
+        }
+
+        return $document;
+    }
+
     public function testTheFullReferenceContractIsRefusedFormByForm(): void
     {
         $ir = ReferenceContract::read(new LaravelGenerator(), ReferenceContract::document(ReferenceContract::TASKS));
@@ -59,9 +94,7 @@ final class GoldenTest extends TestCase
             self::assertSame(
                 [
                     'access.signed.unsupported', 'cache.unsupported', 'deadline.unsupported', 'error.retryHeader.unsupported', 'idempotency.unsupported',
-                    'input.proofs.unsupported', 'input.rawBody.unsupported', 'paging.unsupported', 'param.query.structured.unsupported',
-                    'requires.right.unsupported', 'requires.rule.unsupported',
-                    'response.header.unsupported', 'response.shape.unsupported', 'throttle.unsupported', 'type.opaque.unsupported',
+                    'input.rawBody.unsupported', 'paging.unsupported', 'param.query.structured.unsupported', 'response.header.unsupported', 'response.shape.unsupported', 'throttle.unsupported', 'type.opaque.unsupported',
                 ],
                 $codes,
             );

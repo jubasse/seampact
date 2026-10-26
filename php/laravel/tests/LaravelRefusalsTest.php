@@ -74,22 +74,6 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString('laravel-3 generates it', self::refused($document)['throttle.unsupported'] ?? '');
     }
 
-    public function testARightAndAPlainRuleWaitForTheAccessMiddleware(): void
-    {
-        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
-            $origin = (object) ['layer' => 'api', 'pointer' => '/surfaces/app/requires'];
-            $operation->requires = [
-                (object) ['kind' => 'right', 'origin' => $origin, 'right' => 'tasks.read', 'subject' => (object) ['defaulted' => true, 'source' => (object) ['in' => 'scope', 'name' => 'channel']]],
-                (object) ['kind' => 'rule', 'origin' => $origin, 'params' => (object) ['intent' => 'read_task'], 'rule' => 'recentAuth'],
-            ];
-        });
-
-        $refused = self::refused($document);
-
-        self::assertStringContainsString('laravel-2 generates it', $refused['requires.right.unsupported'] ?? '');
-        self::assertStringContainsString('laravel-2 generates it', $refused['requires.rule.unsupported'] ?? '');
-    }
-
     public function testAnIntegerStepBeyondThePhpIntRangeIsRefusedByName(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
@@ -101,18 +85,17 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString('waits for a consumer after 1.0', self::refused($document)['multipleOf.wide.unsupported'] ?? '');
     }
 
-    public function testTheHooksAccessArtefactWaitsForTheAccessMiddleware(): void
+    public function testBootCheckHooksWarnWaitsForAConsumer(): void
     {
-        $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => true]);
+        $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['bootCheck' => (object) ['hooks' => 'warn']]);
 
-        self::assertStringContainsString('laravel-2 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');
+        self::assertStringContainsString('it waits for an app that needs it', $refused['artefacts.bootCheck.hooks.warn.unsupported'] ?? '');
     }
 
     public function testEachRefusalOfTheFullReferenceNamesTheReleaseThatBringsIt(): void
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => false]);
 
-        self::assertStringContainsString('laravel-2 generates it', $refused['input.proofs.unsupported'] ?? '');
         self::assertStringContainsString('laravel-3 generates it', $refused['type.opaque.unsupported'] ?? '');
         self::assertStringContainsString('laravel-3 generates it', $refused['param.query.structured.unsupported'] ?? '');
         self::assertStringContainsString('laravel-4 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');

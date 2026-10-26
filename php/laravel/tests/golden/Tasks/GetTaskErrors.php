@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks;
 
+use Illuminate\Contracts\Support\Responsable;
+use Illuminate\Http\Request;
+use Seampact\Golden\Tasks\Laravel\Runtime\Replies;
 use Seampact\Golden\Tasks\Schemas\ApiSchemaInvalidParams;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * A declared error of operation 'getTask', returned by its handler instead of thrown.
  */
-final readonly class GetTaskErrors implements GetTaskResult
+final readonly class GetTaskErrors implements GetTaskResult, Responsable
 {
     private function __construct(
         public string $code,
@@ -35,5 +39,13 @@ final readonly class GetTaskErrors implements GetTaskResult
     public static function apiInternal(): self
     {
         return new self('api.internal', null);
+    }
+
+    /**
+     * @param Request $request
+     */
+    public function toResponse($request): Response
+    {
+        return Replies::result($request, 'tasks', $this);
     }
 }

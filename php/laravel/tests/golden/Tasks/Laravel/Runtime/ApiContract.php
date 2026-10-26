@@ -43,6 +43,8 @@ final class ApiContract
         public readonly array $defaults,
         public readonly array $routeTable,
         public readonly string $routesClass,
+        /** @var list<array{method: ?string, path: string}> */
+        public readonly array $frameworkRoutes,
     ) {
         foreach (Ir::maps($ir, 'operations') as $operation) {
             $id = Ir::string($operation, 'id') ?? '';
@@ -80,8 +82,9 @@ final class ApiContract
         $ir = $constant('IR');
         $types = $constant('TYPES');
         $routesClass = $constant('ROUTES_CLASS');
-        if (!is_string($api) || !is_array($ir) || !is_array($types) || !is_string($routesClass)) {
-            throw new \LogicException("The generated contract class {$contractClass} lacks its API, IR, TYPES or ROUTES_CLASS constant; regenerate it.");
+        $frameworkRoutes = $constant('FRAMEWORK_ROUTES');
+        if (!is_string($api) || !is_array($ir) || !is_array($types) || !is_string($routesClass) || !is_array($frameworkRoutes)) {
+            throw new \LogicException("The generated contract class {$contractClass} lacks its API, IR, TYPES, ROUTES_CLASS or FRAMEWORK_ROUTES constant; regenerate it.");
         }
 
         $defaults = constant("{$routesClass}::DEFAULTS");
@@ -92,7 +95,8 @@ final class ApiContract
 
         /** @var array<string, mixed> $defaults */
         /** @var list<array<string, mixed>> $routeTable */
-        return self::$loaded[$contractClass] = new self($api, $ir, $types, $defaults, $routeTable, $routesClass);
+        /** @var list<array{method: ?string, path: string}> $frameworkRoutes */
+        return self::$loaded[$contractClass] = new self($api, $ir, $types, $defaults, $routeTable, $routesClass, $frameworkRoutes);
     }
 
     /** @return array<array-key, mixed> */
