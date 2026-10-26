@@ -112,7 +112,7 @@ Every other exception is rendered by the app's own handler, untouched. The bound
 - `PostTooLargeException` from `ValidatePostSize`: `payloadTooLarge` (413);
 - the `HttpException` 503 of `PreventRequestsDuringMaintenance`: `serviceUnavailable` (503, grammar 05 roles), keeping `Retry-After`.
 
-A role whose status the operation does not declare is the api's 500. Any other exception that no contract reply rendered is the api's 500 too, in every `responses` mode, as Spring's exception resolver answers it, so Laravel's error page and its debug trace never reach the client; the mapping stays by exception class, so `abort(401|403|429)` from a handler or an app middleware is the api's 500 until laravel-4. A generated exception renders only on a contract request; an exported `renderContractError($request, $exception)` for an app's own handler waits for a consumer that needs it.
+A role whose status the operation does not declare is the api's 500. Any other exception that no contract reply rendered is the api's 500 too, in every `responses` mode, so Laravel's error page and its debug trace never reach the client. This differs from Spring on purpose: Spring's resolver leaves an unknown exception to the app's `@ExceptionHandler` and judges that reply, whereas here an app exception's own `render()` is the api's 500 even when it writes a declared code; the mapping stays by exception class, so `abort(401|403|429)` from a handler or an app middleware is the api's 500 until laravel-4. A generated exception renders only on a contract request; an exported `renderContractError($request, $exception)` for an app's own handler waits for a consumer that needs it.
 
 ### The outgoing response check
 

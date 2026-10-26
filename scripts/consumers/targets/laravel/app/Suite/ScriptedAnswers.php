@@ -7,7 +7,8 @@ namespace App\Suite;
 /**
  * What a handler answers in place of its own result when the loaded script says so: its declared success built from
  * the script's body, one of its declared error arms, a thrown exception, or, for a status or code the result type
- * cannot hold, a reply the app writes itself (`ScriptedReply`), which the boundary's outgoing check judges.
+ * cannot hold, a reply the app writes itself (`ScriptedReply`), an exception rendering the boundary answers with the
+ * api's 500.
  */
 final class ScriptedAnswers
 {

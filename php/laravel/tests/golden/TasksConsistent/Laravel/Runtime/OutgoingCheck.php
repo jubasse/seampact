@@ -15,14 +15,13 @@ final class OutgoingCheck
 {
     public const MAX_CHECKED_ERROR_BODY_BYTES = 65536;
     private const ERROR_FLOOR = 400;
-    private const JSON_MEDIA = 'application/json';
 
     private function __construct()
     {
     }
 
     /** The violation found, null when the reply passes. */
-    public static function violation(BoundaryState $state, Response $response, ?\Throwable $exception): ?string
+    public static function violation(BoundaryState $state, Response $response): ?string
     {
         if ($state->authored($response)) {
             return null;
@@ -33,14 +32,15 @@ final class OutgoingCheck
             return "a {$status} reply the boundary did not write";
         }
 
-        // Once admitted, only the boundary or an exception's rendering writes the reply (ADR 0023 "The outgoing check").
-        if ($state->admitted && $exception === null) {
-            return "a {$status} reply written after the access middleware admitted the request";
-        }
-
         $codes = self::declaredCodes($state, $status);
         if ($codes === []) {
             return "the undeclared status {$status}";
+        }
+
+        // Once admitted, only the boundary or a contract exception's rendering writes the reply (ADR 0023 "The outgoing
+        // check"); an exception reply never comes here, the boundary answered it first.
+        if ($state->admitted) {
+            return "a {$status} reply written after the access middleware admitted the request";
         }
 
         $content = $response->getContent();
@@ -48,7 +48,7 @@ final class OutgoingCheck
             return "a {$status} error body that cannot be checked";
         }
 
-        $errorMedia = Ir::string(Ir::map($state->contract->format($state->operationId), 'error'), 'media') ?? self::JSON_MEDIA;
+        $errorMedia = Ir::string(Ir::map($state->contract->format($state->operationId), 'error'), 'media') ?? Replies::JSON_MEDIA;
         $media = strtolower(trim(explode(';', (string) $response->headers->get('Content-Type', ''))[0]));
         if ($media !== strtolower($errorMedia)) {
             return "a {$status} error body that is not {$errorMedia}";

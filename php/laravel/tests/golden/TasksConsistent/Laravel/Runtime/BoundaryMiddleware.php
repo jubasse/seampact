@@ -115,7 +115,7 @@ abstract class BoundaryMiddleware
             $response->headers->remove('ETag');
         }
 
-        $violation = OutgoingCheck::violation($state, $response, $exception);
+        $violation = OutgoingCheck::violation($state, $response);
         if ($violation === null) {
             return $response;
         }

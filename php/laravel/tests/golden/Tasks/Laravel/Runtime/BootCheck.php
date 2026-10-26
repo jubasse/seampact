@@ -163,7 +163,9 @@ final class BootCheck
 
         $ownNames = [];
         foreach ($contract->routeTable as $entry) {
-            $ownNames[$contract->routeName(is_string($entry['operation'] ?? null) ? $entry['operation'] : '')] = true;
+            if (is_string($entry['operation'] ?? null)) {
+                $ownNames[$contract->routeName($entry['operation'])] = true;
+            }
         }
 
         foreach ($router->getRoutes()->getRoutes() as $route) {

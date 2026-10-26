@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class Replies
 {
+    public const JSON_MEDIA = 'application/json';
     public const JSON_FLAGS = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
     private const NULL_ABSENT = 'null';
     private const NO_CONTENT = 204;
@@ -45,7 +46,7 @@ final class Replies
         return new Response(
             json_encode($body->present ? $body->value : new \stdClass(), self::JSON_FLAGS),
             $contract->statusOf($code),
-            ['Content-Type' => Ir::string($error, 'media') ?? 'application/json'],
+            ['Content-Type' => Ir::string($error, 'media') ?? self::JSON_MEDIA],
         );
     }
 
@@ -87,7 +88,7 @@ final class Replies
 
         $body = WireCodec::encodeBody($contract, $declared, self::member($result, 'body'));
         $body = FieldRights::output($state, $declared, $body);
-        $media = Ir::string($declared, 'media') ?? Ir::string($contract->format($operationId), 'media') ?? 'application/json';
+        $media = Ir::string($declared, 'media') ?? Ir::string($contract->format($operationId), 'media') ?? self::JSON_MEDIA;
 
         return $state->author(new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media]));
     }
