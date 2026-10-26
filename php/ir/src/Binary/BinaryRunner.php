@@ -123,7 +123,7 @@ final class BinaryRunner
             throw BinaryRefusedException::of(
                 BinaryFailureCode::DocumentsRefused,
                 rtrim("The compiler binary exited with {$exit['code']} on the app's OpenAPI documents:\n{$stderr}{$stdout}"),
-                'Fix what the diagnostics say, reading `seampact generate` there as `vendor/bin/seampact generate`: a document that differs is written again by it, then committed; a document edited by hand is not overwritten, so delete it first.',
+                'Fix what the diagnostics say, reading `seampact generate` there as `vendor/bin/seampact generate`: a document that differs is written again by it, then committed; a document edited by hand is written again by `vendor/bin/seampact generate --force`.',
             );
         }
 
