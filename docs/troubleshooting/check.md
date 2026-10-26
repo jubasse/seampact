@@ -11,6 +11,7 @@
 | `writer.file.not-generated` | A file in the output folder is not seampact's. Move it out. |
 | `writer.manifest.other-owner` | Two entries write to one folder. Give each its own `out`. |
 | `writer.manifest.invalid`, `writer.manifest.not-regular` | The manifest in the output folder is damaged. Delete the generated files of that entry and its manifest, then run `generate`. |
+| `file.path.invalid`, `file.extension.unsupported`, `file.php.open-tag`, `file.header.unsafe` | PHP: the target generated a file the writer refuses. Update the target package, or report it to its maintainers. |
 | `writer.path.outside` | A symbolic link in the output folder leads out of it. Replace it with a plain folder. |
 
 You see `check: the generated files and documents match the committed ones.` when nothing drifted.

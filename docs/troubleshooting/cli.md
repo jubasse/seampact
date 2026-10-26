@@ -3,6 +3,7 @@
 | You see | Do |
 |---|---|
 | `cli.usage: Unknown command 'frob'` | Run `seampact help` for the commands and their options. |
+| `seampact: internal error: ...` | PHP: `vendor/bin/seampact` hit an error no code names. Report it with the line it printed. |
 | `init.file-exists` | `init` writes a new project and found `seampact.config.yaml` or `contract` already there; it wrote nothing. Run it in an empty folder, or run `seampact init --modelines` to add modelines to an existing project. |
 | `init.modelines.no-source` | `init --modelines` edits the contract files of `path` sources only. Add `{ path: ./contract }` to `sources`. |
 | `init.ignore-file-link` | `.gitignore` is a symbolic link, and `init` does not write through links. Run `seampact init --no-ignore-files`, then add `.seampact/` to the link's target yourself. |

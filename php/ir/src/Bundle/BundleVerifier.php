@@ -67,6 +67,7 @@ final class BundleVerifier
     private static function checkIrs(BundleManifest $manifest, array $files, string $integrity): BundleVerification
     {
         $irs = [];
+        $irBytes = [];
         $failures = [];
 
         foreach ($manifest->apis as $api) {
@@ -78,10 +79,11 @@ final class BundleVerifier
                 $failures[] = $checked;
             } else {
                 $irs[$api->name] = $checked;
+                $irBytes[$api->name] = $bytes;
             }
         }
 
-        return $failures === [] ? BundleVerification::verified($manifest, $integrity, $irs) : BundleVerification::refused($failures, $integrity);
+        return $failures === [] ? BundleVerification::verified($manifest, $integrity, $irs, $irBytes) : BundleVerification::refused($failures, $integrity);
     }
 
     /**

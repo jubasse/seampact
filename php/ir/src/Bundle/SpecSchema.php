@@ -64,7 +64,13 @@ final class SpecSchema
     /** The manifest schema itself, the one source of the portable-path rule (`$defs/path`). */
     public static function manifestDocument(): \stdClass
     {
-        return self::$manifestDocument ??= self::load(self::RESOURCES . '/bundle/manifest.schema.json');
+        return self::$manifestDocument ??= self::document('bundle/manifest.schema.json');
+    }
+
+    /** A shipped schema copy, by its path below `resources/schemas/` (`config/app.schema.json`). */
+    public static function document(string $relativePath): \stdClass
+    {
+        return self::load(self::RESOURCES . '/' . $relativePath);
     }
 
     /**

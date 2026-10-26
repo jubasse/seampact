@@ -1,0 +1,34 @@
+#!/usr/bin/env php
+<?php
+
+// vendor/bin/seampact: generates and checks the app's PHP targets from its seampact.config.yaml.
+
+declare(strict_types=1);
+
+use Seampact\Ir\Run\Command;
+
+$autoload = $GLOBALS['_composer_autoload_path'] ?? __DIR__ . '/../vendor/autoload.php';
+if (!is_string($autoload) || !is_file($autoload)) {
+    fwrite(STDERR, "seampact: Composer's autoloader was not found; run `composer install` first.\n");
+    exit(Command::EXIT_USAGE);
+}
+
+require $autoload;
+
+$environment = array_filter(getenv(), is_string(...));
+$projectDirectory = getcwd();
+if ($projectDirectory === false) {
+    fwrite(STDERR, "seampact: the working directory cannot be read; run the command from the project's root directory.\n");
+    exit(Command::EXIT_USAGE);
+}
+
+$arguments = is_array($_SERVER['argv'] ?? null) ? array_slice($_SERVER['argv'], 1) : [];
+
+exit(Command::run(
+    array_values(array_filter($arguments, is_string(...))),
+    $projectDirectory,
+    dirname(realpath($autoload) ?: $autoload),
+    $environment,
+    STDOUT,
+    STDERR,
+));

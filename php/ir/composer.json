@@ -3,11 +3,13 @@
   "description": "The Seampact IR model and reader for PHP.",
   "type": "library",
   "license": "MIT",
+  "bin": ["bin/seampact"],
   "require": {
     "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
     "ext-json": "*",
     "ext-zlib": "*",
-    "opis/json-schema": "~2.6.0"
+    "opis/json-schema": "~2.6.0",
+    "symfony/yaml": "~7.4.0"
   },
   "require-dev": {
     "phpstan/phpstan": "2.2.16",

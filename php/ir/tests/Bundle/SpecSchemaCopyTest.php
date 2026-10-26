@@ -16,7 +16,7 @@ final class SpecSchemaCopyTest extends TestCase
     private const COPIES = __DIR__ . '/../../resources/schemas';
 
     // The spec schema directories this package ships copies of, every schema of each.
-    private const SCHEMA_DIRECTORIES = ['bundle', 'ir'];
+    private const SCHEMA_DIRECTORIES = ['bundle', 'config', 'ir'];
 
     /** @return array<string, array{string}> */
     public static function specSchemas(): array

@@ -44,9 +44,8 @@ jobs:
             echo "php-core=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # The PHP packages, the shape manifest, the signature vectors and this workflow.
-          watched='^(php/|fixtures/hooks-shape/|packages/runtime/signed-webhooks/vectors/'
-          watched+='|packages/core/spec/schemas/(bundle|ir)/|packages/core/spec/vectors/bundle/'
+          watched='^(php/|fixtures/hooks-shape/|packages/runtime/signed-webhooks/vectors/|fixtures/golden/reference/'
+          watched+='|packages/core/spec/schemas/(bundle|config|ir)/|packages/core/spec/vectors/bundle/'
           watched+='|\.github/actions/|\.github/workflows/p6-php-core\.yml$)'
           # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
           # quote, a backslash, a tab or a non-ASCII byte, still matches.

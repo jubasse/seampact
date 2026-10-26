@@ -58,12 +58,12 @@ final class BundleTarball
                 return $read->failures;
             }
 
-            $directory = self::newPrivateDirectory($parentDirectory ?? sys_get_temp_dir());
+            $directory = PrivateDirectory::create($parentDirectory ?? sys_get_temp_dir(), self::TEMPORARY_PREFIX);
 
             try {
                 self::writeEntries($archive['stream'], $read->entries, $directory);
             } catch (\RuntimeException $failure) {
-                self::removeDirectory($directory);
+                PrivateDirectory::remove($directory);
                 throw $failure;
             }
 
@@ -94,36 +94,6 @@ final class BundleTarball
                 throw new \RuntimeException("bundle: writing '{$target}' failed while writing the checked tarball; nothing of it was kept.");
             }
         }
-    }
-
-    // The directory this reader created; links inside it are removed, never followed.
-    private static function removeDirectory(string $directory): void
-    {
-        foreach (scandir($directory) ?: [] as $name) {
-            if ($name === '.' || $name === '..') {
-                continue;
-            }
-
-            $path = "{$directory}/{$name}";
-            if (is_dir($path) && !is_link($path)) {
-                self::removeDirectory($path);
-            } else {
-                @unlink($path);
-            }
-        }
-
-        @rmdir($directory);
-    }
-
-    private static function newPrivateDirectory(string $parent): string
-    {
-        $directory = $parent . '/' . self::TEMPORARY_PREFIX . bin2hex(random_bytes(8));
-
-        if (!mkdir($directory, self::OWNER_ONLY) || !chmod($directory, self::OWNER_ONLY)) {
-            throw new \RuntimeException("bundle: creating the directory '{$directory}' failed; check that '{$parent}' is writable.");
-        }
-
-        return $directory;
     }
 
     /** @return array{stream: resource, bytes: int}|BundleFailure the uncompressed archive in a private temporary file */
