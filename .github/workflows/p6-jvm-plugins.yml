@@ -15,6 +15,17 @@ on:
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
+  # The nightly run is the only one that writes the Gradle caches; every other run reads them.
+  schedule:
+    - cron: "30 0 * * *"
+
+# Maven Resolver retries a 429 or 503 from a registry after a growing pause: the `connector` keys are read by
+# Maven 3.9 (Resolver 1.9), the `transport` keys by Maven 4 (Resolver 2). setup-java keeps this value, `-ntp` included.
+env:
+  MAVEN_ARGS: >-
+    -ntp
+    -Daether.connector.http.retryHandler.count=5 -Daether.connector.http.retryHandler.interval=5000
+    -Daether.transport.http.retryHandler.count=5 -Daether.transport.http.retryHandler.interval=5000
 
 permissions:
   contents: read
@@ -105,6 +116,9 @@ jobs:
             21
             25
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.event_name != 'schedule' }}
+      - uses: ./.github/actions/gradle-retry
       - name: Check the Gradle plugin on Java ${{ matrix.test-jdk }} and Gradle ${{ matrix.test-gradle }}
         working-directory: jvm
         env:
@@ -142,6 +156,9 @@ jobs:
             21
             25
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.event_name != 'schedule' }}
+      - uses: ./.github/actions/gradle-retry
       - name: Check the Maven plugin on Java ${{ matrix.test-jdk }} and Maven ${{ matrix.test-maven }}
         working-directory: jvm
         env:
@@ -174,6 +191,9 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.event_name != 'schedule' }}
+      - uses: ./.github/actions/gradle-retry
       - name: Publish the JVM modules to Maven local
         if: matrix.build-tool == 'maven'
         working-directory: jvm

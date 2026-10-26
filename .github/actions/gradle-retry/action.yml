@@ -1,0 +1,17 @@
+# Copies the repository's Gradle retry keys (the systemProp lines of jvm/gradle.properties) into the runner's Gradle
+# user home, so every Gradle build of the job gets them, including the consumer builds that only include jvm/.
+name: Gradle retry settings
+description: Appends the dependency retry keys of jvm/gradle.properties to ~/.gradle/gradle.properties once per job.
+
+runs:
+  using: composite
+  steps:
+    - name: Apply the Gradle retry keys
+      shell: bash
+      run: |
+        mkdir -p ~/.gradle
+        touch ~/.gradle/gradle.properties
+        grep '^systemProp\.org\.gradle\.internal\.repository\.' "$GITHUB_WORKSPACE/jvm/gradle.properties" |
+          while IFS= read -r line; do
+            grep -qxF "$line" ~/.gradle/gradle.properties || echo "$line" >> ~/.gradle/gradle.properties
+          done
