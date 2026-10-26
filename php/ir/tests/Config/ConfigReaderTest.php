@@ -142,7 +142,7 @@ final class ConfigReaderTest extends TestCase
     public function testReadsTheFormsInCommentsQuotedAndBlockScalarsAsText(): void
     {
         $config = $this->read("# a <<: *b, 0755, 1_000, !!binary\noutDir: 'src <<: x 0755' # <<: 1_000\n"
-            . "openapi: \"none\"\ntargets:\n  - { id: a, use: x/y, api: \"<<: 0755\", out: >-\n      '1_000 <<: !!binary' }\n");
+            . "openapi: \"none\"\ntargets:\n  - id: a\n    use: x/y\n    api: \"<<: 0755\"\n    out: >-\n      1_000 <<: !!binary\n\n      0755\n  - { id: b, use: 'x/z', api: t, out: '2026-10-26' }\n");
 
         self::assertInstanceOf(AppConfig::class, $config);
         self::assertStringEndsWith('/app/src <<: x 0755', $config->outDir);
