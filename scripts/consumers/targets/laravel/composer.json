@@ -1,0 +1,69 @@
+{
+  "name": "seampact/laravel-consumer",
+  "description": "The Laravel consumer of the reference contract, served for the shared http suite; never published.",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
+    "ext-json": "*",
+    "ext-zlib": "*",
+    "laravel/framework": "~13.38.0",
+    "seampact/hooks": "dev-develop",
+    "seampact/laravel": "dev-develop"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../../../../php/laravel",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/laravel": "dev-develop"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../../../../php/codegen",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/codegen": "dev-develop"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../../../../php/ir",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/ir": "dev-develop"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../../../../php/hooks",
+      "options": {
+        "symlink": false,
+        "versions": {
+          "seampact/hooks": "dev-develop"
+        }
+      }
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "config": {
+    "platform": {
+      "php": "8.3.36"
+    },
+    "sort-packages": true
+  }
+}

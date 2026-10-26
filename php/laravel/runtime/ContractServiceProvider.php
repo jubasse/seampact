@@ -55,8 +55,10 @@ abstract class ContractServiceProvider extends ServiceProvider
         }
 
         if (!Route::hasMacro(self::MACRO)) {
-            Route::macro(self::MACRO, static function (string $api): void {
-                $routesClass = app(self::routeTableKey($api));
+            // The macro runs bound to the router, where `self` names the router: the key function is captured here.
+            $routeTableKey = self::routeTableKey(...);
+            Route::macro(self::MACRO, static function (string $api) use ($routeTableKey): void {
+                $routesClass = app($routeTableKey($api));
                 if (!is_string($routesClass) || !method_exists($routesClass, 'register')) {
                     throw new \LogicException("seampact: no generated routes for the api '{$api}'; list its service provider in bootstrap/providers.php.");
                 }

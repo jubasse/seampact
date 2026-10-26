@@ -1,0 +1,19 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Http\Controllers\SuiteControlController;
+use App\Http\Controllers\UnlistedRouteController;
+use App\Suite\BootVariant;
+use Illuminate\Support\Facades\Route;
+
+Route::seampact('tasks');
+
+// The suite's control routes (ADR 0015 "Control routes"), allow-listed in seampact.config.yaml.
+Route::put('/__seampact/script', [SuiteControlController::class, 'loadScript']);
+Route::get('/__seampact/hook-calls', [SuiteControlController::class, 'hookCalls']);
+Route::get('/__seampact/log-lines', [SuiteControlController::class, 'logLines']);
+
+if (BootVariant::servesUnlistedRoute()) {
+    Route::get('/v1/unlisted', UnlistedRouteController::class);
+}

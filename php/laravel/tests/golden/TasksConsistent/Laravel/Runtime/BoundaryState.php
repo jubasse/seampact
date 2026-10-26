@@ -16,6 +16,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class BoundaryState
 {
+    private const HEAD = 'HEAD';
+
     public ?object $principal = null;
     /** @var list<ResolvedScope> */
     public array $scopes = [];
@@ -72,8 +74,11 @@ final class BoundaryState
             return false;
         }
         $content = $response->getContent();
+        $content = $content === false ? '' : $content;
+        // Laravel prepares a HEAD reply by emptying its body, after the boundary wrote it.
+        $bodyKept = $written[1] === $content || $content === '' && $this->view->method === self::HEAD;
 
-        return $written[0] === $response->getStatusCode() && $written[1] === ($content === false ? '' : $content);
+        return $written[0] === $response->getStatusCode() && $bodyKept;
     }
 
     /** The ETag the boundary wrote on `$response`, null when it wrote none. */
