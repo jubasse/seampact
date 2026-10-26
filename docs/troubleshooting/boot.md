@@ -24,7 +24,12 @@ Fix every line, then start again.
 | `<method>() has no input parameter, so its input is never validated` | Add `@<Op>.input() input`. |
 | `the app interceptor <name> can answer <route> from its cache` | Keep cache interceptors off contract routes. The contract's `cache` sets the reply headers. |
 | `<decorator> on <method>() writes after the boundary's reply`, `a @Res(), @Response() or @Next() parameter ...` | Remove it: return the reply instead. |
-| `the api '<id>' is registered twice` | Import `SeampactModule.forRoot` once per api. |
+| `@HttpCode on <method>() sets a status the boundary never writes` | Remove `@HttpCode`. Return the status from the handler. |
+| `@Header on <method>() sets a header the boundary never writes` | Remove `@Header`. Declare the header in the contract's response. |
+| `@Controller('<path>') on <Controller> prefixes the contract route` | Use `@Controller()` with no path. The contract's paths are absolute. |
+| `RouterModule mounts <Module> under '<path>'` | Remove that `RouterModule` entry, or move the controller to a module it does not mount. |
+| `setGlobalPrefix('<prefix>') prefixes <route>` | Exclude the contract routes with the `exclude` option of `setGlobalPrefix`, or remove the prefix. |
+| `the api '<id>' is registered twice` | Import `SeampactModule.forRoot` or `forRootAsync` once per api. |
 | `the NestJS platform is '<x>'` | Use `@nestjs/platform-express`. |
 | `'<key>' is not an option of SeampactModule.forRoot` | `forRoot` takes `{ logger }`. |
 

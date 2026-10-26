@@ -9,6 +9,8 @@ import {
   Catch,
   Controller,
   Get,
+  Header,
+  HttpCode,
   Inject,
   Injectable,
   Module,
@@ -19,9 +21,20 @@ import {
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
-import { APP_INTERCEPTOR, ApplicationConfig, NestFactory } from "@nestjs/core";
+import { APP_INTERCEPTOR, ApplicationConfig, NestFactory, RouterModule } from "@nestjs/core";
+import { Test } from "@nestjs/testing";
 import { catchError, map, mergeMap, of, tap, throwError } from "rxjs";
 import * as TasksNest from "../generated/server/tasks/nestjs.js";
+
+export {
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  NotFoundException,
+} from "@nestjs/common";
+
+/** The api's typed exception, for the scenario's handlers. */
+export const ContractException = TasksNest.ContractException;
 
 export const ALLOWED_ORIGIN = "https://app.example";
 
@@ -263,6 +276,13 @@ class AppModuleInterceptor extends PassThroughInterceptor {}
 
 class LateGlobalInterceptor extends PassThroughInterceptor {}
 
+// An app interceptor that answers by itself, never calling the handler.
+class AnsweringInterceptor {
+  intercept() {
+    return of({ status: 200, body: { status: "ok" } });
+  }
+}
+
 // Every operation bound on one controller class; `aboveComposite` lists the app decorators written above an
 // operation's composite, and `withoutInput` the operations whose method declares no input param.
 function tasksController(aboveComposite = {}, withoutInput = []) {
@@ -405,8 +425,10 @@ const recordingLogger = {
 };
 
 // Initialises and closes an app of the given module; resolves once initialised, rejects with its boot problems.
-async function bootOnce(module) {
+async function bootOnce(module, configureApp = () => undefined) {
   const app = await NestFactory.create(module, { rawBody: true, logger: recordingLogger });
+
+  configureApp(app);
 
   try {
     await app.init();
@@ -423,10 +445,10 @@ function moduleOf(imports, controllers, providers = []) {
   return BootModule;
 }
 
-function controllerOf(aboveComposite = {}, withoutInput = []) {
+function controllerOf(aboveComposite = {}, withoutInput = [], controllerPath = undefined) {
   const BootController = tasksController(aboveComposite, withoutInput);
 
-  Controller()(BootController);
+  Controller(controllerPath)(BootController);
 
   return BootController;
 }
@@ -546,6 +568,140 @@ export function bootWithAppInterceptors() {
       [{ provide: APP_INTERCEPTOR, useClass: AppModuleInterceptor }],
     ),
   );
+}
+
+/** Boots an app whose controller is mounted under a path: `@Controller('tasks')`. */
+export function bootWithControllerPrefix() {
+  return bootOnce(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controllerOf({}, [], "tasks")]),
+  );
+}
+
+/** Boots an app with `setGlobalPrefix(prefix, { exclude })`. */
+export function bootWithGlobalPrefix(prefix, exclude) {
+  return bootOnce(moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controllerOf()]), (app) =>
+    app.setGlobalPrefix(prefix, exclude === undefined ? {} : { exclude }),
+  );
+}
+
+/** Boots an app whose controller's module RouterModule mounts under `tasks`. */
+export function bootWithRouterModulePrefix() {
+  const ControllerModule = moduleOf([], [controllerOf()]);
+
+  return bootOnce(
+    moduleOf(
+      [
+        TasksNest.SeampactModule.forRoot(hooks),
+        ControllerModule,
+        RouterModule.register([{ path: "tasks", module: ControllerModule }]),
+      ],
+      [],
+    ),
+  );
+}
+
+/** Boots an app whose `health` method carries `@HttpCode(204)` and `@Header(...)`. */
+export function bootWithReplyDecorators() {
+  const controller = controllerOf({
+    health: [HttpCode(204), Header("cache-control", "max-age=60")],
+  });
+
+  return bootOnce(moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controller]));
+}
+
+/** A provider of the app, which the hooks reach through NestJS's injection. */
+class UsersService {
+  authenticate(request) {
+    calls.events.push("users service");
+
+    return authenticateByBearer(request);
+  }
+}
+
+const USERS_SERVICE = "app:users";
+
+/** Serves an app whose hooks a factory builds from an injected provider, `forRootAsync`. */
+export async function startAsyncHooksApp() {
+  class UsersModule {}
+
+  Module({
+    providers: [{ provide: USERS_SERVICE, useClass: UsersService }],
+    exports: [USERS_SERVICE],
+  })(UsersModule);
+
+  const seampact = TasksNest.SeampactModule.forRootAsync({
+    imports: [UsersModule],
+    inject: [USERS_SERVICE],
+    useFactory: async (users) => ({
+      ...hooks,
+      authenticate: {
+        ...hooks.authenticate,
+        user: { authenticate: (request) => users.authenticate(request) },
+      },
+    }),
+  });
+  const app = await NestFactory.create(moduleOf([seampact], [controllerOf()]), {
+    rawBody: true,
+    logger: recordingLogger,
+  });
+
+  await app.listen(0, "127.0.0.1");
+
+  const { port } = app.getHttpServer().address();
+  const registeredHooks = app.get(TasksNest.SEAMPACT_HOOKS);
+
+  return { host: "127.0.0.1", port, registeredHooks, close: () => app.close() };
+}
+
+// Listens on a free port with the documented setup 1 (`rawBody: true`).
+async function serveApp(app) {
+  await app.listen(0, "127.0.0.1");
+
+  const { port } = app.getHttpServer().address();
+
+  return { host: "127.0.0.1", port, close: () => app.close() };
+}
+
+/** Serves an app with no global interceptor whose `health` method or controller carries an answering interceptor. */
+export async function startAnsweringInterceptorApp(placement) {
+  const controller = controllerOf(
+    placement === "method" ? { health: [UseInterceptors(AnsweringInterceptor)] } : {},
+  );
+
+  if (placement === "controller") UseInterceptors(AnsweringInterceptor)(controller);
+
+  const app = await NestFactory.create(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controller]),
+    { rawBody: true, logger: recordingLogger },
+  );
+
+  return serveApp(app);
+}
+
+/** Serves a testing module whose hooks `overrideProvider(SEAMPACT_HOOKS)` replaces. */
+export async function startOverriddenHooksApp() {
+  const testHooks = {
+    ...hooks,
+    authenticate: {
+      ...hooks.authenticate,
+      user: {
+        authenticate(request) {
+          calls.events.push("test hooks");
+
+          return authenticateByBearer(request);
+        },
+      },
+    },
+  };
+  const testingModule = await Test.createTestingModule({
+    imports: [TasksNest.SeampactModule.forRoot(hooks)],
+    controllers: [controllerOf()],
+  })
+    .overrideProvider(TasksNest.SEAMPACT_HOOKS)
+    .useValue(testHooks)
+    .compile();
+
+  return serveApp(testingModule.createNestApplication({ rawBody: true, logger: recordingLogger }));
 }
 
 /** Boots the app on a free port with the documented setup 1 (`rawBody: true`). */

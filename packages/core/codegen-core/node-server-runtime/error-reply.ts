@@ -1,6 +1,6 @@
 // The error replies every server placement renders: a contract error reported to the hook or the log, the 404 of a
-// request the api does not serve (a bare one when no operation can answer it), and a framework refusal (an error
-// carrying a 401, 403 or 429 status) mapped to its role. Copied into the generated tree as is.
+// request the api does not serve (a bare one when no operation can answer it), and a thrown HTTP status (a framework
+// refusal of 401, 403 or 429 among them) mapped to the operation's code. Copied into the generated tree as is.
 import { type BoundaryHooks, reportUnexpected } from "./boundary-hooks.js";
 import { ContractError, codeOfRole, codeOfStatus, unexpectedError } from "./contract-error.js";
 import { type ContractApi, type ContractRoute, matchesContractPath } from "./contract-route.js";
@@ -13,9 +13,24 @@ export const NOT_FOUND_STATUS = 404;
 const UNAUTHORIZED = 401;
 const FORBIDDEN = 403;
 const TOO_MANY_REQUESTS = 429;
-const UNAUTHENTICATED_ROLE = "unauthenticated";
-const FORBIDDEN_ROLE = "forbidden";
 const NOT_FOUND_ROLE = "notFound";
+// The roles a status takes before its status alone, as the PHP targets map `abort()`.
+const STATUS_ROLES: Readonly<Record<number, string>> = {
+  401: "unauthenticated",
+  403: "forbidden",
+  429: "rateLimited",
+  503: "serviceUnavailable",
+};
+const FRAMEWORK_REFUSAL_FIXES: StatusErrorFixes = {
+  requiredParams: "answer that code from the handler with its params",
+  severalCodes: "answer the one it means from the handler",
+};
+
+/** How the placement tells the app to answer a status the boundary cannot map to one code alone. */
+export interface StatusErrorFixes {
+  readonly requiredParams: string;
+  readonly severalCodes: string;
+}
 
 /** The request as an error report names it. */
 export interface ReportedRequest {
@@ -96,8 +111,8 @@ export function isStatusDenial(error: unknown): boolean {
 }
 
 /**
- * A framework refusal mapped to the operation's role: 401 to `unauthenticated`, 403 to `forbidden`, 429 to the
- * code of that status; a status the operation does not declare is a 500. Undefined for any other error.
+ * A framework refusal (an error carrying a 401, 403 or 429 status) mapped as `statusError` maps it. Undefined for any
+ * other error.
  */
 export function frameworkRefusal(route: ContractRoute, error: unknown): ContractError | undefined {
   const status = errorStatus(error);
@@ -106,14 +121,61 @@ export function frameworkRefusal(route: ContractRoute, error: unknown): Contract
     return undefined;
   }
 
-  const code =
-    status === UNAUTHORIZED
-      ? (codeOfRole(route, UNAUTHENTICATED_ROLE) ?? codeOfStatus(route, status))
-      : status === FORBIDDEN
-        ? (codeOfRole(route, FORBIDDEN_ROLE) ?? codeOfStatus(route, status))
-        : codeOfStatus(route, status);
+  return statusError(route, status, error, FRAMEWORK_REFUSAL_FIXES);
+}
 
-  return code === undefined ? unexpectedError(route, error) : new ContractError(code);
+/** Whether the operation answers a status: a code of the status's role, or a code of that status. */
+export function declaresStatus(route: ContractRoute, status: number): boolean {
+  return statusRoleCode(route, status) !== undefined || codeOfStatus(route, status) !== undefined;
+}
+
+/**
+ * An HTTP status thrown on an operation, as its code: the code of the status's role first, else the operation's one
+ * code of that status when it requires no params, else a 500 whose cause names the fix.
+ */
+export function statusError(
+  route: ContractRoute,
+  status: number,
+  cause: unknown,
+  fixes: StatusErrorFixes,
+): ContractError {
+  const roleCode = statusRoleCode(route, status);
+
+  if (roleCode !== undefined) return new ContractError(roleCode);
+
+  const [entry, ...otherEntries] = Object.values(route.errors).filter(
+    (candidate) => candidate.status === status,
+  );
+
+  if (entry === undefined) return unexpectedError(route, cause);
+
+  if (otherEntries.length > 0) {
+    const codes = [entry, ...otherEntries].map((candidate) => candidate.code).join(", ");
+
+    return unexpectedError(
+      route,
+      new Error(
+        `seampact: a ${status} error on '${route.id}' matches its codes ${codes}; ${fixes.severalCodes}.`,
+      ),
+    );
+  }
+
+  if (entry.requiresParams === true) {
+    return unexpectedError(
+      route,
+      new Error(
+        `seampact: a ${status} error on '${route.id}' maps to '${entry.code}', which declares required params; ${fixes.requiredParams}.`,
+      ),
+    );
+  }
+
+  return new ContractError(entry.code);
+}
+
+function statusRoleCode(route: ContractRoute, status: number): string | undefined {
+  const role = STATUS_ROLES[status];
+
+  return role === undefined ? undefined : codeOfRole(route, role);
 }
 
 /** A client error a body read raises, as the operation's code of its status; a 500 when it declares none. */

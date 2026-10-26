@@ -19,15 +19,19 @@ import {
   HttpException,
   Inject,
   Injectable,
+  type InjectionToken,
   type MiddlewareConsumer,
   Module,
+  type ModuleMetadata,
   type NestInterceptor,
   type NestModule,
   NotFoundException,
   type OnApplicationBootstrap,
+  type OptionalFactoryDependency,
   Patch,
   type PipeTransform,
   Post,
+  type Provider,
   Put,
   RequestMethod,
   Res,
@@ -47,6 +51,7 @@ import {
   DiscoveryModule,
   DiscoveryService,
   HttpAdapterHost,
+  ModulesContainer,
   Reflector,
 } from "@nestjs/core";
 import { ExecutionContextHost } from "@nestjs/core/internal";
@@ -72,8 +77,6 @@ import {
 } from "./node-server/boundary-hooks.js";
 import {
   ContractError,
-  codeOfRole,
-  codeOfStatus,
   renderContractReply,
   unexpectedError,
 } from "./node-server/contract-error.js";
@@ -87,7 +90,13 @@ import {
   matchesContractPath,
   type ResponsesMode,
 } from "./node-server/contract-route.js";
-import { logWriteFailure, notFoundError } from "./node-server/error-reply.js";
+import {
+  declaresStatus,
+  logWriteFailure,
+  notFoundError,
+  type StatusErrorFixes,
+  statusError,
+} from "./node-server/error-reply.js";
 import { routeKey } from "./node-server/framework-route-patterns.js";
 import { frameworkRouteProblems } from "./node-server/framework-routes.js";
 import { handlerReply } from "./node-server/handler-reply.js";
@@ -139,10 +148,62 @@ export interface SeampactModuleOptions {
   readonly logger?: RuntimeLogger;
 }
 
+/** The arguments of `SeampactModule.forRootAsync`, in the shape of NestJS's `ConfigurableModuleBuilder`. */
+export interface SeampactModuleAsyncHooks<Hooks> {
+  /** The modules that export the providers `inject` names. */
+  readonly imports?: ModuleMetadata["imports"];
+  /** The providers passed to `useFactory`, in order. */
+  readonly inject?: readonly (InjectionToken | OptionalFactoryDependency)[];
+  /** Builds the api's hooks from the injected providers. */
+  readonly useFactory: (...providers: never[]) => Hooks | Promise<Hooks>;
+}
+
+/** A declared error of the api: its code, and its params when the code declares them. */
+export interface DeclaredContractError {
+  readonly code: string;
+  readonly params?: unknown;
+}
+
+/** The errors a handler method returns, from its generated signature. */
+export type ErrorsOf<Method> = Method extends (...input: never[]) => infer Result
+  ? Extract<Awaited<Result>, { readonly code: string }>
+  : never;
+
+// One declared error's constructor arguments: its code, then its params when it declares them.
+type ContractExceptionArguments<Errors> = Errors extends {
+  readonly code: infer Code extends string;
+}
+  ? Errors extends { readonly params: infer Params }
+    ? [code: Code, params: Params]
+    : Errors extends { readonly params?: infer Params }
+      ? "params" extends keyof Errors
+        ? [code: Code, params?: Params]
+        : [code: Code]
+      : [code: Code]
+  : never;
+
+/**
+ * A declared error a handler or a service throws; the operation's filter answers its code in the api's format, and a
+ * code the operation does not declare is its 500. The generated module types it with the api's codes and params.
+ */
+export class ContractException<
+  Errors extends DeclaredContractError = DeclaredContractError,
+> extends ContractError {
+  constructor(...[code, params]: ContractExceptionArguments<Errors>) {
+    super(code, params);
+    this.name = "ContractException";
+  }
+}
+
 type ModuleArguments<Hooks> =
   Partial<Hooks> extends Hooks
     ? [hooks?: Hooks, options?: SeampactModuleOptions]
     : [hooks: Hooks, options?: SeampactModuleOptions];
+
+// A route `setGlobalPrefix`'s `exclude` option keeps unprefixed, as `ApplicationConfig` holds it.
+type ExcludedRoute = NonNullable<
+  ReturnType<ApplicationConfig["getGlobalPrefixOptions"]>["exclude"]
+>[number];
 
 type ContractMethod = (this: unknown, ...args: unknown[]) => unknown;
 
@@ -157,6 +218,8 @@ interface DiscoveredContractMethod {
   readonly name: string;
   readonly method: object;
   readonly metadata: OperationMetadata;
+  /** The class of the module that declares the controller, where `RouterModule` records its path. */
+  readonly module: unknown;
   /** The interceptors the module of the controller instantiated, by the class a decorator bound. */
   readonly injectables: ReadonlyMap<
     unknown,
@@ -169,6 +232,10 @@ const ROUTE_ARGS_METADATA = "__routeArguments__";
 const GUARDS_METADATA = "__guards__";
 const INTERCEPTORS_METADATA = "__interceptors__";
 const REDIRECT_METADATA = "__redirect__";
+const HTTP_CODE_METADATA = "__httpCode__";
+const HEADERS_METADATA = "__headers__";
+const PATH_METADATA = "path";
+const MODULE_PATH_METADATA = "__module_path__";
 const RENDER_METADATA = "__renderTemplate__";
 const SSE_METADATA = "__sse__";
 const RESPONSE_PARAM_TYPE = 1;
@@ -183,8 +250,13 @@ const EXPRESS_PLATFORM = "express";
 const NOT_FOUND = 404;
 const TOO_MANY_REQUESTS = 429;
 const INTERNAL_STATUS = 500;
-const FORBIDDEN_ROLE = "forbidden";
-const UNAUTHENTICATED_ROLE = "unauthenticated";
+const ROOT_PATHS: readonly unknown[] = [undefined, "", "/"];
+// A thrown code goes into a logged message: longer codes are cut, so an app's input never floods the log.
+const MAX_LOGGED_CODE_LENGTH = 100;
+const NEST_STATUS_FIXES: StatusErrorFixes = {
+  requiredParams: "throw ContractException(code, params) with its params",
+  severalCodes: "throw a ContractException of the one it means",
+};
 const NEST_FIXES: PlatformFixes = {
   rawBody:
     "NestJS keeps it as a Buffer on req.rawBody: create the app with { rawBody: true }, or pass the generated keepRawBody as the JSON parser's verify function with rawBody off.",
@@ -267,6 +339,18 @@ function boundaryRouteFilter(middlewareRoutes: readonly string[]): (route: objec
   };
 }
 
+/** An `HttpException` thrown on a contract route whose status the route declares, by role or by status. */
+// biome-ignore lint/complexity/noStaticOnlyClass: `@Catch()` matches exceptions with `instanceof`, which this class answers.
+class DeclaredStatusException {
+  static [Symbol.hasInstance](value: unknown): boolean {
+    const route = boundaryContext.getStore()?.route;
+
+    if (!(value instanceof HttpException) || route === undefined) return false;
+
+    return declaresStatus(route, value.getStatus());
+  }
+}
+
 function isFrameworkDenial(error: unknown): boolean {
   return error instanceof UnauthorizedException || error instanceof ForbiddenException;
 }
@@ -290,7 +374,7 @@ function requireContext(): BoundaryContext {
     throw unexpectedError(
       undefined,
       new Error(
-        "seampact: a contract route ran without its request context; import the api's SeampactModule.forRoot(...) in the app module.",
+        "seampact: a contract route ran without its request context; import the api's SeampactModule.forRoot(...) in the app module, and serve the contract routes without a path prefix.",
       ),
     );
   }
@@ -303,7 +387,9 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   api: ContractApi,
   options: NestBoundaryOptions,
 ) {
-  const HOOKS = Symbol(`seampact:${api.id}:hooks`);
+  // The app's hooks, exported for `overrideProvider`, and the boundary's resolved copy of them.
+  const SEAMPACT_HOOKS = Symbol(`seampact:${api.id}:hooks`);
+  const HOOKS = Symbol(`seampact:${api.id}:resolved-hooks`);
   const MODULE_OPTIONS = Symbol(`seampact:${api.id}:options`);
   const RESPONSES_METADATA = `seampact:${api.id}:responses`;
   const bodyGlue = expressBodyGlue(api);
@@ -622,6 +708,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     for (const wrapper of discovery.getControllers()) {
       const instance: unknown = wrapper.instance;
       const injectables = wrapper.host?.injectables ?? new Map();
+      const module: unknown = wrapper.host?.metatype;
 
       if (!isPlainObject(instance) && typeof instance !== "object") continue;
 
@@ -637,7 +724,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         const metadata = reflector.get<OperationMetadata | undefined>(OPERATION_METADATA, method);
 
         if (metadata?.api === api.id) {
-          discovered.push({ prototype, name, method, metadata, injectables });
+          discovered.push({ prototype, name, method, metadata, module, injectables });
         }
       }
     }
@@ -684,10 +771,10 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     }
 
     for (const { prototype, method, metadata } of methods) {
-      const interceptors = [
+      const interceptors = appInterceptors([
         ...metadataList(INTERCEPTORS_METADATA, prototype.constructor),
         ...metadataList(INTERCEPTORS_METADATA, method),
-      ];
+      ]);
 
       if (interceptors.length === 0) continue;
 
@@ -712,6 +799,40 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
     globalInterceptors.splice(index, 1);
     globalInterceptors.unshift(replyInterceptor);
+  }
+
+  // In the default reply mode, an app interceptor that answers without `next.handle()` would leave the route with no
+  // reply, since the response is marked as handled. The reply interceptor then sits outside the app's interceptors of
+  // each such route and answers 500 with a log: in front of the globals when the app has one, else first on the
+  // controller or the method that binds one. Routes without an app interceptor stay off NestJS's interceptor path.
+  function placeReplyCheck(
+    methods: readonly DiscoveredContractMethod[],
+    config: ApplicationConfig,
+  ): void {
+    if (options.reply === INTERCEPTOR_REPLY) return;
+
+    const globalInterceptors = config.getGlobalInterceptors();
+    const hasGlobalInterceptors =
+      appInterceptors(globalInterceptors).length > 0 ||
+      config.getGlobalRequestInterceptors().length > 0;
+
+    if (hasGlobalInterceptors) {
+      if (!globalInterceptors.includes(replyInterceptor))
+        globalInterceptors.unshift(replyInterceptor);
+
+      return;
+    }
+
+    for (const { prototype, method } of methods) {
+      const controller: object = prototype.constructor;
+      const target =
+        metadataList(INTERCEPTORS_METADATA, controller).length > 0 ? controller : method;
+      const interceptors = metadataList(INTERCEPTORS_METADATA, target);
+
+      if (interceptors.length === 0 || interceptors.includes(replyInterceptor)) continue;
+
+      Reflect.defineMetadata(INTERCEPTORS_METADATA, [replyInterceptor, ...interceptors], target);
+    }
   }
 
   // A global an app module's `configure` placed in front after seampact's own still runs outside the reply.
@@ -899,7 +1020,13 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     ];
   }
 
-  @Catch(ContractError, UnauthorizedException, ForbiddenException, TooManyRequestsRefusal)
+  @Catch(
+    ContractError,
+    UnauthorizedException,
+    ForbiddenException,
+    TooManyRequestsRefusal,
+    DeclaredStatusException,
+  )
   class ContractFilter implements ExceptionFilter {
     catch(exception: unknown, host: ArgumentsHost): void {
       void renderContractError(host, exception);
@@ -961,6 +1088,32 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   const inputDecorator = createParamDecorator(inputFactory);
   const input = (): ParameterDecorator => inputDecorator(contractInputPipe);
 
+  // The app's hooks under the exported token, so a test's `overrideProvider` replaces them before they are resolved.
+  function moduleOf(
+    hooksProvider: Provider,
+    imports: NonNullable<ModuleMetadata["imports"]>,
+    moduleOptions: SeampactModuleOptions,
+  ): DynamicModule {
+    useRuntimeLogger(moduleOptions.logger);
+
+    return {
+      module: SeampactModule,
+      imports: [DiscoveryModule, ...imports],
+      providers: [
+        hooksProvider,
+        {
+          provide: HOOKS,
+          useFactory: (hooks: RegisteredHooks | undefined) => resolvedHooks(hooks),
+          inject: [SEAMPACT_HOOKS],
+        },
+        { provide: MODULE_OPTIONS, useValue: moduleOptions },
+        ...(options.reply === INTERCEPTOR_REPLY
+          ? [{ provide: APP_INTERCEPTOR, useValue: replyInterceptor }]
+          : []),
+      ],
+    };
+  }
+
   @Module({})
   class SeampactModule implements NestModule, OnApplicationBootstrap {
     // Property injection with explicit tokens: no constructor parameter decorators, no design metadata.
@@ -969,21 +1122,26 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     @Inject(HttpAdapterHost) private readonly adapterHost!: HttpAdapterHost;
     @Inject(ApplicationConfig) private readonly applicationConfig!: ApplicationConfig;
     @Inject(MODULE_OPTIONS) private readonly moduleOptions!: SeampactModuleOptions;
+    @Inject(ModulesContainer) private readonly modulesContainer!: ModulesContainer;
 
     static forRoot(...[hooks, moduleOptions = {}]: ModuleArguments<Hooks>): DynamicModule {
-      useRuntimeLogger(moduleOptions.logger);
+      return moduleOf({ provide: SEAMPACT_HOOKS, useValue: hooks ?? {} }, [], moduleOptions);
+    }
 
-      return {
-        module: SeampactModule,
-        imports: [DiscoveryModule],
-        providers: [
-          { provide: HOOKS, useValue: resolvedHooks(hooks) },
-          { provide: MODULE_OPTIONS, useValue: moduleOptions },
-          ...(options.reply === INTERCEPTOR_REPLY
-            ? [{ provide: APP_INTERCEPTOR, useValue: replyInterceptor }]
-            : []),
-        ],
-      };
+    /** The module with hooks a factory builds from injected providers. */
+    static forRootAsync(
+      asyncHooks: SeampactModuleAsyncHooks<Hooks>,
+      moduleOptions: SeampactModuleOptions = {},
+    ): DynamicModule {
+      return moduleOf(
+        {
+          provide: SEAMPACT_HOOKS,
+          useFactory: asyncHooks.useFactory,
+          inject: [...(asyncHooks.inject ?? [])],
+        },
+        asyncHooks.imports ?? [],
+        moduleOptions,
+      );
     }
 
     configure(consumer: MiddlewareConsumer): void {
@@ -994,6 +1152,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
       moveContractGuardLast(contractMethods);
       moveReplyInterceptorFirst(this.applicationConfig);
+      placeReplyCheck(contractMethods, this.applicationConfig);
 
       // Claimed before any api's boot check runs, so each check sees every api's routes.
       const adapter: object | undefined = this.adapterHost.httpAdapter;
@@ -1021,6 +1180,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         ...enforcedHookBootProblems(api, this.hooks),
         ...moduleOptionsProblems(this.moduleOptions),
         ...this.handlerProblems(contractMethods),
+        ...this.pathPrefixProblems(contractMethods),
         ...cacheProblems(contractMethods, this.applicationConfig),
         ...this.platformProblems(),
         ...this.repeatedRegistrationProblems(),
@@ -1040,6 +1200,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         bound.add(metadata.id);
         problems.push(
           ...writerProblems(metadata.id, prototype, name, method),
+          ...replyDecoratorProblems(metadata.id, name, method),
           ...inputParamProblems(discovered),
           ...guardLastProblems(discovered),
         );
@@ -1056,6 +1217,62 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       }
 
       return problems;
+    }
+
+    // The contract's paths are absolute: a controller path, a RouterModule path or a global prefix would serve them
+    // elsewhere than the module middleware binds them. Each is named once.
+    private pathPrefixProblems(
+      contractMethods: readonly DiscoveredContractMethod[],
+    ): BootProblem[] {
+      const problems: BootProblem[] = [];
+      const named = new Set<unknown>();
+
+      for (const discovered of contractMethods) {
+        const controller: unknown = discovered.prototype.constructor;
+
+        if (named.has(controller)) continue;
+
+        named.add(controller);
+        problems.push(
+          ...controllerPathProblems(discovered),
+          ...this.routerModuleProblems(discovered),
+        );
+      }
+
+      return [...problems, ...this.globalPrefixProblems()];
+    }
+
+    private routerModuleProblems({ prototype, module }: DiscoveredContractMethod): BootProblem[] {
+      if (typeof module !== "function") return [];
+
+      const modulePath: unknown =
+        Reflect.getMetadata(MODULE_PATH_METADATA + this.modulesContainer.applicationId, module) ??
+        Reflect.getMetadata(MODULE_PATH_METADATA, module);
+
+      if (ROOT_PATHS.includes(modulePath)) return [];
+
+      return [
+        {
+          problem: `RouterModule mounts ${module.name} under '${String(modulePath)}', which prefixes the contract routes of ${prototype.constructor.name}`,
+          fix: `remove the RouterModule entry of ${module.name}, or move ${prototype.constructor.name} to a module RouterModule does not mount; the contract's paths are absolute`,
+        },
+      ];
+    }
+
+    private globalPrefixProblems(): BootProblem[] {
+      const prefix = this.applicationConfig.getGlobalPrefix();
+
+      if (ROOT_PATHS.includes(prefix)) return [];
+
+      const excluded = this.applicationConfig.getGlobalPrefixOptions().exclude ?? [];
+
+      return api.routes
+        .filter((route) => !isExcludedFromPrefix(excluded, route))
+        .map((route) => ({
+          operation: route.id,
+          problem: `setGlobalPrefix('${prefix}') prefixes ${methodOf(route).toUpperCase()} ${route.path}`,
+          fix: "exclude the contract routes with setGlobalPrefix's 'exclude' option, or remove the prefix; the contract's paths are absolute",
+        }));
     }
 
     // Every route of the Express app outside the apis' operations must be allow-listed in the app config.
@@ -1151,6 +1368,29 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     return problems;
   }
 
+  // `@HttpCode` and `@Header` shape a reply NestJS never writes on a contract route.
+  function replyDecoratorProblems(id: string, name: string, method: object): BootProblem[] {
+    const problems: BootProblem[] = [];
+
+    if (Reflect.getMetadata(HTTP_CODE_METADATA, method) !== undefined) {
+      problems.push({
+        operation: id,
+        problem: `@HttpCode on ${name}() sets a status the boundary never writes`,
+        fix: "remove @HttpCode; return the status from the handler",
+      });
+    }
+
+    if (Reflect.getMetadata(HEADERS_METADATA, method) !== undefined) {
+      problems.push({
+        operation: id,
+        problem: `@Header on ${name}() sets a header the boundary never writes`,
+        fix: "remove @Header; declare the header in the contract's response",
+      });
+    }
+
+    return problems;
+  }
+
   /**
    * Renders a refusal raised before routing on a contract path, or the 404 of a path under the base path, in the
    * api's format; false when it does nothing.
@@ -1232,6 +1472,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
   return {
     SeampactModule,
+    SEAMPACT_HOOKS,
     operation,
     responses: (mode: ResponsesMode) => SetMetadata(RESPONSES_METADATA, mode),
     renderContractError,
@@ -1256,6 +1497,38 @@ function appInterceptors(interceptors: readonly unknown[]): unknown[] {
       typeof interceptor !== "object" ||
       interceptor === null ||
       !Reflect.has(interceptor, REPLY_INTERCEPTOR_MARK),
+  );
+}
+
+// `@Controller('tasks')` or `@Controller({ path })` prefixes every route of the controller.
+function controllerPathProblems({ prototype }: DiscoveredContractMethod): BootProblem[] {
+  const controllerPath: unknown = Reflect.getMetadata(PATH_METADATA, prototype.constructor);
+  const paths: readonly unknown[] = Array.isArray(controllerPath)
+    ? controllerPath
+    : [controllerPath];
+
+  if (paths.every((path) => ROOT_PATHS.includes(path))) return [];
+
+  const written = paths.map((path) => `'${String(path)}'`).join(", ");
+  const controller = prototype.constructor.name;
+
+  return [
+    {
+      problem: `@Controller(${written}) on ${controller} prefixes the contract route`,
+      fix: `use @Controller() on ${controller}, with no path; the contract's paths are absolute`,
+    },
+  ];
+}
+
+// NestJS's own exclusion test of `setGlobalPrefix`: a method of the route or every method, and the path's pattern.
+function isExcludedFromPrefix(excluded: readonly ExcludedRoute[], route: ContractRoute): boolean {
+  const method = REQUEST_METHODS[methodOf(route)];
+  const path = nestPath(route.path);
+
+  return excluded.some(
+    (entry) =>
+      (entry.requestMethod === RequestMethod.ALL || entry.requestMethod === method) &&
+      entry.pathRegex.test(path),
   );
 }
 
@@ -1366,18 +1639,24 @@ function copyMethodIdentity(
 }
 
 function asContractError(route: ContractRoute, error: unknown): ContractError {
+  if (error instanceof ContractException && !declaresCode(route, error.code)) {
+    return unexpectedError(
+      route,
+      new Error(
+        `seampact: '${route.id}' declares no code '${error.code.slice(0, MAX_LOGGED_CODE_LENGTH)}'; throw a ContractException of one of its codes.`,
+      ),
+    );
+  }
+
   if (error instanceof ContractError) return error;
 
-  const code =
-    error instanceof UnauthorizedException
-      ? codeOfRole(route, UNAUTHENTICATED_ROLE)
-      : error instanceof ForbiddenException
-        ? codeOfRole(route, FORBIDDEN_ROLE)
-        : error instanceof HttpException
-          ? codeOfStatus(route, error.getStatus())
-          : undefined;
+  if (!(error instanceof HttpException)) return unexpectedError(route, error);
 
-  return code === undefined ? unexpectedError(route, error) : new ContractError(code);
+  return statusError(route, error.getStatus(), error, NEST_STATUS_FIXES);
+}
+
+function declaresCode(route: ContractRoute, code: string): boolean {
+  return Object.values(route.errors).some((entry) => entry.code === code);
 }
 
 function preRoutingError(route: ContractRoute | undefined, exception: unknown): ContractError {

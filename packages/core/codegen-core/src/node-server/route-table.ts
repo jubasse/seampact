@@ -4,6 +4,7 @@ import {
   type Operation,
   type Param,
   type Principal,
+  type SchemaId,
   type Template,
   type TypeUse,
   type WireFormat,
@@ -951,8 +952,23 @@ function errorEntry(
             param: error.retryHeader.param,
             unit: error.retryHeader.unit,
           },
+    requiresParams: paramsRequireAMember(ir, declaration.params) ? true : undefined,
     noStore: declaration.noStore === true ? true : undefined,
   };
+}
+
+// Whether an error code's params schema has a member with no default the reply must carry; a schema that is not an
+// object counts as required, so a status alone never answers it.
+function paramsRequireAMember(ir: ContractIR, paramsSchema: SchemaId | undefined): boolean {
+  if (paramsSchema === undefined) return false;
+
+  const schema = Object.hasOwn(ir.schemas, paramsSchema) ? ir.schemas[paramsSchema] : undefined;
+
+  if (schema === undefined || !isKnownVariant("Schema", schema) || schema.kind !== "object") {
+    return true;
+  }
+
+  return schema.properties.some((property) => !property.optional && property.default === undefined);
 }
 
 // Whether a template writes the slot anywhere: as a value, a member name, a text part or inside a nested template.
