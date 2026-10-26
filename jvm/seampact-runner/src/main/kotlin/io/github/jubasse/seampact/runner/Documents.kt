@@ -4,12 +4,17 @@ import io.github.jubasse.seampact.ir.binary.BinaryDocumentsResult
 import io.github.jubasse.seampact.ir.binary.BinaryInstall
 import io.github.jubasse.seampact.ir.binary.BinaryRunner
 import io.github.jubasse.seampact.ir.binary.DocumentsCommand
+import io.github.jubasse.seampact.ir.binary.HandedConfig
 import io.github.jubasse.seampact.ir.bundle.BundleFailureCode
+import io.github.jubasse.seampact.ir.bundle.CachedBundle
 import io.github.jubasse.seampact.ir.config.AppConfig
 import io.github.jubasse.seampact.ir.config.AppConfigReader
 import io.github.jubasse.seampact.ir.config.ConfigProblem
+import io.github.jubasse.seampact.ir.config.EntryView
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.io.path.writeText
 
 private const val NO_DOCUMENTS = "none"
@@ -26,6 +31,20 @@ internal fun documentsAsked(config: AppConfig): Boolean {
     if (config.openapi == JsonPrimitive(NO_DOCUMENTS)) return false
 
     return config.openapi != null || config.entries.isNotEmpty() || config.otherEntries.isNotEmpty()
+}
+
+/**
+ * The sources the binary reads for the app's documents, by the rule of its own run: those holding the api of any
+ * target entry, this runner's or another's, or of any document `openapi` lists (ADR 0011: a source no ref uses is
+ * never resolved). None without documents.
+ */
+internal fun documentSources(config: AppConfig): List<String> {
+    if (!documentsAsked(config)) return emptyList()
+
+    val listedApis = (config.openapi as? JsonObject)?.keys.orEmpty()
+    val refs = (config.entries + config.otherEntries).flatMap { it.apiRefs } + listedApis
+
+    return EntryView.sourcesHoldingRefs(config, refs)
 }
 
 /** What the binary's documents run printed, or the problems that refused it. */
@@ -45,10 +64,10 @@ internal sealed interface DocumentsRun {
 internal fun runDocuments(prepared: PreparedRun.Prepared, settings: RunSettings, command: DocumentsCommand): DocumentsRun {
     if (!documentsAsked(prepared.config)) return DocumentsRun.Done(emptyList(), emptyList())
 
-    val bundleDirectories = prepared.bundles.associate { it.source to prepared.verifiedBundleDirectory(it.integrity) }
-    val gone = prepared.bundles.filter { bundleDirectories[it.source] == null }
-    if (gone.isNotEmpty()) return DocumentsRun.Refused(gone.map(::cacheEntryGone))
-    val handedBundles = bundleDirectories.mapValues { (_, directory) -> checkNotNull(directory) }
+    val cached = prepared.bundles.associateWith { prepared.cachedBundle(it.integrity) }
+    val gone = cached.mapNotNull { (bundle, entry) -> (entry as? CachedBundle.Unavailable)?.let { cacheEntryGone(bundle, it.entry) } }
+    if (gone.isNotEmpty()) return DocumentsRun.Refused(gone)
+    val handedBundles = cached.entries.associate { (bundle, entry) -> bundle.source to (entry as CachedBundle.Verified).directory }
 
     val installed = when (val install = prepared.binary()) {
         is BinaryInstall.Installed -> install.binary
@@ -68,17 +87,17 @@ internal fun runDocuments(prepared: PreparedRun.Prepared, settings: RunSettings,
         val dslConfig = runDirectory.resolve(DSL_CONFIG_FILE_NAME)
         dslConfig.writeText(dslTree)
 
-        return documentsOutcome(BinaryRunner.documents(installed, dslConfig, command, settings.appDirectory, handedBundles), settings.buildTool)
+        return documentsOutcome(BinaryRunner.documents(installed, dslConfig, command, HandedConfig(settings.appDirectory, settings.dslName), handedBundles), settings.buildTool)
     } finally {
         runDirectory.toFile().deleteRecursively()
     }
 }
 
 // The run checked the bundle a moment ago; its cache entry went missing or changed since.
-private fun cacheEntryGone(bundle: CheckedBundle): ConfigProblem = ConfigProblem(
+private fun cacheEntryGone(bundle: CheckedBundle, entry: Path?): ConfigProblem = ConfigProblem(
     BundleFailureCode.CACHE_INVALID.code,
-    "The cached bundle of the source '${bundle.source}' (integrity ${bundle.integrity}) is gone or fails the pinned-bundle check since this run read it; it is not handed to the compiler.",
-    "Check who can write to the bundle cache directory, keep it private to your user, and run the build again.",
+    "The cached bundle of the source '${bundle.source}' at ${entry ?: "(no entry for ${bundle.integrity})"} is gone or fails the pinned-bundle check since this run read it; it is not handed to the compiler.",
+    "Remove the folder the message names, then run the build again to fetch the bundle afresh.",
     "source '${bundle.source}'",
 )
 
@@ -94,7 +113,7 @@ private fun documentsOutcome(result: BinaryDocumentsResult, buildTool: BuildTool
             ConfigProblem(
                 "binary.documents-refused",
                 "The compiler exited with ${result.exitCode} on the app's OpenAPI documents:\n${result.stderr}${result.stdout}".trimEnd(),
-                "Fix what the compiler's diagnostics say; a document that differs is written again by `${buildTool.generateCommand}`, then committed.",
+                "Fix what the compiler's diagnostics say, reading `seampact generate` there as `${buildTool.generateCommand}`: a document that differs is written again by it, then committed; a document edited by hand is not overwritten, so delete it first.",
                 OPENAPI_WHERE,
             ),
         ),

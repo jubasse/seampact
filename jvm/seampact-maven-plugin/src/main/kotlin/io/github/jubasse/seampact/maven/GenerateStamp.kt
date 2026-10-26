@@ -18,11 +18,12 @@ import kotlin.io.path.writeText
 
 /**
  * The record of the last generate run, in the build directory: the hash of its inputs and of the files it left in
- * the entry roots. The goal skips when both are unchanged, as Gradle's up-to-date check does; a file edited, added
- * or removed in an entry root, or any changed input, runs it again.
+ * its outputs, the entry roots and the OpenAPI documents (each listed file, or the default `openapi` directory). The
+ * goal skips when both are unchanged, as Gradle's up-to-date check does; a file edited, added or removed in an
+ * output, or any changed input, runs it again.
  */
 internal class GenerateStamp(private val file: Path) {
-    /** Whether the last run had [inputsHash] and left the entry [roots] as they are now. */
+    /** Whether the last run had [inputsHash] and left the [roots], directories or files, as they are now. */
     fun isCurrent(inputsHash: String, roots: List<Path>): Boolean {
         if (!file.exists()) return false
 
@@ -86,6 +87,8 @@ internal class GenerateStamp(private val file: Path) {
             val digest = MessageDigest.getInstance(SHA_256)
             for (directory in directories) {
                 digest.update("${directory.toAbsolutePath().normalize()}\n".toByteArray())
+                // An output given as a file (a listed OpenAPI document) counts by its bytes.
+                if (Files.isRegularFile(directory)) digest.update(Files.readAllBytes(directory))
                 if (!directory.isDirectory()) continue
 
                 val entries = TreeEntries(directory).also { Files.walkFileTree(directory, setOf(FileVisitOption.FOLLOW_LINKS), Int.MAX_VALUE, it) }

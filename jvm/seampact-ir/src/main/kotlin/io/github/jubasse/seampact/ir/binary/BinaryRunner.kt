@@ -39,6 +39,12 @@ public enum class DocumentsCommand(public val command: String) {
     CHECK("check"),
 }
 
+/**
+ * An app config handed to the binary from elsewhere: read as the app config of [appDirectory] (`--app-directory`)
+ * and named [name] in its problems (`--config-name`), the build file that writes it.
+ */
+public data class HandedConfig(val appDirectory: Path, val name: String)
+
 /** The outcome of [BinaryRunner.documents]. */
 public sealed interface BinaryDocumentsResult {
     /** The binary wrote or checked the documents (exit 0); [stdout] holds its lines and [stderr] its warnings. */
@@ -103,16 +109,15 @@ public object BinaryRunner {
     /**
      * Runs `generate` or `check` on the app config [appConfig] with the same checks and environment as [compile]: the
      * binary writes or checks the config's OpenAPI documents and leaves the native entries to the plugin. An npm entry
-     * is the binary's own refusal (exit 1). [appDirectory], when set, makes the binary read [appConfig] as the app
-     * config of that directory (`--app-directory`, a config the build file writes) and runs it from there; otherwise
-     * it runs from the config's directory. Each [bundleDirectories] entry hands over a bundle the plugin already
+     * is the binary's own refusal (exit 1). [handed], when set, makes the binary read [appConfig] as the app config
+     * of its directory, under its name, and runs it from there; otherwise it runs from the config's directory. Each [bundleDirectories] entry hands over a bundle the plugin already
      * fetched and checked (`--bundle-directory <source>=<dir>`), which the binary checks again and never fetches.
      */
     public fun documents(
         binary: VerifiedBinary,
         appConfig: Path,
         command: DocumentsCommand,
-        appDirectory: Path? = null,
+        handed: HandedConfig? = null,
         bundleDirectories: Map<String, Path> = emptyMap(),
         timeout: Duration = DEFAULT_TIMEOUT,
     ): BinaryDocumentsResult {
@@ -120,16 +125,18 @@ public object BinaryRunner {
             add(command.command)
             add("--config")
             add(appConfig.toAbsolutePath().toString())
-            if (appDirectory != null) {
+            if (handed != null) {
                 add("--app-directory")
-                add(appDirectory.toAbsolutePath().toString())
+                add(handed.appDirectory.toAbsolutePath().toString())
+                add("--config-name")
+                add(handed.name)
             }
             for ((source, directory) in bundleDirectories.toSortedMap()) {
                 add("--bundle-directory")
                 add("$source=${directory.toAbsolutePath()}")
             }
         }
-        val workingDirectory = appDirectory ?: appConfig.toAbsolutePath().parent
+        val workingDirectory = handed?.appDirectory ?: appConfig.toAbsolutePath().parent
 
         return when (val ran = run(binary, arguments, workingDirectory, timeout)) {
             is Ran.NotStarted -> BinaryDocumentsResult.NotRun(ran.failure)

@@ -3,11 +3,11 @@ package io.github.jubasse.seampact.runner
 import io.github.jubasse.seampact.ir.binary.BinaryInstall
 import io.github.jubasse.seampact.ir.binary.BinaryPin
 import io.github.jubasse.seampact.ir.bundle.BundleFetcher
+import io.github.jubasse.seampact.ir.bundle.CachedBundle
 import io.github.jubasse.seampact.ir.bundle.MavenArtefactResolver
 import io.github.jubasse.seampact.ir.config.AppConfig
 import io.github.jubasse.seampact.ir.config.AppConfigRead
 import io.github.jubasse.seampact.ir.config.ConfigProblem
-import io.github.jubasse.seampact.ir.config.ConfigSource
 import io.github.jubasse.seampact.ir.config.EntryView
 import io.github.jubasse.seampact.ir.config.LocalSourcePolicy
 import java.nio.file.Path
@@ -41,9 +41,8 @@ public class RunSettings(
 public sealed interface PreparedRun {
     /**
      * [warnings] are the compatibility check's, which generate and check print; [binary] installs the pinned binary
-     * once, when a `path` source or the documents first need it. [bundles] holds every bundle source of the app when it
-     * has documents, the used ones otherwise; [verifiedBundleDirectory] gives the checked cache directory of a pinned
-     * bundle, which the documents run hands to the binary.
+     * once, when a `path` source or the documents first need it. [bundles] holds the bundle sources the entries or the
+     * documents read; [cachedBundle] gives the checked cache directory of a pinned bundle, which the documents run hands to the binary.
      */
     public data class Prepared(
         val config: AppConfig,
@@ -51,7 +50,7 @@ public sealed interface PreparedRun {
         val plans: List<EntryPlan>,
         val warnings: List<ConfigProblem>,
         internal val binary: () -> BinaryInstall,
-        internal val verifiedBundleDirectory: (String) -> Path?,
+        internal val cachedBundle: (String) -> CachedBundle,
     ) : PreparedRun
 
     public data class Refused(val problems: List<ConfigProblem>) : PreparedRun
@@ -84,9 +83,9 @@ public fun prepareRun(settings: RunSettings): PreparedRun {
         installBinary = { binary },
     )
 
-    // The binary's documents run fetches nothing: every bundle source is read here, so each can be handed over.
+    // The binary's documents run fetches nothing: each source it reads is read here, so each bundle can be handed over.
     val used = EntryView.usedSources(config)
-    val read = if (documentsAsked(config)) used + (bundleSourceNames(config) - used.toSet()) else used
+    val read = used + (documentSources(config) - used.toSet())
 
     return when (val outcome = contractApis.read(config, read)) {
         is ContractApisOutcome.Refused -> PreparedRun.Refused(outcome.problems)
@@ -96,13 +95,10 @@ public fun prepareRun(settings: RunSettings): PreparedRun {
             planEntries(config, outcome.apis.filter { it.source in used }, settings, runnerVersion()),
             matrix.warnings,
             { binary },
-            fetcher::verifiedBundleDirectory,
+            fetcher::cachedBundle,
         )
     }
 }
-
-private fun bundleSourceNames(config: AppConfig): List<String> =
-    config.sources.filterValues { it is ConfigSource.Bundle }.keys.sorted()
 
 private const val RUNNER_PROPERTIES = "seampact-runner.properties"
 

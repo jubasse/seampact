@@ -24,10 +24,11 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
         val settings = runSettings()
         val layout = layoutOf(settings)
         val roots = layout.entryRoots.map { Path.of(it) }
+        val outputs = roots + (layout.documentDirectories + layout.documentFiles).map { Path.of(it) }
         val stamp = GenerateStamp(buildDirectory.resolve(STAMP_FILE))
         val inputsHash = inputsHash(settings, layout.pathSources.map { Path.of(it) }, bundleOrigins(layout))
 
-        if (stamp.isCurrent(inputsHash, roots)) {
+        if (stamp.isCurrent(inputsHash, outputs)) {
             log.info("seampact: inputs and generated files unchanged since the last run; nothing to generate.")
         } else {
             when (val outcome = generate(settings)) {
@@ -37,7 +38,7 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
                     outcome.warnings.forEach(log::warn)
                 }
             }
-            stamp.record(inputsHash, roots)
+            stamp.record(inputsHash, outputs)
         }
 
         roots.forEach { root ->

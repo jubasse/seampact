@@ -13,8 +13,8 @@ import java.nio.file.Path
 
 /**
  * What the build must know of the app config before a run: the output root of each JVM entry (the generated Java
- * sources), the `path` sources a run compiles (its inputs), the `maven` bundle sources it resolves (every one when the
- * app has documents, which the binary reads from the handed-over bundles), and whether it has seampact OpenAPI
+ * sources), the `path` sources a run compiles (its inputs), the `maven` bundle sources it resolves (also those the
+ * documents read, which the binary gets as handed-over bundles), and whether it has seampact OpenAPI
  * documents, with the files and directories they are written to. The binary is needed for a `path` source or a
  * document only. An app config that does not read has an empty layout; the run then refuses it with its problems.
  */
@@ -29,14 +29,15 @@ public data class AppLayout(
     val needsBinary: Boolean get() = pathSources.isNotEmpty() || documents
 
     public companion object {
-        private const val serialVersionUID: Long = 3
+        private const val serialVersionUID: Long = 2
 
         public val EMPTY: AppLayout = AppLayout(emptyList(), emptyList(), emptyList(), documents = false, emptyList(), emptyList())
 
         public fun of(config: AppConfig): AppLayout {
-            val used = EntryView.usedSources(config).mapNotNull { config.sources[it] }
+            val usedNames = EntryView.usedSources(config)
+            val used = usedNames.mapNotNull { config.sources[it] }
             val documents = documentsAsked(config)
-            val bundled = if (documents) config.sources.values else used
+            val bundled = (usedNames + documentSources(config)).distinct().mapNotNull { config.sources[it] }
             val outputs = if (documents) DocumentOutputs.of(config) else DocumentOutputs.NONE
 
             return AppLayout(

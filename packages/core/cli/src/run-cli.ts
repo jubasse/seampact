@@ -34,11 +34,11 @@ const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "generate",
-    "  generate [--config <path>] [--force] [--app-directory <dir>] [--bundle-directory <source>=<dir>]\n                                           Generate every target entry of the app config, or of every app a root config lists; --force overwrites, or removes when stale, a generated file edited by hand. A build plugin passes --app-directory (the --config text read as that directory's app config) and --bundle-directory (a bundle it already fetched, checked against the source's integrity, never fetched).",
+    "  generate [--config <path>] [--force] [--app-directory <dir> [--config-name <label>]] [--bundle-directory <source>=<dir>]\n                                           Generate every target entry of the app config, or of every app a root config lists; --force overwrites, or removes when stale, a generated file edited by hand. A build plugin passes --app-directory (the --config text read as that directory's app config, named --config-name in problems) and --bundle-directory (a bundle it already fetched, checked against the source's integrity, never fetched).",
   ],
   [
     "check",
-    "  check [--config <path>] [--app-directory <dir>] [--bundle-directory <source>=<dir>]\n                                           Fail when the committed generated files or documents differ from a fresh run; --app-directory and --bundle-directory as for generate.",
+    "  check [--config <path>] [--app-directory <dir> [--config-name <label>]] [--bundle-directory <source>=<dir>]\n                                           Fail when the committed generated files or documents differ from a fresh run; --app-directory, --config-name and --bundle-directory as for generate.",
   ],
   [
     "lint",
@@ -195,6 +195,7 @@ const PLUGIN_RUN_OPTIONS: OptionSpec = {
   config: { type: "string" },
   "app-directory": { type: "string" },
   "bundle-directory": { type: "string", multiple: true },
+  "config-name": { type: "string" },
 };
 
 async function runGenerate(args: readonly string[], io: CliIo): Promise<number> {
@@ -235,6 +236,7 @@ type PluginRun =
 function pluginRunOf(values: ParsedValues, io: CliIo, command: string): PluginRun {
   const config = stringOption(values.config);
   const appDirectory = stringOption(values["app-directory"]);
+  const configName = stringOption(values["config-name"]);
   const localBundles = new Map<string, string>();
 
   for (const pair of listOption(values["bundle-directory"])) {
@@ -246,10 +248,24 @@ function pluginRunOf(values: ParsedValues, io: CliIo, command: string): PluginRu
         message: `\`--bundle-directory\` takes <source>=<dir>, not '${pair}'.`,
       };
 
-    localBundles.set(pair.slice(0, separator), resolve(io.cwd, pair.slice(separator + 1)));
+    const source = pair.slice(0, separator);
+
+    if (localBundles.has(source))
+      return {
+        status: "refused",
+        message: `\`--bundle-directory\` hands over the source '${source}' twice; pass one directory per source.`,
+      };
+
+    localBundles.set(source, resolve(io.cwd, pair.slice(separator + 1)));
   }
 
   const inputs: PlanInputs = { nativeEntries: nativeEntryPolicy(io, command), localBundles };
+
+  if (appDirectory === undefined && configName !== undefined)
+    return {
+      status: "refused",
+      message: "`--config-name` names the config `--app-directory` reads; pass both.",
+    };
 
   if (appDirectory === undefined)
     return { status: "read", location: configLocation(io.cwd, config), inputs };
@@ -268,7 +284,15 @@ function pluginRunOf(values: ParsedValues, io: CliIo, command: string): PluginRu
       message: `\`--app-directory\` reads --config as the app config of ${location.file}, which exists; pass that file with \`--config\` instead.`,
     };
 
-  return { status: "read", location: { ...location, textFile: resolve(io.cwd, config) }, inputs };
+  return {
+    status: "read",
+    location: {
+      ...location,
+      displayName: configName ?? location.displayName,
+      textFile: resolve(io.cwd, config),
+    },
+    inputs,
+  };
 }
 
 // The host's policy for a command it runs on native entries only; the Node CLI's own otherwise.

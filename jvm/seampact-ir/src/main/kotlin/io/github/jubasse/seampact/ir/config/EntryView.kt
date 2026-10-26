@@ -46,8 +46,11 @@ public object EntryView {
      * hold it: a `path` source whose `workspace.yaml` lists it or cannot be read (its compile then says why), and
      * every bundle source, whose apis only its manifest tells.
      */
-    public fun usedSources(config: AppConfig): List<String> {
-        val refs = config.entries.flatMap { it.apiRefs }.map(::parseApiRef)
+    public fun usedSources(config: AppConfig): List<String> = sourcesHoldingRefs(config, config.entries.flatMap { it.apiRefs })
+
+    /** The sources that may hold [apiRefs], `<api>` or `<source>/<api>`, by the rule of [usedSources]. */
+    public fun sourcesHoldingRefs(config: AppConfig, apiRefs: List<String>): List<String> {
+        val refs = apiRefs.map(::parseApiRef)
         val named = refs.mapNotNull { it.source }.toSet()
         val bareApis = refs.filter { it.source == null }.map { it.api }.toSet()
 
