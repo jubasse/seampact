@@ -1,6 +1,6 @@
 // The error replies every server placement renders: a contract error reported to the hook or the log, the 404 of a
-// request the api does not serve (a bare one when no operation can answer it), and a framework refusal (an error
-// carrying a 401, 403 or 429 status) or any HTTP status mapped to the operation's code. Copied into the generated tree as is.
+// request the api does not serve (a bare one when no operation can answer it), and a thrown HTTP status (a framework
+// refusal of 401, 403 or 429 among them) mapped to the operation's code. Copied into the generated tree as is.
 import { type BoundaryHooks, reportUnexpected } from "./boundary-hooks.js";
 import { ContractError, codeOfRole, codeOfStatus, unexpectedError } from "./contract-error.js";
 import { type ContractApi, type ContractRoute, matchesContractPath } from "./contract-route.js";
