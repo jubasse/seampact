@@ -1,6 +1,7 @@
 package com.example.tasksservice.api.spring.runtime;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -19,11 +20,13 @@ import tools.jackson.databind.node.ObjectNode;
  * Step 6's structural pass (ADR 0022 "Types and validation"): it walks a decoded value against the contract's type
  * with no coercion and reports every issue with its pointer and the contract rule (`required`, `type`, `enum`,
  * `unknownKeys`, `minLength`...). String lengths count code points, `pattern` is a search as in ECMA-262, and an
- * integer outside a Java `long` is a `type` issue. Unknown keys a schema strips are removed from the value.
+ * integer past the safe range of a double is a `minimum` or `maximum` issue, a non-finite number a `type` issue. Unknown keys a schema strips are removed from the value.
  */
 final class StructuralValidator {
     private static final Pattern UUID_TEXT = Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
     private static final Pattern DECIMAL_TEXT = Pattern.compile("-?(0|[1-9][0-9]*)(\\.[0-9]+)?");
+    // ADR 0003 keeps a plain integer in the safe range of a double, as the Node and PHP targets check it.
+    private static final BigInteger LARGEST_SAFE_INTEGER = BigInteger.valueOf(9007199254740991L);
     private static final String DECIMAL_FORMAT = "decimal";
     private static final String OPAQUE = "opaque";
     private static final String UNKNOWN_KEYS_STRIP = "strip";
@@ -74,14 +77,19 @@ final class StructuralValidator {
                 checkString(value.asString(), typeUse, refinements, in, pointer, issues);
             }
             case "integer" -> {
-                if (!value.isIntegralNumber() || !value.canConvertToLong()) {
+                if (!value.isIntegralNumber()) {
                     issues.add(new InputIssue(in, pointer, "type"));
+                    return;
+                }
+                if (isBeyondSafeInteger(value.bigIntegerValue())) {
+                    issues.add(new InputIssue(in, pointer, value.bigIntegerValue().signum() < 0 ? "minimum" : "maximum"));
                     return;
                 }
                 checkBounds(value.decimalValue(), refinements, in, pointer, issues);
             }
             case "number" -> {
-                if (!value.isNumber()) {
+                // A literal past the range of a double is Infinity, whatever node holds it, and no handler takes it.
+                if (!value.isNumber() || !Double.isFinite(value.doubleValue())) {
                     issues.add(new InputIssue(in, pointer, "type"));
                     return;
                 }
@@ -93,6 +101,10 @@ final class StructuralValidator {
             default -> throw new IllegalStateException(
                     "seampact: the scalar type '" + typeUse.path("type").asString() + "' is not one the boundary validates");
         }
+    }
+
+    private static boolean isBeyondSafeInteger(BigInteger integer) {
+        return integer.abs().compareTo(LARGEST_SAFE_INTEGER) > 0;
     }
 
     private void checkString(String text, JsonNode typeUse, JsonNode refinements, String in, String pointer, List<InputIssue> issues) {
