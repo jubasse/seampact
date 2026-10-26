@@ -157,8 +157,9 @@ final class RouteTable
     }
 
     /**
-     * The `config/seampact/<api>.php` the provider publishes (`--tag=seampact-config`): each default read from an
-     * `env()` variable, `SEAMPACT_<API>_<SETTING>`, and the empty middleware lists.
+     * The `config/seampact/<api>.php` the provider publishes (`--tag=seampact-config`): each setting read from an
+     * `env()` variable, `SEAMPACT_<API>_<SETTING>`, falling back to the route table's `DEFAULTS` so a regenerate with
+     * other options still reaches a file published earlier, and the empty middleware lists.
      */
     public function configFile(): GeneratedFile
     {
@@ -166,9 +167,11 @@ final class RouteTable
         $prefix = 'SEAMPACT_' . strtoupper((string) preg_replace(['/(?<=[a-z0-9])(?=[A-Z])/', '/[^A-Za-z0-9]+/'], '_', $api)) . '_';
         $indent = str_repeat(' ', $this->options->indentSpaces);
         $lines = [];
-        foreach ([...$this->defaults(), self::PUBLIC_ORIGIN => null] as $name => $default) {
+        $defaults = '\\' . $this->layout->routeTable . '::DEFAULTS';
+        foreach ([...array_keys($this->defaults()), self::PUBLIC_ORIGIN] as $name) {
             $variable = var_export($prefix . strtoupper($name), true);
-            $lines[] = "{$indent}" . var_export($name, true) . ' => env(' . $variable . ($default === null ? '' : ', ' . var_export($default, true)) . '),';
+            $fallback = $name === self::PUBLIC_ORIGIN ? '' : ", {$defaults}[" . var_export($name, true) . ']';
+            $lines[] = "{$indent}" . var_export($name, true) . " => env({$variable}{$fallback}),";
         }
         $lines[] = "{$indent}'middleware' => [";
         foreach (self::MIDDLEWARE_KINDS as $kind) {
