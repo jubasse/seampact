@@ -7,7 +7,10 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** The numbers the structural pass refuses: a non-finite number, a decimal that is no string, an integer past the safe range. */
+/**
+ * The numbers the structural pass refuses: a non-finite number, in a number or anywhere in an opaque value, a decimal
+ * that is no string, an integer past the safe range.
+ */
 class StructuralValidatorNumbersTest {
     private static final JsonMapper MAPPER = BoundaryMapper.create();
     private final StructuralValidator validator = new StructuralValidator(new ContractTable(MAPPER.readTree("{\"operations\": []}")));
@@ -33,6 +36,16 @@ class StructuralValidatorNumbersTest {
         assertEquals(issue("type"), issuesOf("1e400", number));
         assertEquals(issue("type"), issuesOf("-1e400", number));
         assertEquals(List.of(), issuesOf("1e300", number));
+    }
+
+    @Test
+    void nonFiniteNumberAnywhereInAnOpaqueValueIsATypeIssue() {
+        JsonNode opaque = MAPPER.readTree("{\"kind\": \"opaque\"}");
+
+        assertEquals(issue("type"), issuesOf("1e400", opaque));
+        assertEquals(issue("type"), issuesOf("{\"a\": [1, {\"b\": -1e400}]}", opaque));
+        assertEquals(List.of(), issuesOf("{\"a\": [1e300, null, \"x\"]}", opaque));
+        assertEquals(List.of(), issuesOf("null", opaque));
     }
 
     @Test
