@@ -217,3 +217,22 @@ test("names a handed-over config by its label", async () => {
   expect(io.errors.join("")).toContain(label);
   expect(io.errors.join("")).not.toContain("seampact.config.yaml");
 });
+
+// The label only names the config in problems: an empty or multi-line one would break every located line.
+test.each(["", "first\nsecond"])("refuses the config label %j", async (label) => {
+  const app = appWith(NATIVE_APP_CONFIG);
+  const appDirectory = mkdtempSync(join(tmpdir(), "seampact-binary-app-"));
+  const configFile = join(app, "handed-over.json");
+  const io = capturingIo(app, "binary");
+
+  temporaryDirectories.push(appDirectory);
+  writeFileSync(configFile, JSON.stringify({ sources: 3 }));
+
+  expect(
+    await runCli(
+      ["check", "--config", configFile, "--app-directory", appDirectory, "--config-name", label],
+      io,
+    ),
+  ).toBe(EXIT_USAGE);
+  expect(io.errors.join("")).toContain("one-line label");
+});

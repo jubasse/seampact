@@ -123,7 +123,29 @@ class DocumentsTest {
         app.run("seampactGenerate")
         val again = app.run("seampactGenerate")
 
-        assertEquals(TaskOutcome.SUCCESS, again.task(":seampactGenerate")?.outcome, "a deleted default document is written again")
+        assertEquals(TaskOutcome.SUCCESS, again.task(":seampactGenerate")?.outcome, "the task runs again while only the IR names the default documents")
+    }
+
+    @Test
+    fun aPathSourceOnlyTheDocumentsReadIsAnInput() {
+        val app = SampleApp(directory)
+        app.write(
+            "seampact.config.yaml",
+            """
+            outDir: build/generated/sources/seampact/main
+            openapi: { tasks: openapi/tasks.yaml }
+            sources:
+              contract: { path: contract }
+            targets: []
+            """,
+        )
+        app.writeBuildScript("seampact {\n${app.stubBinaryBlock()}\n}")
+
+        app.run("seampactGenerate")
+        app.write("contract/notes.yaml", "edited: true")
+        val edited = app.run("seampactGenerate")
+
+        assertEquals(TaskOutcome.SUCCESS, edited.task(":seampactGenerate")?.outcome, "an edited contract the documents read runs the task again")
     }
 
     // The run directories a documents run leaves under the build's temporary directory.
