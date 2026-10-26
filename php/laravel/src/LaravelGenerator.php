@@ -28,7 +28,8 @@ final class LaravelGenerator implements Generator
     public const TARGET = 'laravel';
     public const PACKAGE = 'seampact/laravel';
     private const HTTP_OPERATION = 'httpOperation';
-    private const ARTEFACT_RELEASES = ['bootCheck' => LaravelReleases::LARAVEL_2, 'accessHooks' => LaravelReleases::LARAVEL_4];
+    private const BOOT_CHECK = 'bootCheck';
+    private const ACCESS_HOOKS = 'accessHooks';
 
     public function irSupport(): IrSupport
     {
@@ -89,21 +90,27 @@ final class LaravelGenerator implements Generator
         return $files;
     }
 
-    // The boot check comes with laravel-2 and native access with laravel-4; the target declares no other artefact.
+    // The boot check and hooks access come with laravel-2, native access (`accessHooks: false`) with laravel-4; the
+    // target declares no other artefact.
     private static function readArtefacts(\stdClass $artefacts, Refusals $refusals): void
     {
-        foreach (array_keys(get_object_vars($artefacts)) as $artefact) {
+        foreach (get_object_vars($artefacts) as $artefact => $value) {
+            $artefact = (string) $artefact;
             $at = IrPlace::root()->below('artefacts', $artefact);
-            $release = self::ARTEFACT_RELEASES[$artefact] ?? null;
+            $release = match ($artefact) {
+                self::BOOT_CHECK => LaravelReleases::LARAVEL_2,
+                self::ACCESS_HOOKS => $value === false ? LaravelReleases::LARAVEL_4 : LaravelReleases::LARAVEL_2,
+                default => null,
+            };
 
             if ($release !== null) {
-                $refusals->waitingForRelease("artefacts.{$artefact}", "The artefact switch '{$artefact}'", $at, $release);
+                $refusals->waitingForRelease("artefacts.{$artefact}", "The artefact switch '{$artefact}: " . json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "'", $at, $release);
                 continue;
             }
 
             $refusals->add(
                 'artefacts.unknown',
-                "The artefact '{$artefact}' is not one the laravel target declares; it takes '" . implode("', '", array_keys(self::ARTEFACT_RELEASES)) . "'.",
+                "The artefact '{$artefact}' is not one the laravel target declares; it takes '" . self::BOOT_CHECK . "' and '" . self::ACCESS_HOOKS . "'.",
                 "Remove '{$artefact}' from the entry's `artefacts`.",
                 $at,
             );

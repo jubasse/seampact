@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Seampact\Codegen\Delivery;
+use Seampact\Codegen\IntegerStep;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\PhpClassFile;
@@ -160,18 +161,40 @@ final class MemberRules
             ]);
         }
 
-        if ($refinements->multipleOf !== null && ($type->type->value !== ScalarType::Integer || preg_match('/^-?\d+$/D', (string) $refinements->multipleOf) !== 1)) {
-            $this->refusals->inconsistent('multipleOf.notInteger', "A 'multipleOf' of {$refinements->multipleOf} on a '{$type->type->value}' value, which ADR 0003 keeps on integers only", $at->below('refinements', 'multipleOf'));
-        }
-
         if (in_array($type->type->value, [ScalarType::Integer, ScalarType::Number], true)) {
-            $this->number($key, $refinements, $position);
+            $this->number($key, $refinements, $this->integerStep($type, $at->below('refinements', 'multipleOf')), $position);
         } elseif ($type->type->value === ScalarType::String) {
             $this->string($key, $refinements, $position, $at);
         }
     }
 
-    private function number(string $key, Refinements $refinements, Position $position): void
+    /**
+     * The exact integer step of the member's `multipleOf`, null when it has none or it is refused: ADR 0003 keeps
+     * `multipleOf` on `integer` and decimal and refuses it on `number`.
+     */
+    private function integerStep(ScalarTypeUse $type, IrPlace $at): ?int
+    {
+        $literal = $type->refinements->multipleOf;
+        if ($literal === null) {
+            return null;
+        }
+
+        if ($type->type->value !== ScalarType::Integer || !IntegerStep::isNonzeroDecimal($literal)) {
+            $this->refusals->inconsistent('multipleOf.invalid', "A 'multipleOf' of {$literal} on a '{$type->type->value}' value, where ADR 0003 keeps a nonzero step on `integer` and decimal only", $at);
+
+            return null;
+        }
+
+        $step = IntegerStep::of($literal);
+        if ($step === null) {
+            $this->refusals->waiting('multipleOf.wide', "The integer step {$literal}, beyond the PHP `int` range,", $at, Delivery::AfterOneZero);
+        }
+
+        return $step;
+    }
+
+    // Under seampact-consistent the step is the exact integer step; Laravel's `multiple_of` divides the literal exactly.
+    private function number(string $key, Refinements $refinements, ?int $integerStep, Position $position): void
     {
         $bounds = [
             'minimum' => [$refinements->minimum, 'gte', 'Gte'],
@@ -189,7 +212,11 @@ final class MemberRules
         if ($this->mode === RulesMode::SeampactConsistent) {
             $arguments = ['$input', $this->position($position)];
             foreach ($declared as $contractRule => [$value]) {
-                $arguments[] = "{$contractRule}: " . self::numberLiteral((string) $value);
+                if ($contractRule !== 'multipleOf') {
+                    $arguments[] = "{$contractRule}: " . self::numberLiteral((string) $value);
+                } elseif ($integerStep !== null) {
+                    $arguments[] = "multipleOf: {$integerStep}";
+                }
             }
             $this->rules[$key][] = $this->construct('NumberRule', $arguments);
 
