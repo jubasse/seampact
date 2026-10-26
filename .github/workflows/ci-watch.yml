@@ -36,6 +36,8 @@ on:
     branches: [develop]
 
 permissions:
+  # Lists the failed jobs of the run it reports.
+  actions: read
   issues: write
 
 jobs:
