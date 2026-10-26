@@ -25,6 +25,7 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
     private static final String ITEMS = "items";
     private static final String TOTAL = "total";
     private static final String PAGE_SHAPE = "page";
+    private static final String ITEM_SHAPE = "item";
     private static final String EMPTY_SHAPE = "empty";
     private static final int NO_CONTENT = 204;
 
@@ -73,14 +74,15 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
         JsonNode response = exchange.route().response(status);
         CheckingResponse checking = exchange.response;
 
-        // A null body is the format's null, as on the PHP and Node targets: its schema decides whether it may be null.
+        // A null item is the format's null, as on the PHP and Node targets: its schema decides whether it may be null.
         if (hasBody(response, status)) {
-            boolean isPage = PAGE_SHAPE.equals(response.path("shape").asString());
-            if (isPage && bodyValue == null) {
-                exchange.violation = Optional.of("the handler returned a null page");
+            String shape = response.path("shape").asString();
+            if (bodyValue == null && !ITEM_SHAPE.equals(shape)) {
+                exchange.violation = Optional.of("the handler returned a null " + shape);
                 return;
             }
 
+            boolean isPage = PAGE_SHAPE.equals(shape);
             JsonNode handlerBody = bodyValue == null
                     ? NullNode.getInstance()
                     : boundary.mapper().valueToTree(isPage ? boundary.binding().pageFacts(bodyValue) : bodyValue);

@@ -3,6 +3,7 @@ package com.example.tasks.api.spring.runtime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.example.tasks.api.HealthResult;
+import com.example.tasks.api.ListTasksResult;
 import com.example.tasks.api.spring.TasksContractTable;
 import com.example.tasks.api.spring.TasksSeampactBinding;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,18 +20,19 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 /** The reply a handler's success arm gets on the golden 'tasks' api (ADR 0022 "The reply path"). */
 class ContractReplyHandlerTest {
     private static final String HEALTH_PATH = "/v1/health";
+    private static final String TASKS_PATH = "/v1/channels/c1/tasks";
     private static final String BODY_VALIDATION = "seampact.tasks.body-validation";
     private static final int OK = 200;
     private static final int INTERNAL_ERROR = 500;
 
-    private static MockHttpServletResponse answerHealth(Environment environment, HealthResult result) throws Exception {
+    private static MockHttpServletResponse answer(Environment environment, String path, Object result) throws Exception {
         StaticListableBeanFactory beans = new StaticListableBeanFactory();
         UnexpectedErrorListener ignoreFailures = failure -> { };
         beans.addBean("unexpectedFailures", ignoreFailures);
         SeampactBoundary boundary = new SeampactBoundary(TasksContractTable.json(), new TasksSeampactBinding(), beans, environment);
 
         MockHttpServletResponse response = new MockHttpServletResponse();
-        new BoundaryFilter(boundary).doFilter(new MockHttpServletRequest("GET", HEALTH_PATH), response, (request, reply) ->
+        new BoundaryFilter(boundary).doFilter(new MockHttpServletRequest("GET", path), response, (request, reply) ->
                 new ContractReplyHandler(boundary).handleReturnValue(result, null, new ModelAndViewContainer(),
                         new ServletWebRequest((HttpServletRequest) request, (HttpServletResponse) reply)));
 
@@ -39,7 +41,7 @@ class ContractReplyHandlerTest {
 
     @Test
     void aNullBodyAnswersTheBareFormatsNull() throws Exception {
-        MockHttpServletResponse response = answerHealth(new MockEnvironment(), new HealthResult.Status200(null));
+        MockHttpServletResponse response = answer(new MockEnvironment(), HEALTH_PATH, new HealthResult.Status200(null));
 
         assertEquals(OK, response.getStatus());
         assertEquals("null", response.getContentAsString());
@@ -48,7 +50,14 @@ class ContractReplyHandlerTest {
 
     @Test
     void aNullBodyThatBreaksItsSchemaIsAViolationUnderBodyValidation() throws Exception {
-        MockHttpServletResponse response = answerHealth(new MockEnvironment().withProperty(BODY_VALIDATION, "true"), new HealthResult.Status200(null));
+        MockHttpServletResponse response = answer(new MockEnvironment().withProperty(BODY_VALIDATION, "true"), HEALTH_PATH, new HealthResult.Status200(null));
+
+        assertEquals(INTERNAL_ERROR, response.getStatus());
+    }
+
+    @Test
+    void aNullPageIsAViolation() throws Exception {
+        MockHttpServletResponse response = answer(new MockEnvironment(), TASKS_PATH, new ListTasksResult.Status200(null));
 
         assertEquals(INTERNAL_ERROR, response.getStatus());
     }
