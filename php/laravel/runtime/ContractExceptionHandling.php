@@ -12,7 +12,7 @@ use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\ContractRefusal;
 
 /**
- * What the api asks of Laravel's exception handler: a contract refusal is an answer, never reported, and an
+ * What the api asks of Laravel's exception handler: a contract refusal and a replayed reply are answers, never reported, and an
  * `AuthenticationException` on a contract route renders a bare 401, which the boundary maps to `unauthenticated`,
  * where Laravel would redirect a browser `Accept` to `login`, or answer 500 when no such route exists. A handler
  * other than Laravel's own, without these methods, is left as is.
@@ -28,7 +28,7 @@ final class ContractExceptionHandling
     public static function register(ExceptionHandler $handler, string $api): void
     {
         if (method_exists($handler, 'dontReport')) {
-            $handler->dontReport(ContractRefusal::class);
+            $handler->dontReport([ContractRefusal::class, ReplayedReply::class]);
         }
 
         if (method_exists($handler, 'renderable')) {

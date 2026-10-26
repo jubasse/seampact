@@ -29,6 +29,7 @@ final readonly class RequirementCall implements RequirementRequest
         private Purpose $purpose,
         private OperationRef $operation,
         private RequestView $request,
+        private ?ThrottleBucket $bucket = null,
     ) {
     }
 
@@ -69,7 +70,7 @@ final readonly class RequirementCall implements RequirementRequest
 
     public function bucket(): ?ThrottleBucket
     {
-        return null;
+        return $this->bucket;
     }
 
     public function purpose(): Purpose

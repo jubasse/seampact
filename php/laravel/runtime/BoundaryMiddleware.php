@@ -13,6 +13,7 @@ use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Codegen\Runtime\ContractRefusal;
 use Seampact\Codegen\Runtime\RawTarget;
+use Seampact\Codegen\Runtime\IdempotencyStep;
 use Seampact\Codegen\Runtime\ReplyVerdict;
 use Seampact\Codegen\Runtime\RouteMatch;
 use Seampact\Hooks\RequestView;
@@ -86,7 +87,10 @@ abstract class BoundaryMiddleware
             return ReplyVerdict::internalError($this->hooks(), $contract, $operationId, 'the request failed before a reply was written', $failure);
         }
 
-        return $this->checked($request, $state, $response);
+        $checked = $this->checked($request, $state, $response);
+        IdempotencyStep::settle($state, $checked);
+
+        return $checked;
     }
 
     private function checked(Request $request, BoundaryState $state, Response $response): Response

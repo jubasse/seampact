@@ -407,6 +407,15 @@ final class TasksContract
                 'origin' => ['layer' => 'shared', 'pointer' => '/rules/throttle'],
             ],
         ],
+        'buckets' => [
+            'write' => [
+                'id' => 'write',
+                'key' => [['in' => 'principal', 'name' => 'userId']],
+                'limit' => 60,
+                'windowMs' => 60000,
+                'origin' => ['layer' => 'shared', 'pointer' => '/buckets/write'],
+            ],
+        ],
         'schemas' => [
             'ApiEmptyBody' => [
                 'kind' => 'object',

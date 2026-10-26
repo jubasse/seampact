@@ -13,6 +13,7 @@ final readonly class PurgeTaskInput
 {
     public function __construct(
         public PurgeTaskPath $path,
+        public PurgeTaskHeaders $headers,
         public ApiEmptyBody $body,
     ) {
     }

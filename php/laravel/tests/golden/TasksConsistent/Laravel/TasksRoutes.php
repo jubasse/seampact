@@ -52,6 +52,14 @@ final class TasksRoutes
             'action' => [DraftsEndpoints::class, 'getDraft'],
         ],
         [
+            'operation' => 'createTask',
+            'method' => 'POST',
+            'uri' => '/v1/channels/{p1}/tasks',
+            'name' => 'seampact.tasks.createTask',
+            'access' => 'identity',
+            'action' => [TasksEndpoints::class, 'createTask'],
+        ],
+        [
             'operation' => 'getTasksBatch',
             'method' => 'POST',
             'uri' => '/v1/channels/{p1}/tasks/batch',

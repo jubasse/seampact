@@ -23,7 +23,6 @@ final class GoldenTest extends TestCase
 {
     private const GOLDEN_DIRECTORY = __DIR__ . '/golden';
     private const UPDATE_VARIABLE = 'SEAMPACT_UPDATE_GOLDEN';
-    private const IDEMPOTENCY_KEY = 'Idempotency-Key';
 
     public function testTheGeneratedTreeIsTheCommittedGolden(): void
     {
@@ -58,26 +57,7 @@ final class GoldenTest extends TestCase
 
     private static function withAccessOperations(): \stdClass
     {
-        $document = ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), [...ReferenceContract::CORE_OPERATIONS, 'updateTask', 'purgeTask']);
-        foreach (is_array($document->operations) ? $document->operations : [] as $operation) {
-            self::assertInstanceOf(\stdClass::class, $operation);
-            if (in_array($operation->id, ReferenceContract::CORE_OPERATIONS, true)) {
-                continue;
-            }
-            unset($operation->idempotency, $operation->concurrency);
-            $params = $operation->params;
-            self::assertInstanceOf(\stdClass::class, $params);
-            $params->header = array_values(array_filter(
-                is_array($params->header ?? null) ? $params->header : [],
-                static fn (mixed $param): bool => $param instanceof \stdClass && $param->name !== self::IDEMPOTENCY_KEY,
-            ));
-            foreach (is_array($operation->responses) ? $operation->responses : [] as $response) {
-                self::assertInstanceOf(\stdClass::class, $response);
-                $response->headers = [];
-            }
-        }
-
-        return $document;
+        return ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), [...ReferenceContract::CORE_OPERATIONS, 'createTask', 'updateTask', 'purgeTask']);
     }
 
     public function testTheFullReferenceContractIsRefusedFormByForm(): void
@@ -93,8 +73,8 @@ final class GoldenTest extends TestCase
 
             self::assertSame(
                 [
-                    'access.signed.unsupported', 'cache.unsupported', 'deadline.unsupported', 'error.retryHeader.unsupported', 'idempotency.unsupported',
-                    'input.rawBody.unsupported', 'paging.unsupported', 'param.query.structured.unsupported', 'response.header.unsupported', 'response.shape.unsupported', 'throttle.unsupported', 'type.opaque.unsupported',
+                    'access.signed.unsupported', 'cache.unsupported', 'deadline.unsupported', 'input.rawBody.unsupported', 'paging.unsupported',
+                    'param.query.structured.unsupported', 'response.shape.unsupported', 'type.opaque.unsupported',
                 ],
                 $codes,
             );

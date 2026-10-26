@@ -78,7 +78,10 @@ abstract class BoundaryMiddleware
             return ReplyVerdict::internalError($this->hooks(), $contract, $operationId, 'the request failed before a reply was written', $failure);
         }
 
-        return $this->checked($request, $state, $response);
+        $checked = $this->checked($request, $state, $response);
+        IdempotencyStep::settle($state, $checked);
+
+        return $checked;
     }
 
     private function checked(Request $request, BoundaryState $state, Response $response): Response

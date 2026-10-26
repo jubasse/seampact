@@ -89,6 +89,10 @@ final class PurgeTaskRequest extends FormRequest
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
                 new FormatRule($input, Position::Member, FormatRule::UUID, BlankStrings::Every),
             ],
+            'headers.Idempotency-Key' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
+            ],
             'query' => [
                 new UnknownKeysRule($input, Position::Member, []),
             ],

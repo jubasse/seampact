@@ -12,6 +12,7 @@ use Seampact\Hooks\RequirementKind;
 use Seampact\Hooks\ScopeIdSource;
 use Seampact\Hooks\ScopeResolution;
 use Seampact\Hooks\SubjectRef;
+use Seampact\Hooks\ThrottleBucket;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -256,6 +257,7 @@ final class AccessSteps
                 new Purpose\Route(),
                 self::operationRef($state),
                 $state->view,
+                self::throttleBucket($state, Ir::string($requirement, 'bucket')),
             );
 
             $decision = self::decide($state, $call);
@@ -315,6 +317,64 @@ final class AccessSteps
         }
 
         return $value;
+    }
+
+    /**
+     * The bucket a throttle rule counts in: its key is the SHA-256 hex of `[api, bucket, values]` as the Node and
+     * Spring targets write it, so a counter shared across targets counts one client once.
+     */
+    private static function throttleBucket(BoundaryState $state, ?string $bucketId): ?ThrottleBucket
+    {
+        if ($bucketId === null) {
+            return null;
+        }
+
+        $bucket = $state->contract->declaration('buckets', $bucketId);
+        $values = [];
+        foreach (Ir::maps($bucket, 'key') as $source) {
+            $values[] = self::bucketKeyValue($state, $source);
+        }
+
+        return new ThrottleBucket($bucketId, Digests::hexOf([$state->contract->api, $bucketId, $values]), $values, Ir::int($bucket, 'limit'), Ir::int($bucket, 'windowMs'));
+    }
+
+    /**
+     * A key value: a path param decoded and checked by its type, a resolved scope's id, a principal member.
+     *
+     * @param array<array-key, mixed> $source
+     */
+    private static function bucketKeyValue(BoundaryState $state, array $source): mixed
+    {
+        $name = Ir::string($source, 'name') ?? '';
+
+        return match (Ir::string($source, 'in')) {
+            'path' => self::pathValue($state, $name, self::pathParamType($state, $name)),
+            'scope' => self::scopeId($state, $name),
+            'principal' => $state->principal === null ? null : (get_object_vars($state->principal)[$name] ?? null),
+            default => throw new \LogicException('seampact: a bucket key read from ' . var_export(Ir::string($source, 'in'), true) . ' is not one the boundary reads.'),
+        };
+    }
+
+    private static function pathParamType(BoundaryState $state, string $name): mixed
+    {
+        foreach (Ir::maps(Ir::map($state->contract->operation($state->operationId), 'params'), 'path') as $param) {
+            if (Ir::string($param, 'name') === $name) {
+                return $param['type'] ?? null;
+            }
+        }
+
+        throw new \LogicException("seampact: the bucket key reads the path param '{$name}', which operation '{$state->operationId}' does not declare.");
+    }
+
+    private static function scopeId(BoundaryState $state, string $scope): mixed
+    {
+        foreach ($state->scopes as $resolved) {
+            if ($resolved->scope === $scope) {
+                return $resolved->id;
+            }
+        }
+
+        return null;
     }
 
     /** @param array<array-key, mixed> $value */

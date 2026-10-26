@@ -15,6 +15,10 @@ final class Replies
 {
     public const JSON_MEDIA = 'application/json';
     public const JSON_FLAGS = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
+    public const CACHE_CONTROL_HEADER = 'Cache-Control';
+    public const NO_STORE_DIRECTIVE = 'no-store';
+    private const SECONDS_UNIT = 's';
+    private const MILLISECONDS_PER_SECOND = 1000;
     private const NULL_ABSENT = 'null';
     private const NO_CONTENT = 204;
 
@@ -43,11 +47,37 @@ final class Replies
         $error = Ir::map($format, 'error');
         $body = Templates::render($error['body'] ?? null, $slots, Ir::string($format, 'absent') === self::NULL_ABSENT);
 
-        return new Response(
+        $reply = new Response(
             json_encode($body->present ? $body->value : new \stdClass(), self::JSON_FLAGS),
             $contract->statusOf($code),
             ['Content-Type' => Ir::string($error, 'media') ?? self::JSON_MEDIA],
         );
+        if ($catalog['noStore'] ?? false) {
+            $reply->headers->set(self::CACHE_CONTROL_HEADER, self::NO_STORE_DIRECTIVE);
+        }
+        if ($operationId !== null) {
+            self::writeRetryHeader($reply, $contract->errorDeclaration($operationId, $code), $params);
+        }
+
+        return $reply;
+    }
+
+    /**
+     * The delay param of a refusal, in integer milliseconds, written in its retry header's unit (`Retry-After`).
+     *
+     * @param array<array-key, mixed> $declared
+     */
+    private static function writeRetryHeader(Response $reply, array $declared, ?\stdClass $params): void
+    {
+        $retryHeader = Ir::map($declared, 'retryHeader');
+        $name = Ir::string($retryHeader, 'name');
+        $delayMs = $params->{Ir::string($retryHeader, 'param') ?? ''} ?? null;
+        if ($name === null || !is_int($delayMs) && !is_float($delayMs)) {
+            return;
+        }
+
+        $value = Ir::string($retryHeader, 'unit') === self::SECONDS_UNIT ? (int) ceil($delayMs / self::MILLISECONDS_PER_SECOND) : (int) $delayMs;
+        $reply->headers->set($name, (string) $value);
     }
 
     /**

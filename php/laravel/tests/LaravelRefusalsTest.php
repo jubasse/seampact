@@ -59,34 +59,6 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused['response.shape.unsupported'] ?? '');
     }
 
-    public function testAThrottleIsRefusedByItsOwnName(): void
-    {
-        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
-            $operation->requires = [(object) [
-                'bucket' => 'write',
-                'entry' => 'writeThrottle',
-                'kind' => 'rule',
-                'origin' => (object) ['layer' => 'api', 'pointer' => '/surfaces/app/requires/0'],
-                'rule' => 'throttle',
-            ]];
-        });
-
-        self::assertStringContainsString('laravel-3 generates it', self::refused($document)['throttle.unsupported'] ?? '');
-    }
-
-    public function testAnErrorThatForbidsCachingWaitsForLaravel3(): void
-    {
-        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
-            $errors = $document->errors;
-            self::assertInstanceOf(\stdClass::class, $errors);
-            $notFound = $errors->{'api.not_found'};
-            self::assertInstanceOf(\stdClass::class, $notFound);
-            $notFound->noStore = true;
-        });
-
-        self::assertStringContainsString('laravel-3 generates it', self::refused($document)['error.noStore.unsupported'] ?? '');
-    }
-
     public function testAnIntegerStepBeyondThePhpIntRangeIsRefusedByName(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {

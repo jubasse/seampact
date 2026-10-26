@@ -42,10 +42,24 @@ final class FormSteps
         return AccessSteps::schemaInvalid($state, array_slice(self::unique($issues), 0, self::MAX_RENDERED_ISSUES));
     }
 
-    /** Step 7, then the typed input of the operation. */
+    /**
+     * Step 7, the typed input of the operation, then the idempotency claim: a replayed reply is thrown, so the handler
+     * never runs.
+     *
+     * @throws ReplayedReply
+     */
     public static function passed(Request $request, string $api): object
     {
-        return TypedInput::build(BoundaryState::required($request, $api), InputTree::of($request, $api)->parts());
+        $state = BoundaryState::required($request, $api);
+        $parts = InputTree::of($request, $api)->parts();
+        $input = TypedInput::build($state, $parts);
+
+        $replayed = IdempotencyStep::begin($state, $parts);
+        if ($replayed !== null) {
+            throw new ReplayedReply($replayed);
+        }
+
+        return $input;
     }
 
     /** @param array<string, array<string, string>> $nativeRuleNames */

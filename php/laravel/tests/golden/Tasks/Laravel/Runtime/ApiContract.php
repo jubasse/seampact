@@ -188,6 +188,18 @@ final class ApiContract
         return null;
     }
 
+    /** @return array<array-key, mixed> the operation's entry for `$code` (its roles and retry header), empty when it declares none */
+    public function errorDeclaration(string $operationId, string $code): array
+    {
+        foreach (Ir::maps($this->operation($operationId), 'errors') as $error) {
+            if (Ir::string($error, 'code') === $code) {
+                return $error;
+            }
+        }
+
+        return [];
+    }
+
     public function declares(string $operationId, string $code): bool
     {
         foreach (Ir::maps($this->operation($operationId), 'errors') as $error) {

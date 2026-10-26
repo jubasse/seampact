@@ -407,6 +407,15 @@ final class TasksContract
                 'origin' => ['layer' => 'shared', 'pointer' => '/rules/throttle'],
             ],
         ],
+        'buckets' => [
+            'write' => [
+                'id' => 'write',
+                'key' => [['in' => 'principal', 'name' => 'userId']],
+                'limit' => 60,
+                'windowMs' => 60000,
+                'origin' => ['layer' => 'shared', 'pointer' => '/buckets/write'],
+            ],
+        ],
         'schemas' => [
             'ApiEmptyBody' => [
                 'kind' => 'object',
@@ -1348,6 +1357,409 @@ final class TasksContract
         'operations' => [
             [
                 'kind' => 'httpOperation',
+                'id' => 'createTask',
+                'name' => ['segments' => ['create', 'task'], 'role' => 'operation'],
+                'surface' => 'app',
+                'op' => 'create',
+                'resource' => ['type' => 'tasks', 'idProperty' => 'taskId'],
+                'features' => [],
+                'method' => 'post',
+                'path' => '/v1/channels/{channelId}/tasks',
+                'safe' => false,
+                'params' => [
+                    'path' => [
+                        [
+                            'name' => 'channelId',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'format' => 'uuid', 'refinements' => []],
+                            'required' => true,
+                            'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/id/channelId'],
+                        ],
+                    ],
+                    'query' => [],
+                    'header' => [
+                        [
+                            'name' => 'Authorization',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                            'required' => false,
+                            'derivedFrom' => [
+                                'derivation' => 'identity.authenticate',
+                                'from' => [
+                                    ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                                    ['layer' => 'shared', 'pointer' => '/schemes/bearer'],
+                                ],
+                            ],
+                        ],
+                        [
+                            'name' => 'X-Csrf-Token',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                            'required' => false,
+                            'derivedFrom' => [
+                                'derivation' => 'csrf.cookieWrite',
+                                'from' => [
+                                    ['layer' => 'shared', 'pointer' => '/identities/user'],
+                                    ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+                                ],
+                            ],
+                        ],
+                        [
+                            'name' => 'Idempotency-Key',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                            'required' => true,
+                            'derivedFrom' => [
+                                'derivation' => 'idempotency.write',
+                                'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                            ],
+                        ],
+                    ],
+                ],
+                'unknownQuery' => ['policy' => 'refuse'],
+                'access' => [
+                    'kind' => 'identity',
+                    'identity' => 'user',
+                    'schemes' => ['bearer', 'sessionCookie'],
+                    'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                ],
+                'callerKinds' => ['identified'],
+                'principalRequires' => [],
+                'scopes' => [
+                    [
+                        'scope' => 'channel',
+                        'source' => ['in' => 'path', 'name' => 'channelId'],
+                        'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+                    ],
+                ],
+                'requires' => [
+                    [
+                        'kind' => 'rule',
+                        'rule' => 'throttle',
+                        'bucket' => 'write',
+                        'entry' => 'writeThrottle',
+                        'origin' => [
+                            'layer' => 'api',
+                            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0',
+                        ],
+                    ],
+                    [
+                        'kind' => 'right',
+                        'right' => 'roles',
+                        'params' => ['allowed' => ['owner', 'editor']],
+                        'subject' => ['source' => ['in' => 'scope', 'name' => 'channel'], 'defaulted' => true],
+                        'entry' => 'channelEditor',
+                        'origin' => [
+                            'layer' => 'api',
+                            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/1',
+                        ],
+                    ],
+                ],
+                'bindings' => [],
+                'input' => [
+                    'media' => 'application/json',
+                    'schema' => ['kind' => 'ref', 'schema' => 'CreateTask'],
+                    'bodyLimitBytes' => 1048576,
+                    'rawBody' => false,
+                    'origin' => [
+                        'layer' => 'api',
+                        'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/input',
+                    ],
+                ],
+                'responses' => [
+                    [
+                        'status' => 201,
+                        'media' => 'application/json',
+                        'body' => ['kind' => 'ref', 'schema' => 'Task'],
+                        'shape' => 'item',
+                        'headers' => [
+                            [
+                                'name' => 'Idempotency-Replayed',
+                                'type' => ['kind' => 'scalar', 'type' => 'boolean', 'refinements' => []],
+                                'required' => false,
+                                'derivedFrom' => [
+                                    'derivation' => 'idempotency.write',
+                                    'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                                ],
+                            ],
+                        ],
+                        'origin' => [
+                            'layer' => 'api',
+                            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/item',
+                        ],
+                        'derivedFrom' => [
+                            'derivation' => 'response.format',
+                            'from' => [['layer' => 'core', 'pointer' => '/formats/bare']],
+                        ],
+                    ],
+                ],
+                'errors' => [
+                    [
+                        'code' => 'api.schema_invalid',
+                        'roles' => [
+                            [
+                                'role' => 'schemaInvalid',
+                                'params' => [
+                                    'kind' => 'object',
+                                    'members' => [
+                                        [
+                                            'name' => ['kind' => 'text', 'text' => 'issues'],
+                                            'value' => [
+                                                'kind' => 'each',
+                                                'of' => 'issues',
+                                                'as' => [
+                                                    'kind' => 'object',
+                                                    'members' => [
+                                                        [
+                                                            'name' => ['kind' => 'text', 'text' => 'pointer'],
+                                                            'value' => [
+                                                                'kind' => 'slot',
+                                                                'slot' => 'item',
+                                                                'path' => ['pointer'],
+                                                            ],
+                                                        ],
+                                                        [
+                                                            'name' => ['kind' => 'text', 'text' => 'rule'],
+                                                            'value' => [
+                                                                'kind' => 'slot',
+                                                                'slot' => 'item',
+                                                                'path' => ['rule'],
+                                                            ],
+                                                        ],
+                                                    ],
+                                                ],
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'derivedFrom' => [
+                            'derivation' => 'input.invalid',
+                            'from' => [
+                                ['layer' => 'shared', 'pointer' => '/conventions/idempotency'],
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create',
+                                ],
+                                ['layer' => 'shared', 'pointer' => '/conventions/errors/derived/schemaInvalid'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.unauthenticated',
+                        'roles' => [['role' => 'unauthenticated']],
+                        'derivedFrom' => [
+                            'derivation' => 'identity.authenticate',
+                            'from' => [['layer' => 'api', 'pointer' => '/surfaces/app/identity']],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.csrf_invalid',
+                        'roles' => [['role' => 'csrfInvalid']],
+                        'derivedFrom' => [
+                            'derivation' => 'csrf.cookieWrite',
+                            'from' => [
+                                ['layer' => 'shared', 'pointer' => '/identities/user'],
+                                ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.forbidden',
+                        'roles' => [
+                            [
+                                'role' => 'forbidden',
+                                'params' => [
+                                    'kind' => 'object',
+                                    'members' => [
+                                        [
+                                            'name' => ['kind' => 'text', 'text' => 'pointer'],
+                                            'value' => ['kind' => 'slot', 'slot' => 'pointer', 'path' => []],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'derivedFrom' => [
+                            'derivation' => 'requirement.errors',
+                            'from' => [
+                                ['layer' => 'api', 'pointer' => '/schemas/CreateTask/properties/effort/restrictedTo'],
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/1',
+                                ],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.not_found',
+                        'derivedFrom' => [
+                            'derivation' => 'scope.errors',
+                            'from' => [
+                                ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.idempotency_in_progress',
+                        'roles' => [['role' => 'idempotencyInProgress']],
+                        'derivedFrom' => [
+                            'derivation' => 'idempotency.write',
+                            'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.payload_too_large',
+                        'roles' => [
+                            [
+                                'role' => 'payloadTooLarge',
+                                'params' => [
+                                    'kind' => 'object',
+                                    'members' => [
+                                        [
+                                            'name' => ['kind' => 'text', 'text' => 'limitBytes'],
+                                            'value' => ['kind' => 'slot', 'slot' => 'limitBytes', 'path' => []],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'derivedFrom' => [
+                            'derivation' => 'body.limit',
+                            'from' => [
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/input',
+                                ],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.unsupported_media_type',
+                        'roles' => [['role' => 'unsupportedMediaType']],
+                        'derivedFrom' => [
+                            'derivation' => 'body.media',
+                            'from' => [
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/input',
+                                ],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.idempotency_key_reused',
+                        'roles' => [['role' => 'idempotencyKeyReused']],
+                        'derivedFrom' => [
+                            'derivation' => 'idempotency.write',
+                            'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.rate_limited',
+                        'retryHeader' => [
+                            'name' => 'Retry-After',
+                            'param' => 'retryAfterMs',
+                            'unit' => 's',
+                            'derivedFrom' => [
+                                'derivation' => 'rule.bucket',
+                                'from' => [
+                                    [
+                                        'layer' => 'api',
+                                        'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0',
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'derivedFrom' => [
+                            'derivation' => 'requirement.errors',
+                            'from' => [
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0',
+                                ],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.internal',
+                        'roles' => [['role' => 'undeclaredStatus']],
+                        'derivedFrom' => [
+                            'derivation' => 'response.undeclared',
+                            'from' => [
+                                ['layer' => 'shared', 'pointer' => '/conventions/errors/every/0'],
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+                'fieldRights' => [
+                    [
+                        'schema' => 'CreateTask',
+                        'pointer' => '/effort',
+                        'right' => 'roles',
+                        'params' => ['allowed' => ['owner']],
+                        'subject' => ['source' => ['in' => 'scope', 'name' => 'channel']],
+                        'direction' => 'input',
+                        'inputPolicy' => 'reject',
+                        'derivedFrom' => [
+                            'derivation' => 'fieldRight.restricted',
+                            'from' => [
+                                ['layer' => 'api', 'pointer' => '/schemas/CreateTask/properties/effort/restrictedTo'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'schema' => 'Task',
+                        'pointer' => '/effort',
+                        'right' => 'tasks.seeEffort',
+                        'subject' => ['source' => ['in' => 'holderField', 'name' => 'taskId']],
+                        'direction' => 'output',
+                        'derivedFrom' => [
+                            'derivation' => 'fieldRight.restricted',
+                            'from' => [['layer' => 'shared', 'pointer' => '/schemas/Task/properties/effort/restrictedTo']],
+                        ],
+                    ],
+                ],
+                'idempotency' => [
+                    'kind' => 'derived',
+                    'header' => 'Idempotency-Key',
+                    'replayHeader' => 'Idempotency-Replayed',
+                    'lifetimeMs' => 86400000,
+                    'required' => true,
+                    'enforce' => 'boundary',
+                    'derivedFrom' => [
+                        'derivation' => 'idempotency.write',
+                        'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                    ],
+                ],
+                'upstream' => [],
+                'maturity' => [
+                    'level' => 'provisional',
+                    'source' => 'api',
+                    'origin' => ['layer' => 'api', 'pointer' => '/api/maturity'],
+                ],
+                'internal' => false,
+                'csrf' => [
+                    'kind' => 'derived',
+                    'header' => 'X-Csrf-Token',
+                    'derivedFrom' => [
+                        'derivation' => 'csrf.cookieWrite',
+                        'from' => [
+                            ['layer' => 'shared', 'pointer' => '/identities/user'],
+                            ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+                        ],
+                    ],
+                ],
+                'format' => 'bare',
+                'tags' => [],
+                'examples' => [],
+                'docs' => [],
+                'extensions' => [],
+                'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create'],
+            ],
+            [
+                'kind' => 'httpOperation',
                 'id' => 'getChannel',
                 'name' => ['segments' => ['get', 'channel'], 'role' => 'operation'],
                 'surface' => 'app',
@@ -2261,6 +2673,15 @@ final class TasksContract
                                 ],
                             ],
                         ],
+                        [
+                            'name' => 'Idempotency-Key',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                            'required' => true,
+                            'derivedFrom' => [
+                                'derivation' => 'idempotency.write',
+                                'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                            ],
+                        ],
                     ],
                 ],
                 'unknownQuery' => ['policy' => 'refuse'],
@@ -2325,7 +2746,17 @@ final class TasksContract
                     [
                         'status' => 204,
                         'shape' => 'empty',
-                        'headers' => [],
+                        'headers' => [
+                            [
+                                'name' => 'Idempotency-Replayed',
+                                'type' => ['kind' => 'scalar', 'type' => 'boolean', 'refinements' => []],
+                                'required' => false,
+                                'derivedFrom' => [
+                                    'derivation' => 'idempotency.write',
+                                    'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                                ],
+                            ],
+                        ],
                         'origin' => [
                             'layer' => 'api',
                             'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/responses/204',
@@ -2505,6 +2936,18 @@ final class TasksContract
                     ],
                 ],
                 'fieldRights' => [],
+                'idempotency' => [
+                    'kind' => 'derived',
+                    'header' => 'Idempotency-Key',
+                    'replayHeader' => 'Idempotency-Replayed',
+                    'lifetimeMs' => 86400000,
+                    'required' => true,
+                    'enforce' => 'boundary',
+                    'derivedFrom' => [
+                        'derivation' => 'idempotency.write',
+                        'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                    ],
+                ],
                 'upstream' => [],
                 'maturity' => [
                     'level' => 'provisional',
@@ -2588,6 +3031,15 @@ final class TasksContract
                                 ],
                             ],
                         ],
+                        [
+                            'name' => 'Idempotency-Key',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                            'required' => true,
+                            'derivedFrom' => [
+                                'derivation' => 'idempotency.write',
+                                'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                            ],
+                        ],
                     ],
                 ],
                 'unknownQuery' => ['policy' => 'refuse'],
@@ -2634,7 +3086,17 @@ final class TasksContract
                         'media' => 'application/json',
                         'body' => ['kind' => 'ref', 'schema' => 'Task'],
                         'shape' => 'item',
-                        'headers' => [],
+                        'headers' => [
+                            [
+                                'name' => 'Idempotency-Replayed',
+                                'type' => ['kind' => 'scalar', 'type' => 'boolean', 'refinements' => []],
+                                'required' => false,
+                                'derivedFrom' => [
+                                    'derivation' => 'idempotency.write',
+                                    'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                                ],
+                            ],
+                        ],
                         'origin' => [
                             'layer' => 'api',
                             'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/item',
@@ -2870,6 +3332,31 @@ final class TasksContract
                         ],
                     ],
                 ],
+                'idempotency' => [
+                    'kind' => 'derived',
+                    'header' => 'Idempotency-Key',
+                    'replayHeader' => 'Idempotency-Replayed',
+                    'lifetimeMs' => 86400000,
+                    'required' => true,
+                    'enforce' => 'boundary',
+                    'derivedFrom' => [
+                        'derivation' => 'idempotency.write',
+                        'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                    ],
+                ],
+                'concurrency' => [
+                    'version' => ['in' => 'body', 'name' => 'expectedVersion'],
+                    'field' => 'version',
+                    'derivedFrom' => [
+                        'derivation' => 'concurrency.version',
+                        'from' => [
+                            [
+                                'layer' => 'api',
+                                'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/concurrency',
+                            ],
+                        ],
+                    ],
+                ],
                 'upstream' => [],
                 'maturity' => [
                     'level' => 'provisional',
@@ -2910,6 +3397,10 @@ final class TasksContract
                 'class' => 'Seampact\Golden\TasksConsistent\Schemas\ApiPayloadTooLargeParams',
                 'members' => ['limitBytes' => 'limitBytes'],
             ],
+            'ApiRateLimitedParams' => [
+                'class' => 'Seampact\Golden\TasksConsistent\Schemas\ApiRateLimitedParams',
+                'members' => ['retryAfterMs' => 'retryAfterMs'],
+            ],
             'ApiSchemaInvalidParams' => [
                 'class' => 'Seampact\Golden\TasksConsistent\Schemas\ApiSchemaInvalidParams',
                 'members' => ['issues' => 'issues'],
@@ -2917,6 +3408,10 @@ final class TasksContract
             'Channel' => [
                 'class' => 'Seampact\Golden\TasksConsistent\Schemas\Channel',
                 'members' => ['channelId' => 'channelId', 'name' => 'name'],
+            ],
+            'CreateTask' => [
+                'class' => 'Seampact\Golden\TasksConsistent\Schemas\CreateTask',
+                'members' => ['title' => 'title', 'effort' => 'effort'],
             ],
             'Draft' => [
                 'class' => 'Seampact\Golden\TasksConsistent\Schemas\Draft',
@@ -2954,6 +3449,22 @@ final class TasksContract
         ],
         'enums' => ['TaskState' => 'Seampact\Golden\TasksConsistent\Schemas\TaskState'],
         'operations' => [
+            'createTask' => [
+                'input' => 'Seampact\Golden\TasksConsistent\CreateTaskInput',
+                'parts' => [
+                    'path' => [
+                        'class' => 'Seampact\Golden\TasksConsistent\CreateTaskPath',
+                        'members' => ['channelId' => 'channelId'],
+                    ],
+                    'headers' => [
+                        'class' => 'Seampact\Golden\TasksConsistent\CreateTaskHeaders',
+                        'members' => ['Idempotency-Key' => 'idempotencyKey'],
+                    ],
+                ],
+                'responses' => [201 => 'Seampact\Golden\TasksConsistent\CreateTaskResponse201'],
+                'errors' => 'Seampact\Golden\TasksConsistent\CreateTaskErrors',
+                'request' => 'Seampact\Golden\TasksConsistent\Laravel\CreateTaskRequest',
+            ],
             'getChannel' => [
                 'input' => 'Seampact\Golden\TasksConsistent\GetChannelInput',
                 'parts' => [
@@ -3016,6 +3527,10 @@ final class TasksContract
                         'class' => 'Seampact\Golden\TasksConsistent\PurgeTaskPath',
                         'members' => ['channelId' => 'channelId', 'taskId' => 'taskId'],
                     ],
+                    'headers' => [
+                        'class' => 'Seampact\Golden\TasksConsistent\PurgeTaskHeaders',
+                        'members' => ['Idempotency-Key' => 'idempotencyKey'],
+                    ],
                 ],
                 'responses' => [204 => 'Seampact\Golden\TasksConsistent\PurgeTaskResponse204'],
                 'errors' => 'Seampact\Golden\TasksConsistent\PurgeTaskErrors',
@@ -3027,6 +3542,10 @@ final class TasksContract
                     'path' => [
                         'class' => 'Seampact\Golden\TasksConsistent\UpdateTaskPath',
                         'members' => ['channelId' => 'channelId', 'taskId' => 'taskId'],
+                    ],
+                    'headers' => [
+                        'class' => 'Seampact\Golden\TasksConsistent\UpdateTaskHeaders',
+                        'members' => ['Idempotency-Key' => 'idempotencyKey'],
                     ],
                 ],
                 'responses' => [200 => 'Seampact\Golden\TasksConsistent\UpdateTaskResponse200'],
