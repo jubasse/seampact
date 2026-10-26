@@ -45,7 +45,6 @@ class StructuralValidatorNumbersTest {
         assertEquals(issue("type"), issuesOf("1e400", opaque));
         assertEquals(issue("type"), issuesOf("{\"a\": [1, {\"b\": -1e400}]}", opaque));
         assertEquals(List.of(), issuesOf("{\"a\": [1e300, null, \"x\"]}", opaque));
-        assertEquals(List.of(), issuesOf("null", opaque));
     }
 
     @Test

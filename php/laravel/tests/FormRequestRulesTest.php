@@ -140,6 +140,13 @@ final class FormRequestRulesTest extends TestCase
         self::assertSame([['body', '/payload', 'type']], $this->issuesOfJson('{"ids":[],"payload":{"deep":[1e400]}}'));
     }
 
+    public function testAnOpaqueValueTakesNullOnlyWhenNullable(): void
+    {
+        self::assertSame([['body', '/payload', 'type']], $this->issuesOfJson('{"ids":[],"payload":null}'));
+        self::assertSame([['body', '/payload', 'type']], $this->issuesOfJson('{"ids":[],"payload":null}', self::CONSISTENT_NAMESPACE));
+        self::assertSame([], $this->issuesOfJson('{"ids":[],"nullablePayload":null}'));
+    }
+
     public function testAMultipleOfIsCheckedExactly(): void
     {
         self::assertSame([], $this->issuesOfJson('{"ids":[],"step":9}', self::CONSISTENT_NAMESPACE));
@@ -285,6 +292,7 @@ final class FormRequestRulesTest extends TestCase
             ['step', true, false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['multipleOf' => '3']]],
             ['halfStep', true, false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['multipleOf' => '2.5']]],
             ['payload', true, false, ['kind' => 'opaque', 'reason' => 'any webhook payload', 'origin' => ['layer' => 'api', 'pointer' => '/schemas/GetTasksBatchInput/properties/payload']]],
+            ['nullablePayload', true, true, ['kind' => 'opaque', 'reason' => 'any webhook payload', 'origin' => ['layer' => 'api', 'pointer' => '/schemas/GetTasksBatchInput/properties/nullablePayload']]],
         ];
         foreach ($added as [$name, $optional, $nullable, $type]) {
             $property = clone $template;
