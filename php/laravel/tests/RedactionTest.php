@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel\Tests;
 
+use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Providers\FoundationServiceProvider;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\ApiContract;
@@ -12,6 +15,7 @@ use Seampact\Golden\TasksConsistent\Laravel\Runtime\AuthenticateCall;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\DumpRedaction;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\Hooks;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\RedactingDumper;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\SignatureHeader;
 use Seampact\Golden\TasksConsistent\Laravel\TasksContract;
 use Seampact\Golden\TasksConsistent\Laravel\UserCredentials;
@@ -25,6 +29,7 @@ use Seampact\Hooks\SignatureTemplate;
 use Seampact\Hooks\SignedTemplateRequest;
 use Symfony\Component\VarDumper\Cloner\VarCloner;
 use Symfony\Component\VarDumper\Dumper\CliDumper;
+use Symfony\Component\VarDumper\VarDumper;
 
 /**
  * One generated class of each kind ADR 0023 "Redaction" lists, holding a known secret: `var_dump`, `print_r` and the
@@ -75,6 +80,28 @@ final class RedactionTest extends TestCase
         $dumped = (new CliDumper())->dump((new VarCloner())->cloneVar($holder), true);
 
         self::assertRedacted((string) $dumped);
+    }
+
+    public function testLaravelsDumpShowsNoSecretOnceTheProviderInstalledTheCasters(): void
+    {
+        $previousFormat = $_SERVER['VAR_DUMPER_FORMAT'] ?? null;
+        $_SERVER['VAR_DUMPER_FORMAT'] = 'html';
+        $app = new Application(sys_get_temp_dir());
+        $app->instance('config', new Repository(['view' => ['compiled' => sys_get_temp_dir()]]));
+        $app->register(FoundationServiceProvider::class);
+
+        RedactingDumper::install($app, ApiContract::of(TasksContract::class));
+        ob_start();
+        dump(new UserCredentials(self::SECRET, self::SECRET));
+        $dumped = (string) ob_get_clean();
+
+        if ($previousFormat === null) {
+            unset($_SERVER['VAR_DUMPER_FORMAT']);
+        } else {
+            $_SERVER['VAR_DUMPER_FORMAT'] = $previousFormat;
+        }
+        VarDumper::setHandler(null);
+        self::assertRedacted($dumped);
     }
 
     private static function assertRedacted(string $dumped): void
