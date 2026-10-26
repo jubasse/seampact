@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
+
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+
+/**
+ * What the api asks of Laravel's exception handler: a contract refusal is an answer, never reported, and an
+ * `AuthenticationException` on a contract route renders a bare 401, which the boundary maps to `unauthenticated`,
+ * where Laravel would redirect a browser `Accept` to `login`, or answer 500 when no such route exists. A handler
+ * other than Laravel's own, without these methods, is left as is.
+ */
+final class ContractExceptionHandling
+{
+    private const UNAUTHENTICATED_STATUS = 401;
+
+    private function __construct()
+    {
+    }
+
+    public static function register(ExceptionHandler $handler, string $api): void
+    {
+        if (method_exists($handler, 'dontReport')) {
+            $handler->dontReport(ContractRefusal::class);
+        }
+
+        if (method_exists($handler, 'renderable')) {
+            $handler->renderable(static function (AuthenticationException $exception, Request $request) use ($api): ?Response {
+                return BoundaryState::of($request, $api) === null ? null : new Response('', self::UNAUTHENTICATED_STATUS);
+            });
+        }
+    }
+}

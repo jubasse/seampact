@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel\Runtime;
 
-use Illuminate\Contracts\Debug\ShouldntReport;
-use Illuminate\Http\Request;
 use Seampact\Codegen\Runtime\BoundaryState;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -14,7 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
  * params: thrown by the access middleware and the FormRequest, rendered by its own `render()`, which Laravel's
  * handler calls before any render callback of the app.
  */
-final class ContractRefusal extends \RuntimeException implements ShouldntReport
+final class ContractRefusal extends \RuntimeException
 {
     /** @param array<string, string> $headers */
     public function __construct(
