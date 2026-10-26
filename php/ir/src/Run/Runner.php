@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Seampact\Ir\Run;
 
 use Seampact\Ir\Binary\BinaryRefusedException;
-use Seampact\Ir\Binary\DocumentsCommand;
 use Seampact\Ir\Binary\CacheRoot;
+use Seampact\Ir\Binary\DocumentsCommand;
 use Seampact\Ir\Binary\PhpRuntimeCheck;
 use Seampact\Ir\Binary\RootPackage;
 use Seampact\Ir\Bundle\BundleFetcher;
