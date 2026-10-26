@@ -677,7 +677,7 @@ final class TasksContract
                         ],
                         'optional' => false,
                         'nullable' => false,
-                        'sensitive' => false,
+                        'sensitive' => true,
                         'deprecated' => false,
                         'docs' => [],
                         'extensions' => [],

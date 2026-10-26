@@ -13,12 +13,14 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\DumpRedaction;
 
 /**
  * The base of an api's generated service provider: it merges the api's run-time defaults into
  * `config('seampact.<api>')`, prepends the boundary middleware, places the access middleware before
  * `SubstituteBindings`, defines the `Route::seampact()` macro, keeps `TrimStrings` and `ConvertEmptyStringsToNull`
- * off contract routes, refuses Octane workers and runs the boot check once every provider booted.
+ * off contract routes, refuses Octane workers, hides sensitive values from `dump()` and runs the boot check once every
+ * provider booted.
  */
 abstract class ContractServiceProvider extends ServiceProvider
 {
@@ -51,6 +53,7 @@ abstract class ContractServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $contract = ApiContract::of($this->contractClass());
+        DumpRedaction::register($contract);
         $kernel = $this->app->make(Kernel::class);
         if (method_exists($kernel, 'prependMiddleware') && method_exists($kernel, 'addToMiddlewarePriorityBefore')) {
             $kernel->prependMiddleware($this->boundaryClass());

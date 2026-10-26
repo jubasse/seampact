@@ -17,12 +17,13 @@ use Seampact\Laravel\LaravelGenerator;
  * `php -l`. `SEAMPACT_UPDATE_GOLDEN=1` rewrites the tree instead. The tasks api is generated twice: with every default, and in
  * a namespace of its own with `routes: file`, `rules: seampact-consistent`, two framework routes and, beside the core
  * operations, a right and a rule with its body proof (`updateTask` and `purgeTask`), the paged `listTasks`, the cached
- * `getPreferences` and the signed `payments`.
+ * `getPreferences`, the signed `payments`, and a sensitive `CreateTask.title`.
  */
 final class GoldenTest extends TestCase
 {
     private const GOLDEN_DIRECTORY = __DIR__ . '/golden';
     private const UPDATE_VARIABLE = 'SEAMPACT_UPDATE_GOLDEN';
+    private const SENSITIVE_SCHEMA = 'CreateTask';
 
     public function testTheGeneratedTreeIsTheCommittedGolden(): void
     {
@@ -57,7 +58,18 @@ final class GoldenTest extends TestCase
 
     private static function withAccessOperations(): \stdClass
     {
-        return ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), [...ReferenceContract::CORE_OPERATIONS, 'createTask', 'updateTask', 'purgeTask', 'listTasks', 'getPreferences', 'payments']);
+        $document = ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), [...ReferenceContract::CORE_OPERATIONS, 'createTask', 'updateTask', 'purgeTask', 'listTasks', 'getPreferences', 'payments']);
+
+        // An input-only member made sensitive, so the golden holds a redacted schema class.
+        $schemas = $document->schemas ?? null;
+        $createTask = $schemas instanceof \stdClass ? $schemas->{self::SENSITIVE_SCHEMA} ?? null : null;
+        $title = $createTask instanceof \stdClass && is_array($createTask->properties) ? $createTask->properties[0] : null;
+        if (!$title instanceof \stdClass) {
+            throw new \LogicException('The reference IR lost the first property of ' . self::SENSITIVE_SCHEMA . '.');
+        }
+        $title->sensitive = true;
+
+        return $document;
     }
 
     public function testTheFullReferenceContractIsRefusedFormByForm(): void

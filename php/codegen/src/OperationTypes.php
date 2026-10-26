@@ -52,6 +52,9 @@ final class OperationTypes
             if ($operation->input !== null) {
                 PhpTypes::promote($constructor, 'body', $this->types->of($operation->input->schema, $input));
             }
+            // A signed route's body is the signed payload, redacted whole (ADR 0023 "Redaction").
+            $bodyRedacted = $operation->input !== null && ($operation->input->rawBody || RedactedMembers::isSensitive($operation->input->schema));
+            RedactedMembers::redact($inputClass, $constructor, $bodyRedacted ? ['body'] : []);
         }
         $files[] = $input;
 
@@ -82,6 +85,7 @@ final class OperationTypes
         $irPart = $part === 'headers' ? 'header' : $part;
 
         $members = [];
+        $sensitive = [];
 
         foreach ($params as $index => $param) {
             $paramAt = $at->below('params', $irPart, $index);
@@ -99,7 +103,11 @@ final class OperationTypes
 
             $members[strtolower($member)] = $param->name;
             PhpTypes::promote($constructor, $member, $this->types->ofParam($param, $file));
+            if (RedactedMembers::isSensitive($param->type)) {
+                $sensitive[] = $member;
+            }
         }
+        RedactedMembers::redact($class, $constructor, $sensitive);
 
         return $file;
     }
@@ -131,7 +139,9 @@ final class OperationTypes
             }
             $body = new PhpType($names->page, PhpClassFile::shortNameOf($file->name($names->page)));
         }
-        PhpTypes::promote($class->addMethod('__construct'), 'body', $body);
+        $constructor = $class->addMethod('__construct');
+        PhpTypes::promote($constructor, 'body', $body);
+        RedactedMembers::redact($class, $constructor, RedactedMembers::isSensitive($response->body) ? ['body'] : []);
 
         return $file;
     }

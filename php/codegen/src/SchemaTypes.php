@@ -79,6 +79,7 @@ final class SchemaTypes
         $class->addComment(DocComments::of($schema->docs, "The schema '{$schemaId}'."));
         $constructor = $class->addMethod('__construct');
         $members = [];
+        $sensitive = [];
 
         foreach ($schema->properties as $index => $property) {
             $at = IrPlace::root()->below('schemas', $schemaId, 'properties', $index);
@@ -95,7 +96,11 @@ final class SchemaTypes
 
             $members[strtolower($member)] = $property->name;
             PhpTypes::promote($constructor, $member, $this->types->ofProperty($property, $file));
+            if ($property->sensitive || RedactedMembers::isSensitive($property->type)) {
+                $sensitive[] = $member;
+            }
         }
+        RedactedMembers::redact($class, $constructor, $sensitive);
 
         return $file;
     }

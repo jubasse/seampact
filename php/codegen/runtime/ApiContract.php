@@ -243,6 +243,34 @@ final class ApiContract
         return Ir::map(Ir::map($this->types, 'operations'), $operationId);
     }
 
+    /**
+     * Every generated class the contract names that may hold a request or reply value: the schemas, each operation's
+     * input, parameter parts and replies, and each identity's credentials.
+     *
+     * @return list<string>
+     */
+    public function valueClasses(): array
+    {
+        $classes = [];
+        foreach (Ir::map($this->types, 'schemas') as $schema) {
+            $classes[] = Ir::string($schema, 'class');
+        }
+        foreach (Ir::map($this->types, 'operations') as $operation) {
+            $classes[] = Ir::string($operation, 'input');
+            foreach (Ir::map($operation, 'parts') as $part) {
+                $classes[] = Ir::string($part, 'class');
+            }
+            foreach (Ir::map($operation, 'responses') as $response) {
+                $classes[] = is_string($response) ? $response : null;
+            }
+        }
+        foreach (Ir::map($this->types, 'identities') as $identity) {
+            $classes[] = Ir::string($identity, 'credentials');
+        }
+
+        return array_values(array_unique(array_filter($classes, is_string(...))));
+    }
+
     /** The route name the generated registration gives an operation. */
     public function routeName(string $operationId): string
     {

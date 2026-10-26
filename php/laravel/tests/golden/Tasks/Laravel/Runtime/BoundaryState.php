@@ -90,6 +90,27 @@ final class BoundaryState
         return $written[0] === $response->getStatusCode() && $bodyKept;
     }
 
+    /**
+     * The state without the request's values: the body, raw and decoded, the typed input, the query and the
+     * idempotency key may hold a sensitive or signed value (ADR 0023 "Redaction").
+     *
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'operationId' => $this->operationId,
+            'principal' => $this->principal,
+            'scopes' => $this->scopes,
+            'admitted' => $this->admitted,
+            'body' => \Seampact\Hooks\Redaction::REDACTED,
+            'rawBody' => $this->rawBody === null ? null : \Seampact\Hooks\Redaction::REDACTED,
+            'contractInput' => $this->contractInput === null ? null : \Seampact\Hooks\Redaction::REDACTED,
+            'query' => \Seampact\Hooks\Redaction::REDACTED,
+            'idempotencyKey' => $this->idempotencyKey === null ? null : \Seampact\Hooks\Redaction::REDACTED,
+        ];
+    }
+
     /** The ETag the boundary wrote on `$response`, null when it wrote none. */
     public function authoredEtag(Response $response): ?string
     {

@@ -70,6 +70,16 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString('waits for a consumer after 1.0', self::refused($document)['multipleOf.wide.unsupported'] ?? '');
     }
 
+    public function testASortKeyRestrictedByARightWaitsForAConsumer(): void
+    {
+        $document = ReferenceContract::withOperation('listTasks', static function (\stdClass $operation): void {
+            $sortKey = self::firstOf(self::object($operation->paging)->sortKeys);
+            $sortKey->right = 'tasks.seeEffort';
+        });
+
+        self::assertStringContainsString("The sort key 'createdAt' restricted by the right 'tasks.seeEffort'", self::refused($document)['paging.sortKey.right.unsupported'] ?? '');
+    }
+
     public function testBootCheckHooksWarnWaitsForAConsumer(): void
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['bootCheck' => (object) ['hooks' => 'warn']]);
