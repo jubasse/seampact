@@ -101,14 +101,13 @@ final readonly class BundleFetcher
             return $verification->failures;
         }
 
+        // The bytes the check read, never the file again: a cache writer could swap it between the check and a read.
         $documents = [];
-        foreach ($verification->manifest->apis as $api) {
-            $bytes = @file_get_contents("{$directory}/{$api->file}");
-            $parsed = UntrustedJson::parse($bytes === false ? '' : $bytes);
-            if (!$parsed->document instanceof \stdClass) {
-                return [new BundleFailure(BundleFailureCode::IrUnreadable, "'{$api->file}' cannot be read again after the check.", BundleLayout::REFETCH_FIX, $api->file)];
-            }
-            $documents[$api->name] = $parsed->document;
+        foreach ($verification->irBytes as $apiName => $bytes) {
+            $parsed = UntrustedJson::parse($bytes);
+            $documents[$apiName] = $parsed->document instanceof \stdClass
+                ? $parsed->document
+                : throw new \LogicException("bundle: the checked IR of api '{$apiName}' does not parse again.");
         }
         ksort($documents, SORT_STRING);
 
