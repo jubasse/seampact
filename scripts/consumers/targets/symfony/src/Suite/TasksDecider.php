@@ -12,22 +12,28 @@ use Seampact\ConsumerSuite\Credentials;
 use Seampact\ConsumerSuite\DecisionPurpose;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\Decision;
+use Seampact\Hooks\RequirementKind;
 use Seampact\Hooks\RequirementRequest;
 use Seampact\Hooks\ThrottleBucket;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /**
- * The `tasks` api's decide double for every right and rule: the throttle rule counts the throttled user's bucket in
- * the app's `suite_throttle` rate limiter, keyed by the boundary's bucket key, denies what the script denies and
- * allows the rest.
+ * The `tasks` api's decide double for every right and rule: a right is first asked of the app's voters through
+ * `isGranted`, with a subject carrying its params and scopes, and a refusal throws `AccessDeniedException` as
+ * `denyAccessUnlessGranted()` does; the throttle rule counts the throttled user's bucket in the app's `suite_throttle`
+ * rate limiter, keyed by the boundary's bucket key; then it denies what the script denies and allows the rest.
  */
 final class TasksDecider implements Decider
 {
     private const THROTTLE_RULE = 'throttle';
     private const RATE_LIMITED = 'api.rate_limited';
 
-    public function __construct(private readonly RateLimiterFactoryInterface $suiteThrottleLimiter)
-    {
+    public function __construct(
+        private readonly RateLimiterFactoryInterface $suiteThrottleLimiter,
+        private readonly AuthorizationCheckerInterface $authorization,
+    ) {
     }
 
     public function names(): array
@@ -38,6 +44,10 @@ final class TasksDecider implements Decider
     public function decide(RequirementRequest $request): Decision
     {
         SuiteControl::recordHookCall("decide:{$request->name()}", $request->operation()->api, $request->operation()->id);
+
+        if ($request->kind() === RequirementKind::Right && !$this->authorization->isGranted($request->name(), new DecisionSubject($request->params(), $request->scopes()))) {
+            throw new AccessDeniedException("the app's voters deny the right '{$request->name()}'");
+        }
 
         $denied = SuiteControl::scriptedDecision($request->name(), DecisionPurpose::name($request->purpose()));
         $bucket = $request->bucket();
