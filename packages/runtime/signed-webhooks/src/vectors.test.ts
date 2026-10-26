@@ -131,6 +131,9 @@ describe("verifies the ADR 0013 vectors", () => {
   test.each([
     ["a negative tolerance", "{ts}.{rawBody}", -1],
     ["a tolerance without {ts}", "{rawBody}", 1000],
+    ["a NaN tolerance", "{ts}.{rawBody}", Number.NaN],
+    ["an infinite tolerance", "{ts}.{rawBody}", Number.POSITIVE_INFINITY],
+    ["a fractional tolerance", "{ts}.{rawBody}", 1.5],
   ])("%s is refused by name", async (_name, payload, toleranceMs) => {
     const request = signedRequest("github", vectors.cases[0]?.header ?? "", "");
     const verification = verifyTemplateSignature(
