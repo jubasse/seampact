@@ -20,6 +20,7 @@ final class Replies
     private const SECONDS_UNIT = 's';
     private const MILLISECONDS_PER_SECOND = 1000;
     private const NULL_ABSENT = 'null';
+    private const PAYLOAD_SLOT = 'payload';
     private const NO_CONTENT = 204;
     private const PAGE_SHAPE = 'page';
 
@@ -123,11 +124,44 @@ final class Replies
         }
 
         $body = WireCodec::encodeBody($contract, $declared, self::member($result, 'body'));
-        $body = FieldRights::output($state, $declared, $body);
+        $body = self::enveloped($request, $state, Ir::string($declared, 'shape') ?? '', FieldRights::output($state, $declared, $body), $status);
 
         $reply = new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media]);
 
         return $state->author(CacheHeaders::written($request, $state, $reply));
+    }
+
+    private static function enveloped(Request $request, BoundaryState $state, string $shape, mixed $payload, int $status): mixed
+    {
+        return self::successBody($state->contract->format($state->operationId), $shape, $payload, $status, RawTarget::path($request));
+    }
+
+    /**
+     * The success body in its format's envelope (ADR 0002 section 13): `{ data: $payload }` under `pack:laravel`, the
+     * payload itself under a bare format, `null` included. Generation refuses an envelope that does not write
+     * `$payload` under named members, so an object template always renders.
+     *
+     * @param array<array-key, mixed> $format
+     */
+    public static function successBody(array $format, string $shape, mixed $payload, int $status, string $path): mixed
+    {
+        $template = Ir::map(Ir::map($format, 'success'), $shape)['body'] ?? null;
+        if ($template === null || self::isBarePayload($template)) {
+            return $payload;
+        }
+
+        $slots = [self::PAYLOAD_SLOT => $payload, 'status' => $status, 'path' => $path];
+        $rendered = Templates::render($template, $slots, Ir::string($format, 'absent') === self::NULL_ABSENT);
+        if (!$rendered->present) {
+            throw new \LogicException("seampact: the format's '{$shape}' success envelope rendered nothing; regenerate the api, whose generation refuses an envelope that does not write \$payload under named members.");
+        }
+
+        return $rendered->value;
+    }
+
+    private static function isBarePayload(mixed $template): bool
+    {
+        return Ir::string($template, 'kind') === 'slot' && Ir::string($template, 'slot') === self::PAYLOAD_SLOT && Ir::list($template, 'path') === [];
     }
 
     /**
@@ -141,9 +175,12 @@ final class Replies
             throw new \LogicException("seampact: the handler of operation '{$state->operationId}' answered its page with " . get_debug_type($page) . ', not its generated page.');
         }
 
-        $facts = [];
-        foreach (get_object_vars($page) as $name => $value) {
-            $facts[(string) $name] = $value;
+        $facts = $state->pageReader?->factsOf($page);
+        if ($facts === null) {
+            $facts = [];
+            foreach (get_object_vars($page) as $name => $value) {
+                $facts[(string) $name] = $value;
+            }
         }
         $items = FieldRights::output($state, $declared, WireCodec::encodeBody($state->contract, $declared, $facts['items'] ?? []));
         [$body, $headers] = PageReply::render($state, RawTarget::query($request), RawTarget::path($request), is_array($items) ? array_values($items) : [], $facts, $status);

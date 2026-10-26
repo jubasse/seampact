@@ -74,13 +74,14 @@ final class PageReply
                 $slots['totalPages'] = intdiv($facts['total'] + $limit - 1, $limit);
             }
         }
-        $slots['self'] = self::pageUrl(self::withoutQueryMembers($rawQuery, []));
+        $urlBase = $state->publicOrigin === null ? '' : $state->publicOrigin . $requestPath;
+        $slots['self'] = self::pageUrl($urlBase, self::withoutQueryMembers($rawQuery, []));
 
         $position = Ir::string($style, 'position');
         if ($position === self::PAGE || $position === self::OFFSET) {
-            $slots = self::numberedSlots($state, $style, $rawQuery, $facts, count($items), $limit, $slots);
+            $slots = self::numberedSlots($state, $style, $rawQuery, $urlBase, $facts, count($items), $limit, $slots);
         } else {
-            $slots = self::tokenSlots($style, $rawQuery, $facts, $position, $slots);
+            $slots = self::tokenSlots($style, $rawQuery, $urlBase, $facts, $position, $slots);
         }
         $slots['items'] = $items;
         $slots['status'] = $status;
@@ -177,7 +178,7 @@ final class PageReply
      * @param array<string, mixed> $slots
      * @return array<string, mixed>
      */
-    private static function numberedSlots(BoundaryState $state, array $style, string $rawQuery, array $facts, int $itemCount, ?int $limit, array $slots): array
+    private static function numberedSlots(BoundaryState $state, array $style, string $rawQuery, string $urlBase, array $facts, int $itemCount, ?int $limit, array $slots): array
     {
         if ($limit === null || $limit <= 0) {
             throw new \LogicException("seampact: the list '{$state->operationId}' has no limit.");
@@ -209,19 +210,19 @@ final class PageReply
             $slots['to'] = $offset + $itemCount;
         }
 
-        $slots['first'] = self::pageUrl(self::withQueryMember($rawQuery, $positionParam, self::positionAt($isPage, $base, 0, $limit)));
+        $slots['first'] = self::pageUrl($urlBase, self::withQueryMember($rawQuery, $positionParam, self::positionAt($isPage, $base, 0, $limit)));
         if ($offset > self::FIRST_OFFSET) {
             $previous = $isPage ? (string) ($base + $pageIndex - 1) : (string) max($offset - $limit, self::FIRST_OFFSET);
-            $slots['previous'] = self::pageUrl(self::withQueryMember($rawQuery, $positionParam, $previous));
+            $slots['previous'] = self::pageUrl($urlBase, self::withQueryMember($rawQuery, $positionParam, $previous));
         }
         if ($hasNext) {
             // An offset the client chose need not fall on a page start: the next page starts one limit further.
             $next = $isPage ? self::positionAt(true, $base, $pageIndex + 1, $limit) : (string) ($offset + $limit);
-            $slots['next'] = self::pageUrl(self::withQueryMember($rawQuery, $positionParam, $next));
+            $slots['next'] = self::pageUrl($urlBase, self::withQueryMember($rawQuery, $positionParam, $next));
         }
         if (is_int($slots['totalPages'] ?? null)) {
             $lastIndex = max($slots['totalPages'] - 1, 0);
-            $slots['last'] = self::pageUrl(self::withQueryMember($rawQuery, $positionParam, self::positionAt($isPage, $base, $lastIndex, $limit)));
+            $slots['last'] = self::pageUrl($urlBase, self::withQueryMember($rawQuery, $positionParam, self::positionAt($isPage, $base, $lastIndex, $limit)));
         }
 
         return $slots;
@@ -235,19 +236,19 @@ final class PageReply
      * @param array<string, mixed> $slots
      * @return array<string, mixed>
      */
-    private static function tokenSlots(array $style, string $rawQuery, array $facts, ?string $position, array $slots): array
+    private static function tokenSlots(array $style, string $rawQuery, string $urlBase, array $facts, ?string $position, array $slots): array
     {
         $positionParam = Ir::string(self::positionRole($style), 'name') ?? '';
         $beforeParam = self::roleName($style, self::BEFORE_ROLE);
         $withoutPosition = self::withoutQueryMembers($rawQuery, $beforeParam === null ? [$positionParam] : [$positionParam, $beforeParam]);
-        $slots['first'] = self::pageUrl($withoutPosition);
+        $slots['first'] = self::pageUrl($urlBase, $withoutPosition);
 
         $tokens = $position === self::SINCE
             ? ['next' => [$positionParam, $facts['nextSince'] ?? null]]
             : ['next' => [$positionParam, $facts['nextCursor'] ?? null], 'previous' => [$beforeParam ?? $positionParam, $facts['previousCursor'] ?? null]];
         foreach ($tokens as $role => [$param, $token]) {
             if (is_string($token)) {
-                $slots[$role] = self::pageUrl(self::withQueryMember($withoutPosition, $param, $token));
+                $slots[$role] = self::pageUrl($urlBase, self::withQueryMember($withoutPosition, $param, $token));
             }
         }
 
@@ -336,10 +337,11 @@ final class PageReply
         return $kept === '' ? $member : "{$kept}&{$member}";
     }
 
-    // A query-only reference (RFC 3986): it resolves against the URL the client called, so it keeps a path prefix a
-    // reverse proxy stripped. An empty query is `?`, since an empty reference would keep the called query.
-    private static function pageUrl(string $query): string
+    // Under relative URLs a query-only reference (RFC 3986): it resolves against the URL the client called, so it
+    // keeps a path prefix a reverse proxy stripped. An empty query is `?`, since an empty reference would keep the
+    // called query. Under absolute URLs the base is the public origin and the request path.
+    private static function pageUrl(string $urlBase, string $query): string
     {
-        return '?' . $query;
+        return $urlBase . '?' . $query;
     }
 }

@@ -6,7 +6,7 @@ name: Laravel target
 # generated tree with the committed golden, which PHPStan analyses against Laravel 13 and `php -l` lints. The consumer
 # is then generated with Node removed from the runner, from the reference contract's bundle in a local git repository,
 # and served by PHP's built-in server to the shared http suite, on the same two PHP versions ("The consumer and the
-# proof"). They run only when the change touches the PHP packages, the reference contract, the consumer, the binary,
+# proof"); a variant generated from the contract with `@seampact/pack-laravel` applied runs the `pack:laravel` profile. They run only when the change touches the PHP packages, the reference contract, the consumer, the binary,
 # the http suite or this workflow; `laravel` is the one check to require.
 
 on:
@@ -46,6 +46,8 @@ jobs:
             ^php/
             ^fixtures/reference/
             ^fixtures/golden/reference/
+            ^fixtures/golden/pack-laravel/
+            ^packages/packs/pack-laravel/
             ^packages/core/
             ^packages/tools/binary/
             ^packages/tools/http-suite/
@@ -99,7 +101,8 @@ jobs:
         working-directory: php/${{ matrix.package }}
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G
 
-  # The reference contract bundled once by the compiler binary, so the consumer jobs fetch it without Node.
+  # The reference contract and its pack-laravel variant bundled once by the compiler binary, so the consumer jobs fetch
+  # them without Node.
   contract-bundle:
     needs: changes
     if: needs.changes.outputs.laravel == 'true'
@@ -118,17 +121,21 @@ jobs:
       - name: Build the binaries
         working-directory: packages/tools/binary
         run: pnpm build
-      - name: Bundle the reference contract
-        run: scripts/consumers/php/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundled"
+      - name: Bundle the reference contract and its pack-laravel variant
+        run: |
+          scripts/consumers/php/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundles/reference"
+          scripts/consumers/php/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundles/pack-laravel" fixtures/golden/pack-laravel/contract
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: laravel-contract-bundle
-          path: ${{ runner.temp }}/bundled
+          path: ${{ runner.temp }}/bundles
+          # The pack-laravel bundle keeps its packs under `sources/.packs`, which upload-artifact skips by default.
+          include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
 
   # The consumer generated from the bundle with Node removed, then served by `php -S` to the http suite's default,
-  # hand-written and boot profiles; the floor and the latest PHP are both PR rows.
+  # hand-written, boot and pack:laravel profiles; the floor and the latest PHP are both PR rows.
   e2e:
     name: e2e (PHP ${{ matrix.php-version }})
     needs: [changes, contract-bundle]
@@ -164,13 +171,15 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: laravel-contract-bundle
-          path: ${{ runner.temp }}/bundled
-      - name: Assemble, install and generate the consumer and its allow-listed variant
+          path: ${{ runner.temp }}/bundles
+      - name: Assemble, install and generate the consumer and its allow-listed and pack-laravel variants
         shell: bash
         run: |
           set -euo pipefail
-          for variant in "" allow-listed; do
-            scripts/consumers/targets/laravel/assemble.sh "$WORK" "$RUNNER_TEMP/bundled" $variant
+          for variant in "" allow-listed pack-laravel; do
+            bundled="$RUNNER_TEMP/bundles/reference"
+            if [ "$variant" = "pack-laravel" ]; then bundled="$RUNNER_TEMP/bundles/pack-laravel"; fi
+            scripts/consumers/targets/laravel/assemble.sh "$WORK" "$bundled" $variant
             app="$WORK/app${variant:+-$variant}"
             (
               cd "$app"
@@ -187,10 +196,11 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Run the default, hand-written and boot profiles
+      - name: Run the default, hand-written, boot and pack:laravel profiles
         env:
           SEAMPACT_LARAVEL_APP: ${{ env.WORK }}/app
           SEAMPACT_LARAVEL_ALLOW_LISTED_APP: ${{ env.WORK }}/app-allow-listed
+          SEAMPACT_LARAVEL_PACK_APP: ${{ env.WORK }}/app-pack-laravel
           SEAMPACT_LARAVEL_REPORTS: ${{ github.workspace }}/reports
         run: pnpm vitest run --config scripts/consumers/targets/laravel/suite/vitest.config.ts
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

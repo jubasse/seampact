@@ -14,15 +14,22 @@ use App\Generated\Tasks\Laravel\TasksSeampactServiceProvider;
 use App\Generated\Tasks\Laravel\UserAuthenticateHook;
 use App\Generated\Tasks\PreferencesEndpoints;
 use App\Generated\Tasks\TasksEndpoints;
+use App\Generated\TasksService\InternalEndpoints;
+use App\Generated\TasksService\Laravel\Runtime\UnexpectedErrorListener as ServiceUnexpectedErrorListener;
+use App\Generated\TasksService\Laravel\ServiceAuthenticateHook;
+use App\Generated\TasksService\Laravel\TasksServiceSeampactServiceProvider;
 use App\Http\Controllers\AppController;
 use App\Http\Controllers\ChannelsController;
 use App\Http\Controllers\DraftsController;
 use App\Http\Controllers\HooksController;
+use App\Http\Controllers\InternalController;
 use App\Http\Controllers\PreferencesController;
 use App\Http\Controllers\TasksController;
 use App\Suite\ChannelResolver;
 use App\Suite\FileIdempotencyStore;
 use App\Suite\OverriddenRightDecider;
+use App\Suite\ServiceDecider;
+use App\Suite\ServiceHook;
 use App\Suite\StripeHook;
 use App\Suite\TasksDecider;
 use App\Suite\TasksUnexpectedErrors;
@@ -36,7 +43,7 @@ use Seampact\ConsumerSuite\SuiteFiles;
 use Seampact\Hooks\IdempotencyStore;
 
 /**
- * Binds the handlers and the hook doubles of the `tasks` api, less what the boot variant leaves out, and takes the
+ * Binds the handlers and the hook doubles of the `tasks` and `tasksService` apis, less what the boot variant leaves out, and takes the
  * api's `responses` mode from `SEAMPACT_SUITE_RESPONSES` and `app.debug` from `SEAMPACT_SUITE_APP_DEBUG` when they
  * are set, at run time so a config cache keeps them.
  */
@@ -80,6 +87,11 @@ final class SuiteServiceProvider extends ServiceProvider
         }
         $this->app->bind(UnexpectedErrorListener::class, TasksUnexpectedErrors::class);
         $this->app->bind(IdempotencyStore::class, FileIdempotencyStore::class);
+
+        $this->app->bind(InternalEndpoints::class, InternalController::class);
+        $this->app->bind(ServiceAuthenticateHook::class, ServiceHook::class);
+        $this->app->tag([ServiceDecider::class], TasksServiceSeampactServiceProvider::DECIDERS_TAG);
+        $this->app->bind(ServiceUnexpectedErrorListener::class, TasksUnexpectedErrors::class);
     }
 
     public function boot(): void

@@ -8,7 +8,6 @@ use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\GoldenTree;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Ir\Run\FrameworkRoute;
-use Seampact\Ir\Run\GenerationRefusedException;
 use Seampact\Laravel\LaravelGenerator;
 
 /**
@@ -17,7 +16,7 @@ use Seampact\Laravel\LaravelGenerator;
  * `php -l`. `SEAMPACT_UPDATE_GOLDEN=1` rewrites the tree instead. The tasks api is generated twice: with every default, and in
  * a namespace of its own with `routes: file`, `rules: seampact-consistent`, two framework routes and, beside the core
  * operations, a right and a rule with its body proof (`updateTask` and `purgeTask`), the paged `listTasks`, the cached
- * `getPreferences`, the signed `payments`, and a sensitive `CreateTask.title`.
+ * `getPreferences`, the signed `payments`, the deadline budget of `searchTasks`, and a sensitive `CreateTask.title`.
  */
 final class GoldenTest extends TestCase
 {
@@ -58,7 +57,7 @@ final class GoldenTest extends TestCase
 
     private static function withAccessOperations(): \stdClass
     {
-        $document = ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), [...ReferenceContract::CORE_OPERATIONS, 'createTask', 'updateTask', 'purgeTask', 'listTasks', 'getPreferences', 'payments']);
+        $document = ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), [...ReferenceContract::CORE_OPERATIONS, 'createTask', 'updateTask', 'purgeTask', 'listTasks', 'getPreferences', 'payments', 'searchTasks']);
 
         // An input-only member made sensitive, so the golden holds a redacted schema class.
         $schemas = $document->schemas ?? null;
@@ -72,19 +71,13 @@ final class GoldenTest extends TestCase
         return $document;
     }
 
-    public function testTheFullReferenceContractIsRefusedFormByForm(): void
+    public function testBothApisOfTheFullReferenceContractGenerate(): void
     {
-        $ir = ReferenceContract::read(new LaravelGenerator(), ReferenceContract::document(ReferenceContract::TASKS));
+        foreach ([ReferenceContract::TASKS => 'tasks', ReferenceContract::TASKS_SERVICE => 'tasksService'] as $file => $api) {
+            $ir = ReferenceContract::read(new LaravelGenerator(), ReferenceContract::document($file));
+            $files = (new LaravelGenerator())->generate($ir, ReferenceContract::entry(LaravelGenerator::PACKAGE, $api, 'App\\Generated'));
 
-        try {
-            (new LaravelGenerator())->generate($ir, ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
-            self::fail('The full reference contract was generated, but it carries forms a later release brings.');
-        } catch (GenerationRefusedException $refused) {
-            $codes = array_values(array_unique(array_map(static fn ($problem): string => $problem->code, $refused->problems)));
-            sort($codes);
-
-            self::assertSame(['deadline.unsupported'], $codes);
-            self::assertStringContainsString("entry 'server' /operations/", $refused->getMessage());
+            self::assertNotSame([], $files, "The api '{$api}' generated no file.");
         }
     }
 }

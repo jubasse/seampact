@@ -42,6 +42,7 @@ final class BootCheck
             ...self::middleware($app, $boundaryClass, $accessClass),
             ...self::routes($app, $contract, $accessClass, $switches),
             ...self::platform(),
+            ...self::publicOrigin($app, $contract),
         ];
 
         if ($problems !== []) {
@@ -80,8 +81,8 @@ final class BootCheck
         $kernel = $app->make(Kernel::class);
         $problems = [];
         $global = method_exists($kernel, 'getGlobalMiddleware') ? $kernel->getGlobalMiddleware() : [];
-        if (!is_array($global) || ($global[0] ?? null) !== $boundaryClass) {
-            $problems[] = "the boundary middleware {$boundaryClass} is not the first global middleware: prepend no global middleware before it";
+        if (!is_array($global) || !ContractServiceProvider::leadsGlobalStack($app, $global, $boundaryClass)) {
+            $problems[] = "the boundary middleware {$boundaryClass} is not the first global middleware (only other apis' boundaries may come before it, and none whose base path claims this api's paths with its catch-all on): prepend no global middleware before it, and set 'catch_all' to false on an api whose base path equals or prefixes this api's";
         }
 
         $priority = method_exists($kernel, 'getMiddlewarePriority') ? $kernel->getMiddlewarePriority() : [];
@@ -190,6 +191,15 @@ final class BootCheck
     {
         return explode('@', $route->getActionName())[0] === self::HEALTH_ACTION
             || preg_match(self::OWN_ROUTE_NAMES, $route->getName() ?? '') === 1;
+    }
+
+    /** @return list<string> */
+    private static function publicOrigin(Application $app, ApiContract $contract): array
+    {
+        $setting = "seampact.{$contract->api}.public_origin";
+        $problem = PublicOrigin::bootProblem($contract, $setting, Services::config($app)->get($setting));
+
+        return $problem === null ? [] : [$problem];
     }
 
     /** @return list<string> */

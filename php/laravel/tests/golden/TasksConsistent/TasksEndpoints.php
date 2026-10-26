@@ -9,6 +9,7 @@ use Seampact\Golden\TasksConsistent\Laravel\GetTaskRequest;
 use Seampact\Golden\TasksConsistent\Laravel\GetTasksBatchRequest;
 use Seampact\Golden\TasksConsistent\Laravel\ListTasksRequest;
 use Seampact\Golden\TasksConsistent\Laravel\PurgeTaskRequest;
+use Seampact\Golden\TasksConsistent\Laravel\SearchTasksRequest;
 use Seampact\Golden\TasksConsistent\Laravel\UpdateTaskRequest;
 
 /**
@@ -75,6 +76,19 @@ interface TasksEndpoints
      * @throws ApiInternalError
      */
     public function purgeTask(PurgeTaskRequest $request): PurgeTaskResult;
+
+    /**
+     * Search the channel's tasks with a structured query.
+     * @throws ApiSchemaInvalidError
+     * @throws ApiUnauthenticatedError
+     * @throws ApiCsrfInvalidError
+     * @throws ApiForbiddenError
+     * @throws ApiNotFoundError
+     * @throws ApiPayloadTooLargeError
+     * @throws ApiUnsupportedMediaTypeError
+     * @throws ApiInternalError
+     */
+    public function searchTasks(SearchTasksRequest $request): SearchTasksResult;
 
     /**
      * Operation 'updateTask'.

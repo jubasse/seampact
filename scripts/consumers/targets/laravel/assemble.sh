@@ -1,8 +1,10 @@
 #!/bin/sh
-# Assembles the Laravel consumer in <work>: `assemble.sh <work> <bundled> [allow-listed]` copies the app into
-# <work>/app (or <work>/app-allow-listed, built from `seampact.allow-listed.config.yaml`), points its path
+# Assembles the Laravel consumer in <work>: `assemble.sh <work> <bundled> [allow-listed|pack-laravel]` copies the app
+# into <work>/app (or <work>/app-allow-listed, built from `seampact.allow-listed.config.yaml`, or
+# <work>/app-pack-laravel, whose paged lists answer Laravel's paginators from `pack-laravel/app`), points its path
 # repositories at the repository's php/ packages, and points its contract at the bundle that `bundle.sh` wrote to
-# <bundled>, committed into the local git repository <work>/contract-repo with the tag v1.0.0. The app directory is new.
+# <bundled> (for pack-laravel, the bundle of fixtures/golden/pack-laravel/contract), committed into the local git
+# repository <work>/contract-repo (<work>/contract-repo-pack-laravel) with the tag v1.0.0. The app directory is new.
 set -eu
 
 work="$1"
@@ -16,7 +18,8 @@ contract_repo="$work/contract-repo"
 case "$variant" in
   "") app="$work/app"; config="seampact.config.yaml" ;;
   allow-listed) app="$work/app-allow-listed"; config="seampact.allow-listed.config.yaml" ;;
-  *) echo "usage: assemble.sh <work> <bundled> [allow-listed]" >&2; exit 1 ;;
+  pack-laravel) app="$work/app-pack-laravel"; config="seampact.config.yaml"; contract_repo="$work/contract-repo-pack-laravel" ;;
+  *) echo "usage: assemble.sh <work> <bundled> [allow-listed|pack-laravel]" >&2; exit 1 ;;
 esac
 
 if [ -e "$app" ]; then
@@ -36,6 +39,9 @@ fi
 mkdir -p "$app"
 cp -R "$here/app" "$here/bootstrap" "$here/config" "$here/public" "$here/routes" "$here/artisan" "$here/composer.json" "$app/"
 cp "$here/$config" "$app/seampact.config.yaml"
+if [ "$variant" = "pack-laravel" ]; then
+  cp -R "$here/pack-laravel/app" "$app/"
+fi
 cp "$here/../spring-boot/credentials.json" "$app/credentials.json"
 mkdir -p "$app/bootstrap/cache" "$app/storage/logs" "$app/storage/framework/cache" "$app/storage/framework/views"
 

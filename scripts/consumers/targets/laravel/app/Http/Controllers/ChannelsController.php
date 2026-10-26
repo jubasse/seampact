@@ -9,8 +9,6 @@ use App\Generated\Tasks\GetChannelResponse200;
 use App\Generated\Tasks\GetChannelResult;
 use App\Generated\Tasks\Laravel\GetChannelRequest;
 use App\Generated\Tasks\Laravel\ListChannelsRequest;
-use App\Generated\Tasks\ListChannelsPage;
-use App\Generated\Tasks\ListChannelsResponse200;
 use App\Generated\Tasks\ListChannelsResult;
 use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\ScriptedAnswers;
@@ -25,6 +23,6 @@ final class ChannelsController implements ChannelsEndpoints
 
     public function listChannels(ListChannelsRequest $request): ListChannelsResult
     {
-        return new ListChannelsResponse200(new ListChannelsPage([SampleData::channel(SampleData::GENERAL_CHANNEL_ID)]));
+        return PagedLists::listChannels($request);
     }
 }

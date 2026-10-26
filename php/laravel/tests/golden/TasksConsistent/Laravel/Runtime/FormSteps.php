@@ -15,6 +15,8 @@ use Illuminate\Http\Request;
 final class FormSteps
 {
     public const MAX_RENDERED_ISSUES = 100;
+    // The order a 400 lists its issues in, by the part they are in, as the other targets list them.
+    private const ISSUE_PART_ORDER = ['path' => 0, 'query' => 1, 'header' => 2, 'body' => 3];
 
     private function __construct()
     {
@@ -38,6 +40,9 @@ final class FormSteps
                 }
             }
         }
+
+        // A stable sort: within a part, the issues keep the order they were found in.
+        usort($issues, static fn (array $first, array $second): int => (self::ISSUE_PART_ORDER[$first['in']] ?? count(self::ISSUE_PART_ORDER)) <=> (self::ISSUE_PART_ORDER[$second['in']] ?? count(self::ISSUE_PART_ORDER)));
 
         return AccessSteps::schemaInvalid($state, array_slice(self::unique($issues), 0, self::MAX_RENDERED_ISSUES));
     }

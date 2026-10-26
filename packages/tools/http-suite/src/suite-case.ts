@@ -55,7 +55,8 @@ export interface RequestSignature {
 
 /**
  * The request of a step. `path` is sent as written (no normalisation, so a doubled slash or a percent-encoded
- * segment reaches the server); `query` is appended encoded; a `body` is sent as JSON with
+ * segment reaches the server), or, when it is one captured link alone, resolved against the URL of the request the
+ * link came from; `query` is appended encoded; a `body` is sent as JSON with
  * `content-type: application/json` unless `headers` names another content type; `bodyText` is sent as written,
  * for a body that is not valid JSON, with the same default content type.
  */
@@ -379,7 +380,7 @@ function readRequest(reader: JsonReader, value: unknown, pointer: string): StepR
   const object = objectAt(reader, value, pointer, REQUEST_MEMBERS);
   const path = stringAt(reader, object.path, `${pointer}/path`);
 
-  // A path that is one placeholder holds a URL path a response linked (`{{nextPage}}`).
+  // A path that is one placeholder holds a link a response wrote (`{{nextPage}}`), resolved against its request URL.
   if (!path.startsWith("/") && !WHOLE_PLACEHOLDER.test(path)) {
     reader.fail(`${pointer}/path`, "a path starts with '/' or is one placeholder");
   }

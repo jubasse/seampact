@@ -21,6 +21,7 @@ abstract class BoundaryMiddleware
 {
     private const NOT_FOUND_ROLE = 'notFound';
     private const NOT_FOUND_STATUS = 404;
+    private const PUBLIC_ORIGIN = 'public_origin';
 
     private ?Hooks $hooks = null;
 
@@ -54,7 +55,7 @@ abstract class BoundaryMiddleware
     private function served(Request $request, \Closure $next, ApiContract $contract, RouteMatch $match): Response
     {
         if (!$this->isFirst()) {
-            return ReplyVerdict::internalError($this->hooks(), $contract, $match->operationId, 'the boundary middleware is not the first global middleware; let the provider prepend it, and prepend no other global middleware before it', null);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $match->operationId, 'the boundary middleware is not the first global middleware (only other apis\' boundaries may come before it, and none whose base path claims this api\'s paths with its catch-all on); let the provider prepend it, prepend no other global middleware before it, and set \'catch_all\' to false on an api whose base path equals or prefixes this api\'s', null);
         }
 
         $operationId = $match->operationId;
@@ -65,6 +66,8 @@ abstract class BoundaryMiddleware
         }
 
         $state = new BoundaryState($contract, $operationId, $match->rawParameters, RawTarget::view($request), $this->hooks());
+        $state->publicOrigin = PublicOrigin::of($contract, $this->setting($contract, null, self::PUBLIC_ORIGIN));
+        $state->pageReader = new PaginatorPages();
         $request->attributes->set(BoundaryState::attributeName($contract->api), $state);
 
         try {
@@ -170,8 +173,7 @@ abstract class BoundaryMiddleware
 
         $kernel = $this->app->make(Kernel::class);
         $global = method_exists($kernel, 'getGlobalMiddleware') ? $kernel->getGlobalMiddleware() : null;
-        $first = is_array($global) ? ($global[0] ?? null) : null;
-        if ($first !== static::class) {
+        if (!is_array($global) || !ContractServiceProvider::leadsGlobalStack($this->app, $global, static::class)) {
             return false;
         }
         self::$placed[static::class] = true;

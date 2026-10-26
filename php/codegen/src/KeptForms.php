@@ -57,6 +57,9 @@ final class KeptForms
     private const JSON_MEDIA = 'application/json';
     private const PAGING_PARAMS_DERIVATION = 'paging.params';
     private const TOP_LEVEL_POINTER = '/^\/[^\/]+$/D';
+    // The slots an item, table or list envelope may write that the boundary fills.
+    private const PAYLOAD_SLOT = 'payload';
+    private const ENVELOPE_SLOTS = [self::PAYLOAD_SLOT, 'status', 'path', 'meta'];
     private const BUCKET_KEY_SOURCES = [ValueSourceIn::Path, ValueSourceIn::Scope, ValueSourceIn::Principal];
 
     // Header params the boundary consumes itself: the credentials and the CSRF token never reach the handler.
@@ -76,6 +79,12 @@ final class KeptForms
 
     /** @var array<string, true> */
     private array $identities = [];
+
+    /** @var array<string, true> the formats already read */
+    private array $formats = [];
+
+    /** @var array<string, true> the success shapes already read, by format and shape */
+    private array $formatShapes = [];
 
     public function __construct(private readonly ContractIR $ir, private readonly Refusals $refusals, private readonly FormReleases $releases)
     {
@@ -160,6 +169,7 @@ final class KeptForms
         }
 
         $this->readAccess($operation, $at);
+        $this->readFormat($operation->format);
         $this->readWaitingMembers($operation, $at);
         $this->readRequirements($operation, $at);
         $this->readAfterOneZeroMembers($operation, $at);
@@ -176,6 +186,9 @@ final class KeptForms
 
         foreach ($operation->responses as $responseIndex => $response) {
             $this->readResponse($response, $at->below('responses', $responseIndex));
+            if ($response->body !== null) {
+                $this->readSuccessShape($operation->format, $response->shape->value);
+            }
         }
 
         foreach ($operation->errors as $errorIndex => $error) {
@@ -237,7 +250,133 @@ final class KeptForms
 
         if (!$identity->principal instanceof SchemaPrincipal) {
             $this->refusals->waiting('principal.variants', 'A principal of several variants', $identityAt->below('principal'), Delivery::AfterOneZero);
+
+            return;
         }
+
+        $this->readPrincipalEnums($identity->principal->schema);
+    }
+
+    // The enums of the principal's members, which its generated principal class types them with.
+    private function readPrincipalEnums(string $schemaId): void
+    {
+        $schema = $this->ir->schemas[$schemaId] ?? null;
+        if (!$schema instanceof ObjectSchema) {
+            return;
+        }
+
+        foreach ($schema->properties as $index => $property) {
+            if ($property->type instanceof EnumTypeUse) {
+                $this->readEnum($property->type, IrPlace::root()->below('schemas', $schemaId, 'properties', $index, 'type'));
+            }
+        }
+    }
+
+    // A success envelope the boundary renders around the payload (`{ data: $payload }`), as the Node targets render
+    // it: with no format meta member, and per shape a response takes, no success header and no slot beside the
+    // payload, the status and the path.
+    private function readFormat(string $formatId): void
+    {
+        if (isset($this->formats[$formatId])) {
+            return;
+        }
+        $this->formats[$formatId] = true;
+
+        $format = $this->ir->formats[$formatId] ?? null;
+        $formatAt = IrPlace::root()->below('formats', $formatId);
+        if ($format === null) {
+            $this->refusals->inconsistent('format.undeclared', "The format '{$formatId}' is not declared", $formatAt);
+
+            return;
+        }
+
+        if ($format->meta !== []) {
+            $this->refusals->waiting('format.meta', "The meta members of the format '{$formatId}'", $formatAt->below('meta'), Delivery::AfterOneZero);
+        }
+    }
+
+    // The format's shape of a response with a body, read once per format and shape.
+    private function readSuccessShape(string $formatId, string $shapeName): void
+    {
+        $format = $this->ir->formats[$formatId] ?? null;
+        $shapes = $format === null ? [] : ['item' => $format->success->item, 'table' => $format->success->table, 'list' => $format->success->list, 'page' => $format->success->page];
+        $shape = $shapes[$shapeName] ?? null;
+        if ($shape === null || isset($this->formatShapes["{$formatId}/{$shapeName}"])) {
+            return;
+        }
+        $this->formatShapes["{$formatId}/{$shapeName}"] = true;
+
+        $shapeAt = IrPlace::root()->below('formats', $formatId, 'success', $shapeName);
+        if ($shape->headers !== []) {
+            $this->refusals->waiting('format.success.headers', 'A success format header', $shapeAt->below('headers'), Delivery::AfterOneZero);
+        }
+        if ($shapeName === 'page') {
+            return;
+        }
+
+        $body = $shape->body->toJson();
+        $payloadPath = self::slotPath($body, self::PAYLOAD_SLOT);
+        if ($payloadPath === null) {
+            $this->refusals->waiting('format.success.envelope', 'A success envelope that does not write `$payload` under named members', $shapeAt->below('body'), Delivery::AfterOneZero);
+
+            return;
+        }
+        if ($payloadPath === []) {
+            return;
+        }
+
+        foreach (self::templateSlots($body) as $slot) {
+            if (!in_array($slot, self::ENVELOPE_SLOTS, true)) {
+                $this->refusals->waiting('format.success.slot', "The success envelope slot '\${$slot}'", $shapeAt->below('body'), Delivery::AfterOneZero);
+            }
+        }
+    }
+
+    /** @return list<string>|null the member names down to the slot, reached through named object members only */
+    private static function slotPath(mixed $template, string $slot): ?array
+    {
+        if (!$template instanceof \stdClass) {
+            return null;
+        }
+        if (($template->kind ?? null) === 'slot') {
+            return ($template->slot ?? null) === $slot && ($template->path ?? null) === [] ? [] : null;
+        }
+        if (($template->kind ?? null) !== 'object' || !is_array($template->members ?? null)) {
+            return null;
+        }
+
+        foreach ($template->members as $member) {
+            $name = $member instanceof \stdClass ? $member->name ?? null : null;
+            if (!$name instanceof \stdClass || ($name->kind ?? null) !== 'text' || !is_string($name->text ?? null)) {
+                continue;
+            }
+            $rest = self::slotPath($member->value ?? null, $slot);
+            if ($rest !== null) {
+                return [$name->text, ...$rest];
+            }
+        }
+
+        return null;
+    }
+
+    /** @return list<string> the slot names a template writes, at any depth */
+    private static function templateSlots(mixed $template): array
+    {
+        if ($template instanceof \stdClass) {
+            $slot = ($template->kind ?? null) === 'slot' && is_string($template->slot ?? null) ? [$template->slot] : [];
+
+            return [...$slot, ...self::templateSlots(get_object_vars($template))];
+        }
+        if (!is_array($template)) {
+            return [];
+        }
+
+        $slots = [];
+        foreach ($template as $value) {
+            array_push($slots, ...self::templateSlots($value));
+        }
+
+        return $slots;
     }
 
     // A signed identity's scheme: verified by its template, with a key id the contract writes.
@@ -265,7 +404,7 @@ final class KeptForms
             [PendingForm::Paging, 'paging', $operation->paging, 'Paging', 'paging'],
             [PendingForm::Idempotency, 'idempotency', $operation->idempotency, 'Idempotency', 'idempotency'],
             [PendingForm::Cache, 'cache', $operation->cache, 'Cache and ETag headers', 'cache'],
-            [PendingForm::Deadline, 'deadline', $operation->budgetMs ?? $operation->deadlineHeader ?? $operation->degradable, 'A deadline budget', 'budgetMs'],
+            [PendingForm::Deadline, 'deadline', $operation->budgetMs ?? $operation->deadlineHeader, 'A deadline budget', $operation->budgetMs === null ? 'deadlineHeader' : 'budgetMs'],
             [PendingForm::Relays, 'relays', $operation->relays, 'A relayed operation', 'relays'],
         ];
 
@@ -340,6 +479,10 @@ final class KeptForms
             if ($value !== []) {
                 $this->refusals->waiting($member, $description, $at->below($member), Delivery::AfterOneZero);
             }
+        }
+
+        if ($operation->degradable !== null) {
+            $this->refusals->waiting('degradable', 'A degradable operation', $at->below('degradable'), Delivery::AfterOneZero);
         }
 
         foreach ($operation->fieldRights as $index => $fieldRight) {

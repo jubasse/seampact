@@ -19,7 +19,11 @@ final class OperationTypes
     /** The PHP type of each page fact a paging style reads from the handler (ADR 0002 section 14). */
     private const PAGE_FACT_TYPES = ['nextCursor' => 'string', 'previousCursor' => 'string', 'nextSince' => 'string', 'total' => 'int', 'more' => 'bool'];
 
-    public function __construct(private readonly ApiLayout $layout, private readonly PhpTypes $types, private readonly Refusals $refusals)
+    /**
+     * @param array<string, string> $nativePageClasses the framework class a handler answers instead of the generated
+     *     page, by paging style id (a pack's style the framework pages natively)
+     */
+    public function __construct(private readonly ApiLayout $layout, private readonly PhpTypes $types, private readonly Refusals $refusals, private readonly array $nativePageClasses = [])
     {
     }
 
@@ -66,7 +70,7 @@ final class OperationTypes
         foreach ($operation->responses as $index => $response) {
             $files[] = $this->responseFile($names, $response, $operation, $at->below('responses', $index));
         }
-        if ($names->page !== null) {
+        if ($names->page !== null && $this->nativePageClass($operation) === null) {
             $files[] = $this->pageFile($names->page, $operation, $at);
         }
 
@@ -137,13 +141,21 @@ final class OperationTypes
 
                 return $file;
             }
-            $body = new PhpType($names->page, PhpClassFile::shortNameOf($file->name($names->page)));
+            $nativePage = $this->nativePageClass($operation);
+            $body = $nativePage === null
+                ? new PhpType($names->page, PhpClassFile::shortNameOf($file->name($names->page)))
+                : new PhpType($nativePage, PhpClassFile::shortNameOf($file->name($nativePage)) . "<int, {$body->doc}>");
         }
         $constructor = $class->addMethod('__construct');
         PhpTypes::promote($constructor, 'body', $body);
         RedactedMembers::redact($class, $constructor, RedactedMembers::isSensitive($response->body) ? ['body'] : []);
 
         return $file;
+    }
+
+    private function nativePageClass(Operation $operation): ?string
+    {
+        return $this->nativePageClasses[$operation->paging->style ?? ''] ?? null;
     }
 
     /**

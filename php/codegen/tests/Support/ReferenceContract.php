@@ -17,6 +17,8 @@ use Seampact\Ir\Run\TargetEntry;
 final class ReferenceContract
 {
     public const TASKS = 'tasks.ir.json';
+    public const TASKS_SERVICE = 'tasksService.ir.json';
+    public const REFERENCE = 'reference';
 
     // The tasks operations whose forms this release generates; the others carry paging, idempotency, cache headers or
     // a signed route, and the tasksService api's one operation a deadline and a relay, which a later release brings.
@@ -27,9 +29,10 @@ final class ReferenceContract
         return dirname(__DIR__, 4);
     }
 
-    public static function document(string $file): \stdClass
+    /** An IR of the reference contract, or of a variant of it under `fixtures/golden` (`pack-laravel`). */
+    public static function document(string $file, string $fixture = self::REFERENCE): \stdClass
     {
-        $document = json_decode((string) file_get_contents(self::repositoryRoot() . '/fixtures/golden/reference/' . $file), false, 512, JSON_THROW_ON_ERROR);
+        $document = json_decode((string) file_get_contents(self::repositoryRoot() . "/fixtures/golden/{$fixture}/" . $file), false, 512, JSON_THROW_ON_ERROR);
         if (!$document instanceof \stdClass) {
             throw new \LogicException("The reference IR {$file} is not a JSON object.");
         }

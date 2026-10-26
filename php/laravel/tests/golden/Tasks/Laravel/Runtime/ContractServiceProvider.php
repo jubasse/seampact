@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Golden\Tasks\Laravel\Runtime;
 
 use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
 use Illuminate\Foundation\Http\Middleware\TrimStrings;
@@ -25,6 +26,8 @@ abstract class ContractServiceProvider extends ServiceProvider
     private const SUBSTITUTE_BINDINGS = 'Illuminate\\Routing\\Middleware\\SubstituteBindings';
     private const OCTANE_WORKER_STARTING = 'Laravel\\Octane\\Events\\WorkerStarting';
     private const CACHING_COMMANDS = ['route:cache', 'optimize'];
+    // The same key in every api's copied runtime, so each api's provider sees the others' boundaries.
+    private const BOUNDARIES_KEY = 'seampact.boundaries';
 
     abstract protected function contractClass(): string;
 
@@ -39,6 +42,7 @@ abstract class ContractServiceProvider extends ServiceProvider
     {
         $contract = ApiContract::of($this->contractClass());
         $this->app->instance(self::routeTableKey($contract->api), $contract->routesClass);
+        $this->app->instance(self::BOUNDARIES_KEY, [...self::boundaries($this->app), $this->boundaryClass() => ['api' => $contract->api, 'basePaths' => $contract->basePaths()]]);
 
         if (!method_exists($this->app, 'configurationIsCached') || !$this->app->configurationIsCached()) {
             $config = Services::config($this->app);
@@ -97,6 +101,67 @@ abstract class ContractServiceProvider extends ServiceProvider
 
         return !$this->app->runningInConsole()
             || (method_exists($this->app, 'runningConsoleCommand') && $this->app->runningConsoleCommand(self::CACHING_COMMANDS));
+    }
+
+    /**
+     * Whether `$boundaryClass` leads the global middleware stack: only the boundaries of the app's other apis may come
+     * before it, and none whose base path equals or prefixes one of this api's with its catch-all on, since that
+     * boundary answers its 404 on this api's paths.
+     *
+     * @param array<mixed> $global the kernel's global middleware, in order
+     */
+    public static function leadsGlobalStack(Application $app, array $global, string $boundaryClass): bool
+    {
+        $boundaries = self::boundaries($app);
+        $basePaths = $boundaries[$boundaryClass]['basePaths'] ?? [];
+        foreach ($global as $middleware) {
+            if ($middleware === $boundaryClass) {
+                return true;
+            }
+            $earlier = is_string($middleware) ? ($boundaries[$middleware] ?? null) : null;
+            if ($earlier === null || self::claimsPathsOf($app, $earlier, $basePaths)) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether an earlier api's boundary answers its catch-all 404 under one of `$basePaths`.
+     *
+     * @param array{api: string, basePaths: list<string>} $earlier
+     * @param list<string> $basePaths
+     */
+    private static function claimsPathsOf(Application $app, array $earlier, array $basePaths): bool
+    {
+        if (Services::config($app)->get("seampact.{$earlier['api']}.catch_all") === false) {
+            return false;
+        }
+
+        foreach ($earlier['basePaths'] as $earlierBasePath) {
+            foreach ($basePaths as $basePath) {
+                if ($earlierBasePath === '' || $earlierBasePath === $basePath || str_starts_with($basePath, "{$earlierBasePath}/")) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /** @return array<string, array{api: string, basePaths: list<string>}> the api and base paths of each registered boundary */
+    private static function boundaries(Application $app): array
+    {
+        $registered = $app->bound(self::BOUNDARIES_KEY) ? $app->make(self::BOUNDARIES_KEY) : [];
+        $boundaries = [];
+        foreach (is_array($registered) ? $registered : [] as $boundaryClass => $boundary) {
+            if (is_string($boundaryClass) && is_array($boundary) && is_string($boundary['api'] ?? null) && is_array($boundary['basePaths'] ?? null)) {
+                $boundaries[$boundaryClass] = ['api' => $boundary['api'], 'basePaths' => array_values(array_filter($boundary['basePaths'], is_string(...)))];
+            }
+        }
+
+        return $boundaries;
     }
 
     /** The container key of the api's generated route table class. */

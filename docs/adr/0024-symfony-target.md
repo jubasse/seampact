@@ -396,6 +396,10 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 - **Redaction**: the VarDumper caster comes with symfony-2. The bundle's `boot()` registers it for each identity's generated credentials class and the hook calls that hold credentials; it dumps the object's `__debugInfo()`. The rest of "Redaction" stays with symfony-3.
 - **The consumer** is served by PHP's built-in server, as the Laravel one is (ADR 0023), not by php-fpm behind nginx. `p6-symfony.yml` gains a `contract-bundle` job and one `e2e` job, gated by `changes` and needed by `symfony`, with the PR rows Symfony 7.4 on PHP 8.3 and Symfony 8 on PHP 8.5. The app is a `MicroKernelTrait` kernel without Flex, Monolog or RateLimiter: its `logger` service feeds the `log-lines` route, its `access_control` rule uses a request matcher keyed on a suite header, and a boot case runs `cache:warmup` into a cache directory of its own. The core operations declare no 403, so the `access_control` row answers the api's 500 and logs the `forbidden` role it kept. The spike's "CLI server" results stay proven on that server only.
 
+### Amendment 2026-10-26: what the shared PHP code gives Symfony from laravel-3b
+
+- The edits laravel-3b made to `php/codegen` serve Symfony too: success envelopes rendered around the payload (a bare format still answers a `null` payload as `null`), enum principal members written as their wire values, and the refusals by name of `format.meta`, `format.success.headers` on a shape a response takes, `format.success.slot`, `format.success.envelope` (an envelope that does not write `$payload` under named members) and `degradable`, each after 1.0.
+
 ## Spike
 
 Run on Symfony 7.4.21 and 8.1.9 (fresh `symfony/skeleton` apps with SecurityBundle, Validator, Serializer and RateLimiter) on PHP 8.5.4 under the PHP CLI server, and not kept. Both majors gave the same result on every case. PHP 8.3, php-fpm, FrankenPHP, WebProfilerBundle and NelmioCorsBundle were not run. The results marked "CLI server" (the chunked bounded read) depend on the server; symfony-2's php-fpm suite proves them. A reduced boundary had:
