@@ -4,8 +4,12 @@ import io.github.jubasse.seampact.ir.model.Access
 import io.github.jubasse.seampact.ir.model.ArrayTypeUse
 import io.github.jubasse.seampact.ir.model.ContractIR
 import io.github.jubasse.seampact.ir.model.CredentialIdentity
+import io.github.jubasse.seampact.ir.model.EachTemplate
+import io.github.jubasse.seampact.ir.model.HeaderTemplate
 import io.github.jubasse.seampact.ir.model.IdentityAccess
 import io.github.jubasse.seampact.ir.model.LiteralTemplate
+import io.github.jubasse.seampact.ir.model.MetaFill
+import io.github.jubasse.seampact.ir.model.MetaMember
 import io.github.jubasse.seampact.ir.model.ObjectSchema
 import io.github.jubasse.seampact.ir.model.ObjectTemplate
 import io.github.jubasse.seampact.ir.model.ObjectTemplateMember
@@ -17,6 +21,12 @@ import io.github.jubasse.seampact.ir.model.RefusedCredential
 import io.github.jubasse.seampact.ir.model.Refinements
 import io.github.jubasse.seampact.ir.model.ScalarType
 import io.github.jubasse.seampact.ir.model.ScalarTypeUse
+import io.github.jubasse.seampact.ir.model.SlotMemberName
+import io.github.jubasse.seampact.ir.model.SlotTemplate
+import io.github.jubasse.seampact.ir.model.SlotTextPart
+import io.github.jubasse.seampact.ir.model.Template
+import io.github.jubasse.seampact.ir.model.TextTemplate
+import io.github.jubasse.seampact.ir.model.WireFormat
 import io.github.jubasse.seampact.ir.model.TypeUse
 import io.github.jubasse.seampact.ir.read.IrReader
 import java.nio.file.Files
@@ -302,6 +312,66 @@ class SpringBootGoldenTest {
 
         val refusal = refusalsOf(ir.copy(formats = ir.formats + ("bare" to withoutPayload))).single { it.code == "format.success.envelope.unsupported" }
         assertEquals("/formats/bare/success/item/body", refusal.member)
+    }
+
+    @Test
+    fun acceptsAPageThatWritesTheEachBoundItemInText() {
+        val itemId = TextTemplate(parts = listOf(SlotTextPart(slot = "item", path = listOf("id"))))
+        val pageBody = namedMembers("data" to EachTemplate(of = "items", as_ = namedMembers("id" to itemId)))
+
+        val generated = SpringBootTarget.generate(withCursorPageBody(pageBody), entry(apis.first().packageName))
+        assertTrue(generated.isNotEmpty())
+    }
+
+    @Test
+    fun refusesPageSlotsWrittenInTextOrAsAMemberName() {
+        val resourceText = TextTemplate(parts = listOf(SlotTextPart(slot = "resource", path = emptyList())))
+        val collectionMember = ObjectTemplateMember(SlotMemberName(slot = "collection"), SlotTemplate(slot = "items", path = emptyList()))
+        val pageBody = ObjectTemplate(members = listOf(collectionMember, ObjectTemplateMember(PlainMemberName(text = "self"), resourceText)))
+
+        val refusal = refusalsOf(withCursorPageBody(pageBody)).single { it.code == "paging.response.slot.unsupported" }
+        assertTrue(refusal.message.contains("The page slots '\$collection', '\$resource' of the paging style 'cursor'"), refusal.message)
+    }
+
+    @Test
+    fun refusesASuccessEnvelopeSlotBesideThePayload() {
+        val envelope = namedMembers("data" to SlotTemplate(slot = "payload", path = emptyList()), "self" to SlotTemplate(slot = "resource", path = emptyList()))
+
+        val refusal = refusalsOf(withBareFormat { it.copy(success = it.success.copy(item = it.success.item.copy(body = envelope))) }).single { it.code == "format.success.slot.unsupported" }
+        assertTrue(refusal.message.contains("The success envelope slot '\$resource'"), refusal.message)
+        assertEquals("/formats/bare/success/item/body", refusal.member)
+    }
+
+    @Test
+    fun refusesASuccessFormatHeader() {
+        val header = HeaderTemplate(name = "X-Envelope", value = LiteralTemplate(value = JsonPrimitive("1")))
+
+        val refusal = refusalsOf(withBareFormat { it.copy(success = it.success.copy(item = it.success.item.copy(headers = listOf(header)))) }).single { it.code == "format.success.headers.unsupported" }
+        assertEquals("/formats/bare/success/item/headers", refusal.member)
+    }
+
+    @Test
+    fun refusesTheFormatMetaMembers() {
+        val generatedAt = MetaMember(type = ScalarTypeUse(type = ScalarType.STRING, refinements = Refinements()), fill = MetaFill.NOW)
+
+        val refusal = refusalsOf(withBareFormat { it.copy(meta = mapOf("generatedAt" to generatedAt)) }).single { it.code == "format.meta.unsupported" }
+        assertEquals("/formats/bare/meta", refusal.member)
+    }
+
+    private fun namedMembers(vararg members: Pair<String, Template>): ObjectTemplate =
+        ObjectTemplate(members = members.map { (name, value) -> ObjectTemplateMember(PlainMemberName(text = name), value) })
+
+    private fun withCursorPageBody(body: Template): ContractIR {
+        val ir = coreView(apis.first())
+        val cursor = ir.pagings.getValue("cursor")
+
+        return ir.copy(pagings = ir.pagings + ("cursor" to cursor.copy(response = cursor.response.copy(body = body))))
+    }
+
+    private fun withBareFormat(change: (WireFormat) -> WireFormat): ContractIR {
+        val ir = coreView(apis.first())
+
+        return ir.copy(formats = ir.formats + ("bare" to change(ir.formats.getValue("bare"))))
     }
 
     private fun rewriteGolden(generated: Map<String, String>, directory: Path) {
