@@ -6,6 +6,7 @@ namespace Seampact\Laravel;
 
 use Seampact\Codegen\DocComments;
 use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpNames;
 use Seampact\Codegen\PhpType;
@@ -82,13 +83,24 @@ final class OperationTypes
         $constructor = $class->addMethod('__construct');
         $irPart = $part === 'headers' ? 'header' : $part;
 
+        $members = [];
+
         foreach ($params as $index => $param) {
+            $paramAt = $at->below('params', $irPart, $index);
             $member = PhpNames::memberIdentifier($param->name);
             if ($member === null) {
-                $this->refusals->inconsistent('param.no-segment', "The parameter '{$param->name}' yields no name segment", $at->below('params', $irPart, $index));
+                $this->refusals->inconsistent('param.no-segment', "The parameter '{$param->name}' yields no name segment", $paramAt);
                 continue;
             }
-            PhpTypes::promote($constructor, $member, $this->types->member($param->type, !$param->required, false, $file));
+
+            $claimed = $members[strtolower($member)] ?? null;
+            if ($claimed !== null) {
+                $this->refusals->add('name.collision', "The property '\${$member}' would be written for both '{$claimed}' and '{$param->name}' of the {$part} parameters of operation '{$operation->id}'.", 'Rename one of the parameters in the contract.', $paramAt);
+                continue;
+            }
+
+            $members[strtolower($member)] = $param->name;
+            PhpTypes::promote($constructor, $member, $this->types->ofParam($param, $file));
         }
 
         return $file;

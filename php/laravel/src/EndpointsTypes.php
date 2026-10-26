@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Seampact\Codegen\DocComments;
+use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\PhpClassFile;
 
 /**
@@ -22,7 +23,7 @@ final class EndpointsTypes
     {
         $files = [];
 
-        foreach ($kept->operations as [, $operation]) {
+        foreach ($kept->operations() as [, $operation]) {
             $names = $this->layout->operation($operation->id);
             if ($names === null) {
                 continue;

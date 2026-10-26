@@ -6,14 +6,17 @@ namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\Literal;
 use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
 use Seampact\Ir\Model\Operation;
+use Seampact\Ir\Model\RefuseUnknownQuery;
 
 /**
  * The FormRequest of each operation (ADR 0023 "Types and validation"): `authorize()` fails closed unless the access
  * middleware marked the request for this operation, `validationData()` is the boundary's decoded input with every
- * wire name escaped, and `rules()` holds the operation's rules, which `contractRules()` builds over an input tree.
+ * wire name escaped, and `rules()` holds the operation's rules, which `contractRules()` builds over an input tree;
+ * under `unknownQuery: refuse` an undeclared query key is an issue.
  */
 final class FormRequests
 {
@@ -38,11 +41,14 @@ final class FormRequests
                 $rules->param($part, $param, $at->below('params', $part === 'headers' ? 'header' : $part, $index));
             }
         }
+        if ($operation->unknownQuery instanceof RefuseUnknownQuery) {
+            $rules->refuseUnknownQuery($operation->params->query);
+        }
         if ($operation->input !== null) {
             $rules->body($operation->input->schema, $at->below('input', 'schema'));
         }
 
-        $class->addConstant('NATIVE_RULE_NAMES', $rules->nativeNames)->setPublic()
+        $class->addConstant('NATIVE_RULE_NAMES', $rules->nativeNames())->setPublic()
             ->addComment("Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks.");
 
         $mark = $file->name($this->layout->runtime('BoundaryMark'));
@@ -61,7 +67,7 @@ final class FormRequests
 
         $contractRules = $class->addMethod('contractRules')->setStatic()->setReturnType('array')
             ->addComment('@return array<string, list<mixed>>')
-            ->setBody('return ?;', [new Literal(self::rulesArray($rules->rules))]);
+            ->setBody('return ?;', [new Literal(self::rulesArray($rules->rules()))]);
         $contractRules->addParameter('input')->setType($this->layout->runtime('InputTree'));
 
         return $file;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpNames;
 use Seampact\Codegen\Refusals;
@@ -54,7 +55,7 @@ final class PhpLayout implements TypeNames
         $this->contractException = $this->claim("{$namespace}\\{$this->apiTypeName}ContractException", "the api's contract exception base", $apiAt);
         $this->routeTable = $this->claim("{$this->laravelNamespace}\\{$this->apiTypeName}Routes", "the api's route table", $apiAt);
 
-        foreach ($kept->enums as $enumId => $enum) {
+        foreach ($kept->enums() as $enumId => $enum) {
             $at = IrPlace::root()->below('enums', $enumId, 'name');
             $simpleName = $this->typeIdentifier($enum->name, $at);
             if ($simpleName !== null) {
@@ -62,7 +63,7 @@ final class PhpLayout implements TypeNames
             }
         }
 
-        foreach ($kept->objects as $schemaId => $schema) {
+        foreach ($kept->objects() as $schemaId => $schema) {
             $at = IrPlace::root()->below('schemas', $schemaId, 'name');
             $simpleName = $this->typeIdentifier($schema->name, $at);
             if ($simpleName !== null) {
@@ -70,7 +71,7 @@ final class PhpLayout implements TypeNames
             }
         }
 
-        foreach (array_keys($kept->errors) as $code) {
+        foreach (array_keys($kept->errors()) as $code) {
             $at = IrPlace::root()->below('errors', $code);
             $segments = SplitName::segmentsOf($code, NameSource::Name);
             if ($segments === null) {
@@ -82,7 +83,7 @@ final class PhpLayout implements TypeNames
         }
 
         $endpointsClaimed = [];
-        foreach ($kept->operations as [$index, $operation]) {
+        foreach ($kept->operations() as [$index, $operation]) {
             $at = IrPlace::ofOperation($index, $operation->id);
             $owner = $this->endpointsOwner($operation);
             if ($owner === null) {

@@ -51,6 +51,16 @@ final class Refusals
         );
     }
 
+    /** A form this release of the target does not generate, with its arrival: `<form>.unsupported`. */
+    public function pending(string $form, string $description, IrPlace $at, FormArrival $arrival): void
+    {
+        if ($arrival->release !== null) {
+            $this->waitingForRelease($form, $description, $at, $arrival->release);
+        } elseif ($arrival->delivery !== null) {
+            $this->waiting($form, $description, $at, $arrival->delivery);
+        }
+    }
+
     /** An IR that breaks a rule the compiler guarantees, such as a reference to a missing schema. */
     public function inconsistent(string $code, string $description, IrPlace $at): void
     {

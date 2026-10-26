@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Seampact\Codegen\DocComments;
+use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Ir\Model\ErrorDecl;
 
@@ -33,7 +34,7 @@ final class ContractExceptions
         $baseClass->addMethod('status')->setAbstract()->setReturnType('int');
         $files = [$base];
 
-        foreach ($kept->errors as $code => $error) {
+        foreach ($kept->errors() as $code => $error) {
             $className = $this->layout->errorClass($code);
             if ($className !== null) {
                 $files[] = $this->errorFile($className, $code, $error);

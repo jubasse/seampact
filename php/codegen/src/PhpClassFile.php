@@ -8,8 +8,9 @@ use Nette\PhpGenerator\PhpFile;
 use Nette\PhpGenerator\PhpNamespace;
 
 /**
- * One generated PHP file holding one class-like type: its namespace and the `use` lines its names need. A name whose
- * short form another import or the type itself already takes stays qualified.
+ * One generated PHP file holding one class-like type: its namespace and the `use` lines its names need. A short name
+ * belongs to the first class written with it, the type itself first; a later class with that short name stays fully
+ * qualified, so a written name never changes meaning.
  */
 final class PhpClassFile
 {
@@ -45,18 +46,25 @@ final class PhpClassFile
         return $separator === false ? $className : substr($className, $separator + 1);
     }
 
-    /** The name to write for `$className` in this file's code and docs, imported when its short name is free. */
+    /**
+     * The name to write for `$className` in this file's code and docs: its short name when free, claimed for the rest
+     * of the file (imported from another namespace), else the fully qualified name.
+     */
     public function name(string $className): string
     {
-        $short = self::shortNameOf($className);
-        $key = strtolower($short);
+        $key = strtolower(self::shortNameOf($className));
+        $claimedBy = $this->taken[$key] ?? null;
 
-        if (self::namespaceOf($className) !== $this->namespace->getName() && !isset($this->taken[$key])) {
-            $this->namespace->addUse($className);
+        if ($claimedBy === null) {
             $this->taken[$key] = $className;
+            if (self::namespaceOf($className) !== $this->namespace->getName()) {
+                $this->namespace->addUse($className);
+            }
+
+            return self::shortNameOf($className);
         }
 
-        return $this->namespace->simplifyName($className);
+        return strcasecmp($claimedBy, $className) === 0 ? self::shortNameOf($claimedBy) : '\\' . ltrim($className, '\\');
     }
 
     /** The relative path of the file under the output directory, from the namespace below `$rootNamespace`. */

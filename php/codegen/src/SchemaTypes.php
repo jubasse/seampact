@@ -94,7 +94,7 @@ final class SchemaTypes
             }
 
             $members[strtolower($member)] = $property->name;
-            PhpTypes::promote($constructor, $member, $this->types->member($property->type, $property->optional, $property->nullable, $file));
+            PhpTypes::promote($constructor, $member, $this->types->ofProperty($property, $file));
         }
 
         return $file;

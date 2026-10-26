@@ -8,7 +8,8 @@ namespace Seampact\Laravel\Runtime;
  * The member's presence and JSON type, read on the objects-preserved input with `array_key_exists`, so an explicit
  * null and an absent key never look alike, `{}` is never a list and a string is never a number. An integer accepts a
  * whole float up to 2^53 in magnitude (`1.0`); a larger one, which the decode may have changed, is refused as
- * `maximum`, or `minimum` below zero.
+ * `maximum`, or `minimum` below zero. A number the decode made infinite (`1e400`) is a `type` issue, as on the Node
+ * targets, which take only finite numbers.
  */
 final class TypeRule extends ContractRule
 {
@@ -77,7 +78,15 @@ final class TypeRule extends ContractRule
             return 'type';
         }
 
-        return $this->type === self::INTEGER && is_float($value) ? self::wholeFloatIssue($value) : null;
+        if (!is_float($value)) {
+            return null;
+        }
+
+        return match ($this->type) {
+            self::INTEGER => self::wholeFloatIssue($value),
+            self::NUMBER => is_finite($value) ? null : 'type',
+            default => null,
+        };
     }
 
     // A JSON integer that fits an `int` decodes to an `int`; a float here is `1.0` or a number beyond that range.

@@ -7,6 +7,8 @@ namespace Seampact\Codegen;
 use Nette\PhpGenerator\Method;
 use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\EnumTypeUse;
+use Seampact\Ir\Model\Param;
+use Seampact\Ir\Model\Property;
 use Seampact\Ir\Model\RefTypeUse;
 use Seampact\Ir\Model\ScalarType;
 use Seampact\Ir\Model\ScalarTypeUse;
@@ -38,18 +40,26 @@ final class PhpTypes
         return $nullable ? self::orNull($plain) : $plain;
     }
 
-    /** The type of an object member: `?T` when optional or nullable, `Field<T>` when both. */
-    public function member(TypeUse $type, bool $optional, bool $nullable, PhpClassFile $file): PhpType
+    /** The type of an object property: `?T` when optional or nullable, `Field<T>` when both. */
+    public function ofProperty(Property $property, PhpClassFile $file): PhpType
     {
-        $plain = $this->of($type, $file);
+        $plain = $this->of($property->type, $file);
 
-        if ($optional && $nullable) {
+        if ($property->optional && $property->nullable) {
             $field = $file->name(self::FIELD_CLASS);
 
             return new PhpType(self::FIELD_CLASS, "{$field}<" . self::withoutNull($plain)->doc . '>');
         }
 
-        return $optional || $nullable ? self::orNull($plain) : $plain;
+        return $property->optional || $property->nullable ? self::orNull($plain) : $plain;
+    }
+
+    /** The type of a parameter: `?T` when it is optional. */
+    public function ofParam(Param $param, PhpClassFile $file): PhpType
+    {
+        $plain = $this->of($param->type, $file);
+
+        return $param->required ? $plain : self::orNull($plain);
     }
 
     /** Adds `$type` as a promoted constructor parameter, with its PHPDoc line when the native type says less. */

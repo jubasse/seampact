@@ -6,6 +6,7 @@ namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\PsrPrinter;
 use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpTypes;
 use Seampact\Codegen\Refusals;
@@ -27,6 +28,7 @@ final class LaravelGenerator implements Generator
     public const TARGET = 'laravel';
     public const PACKAGE = 'seampact/laravel';
     private const HTTP_OPERATION = 'httpOperation';
+    private const ARTEFACT_RELEASES = ['bootCheck' => LaravelReleases::LARAVEL_2, 'accessHooks' => LaravelReleases::LARAVEL_4];
 
     public function irSupport(): IrSupport
     {
@@ -38,11 +40,9 @@ final class LaravelGenerator implements Generator
         $options = LaravelOptions::parse($entry->options, $entry->namespace, $entry->id);
         $refusals = new Refusals($entry->id, self::TARGET, self::PACKAGE);
 
-        foreach (array_keys(get_object_vars($entry->artefacts)) as $artefact) {
-            $refusals->waitingForRelease('artefacts.' . $artefact, "The artefact switch '{$artefact}'", IrPlace::root()->below('artefacts', $artefact), KeptForms::LARAVEL_2);
-        }
+        self::readArtefacts($entry->artefacts, $refusals);
 
-        $kept = new KeptForms($ir, $refusals);
+        $kept = new KeptForms($ir, $refusals, new LaravelReleases());
         $refusals->throwIfAny();
 
         $layout = new PhpLayout($ir, $options->namespace, $kept, $refusals);
@@ -52,12 +52,12 @@ final class LaravelGenerator implements Generator
         $routes = new RouteTable($layout, $options, $refusals);
 
         $classFiles = [
-            ...(new SchemaTypes($layout, $types, $refusals))->files($kept->enums, $kept->objects),
+            ...(new SchemaTypes($layout, $types, $refusals))->files($kept->enums(), $kept->objects()),
             ...(new ContractExceptions($layout, $operationTypes))->files($kept),
             ...(new EndpointsTypes($layout))->files($kept),
         ];
 
-        foreach ($kept->operations as [$index, $operation]) {
+        foreach ($kept->operations() as [$index, $operation]) {
             $names = $layout->operation($operation->id);
             if ($names === null) {
                 continue;
@@ -87,5 +87,26 @@ final class LaravelGenerator implements Generator
         usort($files, static fn (GeneratedFile $first, GeneratedFile $second): int => strcmp($first->path, $second->path));
 
         return $files;
+    }
+
+    // The boot check comes with laravel-2 and native access with laravel-4; the target declares no other artefact.
+    private static function readArtefacts(\stdClass $artefacts, Refusals $refusals): void
+    {
+        foreach (array_keys(get_object_vars($artefacts)) as $artefact) {
+            $at = IrPlace::root()->below('artefacts', $artefact);
+            $release = self::ARTEFACT_RELEASES[$artefact] ?? null;
+
+            if ($release !== null) {
+                $refusals->waitingForRelease("artefacts.{$artefact}", "The artefact switch '{$artefact}'", $at, $release);
+                continue;
+            }
+
+            $refusals->add(
+                'artefacts.unknown',
+                "The artefact '{$artefact}' is not one the laravel target declares; it takes '" . implode("', '", array_keys(self::ARTEFACT_RELEASES)) . "'.",
+                "Remove '{$artefact}' from the entry's `artefacts`.",
+                $at,
+            );
+        }
     }
 }

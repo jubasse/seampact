@@ -20,7 +20,7 @@ final class LaravelRefusalsTest extends TestCase
     public function testTwoParametersWithOnePhpNameAreRefusedAsACollision(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
-            $operation->params->query = [
+            self::object($operation->params)->query = [
                 self::param('page-size', false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => new \stdClass()]),
                 self::param('pageSize', true, ['kind' => 'scalar', 'type' => 'string', 'refinements' => new \stdClass()]),
             ];
@@ -36,7 +36,7 @@ final class LaravelRefusalsTest extends TestCase
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
             $operation->upstream = ['billing'];
-            $operation->scopes[0]->source = (object) ['in' => 'query', 'name' => 'channel'];
+            self::firstOf($operation->scopes)->source = (object) ['in' => 'query', 'name' => 'channel'];
         });
 
         $refused = self::refused($document);
@@ -48,8 +48,9 @@ final class LaravelRefusalsTest extends TestCase
     public function testAListResponseWaitsForAConsumerAfterOneZero(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
-            $operation->responses[0]->shape = 'list';
-            $operation->responses[0]->body = (object) ['kind' => 'array', 'items' => $operation->responses[0]->body];
+            $response = self::firstOf($operation->responses);
+            $response->shape = 'list';
+            $response->body = (object) ['kind' => 'array', 'items' => $response->body];
         });
 
         $refused = self::refused($document);
@@ -103,6 +104,20 @@ final class LaravelRefusalsTest extends TestCase
         }
 
         self::fail('The contract was generated, but a form in it should be refused.');
+    }
+
+    private static function object(mixed $value): \stdClass
+    {
+        self::assertInstanceOf(\stdClass::class, $value);
+
+        return $value;
+    }
+
+    private static function firstOf(mixed $list): \stdClass
+    {
+        self::assertIsArray($list);
+
+        return self::object($list[0] ?? null);
     }
 
     /** @param array<string, mixed> $type */

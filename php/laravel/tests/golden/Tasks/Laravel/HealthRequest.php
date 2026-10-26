@@ -7,6 +7,8 @@ namespace Seampact\Golden\Tasks\Laravel;
 use Illuminate\Foundation\Http\FormRequest;
 use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryMark;
 use Seampact\Golden\Tasks\Laravel\Runtime\InputTree;
+use Seampact\Golden\Tasks\Laravel\Runtime\Position;
+use Seampact\Golden\Tasks\Laravel\Runtime\UnknownKeysRule;
 
 /**
  * The request of operation 'health': its access mark and its validation rules.
@@ -47,6 +49,10 @@ final class HealthRequest extends FormRequest
      */
     public static function contractRules(InputTree $input): array
     {
-        return [];
+        return [
+            'query' => [
+                new UnknownKeysRule($input, Position::Member, []),
+            ],
+        ];
     }
 }

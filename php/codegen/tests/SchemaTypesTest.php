@@ -9,12 +9,10 @@ use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\PhpTypes;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\SchemaTypes;
-use Seampact\Codegen\TypeNames;
+use Seampact\Codegen\Tests\Support\AppTypeNames;
+use Seampact\Codegen\Tests\Support\ReferenceIr;
 use Seampact\Ir\Model\ContractIR;
-use Seampact\Ir\Model\IrModelVersion;
 use Seampact\Ir\Model\ObjectSchema;
-use Seampact\Ir\Read\IrReader;
-use Seampact\Ir\Read\IrSupport;
 
 final class SchemaTypesTest extends TestCase
 {
@@ -63,17 +61,7 @@ final class SchemaTypesTest extends TestCase
     {
         $task = $ir->schemas['Task'] ?? null;
         self::assertInstanceOf(ObjectSchema::class, $task);
-        $names = new class implements TypeNames {
-            public function schemaClass(string $schemaId): string
-            {
-                return 'App\\Types\\' . $schemaId;
-            }
-
-            public function enumClass(string $enumId): string
-            {
-                return 'App\\Types\\' . $enumId;
-            }
-        };
+        $names = new AppTypeNames();
         $refusals = new Refusals('server', 'test', 'seampact/test');
         $classFiles = (new SchemaTypes($names, new PhpTypes($names), $refusals))->files(['TaskState' => $ir->enums['TaskState']], ['Task' => $task]);
         self::assertTrue($refusals->isEmpty());
@@ -89,10 +77,7 @@ final class SchemaTypesTest extends TestCase
 
     private static function taskWithPublishOn(): ContractIR
     {
-        $text = file_get_contents(dirname(__DIR__, 3) . '/fixtures/golden/reference/tasks.ir.json');
-        self::assertIsString($text);
-        $document = json_decode($text, false, 512, JSON_THROW_ON_ERROR);
-        self::assertInstanceOf(\stdClass::class, $document);
+        $document = ReferenceIr::document();
 
         $schemas = get_object_vars($document)['schemas'];
         self::assertInstanceOf(\stdClass::class, $schemas);
@@ -108,6 +93,6 @@ final class SchemaTypesTest extends TestCase
         $publishOn->type = (object) ['kind' => 'scalar', 'type' => 'string', 'format' => 'date-time', 'refinements' => new \stdClass()];
         $task->properties[] = $publishOn;
 
-        return IrReader::readDocument($document, new IrSupport([IrModelVersion::IR_VERSION], IrModelVersion::IR_REVISION, ['httpOperation'], []));
+        return ReferenceIr::read($document);
     }
 }

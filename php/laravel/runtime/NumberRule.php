@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel\Runtime;
 
-/** A number member's bounds and step with the contract's meaning (`rules: seampact-consistent`). */
+/**
+ * A number member's bounds and step with the contract's meaning (`rules: seampact-consistent`). ADR 0003 keeps
+ * `multipleOf` on integers only, so the step is checked exactly, as Laravel's `multiple_of` and the Spring runtime do.
+ */
 final class NumberRule extends ContractRule
 {
-    private const STEP_TOLERANCE = 1e-9;
-
     public function __construct(
         InputTree $input,
         Position $position,
@@ -16,7 +17,7 @@ final class NumberRule extends ContractRule
         private readonly int|float|null $maximum = null,
         private readonly int|float|null $exclusiveMinimum = null,
         private readonly int|float|null $exclusiveMaximum = null,
-        private readonly int|float|null $multipleOf = null,
+        private readonly ?int $multipleOf = null,
     ) {
         parent::__construct($input, $position);
     }
@@ -44,14 +45,13 @@ final class NumberRule extends ContractRule
         }
     }
 
-    private static function isMultiple(int|float $number, int|float $step): bool
+    // The type rule let through only whole floats up to 2^53 in magnitude, which convert to an int exactly.
+    private static function isMultiple(int|float $number, int $step): bool
     {
-        if (is_int($number) && is_int($step)) {
-            return $number % $step === 0;
+        if (is_float($number) && floor($number) !== $number) {
+            return false;
         }
 
-        $quotient = $number / $step;
-
-        return abs($quotient - round($quotient)) <= self::STEP_TOLERANCE * max(1.0, abs($quotient));
+        return (int) $number % $step === 0;
     }
 }

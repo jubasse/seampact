@@ -6,7 +6,8 @@ namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 
 /**
  * A string member's portable format: `date-time` (RFC 3339, with its offset), which Laravel has no rule for, and
- * `uuid` under `rules: seampact-consistent`.
+ * `uuid`. Under `rules: native` a `uuid` member has Laravel's `uuid` rule and this one checks only the empty and
+ * whitespace-only strings, which Laravel's rule skips.
  */
 final class FormatRule extends ContractRule
 {
@@ -19,7 +20,7 @@ final class FormatRule extends ContractRule
     private const LAST_MINUTE = 59;
     private const LAST_SECOND = 60;
 
-    public function __construct(InputTree $input, Position $position, private readonly string $format)
+    public function __construct(InputTree $input, Position $position, private readonly string $format, private readonly BlankStrings $checked)
     {
         parent::__construct($input, $position);
     }
@@ -28,7 +29,11 @@ final class FormatRule extends ContractRule
     {
         $found = $this->presentValue($attribute);
 
-        if (is_string($found->value) && !$this->matches($found->value)) {
+        if (!is_string($found->value) || ($this->checked === BlankStrings::BlankOnly && trim($found->value) !== '')) {
+            return;
+        }
+
+        if (!$this->matches($found->value)) {
             $this->failWith($attribute, 'format', $fail);
         }
     }

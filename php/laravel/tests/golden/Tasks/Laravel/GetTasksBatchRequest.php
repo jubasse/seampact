@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Seampact\Golden\Tasks\Laravel;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Seampact\Golden\Tasks\Laravel\Runtime\BlankStrings;
 use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryMark;
+use Seampact\Golden\Tasks\Laravel\Runtime\FormatRule;
 use Seampact\Golden\Tasks\Laravel\Runtime\InputTree;
 use Seampact\Golden\Tasks\Laravel\Runtime\Nullability;
 use Seampact\Golden\Tasks\Laravel\Runtime\Position;
@@ -61,6 +63,10 @@ final class GetTasksBatchRequest extends FormRequest
                 'bail',
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
                 'uuid',
+                new FormatRule($input, Position::Member, FormatRule::UUID, BlankStrings::BlankOnly),
+            ],
+            'query' => [
+                new UnknownKeysRule($input, Position::Member, []),
             ],
             'body' => [
                 'bail',
@@ -76,6 +82,7 @@ final class GetTasksBatchRequest extends FormRequest
                 'bail',
                 new TypeRule($input, Position::Item, TypeRule::STRING, Presence::Required, Nullability::NotNull),
                 'uuid',
+                new FormatRule($input, Position::Item, FormatRule::UUID, BlankStrings::BlankOnly),
             ],
         ];
     }

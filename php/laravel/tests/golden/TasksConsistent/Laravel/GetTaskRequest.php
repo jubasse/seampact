@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Golden\TasksConsistent\Laravel;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\BlankStrings;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryMark;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormatRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\InputTree;
@@ -12,6 +13,7 @@ use Seampact\Golden\TasksConsistent\Laravel\Runtime\Nullability;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\Position;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\Presence;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\TypeRule;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\UnknownKeysRule;
 
 /**
  * The request of operation 'getTask': its access mark and its validation rules.
@@ -56,12 +58,15 @@ final class GetTaskRequest extends FormRequest
             'path.channelId' => [
                 'bail',
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
-                new FormatRule($input, Position::Member, FormatRule::UUID),
+                new FormatRule($input, Position::Member, FormatRule::UUID, BlankStrings::Every),
             ],
             'path.taskId' => [
                 'bail',
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
-                new FormatRule($input, Position::Member, FormatRule::UUID),
+                new FormatRule($input, Position::Member, FormatRule::UUID, BlankStrings::Every),
+            ],
+            'query' => [
+                new UnknownKeysRule($input, Position::Member, []),
             ],
         ];
     }
