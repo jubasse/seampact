@@ -6,7 +6,12 @@
 
 Laravel 13 on PHP 8.3, 8.4 or 8.5 (the CI runs 8.3 and 8.5, on Laravel 13.38). The extensions `json`, `mbstring` and `zlib` must be loaded. Octane is refused at start.
 
+Nothing is published to Packagist yet, so Composer installs seampact from your checkout. Replace `~/src/seampact` with the path of your checkout.
+
 ```sh
+composer config minimum-stability dev
+composer config prefer-stable true
+composer config repositories.seampact path "$HOME/src/seampact/php/*"
 composer require seampact/laravel seampact/hooks
 ```
 
@@ -19,6 +24,7 @@ targets:
     out: Notes
     use: seampact/laravel
     api: notes
+    options: { rules: seampact-consistent }
 ```
 
 The classes go into the PSR-4 namespace that `composer.json` gives `outDir` (here `App\Generated\Notes`). Then generate:
@@ -31,7 +37,7 @@ php artisan seampact:generate
 
 Commit the generated files. `seampact check` fails CI when they drift from the contract.
 
-Options of the entry (all optional):
+Options of the entry (all optional), set under `options:` as above:
 
 | Option | Default | What it does |
 |---|---|---|
@@ -103,7 +109,7 @@ The same holds for an API Resource: build the generated type from it.
 
 ## Paging
 
-With `@seampact/pack-laravel`, a paged list answers Laravel's paginator, and the boundary writes `{ data, links, meta }` for you.
+With `@seampact/pack-laravel`, installed from your checkout as [Get started](../getting-started/01-install.md) installs the npm packages (it is not on npm yet), a paged list answers Laravel's paginator, and the boundary writes `{ data, links, meta }` for you.
 
 The boundary validates `page` and `per_page` first. Use the validated values from `contractInput()`. Laravel's own page resolver falls back to page 1 on a bad value, so do not rely on it.
 
