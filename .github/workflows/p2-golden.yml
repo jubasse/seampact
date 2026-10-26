@@ -20,8 +20,30 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only.
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - name: Detect a change beyond documentation no test reads
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          # Every path: only a change to documentation no test reads skips this lane.
+          watched-paths: |
+            .
+
   determinism:
     name: determinism (${{ matrix.os }}, ${{ matrix.tz }}, ${{ matrix.lang }})
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
@@ -81,7 +103,7 @@ jobs:
         run: node --experimental-transform-types --import ./scripts/ir-models/register.ts scripts/golden/cli.ts --check
 
   golden-determinism:
-    needs: determinism
+    needs: [changes, determinism]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -90,8 +112,7 @@ jobs:
         with:
           sparse-checkout: .github/actions
           persist-credentials: false
-      # No change filter yet: every needed job must run.
       - uses: ./.github/actions/lane-aggregate
         with:
           needs: ${{ toJSON(needs) }}
-          should-run: true
+          should-run: ${{ needs.changes.outputs.run }}
