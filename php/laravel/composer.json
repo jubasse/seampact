@@ -1,6 +1,6 @@
 {
   "name": "seampact/laravel",
-  "description": "The Seampact Laravel target: generates the FormRequests, types, controller interfaces and routes of a contract for Laravel 13.",
+  "description": "The Seampact Laravel target: generates the FormRequests, types, controller interfaces, routes and boundary of a contract for Laravel 13.",
   "type": "library",
   "license": "MIT",
   "require": {
@@ -9,12 +9,12 @@
     "laravel/framework": "^13.0",
     "nette/php-generator": "~4.2.0",
     "seampact/codegen": "self.version",
+    "seampact/hooks": "self.version",
     "seampact/ir": "self.version"
   },
   "require-dev": {
     "phpstan/phpstan": "2.2.16",
-    "phpunit/phpunit": "11.5.56",
-    "seampact/hooks": "self.version"
+    "phpunit/phpunit": "11.5.56"
   },
   "repositories": [
     {
@@ -55,6 +55,11 @@
   "extra": {
     "seampact": {
       "generator": "Seampact\\Laravel\\LaravelGenerator"
+    },
+    "laravel": {
+      "providers": [
+        "Seampact\\Laravel\\SeampactCommandsProvider"
+      ]
     }
   },
   "config": {
