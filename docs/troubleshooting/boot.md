@@ -49,6 +49,7 @@ Same start check, run by `bin/console cache:warmup` and on the first request. Th
 | `the input resolver ... is not registered as a value resolver` | List the api's bundle in `config/bundles.php`. |
 | `the service <id> listens to kernel.request at priority ...`, `... kernel.response at priority ...` | Move your listener inside the boundary's priorities, as the message says. |
 | `the api writes absolute URLs ... and 'seampact_<api>.public_origin' is not set` | Set `public_origin` to the origin clients call, such as `https://api.example.com`: a scheme, a host, an optional port, no path. |
+| `the api writes relative URLs ... and 'seampact_<api>.public_origin' is set` | Remove `public_origin`, or set `api.wire.urls: absolute` in the contract and generate again. |
 | `the PHP extension zlib is not loaded`, `Symfony <x> is not supported` | Enable ext-zlib. Use Symfony 7.4 or 8. |
 | `the route of operation '<id>' has the path ...`, `... carries a host, a scheme or a condition` | Import the api's routes with no `prefix`, `host`, `schemes` or `condition`. |
 | `an app route with the path ... is registered before the route of operation '<id>'` | Import the contract routes first. |
@@ -77,6 +78,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `operation '<id>' runs without the access middleware: remove the withoutMiddleware() call on its route` | Remove `withoutMiddleware()` from the contract route. |
 | `the exception handler ... has no 'renderable' method` | Make your handler extend Laravel's `Illuminate\Foundation\Exceptions\Handler`. |
 | `'seampact.<api>.public_origin' is not set` or `... is '<value>', which ...` | The contract writes absolute URLs. Set `public_origin` in `config/seampact/<api>.php` to a scheme, host and optional port, such as `https://api.example.com`. |
+| `the api writes relative URLs ... and 'seampact.<api>.public_origin' is set` | Remove `public_origin` from `config/seampact/<api>.php`, or set `api.wire.urls: absolute` in the contract and generate again. |
 | `Laravel <version> runs here, and the generated code serves Laravel 13 only` | Run the app on Laravel 13. |
 | `ext-zlib is not loaded` | Enable the `zlib` PHP extension. |
 | `runtime.octane.unsupported` | Serve the app with php-fpm, or keep this api's provider out of the Octane app. |

@@ -36,14 +36,17 @@ final class PublicOrigin
         return $configured;
     }
 
-    /** The boot check's problem with the origin set in `$setting`, when the api writes absolute URLs. */
+    /** The boot check's problem with the origin set in `$setting`: one set under relative URLs, or a missing or invalid one under absolute URLs. */
     public static function bootProblem(ApiContract $contract, string $setting, mixed $configured): ?string
     {
+        $isSet = $configured !== null && $configured !== '';
         if (!self::writesAbsoluteUrls($contract)) {
-            return null;
+            return $isSet
+                ? "the api writes relative URLs ('api.wire.urls: relative') and '{$setting}' is set: remove it, or set 'api.wire.urls: absolute' to write absolute URLs"
+                : null;
         }
 
-        if ($configured === null || $configured === '') {
+        if (!$isSet) {
             return "the api writes absolute URLs ('api.wire.urls: absolute') and '{$setting}' is not set: set it to the origin clients call, such as https://api.example.com";
         }
 

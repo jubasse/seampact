@@ -7,6 +7,7 @@ namespace Seampact\Golden\Tasks\Symfony;
 use Seampact\Golden\Tasks\Symfony\Runtime\ApiContract;
 use Seampact\Golden\Tasks\Symfony\Runtime\BootCheckPass;
 use Seampact\Golden\Tasks\Symfony\Runtime\BoundarySubscriber;
+use Seampact\Golden\Tasks\Symfony\Runtime\ContractSettings;
 use Seampact\Golden\Tasks\Symfony\Runtime\Decider;
 use Seampact\Golden\Tasks\Symfony\Runtime\DumpRedaction;
 use Seampact\Golden\Tasks\Symfony\Runtime\HookCheckWarmer;
@@ -69,6 +70,7 @@ final class TasksSeampactBundle extends AbstractBundle
             '$responses' => $config['responses'] ?? null,
             '$bodyValidation' => $config['body_validation'] ?? null,
             '$operations' => $config['operations'] ?? [],
+            ContractSettings::PUBLIC_ORIGIN_ARGUMENT => $config['public_origin'] ?? null,
         ]);
         $services->set(Hooks::class)->args([
             tagged_locator(Hooks::tag(self::API, Hooks::AUTHENTICATE_TAG_SUFFIX), Hooks::HOOK_ATTRIBUTE),

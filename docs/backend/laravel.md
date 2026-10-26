@@ -187,7 +187,7 @@ public function authenticate(AuthenticateRequest $request): AuthenticateResult
 | `public_origin` | The origin of absolute URLs, such as `https://api.example.com`. |
 | `middleware.public`, `.optional`, `.identity`, `.signed` | Your middleware on one kind of route. |
 
-When the contract writes absolute URLs (`api.wire.urls: absolute`), set `public_origin` (`SEAMPACT_NOTES_PUBLIC_ORIGIN`). The app refuses to start without it. The request's `Host` is never read. Behind a proxy, set Laravel's `trustProxies()`; it changes Laravel's URL helpers, never the contract's URLs.
+When the contract writes absolute URLs (`api.wire.urls: absolute`), set `public_origin` (`SEAMPACT_NOTES_PUBLIC_ORIGIN`). The app refuses to start without it, and refuses it when the contract writes relative URLs. The request's `Host` is never read. Behind a proxy, set Laravel's `trustProxies()`; it changes Laravel's URL helpers, never the contract's URLs.
 
 ## The boot check
 
@@ -197,7 +197,8 @@ The app refuses to start, and lists every problem, when:
 - an operation has no handler, or its route is missing or served twice;
 - a route that is not in the contract is served and not allow-listed;
 - the boundary is not the first global middleware, or the access middleware is not before `SubstituteBindings`;
-- the contract writes absolute URLs and `public_origin` is missing or is not a scheme, host and port.
+- the contract writes absolute URLs and `public_origin` is missing or is not a scheme, host and port;
+- the contract writes relative URLs and `public_origin` is set.
 
 The check runs at `php artisan route:cache` and at an HTTP boot without a route cache. Each message names the fix; find it in [Boot errors](../troubleshooting/boot.md).
 

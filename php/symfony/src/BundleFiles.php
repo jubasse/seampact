@@ -94,9 +94,7 @@ final class BundleFiles
         $routeCheck = $file->name($this->placement->runtime('RouteCheck'));
         $contract = $file->name($this->placement->contract);
         $bootCheck = $file->name($this->placement->runtime('BootCheckPass'));
-        $publicOriginArgument = $this->writesAbsoluteUrls()
-            ? "\n    {$file->name($this->placement->runtime('ContractSettings'))}::PUBLIC_ORIGIN_ARGUMENT => \$config['public_origin'] ?? null,"
-            : '';
+        $publicOriginArgument = "\n    {$file->name($this->placement->runtime('ContractSettings'))}::PUBLIC_ORIGIN_ARGUMENT => \$config['public_origin'] ?? null,";
         $matcher = $file->name($this->placement->runtime('KindRequestMatcher'));
         $access = $file->name($this->placement->access);
         $tag = static fn (string $suffix): string => "{$hooks}::tag(self::API, {$hooks}::{$suffix})";
@@ -228,6 +226,9 @@ final class BundleFiles
         $constructor->addPromotedParameter('operations')->setPrivate()->setType('array');
         if ($this->writesAbsoluteUrls()) {
             $constructor->addPromotedParameter('publicOrigin')->setPrivate()->setType('mixed');
+        } else {
+            // Held for the boot check, which refuses a value under relative URLs; never read at run time.
+            $constructor->addPromotedParameter('publicOrigin', null)->setPublic()->setType('mixed');
         }
 
         $responses = $class->addMethod('responsesOf')->setPublic()->setReturnType('string')

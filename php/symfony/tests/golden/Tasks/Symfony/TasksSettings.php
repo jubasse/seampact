@@ -24,6 +24,7 @@ final readonly class TasksSettings implements ContractSettings
         private mixed $responses,
         private mixed $bodyValidation,
         private array $operations,
+        public mixed $publicOrigin = null,
     ) {
     }
 
