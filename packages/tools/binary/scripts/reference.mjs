@@ -1,5 +1,5 @@
 // Writes the reference output the smoke compares against: the IR, the bundle and the editor schemas of each smoke app,
-// and every file each `init` run leaves, made by the Node CLI
+// the OpenAPI documents of the native app, and every file each `init` run leaves, made by the Node CLI
 // (the CLI entry bundled for Node, packs resolved from the repository's node_modules).
 // Usage: node scripts/reference.mjs <out-dir>
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -9,8 +9,10 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import {
   INIT_RUNS,
+  NATIVE_APP,
   repositoryRoot,
   runInit,
+  runNativeApp,
   runSmokeApp,
   SMOKE_APPS,
   writeSmokeApp,
@@ -58,6 +60,26 @@ for (const app of SMOKE_APPS) {
 
   writeReference(app.name, steps, writtenFiles);
 }
+
+const nativeReference = runNativeApp({
+  executable: process.execPath,
+  prefixArguments: [nodeCli],
+  environment: process.env,
+  config: NATIVE_APP.referenceConfig,
+  directory: join(appsRoot, NATIVE_APP.name),
+});
+const nativeFailed = Object.entries(nativeReference.steps).find(
+  ([, answer]) => answer.status !== 0,
+);
+
+if (nativeFailed !== undefined) {
+  console.error(
+    `reference: ${NATIVE_APP.name}: '${nativeFailed[0]}' failed\n${nativeFailed[1].stderr}`,
+  );
+  process.exit(1);
+}
+
+writeReference(NATIVE_APP.name, nativeReference.steps, nativeReference.writtenFiles);
 
 // Outside the repository, as the binary's smoke runs them: init writes a new project with no config above it.
 const initRoot = mkdtempSync(join(tmpdir(), "seampact-reference-init-"));

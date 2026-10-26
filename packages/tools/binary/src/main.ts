@@ -1,6 +1,6 @@
 import { runCli } from "@seampact/cli";
 import { loadFsReader } from "@seampact/compiler";
-import { BINARY_REFUSED_COMMANDS } from "./binary-refusals.js";
+import { BINARY_NATIVE_ONLY_COMMANDS } from "./binary-refusals.js";
 import { type EmbeddedPackReader, readerWithEmbeddedPacks } from "./embedded-pack-reader.js";
 import { EMBEDDED_PACKS } from "./embedded-packs.js";
 
@@ -20,7 +20,7 @@ async function main(argv: readonly string[]): Promise<number> {
     cwd: process.cwd(),
     stdout: (text) => process.stdout.write(text),
     stderr: (text) => process.stderr.write(text),
-    refusedCommands: BINARY_REFUSED_COMMANDS,
+    nativeOnlyCommands: BINARY_NATIVE_ONLY_COMMANDS,
     sourceReader: (directory) => {
       currentReader = readerWithEmbeddedPacks(loadFsReader(directory), EMBEDDED_PACKS);
 

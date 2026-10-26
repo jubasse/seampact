@@ -9,6 +9,11 @@ import { type EmittedDocument, emitAppDocuments } from "./document-emission.js";
 import { DEFAULT_DRIFT_CHECK_LEVEL } from "./drift-level.js";
 import { type GeneratedOutput, generateEntries } from "./entry-generation.js";
 import { emitMergedDocuments } from "./merged-documents.js";
+import {
+  type NativeEntryPolicy,
+  npmEntryProblems,
+  REFUSE_NATIVE_ENTRIES,
+} from "./native-entries.js";
 import type { Step } from "./step.js";
 import { type PlannedWrites, planWrites, type SweptDirectory } from "./write-plan.js";
 
@@ -22,36 +27,49 @@ interface RunApp {
 
 // Reads the config a command runs on, an app or a monorepo root, then plans and generates everything in memory:
 // each app's entries and documents, and for a root the merged documents after them. Nothing is written; the result
-// is every write, checked, for `generate` to commit and `check` to compare.
+// is every write, checked, for `generate` to commit and `check` to compare. `nativeEntries` says what becomes of an
+// entry a build plugin generates.
 export async function prepareRun(
   location: ConfigLocation,
   io: CliIo,
   writeOptions: PlanWriteOptions = REFUSE_HAND_EDITS,
+  nativeEntries: NativeEntryPolicy = REFUSE_NATIVE_ENTRIES,
 ): Promise<Step<PlannedWrites>> {
   const read = await readRunConfig(location.file, location.displayName);
 
   if (read.status === "refused") return read;
 
-  if (read.run.kind === "app")
-    return prepareApps([{ config: read.run.config }], undefined, io, writeOptions);
+  const run: RunOptions = { io, writeOptions, nativeEntries };
+
+  if (read.run.kind === "app") return prepareApps([{ config: read.run.config }], undefined, run);
 
   const { workspace } = read.run;
 
   return prepareApps(
     workspace.apps.map(({ app, config }) => ({ name: app.name, config })),
     workspace,
-    io,
-    writeOptions,
+    run,
   );
+}
+
+interface RunOptions {
+  io: CliIo;
+  writeOptions: PlanWriteOptions;
+  nativeEntries: NativeEntryPolicy;
 }
 
 async function prepareApps(
   apps: readonly RunApp[],
   workspace: LoadedWorkspace | undefined,
-  io: CliIo,
-  writeOptions: PlanWriteOptions,
+  { io, writeOptions, nativeEntries }: RunOptions,
 ): Promise<Step<PlannedWrites>> {
-  const plans = await planEachApp(apps, io);
+  const npmEntries = apps.flatMap((app) =>
+    scoped(app, npmEntryProblems(app.config, nativeEntries)),
+  );
+
+  if (npmEntries.length > 0) return { status: "refused", problems: npmEntries };
+
+  const plans = await planEachApp(apps, io, nativeEntries);
 
   if (plans.status === "refused") return plans;
 
@@ -110,13 +128,17 @@ interface PlannedApp {
 
 // Every app planned, the problems of every app reported together. An app refused with no problem (its compile
 // diagnostics are already printed) still refuses the run.
-async function planEachApp(apps: readonly RunApp[], io: CliIo): Promise<Step<PlannedApp[]>> {
+async function planEachApp(
+  apps: readonly RunApp[],
+  io: CliIo,
+  nativeEntries: NativeEntryPolicy,
+): Promise<Step<PlannedApp[]>> {
   const planned: PlannedApp[] = [];
   const problems: CliProblem[] = [];
   let anyRefused = false;
 
   for (const app of apps) {
-    const plan = await planApp(app.config, io);
+    const plan = await planApp(app.config, io, nativeEntries);
 
     if (plan.status === "refused") {
       anyRefused = true;

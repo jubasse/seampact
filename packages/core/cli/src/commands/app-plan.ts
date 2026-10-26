@@ -34,6 +34,13 @@ import {
 import { filterOperations } from "./filter-operations.js";
 import { frameworkDocsProblems } from "./framework-docs.js";
 import { unreadFrameworkRouteKeyProblems } from "./framework-route-check.js";
+import {
+  NATIVE_ENTRY_ROLE,
+  type NativeEntryPolicy,
+  printLeftEntries,
+  REFUSE_NATIVE_ENTRIES,
+  splitNativeEntries,
+} from "./native-entries.js";
 import type { Step } from "./step.js";
 
 // One seampact OpenAPI document of the app, with the compiled IR of its api.
@@ -58,9 +65,15 @@ export interface AppPlan {
 
 // Plans one app's run: resolves each target from the app's project, checks the artefact switches and the
 // compatibility matrix, compiles the sources the targets and the `openapi` key use, keeps each entry's operations
-// and checks the links (ADR 0009, ADR 0011).
-export async function planApp(config: LoadedAppConfig, io: CliIo): Promise<Step<AppPlan>> {
-  const entries = config.entries.map(({ entry }) => entry);
+// and checks the links (ADR 0009, ADR 0011). An entry `nativeEntries` leaves to its build plugin is not generated,
+// and its apis are compiled and documented as a server entry's.
+export async function planApp(
+  config: LoadedAppConfig,
+  io: CliIo,
+  nativeEntries: NativeEntryPolicy = REFUSE_NATIVE_ENTRIES,
+): Promise<Step<AppPlan>> {
+  const { generated, left } = splitNativeEntries(config, nativeEntries);
+  const entries = generated.entries.map(({ entry }) => entry);
   const unknownLinks = unknownLinkEntryProblems(entries);
 
   if (unknownLinks.length > 0) return { status: "refused", problems: unknownLinks };
@@ -69,12 +82,12 @@ export async function planApp(config: LoadedAppConfig, io: CliIo): Promise<Step<
 
   if (ordered.status === "refused") return ordered;
 
-  const targets = await resolveTargets(config);
+  const targets = await resolveTargets(generated);
 
   if (targets.status === "refused") return targets;
 
-  const artefacts = selectEntryArtefacts(config, targets.value);
-  const compatibility = checkAppCompatibility(config, targets.value);
+  const artefacts = selectEntryArtefacts(generated, targets.value);
+  const compatibility = checkAppCompatibility(generated, targets.value);
 
   printWarnings(io, compatibility.warnings);
 
@@ -98,7 +111,7 @@ export async function planApp(config: LoadedAppConfig, io: CliIo): Promise<Step<
   if (compiled.failed)
     return { status: "refused", problems: addQualifyFix(compiled.problems, refs) };
 
-  const planned = planEachEntry(config, targets.value, compiled.apis);
+  const planned = planEachEntry(generated, targets.value, compiled.apis);
 
   if (planned.status === "refused") return planned;
 
@@ -110,9 +123,18 @@ export async function planApp(config: LoadedAppConfig, io: CliIo): Promise<Step<
 
   if (linkProblems.length > 0) return { status: "refused", problems: linkProblems };
 
-  const documents = planDocuments(config, targets.value, compiled.apis);
+  const roles = new Map<string, TargetRole>([
+    ...[...targets.value].map(([entryId, target]): [string, TargetRole] => [
+      entryId,
+      target.metadata.role,
+    ]),
+    ...left.map(({ entry }): [string, TargetRole] => [entry.id, NATIVE_ENTRY_ROLE]),
+  ]);
+  const documents = planDocuments(config, roles, compiled.apis);
 
   if (documents.status === "refused") return documents;
+
+  printLeftEntries(io, left);
 
   return {
     status: "done",
@@ -123,9 +145,7 @@ export async function planApp(config: LoadedAppConfig, io: CliIo): Promise<Step<
       documents: documents.value,
       defaultDocumentDirectory: defaultDocumentDirectory(config),
       compiled: compiled.apis,
-      roles: new Map(
-        [...targets.value].map(([entryId, target]) => [entryId, target.metadata.role]),
-      ),
+      roles,
     },
   };
 }
@@ -133,10 +153,9 @@ export async function planApp(config: LoadedAppConfig, io: CliIo): Promise<Step<
 // The app's documents (A43), each with the compiled IR of its api.
 function planDocuments(
   config: LoadedAppConfig,
-  targets: ReadonlyMap<string, Target>,
+  roles: ReadonlyMap<string, TargetRole>,
   compiled: readonly CompiledApi[],
 ): Step<PlannedDocument[]> {
-  const roles = new Map([...targets].map(([entryId, target]) => [entryId, target.metadata.role]));
   const apiDocuments = compiled.map(({ source, api, ir }) => ({
     source,
     api,

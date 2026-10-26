@@ -15,3 +15,4 @@ export {
   initCommand,
 } from "./init-command.js";
 export { lintCommand } from "./lint-command.js";
+export { type NativeEntryPolicy, REFUSE_NATIVE_ENTRIES } from "./native-entries.js";

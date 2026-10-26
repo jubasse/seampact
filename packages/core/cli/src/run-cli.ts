@@ -14,6 +14,8 @@ import {
   generateCommand,
   initCommand,
   lintCommand,
+  type NativeEntryPolicy,
+  REFUSE_NATIVE_ENTRIES,
 } from "./commands/index.js";
 import { errorCode } from "./error-code.js";
 
@@ -65,17 +67,9 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
   if (command === undefined) return usageError(io, "No command given.");
 
   if (HELP_ARGUMENTS.has(command)) {
-    io.stdout(usageText(io));
+    io.stdout(usageText());
 
     return 0;
-  }
-
-  const refusal = io.refusedCommands?.get(command);
-
-  if (refusal !== undefined) {
-    printProblems(io, [refusal]);
-
-    return EXIT_USAGE;
   }
 
   const waitingFlag = rest.find((argument) =>
@@ -198,9 +192,12 @@ async function runGenerate(args: readonly string[], io: CliIo): Promise<number> 
 
   if (parsed.status === "refused") return usageError(io, parsed.message);
 
-  return generateCommand(configLocation(io.cwd, stringOption(parsed.values.config)), io, {
-    onHandEdit: parsed.values.force === true ? "overwrite" : "refuse",
-  });
+  return generateCommand(
+    configLocation(io.cwd, stringOption(parsed.values.config)),
+    io,
+    { onHandEdit: parsed.values.force === true ? "overwrite" : "refuse" },
+    nativeEntryPolicy(io, "generate"),
+  );
 }
 
 async function runCheck(args: readonly string[], io: CliIo): Promise<number> {
@@ -208,7 +205,18 @@ async function runCheck(args: readonly string[], io: CliIo): Promise<number> {
 
   if (parsed.status === "refused") return usageError(io, parsed.message);
 
-  return checkCommand(configLocation(io.cwd, stringOption(parsed.values.config)), io);
+  return checkCommand(
+    configLocation(io.cwd, stringOption(parsed.values.config)),
+    io,
+    nativeEntryPolicy(io, "check"),
+  );
+}
+
+// The host's policy for a command it runs on native entries only; the Node CLI's own otherwise.
+function nativeEntryPolicy(io: CliIo, command: string): NativeEntryPolicy {
+  const npmEntryRefusal = io.nativeOnlyCommands?.get(command);
+
+  return npmEntryRefusal === undefined ? REFUSE_NATIVE_ENTRIES : { kind: "leave", npmEntryRefusal };
 }
 
 async function runLint(args: readonly string[], io: CliIo): Promise<number> {
@@ -355,7 +363,7 @@ function usageError(io: CliIo, message: string): number {
   };
 
   printProblems(io, [problem]);
-  io.stderr(usageText(io));
+  io.stderr(usageText());
 
   return EXIT_USAGE;
 }
@@ -365,27 +373,22 @@ function notAvailable(io: CliIo, subject: string): number {
     {
       code: "cli.not-available",
       message: `${subject} is not available yet.`,
-      fix: `Use ${listed(quotedCommands(io))}.`,
+      fix: `Use ${listed(quotedCommands())}.`,
     },
   ]);
 
   return EXIT_USAGE;
 }
 
-// The commands this run carries: all of them, less the ones the host refuses by name.
-function availableCommands(io: CliIo): string[] {
-  return [...COMMAND_USAGE.keys()].filter((name) => !io.refusedCommands?.has(name));
-}
-
-function usageText(io: CliIo): string {
-  const lines = availableCommands(io).map((name) => COMMAND_USAGE.get(name));
+function usageText(): string {
+  const lines = [...COMMAND_USAGE.values()];
 
   return `Usage: seampact <command> [options]\n\nCommands:\n${lines.join("\n")}\n`;
 }
 
 // `seampact compile`, then the other names, each in backticks.
-function quotedCommands(io: CliIo): string[] {
-  return availableCommands(io).map(
+function quotedCommands(): string[] {
+  return [...COMMAND_USAGE.keys()].map(
     (name) => `\`${name === "compile" ? "seampact compile" : name}\``,
   );
 }
