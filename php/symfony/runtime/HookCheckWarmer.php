@@ -23,7 +23,7 @@ final class HookCheckWarmer implements CacheWarmerInterface
     /** @return list<string> the hook problems of the api, with the fix */
     public static function problems(HookLookup $hooks, ApiContract $contract): array
     {
-        return HookCheck::problems($hooks, $contract, Hooks::DECIDER_FIX, Hooks::SCOPE_RESOLVER_FIX);
+        return HookCheck::problems($hooks, $contract, Hooks::AUTHENTICATE_HOOK_FIX, Hooks::DECIDER_FIX, Hooks::SCOPE_RESOLVER_FIX);
     }
 
     /** @param non-empty-list<string> $problems */

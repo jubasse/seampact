@@ -309,7 +309,8 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
     {
         $request = $event->getRequest();
         $response = $event->getResponse();
-        if ($event->isMainRequest() && $response === $request->attributes->get($this->attribute('final'))) {
+        // Whatever the event holds now is compared, so a listener that replaced the reply object is caught too.
+        if ($event->isMainRequest() && $request->attributes->has($this->attribute('final_signature'))) {
             $this->refuseRewrittenReply($event, $response);
 
             return;
@@ -357,7 +358,6 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         return ReplyVerdict::checked($state, $response, $exception, $responses, is_string($etag) ? $etag : null);
     }
 
-    // Once routing ran, a route other than this operation's contract route answers the raw path's 404.
     /**
      * The role of a native refusal. The firewall still sees a caller the authenticate hook admitted as anonymous, so
      * it answers a later access denial with its entry point; the caller is known, so that denial is forbidden.
@@ -372,6 +372,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         return $role;
     }
 
+    // Once routing ran, a route other than this operation's contract route answers the raw path's 404.
     private function routedElsewhere(Request $request, BoundaryState $state, ?\Throwable $exception): bool
     {
         if ($request->attributes->get($this->attribute('routed')) === true) {
@@ -466,7 +467,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         $event->setResponse($reply);
     }
 
-    /** An app's `kernel.response` listener that rewrote the boundary's own reply in place: the api's 500. */
+    /** An app's `kernel.response` listener that rewrote or replaced the boundary's own reply: the api's 500. */
     private function refuseRewrittenReply(ResponseEvent $event, Response $reply): void
     {
         $request = $event->getRequest();

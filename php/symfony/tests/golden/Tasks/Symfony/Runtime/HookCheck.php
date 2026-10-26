@@ -16,11 +16,13 @@ final class HookCheck
     }
 
     /**
+     * @param string $authenticateHookFix how the app registers an identity's authenticate hook, ending the problem line;
+     *                                    `%s` stands for the hook interface
      * @param string $deciderFix how the app registers a decider for a name, ending the problem line
      * @param string $scopeResolverFix how the app registers a scope resolver, ending the problem line
      * @return list<string>
      */
-    public static function problems(HookLookup $hooks, ApiContract $contract, string $deciderFix, string $scopeResolverFix): array
+    public static function problems(HookLookup $hooks, ApiContract $contract, string $authenticateHookFix, string $deciderFix, string $scopeResolverFix): array
     {
         $identities = [];
         $scopes = [];
@@ -46,8 +48,9 @@ final class HookCheck
         foreach (array_keys($identities) as $identity) {
             try {
                 $hooks->authenticateHook($contract, (string) $identity);
-            } catch (\LogicException $missing) {
-                $problems[] = $missing->getMessage();
+            } catch (\LogicException) {
+                $interface = Ir::string(Ir::map(Ir::map($contract->types, 'identities'), (string) $identity), 'hook') ?? '';
+                $problems[] = "no authenticate hook for the identity '{$identity}': " . sprintf($authenticateHookFix, $interface);
             }
         }
 

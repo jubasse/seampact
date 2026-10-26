@@ -112,7 +112,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.3", "8.5"]
+        include:
+          - php-version: "8.3"
+            yaml: "7.4"
+          - php-version: "8.5"
+            yaml: "7.4"
+          # seampact/ir admits symfony/yaml 8, which Symfony 8 apps hold; the reader is proven on it too.
+          - php-version: "8.5"
+            yaml: "8"
+    name: php (PHP ${{ matrix.php-version }}, symfony/yaml ${{ matrix.yaml }})
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -125,6 +133,15 @@ jobs:
       - name: Install the PHP dev tools from the lock file
         working-directory: php/ir
         run: composer install --no-interaction --no-progress --no-plugins --no-scripts
+      # The lock holds symfony/yaml 7.4 on the PHP 8.3 platform; yaml 8 needs PHP 8.4, so this row moves both.
+      - name: Move to symfony/yaml 8
+        if: matrix.yaml == '8'
+        working-directory: php/ir
+        run: |
+          composer config platform.php 8.5.12
+          composer require --no-update --no-interaction "symfony/yaml:~8.1.0"
+          composer update --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies symfony/yaml
+          composer show symfony/yaml | grep -E '^versions : \* v8\.'
       - name: Test the PHP model and reader on PHP ${{ matrix.php-version }}
         working-directory: php/ir
         run: vendor/bin/phpunit

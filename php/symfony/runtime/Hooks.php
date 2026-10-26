@@ -31,6 +31,7 @@ final class Hooks implements HookLookup
     /** The tag attribute naming an authenticate hook's generated interface, the locator's key. */
     public const HOOK_ATTRIBUTE = 'hook';
     public const DECIDER_FIX = "register a service implementing the api's Decider and naming it, or '" . Decider::EVERY_NAME . "', with autoconfiguration on";
+    public const AUTHENTICATE_HOOK_FIX = 'register one service implementing %s, with autoconfiguration on';
     public const SCOPE_RESOLVER_FIX = "register a service implementing the api's ScopeResolver, with autoconfiguration on";
     private const ACCESS_DENIED = 'Symfony\\Component\\Security\\Core\\Exception\\AccessDeniedException';
 

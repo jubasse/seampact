@@ -55,6 +55,7 @@ final class BootCheck
         $problems = HookCheck::problems(
             new Hooks($app),
             $contract,
+            'bind %s in the container',
             "tag a Decider naming it, or '" . Decider::EVERY_NAME . "', with '" . Hooks::decidersTag($contract->api) . "'",
             "tag a ScopeResolver with '" . Hooks::scopeResolversTag($contract->api) . "'",
         );
