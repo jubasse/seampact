@@ -22,6 +22,7 @@ final readonly class Checks
         public ?string $pattern = null,
         public ?Format $format = null,
         public PatternScope $patternScope = PatternScope::EveryString,
+        public PatternScope $formatScope = PatternScope::EveryString,
         public int|float|null $minimum = null,
         public int|float|null $maximum = null,
         public int|float|null $exclusiveMinimum = null,
@@ -59,14 +60,10 @@ final readonly class Checks
             $issues[] = Rule::MAX_LENGTH;
         }
 
-        if ($this->patternScope === PatternScope::EmptyStringOnly && $value !== '') {
-            return $issues;
-        }
-
-        if ($this->pattern !== null && !self::matches($this->pattern, $value)) {
+        if ($this->pattern !== null && self::reads($this->patternScope, $value) && !self::matches($this->pattern, $value)) {
             $issues[] = Rule::PATTERN;
         }
-        if ($this->format !== null && !$this->format->accepts($value)) {
+        if ($this->format !== null && self::reads($this->formatScope, $value) && !$this->format->accepts($value)) {
             $issues[] = Rule::FORMAT;
         }
 
@@ -108,6 +105,11 @@ final readonly class Checks
         }
 
         return $issues;
+    }
+
+    private static function reads(PatternScope $scope, string $value): bool
+    {
+        return $scope === PatternScope::EveryString || $value === '';
     }
 
     private static function matches(string $pattern, string $value): bool

@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Seampact\Golden\Tasks;
+
+/**
+ * The handlers a controller service implements, each method marked with the SeampactOperation
+ * attribute of its operation; each returns a declared success or error, or throws a declared error.
+ */
+interface DraftsEndpoints
+{
+    /**
+     * Operation 'getDraft'.
+     * @throws ApiSchemaInvalidError
+     * @throws ApiUnauthenticatedError
+     * @throws ApiNotFoundError
+     * @throws ApiInternalError
+     */
+    public function getDraft(GetDraftInput $input): GetDraftResult;
+}
