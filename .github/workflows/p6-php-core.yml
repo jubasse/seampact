@@ -111,6 +111,7 @@ jobs:
           set -euo pipefail
           work="$WORK"
           rm -rf "$work"; mkdir -p "$work/trees" "$work/projects"
+          # Every mirror tree first, so that each install proof resolves its seampact siblings from the PR copies.
           for manifest in php/*/composer.json; do
             name=$(basename "$(dirname "$manifest")")
             # The mirror's history: the directory's commits rewritten with php/<name> as the root; never pushed.
@@ -118,25 +119,49 @@ jobs:
             mkdir "$work/trees/$name"
             git archive "$split" | tar -x -C "$work/trees/$name"
             test -f "$work/trees/$name/composer.json" || { echo "The split tree of php/$name has no composer.json at its root."; exit 1; }
+          done
+          for manifest in php/*/composer.json; do
+            name=$(basename "$(dirname "$manifest")")
             package=$(php -r 'echo json_decode(file_get_contents($argv[1]), true, flags: JSON_THROW_ON_ERROR)["name"];' "$work/trees/$name/composer.json")
             project="$work/projects/$name"
             mkdir "$project"
             php -r '
-              [, $package, $tree, $target] = $argv;
+              [, $package, $trees, $target] = $argv;
+              $siblings = array_map(
+                static fn (string $tree): array => ["type" => "path", "url" => $tree, "options" => ["symlink" => false]],
+                glob("$trees/*", GLOB_ONLYDIR),
+              );
+              // Each seampact package this one needs, transitively, is required "*@dev" by name: the dev stability
+              // of the PR copies never reaches a third-party package.
+              $requires = [];
+              foreach (glob("$trees/*/composer.json") as $manifest) {
+                $read = json_decode(file_get_contents($manifest), true, flags: JSON_THROW_ON_ERROR);
+                $requires[$read["name"]] = array_values(array_filter(array_keys($read["require"] ?? []), static fn (string $name): bool => str_starts_with($name, "seampact/")));
+              }
+              $needed = [$package => "*@dev"];
+              for ($pending = [$package]; $pending !== []; ) {
+                foreach ($requires[array_pop($pending)] ?? [] as $sibling) {
+                  if (!isset($needed[$sibling])) {
+                    $needed[$sibling] = "*@dev";
+                    $pending[] = $sibling;
+                  }
+                }
+              }
               $project = [
                 "name" => "seampact-ci/install-proof",
                 "version" => "0.0.0",
-                // Packagist without seampact/*: a published sibling never stands in for the PR copy, while a pinned
-                // third-party runtime dependency (the JSON Schema validator of seampact/ir) still resolves.
+                // Every split tree, then Packagist without seampact/*: a published sibling never stands in for the PR
+                // copy, while a pinned third-party runtime dependency (the JSON Schema validator of seampact/ir)
+                // still resolves.
                 "repositories" => [
-                  ["type" => "path", "url" => $tree, "options" => ["symlink" => false]],
+                  ...$siblings,
                   ["type" => "composer", "url" => "https://repo.packagist.org", "exclude" => ["seampact/*"]],
                   ["packagist.org" => false],
                 ],
-                "require" => [$package => "*@dev"],
+                "require" => $needed,
               ];
               file_put_contents($target, json_encode($project, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n");
-            ' "$package" "$work/trees/$name" "$project/composer.json"
+            ' "$package" "$work/trees" "$project/composer.json"
             composer update --working-dir="$project" --no-interaction --no-progress
             test ! -L "$project/vendor/$package" || { echo "$package was symlinked, not copied."; exit 1; }
             # Every class of the installed copy loads through its own autoloader.

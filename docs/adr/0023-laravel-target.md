@@ -1,6 +1,6 @@
 # ADR 0023: The Laravel server target
 
-Status: proposed
+Status: accepted
 
 ## Context
 
@@ -38,11 +38,11 @@ final class TasksController implements TasksEndpoints
 }
 ```
 
-Codegen emits, per api, under the target entry's `out` and the `namespace` option:
+Codegen emits, per api, under the target entry's `out`, in its PSR-4 namespace:
 
 - **Per operation**:
   - the FormRequest (`UpdateTaskRequest`), which runs steps 6 to 8 and hands over the typed input with `contractInput()`;
-  - the input class, the result classes and one exception class per code.
+  - the input class, the result classes and one exception class per code. The input holds the path, query and header parameters and the body; the credential and CSRF headers, which the boundary reads, are not in it.
 - **The boundary middleware** (`TasksBoundary`), a global middleware prepended before every other one, `ValidatePathEncoding` and `TrustProxies` included (spike). It runs step 1:
   - the request context;
   - the raw-path match of "Routes" below;
@@ -61,7 +61,7 @@ Codegen emits, per api, under the target entry's `out` and the `namespace` optio
 
 Both middleware are registered from the provider, with no edit to `bootstrap/app.php` (spike). The routes point at the interface (`[TasksEndpoints::class, 'updateTask']`), which the container resolves to the bound controller, cached routes included (spike). Each route is named `seampact.<api>.<operationId>`.
 
-The generated types go into the `namespace` option (no default: ADR 0010 "Namespaces"). The Laravel placement goes into its `Laravel` sub-namespace, and the copied runtime into `Laravel\Runtime`. A declared schema `UpdateTask` and a placement class never share a namespace. Fixed class names that ADR 0007 has no role for are Pascal-case words prefixed by the api's type name, and constants are upper snake case (`MAX_CHECKED_ERROR_BODY_BYTES`).
+The generated types go into the PSR-4 namespace `composer.json` gives the entry's output directory, which the runner derives (ADR 0010 "Namespaces"), so no option names it; the schema types go into its `Schemas` sub-namespace. The Laravel placement goes into its `Laravel` sub-namespace, and the copied runtime into `Laravel\Runtime`. A declared schema `UpdateTask` and a placement class never share a namespace. Fixed class names that ADR 0007 has no role for are Pascal-case words prefixed by the api's type name, and constants are upper snake case (`MAX_CHECKED_ERROR_BODY_BYTES`).
 
 The handler method returns the operation's generated result: an interface implemented by one final class per declared success status and by the typed error result (ADR 0007 `errors` role). It may instead throw one of the generated exceptions, declared with `@throws` on the interface method (ADR 0012 "Errors the handler answers"). A decide hook that throws Laravel's `AuthorizationException` (`Gate::authorize()`) answers the requirement's first declared denial code. Any other exception from a hook is a 500 with `onUnexpectedError` called (ADR 0012 "Failures inside hooks").
 
@@ -161,9 +161,9 @@ The boundary decodes the held body with `json_decode($bytes, false, 512, JSON_TH
 
 1. `authorize()` fails closed: unless the request carries the access middleware's mark for the FormRequest's own operation id, it throws the boundary's internal exception before any input is read (never `false`, which Laravel would answer 403), and the reply is the api's 500 with `onUnexpectedError` called. An app route to the interface or to the bound controller, a route without the access middleware, or a request under the `middleware.disable` binding that `withoutMiddleware()` sets in tests, therefore never reaches the handler; the Laravel guide says so for feature tests.
 2. `validationData()` returns the boundary's decoded input as arrays, keyed `path`, `query`, `headers` and `body`. `.`, `*` and `~` in a wire name are escaped (`~1`, `~2`, `~0`) in the data and the rule keys, so Laravel's validator reads no wire name as a path (spike); the issue pointer decodes them back.
-3. `rules()` returns, per member, `bail` and a generated rule object that checks the member's type on the objects-preserved tree (no coercion, `{}` versus `[]`, whole numbers), then the value rules. Unknown keys, `enum`, `const`, `oneOf` and the discriminator are generated rule objects. A required member is `present`, never `required`, which fails on `""` (ADR 0003 Consequences).
+3. `rules()` returns, per member, `bail` and a generated rule object that checks the member's type on the objects-preserved tree (no coercion, `{}` versus `[]`, whole numbers), then the value rules. Unknown keys, of an object and of the query under `unknownQuery: refuse` (a rule on the `query` part naming the declared parameters), `enum`, `const`, `oneOf` and the discriminator are generated rule objects. The type rule also checks that a required member is there, never Laravel's `required`, which fails on `""` (ADR 0003 Consequences), nor `present`, which fails on a member of an absent optional object or of a parent of another type.
    - A nullable member, at the top level, nested or a `*` item, also gets `nullable` after `bail`, since Laravel runs its non-implicit rules on `null` otherwise. The generated rule objects, which are implicit, accept `null` on a nullable member and pass an absent optional member, so it stays absent.
-   - A number or integer member carried as a JSON number that has a Laravel value rule also gets `numeric:strict` after the type rule, so `between`, `size`, `gt`, `gte`, `lt`, `lte` and `multiple_of` compare its value, never the length of its decimal text. `numeric:strict` accepts `1.0`, which `integer:strict` would refuse. An `int64` or `decimal` member carried as a string on the wire never gets `numeric:strict`, which refuses `"42"`: its limits stay generated rules on its decimal text. The body is decoded without `JSON_BIGINT_AS_STRING`, which would turn a large JSON number into the same string as a JSON string, so a JSON integer beyond the `int` range decodes to a float: it is a type issue on a string member, including an `int64` or `decimal` member carried as a string, and read as a float on a `number` member. On an `integer` member, the type rule accepts a float (`is_float()`) only when it is whole and its magnitude is at most 2^53, such as `1.0`: a whole float whose magnitude is at least 2^63 (so -2^63 too, since `-9223372036854775809` decodes to a float equal to `PHP_INT_MIN`) is 400 `maximum`, or `minimum` below zero, as on the JVM, and a whole float of smaller magnitude above 2^53 is refused the same way, since its value may have changed in the decode; a JSON integer that fits an `int` decodes to an `int` and is never a float.
+   - A number or integer member carried as a JSON number that has a Laravel value rule also gets `numeric:strict` after the type rule, so `between`, `size`, `gt`, `gte`, `lt`, `lte` and `multiple_of` compare its value, never the length of its decimal text. `numeric:strict` accepts `1.0`, which `integer:strict` would refuse. An `int64` or `decimal` member carried as a string on the wire never gets `numeric:strict`, which refuses `"42"`: its limits stay generated rules on its decimal text. The body is decoded without `JSON_BIGINT_AS_STRING`, which would turn a large JSON number into the same string as a JSON string, so a JSON integer beyond the `int` range decodes to a float: it is a type issue on a string member, including an `int64` or `decimal` member carried as a string, and read as a float on a `number` member. On an `integer` member, the type rule accepts a float (`is_float()`) only when it is whole and its magnitude is at most 2^53, such as `1.0`: a whole float whose magnitude is at least 2^63 (so -2^63 too, since `-9223372036854775809` decodes to a float equal to `PHP_INT_MIN`) is 400 `maximum`, or `minimum` below zero, as on the JVM, and a whole float of smaller magnitude above 2^53 is refused the same way, since its value may have changed in the decode; a JSON integer that fits an `int` decodes to an `int` and is never a float. A number the decode makes infinite (`1e400`) is 400 `type` on a `number` member, as on the Node targets, which take only finite numbers. `multipleOf`, which ADR 0003 keeps on `integer` and decimal and refuses on `number`, is checked exactly in both modes: Laravel's `multiple_of` divides by the decimal step, and the generated rule divides by the step's exact integer step, as the Node targets reduce it (`2.5` gives 5); a step whose integer step is beyond the PHP `int` range is refused by name (`multipleOf.wide`).
    - The generated type rule reads presence with `array_key_exists` on the decoded tree, so an explicit `null` and an absent key never look alike.
 4. `failedValidation()` throws the generated `schemaInvalid` exception, so the 400 is rendered and Laravel's 422 never is (spike). Each issue carries its `{ in, pointer, rule }`, the contract rule name kept per generated rule, and the issues are bounded by `MAX_RENDERED_ISSUES = 100`.
 5. `passedValidation()` runs steps 7 and 8, then builds the typed input that `contractInput()` returns. `validated()` and `safe()` keep Laravel's meaning and return the escaped part arrays; the contract input is `contractInput()`.
@@ -175,7 +175,7 @@ The target takes `rules` (ADR 0009), as AdonisJS does for its own validators:
 - **`native`, the default.** A value rule renders as Laravel's own rule wherever Laravel has one: `min`, `max` and `size` on strings (counted in code points by `mb_strlen`, as the contract counts, spike) and arrays, `between`, `gt`, `gte`, `lt` and `lte` on numbers (behind `numeric:strict`), `multiple_of`, `regex`, `uuid`, `email`, `url`, `ip`. `enum` and `const` stay generated rule objects, since Laravel's `in` compares loosely. A format Laravel has no rule for (`date-time`) stays a generated rule. The Laravel guide lists the differences in a few lines (the `email` rule's RFC validation, `regex` on PCRE).
 - **`seampact-consistent`.** Every value rule is a generated rule object with ADR 0003's meaning, patterns searched as ECMA-262 does through the normalised pattern of ADR 0003 section 9, rendered for PCRE with the `u` and `D` modifiers.
 
-In both modes every generated rule object is implicit (`$implicit = true`), since Laravel runs no non-implicit rule on an empty or whitespace-only string (spike). Under `native`, a string member with a length or pattern rule also gets a generated implicit rule that applies the contract's rule to such a string, so `"   "` never passes a `minLength: 5` or a `pattern` unchecked.
+In both modes every generated rule object is implicit (`$implicit = true`), since Laravel runs no non-implicit rule on an empty or whitespace-only string (spike). Under `native`, a string member with a length, a pattern or the `uuid` format also gets a generated implicit rule that applies the contract's rule to such a string, so `"   "` never passes a `minLength: 5`, a `pattern` or a `uuid` unchecked.
 
 The contract input is the boundary's decoding, never `$request->input()`. `TrimStrings` and `ConvertEmptyStringsToNull` are skipped on contract routes (spike), so app code that reads `$request->input()` sees the strings as sent. On a `gzip` or `deflate` body, `$request->input()` is empty, since the app's `getContent()` keeps the compressed bytes (spike).
 
@@ -214,15 +214,16 @@ The boundary's own logs, written to the app's PSR-3 logger, carry the operation 
 
 The target options, validated against the schema the target publishes, with unknown keys refused by name:
 
-- `namespace`, required;
-- the naming options of ADR 0007: `suffixes`, `escape`, `enumCase`, `handlers` (`perOperation` gives one interface per operation, for an `__invoke` controller);
-- `indent` and `layout`;
+- `handlers`, `perResource` only: `perOperation`, one interface per operation for an `__invoke` controller, waits for an app that needs it (`options.handlers.unsupported`);
+- `indent`;
 - `routes` (`macro`, the default, or `file`);
 - `rules` (`native`, the default, or `seampact-consistent`);
 - `responses` (`strict`, the default, or `warn`);
 - `bodyValidation` (`false`, the default, or `true`);
 - `frameworkEtag` (`strip`, the default, or `keep`);
 - `catchAll` (`true`, the default, or `false`).
+
+The naming options of ADR 0007 (`suffixes`, `escape`, `enumCase`) are refused by name (`options.naming.unsupported`): the target names PHP with the ADR 0007 defaults, which the shared naming vectors test. `layout` is refused too (`options.layout.unsupported`): one file per class under the PSR-4 directory is the only layout Composer loads.
 
 Under `routes: macro`, the app writes `Route::seampact('tasks');` in its own routes file, inside its own groups (`web` or `api`). The macro is defined once, whichever api's provider boots first, and looks up the api's generated route table in the container, so two apis share it. Under `routes: file`, the generator writes `routes.php` in the api's directory, one `Route::` line per operation, which the app requires from its own routes file. Both forms register the same routes, survive `route:cache` (spike, macro form) and exclude `PreventRequestForgery` from signed routes, which carry no CSRF token (ADR 0013).
 
@@ -324,10 +325,11 @@ The boundary runtime is copied into `Laravel\Runtime` with the generated header,
 
 | Waits for | What |
 |---|---|
-| laravel-3 | paging, idempotency replay, throttle, cache and ETag headers, signed routes, absolute URLs, the `pack:laravel` styles |
-| laravel-4 | multipart (`file`, `mimetypes` and `max` rules; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`response()->streamDownload()`) and redirect (`redirect()->to()`) bodies, the per-kind middleware lists, the published config |
-| a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target: the reference contract carries none |
-| after 1.0 | Laravel 12 and older (refused, not waiting); Octane (refused, below); `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs |
+| laravel-2 | rights and rules an operation requires, which the access middleware runs, rule proof fields in the body (`recentAuth` on purgeTask), `artefacts.bootCheck` and `artefacts.accessHooks: true` |
+| laravel-3 | paging, its structured `sort` query parameter (listTasks) and its `page` response, idempotency replay, throttle, cache and ETag headers, the response headers these features derive, retry headers, signed routes and their raw body, absolute URLs, deadline budgets (`budgetMs`), relayed operations (`relays`), sensitive values, opaque values (`PaymentEvent.data` on payments), the `pack:laravel` styles |
+| laravel-4 | multipart (`file`, `mimetypes` and `max` rules; PHP stores an upload before any PHP code runs, so the boundary refuses a `Content-Length` above the route limit and `post_max_size` bounds the rest), download (`response()->streamDownload()`) and redirect (`redirect()->to()`) bodies, native access (`artefacts.accessHooks: false`), the per-kind middleware lists, the published config |
+| a consumer that needs them | form bodies (ADR 0012 bodies table), refused by name as on every Node target: the reference contract carries none; unions (`oneOf`), designed above, until a contract needs one |
+| after 1.0 | Laravel 12 and older (refused, not waiting); Octane (refused, below); `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs, as the Spring target refuses them: `list` responses, response headers the route writes itself, principal requirements, bindings, upstream calls, operation features, extension keys, input field rights below the top level, scope ids not read from the path, bucket keys not read from the path, a scope or the principal, rule proofs outside the body, principals of several variants, signatures verified by the application or keyed from the request, parameter and property defaults, open enums, maps, `int64` and `decimal`, kept unknown keys |
 
 Octane is refused at run time, outside the boot check, since an Octane app usually serves from a route cache, where the boot check does not run. The provider's `boot()` listens for Octane's `Laravel\Octane\Events\WorkerStarting`, named as a string so the generated code needs no Octane package, and throws `runtime.octane.unsupported` with the fix "serve the app with php-fpm, or keep this api's provider out of the Octane app": the worker does not start.
 
@@ -355,10 +357,10 @@ Suite cases that wait for a later PR carry a refusal naming that PR; the list is
 
 | PR | Delivers |
 |---|---|
-| laravel-1 | `php/laravel` (`Seampact\Laravel`): the generator class registered in `extra.seampact.generator`, the options (`namespace`, `routes` and the rest), readonly classes with `Field`, controller interfaces, FormRequests with their rules, the routes file and the macro's route table, the exceptions per error; a golden for the reference contract, linted with `php -l` and PHPStan max on PHP 8.3 and 8.5 |
-| laravel-2 | the boundary middleware (steps 1 and 10, the "boundary first" assertion), the access middleware (steps 2 to 5 and its mark), the FormRequest steps 6 to 8 failing closed without that mark, the mapping of "Exceptions on contract routes", the provider with its hook bindings and the Octane refusal, scopes in request attributes, the 500 on a missing hook, the boot check, `php artisan seampact:generate`; the sample app with path repositories under php-fpm behind nginx, the core suite profile, the e2e job of `p6-laravel.yml`; `BootCheckTest.php` only for a rule that is a brick |
-| laravel-3 | paging, idempotency, throttle, cache headers, the signed raw body, absolute URLs, redaction (`__debugInfo()`, `#[\SensitiveParameter]`, the VarDumper caster), the `pack:laravel` profile; the pack and full suite profiles and `RedactionTest.php` |
-| laravel-4 | guards and Sanctum for authenticate, Gates and Policies for decide, `AuthorizationException` in a decider answering the first denial code, coexistence with the native layers and their per-kind middleware lists, multipart, `streamDownload` and `redirect()->to()`, the published `config/seampact.php`; the suite's security and media rows, a Sanctum row in the sample app |
+| laravel-1 | `php/laravel` (`Seampact\Laravel`) and the shared emitters and form walk of `php/codegen` (`Seampact\Codegen`), where each PHP target names the release that brings a refused form: the generator class registered in `extra.seampact.generator`, the options (`routes`, `rules` and the rest), readonly classes with `Field`, controller interfaces, FormRequests with their rules, the routes file and the macro's route table, the exceptions per error; a golden for the reference contract, linted with `php -l` and PHPStan max on PHP 8.3 and 8.5 |
+| laravel-2 | the boundary middleware (steps 1 and 10, the "boundary first" assertion), the access middleware (steps 2 to 5 and its mark), the FormRequest steps 6 to 8 failing closed without that mark, the mapping of "Exceptions on contract routes", the provider with its hook bindings and the Octane refusal, rule proof fields in the body, scopes in request attributes, the 500 on a missing hook, the boot check, `php artisan seampact:generate`; the sample app with path repositories under php-fpm behind nginx, the core suite profile, the e2e job of `p6-laravel.yml`; `BootCheckTest.php` only for a rule that is a brick |
+| laravel-3 | paging with its `sort` parameter, idempotency, throttle, cache headers and the response headers of these features, retry headers, the signed raw body, absolute URLs, deadline budgets and relayed operations, opaque values, redaction (`__debugInfo()`, `#[\SensitiveParameter]`, the VarDumper caster), the `pack:laravel` profile; the pack and full suite profiles and `RedactionTest.php` |
+| laravel-4 | guards and Sanctum for authenticate, Gates and Policies for decide, native access (`artefacts.accessHooks: false`), `AuthorizationException` in a decider answering the first denial code, coexistence with the native layers and their per-kind middleware lists, multipart, `streamDownload` and `redirect()->to()`, the published `config/seampact.php`; the suite's security and media rows, a Sanctum row in the sample app |
 
 ## Spike
 
