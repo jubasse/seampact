@@ -20,6 +20,9 @@ final class BinaryRunner
     private const EXIT_REFUSED = 1;
     private const EXIT_USAGE = 2;
 
+    /** The deadline of a compile and of a documents run. */
+    public const DEADLINE_SECONDS = 120.0;
+
     private const KILL_SIGNAL = 9;
 
     // Each output stream is kept up to this many bytes; the rest is counted.
@@ -123,7 +126,7 @@ final class BinaryRunner
             throw BinaryRefusedException::of(
                 BinaryFailureCode::DocumentsRefused,
                 rtrim("The compiler binary exited with {$exit['code']} on the app's OpenAPI documents:\n{$stderr}{$stdout}"),
-                'Fix what the diagnostics say, reading `seampact generate` there as `vendor/bin/seampact generate`: a document that differs is written again by it, then committed; a document edited by hand is written again by `vendor/bin/seampact generate --force`.',
+                'Fix what the diagnostics say, reading `seampact generate` there as `vendor/bin/seampact generate`: a document that differs is written again by it, then committed; a document edited by hand is not overwritten, so delete it first or run `vendor/bin/seampact generate --force`.',
             );
         }
 

@@ -30,8 +30,6 @@ use Seampact\Ir\Config\WorkspaceApiNames;
  */
 final class ContractApis
 {
-    private const COMPILE_TIMEOUT_SECONDS = 120.0;
-
     private const COMPILE_ENTRY_ID = 'compile';
 
     private const COMPILE_PREFIX = 'seampact-source-';
@@ -120,7 +118,7 @@ final class ContractApis
         try {
             $configFile = $workDirectory . '/seampact.config.yaml';
             file_put_contents($configFile, self::compileConfig($name, $source->directory));
-            $output = BinaryRunner::compile($binary, $configFile, $apiNames ?? [], self::COMPILE_TIMEOUT_SECONDS, $this->environment, PHP_OS_FAMILY === 'Windows');
+            $output = BinaryRunner::compile($binary, $configFile, $apiNames ?? [], BinaryRunner::DEADLINE_SECONDS, $this->environment, PHP_OS_FAMILY === 'Windows');
         } catch (BinaryRefusedException $refused) {
             return [RunProblems::ofBinary($refused->failure, $where)];
         } finally {

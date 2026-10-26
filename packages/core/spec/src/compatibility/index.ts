@@ -171,7 +171,8 @@ export interface PhpTargetCompatibility {
 
 const FLOOR_PATTERN = /^(\d+)\.(\d+)$/;
 
-// A PHP target row, its `floor` checked: `<major>.<minor>` of a tested major.
+// A PHP target row, its `floor` checked: `<major>.<minor>` of a tested major. The matrix test runs it over every row,
+// so a malformed row never breaks a reader when this module loads.
 export function phpTargetOf(target: PhpTargetCompatibility): PhpTargetCompatibility {
   const floor = target.framework.floor;
 
@@ -189,7 +190,7 @@ export function phpTargetOf(target: PhpTargetCompatibility): PhpTargetCompatibil
   return target;
 }
 
-export const PHP_TARGETS: readonly PhpTargetCompatibility[] = matrix.phpTargets.map(phpTargetOf);
+export const PHP_TARGETS: readonly PhpTargetCompatibility[] = matrix.phpTargets;
 
 // Every target the matrix records, servers then clients.
 export const ALL_TARGETS: readonly TargetCompatibility[] = [...SERVER_TARGETS, ...CLIENT_TARGETS];

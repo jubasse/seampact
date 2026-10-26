@@ -81,7 +81,8 @@ final class MatrixCheck
     private static function versionOutcome(AppConfigEntry $entry, MatrixFramework $framework, ?\stdClass $package, array $allowed): ?ConfigProblem
     {
         $version = $package === null ? null : self::installedVersion($package);
-        if ($version === null) {
+        $shown = $package === null ? null : self::shownVersion($package);
+        if ($version === null || $shown === null) {
             return new ConfigProblem(
                 'framework.version.unresolved',
                 "Composer has not installed {$framework->package}, the framework the target '{$entry->use()}' generates for, so its version cannot be checked.",
@@ -94,28 +95,28 @@ final class MatrixCheck
         if ($parts === null) {
             return new ConfigProblem(
                 'framework.version.unresolved',
-                "Composer installed {$framework->package} '{$version}', a version whose major the compatibility check cannot read.",
+                "Composer installed {$framework->package} '{$shown}', a version whose major the compatibility check cannot read.",
                 "Require a released {$framework->package} version, major {$framework->testedText()}.",
                 self::where($entry),
             );
         }
 
         [$major, $minor] = $parts;
-        if ($framework->isBelowFloor($major, $minor)) {
-            return new ConfigProblem(
-                'config.matrix.incompatible',
-                "Composer installed {$framework->package} {$version}, and the target '{$entry->use()}' works on {$framework->id} {$framework->floor} or later only.",
-                "Require {$framework->package} {$framework->floor} or later, major {$framework->testedText()}.",
-                self::where($entry),
-            );
-        }
-
         $incompatibleReason = $framework->incompatible[$major] ?? null;
         if ($incompatibleReason !== null) {
             return new ConfigProblem(
                 'config.matrix.incompatible',
-                "Composer installed {$framework->package} {$version}, and the target '{$entry->use()}' does not work on {$framework->id} {$major}: {$incompatibleReason}",
+                "Composer installed {$framework->package} {$shown}, and the target '{$entry->use()}' does not work on {$framework->id} {$major}: {$incompatibleReason}",
                 "Use a major of {$framework->package} the target is tested on: {$framework->testedText()}.",
+                self::where($entry),
+            );
+        }
+
+        if ($framework->isBelowFloor($major, $minor)) {
+            return new ConfigProblem(
+                'config.matrix.incompatible',
+                "Composer installed {$framework->package} {$shown}, and the target '{$entry->use()}' works on {$framework->id} {$framework->floor} or later only.",
+                "Require {$framework->package} {$framework->floor} or later, major {$framework->testedText()}.",
                 self::where($entry),
             );
         }
@@ -127,10 +128,18 @@ final class MatrixCheck
 
         return new ConfigProblem(
             'config.matrix.untested',
-            "Composer installed {$framework->package} {$version}, and the target '{$entry->use()}' is tested on {$framework->id} {$framework->testedText()} only.",
+            "Composer installed {$framework->package} {$shown}, and the target '{$entry->use()}' is tested on {$framework->id} {$framework->testedText()} only.",
             "Use a tested major, or accept this one with `allowUntested: [{$allowItem}]` on the entry.",
             self::where($entry),
         );
+    }
+
+    // The tag Composer shows (`v13.38.2`), which the messages print.
+    private static function shownVersion(\stdClass $package): ?string
+    {
+        $version = $package->version ?? null;
+
+        return is_string($version) ? $version : null;
     }
 
     // Composer writes `version_normalized` (13.38.2.0) beside the tag (`v13.38.2`); a branch is `dev-<name>`.

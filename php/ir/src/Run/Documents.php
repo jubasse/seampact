@@ -24,8 +24,6 @@ final class Documents
 
     private const WHERE = 'openapi';
 
-    private const TIMEOUT_SECONDS = 120.0;
-
     private const WARNING_PREFIX = 'warning: ';
 
     private function __construct()
@@ -87,7 +85,7 @@ final class Documents
                 $settings->configFile,
                 $command,
                 $bundleDirectories,
-                self::TIMEOUT_SECONDS,
+                BinaryRunner::DEADLINE_SECONDS,
                 $settings->environment,
                 PHP_OS_FAMILY === 'Windows',
             );
@@ -95,13 +93,23 @@ final class Documents
             return [RunProblems::ofBinary($refused->failure, self::WHERE)];
         }
 
+        $runnerEntries = array_map(static fn (AppConfigEntry $entry): string => self::leftEntryLine($entry), $prepared->config->entries);
+        $compilerLines = array_values(array_diff(self::printedLines($output->stdout), $runnerEntries));
+
         return new DocumentsRun(
-            array_map(static fn (string $line): string => "seampact: compiler: {$line}", self::printedLines($output->stdout)),
+            array_map(static fn (string $line): string => "seampact: compiler: {$line}", $compilerLines),
             array_map(
                 static fn (string $line): string => str_starts_with($line, self::WARNING_PREFIX) ? substr($line, strlen(self::WARNING_PREFIX)) : $line,
                 self::printedLines($output->stderr),
             ),
         );
+    }
+
+    // The line the binary prints for an entry it leaves to its build plugin; for this runner's own entries it is
+    // not shown, since this runner writes them.
+    private static function leftEntryLine(AppConfigEntry $entry): string
+    {
+        return "entry '{$entry->id()}' uses '{$entry->use()}', which its build plugin generates: left to it.";
     }
 
     /** @return list<string> */
