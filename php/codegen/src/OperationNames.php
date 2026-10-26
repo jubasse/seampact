@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel;
+namespace Seampact\Codegen;
 
-/** The PHP names of one operation: its handler method and the classes the target writes for it. */
+/** The framework-neutral PHP names of one operation: its handler method and the classes every PHP target writes for it. */
 final readonly class OperationNames
 {
     /** @param array<int, string> $responses each declared success status and its result class */
@@ -16,7 +16,6 @@ final readonly class OperationNames
         public string $headers,
         public string $result,
         public string $errors,
-        public string $request,
         public string $endpoints,
         public array $responses,
     ) {

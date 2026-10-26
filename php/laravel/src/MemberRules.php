@@ -8,14 +8,16 @@ use Seampact\Codegen\Delivery;
 use Seampact\Codegen\IntegerStep;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
+use Seampact\Codegen\PcrePattern;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
+use Seampact\Codegen\RulesMode;
 use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\EnumTypeUse;
 use Seampact\Ir\Model\ObjectSchema;
 use Seampact\Ir\Model\Param;
-use Seampact\Ir\Model\Refinements;
 use Seampact\Ir\Model\RefTypeUse;
+use Seampact\Ir\Model\Refinements;
 use Seampact\Ir\Model\ScalarType;
 use Seampact\Ir\Model\ScalarTypeUse;
 use Seampact\Ir\Model\TypeUse;
@@ -37,7 +39,6 @@ use Seampact\Laravel\Runtime\Presence;
  */
 final class MemberRules
 {
-    private const PATTERN_DELIMITERS = ['/', '#', '~', '%', '!', '@', ';', ','];
     private const NATIVE_PATTERN_MODIFIERS = 'u';
     private const CONSISTENT_PATTERN_MODIFIERS = 'uD';
 
@@ -162,35 +163,10 @@ final class MemberRules
         }
 
         if (in_array($type->type->value, [ScalarType::Integer, ScalarType::Number], true)) {
-            $this->number($key, $refinements, $this->integerStep($type, $at->below('refinements', 'multipleOf')), $position);
+            $this->number($key, $refinements, IntegerStep::ofMember($type, $at->below('refinements', 'multipleOf'), $this->refusals), $position);
         } elseif ($type->type->value === ScalarType::String) {
             $this->string($key, $refinements, $position, $at);
         }
-    }
-
-    /**
-     * The exact integer step of the member's `multipleOf`, null when it has none or it is refused: ADR 0003 keeps
-     * `multipleOf` on `integer` and decimal and refuses it on `number`.
-     */
-    private function integerStep(ScalarTypeUse $type, IrPlace $at): ?int
-    {
-        $literal = $type->refinements->multipleOf;
-        if ($literal === null) {
-            return null;
-        }
-
-        if ($type->type->value !== ScalarType::Integer || !IntegerStep::isNonzeroDecimal($literal)) {
-            $this->refusals->inconsistent('multipleOf.invalid', "A 'multipleOf' of {$literal} on a '{$type->type->value}' value, where ADR 0003 keeps a nonzero step on `integer` and decimal only", $at);
-
-            return null;
-        }
-
-        $step = IntegerStep::of($literal);
-        if ($step === null) {
-            $this->refusals->waiting('multipleOf.wide', "The integer step {$literal}, beyond the PHP `int` range,", $at, Delivery::AfterOneZero);
-        }
-
-        return $step;
     }
 
     // Under seampact-consistent the step is the exact integer step; Laravel's `multiple_of` divides the literal exactly.
@@ -238,9 +214,9 @@ final class MemberRules
         $native = $this->mode === RulesMode::Native;
         $pattern = null;
         if ($refinements->pattern !== null) {
-            $pattern = self::pcre($refinements->pattern->normalized, $native ? self::NATIVE_PATTERN_MODIFIERS : self::CONSISTENT_PATTERN_MODIFIERS);
+            $pattern = PcrePattern::of($refinements->pattern->normalized, $native ? self::NATIVE_PATTERN_MODIFIERS : self::CONSISTENT_PATTERN_MODIFIERS);
             if ($pattern === null) {
-                $this->refusals->waiting('pattern.delimiter', 'A pattern holding every PCRE delimiter the target uses (' . implode(' ', self::PATTERN_DELIMITERS) . ')', $at->below('refinements', 'pattern'), Delivery::Consumer);
+                PcrePattern::refuse($this->refusals, $at->below('refinements', 'pattern'));
             }
         }
 
@@ -364,18 +340,6 @@ final class MemberRules
     private function runtimeName(string $simpleName): string
     {
         return $this->file->name($this->layout->runtime($simpleName));
-    }
-
-    /** The PCRE form of a normalised pattern, between the first delimiter it does not hold; null when it holds all. */
-    private static function pcre(string $normalized, string $modifiers): ?string
-    {
-        foreach (self::PATTERN_DELIMITERS as $delimiter) {
-            if (!str_contains($normalized, $delimiter)) {
-                return $delimiter . $normalized . $delimiter . $modifiers;
-            }
-        }
-
-        return null;
     }
 
     private static function numberLiteral(string $decimal): string

@@ -2,16 +2,8 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel;
+namespace Seampact\Codegen;
 
-use Seampact\Codegen\DocComments;
-use Seampact\Codegen\IrPlace;
-use Seampact\Codegen\KeptForms;
-use Seampact\Codegen\PhpClassFile;
-use Seampact\Codegen\PhpNames;
-use Seampact\Codegen\PhpType;
-use Seampact\Codegen\PhpTypes;
-use Seampact\Codegen\Refusals;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\Response;
@@ -24,7 +16,7 @@ use Seampact\Ir\Model\ResponseShape;
  */
 final class OperationTypes
 {
-    public function __construct(private readonly PhpLayout $layout, private readonly PhpTypes $types, private readonly Refusals $refusals)
+    public function __construct(private readonly ApiLayout $layout, private readonly PhpTypes $types, private readonly Refusals $refusals)
     {
     }
 

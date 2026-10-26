@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\PsrPrinter;
+use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
+use Seampact\Codegen\OperationTypes;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpTypes;
 use Seampact\Codegen\Refusals;
@@ -28,6 +30,8 @@ final class LaravelGenerator implements Generator
     public const TARGET = 'laravel';
     public const PACKAGE = 'seampact/laravel';
     private const HTTP_OPERATION = 'httpOperation';
+    // Laravel's exception handler does not report a declared error a handler throws.
+    private const SHOULDNT_REPORT = 'Illuminate\\Contracts\\Debug\\ShouldntReport';
     private const BOOT_CHECK = 'bootCheck';
     private const ACCESS_HOOKS = 'accessHooks';
 
@@ -48,13 +52,13 @@ final class LaravelGenerator implements Generator
 
         $layout = new PhpLayout($ir, $options->namespace, $kept, $refusals);
         $types = new PhpTypes($layout);
-        $operationTypes = new OperationTypes($layout, $types, $refusals);
+        $operationTypes = new OperationTypes($layout->api, $types, $refusals);
         $formRequests = new FormRequests($layout, $options->rules, $refusals);
         $routes = new RouteTable($layout, $options, $refusals);
 
         $classFiles = [
             ...(new SchemaTypes($layout, $types, $refusals))->files($kept->enums(), $kept->objects()),
-            ...(new ContractExceptions($layout, $operationTypes))->files($kept),
+            ...(new ContractExceptions($layout->api, $operationTypes, [self::SHOULDNT_REPORT]))->files($kept),
             ...(new EndpointsTypes($layout))->files($kept),
         ];
 
@@ -65,7 +69,7 @@ final class LaravelGenerator implements Generator
             }
             $at = IrPlace::ofOperation($index, $operation->id);
             array_push($classFiles, ...$operationTypes->files($operation, $names, $at));
-            $classFiles[] = $formRequests->file($operation, $names, $at);
+            $classFiles[] = $formRequests->file($operation, $at);
             $routes->add($operation, $names, $at);
         }
         $classFiles[] = $routes->tableFile();

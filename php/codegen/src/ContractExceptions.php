@@ -2,22 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Laravel;
+namespace Seampact\Codegen;
 
-use Seampact\Codegen\DocComments;
-use Seampact\Codegen\KeptForms;
-use Seampact\Codegen\PhpClassFile;
 use Seampact\Ir\Model\ErrorDecl;
 
 /**
- * The exceptions a handler throws (ADR 0012 "Errors the handler answers"): an abstract base per api, which Laravel's
- * handler does not report, and one final class per declared error code with its code, status and params.
+ * The exceptions a handler throws (ADR 0012 "Errors the handler answers"): an abstract base per api, implementing the
+ * interfaces the target names (Laravel's `ShouldntReport`), and one final class per declared error code with its
+ * code, status and params.
  */
 final class ContractExceptions
 {
-    private const SHOULDNT_REPORT = 'Illuminate\\Contracts\\Debug\\ShouldntReport';
-
-    public function __construct(private readonly PhpLayout $layout, private readonly OperationTypes $operationTypes)
+    /** @param list<string> $baseInterfaces the interfaces the api's exception base implements, fully qualified */
+    public function __construct(private readonly ApiLayout $layout, private readonly OperationTypes $operationTypes, private readonly array $baseInterfaces = [])
     {
     }
 
@@ -26,9 +23,11 @@ final class ContractExceptions
     {
         $base = new PhpClassFile($this->layout->contractException);
         $baseClass = $base->namespace->addClass($base->shortName)->setAbstract()
-            ->setExtends(\RuntimeException::class)
-            ->addImplement(self::SHOULDNT_REPORT);
-        $base->name(self::SHOULDNT_REPORT);
+            ->setExtends(\RuntimeException::class);
+        foreach ($this->baseInterfaces as $interface) {
+            $baseClass->addImplement($interface);
+            $base->name($interface);
+        }
         $baseClass->addComment("A declared error of api '{$this->layout->ir->api->id}', thrown by a handler.");
         $baseClass->addMethod('contractCode')->setAbstract()->setReturnType('string');
         $baseClass->addMethod('status')->setAbstract()->setReturnType('int');

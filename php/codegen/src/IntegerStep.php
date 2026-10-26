@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen;
 
+use Seampact\Ir\Model\ScalarType;
+use Seampact\Ir\Model\ScalarTypeUse;
+
 /**
  * The exact integer step of a `multipleOf` on an integer (ADR 0003 keeps it on `integer` and decimal): an integer is
  * a multiple of `p / 10^d` exactly when it is a multiple of `p / gcd(p, 10^d)`, as the Node targets reduce it, so
@@ -17,6 +20,31 @@ final class IntegerStep
 
     private function __construct()
     {
+    }
+
+    /**
+     * The exact integer step of a member's `multipleOf`, null when it has none or it is refused at `$at`: ADR 0003
+     * keeps `multipleOf` on `integer` and decimal and refuses it on `number`; a step beyond the PHP `int` range waits.
+     */
+    public static function ofMember(ScalarTypeUse $type, IrPlace $at, Refusals $refusals): ?int
+    {
+        $literal = $type->refinements->multipleOf;
+        if ($literal === null) {
+            return null;
+        }
+
+        if ($type->type->value !== ScalarType::Integer || !self::isNonzeroDecimal($literal)) {
+            $refusals->inconsistent('multipleOf.invalid', "A 'multipleOf' of {$literal} on a '{$type->type->value}' value, where ADR 0003 keeps a nonzero step on `integer` and decimal only", $at);
+
+            return null;
+        }
+
+        $step = self::of($literal);
+        if ($step === null) {
+            $refusals->waiting('multipleOf.wide', "The integer step {$literal}, beyond the PHP `int` range,", $at, Delivery::AfterOneZero);
+        }
+
+        return $step;
     }
 
     public static function isNonzeroDecimal(string $literal): bool
