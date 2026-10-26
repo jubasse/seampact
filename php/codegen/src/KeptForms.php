@@ -58,7 +58,8 @@ final class KeptForms
     private const PAGING_PARAMS_DERIVATION = 'paging.params';
     private const TOP_LEVEL_POINTER = '/^\/[^\/]+$/D';
     // The slots an item, table or list envelope may write that the boundary fills.
-    private const ENVELOPE_SLOTS = ['payload', 'status', 'path', 'meta'];
+    private const PAYLOAD_SLOT = 'payload';
+    private const ENVELOPE_SLOTS = [self::PAYLOAD_SLOT, 'status', 'path', 'meta'];
     private const BUCKET_KEY_SOURCES = [ValueSourceIn::Path, ValueSourceIn::Scope, ValueSourceIn::Principal];
 
     // Header params the boundary consumes itself: the credentials and the CSRF token never reach the handler.
@@ -81,6 +82,9 @@ final class KeptForms
 
     /** @var array<string, true> the formats already read */
     private array $formats = [];
+
+    /** @var array<string, true> the success shapes already read, by format and shape */
+    private array $formatShapes = [];
 
     public function __construct(private readonly ContractIR $ir, private readonly Refusals $refusals, private readonly FormReleases $releases)
     {
@@ -182,6 +186,9 @@ final class KeptForms
 
         foreach ($operation->responses as $responseIndex => $response) {
             $this->readResponse($response, $at->below('responses', $responseIndex));
+            if ($response->body !== null) {
+                $this->readSuccessShape($operation->format, $response->shape->value);
+            }
         }
 
         foreach ($operation->errors as $errorIndex => $error) {
@@ -266,7 +273,8 @@ final class KeptForms
     }
 
     // A success envelope the boundary renders around the payload (`{ data: $payload }`), as the Node targets render
-    // it: with no format meta member, no success header and no slot beside the payload, the status and the path.
+    // it: with no format meta member, and per shape a response takes, no success header and no slot beside the
+    // payload, the status and the path.
     private function readFormat(string $formatId): void
     {
         if (isset($this->formats[$formatId])) {
@@ -285,22 +293,70 @@ final class KeptForms
         if ($format->meta !== []) {
             $this->refusals->waiting('format.meta', "The meta members of the format '{$formatId}'", $formatAt->below('meta'), Delivery::AfterOneZero);
         }
+    }
 
-        $shapes = ['item' => $format->success->item, 'table' => $format->success->table, 'list' => $format->success->list, 'page' => $format->success->page];
-        foreach ($shapes as $shapeName => $shape) {
-            $shapeAt = $formatAt->below('success', $shapeName);
-            if ($shape->headers !== []) {
-                $this->refusals->waiting('format.success.headers', 'A success format header', $shapeAt->below('headers'), Delivery::AfterOneZero);
-            }
-            if ($shapeName === 'page') {
-                continue;
-            }
-            foreach (self::templateSlots($shape->body->toJson()) as $slot) {
-                if (!in_array($slot, self::ENVELOPE_SLOTS, true)) {
-                    $this->refusals->waiting('format.success.slot', "The success envelope slot '\${$slot}'", $shapeAt->below('body'), Delivery::AfterOneZero);
-                }
+    // The format's shape of a response with a body, read once per format and shape.
+    private function readSuccessShape(string $formatId, string $shapeName): void
+    {
+        $format = $this->ir->formats[$formatId] ?? null;
+        $shapes = $format === null ? [] : ['item' => $format->success->item, 'table' => $format->success->table, 'list' => $format->success->list, 'page' => $format->success->page];
+        $shape = $shapes[$shapeName] ?? null;
+        if ($shape === null || isset($this->formatShapes["{$formatId}/{$shapeName}"])) {
+            return;
+        }
+        $this->formatShapes["{$formatId}/{$shapeName}"] = true;
+
+        $shapeAt = IrPlace::root()->below('formats', $formatId, 'success', $shapeName);
+        if ($shape->headers !== []) {
+            $this->refusals->waiting('format.success.headers', 'A success format header', $shapeAt->below('headers'), Delivery::AfterOneZero);
+        }
+        if ($shapeName === 'page') {
+            return;
+        }
+
+        $body = $shape->body->toJson();
+        $payloadPath = self::slotPath($body, self::PAYLOAD_SLOT);
+        if ($payloadPath === null) {
+            $this->refusals->waiting('format.success.envelope', 'A success envelope that does not write `$payload` under named members', $shapeAt->below('body'), Delivery::AfterOneZero);
+
+            return;
+        }
+        if ($payloadPath === []) {
+            return;
+        }
+
+        foreach (self::templateSlots($body) as $slot) {
+            if (!in_array($slot, self::ENVELOPE_SLOTS, true)) {
+                $this->refusals->waiting('format.success.slot', "The success envelope slot '\${$slot}'", $shapeAt->below('body'), Delivery::AfterOneZero);
             }
         }
+    }
+
+    /** @return list<string>|null the member names down to the slot, reached through named object members only */
+    private static function slotPath(mixed $template, string $slot): ?array
+    {
+        if (!$template instanceof \stdClass) {
+            return null;
+        }
+        if (($template->kind ?? null) === 'slot') {
+            return ($template->slot ?? null) === $slot && ($template->path ?? null) === [] ? [] : null;
+        }
+        if (($template->kind ?? null) !== 'object' || !is_array($template->members ?? null)) {
+            return null;
+        }
+
+        foreach ($template->members as $member) {
+            $name = $member instanceof \stdClass ? $member->name ?? null : null;
+            if (!$name instanceof \stdClass || ($name->kind ?? null) !== 'text' || !is_string($name->text ?? null)) {
+                continue;
+            }
+            $rest = self::slotPath($member->value ?? null, $slot);
+            if ($rest !== null) {
+                return [$name->text, ...$rest];
+            }
+        }
+
+        return null;
     }
 
     /** @return list<string> the slot names a template writes, at any depth */

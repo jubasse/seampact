@@ -12,6 +12,10 @@ final class PublicOrigin
 {
     private const ABSOLUTE_URLS = 'absolute';
     private const SCHEMES = ['http', 'https'];
+    // What Java's `URI` reads as a server authority: a DNS name or IPv4 address, or a bracketed IPv6 address, then an
+    // optional port of digits.
+    private const SCHEME_HOST_AND_PORT = '~^https?://(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*|\[[0-9A-Fa-f:.]+\])(?::(?<port>[0-9]{1,5}))?$~D';
+    private const HIGHEST_PORT = 65535;
 
     private function __construct()
     {
@@ -71,6 +75,13 @@ final class PublicOrigin
         }
         if (isset($origin['path']) || isset($origin['query']) || isset($origin['fragment']) || str_ends_with($configured, '?') || str_ends_with($configured, '#')) {
             return 'has a path, a query or a fragment (a trailing slash included)';
+        }
+        if (preg_match(self::SCHEME_HOST_AND_PORT, $configured, $parts) !== 1) {
+            return 'has a host that is not a DNS name, an IPv4 address or a bracketed IPv6 address, or an empty port';
+        }
+        $port = $parts['port'] ?? '';
+        if ($port !== '' && ((int) $port < 1 || (int) $port > self::HIGHEST_PORT)) {
+            return 'has a port outside 1-65535';
         }
 
         return null;

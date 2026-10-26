@@ -20,6 +20,7 @@ final class Replies
     private const SECONDS_UNIT = 's';
     private const MILLISECONDS_PER_SECOND = 1000;
     private const NULL_ABSENT = 'null';
+    private const PAYLOAD_SLOT = 'payload';
     private const NO_CONTENT = 204;
     private const PAGE_SHAPE = 'page';
 
@@ -130,22 +131,37 @@ final class Replies
         return $state->author(CacheHeaders::written($request, $state, $reply));
     }
 
-    /**
-     * The success body in its format's envelope (ADR 0002 section 13): `{ data: $payload }` under `pack:laravel`, the
-     * payload itself under a bare format.
-     */
     private static function enveloped(Request $request, BoundaryState $state, string $shape, mixed $payload, int $status): mixed
     {
-        $format = $state->contract->format($state->operationId);
+        return self::successBody($state->contract->format($state->operationId), $shape, $payload, $status, RawTarget::path($request));
+    }
+
+    /**
+     * The success body in its format's envelope (ADR 0002 section 13): `{ data: $payload }` under `pack:laravel`, the
+     * payload itself under a bare format, `null` included. Generation refuses an envelope that does not write
+     * `$payload` under named members, so an object template always renders.
+     *
+     * @param array<array-key, mixed> $format
+     */
+    public static function successBody(array $format, string $shape, mixed $payload, int $status, string $path): mixed
+    {
         $template = Ir::map(Ir::map($format, 'success'), $shape)['body'] ?? null;
-        if ($template === null) {
+        if ($template === null || self::isBarePayload($template)) {
             return $payload;
         }
 
-        $slots = ['payload' => $payload, 'status' => $status, 'path' => RawTarget::path($request)];
+        $slots = [self::PAYLOAD_SLOT => $payload, 'status' => $status, 'path' => $path];
         $rendered = Templates::render($template, $slots, Ir::string($format, 'absent') === self::NULL_ABSENT);
+        if (!$rendered->present) {
+            throw new \LogicException("seampact: the format's '{$shape}' success envelope rendered nothing; regenerate the api, whose generation refuses an envelope that does not write \$payload under named members.");
+        }
 
-        return $rendered->present ? $rendered->value : new \stdClass();
+        return $rendered->value;
+    }
+
+    private static function isBarePayload(mixed $template): bool
+    {
+        return Ir::string($template, 'kind') === 'slot' && Ir::string($template, 'slot') === self::PAYLOAD_SLOT && Ir::list($template, 'path') === [];
     }
 
     /**
