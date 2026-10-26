@@ -9,8 +9,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * A contract error the boundary answers before the handler, with one of the operation's declared codes and its
- * params: thrown by the access middleware and the FormRequest, rendered by its own `render()`, which Laravel's
- * handler calls before any render callback of the app.
+ * params: thrown by the boundary's access and input steps, rendered by its own `render()`, which the target calls
+ * before any exception rendering of the app.
  */
 final class ContractRefusal extends \RuntimeException
 {

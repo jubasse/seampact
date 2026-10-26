@@ -7,7 +7,7 @@ namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 use Seampact\Hooks\ResolveScopeHook;
 
 /**
- * The resolve-scope hook of one scope of the api, tagged in the container with the provider's `SCOPE_RESOLVERS_TAG`.
+ * The resolve-scope hook of one scope of the api, registered as the target's guide says (HookLookup::scopeResolvers()).
  *
  * @extends ResolveScopeHook<ScopeCall>
  */

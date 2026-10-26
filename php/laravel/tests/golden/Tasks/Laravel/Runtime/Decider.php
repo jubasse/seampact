@@ -7,7 +7,7 @@ namespace Seampact\Golden\Tasks\Laravel\Runtime;
 use Seampact\Hooks\DecideHook;
 
 /**
- * A decide hook of the api, tagged in the container with the provider's `DECIDERS_TAG`: it serves the rights and
+ * A decide hook of the api, registered as the target's guide says (HookLookup::deciders()): it serves the rights and
  * rules `names()` lists, or every one the api declares with `EVERY_NAME`, which a decider naming one wins over.
  *
  * @extends DecideHook<RequirementCall>

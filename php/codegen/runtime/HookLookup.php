@@ -8,7 +8,7 @@ use Psr\Log\LoggerInterface;
 use Seampact\Hooks\AuthenticateHook;
 
 /**
- * Where the boundary finds the app's hooks and services, which each target answers from its own container: the
+ * Where the boundary finds the app's hooks and services, which each target answers from its own service registry: the
  * authenticate hook of an identity, the registered deciders and scope resolvers (HookSelection picks one), the optional
  * unexpected-error listener, the app's logger, and whether an exception a decider threw is the framework's own access
  * denial. A later capability gets its own interface, never a new method here.
