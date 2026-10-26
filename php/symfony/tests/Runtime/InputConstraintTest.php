@@ -93,6 +93,36 @@ final class InputConstraintTest extends TestCase
         self::assertSame([], self::issues($body, '{"code":"ab","id":"6f1c2b9e-0a43-4c8e-9a51-1f2d3c4b5a69","name":"x"}'));
     }
 
+    public function testABlankStringNeverPassesAUuidUnderNativeRules(): void
+    {
+        $body = self::object([
+            'id' => new Member(JsonType::String, checks: new Checks(format: Format::Uuid, formatScope: PatternScope::EmptyStringOnly), native: [new Uuid(payload: Rule::payload(Rule::FORMAT))]),
+        ]);
+
+        self::assertSame(['/body/id format'], self::issues($body, '{"id":"   "}'));
+        self::assertSame(['/body/id format'], self::issues($body, '{"id":""}'));
+    }
+
+    public function testANonFiniteNumberIsATypeIssue(): void
+    {
+        $body = self::object([
+            'amount' => new Member(JsonType::Number, presence: Presence::Optional),
+            'count' => new Member(JsonType::Integer, presence: Presence::Optional),
+        ]);
+
+        self::assertSame(['/body/amount type', '/body/count type'], self::issues($body, '{"amount":1e400,"count":-1e400}'));
+    }
+
+    public function testAnIntegerStepIsExactOnAWholeFloat(): void
+    {
+        $body = self::object(['count' => new Member(JsonType::Integer, checks: new Checks(multipleOf: 7))]);
+
+        self::assertSame(['/body/count multipleOf'], self::issues($body, '{"count":9007199254740990.0}'));
+        self::assertSame([], self::issues($body, '{"count":9007199254740988.0}'));
+        self::assertSame(['/body/count multipleOf'], self::issues($body, '{"count":15}'));
+        self::assertSame([], self::issues($body, '{"count":14}'));
+    }
+
     public function testConsistentRulesCountCodePointsAndSearchTheEmptyStringToo(): void
     {
         $body = self::object([
