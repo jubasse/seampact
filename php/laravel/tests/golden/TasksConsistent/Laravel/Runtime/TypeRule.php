@@ -75,7 +75,7 @@ final class TypeRule extends ContractRule
             self::BOOLEAN => is_bool($value),
             self::OBJECT => $value instanceof \stdClass,
             self::ARRAY => is_array($value) && array_is_list($value),
-            self::ANY => self::finiteThroughout($value),
+            self::ANY => OpaqueValue::isFiniteThroughout($value),
             default => throw new \LogicException("The generated type rule names the unknown type '{$this->type}'."),
         };
 
@@ -99,23 +99,6 @@ final class TypeRule extends ContractRule
     }
 
     // A JSON integer that fits an `int` decodes to an `int`; a float here is `1.0` or a number beyond that range.
-    private static function finiteThroughout(mixed $value): bool
-    {
-        if (is_float($value)) {
-            return is_finite($value);
-        }
-        if (!is_array($value) && !$value instanceof \stdClass) {
-            return true;
-        }
-        foreach ((array) $value as $member) {
-            if (!self::finiteThroughout($member)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     private static function wholeFloatIssue(float $value): ?string
     {
         if (!is_finite($value) || floor($value) !== $value) {

@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Seampact\Symfony\Runtime;
 
+use Seampact\Codegen\Runtime\OpaqueValue;
+
 /**
  * A member's JSON type, checked on the objects-preserved decoding without coercion: `{}` is never a list and a string
  * is never a number. An integer accepts a whole number in the safe range of ADR 0003, up to 2^53 - 1 in magnitude,
  * whether it decoded to an `int` or a float (`1.0`); a larger one is refused as `maximum`, or `minimum` below zero, as
  * on the Node targets. A number beyond the float range, which decodes to
- * an infinity, is refused as `type`, as on the Node and JVM targets.
+ * an infinity, is refused as `type`, as on the Node and JVM targets; an opaque value takes any JSON with no such number
+ * anywhere inside it.
  */
 enum JsonType
 {
@@ -19,6 +22,7 @@ enum JsonType
     case Boolean;
     case Object;
     case List;
+    case Any;
 
     private const LARGEST_SAFE_INTEGER = 9007199254740991;
 
@@ -31,6 +35,7 @@ enum JsonType
             self::Boolean => is_bool($value),
             self::Object => $value instanceof \stdClass,
             self::List => is_array($value) && array_is_list($value),
+            self::Any => OpaqueValue::isFiniteThroughout($value),
         };
 
         if (!$matches) {

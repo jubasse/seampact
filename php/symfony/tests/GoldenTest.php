@@ -15,12 +15,16 @@ use Seampact\Symfony\SymfonyGenerator;
  * The reference contract's apis generated with the operations this release serves, compared byte for byte with the
  * committed tree under `tests/golden`, which PHPStan then analyses at level max against Symfony and CI lints with
  * `php -l`. `SEAMPACT_UPDATE_GOLDEN=1` rewrites the tree instead. The tasks api is generated twice: with every default,
- * and with `rules: seampact-consistent` and an indent of two spaces in a namespace of its own.
+ * and with `rules: seampact-consistent` and an indent of two spaces in a namespace of its own, where, beside the core
+ * operations, it holds the writes with their idempotency, a right and a rule with its body proof (`updateTask` and
+ * `purgeTask`), the paged `listTasks`, the cached `getPreferences`, the signed `payments`, the deadline budget of
+ * `searchTasks`, and a sensitive `CreateTask.title`.
  */
 final class GoldenTest extends TestCase
 {
     private const GOLDEN_DIRECTORY = __DIR__ . '/golden';
     private const UPDATE_VARIABLE = 'SEAMPACT_UPDATE_GOLDEN';
+    private const SENSITIVE_SCHEMA = 'CreateTask';
 
     public function testTheGeneratedTreeIsTheCommittedGolden(): void
     {
@@ -28,7 +32,7 @@ final class GoldenTest extends TestCase
         $trees = [
             'Tasks' => $generator->generate(ReferenceContract::core(new SymfonyGenerator()), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'Seampact\\Golden\\Tasks')),
             'TasksConsistent' => $generator->generate(
-                ReferenceContract::core(new SymfonyGenerator()),
+                ReferenceContract::read(new SymfonyGenerator(), self::withServedOperations()),
                 ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'Seampact\\Golden\\TasksConsistent', ['rules' => 'seampact-consistent', 'indent' => 2]),
             ),
         ];
@@ -46,26 +50,32 @@ final class GoldenTest extends TestCase
         }
     }
 
-    public function testTheFullReferenceContractIsRefusedFormByForm(): void
+    private static function withServedOperations(): \stdClass
     {
-        $ir = ReferenceContract::read(new SymfonyGenerator(), ReferenceContract::document(ReferenceContract::TASKS));
+        $document = ReferenceContract::kept(
+            ReferenceContract::document(ReferenceContract::TASKS),
+            [...ReferenceContract::CORE_OPERATIONS, 'createTask', 'updateTask', 'purgeTask', 'listTasks', 'getPreferences', 'payments', 'searchTasks'],
+        );
 
-        try {
-            (new SymfonyGenerator())->generate($ir, ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
-            self::fail('The full reference contract was generated, but it carries forms a later release brings.');
-        } catch (GenerationRefusedException $refused) {
-            $codes = array_values(array_unique(array_map(static fn (ConfigProblem $problem): string => $problem->code, $refused->problems)));
-            sort($codes);
+        // An input-only member made sensitive, so the golden holds a redacted schema class.
+        $schemas = $document->schemas ?? null;
+        $createTask = $schemas instanceof \stdClass ? $schemas->{self::SENSITIVE_SCHEMA} ?? null : null;
+        $title = $createTask instanceof \stdClass && is_array($createTask->properties) ? $createTask->properties[0] : null;
+        if (!$title instanceof \stdClass) {
+            throw new \LogicException('The reference IR lost the first property of ' . self::SENSITIVE_SCHEMA . '.');
+        }
+        $title->sensitive = true;
 
-            self::assertSame(
-                [
-                    'access.signed.unsupported', 'cache.unsupported', 'deadline.unsupported', 'error.retryHeader.unsupported', 'idempotency.unsupported',
-                    'input.rawBody.unsupported', 'paging.unsupported', 'param.query.structured.unsupported',
-                    'response.header.unsupported', 'response.shape.unsupported', 'throttle.unsupported', 'type.opaque.unsupported',
-                ],
-                $codes,
-            );
-            self::assertStringContainsString("entry 'server' /operations/", $refused->getMessage());
+        return $document;
+    }
+
+    public function testBothApisOfTheFullReferenceContractGenerate(): void
+    {
+        foreach ([ReferenceContract::TASKS => 'tasks', ReferenceContract::TASKS_SERVICE => 'tasksService'] as $file => $api) {
+            $ir = ReferenceContract::read(new SymfonyGenerator(), ReferenceContract::document($file));
+            $files = (new SymfonyGenerator())->generate($ir, ReferenceContract::entry(SymfonyGenerator::PACKAGE, $api, 'App\\Generated'));
+
+            self::assertNotSame([], $files, "The api '{$api}' generated no file.");
         }
     }
 

@@ -18,6 +18,7 @@ use Seampact\Codegen\OptionValues;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpTypes;
 use Seampact\Codegen\Refusals;
+use Seampact\Codegen\RestrictedSortKeys;
 use Seampact\Codegen\RuntimeCopy;
 use Seampact\Codegen\RuntimeSource;
 use Seampact\Codegen\SchemaTypes;
@@ -80,6 +81,7 @@ final class SymfonyGenerator implements Generator
         ];
         foreach ($placement->operations() as [$index, $operation]) {
             $at = IrPlace::ofOperation($index, $operation->id);
+            RestrictedSortKeys::refuse($operation, $at, $refusals);
             array_push($classFiles, ...$operationTypes->files($operation, $placement->names($operation->id), $at));
             array_push($classFiles, ...$constraints->files($operation, $at));
         }

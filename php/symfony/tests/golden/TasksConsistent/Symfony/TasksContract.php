@@ -677,7 +677,7 @@ final class TasksContract
             ],
             'optional' => false,
             'nullable' => false,
-            'sensitive' => false,
+            'sensitive' => true,
             'deprecated' => false,
             'docs' => [],
             'extensions' => [],
@@ -1377,6 +1377,409 @@ final class TasksContract
     'operations' => [
       [
         'kind' => 'httpOperation',
+        'id' => 'createTask',
+        'name' => ['segments' => ['create', 'task'], 'role' => 'operation'],
+        'surface' => 'app',
+        'op' => 'create',
+        'resource' => ['type' => 'tasks', 'idProperty' => 'taskId'],
+        'features' => [],
+        'method' => 'post',
+        'path' => '/v1/channels/{channelId}/tasks',
+        'safe' => false,
+        'params' => [
+          'path' => [
+            [
+              'name' => 'channelId',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'format' => 'uuid', 'refinements' => []],
+              'required' => true,
+              'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/id/channelId'],
+            ],
+          ],
+          'query' => [],
+          'header' => [
+            [
+              'name' => 'Authorization',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'derivedFrom' => [
+                'derivation' => 'identity.authenticate',
+                'from' => [
+                  ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                  ['layer' => 'shared', 'pointer' => '/schemes/bearer'],
+                ],
+              ],
+            ],
+            [
+              'name' => 'X-Csrf-Token',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'derivedFrom' => [
+                'derivation' => 'csrf.cookieWrite',
+                'from' => [
+                  ['layer' => 'shared', 'pointer' => '/identities/user'],
+                  ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+                ],
+              ],
+            ],
+            [
+              'name' => 'Idempotency-Key',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => true,
+              'derivedFrom' => [
+                'derivation' => 'idempotency.write',
+                'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+              ],
+            ],
+          ],
+        ],
+        'unknownQuery' => ['policy' => 'refuse'],
+        'access' => [
+          'kind' => 'identity',
+          'identity' => 'user',
+          'schemes' => ['bearer', 'sessionCookie'],
+          'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+        ],
+        'callerKinds' => ['identified'],
+        'principalRequires' => [],
+        'scopes' => [
+          [
+            'scope' => 'channel',
+            'source' => ['in' => 'path', 'name' => 'channelId'],
+            'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+          ],
+        ],
+        'requires' => [
+          [
+            'kind' => 'rule',
+            'rule' => 'throttle',
+            'bucket' => 'write',
+            'entry' => 'writeThrottle',
+            'origin' => [
+              'layer' => 'api',
+              'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0',
+            ],
+          ],
+          [
+            'kind' => 'right',
+            'right' => 'roles',
+            'params' => ['allowed' => ['owner', 'editor']],
+            'subject' => ['source' => ['in' => 'scope', 'name' => 'channel'], 'defaulted' => true],
+            'entry' => 'channelEditor',
+            'origin' => [
+              'layer' => 'api',
+              'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/1',
+            ],
+          ],
+        ],
+        'bindings' => [],
+        'input' => [
+          'media' => 'application/json',
+          'schema' => ['kind' => 'ref', 'schema' => 'CreateTask'],
+          'bodyLimitBytes' => 1048576,
+          'rawBody' => false,
+          'origin' => [
+            'layer' => 'api',
+            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/input',
+          ],
+        ],
+        'responses' => [
+          [
+            'status' => 201,
+            'media' => 'application/json',
+            'body' => ['kind' => 'ref', 'schema' => 'Task'],
+            'shape' => 'item',
+            'headers' => [
+              [
+                'name' => 'Idempotency-Replayed',
+                'type' => ['kind' => 'scalar', 'type' => 'boolean', 'refinements' => []],
+                'required' => false,
+                'derivedFrom' => [
+                  'derivation' => 'idempotency.write',
+                  'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                ],
+              ],
+            ],
+            'origin' => [
+              'layer' => 'api',
+              'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/item',
+            ],
+            'derivedFrom' => [
+              'derivation' => 'response.format',
+              'from' => [['layer' => 'core', 'pointer' => '/formats/bare']],
+            ],
+          ],
+        ],
+        'errors' => [
+          [
+            'code' => 'api.schema_invalid',
+            'roles' => [
+              [
+                'role' => 'schemaInvalid',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'issues'],
+                      'value' => [
+                        'kind' => 'each',
+                        'of' => 'issues',
+                        'as' => [
+                          'kind' => 'object',
+                          'members' => [
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'pointer'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['pointer'],
+                              ],
+                            ],
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'rule'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['rule'],
+                              ],
+                            ],
+                          ],
+                        ],
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'input.invalid',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/conventions/idempotency'],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create',
+                ],
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/derived/schemaInvalid'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.unauthenticated',
+            'roles' => [['role' => 'unauthenticated']],
+            'derivedFrom' => [
+              'derivation' => 'identity.authenticate',
+              'from' => [['layer' => 'api', 'pointer' => '/surfaces/app/identity']],
+            ],
+          ],
+          [
+            'code' => 'api.csrf_invalid',
+            'roles' => [['role' => 'csrfInvalid']],
+            'derivedFrom' => [
+              'derivation' => 'csrf.cookieWrite',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/identities/user'],
+                ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.forbidden',
+            'roles' => [
+              [
+                'role' => 'forbidden',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'pointer'],
+                      'value' => ['kind' => 'slot', 'slot' => 'pointer', 'path' => []],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'requirement.errors',
+              'from' => [
+                ['layer' => 'api', 'pointer' => '/schemas/CreateTask/properties/effort/restrictedTo'],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/1',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.not_found',
+            'derivedFrom' => [
+              'derivation' => 'scope.errors',
+              'from' => [
+                ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.idempotency_in_progress',
+            'roles' => [['role' => 'idempotencyInProgress']],
+            'derivedFrom' => [
+              'derivation' => 'idempotency.write',
+              'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+            ],
+          ],
+          [
+            'code' => 'api.payload_too_large',
+            'roles' => [
+              [
+                'role' => 'payloadTooLarge',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'limitBytes'],
+                      'value' => ['kind' => 'slot', 'slot' => 'limitBytes', 'path' => []],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'body.limit',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/input',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.unsupported_media_type',
+            'roles' => [['role' => 'unsupportedMediaType']],
+            'derivedFrom' => [
+              'derivation' => 'body.media',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/input',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.idempotency_key_reused',
+            'roles' => [['role' => 'idempotencyKeyReused']],
+            'derivedFrom' => [
+              'derivation' => 'idempotency.write',
+              'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+            ],
+          ],
+          [
+            'code' => 'api.rate_limited',
+            'retryHeader' => [
+              'name' => 'Retry-After',
+              'param' => 'retryAfterMs',
+              'unit' => 's',
+              'derivedFrom' => [
+                'derivation' => 'rule.bucket',
+                'from' => [
+                  [
+                    'layer' => 'api',
+                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0',
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'requirement.errors',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.internal',
+            'roles' => [['role' => 'undeclaredStatus']],
+            'derivedFrom' => [
+              'derivation' => 'response.undeclared',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/every/0'],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create',
+                ],
+              ],
+            ],
+          ],
+        ],
+        'fieldRights' => [
+          [
+            'schema' => 'CreateTask',
+            'pointer' => '/effort',
+            'right' => 'roles',
+            'params' => ['allowed' => ['owner']],
+            'subject' => ['source' => ['in' => 'scope', 'name' => 'channel']],
+            'direction' => 'input',
+            'inputPolicy' => 'reject',
+            'derivedFrom' => [
+              'derivation' => 'fieldRight.restricted',
+              'from' => [
+                ['layer' => 'api', 'pointer' => '/schemas/CreateTask/properties/effort/restrictedTo'],
+              ],
+            ],
+          ],
+          [
+            'schema' => 'Task',
+            'pointer' => '/effort',
+            'right' => 'tasks.seeEffort',
+            'subject' => ['source' => ['in' => 'holderField', 'name' => 'taskId']],
+            'direction' => 'output',
+            'derivedFrom' => [
+              'derivation' => 'fieldRight.restricted',
+              'from' => [['layer' => 'shared', 'pointer' => '/schemas/Task/properties/effort/restrictedTo']],
+            ],
+          ],
+        ],
+        'idempotency' => [
+          'kind' => 'derived',
+          'header' => 'Idempotency-Key',
+          'replayHeader' => 'Idempotency-Replayed',
+          'lifetimeMs' => 86400000,
+          'required' => true,
+          'enforce' => 'boundary',
+          'derivedFrom' => [
+            'derivation' => 'idempotency.write',
+            'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+          ],
+        ],
+        'upstream' => [],
+        'maturity' => [
+          'level' => 'provisional',
+          'source' => 'api',
+          'origin' => ['layer' => 'api', 'pointer' => '/api/maturity'],
+        ],
+        'internal' => false,
+        'csrf' => [
+          'kind' => 'derived',
+          'header' => 'X-Csrf-Token',
+          'derivedFrom' => [
+            'derivation' => 'csrf.cookieWrite',
+            'from' => [
+              ['layer' => 'shared', 'pointer' => '/identities/user'],
+              ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+            ],
+          ],
+        ],
+        'format' => 'bare',
+        'tags' => [],
+        'examples' => [],
+        'docs' => [],
+        'extensions' => [],
+        'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/create'],
+      ],
+      [
+        'kind' => 'httpOperation',
         'id' => 'getChannel',
         'name' => ['segments' => ['get', 'channel'], 'role' => 'operation'],
         'surface' => 'app',
@@ -1696,6 +2099,234 @@ final class TasksContract
         'docs' => [],
         'extensions' => [],
         'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/me/routes/drafts/ops/get'],
+      ],
+      [
+        'kind' => 'httpOperation',
+        'id' => 'getPreferences',
+        'name' => ['segments' => ['get', 'preferences'], 'role' => 'operation'],
+        'surface' => 'app',
+        'op' => 'get',
+        'resource' => ['type' => 'preferences'],
+        'features' => [],
+        'method' => 'get',
+        'path' => '/v1/me/preferences',
+        'safe' => true,
+        'params' => [
+          'path' => [],
+          'query' => [],
+          'header' => [
+            [
+              'name' => 'Authorization',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'derivedFrom' => [
+                'derivation' => 'identity.authenticate',
+                'from' => [
+                  ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                  ['layer' => 'shared', 'pointer' => '/schemes/bearer'],
+                ],
+              ],
+            ],
+            [
+              'name' => 'If-None-Match',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'derivedFrom' => [
+                'derivation' => 'cache.etag',
+                'from' => [
+                  [
+                    'layer' => 'api',
+                    'pointer' => '/surfaces/app/routes/me/routes/preferences/ops/get/cache',
+                  ],
+                ],
+              ],
+            ],
+          ],
+        ],
+        'unknownQuery' => ['policy' => 'refuse'],
+        'access' => [
+          'kind' => 'identity',
+          'identity' => 'user',
+          'schemes' => ['bearer', 'sessionCookie'],
+          'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+        ],
+        'callerKinds' => ['identified'],
+        'principalRequires' => [],
+        'scopes' => [],
+        'requires' => [],
+        'bindings' => [],
+        'responses' => [
+          [
+            'status' => 200,
+            'media' => 'application/json',
+            'body' => ['kind' => 'ref', 'schema' => 'Preferences'],
+            'shape' => 'item',
+            'headers' => [
+              [
+                'name' => 'ETag',
+                'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                'required' => true,
+                'derivedFrom' => [
+                  'derivation' => 'cache.etag',
+                  'from' => [
+                    [
+                      'layer' => 'api',
+                      'pointer' => '/surfaces/app/routes/me/routes/preferences/ops/get/cache',
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/me/routes/preferences/item'],
+            'derivedFrom' => [
+              'derivation' => 'response.format',
+              'from' => [['layer' => 'core', 'pointer' => '/formats/bare']],
+            ],
+          ],
+          [
+            'status' => 304,
+            'shape' => 'empty',
+            'headers' => [
+              [
+                'name' => 'ETag',
+                'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                'required' => true,
+                'derivedFrom' => [
+                  'derivation' => 'cache.etag',
+                  'from' => [
+                    [
+                      'layer' => 'api',
+                      'pointer' => '/surfaces/app/routes/me/routes/preferences/ops/get/cache',
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'cache.etag',
+              'from' => [
+                ['layer' => 'api', 'pointer' => '/surfaces/app/routes/me/routes/preferences/ops/get/cache'],
+              ],
+            ],
+          ],
+        ],
+        'errors' => [
+          [
+            'code' => 'api.schema_invalid',
+            'roles' => [
+              [
+                'role' => 'schemaInvalid',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'issues'],
+                      'value' => [
+                        'kind' => 'each',
+                        'of' => 'issues',
+                        'as' => [
+                          'kind' => 'object',
+                          'members' => [
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'pointer'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['pointer'],
+                              ],
+                            ],
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'rule'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['rule'],
+                              ],
+                            ],
+                          ],
+                        ],
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'input.invalid',
+              'from' => [
+                ['layer' => 'api', 'pointer' => '/surfaces/app/routes/me/routes/preferences/ops/get'],
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/derived/schemaInvalid'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.unauthenticated',
+            'roles' => [['role' => 'unauthenticated']],
+            'derivedFrom' => [
+              'derivation' => 'identity.authenticate',
+              'from' => [['layer' => 'api', 'pointer' => '/surfaces/app/identity']],
+            ],
+          ],
+          [
+            'code' => 'api.not_found',
+            'roles' => [['role' => 'notFound']],
+            'derivedFrom' => [
+              'derivation' => 'owner.caller',
+              'from' => [['layer' => 'api', 'pointer' => '/surfaces/app/routes/me/routes/preferences/owner']],
+            ],
+          ],
+          [
+            'code' => 'api.internal',
+            'roles' => [['role' => 'undeclaredStatus']],
+            'derivedFrom' => [
+              'derivation' => 'response.undeclared',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/every/0'],
+                ['layer' => 'api', 'pointer' => '/surfaces/app/routes/me/routes/preferences/ops/get'],
+              ],
+            ],
+          ],
+        ],
+        'fieldRights' => [],
+        'owner' => [
+          'kind' => 'caller',
+          'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/me/routes/preferences/owner'],
+        ],
+        'cache' => [
+          'family' => 'minute',
+          'directives' => [
+            'maxAgeMs' => 60000,
+            'immutable' => false,
+            'noCache' => false,
+            'mustRevalidate' => false,
+          ],
+          'anonymous' => 'private',
+          'vary' => ['Authorization', 'Cookie'],
+          'etag' => true,
+          'perCallerKind' => [['caller' => 'identified', 'cacheControl' => 'private, max-age=60']],
+          'noStore' => false,
+          'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/me/routes/preferences/ops/get/cache'],
+          'derivedFrom' => [
+            'derivation' => 'cache.headers',
+            'from' => [
+              ['layer' => 'api', 'pointer' => '/surfaces/app/routes/me/routes/preferences/ops/get/cache'],
+              ['layer' => 'shared', 'pointer' => '/conventions/cache/families/minute'],
+            ],
+          ],
+        ],
+        'upstream' => [],
+        'maturity' => [
+          'level' => 'provisional',
+          'source' => 'api',
+          'origin' => ['layer' => 'api', 'pointer' => '/api/maturity'],
+        ],
+        'internal' => false,
+        'format' => 'bare',
+        'tags' => [],
+        'examples' => [],
+        'docs' => [],
+        'extensions' => [],
+        'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/me/routes/preferences/ops/get'],
       ],
       [
         'kind' => 'httpOperation',
@@ -2236,15 +2867,1562 @@ final class TasksContract
         'extensions' => [],
         'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/health'],
       ],
+      [
+        'kind' => 'httpOperation',
+        'id' => 'listTasks',
+        'name' => ['segments' => ['list', 'tasks'], 'role' => 'operation'],
+        'surface' => 'app',
+        'op' => 'list',
+        'resource' => ['type' => 'tasks', 'idProperty' => 'taskId'],
+        'features' => [],
+        'method' => 'get',
+        'path' => '/v1/channels/{channelId}/tasks',
+        'safe' => true,
+        'params' => [
+          'path' => [
+            [
+              'name' => 'channelId',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'format' => 'uuid', 'refinements' => []],
+              'required' => true,
+              'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/id/channelId'],
+            ],
+          ],
+          'query' => [
+            [
+              'name' => 'cursor',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'wire' => ['kind' => 'text', 'style' => 'form', 'explode' => true, 'brackets' => false],
+              'derivedFrom' => [
+                'derivation' => 'paging.params',
+                'from' => [
+                  [
+                    'layer' => 'api',
+                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+                  ],
+                  ['layer' => 'shared', 'pointer' => '/pagings/cursor'],
+                ],
+              ],
+            ],
+            [
+              'name' => 'limit',
+              'type' => [
+                'kind' => 'scalar',
+                'type' => 'integer',
+                'refinements' => ['minimum' => '1', 'maximum' => '50'],
+              ],
+              'required' => false,
+              'wire' => ['kind' => 'number', 'style' => 'form', 'explode' => true, 'brackets' => false],
+              'derivedFrom' => [
+                'derivation' => 'paging.params',
+                'from' => [
+                  [
+                    'layer' => 'api',
+                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+                  ],
+                  ['layer' => 'shared', 'pointer' => '/pagings/cursor'],
+                ],
+              ],
+            ],
+            [
+              'name' => 'sort',
+              'type' => [
+                'kind' => 'array',
+                'items' => [
+                  'kind' => 'scalar',
+                  'type' => 'string',
+                  'refinements' => [
+                    'pattern' => [
+                      'source' => '^(?:createdAt|-createdAt)$',
+                      'normalized' => '^(?:createdAt|-createdAt)$',
+                    ],
+                  ],
+                ],
+              ],
+              'required' => false,
+              'wire' => ['kind' => 'list', 'style' => 'form', 'explode' => false, 'brackets' => false],
+              'derivedFrom' => [
+                'derivation' => 'paging.params',
+                'from' => [
+                  [
+                    'layer' => 'api',
+                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+                  ],
+                  ['layer' => 'shared', 'pointer' => '/pagings/cursor'],
+                ],
+              ],
+            ],
+          ],
+          'header' => [
+            [
+              'name' => 'Authorization',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'derivedFrom' => [
+                'derivation' => 'identity.authenticate',
+                'from' => [
+                  ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                  ['layer' => 'shared', 'pointer' => '/schemes/bearer'],
+                ],
+              ],
+            ],
+          ],
+        ],
+        'unknownQuery' => ['policy' => 'refuse'],
+        'access' => [
+          'kind' => 'identity',
+          'identity' => 'user',
+          'schemes' => ['bearer', 'sessionCookie'],
+          'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+        ],
+        'callerKinds' => ['identified'],
+        'principalRequires' => [],
+        'scopes' => [
+          [
+            'scope' => 'channel',
+            'source' => ['in' => 'path', 'name' => 'channelId'],
+            'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+          ],
+        ],
+        'requires' => [],
+        'bindings' => [],
+        'responses' => [
+          [
+            'status' => 200,
+            'media' => 'application/json',
+            'body' => ['kind' => 'ref', 'schema' => 'Task'],
+            'shape' => 'page',
+            'headers' => [
+              [
+                'name' => 'Link',
+                'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                'required' => false,
+                'derivedFrom' => [
+                  'derivation' => 'paging.params',
+                  'from' => [
+                    [
+                      'layer' => 'api',
+                      'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+                    ],
+                    ['layer' => 'shared', 'pointer' => '/pagings/cursor'],
+                  ],
+                ],
+              ],
+            ],
+            'origin' => [
+              'layer' => 'api',
+              'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/item',
+            ],
+            'derivedFrom' => [
+              'derivation' => 'response.format',
+              'from' => [['layer' => 'core', 'pointer' => '/formats/bare']],
+            ],
+          ],
+        ],
+        'errors' => [
+          [
+            'code' => 'api.schema_invalid',
+            'roles' => [
+              [
+                'role' => 'schemaInvalid',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'issues'],
+                      'value' => [
+                        'kind' => 'each',
+                        'of' => 'issues',
+                        'as' => [
+                          'kind' => 'object',
+                          'members' => [
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'pointer'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['pointer'],
+                              ],
+                            ],
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'rule'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['rule'],
+                              ],
+                            ],
+                          ],
+                        ],
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'input.invalid',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list',
+                ],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+                ],
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/derived/schemaInvalid'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.unauthenticated',
+            'roles' => [['role' => 'unauthenticated']],
+            'derivedFrom' => [
+              'derivation' => 'identity.authenticate',
+              'from' => [['layer' => 'api', 'pointer' => '/surfaces/app/identity']],
+            ],
+          ],
+          [
+            'code' => 'api.not_found',
+            'derivedFrom' => [
+              'derivation' => 'scope.errors',
+              'from' => [
+                ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.internal',
+            'roles' => [['role' => 'undeclaredStatus']],
+            'derivedFrom' => [
+              'derivation' => 'response.undeclared',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/every/0'],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list',
+                ],
+              ],
+            ],
+          ],
+        ],
+        'fieldRights' => [
+          [
+            'schema' => 'Task',
+            'pointer' => '/effort',
+            'right' => 'tasks.seeEffort',
+            'subject' => ['source' => ['in' => 'holderField', 'name' => 'taskId']],
+            'direction' => 'output',
+            'derivedFrom' => [
+              'derivation' => 'fieldRight.restricted',
+              'from' => [['layer' => 'shared', 'pointer' => '/schemas/Task/properties/effort/restrictedTo']],
+            ],
+          ],
+        ],
+        'paging' => [
+          'style' => 'cursor',
+          'maxLimit' => 50,
+          'defaultLimit' => 50,
+          'overLimit' => 'reject',
+          'sortKeys' => [
+            [
+              'key' => 'createdAt',
+              'origin' => [
+                'layer' => 'api',
+                'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/sortable/0',
+              ],
+            ],
+          ],
+          'origin' => [
+            'layer' => 'api',
+            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging',
+          ],
+        ],
+        'filteredBy' => 'tasks.read',
+        'upstream' => [],
+        'maturity' => [
+          'level' => 'provisional',
+          'source' => 'api',
+          'origin' => ['layer' => 'api', 'pointer' => '/api/maturity'],
+        ],
+        'internal' => false,
+        'format' => 'bare',
+        'tags' => [],
+        'examples' => [],
+        'docs' => [],
+        'extensions' => [],
+        'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list'],
+      ],
+      [
+        'kind' => 'httpOperation',
+        'id' => 'payments',
+        'name' => ['segments' => ['payments'], 'role' => 'operation'],
+        'surface' => 'hooks',
+        'features' => [],
+        'method' => 'post',
+        'path' => '/v1/hooks/payments',
+        'safe' => false,
+        'params' => [
+          'path' => [],
+          'query' => [],
+          'header' => [
+            [
+              'name' => 'Stripe-Signature',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => true,
+              'derivedFrom' => [
+                'derivation' => 'identity.authenticate',
+                'from' => [
+                  ['layer' => 'api', 'pointer' => '/surfaces/hooks/identity'],
+                  ['layer' => 'shared', 'pointer' => '/schemes/stripeSignature'],
+                ],
+              ],
+            ],
+          ],
+        ],
+        'unknownQuery' => ['policy' => 'refuse'],
+        'access' => [
+          'kind' => 'identity',
+          'identity' => 'stripe',
+          'schemes' => ['stripeSignature'],
+          'origin' => ['layer' => 'api', 'pointer' => '/surfaces/hooks/identity'],
+        ],
+        'callerKinds' => ['identified'],
+        'principalRequires' => [],
+        'scopes' => [],
+        'requires' => [],
+        'bindings' => [],
+        'input' => [
+          'media' => 'application/json',
+          'schema' => ['kind' => 'ref', 'schema' => 'PaymentEvent'],
+          'bodyLimitBytes' => 1048576,
+          'rawBody' => true,
+          'origin' => ['layer' => 'api', 'pointer' => '/surfaces/hooks/routes/payments/input'],
+        ],
+        'responses' => [
+          [
+            'status' => 204,
+            'shape' => 'empty',
+            'headers' => [],
+            'origin' => ['layer' => 'api', 'pointer' => '/surfaces/hooks/routes/payments/responses/204'],
+            'derivedFrom' => [
+              'derivation' => 'response.format',
+              'from' => [['layer' => 'core', 'pointer' => '/formats/bare']],
+            ],
+          ],
+        ],
+        'errors' => [
+          [
+            'code' => 'api.schema_invalid',
+            'roles' => [
+              [
+                'role' => 'schemaInvalid',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'issues'],
+                      'value' => [
+                        'kind' => 'each',
+                        'of' => 'issues',
+                        'as' => [
+                          'kind' => 'object',
+                          'members' => [
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'pointer'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['pointer'],
+                              ],
+                            ],
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'rule'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['rule'],
+                              ],
+                            ],
+                          ],
+                        ],
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'input.invalid',
+              'from' => [
+                ['layer' => 'api', 'pointer' => '/surfaces/hooks/routes/payments'],
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/derived/schemaInvalid'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.unauthenticated',
+            'roles' => [['role' => 'unauthenticated']],
+            'derivedFrom' => [
+              'derivation' => 'identity.authenticate',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/identities/stripe'],
+                ['layer' => 'api', 'pointer' => '/surfaces/hooks/identity'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.payload_too_large',
+            'roles' => [
+              [
+                'role' => 'payloadTooLarge',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'limitBytes'],
+                      'value' => ['kind' => 'slot', 'slot' => 'limitBytes', 'path' => []],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'body.limit',
+              'from' => [['layer' => 'api', 'pointer' => '/surfaces/hooks/routes/payments/input']],
+            ],
+          ],
+          [
+            'code' => 'api.unsupported_media_type',
+            'roles' => [['role' => 'unsupportedMediaType']],
+            'derivedFrom' => [
+              'derivation' => 'body.media',
+              'from' => [['layer' => 'api', 'pointer' => '/surfaces/hooks/routes/payments/input']],
+            ],
+          ],
+          [
+            'code' => 'api.internal',
+            'roles' => [['role' => 'undeclaredStatus']],
+            'derivedFrom' => [
+              'derivation' => 'response.undeclared',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/every/0'],
+                ['layer' => 'api', 'pointer' => '/surfaces/hooks/routes/payments'],
+              ],
+            ],
+          ],
+        ],
+        'fieldRights' => [],
+        'upstream' => [],
+        'maturity' => [
+          'level' => 'provisional',
+          'source' => 'api',
+          'origin' => ['layer' => 'api', 'pointer' => '/api/maturity'],
+        ],
+        'internal' => false,
+        'format' => 'bare',
+        'tags' => [],
+        'examples' => [],
+        'docs' => [],
+        'extensions' => [],
+        'origin' => ['layer' => 'api', 'pointer' => '/surfaces/hooks/routes/payments'],
+      ],
+      [
+        'kind' => 'httpOperation',
+        'id' => 'purgeTask',
+        'name' => ['segments' => ['purge', 'task'], 'role' => 'operation'],
+        'surface' => 'app',
+        'resource' => ['type' => 'tasks', 'idParam' => 'taskId', 'idProperty' => 'taskId'],
+        'features' => [],
+        'method' => 'post',
+        'path' => '/v1/channels/{channelId}/tasks/{taskId}/purge',
+        'safe' => false,
+        'params' => [
+          'path' => [
+            [
+              'name' => 'channelId',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'format' => 'uuid', 'refinements' => []],
+              'required' => true,
+              'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/id/channelId'],
+            ],
+            [
+              'name' => 'taskId',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'format' => 'uuid', 'refinements' => []],
+              'required' => true,
+              'origin' => [
+                'layer' => 'api',
+                'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/id/taskId',
+              ],
+            ],
+          ],
+          'query' => [],
+          'header' => [
+            [
+              'name' => 'Authorization',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'derivedFrom' => [
+                'derivation' => 'identity.authenticate',
+                'from' => [
+                  ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                  ['layer' => 'shared', 'pointer' => '/schemes/bearer'],
+                ],
+              ],
+            ],
+            [
+              'name' => 'X-Csrf-Token',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'derivedFrom' => [
+                'derivation' => 'csrf.cookieWrite',
+                'from' => [
+                  ['layer' => 'shared', 'pointer' => '/identities/user'],
+                  ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+                ],
+              ],
+            ],
+            [
+              'name' => 'Idempotency-Key',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => true,
+              'derivedFrom' => [
+                'derivation' => 'idempotency.write',
+                'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+              ],
+            ],
+          ],
+        ],
+        'unknownQuery' => ['policy' => 'refuse'],
+        'access' => [
+          'kind' => 'identity',
+          'identity' => 'user',
+          'schemes' => ['bearer', 'sessionCookie'],
+          'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+        ],
+        'callerKinds' => ['identified'],
+        'principalRequires' => [],
+        'scopes' => [
+          [
+            'scope' => 'channel',
+            'source' => ['in' => 'path', 'name' => 'channelId'],
+            'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+          ],
+        ],
+        'requires' => [
+          [
+            'kind' => 'rule',
+            'rule' => 'recentAuth',
+            'params' => ['intent' => 'purge_task'],
+            'origin' => [
+              'layer' => 'api',
+              'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0',
+            ],
+          ],
+        ],
+        'bindings' => [],
+        'input' => [
+          'media' => 'application/json',
+          'schema' => ['kind' => 'ref', 'schema' => 'ApiEmptyBody'],
+          'bodyLimitBytes' => 1048576,
+          'rawBody' => false,
+          'proofs' => [
+            [
+              'name' => 'reauthToken',
+              'schema' => [
+                'kind' => 'scalar',
+                'type' => 'string',
+                'refinements' => ['minLength' => 1, 'maxLength' => 512],
+              ],
+              'derivedFrom' => [
+                'derivation' => 'rule.proof',
+                'from' => [
+                  [
+                    'layer' => 'api',
+                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0',
+                  ],
+                  ['layer' => 'shared', 'pointer' => '/rules/recentAuth/proof'],
+                ],
+              ],
+            ],
+          ],
+          'origin' => [
+            'layer' => 'api',
+            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0',
+          ],
+        ],
+        'responses' => [
+          [
+            'status' => 204,
+            'shape' => 'empty',
+            'headers' => [
+              [
+                'name' => 'Idempotency-Replayed',
+                'type' => ['kind' => 'scalar', 'type' => 'boolean', 'refinements' => []],
+                'required' => false,
+                'derivedFrom' => [
+                  'derivation' => 'idempotency.write',
+                  'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                ],
+              ],
+            ],
+            'origin' => [
+              'layer' => 'api',
+              'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/responses/204',
+            ],
+            'derivedFrom' => [
+              'derivation' => 'response.format',
+              'from' => [['layer' => 'core', 'pointer' => '/formats/bare']],
+            ],
+          ],
+        ],
+        'errors' => [
+          [
+            'code' => 'api.schema_invalid',
+            'roles' => [
+              [
+                'role' => 'schemaInvalid',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'issues'],
+                      'value' => [
+                        'kind' => 'each',
+                        'of' => 'issues',
+                        'as' => [
+                          'kind' => 'object',
+                          'members' => [
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'pointer'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['pointer'],
+                              ],
+                            ],
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'rule'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['rule'],
+                              ],
+                            ],
+                          ],
+                        ],
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'input.invalid',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/conventions/idempotency'],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge',
+                ],
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/derived/schemaInvalid'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.reauthentication_required',
+            'derivedFrom' => [
+              'derivation' => 'requirement.errors',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.unauthenticated',
+            'roles' => [['role' => 'unauthenticated']],
+            'derivedFrom' => [
+              'derivation' => 'identity.authenticate',
+              'from' => [['layer' => 'api', 'pointer' => '/surfaces/app/identity']],
+            ],
+          ],
+          [
+            'code' => 'api.csrf_invalid',
+            'roles' => [['role' => 'csrfInvalid']],
+            'derivedFrom' => [
+              'derivation' => 'csrf.cookieWrite',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/identities/user'],
+                ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.not_found',
+            'roles' => [['role' => 'notFound']],
+            'derivedFrom' => [
+              'derivation' => 'member.notFound',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge',
+                ],
+                ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.idempotency_in_progress',
+            'roles' => [['role' => 'idempotencyInProgress']],
+            'derivedFrom' => [
+              'derivation' => 'idempotency.write',
+              'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+            ],
+          ],
+          [
+            'code' => 'api.payload_too_large',
+            'roles' => [
+              [
+                'role' => 'payloadTooLarge',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'limitBytes'],
+                      'value' => ['kind' => 'slot', 'slot' => 'limitBytes', 'path' => []],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'body.limit',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.unsupported_media_type',
+            'roles' => [['role' => 'unsupportedMediaType']],
+            'derivedFrom' => [
+              'derivation' => 'body.media',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.idempotency_key_reused',
+            'roles' => [['role' => 'idempotencyKeyReused']],
+            'derivedFrom' => [
+              'derivation' => 'idempotency.write',
+              'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+            ],
+          ],
+          [
+            'code' => 'api.internal',
+            'roles' => [['role' => 'undeclaredStatus']],
+            'derivedFrom' => [
+              'derivation' => 'response.undeclared',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/every/0'],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge',
+                ],
+              ],
+            ],
+          ],
+        ],
+        'fieldRights' => [],
+        'idempotency' => [
+          'kind' => 'derived',
+          'header' => 'Idempotency-Key',
+          'replayHeader' => 'Idempotency-Replayed',
+          'lifetimeMs' => 86400000,
+          'required' => true,
+          'enforce' => 'boundary',
+          'derivedFrom' => [
+            'derivation' => 'idempotency.write',
+            'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+          ],
+        ],
+        'upstream' => [],
+        'maturity' => [
+          'level' => 'provisional',
+          'source' => 'api',
+          'origin' => ['layer' => 'api', 'pointer' => '/api/maturity'],
+        ],
+        'internal' => false,
+        'csrf' => [
+          'kind' => 'derived',
+          'header' => 'X-Csrf-Token',
+          'derivedFrom' => [
+            'derivation' => 'csrf.cookieWrite',
+            'from' => [
+              ['layer' => 'shared', 'pointer' => '/identities/user'],
+              ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+            ],
+          ],
+        ],
+        'format' => 'bare',
+        'tags' => [],
+        'examples' => [],
+        'docs' => [],
+        'extensions' => [],
+        'origin' => [
+          'layer' => 'api',
+          'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge',
+        ],
+      ],
+      [
+        'kind' => 'httpOperation',
+        'id' => 'searchTasks',
+        'name' => ['segments' => ['search', 'tasks'], 'role' => 'operation'],
+        'surface' => 'app',
+        'resource' => ['type' => 'tasks', 'idProperty' => 'taskId'],
+        'features' => [],
+        'method' => 'post',
+        'path' => '/v1/channels/{channelId}/tasks/search',
+        'safe' => false,
+        'params' => [
+          'path' => [
+            [
+              'name' => 'channelId',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'format' => 'uuid', 'refinements' => []],
+              'required' => true,
+              'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/id/channelId'],
+            ],
+          ],
+          'query' => [],
+          'header' => [
+            [
+              'name' => 'Authorization',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'derivedFrom' => [
+                'derivation' => 'identity.authenticate',
+                'from' => [
+                  ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                  ['layer' => 'shared', 'pointer' => '/schemes/bearer'],
+                ],
+              ],
+            ],
+            [
+              'name' => 'X-Csrf-Token',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'derivedFrom' => [
+                'derivation' => 'csrf.cookieWrite',
+                'from' => [
+                  ['layer' => 'shared', 'pointer' => '/identities/user'],
+                  ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+                ],
+              ],
+            ],
+          ],
+        ],
+        'unknownQuery' => ['policy' => 'refuse'],
+        'access' => [
+          'kind' => 'identity',
+          'identity' => 'user',
+          'schemes' => ['bearer', 'sessionCookie'],
+          'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+        ],
+        'callerKinds' => ['identified'],
+        'principalRequires' => [],
+        'scopes' => [
+          [
+            'scope' => 'channel',
+            'source' => ['in' => 'path', 'name' => 'channelId'],
+            'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+          ],
+        ],
+        'requires' => [
+          [
+            'kind' => 'right',
+            'right' => 'tasks.read',
+            'subject' => ['source' => ['in' => 'scope', 'name' => 'channel'], 'defaulted' => true],
+            'origin' => [
+              'layer' => 'api',
+              'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/requires/0',
+            ],
+          ],
+        ],
+        'bindings' => [],
+        'input' => [
+          'media' => 'application/json',
+          'schema' => ['kind' => 'ref', 'schema' => 'TaskQuery'],
+          'bodyLimitBytes' => 1048576,
+          'rawBody' => false,
+          'origin' => [
+            'layer' => 'api',
+            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/input',
+          ],
+        ],
+        'responses' => [
+          [
+            'status' => 200,
+            'media' => 'application/json',
+            'body' => ['kind' => 'ref', 'schema' => 'TaskSearchResult'],
+            'shape' => 'item',
+            'headers' => [],
+            'origin' => [
+              'layer' => 'api',
+              'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/output',
+            ],
+            'derivedFrom' => [
+              'derivation' => 'response.format',
+              'from' => [['layer' => 'core', 'pointer' => '/formats/bare']],
+            ],
+          ],
+        ],
+        'errors' => [
+          [
+            'code' => 'api.schema_invalid',
+            'roles' => [
+              [
+                'role' => 'schemaInvalid',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'issues'],
+                      'value' => [
+                        'kind' => 'each',
+                        'of' => 'issues',
+                        'as' => [
+                          'kind' => 'object',
+                          'members' => [
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'pointer'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['pointer'],
+                              ],
+                            ],
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'rule'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['rule'],
+                              ],
+                            ],
+                          ],
+                        ],
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'input.invalid',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search',
+                ],
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/derived/schemaInvalid'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.unauthenticated',
+            'roles' => [['role' => 'unauthenticated']],
+            'derivedFrom' => [
+              'derivation' => 'identity.authenticate',
+              'from' => [['layer' => 'api', 'pointer' => '/surfaces/app/identity']],
+            ],
+          ],
+          [
+            'code' => 'api.csrf_invalid',
+            'roles' => [['role' => 'csrfInvalid']],
+            'derivedFrom' => [
+              'derivation' => 'csrf.cookieWrite',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/identities/user'],
+                ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.forbidden',
+            'derivedFrom' => [
+              'derivation' => 'requirement.errors',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/requires/0',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.not_found',
+            'derivedFrom' => [
+              'derivation' => 'scope.errors',
+              'from' => [
+                ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.payload_too_large',
+            'roles' => [
+              [
+                'role' => 'payloadTooLarge',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'limitBytes'],
+                      'value' => ['kind' => 'slot', 'slot' => 'limitBytes', 'path' => []],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'body.limit',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/input',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.unsupported_media_type',
+            'roles' => [['role' => 'unsupportedMediaType']],
+            'derivedFrom' => [
+              'derivation' => 'body.media',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/input',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.internal',
+            'roles' => [['role' => 'undeclaredStatus']],
+            'derivedFrom' => [
+              'derivation' => 'response.undeclared',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/every/0'],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search',
+                ],
+              ],
+            ],
+          ],
+        ],
+        'fieldRights' => [
+          [
+            'schema' => 'TaskSearchResult',
+            'pointer' => '/items/*/effort',
+            'right' => 'tasks.seeEffort',
+            'subject' => ['source' => ['in' => 'holderField', 'name' => 'taskId']],
+            'direction' => 'output',
+            'derivedFrom' => [
+              'derivation' => 'fieldRight.restricted',
+              'from' => [['layer' => 'shared', 'pointer' => '/schemas/Task/properties/effort/restrictedTo']],
+            ],
+          ],
+        ],
+        'idempotency' => [
+          'kind' => 'exempt',
+          'reason' => 'A read with a body; replaying it is harmless.',
+          'origin' => [
+            'layer' => 'api',
+            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/idempotency',
+          ],
+        ],
+        'budgetMs' => 300,
+        'upstream' => [],
+        'maturity' => [
+          'level' => 'provisional',
+          'source' => 'api',
+          'origin' => ['layer' => 'api', 'pointer' => '/api/maturity'],
+        ],
+        'internal' => false,
+        'csrf' => [
+          'kind' => 'derived',
+          'header' => 'X-Csrf-Token',
+          'derivedFrom' => [
+            'derivation' => 'csrf.cookieWrite',
+            'from' => [
+              ['layer' => 'shared', 'pointer' => '/identities/user'],
+              ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+            ],
+          ],
+        ],
+        'format' => 'bare',
+        'tags' => [],
+        'examples' => [
+          'firstPage' => [
+            'status' => 200,
+            'value' => [
+              'items' => [
+                [
+                  'createdAt' => '2027-01-15T09:30:00Z',
+                  'state' => 'open',
+                  'taskId' => '6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42',
+                  'title' => 'Write the brief',
+                  'version' => 1,
+                ],
+              ],
+              'total' => 1,
+            ],
+          ],
+        ],
+        'docs' => ['summary' => 'Search the channel\'s tasks with a structured query.'],
+        'extensions' => [],
+        'origin' => [
+          'layer' => 'api',
+          'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search',
+        ],
+      ],
+      [
+        'kind' => 'httpOperation',
+        'id' => 'updateTask',
+        'name' => ['segments' => ['update', 'task'], 'role' => 'operation'],
+        'surface' => 'app',
+        'op' => 'update',
+        'resource' => ['type' => 'tasks', 'idParam' => 'taskId', 'idProperty' => 'taskId'],
+        'features' => [],
+        'method' => 'patch',
+        'path' => '/v1/channels/{channelId}/tasks/{taskId}',
+        'safe' => false,
+        'params' => [
+          'path' => [
+            [
+              'name' => 'channelId',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'format' => 'uuid', 'refinements' => []],
+              'required' => true,
+              'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/id/channelId'],
+            ],
+            [
+              'name' => 'taskId',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'format' => 'uuid', 'refinements' => []],
+              'required' => true,
+              'origin' => [
+                'layer' => 'api',
+                'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/id/taskId',
+              ],
+            ],
+          ],
+          'query' => [],
+          'header' => [
+            [
+              'name' => 'Authorization',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'derivedFrom' => [
+                'derivation' => 'identity.authenticate',
+                'from' => [
+                  ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                  ['layer' => 'shared', 'pointer' => '/schemes/bearer'],
+                ],
+              ],
+            ],
+            [
+              'name' => 'X-Csrf-Token',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => false,
+              'derivedFrom' => [
+                'derivation' => 'csrf.cookieWrite',
+                'from' => [
+                  ['layer' => 'shared', 'pointer' => '/identities/user'],
+                  ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+                ],
+              ],
+            ],
+            [
+              'name' => 'Idempotency-Key',
+              'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+              'required' => true,
+              'derivedFrom' => [
+                'derivation' => 'idempotency.write',
+                'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+              ],
+            ],
+          ],
+        ],
+        'unknownQuery' => ['policy' => 'refuse'],
+        'access' => [
+          'kind' => 'identity',
+          'identity' => 'user',
+          'schemes' => ['bearer', 'sessionCookie'],
+          'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+        ],
+        'callerKinds' => ['identified'],
+        'principalRequires' => [],
+        'scopes' => [
+          [
+            'scope' => 'channel',
+            'source' => ['in' => 'path', 'name' => 'channelId'],
+            'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+          ],
+        ],
+        'requires' => [
+          [
+            'kind' => 'right',
+            'right' => 'tasks.update',
+            'subject' => ['source' => ['in' => 'path', 'name' => 'taskId'], 'defaulted' => true],
+            'origin' => [
+              'layer' => 'api',
+              'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/update/requires/0',
+            ],
+          ],
+        ],
+        'bindings' => [],
+        'input' => [
+          'media' => 'application/json',
+          'schema' => ['kind' => 'ref', 'schema' => 'UpdateTask'],
+          'bodyLimitBytes' => 1048576,
+          'rawBody' => false,
+          'origin' => [
+            'layer' => 'api',
+            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/update/input',
+          ],
+        ],
+        'responses' => [
+          [
+            'status' => 200,
+            'media' => 'application/json',
+            'body' => ['kind' => 'ref', 'schema' => 'Task'],
+            'shape' => 'item',
+            'headers' => [
+              [
+                'name' => 'Idempotency-Replayed',
+                'type' => ['kind' => 'scalar', 'type' => 'boolean', 'refinements' => []],
+                'required' => false,
+                'derivedFrom' => [
+                  'derivation' => 'idempotency.write',
+                  'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+                ],
+              ],
+            ],
+            'origin' => [
+              'layer' => 'api',
+              'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/item',
+            ],
+            'derivedFrom' => [
+              'derivation' => 'response.format',
+              'from' => [['layer' => 'core', 'pointer' => '/formats/bare']],
+            ],
+          ],
+        ],
+        'errors' => [
+          [
+            'code' => 'api.schema_invalid',
+            'roles' => [
+              [
+                'role' => 'schemaInvalid',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'issues'],
+                      'value' => [
+                        'kind' => 'each',
+                        'of' => 'issues',
+                        'as' => [
+                          'kind' => 'object',
+                          'members' => [
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'pointer'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['pointer'],
+                              ],
+                            ],
+                            [
+                              'name' => ['kind' => 'text', 'text' => 'rule'],
+                              'value' => [
+                                'kind' => 'slot',
+                                'slot' => 'item',
+                                'path' => ['rule'],
+                              ],
+                            ],
+                          ],
+                        ],
+                      ],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'input.invalid',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/conventions/idempotency'],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/update',
+                ],
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/derived/schemaInvalid'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.unauthenticated',
+            'roles' => [['role' => 'unauthenticated']],
+            'derivedFrom' => [
+              'derivation' => 'identity.authenticate',
+              'from' => [['layer' => 'api', 'pointer' => '/surfaces/app/identity']],
+            ],
+          ],
+          [
+            'code' => 'api.csrf_invalid',
+            'roles' => [['role' => 'csrfInvalid']],
+            'derivedFrom' => [
+              'derivation' => 'csrf.cookieWrite',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/identities/user'],
+                ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.forbidden',
+            'roles' => [
+              [
+                'role' => 'forbidden',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'pointer'],
+                      'value' => ['kind' => 'slot', 'slot' => 'pointer', 'path' => []],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'requirement.errors',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/schemas/Task/properties/effort/restrictedTo'],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/update/requires/0',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.not_found',
+            'roles' => [['role' => 'notFound']],
+            'derivedFrom' => [
+              'derivation' => 'member.notFound',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/update',
+                ],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/update/requires/0',
+                ],
+                ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.idempotency_in_progress',
+            'roles' => [['role' => 'idempotencyInProgress']],
+            'derivedFrom' => [
+              'derivation' => 'idempotency.write',
+              'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+            ],
+          ],
+          [
+            'code' => 'state.conflict',
+            'roles' => [['role' => 'stateConflict']],
+            'derivedFrom' => [
+              'derivation' => 'concurrency.version',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/concurrency',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.payload_too_large',
+            'roles' => [
+              [
+                'role' => 'payloadTooLarge',
+                'params' => [
+                  'kind' => 'object',
+                  'members' => [
+                    [
+                      'name' => ['kind' => 'text', 'text' => 'limitBytes'],
+                      'value' => ['kind' => 'slot', 'slot' => 'limitBytes', 'path' => []],
+                    ],
+                  ],
+                ],
+              ],
+            ],
+            'derivedFrom' => [
+              'derivation' => 'body.limit',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/update/input',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.unsupported_media_type',
+            'roles' => [['role' => 'unsupportedMediaType']],
+            'derivedFrom' => [
+              'derivation' => 'body.media',
+              'from' => [
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/update/input',
+                ],
+              ],
+            ],
+          ],
+          [
+            'code' => 'api.idempotency_key_reused',
+            'roles' => [['role' => 'idempotencyKeyReused']],
+            'derivedFrom' => [
+              'derivation' => 'idempotency.write',
+              'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+            ],
+          ],
+          [
+            'code' => 'api.internal',
+            'roles' => [['role' => 'undeclaredStatus']],
+            'derivedFrom' => [
+              'derivation' => 'response.undeclared',
+              'from' => [
+                ['layer' => 'shared', 'pointer' => '/conventions/errors/every/0'],
+                [
+                  'layer' => 'api',
+                  'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/update',
+                ],
+              ],
+            ],
+          ],
+        ],
+        'fieldRights' => [
+          [
+            'schema' => 'Task',
+            'pointer' => '/effort',
+            'right' => 'tasks.seeEffort',
+            'subject' => ['source' => ['in' => 'holderField', 'name' => 'taskId']],
+            'direction' => 'output',
+            'derivedFrom' => [
+              'derivation' => 'fieldRight.restricted',
+              'from' => [['layer' => 'shared', 'pointer' => '/schemas/Task/properties/effort/restrictedTo']],
+            ],
+          ],
+          [
+            'schema' => 'UpdateTask',
+            'pointer' => '/effort',
+            'right' => 'tasks.seeEffort',
+            'subject' => ['source' => ['in' => 'path', 'name' => 'taskId']],
+            'direction' => 'input',
+            'inputPolicy' => 'reject',
+            'derivedFrom' => [
+              'derivation' => 'fieldRight.restricted',
+              'from' => [['layer' => 'shared', 'pointer' => '/schemas/Task/properties/effort/restrictedTo']],
+            ],
+          ],
+        ],
+        'idempotency' => [
+          'kind' => 'derived',
+          'header' => 'Idempotency-Key',
+          'replayHeader' => 'Idempotency-Replayed',
+          'lifetimeMs' => 86400000,
+          'required' => true,
+          'enforce' => 'boundary',
+          'derivedFrom' => [
+            'derivation' => 'idempotency.write',
+            'from' => [['layer' => 'shared', 'pointer' => '/conventions/idempotency']],
+          ],
+        ],
+        'concurrency' => [
+          'version' => ['in' => 'body', 'name' => 'expectedVersion'],
+          'field' => 'version',
+          'derivedFrom' => [
+            'derivation' => 'concurrency.version',
+            'from' => [
+              [
+                'layer' => 'api',
+                'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/concurrency',
+              ],
+            ],
+          ],
+        ],
+        'upstream' => [],
+        'maturity' => [
+          'level' => 'provisional',
+          'source' => 'api',
+          'origin' => ['layer' => 'api', 'pointer' => '/api/maturity'],
+        ],
+        'internal' => false,
+        'csrf' => [
+          'kind' => 'derived',
+          'header' => 'X-Csrf-Token',
+          'derivedFrom' => [
+            'derivation' => 'csrf.cookieWrite',
+            'from' => [
+              ['layer' => 'shared', 'pointer' => '/identities/user'],
+              ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+            ],
+          ],
+        ],
+        'format' => 'bare',
+        'tags' => [],
+        'examples' => [],
+        'docs' => [],
+        'extensions' => [],
+        'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/update'],
+      ],
     ],
   ];
 
   /** The PHP class of each schema, enum, operation part, result and identity. */
   public const TYPES = [
     'schemas' => [
+      'ApiEmptyBody' => ['class' => 'Seampact\Golden\TasksConsistent\Schemas\ApiEmptyBody', 'members' => []],
+      'ApiForbiddenParams' => [
+        'class' => 'Seampact\Golden\TasksConsistent\Schemas\ApiForbiddenParams',
+        'members' => ['pointer' => 'pointer'],
+      ],
       'ApiPayloadTooLargeParams' => [
         'class' => 'Seampact\Golden\TasksConsistent\Schemas\ApiPayloadTooLargeParams',
         'members' => ['limitBytes' => 'limitBytes'],
+      ],
+      'ApiRateLimitedParams' => [
+        'class' => 'Seampact\Golden\TasksConsistent\Schemas\ApiRateLimitedParams',
+        'members' => ['retryAfterMs' => 'retryAfterMs'],
       ],
       'ApiSchemaInvalidParams' => [
         'class' => 'Seampact\Golden\TasksConsistent\Schemas\ApiSchemaInvalidParams',
@@ -2253,6 +4431,10 @@ final class TasksContract
       'Channel' => [
         'class' => 'Seampact\Golden\TasksConsistent\Schemas\Channel',
         'members' => ['channelId' => 'channelId', 'name' => 'name'],
+      ],
+      'CreateTask' => [
+        'class' => 'Seampact\Golden\TasksConsistent\Schemas\CreateTask',
+        'members' => ['title' => 'title', 'effort' => 'effort'],
       ],
       'Draft' => [
         'class' => 'Seampact\Golden\TasksConsistent\Schemas\Draft',
@@ -2267,6 +4449,14 @@ final class TasksContract
         'class' => 'Seampact\Golden\TasksConsistent\Schemas\IssuesItem',
         'members' => ['pointer' => 'pointer', 'rule' => 'rule'],
       ],
+      'PaymentEvent' => [
+        'class' => 'Seampact\Golden\TasksConsistent\Schemas\PaymentEvent',
+        'members' => ['id' => 'id', 'type' => 'type', 'data' => 'data'],
+      ],
+      'Preferences' => [
+        'class' => 'Seampact\Golden\TasksConsistent\Schemas\Preferences',
+        'members' => ['locale' => 'locale', 'digest' => 'digest'],
+      ],
       'Task' => [
         'class' => 'Seampact\Golden\TasksConsistent\Schemas\Task',
         'members' => [
@@ -2278,9 +4468,41 @@ final class TasksContract
           'createdAt' => 'createdAt',
         ],
       ],
+      'TaskQuery' => [
+        'class' => 'Seampact\Golden\TasksConsistent\Schemas\TaskQuery',
+        'members' => ['text' => 'text', 'states' => 'states'],
+      ],
+      'TaskSearchResult' => [
+        'class' => 'Seampact\Golden\TasksConsistent\Schemas\TaskSearchResult',
+        'members' => ['items' => 'items', 'total' => 'total'],
+      ],
+      'UpdateTask' => [
+        'class' => 'Seampact\Golden\TasksConsistent\Schemas\UpdateTask',
+        'members' => [
+          'title' => 'title',
+          'state' => 'state',
+          'effort' => 'effort',
+          'expectedVersion' => 'expectedVersion',
+        ],
+      ],
     ],
     'enums' => ['TaskState' => 'Seampact\Golden\TasksConsistent\Schemas\TaskState'],
     'operations' => [
+      'createTask' => [
+        'input' => 'Seampact\Golden\TasksConsistent\CreateTaskInput',
+        'parts' => [
+          'path' => [
+            'class' => 'Seampact\Golden\TasksConsistent\CreateTaskPath',
+            'members' => ['channelId' => 'channelId'],
+          ],
+          'headers' => [
+            'class' => 'Seampact\Golden\TasksConsistent\CreateTaskHeaders',
+            'members' => ['Idempotency-Key' => 'idempotencyKey'],
+          ],
+        ],
+        'responses' => [201 => 'Seampact\Golden\TasksConsistent\CreateTaskResponse201'],
+        'errors' => 'Seampact\Golden\TasksConsistent\CreateTaskErrors',
+      ],
       'getChannel' => [
         'input' => 'Seampact\Golden\TasksConsistent\GetChannelInput',
         'parts' => [
@@ -2302,6 +4524,20 @@ final class TasksContract
         ],
         'responses' => [200 => 'Seampact\Golden\TasksConsistent\GetDraftResponse200'],
         'errors' => 'Seampact\Golden\TasksConsistent\GetDraftErrors',
+      ],
+      'getPreferences' => [
+        'input' => 'Seampact\Golden\TasksConsistent\GetPreferencesInput',
+        'parts' => [
+          'headers' => [
+            'class' => 'Seampact\Golden\TasksConsistent\GetPreferencesHeaders',
+            'members' => ['If-None-Match' => 'ifNoneMatch'],
+          ],
+        ],
+        'responses' => [
+          200 => 'Seampact\Golden\TasksConsistent\GetPreferencesResponse200',
+          304 => 'Seampact\Golden\TasksConsistent\GetPreferencesResponse304',
+        ],
+        'errors' => 'Seampact\Golden\TasksConsistent\GetPreferencesErrors',
       ],
       'getTask' => [
         'input' => 'Seampact\Golden\TasksConsistent\GetTaskInput',
@@ -2331,8 +4567,78 @@ final class TasksContract
         'responses' => [200 => 'Seampact\Golden\TasksConsistent\HealthResponse200'],
         'errors' => 'Seampact\Golden\TasksConsistent\HealthErrors',
       ],
+      'listTasks' => [
+        'input' => 'Seampact\Golden\TasksConsistent\ListTasksInput',
+        'parts' => [
+          'path' => [
+            'class' => 'Seampact\Golden\TasksConsistent\ListTasksPath',
+            'members' => ['channelId' => 'channelId'],
+          ],
+          'query' => [
+            'class' => 'Seampact\Golden\TasksConsistent\ListTasksQuery',
+            'members' => ['cursor' => 'cursor', 'limit' => 'limit', 'sort' => 'sort'],
+          ],
+        ],
+        'responses' => [200 => 'Seampact\Golden\TasksConsistent\ListTasksResponse200'],
+        'errors' => 'Seampact\Golden\TasksConsistent\ListTasksErrors',
+      ],
+      'payments' => [
+        'input' => 'Seampact\Golden\TasksConsistent\PaymentsInput',
+        'parts' => [],
+        'responses' => [204 => 'Seampact\Golden\TasksConsistent\PaymentsResponse204'],
+        'errors' => 'Seampact\Golden\TasksConsistent\PaymentsErrors',
+      ],
+      'purgeTask' => [
+        'input' => 'Seampact\Golden\TasksConsistent\PurgeTaskInput',
+        'parts' => [
+          'path' => [
+            'class' => 'Seampact\Golden\TasksConsistent\PurgeTaskPath',
+            'members' => ['channelId' => 'channelId', 'taskId' => 'taskId'],
+          ],
+          'headers' => [
+            'class' => 'Seampact\Golden\TasksConsistent\PurgeTaskHeaders',
+            'members' => ['Idempotency-Key' => 'idempotencyKey'],
+          ],
+        ],
+        'responses' => [204 => 'Seampact\Golden\TasksConsistent\PurgeTaskResponse204'],
+        'errors' => 'Seampact\Golden\TasksConsistent\PurgeTaskErrors',
+      ],
+      'searchTasks' => [
+        'input' => 'Seampact\Golden\TasksConsistent\SearchTasksInput',
+        'parts' => [
+          'path' => [
+            'class' => 'Seampact\Golden\TasksConsistent\SearchTasksPath',
+            'members' => ['channelId' => 'channelId'],
+          ],
+        ],
+        'responses' => [200 => 'Seampact\Golden\TasksConsistent\SearchTasksResponse200'],
+        'errors' => 'Seampact\Golden\TasksConsistent\SearchTasksErrors',
+      ],
+      'updateTask' => [
+        'input' => 'Seampact\Golden\TasksConsistent\UpdateTaskInput',
+        'parts' => [
+          'path' => [
+            'class' => 'Seampact\Golden\TasksConsistent\UpdateTaskPath',
+            'members' => ['channelId' => 'channelId', 'taskId' => 'taskId'],
+          ],
+          'headers' => [
+            'class' => 'Seampact\Golden\TasksConsistent\UpdateTaskHeaders',
+            'members' => ['Idempotency-Key' => 'idempotencyKey'],
+          ],
+        ],
+        'responses' => [200 => 'Seampact\Golden\TasksConsistent\UpdateTaskResponse200'],
+        'errors' => 'Seampact\Golden\TasksConsistent\UpdateTaskErrors',
+      ],
     ],
     'identities' => [
+      'stripe' => [
+        'hook' => 'Seampact\Golden\TasksConsistent\Symfony\StripeAuthenticateHook',
+        'credentials' => 'Seampact\Golden\TasksConsistent\Symfony\StripeCredentials',
+        'principal' => 'Seampact\Golden\TasksConsistent\Symfony\StripePrincipal',
+        'principalMembers' => 'Seampact\Golden\TasksConsistent\Symfony\StripePrincipalMembers',
+        'schemes' => ['stripeSignature' => 'stripeSignature'],
+        'principalAccessors' => ['account' => 'account'],
+      ],
       'user' => [
         'hook' => 'Seampact\Golden\TasksConsistent\Symfony\UserAuthenticateHook',
         'credentials' => 'Seampact\Golden\TasksConsistent\Symfony\UserCredentials',

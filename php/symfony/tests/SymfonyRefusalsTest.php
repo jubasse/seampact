@@ -59,21 +59,6 @@ final class SymfonyRefusalsTest extends TestCase
         self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused['response.shape.unsupported'] ?? '');
     }
 
-    public function testAThrottleIsRefusedByItsOwnName(): void
-    {
-        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
-            $operation->requires = [(object) [
-                'bucket' => 'write',
-                'entry' => 'writeThrottle',
-                'kind' => 'rule',
-                'origin' => (object) ['layer' => 'api', 'pointer' => '/surfaces/app/requires/0'],
-                'rule' => 'throttle',
-            ]];
-        });
-
-        self::assertStringContainsString('symfony-3 generates it', self::refused($document)['throttle.unsupported'] ?? '');
-    }
-
     public function testARightAndAPlainRuleAreServedByTheAccessListener(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
@@ -113,32 +98,20 @@ final class SymfonyRefusalsTest extends TestCase
 
     public function testTheHooksAccessArtefactAndTheBootCheckSwitchesAreRead(): void
     {
-        $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => true, 'bootCheck' => (object) ['frameworkRoutes' => false, 'hooks' => true]]);
+        $files = (new SymfonyGenerator())->generate(
+            ReferenceContract::read(new SymfonyGenerator(), ReferenceContract::document(ReferenceContract::TASKS)),
+            ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks', [], ['accessHooks' => true, 'bootCheck' => (object) ['frameworkRoutes' => false, 'hooks' => true]]),
+        );
 
-        self::assertArrayNotHasKey('artefacts.accessHooks.unsupported', $refused);
-        self::assertArrayNotHasKey('artefacts.bootCheck.unsupported', $refused);
+        self::assertNotSame([], $files);
     }
 
-    public function testEachRefusalOfTheFullReferenceNamesTheReleaseThatBringsIt(): void
+    public function testTheOnlyRefusalOfTheFullReferenceUnderNativeAccessNamesSymfony4(): void
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => false]);
 
-        self::assertStringContainsString('symfony-3 generates it', $refused['type.opaque.unsupported'] ?? '');
-        self::assertStringContainsString('symfony-3 generates it', $refused['param.query.structured.unsupported'] ?? '');
-        self::assertStringContainsString('symfony-4 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');
-    }
-
-    public function testAnErrorThatForbidsCachingWaitsForSymfony3(): void
-    {
-        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
-            $errors = $document->errors;
-            self::assertInstanceOf(\stdClass::class, $errors);
-            $notFound = $errors->{'api.not_found'};
-            self::assertInstanceOf(\stdClass::class, $notFound);
-            $notFound->noStore = true;
-        });
-
-        self::assertStringContainsString('symfony-3 generates it', self::refused($document)['error.noStore.unsupported'] ?? '');
+        self::assertSame(['artefacts.accessHooks.unsupported'], array_keys($refused));
+        self::assertStringContainsString('symfony-4 generates it', $refused['artefacts.accessHooks.unsupported']);
     }
 
     /**

@@ -21,11 +21,18 @@ final class TasksBoundary extends BoundarySubscriber
   protected function inputConstraint(string $operationId): Constraint
   {
     return match ($operationId) {
+      'createTask' => new CreateTaskInputConstraint(),
       'getChannel' => new GetChannelInputConstraint(),
       'getDraft' => new GetDraftInputConstraint(),
+      'getPreferences' => new GetPreferencesInputConstraint(),
       'getTask' => new GetTaskInputConstraint(),
       'getTasksBatch' => new GetTasksBatchInputConstraint(),
       'health' => new HealthInputConstraint(),
+      'listTasks' => new ListTasksInputConstraint(),
+      'payments' => new PaymentsInputConstraint(),
+      'purgeTask' => new PurgeTaskInputConstraint(),
+      'searchTasks' => new SearchTasksInputConstraint(),
+      'updateTask' => new UpdateTaskInputConstraint(),
       default => throw new \LogicException("seampact: the api 'tasks' has no operation '{$operationId}'."),
     };
   }
