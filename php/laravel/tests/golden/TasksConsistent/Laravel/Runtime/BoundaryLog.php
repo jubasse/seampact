@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 
-use Illuminate\Container\Container;
-use Psr\Log\LoggerInterface;
-
 /**
  * The boundary's own log lines, written to the app's PSR-3 logger, and the unexpected-error listener: a line carries
  * the api, the operation, the reason and a pointer, never an input value. A pointer can hold client text, so a
@@ -20,15 +17,14 @@ final class BoundaryLog
     {
     }
 
-    public static function unexpected(ApiContract $contract, ?string $operationId, string $reason, ?\Throwable $cause, string $listenerInterface): void
+    public static function unexpected(HookLookup $hooks, ApiContract $contract, ?string $operationId, string $reason, ?\Throwable $cause): void
     {
-        $container = Container::getInstance();
-        $logger = $container->make(LoggerInterface::class);
+        $logger = $hooks->logger();
         $operation = $operationId ?? '-';
         $failure = $cause === null ? '' : ' (' . $cause::class . ')';
         $logger->error("seampact: api '{$contract->api}' operation '{$operation}': {$reason}{$failure}");
 
-        Hooks::unexpectedErrorListener($container, $listenerInterface)?->onUnexpectedError(new UnexpectedFailure($contract->api, $operationId, $reason, $cause));
+        $hooks->unexpectedErrorListener()?->onUnexpectedError(new UnexpectedFailure($contract->api, $operationId, $reason, $cause));
     }
 
     public static function pointer(string $pointer): string

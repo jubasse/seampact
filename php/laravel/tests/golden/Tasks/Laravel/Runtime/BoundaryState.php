@@ -35,6 +35,7 @@ final class BoundaryState
         public readonly string $operationId,
         public readonly array $rawParameters,
         public readonly RequestView $view,
+        public readonly HookLookup $hooks,
     ) {
         $this->authored = new \WeakMap();
     }

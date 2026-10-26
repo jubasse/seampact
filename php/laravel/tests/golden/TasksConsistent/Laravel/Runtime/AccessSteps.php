@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\Request;
 use Seampact\Hooks\AuthenticateResult;
 use Seampact\Hooks\Decision;
@@ -35,11 +33,11 @@ final class AccessSteps
     {
     }
 
-    public static function run(Container $container, Request $request, BoundaryState $state): void
+    public static function run(Request $request, BoundaryState $state): void
     {
-        self::authenticate($container, $request, $state);
-        self::resolveScopes($container, $state);
-        self::decideRequirements($container, $state);
+        self::authenticate($request, $state);
+        self::resolveScopes($state);
+        self::decideRequirements($state);
     }
 
     public static function operationRef(BoundaryState $state): OperationRef
@@ -47,15 +45,19 @@ final class AccessSteps
         return new OperationRef($state->contract->api, $state->operationId);
     }
 
-    /** Asks the decider of `$name`; Laravel's `AuthorizationException` (`Gate::authorize()`) is its first declared code. */
-    public static function decide(Container $container, BoundaryState $state, RequirementCall $call): Decision
+    /** Asks the decider of `$name`; the framework's access denial (HookLookup::isAccessDenial()) is its first declared code. */
+    public static function decide(BoundaryState $state, RequirementCall $call): Decision
     {
-        $decider = Hooks::decider($container, $state->contract, $call->name())
+        $decider = HookSelection::decider($state->hooks, $state->contract, $call->name())
             ?? throw new \LogicException("seampact: the api '{$state->contract->api}' has no decider for '{$call->name()}'; tag one with the provider's DECIDERS_TAG.");
 
         try {
             return $decider->decide($call);
-        } catch (AuthorizationException) {
+        } catch (\Throwable $failure) {
+            if (!$state->hooks->isAccessDenial($failure)) {
+                throw $failure;
+            }
+
             $kind = $call->kind() === RequirementKind::Rule ? 'rules' : 'rights';
             $code = Ir::strings($state->contract->declaration($kind, $call->name()), 'errors')[0] ?? null;
             if ($code === null) {
@@ -94,7 +96,7 @@ final class AccessSteps
         return new ContractRefusal($state->contract->api, $code, Replies::roleParams($state->contract, $state->operationId, $code, self::SCHEMA_INVALID_ROLE, ['issues' => $issues]));
     }
 
-    private static function authenticate(Container $container, Request $request, BoundaryState $state): void
+    private static function authenticate(Request $request, BoundaryState $state): void
     {
         $operation = $state->contract->operation($state->operationId);
         $access = Ir::map($operation, 'access');
@@ -127,7 +129,7 @@ final class AccessSteps
             }
         }
 
-        $hook = Hooks::authenticateHook($container, $state->contract, $identity);
+        $hook = $state->hooks->authenticateHook($state->contract, $identity);
         $result = $hook->authenticate(new AuthenticateCall($identity, new $credentialsClass(...$arguments), $csrfToken, $state->view, self::operationRef($state)));
         if ($result instanceof AuthenticateResult\Authenticated) {
             $state->principal = $result->principal;
@@ -199,13 +201,13 @@ final class AccessSteps
         return null;
     }
 
-    private static function resolveScopes(Container $container, BoundaryState $state): void
+    private static function resolveScopes(BoundaryState $state): void
     {
         foreach (Ir::maps($state->contract->operation($state->operationId), 'scopes') as $entry) {
             $scope = Ir::string($entry, 'scope') ?? '';
             $idType = Ir::map($state->contract->declaration('scopes', $scope), 'idSchema');
             $id = self::pathValue($state, Ir::string(Ir::map($entry, 'source'), 'name') ?? '', $idType);
-            $resolver = Hooks::scopeResolver($container, $state->contract, $scope)
+            $resolver = HookSelection::scopeResolver($state->hooks, $state->contract, $scope)
                 ?? throw new \LogicException("seampact: the api '{$state->contract->api}' has no scope resolver for the scope '{$scope}'; tag one with the provider's SCOPE_RESOLVERS_TAG.");
 
             $resolution = $resolver->resolveScope(new ScopeCall($scope, new ScopeIdSource\Declared($id), $state->principal, $state->scopes));
@@ -237,7 +239,7 @@ final class AccessSteps
         return $value;
     }
 
-    private static function decideRequirements(Container $container, BoundaryState $state): void
+    private static function decideRequirements(BoundaryState $state): void
     {
         foreach (Ir::maps($state->contract->operation($state->operationId), 'requires') as $requirement) {
             $isRule = Ir::string($requirement, 'kind') === 'rule';
@@ -256,7 +258,7 @@ final class AccessSteps
                 $state->view,
             );
 
-            $decision = self::decide($container, $state, $call);
+            $decision = self::decide($state, $call);
             if ($decision instanceof Decision\Denied) {
                 throw self::refusalOf($state, $decision->deny);
             }

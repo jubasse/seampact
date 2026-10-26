@@ -67,7 +67,7 @@ abstract class BoundaryMiddleware
                 : self::roleReply($contract, null, self::NOT_FOUND_ROLE, self::NOT_FOUND_STATUS);
         }
 
-        $state = new BoundaryState($contract, $operationId, $match->rawParameters, self::view($request));
+        $state = new BoundaryState($contract, $operationId, $match->rawParameters, self::view($request), new Hooks($this->app));
         $request->attributes->set(BoundaryState::attributeName($contract->api), $state);
 
         try {
@@ -121,7 +121,7 @@ abstract class BoundaryMiddleware
         }
 
         if ($this->setting($contract, $state->operationId, 'responses') !== self::STRICT) {
-            BoundaryLog::unexpected($contract, $state->operationId, "the outgoing check let through {$violation} (responses: warn)", $exception, UnexpectedErrorListener::class);
+            BoundaryLog::unexpected($state->hooks, $contract, $state->operationId, "the outgoing check let through {$violation} (responses: warn)", $exception);
 
             return $response;
         }
@@ -159,7 +159,7 @@ abstract class BoundaryMiddleware
 
     private function internalError(ApiContract $contract, ?string $operationId, string $reason, ?\Throwable $cause): Response
     {
-        BoundaryLog::unexpected($contract, $operationId, $reason, $cause, UnexpectedErrorListener::class);
+        BoundaryLog::unexpected(new Hooks($this->app), $contract, $operationId, $reason, $cause);
 
         return self::roleReply($contract, $operationId, ApiContract::UNDECLARED_STATUS_ROLE, self::INTERNAL_STATUS);
     }

@@ -36,7 +36,7 @@ abstract class AccessMiddleware
         }
 
         try {
-            AccessSteps::run($this->app, $request, $state);
+            AccessSteps::run($request, $state);
         } catch (\Throwable $failure) {
             // A refusal keeps its role, read from the role map the boundary maps native exceptions with (ADR 0023).
             if ($failure instanceof ContractRefusal || ExceptionRoles::roleOf($failure) !== null) {
