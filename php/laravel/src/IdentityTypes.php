@@ -80,7 +80,18 @@ final class IdentityTypes
         $class->addComment("The principal of identity '{$identity}', as the contract declares it.");
         $constructor = $class->addMethod('__construct');
 
-        foreach (self::principalProperties($this->layout, $identity) as [$property, $at]) {
+        $properties = self::principalProperties($this->layout, $identity);
+        if ($properties === []) {
+            // Without a member every caller of the identity would share one idempotency partition and bucket.
+            $this->refusals->add(
+                'principal.members.none',
+                "The principal of identity '{$identity}' is not an object schema with at least one member, so the boundary cannot tell its callers apart.",
+                'Declare the principal as an object schema with the members that identify a caller (an id).',
+                IrPlace::root()->below('identities', $identity, 'principal'),
+            );
+        }
+
+        foreach ($properties as [$property, $at]) {
             $member = PhpNames::memberIdentifier($property->name, $property->codeName);
             if ($member === null) {
                 $this->refusals->inconsistent('property.no-segment', "The property '{$property->name}' yields no name segment", $at);

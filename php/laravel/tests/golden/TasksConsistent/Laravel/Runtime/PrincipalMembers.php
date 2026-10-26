@@ -26,8 +26,13 @@ final class PrincipalMembers
             throw new \LogicException("seampact: the authenticate hook of identity '{$identity}' returned a " . $principal::class . ", which does not implement {$interface}; return the generated principal class or implement that interface.");
         }
 
+        $accessors = Ir::map($types, 'principalAccessors');
+        if ($accessors === []) {
+            throw new \LogicException("seampact: the principal of identity '{$identity}' declares no member, so its callers cannot be told apart; regenerate the contract class.");
+        }
+
         $members = [];
-        foreach (Ir::map($types, 'principalAccessors') as $name => $accessor) {
+        foreach ($accessors as $name => $accessor) {
             if (!is_string($accessor) || !method_exists($principal, $accessor)) {
                 throw new \LogicException("seampact: the principal members interface of identity '{$identity}' has no accessor for '{$name}'; regenerate it.");
             }
