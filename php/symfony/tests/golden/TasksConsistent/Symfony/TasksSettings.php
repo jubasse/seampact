@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Golden\TasksConsistent\Symfony;
 
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\ContractSettings;
+use Seampact\Golden\TasksConsistent\Symfony\Runtime\PublicOrigin;
 
 /**
  * The 'seampact_tasks' bundle configuration, each value checked when the boundary reads it, so a value
@@ -12,6 +13,7 @@ use Seampact\Golden\TasksConsistent\Symfony\Runtime\ContractSettings;
  */
 final readonly class TasksSettings implements ContractSettings
 {
+  public const ALIAS = 'seampact_tasks';
   private const RESPONSES_VALUES = ['strict', 'warn'];
   private const TRUE_TEXTS = ['true', '1'];
   private const FALSE_TEXTS = ['false', '0', ''];
@@ -23,6 +25,7 @@ final readonly class TasksSettings implements ContractSettings
     private mixed $responses,
     private mixed $bodyValidation,
     private array $operations,
+    private mixed $publicOrigin,
   ) {
   }
 
@@ -61,5 +64,18 @@ final readonly class TasksSettings implements ContractSettings
     }
 
     throw new \UnexpectedValueException('The bundle configuration key seampact_tasks.body_validation takes true or false.');
+  }
+
+  /**
+   * The origin absolute URLs start with, never read from the request.
+   */
+  public function publicOrigin(): string
+  {
+    $origin = $this->publicOrigin;
+    if (!is_string($origin) || !PublicOrigin::isOrigin($origin)) {
+        throw new \UnexpectedValueException('The bundle configuration key seampact_tasks.public_origin takes the origin clients call: a scheme (http or https), a host and an optional port, such as https://api.example.com.');
+    }
+
+    return $origin;
   }
 }

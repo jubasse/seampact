@@ -106,12 +106,12 @@ final class SymfonyRefusalsTest extends TestCase
         self::assertNotSame([], $files);
     }
 
-    public function testTheOnlyRefusalOfTheFullReferenceUnderNativeAccessNamesSymfony4(): void
+    public function testNativeAccessWaitsForAnAppThatNeedsIt(): void
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => false]);
 
         self::assertSame(['artefacts.accessHooks.unsupported'], array_keys($refused));
-        self::assertStringContainsString('symfony-4 generates it', $refused['artefacts.accessHooks.unsupported']);
+        self::assertStringContainsString('it waits for an app that needs it', $refused['artefacts.accessHooks.unsupported']);
     }
 
     /**

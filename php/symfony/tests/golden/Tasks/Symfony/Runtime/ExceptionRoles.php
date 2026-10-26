@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Seampact\Golden\Tasks\Symfony\Runtime;
 
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
  * The role of a native layer's refusal (ADR 0024 "Exceptions on contract routes"), read from the first exception of
- * the request and the reply Symfony wrote for it, first matching row wins: throttling, CSRF, authentication, then an
- * access denial answered by the firewall's entry point (a 401 or a redirect) or with a 403. Classes are named as
- * strings, so an app without SecurityBundle or RateLimiter still loads this map.
+ * the request and the reply Symfony wrote for it, first matching row wins: throttling, CSRF, authentication, an access
+ * denial answered by the firewall's entry point (a 401 or a redirect) or with a 403, then an HTTP exception 401, 403
+ * or 429 that a handler or an app listener throws (`createAccessDeniedException()` aside, which is an access denial).
+ * Classes are named as strings, so an app without SecurityBundle or RateLimiter still loads this map.
  */
 final class ExceptionRoles
 {
@@ -24,6 +26,8 @@ final class ExceptionRoles
     private const ACCESS_DENIED = 'Symfony\\Component\\Security\\Core\\Exception\\AccessDeniedException';
     private const UNAUTHORIZED = 401;
     private const FORBIDDEN = 403;
+    private const TOO_MANY_REQUESTS = 429;
+    private const STATUS_ROLES = [self::UNAUTHORIZED => 'unauthenticated', self::FORBIDDEN => 'forbidden', self::TOO_MANY_REQUESTS => 'rateLimited'];
     /** The headers a mapped refusal keeps from the reply Symfony wrote. */
     public const KEPT_HEADERS = ['Retry-After'];
 
@@ -48,7 +52,7 @@ final class ExceptionRoles
         }
 
         if (!is_a($exception, self::ACCESS_DENIED)) {
-            return null;
+            return self::statusRoleOf($exception);
         }
 
         $status = $reply->getStatusCode();
@@ -57,6 +61,11 @@ final class ExceptionRoles
         }
 
         return $status === self::FORBIDDEN ? 'forbidden' : null;
+    }
+
+    private static function statusRoleOf(\Throwable $exception): ?string
+    {
+        return $exception instanceof HttpExceptionInterface ? self::STATUS_ROLES[$exception->getStatusCode()] ?? null : null;
     }
 
     /** Whether `$exception` is Symfony's `AccessDeniedException`, from `access_control`, a voter or app code. */

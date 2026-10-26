@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\Literal;
+use Seampact\Codegen\AccessKind;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\OperationNames;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
-use Seampact\Ir\Model\IdentityAccess;
 use Seampact\Ir\Model\Operation;
-use Seampact\Ir\Model\OptionalAccess;
-use Seampact\Ir\Model\SignedIdentity;
 use Seampact\Ir\Write\GeneratedFile;
 
 /**
@@ -34,9 +32,6 @@ final class RouteTable
     private const LITERAL_SEGMENT = 0;
     private const PLACEHOLDER_SEGMENT = 1;
     private const KIND_MIDDLEWARE = 'KindMiddleware';
-    private const SIGNED_KIND = 'signed';
-    /** The access kinds a `middleware.<kind>` list names, each empty by default. */
-    private const MIDDLEWARE_KINDS = ['public', 'optional', 'identity', self::SIGNED_KIND];
 
     /** @var list<array{operation: Operation, uri: string, depthKey: list<int>, names: OperationNames}> */
     private array $routes = [];
@@ -84,7 +79,7 @@ final class RouteTable
         $class = $file->namespace->addClass($file->shortName)->setFinal();
         $class->addComment("The contract routes of api '{$this->layout->ir->api->id}', in registration order.");
         $class->addConstant('API', $this->layout->ir->api->id)->setPublic();
-        $class->addConstant('DEFAULTS', [...$this->defaults(), 'middleware' => array_fill_keys(self::MIDDLEWARE_KINDS, [])])->setPublic()->addComment("The run-time defaults the entry's options set, which `config('seampact.<api>.*')` overrides.");
+        $class->addConstant('DEFAULTS', [...$this->defaults(), 'middleware' => array_fill_keys(AccessKind::ALL, [])])->setPublic()->addComment("The run-time defaults the entry's options set, which `config('seampact.<api>.*')` overrides.");
 
         $lines = [];
         foreach ($this->ordered() as $route) {
@@ -96,7 +91,7 @@ final class RouteTable
                 . "\t\t'uri' => " . var_export($route['uri'], true) . ",\n"
                 . "\t\t'name' => " . var_export($this->routeName($operation), true) . ",\n"
                 . "\t\t'access' => " . var_export($operation->access->tag(), true) . ",\n"
-                . ($this->signed($operation) ? "\t\t'signed' => true,\n" : '')
+                . (AccessKind::isSigned($this->layout->ir, $operation) ? "\t\t'signed' => true,\n" : '')
                 . "\t\t'action' => [" . $file->name($names->endpoints) . '::class, ' . var_export($names->method, true) . "],\n"
                 . "\t],";
         }
@@ -106,8 +101,8 @@ final class RouteTable
         $route = $file->name(self::ROUTE_FACADE);
         $access = $file->name($this->layout->accessMiddleware);
         $kindMiddleware = $file->name($this->layout->runtime(self::KIND_MIDDLEWARE));
-        $anySigned = array_filter($this->routes, fn (array $kept): bool => $this->signed($kept['operation'])) !== [];
-        $kind = $anySigned ? "(\$route['signed'] ?? false) ? " . var_export(self::SIGNED_KIND, true) . " : \$route['access']" : "\$route['access']";
+        $anySigned = array_filter($this->routes, fn (array $kept): bool => AccessKind::isSigned($this->layout->ir, $kept['operation'])) !== [];
+        $kind = $anySigned ? "(\$route['signed'] ?? false) ? " . var_export(AccessKind::SIGNED, true) . " : \$route['access']" : "\$route['access']";
         $registration = "{$route}::match([\$route['method']], \$route['uri'], \$route['action'])->name(\$route['name'])"
             . "->middleware([{$access}::class, ...{$kindMiddleware}::of(self::API, {$kind})]);";
         $body = $anySigned
@@ -139,9 +134,9 @@ final class RouteTable
             $lines[] = 'Route::' . $route['operation']->method->value . '(' . var_export($route['uri'], true) . ', ['
                 . PhpClassFile::shortNameOf($names->endpoints) . '::class, ' . var_export($names->method, true) . '])->name('
                 . var_export($this->routeName($route['operation']), true) . ")->middleware([{$access}::class, ...{$kindMiddleware}::of({$api}, "
-                . var_export($this->kindOf($route['operation']), true) . ')])'
-                . ($this->signed($route['operation']) ? '->withoutMiddleware(' . PhpClassFile::shortNameOf(self::FORGERY_MIDDLEWARE) . '::class)' : '') . ';';
-            if ($this->signed($route['operation'])) {
+                . var_export(AccessKind::of($this->layout->ir, $route['operation']), true) . ')])'
+                . (AccessKind::isSigned($this->layout->ir, $route['operation']) ? '->withoutMiddleware(' . PhpClassFile::shortNameOf(self::FORGERY_MIDDLEWARE) . '::class)' : '') . ';';
+            if (AccessKind::isSigned($this->layout->ir, $route['operation'])) {
                 $imports[self::FORGERY_MIDDLEWARE] = true;
             }
         }
@@ -174,7 +169,7 @@ final class RouteTable
             $lines[] = "{$indent}" . var_export($name, true) . " => env({$variable}{$fallback}),";
         }
         $lines[] = "{$indent}'middleware' => [";
-        foreach (self::MIDDLEWARE_KINDS as $kind) {
+        foreach (AccessKind::ALL as $kind) {
             $lines[] = "{$indent}{$indent}" . var_export($kind, true) . ' => [],';
         }
         $lines[] = "{$indent}],";
@@ -193,19 +188,6 @@ final class RouteTable
             'framework_etag' => $this->options->frameworkEtag->value,
             'catch_all' => $this->options->catchAll,
         ];
-    }
-
-    private function signed(Operation $operation): bool
-    {
-        $access = $operation->access;
-        $identity = $access instanceof IdentityAccess || $access instanceof OptionalAccess ? $this->layout->ir->identities[$access->identity] ?? null : null;
-
-        return $identity instanceof SignedIdentity;
-    }
-
-    private function kindOf(Operation $operation): string
-    {
-        return $this->signed($operation) ? self::SIGNED_KIND : $operation->access->tag();
     }
 
     private function routeName(Operation $operation): string

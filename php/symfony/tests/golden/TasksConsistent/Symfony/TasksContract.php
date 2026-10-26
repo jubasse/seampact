@@ -22,7 +22,7 @@ final class TasksContract
       'pathVersion' => ['value' => 'prefix', 'origin' => ['layer' => 'api', 'pointer' => '/api/version']],
       'maturity' => 'provisional',
       'compat' => ['policy' => 'additive-only'],
-      'wire' => ['int64' => 'string', 'outputEnums' => 'enum', 'urls' => 'relative'],
+      'wire' => ['int64' => 'string', 'outputEnums' => 'enum', 'urls' => 'absolute'],
       'surfaces' => [
         'app' => [
           'name' => ['segments' => ['app'], 'role' => 'schema'],

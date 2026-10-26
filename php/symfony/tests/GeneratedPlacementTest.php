@@ -9,15 +9,20 @@ use Seampact\Golden\Tasks\AppEndpoints;
 use Seampact\Golden\Tasks\Symfony\GetTaskInputConstraint;
 use Seampact\Golden\Tasks\Symfony\GetTasksBatchInputConstraint;
 use Seampact\Golden\Tasks\Symfony\Runtime\Issue;
+use Seampact\Golden\Tasks\Symfony\Runtime\KindRequestMatcher;
+use Seampact\Golden\Tasks\Symfony\TasksAccess;
+use Seampact\Golden\Tasks\Symfony\TasksContract;
 use Seampact\Golden\Tasks\Symfony\TasksRouteLoader;
 use Seampact\Golden\Tasks\Symfony\TasksSeampactBundle;
 use Seampact\Golden\Tasks\Symfony\TasksSettings;
+use Seampact\Golden\TasksConsistent\Symfony\TasksSettings as AbsoluteSettings;
 use Seampact\Symfony\Tests\Support\HealthController;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\HttpKernel\DependencyInjection\RegisterControllerArgumentLocatorsPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Validator\Validation;
 
 /** The golden tree's Symfony placement run in Symfony: its routes, its input constraint and its bundle configuration. */
@@ -75,10 +80,61 @@ final class GeneratedPlacementTest extends TestCase
         $extension->load([['operations' => ['getTask' => ['responses' => 'warn']]]], $container);
 
         self::assertTrue($container->getDefinition(TasksRouteLoader::class)->hasTag('routing.loader'));
-        $settings = new TasksSettings(...$container->getDefinition(TasksSettings::class)->getArguments());
+        $settings = new TasksSettings(...self::namedArguments($container->getDefinition(TasksSettings::class)->getArguments()));
         self::assertSame('warn', $settings->responsesOf('getTask'));
         self::assertSame('strict', $settings->responsesOf('getDraft'));
         self::assertFalse($settings->bodyValidation());
+        self::assertNull($settings->publicOrigin());
+    }
+
+    public function testEachAccessKindHasARequestMatcherServiceThatMatchesOnlyItsOperations(): void
+    {
+        $container = new ContainerBuilder();
+        $container->setParameter('kernel.environment', 'test');
+        $container->setParameter('kernel.build_dir', sys_get_temp_dir());
+        $extension = (new TasksSeampactBundle())->getContainerExtension();
+        self::assertNotNull($extension);
+        $extension->load([], $container);
+
+        $matchers = [];
+        foreach (['public', 'optional', 'identity', 'signed'] as $kind) {
+            $definition = $container->getDefinition("seampact.tasks.matcher.{$kind}");
+            self::assertSame(KindRequestMatcher::class, $definition->getClass());
+            self::assertSame([TasksContract::class, TasksAccess::ROUTES, $kind], $definition->getArguments());
+            $matchers[$kind] = new KindRequestMatcher(TasksContract::class, TasksAccess::ROUTES, $kind);
+        }
+        $matchedKinds = static fn (Request $request): array => array_keys(array_filter($matchers, static fn (KindRequestMatcher $matcher): bool => $matcher->matches($request)));
+
+        self::assertSame(['public'], $matchedKinds(Request::create('/v1/health')));
+        self::assertSame(['identity'], $matchedKinds(Request::create('/v1/channels/10000000-0000-4000-8000-000000000001')));
+        self::assertSame([], $matchedKinds(Request::create('/v1/no-such-operation')));
+        self::assertSame([], $matchedKinds(Request::create('/elsewhere')));
+        self::assertSame('identity', TasksAccess::ROUTES['seampact.tasks.getTask']['kind']);
+        self::assertSame('user', TasksAccess::ROUTES['seampact.tasks.getTask']['identity']);
+    }
+
+    public function testUnderAbsoluteUrlsThePublicOriginIsReadAndCheckedNamingItsKeyNeverItsValue(): void
+    {
+        self::assertSame('https://api.example.com', (new AbsoluteSettings('strict', false, [], 'https://api.example.com'))->publicOrigin());
+
+        $this->expectExceptionMessage('The bundle configuration key seampact_tasks.public_origin takes the origin clients call');
+        (new AbsoluteSettings('strict', false, [], 'https://api.example.com/v1'))->publicOrigin();
+    }
+
+    /**
+     * The service arguments, keyed by parameter name without its `$`, as PHP's named arguments take them.
+     *
+     * @param array<int|string, mixed> $arguments
+     * @return array<int|string, mixed>
+     */
+    private static function namedArguments(array $arguments): array
+    {
+        $named = [];
+        foreach ($arguments as $key => $value) {
+            $named[is_string($key) ? ltrim($key, '$') : $key] = $value;
+        }
+
+        return $named;
     }
 
     public function testASettingOutsideItsValuesIsRefusedNamingItsKeyNeverItsValue(): void

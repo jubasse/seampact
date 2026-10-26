@@ -10,6 +10,7 @@ use Seampact\Codegen\ArtefactSwitches;
 use Seampact\Codegen\BootCheckSwitches;
 use Seampact\Codegen\ContractClass;
 use Seampact\Codegen\ContractExceptions;
+use Seampact\Codegen\Delivery;
 use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -54,7 +55,7 @@ final class SymfonyGenerator implements Generator
     {
         $refusals = new Refusals($entry->id, self::TARGET, self::PACKAGE);
         $options = TargetOptions::read(new OptionValues($entry->options, self::TARGET, TargetOptions::KEYS, $refusals), $entry->namespace);
-        (new ArtefactSwitches(self::TARGET, null, SymfonyReleases::SYMFONY_4))->read($entry->artefacts, $refusals);
+        (new ArtefactSwitches(self::TARGET, null, Delivery::Consumer))->read($entry->artefacts, $refusals);
         $kept = new KeptForms($ir, $refusals, new SymfonyReleases());
         $refusals->throwIfAny();
         if ($options === null) {
