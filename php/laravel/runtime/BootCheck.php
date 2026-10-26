@@ -8,6 +8,11 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\Decider;
+use Seampact\Codegen\Runtime\HookSelection;
+use Seampact\Codegen\Runtime\Ir;
+use Seampact\Codegen\Runtime\ScopeResolver;
 
 /**
  * The api's boot check (ADR 0023 "The boot check"): every problem listed at once, with the operation, the name and
@@ -74,19 +79,19 @@ final class BootCheck
 
         foreach (array_keys($identities) as $identity) {
             try {
-                Hooks::authenticateHook($app, $contract, (string) $identity);
+                (new Hooks($app))->authenticateHook($contract, (string) $identity);
             } catch (\LogicException) {
                 $interface = Ir::string(Ir::map(Ir::map($contract->types, 'identities'), (string) $identity), 'hook') ?? '';
                 $problems[] = "no authenticate hook for the identity '{$identity}': bind {$interface} in the container";
             }
         }
         foreach (array_keys($scopes) as $scope) {
-            if (Hooks::scopeResolver($app, $contract, (string) $scope) === null) {
+            if (HookSelection::scopeResolver(new Hooks($app), $contract, (string) $scope) === null) {
                 $problems[] = "no scope resolver for the scope '{$scope}': tag a ScopeResolver with '" . Hooks::scopeResolversTag($contract->api) . "'";
             }
         }
         foreach (array_keys($deciderNames) as $name) {
-            if (Hooks::decider($app, $contract, (string) $name) === null) {
+            if (HookSelection::decider(new Hooks($app), $contract, (string) $name) === null) {
                 $problems[] = "no decider for '{$name}': tag a Decider naming it, or '" . Decider::EVERY_NAME . "', with '" . Hooks::decidersTag($contract->api) . "'";
             }
         }

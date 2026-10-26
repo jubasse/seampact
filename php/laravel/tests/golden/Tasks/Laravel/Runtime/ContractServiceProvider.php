@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Laravel\Runtime;
 
-use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
 use Illuminate\Foundation\Http\Middleware\TrimStrings;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,7 +24,6 @@ abstract class ContractServiceProvider extends ServiceProvider
     private const SUBSTITUTE_BINDINGS = 'Illuminate\\Routing\\Middleware\\SubstituteBindings';
     private const OCTANE_WORKER_STARTING = 'Laravel\\Octane\\Events\\WorkerStarting';
     private const CACHING_COMMANDS = ['route:cache', 'optimize'];
-    private const UNAUTHENTICATED_STATUS = 401;
 
     abstract protected function contractClass(): string;
 
@@ -75,14 +72,7 @@ abstract class ContractServiceProvider extends ServiceProvider
         TrimStrings::skipWhen($onContractRoute);
         ConvertEmptyStringsToNull::skipWhen($onContractRoute);
 
-        // Laravel renders an AuthenticationException as a redirect to `login` for a browser `Accept`, and as a 500 when
-        // no such route exists; on a contract route it renders a bare 401, which the boundary maps to `unauthenticated`.
-        $handler = $this->app->make(ExceptionHandler::class);
-        if (method_exists($handler, 'renderable')) {
-            $handler->renderable(static function (AuthenticationException $exception, Request $request) use ($api): ?Response {
-                return BoundaryState::of($request, $api) === null ? null : new Response('', self::UNAUTHENTICATED_STATUS);
-            });
-        }
+        ContractExceptionHandling::register($this->app->make(ExceptionHandler::class), $api);
 
         Services::events($this->app)->listen(self::OCTANE_WORKER_STARTING, static function () use ($api): void {
             throw new \RuntimeException("runtime.octane.unsupported: the api '{$api}' cannot run in an Octane worker. Serve the app with php-fpm, or keep this api's provider out of the Octane app.");

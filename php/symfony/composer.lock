@@ -364,21 +364,25 @@
             "dist": {
                 "type": "path",
                 "url": "../codegen",
-                "reference": "a0f0dbe6eac58c5d7cc148dd6fe82fe0cb56add5"
+                "reference": "6eafcb2d37ce499a801b1e7b5dde47933664e920"
             },
             "require": {
                 "nette/php-generator": "~4.2.0",
                 "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
+                "seampact/hooks": "self.version",
                 "seampact/ir": "self.version"
             },
             "require-dev": {
                 "phpstan/phpstan": "2.2.16",
-                "phpunit/phpunit": "11.5.56"
+                "phpunit/phpunit": "11.5.56",
+                "psr/log": "3.0.2",
+                "symfony/http-foundation": "7.4.21"
             },
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "Seampact\\Codegen\\": "src/"
+                    "Seampact\\Codegen\\": "src/",
+                    "Seampact\\Codegen\\Runtime\\": "runtime/"
                 }
             },
             "autoload-dev": {
@@ -398,6 +402,49 @@
                 "MIT"
             ],
             "description": "The framework-neutral PHP emitters the Seampact PHP targets share: value types with Field, enums, naming, refusals and the golden tree.",
+            "transport-options": {
+                "symlink": false,
+                "relative": true
+            }
+        },
+        {
+            "name": "seampact/hooks",
+            "version": "dev-develop",
+            "dist": {
+                "type": "path",
+                "url": "../hooks",
+                "reference": "15dd6e9ab5cdd0d96dd469fa7e77774a3b4330bc"
+            },
+            "require": {
+                "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "2.2.16",
+                "phpunit/phpunit": "11.5.56"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Seampact\\Hooks\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Seampact\\Hooks\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit"
+                ],
+                "analyse": [
+                    "phpstan analyse"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "The Seampact hook interfaces, decision and subject types for PHP: what generated boundaries call and applications implement.",
             "transport-options": {
                 "symlink": false,
                 "relative": true
@@ -1629,49 +1676,6 @@
                 "source": "https://github.com/php-fig/log/tree/3.0.2"
             },
             "time": "2024-09-11T13:17:53+00:00"
-        },
-        {
-            "name": "seampact/hooks",
-            "version": "dev-develop",
-            "dist": {
-                "type": "path",
-                "url": "../hooks",
-                "reference": "15dd6e9ab5cdd0d96dd469fa7e77774a3b4330bc"
-            },
-            "require": {
-                "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12"
-            },
-            "require-dev": {
-                "phpstan/phpstan": "2.2.16",
-                "phpunit/phpunit": "11.5.56"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Seampact\\Hooks\\": "src/"
-                }
-            },
-            "autoload-dev": {
-                "psr-4": {
-                    "Seampact\\Hooks\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "phpunit"
-                ],
-                "analyse": [
-                    "phpstan analyse"
-                ]
-            },
-            "license": [
-                "MIT"
-            ],
-            "description": "The Seampact hook interfaces, decision and subject types for PHP: what generated boundaries call and applications implement.",
-            "transport-options": {
-                "symlink": false,
-                "relative": true
-            }
         },
         {
             "name": "sebastian/cli-parser",

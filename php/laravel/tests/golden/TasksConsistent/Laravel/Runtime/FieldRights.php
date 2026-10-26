@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 
-use Illuminate\Container\Container;
 use Seampact\Hooks\Decision;
 use Seampact\Hooks\FieldDirection;
 use Seampact\Hooks\Purpose;
@@ -46,7 +45,7 @@ final class FieldRights
             }
 
             $right = Ir::string($fieldRight, 'right') ?? '';
-            $decision = AccessSteps::decide(Container::getInstance(), $state, self::call($state, $fieldRight, $right, AccessSteps::subjectOf($state, Ir::map($fieldRight, 'subject'), $right), FieldDirection::Input));
+            $decision = AccessSteps::decide($state, self::call($state, $fieldRight, $right, AccessSteps::subjectOf($state, Ir::map($fieldRight, 'subject'), $right), FieldDirection::Input));
             if (!$decision instanceof Decision\Denied) {
                 continue;
             }
@@ -136,7 +135,7 @@ final class FieldRights
 
         $key = $right . "\n" . ($subject === null ? '' : (string) (is_object($subject->id) ? spl_object_id($subject->id) : $subject->id));
         if (!isset($decisions[$key])) {
-            $decision = AccessSteps::decide(Container::getInstance(), $state, self::call($state, $fieldRight, $right, $subject, FieldDirection::Output));
+            $decision = AccessSteps::decide($state, self::call($state, $fieldRight, $right, $subject, FieldDirection::Output));
             $decisions[$key] = $decision instanceof Decision\Allowed;
         }
 

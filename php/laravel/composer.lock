@@ -3333,21 +3333,25 @@
             "dist": {
                 "type": "path",
                 "url": "../codegen",
-                "reference": "a0f0dbe6eac58c5d7cc148dd6fe82fe0cb56add5"
+                "reference": "6eafcb2d37ce499a801b1e7b5dde47933664e920"
             },
             "require": {
                 "nette/php-generator": "~4.2.0",
                 "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
+                "seampact/hooks": "self.version",
                 "seampact/ir": "self.version"
             },
             "require-dev": {
                 "phpstan/phpstan": "2.2.16",
-                "phpunit/phpunit": "11.5.56"
+                "phpunit/phpunit": "11.5.56",
+                "psr/log": "3.0.2",
+                "symfony/http-foundation": "7.4.21"
             },
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "Seampact\\Codegen\\": "src/"
+                    "Seampact\\Codegen\\": "src/",
+                    "Seampact\\Codegen\\Runtime\\": "runtime/"
                 }
             },
             "autoload-dev": {

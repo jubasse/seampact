@@ -6,6 +6,11 @@ namespace Seampact\Laravel\Runtime;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
+use Seampact\Codegen\Runtime\AccessSteps;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\BoundaryFailure;
+use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\ContractRefusal;
 
 /**
  * The api's route middleware, placed before `SubstituteBindings`: it checks that the route Laravel chose carries the
@@ -33,7 +38,7 @@ abstract class AccessMiddleware
         }
 
         try {
-            AccessSteps::run($this->app, $request, $state);
+            AccessSteps::run($request, $state);
         } catch (\Throwable $failure) {
             // A refusal keeps its role, read from the role map the boundary maps native exceptions with (ADR 0023).
             if ($failure instanceof ContractRefusal || ExceptionRoles::roleOf($failure) !== null) {

@@ -22,10 +22,9 @@ abstract class BoundaryMiddleware
 {
     private const NOT_FOUND_ROLE = 'notFound';
     private const NOT_FOUND_STATUS = 404;
-    private const INTERNAL_STATUS = 500;
     private const PREFLIGHT_METHOD = 'OPTIONS';
-    private const STRICT = 'strict';
-    private const KEEP = 'keep';
+
+    private ?Hooks $hooks = null;
 
     /** @var array<class-string, true> the boundaries found first in the global stack, once per booted application */
     private static array $placed = [];
@@ -57,17 +56,17 @@ abstract class BoundaryMiddleware
     private function served(Request $request, \Closure $next, ApiContract $contract, RouteMatch $match): Response
     {
         if (!$this->isFirst()) {
-            return $this->internalError($contract, $match->operationId, 'the boundary middleware is not the first global middleware; let the provider prepend it, and prepend no other global middleware before it', null);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $match->operationId, 'the boundary middleware is not the first global middleware; let the provider prepend it, and prepend no other global middleware before it', null);
         }
 
         $operationId = $match->operationId;
         if ($operationId === null) {
             return $this->setting($contract, null, 'catch_all') === false
                 ? self::passed($next($request))
-                : self::roleReply($contract, null, self::NOT_FOUND_ROLE, self::NOT_FOUND_STATUS);
+                : ReplyVerdict::roleReply($contract, null, self::NOT_FOUND_ROLE, self::NOT_FOUND_STATUS);
         }
 
-        $state = new BoundaryState($contract, $operationId, $match->rawParameters, self::view($request));
+        $state = new BoundaryState($contract, $operationId, $match->rawParameters, self::view($request), $this->hooks());
         $request->attributes->set(BoundaryState::attributeName($contract->api), $state);
 
         try {
@@ -76,7 +75,7 @@ abstract class BoundaryMiddleware
         } catch (ContractRefusal $refusal) {
             return $refusal->render($request);
         } catch (\Throwable $failure) {
-            return $this->internalError($contract, $operationId, 'the request failed before a reply was written', $failure);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $operationId, 'the request failed before a reply was written', $failure);
         }
 
         return $this->checked($request, $state, $response);
@@ -88,45 +87,35 @@ abstract class BoundaryMiddleware
         $exception = property_exists($response, 'exception') && $response->exception instanceof \Throwable ? $response->exception : null;
 
         if (self::routedElsewhere($request, $state, $exception)) {
-            return $state->author(self::roleReply($contract, $state->operationId, self::NOT_FOUND_ROLE, self::NOT_FOUND_STATUS));
+            return $state->author(ReplyVerdict::roleReply($contract, $state->operationId, self::NOT_FOUND_ROLE, self::NOT_FOUND_STATUS));
         }
 
         if ($exception instanceof ContractBypassedException) {
-            return $this->internalError($contract, $state->operationId, 'a contract FormRequest ran without the access middleware\'s mark', $exception);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $state->operationId, 'a contract FormRequest ran without the access middleware\'s mark', $exception);
         }
 
         if ($exception instanceof BoundaryFailure) {
-            return $this->internalError($contract, $state->operationId, 'a boundary step failed', $exception->getPrevious() ?? $exception);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $state->operationId, 'a boundary step failed', $exception->getPrevious() ?? $exception);
         }
 
         $role = $exception === null ? null : ExceptionRoles::roleOf($exception);
         if ($role !== null) {
-            return $this->mapped($state, $response, $role, $exception);
+            return ReplyVerdict::mapped($state, $response, $role, $exception, ExceptionRoles::KEPT_HEADERS);
         }
 
         // An exception no role maps and no contract reply rendered answers the api's 500 in every `responses` mode,
         // so Laravel's error page and its debug trace never reach the client.
         if ($exception !== null && !$state->authored($response)) {
-            return $this->internalError($contract, $state->operationId, 'an exception reached the boundary unmapped', $exception);
+            return ReplyVerdict::internalError($this->hooks(), $contract, $state->operationId, 'an exception reached the boundary unmapped', $exception);
         }
 
-        $etag = $response->headers->get('ETag');
-        if ($etag !== null && $etag !== $state->authoredEtag($response) && $this->setting($contract, $state->operationId, 'framework_etag') !== self::KEEP) {
-            $response->headers->remove('ETag');
-        }
-
-        $violation = OutgoingCheck::violation($state, $response);
-        if ($violation === null) {
-            return $response;
-        }
-
-        if ($this->setting($contract, $state->operationId, 'responses') !== self::STRICT) {
-            BoundaryLog::unexpected($contract, $state->operationId, "the outgoing check let through {$violation} (responses: warn)", $exception, UnexpectedErrorListener::class);
-
-            return $response;
-        }
-
-        return $this->internalError($contract, $state->operationId, "the outgoing check replaced {$violation}", $exception);
+        return ReplyVerdict::checked(
+            $state,
+            $response,
+            $exception,
+            self::text($this->setting($contract, $state->operationId, 'responses')),
+            self::text($this->setting($contract, $state->operationId, 'framework_etag')),
+        );
     }
 
     // Once routing ran, a route other than this operation's contract route answers the raw path's 404.
@@ -140,36 +129,14 @@ abstract class BoundaryMiddleware
         return $exception instanceof NotFoundHttpException || $exception instanceof MethodNotAllowedHttpException;
     }
 
-    private function mapped(BoundaryState $state, Response $response, string $role, ?\Throwable $exception): Response
+    private function hooks(): Hooks
     {
-        $code = $state->contract->roleCode($state->operationId, $role);
-        if ($code === null) {
-            return $this->internalError($state->contract, $state->operationId, "a native layer refused with the role '{$role}', which the operation does not declare", $exception);
-        }
-
-        $reply = Replies::error($state->contract, $state->operationId, $code);
-        foreach (ExceptionRoles::KEPT_HEADERS as $header) {
-            if ($response->headers->has($header)) {
-                $reply->headers->set($header, $response->headers->get($header));
-            }
-        }
-
-        return $state->author($reply);
+        return $this->hooks ??= new Hooks($this->app);
     }
 
-    private function internalError(ApiContract $contract, ?string $operationId, string $reason, ?\Throwable $cause): Response
+    private static function text(mixed $setting): ?string
     {
-        BoundaryLog::unexpected($contract, $operationId, $reason, $cause, UnexpectedErrorListener::class);
-
-        return self::roleReply($contract, $operationId, ApiContract::UNDECLARED_STATUS_ROLE, self::INTERNAL_STATUS);
-    }
-
-    // The role's code in the api's format, or a bare status when the api declares no code for the role.
-    private static function roleReply(ApiContract $contract, ?string $operationId, string $role, int $bareStatus): Response
-    {
-        $code = $contract->roleCode($operationId, $role);
-
-        return $code === null ? new Response('', $bareStatus) : Replies::error($contract, $operationId, $code);
+        return is_string($setting) ? $setting : null;
     }
 
     private static function isPreflight(Request $request): bool

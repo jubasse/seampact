@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Laravel\Runtime;
 
 use Illuminate\Http\Request;
+use Seampact\Codegen\Runtime\ContractBypassedException;
 
 /**
  * The mark the access middleware puts on a request once steps 2 to 5 admitted it: the operation id, in a request

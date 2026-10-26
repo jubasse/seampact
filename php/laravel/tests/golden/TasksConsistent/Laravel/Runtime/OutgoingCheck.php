@@ -40,7 +40,7 @@ final class OutgoingCheck
         // Once admitted, only the boundary or a contract exception's rendering writes the reply (ADR 0023 "The outgoing
         // check"); an exception reply never comes here, the boundary answered it first.
         if ($state->admitted) {
-            return "a {$status} reply written after the access middleware admitted the request";
+            return "a {$status} reply written after the boundary's access step admitted the request";
         }
 
         $content = $response->getContent();

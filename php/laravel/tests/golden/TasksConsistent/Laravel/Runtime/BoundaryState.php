@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 
-use Illuminate\Http\Request;
 use Seampact\Hooks\RequestView;
 use Seampact\Hooks\ResolvedScope;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -22,7 +22,7 @@ final class BoundaryState
     /** @var list<ResolvedScope> */
     public array $scopes = [];
     public ?object $contractInput = null;
-    /** Whether the access middleware admitted the request (steps 2 to 5 passed). */
+    /** Whether the boundary's access step admitted the request (steps 2 to 5 passed). */
     public bool $admitted = false;
     /** The body decoded with its objects preserved; null when the request carries none. */
     public mixed $body = null;
@@ -35,6 +35,7 @@ final class BoundaryState
         public readonly string $operationId,
         public readonly array $rawParameters,
         public readonly RequestView $view,
+        public readonly HookLookup $hooks,
     ) {
         $this->authored = new \WeakMap();
     }
@@ -51,12 +52,12 @@ final class BoundaryState
         return $state instanceof self ? $state : null;
     }
 
-    /** @throws ContractBypassedException the boundary middleware did not run for `$request` */
+    /** @throws ContractBypassedException the boundary did not match `$request` */
     public static function required(Request $request, string $api): self
     {
         return self::of($request, $api) ?? throw new ContractBypassedException(
-            "A contract reply of api '{$api}' was built for a request the boundary middleware did not match. "
-            . 'Serve the operation only through its generated route, with the boundary middleware installed.',
+            "A contract reply of api '{$api}' was built for a request the boundary did not match. "
+            . 'Serve the operation only through its generated route, with the boundary installed.',
         );
     }
 
@@ -77,7 +78,7 @@ final class BoundaryState
         }
         $content = $response->getContent();
         $content = $content === false ? '' : $content;
-        // Laravel prepares a HEAD reply by emptying its body, after the boundary wrote it.
+        // The framework prepares a HEAD reply by emptying its body, after the boundary wrote it.
         $bodyKept = $written[1] === $content || $content === '' && $this->view->method === self::HEAD;
 
         return $written[0] === $response->getStatusCode() && $bodyKept;

@@ -16,6 +16,7 @@ use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpTypes;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\RuntimeCopy;
+use Seampact\Codegen\RuntimeSource;
 use Seampact\Codegen\SchemaTypes;
 use Seampact\Codegen\TargetOptions;
 use Seampact\Ir\Model\ContractIR;
@@ -84,7 +85,7 @@ final class SymfonyGenerator implements Generator
                 static fn (PhpClassFile $file): GeneratedFile => new GeneratedFile($file->path($options->namespace), $printer->printFile($file->file)),
                 $classFiles,
             ),
-            ...(new RuntimeCopy(self::RUNTIME_SOURCE_NAMESPACE, self::RUNTIME_SOURCE_DIRECTORY, self::PACKAGE))->files($placement->namespace, $placement->runtimeNamespace),
+            ...(new RuntimeCopy([new RuntimeSource(self::RUNTIME_SOURCE_NAMESPACE, self::RUNTIME_SOURCE_DIRECTORY, self::PACKAGE)]))->files($placement->namespace, $placement->runtimeNamespace),
         ];
         usort($files, static fn (GeneratedFile $first, GeneratedFile $second): int => strcmp($first->path, $second->path));
 
