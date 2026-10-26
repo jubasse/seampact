@@ -137,7 +137,7 @@ jobs:
                 "name" => "seampact-ci/install-proof",
                 "version" => "0.0.0",
                 // Packagist without seampact/*: a published sibling never stands in for the PR copy, while a pinned
-                // third-party runtime dependency (seampact/ir's JSON Schema validator) still resolves.
+                // third-party runtime dependency (the JSON Schema validator of seampact/ir) still resolves.
                 "repositories" => [
                   ["type" => "path", "url" => $tree, "options" => ["symlink" => false]],
                   ["type" => "composer", "url" => "https://repo.packagist.org", "exclude" => ["seampact/*"]],
