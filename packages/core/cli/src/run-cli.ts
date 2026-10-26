@@ -264,7 +264,8 @@ function pluginRunOf(values: ParsedValues, io: CliIo, command: string): PluginRu
   if (configName !== undefined && (configName.trim() === "" || /[\r\n]/.test(configName)))
     return {
       status: "refused",
-      message: "`--config-name` takes a non-empty, one-line label, the name problems give the config.",
+      message:
+        "`--config-name` takes a non-empty, one-line label, the name problems give the config.",
     };
 
   if (appDirectory === undefined && configName !== undefined)
