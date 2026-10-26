@@ -19,8 +19,8 @@ use Seampact\Codegen\Runtime\BoundaryState;
  * The base of an api's generated service provider: it merges the api's run-time defaults into
  * `config('seampact.<api>')`, prepends the boundary middleware, places the access middleware before
  * `SubstituteBindings`, defines the `Route::seampact()` macro, keeps `TrimStrings` and `ConvertEmptyStringsToNull`
- * off contract routes, refuses Octane workers, hides sensitive values from `dump()` and runs the boot check once every
- * provider booted.
+ * off contract routes, refuses Octane workers, hides sensitive values from `dump()`, publishes the api's settings as
+ * `config/seampact/<api>.php` (`--tag=seampact-config`) and runs the boot check once every provider booted.
  */
 abstract class ContractServiceProvider extends ServiceProvider
 {
@@ -28,6 +28,7 @@ abstract class ContractServiceProvider extends ServiceProvider
     private const SUBSTITUTE_BINDINGS = 'Illuminate\\Routing\\Middleware\\SubstituteBindings';
     private const OCTANE_WORKER_STARTING = 'Laravel\\Octane\\Events\\WorkerStarting';
     private const CACHING_COMMANDS = ['route:cache', 'optimize'];
+    private const CONFIG_TAG = 'seampact-config';
     // The same key in every api's copied runtime, so each api's provider sees the others' boundaries.
     private const BOUNDARIES_KEY = 'seampact.boundaries';
 
@@ -39,6 +40,9 @@ abstract class ContractServiceProvider extends ServiceProvider
 
     /** @return array{hooks: bool, handlers: bool, frameworkRoutes: bool}|null the boot check's switches, null when it is off */
     abstract protected function bootCheck(): ?array;
+
+    /** The path of the api's generated settings file, which `vendor:publish` copies into the app's config. */
+    abstract protected function publishedConfig(): string;
 
     public function register(): void
     {
@@ -76,6 +80,10 @@ abstract class ContractServiceProvider extends ServiceProvider
         }
 
         $api = $contract->api;
+        if ($this->app->runningInConsole()) {
+            $this->publishes([$this->publishedConfig() => $this->app->configPath("seampact/{$api}.php")], self::CONFIG_TAG);
+        }
+
         $onContractRoute = static fn (Request $request): bool => BoundaryState::of($request, $api) !== null;
         TrimStrings::skipWhen($onContractRoute);
         ConvertEmptyStringsToNull::skipWhen($onContractRoute);

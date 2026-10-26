@@ -106,6 +106,7 @@ final class LaravelGenerator implements Generator
             $classFiles,
         );
 
+        $files[] = $routes->configFile();
         $routesFile = $routes->routesFile();
         if ($routesFile !== null) {
             $files[] = $routesFile;

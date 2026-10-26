@@ -34,6 +34,14 @@ final class TasksSeampactServiceProvider extends ContractServiceProvider
     }
 
     /**
+     * The api's run-time settings with their `env()` variables, published as config/seampact/<api>.php.
+     */
+    protected function publishedConfig(): string
+    {
+        return dirname(__DIR__) . '/config.php';
+    }
+
+    /**
      * @return array{hooks: bool, handlers: bool, frameworkRoutes: bool}
      */
     protected function bootCheck(): array

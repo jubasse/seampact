@@ -56,6 +56,10 @@ final class BoundaryClasses
         $this->contractMethod($file, 'boundaryClass', $this->layout->boundary);
         $this->contractMethod($file, 'accessClass', $this->layout->accessMiddleware);
 
+        $class->addMethod('publishedConfig')->setProtected()->setReturnType('string')
+            ->addComment('The api\'s run-time settings with their `env()` variables, published as config/seampact/<api>.php.')
+            ->setBody('return dirname(__DIR__) . ?;', ['/' . RouteTable::CONFIG_FILE]);
+
         $switches = $this->bootCheck?->toArray();
         $bootCheck = $class->addMethod('bootCheck')->setProtected()->setReturnType($switches === null ? 'null' : 'array')
             ->setBody('return ?;', [$switches]);
