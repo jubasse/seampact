@@ -1,0 +1,246 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Seampact\Laravel\Tests;
+
+use Illuminate\Translation\ArrayLoader;
+use Illuminate\Translation\Translator;
+use Illuminate\Validation\Factory;
+use PHPUnit\Framework\TestCase;
+use Seampact\Laravel\LaravelGenerator;
+use Seampact\Laravel\Tests\Support\ReferenceContract;
+
+/**
+ * The rules a generated FormRequest returns, run in Laravel's validator over a decoded body: the getTasksBatch body
+ * of the reference contract, with members added for the forms the reference body lacks (a member both optional and
+ * nullable, a bounded integer, a number, a string with a length and a pattern).
+ */
+final class FormRequestRulesTest extends TestCase
+{
+    private const NATIVE_NAMESPACE = 'Seampact\\Behaviour\\Native';
+    private const CONSISTENT_NAMESPACE = 'Seampact\\Behaviour\\Consistent';
+    private const CHANNEL_ID = '0b6e5d1c-8f0a-4c4e-9a7e-1f2d3c4b5a69';
+    private const TASK_ID = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+
+    private static string $generatedDirectory;
+
+    public static function setUpBeforeClass(): void
+    {
+        self::$generatedDirectory = sys_get_temp_dir() . '/seampact-laravel-rules-' . bin2hex(random_bytes(6));
+        $generator = new LaravelGenerator();
+        $ir = ReferenceContract::read(self::withAddedMembers(ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), ['getTasksBatch'])));
+
+        foreach ([self::NATIVE_NAMESPACE => [], self::CONSISTENT_NAMESPACE => ['rules' => 'seampact-consistent']] as $namespace => $options) {
+            $root = self::$generatedDirectory . '/' . str_replace('\\', '/', $namespace);
+            foreach ($generator->generate($ir, ReferenceContract::entry('tasks', $namespace, $options)) as $file) {
+                $target = "{$root}/{$file->path}";
+                if (!is_dir(dirname($target))) {
+                    mkdir(dirname($target), 0o700, true);
+                }
+                file_put_contents($target, $file->contents);
+            }
+        }
+
+        spl_autoload_register(static function (string $className): void {
+            $path = self::$generatedDirectory . '/' . str_replace('\\', '/', $className) . '.php';
+            if (str_starts_with($className, 'Seampact\\Behaviour\\') && is_file($path)) {
+                require $path;
+            }
+        });
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        $paths = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(self::$generatedDirectory, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
+        foreach ($paths as $path) {
+            if ($path instanceof \SplFileInfo) {
+                $path->isDir() ? rmdir($path->getPathname()) : unlink($path->getPathname());
+            }
+        }
+        rmdir(self::$generatedDirectory);
+    }
+
+    public function testAMemberBothOptionalAndNullableIsAFieldAndKeepsNullApartFromAbsent(): void
+    {
+        $schema = (string) file_get_contents(self::$generatedDirectory . '/Seampact/Behaviour/Native/Schemas/GetTasksBatchInput.php');
+        self::assertStringContainsString('public Field $note,', $schema);
+        self::assertStringContainsString('@param Field<string> $note', $schema);
+
+        self::assertSame([], $this->issues(['ids' => [], 'note' => null]));
+        self::assertSame([], $this->issues(['ids' => []]));
+        self::assertSame([['body', '/count', 'type']], $this->issues(['ids' => [], 'count' => null]));
+        self::assertSame([['body', '/ids', 'required']], $this->issues(['note' => 'x']));
+    }
+
+    public function testANumberIsComparedByValueBehindNumericStrict(): void
+    {
+        self::assertSame([], $this->issues(['ids' => [], 'count' => 1.0, 'ratio' => 0.25]));
+        self::assertSame([['body', '/count', 'type']], $this->issues(['ids' => [], 'count' => '5']));
+        self::assertSame([['body', '/count', 'maximum']], $this->issues(['ids' => [], 'count' => 11]));
+        self::assertSame([['body', '/count', 'minimum']], $this->issues(['ids' => [], 'count' => 0]));
+        self::assertSame([['body', '/count', 'type']], $this->issues(['ids' => [], 'count' => 2.5]));
+    }
+
+    public function testAnIntegerBeyondTheExactFloatRangeIsRefusedAsABound(): void
+    {
+        self::assertSame([['body', '/count', 'maximum']], $this->issuesOfJson('{"ids":[],"count":9223372036854775808}'));
+        self::assertSame([['body', '/count', 'minimum']], $this->issuesOfJson('{"ids":[],"count":-9223372036854775809}'));
+        self::assertSame([['body', '/count', 'maximum']], $this->issuesOfJson('{"ids":[],"count":9007199254740994.0}'));
+        self::assertSame([], $this->issuesOfJson('{"ids":[],"ratio":9223372036854775808}'));
+        self::assertSame([['body', '/label', 'type']], $this->issuesOfJson('{"ids":[],"label":9223372036854775808}'));
+    }
+
+    public function testUnknownKeysAndAnObjectInPlaceOfAListAreRefused(): void
+    {
+        self::assertSame([['body', '/extra', 'unknownKeys']], $this->issues(['ids' => [], 'extra' => 1]));
+        self::assertSame([['body', '/ids', 'type']], $this->issuesOfJson('{"ids":{}}'));
+        self::assertSame([['body', '', 'type']], $this->issuesOfJson('[]'));
+        self::assertSame([['body', '/ids/1', 'format']], $this->issues(['ids' => [self::TASK_ID, 'not-a-uuid']], self::CONSISTENT_NAMESPACE));
+    }
+
+    public function testABlankStringStillMeetsTheContractsLengthAndPattern(): void
+    {
+        self::assertSame([], $this->issues(['ids' => [], 'label' => 'tag-12345']));
+        self::assertSame([['body', '/label', 'minLength']], $this->issues(['ids' => [], 'label' => '   ']));
+        self::assertSame([['body', '/label', 'minLength']], $this->issues(['ids' => [], 'label' => '']));
+        self::assertSame([['body', '/label', 'minLength']], $this->issues(['ids' => [], 'label' => '   '], self::CONSISTENT_NAMESPACE));
+        self::assertSame([['body', '/label', 'pattern']], $this->issues(['ids' => [], 'label' => 'label-without-prefix'], self::CONSISTENT_NAMESPACE));
+    }
+
+    public function testNativeRuleFailuresAreNamedWithTheirContractRules(): void
+    {
+        $failed = $this->failed(['ids' => [], 'count' => 11, 'label' => 'label-without-prefix']);
+        $requestClass = self::NATIVE_NAMESPACE . '\\Laravel\\GetTasksBatchRequest';
+        $names = constant("{$requestClass}::NATIVE_RULE_NAMES");
+        self::assertIsArray($names);
+
+        self::assertSame(['body.count' => ['Lte'], 'body.label' => ['Regex']], $failed);
+        self::assertSame(['Numeric' => 'type', 'Gte' => 'minimum', 'Lte' => 'maximum'], $names['body.count'] ?? null);
+        self::assertSame('pattern', is_array($names['body.label'] ?? null) ? ($names['body.label']['Regex'] ?? null) : null);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @return list<array{string, string, string}>
+     */
+    private function issues(array $body, string $namespace = self::NATIVE_NAMESPACE): array
+    {
+        return $this->issuesOfJson(json_encode((object) $body, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION), $namespace);
+    }
+
+    /**
+     * The generated rules' issues, then Laravel's own failures named with the contract rule `NATIVE_RULE_NAMES` gives.
+     *
+     * @return list<array{string, string, string}>
+     */
+    private function issuesOfJson(string $json, string $namespace = self::NATIVE_NAMESPACE): array
+    {
+        [$issues, $validator] = $this->validate($json, $namespace);
+        $names = constant("{$namespace}\\Laravel\\GetTasksBatchRequest::NATIVE_RULE_NAMES");
+        self::assertIsArray($names);
+
+        foreach ($validator->failed() as $attribute => $rules) {
+            $key = preg_replace('/\.\d+(?=\.|$)/', '.*', (string) $attribute);
+            $segments = explode('.', (string) $attribute);
+            $part = array_shift($segments);
+            foreach (array_keys(is_array($rules) ? $rules : []) as $laravelRule) {
+                $contractRule = is_array($names[$key] ?? null) ? ($names[$key][$laravelRule] ?? null) : null;
+                if (is_string($contractRule)) {
+                    $issues[] = [$part, '/' . implode('/', $segments), $contractRule];
+                }
+            }
+        }
+
+        return $issues;
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @return array<string, list<string>>
+     */
+    private function failed(array $body): array
+    {
+        [, $validator] = $this->validate(json_encode((object) $body, JSON_THROW_ON_ERROR), self::NATIVE_NAMESPACE);
+        $failed = [];
+        foreach ($validator->failed() as $attribute => $rules) {
+            $failed[(string) $attribute] = array_map(strval(...), array_keys(is_array($rules) ? $rules : []));
+        }
+
+        return $failed;
+    }
+
+    /**
+     * Runs the generated request's rules over `$json`; the generated classes are loaded at run time, so their values
+     * are read through checks.
+     *
+     * @return array{list<array{string, string, string}>, \Illuminate\Validation\Validator}
+     */
+    private function validate(string $json, string $namespace): array
+    {
+        $withBody = ["{$namespace}\\Laravel\\Runtime\\InputTree", 'withBody'];
+        $contractRules = ["{$namespace}\\Laravel\\GetTasksBatchRequest", 'contractRules'];
+        self::assertIsCallable($withBody);
+        self::assertIsCallable($contractRules);
+
+        $tree = $withBody(['channelId' => self::CHANNEL_ID], [], [], json_decode($json, false, 512, JSON_THROW_ON_ERROR));
+        self::assertIsObject($tree);
+        $data = [$tree, 'validationData'];
+        $recorded = [$tree, 'issues'];
+        self::assertIsCallable($data);
+        self::assertIsCallable($recorded);
+        $validationData = $data();
+        $rules = $contractRules($tree);
+        self::assertIsArray($validationData);
+        self::assertIsArray($rules);
+
+        $factory = new Factory(new Translator(new ArrayLoader(), 'en'));
+        $validator = $factory->make($validationData, $rules);
+        $validator->passes();
+
+        $issues = [];
+        $found = $recorded();
+        self::assertIsArray($found);
+        foreach ($found as $issue) {
+            self::assertIsObject($issue);
+            $issues[] = [self::text($issue, 'in'), self::text($issue, 'pointer'), self::text($issue, 'rule')];
+        }
+
+        return [$issues, $validator];
+    }
+
+    private static function text(object $issue, string $member): string
+    {
+        $value = get_object_vars($issue)[$member] ?? null;
+
+        return is_string($value) ? $value : '';
+    }
+
+    private static function withAddedMembers(\stdClass $document): \stdClass
+    {
+        $schemas = get_object_vars($document)['schemas'] ?? null;
+        $schema = $schemas instanceof \stdClass ? (get_object_vars($schemas)['GetTasksBatchInput'] ?? null) : null;
+        if (!$schema instanceof \stdClass || !is_array($schema->properties) || !$schema->properties[0] instanceof \stdClass) {
+            throw new \LogicException('The reference IR has no GetTasksBatchInput object schema.');
+        }
+
+        $template = $schema->properties[0];
+        $added = [
+            ['note', true, true, ['kind' => 'scalar', 'type' => 'string', 'refinements' => new \stdClass()]],
+            ['count', true, false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['minimum' => '1', 'maximum' => '10']]],
+            ['ratio', true, false, ['kind' => 'scalar', 'type' => 'number', 'refinements' => new \stdClass()]],
+            ['label', true, false, ['kind' => 'scalar', 'type' => 'string', 'refinements' => ['minLength' => 5, 'pattern' => ['source' => '^tag-', 'normalized' => '^tag-']]]],
+        ];
+        foreach ($added as [$name, $optional, $nullable, $type]) {
+            $property = clone $template;
+            unset($property->derivedFrom);
+            $property->name = $name;
+            $property->optional = $optional;
+            $property->nullable = $nullable;
+            $property->type = json_decode(json_encode($type, JSON_THROW_ON_ERROR), false, 512, JSON_THROW_ON_ERROR);
+            $schema->properties[] = $property;
+        }
+
+        return $document;
+    }
+}

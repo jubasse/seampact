@@ -21,7 +21,7 @@ final class GetDraftRequest extends FormRequest
     public const OPERATION_ID = 'getDraft';
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
-    public const NATIVE_RULE_NAMES = ['path.draftId' => ['Present' => 'required', 'Uuid' => 'format']];
+    public const NATIVE_RULE_NAMES = ['path.draftId' => ['Uuid' => 'format']];
 
     public function authorize(): bool
     {
@@ -54,7 +54,6 @@ final class GetDraftRequest extends FormRequest
         return [
             'path.draftId' => [
                 'bail',
-                'present',
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
                 'uuid',
             ],

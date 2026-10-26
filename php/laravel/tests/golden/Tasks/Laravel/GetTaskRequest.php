@@ -21,10 +21,7 @@ final class GetTaskRequest extends FormRequest
     public const OPERATION_ID = 'getTask';
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
-    public const NATIVE_RULE_NAMES = [
-        'path.channelId' => ['Present' => 'required', 'Uuid' => 'format'],
-        'path.taskId' => ['Present' => 'required', 'Uuid' => 'format'],
-    ];
+    public const NATIVE_RULE_NAMES = ['path.channelId' => ['Uuid' => 'format'], 'path.taskId' => ['Uuid' => 'format']];
 
     public function authorize(): bool
     {
@@ -57,13 +54,11 @@ final class GetTaskRequest extends FormRequest
         return [
             'path.channelId' => [
                 'bail',
-                'present',
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
                 'uuid',
             ],
             'path.taskId' => [
                 'bail',
-                'present',
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
                 'uuid',
             ],

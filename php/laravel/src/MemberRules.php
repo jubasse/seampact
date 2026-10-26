@@ -18,8 +18,9 @@ use Seampact\Laravel\Runtime\InputTree;
 
 /**
  * The validation rules of one operation (ADR 0023 "Types and validation"), as PHP source per rule key: `bail`, then
- * `nullable` on a nullable member, `present` on a required one (never `required`, which fails on `""`), the generated
- * type rule, then the value rules. Under `rules: native` a value rule is Laravel's own where it has one, numbers behind
+ * `nullable` on a nullable member, the generated type rule, which also checks that a required member is there (never
+ * Laravel's `required`, which fails on `""`, nor `present`, which fails under an absent optional parent or a parent of
+ * another type), then the value rules. Under `rules: native` a value rule is Laravel's own where it has one, numbers behind
  * `numeric:strict`, and a string with a length or a pattern also gets the generated rule for blank strings, which
  * Laravel's rules skip. Unknown keys, enums and formats Laravel lacks are generated rules in both modes.
  */
@@ -70,10 +71,6 @@ final class MemberRules
         $rules = ["'bail'"];
         if ($nullable) {
             $rules[] = "'nullable'";
-        }
-        if ($presence === 'Required' && $position === 'Member') {
-            $rules[] = "'present'";
-            $this->nativeNames[$key]['Present'] = 'required';
         }
 
         $rules[] = $this->construct('TypeRule', [

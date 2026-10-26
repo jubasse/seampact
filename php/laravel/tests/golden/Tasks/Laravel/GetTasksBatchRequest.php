@@ -23,9 +23,8 @@ final class GetTasksBatchRequest extends FormRequest
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
     public const NATIVE_RULE_NAMES = [
-        'path.channelId' => ['Present' => 'required', 'Uuid' => 'format'],
-        'body' => ['Present' => 'required'],
-        'body.ids' => ['Present' => 'required', 'Max' => 'maxItems'],
+        'path.channelId' => ['Uuid' => 'format'],
+        'body.ids' => ['Max' => 'maxItems'],
         'body.ids.*' => ['Uuid' => 'format'],
     ];
 
@@ -60,19 +59,16 @@ final class GetTasksBatchRequest extends FormRequest
         return [
             'path.channelId' => [
                 'bail',
-                'present',
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
                 'uuid',
             ],
             'body' => [
                 'bail',
-                'present',
                 new TypeRule($input, Position::Member, TypeRule::OBJECT, Presence::Required, Nullability::NotNull),
                 new UnknownKeysRule($input, Position::Member, ['ids']),
             ],
             'body.ids' => [
                 'bail',
-                'present',
                 new TypeRule($input, Position::Member, TypeRule::ARRAY, Presence::Required, Nullability::NotNull),
                 'max:200',
             ],

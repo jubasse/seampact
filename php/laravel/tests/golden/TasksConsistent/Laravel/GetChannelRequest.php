@@ -22,7 +22,7 @@ final class GetChannelRequest extends FormRequest
     public const OPERATION_ID = 'getChannel';
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
-    public const NATIVE_RULE_NAMES = ['path.channelId' => ['Present' => 'required']];
+    public const NATIVE_RULE_NAMES = [];
 
     public function authorize(): bool
     {
@@ -55,7 +55,6 @@ final class GetChannelRequest extends FormRequest
         return [
             'path.channelId' => [
                 'bail',
-                'present',
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
                 new FormatRule($input, Position::Member, FormatRule::UUID),
             ],
