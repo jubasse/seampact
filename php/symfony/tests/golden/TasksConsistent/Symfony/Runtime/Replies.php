@@ -123,11 +123,29 @@ final class Replies
         }
 
         $body = WireCodec::encodeBody($contract, $declared, self::member($result, 'body'));
-        $body = FieldRights::output($state, $declared, $body);
+        $body = self::enveloped($request, $state, Ir::string($declared, 'shape') ?? '', FieldRights::output($state, $declared, $body), $status);
 
         $reply = new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media]);
 
         return $state->author(CacheHeaders::written($request, $state, $reply));
+    }
+
+    /**
+     * The success body in its format's envelope (ADR 0002 section 13): `{ data: $payload }` under `pack:laravel`, the
+     * payload itself under a bare format.
+     */
+    private static function enveloped(Request $request, BoundaryState $state, string $shape, mixed $payload, int $status): mixed
+    {
+        $format = $state->contract->format($state->operationId);
+        $template = Ir::map(Ir::map($format, 'success'), $shape)['body'] ?? null;
+        if ($template === null) {
+            return $payload;
+        }
+
+        $slots = ['payload' => $payload, 'status' => $status, 'path' => RawTarget::path($request)];
+        $rendered = Templates::render($template, $slots, Ir::string($format, 'absent') === self::NULL_ABSENT);
+
+        return $rendered->present ? $rendered->value : new \stdClass();
     }
 
     /**

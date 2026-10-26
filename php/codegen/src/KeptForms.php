@@ -57,6 +57,8 @@ final class KeptForms
     private const JSON_MEDIA = 'application/json';
     private const PAGING_PARAMS_DERIVATION = 'paging.params';
     private const TOP_LEVEL_POINTER = '/^\/[^\/]+$/D';
+    // The slots an item, table or list envelope may write that the boundary fills.
+    private const ENVELOPE_SLOTS = ['payload', 'status', 'path', 'meta'];
     private const BUCKET_KEY_SOURCES = [ValueSourceIn::Path, ValueSourceIn::Scope, ValueSourceIn::Principal];
 
     // Header params the boundary consumes itself: the credentials and the CSRF token never reach the handler.
@@ -76,6 +78,9 @@ final class KeptForms
 
     /** @var array<string, true> */
     private array $identities = [];
+
+    /** @var array<string, true> the formats already read */
+    private array $formats = [];
 
     public function __construct(private readonly ContractIR $ir, private readonly Refusals $refusals, private readonly FormReleases $releases)
     {
@@ -160,6 +165,7 @@ final class KeptForms
         }
 
         $this->readAccess($operation, $at);
+        $this->readFormat($operation->format);
         $this->readWaitingMembers($operation, $at);
         $this->readRequirements($operation, $at);
         $this->readAfterOneZeroMembers($operation, $at);
@@ -257,6 +263,64 @@ final class KeptForms
                 $this->readEnum($property->type, IrPlace::root()->below('schemas', $schemaId, 'properties', $index, 'type'));
             }
         }
+    }
+
+    // A success envelope the boundary renders around the payload (`{ data: $payload }`), as the Node targets render
+    // it: with no format meta member, no success header and no slot beside the payload, the status and the path.
+    private function readFormat(string $formatId): void
+    {
+        if (isset($this->formats[$formatId])) {
+            return;
+        }
+        $this->formats[$formatId] = true;
+
+        $format = $this->ir->formats[$formatId] ?? null;
+        $formatAt = IrPlace::root()->below('formats', $formatId);
+        if ($format === null) {
+            $this->refusals->inconsistent('format.undeclared', "The format '{$formatId}' is not declared", $formatAt);
+
+            return;
+        }
+
+        if ($format->meta !== []) {
+            $this->refusals->waiting('format.meta', "The meta members of the format '{$formatId}'", $formatAt->below('meta'), Delivery::AfterOneZero);
+        }
+
+        $shapes = ['item' => $format->success->item, 'table' => $format->success->table, 'list' => $format->success->list, 'page' => $format->success->page];
+        foreach ($shapes as $shapeName => $shape) {
+            $shapeAt = $formatAt->below('success', $shapeName);
+            if ($shape->headers !== []) {
+                $this->refusals->waiting('format.success.headers', 'A success format header', $shapeAt->below('headers'), Delivery::AfterOneZero);
+            }
+            if ($shapeName === 'page') {
+                continue;
+            }
+            foreach (self::templateSlots($shape->body->toJson()) as $slot) {
+                if (!in_array($slot, self::ENVELOPE_SLOTS, true)) {
+                    $this->refusals->waiting('format.success.slot', "The success envelope slot '\${$slot}'", $shapeAt->below('body'), Delivery::AfterOneZero);
+                }
+            }
+        }
+    }
+
+    /** @return list<string> the slot names a template writes, at any depth */
+    private static function templateSlots(mixed $template): array
+    {
+        if ($template instanceof \stdClass) {
+            $slot = ($template->kind ?? null) === 'slot' && is_string($template->slot ?? null) ? [$template->slot] : [];
+
+            return [...$slot, ...self::templateSlots(get_object_vars($template))];
+        }
+        if (!is_array($template)) {
+            return [];
+        }
+
+        $slots = [];
+        foreach ($template as $value) {
+            array_push($slots, ...self::templateSlots($value));
+        }
+
+        return $slots;
     }
 
     // A signed identity's scheme: verified by its template, with a key id the contract writes.
