@@ -3,7 +3,8 @@
 name: Lane changes
 description: >-
   Says run=true when a changed path matches the lane's watched paths, run=false when none does or when the change
-  only touches documentation no lane test reads. The calling job checks out the full history first.
+  only touches documentation no lane test reads. Also says which row classes the run holds: post-merge rows on a
+  push, drift rows on the schedule, a manual run or a release. The calling job checks out the full history first.
 
 inputs:
   watched-paths:
@@ -15,6 +16,12 @@ outputs:
   run:
     description: "`true` when the lane has something to test, `false` when it has nothing."
     value: ${{ steps.decide.outputs.run }}
+  post-merge:
+    description: "`true` when the lane runs and this event runs its post-merge rows."
+    value: ${{ steps.classes.outputs.post-merge }}
+  drift:
+    description: "`true` when the lane runs and this event runs its drift rows."
+    value: ${{ steps.classes.outputs.drift }}
 
 runs:
   using: composite
@@ -56,3 +63,13 @@ runs:
         run=$(git diff -z --name-only --no-renames "$range" | bash "$GITHUB_ACTION_PATH/lane-run.sh" "$watched_pattern")
         echo "Changes in $range: run=$run"
         echo "run=$run" >> "$GITHUB_OUTPUT"
+
+    - name: Decide which row classes run
+      id: classes
+      shell: bash
+      env:
+        EVENT: ${{ github.event_name }}
+        LANE_RUN: ${{ steps.decide.outputs.run }}
+      run: |
+        set -euo pipefail
+        bash "$GITHUB_ACTION_PATH/row-classes.sh" "$EVENT" "$LANE_RUN" | tee -a "$GITHUB_OUTPUT"

@@ -4,7 +4,8 @@ name: Spring Boot target
 # Spring Boot 4 and its redaction checked, on Java 21 and 25 (A13). The consumer is then built by the Gradle plugin
 # and by the Maven plugin with Node removed from the runner, from the reference contract's bundle served over HTTPS
 # on Java 21 and 25 and from the local YAML on Java 25, and the shared http suite runs against each jar ("The consumer
-# and the proof").
+# and the proof"). A pull request builds and suites the consumer on (Gradle, Java 21) and (Maven, Java 25) from the
+# bundle; a push to develop adds the other four rows.
 # On a pull request or a push it runs only when the change touches the JVM modules, the reference contract, the consumer, the
 # binary, the http suite or this workflow; `spring-boot` is the one check to require.
 
@@ -39,12 +40,15 @@ jobs:
     timeout-minutes: 5
     outputs:
       spring-boot: ${{ steps.detect.outputs.run }}
+      post-merge: ${{ steps.detect.outputs.post-merge }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history without file contents: the change list reads commits and trees only.
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
           fetch-depth: 0
           filter: blob:none
+          sparse-checkout: .github/actions
           persist-credentials: false
       - name: Detect a change to the generator, its inputs or its pins
         id: detect
@@ -124,22 +128,20 @@ jobs:
   # The consumer built by one plugin three times: as configured, with the boot variant's route allow-listed, and from
   # the contract with @seampact/pack-spring applied (the pack:spring profile). A `bundle` row fetches each contract as
   # a release asset from a loopback HTTPS server; a `local-yaml` row compiles the `path` source.
+  # The PR rows; the post-merge job below runs the same steps on the other rows, and http-suite pairs with each.
   build:
-    name: build (${{ matrix.build-tool }}, Java ${{ matrix.jdk }}, ${{ matrix.contract }})
+    name: &build-name build (${{ matrix.build-tool }}, Java ${{ matrix.jdk }}, ${{ matrix.contract }})
     needs: [changes, binary]
     if: needs.changes.outputs.spring-boot == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    strategy:
+    strategy: &consumer-pr-rows
       fail-fast: false
       matrix:
-        build-tool: [gradle, maven]
-        jdk: [21, 25]
-        contract: [bundle]
         include:
-          - { build-tool: gradle, jdk: 25, contract: local-yaml }
-          - { build-tool: maven, jdk: 25, contract: local-yaml }
-    steps:
+          - { build-tool: gradle, jdk: 21, contract: bundle }
+          - { build-tool: maven, jdk: 25, contract: bundle }
+    steps: &build-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -219,22 +221,30 @@ jobs:
           retention-days: 3
           if-no-files-found: error
 
+  build-post-merge:
+    name: *build-name
+    needs: [changes, binary]
+    if: needs.changes.outputs.post-merge == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy: &consumer-post-merge-rows
+      fail-fast: false
+      matrix:
+        include:
+          - { build-tool: gradle, jdk: 25, contract: bundle }
+          - { build-tool: maven, jdk: 21, contract: bundle }
+          - { build-tool: gradle, jdk: 25, contract: local-yaml }
+          - { build-tool: maven, jdk: 25, contract: local-yaml }
+    steps: *build-steps
+
   http-suite:
-    name: http-suite (${{ matrix.build-tool }}, Java ${{ matrix.jdk }}, ${{ matrix.contract }})
+    name: &http-suite-name http-suite (${{ matrix.build-tool }}, Java ${{ matrix.jdk }}, ${{ matrix.contract }})
     needs: [changes, build]
     if: needs.changes.outputs.spring-boot == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        build-tool: [gradle, maven]
-        jdk: [21, 25]
-        contract: [bundle]
-        include:
-          - { build-tool: gradle, jdk: 25, contract: local-yaml }
-          - { build-tool: maven, jdk: 25, contract: local-yaml }
-    steps:
+    strategy: *consumer-pr-rows
+    steps: &http-suite-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -267,10 +277,19 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
+  http-suite-post-merge:
+    name: *http-suite-name
+    needs: [changes, build-post-merge]
+    if: needs.changes.outputs.post-merge == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy: *consumer-post-merge-rows
+    steps: *http-suite-steps
+
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   spring-boot:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, golden, binary, build, http-suite]
+    needs: [changes, golden, binary, build, build-post-merge, http-suite, http-suite-post-merge]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

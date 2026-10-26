@@ -6,7 +6,8 @@ name: JVM core
 # Node job builds the linux x64 binary; the Java job runs with Node removed from the runner and compiles the
 # reference contract with that binary, whose IR must equal the golden IR byte for byte. A Windows job runs the binary
 # cache checks on a real NTFS ACL: the profile, the ACEs, the junctions and the SIDs. On a pull request or a push they run
-# only when the change touches a watched path; `jvm-core` is the one check to require.
+# only when the change touches a watched path; `jvm-core` is the one check to require. On a pull request the Windows
+# job runs only when the binary cache code or this workflow changes; a push to develop always runs it.
 
 on:
   push:
@@ -31,12 +32,15 @@ jobs:
     timeout-minutes: 5
     outputs:
       jvm-core: ${{ steps.detect.outputs.run }}
+      windows-cache: ${{ steps.detect.outputs.post-merge == 'true' || steps.windows-cache.outputs.run == 'true' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history without file contents: the change list reads commits and trees only.
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
           fetch-depth: 0
           filter: blob:none
+          sparse-checkout: .github/actions
           persist-credentials: false
       - name: Detect a change to the JVM modules or what they read
         id: detect
@@ -59,6 +63,15 @@ jobs:
             ^pnpm-workspace\.yaml$
             ^package\.json$
             ^\.nvmrc$
+      - name: Detect a change to the binary cache code
+        id: windows-cache
+        uses: ./.github/actions/lane-changes
+        with:
+          # The binary cache code and its tests, the shared actions and this workflow.
+          watched-paths: |
+            ^jvm/seampact-ir/src/(main|test)/kotlin/io/github/jubasse/seampact/ir/binary/
+            ^\.github/actions/
+            ^\.github/workflows/p6-jvm-core\.yml$
 
   binary:
     name: binary (linux x64)
@@ -139,7 +152,7 @@ jobs:
   windows-cache:
     name: binary cache checks (Windows)
     needs: changes
-    if: needs.changes.outputs.jvm-core == 'true'
+    if: needs.changes.outputs.windows-cache == 'true'
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
@@ -177,3 +190,4 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.jvm-core }}
+          allow-skip: ${{ needs.changes.outputs.windows-cache == 'false' && 'windows-cache' || '' }}

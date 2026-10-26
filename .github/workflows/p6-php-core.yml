@@ -5,6 +5,7 @@ name: PHP core packages
 # then the split job, which builds every `php/<name>` mirror tree without pushing it and installs each one alone
 # into a throwaway project through a Composer path repository. On a pull request or a push they run only when the change
 # touches the PHP packages, the files their tests read or this workflow; `php-core` is the one check to require.
+# The split proves the PHP 8.3 floor on every run; its PHP 8.5 row, where Packagist resolves newer releases, runs nightly.
 
 on:
   push:
@@ -12,6 +13,9 @@ on:
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
+  # The nightly run holds the drift row (the split on PHP 8.5).
+  schedule:
+    - cron: "30 0 * * *"
 
 permissions:
   contents: read
@@ -26,12 +30,15 @@ jobs:
     timeout-minutes: 5
     outputs:
       php-core: ${{ steps.detect.outputs.run }}
+      drift: ${{ steps.detect.outputs.drift }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history without file contents: the change list reads commits and trees only.
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
           fetch-depth: 0
           filter: blob:none
+          sparse-checkout: .github/actions
           persist-credentials: false
       - name: Detect a change to the PHP packages or the files their tests read
         id: detect
@@ -82,7 +89,9 @@ jobs:
         working-directory: php/${{ matrix.package }}
         run: vendor/bin/phpstan analyse --no-progress
 
+  # The PR row; the drift job below runs the same steps on PHP 8.5.
   split:
+    name: &split-name split (${{ matrix.php-version }})
     needs: changes
     if: needs.changes.outputs.php-core == 'true'
     runs-on: ubuntu-latest
@@ -90,8 +99,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.3", "8.5"]
-    steps:
+        php-version: ["8.3"]
+    steps: &split-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Full history, which the split rewrites.
@@ -189,10 +198,22 @@ jobs:
             ' "$project" "$package"
           done
 
+  split-drift:
+    name: *split-name
+    needs: changes
+    if: needs.changes.outputs.drift == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ["8.5"]
+    steps: *split-steps
+
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   php-core:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, packages, split]
+    needs: [changes, packages, split, split-drift]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
