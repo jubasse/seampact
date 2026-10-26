@@ -14,18 +14,25 @@ use Seampact\Hooks\AuthenticateHook;
  */
 final class Hooks
 {
+    /** The tags are `TAG_PREFIX . <api> . <kind suffix>`; the generated provider builds its constants from these. */
+    public const TAG_PREFIX = 'seampact.';
+
+    public const DECIDERS_TAG_SUFFIX = '.deciders';
+
+    public const SCOPE_RESOLVERS_TAG_SUFFIX = '.scope-resolvers';
+
     private function __construct()
     {
     }
 
     public static function decidersTag(string $api): string
     {
-        return "seampact.{$api}.deciders";
+        return self::TAG_PREFIX . $api . self::DECIDERS_TAG_SUFFIX;
     }
 
     public static function scopeResolversTag(string $api): string
     {
-        return "seampact.{$api}.scope-resolvers";
+        return self::TAG_PREFIX . $api . self::SCOPE_RESOLVERS_TAG_SUFFIX;
     }
 
     /** @return AuthenticateHook<AuthenticateCall> */

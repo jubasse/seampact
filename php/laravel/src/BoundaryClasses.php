@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Seampact\Codegen\BootCheckSwitches;
+use Nette\PhpGenerator\Literal;
 use Seampact\Codegen\PhpClassFile;
 
 /**
@@ -45,9 +46,10 @@ final class BoundaryClasses
         $class = $file->namespace->addClass($file->shortName)->setFinal()
             ->setExtends($file->type($this->layout->runtime('ContractServiceProvider')));
         $class->addComment("Serves api '{$api}': list it in bootstrap/providers.php, then call Route::seampact('{$api}') in the app's routes.");
-        $class->addConstant('DECIDERS_TAG', "seampact.{$api}.deciders")->setPublic()
+        $hooks = $file->name($this->layout->runtime('Hooks'));
+        $class->addConstant('DECIDERS_TAG', self::tagLiteral($hooks, $api, 'DECIDERS_TAG_SUFFIX'))->setPublic()
             ->addComment('The container tag of the deciders of this api.');
-        $class->addConstant('SCOPE_RESOLVERS_TAG', "seampact.{$api}.scope-resolvers")->setPublic()
+        $class->addConstant('SCOPE_RESOLVERS_TAG', self::tagLiteral($hooks, $api, 'SCOPE_RESOLVERS_TAG_SUFFIX'))->setPublic()
             ->addComment('The container tag of the scope resolvers of this api.');
 
         $this->contractMethod($file, 'contractClass', $this->layout->contract);
@@ -62,6 +64,12 @@ final class BoundaryClasses
         }
 
         return $file;
+    }
+
+    /** The tag as an expression over the runtime's `Hooks` constants, so the strings live in the runtime alone. */
+    private static function tagLiteral(string $hooksName, string $api, string $suffixConstant): Literal
+    {
+        return new Literal("{$hooksName}::TAG_PREFIX . ? . {$hooksName}::{$suffixConstant}", [$api]);
     }
 
     private function contractMethod(PhpClassFile $file, string $method, string $className): void
