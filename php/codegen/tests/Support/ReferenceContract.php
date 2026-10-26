@@ -17,6 +17,7 @@ use Seampact\Ir\Run\TargetEntry;
 final class ReferenceContract
 {
     public const TASKS = 'tasks.ir.json';
+    public const TASKS_SERVICE = 'tasksService.ir.json';
 
     // The tasks operations whose forms this release generates; the others carry paging, idempotency, cache headers or
     // a signed route, and the tasksService api's one operation a deadline and a relay, which a later release brings.

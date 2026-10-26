@@ -237,6 +237,25 @@ final class KeptForms
 
         if (!$identity->principal instanceof SchemaPrincipal) {
             $this->refusals->waiting('principal.variants', 'A principal of several variants', $identityAt->below('principal'), Delivery::AfterOneZero);
+
+            return;
+        }
+
+        $this->readPrincipalEnums($identity->principal->schema);
+    }
+
+    // The enums of the principal's members, which its generated principal class types them with.
+    private function readPrincipalEnums(string $schemaId): void
+    {
+        $schema = $this->ir->schemas[$schemaId] ?? null;
+        if (!$schema instanceof ObjectSchema) {
+            return;
+        }
+
+        foreach ($schema->properties as $index => $property) {
+            if ($property->type instanceof EnumTypeUse) {
+                $this->readEnum($property->type, IrPlace::root()->below('schemas', $schemaId, 'properties', $index, 'type'));
+            }
         }
     }
 
@@ -265,7 +284,7 @@ final class KeptForms
             [PendingForm::Paging, 'paging', $operation->paging, 'Paging', 'paging'],
             [PendingForm::Idempotency, 'idempotency', $operation->idempotency, 'Idempotency', 'idempotency'],
             [PendingForm::Cache, 'cache', $operation->cache, 'Cache and ETag headers', 'cache'],
-            [PendingForm::Deadline, 'deadline', $operation->budgetMs ?? $operation->deadlineHeader ?? $operation->degradable, 'A deadline budget', 'budgetMs'],
+            [PendingForm::Deadline, 'deadline', $operation->budgetMs ?? $operation->deadlineHeader, 'A deadline budget', $operation->budgetMs === null ? 'deadlineHeader' : 'budgetMs'],
             [PendingForm::Relays, 'relays', $operation->relays, 'A relayed operation', 'relays'],
         ];
 
@@ -340,6 +359,10 @@ final class KeptForms
             if ($value !== []) {
                 $this->refusals->waiting($member, $description, $at->below($member), Delivery::AfterOneZero);
             }
+        }
+
+        if ($operation->degradable !== null) {
+            $this->refusals->waiting('degradable', 'A degradable operation', $at->below('degradable'), Delivery::AfterOneZero);
         }
 
         foreach ($operation->fieldRights as $index => $fieldRight) {

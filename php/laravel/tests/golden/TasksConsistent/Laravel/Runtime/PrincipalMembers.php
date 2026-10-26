@@ -36,7 +36,9 @@ final class PrincipalMembers
             if (!is_string($accessor) || !method_exists($principal, $accessor)) {
                 throw new \LogicException("seampact: the principal members interface of identity '{$identity}' has no accessor for '{$name}'; regenerate it.");
             }
-            $members[(string) $name] = $principal->{$accessor}();
+            $value = $principal->{$accessor}();
+            // An enum member keys a partition or a bucket by its wire value.
+            $members[(string) $name] = $value instanceof \BackedEnum ? $value->value : $value;
         }
 
         return $members;

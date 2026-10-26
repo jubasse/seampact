@@ -34,6 +34,8 @@ final class BoundaryState
     public ?string $idempotencyKey = null;
     /** The body bytes as received, kept for a signed route's signature (ADR 0013), null elsewhere. */
     public ?string $rawBody = null;
+    /** The origin the api's URLs start with under absolute URLs (`PublicOrigin`), null under relative ones. */
+    public ?string $publicOrigin = null;
     /** @var \WeakMap<Response, array{int, string, ?string}> */
     private \WeakMap $authored;
 

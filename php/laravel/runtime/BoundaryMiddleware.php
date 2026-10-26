@@ -14,6 +14,7 @@ use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Codegen\Runtime\ContractRefusal;
 use Seampact\Codegen\Runtime\RawTarget;
 use Seampact\Codegen\Runtime\IdempotencyStep;
+use Seampact\Codegen\Runtime\PublicOrigin;
 use Seampact\Codegen\Runtime\ReplyVerdict;
 use Seampact\Codegen\Runtime\RouteMatch;
 use Symfony\Component\HttpFoundation\Response;
@@ -30,6 +31,7 @@ abstract class BoundaryMiddleware
 {
     private const NOT_FOUND_ROLE = 'notFound';
     private const NOT_FOUND_STATUS = 404;
+    private const PUBLIC_ORIGIN = 'public_origin';
 
     private ?Hooks $hooks = null;
 
@@ -74,6 +76,7 @@ abstract class BoundaryMiddleware
         }
 
         $state = new BoundaryState($contract, $operationId, $match->rawParameters, RawTarget::view($request), $this->hooks());
+        $state->publicOrigin = PublicOrigin::of($contract, $this->setting($contract, null, self::PUBLIC_ORIGIN));
         $request->attributes->set(BoundaryState::attributeName($contract->api), $state);
 
         try {

@@ -18,7 +18,7 @@ use Seampact\Hooks\RequestView;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/** The shared runtime's cross-target bricks on the reference contract: the fingerprint, the cache headers and page links. */
+/** The shared runtime's cross-target bricks on the reference contract: the fingerprint, the cache headers and page links, relative and absolute. */
 final class RuntimeBricksTest extends TestCase
 {
     private const PREFERENCES_BODY = '{"locale":"en","digest":false}';
@@ -62,6 +62,15 @@ final class RuntimeBricksTest extends TestCase
         self::assertStringContainsString('cursor=c%202', $link);
         self::assertStringNotContainsString('a>', $link);
         self::assertStringNotContainsString('"evil"', $link);
+    }
+
+    public function testUnderAbsoluteUrlsAPageLinkStartsWithThePublicOriginAndThePath(): void
+    {
+        $state = self::stateOf('listTasks');
+        $state->publicOrigin = 'https://api.example.com';
+        [, $headers] = PageReply::render($state, 'limit=1', '/v1/channels/c/tasks', [], ['nextCursor' => 'c2'], 200);
+
+        self::assertStringContainsString('<https://api.example.com/v1/channels/c/tasks?limit=1&cursor=c2>; rel="next"', implode(',', array_map(strval(...), array_values($headers))));
     }
 
     private static function identified(string $operationId): BoundaryState

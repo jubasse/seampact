@@ -3687,6 +3687,320 @@ final class TasksContract
             ],
             [
                 'kind' => 'httpOperation',
+                'id' => 'searchTasks',
+                'name' => ['segments' => ['search', 'tasks'], 'role' => 'operation'],
+                'surface' => 'app',
+                'resource' => ['type' => 'tasks', 'idProperty' => 'taskId'],
+                'features' => [],
+                'method' => 'post',
+                'path' => '/v1/channels/{channelId}/tasks/search',
+                'safe' => false,
+                'params' => [
+                    'path' => [
+                        [
+                            'name' => 'channelId',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'format' => 'uuid', 'refinements' => []],
+                            'required' => true,
+                            'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/id/channelId'],
+                        ],
+                    ],
+                    'query' => [],
+                    'header' => [
+                        [
+                            'name' => 'Authorization',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                            'required' => false,
+                            'derivedFrom' => [
+                                'derivation' => 'identity.authenticate',
+                                'from' => [
+                                    ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                                    ['layer' => 'shared', 'pointer' => '/schemes/bearer'],
+                                ],
+                            ],
+                        ],
+                        [
+                            'name' => 'X-Csrf-Token',
+                            'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
+                            'required' => false,
+                            'derivedFrom' => [
+                                'derivation' => 'csrf.cookieWrite',
+                                'from' => [
+                                    ['layer' => 'shared', 'pointer' => '/identities/user'],
+                                    ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+                'unknownQuery' => ['policy' => 'refuse'],
+                'access' => [
+                    'kind' => 'identity',
+                    'identity' => 'user',
+                    'schemes' => ['bearer', 'sessionCookie'],
+                    'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/identity'],
+                ],
+                'callerKinds' => ['identified'],
+                'principalRequires' => [],
+                'scopes' => [
+                    [
+                        'scope' => 'channel',
+                        'source' => ['in' => 'path', 'name' => 'channelId'],
+                        'origin' => ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+                    ],
+                ],
+                'requires' => [
+                    [
+                        'kind' => 'right',
+                        'right' => 'tasks.read',
+                        'subject' => ['source' => ['in' => 'scope', 'name' => 'channel'], 'defaulted' => true],
+                        'origin' => [
+                            'layer' => 'api',
+                            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/requires/0',
+                        ],
+                    ],
+                ],
+                'bindings' => [],
+                'input' => [
+                    'media' => 'application/json',
+                    'schema' => ['kind' => 'ref', 'schema' => 'TaskQuery'],
+                    'bodyLimitBytes' => 1048576,
+                    'rawBody' => false,
+                    'origin' => [
+                        'layer' => 'api',
+                        'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/input',
+                    ],
+                ],
+                'responses' => [
+                    [
+                        'status' => 200,
+                        'media' => 'application/json',
+                        'body' => ['kind' => 'ref', 'schema' => 'TaskSearchResult'],
+                        'shape' => 'item',
+                        'headers' => [],
+                        'origin' => [
+                            'layer' => 'api',
+                            'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/output',
+                        ],
+                        'derivedFrom' => [
+                            'derivation' => 'response.format',
+                            'from' => [['layer' => 'core', 'pointer' => '/formats/bare']],
+                        ],
+                    ],
+                ],
+                'errors' => [
+                    [
+                        'code' => 'api.schema_invalid',
+                        'roles' => [
+                            [
+                                'role' => 'schemaInvalid',
+                                'params' => [
+                                    'kind' => 'object',
+                                    'members' => [
+                                        [
+                                            'name' => ['kind' => 'text', 'text' => 'issues'],
+                                            'value' => [
+                                                'kind' => 'each',
+                                                'of' => 'issues',
+                                                'as' => [
+                                                    'kind' => 'object',
+                                                    'members' => [
+                                                        [
+                                                            'name' => ['kind' => 'text', 'text' => 'pointer'],
+                                                            'value' => [
+                                                                'kind' => 'slot',
+                                                                'slot' => 'item',
+                                                                'path' => ['pointer'],
+                                                            ],
+                                                        ],
+                                                        [
+                                                            'name' => ['kind' => 'text', 'text' => 'rule'],
+                                                            'value' => [
+                                                                'kind' => 'slot',
+                                                                'slot' => 'item',
+                                                                'path' => ['rule'],
+                                                            ],
+                                                        ],
+                                                    ],
+                                                ],
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'derivedFrom' => [
+                            'derivation' => 'input.invalid',
+                            'from' => [
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search',
+                                ],
+                                ['layer' => 'shared', 'pointer' => '/conventions/errors/derived/schemaInvalid'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.unauthenticated',
+                        'roles' => [['role' => 'unauthenticated']],
+                        'derivedFrom' => [
+                            'derivation' => 'identity.authenticate',
+                            'from' => [['layer' => 'api', 'pointer' => '/surfaces/app/identity']],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.csrf_invalid',
+                        'roles' => [['role' => 'csrfInvalid']],
+                        'derivedFrom' => [
+                            'derivation' => 'csrf.cookieWrite',
+                            'from' => [
+                                ['layer' => 'shared', 'pointer' => '/identities/user'],
+                                ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.forbidden',
+                        'derivedFrom' => [
+                            'derivation' => 'requirement.errors',
+                            'from' => [
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/requires/0',
+                                ],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.not_found',
+                        'derivedFrom' => [
+                            'derivation' => 'scope.errors',
+                            'from' => [
+                                ['layer' => 'api', 'pointer' => '/surfaces/app/routes/channels/member/scopes/channel'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.payload_too_large',
+                        'roles' => [
+                            [
+                                'role' => 'payloadTooLarge',
+                                'params' => [
+                                    'kind' => 'object',
+                                    'members' => [
+                                        [
+                                            'name' => ['kind' => 'text', 'text' => 'limitBytes'],
+                                            'value' => ['kind' => 'slot', 'slot' => 'limitBytes', 'path' => []],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'derivedFrom' => [
+                            'derivation' => 'body.limit',
+                            'from' => [
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/input',
+                                ],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.unsupported_media_type',
+                        'roles' => [['role' => 'unsupportedMediaType']],
+                        'derivedFrom' => [
+                            'derivation' => 'body.media',
+                            'from' => [
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/input',
+                                ],
+                            ],
+                        ],
+                    ],
+                    [
+                        'code' => 'api.internal',
+                        'roles' => [['role' => 'undeclaredStatus']],
+                        'derivedFrom' => [
+                            'derivation' => 'response.undeclared',
+                            'from' => [
+                                ['layer' => 'shared', 'pointer' => '/conventions/errors/every/0'],
+                                [
+                                    'layer' => 'api',
+                                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+                'fieldRights' => [
+                    [
+                        'schema' => 'TaskSearchResult',
+                        'pointer' => '/items/*/effort',
+                        'right' => 'tasks.seeEffort',
+                        'subject' => ['source' => ['in' => 'holderField', 'name' => 'taskId']],
+                        'direction' => 'output',
+                        'derivedFrom' => [
+                            'derivation' => 'fieldRight.restricted',
+                            'from' => [['layer' => 'shared', 'pointer' => '/schemas/Task/properties/effort/restrictedTo']],
+                        ],
+                    ],
+                ],
+                'idempotency' => [
+                    'kind' => 'exempt',
+                    'reason' => 'A read with a body; replaying it is harmless.',
+                    'origin' => [
+                        'layer' => 'api',
+                        'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/idempotency',
+                    ],
+                ],
+                'budgetMs' => 300,
+                'upstream' => [],
+                'maturity' => [
+                    'level' => 'provisional',
+                    'source' => 'api',
+                    'origin' => ['layer' => 'api', 'pointer' => '/api/maturity'],
+                ],
+                'internal' => false,
+                'csrf' => [
+                    'kind' => 'derived',
+                    'header' => 'X-Csrf-Token',
+                    'derivedFrom' => [
+                        'derivation' => 'csrf.cookieWrite',
+                        'from' => [
+                            ['layer' => 'shared', 'pointer' => '/identities/user'],
+                            ['layer' => 'shared', 'pointer' => '/schemes/sessionCookie'],
+                        ],
+                    ],
+                ],
+                'format' => 'bare',
+                'tags' => [],
+                'examples' => [
+                    'firstPage' => [
+                        'status' => 200,
+                        'value' => [
+                            'items' => [
+                                [
+                                    'createdAt' => '2027-01-15T09:30:00Z',
+                                    'state' => 'open',
+                                    'taskId' => '6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42',
+                                    'title' => 'Write the brief',
+                                    'version' => 1,
+                                ],
+                            ],
+                            'total' => 1,
+                        ],
+                    ],
+                ],
+                'docs' => ['summary' => 'Search the channel\'s tasks with a structured query.'],
+                'extensions' => [],
+                'origin' => [
+                    'layer' => 'api',
+                    'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search',
+                ],
+            ],
+            [
+                'kind' => 'httpOperation',
                 'id' => 'updateTask',
                 'name' => ['segments' => ['update', 'task'], 'role' => 'operation'],
                 'surface' => 'app',
@@ -4154,6 +4468,14 @@ final class TasksContract
                     'createdAt' => 'createdAt',
                 ],
             ],
+            'TaskQuery' => [
+                'class' => 'Seampact\Golden\TasksConsistent\Schemas\TaskQuery',
+                'members' => ['text' => 'text', 'states' => 'states'],
+            ],
+            'TaskSearchResult' => [
+                'class' => 'Seampact\Golden\TasksConsistent\Schemas\TaskSearchResult',
+                'members' => ['items' => 'items', 'total' => 'total'],
+            ],
             'UpdateTask' => [
                 'class' => 'Seampact\Golden\TasksConsistent\Schemas\UpdateTask',
                 'members' => [
@@ -4290,6 +4612,18 @@ final class TasksContract
                 'responses' => [204 => 'Seampact\Golden\TasksConsistent\PurgeTaskResponse204'],
                 'errors' => 'Seampact\Golden\TasksConsistent\PurgeTaskErrors',
                 'request' => 'Seampact\Golden\TasksConsistent\Laravel\PurgeTaskRequest',
+            ],
+            'searchTasks' => [
+                'input' => 'Seampact\Golden\TasksConsistent\SearchTasksInput',
+                'parts' => [
+                    'path' => [
+                        'class' => 'Seampact\Golden\TasksConsistent\SearchTasksPath',
+                        'members' => ['channelId' => 'channelId'],
+                    ],
+                ],
+                'responses' => [200 => 'Seampact\Golden\TasksConsistent\SearchTasksResponse200'],
+                'errors' => 'Seampact\Golden\TasksConsistent\SearchTasksErrors',
+                'request' => 'Seampact\Golden\TasksConsistent\Laravel\SearchTasksRequest',
             ],
             'updateTask' => [
                 'input' => 'Seampact\Golden\TasksConsistent\UpdateTaskInput',

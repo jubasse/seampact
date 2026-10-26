@@ -13,6 +13,7 @@ use Seampact\Codegen\Runtime\Decider;
 use Seampact\Codegen\Runtime\FrameworkRoutes;
 use Seampact\Codegen\Runtime\HookCheck;
 use Seampact\Codegen\Runtime\Ir;
+use Seampact\Codegen\Runtime\PublicOrigin;
 use Seampact\Hooks\IdempotencyStore;
 
 /**
@@ -47,6 +48,7 @@ final class BootCheck
             ...self::middleware($app, $boundaryClass, $accessClass),
             ...self::routes($app, $contract, $accessClass, $switches),
             ...self::platform(),
+            ...self::publicOrigin($app, $contract),
         ];
 
         if ($problems !== []) {
@@ -195,6 +197,15 @@ final class BootCheck
     {
         return explode('@', $route->getActionName())[0] === self::HEALTH_ACTION
             || preg_match(self::OWN_ROUTE_NAMES, $route->getName() ?? '') === 1;
+    }
+
+    /** @return list<string> */
+    private static function publicOrigin(Application $app, ApiContract $contract): array
+    {
+        $setting = "seampact.{$contract->api}.public_origin";
+        $problem = PublicOrigin::bootProblem($contract, $setting, Services::config($app)->get($setting));
+
+        return $problem === null ? [] : [$problem];
     }
 
     /** @return list<string> */

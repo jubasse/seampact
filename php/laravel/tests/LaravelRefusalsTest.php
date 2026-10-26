@@ -89,6 +89,15 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString("identity 'user'", self::refused($document)['principal.members.none'] ?? '');
     }
 
+    public function testADegradableOperationWaitsForAConsumerAfterOneZero(): void
+    {
+        $document = ReferenceContract::withOperation('searchTasks', static function (\stdClass $operation): void {
+            $operation->degradable = (object) ['paths' => ['/items'], 'header' => 'X-Degraded', 'origin' => (object) ['layer' => 'api', 'pointer' => '/degradable']];
+        });
+
+        self::assertStringContainsString('no reference contract carries it', self::refused($document)['degradable.unsupported'] ?? '');
+    }
+
     public function testBootCheckHooksWarnWaitsForAConsumer(): void
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['bootCheck' => (object) ['hooks' => 'warn']]);
@@ -100,7 +109,7 @@ final class LaravelRefusalsTest extends TestCase
     {
         $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => false]);
 
-        self::assertStringContainsString('laravel-3b generates it', $refused['deadline.unsupported'] ?? '');
+        self::assertArrayNotHasKey('deadline.unsupported', $refused);
         self::assertArrayNotHasKey('cache.unsupported', $refused);
         self::assertArrayNotHasKey('access.signed.unsupported', $refused);
         self::assertStringContainsString('laravel-4 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');

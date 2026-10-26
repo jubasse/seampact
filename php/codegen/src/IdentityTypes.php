@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Codegen;
 
 use Seampact\Ir\Model\CredentialIdentity;
+use Seampact\Ir\Model\EnumTypeUse;
 use Seampact\Ir\Model\IdentityAccess;
 use Seampact\Ir\Model\ObjectSchema;
 use Seampact\Ir\Model\OptionalAccess;
@@ -130,8 +131,8 @@ final class IdentityTypes
                 $this->refusals->inconsistent('property.no-segment', "The property '{$property->name}' yields no name segment", $at);
                 continue;
             }
-            if (!$property->type instanceof ScalarTypeUse) {
-                $this->refusals->waiting('principal.member.type', "The principal member '{$property->name}' of identity '{$identity}', which is not a scalar,", $at->below('type'), Delivery::Consumer);
+            if (!$property->type instanceof ScalarTypeUse && !$property->type instanceof EnumTypeUse) {
+                $this->refusals->waiting('principal.member.type', "The principal member '{$property->name}' of identity '{$identity}', which is neither a scalar nor an enum,", $at->below('type'), Delivery::Consumer);
                 continue;
             }
 
