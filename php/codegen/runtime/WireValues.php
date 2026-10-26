@@ -103,11 +103,12 @@ final class WireValues
     }
 
     /**
-     * Each query member by name, with all its values in order, form-decoded (`+` is a space).
+     * Each query member by name, form-decoded (`+` is a space), with all its values in order as received; `listItems`
+     * decodes them, after splitting an unexploded list.
      *
      * @return array<string, list<string>>
      */
-    public static function query(string $raw): array
+    public static function rawQuery(string $raw): array
     {
         $members = [];
         foreach (explode('&', $raw) as $pair) {
@@ -115,27 +116,26 @@ final class WireValues
                 continue;
             }
             $parts = explode('=', $pair, 2);
-            $members[urldecode($parts[0])][] = urldecode($parts[1] ?? '');
+            $members[urldecode($parts[0])][] = $parts[1] ?? '';
         }
 
         return $members;
     }
 
     /**
-     * A list parameter's values: a list written with `explode: false` is one comma-separated value (`sort=a,-b`).
+     * A parameter's values, form-decoded: a list written with `explode: false` is one comma-separated value (`sort=a,-b`).
      *
      * @param list<string> $values
      * @return list<string>
      */
     public static function listItems(array $values, mixed $wire): array
     {
-        if (!is_array($wire) || Ir::string($wire, 'kind') !== 'list' || ($wire['explode'] ?? true) !== false) {
-            return $values;
-        }
+        $unexploded = is_array($wire) && Ir::string($wire, 'kind') === 'list' && ($wire['explode'] ?? true) === false;
 
         $items = [];
         foreach ($values as $value) {
-            array_push($items, ...explode(',', $value));
+            // An unexploded list splits on raw commas only: an encoded `%2C` is data within one item.
+            array_push($items, ...array_map(urldecode(...), $unexploded ? explode(',', $value) : [$value]));
         }
 
         return $items;

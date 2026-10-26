@@ -42,11 +42,12 @@ final class InputDecoding
         foreach (Ir::maps($params, 'query') as $param) {
             $declaredQuery[Ir::string($param, 'name') ?? ''] = $param;
         }
-        foreach (WireValues::query(RawTarget::query($request)) as $name => $values) {
+        foreach (WireValues::rawQuery(RawTarget::query($request)) as $name => $rawValues) {
             $declared = $declaredQuery[$name] ?? null;
+            $values = WireValues::listItems($rawValues, $declared['wire'] ?? null);
             $query[$name] = $declared === null
                 ? (count($values) === 1 ? $values[0] : $values)
-                : WireValues::queryValue(WireValues::listItems($values, $declared['wire'] ?? null), $declared['type'] ?? null);
+                : WireValues::queryValue($values, $declared['type'] ?? null);
         }
         $state->query = $query;
 

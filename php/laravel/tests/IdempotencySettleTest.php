@@ -12,6 +12,8 @@ use Illuminate\Foundation\Http\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
 use Seampact\Golden\TasksConsistent\Laravel\TasksBoundary;
 use Seampact\Hooks\IdempotencyBegin;
@@ -33,6 +35,7 @@ final class IdempotencySettleTest extends TestCase
         $app->instance(KernelContract::class, $kernel);
         $store = new RecordingStore();
         $app->instance(IdempotencyStore::class, $store);
+        $app->instance(LoggerInterface::class, new NullLogger());
 
         $request = Request::create('/v1/channels/10000000-0000-4000-8000-000000000001/tasks', 'POST');
         $reply = (new TasksBoundary($app))->handle($request, static function (Request $request): never {

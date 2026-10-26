@@ -12,7 +12,7 @@ namespace Seampact\Codegen\Runtime;
 final class Digests
 {
     private const STRING_FLAGS = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-        | JSON_UNESCAPED_LINE_TERMINATORS | JSON_INVALID_UTF8_SUBSTITUTE;
+        | JSON_UNESCAPED_LINE_TERMINATORS;
     private const FLOAT_FLAGS = JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION;
     // `JSON.stringify` writes an exponent from 1e21 up and below 1e-6.
     private const PLAIN_UPPER_EXPONENT = 21;

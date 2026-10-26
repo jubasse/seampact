@@ -84,6 +84,22 @@ final class IdempotencyStep
         ]);
     }
 
+    /** Releases the key this request claimed, without a reply to keep; a store failure is logged. */
+    public static function abandon(BoundaryState $state): void
+    {
+        $key = $state->idempotencyKey;
+        if ($key === null) {
+            return;
+        }
+        $state->idempotencyKey = null;
+
+        try {
+            self::store($state)->abandon($key);
+        } catch (\Throwable $failure) {
+            BoundaryLog::unexpected($state->hooks, $state->contract, $state->operationId, 'the idempotency store failed to release a key after the request failed, so a retry waits for its lifetime; check the store\'s backend', $failure);
+        }
+    }
+
     public static function settle(BoundaryState $state, Response $response): void
     {
         $key = $state->idempotencyKey;
@@ -151,7 +167,7 @@ final class IdempotencyStep
         $reply = new Response($stored->body, $stored->status);
         foreach ($stored->headers as $header) {
             if ($replayHeader === null || strcasecmp($header->name, $replayHeader) !== 0) {
-                $reply->headers->set($header->name, $header->value, false);
+                $reply->headers->set(self::headerCase($header->name), $header->value, false);
             }
         }
         if ($replayHeader !== null && $stored->status < self::CLIENT_ERROR_FLOOR) {
@@ -163,6 +179,12 @@ final class IdempotencyStep
 
     // An error reply its sender marked no-store is dropped as a server error is; a no-store success is kept, so a
     // retry never runs the write twice.
+    // A stored name is lower case; the replay writes it as a fresh reply would (`Content-Type`).
+    private static function headerCase(string $name): string
+    {
+        return implode('-', array_map(ucfirst(...), explode('-', $name)));
+    }
+
     private static function isKeptForReplay(Response $response): bool
     {
         $status = $response->getStatusCode();

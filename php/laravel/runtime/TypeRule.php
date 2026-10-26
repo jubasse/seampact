@@ -68,7 +68,8 @@ final class TypeRule extends ContractRule
     private function typeIssue(mixed $value): ?string
     {
         $matches = match ($this->type) {
-            self::STRING => is_string($value),
+            // A decoded query or header text that is not UTF-8 is no JSON string, as the Node targets refuse it.
+            self::STRING => is_string($value) && preg_match('//u', $value) === 1,
             self::INTEGER => is_int($value) || is_float($value),
             self::NUMBER => is_int($value) || is_float($value),
             self::BOOLEAN => is_bool($value),
