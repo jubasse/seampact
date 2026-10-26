@@ -9,6 +9,8 @@ use App\Generated\TasksService\Laravel\ServiceAuthenticateHook;
 use App\Generated\TasksService\Laravel\ServiceCredentials;
 use App\Generated\TasksService\Laravel\ServicePrincipal;
 use App\Generated\TasksService\Schemas\Service;
+use Seampact\ConsumerSuite\Credentials;
+use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\AuthenticateRequest;
 use Seampact\Hooks\AuthenticateResult;
 

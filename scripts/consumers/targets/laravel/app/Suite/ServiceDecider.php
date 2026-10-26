@@ -8,6 +8,8 @@ use App\Generated\TasksService\Laravel\Runtime\Decider;
 use App\Generated\TasksService\Laravel\Runtime\Denial;
 use App\Generated\TasksService\Laravel\ServicePrincipal;
 use App\Generated\TasksService\Schemas\ApiForbiddenParams;
+use Seampact\ConsumerSuite\DecisionPurpose;
+use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\Decision;
 use Seampact\Hooks\RequirementRequest;
 
@@ -25,7 +27,7 @@ final class ServiceDecider implements Decider
     {
         SuiteControl::recordHookCall("decide:{$request->name()}", $request->operation()->api, $request->operation()->id);
 
-        $denied = SuiteControl::scriptedDecision($request->name(), TasksDecider::purposeName($request->purpose()));
+        $denied = SuiteControl::scriptedDecision($request->name(), DecisionPurpose::name($request->purpose()));
         if ($denied !== null) {
             return new Decision\Denied(new Denial($denied));
         }
