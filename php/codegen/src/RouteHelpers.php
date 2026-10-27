@@ -70,7 +70,7 @@ final class RouteHelpers
             }
 
             $routeNamesType->addConstant(self::constantName($operation), self::routeName($apiId, $operation->id))->setPublic()
-                ->addComment("The route of operation '{$operation->id}', `" . strtoupper($operation->method->value) . " {$operation->path}`.");
+                ->addComment("The route of operation '{$operation->id}', `" . strtoupper($operation->method->value) . " {$this->mount}{$operation->path}`.");
             $this->addUrlMethod($urls, $urlsType, $operation, $operationNames->method, IrPlace::ofOperation($index, $operation->id));
         }
 

@@ -35,7 +35,7 @@ const FRAMEWORK_ROUTE_PATH_RULE =
   "The key 'path' of a framework route is '/' then segments, each '*', '**', or text without '?', '{' or '}' holding at most two '*'.";
 const FRAMEWORK_ROUTE_SWITCH = "frameworkRoutes";
 const MOUNT_RULE =
-  "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*' and no segment starting with ':'.";
+  "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'.";
 const SCHEMA_FIX = "Correct the value as the config schema states (ADR 0011 'The app config').";
 
 export interface ParsedConfig {

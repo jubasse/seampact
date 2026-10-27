@@ -12,6 +12,12 @@ namespace Seampact\Golden\TasksConsistent\Laravel\Runtime;
 final class FrameworkRoutes
 {
     private const HEAD = 'HEAD';
+    private const PLACEHOLDER = '#\{!?(\w+)(?:<[^>]*>)?(?:\?[^}]*)?\}#';
+    private const UNREAD_CATCH_ALL = '{*}';
+    // What a placeholder pattern may hold and still keep to one segment once `\d`, `\w` and `(?:` are read: letters,
+    // digits, `_`, `-`, alternation, groups, quantifiers, anchors and classes.
+    private const ONE_SEGMENT_PATTERN = '#^[A-Za-z0-9_|(){},?+*^$\[\]-]*$#D';
+    private const CLASS_CONTENT = '#\[([^\]]*)\]#';
 
     private function __construct()
     {
@@ -39,7 +45,8 @@ final class FrameworkRoutes
     /**
      * Whether the route at `$uri` can serve a path at or under one of `$basePaths`: each of its first segments takes
      * the base path's (the same text, a placeholder or a catch-all), and it has as many segments, or a catch-all.
-     * A placeholder segment is `{name}` or `{name?}`; one holding `*` (`{rest*}`, `**`) is a catch-all.
+     * A segment holding a placeholder (`{name}`, `{name?}`, `api{rest}`) takes one segment; one holding `*`
+     * (`{rest*}`, `**`) is a catch-all.
      *
      * @param list<string> $basePaths
      */
@@ -56,37 +63,76 @@ final class FrameworkRoutes
     }
 
     /**
-     * The route path with each placeholder whose pattern takes a `/` written as the catch-all `{name*}`, as
-     * `overlapsAny` reads it; `$patternOf` gives a placeholder's pattern, null for the framework's default one.
+     * The route path with each segment that may take a `/` written as a catch-all, as `overlapsAny` reads it: one
+     * holding a placeholder whose pattern does not keep to one segment (`{any}` with `.*`, `api{rest}` with `.+`)
+     * becomes `{name*}`, and one whose braces do not read as placeholders `{*}`. `$patternOf` gives a placeholder's
+     * pattern, null for the framework's default one, which keeps to one segment.
      *
      * @param \Closure(string): ?string $patternOf
      */
     public static function withCatchAlls(string $path, \Closure $patternOf): string
     {
-        $segments = array_map(
-            static function (string $segment) use ($patternOf): string {
-                if (preg_match('#^\{!?(\w+)(?:<[^>]*>)?(?:\?[^}]*)?\}$#', $segment, $placeholder) !== 1) {
-                    return $segment;
-                }
-                $pattern = $patternOf($placeholder[1]);
-
-                return $pattern !== null && self::takesASlash($pattern) ? "{{$placeholder[1]}*}" : $segment;
-            },
-            explode('/', $path),
-        );
-
-        return implode('/', $segments);
+        return implode('/', array_map(static fn (string $segment): string => self::scopedSegment($segment, $patternOf), explode('/', $path)));
     }
 
-    // The app's router compiled the pattern already, so it reads as a regular expression.
-    private static function takesASlash(string $pattern): bool
+    /** @param \Closure(string): ?string $patternOf */
+    private static function scopedSegment(string $segment, \Closure $patternOf): string
     {
-        $matched = preg_match('#^(?:' . str_replace('#', '\\#', $pattern) . ')$#u', 'a/b');
-        if ($matched === false) {
-            throw new \LogicException("seampact: the route placeholder pattern '{$pattern}' could not be matched: " . preg_last_error_msg() . '.');
+        if (!str_contains($segment, '{') && !str_contains($segment, '}')) {
+            return $segment;
         }
 
-        return $matched === 1;
+        preg_match_all(self::PLACEHOLDER, $segment, $placeholders);
+        $outside = preg_replace(self::PLACEHOLDER, '', $segment);
+        if ($placeholders[1] === [] || $outside === null || str_contains($outside, '{') || str_contains($outside, '}')) {
+            return self::UNREAD_CATCH_ALL;
+        }
+
+        foreach ($placeholders[1] as $name) {
+            $pattern = $patternOf($name);
+            if ($pattern !== null && !self::keepsToOneSegment($pattern)) {
+                return "{{$name}*}";
+            }
+        }
+
+        return $segment;
+    }
+
+    // Read conservatively: a pattern keeps to one segment only when it holds no `.`, no `/`, no escape but `\d` and
+    // `\w`, no negated class and no class range that can reach `/`.
+    private static function keepsToOneSegment(string $pattern): bool
+    {
+        $withoutWordClasses = preg_replace('#\\\\[dw]#', '0', $pattern);
+        if ($withoutWordClasses === null) {
+            return false;
+        }
+
+        $read = str_replace('(?:', '(', $withoutWordClasses);
+        if (str_contains($read, '[^') || preg_match(self::ONE_SEGMENT_PATTERN, $read) !== 1) {
+            return false;
+        }
+
+        preg_match_all(self::CLASS_CONTENT, $read, $classes);
+        foreach ($classes[1] as $content) {
+            if (!self::classRangesKeepToAlphanumerics($content)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // A `-` inside a class is a range between two letters or digits, which never reaches `/`, or a literal at its edge.
+    private static function classRangesKeepToAlphanumerics(string $content): bool
+    {
+        $last = strlen($content) - 1;
+        for ($index = 1; $index < $last; $index++) {
+            if ($content[$index] === '-' && (!ctype_alnum($content[$index - 1]) || !ctype_alnum($content[$index + 1]))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -103,7 +149,7 @@ final class FrameworkRoutes
             if (str_contains($routeSegment, '*')) {
                 return true;
             }
-            if (!str_starts_with($routeSegment, '{') && $routeSegment !== $baseSegment) {
+            if (!str_contains($routeSegment, '{') && $routeSegment !== $baseSegment) {
                 return false;
             }
         }

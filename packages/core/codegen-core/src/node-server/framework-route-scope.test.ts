@@ -1,6 +1,9 @@
 import { expect, test } from "vitest";
-import { unlistedFrameworkRoutes } from "../../node-server-runtime/framework-route-patterns.js";
-import { routeEntries } from "../../node-server-runtime/node-express-routes.js";
+import {
+  type ListedRoute,
+  REGULAR_EXPRESSION_PATH,
+  unlistedFrameworkRoutes,
+} from "../../node-server-runtime/framework-route-patterns.js";
 
 const APP_ROUTES = [
   { method: "GET", path: "/health" },
@@ -56,8 +59,10 @@ test.each([
   expect(unlistedFrameworkRoutes(CONTRACT_SCOPE, [{ method: "GET", path }])).toEqual([]);
 });
 
-test("the default scope checks an Express route written as a regular expression", () => {
-  const listed = routeEntries({ methods: { get: true }, path: /api/ });
+test("the default scope checks a route written as a regular expression", () => {
+  const listed: ListedRoute[] = [
+    { method: "GET", path: "/api/", pathSyntax: REGULAR_EXPRESSION_PATH },
+  ];
 
   expect(unlistedFrameworkRoutes(CONTRACT_SCOPE, listed)).toEqual([
     { method: "GET", path: "/api/" },

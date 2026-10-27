@@ -26,7 +26,7 @@ final class ConfigSchemaCheck
 
     private const MOUNT_KEY = 'mount';
 
-    private const MOUNT_RULE = "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*' and no segment starting with ':'.";
+    private const MOUNT_RULE = "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'.";
 
     private const MOUNT_FIX = "Write the path prefix the api is served under, such as '/api' (ADR 0011 'The app config').";
 

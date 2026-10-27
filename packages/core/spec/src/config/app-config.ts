@@ -190,8 +190,9 @@ const FRAMEWORK_ROUTE_PATH_PATTERN = `^/(?:(?:${FRAMEWORK_ROUTE_SEGMENT})(?:/(?:
 
 // A mount is '/' then segments of plain ASCII, with no trailing '/': no '*', no character a client sends
 // percent-encoded or a server reads as syntax (the static path segment rule of the server targets), no '%', '?' or
-// '#', and no segment starting with ':', which Hono reads as a param.
-const MOUNT_SEGMENT = "[A-Za-z0-9._~!$&'()+,;=@-][A-Za-z0-9._~!$&'()+,;=@:-]*";
+// '#', no segment starting with ':', which Hono reads as a param, and no '.' or '..' segment, which a client
+// resolves away.
+const MOUNT_SEGMENT = "(?!\\.\\.?(?:/|$))[A-Za-z0-9._~!$&'()+,;=@-][A-Za-z0-9._~!$&'()+,;=@:-]*";
 
 export const MOUNT_PATTERN = `^(?:/${MOUNT_SEGMENT})+$`;
 

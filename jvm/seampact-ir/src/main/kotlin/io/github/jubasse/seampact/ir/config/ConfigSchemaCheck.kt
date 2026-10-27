@@ -23,7 +23,7 @@ private const val ONE_OF = "oneOf"
 private const val BOOT_CHECK_ARTEFACT = "bootCheck"
 private const val MOUNT_KEY = "mount"
 private const val MOUNT_RULE =
-    "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!\$&'()+,;=@:', with no trailing '/', no '*' and no segment starting with ':'."
+    "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!\$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'."
 private const val MOUNT_FIX = "Write the path prefix the api is served under, such as '/api' (ADR 0011 'The app config')."
 
 /** A problem the reader reports at a key before the schema check; the schema errors at or under it would repeat it. */

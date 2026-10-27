@@ -48,7 +48,7 @@ One entry per name. Write the keys of one form.
 | `allowUntested` | list of strings | none | Accept a framework major that is not tested: `nestjs@13`. |
 | `frameworkRoutes` | list | none | Server targets. Routes outside the contract that the boot check accepts: `path`, `reason`, optional `method`. In `path`, `*` is one segment, `**` any number, and a `*` inside a segment any characters but `/` (`/livewire-*/**`). A segment holds at most two `*` and no `?`, `{` or `}`: write a route parameter as `*`. |
 | `frameworkDocs` | `keep` or `off` | `keep` | Server targets. `off` drops the framework's own document. |
-| `mount` | string | none | Server targets. The path prefix seampact registers the api's routes under: `/api` serves `/tasks` at `/api/tasks`. It starts with `/`, has no trailing `/`, no `*` and no segment starting with `:`. Do not add the same prefix in the framework (a global prefix, a route group, a `basePath`). On Spring the context path stays outside it. |
+| `mount` | string | none | Server targets. The path prefix seampact registers the api's routes under: `/api` serves `/tasks` at `/api/tasks`. It starts with `/`, has no trailing `/`, no `*`, no `.` or `..` segment and no segment starting with `:`. Do not add the same prefix in the framework (a global prefix, a route group, a `basePath`). On Spring the context path stays outside it. |
 
 `access` is planned. It is refused with `config.key.waits`.
 
