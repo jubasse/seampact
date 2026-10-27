@@ -95,6 +95,18 @@ final class SymfonyRefusalsTest extends TestCase
         self::assertNotSame([], $files);
     }
 
+    public function testAStaticPathSegmentThatNeedsPercentEncodingWaitsForAConsumer(): void
+    {
+        foreach (['my tasks', 'tâches', 'a\\b', 'a^b'] as $segment) {
+            $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation) use ($segment): void {
+                self::assertIsString($operation->path);
+                $operation->path = str_replace('/tasks/', "/{$segment}/", $operation->path);
+            });
+
+            self::assertStringContainsString("'{$segment}'", self::refused($document)['path.segment.encoded.unsupported'] ?? '', $segment);
+        }
+    }
+
     public function testAnIntegerStepBeyondThePhpIntRangeIsRefusedByName(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {

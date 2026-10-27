@@ -1,6 +1,6 @@
 {
   "id": "pack-laravel-page-next-link",
-  "title": "A page is fetched with the laravel request names and its next link is followed",
+  "title": "A page is fetched with the laravel request names and its query-only next link is followed",
   "checks": ["CHK-107"],
   "profiles": ["pack:laravel"],
   "steps": [
@@ -25,9 +25,15 @@
       "expect": {
         "status": 200,
         "body": {
+          "links": {
+            "first": "?per_page=2&page=1",
+            "prev": null,
+            "next": "?per_page=2&page=2"
+          },
           "meta": {
             "current_page": 1,
-            "per_page": 2
+            "per_page": 2,
+            "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks"
           }
         }
       }

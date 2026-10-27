@@ -368,7 +368,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
 
         $role = $exception === null ? null : $this->roleOf($state, $exception, $response);
         if ($exception !== null && ($role !== null || FrameworkRefusal::statusOf($exception) !== null)) {
-            $reply = ReplyVerdict::mapped($state, $response, $role, $exception, ExceptionRoles::KEPT_HEADERS);
+            $reply = ReplyVerdict::mapped($state, $response, $role, $exception, ExceptionRoles::retryAfterValues($exception, $response), ExceptionRoles::KEPT_HEADERS);
             $retryAfter = ExceptionRoles::retryAfter($exception);
             if ($retryAfter !== null && !$reply->headers->has('Retry-After')) {
                 $reply->headers->set('Retry-After', $retryAfter);

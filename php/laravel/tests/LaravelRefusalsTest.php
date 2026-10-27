@@ -80,6 +80,18 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused['response.shape.unsupported'] ?? '');
     }
 
+    public function testAStaticPathSegmentThatNeedsPercentEncodingWaitsForAConsumer(): void
+    {
+        foreach (['my tasks', 'tâches', 'a\\b', 'a^b'] as $segment) {
+            $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation) use ($segment): void {
+                self::assertIsString($operation->path);
+                $operation->path = str_replace('/tasks/', "/{$segment}/", $operation->path);
+            });
+
+            self::assertStringContainsString("'{$segment}'", self::refused($document)['path.segment.encoded.unsupported'] ?? '', $segment);
+        }
+    }
+
     public function testAnIntegerStepBeyondThePhpIntRangeIsRefusedByName(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {

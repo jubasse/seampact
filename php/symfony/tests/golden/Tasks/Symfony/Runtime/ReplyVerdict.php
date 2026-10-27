@@ -50,23 +50,24 @@ final class ReplyVerdict
 
     /**
      * A native layer's refusal answered with the code `FrameworkRefusal` picks for its role or its HTTP status, keeping
-     * the named headers of the framework's reply.
+     * the named headers of the framework's reply that the contract's reply does not write itself (its retry header).
      *
+     * @param list<string> $retryAfterValues the refusal's `Retry-After` values, the first usable one giving the delay
      * @param list<string> $keptHeaders
      */
-    public static function mapped(BoundaryState $state, Response $response, ?string $role, ?\Throwable $exception, array $keptHeaders): Response
+    public static function mapped(BoundaryState $state, Response $response, ?string $role, ?\Throwable $exception, array $retryAfterValues, array $keptHeaders): Response
     {
         $status = FrameworkRefusal::statusOf($exception);
-        $code = FrameworkRefusal::codeOf($state->contract, $state->operationId, $role, $status);
-        if ($code === null) {
+        $answer = FrameworkRefusal::answerOf($state->contract, $state->operationId, $role, $status, $retryAfterValues, time());
+        if ($answer === null) {
             $refusal = $role === null ? "with the status {$status}" : "with the role '{$role}'";
 
-            return self::internalError($state->hooks, $state->contract, $state->operationId, "a native layer refused {$refusal}, and the operation declares no code that answers it", $exception);
+            return self::internalError($state->hooks, $state->contract, $state->operationId, "a native layer refused {$refusal}, and the operation declares no code that answers it, or one whose required params the refusal does not give", $exception);
         }
 
-        $reply = Replies::error($state->contract, $state->operationId, $code);
+        $reply = Replies::error($state->contract, $state->operationId, $answer['code'], $answer['params']);
         foreach ($keptHeaders as $header) {
-            if ($response->headers->has($header)) {
+            if ($response->headers->has($header) && !$reply->headers->has($header)) {
                 $reply->headers->set($header, $response->headers->get($header));
             }
         }
