@@ -14,4 +14,11 @@ Codes that start with `seampact/access/` and `seampact/derive/`.
 | `seampact/derive/error-pattern` | A code does not match `conventions.errors.pattern`. Rename the code, or change the pattern. |
 | `seampact/derive/cache-sensitive` | A cache family would store a sensitive value that its routes answer. Drop `cache` or `sensitive`, or write `freshness: never`. |
 
+Logged 500 messages, with no code:
+
+| You see in the log | Do |
+|---|---|
+| `seampact: a 429 error on '<operation>' maps to '<code>', which declares required params` | A throttler refused the request, and the code needs params that no `Retry-After` gave. Let the throttler set `Retry-After` (seconds or an HTTP date), or answer the code from the handler with its params. On NestJS, throw `ContractException(code, params)`. |
+| `seampact: api '<api>' operation '<op>': a native layer refused with the role 'rateLimited', and the operation declares no code that answers it, or one whose required params the refusal does not give` | A throttler refused the request (the line says `with the status 429` when no role is known), and the code needs params that no `Retry-After` gave. Let the throttler set `Retry-After` (seconds or an HTTP date), or answer the code from the handler with its params. |
+
 See [Access](../contract/04-access.md) and [Errors](../contract/03-errors.md).

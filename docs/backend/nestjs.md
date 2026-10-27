@@ -95,6 +95,8 @@ npx tsc -p .
 
 You see no output.
 
+A throttler's 429 works out of the box with `@nestjs/throttler`. When the operation's `rateLimited` code requires `retryAfterMs`, seampact fills it from the throttler's `Retry-After` (seconds or an HTTP date), read from the reply or from the exception. Without a usable `Retry-After`, the reply is a logged 500 (with an optional `retryAfterMs`, the code is answered without it): throw `new NotesNest.ContractException(code, params)` instead.
+
 ## Behind a reverse proxy and in Docker
 
 Trust only your proxy's addresses on the Express platform, so `req.ip` is the caller's:

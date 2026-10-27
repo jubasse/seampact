@@ -182,7 +182,7 @@ Laravel's layers work beside the contract, and the api's error format answers th
 - **Gates and Policies.** Call `Gate::authorize()` in a decider. An `AuthorizationException` is the contract's 403, with the first denial code the right declares.
 - **`abort()`.** `abort(401)`, `abort(403)`, `abort(404)`, `abort(429)` and `abort(503)` from a handler or a middleware answer the contract's `unauthenticated`, `forbidden`, `notFound`, `rateLimited` and `serviceUnavailable` errors. Without that error, any status answers the operation's one code of that status, if it has exactly one with no required params. Otherwise the reply is a 500.
 - **`auth` and `auth.session` middleware.** They never redirect on a contract route, so no `login` route is needed.
-- **Throttle and CSRF.** `ThrottleRequestsException` is a 429 with its `Retry-After`. Laravel's CSRF check runs only on routes that accept a cookie credential; its failure is the contract's 403, not Laravel's 419.
+- **Throttle and CSRF.** `ThrottleRequestsException` is a 429 with its `Retry-After`: when the `rateLimited` code requires `retryAfterMs`, seampact fills it from that header (seconds or an HTTP date). Without a usable one, the reply is a logged 500 (with an optional `retryAfterMs`, the code is answered without it). Laravel's CSRF check runs only on routes that accept a cookie credential; its failure is the contract's 403, not Laravel's 419.
 
 The generated per-kind lists put your own middleware on a kind of route (see the config below). To keep Laravel's rules on a route, add them there:
 

@@ -155,7 +155,7 @@ if (!$this->authorization->isGranted($request->name(), new DecisionSubject($requ
 }
 ```
 
-- `login_throttling`, an `AccessDeniedException` and an `HttpException` 401, 403 or 429 thrown by a handler or a listener are answered in the api's error format: `unauthenticated`, `forbidden` and `rateLimited`. Off a contract route, nothing changes.
+- `login_throttling`, an `AccessDeniedException` and an `HttpException` 401, 403 or 429 thrown by a handler or a listener are answered in the api's error format: `unauthenticated`, `forbidden` and `rateLimited`. When the `rateLimited` code requires `retryAfterMs`, seampact fills it from the exception's or the reply's `Retry-After` (seconds or an HTTP date); without a usable one, the reply is a logged 500 (with an optional `retryAfterMs`, the code is answered without it). Off a contract route, nothing changes.
 
 For `access_control`, the api registers one request matcher per access kind: `seampact.<api>.matcher.public`, `.optional`, `.identity` and `.signed`. Each follows the routes the api serves, so a public `/tasks/search` never covers a protected `/tasks/{id}`.
 
