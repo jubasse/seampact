@@ -48,9 +48,22 @@ final class VoterDeciderTest extends TestCase
         self::assertSame($project, $call->scopes()[1]->value);
     }
 
+    public function testARightNoVoterAnswersIsDenied(): void
+    {
+        $decision = DecidedRight::decide(self::hooksOfVoters([]), DecidedRight::call(new \stdClass(), new \stdClass()));
+
+        self::assertInstanceOf(Decision\Denied::class, $decision);
+    }
+
     private static function hooks(RecordingVoter $voter): Hooks
     {
-        $authorization = new AuthorizationChecker(new TokenStorage(), new AccessDecisionManager([$voter]));
+        return self::hooksOfVoters([$voter]);
+    }
+
+    /** @param list<RecordingVoter> $voters */
+    private static function hooksOfVoters(array $voters): Hooks
+    {
+        $authorization = new AuthorizationChecker(new TokenStorage(), new AccessDecisionManager($voters));
 
         return new Hooks(new ServiceLocator([]), [new VoterDecider($authorization)], [], null, new NullLogger());
     }

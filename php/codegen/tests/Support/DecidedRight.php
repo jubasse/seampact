@@ -44,13 +44,24 @@ final class DecidedRight
     /** The call of the right: its subject is the `project` scope, which the scope resolver loaded as `$project`. */
     public static function call(object $principal, object $project): RequirementCall
     {
+        return self::callOn($principal, self::PROJECT_ID, $project);
+    }
+
+    /** The call of the right on the project `$projectId`, an id the client sent, which no scope resolver loaded. */
+    public static function callOnUnloadedProject(object $principal, string $projectId): RequirementCall
+    {
+        return self::callOn($principal, $projectId, null);
+    }
+
+    private static function callOn(object $principal, string $projectId, ?object $project): RequirementCall
+    {
         $scopes = [
             new ResolvedScope(self::WORKSPACE_SCOPE, self::WORKSPACE_ID),
-            new ResolvedScope(self::PROJECT_SCOPE, self::PROJECT_ID, $project),
+            new ResolvedScope(self::PROJECT_SCOPE, $projectId, $project),
         ];
         $view = new RequestView('PATCH', '/v1/projects/p1/task', []);
 
-        return new RequirementCall(RequirementKind::Right, self::RIGHT, null, $principal, new SubjectRef(self::PROJECT_SCOPE, self::PROJECT_ID), $scopes, null, new Purpose\Route(), new OperationRef('tasks', 'editTask'), $view);
+        return new RequirementCall(RequirementKind::Right, self::RIGHT, null, $principal, new SubjectRef(self::PROJECT_SCOPE, $projectId), $scopes, null, new Purpose\Route(), new OperationRef('tasks', 'editTask'), $view);
     }
 
     private static function state(HookLookup $hooks): BoundaryState

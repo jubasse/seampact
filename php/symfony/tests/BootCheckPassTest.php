@@ -112,7 +112,8 @@ final class BootCheckPassTest extends TestCase
 
         $method = GrantedChannelsController::class . '::getChannel carries #[' . IsGranted::class . "], which runs after the contract's input checks; use ";
         self::assertStringContainsString($method . 'the access_control rule `- { request_matcher: seampact.tasks.matcher.identity, roles: ' . GrantedChannelsController::ROLE . ' }`, which guards every route of that kind, or a decider of the right, such as ' . VoterDecider::class, $problems);
-        self::assertStringContainsString($method . 'a decider of the right, such as ' . VoterDecider::class . ', which asks your voters', $problems);
+        self::assertSame(1, substr_count($problems, 'request_matcher'));
+        self::assertSame(GrantedChannelsController::DECIDER_FIXED_ATTRIBUTES, substr_count($problems, $method . 'a decider of the right, such as ' . VoterDecider::class . ', which asks your voters'));
     }
 
     public function testAContainerWithoutTheValidatorIsRefusedNamingThePackage(): void
