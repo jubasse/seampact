@@ -112,7 +112,7 @@ The target options are ADR 0016's: `responses` (`strict`, the default, or `warn`
 - the hook problems of ADR 0016's list (a missing authenticate hook, decider, scope resolver or idempotency store; two deciders claiming one name);
 - a contract operation without a bound handler: `handlers` lacks the interface's object or the object lacks the method;
 - a key of `operations` that names no operation of the api;
-- a base path on the app: a route the registration added whose `basePath` (Hono's public `app.routes` entries) is not `/`, as `app.basePath('/api')` gives, which differs from the empty `mount` the slice allows;
+- a base path on the app: a route the registration added whose `basePath` (Hono's public `app.routes` entries) is not `/`, as `app.basePath('/api')` gives, which the entry's `mount` replaces;
 - a second registration of the api on the same app.
 
 Hono has no start hook, so the framework-route check of ADR 0012 is `checkFrameworkRoutes(app)`, which the app calls once every route is added, before serving, and which throws the problems. Since a request's context does not reach the app, a contract request on an app whose check has not passed answers 500 in the api's format and logs that fix; nothing changes when the app config switches the check off. Hono lists middleware among its routes, so the check takes an entry whose handler declares `next` (two parameters or more) as middleware, whatever its path, and lists every other entry: a route handler declared with `next` counts as middleware.

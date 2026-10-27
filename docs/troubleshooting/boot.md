@@ -12,6 +12,8 @@ Fix every line, then start again.
 | You see | Do |
 |---|---|
 | `the framework route 'GET /docs' is outside the contract and not allow-listed` | List the route under `frameworkRoutes` of the server target, with a reason, then run `seampact generate`. See [OpenAPI and docs](../configuration/openapi-and-docs.md). |
+| A route of yours outside the api's paths is no longer reported | That is the default: only routes that reach a path of the api are checked. Set `artefacts.bootCheck.frameworkRoutes: strict` to check every route. |
+| `... differs from the entry's mount (write the prefix as the entry's 'mount' ...)` | Remove the prefix from the framework (route group, plugin prefix, `basePath`, mount path) and set `mount` on the target entry instead. |
 | `handlers has no 'NotesEndpoints' object` | Pass one object per generated handler interface. |
 | `handlers.NotesEndpoints has no method getNote()` | Implement the method on that object. |
 | `'bodyValidation' is turned on, but the target generated no output validators` | Set `bodyValidation: true` in the target's `options`, then run `generate`. |

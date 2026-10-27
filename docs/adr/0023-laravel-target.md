@@ -89,7 +89,7 @@ Other methods:
 - A method the path does not serve answers the path's `notFound` 404 from the boundary, where Laravel would answer 405 with `Allow`, or 200 for `OPTIONS` (spike).
 - A CORS preflight (`OPTIONS` with `Origin` and `Access-Control-Request-Method`) is left to the app's `HandleCors`, which runs after the boundary in the global stack.
 
-`mount` is the route group prefix that the generated registration applies around the contract routes.
+`mount` is the prefix the generated route table writes before each contract path; the app wraps the macro in no group prefix.
 
 Beside the route table, the shared `RouteHelpers` of `php/codegen` writes `<Api>RouteNames`, one constant per operation holding its route name, and `<Api>Urls`, one static method per operation taking one typed argument per path parameter in path order and returning the contract path, each value written as one segment by `WireValues::pathSegment` (its wire text, a number as JavaScript writes it, `encodeURIComponent`-encoded as the generated clients send it; an empty, `.`, `..` or non-UTF-8 value refused) and each static segment as the contract writes it, never prefixed (the boot check refuses a prefix while `mount` waits) and never absolute; `artefacts.routeHelpers: false` leaves both out.
 

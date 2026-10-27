@@ -82,7 +82,7 @@ seampact_tasks:
     type: seampact
 ```
 
-Each api's loader supports the `seampact` type for its own api name only, so two apis load apart. The loader writes each contract path as declared, and the routing import takes no `prefix` while `mount` waits: the boot check refuses a contract route whose path is not the contract path, and an import `host`, `schemes` or `condition` on a contract route too. The runner passes `frameworkRoutes` to the generator through the target entry.
+Each api's loader supports the `seampact` type for its own api name only, so two apis load apart. The loader writes each contract path under the entry's `mount`, and the routing import takes no `prefix`: the boot check refuses a contract route whose path is not the mount followed by the contract path, and an import `host`, `schemes` or `condition` on a contract route too. The runner passes `frameworkRoutes` to the generator through the target entry.
 
 The `kernel.request` listener matches the raw path, `getPathInfo()`, against the contract templates. That path is the request target without the query, minus the front controller's own base path; a trusted `X-Forwarded-Prefix` does not change it (spike). The `kernel.controller` listener then compares the operation of the route the router chose with that match. The router decodes the path before matching, so the two can differ:
 

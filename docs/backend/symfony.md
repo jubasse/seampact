@@ -53,7 +53,7 @@ seampact_tasks:
     type: seampact
 ```
 
-The resource is the api key, the snake case of the api name (`tasks_service` for `tasksService`). Do not set a `prefix` or a `host` on the import. Two apis are two bundles and two imports.
+The resource is the api key, the snake case of the api name (`tasks_service` for `tasksService`). Do not set a `prefix` or a `host` on the import. To serve the api under a prefix, set `mount: /api` on the target entry. Two apis are two bundles and two imports.
 
 `bin/console seampact:generate` does the same as the vendor binary. To use it, list `Seampact\Symfony\SeampactCommandsBundle` in `config/bundles.php` for `dev` only.
 
@@ -82,7 +82,7 @@ TasksUrls::getTask($task->id); // '/v1/tasks/42'
 
 The boot check refuses a `prefix`, a `host`, `schemes` or a `condition` on the import, and a `#[Route]` on an endpoints method: the loader already declares that route. `generate` refuses a path segment that mixes a parameter with text (`path.segment.mixed.unsupported`), and a static segment with `{`, `}` or `?` (`path.segment.literal.unsupported`). A parameter name over 32 characters gets a positional name instead (`{p2}` for the second parameter).
 
-Your own routes stay beside the contract's. The boot check refuses one that is not in the contract unless `frameworkRoutes` allow-lists it (see [The boot check](#the-boot-check)).
+Your own routes stay beside the contract's. The boot check refuses one that is not in the contract unless `frameworkRoutes` allow-lists it (see [The boot check](#the-boot-check)). By default only routes that reach a path of the api are checked; `artefacts.bootCheck.frameworkRoutes: strict` checks them all.
 
 ## Write a controller
 

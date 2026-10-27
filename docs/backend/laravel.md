@@ -70,7 +70,7 @@ The provider puts the boundary first in the global middleware, before every othe
 
 `Route::seampact('notes')` declares one route per operation, with the contract's method and path. Each route runs the access middleware, then your middleware for its kind (see the config below).
 
-Call it once, outside any route prefix. `withRouting(then:)` does that. In `routes/api.php`, set `apiPrefix: ''` in `withRouting()`, since the contract's paths already hold their prefix. Avoid `routes/web.php`: its group adds sessions and cookies that an API client does not need. One exception: when the contract's cookie credential is Laravel's session (the `web` guard, a Sanctum SPA), call it inside the `web` group. That group starts the session and checks CSRF.
+Call it once, outside any route prefix. To serve the api under a prefix, set `mount: /api` on the target entry. `withRouting(then:)` does that. In `routes/api.php`, set `apiPrefix: ''` in `withRouting()`, since the contract's paths already hold their prefix. Avoid `routes/web.php`: its group adds sessions and cookies that an API client does not need. One exception: when the contract's cookie credential is Laravel's session (the `web` guard, a Sanctum SPA), call it inside the `web` group. That group starts the session and checks CSRF.
 
 Each route is named `seampact.<api>.<operation>`. Its parameters take the names of the input properties:
 
@@ -96,7 +96,7 @@ NotesUrls::getNote($note->id); // '/v1/notes/42'
 
 `generate` refuses a path segment that mixes a parameter with text (`path.segment.mixed.unsupported`), and a static segment with `{`, `}` or `?` (`path.segment.literal.unsupported`). A parameter name over 32 characters gets a positional name instead (`{p2}` for the second parameter), since Laravel's router refuses longer ones.
 
-Your own routes stay beside the contract's, in your routes files. The boot check refuses one that is not in the contract unless `frameworkRoutes` allow-lists it (see [The boot check](#the-boot-check)).
+Your own routes stay beside the contract's, in your routes files. The boot check refuses one that is not in the contract unless `frameworkRoutes` allow-lists it (see [The boot check](#the-boot-check)). By default only routes that reach a path of the api are checked; `artefacts.bootCheck.frameworkRoutes: strict` checks them all.
 
 ## Write a controller
 

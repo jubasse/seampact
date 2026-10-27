@@ -43,12 +43,14 @@ One entry per name. Write the keys of one form.
 | `options` | map | none | The target's own settings. |
 | `operations.include`, `operations.exclude` | list of strings | all operations | Keep or drop operations by tag or operation id. |
 | `artefacts` | map of booleans | the target's own | Switch each generated part on or off. `bootCheck` also takes `{ frameworkRoutes: false }`. `index: false` skips the api `index` module of a Node server target. |
+| `artefacts.bootCheck.frameworkRoutes` | `true`, `false`, `strict` | `true` | `true` checks the app's other routes only where they reach a path of the api. `strict` checks every route of the app. `false` turns the check off. |
 | `artefacts.bootCheck.hooks` | `error`, `warn`, `off` | `error` | What a Node server does at boot when a hook the contract needs is not registered: refuse to start, log and start, or start silently. A route whose hook is missing answers 500 on every request, whatever the level; an output field right with a missing decider runs the handler first, then answers 500. A right claimed by two deciders always refuses to start. `bootCheck: false` does not change it. |
 | `allowUntested` | list of strings | none | Accept a framework major that is not tested: `nestjs@13`. |
 | `frameworkRoutes` | list | none | Server targets. Routes outside the contract that the boot check accepts: `path`, `reason`, optional `method`. In `path`, `*` is one segment, `**` any number, and a `*` inside a segment any characters but `/` (`/livewire-*/**`). A segment holds at most two `*` and no `?`, `{` or `}`: write a route parameter as `*`. |
 | `frameworkDocs` | `keep` or `off` | `keep` | Server targets. `off` drops the framework's own document. |
+| `mount` | string | none | Server targets. The path prefix seampact registers the api's routes under: `/api` serves `/tasks` at `/api/tasks`. It starts with `/`, has no trailing `/`, no `*` and no segment starting with `:`. Do not add the same prefix in the framework (a global prefix, a route group, a `basePath`). On Spring the context path stays outside it. |
 
-`mount` and `access` are planned. They are refused with `config.key.waits`.
+`access` is planned. It is refused with `config.key.waits`.
 
 ## OpenAPI
 

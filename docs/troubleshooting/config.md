@@ -14,9 +14,11 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 | `config.yaml.leading-zero`, `config.yaml.underscore-number`, `config.yaml.signed-number`, `config.yaml.keyword-case`, `config.yaml.integer-range` | PHP and Node read this value differently. Quote it to keep it as text, or write the plain number or keyword. |
 | `config.schema ... 'colour' is not a key the app config takes here` | Remove the key or fix its spelling. |
 | `config.schema ... The key 'id' is required here` | Add the key it names. |
+| `config.schema ... The key 'mount' is '/' then segments ...` | Write the prefix as `/api`: a leading `/`, no trailing `/`, no `*`, no segment starting with `:`. |
+| `config.schema ... 'bootCheck.frameworkRoutes' is true, false or 'strict'` | Write `true`, `false` or `strict`. |
 | `config.schema ... A source takes one form` | Keep the keys of one form: `path`, or `package` with `version`, or `release`, or `git`. `integrity` goes with the last three only. |
 | `config.key.waits` | The key is not read yet. Remove it from the config. |
-| `config.key.unsupported` | `frameworkRoutes` and `frameworkDocs` belong to a server target. Remove them from this entry. |
+| `config.key.unsupported` | `mount`, `frameworkRoutes` and `frameworkDocs` belong to a server target. Remove them from this entry. |
 | `config.key.conflict` | You set two keys that cancel each other, such as `frameworkRoutes` with `artefacts.bootCheck: false`. Keep one. |
 
 ## Sources

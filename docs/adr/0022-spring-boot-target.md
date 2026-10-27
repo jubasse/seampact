@@ -242,7 +242,6 @@ The boot check runs in a `SmartInitializingSingleton`, before the server starts 
 - a mapping that no composed annotation registered and that `frameworkRoutes` does not allow-list (FR-25):
   - springdoc's paths read from its own properties (`springdoc.api-docs.path`, `/v3/api-docs` and `/v3/api-docs.yaml` by default, and the UI's paths) are accepted while `frameworkDocs` is `keep` (ADR 0011 "Which OpenAPI documents exist"); under `off` they are a problem whose fix names the generated properties file;
   - Boot's error path (`server.error.path`, `/error`) is accepted as the container's error target; a contract route reaches it only under `warn`, by a `sendError` the boundary let through;
-- a configured `mount` that differs from `server.servlet.context-path` followed by `spring.mvc.servlet.path`, both read from the environment; without a `mount` nothing is compared;
 - the boundary filter not ordered before Spring Security's chain, or a `ShallowEtagHeaderFilter`, `FormContentFilter` or `HiddenHttpMethodFilter` ordered before it;
 - a servlet container other than Tomcat ("Refused by name or waiting") or a reactive application;
 - a Spring Boot major other than 4, read from `SpringBootVersion`; `generate` already refuses 3.x from the build's resolved version.

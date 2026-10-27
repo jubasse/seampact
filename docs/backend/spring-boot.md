@@ -189,7 +189,7 @@ The app refuses to start, and lists every problem, when:
 - the app does not run Spring MVC on Tomcat;
 - the contract writes absolute URLs and `seampact.<api>.public-origin` is missing or is not a scheme, host and port.
 
-Allow-list your own routes in the entry, with a reason:
+By default the check reads only routes that reach a path of the api; `artefacts.bootCheck.frameworkRoutes: strict` checks them all. Allow-list your own routes in the entry, with a reason:
 
 ```yaml
     frameworkRoutes:
@@ -216,7 +216,7 @@ Set the forwarded-headers strategy, so Spring reads the proxy's headers:
 server.forward-headers-strategy=framework
 ```
 
-With `framework`, a prefix sent in `X-Forwarded-Prefix` is applied, and the contract's routes still match. The same holds for `server.servlet.context-path` and `spring.mvc.servlet.path`. Strip any forwarded header a client sends at your edge proxy: only the proxy may set them.
+With `framework`, a prefix sent in `X-Forwarded-Prefix` is applied, and the contract's routes still match. The same holds for `server.servlet.context-path` and `spring.mvc.servlet.path`. To serve the api under a prefix inside the app, set `mount: /api` on the target entry. Strip any forwarded header a client sends at your edge proxy: only the proxy may set them.
 
 The public URL of the api stays the one in the contract. Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. If the contract writes absolute URLs, set the public origin; the request's `Host` is never read:
 

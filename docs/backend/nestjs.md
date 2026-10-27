@@ -109,7 +109,7 @@ app.set("trust proxy", ["loopback", "10.0.0.0/8"]);
 
 The client address your hooks get is Express's `req.ip`, so it follows this setting.
 
-The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. With `setGlobalPrefix`, exclude the contract routes: the app refuses to start when a contract route is under the prefix. The same goes for a `RouterModule` path on the controller's module.
+The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. With `setGlobalPrefix`, exclude the contract routes: the app refuses to start when a contract route is under the prefix. The same goes for a `RouterModule` path on the controller's module. To serve the api under a prefix, set `mount: /api` on the target entry instead.
 
 Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
 
