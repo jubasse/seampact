@@ -12,7 +12,6 @@ const USER = "55555555-5555-4555-8555-555555555555";
 const OTHER_USER = "66666666-6666-4666-8666-666666666666";
 const CHANNEL_OPERATION = "getChannel";
 const CALLER_MEMBERS = ["principal", "scopes"];
-const DECLARED_SCOPE = "channel";
 const OTHER_SCOPE = "organisation";
 const INTERNAL_ERROR = 500;
 // Long enough for the requests of two apis to be served at once.

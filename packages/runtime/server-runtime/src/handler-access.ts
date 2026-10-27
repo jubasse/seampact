@@ -7,8 +7,8 @@ import type { ContractRoute } from "./contract-route.js";
 import { isPlainObject } from "./plain-object.js";
 
 /**
- * The caller of an operation: its principal (null for an anonymous caller on an optional-auth route) unless the
- * route is public, and each scope it runs in, by scope name, unless it runs in none.
+ * The caller of an operation: its principal unless the route is public, and each scope it runs in, by scope name,
+ * unless it runs in none. A principal object is a frozen shallow copy of what the authenticate hook returned.
  */
 export interface HandlerAccess {
   readonly principal?: unknown;
@@ -31,14 +31,26 @@ export function handlerAccess(route: ContractRoute, grant: AccessGrant): Handler
   });
 
   return {
-    ...(route.access.kind === "public" ? {} : { principal: grant.principal ?? null }),
+    ...(route.access.kind === "public" ? {} : { principal: frozenPrincipal(grant.principal) }),
     ...(scopes.length === 0 ? {} : { scopes: Object.freeze(Object.fromEntries(scopes)) }),
   };
 }
 
+function frozenPrincipal(principal: unknown): unknown {
+  if (principal === undefined || principal === null) return null;
+
+  return isPlainObject(principal) ? Object.freeze({ ...principal }) : principal;
+}
+
+// Node's `util.inspect` reads this symbol; the input answers with its wire members only, so `%o` or `showHidden`
+// never prints the caller.
+const INSPECT_CUSTOM = Symbol.for("nodejs.util.inspect.custom");
+
+type NodeInspect = (value: unknown, options: unknown) => string;
+
 /**
  * The input a handler receives: a copy of the validated input with its caller's `principal` and `scopes` added as
- * read-only, non-enumerable members, so serialising or spreading the input never carries them.
+ * read-only, non-enumerable members, so serialising, spreading or inspecting the input never carries them.
  */
 export function inputWithAccess(route: ContractRoute, grant: AccessGrant, input: unknown): object {
   if (input !== undefined && !isPlainObject(input)) {
@@ -49,5 +61,15 @@ export function inputWithAccess(route: ContractRoute, grant: AccessGrant, input:
     ([name, value]) => [name, { value, enumerable: false, writable: false }] as const,
   );
 
-  return Object.defineProperties({ ...input }, Object.fromEntries(members));
+  const wireMembers = { ...input };
+  const inspectWireMembers = (_depth: number, options: unknown, inspect: NodeInspect): string =>
+    inspect(wireMembers, options);
+
+  return Object.defineProperties(
+    { ...input },
+    {
+      ...Object.fromEntries(members),
+      [INSPECT_CUSTOM]: { value: inspectWireMembers, enumerable: false, writable: false },
+    },
+  );
 }

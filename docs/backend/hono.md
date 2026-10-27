@@ -100,7 +100,7 @@ A throttler's 429 works out of the box with `hono-rate-limiter`. When the operat
 
 ## Who is calling
 
-When an operation declares an identity, its handler's `input` also has `principal`: what your authenticate hook returned, typed with the identity's principal schema. On an optional-auth route it is `null` for an anonymous caller. A public operation has no `principal`.
+When an operation declares an identity, its handler's `input` also has `principal`: what your authenticate hook returned, typed with the identity's principal schema. A public operation has no `principal`.
 
 When an operation runs in a scope, `input.scopes` has one entry per scope, as your resolver returned it. An operation in no scope has no `scopes`.
 

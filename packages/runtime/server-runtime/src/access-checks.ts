@@ -421,6 +421,13 @@ async function resolveScopes(
         );
       }
 
+      if (value.scope !== scope.scope) {
+        throw unexpectedError(
+          state.route,
+          new Error(`the resolver of '${scope.scope}' answered the scope '${value.scope}'`),
+        );
+      }
+
       resolved.push({
         scope: value.scope,
         id: value.id,

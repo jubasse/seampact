@@ -101,7 +101,7 @@ A throttler's 429 works out of the box with `@nestjs/throttler`. When the operat
 
 ## Who is calling
 
-When an operation declares an identity, take its caller with `@<operation>.principal()`: what your authenticate hook returned, typed with the identity's principal schema. On an optional-auth route it is `null` for an anonymous caller. A public operation has no `principal()` decorator.
+When an operation declares an identity, take its caller with `@<operation>.principal()`: what your authenticate hook returned, typed with the identity's principal schema. A public operation has no `principal()` decorator.
 
 When an operation runs in a scope, `@<operation>.scopes()` gives one entry per scope, as your resolver returned it. An operation in no scope has no `scopes()` decorator.
 
