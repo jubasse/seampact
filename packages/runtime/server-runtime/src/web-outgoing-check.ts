@@ -10,6 +10,7 @@ import { settleIdempotency } from "./idempotency.js";
 import {
   errorBodyViolation,
   type HoldReason,
+  leftToFrameworkInDebug,
   MAX_CHECKED_ERROR_BODY_BYTES,
   oversizedDecodedBodyViolation,
   oversizedErrorBodyViolation,
@@ -190,7 +191,8 @@ async function heldResponse(
   return passedResponse(context, outgoing, read.bytes);
 }
 
-// Under `warn` the reply goes out as written with the violation logged; under `strict` the api's 500 replaces it.
+// Under `warn` the reply goes out as written with the violation logged, as under debug a reply the framework wrote
+// for an exception the boundary does not map; under `strict` the api's 500 replaces it.
 async function violatingResponse(
   context: BoundaryContext,
   request: ReportedRequest,
@@ -199,6 +201,8 @@ async function violatingResponse(
   heldBytes: Uint8Array,
   reason: string,
 ): Promise<Response> {
+  if (leftToFrameworkInDebug(context, request)) return passedResponse(context, outgoing, body);
+
   if (context.mode === "warn") {
     warnViolation(context, reason);
 

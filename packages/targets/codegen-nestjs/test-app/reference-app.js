@@ -738,6 +738,32 @@ export async function startOverriddenHooksApp() {
 }
 
 /**
+ * Serves a testing module holding one controller, `health` only, set up with `configureApp` as an e2e test does,
+ * with the given `forRoot` options; rejects with the boot problems when the boot check refuses it.
+ */
+export async function startHealthOnlyTestingApp(moduleOptions) {
+  class HealthController {
+    health(input) {
+      return answer("health", input, this);
+    }
+  }
+
+  TasksNest.health.input()(HealthController.prototype, "health", 0);
+  decorateMethod(HealthController.prototype, "health", TasksNest.health());
+  Controller()(HealthController);
+
+  const testingModule = await Test.createTestingModule({
+    imports: [TasksNest.SeampactModule.forRoot(hooks, moduleOptions)],
+    controllers: [HealthController],
+  }).compile();
+  const app = testingModule.createNestApplication({ logger: recordingLogger });
+
+  TasksNest.configureApp(app);
+
+  return serveApp(app);
+}
+
+/**
  * Serves `tasks` and the api the `tasksService` slot holds, each through its own `SeampactModule.forRoot`, on a
  * free port.
  */
@@ -782,8 +808,7 @@ export async function startReferenceApp() {
 
     next();
   });
-  app.useBodyParser("json", { limit: TasksNest.LARGEST_BODY_LIMIT, strict: false });
-  app.useGlobalFilters(TasksNest.preRoutingFilter);
+  TasksNest.configureApp(app);
   app.useGlobalPipes(new TamperingPipe());
   await app.listen(0, "127.0.0.1");
 

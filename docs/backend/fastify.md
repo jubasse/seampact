@@ -133,6 +133,24 @@ getNote(input: NotesFastify.HandlerInputs["getNote"]) {
 
 The scope's `value` is `unknown`: narrow it before use.
 
+## Test your routes
+
+Build the app as `main.ts` does, without `listen`, and send requests with `app.inject`. Send the credential header your authenticate hook reads.
+
+```ts
+const reply = await app.inject({ method: "GET", url: `/v1/notes/${noteId}`, headers: { authorization: "Bearer test-user" } });
+```
+
+To test a handler without HTTP, call it with a plain input. Add `principal` and `scopes` yourself: nothing checks them on a direct call.
+
+```ts
+const reply = await notesHandlers.getNote({ path: { noteId }, principal: { userId } });
+```
+
+To use test hooks, pass them to the plugin in the test app: `app.register(NotesFastify.plugin, { handlers, hooks: testHooks })`.
+
+With `NODE_ENV=development`, an exception your handler throws goes to Fastify's error handler, which answers its message. seampact logs the message and the file and line it came from. Outside development, under the default `responses: strict` the client gets the api's 500; under `responses: warn` the framework's reply goes out as written and the violation is logged.
+
 ## Behind a reverse proxy and in Docker
 
 Trust only your proxy's addresses, not a hop count, so `request.ip` and `request.protocol` are the caller's:

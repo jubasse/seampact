@@ -1,6 +1,8 @@
 package io.github.jubasse.seampact.springboot.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.example.tasks.api.TasksUnexpectedErrorListener;
@@ -12,8 +14,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
+import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -37,11 +41,23 @@ class BoundaryFilterTest {
     private final SeampactBoundary boundary = boundaryReportingTo(reported);
 
     private static SeampactBoundary boundaryReportingTo(List<UnexpectedErrorListener.UnexpectedFailure> reported) {
+        return boundaryReportingTo(reported, new StandardEnvironment());
+    }
+
+    private static SeampactBoundary boundaryReportingTo(List<UnexpectedErrorListener.UnexpectedFailure> reported, StandardEnvironment environment) {
         StaticListableBeanFactory beans = new StaticListableBeanFactory();
         TasksUnexpectedErrorListener listener = reported::add;
         beans.addBean("unexpectedFailures", listener);
 
-        return new SeampactBoundary(TasksContractTable.json(), new TasksSeampactBinding(), beans, new StandardEnvironment());
+        return new SeampactBoundary(TasksContractTable.json(), new TasksSeampactBinding(), beans, environment);
+    }
+
+    // The environment Spring Boot devtools leaves when its property defaults are active.
+    private static StandardEnvironment devtoolsEnvironment() {
+        StandardEnvironment environment = new StandardEnvironment();
+        environment.getPropertySources().addLast(new MapPropertySource("devtools", Map.of()));
+
+        return environment;
     }
 
     private MockHttpServletResponse serve(MockHttpServletRequest request, FilterChain chain) throws Exception {
@@ -61,6 +77,24 @@ class BoundaryFilterTest {
         assertEquals(INTERNAL_ERROR, response.getStatus());
         assertTrue(response.getContentAsString().contains(INTERNAL_CODE), response.getContentAsString());
         assertEquals(1, reported.size(), "onUnexpectedError is called once");
+    }
+
+    @Test
+    void unmappedExceptionGoesToSpringUnderDevtoolsAndIsTheApisInternalErrorOtherwise() throws Exception {
+        IllegalStateException unmapped = new IllegalStateException("the handler failed");
+        FilterChain throwing = (request, reply) -> {
+            throw unmapped;
+        };
+        List<UnexpectedErrorListener.UnexpectedFailure> reportedUnderDevtools = new ArrayList<>();
+        BoundaryFilter devtoolsFilter = new BoundaryFilter(boundaryReportingTo(reportedUnderDevtools, devtoolsEnvironment()));
+        MockHttpServletRequest devtoolsRequest = new MockHttpServletRequest("GET", TASK_PATH);
+
+        IllegalStateException rethrown = assertThrows(IllegalStateException.class,
+                () -> devtoolsFilter.doFilter(devtoolsRequest, new MockHttpServletResponse(), throwing));
+
+        assertSame(unmapped, rethrown);
+        assertEquals(1, reportedUnderDevtools.size(), "onUnexpectedError still hears of it");
+        assertReplacedByInternalError(serve(new MockHttpServletRequest("GET", TASK_PATH), throwing));
     }
 
     @Test

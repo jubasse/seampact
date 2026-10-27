@@ -7,6 +7,7 @@ import {
   CLIENT_ADDRESS_CASES,
   clientAddressesTheHookSees,
   copyTestApp,
+  describeDebugExceptions,
   describeHandlerAccess,
   describeTwoApiHandlerAccess,
   emitProject,
@@ -157,6 +158,11 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
   });
 
   describeHandlerAccess(() => ({
+    app,
+    send: (method, path, headers) => send(method, path, { headers }),
+  }));
+
+  describeDebugExceptions(() => ({
     app,
     send: (method, path, headers) => send(method, path, { headers }),
   }));

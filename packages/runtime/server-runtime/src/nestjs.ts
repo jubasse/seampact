@@ -3,7 +3,7 @@
 // filter, the dynamic module with its boot check (the framework-route check included), and the exported helpers.
 // Each api's generated module calls `createNestBoundary` once with its route table and its identity: its own
 // `ContractException` subclass and its module's class name.
-import { ServerResponse } from "node:http";
+import { type IncomingMessage, ServerResponse } from "node:http";
 import {
   type ArgumentMetadata,
   type ArgumentsHost,
@@ -79,6 +79,7 @@ import {
   type ContractRoute,
   isUnderBasePath,
   isUnderPrefix,
+  largestRouteBodyLimit,
   matchContractPath,
   matchContractRoute,
   matchesContractPath,
@@ -151,6 +152,27 @@ export interface NestApiIdentity {
 export interface SeampactModuleOptions {
   /** Where the boundary writes its warnings and unexpected failures; the console when absent. */
   readonly logger?: RuntimeLogger;
+  /**
+   * What the boot check does with a contract operation no controller method binds: `error` (the default) stops the
+   * boot, `warn` logs them once, for a test module that holds some controllers only; their routes answer the api's 404.
+   */
+  readonly unboundOperations?: UnboundOperations;
+}
+
+/** The value of the `unboundOperations` option of `SeampactModule.forRoot`. */
+export type UnboundOperations = "error" | "warn";
+
+/** What `configureApp` calls on a NestJS Express app, as `NestExpressApplication` declares it. */
+export interface ConfigurableNestApp {
+  useBodyParser(
+    parser: "json",
+    options: {
+      limit?: number;
+      strict: boolean;
+      verify: (request: IncomingMessage, response: ServerResponse, bytes: Buffer) => void;
+    },
+  ): unknown;
+  useGlobalFilters(...filters: ExceptionFilter[]): unknown;
 }
 
 /** The arguments of `SeampactModule.forRootAsync`, in the shape of NestJS's `ConfigurableModuleBuilder`. */
@@ -260,6 +282,14 @@ const OPERATION_METADATA = "seampact:operation";
 const RESPONSE_INDEX_METADATA = "seampact:responseIndex";
 const INTERCEPTOR_REPLY: ReplyMode = "interceptor";
 const LOGGER_OPTION = "logger";
+const NO_BODY_LIMIT = 0;
+const UNBOUND_OPERATIONS_OPTION = "unboundOperations";
+const MODULE_OPTION_NAMES: readonly string[] = [LOGGER_OPTION, UNBOUND_OPERATIONS_OPTION];
+const UNBOUND_OPERATIONS_VALUES: readonly unknown[] = [
+  "error",
+  "warn",
+] satisfies UnboundOperations[];
+const WARN_UNBOUND: UnboundOperations = "warn";
 // Marks every api's reply interceptor, so an api's boot check never names another api's as an app interceptor.
 const REPLY_INTERCEPTOR_MARK = Symbol.for("seampact.nestjs.reply-interceptor");
 const EXPRESS_PLATFORM = "express";
@@ -417,6 +447,8 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   const platform: { adapterHost?: HttpAdapterHost; hooks?: BoundaryHooks } = {};
   // The HTTP adapters of the apps the module was bootstrapped in.
   const bootstrappedAdapters = new WeakSet<object>();
+  // The operations each app's module left unbound under `unboundOperations: 'warn'`, keyed by its Express app.
+  const unboundRouteIdsOfApp = new WeakMap<object, ReadonlySet<string>>();
 
   const routeOf = (id: string): ContractRoute => {
     const route = api.routes.find((candidate) => candidate.id === id);
@@ -440,6 +472,12 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
       if (matched === undefined) {
         void respondUnmatched(response, hooks, { method, path });
+
+        return;
+      }
+
+      if (isUnboundInApp(request, matched.route)) {
+        void respondNotServed(response, hooks, api, { method, path });
 
         return;
       }
@@ -475,6 +513,12 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         });
       });
     };
+
+  function isUnboundInApp(request: ExpressRequest, route: ContractRoute): boolean {
+    const app = expressAppKey(Reflect.get(request, "app"));
+
+    return app !== undefined && unboundRouteIdsOfApp.get(app)?.has(route.id) === true;
+  }
 
   // Express routes a path case-insensitively and with or without a trailing slash; the contract serves the path as
   // written, so such a path under the base path answers the api's 404. Only a path under a prefix is a setup error.
@@ -636,13 +680,28 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
     if (started?.outcome === "started") context.idempotencyKey = started.key;
 
-    const result: unknown = await callMethod();
+    const result: unknown = await methodResult(context, callMethod);
 
     if (options.reply === INTERCEPTOR_REPLY) return result;
 
     await writeHandlerReply(context, response, result);
 
     return undefined;
+  }
+
+  // An exception of the method is kept, so the outgoing check reports it, or leaves it to NestJS under debug, when
+  // no seampact filter claims it, with or without the pre-routing filter.
+  async function methodResult(
+    context: BoundaryContext,
+    callMethod: () => unknown,
+  ): Promise<unknown> {
+    try {
+      return await callMethod();
+    } catch (exception) {
+      context.unclaimedException = exception;
+
+      throw exception;
+    }
   }
 
   // Step 10 on the handler's result, or on the value the app's interceptors mapped it to, then the write.
@@ -1049,6 +1108,11 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   )
   class ContractFilter implements ExceptionFilter {
     catch(exception: unknown, host: ArgumentsHost): void {
+      const context = boundaryContext.getStore();
+
+      // The contract answers this exception, so it is no longer unclaimed.
+      if (context !== undefined) context.unclaimedException = undefined;
+
       void renderContractError(host, exception);
     }
   }
@@ -1256,6 +1320,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         ...enforcedHookBootProblems(api, this.hooks),
         ...moduleOptionsProblems(this.moduleOptions),
         ...this.handlerProblems(contractMethods),
+        ...this.unboundOperationProblems(contractMethods),
         ...this.pathPrefixProblems(contractMethods),
         ...cacheProblems(contractMethods, this.applicationConfig),
         ...this.platformProblems(),
@@ -1267,13 +1332,11 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     }
 
     private handlerProblems(contractMethods: readonly DiscoveredContractMethod[]): BootProblem[] {
-      const bound = new Set<string>();
       const problems: BootProblem[] = [];
 
       for (const discovered of contractMethods) {
         const { prototype, name, method, metadata } = discovered;
 
-        bound.add(metadata.id);
         problems.push(
           ...writerProblems(metadata.id, prototype, name, method),
           ...replyDecoratorProblems(metadata.id, name, method),
@@ -1282,17 +1345,36 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         );
       }
 
-      for (const route of api.routes) {
-        if (!bound.has(route.id)) {
-          problems.push({
-            operation: route.id,
-            problem: "no controller method carries its decorator",
-            fix: `decorate a controller method with @${route.id}() and implement it`,
-          });
-        }
+      return problems;
+    }
+
+    // Under `unboundOperations: 'warn'`, a test module's operations without a controller are logged, not refused.
+    private unboundOperationProblems(
+      contractMethods: readonly DiscoveredContractMethod[],
+    ): BootProblem[] {
+      const bound = new Set(contractMethods.map((discovered) => discovered.metadata.id));
+      const unbound = api.routes.filter((route) => !bound.has(route.id));
+
+      if (unbound.length === 0) return [];
+
+      if (this.moduleOptions.unboundOperations === WARN_UNBOUND) {
+        const app = expressAppKey(this.adapterHost.httpAdapter?.getInstance());
+
+        if (app !== undefined)
+          unboundRouteIdsOfApp.set(app, new Set(unbound.map((route) => route.id)));
+
+        runtimeLogOf(api).warn(
+          `seampact: api '${api.id}' serves no controller method for ${unbound.map((route) => `'${route.id}'`).join(", ")}; their routes answer the api's 404 (unboundOperations: warn).`,
+        );
+
+        return [];
       }
 
-      return problems;
+      return unbound.map((route) => ({
+        operation: route.id,
+        problem: "no controller method carries its decorator",
+        fix: `decorate a controller method with @${route.id}() and implement it, or pass \`{ ${UNBOUND_OPERATIONS_OPTION}: 'warn' }\` to forRoot in a test module`,
+      }));
     }
 
     // The contract's paths are absolute: a controller path, a RouterModule path or a global prefix would serve them
@@ -1526,15 +1608,10 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   }
 
   // Hands an exception no api claims to NestJS's own filter, which answers and logs it as without this filter.
-  @Catch()
+  @Catch(RaisedOutsideContractRoutes)
   class PreRoutingFilter implements ExceptionFilter {
     catch(exception: unknown, host: ArgumentsHost): void {
       if (renderPreRoutingError(exception, host)) return;
-
-      const context = boundaryContext.getStore();
-
-      // On a contract route the outgoing check reports this exception if NestJS's reply violates the contract.
-      if (context !== undefined) context.unclaimedException = exception;
 
       const httpAdapter = platform.adapterHost?.httpAdapter;
 
@@ -1552,6 +1629,22 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     }
   }
 
+  const preRoutingFilter = new PreRoutingFilter();
+
+  // What every `main.ts` and e2e setup of an app serving this api alone needs: the JSON parser at the largest route
+  // limit, non-strict, keeping the raw body of signed routes, and the pre-routing filter.
+  // An api without a body leaves the parser's own limit, which its routes never reach.
+  function configureApp(app: ConfigurableNestApp): void {
+    const largestBodyLimit = largestRouteBodyLimit(api.routes);
+
+    app.useBodyParser("json", {
+      ...(largestBodyLimit === NO_BODY_LIMIT ? {} : { limit: largestBodyLimit }),
+      strict: false,
+      verify: bodyGlue.keepRawBody,
+    });
+    app.useGlobalFilters(preRoutingFilter);
+  }
+
   return {
     SeampactModule: apiModule,
     SEAMPACT_HOOKS,
@@ -1563,8 +1656,27 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     isContractRoute,
     keepRawBody: bodyGlue.keepRawBody,
     renderPreRoutingError,
-    preRoutingFilter: new PreRoutingFilter(),
+    preRoutingFilter,
+    configureApp,
   };
+}
+
+// The exceptions the pre-routing filter takes, as a class NestJS's `@Catch` tests with `instanceof`: those raised
+// outside any contract route. NestJS gives an exception to the first matching filter alone, and this filter is
+// registered after the app's `APP_FILTER`s, so on a contract route it matches nothing and the app's filters, then
+// NestJS's own, keep the exception (ADR 0016). The exception is kept there, so the outgoing check reports it if the
+// reply written for it violates the contract.
+// biome-ignore lint/complexity/noStaticOnlyClass: `@Catch` takes a class, and matches it by `instanceof`.
+class RaisedOutsideContractRoutes {
+  static [Symbol.hasInstance](value: unknown): boolean {
+    const context = boundaryContext.getStore();
+
+    if (context === undefined) return true;
+
+    context.unclaimedException = value;
+
+    return false;
+  }
 }
 
 // The contract errors one api's filter answers, as a class NestJS's `@Catch` tests with `instanceof`: the runtime's
@@ -1657,19 +1769,36 @@ function moduleOptionsProblems(moduleOptions: unknown): BootProblem[] {
     return [
       {
         problem: "the options of SeampactModule.forRoot are not an object",
-        fix: "pass `{ logger }` as forRoot's second argument, or leave it out",
+        fix: "pass `{ logger, unboundOperations }` as forRoot's second argument, or leave it out",
       },
     ];
   }
 
   return [
     ...Object.keys(moduleOptions)
-      .filter((key) => key !== LOGGER_OPTION)
+      .filter((key) => !MODULE_OPTION_NAMES.includes(key))
       .map((key) => ({
         problem: `'${key}' is not an option of SeampactModule.forRoot`,
-        fix: `remove '${key}'; forRoot takes \`{ ${LOGGER_OPTION} }\``,
+        fix: `remove '${key}'; forRoot takes \`{ ${MODULE_OPTION_NAMES.join(", ")} }\``,
       })),
     ...loggerProblems(moduleOptions[LOGGER_OPTION]),
+    ...unboundOperationsProblems(moduleOptions[UNBOUND_OPERATIONS_OPTION]),
+  ];
+}
+
+// The Express app, a function, as a weak map key.
+function expressAppKey(app: unknown): object | undefined {
+  return typeof app === "function" || (typeof app === "object" && app !== null) ? app : undefined;
+}
+
+function unboundOperationsProblems(value: unknown): BootProblem[] {
+  if (value === undefined || UNBOUND_OPERATIONS_VALUES.includes(value)) return [];
+
+  return [
+    {
+      problem: `'${UNBOUND_OPERATIONS_OPTION}' is ${JSON.stringify(value)}, not 'error' or 'warn'`,
+      fix: `pass \`${UNBOUND_OPERATIONS_OPTION}: 'warn'\` in a test module, or leave it out`,
+    },
   ];
 }
 

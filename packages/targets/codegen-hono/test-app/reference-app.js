@@ -35,6 +35,9 @@ export const REWRITE_REPLY_HEADER = "x-rewrite-reply";
  */
 export const RELABEL_REPLY_HEADER = "x-relabel-reply";
 
+/** A request carrying this header has its errors rendered by the app's `onError` through `renderContractError`. */
+export const RENDER_CONTRACT_ERROR_HEADER = "x-render-contract-error";
+
 const HOST = "127.0.0.1";
 const INTERNAL_STATUS = 500;
 const NOT_FOUND_STATUS = 404;
@@ -112,6 +115,10 @@ function referenceApp(registration) {
     if (preRouting !== undefined) return preRouting;
 
     if (error instanceof AppReply) return appReplyResponse(error);
+
+    if (c.req.header(RENDER_CONTRACT_ERROR_HEADER) !== undefined) {
+      return TasksHono.renderContractError(c, error);
+    }
 
     calls.loggedErrors.push(String(error?.stack ?? error));
 

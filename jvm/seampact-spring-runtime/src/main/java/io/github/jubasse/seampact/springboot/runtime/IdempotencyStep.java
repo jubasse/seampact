@@ -142,6 +142,20 @@ final class IdempotencyStep {
         return digested;
     }
 
+    /** Releases the claim of a request whose reply the boundary leaves to Spring, so a retry runs again. */
+    static void abandon(SeampactBoundary boundary, BoundaryExchange exchange) {
+        String key = exchange.idempotencyKey;
+        if (key == null) return;
+
+        exchange.idempotencyKey = null;
+        try {
+            boundary.idempotencyStore().abandon(key);
+        } catch (RuntimeException failure) {
+            SeampactBoundary.LOG.error("seampact: the idempotency store failed to release the claim of {}.{}; a retry with the same key"
+                    + " may be refused until it expires. Check the store's backend.", boundary.apiId(), exchange.route().id(), failure);
+        }
+    }
+
     /** Completes the claimed record with the reply that went out, or abandons it after a server error or a no-store error reply. */
     static void settle(SeampactBoundary boundary, BoundaryExchange exchange, byte[] body) {
         String key = exchange.idempotencyKey;

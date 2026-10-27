@@ -233,6 +233,27 @@ By default a reply that breaks the contract becomes the api's 500. With `seampac
 - A number past the range of a double inside an opaque value is a `type` issue (400).
 - A format with meta members, success headers or envelope slots the boundary cannot write is refused at generate time: see [Generate errors](../troubleshooting/generate.md).
 
+## Test your routes
+
+Start the app on a random port and send requests with `RestTestClient` or any HTTP client. Send the credential header your authenticate hook reads.
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class NotesRoutesTest {
+    @MockitoBean
+    UserHook userHook;
+```
+
+`@MockitoBean` replaces a hook bean with a mock you program in the test. A test slice that loads only some controllers (`@WebMvcTest`) fails the boot check: every operation needs its handler.
+
+To test a controller without HTTP, build the input record yourself, with the caller and the scopes. Nothing checks them on a direct call.
+
+```java
+GetNoteResult result = controller.getNote(new GetNoteInput(new GetNotePath(noteId), new UserPrincipal(userId)));
+```
+
+While Spring Boot devtools is active, an exception your controller throws goes to Spring's own error handling (Boot's error page or JSON). seampact logs its message and the file and line it came from. Without devtools, under the default `responses: strict` the client gets the api's 500; under `responses: warn` the framework's reply goes out as written and the violation is logged.
+
 ## Behind a reverse proxy and in Docker
 
 Set the forwarded-headers strategy, so Spring reads the proxy's headers:

@@ -456,3 +456,13 @@ export function headerValue(headers: ContractRequest["headers"], name: string): 
 
   return Array.isArray(value) ? value[0] : typeof value === "string" ? value : undefined;
 }
+
+const NO_BODY_LIMIT = 0;
+
+/** The largest body limit of the routes, 0 when none takes a body. */
+export function largestRouteBodyLimit(routes: readonly ContractRoute[]): number {
+  return Math.max(
+    NO_BODY_LIMIT,
+    ...routes.map((route) => route.input?.limitBytes ?? NO_BODY_LIMIT),
+  );
+}
