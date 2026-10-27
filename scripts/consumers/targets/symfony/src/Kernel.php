@@ -121,8 +121,9 @@ final class Kernel extends BaseKernel
 
         $services = $container->services()->defaults()->autowire()->autoconfigure();
         $leftOut = self::LEFT_OUT_BY_VARIANT[BootVariant::current() ?? ''] ?? null;
+        // The generated tree is loaded with the app's classes, as the skeleton's services.yaml loads it.
         $services->load('App\\', __DIR__ . '/')
-            ->exclude([__DIR__ . '/Generated', __DIR__ . '/Kernel.php', ...($leftOut === null ? [] : [self::sourceFileOf($leftOut)])]);
+            ->exclude([__DIR__ . '/Kernel.php', ...($leftOut === null ? [] : [self::sourceFileOf($leftOut)])]);
         $services->set('logger', SuiteLogger::class);
         $services->set(IdempotencyStore::class, FileIdempotencyStore::class);
         // The generated request matcher of the tasks api's identity routes, narrowed to the suite's probe header.

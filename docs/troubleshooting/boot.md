@@ -51,11 +51,13 @@ Same start check, run by `bin/console cache:warmup` and on the first request. Th
 | `the controller <class> carries #[IsGranted]` or `#[IsCsrfTokenValid]`, and the same with `the method <class>::<method> carries` | Remove it. Use an `access_control` rule on `seampact.<api>.matcher.<kind>`, or a decider. |
 | `the controller <class> carries #[IsSignatureValid]`, or the method form | Remove it and use nothing instead: a signed URI is not a form the contract declares. |
 | `framework.http_cache is on` | Turn it off: a reply HttpCache serves never reaches the boundary. |
-| `the input resolver ... is not registered as a value resolver` | List the api's bundle in `config/bundles.php`. |
+| `the input resolver service ... is not registered as a value resolver` | List the api's bundle in `config/bundles.php`. |
 | `the service <id> listens to kernel.request at priority ...`, `... kernel.response at priority ...` | Move your listener inside the boundary's priorities, as the message says. |
 | `the api writes absolute URLs ... and 'seampact_<api>.public_origin' is not set` | Set `public_origin` to the origin clients call, such as `https://api.example.com`: a scheme, a host, an optional port, no path. |
 | `the api writes relative URLs ... and 'seampact_<api>.public_origin' is set` | Remove `public_origin`, or set `api.wire.urls: absolute` in the contract and generate again. |
 | `the PHP extension zlib is not loaded`, `Symfony <x> is not supported` | Enable ext-zlib. Use Symfony 7.4 or 8. |
+| `the service validator is missing` | Run `composer require symfony/validator`, and keep `framework.validation` on. |
+| `The bundle configuration key seampact_<api>.<key> takes ...` | Fix the value in `config/packages/seampact_<api>.yaml`. `responses` takes `strict` or `warn`, `body_validation` takes `true` or `false`. |
 | `the route of operation '<id>' has the path ...`, `... carries a host, a scheme or a condition` | Import the api's routes with no `prefix`, `host`, `schemes` or `condition`. |
 | `an app route with the path ... is registered before the route of operation '<id>'` | Import the contract routes first. |
 | `the api '<other>' registered before this one answers its catch-all 404` | Set `catchAll: false` on the api whose base path prefixes the other's. |
