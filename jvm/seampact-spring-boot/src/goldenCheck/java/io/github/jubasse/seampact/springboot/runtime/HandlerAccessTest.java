@@ -1,7 +1,9 @@
 package io.github.jubasse.seampact.springboot.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.example.optins.api.PeekTaskInput;
@@ -155,6 +157,44 @@ class HandlerAccessTest {
 
         assertEquals(new UserPrincipal(USER_ID), tasksInput.principal());
         assertEquals(new ServicePrincipal(Service.CATALOG, USER_ID), serviceInput.principal());
+    }
+
+    @Test
+    void aResolverAnsweringAnotherScopeIsRefusedNamingBothScopes() throws Exception {
+        TasksScopeResolver swapped = new TasksScopeResolver() {
+            @Override
+            public String scope() {
+                return "channel";
+            }
+
+            @Override
+            public ScopeResolution<ResolvedScope<?, ?>, Denial> resolveScope(ScopeCall call) {
+                return new ScopeResolution.Resolved<>(new ResolvedScope<>("workspace", CHANNEL_ID, Optional.empty()));
+            }
+        };
+        beans.addBean("channelResolver", swapped);
+        SeampactBoundary boundary = new SeampactBoundary(TasksContractTable.json(), new TasksSeampactBinding(), beans, new StandardEnvironment());
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/channels/" + CHANNEL_ID + "/tasks/" + TASK_ID);
+        request.addHeader("Authorization", "Bearer " + ACCEPTED_TOKEN);
+
+        assertThrows(AssertionError.class, () -> inputOf(boundary, request, TasksHandlers.class.getMethod("getTask", GetTaskInput.class)));
+
+        String reason = failures.get(0).cause().orElseThrow().getMessage();
+        assertTrue(reason.contains("'channel'") && reason.contains("'workspace'"), reason);
+    }
+
+    @Test
+    void serializingAnInputPrintsNeitherThePrincipalNorTheScopes() throws Exception {
+        SeampactBoundary boundary = new SeampactBoundary(TasksContractTable.json(), new TasksSeampactBinding(), beans, new StandardEnvironment());
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/channels/" + CHANNEL_ID + "/tasks/" + TASK_ID);
+        request.addHeader("Authorization", "Bearer " + ACCEPTED_TOKEN);
+
+        GetTaskInput input = (GetTaskInput) inputOf(boundary, request, TasksHandlers.class.getMethod("getTask", GetTaskInput.class));
+        String json = boundary.mapper().writeValueAsString(input);
+
+        assertFalse(json.contains("principal") || json.contains("scopes") || json.contains(USER_ID.toString()), json);
+        assertFalse(input.toString().contains("principal") || input.toString().contains(USER_ID.toString()), input.toString());
+        assertFalse(input.toString().contains("scopes") || input.toString().contains(CHANNEL_APP_VALUE), input.toString());
     }
 
     // The request through the boundary filter, the interceptor and the input resolver, as Spring MVC runs them.
