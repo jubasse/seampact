@@ -9,7 +9,8 @@ use Seampact\Codegen\Runtime\FrameworkRoutes;
 
 /**
  * The framework-route allow-list of the boot check, the rule Spring's `BootCheck.isAllowListed` shares: `*` takes
- * one segment, `**` any number, a `*` inside a segment any characters but `/`, and a method takes only a route answering that one method besides HEAD.
+ * one segment, `**` any number, a `*` inside a segment any characters but `/`, and a method takes only a route
+ * answering that one method besides HEAD.
  */
 final class FrameworkRoutesTest extends TestCase
 {
@@ -39,8 +40,12 @@ final class FrameworkRoutesTest extends TestCase
         self::assertTrue(FrameworkRoutes::allows($allowed, '/livewire-3f9a/upload-file', ['POST']));
         self::assertTrue(FrameworkRoutes::allows($allowed, '/livewire-/update', ['POST']));
         self::assertFalse(FrameworkRoutes::allows($allowed, '/live-3f9a/upload-file', ['POST']));
-        self::assertTrue(FrameworkRoutes::allows([['path' => '/livewire*/**', 'method' => null]], '/livewire/update', ['POST']));
-        self::assertFalse(FrameworkRoutes::allows([['path' => '/livewire-*', 'method' => null]], '/livewire-3f9a/upload-file', ['POST']));
+        self::assertTrue(
+            FrameworkRoutes::allows([['path' => '/livewire*/**', 'method' => null]], '/livewire/update', ['POST']),
+        );
+        self::assertFalse(
+            FrameworkRoutes::allows([['path' => '/livewire-*', 'method' => null]], '/livewire-3f9a/upload-file', ['POST']),
+        );
         self::assertTrue(FrameworkRoutes::allows([['path' => '/*.json', 'method' => null]], '/up.json', ['GET']));
         self::assertFalse(FrameworkRoutes::allows([['path' => '/*.json', 'method' => null]], '/up.xml', ['GET']));
     }
@@ -57,5 +62,23 @@ final class FrameworkRoutesTest extends TestCase
     public function testALiteralSegmentIsNotAPattern(): void
     {
         self::assertFalse(FrameworkRoutes::allows([['path' => '/up.json', 'method' => null]], '/upxjson', ['GET']));
+    }
+
+    public function testAPatternTheMatcherCannotFinishIsABootErrorNamingIt(): void
+    {
+        $pattern = '/' . str_repeat('a*', 6) . 'b';
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage("the frameworkRoutes pattern '{$pattern}'");
+
+        // The JIT has no backtrack limit, so the test reads the limit the interpreter applies.
+        $jit = ini_set('pcre.jit', '0');
+        $backtrackLimit = ini_set('pcre.backtrack_limit', '1000');
+        try {
+            FrameworkRoutes::allows([['path' => $pattern, 'method' => null]], '/' . str_repeat('a', 200) . 'bx', ['GET']);
+        } finally {
+            ini_set('pcre.jit', (string) $jit);
+            ini_set('pcre.backtrack_limit', (string) $backtrackLimit);
+        }
     }
 }
