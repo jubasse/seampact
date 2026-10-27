@@ -12,6 +12,7 @@ use App\Generated\Tasks\AssignTaskResult;
 use App\Generated\Tasks\CreateTaskResponse201;
 use App\Generated\Tasks\CreateTaskResult;
 use App\Generated\Tasks\GetTaskErrors;
+use App\Generated\Tasks\GetTaskPath;
 use App\Generated\Tasks\GetTaskResponse200;
 use App\Generated\Tasks\GetTaskResult;
 use App\Generated\Tasks\GetTasksBatchResponse200;
@@ -24,6 +25,8 @@ use App\Generated\Tasks\Laravel\GetTasksBatchRequest;
 use App\Generated\Tasks\Laravel\ListTasksRequest;
 use App\Generated\Tasks\Laravel\PurgeTaskRequest;
 use App\Generated\Tasks\Laravel\SearchTasksRequest;
+use App\Generated\Tasks\Laravel\TasksRouteNames;
+use App\Generated\Tasks\Laravel\TasksUrls;
 use App\Generated\Tasks\Laravel\UpdateTaskRequest;
 use App\Generated\Tasks\ListTasksResult;
 use App\Generated\Tasks\PurgeTaskResponse204;
@@ -40,6 +43,7 @@ use App\Generated\Tasks\UpdateTaskResult;
 use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\ScriptedAnswers;
 
+/** The tasks endpoints; `getTask` also checks the route helpers against the router. */
 final class TasksController implements TasksEndpoints
 {
     public function getTask(GetTaskRequest $request): GetTaskResult
@@ -49,7 +53,20 @@ final class TasksController implements TasksEndpoints
             200,
             static fn (array $body): GetTaskResult => new GetTaskResponse200(SampleData::taskOf($body)),
             ['api.not_found' => static fn (): GetTaskResult => GetTaskErrors::apiNotFound()],
-        ) ?? new GetTaskResponse200(SampleData::task($request->contractInput()->path->taskId));
+        ) ?? new GetTaskResponse200(SampleData::task(self::checkedTaskPath($request)->taskId));
+    }
+
+    // The route helpers build the path this request came on, as `route()` builds it from the route name.
+    private static function checkedTaskPath(GetTaskRequest $request): GetTaskPath
+    {
+        $path = $request->contractInput()->path;
+        $built = TasksUrls::getTask($path->channelId, $path->taskId);
+        $routed = route(TasksRouteNames::GET_TASK, ['channelId' => $path->channelId, 'taskId' => $path->taskId], false);
+        if ($built !== $request->getPathInfo() || $built !== $routed) {
+            throw new \LogicException("TasksUrls::getTask built '{$built}', route() '{$routed}', for the request path '{$request->getPathInfo()}'.");
+        }
+
+        return $path;
     }
 
     public function getTasksBatch(GetTasksBatchRequest $request): GetTasksBatchResult
