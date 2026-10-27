@@ -4,6 +4,7 @@ import com.palantir.javapoet.ClassName
 import com.palantir.javapoet.ParameterizedTypeName
 import com.palantir.javapoet.TypeName
 import com.palantir.javapoet.TypeSpec
+import com.palantir.javapoet.WildcardTypeName
 import io.github.jubasse.seampact.ir.model.Operation
 import io.github.jubasse.seampact.ir.model.Param
 import io.github.jubasse.seampact.ir.model.Response
@@ -16,6 +17,17 @@ import javax.lang.model.element.Modifier
 private val CREDENTIAL_DERIVATION_PREFIXES = listOf("identity.", "csrf.")
 
 internal const val STATUS_ARM_PREFIX = "Status"
+
+// The input components the boundary injects from what the access steps resolved, never read from the request; the
+// runtime's input step injects them under these ids.
+private const val PRINCIPAL_COMPONENT = "principal"
+private const val SCOPES_COMPONENT = "scopes"
+private const val SCOPE_INJECTION_PREFIX = "scope."
+private val RESOLVED_SCOPE: TypeName = ParameterizedTypeName.get(
+    ClassName.get("io.github.jubasse.seampact.hooks", "ResolvedScope"),
+    WildcardTypeName.subtypeOf(JavaTypes.OBJECT),
+    WildcardTypeName.subtypeOf(JavaTypes.OBJECT),
+)
 
 /** The Java types of one operation: its input records, its result and its typed error result. */
 internal class OperationTypes(
@@ -50,7 +62,31 @@ internal class OperationTypes(
             components += RecordComponent(PAGEABLE_COMPONENT, JavaTypes.PAGEABLE, injectedAs = PAGEABLE_COMPONENT)
         }
 
+        // Null for an anonymous caller on an optional-auth route; a public route has no principal component.
+        identityOf(operation)?.let { layout.principalClass(it) }?.let { principal ->
+            components += RecordComponent(PRINCIPAL_COMPONENT, principal, injectedAs = PRINCIPAL_COMPONENT)
+        }
+
+        scopesType(operation, at)?.let { scopes ->
+            parts += scopes
+            components += RecordComponent(SCOPES_COMPONENT, names.scopes)
+        }
+
         return parts + generatedRecord(names.input, components, layout).build()
+    }
+
+    /** One component per scope the operation runs in, outermost first, each the scope its resolver answered. */
+    private fun scopesType(operation: Operation, at: IrPlace): TypeSpec? {
+        if (operation.scopes.isEmpty()) return null
+
+        val names = MemberNames(at.below("scopes"), refusals)
+        val components = operation.scopes.mapIndexedNotNull { index, scope ->
+            val name = names.claim(scope.scope, null, at.below("scopes", index, "scope")) ?: return@mapIndexedNotNull null
+
+            RecordComponent(name, RESOLVED_SCOPE, injectedAs = SCOPE_INJECTION_PREFIX + scope.scope)
+        }
+
+        return generatedRecord(layout.operation(operation.id).scopes, components, layout).build()
     }
 
     private fun paramComponents(params: List<Param>, at: IrPlace): List<RecordComponent> {
