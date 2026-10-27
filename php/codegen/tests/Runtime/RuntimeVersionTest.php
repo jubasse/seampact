@@ -50,4 +50,10 @@ final class RuntimeVersionTest extends TestCase
         RuntimeVersion::refuseOtherVersion('tasks', RuntimeVersion::VERSION);
         $this->addToAssertionCount(3);
     }
+
+    public function testTwoEqualVersionsPassEvenOutsideSemver(): void
+    {
+        self::assertTrue(RuntimeVersion::accepts('local-build', 'local-build'));
+        self::assertFalse(RuntimeVersion::accepts('local-build', 'other-build'));
+    }
 }

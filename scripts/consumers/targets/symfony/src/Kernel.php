@@ -19,7 +19,6 @@ use App\Suite\UserHook;
 use Seampact\ConsumerSuite\BootVariant;
 use Seampact\ConsumerSuite\FileIdempotencyStore;
 use Seampact\ConsumerSuite\SuiteFiles;
-use Seampact\Hooks\IdempotencyStore;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Bundle\SecurityBundle\SecurityBundle;
@@ -125,7 +124,7 @@ final class Kernel extends BaseKernel
         $services->load('App\\', __DIR__ . '/')
             ->exclude([__DIR__ . '/Kernel.php', ...($leftOut === null ? [] : [self::sourceFileOf($leftOut)])]);
         $services->set('logger', SuiteLogger::class);
-        $services->set(IdempotencyStore::class, FileIdempotencyStore::class);
+        $services->set(TasksSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
         // The generated request matcher of the tasks api's identity routes, narrowed to the suite's probe header.
         $services->set(self::IDENTITY_PROBE_MATCHER, ChainRequestMatcher::class)->args([[
             service('seampact.tasks.matcher.identity'),

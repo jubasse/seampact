@@ -40,7 +40,6 @@ use Seampact\ConsumerSuite\BootVariant;
 use Seampact\ConsumerSuite\FileIdempotencyStore;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\ConsumerSuite\SuiteFiles;
-use Seampact\Hooks\IdempotencyStore;
 
 /**
  * Binds the handlers and the hook doubles of the `tasks` and `tasksService` apis, less what the boot variant leaves out, and takes the
@@ -92,7 +91,7 @@ final class SuiteServiceProvider extends ServiceProvider
             $this->app->tag([ChannelResolver::class], TasksSeampactServiceProvider::SCOPE_RESOLVERS_TAG);
         }
         $this->app->bind(UnexpectedErrorListener::class, TasksUnexpectedErrors::class);
-        $this->app->bind(IdempotencyStore::class, FileIdempotencyStore::class);
+        $this->app->bind(TasksSeampactServiceProvider::IDEMPOTENCY_STORE_KEY, FileIdempotencyStore::class);
 
         $this->app->bind(InternalEndpoints::class, InternalController::class);
         $this->app->bind(ServiceAuthenticateHook::class, ServiceHook::class);

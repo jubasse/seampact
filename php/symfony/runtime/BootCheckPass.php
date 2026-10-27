@@ -59,6 +59,12 @@ final class BootCheckPass implements CompilerPassInterface
 
     public function process(ContainerBuilder $container): void
     {
+        if (Regeneration::skips($this->contractClass)) {
+            Regeneration::trackVersions($container, $this->contractClass);
+
+            return;
+        }
+
         $contract = ApiContract::of($this->contractClass);
         $problems = [
             ...($this->checksHandlers ? $this->handlers($container, $contract) : []),
@@ -217,6 +223,10 @@ final class BootCheckPass implements CompilerPassInterface
 
             $earlierContractClass = $contractClasses[$service] ?? null;
             if ($earlierContractClass === null) {
+                continue;
+            }
+
+            if (Regeneration::skips($earlierContractClass)) {
                 continue;
             }
 

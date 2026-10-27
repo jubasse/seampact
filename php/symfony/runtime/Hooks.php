@@ -20,7 +20,8 @@ use Symfony\Component\DependencyInjection\Attribute\Exclude;
 /**
  * The api's hooks as tagged services, which the bundle autoconfigures from the hook interfaces: a service locator of
  * the authenticate hooks keyed by their generated interface, the deciders and scope resolvers as tagged iterators, the
- * optional unexpected-error listener of the api's generated interface and idempotency store, and the app's logger. A
+ * optional unexpected-error listener of the api's generated interface and idempotency store of the api's own service
+ * id, and the app's logger. A
  * missing hook is a `LogicException`, which the boundary answers with the api's 500. Symfony's `AccessDeniedException` (`denyAccessUnlessGranted()`) is a decider's access
  * denial, named as a string so an app without SecurityBundle still loads this class.
  */
@@ -32,12 +33,13 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup
     public const AUTHENTICATE_TAG_SUFFIX = '.authenticate';
     public const DECIDERS_TAG_SUFFIX = '.deciders';
     public const SCOPE_RESOLVERS_TAG_SUFFIX = '.scope_resolvers';
+    /** The service id the app aliases to an api's idempotency store is `TAG_PREFIX . <api> . IDEMPOTENCY_STORE_SUFFIX`. */
+    public const IDEMPOTENCY_STORE_SUFFIX = '.idempotency_store';
     /** The tag attribute naming an authenticate hook's generated interface, the locator's key. */
     public const HOOK_ATTRIBUTE = 'hook';
     public const DECIDER_FIX = "register a service implementing the api's Decider and naming it, or '" . Decider::EVERY_NAME . "', with autoconfiguration on";
     public const AUTHENTICATE_HOOK_FIX = 'register one service implementing %s, with autoconfiguration on';
     public const SCOPE_RESOLVER_FIX = "register a service implementing the api's ScopeResolver, with autoconfiguration on";
-    public const IDEMPOTENCY_STORE_FIX = 'alias ' . IdempotencyStore::class . ' to a service implementing it';
     private const ACCESS_DENIED = 'Symfony\\Component\\Security\\Core\\Exception\\AccessDeniedException';
 
     /**
@@ -96,14 +98,25 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup
         throw new \LogicException("seampact: the service {$interface} is " . get_debug_type($listener) . '; alias it to a class implementing that interface.');
     }
 
-    public function idempotencyStore(): ?IdempotencyStore
+    public function idempotencyStore(ApiContract $contract): ?IdempotencyStore
     {
         $store = $this->idempotencyStore;
         if ($store === null || $store instanceof IdempotencyStore) {
             return $store;
         }
 
-        throw new \LogicException('seampact: the service ' . IdempotencyStore::class . ' is ' . get_debug_type($store) . '; ' . self::IDEMPOTENCY_STORE_FIX . '.');
+        throw new \LogicException("seampact: the service '" . self::idempotencyStoreService($contract->api) . "' is " . get_debug_type($store) . '; ' . self::idempotencyStoreFix($contract->api) . '.');
+    }
+
+    public static function idempotencyStoreService(string $api): string
+    {
+        return self::tag($api, self::IDEMPOTENCY_STORE_SUFFIX);
+    }
+
+    /** How the app registers the api's idempotency store, ending a boot check problem. */
+    public static function idempotencyStoreFix(string $api): string
+    {
+        return "alias '" . self::idempotencyStoreService($api) . "' to a service implementing " . IdempotencyStore::class;
     }
 
     public function logger(): LoggerInterface

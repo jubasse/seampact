@@ -109,6 +109,14 @@ final class ApiContract
     }
 
     // The first check of every boot: a boundary never runs against a runtime of another version.
+    /** Whether the installed runtime serves `$contractClass`, the check `of()` refuses on, without throwing. */
+    public static function servesInstalledRuntime(string $contractClass): bool
+    {
+        $generatedBy = defined("{$contractClass}::GENERATED_BY") ? constant("{$contractClass}::GENERATED_BY") : null;
+
+        return is_string($generatedBy) && RuntimeVersion::accepts($generatedBy);
+    }
+
     private static function refuseOtherRuntime(string $contractClass): void
     {
         $generatedBy = defined("{$contractClass}::GENERATED_BY") ? constant("{$contractClass}::GENERATED_BY") : null;

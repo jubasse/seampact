@@ -149,7 +149,7 @@ final class IdempotencyStep
 
     private static function store(BoundaryState $state): IdempotencyStore
     {
-        $store = $state->hooks instanceof IdempotencyStoreLookup ? $state->hooks->idempotencyStore() : null;
+        $store = $state->hooks instanceof IdempotencyStoreLookup ? $state->hooks->idempotencyStore($state->contract) : null;
 
         return $store ?? throw new \LogicException("seampact: the api '{$state->contract->api}' has no idempotency store for operation '{$state->operationId}'; register one.");
     }

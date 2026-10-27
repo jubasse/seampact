@@ -32,9 +32,13 @@ final class RuntimeVersion
         );
     }
 
-    /** The same `major.minor` and a patch at or above the generator's; a pre-release (the development version) matches only itself. */
-    private static function accepts(string $generatedBy, string $installed): bool
+    /** The same version, or the same `major.minor` and a patch at or above the generator's; a pre-release (the development version) matches only itself. */
+    public static function accepts(string $generatedBy, string $installed = self::VERSION): bool
     {
+        if ($generatedBy === $installed) {
+            return true;
+        }
+
         if (preg_match(self::PATTERN, $generatedBy, $generated) !== 1 || preg_match(self::PATTERN, $installed, $runtime) !== 1) {
             return false;
         }

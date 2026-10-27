@@ -68,7 +68,12 @@ final class BootCheck
             "tag a ScopeResolver with '" . Hooks::scopeResolversTag($contract->api) . "'",
         );
 
-        return [...$problems, ...HookCheck::idempotencyStoreProblems(new Hooks($app), $contract, 'bind ' . IdempotencyStore::class . ' in the container')];
+        return [...$problems, ...HookCheck::idempotencyStoreProblems(new Hooks($app), $contract, self::idempotencyStoreFix($contract->api))];
+    }
+
+    private static function idempotencyStoreFix(string $api): string
+    {
+        return "bind '" . Hooks::idempotencyStoreKey($api) . "' to a class implementing " . IdempotencyStore::class . ' in the container';
     }
 
     /** @return list<string> */

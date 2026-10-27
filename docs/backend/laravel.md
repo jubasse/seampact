@@ -35,6 +35,8 @@ vendor/bin/seampact generate
 php artisan seampact:generate
 ```
 
+When the generated code comes from another seampact version, every other command refuses to boot; `php artisan seampact:generate` still runs.
+
 Commit the generated files. `seampact check` fails CI when they drift from the contract.
 
 Options of the entry (all optional), set under `options:` as above:

@@ -47,7 +47,7 @@ Same start check, run by `bin/console cache:warmup` and on the first request. Th
 | `no decider for '<name>'` | Register a service implementing the api's `Decider` that names it, or `[Decider::EVERY_NAME]`. |
 | `no scope resolver for the scope '<scope>'` | Register a service implementing the api's `ScopeResolver`. |
 | `two deciders claim '<name>'` | Keep the name in one decider. |
-| `no idempotency store for '<operation>'` | Alias `Seampact\Hooks\IdempotencyStore` to a service implementing it. |
+| `no idempotency store for '<operation>'` | Alias `seampact.<api key>.idempotency_store` to a service implementing `Seampact\Hooks\IdempotencyStore`. |
 | `operation '<id>' has no handler` | Register one controller service implementing the `<Resource>Endpoints` interface. |
 | `the method <class>::<method> handles operation '<id>' but is not marked #[SeampactOperation('<id>')]` | Add the attribute. |
 | `the controller <class> carries #[IsGranted]` or `#[IsCsrfTokenValid]`, and the same with `the method <class>::<method> carries` | Remove it. Use an `access_control` rule on `seampact.<api>.matcher.<kind>`, or a decider. |
@@ -79,7 +79,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `no authenticate hook for the identity 'user': bind <Interface> in the container` | Bind the generated `<Identity>AuthenticateHook` to your class in a service provider. |
 | `no decider for '<name>': tag a Decider naming it, or '*', with 'seampact.<api>.deciders'` | Tag a class implementing the generated `Decider` with that tag. |
 | `no scope resolver for the scope '<scope>': tag a ScopeResolver with ...` | Tag a scope resolver with `seampact.<api>.scope-resolvers`. |
-| `no idempotency store for ...: bind Seampact\Hooks\IdempotencyStore in the container` | Bind an `IdempotencyStore` implementation. |
+| `no idempotency store for ...: bind 'seampact.<api>.idempotency-store' ...` | Bind your `IdempotencyStore` implementation under the provider's `IDEMPOTENCY_STORE_KEY`. |
 | `operation '<id>' has no handler: bind <Endpoints> to a controller in the container` | Bind the generated `<Resource>Endpoints` interface to your controller. |
 | `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | List the route under `frameworkRoutes` of the entry, with a reason, then run `seampact generate`. |
 | `operation '<id>' has 0 contract routes: call Route::seampact('<api>') once in the app's routes` | Call `Route::seampact('<api>')` once, from `withRouting(then: ...)` in `bootstrap/app.php`. Call it outside any route group prefix. |

@@ -27,7 +27,7 @@ final class HookCheckWarmer implements CacheWarmerInterface
     {
         return [
             ...HookCheck::problems($hooks, $contract, Hooks::AUTHENTICATE_HOOK_FIX, Hooks::DECIDER_FIX, Hooks::SCOPE_RESOLVER_FIX),
-            ...HookCheck::idempotencyStoreProblems($hooks, $contract, Hooks::IDEMPOTENCY_STORE_FIX),
+            ...HookCheck::idempotencyStoreProblems($hooks, $contract, Hooks::idempotencyStoreFix($contract->api)),
         ];
     }
 
@@ -45,6 +45,10 @@ final class HookCheckWarmer implements CacheWarmerInterface
     /** @return list<string> */
     public function warmUp(string $cacheDir, ?string $buildDir = null): array
     {
+        if (Regeneration::skips($this->contractClass)) {
+            return [];
+        }
+
         $contract = ApiContract::of($this->contractClass);
         $problems = self::problems($this->hooks, $contract);
         if ($problems !== []) {

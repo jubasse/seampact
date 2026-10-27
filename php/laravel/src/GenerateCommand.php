@@ -6,6 +6,7 @@ namespace Seampact\Laravel;
 
 use Illuminate\Console\Command;
 use Seampact\Ir\Run\Command as SeampactCommand;
+use Seampact\Laravel\Runtime\ContractServiceProvider;
 
 /**
  * `php artisan seampact:generate`: runs `vendor/bin/seampact generate` from the app's base path, with its options, so
@@ -14,7 +15,7 @@ use Seampact\Ir\Run\Command as SeampactCommand;
 final class GenerateCommand extends Command
 {
     /** @var string */
-    protected $signature = 'seampact:generate {--force : Overwrite generated files edited by hand} {--config= : The seampact config file to read}';
+    protected $signature = ContractServiceProvider::GENERATE_COMMAND . ' {--force : Overwrite generated files edited by hand} {--config= : The seampact config file to read}';
 
     /** @var string */
     protected $description = 'Generate the contract code of every seampact target entry of the app.';

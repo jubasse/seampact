@@ -6,13 +6,13 @@ namespace Seampact\Golden\Tasks\Symfony;
 
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\DumpRedaction;
-use Seampact\Hooks\IdempotencyStore;
 use Seampact\Symfony\Runtime\BootCheckPass;
 use Seampact\Symfony\Runtime\BoundarySubscriber;
 use Seampact\Symfony\Runtime\ContractSettings;
 use Seampact\Symfony\Runtime\HookCheckWarmer;
 use Seampact\Symfony\Runtime\Hooks;
 use Seampact\Symfony\Runtime\KindRequestMatcher;
+use Seampact\Symfony\Runtime\Regeneration;
 use Seampact\Symfony\Runtime\RouteCheck;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
@@ -39,6 +39,9 @@ final class TasksSeampactBundle extends AbstractBundle
     public const BOUNDARY_SERVICE = 'seampact.tasks.boundary';
     public const HOOK_CHECK_WARMER_SERVICE = 'seampact.tasks.hook_check_warmer';
     public const ROUTE_CHECK_SERVICE = 'seampact.tasks.route_check';
+
+    /** The service id the app aliases to the idempotency store of this api. */
+    public const IDEMPOTENCY_STORE_SERVICE = Hooks::TAG_PREFIX . 'tasks' . Hooks::IDEMPOTENCY_STORE_SUFFIX;
     private const API = 'tasks';
 
     protected string $extensionAlias = 'seampact_tasks';
@@ -87,7 +90,7 @@ final class TasksSeampactBundle extends AbstractBundle
             tagged_iterator(Hooks::tag(self::API, Hooks::SCOPE_RESOLVERS_TAG_SUFFIX)),
             service(UnexpectedErrorListener::class)->nullOnInvalid(),
             service('logger'),
-            service(IdempotencyStore::class)->nullOnInvalid(),
+            service(self::IDEMPOTENCY_STORE_SERVICE)->nullOnInvalid(),
         ]);
         $services->set(self::BOUNDARY_SERVICE, TasksBoundary::class)->args([service(self::HOOKS_SERVICE), service(self::SETTINGS_SERVICE), service('validator')])->tag('kernel.event_subscriber')->tag(BootCheckPass::BOUNDARY_TAG, [BootCheckPass::CONTRACT_ATTRIBUTE => TasksContract::class]);
         foreach (TasksAccess::KINDS as $kind) {
@@ -108,12 +111,15 @@ final class TasksSeampactBundle extends AbstractBundle
     }
 
     /**
-     * Refuses a worker runtime, which serves many requests from one container, and redacts credentials in VarDumper.
+     * Checks the runtime version first, except under the generate command, then redacts credentials in VarDumper
+     * and refuses a worker runtime, which serves many requests from one container.
      */
     public function boot(): void
     {
         parent::boot();
+        if (!Regeneration::skips(TasksContract::class)) {
+            DumpRedaction::register(ApiContract::of(TasksContract::class));
+        }
         BoundarySubscriber::refuseWorker($this->container);
-        DumpRedaction::register(ApiContract::of(TasksContract::class));
     }
 }
