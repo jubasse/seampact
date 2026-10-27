@@ -62,6 +62,12 @@ export function handlerInterfaceName(ir: ContractIR, operation: Operation): stri
 }
 
 /**
+ * What a handler method takes: its input alone, or its input then the arguments the app's param decorators give
+ * (NestJS), which a method compares bivariantly, so a method may declare them with their own types.
+ */
+export type HandlerParameters = "inputOnly" | "inputThenDecorated";
+
+/**
  * The handlers module: one interface per resource, each method taking the operation's input with the caller's
  * read-only `principal` and `scopes`.
  */
@@ -69,8 +75,10 @@ export function handlersSource(
   ir: ContractIR,
   types: Link<"types">,
   fromFile: string,
+  parameters: HandlerParameters,
   refusals: Refusal[],
 ): string {
+  const trailing = parameters === "inputThenDecorated" ? ", ...decorated: unknown[]" : "";
   const imports = new TypeImports(types, fromFile);
   const groups = new Map<string, string[]>();
   const accessMembers: string[] = [];
@@ -113,7 +121,7 @@ export function handlersSource(
       `  readonly ${accessKey}: ${imports.reference(exports.input)} & ${OPERATION_ACCESS_EXPORT}[${accessKey}];`,
     );
     members.push(
-      `  ${method}(input: ${HANDLER_INPUTS_EXPORT}[${accessKey}]): Awaitable<${imports.reference(exports.output)} | ${imports.reference(exports.errors)}>;`,
+      `  ${method}(input: ${HANDLER_INPUTS_EXPORT}[${accessKey}]${trailing}): Awaitable<${imports.reference(exports.output)} | ${imports.reference(exports.errors)}>;`,
     );
     groups.set(group, members);
   });

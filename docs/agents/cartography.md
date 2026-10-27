@@ -134,7 +134,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/server-runtime`
 
-- `packages/runtime/server-runtime/src`: The shared runtime of the generated Node and Web-standard server boundaries (ADR 0025): the 27 framework-neutral modules at this root export, the transport modules at `/node` and `/web`, and one placement per framework at `/express`, `/fastify`, `/nestjs`, `/adonis` and `/hono`.
+- `packages/runtime/server-runtime/src`: The shared runtime of the generated Node and Web-standard server boundaries (ADR 0025): the 30 framework-neutral modules at this root export, the transport modules at `/node` and `/web`, and one placement per framework at `/express`, `/fastify`, `/nestjs`, `/adonis` and `/hono`.
 
 ### `@seampact/signed-webhooks`
 

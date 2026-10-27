@@ -21,7 +21,7 @@ import { nativeDocsRuntimeFile } from "./native-docs-runtime-file.js";
 import { type NodeServerOptions, parseNodeServerOptions } from "./options.js";
 import { routeTableSource } from "./route-table.js";
 import { type RuntimeGenerator, serverRuntimeRefusals } from "./server-runtime-check.js";
-import { handlersSource, hookTypesSource } from "./server-types.js";
+import { type HandlerParameters, handlersSource, hookTypesSource } from "./server-types.js";
 
 // The files of one api's Node server boundary: the route table, handler interfaces and hook types, the target's
 // framework module and the api index, over the shared runtime, which a target's generated code imports from
@@ -78,6 +78,8 @@ export interface NodeServerPlacement {
   readonly nativeDocs?: NativeDocsPlacement;
   /** True for a placement that compresses its own replies, which takes the `compression` option. */
   readonly compressesReplies?: boolean;
+  /** What a handler method takes; `inputThenDecorated` lets a NestJS method add param-decorated arguments. */
+  readonly handlerParameters?: HandlerParameters;
   /**
    * The validators in the target's own library, written under `validators/` when the entry gives no `validators`
    * link; absent when the target needs the link. Pushes its refusals and returns nothing when it refuses.
@@ -337,7 +339,13 @@ function boundaryFiles(
     refusals,
     warnings,
   );
-  const handlers = handlersSource(ir, links.types, moduleFile(HANDLERS_MODULE), refusals);
+  const handlers = handlersSource(
+    ir,
+    links.types,
+    moduleFile(HANDLERS_MODULE),
+    placement.handlerParameters ?? "inputOnly",
+    refusals,
+  );
   const hooks = hookTypesSource(ir, links.types, moduleFile(HOOKS_MODULE), refusals);
   const docs = input.artefacts.has(NATIVE_DOCS_ARTEFACT)
     ? nativeDocsFiles(input, placement, refusals)

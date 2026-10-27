@@ -23,7 +23,16 @@ export class ChannelsController implements TasksNest.ChannelsEndpoints {
   }
 
   @TasksNest.getChannel()
-  getChannel(@TasksNest.getChannel.input() input: Tasks.GetChannelInput) {
+  getChannel(
+    @TasksNest.getChannel.input() input: TasksNest.HandlerInputs["getChannel"],
+    @TasksNest.getChannel.principal()
+    principal: TasksNest.OperationAccess["getChannel"]["principal"],
+    @TasksNest.getChannel.scopes() scopes: TasksNest.OperationAccess["getChannel"]["scopes"],
+  ) {
+    if (principal !== input.principal || scopes.channel.id !== input.scopes.channel.id) {
+      throw new Error("the principal and scopes decorators disagree with the input");
+    }
+
     return tasksHandlers.getChannel(input);
   }
 }

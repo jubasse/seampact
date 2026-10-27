@@ -26,6 +26,7 @@ function nestjsTargetOf(reply: ReplyMode): Target {
       frameworkSource: (ir, options, refusals, docsModule) =>
         nestjsModuleSource(ir, { ...options, reply }, refusals, docsModule),
       nativeDocs: { docsModule: "nestjs-docs", docsSource: nestjsDocsModuleSource },
+      handlerParameters: "inputThenDecorated",
     },
     validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
     frameworkDocsOffFix: "remove the `SwaggerModule.setup` call",

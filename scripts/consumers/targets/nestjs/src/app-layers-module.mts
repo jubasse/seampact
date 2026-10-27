@@ -222,7 +222,7 @@ class AppLayersChannelsController implements TasksNest.ChannelsEndpoints {
   @Public()
   @TasksNest.getChannel()
   @UseGuards(AuthGuard("jwt"))
-  getChannel(@TasksNest.getChannel.input() input: Tasks.GetChannelInput) {
+  getChannel(@TasksNest.getChannel.input() input: TasksNest.HandlerInputs["getChannel"]) {
     return tasksHandlers.getChannel(input);
   }
 }

@@ -117,6 +117,22 @@ You see no output.
 
 A throttler's 429 works out of the box with `@fastify/rate-limit`. When the operation's `rateLimited` code requires `retryAfterMs`, seampact fills it from the throttler's `Retry-After` (seconds or an HTTP date), read from the reply or from the exception. Without a usable `Retry-After`, the reply is a logged 500 (with an optional `retryAfterMs`, the code is answered without it) that names the fix: answer the code from the handler with its params.
 
+## Who is calling
+
+When an operation declares an identity, its handler's `input` also has `principal`: what your authenticate hook returned, typed with the identity's principal schema. On an optional-auth route it is `null` for an anonymous caller. A public operation has no `principal`.
+
+When an operation runs in a scope, `input.scopes` has one entry per scope, as your resolver returned it. An operation in no scope has no `scopes`.
+
+Both are read-only and are not part of the request: spreading or serialising `input` leaves them out. Type the parameter with `HandlerInputs`.
+
+```ts
+getNote(input: NotesFastify.HandlerInputs["getNote"]) {
+  const ownerId = input.principal.userId;
+  const workspaceId = input.scopes.workspace.id;
+```
+
+The scope's `value` is `unknown`: narrow it before use.
+
 ## Behind a reverse proxy and in Docker
 
 Trust only your proxy's addresses, not a hop count, so `request.ip` and `request.protocol` are the caller's:

@@ -63,7 +63,9 @@ export const tasksHandlers = scripted("tasks", {
   getChannel(input: TasksServer.HandlerInputs["getChannel"]): Tasks.GetChannelOutput {
     // The boundary authenticated the caller and resolved the channel from the path before the handler ran.
     if (input.principal.userId === "" || input.scopes.channel.id !== input.path.channelId) {
-      throw new Error("the handler did not receive the caller and the channel the boundary resolved");
+      throw new Error(
+        "the handler did not receive the caller and the channel the boundary resolved",
+      );
     }
 
     return { status: 200, body: { channelId: input.path.channelId, name: "General" } };
