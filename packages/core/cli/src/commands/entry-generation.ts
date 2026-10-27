@@ -95,6 +95,7 @@ async function generateApi(
     hookCheck: hookCheckLevelOf(entry.artefacts),
     ...(entry.mount === undefined ? {} : { mount: entry.mount }),
     ...(nativeDocs === undefined ? {} : { nativeDocsDocument: nativeDocs.value }),
+    outputDirectory: plannedApi.root,
   });
 
   if (outcome.status === "refused") {

@@ -72,6 +72,11 @@ export interface GenerateInput<
   mount: string;
   /** The api's document the framework's docs follow; present exactly when the `nativeDocs` artefact is on. */
   nativeDocsDocument?: NativeDocsDocument;
+  /**
+   * The api's output directory, from which a target whose generated code imports a runtime package reads the
+   * installed runtime before writing; the CLI gives it, and such a target refuses a request without it.
+   */
+  outputDirectory?: string;
 }
 
 // One file a target writes. `path` is a POSIX path relative to the target's output root.
@@ -147,6 +152,11 @@ export interface GenerateRequest {
   mount?: string;
   /** The parsed seampact document the `nativeDocs` artefact follows; the target refuses `nativeDocs` without it. */
   nativeDocsDocument?: NativeDocsDocument;
+  /**
+   * The api's output directory, from which a target whose generated code imports a runtime package reads the
+   * installed runtime before writing; the CLI gives it, and such a target refuses a request without it.
+   */
+  outputDirectory?: string;
 }
 
 // The target as the CLI sees it, whatever its options, artefacts and links.

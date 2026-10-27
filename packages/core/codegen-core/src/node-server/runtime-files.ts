@@ -13,6 +13,22 @@ export const SERVER_RUNTIME_DIRECTORIES: Readonly<Record<ServerRuntimeProfile, s
 /** The directory, under an api's output, that holds the copied runtime of the Node targets. */
 export const NODE_SERVER_RUNTIME_DIRECTORY = SERVER_RUNTIME_DIRECTORIES.node;
 
+/** The package the generated code of a target that no longer copies the runtime imports it from (ADR 0025). */
+export const SERVER_RUNTIME_PACKAGE = "@seampact/server-runtime";
+
+/** The runtime source of a target whose generated code imports `SERVER_RUNTIME_PACKAGE`. */
+export const PACKAGED_RUNTIME = "package";
+
+/** Where an api's generated modules import the neutral runtime from: a copied profile's directory, or the package. */
+export type ServerRuntimeSource = ServerRuntimeProfile | typeof PACKAGED_RUNTIME;
+
+/** The specifier an api's root module imports a neutral runtime module by, such as `contract-route`. */
+export function neutralRuntimeSpecifier(source: ServerRuntimeSource, module: string): string {
+  if (source === PACKAGED_RUNTIME) return SERVER_RUNTIME_PACKAGE;
+
+  return `./${SERVER_RUNTIME_DIRECTORIES[source]}/${module}.js`;
+}
+
 // A module named with a profile's prefix belongs to that profile only; every other module is neutral and copied by
 // both profiles.
 const PROFILE_MODULE_PREFIXES: Readonly<Record<ServerRuntimeProfile, string>> = {

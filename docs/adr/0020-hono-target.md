@@ -135,6 +135,14 @@ The slice consumer is a Hono 4 app served by `@hono/node-server` 2 around the ge
 
 `generate` refuses by name, with the case's code and its fix, everything ADR 0016 "Refused by name or waiting" lists for the slice apart from its NestJS platform and `class-validator` items, and the path segments of "Routes". The Web-standard runtimes other than Node, and Next.js route handlers, wait for their own targets after 1.0; this target runs on any runtime Hono serves, but the slice proves it on `@hono/node-server` only.
 
+### Amendment 2026-10-27: the runtime package
+
+ADR 0025 moves the shared runtime out of the generated tree: the `web` profile of `nodeServerRuntimeFiles()` becomes the `/web` export of `@seampact/server-runtime`, imported, no longer copied under `web-server/`, and the placement file is the package's `/hono` export, no longer `hono-boundary.ts`. Each api's generated tree keeps `hono.ts`, `routes.ts`, `handlers.ts`, `hooks.ts` and `index.ts`. The `/web` modules still import no `node:` module other than `node:async_hooks`.
+
+What the generated code depends on adds `@seampact/server-runtime` as a production dependency: its root, `/web` and `/hono` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
+
+The boot check runs one step first, before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `hono.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
+
 ## Spike
 
 Run on Hono 4.13.13, `@hono/node-server` 2.1.5 and Node 24.21, and not kept. A reduced registration wrapped `app.fetch` with an `AsyncLocalStorage` slot, registered routes with Hono's path syntax, a handler that matched the raw path and read the body itself, per-base-path catch-alls, and a reduced outgoing check on the returned `Response`; requests were sent raw with `node:http`.

@@ -5,79 +5,69 @@
 // contract request answers 500; and the exported helpers for the app's `onError` and middleware. Each api's
 // generated module calls `createHonoBoundary` once with its route table.
 import type { Context, Env, Hono, Next, Schema } from "hono";
-import { authorizeRequest, type CheckState } from "./web-server/access-checks.js";
+import { refuseCodeOfOtherVersion } from "./generator-version-check.js";
 import {
-  basePathClaimsOf,
-  claimsBasePathAlone,
-  registerBasePathClaim,
-} from "./web-server/base-path-claims.js";
-import { type BoundaryContext, boundaryContext } from "./web-server/boundary-context.js";
-import {
+  authorizeRequest,
   type BootProblem,
+  type BoundaryContext,
   type BoundaryHooks,
+  basePathClaimsOf,
   bootProblemsMessage,
-  enforcedHookBootProblems,
-  type HooksRequirement,
-  type RegisteredHooks,
-  resolvedHooks,
-} from "./web-server/boundary-hooks.js";
-import {
+  boundaryContext,
+  type CheckState,
+  type ContractApi,
   ContractError,
   type ContractReply,
-  renderContractReply,
-  unexpectedError,
-} from "./web-server/contract-error.js";
-import {
-  type ContractApi,
   type ContractRequest,
   type ContractRoute,
+  claimsBasePathAlone,
+  enforcedHookBootProblems,
+  frameworkRefusal,
+  frameworkRouteProblems,
+  type HandlerBindings,
+  type HooksRequirement,
+  handlerResultReply,
+  isBoundaryRoute,
+  isStatusDenial,
+  type ListedRoute,
+  markBoundaryRoute,
   matchContractRoute,
   matchesContractPath,
-} from "./web-server/contract-route.js";
-import {
-  frameworkRefusal,
-  isStatusDenial,
+  mediaTypeRefusal,
   notFoundError,
-  type ReportedRequest,
-  reportContractError,
-} from "./web-server/error-reply.js";
-import type { ListedRoute } from "./web-server/framework-route-patterns.js";
-import {
-  frameworkRouteProblems,
-  isBoundaryRoute,
-  markBoundaryRoute,
-} from "./web-server/framework-routes.js";
-import {
-  type HandlerBindings,
-  handlerResultReply,
+  type PlatformFixes,
+  RETRY_AFTER_HEADER,
+  type RegisteredHooks,
   type RegistrationOptions,
+  type ReportedRequest,
   type ResponseSettings,
+  registerBasePathClaim,
   registrationProblems,
+  renderContractReply,
+  reportContractError,
+  resolvedHooks,
   runInputSteps,
+  runtimeLogOf,
   settingsOf,
-} from "./web-server/handler-map.js";
-import { RETRY_AFTER_HEADER } from "./web-server/retry-after.js";
-import { runtimeLog, useRuntimeLogger } from "./web-server/runtime-logger.js";
-import { mediaTypeRefusal, type PlatformFixes } from "./web-server/transport-checks.js";
-import { checkOutgoingResponse, recordBoundaryResponse } from "./web-server/web-outgoing-check.js";
+  unexpectedError,
+  useRuntimeLogger,
+} from "./index.js";
 import {
-  type ReadRequestBody,
-  readContractBody,
-  webContractRequest,
-  webReportedRequest,
-} from "./web-server/web-request.js";
-import {
+  checkOutgoingResponse,
   claimFetchWrap,
   currentRequestSlot,
-  type RequestSlot,
-  servedInRequestSlot,
-} from "./web-server/web-request-slot.js";
-import {
   errorResponse,
   notServedResponse,
+  type ReadRequestBody,
+  type RequestSlot,
+  readContractBody,
+  recordBoundaryResponse,
   replaceReplyHeaders,
+  servedInRequestSlot,
   settledContractResponse,
-} from "./web-server/web-response.js";
+  webContractRequest,
+  webReportedRequest,
+} from "./web.js";
 
 const SKIP_CONTRACT_ROUTES_FIX =
   "Skip contract routes in the app middleware that reads the body, with isContractRoute(c): the boundary reads it itself.";
@@ -101,6 +91,8 @@ export function createHonoBoundary<
   Handlers,
   Operation extends string,
 >(api: ContractApi, generated: ResponseSettings, bindings: HandlerBindings) {
+  refuseCodeOfOtherVersion(api);
+
   // The context of this api's contract request in each request slot, for `renderContractError`.
   const contexts = new WeakMap<RequestSlot, BoundaryContext>();
   // The hooks of the last registration, for the replies written outside a contract request.
@@ -115,7 +107,7 @@ export function createHonoBoundary<
     app: Hono<E, S, BasePath>,
     options: HonoRegistrationOptions<Hooks, Handlers, Operation, E> & HooksRequirement<Hooks>,
   ): void {
-    useRuntimeLogger(options.logger);
+    useRuntimeLogger(options.logger, api);
 
     const hooks = resolvedHooks(options.hooks);
     const problems = [
@@ -216,7 +208,7 @@ export function createHonoBoundary<
       `seampact: the framework-route check of api '${api.id}' has not run on the app that serves it; call checkFrameworkRoutes(app) once every route is added, before serving, or switch it off with 'artefacts.bootCheck.frameworkRoutes: false'.`,
     );
 
-    runtimeLog.error(cause.message);
+    runtimeLogOf(api).error(cause.message);
 
     return errorResponse(undefined, hooks, api, route, unexpectedError(route, cause), reported);
   }

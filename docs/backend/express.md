@@ -8,7 +8,7 @@ Add Express to the app.
 pnpm add express@5 && pnpm add -D @types/express@5
 ```
 
-You see pnpm add both packages. The NestJS packages from [Install](../getting-started/01-install.md) stay unused; `pnpm remove @nestjs/common @nestjs/core @nestjs/platform-express reflect-metadata rxjs` drops them.
+You see pnpm add both packages. The generated router imports `@seampact/server-runtime`, which [Install](../getting-started/01-install.md) already put in `dependencies`; keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`. The NestJS packages from [Install](../getting-started/01-install.md) stay unused; `pnpm remove @nestjs/common @nestjs/core @nestjs/platform-express reflect-metadata rxjs` drops them.
 
 Create `src/notes-handlers.ts`.
 

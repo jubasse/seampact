@@ -34,6 +34,7 @@ const LINKED_PACKAGES = {
   "@seampact/codegen-ts": "packages/targets/codegen-ts",
   "@seampact/codegen-zod": "packages/targets/codegen-zod",
   "@seampact/hooks": "packages/runtime/hooks",
+  "@seampact/server-runtime": "packages/runtime/server-runtime",
 };
 
 /** The consumer's compiler options: strict, NodeNext, and the legacy decorators NestJS needs. */
@@ -519,6 +520,11 @@ function linksOf(
   };
 }
 
+/** The output directory of a reference api's server tree in a project, from which the runtime check reads. */
+export function referenceServerOutput(project: string, api: string): string {
+  return join(project, "generated", "server", api);
+}
+
 async function generateApi(
   project: string,
   ir: ContractIR,
@@ -554,6 +560,7 @@ async function generateApi(
         links: linksOf(providers, ir, api),
         artefacts: serverRequest.artefacts ?? BOUNDARY_ONLY,
         frameworkRoutes,
+        outputDirectory: referenceServerOutput(project, api),
         ...(serverRequest.hookCheck === undefined ? {} : { hookCheck: serverRequest.hookCheck }),
         ...(serverRequest.mount === undefined ? {} : { mount: serverRequest.mount }),
         ...(serverRequest.nativeDocsDocument === undefined

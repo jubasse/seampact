@@ -1,22 +1,20 @@
 import type { Target } from "@seampact/codegen-core";
-import { nodeServerTarget } from "@seampact/codegen-core/node-server";
+import { nodeServerTarget, PACKAGED_RUNTIME } from "@seampact/codegen-core/node-server";
 import { serverTargetCompatibility } from "@seampact/spec/compatibility";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
 import { honoModuleSource } from "./hono-module.js";
 
-// The Hono target, as the CLI loads it. Its placement is a checked source of this package one directory above both
-// `src` and `dist`, the `hono` module of each api, and the Web-standard profile of the shared runtime.
+// The Hono target, as the CLI loads it. Its placement is the `hono` module of each api, over the Hono placement and
+// the Web-standard modules of `@seampact/server-runtime`.
 export const target: Target = nodeServerTarget({
   packageName: packageJson.name,
   packageVersion: packageJson.version,
   format,
   placement: {
-    runtimeModule: "hono-boundary",
-    runtimeSourceUrl: new URL("../runtime/hono-boundary.ts", import.meta.url),
+    runtimeSource: PACKAGED_RUNTIME,
     frameworkModule: "hono",
     frameworkSource: honoModuleSource,
-    runtimeProfile: "web",
   },
   validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
   frameworkDocsOffFix: "this framework writes no document of its own; remove the key",

@@ -3,84 +3,80 @@
 // catch-all per contract path and one for the api's base paths; the router's narrow error middleware; the boot
 // check; the framework-route check, which the app calls before listening or the router runs on the first request;
 // and the exported helpers for errors raised before the router. The same code serves Express 4 and 5. Each api's
-// generated module calls `createExpressBoundary` once with its route table.
+// generated module calls `createExpressBoundary` once with the app's `express` and its route table.
 import type { IncomingMessage, ServerResponse } from "node:http";
-import express, {
-  type ErrorRequestHandler,
-  type NextFunction,
-  type Request,
-  type RequestHandler,
-  type Response,
-  type Router,
+import type express from "express";
+import type {
+  ErrorRequestHandler,
+  NextFunction,
+  Request,
+  RequestHandler,
+  Response,
+  Router,
 } from "express";
-import { authorizeRequest, type CheckState } from "./node-server/access-checks.js";
+import { refuseCodeOfOtherVersion } from "./generator-version-check.js";
 import {
+  authorizeRequest,
   type BasePathClaim,
-  basePathClaimsOf,
-  claimsBasePathAlone,
-  registerBasePathClaim,
-} from "./node-server/base-path-claims.js";
-import { type BoundaryContext, boundaryContext } from "./node-server/boundary-context.js";
-import {
   type BootProblem,
+  type BoundaryContext,
   type BoundaryHooks,
+  basePathClaimsOf,
+  bodySizeRefusal,
   bootProblemsMessage,
-  enforcedHookBootProblems,
-  type HooksRequirement,
-  type RegisteredHooks,
-  resolvedHooks,
-} from "./node-server/boundary-hooks.js";
-import { ContractError, unexpectedError } from "./node-server/contract-error.js";
-import {
+  boundaryContext,
+  type CheckState,
   type ContractApi,
+  ContractError,
   type ContractRoute,
+  claimsBasePathAlone,
+  enforcedHookBootProblems,
+  frameworkRefusal,
+  frameworkRouteProblems,
+  type HandlerBindings,
+  type HooksRequirement,
+  handlerResultReply,
+  isStatusDenial,
   isUnderBasePath,
+  logWriteFailure,
   matchContractPath,
   matchContractRoute,
   matchesContractPath,
-} from "./node-server/contract-route.js";
-import {
-  frameworkRefusal,
-  isStatusDenial,
-  logWriteFailure,
+  mediaTypeRefusal,
   notFoundError,
-  type ReportedRequest,
-} from "./node-server/error-reply.js";
-import { frameworkRouteProblems } from "./node-server/framework-routes.js";
-import {
-  type HandlerBindings,
-  handlerResultReply,
+  type PlatformFixes,
+  RETRY_AFTER_HEADER,
+  type RegisteredHooks,
   type RegistrationOptions,
+  type ReportedRequest,
   type ResponseSettings,
+  registerBasePathClaim,
   registrationProblems,
+  resolvedHooks,
   runInputSteps,
+  runtimeLogOf,
   settingsOf,
-} from "./node-server/handler-map.js";
-import { expressRouteListing, isObjectLike } from "./node-server/node-express-routes.js";
-import { installOutgoingCheck } from "./node-server/node-outgoing-check.js";
-import {
-  respondNotServed,
-  respondWithError,
-  responseHeaderValues,
-  writeContractReply,
-} from "./node-server/node-reply.js";
+  unexpectedError,
+  useRuntimeLogger,
+} from "./index.js";
 import {
   bodyParserRefusal,
   clearEmptyBody,
   contractRequest,
   DEFAULT_METHOD,
+  type ExpressBodyGlue,
   type ExpressRequest,
   expressBodyGlue,
+  expressRouteListing,
+  installOutgoingCheck,
+  isObjectLike,
   ownBodyParserRefusal,
   reportedRequest,
-} from "./node-server/node-request.js";
-import { RETRY_AFTER_HEADER } from "./node-server/retry-after.js";
-import { runtimeLog, useRuntimeLogger } from "./node-server/runtime-logger.js";
-import {
-  bodySizeRefusal,
-  mediaTypeRefusal,
-  type PlatformFixes,
-} from "./node-server/transport-checks.js";
+  respondNotServed,
+  respondWithError,
+  responseHeaderValues,
+  writeContractReply,
+} from "./node.js";
 
 const EXPRESS_FIXES: PlatformFixes = {
   rawBody:
@@ -92,12 +88,35 @@ const NO_MOUNT = "";
 
 type ContinueOrStop = "continue" | "stop";
 
-/** The Express boundary of one api. */
+/** The two functions the boundary takes from the app's own `express`, so one Express serves the app and its routers. */
+export type ExpressFramework = Pick<typeof express, "Router" | "json">;
+
+/** What each api's generated `express` module exports from its boundary. */
+export interface ExpressBoundary<Hooks extends RegisteredHooks, Handlers> {
+  router<Operation extends string>(
+    options: RegistrationOptions<Hooks, Handlers, Operation> & HooksRequirement<Hooks>,
+  ): Router;
+  checkFrameworkRoutes(app: unknown): void;
+  readonly preRoutingErrorHandler: ErrorRequestHandler;
+  renderPreRoutingError(
+    request: IncomingMessage,
+    response: ServerResponse,
+    error?: unknown,
+  ): boolean;
+  renderContractError(response: ServerResponse, error: unknown): Promise<void>;
+  isContractRoute(request: IncomingMessage): boolean;
+  readonly keepRawBody: ExpressBodyGlue["keepRawBody"];
+}
+
+/** The Express boundary of one api; refuses code generated by a version this runtime does not serve. */
 export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
+  framework: ExpressFramework,
   api: ContractApi,
   generated: ResponseSettings,
   bindings: HandlerBindings,
-) {
+): ExpressBoundary<Hooks, Handlers> {
+  refuseCodeOfOtherVersion(api);
+
   const bodyGlue = expressBodyGlue(api);
   // The context of each contract response, for the error middleware and `renderContractError`.
   const contexts = new WeakMap<ServerResponse, BoundaryContext>();
@@ -111,7 +130,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
   function router<Operation extends string>(
     options: RegistrationOptions<Hooks, Handlers, Operation> & HooksRequirement<Hooks>,
   ): Router {
-    useRuntimeLogger(options.logger);
+    useRuntimeLogger(options.logger, api);
 
     const hooks = resolvedHooks(options.hooks);
     const problems = [
@@ -121,7 +140,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
-    const contractRouter = express.Router();
+    const contractRouter = framework.Router();
 
     routerHooks.set(contractRouter, hooks);
     routersMade.count += 1;
@@ -257,7 +276,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
 
     if (input === undefined) return [];
 
-    const parser = express.json({
+    const parser = framework.json({
       limit: input.limitBytes,
       strict: false,
       type: () => true,
@@ -293,7 +312,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
 
       if (!warnedGlobalParser.has(route.id)) {
         warnedGlobalParser.add(route.id);
-        runtimeLog.warn(
+        runtimeLogOf(api).warn(
           `seampact: an app-wide body parser read the body of '${route.id}' before the router of api '${api.id}'; mount the router before it, or give it verify: keepRawBody and limit: LARGEST_BODY_LIMIT.`,
         );
       }
@@ -364,7 +383,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
         `${bootProblemsMessage(api, problems)}\nThe check ran on the first request, since the app did not call checkFrameworkRoutes(app) before listening; every request answers 500 until the app restarts.`,
       );
 
-      runtimeLog.error(cause.message);
+      runtimeLogOf(api).error(cause.message);
       respondDetached(response, hooks, route, unexpectedError(route, cause), reported);
     };
   }
@@ -452,7 +471,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
       `seampact: the router of api '${api.id}' is mounted under '${request.baseUrl}', which differs from the entry's mount (write the prefix as the entry's 'mount' in seampact.config.yaml instead); mount it at the app's root with app.use(router).`,
     );
 
-    runtimeLog.error(cause.message);
+    runtimeLogOf(api).error(cause.message);
     respondDetached(response, hooks, route, unexpectedError(route, cause), reported);
   }
 
@@ -492,7 +511,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
 
     if (routersMade.count === 1) return routersMade.lastHooks;
 
-    runtimeLog.error(noOwningRouterMessage(api, routersMade.count));
+    runtimeLogOf(api).error(noOwningRouterMessage(api, routersMade.count));
 
     return undefined;
   }

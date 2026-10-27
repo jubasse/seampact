@@ -251,6 +251,8 @@ export interface ContractRoute {
 
 export interface ContractApi {
   readonly id: string;
+  /** The full version of the generator that wrote this table, which the boot check compares with the runtime's. */
+  readonly generatorVersion: string;
   /** The resolved prefix of each surface, as `/v1`: a path under one that no route serves is the api's 404. */
   readonly basePaths: readonly string[];
   readonly format: ErrorFormat;

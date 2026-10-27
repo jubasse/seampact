@@ -96,6 +96,14 @@ At run time: `express` 4 or 5 as a peer dependency, for `Router` and `express.js
 
 `generate` refuses by name, with the case's code and its fix, everything ADR 0016 "Refused by name or waiting" lists for the slice apart from its NestJS platform and `class-validator` items. Express adds no refusal of its own.
 
+### Amendment 2026-10-27: the runtime package
+
+ADR 0025 moves the shared request checks out of the generated tree: they are those of `@seampact/server-runtime`, imported, no longer the copies of `@seampact/codegen-core/node-server` under `node-server/`, and the placement file is the package's `/express` export, no longer `express-boundary.ts`. Each api's generated tree keeps `express.ts`, `routes.ts`, `handlers.ts`, `hooks.ts` and `index.ts`. `express.ts` hands the app's own `express` to the placement, so the routers and their body parsers come from the Express the app runs, 4 or 5.
+
+What the generated code depends on adds `@seampact/server-runtime` as a production dependency: its root, `/node` and `/express` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
+
+The boot check runs one step first, before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `express.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
+
 ## Spike
 
 Run on Express 4.22.3 and 5.3.0 (`compression` 1.8.2) and Node 24.21, and not kept. A router factory registered routes with the middleware above, a reduced model of the shared outgoing check installed from the first middleware, and a final error middleware that answered contract errors and passed the rest to the app's. Every result below was the same on both majors unless stated.

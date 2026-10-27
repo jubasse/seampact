@@ -1,42 +1,7 @@
-import { pathToFileURL } from "node:url";
-import {
-  GENERATE_TIMEOUT_MILLISECONDS,
-  generateReferenceProject,
-  projectDirectory,
-} from "@seampact/codegen-core/node-server/test-support";
-import { beforeAll, describe, expect, test } from "vitest";
-import { target } from "./index.js";
+import { describe, expect, test } from "vitest";
+import { type ContractRoute, statusError } from "./index.js";
 
-// The shared status rule, exercised on the copy of the Node runtime that the Express target writes into a project.
-
-interface ContractRoute {
-  id: string;
-}
-
-interface StatusErrorReply {
-  code: string;
-  params?: unknown;
-}
-
-type StatusError = (
-  route: ContractRoute,
-  status: number,
-  detail: undefined,
-  fixes: Record<string, string>,
-  facts?: Record<string, unknown>,
-) => StatusErrorReply;
-
-const PROJECT = projectDirectory(import.meta.url, "error-reply");
-const COPIED_ERROR_REPLY = "generated/server/tasks/node-server/error-reply.ts";
-
-let statusError: StatusError;
-
-beforeAll(async () => {
-  await generateReferenceProject(PROJECT, target, {});
-  const copy = await import(pathToFileURL(`${PROJECT}/${COPIED_ERROR_REPLY}`).href);
-
-  statusError = copy.statusError;
-}, GENERATE_TIMEOUT_MILLISECONDS);
+// The shared status rule of the runtime, read through a route of the shape a generated table holds.
 
 const FIXES = { requiredParams: "answer it from the handler", severalCodes: "pick one" };
 

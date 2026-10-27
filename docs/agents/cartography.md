@@ -23,6 +23,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/pack-spring` | `packages/packs/pack-spring` | pack | Spring Data's Page as a paging style. |
 | `@seampact/hooks` | `packages/runtime/hooks` | hooks | The neutral hook interfaces and idempotency store interface every generated Node server boundary types against. |
 | `@seampact/idempotency-memory` | `packages/runtime/idempotency-memory` | helper | An in-memory idempotency store for one process, for development and tests. |
+| `@seampact/server-runtime` | `packages/runtime/server-runtime` | helper | The request checks and replies every generated Node and Web-standard server boundary imports, with one placement per framework. |
 | `@seampact/signed-webhooks` | `packages/runtime/signed-webhooks` | helper | Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook. |
 | `@seampact/codegen-adonis` | `packages/targets/codegen-adonis` | target | Generates the AdonisJS boundary around your controllers: the routes of each api with their checking middleware, the reply path, the error helpers for your exception handler and a boot check, validating with the zod or yup link you give or with VineJS validators it generates. |
 | `@seampact/codegen-angular` | `packages/targets/codegen-angular` | target | Generates an injectable Angular api service over HttpClient with signal readers built on resource(), over the typed fetch client, with no query library, and opt-in NgRx action groups and effects. |
@@ -69,7 +70,7 @@ In pipeline order (ADR 0006 section 1).
 - `packages/core/codegen-core/src`: The API the code generators are written against: target definitions, link descriptors, refusals, and the steps around a target's generate (IR support and link checks, header, formatting, file writer), and the helpers targets share (IR locations, located refusals, planned names, property keys, the front query plan).
 - `packages/core/codegen-core/src/fetch-client`: The fetch client's reading of the contract (ADR 0021): the per-operation request and success plan, the page and payload readers, the wire format forms it refuses, and the type namespace names.
 - `packages/core/codegen-core/src/front-queries`: The framework-neutral query plan the front targets render (ADR 0021): per operation its form, export names, key, resource, call options and next-page rule, the front runtime each front target copies into its output, and the query module sources the TypeScript front targets share (plain fetch and TanStack Query factories, and the parts of the plain fetch hooks and composables).
-- `packages/core/codegen-core/src/node-server`: The shared server boundary every Node and Web-standard server target generates (ADR 0016, ADR 0020): the framework-neutral runtime copied into the generated tree, the emitters of the route table, handler interfaces and hook types, the target options parser, the path segments a router cannot read, and the assembly of one api's boundary files around a target's placement.
+- `packages/core/codegen-core/src/node-server`: The shared server boundary every Node and Web-standard server target generates (ADR 0016, ADR 0020): the framework-neutral runtime, imported from `@seampact/server-runtime` or still copied into the generated tree, the generate-time check of the installed runtime (ADR 0025), the emitters of the route table, handler interfaces and hook types, the target options parser, the path segments a router cannot read, and the assembly of one api's boundary files around a target's placement.
 - `packages/core/codegen-core/src/validators`: The validator-neutral half of every validators target: the module layout and export names, the descriptor, the `rules` option, the shared wire checks, and the plan of each schema and operation input with every refusal, which a target renders in its own library.
 
 ### `@seampact/compiler`
@@ -131,6 +132,10 @@ In pipeline order (ADR 0006 section 1).
 
 - `packages/runtime/idempotency-memory/src`: An in-memory idempotency store for one process, lost on restart: for development and tests.
 
+### `@seampact/server-runtime`
+
+- `packages/runtime/server-runtime/src`: The shared runtime of the generated Node and Web-standard server boundaries (ADR 0025): the 27 framework-neutral modules at this root export, the transport modules at `/node` and `/web`, and one placement per framework.
+
 ### `@seampact/signed-webhooks`
 
 - `packages/runtime/signed-webhooks/src`: The template signature verifier an authenticate hook calls for a signed identity (ADR 0013): HMAC over the raw body, timestamp tolerance and secret rotation; the application keeps its secrets.
@@ -153,7 +158,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/codegen-express`
 
-- `packages/targets/codegen-express/src`: The Express server target: a router per api that places the shared Node request checks of codegen-core around the app's handler map, on Express 4 and 5, validating with zod.
+- `packages/targets/codegen-express/src`: The Express server target: a router per api that places the shared Node request checks of `@seampact/server-runtime` around the app's handler map, on Express 4 and 5, validating with zod.
 
 ### `@seampact/codegen-fastify`
 
@@ -166,7 +171,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/codegen-hono`
 
-- `packages/targets/codegen-hono/src`: The Hono server target: a `registerRoutes` function per api that places the shared request checks of codegen-core, in their Web-standard profile, around the app's handler map on Hono 4, validating with zod.
+- `packages/targets/codegen-hono/src`: The Hono server target: a `registerRoutes` function per api that places the shared request checks of `@seampact/server-runtime`, in their Web-standard profile, around the app's handler map on Hono 4, validating with zod.
 
 ### `@seampact/codegen-msw`
 

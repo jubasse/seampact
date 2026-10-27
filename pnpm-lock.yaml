@@ -172,6 +172,9 @@ importers:
       '@changesets/cli':
         specifier: 3.0.3
         version: 3.0.3
+      '@seampact/hooks':
+        specifier: workspace:*
+        version: link:packages/runtime/hooks
       '@seampact/pack-api-platform':
         specifier: workspace:*
         version: link:packages/packs/pack-api-platform
@@ -335,6 +338,28 @@ importers:
       '@seampact/hooks':
         specifier: workspace:*
         version: link:../hooks
+
+  packages/runtime/server-runtime:
+    dependencies:
+      '@seampact/hooks':
+        specifier: workspace:*
+        version: link:../hooks
+    devDependencies:
+      '@types/express':
+        specifier: 5.0.6
+        version: 5.0.6
+      '@types/node':
+        specifier: 24.19.1
+        version: 24.19.1
+      express:
+        specifier: 5.3.0
+        version: 5.3.0(supports-color@10.2.2)
+      hono:
+        specifier: 4.13.13
+        version: 4.13.13
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
 
   packages/runtime/signed-webhooks:
     dependencies:
