@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel;
 
-use Seampact\Codegen\BootCheckSwitches;
 use Nette\PhpGenerator\Literal;
+use Seampact\Codegen\ApiInterfaceFile;
+use Seampact\Codegen\BootCheckSwitches;
 use Seampact\Codegen\PhpClassFile;
 
 /**
  * The api's boundary wiring (ADR 0023 "The boundary"): the boundary and access middleware, each naming the contract
- * class, and the service provider the app lists in `bootstrap/providers.php`, with its boot check switches and the
- * container tags its deciders and scope resolvers take.
+ * class, the service provider the app lists in `bootstrap/providers.php`, with its boot check switches and the
+ * container tags its deciders and scope resolvers take and the key of its idempotency store, and the interface the app binds its unexpected-error listener to.
  */
 final class BoundaryClasses
 {
@@ -26,6 +27,11 @@ final class BoundaryClasses
             $this->middlewareFile($this->layout->boundary, 'BoundaryMiddleware', 'steps 1 and 10 of every request under its base paths'),
             $this->middlewareFile($this->layout->accessMiddleware, 'AccessMiddleware', 'steps 2 to 5 of each contract route'),
             $this->providerFile(),
+            ApiInterfaceFile::extending(
+                $this->layout->unexpectedErrorListener,
+                $this->layout->runtime('UnexpectedErrorListener'),
+                "Told of every failure api '{$this->layout->ir->api->id}' answers with its 500: bind your listener to this interface.",
+            ),
         ];
     }
 
@@ -51,6 +57,8 @@ final class BoundaryClasses
             ->addComment('The container tag of the deciders of this api.');
         $class->addConstant('SCOPE_RESOLVERS_TAG', self::tagLiteral($hooks, $api, 'SCOPE_RESOLVERS_TAG_SUFFIX'))->setPublic()
             ->addComment('The container tag of the scope resolvers of this api.');
+        $class->addConstant('IDEMPOTENCY_STORE_KEY', self::tagLiteral($hooks, $api, 'IDEMPOTENCY_STORE_KEY_SUFFIX'))->setPublic()
+            ->addComment('The container key the app binds the idempotency store of this api under.');
 
         $this->contractMethod($file, 'contractClass', $this->layout->contract);
         $this->contractMethod($file, 'boundaryClass', $this->layout->boundary);

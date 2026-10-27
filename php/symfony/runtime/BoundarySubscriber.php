@@ -88,6 +88,9 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
     /** The request attribute the input resolver reads the typed input from. */
     abstract protected function inputAttribute(): string;
 
+    /** @return class-string<OperationMark> the api's generated `SeampactOperation` attribute */
+    abstract protected function operationAttribute(): string;
+
     /** The api's generated exception base, which the handlers throw. */
     abstract protected function contractExceptionClass(): string;
 
@@ -186,8 +189,8 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
     {
         $request = $event->getRequest();
         $contract = $this->contract();
-        $attribute = $event->getAttributes(SeampactOperation::class)[0] ?? null;
-        $attributeOperation = $attribute instanceof SeampactOperation ? $attribute->operationId : null;
+        $attribute = $event->getAttributes($this->operationAttribute())[0] ?? null;
+        $attributeOperation = $attribute instanceof OperationMark ? $attribute->operationId : null;
         $routeName = $request->attributes->get(self::ROUTE_ATTRIBUTE);
         $routeOperation = $request->attributes->get(self::OPERATION_DEFAULT);
         $contractRoute = is_string($routeName) && is_string($routeOperation) && $routeName === $contract->routeName($routeOperation);

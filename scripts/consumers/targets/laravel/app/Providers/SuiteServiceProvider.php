@@ -8,16 +8,16 @@ use App\Generated\Tasks\AppEndpoints;
 use App\Generated\Tasks\ChannelsEndpoints;
 use App\Generated\Tasks\DraftsEndpoints;
 use App\Generated\Tasks\HooksEndpoints;
-use App\Generated\Tasks\Laravel\Runtime\UnexpectedErrorListener;
 use App\Generated\Tasks\Laravel\StripeAuthenticateHook;
 use App\Generated\Tasks\Laravel\TasksSeampactServiceProvider;
+use App\Generated\Tasks\Laravel\UnexpectedErrorListener;
 use App\Generated\Tasks\Laravel\UserAuthenticateHook;
 use App\Generated\Tasks\PreferencesEndpoints;
 use App\Generated\Tasks\TasksEndpoints;
 use App\Generated\TasksService\InternalEndpoints;
-use App\Generated\TasksService\Laravel\Runtime\UnexpectedErrorListener as ServiceUnexpectedErrorListener;
 use App\Generated\TasksService\Laravel\ServiceAuthenticateHook;
 use App\Generated\TasksService\Laravel\TasksServiceSeampactServiceProvider;
+use App\Generated\TasksService\Laravel\UnexpectedErrorListener as ServiceUnexpectedErrorListener;
 use App\Http\Controllers\AppController;
 use App\Http\Controllers\ChannelsController;
 use App\Http\Controllers\DraftsController;
@@ -40,7 +40,6 @@ use Seampact\ConsumerSuite\BootVariant;
 use Seampact\ConsumerSuite\FileIdempotencyStore;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\ConsumerSuite\SuiteFiles;
-use Seampact\Hooks\IdempotencyStore;
 
 /**
  * Binds the handlers and the hook doubles of the `tasks` and `tasksService` apis, less what the boot variant leaves out, and takes the
@@ -92,7 +91,7 @@ final class SuiteServiceProvider extends ServiceProvider
             $this->app->tag([ChannelResolver::class], TasksSeampactServiceProvider::SCOPE_RESOLVERS_TAG);
         }
         $this->app->bind(UnexpectedErrorListener::class, TasksUnexpectedErrors::class);
-        $this->app->bind(IdempotencyStore::class, FileIdempotencyStore::class);
+        $this->app->bind(TasksSeampactServiceProvider::IDEMPOTENCY_STORE_KEY, FileIdempotencyStore::class);
 
         $this->app->bind(InternalEndpoints::class, InternalController::class);
         $this->app->bind(ServiceAuthenticateHook::class, ServiceHook::class);

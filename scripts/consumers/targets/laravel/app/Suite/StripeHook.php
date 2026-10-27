@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
-use App\Generated\Tasks\Laravel\Runtime\Denial;
 use App\Generated\Tasks\Laravel\StripeAuthenticateHook;
 use App\Generated\Tasks\Laravel\StripePrincipal;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\StripeSignature;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\AuthenticateRequest;

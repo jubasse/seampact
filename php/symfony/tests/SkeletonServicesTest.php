@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\BootCheckPass;
 use Seampact\Golden\TasksConsistent\Symfony\TasksContract;
+use Seampact\Symfony\Runtime\BootCheckPass;
 use Seampact\Symfony\Tests\Support\SkeletonKernel;
 use Symfony\Component\Filesystem\Filesystem;
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Symfony;
 
+use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Golden\TasksConsistent\CreateTaskInput;
 use Seampact\Golden\TasksConsistent\GetChannelInput;
 use Seampact\Golden\TasksConsistent\GetDraftInput;
@@ -15,7 +16,6 @@ use Seampact\Golden\TasksConsistent\ListTasksInput;
 use Seampact\Golden\TasksConsistent\PaymentsInput;
 use Seampact\Golden\TasksConsistent\PurgeTaskInput;
 use Seampact\Golden\TasksConsistent\SearchTasksInput;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\ContractBypassedException;
 use Seampact\Golden\TasksConsistent\UpdateTaskInput;
 use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\HttpFoundation\Request;

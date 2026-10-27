@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Symfony\Tests\Support;
 
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\BootCheckPass;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSeampactBundle;
+use Seampact\Symfony\Runtime\BootCheckPass;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;

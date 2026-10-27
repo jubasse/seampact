@@ -6,13 +6,13 @@ namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\ApiContract;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\BoundaryState;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\Hooks;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\RawTarget;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\RawTarget;
 use Seampact\Golden\TasksConsistent\Symfony\TasksBoundary;
 use Seampact\Golden\TasksConsistent\Symfony\TasksContract;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSettings;
+use Seampact\Symfony\Runtime\Hooks;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

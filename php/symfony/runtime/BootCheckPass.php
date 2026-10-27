@@ -44,9 +44,11 @@ final class BootCheckPass implements CompilerPassInterface
     /**
      * @param string $boundaryService the ids of the bundle's boundary, input resolver and settings services
      * @param bool $checksHandlers the `handlers` switch of `artefacts.bootCheck`
+     * @param string $operationAttribute the api's generated `SeampactOperation` attribute
      */
     public function __construct(
         private readonly string $contractClass,
+        private readonly string $operationAttribute,
         private readonly string $boundaryService,
         private readonly string $resolverService,
         private readonly string $settingsService,
@@ -57,7 +59,7 @@ final class BootCheckPass implements CompilerPassInterface
 
     public function process(ContainerBuilder $container): void
     {
-        $contract = ApiContract::of($this->contractClass);
+        $contract = Regeneration::contract($this->contractClass);
         $problems = [
             ...($this->checksHandlers ? $this->handlers($container, $contract) : []),
             ...$this->listeners($container),
@@ -115,7 +117,7 @@ final class BootCheckPass implements CompilerPassInterface
                 $problems[] = "the controller {$class->name} carries #[{$attribute}], which runs after the contract's input checks; use {$fix}";
             }
             foreach ($operations as $method => $operationId) {
-                $problems = [...$problems, ...self::method($class, $method, $operationId)];
+                $problems = [...$problems, ...$this->method($class, $method, $operationId)];
             }
         }
 
@@ -126,14 +128,14 @@ final class BootCheckPass implements CompilerPassInterface
      * @param \ReflectionClass<object> $class
      * @return list<string>
      */
-    private static function method(\ReflectionClass $class, string $method, string $operationId): array
+    private function method(\ReflectionClass $class, string $method, string $operationId): array
     {
         if (!$class->hasMethod($method)) {
             return [];
         }
 
         $reflection = $class->getMethod($method);
-        $marks = array_map(static fn (\ReflectionAttribute $attribute): mixed => $attribute->getArguments()[0] ?? $attribute->getArguments()['operationId'] ?? null, $reflection->getAttributes(SeampactOperation::class));
+        $marks = array_map(static fn (\ReflectionAttribute $attribute): mixed => $attribute->getArguments()[0] ?? $attribute->getArguments()['operationId'] ?? null, $reflection->getAttributes($this->operationAttribute));
         $problems = [];
         if ($marks !== [$operationId]) {
             $problems[] = "the method {$class->name}::{$method} handles operation '{$operationId}' but is not marked #[SeampactOperation('{$operationId}')]; add the attribute";
@@ -218,7 +220,7 @@ final class BootCheckPass implements CompilerPassInterface
                 continue;
             }
 
-            $earlier = ApiContract::of($earlierContractClass);
+            $earlier = Regeneration::contract($earlierContractClass);
             if (($earlier->defaults['catch_all'] ?? true) !== false && ApiContract::basePathsCover($earlier->basePaths(), $contract->basePaths())) {
                 $basePaths = implode(', ', array_map(static fn (string $basePath): string => $basePath === '' ? '/' : $basePath, $earlier->basePaths()));
                 $problems[] = "the api '{$earlier->api}' registered before this one answers its catch-all 404 under {$basePaths}, which covers this api's paths; set catchAll to false on the api whose base path equals or prefixes this api's";

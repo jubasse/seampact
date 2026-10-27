@@ -120,7 +120,7 @@ final class HookCheck
         }
 
         try {
-            if ($hooks instanceof IdempotencyStoreLookup && $hooks->idempotencyStore() !== null) {
+            if ($hooks instanceof IdempotencyStoreLookup && $hooks->idempotencyStore($contract) !== null) {
                 return [];
             }
         } catch (\LogicException $wrongType) {

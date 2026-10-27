@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel;
 
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\AuthenticateCall;
+use Seampact\Codegen\Runtime\AuthenticateCall;
 use Seampact\Hooks\AuthenticateHook;
 
 /**

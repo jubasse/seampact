@@ -146,7 +146,7 @@ final class HookSelectionTest extends TestCase
                 return $this->scopeResolvers;
             }
 
-            public function unexpectedErrorListener(): ?UnexpectedErrorListener
+            public function unexpectedErrorListener(ApiContract $contract): ?UnexpectedErrorListener
             {
                 return null;
             }

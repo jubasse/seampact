@@ -6,7 +6,7 @@ namespace Seampact\Golden\TasksConsistent;
 
 use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\Request;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\Replies;
+use Seampact\Codegen\Runtime\Replies;
 use Seampact\Golden\TasksConsistent\Schemas\ApiForbiddenParams;
 use Seampact\Golden\TasksConsistent\Schemas\ApiPayloadTooLargeParams;
 use Seampact\Golden\TasksConsistent\Schemas\ApiSchemaInvalidParams;

@@ -23,7 +23,6 @@ use Seampact\Ir\Model\UrlForm;
  */
 final class BundleFiles
 {
-    private const IDEMPOTENCY_STORE = 'Seampact\\Hooks\\IdempotencyStore';
     /** The bundle's constants naming the id of each service it registers, and the role ending the id. */
     private const SERVICE_ROLES = [
         'ROUTE_LOADER_SERVICE' => 'route_loader',
@@ -62,6 +61,9 @@ final class BundleFiles
         foreach (self::SERVICE_ROLES as $constant => $role) {
             $class->addConstant($constant, "seampact.{$this->placement->layout->ir->api->id}.{$role}");
         }
+        $hooksName = $file->name($this->placement->runtime('Hooks'));
+        $class->addConstant('IDEMPOTENCY_STORE_SERVICE', new Literal("{$hooksName}::TAG_PREFIX . ? . {$hooksName}::IDEMPOTENCY_STORE_SUFFIX", [$this->placement->layout->ir->api->id]))
+            ->addComment('The service id the app aliases to the idempotency store of this api.');
 
         $configure = $class->addMethod('configure')->setPublic()->setReturnType('void');
         $configure->addParameter('definition')->setType($file->type('Symfony\\Component\\Config\\Definition\\Configurator\\DefinitionConfigurator'));
@@ -102,10 +104,9 @@ final class BundleFiles
         $settings = $file->name($this->placement->settings);
         $hooks = $file->name($this->placement->runtime('Hooks'));
         $boundary = $file->name($this->placement->boundary);
-        $listener = $file->name($this->placement->runtime('UnexpectedErrorListener'));
-        $idempotencyStore = $file->name(self::IDEMPOTENCY_STORE);
-        $decider = $file->name($this->placement->runtime('Decider'));
-        $scopeResolver = $file->name($this->placement->runtime('ScopeResolver'));
+        $listener = $file->name($this->placement->unexpectedErrorListener);
+        $decider = $file->name($this->placement->decider);
+        $scopeResolver = $file->name($this->placement->scopeResolver);
         $routeCheck = $file->name($this->placement->runtime('RouteCheck'));
         $contract = $file->name($this->placement->contract);
         $bootCheck = $file->name($this->placement->runtime('BootCheckPass'));
@@ -133,7 +134,7 @@ final class BundleFiles
                 tagged_iterator({$tag('SCOPE_RESOLVERS_TAG_SUFFIX')}),
                 service({$listener}::class)->nullOnInvalid(),
                 service('logger'),
-                service({$idempotencyStore}::class)->nullOnInvalid(),
+                service(self::IDEMPOTENCY_STORE_SERVICE)->nullOnInvalid(),
             ]);
             \$services->set(self::BOUNDARY_SERVICE, {$boundary}::class)->args([service(self::HOOKS_SERVICE), service(self::SETTINGS_SERVICE), service('validator')])->tag('kernel.event_subscriber')->tag({$bootCheck}::BOUNDARY_TAG, [{$bootCheck}::CONTRACT_ATTRIBUTE => {$contract}::class]);
             foreach ({$access}::KINDS as \$kind) {
@@ -167,15 +168,16 @@ final class BundleFiles
             PHP;
         if ($this->bootCheck !== null) {
             $bootCheckPass = $file->name($this->placement->runtime('BootCheckPass'));
-            $buildBody .= "\n\$container->addCompilerPass(new {$bootCheckPass}({$contract}::class, self::BOUNDARY_SERVICE, self::INPUT_RESOLVER_SERVICE, self::SETTINGS_SERVICE, {$settings}::class, "
+            $buildBody .= "\n\$container->addCompilerPass(new {$bootCheckPass}({$contract}::class, {$file->name($this->placement->operationAttribute)}::class, self::BOUNDARY_SERVICE, self::INPUT_RESOLVER_SERVICE, self::SETTINGS_SERVICE, {$settings}::class, "
                 . var_export($this->bootCheck->handlers, true) . "), {$passConfig}::TYPE_BEFORE_REMOVING, {$bootCheckPass}::PRIORITY);";
         }
         $build->setBody($buildBody);
 
         $class->addMethod('boot')->setPublic()->setReturnType('void')
-            ->addComment('Refuses a worker runtime, which serves many requests from one container, and redacts credentials in VarDumper.')
-            ->setBody("parent::boot();\n{$file->name($this->placement->runtime('BoundarySubscriber'))}::refuseWorker(\$this->container);\n"
-                . "{$file->name($this->placement->runtime('DumpRedaction'))}::register({$file->name($this->placement->runtime('ApiContract'))}::of({$file->name($this->placement->contract)}::class));");
+            ->addComment("Checks the runtime version first (except while the generate command runs), then redacts credentials in\nVarDumper and refuses a worker runtime, which serves many requests from one container.")
+            ->setBody("parent::boot();\n"
+                . "{$file->name($this->placement->runtime('DumpRedaction'))}::register({$file->name($this->placement->runtime('Regeneration'))}::contract({$file->name($this->placement->contract)}::class));\n"
+                . "{$file->name($this->placement->runtime('BoundarySubscriber'))}::refuseWorker(\$this->container);");
 
         return $file;
     }
@@ -378,6 +380,9 @@ final class BundleFiles
 
         $class->addMethod('inputAttribute')->setProtected()->setReturnType('string')
             ->setBody('return ' . $file->name($this->placement->inputResolver) . '::INPUT_ATTRIBUTE;');
+
+        $class->addMethod('operationAttribute')->setProtected()->setReturnType('string')
+            ->setBody('return ' . $file->name($this->placement->operationAttribute) . '::class;');
         $class->addMethod('contractExceptionClass')->setProtected()->setReturnType('string')
             ->setBody('return ' . $file->name($this->placement->layout->contractException) . '::class;');
         $class->addMethod('checksHooks')->setProtected()->setReturnType('bool')

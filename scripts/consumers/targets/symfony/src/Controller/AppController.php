@@ -9,7 +9,7 @@ use App\Generated\Tasks\HealthInput;
 use App\Generated\Tasks\HealthResponse200;
 use App\Generated\Tasks\HealthResult;
 use App\Generated\Tasks\Schemas\Health;
-use App\Generated\Tasks\Symfony\Runtime\SeampactOperation;
+use App\Generated\Tasks\Symfony\SeampactOperation;
 use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\ScriptedAnswers;
 

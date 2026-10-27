@@ -14,12 +14,13 @@ use Illuminate\Routing\Router;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Golden\TasksConsistent\Laravel\TasksBoundary;
 use Seampact\Hooks\IdempotencyBegin;
 use Seampact\Hooks\IdempotencyClaim;
 use Seampact\Hooks\IdempotencyStore;
 use Seampact\Hooks\StoredResponse;
+use Seampact\Laravel\Runtime\Hooks;
 
 /** A key the request claimed is released when the request fails past the router, so a retry is not blocked. */
 final class IdempotencySettleTest extends TestCase
@@ -34,7 +35,7 @@ final class IdempotencySettleTest extends TestCase
         $kernel->prependMiddleware(TasksBoundary::class);
         $app->instance(KernelContract::class, $kernel);
         $store = new RecordingStore();
-        $app->instance(IdempotencyStore::class, $store);
+        $app->instance(Hooks::idempotencyStoreKey('tasks'), $store);
         $app->instance(LoggerInterface::class, new NullLogger());
 
         $request = Request::create('/v1/channels/10000000-0000-4000-8000-000000000001/tasks', 'POST');

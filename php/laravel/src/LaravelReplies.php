@@ -12,7 +12,7 @@ use Seampact\Codegen\PhpClassFile;
 
 /**
  * Makes the shared result and exception classes reply through the boundary (ADR 0023 "Results and errors"): each
- * success and errors class is `Responsable`, so Laravel's router hands it to the copied runtime's `Replies::result`,
+ * success and errors class is `Responsable`, so Laravel's router hands it to the runtime's `Replies::result`,
  * and the api's exception base renders itself with `Replies::thrown`, its params read from `contractParams()`.
  */
 final class LaravelReplies

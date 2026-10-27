@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
-use App\Generated\TasksService\Symfony\Runtime\Denial;
+use App\Generated\TasksService\Schemas\Service;
 use App\Generated\TasksService\Symfony\ServiceAuthenticateHook;
 use App\Generated\TasksService\Symfony\ServiceCredentials;
 use App\Generated\TasksService\Symfony\ServicePrincipal;
-use App\Generated\TasksService\Schemas\Service;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\Credentials;
 use Seampact\ConsumerSuite\ServiceTokens;
 use Seampact\ConsumerSuite\SuiteControl;

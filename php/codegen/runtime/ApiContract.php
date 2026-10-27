@@ -75,8 +75,24 @@ final class ApiContract
         usort($this->routes, ContractRoute::mostSpecificFirst(...));
     }
 
-    /** The contract of the generated class `$contractClass`, read once per process. */
+    /** The contract of the generated class `$contractClass`, read once per process, its version checked on every call. */
     public static function of(string $contractClass): self
+    {
+        self::refuseOtherRuntime($contractClass);
+
+        return self::load($contractClass);
+    }
+
+    /**
+     * The contract read for the generate command alone, which runs under a version skew to fix it: the version check
+     * steps aside for this call only, so a later `of()` in the same process still refuses the skew.
+     */
+    public static function forRegeneration(string $contractClass): self
+    {
+        return self::load($contractClass);
+    }
+
+    private static function load(string $contractClass): self
     {
         if (isset(self::$loaded[$contractClass])) {
             return self::$loaded[$contractClass];
@@ -104,6 +120,18 @@ final class ApiContract
         /** @var list<array<string, mixed>> $routeTable */
         /** @var list<array{method: ?string, path: string}> $frameworkRoutes */
         return self::$loaded[$contractClass] = new self($api, $ir, $types, $defaults, $routeTable, $routesClass, $frameworkRoutes, $mount, $frameworkRouteScope === self::STRICT_SCOPE);
+    }
+
+    // The first check of every boot: a boundary never runs against a runtime of another version.
+    private static function refuseOtherRuntime(string $contractClass): void
+    {
+        $generatedBy = defined("{$contractClass}::GENERATED_BY") ? constant("{$contractClass}::GENERATED_BY") : null;
+        $api = defined("{$contractClass}::API") ? constant("{$contractClass}::API") : null;
+        if (!is_string($generatedBy) || !is_string($api)) {
+            throw new \LogicException("The generated contract class {$contractClass} lacks its API or GENERATED_BY constant, which a generator older than the installed runtime omits; regenerate it.");
+        }
+
+        RuntimeVersion::refuseOtherVersion($api, $generatedBy);
     }
 
     /** @return array<array-key, mixed> */

@@ -6,12 +6,12 @@ namespace Seampact\Golden\Tasks;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryMark;
-use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryState;
-use Seampact\Golden\Tasks\Laravel\Runtime\FormSteps;
-use Seampact\Golden\Tasks\Laravel\Runtime\InputTree;
-use Seampact\Golden\Tasks\Laravel\Runtime\Position;
-use Seampact\Golden\Tasks\Laravel\Runtime\UnknownKeysRule;
+use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Laravel\Runtime\BoundaryMark;
+use Seampact\Laravel\Runtime\FormSteps;
+use Seampact\Laravel\Runtime\InputTree;
+use Seampact\Laravel\Runtime\Position;
+use Seampact\Laravel\Runtime\UnknownKeysRule;
 
 /**
  * The request of operation 'health': its access mark and its validation rules.

@@ -9,7 +9,7 @@ use App\Generated\Tasks\GetPreferencesResponse200;
 use App\Generated\Tasks\GetPreferencesResult;
 use App\Generated\Tasks\PreferencesEndpoints;
 use App\Generated\Tasks\Schemas\Preferences;
-use App\Generated\Tasks\Symfony\Runtime\SeampactOperation;
+use App\Generated\Tasks\Symfony\SeampactOperation;
 use App\Generated\Tasks\UpdatePreferencesInput;
 use App\Generated\Tasks\UpdatePreferencesResponse200;
 use App\Generated\Tasks\UpdatePreferencesResult;

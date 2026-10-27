@@ -8,10 +8,10 @@ use Seampact\Golden\TasksConsistent\AppEndpoints;
 use Seampact\Golden\TasksConsistent\ChannelsEndpoints;
 use Seampact\Golden\TasksConsistent\DraftsEndpoints;
 use Seampact\Golden\TasksConsistent\HooksEndpoints;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\KindMiddleware;
 use Seampact\Golden\TasksConsistent\Laravel\TasksAccessMiddleware;
 use Seampact\Golden\TasksConsistent\PreferencesEndpoints;
 use Seampact\Golden\TasksConsistent\TasksEndpoints;
+use Seampact\Laravel\Runtime\KindMiddleware;
 
 // The contract routes of api 'tasks'; require this file inside the route group that serves them.
 Route::get('/v1/health', [AppEndpoints::class, 'health'])->name('seampact.tasks.health')->middleware([TasksAccessMiddleware::class, ...KindMiddleware::of('tasks', 'public')])->withoutMiddleware(PreventRequestForgery::class);

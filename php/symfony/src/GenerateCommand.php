@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Symfony;
 
 use Seampact\Ir\Run\Command as SeampactCommand;
+use Seampact\Symfony\Runtime\Regeneration;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -15,7 +16,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  * `bin/console seampact:generate`: runs `vendor/bin/seampact generate` from the app's project directory, with its
  * options, so an app generates its contract code without leaving the console.
  */
-#[AsCommand(name: 'seampact:generate', description: 'Generate the contract code of every seampact target entry of the app.')]
+#[AsCommand(name: Regeneration::COMMAND, description: 'Generate the contract code of every seampact target entry of the app.')]
 final class GenerateCommand extends Command
 {
     public function __construct(private readonly string $projectDirectory)

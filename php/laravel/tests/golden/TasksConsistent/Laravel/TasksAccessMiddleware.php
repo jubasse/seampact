@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel;
 
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\AccessMiddleware;
+use Seampact\Laravel\Runtime\AccessMiddleware;
 
 /**
  * The AccessMiddleware of api 'tasks': steps 2 to 5 of each contract route.

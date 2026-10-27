@@ -6,9 +6,9 @@ namespace Seampact\Codegen\Runtime;
 
 use Seampact\Hooks\IdempotencyStore;
 
-/** A hook lookup that also finds the app's idempotency store, for a target that serves idempotent writes. */
+/** A hook lookup that also finds the idempotency store the app registered for each api, for a target that serves idempotent writes. */
 interface IdempotencyStoreLookup
 {
-    /** The app's registered store, null when it registers none. */
-    public function idempotencyStore(): ?IdempotencyStore;
+    /** The store the app registered for the api, null when it registers none. */
+    public function idempotencyStore(ApiContract $contract): ?IdempotencyStore;
 }

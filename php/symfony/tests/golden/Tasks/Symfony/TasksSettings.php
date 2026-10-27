@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Symfony;
 
-use Seampact\Golden\Tasks\Symfony\Runtime\ContractSettings;
-use Seampact\Golden\Tasks\Symfony\Runtime\EnvValue;
+use Seampact\Symfony\Runtime\ContractSettings;
+use Seampact\Symfony\Runtime\EnvValue;
 use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 

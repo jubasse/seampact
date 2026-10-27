@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
-use App\Generated\Tasks\Symfony\Runtime\Denial;
-use App\Generated\Tasks\Symfony\Runtime\ScopeResolver;
+use App\Generated\Tasks\Symfony\ScopeResolver;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\ResolvedScope;
 use Seampact\Hooks\ResolveScopeRequest;

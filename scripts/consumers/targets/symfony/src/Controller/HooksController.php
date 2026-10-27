@@ -8,7 +8,7 @@ use App\Generated\Tasks\HooksEndpoints;
 use App\Generated\Tasks\PaymentsInput;
 use App\Generated\Tasks\PaymentsResponse204;
 use App\Generated\Tasks\PaymentsResult;
-use App\Generated\Tasks\Symfony\Runtime\SeampactOperation;
+use App\Generated\Tasks\Symfony\SeampactOperation;
 
 final class HooksController implements HooksEndpoints
 {

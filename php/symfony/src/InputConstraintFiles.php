@@ -30,7 +30,7 @@ use Seampact\Ir\Model\UnknownKeysPolicy;
 
 /**
  * Each operation's generated input constraint and its validator (ADR 0024 "Types and validation"): the validator
- * declares the operation's input shape, which the copied runtime walks on the decoded input. Under `rules: native` a
+ * declares the operation's input shape, which the runtime walks on the decoded input. Under `rules: native` a
  * value rule renders as Symfony's own constraint where Symfony has one (`Length`, `Count`, the comparisons,
  * `DivisibleBy`, `Regex`), its contract rule in its `payload`, and a string with a pattern also gets the generated
  * check of the empty string, which `Regex` passes unchecked. Under `seampact-consistent` every rule is generated.

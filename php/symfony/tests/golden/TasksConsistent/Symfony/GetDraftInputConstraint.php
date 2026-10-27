@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Symfony;
 
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\InputConstraint;
+use Seampact\Symfony\Runtime\InputConstraint;
 
 /**
  * The contract input of operation 'getDraft', checked by its validator on the decoded input.

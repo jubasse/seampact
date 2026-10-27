@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
-use App\Generated\Tasks\Laravel\Runtime\Decider;
-use App\Generated\Tasks\Laravel\Runtime\Denial;
 use App\Generated\Tasks\Laravel\UserPrincipal;
 use App\Generated\Tasks\Schemas\ApiRateLimitedParams;
+use Seampact\Codegen\Runtime\Decider;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\Credentials;
 use Seampact\ConsumerSuite\DecisionPurpose;
 use Seampact\ConsumerSuite\SuiteControl;

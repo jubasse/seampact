@@ -41,6 +41,9 @@ final class GoldenTest extends TestCase
         $golden = new GoldenTree(self::GOLDEN_DIRECTORY);
         $generated = GoldenTree::flattened($trees);
 
+        $copiedRuntime = array_filter(array_keys($generated), static fn (string $path): bool => str_contains($path, '/Runtime/'));
+        self::assertSame([], array_values($copiedRuntime), 'The generated tree copies no runtime: the code imports it from the installed packages.');
+
         if (getenv(self::UPDATE_VARIABLE) === '1') {
             $golden->rewrite($generated);
         }

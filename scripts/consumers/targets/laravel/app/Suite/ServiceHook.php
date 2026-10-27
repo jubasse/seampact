@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
-use App\Generated\TasksService\Laravel\Runtime\Denial;
 use App\Generated\TasksService\Laravel\ServiceAuthenticateHook;
 use App\Generated\TasksService\Laravel\ServiceCredentials;
 use App\Generated\TasksService\Laravel\ServicePrincipal;
 use App\Generated\TasksService\Schemas\Service;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\Credentials;
 use Seampact\ConsumerSuite\ServiceTokens;
 use Seampact\ConsumerSuite\SuiteControl;

@@ -6,7 +6,7 @@ namespace Seampact\Laravel\Tests;
 
 use Illuminate\Http\Request;
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\Tasks\Laravel\Runtime\BodyReader;
+use Seampact\Codegen\Runtime\BodyReader;
 
 /** The body is read through the request, so an in-process request (`postJson()` in a feature test) sends its body. */
 final class BodyReaderTest extends TestCase

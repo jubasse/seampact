@@ -27,7 +27,13 @@ interface HookLookup
     /** @return iterable<mixed> every service registered as a scope resolver of the api, in registration order */
     public function scopeResolvers(ApiContract $contract): iterable;
 
-    public function unexpectedErrorListener(): ?UnexpectedErrorListener;
+    /**
+     * The app's listener of the api's own `UnexpectedErrorListener` interface (`types.unexpectedErrorListener`), so two
+     * apis never share one binding or receive each other's failures.
+     *
+     * @throws \LogicException the registered service implements another type
+     */
+    public function unexpectedErrorListener(ApiContract $contract): ?UnexpectedErrorListener;
 
     public function logger(): LoggerInterface;
 

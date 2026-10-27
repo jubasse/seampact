@@ -28,8 +28,10 @@ abstract class ContractServiceProvider extends ServiceProvider
     private const SUBSTITUTE_BINDINGS = 'Illuminate\\Routing\\Middleware\\SubstituteBindings';
     private const OCTANE_WORKER_STARTING = 'Laravel\\Octane\\Events\\WorkerStarting';
     private const CACHING_COMMANDS = ['route:cache', 'optimize'];
+    /** The command that regenerates the api, under which the runtime version check steps aside. */
+    public const GENERATE_COMMAND = 'seampact:generate';
     private const CONFIG_TAG = 'seampact-config';
-    // The same key in every api's copied runtime, so each api's provider sees the others' boundaries.
+    // One key for every api's provider, so each sees the others' boundaries.
     private const BOUNDARIES_KEY = 'seampact.boundaries';
 
     abstract protected function contractClass(): string;
@@ -46,7 +48,7 @@ abstract class ContractServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $contract = ApiContract::of($this->contractClass());
+        $contract = $this->contract();
         $this->app->instance(self::routeTableKey($contract->api), $contract->routesClass);
         $this->app->instance(self::BOUNDARIES_KEY, [...self::boundaries($this->app), $this->boundaryClass() => ['api' => $contract->api, 'basePaths' => $contract->basePaths()]]);
 
@@ -64,7 +66,7 @@ abstract class ContractServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $contract = ApiContract::of($this->contractClass());
+        $contract = $this->contract();
         RedactingDumper::install($this->app, $contract);
         $kernel = $this->app->make(Kernel::class);
         if (method_exists($kernel, 'prependMiddleware') && method_exists($kernel, 'addToMiddlewarePriorityBefore')) {
@@ -107,6 +109,23 @@ abstract class ContractServiceProvider extends ServiceProvider
         }
     }
 
+    // The version check steps aside while the generate command runs, read from the command line at each boot.
+    private function contract(): ApiContract
+    {
+        return self::generateCommandRuns($this->app) ? ApiContract::forRegeneration($this->contractClass()) : ApiContract::of($this->contractClass());
+    }
+
+    private static function generateCommandRuns(Application $application): bool
+    {
+        return self::runningConsoleCommand($application, [self::GENERATE_COMMAND]);
+    }
+
+    /** @param list<string> $commands */
+    private static function runningConsoleCommand(Application $application, array $commands): bool
+    {
+        return method_exists($application, 'runningConsoleCommand') && $application->runningConsoleCommand($commands);
+    }
+
     // An HTTP boot without a route cache, and `route:cache` and `optimize`, which boot a fresh application.
     private function bootCheckRuns(): bool
     {
@@ -115,7 +134,7 @@ abstract class ContractServiceProvider extends ServiceProvider
         }
 
         return !$this->app->runningInConsole()
-            || (method_exists($this->app, 'runningConsoleCommand') && $this->app->runningConsoleCommand(self::CACHING_COMMANDS));
+            || self::runningConsoleCommand($this->app, self::CACHING_COMMANDS);
     }
 
     /**

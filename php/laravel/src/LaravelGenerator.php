@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\PsrPrinter;
-use Seampact\Codegen\ContractClass;
-use Seampact\Codegen\FrameworkRouteScope;
-use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\ArtefactSwitches;
 use Seampact\Codegen\BootCheckSwitches;
+use Seampact\Codegen\ContractClass;
+use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\Delivery;
+use Seampact\Codegen\FrameworkRouteScope;
 use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -32,7 +32,7 @@ use Seampact\Ir\Write\GeneratedFile;
  * The laravel target (ADR 0023), which `vendor/bin/seampact` finds through `extra.seampact.generator`: per api, the
  * value types, the controller interfaces, the results and exceptions replying through the boundary, the FormRequests
  * with their rules, the route table (and `routes.php` under `routes: file`), the route names and URL builders, the
- * contract class, the identity hooks, the middleware and service provider, and the copied runtime.
+ * contract class, the identity hooks, the middleware, the service provider and the unexpected-error listener interface.
  */
 final class LaravelGenerator implements Generator
 {
@@ -119,7 +119,6 @@ final class LaravelGenerator implements Generator
             $files[] = $routesFile;
         }
 
-        $files = [...$files, ...RuntimeFiles::copied($layout)];
         usort($files, static fn (GeneratedFile $first, GeneratedFile $second): int => strcmp($first->path, $second->path));
 
         return $files;

@@ -10,12 +10,12 @@ use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\AccessMiddleware;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\ApiContract;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BootCheck;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BootCheckFailedException;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryMiddleware;
+use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Golden\TasksConsistent\Laravel\TasksContract;
+use Seampact\Laravel\Runtime\AccessMiddleware;
+use Seampact\Laravel\Runtime\BootCheck;
+use Seampact\Laravel\Runtime\BootCheckFailedException;
+use Seampact\Laravel\Runtime\BoundaryMiddleware;
 
 /** The boot check's rule on the app's exception handler, which must take the api's `renderable` callbacks. */
 final class BootCheckTest extends TestCase

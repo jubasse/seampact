@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Tests\Runtime;
 
+use Seampact\Codegen\Runtime\RuntimeVersion;
+
 /** A generated contract class with one list on a page style that counts its pages and links the last one. */
 final class PagesContract
 {
     public const API = 'tasks';
+    public const GENERATED_BY = RuntimeVersion::VERSION;
     public const IR = [
         'api' => ['id' => 'tasks', 'wire' => ['urls' => 'relative']],
         'operations' => [

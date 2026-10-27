@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel;
 
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\WireValues;
+use Seampact\Codegen\Runtime\WireValues;
 
 /**
  * The path of each operation of api 'tasks', as the contract defines it.

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Symfony;
 
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\BoundarySubscriber;
 use Seampact\Golden\TasksConsistent\TasksContractException;
+use Seampact\Symfony\Runtime\BoundarySubscriber;
 use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\Validator\Constraint;
 
@@ -42,6 +42,11 @@ final class TasksBoundary extends BoundarySubscriber
   protected function inputAttribute(): string
   {
     return TasksInputResolver::INPUT_ATTRIBUTE;
+  }
+
+  protected function operationAttribute(): string
+  {
+    return SeampactOperation::class;
   }
 
   protected function contractExceptionClass(): string

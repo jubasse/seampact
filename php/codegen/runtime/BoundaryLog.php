@@ -26,7 +26,7 @@ final class BoundaryLog
 
         // The 500 is written whatever the listener is: an unusable one is logged, never thrown from here.
         try {
-            $listener = $hooks->unexpectedErrorListener();
+            $listener = $hooks->unexpectedErrorListener($contract);
         } catch (\LogicException $unusable) {
             $logger->error("seampact: api '{$contract->api}' operation '{$operation}': the unexpected-error listener is unusable: {$unusable->getMessage()}");
 

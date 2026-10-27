@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
-use App\Generated\Tasks\Laravel\Runtime\Denial;
 use App\Generated\Tasks\Laravel\UserAuthenticateHook;
 use App\Generated\Tasks\Laravel\UserCredentials;
 use App\Generated\Tasks\Laravel\UserPrincipal;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\Credentials;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\AuthenticateRequest;

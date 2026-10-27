@@ -10,12 +10,12 @@ use Illuminate\Contracts\Auth\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\ApiContract;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\GuestRedirects;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\Hooks;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Golden\TasksConsistent\Laravel\TasksContract;
 use Seampact\Hooks\RequestView;
+use Seampact\Laravel\Runtime\GuestRedirects;
+use Seampact\Laravel\Runtime\Hooks;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 
 /** Laravel's `auth` and `auth.session` middleware in an app with no `login` route: a contract request gets no guest redirect, others keep the app's. */

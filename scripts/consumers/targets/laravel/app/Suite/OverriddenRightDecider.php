@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
-use App\Generated\Tasks\Laravel\Runtime\Decider;
-use App\Generated\Tasks\Laravel\Runtime\Denial;
+use Seampact\Codegen\Runtime\Decider;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\DecisionPurpose;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\Decision;

@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Route;
 use Seampact\Golden\Tasks\AppEndpoints;
 use Seampact\Golden\Tasks\ChannelsEndpoints;
 use Seampact\Golden\Tasks\DraftsEndpoints;
-use Seampact\Golden\Tasks\Laravel\Runtime\KindMiddleware;
 use Seampact\Golden\Tasks\TasksEndpoints;
+use Seampact\Laravel\Runtime\KindMiddleware;
 
 /**
  * The contract routes of api 'tasks', in registration order.

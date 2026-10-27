@@ -9,7 +9,7 @@ use App\Generated\TasksService\GetTaskInput;
 use App\Generated\TasksService\GetTaskResponse200;
 use App\Generated\TasksService\GetTaskResult;
 use App\Generated\TasksService\InternalEndpoints;
-use App\Generated\TasksService\Symfony\Runtime\SeampactOperation;
+use App\Generated\TasksService\Symfony\SeampactOperation;
 use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\ScriptedAnswers;
 

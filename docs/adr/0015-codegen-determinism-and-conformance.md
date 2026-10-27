@@ -68,7 +68,7 @@ A CI job compiles and generates the reference contract and the scale fixture (FR
 
 ### Runtime helpers
 
-Optional runtime helpers (ADR 0009) are hand-written, semver-versioned and unit-tested in their own ecosystem. Generated code never imports them; it imports only the hooks package. A helper that has shared vectors, such as the signed-webhook verifier (ADR 0013), passes the same vectors in every ecosystem. The sample apps of the HTTP suite use the helpers where a real application would, so the suite exercises them too.
+Optional runtime helpers (ADR 0009) are hand-written, semver-versioned and unit-tested in their own ecosystem. Generated code never imports them; it imports only the hooks package and, for a server target whose boundary runtime ships as a package, that runtime package (ADR 0025). A helper that has shared vectors, such as the signed-webhook verifier (ADR 0013), passes the same vectors in every ecosystem. The sample apps of the HTTP suite use the helpers where a real application would, so the suite exercises them too.
 
 ### The shared black-box HTTP suite
 

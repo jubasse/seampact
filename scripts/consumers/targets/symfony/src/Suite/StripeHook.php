@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
-use App\Generated\Tasks\Symfony\Runtime\Denial;
 use App\Generated\Tasks\Symfony\StripeAuthenticateHook;
 use App\Generated\Tasks\Symfony\StripePrincipal;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\StripeSignature;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\AuthenticateRequest;

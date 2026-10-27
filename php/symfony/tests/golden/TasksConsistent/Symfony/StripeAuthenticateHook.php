@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Symfony;
 
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\AuthenticateCall;
+use Seampact\Codegen\Runtime\AuthenticateCall;
 use Seampact\Hooks\AuthenticateHook;
 
 /**

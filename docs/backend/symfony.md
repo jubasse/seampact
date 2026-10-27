@@ -10,11 +10,10 @@ Nothing is published to Packagist yet, so Composer installs seampact from your c
 composer config minimum-stability dev
 composer config prefer-stable true
 composer config repositories.seampact path "$HOME/src/seampact/php/*"
-composer require --dev seampact/symfony
-composer require seampact/hooks symfony/validator
+composer require seampact/symfony
 ```
 
-The boundary checks every input with `symfony/validator`.
+The boundary checks every input with `symfony/validator`, which `seampact/symfony` installs.
 
 In `seampact.config.yaml`, add one entry per api:
 
@@ -55,7 +54,7 @@ seampact_tasks:
 
 The resource is the api key, the snake case of the api name (`tasks_service` for `tasksService`). Do not set a `prefix` or a `host` on the import. To serve the api under a prefix, set `mount: /api` on the target entry. Two apis are two bundles and two imports.
 
-`bin/console seampact:generate` does the same as the vendor binary. To use it, list `Seampact\Symfony\SeampactCommandsBundle` in `config/bundles.php` for `dev` only.
+`bin/console seampact:generate` does the same as the vendor binary. To use it, list `Seampact\Symfony\SeampactCommandsBundle` in `config/bundles.php` for `dev` only. It still runs when the generated code comes from another seampact version, which every other command refuses.
 
 ## Routes
 
@@ -93,7 +92,7 @@ use App\Generated\Tasks\GetTaskErrors;
 use App\Generated\Tasks\GetTaskInput;
 use App\Generated\Tasks\GetTaskResponse200;
 use App\Generated\Tasks\GetTaskResult;
-use App\Generated\Tasks\Symfony\Runtime\SeampactOperation;
+use App\Generated\Tasks\Symfony\SeampactOperation;
 use App\Generated\Tasks\TasksEndpoints;
 
 final class TasksController implements TasksEndpoints
@@ -142,6 +141,8 @@ final class UserHook implements UserAuthenticateHook
 
 A decider lists the names it answers in `names()`, or `[self::EVERY_NAME]` for all of them.
 
+Each api has its own interfaces in `App\Generated\<Api>\Symfony`: `Decider`, `ScopeResolver` and `UnexpectedErrorListener`. Implement the ones of the api the hook serves. The listener is told of each 500 the api answers.
+
 ## With SecurityBundle
 
 The firewall runs before the contract's access steps. So:
@@ -171,11 +172,11 @@ The generated `TasksAccess` class lists, per route, the kind, the identity, and 
 ## Lists, idempotency, throttle
 
 - **Paging.** A paged list gets its page parameters in `$input->query` and a generated `<Operation>Page` class to return.
-- **Idempotency.** Alias the store to a service of yours:
+- **Idempotency.** Alias the api's store id, `seampact.<api key>.idempotency_store`, to a service of yours that implements `Seampact\Hooks\IdempotencyStore`:
 
 ```yaml
 services:
-    Seampact\Hooks\IdempotencyStore: '@App\Idempotency\DoctrineIdempotencyStore'
+    seampact.tasks.idempotency_store: '@App\Idempotency\DoctrineIdempotencyStore'
 ```
 
   A replayed request gets the saved reply and your handler does not run. A 5xx reply releases the key.

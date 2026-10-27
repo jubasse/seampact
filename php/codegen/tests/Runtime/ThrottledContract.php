@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Tests\Runtime;
 
+use Seampact\Codegen\Runtime\RuntimeVersion;
+
 /** A generated contract class with one operation whose throttle refusal carries a retry header and forbids storing. */
 final class ThrottledContract
 {
     public const API = 'tasks';
+    public const GENERATED_BY = RuntimeVersion::VERSION;
     public const IR = [
         'formats' => ['problem' => ['error' => [
             'media' => 'application/problem+json',

@@ -35,6 +35,8 @@ vendor/bin/seampact generate
 php artisan seampact:generate
 ```
 
+When the generated code comes from another seampact version, every other command refuses to boot; `php artisan seampact:generate` still runs.
+
 Commit the generated files. `seampact check` fails CI when they drift from the contract.
 
 Options of the entry (all optional), set under `options:` as above:
@@ -173,6 +175,8 @@ $this->app->tag([WorkspaceResolver::class], NotesSeampactServiceProvider::SCOPE_
 ```
 
 A decider lists the names it answers in `names()`, or `Decider::EVERY_NAME` for all of them.
+
+To be told of each 500 the api answers, bind its `App\Generated\<Api>\Laravel\UnexpectedErrorListener` to your listener.
 
 ## Laravel's own auth
 
