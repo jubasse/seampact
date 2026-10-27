@@ -3,11 +3,13 @@ import {
   handlerMapDeclarations,
   mixedSegmentRefusals,
   type NodeServerOptions,
+  SERVER_RUNTIME_PACKAGE,
 } from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
 
 // The `fastify` module of one api: the plugin built from its route table and handler bindings, and the fixed
-// exports of ADR 0017 "Placement". No export is named by an operation.
+// exports of ADR 0017 "Placement", over the Fastify placement of `@seampact/server-runtime`. No export is named by an
+// operation.
 
 const FASTIFY_MODULE = "fastify";
 
@@ -19,13 +21,12 @@ export function fastifyModuleSource(
   refusals.push(...mixedSegmentRefusals(ir));
 
   return [
-    'import { createFastifyBoundary } from "./fastify-boundary.js";',
+    `import { createFastifyBoundary } from "${SERVER_RUNTIME_PACKAGE}/fastify";`,
     'import type { SeampactHooks } from "./hooks.js";',
     'import { CONTRACT_API } from "./routes.js";',
     ...handlerMapDeclarations(ir, options, FASTIFY_MODULE, refusals),
     "",
-    'export { MAX_CHECKED_ERROR_BODY_BYTES } from "./node-server/outgoing-verdict.js";',
-    'export { MAX_RENDERED_ISSUES } from "./node-server/contract-error.js";',
+    `export { MAX_CHECKED_ERROR_BODY_BYTES, MAX_RENDERED_ISSUES } from "${SERVER_RUNTIME_PACKAGE}";`,
     "",
     "const boundary = createFastifyBoundary<SeampactHooks, ContractHandlers, OperationName>(CONTRACT_API, GENERATED_SETTINGS, HANDLER_BINDINGS);",
     "",

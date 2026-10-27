@@ -140,6 +140,8 @@ interface ReferenceAppModule {
   readonly HttpException: new (message: string, status: number) => Error;
   readonly ConflictException: new () => Error;
   readonly ContractException: new (code: string, params?: unknown) => Error;
+  readonly OtherApiContractException: new (code: string, params?: unknown) => Error;
+  readonly moduleClassNames: readonly string[];
 }
 
 describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
@@ -751,6 +753,22 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       expect(String(app.calls.unexpected[0]?.exceptionOrReply)).toContain(
         "'getTask' declares no code 'state.conflict'",
       );
+    });
+    test("a ContractException of another api matches no filter of this one: a reported 500", async () => {
+      app.scenario.answers.getTask = () => {
+        throw new app.OtherApiContractException("api.not_found");
+      };
+
+      const served = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+        headers: BEARER,
+      });
+
+      expect(served.status).toBe(500);
+      expect(JSON.parse(served.text)).toMatchObject({ type: "api.internal" });
+    });
+
+    test("each api's module class carries the api's type name", () => {
+      expect(app.moduleClassNames).toEqual(["TasksSeampactModule", "TasksServiceSeampactModule"]);
     });
   });
 

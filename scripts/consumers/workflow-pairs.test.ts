@@ -23,6 +23,9 @@ const CONSUMER_TARGETS: ReadonlyMap<string, string> = new Map(
   offeredValidatorPairs().map((pair) => [pair.consumer, `${pair.target}@${pair.frameworkMajor}`]),
 );
 
+// The consumers that run their base consumer's pair in another module format, with the base they stand for.
+const MODULE_FORMAT_VARIANTS: ReadonlyMap<string, string> = new Map([["nestjs-cjs", "nestjs"]]);
+
 // The consumer run must pass each matrix axis, or that axis is dead: the job would test one value of it.
 const CONSUMER_RUN_ARGUMENTS = [
   `--target "\${{ matrix.target }}"`,
@@ -35,7 +38,7 @@ function pairKey(target: string, frameworkMajor: number, validator: string): str
 }
 
 function consumerTargetKey(targetId: string): string {
-  const consumerTarget = CONSUMER_TARGETS.get(targetId);
+  const consumerTarget = CONSUMER_TARGETS.get(MODULE_FORMAT_VARIANTS.get(targetId) ?? targetId);
 
   if (consumerTarget === undefined) {
     throw new Error(
@@ -64,14 +67,20 @@ function assertRunPassesEveryAxis(file: string, jobId: string, job: WorkflowJob)
   }
 }
 
-function workflowPairKeys(file: string): string[] {
+function workflowTargetIds(file: string): string[] {
+  return consumerJobsOf(file).flatMap(([, job]) =>
+    matrixRows(job.strategy?.matrix ?? {}).map((row) => String(row.target)),
+  );
+}
+
+function consumerJobsOf(file: string): [string, WorkflowJob][] {
   const document = readWorkflow(file);
 
-  const consumerJobs = Object.entries(document.jobs).filter(
-    ([jobId]) => !LANE_FILTER_AND_CHECK_JOBS.has(jobId),
-  );
+  return Object.entries(document.jobs).filter(([jobId]) => !LANE_FILTER_AND_CHECK_JOBS.has(jobId));
+}
 
-  return consumerJobs.flatMap(([jobId, job]) => {
+function workflowPairKeys(file: string): string[] {
+  return consumerJobsOf(file).flatMap(([jobId, job]) => {
     const matrix = job.strategy?.matrix;
 
     if (matrix === undefined) {
@@ -103,6 +112,14 @@ describe("consumer workflows", () => {
       .sort();
 
     expect(workflowPairs).toEqual(offeredPairs);
+  });
+
+  it("run every module format variant of a consumer", () => {
+    const workflowTargets = new Set(CONSUMER_WORKFLOWS.flatMap(workflowTargetIds));
+
+    expect(
+      [...MODULE_FORMAT_VARIANTS.keys()].filter((variant) => !workflowTargets.has(variant)),
+    ).toEqual([]);
   });
 });
 

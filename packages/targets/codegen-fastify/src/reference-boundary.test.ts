@@ -10,6 +10,7 @@ import {
   REFERENCE_COMPILER_OPTIONS,
   readGoldenIr,
   referenceLinks,
+  referenceServerOutput,
   TYPE_CHECK_TIMEOUT_MILLISECONDS,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
@@ -75,6 +76,7 @@ describe("a path the router cannot read as written is refused by name", () => {
       ir: mixedSegmentIr,
       options: { bodyValidation: true },
       links: await referenceLinks(PROJECT, "tasks"),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index"]),
     });
 
@@ -103,6 +105,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index", "validators"]),
     });
 
@@ -129,6 +132,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await referenceLinks(PROJECT, "tasks"),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index", "validators"]),
     });
 
@@ -146,6 +150,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
         ir: readGoldenIr("tasks"),
         options,
         links: await referenceLinks(PROJECT, "tasks"),
+        outputDirectory: referenceServerOutput(PROJECT, "tasks"),
         artefacts: new Set(["boundary", "index", "validators"]),
       });
 
@@ -168,6 +173,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
           ir: readGoldenIr("tasks"),
           options: { bodyValidation: true },
           links,
+          outputDirectory: referenceServerOutput(PROJECT, "tasks"),
           artefacts: new Set(artefacts),
         }),
       );
@@ -187,6 +193,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await referenceLinks(PROJECT, "tasks"),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
       artefacts: new Set(["validators"]),
     });
 
@@ -202,6 +209,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index"]),
     });
 
@@ -216,6 +224,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index", "validators"]),
     });
 
@@ -262,6 +271,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir,
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index", "validators"]),
     });
 
@@ -295,6 +305,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index", "validators"]),
     });
 

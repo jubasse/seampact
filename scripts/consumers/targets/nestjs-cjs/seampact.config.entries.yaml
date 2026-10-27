@@ -1,0 +1,12 @@
+  # The `tasks` server once more, as a CommonJS tree (`generated/server-cjs/package.json` marks it), which
+  # `test/commonjs.test.mts` requires as a NestJS app on CommonJS does.
+  - id: server-cjs
+    use: "@seampact/codegen-nestjs"
+    apis: [tasks]
+    options:
+      bodyValidation: true
+    link:
+      types: types
+      validators: validators
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }

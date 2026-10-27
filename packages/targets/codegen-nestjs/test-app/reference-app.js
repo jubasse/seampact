@@ -25,6 +25,7 @@ import { APP_INTERCEPTOR, ApplicationConfig, NestFactory, RouterModule } from "@
 import { Test } from "@nestjs/testing";
 import { catchError, map, mergeMap, of, tap, throwError } from "rxjs";
 import * as TasksNest from "../generated/server/tasks/nestjs.js";
+import * as TasksServiceNest from "../generated/server/tasksService/nestjs.js";
 
 export {
   BadRequestException,
@@ -38,6 +39,15 @@ export {
 export const THROTTLE_RETRY_AFTER_HEADER = "x-throttle-retry-after";
 
 export const ContractException = TasksNest.ContractException;
+
+/** The typed exception of the app's other api, which no filter of `tasks` answers. */
+export const OtherApiContractException = TasksServiceNest.ContractException;
+
+/** The class names of both apis' modules, as NestJS logs them. */
+export const moduleClassNames = [
+  TasksNest.SeampactModule.name,
+  TasksServiceNest.SeampactModule.name,
+];
 
 export const ALLOWED_ORIGIN = "https://app.example";
 

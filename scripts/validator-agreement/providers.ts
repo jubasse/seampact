@@ -14,10 +14,7 @@ const REPO_ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "../..")
 const CODEGEN_CORE_ENTRY = join(REPO_ROOT, "packages/core/codegen-core/src/index.ts");
 const TARGETS_DIRECTORY = "packages/targets";
 const PACKAGE_SCOPE = "@seampact/";
-const INPUT_ISSUES_ENTRY = join(
-  REPO_ROOT,
-  "packages/core/codegen-core/node-server-runtime/input-issues.ts",
-);
+const INPUT_ISSUES_ENTRY = join(REPO_ROOT, "packages/runtime/server-runtime/src/input-issues.ts");
 const BODY_PART = "body";
 const GENERATED_ROOT = "generated";
 

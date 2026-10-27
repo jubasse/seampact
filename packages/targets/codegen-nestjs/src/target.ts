@@ -12,8 +12,8 @@ import {
   withoutReplyOption,
 } from "./nestjs-options.js";
 
-// The NestJS target, as the CLI loads it. Its placement is a checked source of this package one directory above both
-// `src` and `dist`, and the `nestjs` module of each api. It reads the validator
+// The NestJS target, as the CLI loads it. Its placement is the `nestjs` module of each api, over the NestJS placement
+// of `@seampact/server-runtime`. It reads the validator
 // styles the compatibility matrix records for it, Standard Schema and class-validator. Its own option `reply` picks
 // the Node server target whose `nestjs` module passes that reply mode to the boundary.
 function nestjsTargetOf(reply: ReplyMode): Target {
@@ -22,8 +22,6 @@ function nestjsTargetOf(reply: ReplyMode): Target {
     packageVersion: packageJson.version,
     format,
     placement: {
-      runtimeModule: "nestjs-boundary",
-      runtimeSourceUrl: new URL("../runtime/nestjs-boundary.ts", import.meta.url),
       frameworkModule: "nestjs",
       frameworkSource: (ir, options, refusals, docsModule) =>
         nestjsModuleSource(ir, { ...options, reply }, refusals, docsModule),

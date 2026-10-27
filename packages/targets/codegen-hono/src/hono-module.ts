@@ -4,7 +4,6 @@ import {
   literalSegmentRefusals,
   mixedSegmentRefusals,
   type NodeServerOptions,
-  PACKAGED_RUNTIME,
   SERVER_RUNTIME_PACKAGE,
 } from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
@@ -26,7 +25,7 @@ export function honoModuleSource(
     `import { createHonoBoundary } from "${SERVER_RUNTIME_PACKAGE}/hono";`,
     'import type { SeampactHooks } from "./hooks.js";',
     'import { CONTRACT_API } from "./routes.js";',
-    ...handlerMapDeclarations(ir, options, HONO_MODULE, refusals, PACKAGED_RUNTIME),
+    ...handlerMapDeclarations(ir, options, HONO_MODULE, refusals),
     "",
     `export { MAX_CHECKED_ERROR_BODY_BYTES, MAX_RENDERED_ISSUES } from "${SERVER_RUNTIME_PACKAGE}";`,
     "",

@@ -172,9 +172,6 @@ importers:
       '@changesets/cli':
         specifier: 3.0.3
         version: 3.0.3
-      '@seampact/hooks':
-        specifier: workspace:*
-        version: link:packages/runtime/hooks
       '@seampact/pack-api-platform':
         specifier: workspace:*
         version: link:packages/packs/pack-api-platform
@@ -345,6 +342,15 @@ importers:
         specifier: workspace:*
         version: link:../hooks
     devDependencies:
+      '@adonisjs/core':
+        specifier: 7.6.0
+        version: 7.6.0(@vinejs/vine@4.4.0)(supports-color@10.2.2)(youch@4.1.1)
+      '@nestjs/common':
+        specifier: 12.2.0
+        version: 12.2.0(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2)
+      '@nestjs/core':
+        specifier: 12.2.0
+        version: 12.2.0(@nestjs/common@12.2.0(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/platform-express@12.2.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@types/express':
         specifier: 5.0.6
         version: 5.0.6
@@ -354,9 +360,18 @@ importers:
       express:
         specifier: 5.3.0
         version: 5.3.0(supports-color@10.2.2)
+      fastify:
+        specifier: 5.12.7
+        version: 5.12.7
       hono:
         specifier: 4.13.13
         version: 4.13.13
+      reflect-metadata:
+        specifier: 0.2.2
+        version: 0.2.2
+      rxjs:
+        specifier: 7.8.2
+        version: 7.8.2
       typescript:
         specifier: 6.0.3
         version: 6.0.3

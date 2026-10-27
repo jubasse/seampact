@@ -44,7 +44,7 @@ jobs:
           watched-paths: |
             .
 
-  # The PR rows: every target and every validator once; the post-merge job below runs the other pairs.
+  # The PR rows: every target and every validator once, and the CommonJS tree; the post-merge job below runs the other pairs.
   nestjs-consumer:
     needs: changes
     if: needs.changes.outputs.run == 'true'
@@ -56,6 +56,8 @@ jobs:
         include:
           - { target: nestjs, validators: class-validator, reply: handler }
           - { target: nestjs, validators: zod, reply: interceptor }
+          # The generated tree on CommonJS, loading the runtime's CommonJS build.
+          - { target: nestjs-cjs, validators: zod, reply: handler }
     steps: &consumer-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

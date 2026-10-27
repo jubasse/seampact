@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { serverTargetCompatibility } from "@seampact/spec/compatibility";
 import { type ContractIR, IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { apiIndexSource } from "../api-index.js";
@@ -21,19 +20,12 @@ import { type NativeDocsContract, readNativeDocsDocument } from "./native-docs-r
 import { nativeDocsRuntimeFile } from "./native-docs-runtime-file.js";
 import { type NodeServerOptions, parseNodeServerOptions } from "./options.js";
 import { routeTableSource } from "./route-table.js";
-import {
-  neutralRuntimeSpecifier,
-  nodeServerRuntimeFiles,
-  PACKAGED_RUNTIME,
-  type ServerRuntimeProfile,
-  type ServerRuntimeSource,
-} from "./runtime-files.js";
 import { type RuntimeGenerator, serverRuntimeRefusals } from "./server-runtime-check.js";
 import { handlersSource, hookTypesSource } from "./server-types.js";
 
 // The files of one api's Node server boundary: the route table, handler interfaces and hook types, the target's
 // framework module and the api index, over the shared runtime, which a target's generated code imports from
-// `@seampact/server-runtime` (ADR 0025) or which is copied with the target's placement file until it moves.
+// `@seampact/server-runtime` (ADR 0025).
 
 export const BOUNDARY_ARTEFACT = "boundary";
 
@@ -71,27 +63,8 @@ export interface NativeDocsPlacement {
   docsSource(ir: ContractIR, contract: NativeDocsContract, refusals: Refusal[]): string;
 }
 
-/** A placement whose shared runtime and placement file are copied into each api's tree. */
-export interface CopiedRuntimePlacement {
-  readonly runtimeSource?: never;
-  /** The module name of the static placement file, such as `nestjs-boundary`. */
-  readonly runtimeModule: string;
-  /** The placement file, a checked source of the target package copied as is. */
-  readonly runtimeSourceUrl: URL;
-  /** The shared runtime the placement imports: `node` (the default) or `web` for a Web-standard placement. */
-  readonly runtimeProfile?: ServerRuntimeProfile;
-}
-
-/** A placement whose generated code imports the runtime and its placement from `@seampact/server-runtime`. */
-export interface PackagedRuntimePlacement {
-  readonly runtimeSource: typeof PACKAGED_RUNTIME;
-}
-
-/** What a Node server target adds to the shared files. */
-export type NodeServerPlacement = NodeServerPlacementParts &
-  (CopiedRuntimePlacement | PackagedRuntimePlacement);
-
-interface NodeServerPlacementParts {
+/** What a Node server target adds to the shared files, over the runtime its generated code imports. */
+export interface NodeServerPlacement {
   /** The module name of the api's framework module, such as `nestjs`, re-exported by the index first. */
   readonly frameworkModule: string;
   /** `docsModule` is the name of the docs module when `nativeDocs` is on, for the framework module to use. */
@@ -136,7 +109,6 @@ const ROUTES_MODULE = "routes";
 const HANDLERS_MODULE = "handlers";
 const HOOKS_MODULE = "hooks";
 const INDEX_MODULE = "index";
-const DEFAULT_RUNTIME_PROFILE: ServerRuntimeProfile = "node";
 
 /**
  * A Node server target, as the CLI loads it. It reads the operation types through the `types` link and the input
@@ -218,8 +190,8 @@ function ownValidatorsLibrary(targetPackage: NodeServerTargetPackage): string | 
 }
 
 // Every module of one api's boundary, or every refusal at once (A47). With no `validators` link, the own
-// validators of the placement are written and read instead, when the `validators` artefact is on. A boundary that
-// imports the runtime package is refused first when the request gives no output directory, or the output directory
+// validators of the placement are written and read instead, when the `validators` artefact is on. A boundary is
+// refused first when the request gives no output directory, or the output directory
 // resolves no runtime that serves it.
 export function nodeServerBoundaryFiles(
   input: GenerateInput<NodeServerOptions, NodeServerArtefact, "types" | "validators", "validators">,
@@ -228,7 +200,7 @@ export function nodeServerBoundaryFiles(
 ): GenerateOutcome {
   const boundaryOn = input.artefacts.has(BOUNDARY_ARTEFACT);
 
-  if (boundaryOn && placement.runtimeSource === PACKAGED_RUNTIME) {
+  if (boundaryOn) {
     const runtimeRefusals = serverRuntimeRefusals(input.outputDirectory, generator);
 
     if (runtimeRefusals.length > 0) return { status: "refused", refusals: runtimeRefusals };
@@ -348,13 +320,11 @@ function boundaryFiles(
   const { ir, links, options } = input;
   const refusals: Refusal[] = [];
   const warnings: GenerateWarning[] = [];
-  const runtimeSource = runtimeSourceOf(placement);
   const routes = routeTableSource(
     ir,
     validators,
     moduleFile(ROUTES_MODULE),
     {
-      runtimeModule: neutralRuntimeSpecifier(runtimeSource, "contract-route"),
       generatorVersion,
       withItemValidators: options.bodyValidation,
       frameworkRoutes: input.frameworkRoutes,
@@ -368,13 +338,7 @@ function boundaryFiles(
     warnings,
   );
   const handlers = handlersSource(ir, links.types, moduleFile(HANDLERS_MODULE), refusals);
-  const hooks = hookTypesSource(
-    ir,
-    links.types,
-    moduleFile(HOOKS_MODULE),
-    neutralRuntimeSpecifier(runtimeSource, "boundary-hooks"),
-    refusals,
-  );
+  const hooks = hookTypesSource(ir, links.types, moduleFile(HOOKS_MODULE), refusals);
   const docs = input.artefacts.has(NATIVE_DOCS_ARTEFACT)
     ? nativeDocsFiles(input, placement, refusals)
     : [];
@@ -388,7 +352,6 @@ function boundaryFiles(
   if (refusals.length > 0) return { status: "refused", refusals: withoutRepeats(refusals) };
 
   const files: GeneratedFile[] = [
-    ...copiedRuntimeFiles(placement),
     { path: moduleFile(ROUTES_MODULE), contents: routes },
     { path: moduleFile(HANDLERS_MODULE), contents: handlers },
     { path: moduleFile(HOOKS_MODULE), contents: hooks },
@@ -412,25 +375,6 @@ function boundaryFiles(
   ];
 
   return { status: "generated", files, warnings };
-}
-
-function runtimeSourceOf(placement: NodeServerPlacement): ServerRuntimeSource {
-  if (placement.runtimeSource === PACKAGED_RUNTIME) return PACKAGED_RUNTIME;
-
-  return placement.runtimeProfile ?? DEFAULT_RUNTIME_PROFILE;
-}
-
-// The shared runtime and the placement file of a placement that copies them; none for one that imports the package.
-function copiedRuntimeFiles(placement: NodeServerPlacement): GeneratedFile[] {
-  if (placement.runtimeSource === PACKAGED_RUNTIME) return [];
-
-  return [
-    ...nodeServerRuntimeFiles(placement.runtimeProfile ?? DEFAULT_RUNTIME_PROFILE),
-    {
-      path: moduleFile(placement.runtimeModule),
-      contents: readFileSync(placement.runtimeSourceUrl, "utf8"),
-    },
-  ];
 }
 
 // The docs module of the framework's own generator and the guards it imports; none (and a refusal pushed) when the

@@ -7,6 +7,7 @@ import type { Link } from "../links.js";
 import { refuseInconsistentIr } from "../located-refusals.js";
 import { ExportNames, typeScriptIdentifier } from "../planned-names.js";
 import type { Refusal } from "../refusal.js";
+import { SERVER_RUNTIME_PACKAGE } from "./server-runtime-check.js";
 
 // The framework-neutral types of a Node server boundary, typed from the types link: the handler interface of each
 // resource (ADR 0007 `handlers: perResource`) and the hook types the app registers.
@@ -117,7 +118,6 @@ export function hookTypesSource(
   ir: ContractIR,
   types: Link<"types">,
   fromFile: string,
-  runtimeModule: string,
   refusals: Refusal[],
 ): string {
   const imports = new TypeImports(types, fromFile);
@@ -230,7 +230,7 @@ export function hookTypesSource(
       HOOKS_PACKAGE,
       body,
     ),
-    importLine(["DeciderRegistration", "UnexpectedErrorHook"], runtimeModule, body),
+    importLine(["DeciderRegistration", "UnexpectedErrorHook"], SERVER_RUNTIME_PACKAGE, body),
     ...imports.lines(),
     "",
     body,

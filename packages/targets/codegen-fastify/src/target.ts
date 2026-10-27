@@ -7,15 +7,13 @@ import { ajvOwnValidators } from "./ajv/index.js";
 import { fastifyDocsModuleSource } from "./fastify-docs-module.js";
 import { fastifyModuleSource } from "./fastify-module.js";
 
-// The Fastify target, as the CLI loads it. Its placement is a checked source of this package one directory above both
-// `src` and `dist`, and the `fastify` module of each api; with no `validators` link it writes Ajv validators itself.
+// The Fastify target, as the CLI loads it. Its placement is the `fastify` module of each api, over the Fastify
+// placement of `@seampact/server-runtime`; with no `validators` link it writes Ajv validators itself.
 export const target: Target = nodeServerTarget({
   packageName: packageJson.name,
   packageVersion: packageJson.version,
   format,
   placement: {
-    runtimeModule: "fastify-boundary",
-    runtimeSourceUrl: new URL("../runtime/fastify-boundary.ts", import.meta.url),
     frameworkModule: "fastify",
     compressesReplies: true,
     frameworkSource: fastifyModuleSource,

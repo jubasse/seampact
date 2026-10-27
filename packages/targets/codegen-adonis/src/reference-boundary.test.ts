@@ -3,13 +3,13 @@ import { dirname, join } from "node:path";
 import type { LinkSet } from "@seampact/codegen-core";
 import {
   GENERATE_TIMEOUT_MILLISECONDS,
-  generateReferenceProject,
   hooksRequirementErrors,
   projectDirectory,
   publicTasksApi,
   REFERENCE_COMPILER_OPTIONS,
   readGoldenIr,
   referenceLinks,
+  referenceServerOutput,
   TYPE_CHECK_TIMEOUT_MILLISECONDS,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
@@ -66,6 +66,7 @@ describe("the generated reference boundary compiles", () => {
         ir: readGoldenIr(api),
         options: {},
         links: await referenceLinks(INDEX_PROJECT, api),
+        outputDirectory: referenceServerOutput(INDEX_PROJECT, api),
         artefacts: new Set(["boundary", "index"]),
       });
 
@@ -86,6 +87,7 @@ describe("with no validators link the target writes its own VineJS validators", 
       ir,
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
+      outputDirectory: referenceServerOutput(INDEX_PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index", "validators"]),
     });
 
@@ -106,6 +108,7 @@ describe("with no validators link the target writes its own VineJS validators", 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
+      outputDirectory: referenceServerOutput(INDEX_PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index", "validators"]),
     });
 
@@ -199,6 +202,7 @@ describe("with no validators link the target writes its own VineJS validators", 
       ir,
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
+      outputDirectory: referenceServerOutput(INDEX_PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index", "validators"]),
     });
 

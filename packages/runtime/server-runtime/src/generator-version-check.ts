@@ -1,4 +1,4 @@
-import { bootProblemsMessage } from "../../../core/codegen-core/node-server-runtime/boundary-hooks.js";
+import { bootProblemsMessage } from "./boundary-hooks.js";
 import { SERVER_RUNTIME_VERSION } from "./version.js";
 
 // The boot check's first step (ADR 0025, G3): the version the api's generated code carries against this runtime's.

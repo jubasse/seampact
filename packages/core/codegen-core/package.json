@@ -7,8 +7,7 @@
   "files": [
     "dist",
     "front-runtime",
-    "native-docs-runtime",
-    "node-server-runtime"
+    "native-docs-runtime"
   ],
   "main": "./src/index.ts",
   "publishConfig": {

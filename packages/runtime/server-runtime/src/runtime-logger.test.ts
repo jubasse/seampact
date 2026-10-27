@@ -1,12 +1,17 @@
+import type { ServerResponse } from "node:http";
 import { expect, test, vi } from "vitest";
 import {
   type BoundaryContext,
+  type BoundaryHooks,
   boundaryContext,
   type ContractApi,
+  type ContractReply,
   logWriteFailure,
+  reportUnexpected,
   runtimeLog,
   useRuntimeLogger,
 } from "./index.js";
+import { writeContractReply } from "./node-reply.js";
 
 // One runtime serves every api of an app: each api's requests log through the logger its registration gave.
 
@@ -65,4 +70,46 @@ test("two apis logging outside a request each reach their own logger", () => {
     "seampact: writing a reply of api 'tasks' failed",
     writeFailure,
   );
+});
+
+test("a failing onUnexpectedError outside a request reaches its own api's logger", async () => {
+  const notesLogger = { warn: vi.fn(), error: vi.fn() };
+  const tasksLogger = { warn: vi.fn(), error: vi.fn() };
+  const notesApi = apiNamed("notes");
+  const tasksApi = apiNamed("tasks");
+  const hookFailure = new Error("reporter down");
+  const failingHooks: unknown = {
+    onUnexpectedError: () => {
+      throw hookFailure;
+    },
+  };
+  const where = { api: "notes", operation: undefined, method: "GET", path: "/notes" };
+
+  useRuntimeLogger(notesLogger, notesApi);
+  useRuntimeLogger(tasksLogger, tasksApi);
+
+  await reportUnexpected(failingHooks as BoundaryHooks, notesApi, new Error("boom"), where);
+
+  expect(notesLogger.error).toHaveBeenCalledWith(
+    "seampact: onUnexpectedError failed for operation '(none)' of api 'notes'",
+    hookFailure,
+  );
+  expect(tasksLogger.error).not.toHaveBeenCalled();
+});
+
+test("a reply already sent outside a request is logged through its own api's logger", async () => {
+  const notesLogger = { warn: vi.fn(), error: vi.fn() };
+  const tasksLogger = { warn: vi.fn(), error: vi.fn() };
+  const notesApi = apiNamed("notes");
+  const tasksApi = apiNamed("tasks");
+  const sentResponse: unknown = { headersSent: true };
+  const reply: ContractReply = { status: 500, headers: [], body: new Uint8Array() };
+
+  useRuntimeLogger(notesLogger, notesApi);
+  useRuntimeLogger(tasksLogger, tasksApi);
+
+  await writeContractReply(sentResponse as ServerResponse, notesApi, undefined, reply);
+
+  expect(notesLogger.error).toHaveBeenCalledOnce();
+  expect(tasksLogger.error).not.toHaveBeenCalled();
 });

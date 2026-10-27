@@ -107,6 +107,14 @@ At run time: `fastify` 5 as a peer dependency, the zod link's runtime and, for t
 
 `generate` refuses by name, with the case's code and its fix, everything ADR 0016 "Refused by name or waiting" lists for the slice apart from its NestJS platform and `class-validator` items, and a path segment that mixes a placeholder with literal text ("Placement"). The validators link is required in the slice: its absence is the shared `link.missing` refusal, and the Ajv fallback of ADR 0012 "Target obligations" waits for a consumer without a validator library.
 
+### Amendment 2026-10-27: the runtime package
+
+ADR 0025 moves the shared request checks out of the generated tree: they are those of `@seampact/server-runtime`, imported, no longer the copies of `@seampact/codegen-core/node-server` under `node-server/`, and the placement file is the package's `/fastify` export, no longer `fastify-boundary.ts`. Each api's generated tree keeps `fastify.ts`, `routes.ts`, `handlers.ts`, `hooks.ts`, `index.ts`, its own validators when it writes them and, with `nativeDocs`, its docs module.
+
+What the generated code depends on adds `@seampact/server-runtime` as a production dependency: its root, `/node` and `/fastify` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
+
+The boot check runs one step first, before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `fastify.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
+
 ## Spike
 
 Run on Fastify 5.12.7, `@fastify/compress` 9.2.2 and Node 24.21, and not kept. An encapsulated plugin registered routes with the `onRequest`, `preValidation` and `preHandler` hooks above, a reduced model of the shared outgoing check installed from `onRequest` on `reply.raw`, and an error handler that answered contract errors and rethrew the rest to the app's error handler.
