@@ -87,6 +87,7 @@ export function resetScenario() {
   scenario.interceptor = {};
   scenario.authenticate = authenticateByBearer;
   scenario.decide = () => ({ allow: true });
+  scenario.resolvedScopeName = "channel";
   // The app's `trust proxy` setting, read per request, so one app serves a request with and without a trusted proxy.
   scenario.trustsProxy = false;
   calls.scopeIds.length = 0;
@@ -299,9 +300,14 @@ class AnsweringInterceptor {
 // The operation whose method also takes its caller through the principal and scopes param decorators.
 const CALLER_OPERATION = "getChannel";
 
-// Every operation bound on one controller class; `aboveComposite` lists the app decorators written above an
-// operation's composite, and `withoutInput` the operations whose method declares no input param.
+// Every operation of `tasks` bound on one controller class; `aboveComposite` lists the app decorators written above
+// an operation's composite, and `withoutInput` the operations whose method declares no input param.
 function tasksController(aboveComposite = {}, withoutInput = []) {
+  return apiController(TasksNest, aboveComposite, withoutInput);
+}
+
+// Every operation of the api whose generated module `api` is, bound on one controller class.
+function apiController(api, aboveComposite, withoutInput) {
   class TasksController {}
 
   for (const operation of TASK_OPERATIONS) {
@@ -320,18 +326,18 @@ function tasksController(aboveComposite = {}, withoutInput = []) {
       configurable: true,
     });
 
-    if (!withoutInput.includes(operation)) TasksNest[operation].input()(prototype, operation, 0);
+    if (!withoutInput.includes(operation)) api[operation].input()(prototype, operation, 0);
 
     if (operation === CALLER_OPERATION) {
-      TasksNest.getChannel.principal()(prototype, operation, 1);
-      TasksNest.getChannel.scopes()(prototype, operation, 2);
+      api.getChannel.principal()(prototype, operation, 1);
+      api.getChannel.scopes()(prototype, operation, 2);
     }
 
     decorateMethod(
       prototype,
       operation,
       ...(aboveComposite[operation] ?? []),
-      TasksNest[operation](),
+      api[operation](),
       ...(operation === "health" ? [SetMetadata(APP_MARKER, "below")] : []),
     );
   }
@@ -421,7 +427,7 @@ const hooks = {
       resolveScope(request) {
         calls.scopeIds.push(request.source.id);
 
-        return { resolved: { scope: "channel", id: request.source.id } };
+        return { resolved: { scope: scenario.resolvedScopeName, id: request.source.id } };
       },
     },
   },
@@ -729,6 +735,32 @@ export async function startOverriddenHooksApp() {
     .compile();
 
   return serveApp(testingModule.createNestApplication({ rawBody: true, logger: recordingLogger }));
+}
+
+/**
+ * Serves `tasks` and the api the `tasksService` slot holds, each through its own `SeampactModule.forRoot`, on a
+ * free port.
+ */
+export async function startTwoApiApp() {
+  resetScenario();
+
+  const TasksController = tasksController();
+  const SecondController = apiController(TasksServiceNest, {}, []);
+
+  Controller()(TasksController);
+  Controller()(SecondController);
+
+  const module = moduleOf(
+    [TasksNest.SeampactModule.forRoot(hooks), TasksServiceNest.SeampactModule.forRoot(hooks)],
+    [TasksController, SecondController],
+  );
+  const app = await NestFactory.create(module, { rawBody: true, logger: recordingLogger });
+
+  await app.listen(0, "127.0.0.1");
+
+  const { port } = app.getHttpServer().address();
+
+  return { host: "127.0.0.1", port, close: () => app.close() };
 }
 
 /** Boots the app on a free port with the documented setup 1 (`rawBody: true`). */

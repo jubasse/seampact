@@ -53,7 +53,10 @@ interface ReferenceAppModule {
     readonly unexpected: { readonly exceptionOrReply: unknown }[];
     readonly loggedErrors: string[];
   };
-  readonly scenario: { answers: Record<string, (input: unknown) => unknown> };
+  readonly scenario: {
+    answers: Record<string, (input: unknown) => unknown>;
+    resolvedScopeName: string;
+  };
   readonly AppReply: new (
     status: number,
     contentType: string,

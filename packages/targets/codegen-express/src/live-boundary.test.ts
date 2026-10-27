@@ -75,6 +75,7 @@ interface ReferenceAppModule {
   readonly scenario: {
     answers: Record<string, (input: unknown) => unknown>;
     authenticate: (request: unknown) => unknown;
+    resolvedScopeName: string;
     trustsProxy: boolean;
     decide: (request: {
       name: string;

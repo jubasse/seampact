@@ -1,4 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
+import { format, inspect } from "node:util";
 import { expect, test } from "vitest";
 import type { RawReply } from "./live-request.test-support.js";
 
@@ -11,12 +12,19 @@ const USER = "55555555-5555-4555-8555-555555555555";
 const OTHER_USER = "66666666-6666-4666-8666-666666666666";
 const CHANNEL_OPERATION = "getChannel";
 const CALLER_MEMBERS = ["principal", "scopes"];
+const DECLARED_SCOPE = "channel";
+const OTHER_SCOPE = "organisation";
+const INTERNAL_ERROR = 500;
 // Long enough for the requests of two apis to be served at once.
 const HANDLER_DELAY_MILLISECONDS = 20;
 
 /** What the test app's handler answers receive, as the shared reference scenario calls them. */
 export interface HandlerAccessApp {
-  readonly scenario: { answers: Record<string, (input: unknown, ...rest: never[]) => unknown> };
+  readonly scenario: {
+    answers: Record<string, (input: unknown, ...rest: never[]) => unknown>;
+    /** The scope name the `channel` resolver answers. */
+    resolvedScopeName: string;
+  };
 }
 
 /** A booted test app and a request to it. */
@@ -26,8 +34,8 @@ export interface HandlerAccessBoot {
 }
 
 /**
- * What a handler read: its path, the caller members its input has, their values, and the input members a
- * serialisation keeps.
+ * What a handler read: its path, the caller members its input has, their values, the input members a
+ * serialisation keeps, and the caller members a dump of the input shows.
  */
 export interface ReadAccess {
   readonly path: unknown;
@@ -35,6 +43,7 @@ export interface ReadAccess {
   readonly principal: unknown;
   readonly scopes: unknown;
   readonly serialisedMembers: readonly string[];
+  readonly dumpedMembers: readonly string[];
 }
 
 function bearerOf(user: string): Record<string, string> {
@@ -61,12 +70,20 @@ export function readAccessOf(
       principal: Reflect.get(input, "principal"),
       scopes: Reflect.get(input, "scopes"),
       serialisedMembers: Object.keys(JSON.parse(JSON.stringify(input))),
+      dumpedMembers: dumpedCallerMembers(input),
     });
 
     return answer(input);
   };
 
   return reads;
+}
+
+// The dumps that show non-enumerable members: `console.log("%o")` formats as `%o` does.
+function dumpedCallerMembers(input: object): string[] {
+  const dumps = [inspect(input, { showHidden: true, depth: null }), format("%o", input)];
+
+  return CALLER_MEMBERS.filter((member) => dumps.some((dump) => dump.includes(member)));
 }
 
 function channelAnswer(input: unknown): unknown {
@@ -93,8 +110,21 @@ export function describeHandlerAccess(booted: () => HandlerAccessBoot): void {
         principal: { userId: USER },
         scopes: { channel: { scope: "channel", id: CHANNEL } },
         serialisedMembers: expect.not.arrayContaining(["principal", "scopes"]),
+        dumpedMembers: [],
       },
     ]);
+  });
+
+  test("a resolver answering another scope's name is an internal error the handler never sees", async () => {
+    const { app, send } = booted();
+    const reads = readAccessOf(app, CHANNEL_OPERATION, channelAnswer);
+
+    app.scenario.resolvedScopeName = OTHER_SCOPE;
+
+    const reply = await send("GET", `/v1/channels/${CHANNEL}`, bearerOf(USER));
+
+    expect(reply.status).toBe(INTERNAL_ERROR);
+    expect(reads).toEqual([]);
   });
 
   test("a public route's handler has no principal, and one in no scope no scopes", async () => {

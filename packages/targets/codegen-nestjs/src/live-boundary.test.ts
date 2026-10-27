@@ -4,9 +4,11 @@ import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  besideTasksOnSharedBasePaths,
   CLIENT_ADDRESS_CASES,
   clientAddressesTheHookSees,
   describeHandlerAccess,
+  describeTwoApiHandlerAccess,
   emitProject,
   generateReferenceProject,
   problemBody,
@@ -91,6 +93,7 @@ interface ReferenceAppModule {
       ) => unknown
     >;
     authenticate: (request: unknown) => unknown;
+    resolvedScopeName: string;
     trustsProxy: boolean;
     decide: (request: { name: string; purpose: { direction?: string } }) => unknown;
     interceptor: {
@@ -109,6 +112,7 @@ interface ReferenceAppModule {
     writer?: string,
   ) => Error;
   resetScenario(): void;
+  startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startReferenceApp(): Promise<{
     host: string;
     port: number;
@@ -1022,4 +1026,40 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       expect(logged.length).toBeGreaterThan(0);
     });
   });
+});
+
+describe("two apis on one app, each through its own module", () => {
+  let app: ReferenceAppModule;
+  let server: Awaited<ReturnType<ReferenceAppModule["startTwoApiApp"]>>;
+
+  beforeAll(async () => {
+    const project = projectDirectory(import.meta.url, "live-two-apis");
+    const build = join(project, "build");
+    const files = await generateReferenceProject(
+      project,
+      nestjsTarget,
+      { bodyValidation: true, reply: "handler" },
+      besideTasksOnSharedBasePaths,
+    );
+
+    expect(emitProject(project, files, build)).toEqual([]);
+
+    mkdirSync(join(build, "app"), { recursive: true });
+    copyFileSync(APP_SOURCE, join(build, "app", "reference-app.js"));
+    app = await import(pathToFileURL(join(build, "app", "reference-app.js")).href);
+    server = await app.startTwoApiApp();
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await server?.close();
+  });
+
+  beforeEach(() => {
+    app.resetScenario();
+  });
+
+  describeTwoApiHandlerAccess(() => ({
+    app,
+    send: (method, path, headers) => sendRawRequest(server, method, path, { headers }),
+  }));
 });

@@ -45,6 +45,7 @@ export function resetScenario() {
   scenario.answers = {};
   scenario.authenticate = authenticateByBearer;
   scenario.decide = () => ({ allow: true });
+  scenario.resolvedScopeName = "channel";
   scenario.trustsProxy = false;
   calls.scopeIds.length = 0;
   calls.handled.length = 0;
@@ -184,7 +185,7 @@ export const hooks = {
       resolveScope(request) {
         calls.scopeIds.push(request.source.id);
 
-        return { resolved: { scope: "channel", id: request.source.id } };
+        return { resolved: { scope: scenario.resolvedScopeName, id: request.source.id } };
       },
     },
   },
