@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-/** The paged lists of the reference contract, paged by cursor; the pack-spring variant replaces this file. */
+/** The paged lists of the reference contract, paged by cursor; the pack-spring and pack-laravel variants replace this file. */
 final class PagedLists {
     private static final String API = "tasks";
     private static final String NEXT_CURSOR = "page-2";

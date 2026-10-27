@@ -138,7 +138,7 @@ On an `ASYNC` dispatch, Spring passes its own `LifecycleHttpServletResponse` dow
 
 An exception that escapes `chain.doFilter`, on the `REQUEST` or the `ASYNC` dispatch of a contract route, is caught by the filter and never reaches the container. Before the commit, the filter writes the api's 500 and calls `onUnexpectedError` with it; after the commit, it fails as a stream does below. The filter is therefore not registered for the `ERROR` dispatch.
 
-Under `strict` a violation is replaced by the api's 500 when the response is not committed, and `onUnexpectedError` is called. A failure after the commit (a stream whose writer throws after its first bytes) cannot be replaced: it is logged, `onUnexpectedError` is called and the connection is closed. Under `warn` the reply goes out as written, and the violation is logged once.
+Under `strict` a violation is replaced by the api's 500 when the response is not committed, and `onUnexpectedError` is called. A failure after the commit (a stream whose writer throws after its first bytes) cannot be replaced: it is logged, `onUnexpectedError` is called and the connection is closed. Under `warn` the reply goes out as written, and the violation is logged once. A handler result that breaks its own type (null, not an arm of its result, a null list, table or page, a page without items or with a negative total) is the api's 500 in both modes, as on the Node targets.
 
 Until a consumer needs streamed bodies, the wrapper holds every reply whole in memory, success included, and an error body is neither bounded by `MAX_CHECKED_ERROR_BODY_BYTES` nor decoded from `gzip` or `deflate`: such a body fails the check as not JSON.
 

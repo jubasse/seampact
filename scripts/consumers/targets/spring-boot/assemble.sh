@@ -2,7 +2,9 @@
 # Copies the Spring Boot consumer into a directory of its own (ADR 0011, A12): the app sources, its build root (Gradle
 # with the repository's Gradle wrapper, or Maven with its `mvnw`) and the reference contract. `allow-listed` takes the
 # config of the `allow-listed-framework-route` boot variant; `pack-spring` takes the reference contract with
-# `@seampact/pack-spring` applied, its paged lists answered with Spring Data's `Page` (the `pack:spring` suite profile).
+# `@seampact/pack-spring` applied, its paged lists answered with Spring Data's `Page` (the `pack:spring` suite profile);
+# `pack-laravel` the reference contract with `@seampact/pack-laravel` applied, whose format wraps every success body
+# (the `pack:laravel` suite profile).
 set -eu
 
 destination="$1"
@@ -49,6 +51,9 @@ if [ "$variant" = "pack-spring" ]; then
   cp -R "$repository/fixtures/golden/pack-spring/contract" "$destination/contract"
   cp -R "$here/pack-spring/src" "$destination/"
   add_spring_data_commons
+elif [ "$variant" = "pack-laravel" ]; then
+  cp -R "$repository/fixtures/golden/pack-laravel/contract" "$destination/contract"
+  cp -R "$here/pack-laravel/src" "$destination/"
 else
   cp -R "$repository/fixtures/reference" "$destination/contract"
 fi
