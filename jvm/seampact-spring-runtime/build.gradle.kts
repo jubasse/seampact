@@ -3,6 +3,7 @@
 // `SpringDataPages` and `SecurityRefusals` name them, and an app that uses them has them.
 
 import io.github.jubasse.seampact.conventions.WriteVersionConstant
+import org.gradle.api.publish.maven.tasks.GenerateMavenPom
 
 plugins {
     id("seampact.library-module")
@@ -45,4 +46,24 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// The published POM names no Spring module: the app's Spring Boot provides them, so adding seampact never moves the
+// app's Spring Boot version.
+val generatePublishedPom = tasks.named<GenerateMavenPom>("generatePomFileForMavenPublication")
+val checkPublishedPom = tasks.register("checkPublishedPom") {
+    description = "Checks that the published POM of seampact-spring-runtime depends on no Spring module."
+    inputs.files(generatePublishedPom)
+    val publishedPom = generatePublishedPom.map { it.destination }
+
+    doLast {
+        val springGroups = Regex("<groupId>(org\\.springframework[^<]*)</groupId>").findAll(publishedPom.get().readText()).map { it.groupValues[1] }.toList()
+        check(springGroups.isEmpty()) {
+            "the published POM of seampact-spring-runtime depends on $springGroups; fix: declare every Spring module compileOnly, the app's Spring Boot provides it."
+        }
+    }
+}
+
+tasks.check {
+    dependsOn(checkPublishedPom)
 }
