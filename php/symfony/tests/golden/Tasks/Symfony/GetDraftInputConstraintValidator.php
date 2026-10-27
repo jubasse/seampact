@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Symfony;
 
-use Seampact\Golden\Tasks\Symfony\Runtime\Checks;
-use Seampact\Golden\Tasks\Symfony\Runtime\Format;
-use Seampact\Golden\Tasks\Symfony\Runtime\InputConstraintValidator;
-use Seampact\Golden\Tasks\Symfony\Runtime\InputShape;
-use Seampact\Golden\Tasks\Symfony\Runtime\JsonType;
-use Seampact\Golden\Tasks\Symfony\Runtime\KeyPolicy;
-use Seampact\Golden\Tasks\Symfony\Runtime\Member;
+use Seampact\Symfony\Runtime\Checks;
+use Seampact\Symfony\Runtime\Format;
+use Seampact\Symfony\Runtime\InputConstraintValidator;
+use Seampact\Symfony\Runtime\InputShape;
+use Seampact\Symfony\Runtime\JsonType;
+use Seampact\Symfony\Runtime\KeyPolicy;
+use Seampact\Symfony\Runtime\Member;
 
 /**
  * The members of the input of operation 'getDraft', as the contract declares them.

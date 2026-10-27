@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Laravel;
 
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryMiddleware;
+use Seampact\Laravel\Runtime\BoundaryMiddleware;
 
 /**
  * The BoundaryMiddleware of api 'tasks': steps 1 and 10 of every request under its base paths.

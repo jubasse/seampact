@@ -12,19 +12,24 @@ use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\OperationNames;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\RouteHelpers;
+use Seampact\Codegen\RuntimeClasses;
 use Seampact\Ir\Model\Operation;
 
 /**
  * The names of one api's Symfony placement (ADR 0024 "Placement"), claimed beside the shared names of `ApiLayout`:
- * its classes under `<namespace>\Symfony`, prefixed with the api's type name, the copied runtime under
- * `<namespace>\Symfony\Runtime`, its routes (`seampact.<api id>.<operationId>`), and the api key that names its routing
+ * its classes under `<namespace>\Symfony`, prefixed with the api's type name, the per-api attribute and hook
+ * interfaces the app implements there, the runtime classes the code imports from `seampact/symfony` and
+ * `seampact/codegen`, its routes (`seampact.<api id>.<operationId>`), and the api key that names its routing
  * resource and its bundle configuration (`seampact_<api key>`).
  */
 final class SymfonyPlacement implements BoundaryNames
 {
     public readonly string $namespace;
     public readonly string $symfonyNamespace;
-    public readonly string $runtimeNamespace;
+    public readonly string $operationAttribute;
+    public readonly string $decider;
+    public readonly string $scopeResolver;
+    public readonly string $unexpectedErrorListener;
     public readonly string $apiKey;
     public readonly string $bundle;
     public readonly string $controllerPass;
@@ -35,6 +40,11 @@ final class SymfonyPlacement implements BoundaryNames
     public readonly string $boundary;
     public readonly string $access;
     public readonly string $configurationAlias;
+
+    private const RUNTIME_NAMESPACE = 'Seampact\\Symfony\\Runtime';
+    private const RUNTIME_DIRECTORY = __DIR__ . '/../runtime';
+
+    private readonly RuntimeClasses $runtimeClasses;
 
     /** @var list<array{int, Operation}> */
     private array $operations = [];
@@ -49,7 +59,7 @@ final class SymfonyPlacement implements BoundaryNames
     {
         $this->namespace = $layout->namespace;
         $this->symfonyNamespace = "{$layout->namespace}\\Symfony";
-        $this->runtimeNamespace = "{$this->symfonyNamespace}\\Runtime";
+        $this->runtimeClasses = new RuntimeClasses(self::RUNTIME_NAMESPACE, self::RUNTIME_DIRECTORY);
         $this->apiKey = self::apiKeyOf(...$layout->ir->api->name->segments);
         $this->configurationAlias = "seampact_{$this->apiKey}";
 
@@ -63,6 +73,12 @@ final class SymfonyPlacement implements BoundaryNames
         $this->contract = $placed('Contract', "the api's contract class");
         $this->boundary = $placed('Boundary', "the api's boundary subscriber");
         $this->access = $placed('Access', "the api's access table");
+        // Unprefixed, as the runtime names them: the app implements them, one set per api.
+        $unprefixed = fn (string $name, string $owner): string => $layout->claim("{$this->symfonyNamespace}\\{$name}", $owner, $apiAt);
+        $this->operationAttribute = $unprefixed('SeampactOperation', "the api's operation attribute");
+        $this->decider = $unprefixed('Decider', "the api's decider interface");
+        $this->scopeResolver = $unprefixed('ScopeResolver', "the api's scope resolver interface");
+        $this->unexpectedErrorListener = $unprefixed('UnexpectedErrorListener', "the api's unexpected-error listener interface");
 
         foreach ($kept->operations() as [$index, $operation]) {
             $names = $layout->operation($operation->id);
@@ -141,9 +157,14 @@ final class SymfonyPlacement implements BoundaryNames
         return RouteHelpers::routeName($this->layout->ir->api->id, $operationId);
     }
 
+    public function unexpectedErrorListener(): string
+    {
+        return $this->unexpectedErrorListener;
+    }
+
     public function runtime(string $simpleName): string
     {
-        return "{$this->runtimeNamespace}\\{$simpleName}";
+        return $this->runtimeClasses->name($simpleName);
     }
 
     /** @return array{string, string} */

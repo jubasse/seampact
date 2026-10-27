@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\Tasks\Symfony\Runtime\BodyReader;
+use Seampact\Codegen\Runtime\BodyReader;
 use Symfony\Component\HttpFoundation\Request;
 
 /** The body is read through the request, so an in-process request (`KernelBrowser` or `jsonRequest()` in a functional test) sends its body. */

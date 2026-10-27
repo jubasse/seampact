@@ -57,7 +57,7 @@ final class BoundaryLogTest extends TestCase
                 return [];
             }
 
-            public function unexpectedErrorListener(): ?UnexpectedErrorListener
+            public function unexpectedErrorListener(ApiContract $contract): ?UnexpectedErrorListener
             {
                 throw new \LogicException('bind it to a class implementing ' . UnexpectedErrorListener::class . '.');
             }

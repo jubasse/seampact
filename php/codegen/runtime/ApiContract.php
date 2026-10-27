@@ -82,6 +82,8 @@ final class ApiContract
             return self::$loaded[$contractClass];
         }
 
+        self::refuseOtherRuntime($contractClass);
+
         $constant = static fn (string $name): mixed => constant("{$contractClass}::{$name}");
         $api = $constant('API');
         $ir = $constant('IR');
@@ -104,6 +106,18 @@ final class ApiContract
         /** @var list<array<string, mixed>> $routeTable */
         /** @var list<array{method: ?string, path: string}> $frameworkRoutes */
         return self::$loaded[$contractClass] = new self($api, $ir, $types, $defaults, $routeTable, $routesClass, $frameworkRoutes, $mount, $frameworkRouteScope === self::STRICT_SCOPE);
+    }
+
+    // The first check of every boot: a boundary never runs against a runtime of another version.
+    private static function refuseOtherRuntime(string $contractClass): void
+    {
+        $generatedBy = defined("{$contractClass}::GENERATED_BY") ? constant("{$contractClass}::GENERATED_BY") : null;
+        $api = defined("{$contractClass}::API") ? constant("{$contractClass}::API") : null;
+        if (!is_string($generatedBy) || !is_string($api)) {
+            throw new \LogicException("The generated contract class {$contractClass} lacks its API or GENERATED_BY constant, which a generator older than the installed runtime omits; regenerate it.");
+        }
+
+        RuntimeVersion::refuseOtherVersion($api, $generatedBy);
     }
 
     /** @return array<array-key, mixed> */

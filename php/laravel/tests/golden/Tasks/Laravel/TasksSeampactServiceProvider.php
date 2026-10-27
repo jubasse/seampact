@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Laravel;
 
-use Seampact\Golden\Tasks\Laravel\Runtime\ContractServiceProvider;
-use Seampact\Golden\Tasks\Laravel\Runtime\Hooks;
+use Seampact\Laravel\Runtime\ContractServiceProvider;
+use Seampact\Laravel\Runtime\Hooks;
 
 /**
  * Serves api 'tasks': list it in bootstrap/providers.php, then call Route::seampact('tasks') in the app's routes.

@@ -6,7 +6,7 @@ namespace Seampact\Golden\Tasks;
 
 use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\Request;
-use Seampact\Golden\Tasks\Laravel\Runtime\Replies;
+use Seampact\Codegen\Runtime\Replies;
 use Seampact\Golden\Tasks\Schemas\ApiPayloadTooLargeParams;
 use Seampact\Golden\Tasks\Schemas\ApiSchemaInvalidParams;
 use Symfony\Component\HttpFoundation\Response;

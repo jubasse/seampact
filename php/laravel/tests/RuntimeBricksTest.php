@@ -6,15 +6,15 @@ namespace Seampact\Laravel\Tests;
 
 use Illuminate\Container\Container;
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\ApiContract;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\CacheHeaders;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\Hooks;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\IdempotencyStep;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\PageReply;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\CacheHeaders;
+use Seampact\Codegen\Runtime\IdempotencyStep;
+use Seampact\Codegen\Runtime\PageReply;
 use Seampact\Golden\TasksConsistent\Laravel\TasksContract;
 use Seampact\Golden\TasksConsistent\Laravel\UserPrincipal;
 use Seampact\Hooks\RequestView;
+use Seampact\Laravel\Runtime\Hooks;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 

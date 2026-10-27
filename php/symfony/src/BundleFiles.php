@@ -102,10 +102,10 @@ final class BundleFiles
         $settings = $file->name($this->placement->settings);
         $hooks = $file->name($this->placement->runtime('Hooks'));
         $boundary = $file->name($this->placement->boundary);
-        $listener = $file->name($this->placement->runtime('UnexpectedErrorListener'));
+        $listener = $file->name($this->placement->unexpectedErrorListener);
         $idempotencyStore = $file->name(self::IDEMPOTENCY_STORE);
-        $decider = $file->name($this->placement->runtime('Decider'));
-        $scopeResolver = $file->name($this->placement->runtime('ScopeResolver'));
+        $decider = $file->name($this->placement->decider);
+        $scopeResolver = $file->name($this->placement->scopeResolver);
         $routeCheck = $file->name($this->placement->runtime('RouteCheck'));
         $contract = $file->name($this->placement->contract);
         $bootCheck = $file->name($this->placement->runtime('BootCheckPass'));
@@ -167,7 +167,7 @@ final class BundleFiles
             PHP;
         if ($this->bootCheck !== null) {
             $bootCheckPass = $file->name($this->placement->runtime('BootCheckPass'));
-            $buildBody .= "\n\$container->addCompilerPass(new {$bootCheckPass}({$contract}::class, self::BOUNDARY_SERVICE, self::INPUT_RESOLVER_SERVICE, self::SETTINGS_SERVICE, {$settings}::class, "
+            $buildBody .= "\n\$container->addCompilerPass(new {$bootCheckPass}({$contract}::class, {$file->name($this->placement->operationAttribute)}::class, self::BOUNDARY_SERVICE, self::INPUT_RESOLVER_SERVICE, self::SETTINGS_SERVICE, {$settings}::class, "
                 . var_export($this->bootCheck->handlers, true) . "), {$passConfig}::TYPE_BEFORE_REMOVING, {$bootCheckPass}::PRIORITY);";
         }
         $build->setBody($buildBody);
@@ -378,6 +378,9 @@ final class BundleFiles
 
         $class->addMethod('inputAttribute')->setProtected()->setReturnType('string')
             ->setBody('return ' . $file->name($this->placement->inputResolver) . '::INPUT_ATTRIBUTE;');
+
+        $class->addMethod('operationAttribute')->setProtected()->setReturnType('string')
+            ->setBody('return ' . $file->name($this->placement->operationAttribute) . '::class;');
         $class->addMethod('contractExceptionClass')->setProtected()->setReturnType('string')
             ->setBody('return ' . $file->name($this->placement->layout->contractException) . '::class;');
         $class->addMethod('checksHooks')->setProtected()->setReturnType('bool')

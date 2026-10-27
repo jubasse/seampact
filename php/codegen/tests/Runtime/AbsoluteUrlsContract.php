@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Tests\Runtime;
 
+use Seampact\Codegen\Runtime\RuntimeVersion;
+
 /** A generated contract class of an api writing absolute URLs, with no operation. */
 final class AbsoluteUrlsContract
 {
     public const API = 'tasks';
+    public const GENERATED_BY = RuntimeVersion::VERSION;
     public const IR = ['api' => ['id' => 'tasks', 'wire' => ['urls' => 'absolute']], 'operations' => []];
     public const TYPES = [];
     public const ROUTES_CLASS = SelectionRoutes::class;

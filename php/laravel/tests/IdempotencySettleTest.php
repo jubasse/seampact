@@ -14,7 +14,7 @@ use Illuminate\Routing\Router;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Golden\TasksConsistent\Laravel\TasksBoundary;
 use Seampact\Hooks\IdempotencyBegin;
 use Seampact\Hooks\IdempotencyClaim;

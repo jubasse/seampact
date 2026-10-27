@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Tests\Runtime;
 
+use Seampact\Codegen\Runtime\RuntimeVersion;
+
 /**
  * A generated contract class whose operations declare codes by role and by status, with and without required params,
  * and a rate-limited code whose one required param is the delay its retry header writes.
@@ -11,6 +13,7 @@ namespace Seampact\Codegen\Tests\Runtime;
 final class StatusCodesContract
 {
     public const API = 'tasks';
+    public const GENERATED_BY = RuntimeVersion::VERSION;
     private const RETRY_HEADER = ['name' => 'Retry-After', 'param' => 'retryAfterMs', 'unit' => 's'];
     public const IR = [
         'formats' => ['problem' => ['error' => [

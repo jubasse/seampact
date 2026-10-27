@@ -20,8 +20,8 @@ use Symfony\Component\DependencyInjection\Attribute\Exclude;
 /**
  * The api's hooks as tagged services, which the bundle autoconfigures from the hook interfaces: a service locator of
  * the authenticate hooks keyed by their generated interface, the deciders and scope resolvers as tagged iterators, the
- * optional unexpected-error listener and idempotency store, and the app's logger. A missing hook is a `LogicException`, which the boundary
- * answers with the api's 500. Symfony's `AccessDeniedException` (`denyAccessUnlessGranted()`) is a decider's access
+ * optional unexpected-error listener of the api's generated interface and idempotency store, and the app's logger. A
+ * missing hook is a `LogicException`, which the boundary answers with the api's 500. Symfony's `AccessDeniedException` (`denyAccessUnlessGranted()`) is a decider's access
  * denial, named as a string so an app without SecurityBundle still loads this class.
  */
 #[Exclude]
@@ -84,14 +84,16 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup
         return $this->scopeResolvers;
     }
 
-    public function unexpectedErrorListener(): ?UnexpectedErrorListener
+    public function unexpectedErrorListener(ApiContract $contract): ?UnexpectedErrorListener
     {
         $listener = $this->unexpectedErrorListener;
-        if ($listener === null || $listener instanceof UnexpectedErrorListener) {
+        $interface = Ir::string($contract->types, 'unexpectedErrorListener')
+            ?? throw new \LogicException("seampact: the contract of api '{$contract->api}' names no unexpected-error listener interface; regenerate it.");
+        if ($listener === null || ($listener instanceof UnexpectedErrorListener && $listener instanceof $interface)) {
             return $listener;
         }
 
-        throw new \LogicException('seampact: the service ' . UnexpectedErrorListener::class . ' is ' . get_debug_type($listener) . '; alias it to a class implementing that interface.');
+        throw new \LogicException("seampact: the service {$interface} is " . get_debug_type($listener) . '; alias it to a class implementing that interface.');
     }
 
     public function idempotencyStore(): ?IdempotencyStore

@@ -6,15 +6,15 @@ namespace Seampact\Laravel\Tests;
 
 use Illuminate\Container\Container;
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\AccessSteps;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\ApiContract;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\Hooks;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\IdempotencyStep;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\PrincipalMembers;
+use Seampact\Codegen\Runtime\AccessSteps;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\IdempotencyStep;
+use Seampact\Codegen\Runtime\PrincipalMembers;
 use Seampact\Golden\TasksConsistent\Laravel\TasksContract;
 use Seampact\Golden\TasksConsistent\Laravel\UserPrincipal;
 use Seampact\Hooks\RequestView;
+use Seampact\Laravel\Runtime\Hooks;
 
 /** The boundary reads a principal through the members its identity declares, never through its PHP properties. */
 final class PrincipalTest extends TestCase

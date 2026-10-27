@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Tests\Runtime;
 
+use Seampact\Codegen\Runtime\RuntimeVersion;
+
 /** A generated contract class with one schema whose members are opaque values. */
 final class OpaqueMembersContract
 {
     public const API = 'tasks';
+    public const GENERATED_BY = RuntimeVersion::VERSION;
     public const IR = [
         'schemas' => ['event' => ['properties' => [
             ['name' => 'payload', 'type' => ['kind' => 'opaque', 'reason' => 'any webhook payload', 'nullable' => true], 'nullable' => true],

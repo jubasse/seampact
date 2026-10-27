@@ -44,9 +44,11 @@ final class BootCheckPass implements CompilerPassInterface
     /**
      * @param string $boundaryService the ids of the bundle's boundary, input resolver and settings services
      * @param bool $checksHandlers the `handlers` switch of `artefacts.bootCheck`
+     * @param string $operationAttribute the api's generated `SeampactOperation` attribute
      */
     public function __construct(
         private readonly string $contractClass,
+        private readonly string $operationAttribute,
         private readonly string $boundaryService,
         private readonly string $resolverService,
         private readonly string $settingsService,
@@ -115,7 +117,7 @@ final class BootCheckPass implements CompilerPassInterface
                 $problems[] = "the controller {$class->name} carries #[{$attribute}], which runs after the contract's input checks; use {$fix}";
             }
             foreach ($operations as $method => $operationId) {
-                $problems = [...$problems, ...self::method($class, $method, $operationId)];
+                $problems = [...$problems, ...$this->method($class, $method, $operationId)];
             }
         }
 
@@ -126,14 +128,14 @@ final class BootCheckPass implements CompilerPassInterface
      * @param \ReflectionClass<object> $class
      * @return list<string>
      */
-    private static function method(\ReflectionClass $class, string $method, string $operationId): array
+    private function method(\ReflectionClass $class, string $method, string $operationId): array
     {
         if (!$class->hasMethod($method)) {
             return [];
         }
 
         $reflection = $class->getMethod($method);
-        $marks = array_map(static fn (\ReflectionAttribute $attribute): mixed => $attribute->getArguments()[0] ?? $attribute->getArguments()['operationId'] ?? null, $reflection->getAttributes(SeampactOperation::class));
+        $marks = array_map(static fn (\ReflectionAttribute $attribute): mixed => $attribute->getArguments()[0] ?? $attribute->getArguments()['operationId'] ?? null, $reflection->getAttributes($this->operationAttribute));
         $problems = [];
         if ($marks !== [$operationId]) {
             $problems[] = "the method {$class->name}::{$method} handles operation '{$operationId}' but is not marked #[SeampactOperation('{$operationId}')]; add the attribute";

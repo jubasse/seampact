@@ -4,19 +4,16 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Symfony;
 
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\ApiContract;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\BootCheckPass;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\BoundarySubscriber;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\ContractSettings;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\Decider;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\DumpRedaction;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\HookCheckWarmer;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\Hooks;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\KindRequestMatcher;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\RouteCheck;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\ScopeResolver;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\UnexpectedErrorListener;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\DumpRedaction;
 use Seampact\Hooks\IdempotencyStore;
+use Seampact\Symfony\Runtime\BootCheckPass;
+use Seampact\Symfony\Runtime\BoundarySubscriber;
+use Seampact\Symfony\Runtime\ContractSettings;
+use Seampact\Symfony\Runtime\HookCheckWarmer;
+use Seampact\Symfony\Runtime\Hooks;
+use Seampact\Symfony\Runtime\KindRequestMatcher;
+use Seampact\Symfony\Runtime\RouteCheck;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
@@ -122,7 +119,7 @@ final class TasksSeampactBundle extends AbstractBundle
   {
     parent::build($container);
     $container->addCompilerPass(new TasksControllerPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, TasksControllerPass::PRIORITY);
-    $container->addCompilerPass(new BootCheckPass(TasksContract::class, self::BOUNDARY_SERVICE, self::INPUT_RESOLVER_SERVICE, self::SETTINGS_SERVICE, TasksSettings::class, true), PassConfig::TYPE_BEFORE_REMOVING, BootCheckPass::PRIORITY);
+    $container->addCompilerPass(new BootCheckPass(TasksContract::class, SeampactOperation::class, self::BOUNDARY_SERVICE, self::INPUT_RESOLVER_SERVICE, self::SETTINGS_SERVICE, TasksSettings::class, true), PassConfig::TYPE_BEFORE_REMOVING, BootCheckPass::PRIORITY);
   }
 
   /**

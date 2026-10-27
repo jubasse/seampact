@@ -22,8 +22,6 @@ use Seampact\Codegen\PhpTypes;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\RestrictedSortKeys;
 use Seampact\Codegen\RouteHelpers;
-use Seampact\Codegen\RuntimeCopy;
-use Seampact\Codegen\RuntimeSource;
 use Seampact\Codegen\SchemaTypes;
 use Seampact\Codegen\TargetOptions;
 use Seampact\Ir\Model\ContractIR;
@@ -37,16 +35,14 @@ use Seampact\Ir\Write\GeneratedFile;
  * The symfony target (ADR 0024), which `vendor/bin/seampact` finds through `extra.seampact.generator`: per api, the
  * shared value types, inputs, results and exceptions of `seampact/codegen`, then the Symfony placement: the endpoints
  * interfaces, each operation's input constraint, the contract class, the identity hooks, the route loader, the route
- * names and URL builders, the input resolver, the bundle with its configuration, passes and boundary subscriber,
- * and the copied runtime.
+ * names and URL builders, the input resolver, the bundle with its configuration, passes and boundary subscriber, and
+ * the api's operation attribute and hook interfaces.
  */
 final class SymfonyGenerator implements Generator
 {
     public const TARGET = 'symfony';
     public const PACKAGE = 'seampact/symfony';
     private const HTTP_OPERATION = 'httpOperation';
-    private const RUNTIME_SOURCE_NAMESPACE = 'Seampact\\Symfony\\Runtime';
-    private const RUNTIME_SOURCE_DIRECTORY = __DIR__ . '/../runtime';
     private const HOOK_REGISTRATION = 'register one service implementing it, with autoconfiguration on';
 
     public function irSupport(): IrSupport
@@ -83,6 +79,7 @@ final class SymfonyGenerator implements Generator
             (new RouteLoaderFile($placement, $options, $refusals, $mount))->file(),
             (new InputResolverFile($placement))->file(),
             ...(new BundleFiles($placement, $options, BootCheckSwitches::of($entry->artefacts)))->files(),
+            ...(new ApiIdentityFiles($placement))->files(),
         ];
         foreach ($placement->operations() as [$index, $operation]) {
             $at = IrPlace::ofOperation($index, $operation->id);
@@ -97,13 +94,10 @@ final class SymfonyGenerator implements Generator
 
         $printer = new PsrPrinter();
         $printer->indentation = str_repeat(' ', $options->indentSpaces);
-        $files = [
-            ...array_map(
-                static fn (PhpClassFile $file): GeneratedFile => new GeneratedFile($file->path($options->namespace), $printer->printFile($file->file)),
-                $classFiles,
-            ),
-            ...(new RuntimeCopy([RuntimeCopy::sharedSource(), new RuntimeSource(self::RUNTIME_SOURCE_NAMESPACE, self::RUNTIME_SOURCE_DIRECTORY, self::PACKAGE)]))->files($placement->namespace, $placement->runtimeNamespace),
-        ];
+        $files = array_map(
+            static fn (PhpClassFile $file): GeneratedFile => new GeneratedFile($file->path($options->namespace), $printer->printFile($file->file)),
+            $classFiles,
+        );
         usort($files, static fn (GeneratedFile $first, GeneratedFile $second): int => strcmp($first->path, $second->path));
 
         return $files;

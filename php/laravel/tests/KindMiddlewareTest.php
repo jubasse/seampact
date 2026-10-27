@@ -7,7 +7,7 @@ namespace Seampact\Laravel\Tests;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\KindMiddleware;
+use Seampact\Laravel\Runtime\KindMiddleware;
 
 /** The per-kind middleware lists an app sets in `config('seampact.<api>.middleware')`. */
 final class KindMiddlewareTest extends TestCase

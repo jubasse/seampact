@@ -10,6 +10,9 @@ namespace Seampact\Golden\TasksConsistent\Laravel;
 final class TasksContract
 {
     public const API = 'tasks';
+
+    /** The seampact version that generated this code; the boot refuses a runtime of another minor or a lower patch. */
+    public const GENERATED_BY = '0.0.0-dev';
     public const ROUTES_CLASS = 'Seampact\Golden\TasksConsistent\Laravel\TasksRoutes';
 
     /** The IR of the kept operations and the declarations the boundary reads. */
@@ -4660,6 +4663,7 @@ final class TasksContract
                 'principalAccessors' => ['userId' => 'userId'],
             ],
         ],
+        'unexpectedErrorListener' => 'Seampact\Golden\TasksConsistent\Laravel\UnexpectedErrorListener',
     ];
 
     /** The app routes the entry's `frameworkRoutes` lets through the boot check. */

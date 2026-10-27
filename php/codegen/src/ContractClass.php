@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen;
 
+use Seampact\Codegen\Runtime\RuntimeVersion;
 use Seampact\Ir\Model\IdentityAccess;
 use Seampact\Ir\Model\OptionalAccess;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Run\FrameworkRoute;
 
 /**
- * The api's contract class the copied runtime reads (ADR 0023 "The boundary", ADR 0024 "Placement"): the IR view of the kept operations
+ * The api's contract class the runtime reads (ADR 0023 "The boundary", ADR 0024 "Placement"): the IR view of the kept operations
  * and the declarations they read, the PHP class of each schema, enum, operation part, result and identity, and the
  * framework routes the boot check lets through, all as constant arrays that OPcache keeps between requests.
  */
@@ -42,6 +43,8 @@ final class ContractClass
         $class = $file->namespace->addClass($file->shortName)->setFinal();
         $class->addComment("The contract of api '{$this->layout->ir->api->id}' as its boundary reads it.");
         $class->addConstant('API', $this->layout->ir->api->id)->setPublic();
+        $class->addConstant('GENERATED_BY', RuntimeVersion::VERSION)->setPublic()
+            ->addComment('The seampact version that generated this code; the boot refuses a runtime of another minor or a lower patch.');
         $class->addConstant('ROUTES_CLASS', $this->names->routesClass())->setPublic();
         $class->addConstant('IR', $this->irView())->setPublic()
             ->addComment('The IR of the kept operations and the declarations the boundary reads.');
@@ -105,6 +108,7 @@ final class ContractClass
             'enums' => $enums,
             'operations' => $this->operationTypes(),
             'identities' => $this->identityTypes(),
+            'unexpectedErrorListener' => $this->names->unexpectedErrorListener(),
         ];
     }
 

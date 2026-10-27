@@ -6,7 +6,7 @@ namespace Seampact\Golden\TasksConsistent;
 
 use Illuminate\Contracts\Debug\ShouldntReport;
 use Illuminate\Http\Request;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\Replies;
+use Seampact\Codegen\Runtime\Replies;
 use Symfony\Component\HttpFoundation\Response;
 
 /**

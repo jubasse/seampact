@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel\Tests;
 
+use Seampact\Codegen\Runtime\RuntimeVersion;
+
 /** A generated contract class with an operation that declares a not-found code and one that declares only forbidden. */
 final class DeniedStatusContract
 {
     public const API = 'tasks';
+    public const GENERATED_BY = RuntimeVersion::VERSION;
     public const IR = [
         'errors' => [
             'api.forbidden' => ['http' => ['status' => 403], 'default' => 'forbidden'],

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Symfony;
 
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\InputConstraintValidator;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\InputShape;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\JsonType;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\KeyPolicy;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\Member;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\Presence;
+use Seampact\Codegen\Runtime\Presence;
+use Seampact\Symfony\Runtime\InputConstraintValidator;
+use Seampact\Symfony\Runtime\InputShape;
+use Seampact\Symfony\Runtime\JsonType;
+use Seampact\Symfony\Runtime\KeyPolicy;
+use Seampact\Symfony\Runtime\Member;
 
 /**
  * The members of the input of operation 'getPreferences', as the contract declares them.

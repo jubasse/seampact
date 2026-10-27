@@ -103,7 +103,7 @@ final class NotFoundDenialTest extends TestCase
                 return [];
             }
 
-            public function unexpectedErrorListener(): ?UnexpectedErrorListener
+            public function unexpectedErrorListener(ApiContract $contract): ?UnexpectedErrorListener
             {
                 return null;
             }

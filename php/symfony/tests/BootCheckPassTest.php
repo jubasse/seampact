@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\Tasks\Symfony\TasksSeampactBundle as FirstBundle;
-use Seampact\Golden\Tasks\Symfony\Runtime\BootCheckPass as RelativeBootCheckPass;
-use Seampact\Golden\Tasks\Symfony\TasksBoundary as RelativeBoundary;
-use Seampact\Golden\Tasks\Symfony\TasksContract as RelativeContract;
-use Seampact\Golden\Tasks\Symfony\TasksSettings as RelativeSettings;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\BootCheckPass;
+use Seampact\Golden\TasksConsistent\Symfony\SeampactOperation as TasksOperation;
 use Seampact\Golden\TasksConsistent\Symfony\TasksContract;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSeampactBundle as SecondBundle;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSettings;
+use Seampact\Golden\Tasks\Symfony\SeampactOperation as RelativeOperation;
+use Seampact\Golden\Tasks\Symfony\TasksBoundary as RelativeBoundary;
+use Seampact\Golden\Tasks\Symfony\TasksContract as RelativeContract;
+use Seampact\Golden\Tasks\Symfony\TasksSeampactBundle as FirstBundle;
+use Seampact\Golden\Tasks\Symfony\TasksSettings as RelativeSettings;
+use Seampact\Symfony\Runtime\BootCheckPass;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\ResolveClassPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -38,7 +39,7 @@ final class BootCheckPassTest extends TestCase
         // Both golden apis are named tasks, so the first one's boundary is registered under an id of its own.
         $container->register(self::EARLIER_BOUNDARY, RelativeBoundary::class)
             ->addTag('kernel.event_subscriber')
-            ->addTag(RelativeBootCheckPass::BOUNDARY_TAG, [RelativeBootCheckPass::CONTRACT_ATTRIBUTE => RelativeContract::class]);
+            ->addTag(BootCheckPass::BOUNDARY_TAG, [BootCheckPass::CONTRACT_ATTRIBUTE => RelativeContract::class]);
         self::load(new SecondBundle(), $container);
         (new ResolveClassPass())->process($container);
         (new RegisterListenersPass())->process($container);
@@ -95,12 +96,12 @@ final class BootCheckPassTest extends TestCase
 
     private static function bootCheck(): BootCheckPass
     {
-        return new BootCheckPass(TasksContract::class, SecondBundle::BOUNDARY_SERVICE, SecondBundle::INPUT_RESOLVER_SERVICE, SecondBundle::SETTINGS_SERVICE, TasksSettings::class, false);
+        return new BootCheckPass(TasksContract::class, TasksOperation::class, SecondBundle::BOUNDARY_SERVICE, SecondBundle::INPUT_RESOLVER_SERVICE, SecondBundle::SETTINGS_SERVICE, TasksSettings::class, false);
     }
 
-    private static function relativeBootCheck(): RelativeBootCheckPass
+    private static function relativeBootCheck(): BootCheckPass
     {
-        return new RelativeBootCheckPass(RelativeContract::class, FirstBundle::BOUNDARY_SERVICE, FirstBundle::INPUT_RESOLVER_SERVICE, FirstBundle::SETTINGS_SERVICE, RelativeSettings::class, false);
+        return new BootCheckPass(RelativeContract::class, RelativeOperation::class, FirstBundle::BOUNDARY_SERVICE, FirstBundle::INPUT_RESOLVER_SERVICE, FirstBundle::SETTINGS_SERVICE, RelativeSettings::class, false);
     }
 
     /** The boot check's problems on a container built as a Kernel builds it, the bundle configuration merged first. */

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Tests\Runtime;
 
+use Seampact\Codegen\Runtime\RuntimeVersion;
+
 /**
  * A generated contract class with no bucket rule, so no retry header: rate-limited codes whose delay param is
  * required, optional, or renamed by an authored role template.
@@ -11,6 +13,7 @@ namespace Seampact\Codegen\Tests\Runtime;
 final class RateLimitedContract
 {
     public const API = 'tasks';
+    public const GENERATED_BY = RuntimeVersion::VERSION;
     private const RETRY_AFTER_SLOT = ['kind' => 'slot', 'path' => [], 'slot' => 'retryAfterMs'];
     public const IR = [
         'formats' => ['problem' => ['error' => [

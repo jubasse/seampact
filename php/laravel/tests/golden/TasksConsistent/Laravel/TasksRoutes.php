@@ -10,9 +10,9 @@ use Seampact\Golden\TasksConsistent\AppEndpoints;
 use Seampact\Golden\TasksConsistent\ChannelsEndpoints;
 use Seampact\Golden\TasksConsistent\DraftsEndpoints;
 use Seampact\Golden\TasksConsistent\HooksEndpoints;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\KindMiddleware;
 use Seampact\Golden\TasksConsistent\PreferencesEndpoints;
 use Seampact\Golden\TasksConsistent\TasksEndpoints;
+use Seampact\Laravel\Runtime\KindMiddleware;
 
 /**
  * The contract routes of api 'tasks', in registration order.

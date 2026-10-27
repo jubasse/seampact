@@ -7,11 +7,11 @@ namespace Seampact\Laravel\Tests;
 use Illuminate\Config\Repository;
 use Illuminate\Foundation\Application;
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\Tasks\Laravel\TasksBoundary;
-use Seampact\Golden\Tasks\Laravel\TasksSeampactServiceProvider;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\ContractServiceProvider;
 use Seampact\Golden\TasksConsistent\Laravel\TasksBoundary as ConsistentBoundary;
 use Seampact\Golden\TasksConsistent\Laravel\TasksSeampactServiceProvider as ConsistentProvider;
+use Seampact\Golden\Tasks\Laravel\TasksBoundary;
+use Seampact\Golden\Tasks\Laravel\TasksSeampactServiceProvider;
+use Seampact\Laravel\Runtime\ContractServiceProvider;
 
 /**
  * Two apis in one app: each boundary leads the global stack when only the other api's boundary comes before it, and

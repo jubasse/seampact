@@ -10,6 +10,8 @@ use Illuminate\Validation\Factory;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Laravel\LaravelGenerator;
+use Seampact\Laravel\Runtime\ContractIssue;
+use Seampact\Laravel\Runtime\InputTree;
 
 /**
  * The rules a generated FormRequest returns, run in Laravel's validator over a decoded body: the getTasksBatch body
@@ -228,8 +230,8 @@ final class FormRequestRulesTest extends TestCase
     }
 
     /**
-     * Runs the generated request's rules over `$json`; the generated classes are loaded at run time, so their values
-     * are read through checks.
+     * Runs the generated request's rules over `$json`; the generated request is loaded at run time, so its rules are
+     * read through checks.
      *
      * @param array<string, string> $path
      * @param array<string, string> $query
@@ -237,42 +239,20 @@ final class FormRequestRulesTest extends TestCase
      */
     private function validate(string $json, string $namespace, array $path = [], array $query = []): array
     {
-        $withBody = ["{$namespace}\\Laravel\\Runtime\\InputTree", 'withBody'];
         $contractRules = ["{$namespace}\\GetTasksBatchRequest", 'contractRules'];
-        self::assertIsCallable($withBody);
         self::assertIsCallable($contractRules);
 
-        $tree = $withBody($path === [] ? ['channelId' => self::CHANNEL_ID] : $path, $query, [], json_decode($json, false, 512, JSON_THROW_ON_ERROR));
-        self::assertIsObject($tree);
-        $data = [$tree, 'validationData'];
-        $recorded = [$tree, 'issues'];
-        self::assertIsCallable($data);
-        self::assertIsCallable($recorded);
-        $validationData = $data();
+        $tree = InputTree::withBody($path === [] ? ['channelId' => self::CHANNEL_ID] : $path, $query, [], json_decode($json, false, 512, JSON_THROW_ON_ERROR));
         $rules = $contractRules($tree);
-        self::assertIsArray($validationData);
         self::assertIsArray($rules);
 
         $factory = new Factory(new Translator(new ArrayLoader(), 'en'));
-        $validator = $factory->make($validationData, $rules);
+        $validator = $factory->make($tree->validationData(), $rules);
         $validator->passes();
 
-        $issues = [];
-        $found = $recorded();
-        self::assertIsArray($found);
-        foreach ($found as $issue) {
-            self::assertIsObject($issue);
-            $issues[] = [self::text($issue, 'in'), self::text($issue, 'pointer'), self::text($issue, 'rule')];
-        }
+        $issues = array_map(static fn (ContractIssue $issue): array => [$issue->in, $issue->pointer, $issue->rule], $tree->issues());
 
         return [$issues, $validator];
-    }
-
-    private static function text(object $issue, string $member): string
-    {
-        $value = get_object_vars($issue)[$member] ?? null;
-
-        return is_string($value) ? $value : '';
     }
 
     private static function withAddedMembers(\stdClass $document): \stdClass

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Tests\Runtime;
 
+use Seampact\Codegen\Runtime\RuntimeVersion;
+
 /** A generated contract class whose rule denies with its own code, on an operation with and without a not-found code. */
 final class NotFoundDenialContract
 {
     public const API = 'tasks';
+    public const GENERATED_BY = RuntimeVersion::VERSION;
     public const IR = [
         'errors' => [
             'api.not_found' => ['http' => ['status' => 404], 'default' => 'notFound'],

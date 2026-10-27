@@ -6,17 +6,17 @@ namespace Seampact\Golden\TasksConsistent;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BlankStrings;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryMark;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormSteps;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormatRule;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\InputTree;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\Nullability;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\Position;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\Presence;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\TypeRule;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\UnknownKeysRule;
+use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\Nullability;
+use Seampact\Codegen\Runtime\Presence;
+use Seampact\Laravel\Runtime\BlankStrings;
+use Seampact\Laravel\Runtime\BoundaryMark;
+use Seampact\Laravel\Runtime\FormSteps;
+use Seampact\Laravel\Runtime\FormatRule;
+use Seampact\Laravel\Runtime\InputTree;
+use Seampact\Laravel\Runtime\Position;
+use Seampact\Laravel\Runtime\TypeRule;
+use Seampact\Laravel\Runtime\UnknownKeysRule;
 
 /**
  * The request of operation 'getChannel': its access mark and its validation rules.

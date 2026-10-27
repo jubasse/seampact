@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Symfony;
 
+use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Golden\Tasks\GetChannelInput;
 use Seampact\Golden\Tasks\GetDraftInput;
 use Seampact\Golden\Tasks\GetTaskInput;
 use Seampact\Golden\Tasks\GetTasksBatchInput;
 use Seampact\Golden\Tasks\HealthInput;
-use Seampact\Golden\Tasks\Symfony\Runtime\ContractBypassedException;
 use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;

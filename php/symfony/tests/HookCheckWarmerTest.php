@@ -6,11 +6,11 @@ namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\ApiContract;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\HookCheckWarmer;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\Hooks;
+use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Golden\TasksConsistent\Symfony\TasksContract;
 use Seampact\Hooks\IdempotencyStore;
+use Seampact\Symfony\Runtime\HookCheckWarmer;
+use Seampact\Symfony\Runtime\Hooks;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
 /** The hook check the cache warmer runs, on the golden api whose writes the boundary keeps idempotent. */
