@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Codegen;
 
 use Seampact\Ir\Model\ContractIR;
+use Seampact\Ir\Model\CookieScheme;
 use Seampact\Ir\Model\IdentityAccess;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Model\OptionalAccess;
@@ -36,5 +37,19 @@ final class AccessKind
         $identity = $access instanceof IdentityAccess || $access instanceof OptionalAccess ? $ir->identities[$access->identity] ?? null : null;
 
         return $identity instanceof SignedIdentity;
+    }
+
+    /** Whether one of the operation's credential schemes is a cookie, the only credential a cross-site form can forge. */
+    public static function readsCookie(ContractIR $ir, Operation $operation): bool
+    {
+        $access = $operation->access;
+        $schemes = $access instanceof IdentityAccess || $access instanceof OptionalAccess ? $access->schemes : [];
+        foreach ($schemes as $schemeId) {
+            if (($ir->schemes[$schemeId] ?? null) instanceof CookieScheme) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

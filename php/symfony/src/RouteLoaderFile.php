@@ -8,19 +8,19 @@ use Nette\PhpGenerator\Literal;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
+use Seampact\Codegen\RoutePlaceholder;
 use Seampact\Codegen\TargetOptions;
 use Seampact\Ir\Model\Operation;
 
 /**
  * The api's route loader (ADR 0024 "Routes"), tagged `routing.loader`: it serves the `seampact` type for its own api
  * key only and registers each operation as `seampact.<api>.<operationId>`, pointing at the endpoints interface's
- * method, with the operation id under `_seampact_operation`. Parameters take positional names (`{p1}`), which the
- * boundary never reads, and per path depth a literal segment comes before a placeholder, since the router matches in
- * registration order. A static segment holding `{`, `}` or `?`, or one mixing a placeholder with text, is refused.
+ * method, with the operation id under `_seampact_operation`. Each placeholder is named after its input property
+ * (`{taskId}`, a name over 32 characters a positional `{p2}`), so the router builds a URL by name, while the boundary reads the raw path. Per path depth a literal
+ * segment comes before a placeholder, since the router matches in registration order. A static segment holding `{`, `}` or `?`, or one mixing a placeholder with text, is refused.
  */
 final class RouteLoaderFile
 {
-    private const PLACEHOLDER = '/^\{[^{}\/]+\}$/D';
     private const PLACEHOLDER_INSIDE = '/\{[^{}\/]*\}/';
     private const ROUTE_SYNTAX_CHARACTERS = ['{', '}', '?'];
 
@@ -102,17 +102,20 @@ final class RouteLoaderFile
         return array_map(static fn (array $route): array => [$route[0], $route[1]], $routes);
     }
 
-    /** @return array{string, list<int>}|null the path with positional parameters, and 1 per placeholder segment, 0 per literal */
+    /** @return array{string, list<int>}|null the path with named placeholders, and 1 per placeholder segment, 0 per literal */
     private function symfonyPath(Operation $operation, int $index): ?array
     {
         $segments = explode('/', $operation->path);
         $order = [];
-        $parameter = 0;
+        // A parameter that yields no name is refused with its input type, so its route is only left out here.
+        $placeholders = RoutePlaceholder::namesOf($segments);
+        if ($placeholders === null) {
+            return null;
+        }
 
         foreach ($segments as $position => $segment) {
-            if (preg_match(self::PLACEHOLDER, $segment) === 1) {
-                $parameter++;
-                $segments[$position] = "{p{$parameter}}";
+            if (preg_match(RoutePlaceholder::PLACEHOLDER_SEGMENT, $segment) === 1) {
+                $segments[$position] = '{' . array_shift($placeholders) . '}';
                 $order[] = 1;
                 continue;
             }

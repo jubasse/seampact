@@ -67,12 +67,12 @@ The handler method returns the operation's generated result: an interface implem
 
 ### Routes
 
-Patterns use Symfony's syntax with positional parameter names (`/v1/tasks/{p1}`), which the boundary never reads. A `:` inside a static segment is literal (`/v1/tasks:batch`, spike). `generate` refuses by name:
+Patterns use Symfony's syntax, each placeholder named after its input property (`/v1/tasks/{taskId}`), so the router builds a URL by name; a name longer than the 32 characters of the route compiler keeps a positional name (`{p2}` for the second placeholder), as on Laravel. The boundary still matches the raw path. A `:` inside a static segment is literal (`/v1/tasks:batch`, spike). `generate` refuses by name:
 
 - a static segment holding `{`, `}` or `?` (`path.segment.literal.unsupported`);
 - a segment that mixes a placeholder with literal text (`path.segment.mixed.unsupported`), as on Laravel, Spring and the Node targets.
 
-The router matches routes in registration order, so the loader registers, per path depth, literal segments before placeholders: `/v1/tasks/search` before `/v1/tasks/{p1}` (spike). The app imports the routes from its own routing configuration, once per api, with the api name as the resource:
+The router matches routes in registration order, so the loader registers, per path depth, literal segments before placeholders: `/v1/tasks/search` before `/v1/tasks/{taskId}` (spike). The app imports the routes from its own routing configuration, once per api, with the api name as the resource:
 
 ```yaml
 # config/routes/seampact.yaml
@@ -85,9 +85,9 @@ Each api's loader supports the `seampact` type for its own api name only, so two
 
 The `kernel.request` listener matches the raw path, `getPathInfo()`, against the contract templates. That path is the request target without the query, minus the front controller's own base path; a trusted `X-Forwarded-Prefix` does not change it (spike). The `kernel.controller` listener then compares the operation of the route the router chose with that match. The router decodes the path before matching, so the two can differ:
 
-- `/v1/tasks/%73earch` reaches the search route while the raw path matches `{p1}`. The listener answers the path's `notFound` 404 before any check (spike).
+- `/v1/tasks/%73earch` reaches the search route while the raw path matches `{taskId}`. The listener answers the path's `notFound` 404 before any check (spike).
 - A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the `kernel.request` listener, before routing, on every Node target's terms (ADR 0016 "Errors raised before routing"). This covers a trailing slash, which the router would redirect, `//`, a dot segment (`x/../7`, `%2e%2e`), a percent-encoded static segment, a segment holding a `;` path parameter (`7;x=1`), and an app route under the base path that the contract does not declare (spike).
-- `a%2Fb` in a segment matches `{p1}` raw, but the router matches the decoded `a/b` and finds no route, or an app route. On the way back, and only once routing ran (the marker after `RouterListener` is set, or the router raised its not-found or method-not-allowed exception), the `kernel.response` listener reads the chosen route (`_route`). When it is not the contract route of the operation that the raw path matched, the listener answers that path's `notFound` 404, whatever the reply (spike). A reply given before routing (the boundary's own, a `ValidateRequestListener` 400) keeps its status.
+- `a%2Fb` in a segment matches `{taskId}` raw, but the router matches the decoded `a/b` and finds no route, or an app route. On the way back, and only once routing ran (the marker after `RouterListener` is set, or the router raised its not-found or method-not-allowed exception), the `kernel.response` listener reads the chosen route (`_route`). When it is not the contract route of the operation that the raw path matched, the listener answers that path's `notFound` 404, whatever the reply (spike). A reply given before routing (the boundary's own, a `ValidateRequestListener` 400) keeps its status.
 - A segment whose percent-decoding is not UTF-8 (`%E0%A4%A`) is answered by the `kernel.request` listener as ADR 0016 answers a path value that does not decode: the `schemaInvalid` 400 with that parameter's issue, without running steps 2 to 5 (spike).
 - `catchAll: false` leaves those paths to the app. The boot check refuses an api when another api's bundle, listed before it, has `catchAll` on and a base path that is empty, equal to or a prefix of this api's, since that api's 404 would answer this api's paths; set `catchAll: false` on the earlier api.
 
@@ -116,11 +116,13 @@ Every other exception is left to Symfony and the app, untouched: the firewall's 
 - `InvalidCsrfTokenException` (from a CSRF token manager in an app's authenticator or listener): `csrfInvalid` (403), read before the next row since it extends `AuthenticationException`;
 - `AuthenticationException`, or an `AccessDeniedException` that the firewall answered with its entry point (a 401 or a redirect to the login page): `unauthenticated` (401) (spike, `http_basic`);
 - an `AccessDeniedException` answered with a 403 (`access_control`, a voter that app code calls): `forbidden` (403) (spike);
-- any other `HttpException` 401, 403 or 429 that a handler or an app listener throws (`UnauthorizedHttpException`, `AccessDeniedHttpException`, `new HttpException(429)`): `unauthenticated`, `forbidden` and `rateLimited`, as the Laravel target maps `abort()`.
+- any other `HttpException` that a handler, an app listener or a value resolver throws (`UnauthorizedHttpException`, `AccessDeniedHttpException`, `createNotFoundException()`, a `MapEntity` miss, `new HttpException(429)`): the role of its status, `unauthenticated` (401), `forbidden` (403), `notFound` (404), `rateLimited` (429) or `serviceUnavailable` (503), as the Laravel target maps `abort()`.
+
+Each of them answers by one rule, shared with every server target (ADR 0016): the code of its role when the operation declares one; else, for an `HttpException`, the operation's single code of that status, when that code declares no required params (a param with a default is not required); else the api's 500, logged. An `HttpException` of any status is mapped this way, even when an app listener wrote a reply for it.
 
 `#[IsGranted]` and `#[IsCsrfTokenValid]` are not among these layers: their listeners run at `kernel.controller_arguments`, after steps 6 to 8, so a caller without access would get step 6's issues first, against the check order (FR-5). The boot check refuses them on a contract method ("The boot check").
 
-The security and RateLimiter classes are named in `instanceof` checks only, which need neither package installed. A role whose status the operation does not declare is the api's 500. The boundary's internal exception ("Types and validation") is the api's 500 with `onUnexpectedError` called. Any other exception's reply is checked as written, below. An app's own listener renders a contract error with the exported `renderContractError($request, $throwable)`.
+The security and RateLimiter classes are named in `instanceof` checks only, which need neither package installed. The boundary's internal exception ("Types and validation") is the api's 500 with `onUnexpectedError` called. Any other exception's reply is checked as written, below. An exported `renderContractError($request, $throwable)` for an app's own listener waits for a consumer that needs it.
 
 ### The outgoing response check
 

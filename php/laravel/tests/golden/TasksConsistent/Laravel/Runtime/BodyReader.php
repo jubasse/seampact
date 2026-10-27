@@ -9,7 +9,8 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * Step 1's bounded body read: a declared `Content-Length` above the route's limit is refused before reading; the body
  * is read in chunks, `gzip` and `deflate` decoded as they arrive with ext-zlib, and refused as soon as the encoded or
- * the decoded bytes pass the limit, chunked bodies included. The app's `getContent()` keeps the bytes as received.
+ * the decoded bytes pass the limit, chunked bodies included. The body is read from the request's content stream
+ * (`getContent(true)`), so the app's `getContent()` keeps the bytes as received.
  */
 final class BodyReader
 {
@@ -41,11 +42,9 @@ final class BodyReader
             return BodyRead::refused(self::UNSUPPORTED_ENCODING);
         }
 
-        // php://input reads again later, so the app's own `getContent()` still sees the bytes as received.
-        $stream = fopen('php://input', 'rb');
-        if ($stream === false) {
-            throw new \RuntimeException('seampact: php://input could not be opened to read the request body.');
-        }
+        // Read through the request, so an in-process request (a feature test) sends its body; php://input and the
+        // request's own stream are both read again later, so the app's `getContent()` still sees the bytes as received.
+        $stream = $request->getContent(true);
         $inflate = $window === null ? null : inflate_init($window);
         if ($inflate === false) {
             throw new \RuntimeException('seampact: ext-zlib could not start decoding the request body.');
@@ -72,8 +71,6 @@ final class BodyReader
                 return BodyRead::refused(self::TOO_LARGE);
             }
         }
-        fclose($stream);
-
         return BodyRead::bytes($bytes);
     }
 }

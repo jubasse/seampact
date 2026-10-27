@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel\Tests;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use PHPUnit\Framework\TestCase;
 use Seampact\Laravel\Runtime\ExceptionRoles;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -17,6 +18,12 @@ final class ExceptionRolesTest extends TestCase
         self::assertSame('forbidden', ExceptionRoles::roleOf(new HttpException(403)));
         self::assertSame('rateLimited', ExceptionRoles::roleOf(new HttpException(429)));
         self::assertSame('serviceUnavailable', ExceptionRoles::roleOf(new HttpException(503)));
+    }
+
+    public function testAMissingModelAndAnAbortOf404TakeTheNotFoundRole(): void
+    {
+        self::assertSame('notFound', ExceptionRoles::roleOf(new ModelNotFoundException()));
+        self::assertSame('notFound', ExceptionRoles::roleOf(new HttpException(404)));
     }
 
     public function testAnAbortOfAnotherStatusHasNoRole(): void

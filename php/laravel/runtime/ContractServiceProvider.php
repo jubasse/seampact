@@ -16,8 +16,8 @@ use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\BoundaryState;
 
 /**
- * The base of an api's generated service provider: it merges the api's run-time defaults into
- * `config('seampact.<api>')`, prepends the boundary middleware, places the access middleware before
+ * The base of an api's generated service provider: it merges the api's generated settings file, whose `env()`
+ * variables apply before it is published, and its run-time defaults into `config('seampact.<api>')`, prepends the boundary middleware, places the access middleware before
  * `SubstituteBindings`, defines the `Route::seampact()` macro, keeps `TrimStrings` and `ConvertEmptyStringsToNull`
  * off contract routes, refuses Octane workers, hides sensitive values from `dump()`, publishes the api's settings as
  * `config/seampact/<api>.php` (`--tag=seampact-config`) and runs the boot check once every provider booted.
@@ -51,9 +51,14 @@ abstract class ContractServiceProvider extends ServiceProvider
         $this->app->instance(self::BOUNDARIES_KEY, [...self::boundaries($this->app), $this->boundaryClass() => ['api' => $contract->api, 'basePaths' => $contract->basePaths()]]);
 
         if (!method_exists($this->app, 'configurationIsCached') || !$this->app->configurationIsCached()) {
+            // The app's own config first, then the generated file's `env()` settings, so `.env` works unpublished.
             $config = Services::config($this->app);
             $current = $config->get("seampact.{$contract->api}");
-            $config->set("seampact.{$contract->api}", array_replace($contract->defaults, is_array($current) ? $current : []));
+            $generated = require $this->publishedConfig();
+            if (!is_array($generated)) {
+                throw new \LogicException("seampact: {$this->publishedConfig()} does not return the settings array; regenerate the api '{$contract->api}'.");
+            }
+            $config->set("seampact.{$contract->api}", array_replace($contract->defaults, $generated, is_array($current) ? $current : []));
         }
     }
 

@@ -32,6 +32,27 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString("'page-size' and 'pageSize'", $refused['name.collision']);
     }
 
+    public function testAPlaceholderLongerThanTheRouterAcceptsKeepsAPositionalName(): void
+    {
+        $longName = 'theTaskIdentifierOfTheChannelTaskToRead';
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation) use ($longName): void {
+            self::assertIsString($operation->path);
+            $operation->path = str_replace('{taskId}', "{{$longName}}", $operation->path);
+            self::assertIsArray(self::object($operation->params)->path);
+            foreach (self::object($operation->params)->path as $param) {
+                $param = self::object($param);
+                if ($param->name === 'taskId') {
+                    $param->name = $longName;
+                }
+            }
+        });
+
+        $routes = self::generatedFile($document, 'TasksRoutes.php');
+
+        self::assertStringContainsString("'/v1/channels/{channelId}/tasks/{p2}'", $routes);
+        self::assertStringNotContainsString($longName, $routes);
+    }
+
     public function testFormsAbsentFromTheReferenceWaitForAConsumerAfterOneZero(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
@@ -153,6 +174,18 @@ final class LaravelRefusalsTest extends TestCase
         self::assertArrayNotHasKey('cache.unsupported', $refused);
         self::assertArrayNotHasKey('access.signed.unsupported', $refused);
         self::assertStringContainsString('it waits for an app that needs it', $refused['artefacts.accessHooks.unsupported'] ?? '');
+    }
+
+    private static function generatedFile(\stdClass $document, string $pathSuffix): string
+    {
+        $files = (new LaravelGenerator())->generate(ReferenceContract::read(new LaravelGenerator(), $document), ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+        foreach ($files as $file) {
+            if (str_ends_with($file->path, $pathSuffix)) {
+                return $file->contents;
+            }
+        }
+
+        self::fail("No generated file ends with '{$pathSuffix}'.");
     }
 
     /**
