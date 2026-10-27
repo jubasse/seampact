@@ -3,17 +3,15 @@ package com.example.tasks.api.spring.runtime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.util.AntPathMatcher;
 
 /**
- * The `frameworkRoutes` patterns as the boot check matches them, with Spring's AntPathMatcher: `*` one segment, `**`
- * any number, and a `*` inside a segment any characters but `/`, the meaning every server target shares.
+ * The `frameworkRoutes` patterns as the boot check matches them, the rule every server target shares: `*` one segment,
+ * `**` any number, a `*` inside a segment any characters but `/`, an empty segment dropped on both sides, and a
+ * catch-all route (`{*rest}`, `**`) taken only by `**`.
  */
 class FrameworkRoutePatternTest {
-    private final AntPathMatcher paths = new AntPathMatcher();
-
     private void assertMatch(boolean expected, String allowed, String routePattern) {
-        assertEquals(expected, paths.match(allowed, routePattern), allowed + " against " + routePattern);
+        assertEquals(expected, FrameworkRoutePattern.allows(allowed, routePattern), allowed + " against " + routePattern);
     }
 
     @Test
@@ -25,14 +23,42 @@ class FrameworkRoutePatternTest {
         assertMatch(false, "/livewire-*/**", "/live-3f9a/upload-file");
         assertMatch(false, "/livewire-*", "/livewire-3f9a/upload-file");
         assertMatch(false, "/*.json", "/up.xml");
+        assertMatch(false, "/up.json", "/upxjson");
     }
 
     @Test
     void aWholeStarSegmentAndTwoStarsKeepTheirMeaning() {
         assertMatch(true, "/admin/*", "/admin/queues");
+        assertMatch(true, "/orders/*", "/orders/{id}");
         assertMatch(false, "/admin/*", "/admin/queues/jobs");
         assertMatch(true, "/actuator/**", "/actuator");
         assertMatch(true, "/actuator/**", "/actuator/health/db");
         assertMatch(false, "/actuator/**", "/actuatorX");
+        assertMatch(true, "/a/**/z", "/a/z");
+        assertMatch(true, "/a/**/b/**/c", "/a/x/b/y/z/c");
+        assertMatch(false, "/a/**/b/**/c", "/a/c/b");
+        assertMatch(false, "/**/*", "/");
+    }
+
+    @Test
+    void anEmptySegmentIsDroppedOnBothSides() {
+        assertMatch(true, "/a", "/a/");
+        assertMatch(true, "/a/**", "/a/");
+        assertMatch(false, "/a/*", "/a/");
+        assertMatch(true, "/a/b", "/a//b");
+        assertMatch(false, "/a/*/b", "/a//b");
+        assertMatch(true, "/", "/");
+        assertMatch(true, "/**", "/");
+        assertMatch(false, "/*", "/");
+    }
+
+    @Test
+    void aCatchAllRouteIsTakenOnlyByTwoStars() {
+        assertMatch(false, "/files/*", "/files/{*rest}");
+        assertMatch(false, "/files/*", "/files/**");
+        assertMatch(false, "/*", "/{*rest}");
+        assertMatch(true, "/files/**", "/files/{*rest}");
+        assertMatch(true, "/files/**", "/files/**");
+        assertMatch(true, "/**", "/{*rest}");
     }
 }

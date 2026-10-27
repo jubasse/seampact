@@ -1,0 +1,35 @@
+{
+  "id": "opaque-null-refused-when-not-nullable",
+  "title": "400 for a null opaque member the contract does not make nullable, naming its pointer",
+  "checks": ["CHK-135"],
+  "profiles": ["default", "hand-written"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/hooks/payments",
+        "body": {
+          "id": "evt_3",
+          "type": "invoice.paid",
+          "data": null
+        },
+        "sign": {
+          "scheme": "stripe-v1",
+          "header": "stripe-signature",
+          "secret": "{{stripeSecret}}"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/data"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

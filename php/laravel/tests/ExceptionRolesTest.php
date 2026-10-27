@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel\Tests;
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use PHPUnit\Framework\TestCase;
@@ -36,6 +37,12 @@ final class ExceptionRolesTest extends TestCase
     {
         self::assertSame('notFound', ExceptionRoles::roleOf(new ModelNotFoundException()));
         self::assertSame('notFound', ExceptionRoles::roleOf(new HttpException(404)));
+    }
+
+    public function testADenialHiddenAsNotFoundTakesTheNotFoundRole(): void
+    {
+        self::assertSame('notFound', ExceptionRoles::roleOf((new AuthorizationException())->asNotFound()));
+        self::assertSame('forbidden', ExceptionRoles::roleOf(new AuthorizationException()));
     }
 
     public function testAnAbortOfAnotherStatusHasNoRole(): void
