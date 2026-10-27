@@ -182,6 +182,19 @@ security:
 
 The generated `TasksAccess` class lists, per route, the kind, the identity, and the rights and rules it requires.
 
+### Answer rights with your voters
+
+Instead of writing the decider above, register the runtime's `VoterDecider` with your api's deciders tag:
+
+```yaml
+# config/services.yaml
+services:
+    Seampact\Symfony\Runtime\VoterDecider:
+        tags: ['seampact.tasks.deciders']
+```
+
+It calls `isGranted('<right>', $request)` for every right and rule, and a denial answers the first denial code. Your voter reads the `RequirementRequest` subject: `params()`, `subject()`, `scopes()`, `principal()`. A decider of your own that names a right wins over it.
+
 ## Lists, idempotency, throttle
 
 - **Paging.** A paged list gets its page parameters in `$input->query` and a generated `<Operation>Page` class to return.
@@ -291,6 +304,7 @@ The app refuses to start, and lists every problem, when:
 - a route that is not in the contract is served and not allow-listed;
 - an app route sits before a contract route on the same path;
 - `framework.http_cache` is on;
+- a contract method or controller carries `#[IsGranted]`: the message prints the `access_control` rule to paste instead;
 - the contract writes absolute URLs and `public_origin` is missing or is not an origin;
 - the contract writes relative URLs and `public_origin` is set, from an `%env()%` value too.
 

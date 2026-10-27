@@ -201,6 +201,23 @@ Laravel's layers work beside the contract, and the api's error format answers th
 - **`auth` and `auth.session` middleware.** They never redirect on a contract route, so no `login` route is needed.
 - **Throttle and CSRF.** `ThrottleRequestsException` is a 429 with its `Retry-After`: when the `rateLimited` code requires `retryAfterMs`, seampact fills it from that header (seconds or an HTTP date). Without a usable one, the reply is a logged 500 (with an optional `retryAfterMs`, the code is answered without it). Laravel's CSRF check runs only on routes that accept a cookie credential; its failure is the contract's 403, not Laravel's 419.
 
+### Answer rights with Policies
+
+To answer your rights with Gates and Policies, tag the runtime's `GateDecider` instead of writing a decider:
+
+```php
+use Seampact\Laravel\Runtime\GateDecider;
+
+$this->app->tag([GateDecider::class], NotesSeampactServiceProvider::DECIDERS_TAG);
+
+Gate::define('notes.update', [NotePolicy::class, 'update']);
+```
+
+- It asks `Gate::forUser($principal)->authorize('<right>', ...)` for every right and rule. A decider of your own that names a right wins over it.
+- The user is the principal your authenticate hook returns. To get your `User` model in the Policy, let it implement the identity's generated `<Identity>PrincipalMembers` and return it.
+- The arguments are the subject first, then the other scopes, then the request. A scope is the value its resolver loaded, else its id: load the model in the resolver and the Policy receives it.
+- A denial answers the right's first denial code, as `Gate::authorize()` in a decider does. `Response::denyAsNotFound()` answers the operation's `notFound` code.
+
 The generated per-kind lists put your own middleware on a kind of route (see the config below). To keep Laravel's rules on a route, add them there:
 
 ```php
