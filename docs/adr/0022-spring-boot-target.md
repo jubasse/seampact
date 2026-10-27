@@ -120,7 +120,7 @@ The filter wraps the response of each contract route in a checking wrapper. Ever
 - a `StreamingResponseBody` written on a task thread;
 - an asynchronous dispatch.
 
-On an `ASYNC` dispatch, Spring passes its own `LifecycleHttpServletResponse` down the chain rather than the wrapper. The filter therefore finds the wrapper through a request attribute, and completes the check when the last dispatch returns without starting another (spike). The verdict rules, the `responses` modes, `bodyValidation` and the completion of the idempotency record are ADR 0016's:
+On an `ASYNC` dispatch, Spring passes its own `LifecycleHttpServletResponse` down the chain rather than the wrapper. The filter therefore finds the wrapper through a request attribute, and completes the check when the last dispatch returns without starting another (spike). The verdict rules, the `responses` modes, `bodyValidation` and the completion of the idempotency record are ADR 0016's, with one departure: under `bodyValidation` the target also validates the body it writes from a handler result, a 500 under `strict` and sent and logged under `warn`, where ADR 0016 never validates it (listed in Consequences):
 
 - **A declared success** passes chunk by chunk.
   - The wrapper flushes when the writer flushes. Spring Framework 7 ignores `flush()` on a `StreamingResponseBody`'s stream unless the flag `spring.http.response.flush.enabled` is `true`, with or without the wrapper (spike). Since Framework 7.0.6 it is a `SpringProperties` flag, read by `ServletServerHttpResponse`: a JVM system property (`-D`) or a classpath `spring.properties`, never Boot's `application.properties`.
@@ -392,6 +392,7 @@ One run's first request to a non-contract streamed route failed inside Tomcat (a
 - Streamed downloads stream at the writer's pace only with Spring's flush flag set (`-D` or `spring.properties`); the boundary neither sets nor needs it.
 - Tomcat's own 400 for `%2F`, `\` and malformed percent-encodings stays outside the api's format; the Node targets pass such a value to step 6 instead. Loosening `relaxedPathChars` or `encodedSolidusHandling` is not supported.
 - A `br` error body is a violation here, where ADR 0016 decodes it.
+- Under `bodyValidation` the handler-result body is validated here (a 500 under `strict`, a log under `warn`), where ADR 0016 never validates it.
 - A trailing slash, `//`, a dot segment or a `;` path parameter under a base path answers the api's 404, as on the Node targets.
 - Security matchers follow the servlet path; an app that sets `spring.mvc.servlet.path` needs no change.
 - Behind a reverse proxy, the app sets `server.forward-headers-strategy`: `framework` (`ForwardedHeaderFilter`, which applies `X-Forwarded-Prefix` by default in Boot 4.1) or `native` (Tomcat's `RemoteIpValve`, no prefix). The edge proxy removes the forwarded headers a caller sends, so none is forged. The Spring guide says both.

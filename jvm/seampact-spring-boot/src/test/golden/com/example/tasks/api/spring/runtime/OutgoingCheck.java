@@ -57,8 +57,7 @@ final class OutgoingCheck {
             return;
         }
 
-        SeampactBoundary.LOG.warn("seampact: the reply of {}.{} breaks the contract ({}); sent as written under 'responses: warn'",
-                boundary.apiId(), exchange.route().id(), violation.get());
+        boundary.warnViolation(exchange, violation.get());
         release(boundary, exchange, body);
     }
 

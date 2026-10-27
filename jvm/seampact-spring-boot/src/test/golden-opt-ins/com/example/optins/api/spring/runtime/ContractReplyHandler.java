@@ -99,10 +99,12 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
             OutputFieldRights.apply(boundary, exchange, view, response, payload);
 
             Optional<String> broken = brokenSchema(response, payload);
-            if (broken.isPresent()) {
+            if (broken.isPresent() && boundary.isStrict(exchange.route().id())) {
                 exchange.violation = broken;
                 return;
             }
+            // Under `warn` the body goes out as written and the violation is logged.
+            broken.ifPresent(reason -> boundary.warnViolation(exchange, reason));
 
             JsonNode body;
             if (isPage) {
@@ -139,6 +141,10 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
         return !EMPTY_SHAPE.equals(response.path("shape").asString());
     }
 
+    private static String pointerLabel(String pointer) {
+        return pointer.isEmpty() ? "the root" : pointer;
+    }
+
     // The success body against its schema when the api checks bodies; a list's, a table's and a page's every item.
     private Optional<String> brokenSchema(JsonNode response, JsonNode payload) {
         if (!boundary.validatesBodies()) return Optional.empty();
@@ -146,7 +152,7 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
         for (JsonNode instance : OutputFieldRights.schemaInstances(payload, response.path("shape").asString())) {
             List<InputIssue> issues = boundary.validator().issuesOf(instance, response.path("body"), "body", "");
             if (!issues.isEmpty()) {
-                return Optional.of("the success body breaks its schema at " + issues.get(0).pointer() + " (" + issues.get(0).rule() + ")");
+                return Optional.of("the success body breaks its schema at " + pointerLabel(issues.get(0).pointer()) + " (" + issues.get(0).rule() + ")");
             }
         }
 
