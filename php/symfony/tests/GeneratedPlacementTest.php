@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Symfony\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Seampact\Golden\Tasks\AppEndpoints;
 use Seampact\Golden\Tasks\Symfony\GetTaskInputConstraint;
@@ -20,6 +21,7 @@ use Seampact\Golden\TasksConsistent\Symfony\TasksSettings as AbsoluteSettings;
 use Seampact\Symfony\Tests\Support\HealthController;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
+use Symfony\Component\HttpKernel\DependencyInjection\MergeExtensionConfigurationPass;
 use Symfony\Component\HttpKernel\DependencyInjection\RegisterControllerArgumentLocatorsPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
@@ -203,6 +205,45 @@ final class GeneratedPlacementTest extends TestCase
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageMatches("/'getTaks'.*'getTask'/");
         $extension->load([['operations' => ['getTaks' => ['responses' => 'warn']]]], $container);
+    }
+
+    /** @return iterable<string, array{array<string, mixed>, string}> */
+    public static function literalTypos(): iterable
+    {
+        yield 'responses' => [['responses' => 'stric'], "The bundle configuration key seampact_tasks.responses takes 'strict' or 'warn'."];
+        yield 'an operation\'s responses' => [['operations' => ['getTask' => ['responses' => 'stric']]], "The bundle configuration key seampact_tasks.operations.getTask.responses takes 'strict' or 'warn'."];
+        yield 'body_validation' => [['body_validation' => 'maybe'], 'The bundle configuration key seampact_tasks.body_validation takes true or false.'];
+    }
+
+    /** @param array<string, mixed> $configuration */
+    #[DataProvider('literalTypos')]
+    public function testALiteralValueOutsideItsValuesFailsTheContainerBuild(array $configuration, string $refusal): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage($refusal);
+        self::mergedConfiguration($configuration);
+    }
+
+    public function testAnEnvValueIsLeftToTheRunTimeCheck(): void
+    {
+        $container = self::mergedConfiguration(['responses' => '%env(TASKS_RESPONSES)%', 'body_validation' => '%env(TASKS_BODY_VALIDATION)%']);
+
+        self::assertTrue($container->hasDefinition(TasksSettings::class));
+    }
+
+    /** @param array<string, mixed> $configuration */
+    private static function mergedConfiguration(array $configuration): ContainerBuilder
+    {
+        $extension = (new TasksSeampactBundle())->getContainerExtension();
+        self::assertNotNull($extension);
+        $container = new ContainerBuilder();
+        $container->setParameter('kernel.environment', 'test');
+        $container->setParameter('kernel.build_dir', sys_get_temp_dir());
+        $container->registerExtension($extension);
+        $container->loadFromExtension($extension->getAlias(), $configuration);
+        (new MergeExtensionConfigurationPass([$extension->getAlias()]))->process($container);
+
+        return $container;
     }
 
     public function testTheControllerPassRunsBeforeTheControllerLocatorIsBuilt(): void

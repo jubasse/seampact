@@ -87,6 +87,11 @@ final class BootCheckPassTest extends TestCase
         self::assertStringNotContainsString('public_origin', self::compiledProblems(new FirstBundle(), null, self::relativeBootCheck()));
     }
 
+    public function testAContainerWithoutTheValidatorIsRefusedNamingThePackage(): void
+    {
+        self::assertStringContainsString('install symfony/validator', self::compiledProblems(new FirstBundle(), null, self::relativeBootCheck()));
+    }
+
     private static function relativeBootCheck(): RelativeBootCheckPass
     {
         return new RelativeBootCheckPass(RelativeContract::class, RelativeBoundary::class, RelativeInputResolver::class, RelativeSettings::class, false);
