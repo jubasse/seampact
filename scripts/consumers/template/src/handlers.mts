@@ -1,7 +1,6 @@
 // The handlers every Node server consumer's controllers delegate to, framework-neutral and typed by the generated
 // operation types: one declared success per operation, as the http suite expects, unless the script a case loaded
 // answers for the operation.
-import type * as TasksServer from "../generated/server/tasks/index.js";
 import type * as Tasks from "../generated/types/tasks/index.js";
 import type * as TasksService from "../generated/types/tasksService/index.js";
 import { scriptedAnswer } from "./suite-control.mjs";
@@ -11,6 +10,13 @@ const NEW_TASK_ID = "20000000-0000-4000-8000-0000000000ff";
 const NEXT_CURSOR = "page-2";
 const GENERAL_CHANNEL_ID = "10000000-0000-4000-8000-000000000001";
 const FIRST_VERSION = 1;
+
+// The caller a Node server hands the getChannel handler beside its input; written here, not imported from a
+// server tree, since the stub consumer generates none.
+interface ChannelCaller {
+  readonly principal: { readonly userId: unknown };
+  readonly scopes: { readonly channel: { readonly id: unknown } };
+}
 
 function task(taskId: string, title = "Write the slice test"): Tasks.schemas.Task {
   return { taskId, title, state: "open", version: FIRST_VERSION, createdAt: CREATED_AT };
@@ -60,7 +66,7 @@ export const tasksHandlers = scripted("tasks", {
     return { status: 200, body: { items: [{ channelId: GENERAL_CHANNEL_ID, name: "General" }] } };
   },
 
-  getChannel(input: TasksServer.HandlerInputs["getChannel"]): Tasks.GetChannelOutput {
+  getChannel(input: Tasks.GetChannelInput & ChannelCaller): Tasks.GetChannelOutput {
     // The boundary authenticated the caller and resolved the channel from the path before the handler ran.
     if (input.principal.userId === "" || input.scopes.channel.id !== input.path.channelId) {
       throw new Error(

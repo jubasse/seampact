@@ -15,8 +15,23 @@ export interface HandlerAccess {
   readonly scopes?: Readonly<Record<string, ResolvedScope>>;
 }
 
+// One access per grant, so the input and the NestJS decorators of one request hand over the same objects.
+const accessOfGrant = new WeakMap<AccessGrant, HandlerAccess>();
+
 /** The members a public route, or one in no scope, leaves out, as the generated handler input types do. */
 export function handlerAccess(route: ContractRoute, grant: AccessGrant): HandlerAccess {
+  const known = accessOfGrant.get(grant);
+
+  if (known !== undefined) return known;
+
+  const access = accessOf(route, grant);
+
+  accessOfGrant.set(grant, access);
+
+  return access;
+}
+
+function accessOf(route: ContractRoute, grant: AccessGrant): HandlerAccess {
   const scopes = route.scopes.map((declared, index) => {
     const resolved = grant.scopes[index];
 
