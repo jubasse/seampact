@@ -54,7 +54,6 @@ function installedRuntimeVersion(outputDirectory: string): string | undefined {
   if (installRoot === undefined) return undefined;
 
   const versionModule: unknown = createRequire(join(installRoot, sep))(VERSION_MODULE);
-
   const version: unknown =
     typeof versionModule === "object" && versionModule !== null
       ? Reflect.get(versionModule, VERSION_EXPORT)
