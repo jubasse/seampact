@@ -497,7 +497,7 @@ describeServed(
   "a handler exception under responses: warn with the kernel in debug",
   { SEAMPACT_SUITE_RESPONSES: "warn", SEAMPACT_SUITE_APP_DEBUG: "true" },
   (running) => {
-    test("answers the api's 500, never the framework's error page or trace", async () => {
+    test("shows Symfony's error page with the exception, as debug mode does off a contract route", async () => {
       await loadScript(running(), {
         answers: { "tasks.getChannel": { throws: "the channel store is down" } },
       });
@@ -506,8 +506,8 @@ describeServed(
       });
 
       expect(response.status).toBe(500);
-      expect(response.headers.get("content-type")).toContain(PROBLEM_JSON);
-      expect(await problemCode(response)).toBe("api.internal");
+      expect(response.headers.get("content-type")).not.toContain(PROBLEM_JSON);
+      expect(await response.text()).toContain("the channel store is down");
     });
 
     // The app's listener at the default priority runs before the boundary's unmapped-exception listener.

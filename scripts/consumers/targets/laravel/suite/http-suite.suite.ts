@@ -388,7 +388,7 @@ describe("a handler exception under responses: warn with APP_DEBUG on", () => {
     await running?.close();
   });
 
-  test("answers the api's 500, never the framework's error page or trace", async () => {
+  test("shows Laravel's error page with the exception, as debug mode does off a contract route", async () => {
     const script = await fetch(`${running?.baseUrl}/__seampact/script`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
@@ -404,8 +404,8 @@ describe("a handler exception under responses: warn with APP_DEBUG on", () => {
     });
 
     expect(response.status).toBe(500);
-    expect(response.headers.get("content-type")).toContain(PROBLEM_JSON);
-    expect(await problemCode(response)).toBe("api.internal");
+    expect(response.headers.get("content-type")).not.toContain(PROBLEM_JSON);
+    expect(await response.text()).toContain("the channel store is down");
   });
 });
 

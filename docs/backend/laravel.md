@@ -243,6 +243,43 @@ Each setting reads an environment variable, `SEAMPACT_<API>_<KEY>` (such as `SEA
 
 When the contract writes absolute URLs (`api.wire.urls: absolute`), set `public_origin` (`SEAMPACT_NOTES_PUBLIC_ORIGIN`). The app refuses to start without it, and refuses it when the contract writes relative URLs. The request's `Host` is never read. Behind a proxy, set Laravel's `trustProxies()`; it changes Laravel's URL helpers, never the contract's URLs.
 
+## Test your routes
+
+A feature test goes through the boundary like a real request. Send the credential the contract requires, and bind a fake authenticate hook:
+
+```php
+$this->app->instance(UserAuthenticateHook::class, new FakeUserHook('alice'));
+
+$this->withToken('test-token')
+    ->getJson('/v1/notes/n-1')
+    ->assertOk();
+```
+
+- `actingAs($user)` alone answers 401: the boundary asks for the contract's credential before your hook runs. Add it: `actingAs($user)->withToken('test-token')`.
+- Never call `withoutMiddleware()` with no argument: it removes the boundary, and every contract route answers 500 (with `APP_DEBUG=true`, Laravel's error page names the bypass). Remove one middleware by name instead, such as `withoutMiddleware(ThrottleRequests::class)`.
+- Replace a decider, a scope resolver or a store the same way, with `$this->app->instance()`.
+- A request with a body works as usual: `postJson()` reaches the handler with that body, checked like a real request.
+
+To call a handler directly in a unit test, build its request with `forTest()`. It takes the input, then the caller when the route has an identity, then the scopes when it runs in scopes:
+
+```php
+$request = GetNoteRequest::forTest(
+    new GetNoteInput(new GetNotePath('n-1')),
+    new UserPrincipal('alice'),
+    new GetNoteScopes(new ResolvedScope('workspace', 'w-1', $workspace)),
+);
+
+$result = $controller->getNote($request);
+```
+
+`ResolvedScope` is `Seampact\Hooks\ResolvedScope`. This request skips the boundary, so it is for unit tests only: a route refuses it.
+
+### Debug locally
+
+With `APP_DEBUG=true`, an exception that no contract error maps shows Laravel's error page, as on any route. The boundary's log line also names its message and `file:line`. With `APP_DEBUG=false`, the client gets the api's 500, and the log names only the exception class.
+
+A reply that breaks the contract is still a 500 in debug. To see it while you work, set `SEAMPACT_NOTES_RESPONSES=warn` in your local `.env`: the reply goes out and the log names the problem.
+
 ## The boot check
 
 The app refuses to start, and lists every problem, when:
@@ -291,5 +328,4 @@ Octane is not supported yet.
 - The web server's body limit and `post_max_size` must be at least the largest route limit of the contract.
 - Run `php artisan route:cache` and `config:cache` in production. The boot check then runs once, at build time.
 - Form, multipart, file, download and redirect bodies, and `accessHooks: false`, are refused by `generate` by name: they wait for an app that needs them. See [Target option errors](../troubleshooting/generate.md).
-- A feature test that sends a body works as usual: `postJson()` reaches the handler with that body, checked like a real request.
 - Laravel 12 and older are refused. Symfony and API Platform are separate targets.
