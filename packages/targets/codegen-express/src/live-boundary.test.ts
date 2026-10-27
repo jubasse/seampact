@@ -7,6 +7,8 @@ import {
   CLIENT_ADDRESS_CASES,
   clientAddressesTheHookSees,
   copyTestApp,
+  describeHandlerAccess,
+  describeTwoApiHandlerAccess,
   emitProject,
   generateReferenceProject,
   problemBody,
@@ -152,6 +154,11 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     app.resetScenario();
     vi.restoreAllMocks();
   });
+
+  describeHandlerAccess(() => ({
+    app,
+    send: (method, path, headers) => send(method, path, { headers }),
+  }));
 
   test("every operation's handler is called on its object, so `this` is kept", async () => {
     const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
@@ -858,6 +865,11 @@ describe.each(EXPRESS_MAJORS)("two apis on one base path on %s", (_major, expres
   beforeEach(() => {
     app.resetScenario();
   });
+
+  describeTwoApiHandlerAccess(() => ({
+    app,
+    send: (method, path, headers) => sendRawRequest(server, method, path, { headers }),
+  }));
 
   test.each([
     ["the first router", `/v1/channels/${CHANNEL}/tasks/${TASK}`],

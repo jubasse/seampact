@@ -14,6 +14,7 @@ import { SERVER_RUNTIME_PACKAGE } from "./server-runtime-check.js";
 
 const HOOKS_PACKAGE = "@seampact/hooks";
 const WORD = /[a-z0-9]+/g;
+const OPERATION_ACCESS_EXPORT = "OperationAccess";
 
 class TypeImports {
   private readonly aliases = new Map<string, string>();
@@ -59,7 +60,10 @@ export function handlerInterfaceName(ir: ContractIR, operation: Operation): stri
   );
 }
 
-/** The handlers module: one interface per resource, each method taking the operation's input. */
+/**
+ * The handlers module: one interface per resource, each method taking the operation's input with the caller's
+ * read-only `principal` and `scopes`.
+ */
 export function handlersSource(
   ir: ContractIR,
   types: Link<"types">,
@@ -68,7 +72,10 @@ export function handlersSource(
 ): string {
   const imports = new TypeImports(types, fromFile);
   const groups = new Map<string, string[]>();
+  const accessMembers: string[] = [];
   const names = new ExportNames(fromFile);
+
+  names.claim(OPERATION_ACCESS_EXPORT, { member: "the generated access map" }, refusals);
 
   ir.operations.forEach((operation, index) => {
     const location = operationLocation(index, operation.id);
@@ -93,8 +100,14 @@ export function handlersSource(
 
     if (members.length === 0) names.claim(group, below(location, "resource"), refusals);
 
+    const method = operationIdentifier(operation);
+    const accessKey = JSON.stringify(method);
+
+    accessMembers.push(
+      `  readonly ${accessKey}: ${handlerAccessType(ir, operation, types.descriptor, imports)};`,
+    );
     members.push(
-      `  ${operationIdentifier(operation)}(input: ${imports.reference(exports.input)}): Awaitable<${imports.reference(exports.output)} | ${imports.reference(exports.errors)}>;`,
+      `  ${method}(input: ${imports.reference(exports.input)} & ${OPERATION_ACCESS_EXPORT}[${accessKey}]): Awaitable<${imports.reference(exports.output)} | ${imports.reference(exports.errors)}>;`,
     );
     groups.set(group, members);
   });
@@ -104,13 +117,46 @@ export function handlersSource(
       `/** The handlers a controller implements; each returns a declared success or error. */\nexport interface ${group} {\n${members.join("\n")}\n}`,
   );
 
-  return [
-    `import type { Awaitable } from "${HOOKS_PACKAGE}";`,
-    ...imports.lines(),
+  const body = [
+    "/** What each operation's handler reads of its caller: the principal (null when anonymous) and the resolved scopes. */",
+    `export type ${OPERATION_ACCESS_EXPORT} = {\n${accessMembers.join("\n")}\n};`,
     "",
     interfaces.join("\n\n"),
+  ].join("\n");
+
+  return [
+    importLine(["Awaitable", "ResolvedScope"], HOOKS_PACKAGE, body),
+    importLine(["HandlerAccess"], SERVER_RUNTIME_PACKAGE, body),
+    ...imports.lines(),
+    "",
+    body,
     "",
   ].join("\n");
+}
+
+// What the operation's handler reads of its caller: the principal (null when the route lets an anonymous caller
+// in) and each scope the operation runs in, as its resolver answered it.
+function handlerAccessType(
+  ir: ContractIR,
+  operation: Operation,
+  descriptor: TypesDescriptor,
+  imports: TypeImports,
+): string {
+  const access = operation.access;
+  // The hooks module reports a missing principal type; it names the same identities.
+  const reportedByHooksModule: Refusal[] = [];
+  const principal =
+    access.kind === "public" || !("identity" in access)
+      ? "null"
+      : principalType(ir, String(access.identity), descriptor, imports, reportedByHooksModule);
+  const nullable =
+    access.kind === "optional" && principal !== "null" ? `${principal} | null` : principal;
+  const scopes = operation.scopes.map(
+    (scope) => `readonly ${JSON.stringify(scope.scope)}: ResolvedScope`,
+  );
+  const scopesType = scopes.length === 0 ? "Record<never, never>" : `{ ${scopes.join("; ")} }`;
+
+  return `HandlerAccess<${nullable}, ${scopesType}>`;
 }
 
 /** The hooks module: the hook types of each identity, right, rule and scope, and the registration object. */

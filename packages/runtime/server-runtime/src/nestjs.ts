@@ -5,6 +5,7 @@
 // `ContractException` subclass and its module's class name.
 import { ServerResponse } from "node:http";
 import {
+  type ArgumentMetadata,
   type ArgumentsHost,
   applyDecorators,
   type CallHandler,
@@ -94,6 +95,7 @@ import {
 import { routeKey } from "./framework-route-patterns.js";
 import { frameworkRouteProblems } from "./framework-routes.js";
 import { refuseCodeOfOtherVersion } from "./generator-version-check.js";
+import { type HandlerAccess, handlerAccess, inputWithAccess } from "./handler-access.js";
 import { handlerReply } from "./handler-reply.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
@@ -551,7 +553,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       context.input = input;
       context.inputChecked = true;
 
-      return input;
+      return inputWithAccess(context.route, grant, input);
     }
   }
 
@@ -1098,13 +1100,57 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         markResponseHandled,
       );
 
-    return Object.assign(composite, { input });
+    return Object.assign(composite, {
+      input,
+      principal: (): ParameterDecorator => principalDecorator(id),
+      scopes: (): ParameterDecorator => scopesDecorator(id),
+    });
   };
 
   // The value NestJS extracts is ignored: the input pipe validates the request the guard recorded.
   const inputFactory = (): undefined => undefined;
   const inputDecorator = createParamDecorator(inputFactory);
   const input = (): ParameterDecorator => inputDecorator(contractInputPipe);
+  // The value NestJS extracts is ignored: the param's own pipe reads the caller the guard granted.
+  const accessFactory = (): undefined => undefined;
+  const accessDecorator = createParamDecorator(accessFactory);
+
+  // The caller the guard granted, read on the decorator's own operation only, so another api or route fails closed.
+  function grantedAccess(id: unknown): HandlerAccess {
+    const context = requireContext();
+    const { grant } = guardedRequest(context);
+
+    if (context.route.id !== id) {
+      throw unexpectedError(
+        context.route,
+        new Error(
+          `seampact: @${String(id)}.principal() or @${String(id)}.scopes() is on the method of '${context.route.id}'; use @${context.route.id}.principal() and @${context.route.id}.scopes() there.`,
+        ),
+      );
+    }
+
+    return handlerAccess(context.route, grant);
+  }
+
+  // A param's own pipe runs after the app's global pipes, so the value an app pipe returns never replaces these.
+  @Injectable()
+  class PrincipalPipe implements PipeTransform {
+    transform(_value: unknown, metadata: ArgumentMetadata): unknown {
+      return grantedAccess(metadata.data).principal;
+    }
+  }
+
+  @Injectable()
+  class ScopesPipe implements PipeTransform {
+    transform(_value: unknown, metadata: ArgumentMetadata): unknown {
+      return grantedAccess(metadata.data).scopes;
+    }
+  }
+
+  const principalPipe = new PrincipalPipe();
+  const scopesPipe = new ScopesPipe();
+  const principalDecorator = (id: string): ParameterDecorator => accessDecorator(id, principalPipe);
+  const scopesDecorator = (id: string): ParameterDecorator => accessDecorator(id, scopesPipe);
 
   // The app's hooks under the exported token, so a test's `overrideProvider` replaces them before they are resolved.
   function moduleOf(

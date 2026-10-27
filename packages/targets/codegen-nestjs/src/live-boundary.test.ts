@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import {
   CLIENT_ADDRESS_CASES,
   clientAddressesTheHookSees,
+  describeHandlerAccess,
   emitProject,
   generateReferenceProject,
   problemBody,
@@ -83,7 +84,11 @@ interface ReferenceAppModule {
   readonly scenario: {
     answers: Record<
       string,
-      (input: unknown, controller: Record<string, (...args: unknown[]) => unknown>) => unknown
+      (
+        input: unknown,
+        controller: Record<string, (...args: unknown[]) => unknown>,
+        caller: { principal: unknown; scopes: unknown },
+      ) => unknown
     >;
     authenticate: (request: unknown) => unknown;
     trustsProxy: boolean;
@@ -181,6 +186,30 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
   beforeEach(() => {
     app.resetScenario();
     vi.restoreAllMocks();
+  });
+
+  describe("what a handler reads of its caller", () => {
+    describeHandlerAccess(() => ({
+      app,
+      send: (method, path, headers) => send(method, path, { headers }),
+    }));
+
+    test("the principal and scopes decorators hand over the caller the input carries, past the app's pipe", async () => {
+      const decorated: unknown[] = [];
+
+      app.scenario.answers.getChannel = (input, _controller, caller) => {
+        decorated.push(caller);
+
+        return { status: 200, body: { channelId: CHANNEL, name: "General" } };
+      };
+
+      const reply = await send("GET", `/v1/channels/${CHANNEL}`, { headers: BEARER });
+
+      expect(reply.status).toBe(200);
+      expect(decorated).toEqual([
+        { principal: { userId: USER }, scopes: { channel: { scope: "channel", id: CHANNEL } } },
+      ]);
+    });
   });
 
   describe("replies on contract routes", () => {

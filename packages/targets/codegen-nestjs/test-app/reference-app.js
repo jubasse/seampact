@@ -171,14 +171,14 @@ const DEFAULT_ANSWERS = {
   createTask: () => ({ status: 201, body: sampleTask("33333333-3333-4333-8333-333333333333") }),
 };
 
-function answer(operation, input, controller) {
+function answer(operation, input, controller, caller) {
   calls.handled.push(operation);
 
   const handler = scenario.answers[operation] ?? DEFAULT_ANSWERS[operation];
 
   if (handler === undefined) throw new Error(`the test app has no answer for '${operation}'`);
 
-  return handler(input, controller);
+  return handler(input, controller, caller);
 }
 
 // Applies method decorators as TypeScript does: the last written first, then the descriptor they edited defined.
@@ -296,6 +296,9 @@ class AnsweringInterceptor {
   }
 }
 
+// The operation whose method also takes its caller through the principal and scopes param decorators.
+const CALLER_OPERATION = "getChannel";
+
 // Every operation bound on one controller class; `aboveComposite` lists the app decorators written above an
 // operation's composite, and `withoutInput` the operations whose method declares no input param.
 function tasksController(aboveComposite = {}, withoutInput = []) {
@@ -305,14 +308,25 @@ function tasksController(aboveComposite = {}, withoutInput = []) {
     const prototype = TasksController.prototype;
 
     Object.defineProperty(prototype, operation, {
-      value: function handle(input) {
-        return answer(operation, input, this);
-      },
+      value:
+        operation === CALLER_OPERATION
+          ? function handle(input, principal, scopes) {
+              return answer(operation, input, this, { principal, scopes });
+            }
+          : function handle(input) {
+              return answer(operation, input, this);
+            },
       writable: true,
       configurable: true,
     });
 
     if (!withoutInput.includes(operation)) TasksNest[operation].input()(prototype, operation, 0);
+
+    if (operation === CALLER_OPERATION) {
+      TasksNest.getChannel.principal()(prototype, operation, 1);
+      TasksNest.getChannel.scopes()(prototype, operation, 2);
+    }
+
     decorateMethod(
       prototype,
       operation,

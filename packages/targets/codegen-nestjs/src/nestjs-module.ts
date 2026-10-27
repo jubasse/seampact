@@ -92,7 +92,7 @@ export function nestjsModuleSource(
 
     names.claim(name, operationLocation(index, operation.id), refusals);
 
-    return `/** The route of '${operation.id}'; \`${name}.input()\` is its validated input. */\nexport const ${name} = ${operationSource(operation.id, docsModule)};`;
+    return `/** The route of '${operation.id}'; \`${name}.input()\` is its validated input, \`${name}.principal()\` and \`${name}.scopes()\` its caller. */\nexport const ${name} = ${operationSource(operation.id, docsModule)};`;
   });
 
   const handlerMethods = ir.operations.map(

@@ -6,6 +6,7 @@ import type { BoundaryContext } from "./boundary-context.js";
 import type { BootProblem } from "./boundary-hooks.js";
 import { type ContractReply, unexpectedError } from "./contract-error.js";
 import type { ContractApi, ContractRoute, ResponsesMode } from "./contract-route.js";
+import { inputWithAccess } from "./handler-access.js";
 import { handlerReply } from "./handler-reply.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
@@ -245,9 +246,12 @@ export async function handlerResultReply(
     );
   }
 
-  const result: unknown = await Reflect.apply(method, owner, [context.input]);
+  const grant = requireGrant(context);
+  const result: unknown = await Reflect.apply(method, owner, [
+    inputWithAccess(context.route, grant, context.input),
+  ]);
 
-  return handlerReply(state, requireGrant(context), context.input, result);
+  return handlerReply(state, grant, context.input, result);
 }
 
 function requireGrant(context: BoundaryContext): AccessGrant {
