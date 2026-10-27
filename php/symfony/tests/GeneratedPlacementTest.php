@@ -6,8 +6,6 @@ namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\TasksConsistent\Symfony\PaymentsInputConstraint;
-use Seampact\Golden\TasksConsistent\Symfony\TasksSettings as AbsoluteSettings;
 use Seampact\Golden\Tasks\AppEndpoints;
 use Seampact\Golden\Tasks\Symfony\GetTaskInputConstraint;
 use Seampact\Golden\Tasks\Symfony\GetTasksBatchInputConstraint;
@@ -18,6 +16,8 @@ use Seampact\Golden\Tasks\Symfony\TasksRouteNames;
 use Seampact\Golden\Tasks\Symfony\TasksSeampactBundle;
 use Seampact\Golden\Tasks\Symfony\TasksSettings;
 use Seampact\Golden\Tasks\Symfony\TasksUrls;
+use Seampact\Golden\TasksConsistent\Symfony\PaymentsInputConstraint;
+use Seampact\Golden\TasksConsistent\Symfony\TasksSettings as AbsoluteSettings;
 use Seampact\Symfony\Runtime\Issue;
 use Seampact\Symfony\Runtime\KindRequestMatcher;
 use Seampact\Symfony\Tests\Support\HealthController;

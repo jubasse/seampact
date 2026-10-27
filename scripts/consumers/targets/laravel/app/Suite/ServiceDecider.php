@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
-use App\Generated\TasksService\Laravel\Runtime\Decider;
-use App\Generated\TasksService\Laravel\Runtime\Denial;
 use App\Generated\TasksService\Laravel\ServicePrincipal;
 use App\Generated\TasksService\Schemas\ApiForbiddenParams;
+use Seampact\Codegen\Runtime\Decider;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\DecisionPurpose;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\Decision;

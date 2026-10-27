@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Suite;
 
 use App\Generated\Tasks\Schemas\ApiRateLimitedParams;
-use App\Generated\Tasks\Symfony\Runtime\Decider;
-use App\Generated\Tasks\Symfony\Runtime\Denial;
+use App\Generated\Tasks\Symfony\Decider;
 use App\Generated\Tasks\Symfony\UserPrincipal;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\Credentials;
 use Seampact\ConsumerSuite\DecisionPurpose;
 use Seampact\ConsumerSuite\SuiteControl;

@@ -33,7 +33,7 @@ use App\Generated\Tasks\Schemas\TaskState;
 use App\Generated\Tasks\SearchTasksInput;
 use App\Generated\Tasks\SearchTasksResponse200;
 use App\Generated\Tasks\SearchTasksResult;
-use App\Generated\Tasks\Symfony\Runtime\SeampactOperation;
+use App\Generated\Tasks\Symfony\SeampactOperation;
 use App\Generated\Tasks\Symfony\TasksRouteNames;
 use App\Generated\Tasks\Symfony\TasksUrls;
 use App\Generated\Tasks\TasksEndpoints;

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
-use App\Generated\Tasks\Symfony\Runtime\Denial;
 use App\Generated\Tasks\Symfony\UserAuthenticateHook;
 use App\Generated\Tasks\Symfony\UserCredentials;
 use App\Generated\Tasks\Symfony\UserPrincipal;
 use App\Kernel;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\Credentials;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\AuthenticateRequest;

@@ -10,7 +10,7 @@ Nothing is published to Packagist yet, so Composer installs seampact from your c
 composer config minimum-stability dev
 composer config prefer-stable true
 composer config repositories.seampact path "$HOME/src/seampact/php/*"
-composer require --dev seampact/symfony
+composer require seampact/symfony
 composer require seampact/hooks symfony/validator
 ```
 
@@ -93,7 +93,7 @@ use App\Generated\Tasks\GetTaskErrors;
 use App\Generated\Tasks\GetTaskInput;
 use App\Generated\Tasks\GetTaskResponse200;
 use App\Generated\Tasks\GetTaskResult;
-use App\Generated\Tasks\Symfony\Runtime\SeampactOperation;
+use App\Generated\Tasks\Symfony\SeampactOperation;
 use App\Generated\Tasks\TasksEndpoints;
 
 final class TasksController implements TasksEndpoints
@@ -141,6 +141,8 @@ final class UserHook implements UserAuthenticateHook
 ```
 
 A decider lists the names it answers in `names()`, or `[self::EVERY_NAME]` for all of them.
+
+Each api has its own interfaces in `App\Generated\<Api>\Symfony`: `Decider`, `ScopeResolver` and `UnexpectedErrorListener`. Implement the ones of the api the hook serves. The listener is told of each 500 the api answers.
 
 ## With SecurityBundle
 

@@ -10,7 +10,7 @@ use App\Generated\Tasks\GetChannelResponse200;
 use App\Generated\Tasks\GetChannelResult;
 use App\Generated\Tasks\ListChannelsInput;
 use App\Generated\Tasks\ListChannelsResult;
-use App\Generated\Tasks\Symfony\Runtime\SeampactOperation;
+use App\Generated\Tasks\Symfony\SeampactOperation;
 use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\ScriptedAnswers;
 

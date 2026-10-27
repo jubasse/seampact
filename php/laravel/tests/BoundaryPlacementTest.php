@@ -7,10 +7,10 @@ namespace Seampact\Laravel\Tests;
 use Illuminate\Config\Repository;
 use Illuminate\Foundation\Application;
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\TasksConsistent\Laravel\TasksBoundary as ConsistentBoundary;
-use Seampact\Golden\TasksConsistent\Laravel\TasksSeampactServiceProvider as ConsistentProvider;
 use Seampact\Golden\Tasks\Laravel\TasksBoundary;
 use Seampact\Golden\Tasks\Laravel\TasksSeampactServiceProvider;
+use Seampact\Golden\TasksConsistent\Laravel\TasksBoundary as ConsistentBoundary;
+use Seampact\Golden\TasksConsistent\Laravel\TasksSeampactServiceProvider as ConsistentProvider;
 use Seampact\Laravel\Runtime\ContractServiceProvider;
 
 /**

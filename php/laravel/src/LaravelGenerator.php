@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\PsrPrinter;
-use Seampact\Codegen\ContractClass;
-use Seampact\Codegen\FrameworkRouteScope;
-use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\ArtefactSwitches;
 use Seampact\Codegen\BootCheckSwitches;
+use Seampact\Codegen\ContractClass;
+use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\Delivery;
+use Seampact\Codegen\FrameworkRouteScope;
 use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;

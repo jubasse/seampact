@@ -174,6 +174,8 @@ $this->app->tag([WorkspaceResolver::class], NotesSeampactServiceProvider::SCOPE_
 
 A decider lists the names it answers in `names()`, or `Decider::EVERY_NAME` for all of them.
 
+To be told of each 500 the api answers, bind its `App\Generated\<Api>\Laravel\UnexpectedErrorListener` to your listener.
+
 ## Laravel's own auth
 
 Laravel's layers work beside the contract, and the api's error format answers their refusals:

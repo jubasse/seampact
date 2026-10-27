@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
-use App\Generated\TasksService\Symfony\Runtime\Decider;
-use App\Generated\TasksService\Symfony\Runtime\Denial;
-use App\Generated\TasksService\Symfony\ServicePrincipal;
 use App\Generated\TasksService\Schemas\ApiForbiddenParams;
+use App\Generated\TasksService\Symfony\Decider;
+use App\Generated\TasksService\Symfony\ServicePrincipal;
+use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\DecisionPurpose;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\Decision;
