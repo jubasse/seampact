@@ -196,6 +196,10 @@ Allow-list your own routes in the entry, with a reason:
       - { path: "/admin/**", reason: "Back office, not part of the api." }
 ```
 
+## Replies that break the contract
+
+By default a reply that breaks the contract becomes the api's 500. With `seampact.<api>.responses: warn` it goes out as written and the violation is logged, a body that fails `bodyValidation` included.
+
 ## Format envelopes and null
 
 - The success body goes out in its format's envelope. With `pack:laravel` your `Note` leaves as `{ "data": { ... } }`; with a bare format it leaves as it is. You still return the plain value.
