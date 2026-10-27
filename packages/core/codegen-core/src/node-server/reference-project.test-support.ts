@@ -34,6 +34,7 @@ const LINKED_PACKAGES = {
   "@seampact/codegen-ts": "packages/targets/codegen-ts",
   "@seampact/codegen-zod": "packages/targets/codegen-zod",
   "@seampact/hooks": "packages/runtime/hooks",
+  "@seampact/server-runtime": "packages/runtime/server-runtime",
 };
 
 /** The consumer's compiler options: strict, NodeNext, and the legacy decorators NestJS needs. */

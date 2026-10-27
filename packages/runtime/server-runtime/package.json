@@ -1,0 +1,117 @@
+{
+  "name": "@seampact/server-runtime",
+  "description": "The request checks and replies every generated Node and Web-standard server boundary imports, with one placement per framework.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts",
+    "./web": "./src/web.ts",
+    "./express": "./src/express.ts",
+    "./hono": "./src/hono.ts",
+    "./version": "./src/version.ts"
+  },
+  "publishConfig": {
+    "main": "./dist/cjs/runtime/server-runtime/src/index.js",
+    "types": "./dist/cjs/runtime/server-runtime/src/index.d.ts",
+    "exports": {
+      ".": {
+        "import": {
+          "types": "./dist/esm/runtime/server-runtime/src/index.d.ts",
+          "default": "./dist/esm/runtime/server-runtime/src/index.js"
+        },
+        "require": {
+          "types": "./dist/cjs/runtime/server-runtime/src/index.d.ts",
+          "default": "./dist/cjs/runtime/server-runtime/src/index.js"
+        }
+      },
+      "./node": {
+        "import": {
+          "types": "./dist/esm/runtime/server-runtime/src/node.d.ts",
+          "default": "./dist/esm/runtime/server-runtime/src/node.js"
+        },
+        "require": {
+          "types": "./dist/cjs/runtime/server-runtime/src/node.d.ts",
+          "default": "./dist/cjs/runtime/server-runtime/src/node.js"
+        }
+      },
+      "./web": {
+        "import": {
+          "types": "./dist/esm/runtime/server-runtime/src/web.d.ts",
+          "default": "./dist/esm/runtime/server-runtime/src/web.js"
+        },
+        "require": {
+          "types": "./dist/cjs/runtime/server-runtime/src/web.d.ts",
+          "default": "./dist/cjs/runtime/server-runtime/src/web.js"
+        }
+      },
+      "./express": {
+        "import": {
+          "types": "./dist/esm/runtime/server-runtime/src/express.d.ts",
+          "default": "./dist/esm/runtime/server-runtime/src/express.js"
+        },
+        "require": {
+          "types": "./dist/cjs/runtime/server-runtime/src/express.d.ts",
+          "default": "./dist/cjs/runtime/server-runtime/src/express.js"
+        }
+      },
+      "./hono": {
+        "import": {
+          "types": "./dist/esm/runtime/server-runtime/src/hono.d.ts",
+          "default": "./dist/esm/runtime/server-runtime/src/hono.js"
+        },
+        "require": {
+          "types": "./dist/cjs/runtime/server-runtime/src/hono.d.ts",
+          "default": "./dist/cjs/runtime/server-runtime/src/hono.js"
+        }
+      },
+      "./version": {
+        "import": {
+          "types": "./dist/esm/runtime/server-runtime/src/version.d.ts",
+          "default": "./dist/esm/runtime/server-runtime/src/version.js"
+        },
+        "require": {
+          "types": "./dist/cjs/runtime/server-runtime/src/version.d.ts",
+          "default": "./dist/cjs/runtime/server-runtime/src/version.js"
+        }
+      }
+    }
+  },
+  "seampact": {
+    "role": "helper"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@seampact/hooks": "workspace:*"
+  },
+  "peerDependencies": {
+    "@types/express": "^4.0.0 || ^5.0.0",
+    "express": "^4.0.0 || ^5.0.0",
+    "hono": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@types/express": {
+      "optional": true
+    },
+    "express": {
+      "optional": true
+    },
+    "hono": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "24.19.1",
+    "express": "5.3.0",
+    "hono": "4.13.13",
+    "typescript": "6.0.3"
+  }
+}

@@ -3,11 +3,14 @@ import {
   handlerMapDeclarations,
   largestBodyLimit,
   type NodeServerOptions,
+  PACKAGED_RUNTIME,
+  SERVER_RUNTIME_PACKAGE,
 } from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
 
 // The `express` module of one api: the router factory built from its route table and handler bindings, and the
-// fixed exports of ADR 0018 "Placement". No export is named by an operation.
+// fixed exports of ADR 0018 "Placement", over the Express placement of `@seampact/server-runtime`, which takes the
+// app's own `express`. No export is named by an operation.
 
 const EXPRESS_MODULE = "express";
 
@@ -17,15 +20,15 @@ export function expressModuleSource(
   refusals: Refusal[],
 ): string {
   return [
-    'import { createExpressBoundary } from "./express-boundary.js";',
+    'import express from "express";',
+    `import { createExpressBoundary } from "${SERVER_RUNTIME_PACKAGE}/express";`,
     'import type { SeampactHooks } from "./hooks.js";',
     'import { CONTRACT_API } from "./routes.js";',
-    ...handlerMapDeclarations(ir, options, EXPRESS_MODULE, refusals),
+    ...handlerMapDeclarations(ir, options, EXPRESS_MODULE, refusals, PACKAGED_RUNTIME),
     "",
-    'export { MAX_CHECKED_ERROR_BODY_BYTES } from "./node-server/outgoing-verdict.js";',
-    'export { MAX_RENDERED_ISSUES } from "./node-server/contract-error.js";',
+    `export { MAX_CHECKED_ERROR_BODY_BYTES, MAX_RENDERED_ISSUES } from "${SERVER_RUNTIME_PACKAGE}";`,
     "",
-    "const boundary = createExpressBoundary<SeampactHooks, ContractHandlers>(CONTRACT_API, GENERATED_SETTINGS, HANDLER_BINDINGS);",
+    "const boundary = createExpressBoundary<SeampactHooks, ContractHandlers>(express, CONTRACT_API, GENERATED_SETTINGS, HANDLER_BINDINGS);",
     "",
     "/** The api's router: `app.use(router({ handlers, hooks }))`, at the app's root; `handlers` holds one object per handler interface, keyed by its name (`{ NotesEndpoints: { ... } }`); runs the boot check. */",
     "export const router = boundary.router<OperationName>;",

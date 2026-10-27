@@ -5,8 +5,7 @@
   "private": true,
   "type": "module",
   "files": [
-    "dist",
-    "runtime"
+    "dist"
   ],
   "main": "./src/index.ts",
   "exports": {

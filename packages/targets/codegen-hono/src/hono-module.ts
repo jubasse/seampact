@@ -4,11 +4,14 @@ import {
   literalSegmentRefusals,
   mixedSegmentRefusals,
   type NodeServerOptions,
+  PACKAGED_RUNTIME,
+  SERVER_RUNTIME_PACKAGE,
 } from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
 
 // The `hono` module of one api: the registration built from its route table and handler bindings, and the fixed
-// exports of ADR 0020 "Placement". No export is named by an operation.
+// exports of ADR 0020 "Placement", over the Hono placement of `@seampact/server-runtime`. No export is named by an
+// operation.
 
 const HONO_MODULE = "hono";
 
@@ -20,13 +23,12 @@ export function honoModuleSource(
   refusals.push(...literalSegmentRefusals(ir), ...mixedSegmentRefusals(ir));
 
   return [
-    'import { createHonoBoundary } from "./hono-boundary.js";',
+    `import { createHonoBoundary } from "${SERVER_RUNTIME_PACKAGE}/hono";`,
     'import type { SeampactHooks } from "./hooks.js";',
     'import { CONTRACT_API } from "./routes.js";',
-    ...handlerMapDeclarations(ir, options, HONO_MODULE, refusals, "web"),
+    ...handlerMapDeclarations(ir, options, HONO_MODULE, refusals, PACKAGED_RUNTIME),
     "",
-    'export { MAX_CHECKED_ERROR_BODY_BYTES } from "./web-server/outgoing-verdict.js";',
-    'export { MAX_RENDERED_ISSUES } from "./web-server/contract-error.js";',
+    `export { MAX_CHECKED_ERROR_BODY_BYTES, MAX_RENDERED_ISSUES } from "${SERVER_RUNTIME_PACKAGE}";`,
     "",
     "const boundary = createHonoBoundary<SeampactHooks, ContractHandlers, OperationName>(CONTRACT_API, GENERATED_SETTINGS, HANDLER_BINDINGS);",
     "",

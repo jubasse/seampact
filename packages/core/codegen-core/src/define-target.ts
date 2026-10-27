@@ -67,6 +67,9 @@ export function defineTarget<
       ...(request.nativeDocsDocument === undefined
         ? {}
         : { nativeDocsDocument: structuredClone(request.nativeDocsDocument) }),
+      ...(request.outputDirectory === undefined
+        ? {}
+        : { outputDirectory: request.outputDirectory }),
     });
 
     if (generated.status === "refused") return generated;
