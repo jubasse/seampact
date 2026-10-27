@@ -33,6 +33,8 @@ You see `install-into: 21 packages in .../vendor/seampact`.
 pnpm install
 ```
 
+The generated server imports `@seampact/server-runtime`, which `install-into` put in `dependencies`; keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`.
+
 The starter already depends on `@vinejs/vine`. The generated server validates with it, so you need no validators entry. It uses VineJS's own rules; set `rules: seampact-consistent` in the server's `options` to get the contract's exact checks, as [Validators](../configuration/validators.md#vinejs) explains.
 
 Install, `tsconfig.json`: the generated code does not compile with the starter's `lib` and unused-variable checks. Replace `tsconfig.json`.

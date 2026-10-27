@@ -162,6 +162,14 @@ A spike, run and not kept, booted a minimal app in process on Node 24.21 with Ad
 
 The only difference between the majors outside the boundary was the app setup: AdonisJS 7 refuses to boot without `config/encryption.ts`, a file AdonisJS 6 cannot load. The consumer therefore keeps one overlay file per major.
 
+### Amendment 2026-10-27: the runtime package
+
+ADR 0025 moves the shared request checks out of the generated tree: they are those of `@seampact/server-runtime`, imported, no longer copied into the generated tree under `node-server/`, and the placement file is the package's `/adonis` export, no longer `adonis-boundary.ts`. Each api's generated tree keeps `adonis.ts`, `routes.ts`, `handlers.ts`, `hooks.ts`, `index.ts` and its own VineJS validators when it writes them, with `validators/vine-support.ts`, which belongs to the validators. `adonis.ts` hands the app's own `@adonisjs/core` app service and string helpers to the placement, so one runtime serves AdonisJS 6 and 7.
+
+What the generated code depends on adds `@seampact/server-runtime` as a production dependency: its root, `/node` and `/adonis` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
+
+The boot check runs one step first, before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `adonis.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
+
 ## Consequences
 
 - An app keeps its `start/kernel.ts`, its exception handler and its own routes; it calls `registerRoutes` from `start/routes.ts` and the pre-routing helper from its exception handler.

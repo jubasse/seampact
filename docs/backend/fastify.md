@@ -15,6 +15,8 @@ Do this in [Install](../getting-started/01-install.md), before `install-into`. I
 }
 ```
 
+Keep `@seampact/server-runtime`, which `install-into` adds to `dependencies`: the generated server imports it. Keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`.
+
 In `tsconfig.json`, leave out `experimentalDecorators`: Fastify has no decorators.
 
 In [Generate](../getting-started/03-generate-and-run.md), use this `targets` list in `seampact.config.yaml`. The Fastify target checks bodies with Ajv validators it generates, so there is no `validators` entry and no `zod`.

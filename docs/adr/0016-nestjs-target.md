@@ -235,6 +235,16 @@ What the boundary guarantees: steps 3 to 8 run after every app guard and after s
 - An interceptor that skips the handler, in the default reply mode: the module's `configure` places the reply interceptor outside the app's interceptors of each route that has one, in front of the global list when the app has a global interceptor, else first on the controller or the method that binds one. Its post-phase sees `undefined` once the wrapper wrote the reply; a value it receives with no reply written is checked and written as in the interceptor mode, and one that skipped the input pipe answers 500 with a log. Routes without an app interceptor stay off NestJS's interceptor path. A global interceptor another module's `configure` adds after this one is not covered.
 - Path prefixes and reply decorators are refused at boot by name (see "The boot check").
 
+### Amendment 2026-10-27: the runtime package
+
+ADR 0025 moves the request checks out of the generated tree: they are those of `@seampact/server-runtime`, imported, no longer the copies of `@seampact/codegen-core/node-server` under `node-server/`, and the placement file is the package's `/nestjs` export, no longer `nestjs-boundary.ts`. Each api's generated tree keeps `nestjs.ts`, `routes.ts`, `handlers.ts`, `hooks.ts`, `index.ts` and, with `nativeDocs`, its docs module. A NestJS app on CommonJS loads the package's CommonJS build.
+
+Two apis of one app share the runtime, so what tells them apart is generated per api. `nestjs.ts` declares the api's `ContractException` subclass and hands it to the boundary: each api's filter answers the runtime's own errors and its own api's `ContractException`, never another api's, which matches neither api's filter and answers a 500, as with the per-api copies before. The exported name stays `SeampactModule`, while the class carries the api's type name (`TasksSeampactModule`, `TasksServiceSeampactModule`), as NestJS logs it.
+
+What the generated code depends on adds `@seampact/server-runtime` as a production dependency: its root, `/node` and `/nestjs` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
+
+The boot check runs one step first, before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `nestjs.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
+
 ## Consequences
 
 - An app keeps its `main.ts`, its global pipes, guards, interceptors and filters; on contract routes the boundary's checks and reply win, and its own routes are unchanged, Express ETags included. A cache interceptor must skip contract routes with `isContractRoute(context)`, or the app does not start. Any app interceptor on a contract route brings back NestJS's per-request interceptor path there: its CPU cost, and on NestJS 12.1.x its native-memory growth, which 12.2.0 cures; the interceptor mode puts every route of the app on that path.

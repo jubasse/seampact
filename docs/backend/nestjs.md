@@ -2,6 +2,8 @@
 
 The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. Create `src/notes-controller.ts`.
 
+The generated server imports `@seampact/server-runtime`, which `install-into` put in `dependencies`; keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`.
+
 ```ts
 import { randomUUID } from "node:crypto";
 import { Controller } from "@nestjs/common";

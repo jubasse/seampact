@@ -198,6 +198,17 @@ export class ContractException<
   }
 }
 
+/** The api's dynamic module class, as the generated module exports it. */
+export interface SeampactModuleClass<Hooks> {
+  new (): object;
+  forRoot(...[hooks, moduleOptions]: ModuleArguments<Hooks>): DynamicModule;
+  /** The module with hooks a factory builds from injected providers. */
+  forRootAsync(
+    asyncHooks: SeampactModuleAsyncHooks<Hooks>,
+    moduleOptions?: SeampactModuleOptions,
+  ): DynamicModule;
+}
+
 type ModuleArguments<Hooks> =
   Partial<Hooks> extends Hooks
     ? [hooks?: Hooks, options?: SeampactModuleOptions]
@@ -1332,6 +1343,9 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   // Every api's module is its own class; its name tells them apart in NestJS's logs and errors.
   Object.defineProperty(SeampactModule, "name", { value: identity.moduleClassName });
 
+  // The module's injected members stay private to the class; the exported type names its static side.
+  const apiModule: SeampactModuleClass<Hooks> = SeampactModule;
+
   // NestJS decorators and parameters that write after the boundary's reply.
   function writerProblems(
     id: string,
@@ -1480,7 +1494,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   }
 
   return {
-    SeampactModule,
+    SeampactModule: apiModule,
     SEAMPACT_HOOKS,
     operation,
     responses: (mode: ResponsesMode) => SetMetadata(RESPONSES_METADATA, mode),
