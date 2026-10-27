@@ -67,6 +67,20 @@ test("reads the framework-route allow-list of a target entry", async () => {
   });
 });
 
+test.each(["/livewire-*/**", "/livewire*/**", "/*.json", "/a/*-*/z"])(
+  "reads the framework-route pattern %s, a star inside a segment",
+  async (path) => {
+    const outcome = await readConfigText(
+      `${SERVER_ENTRY_HEAD}    frameworkRoutes:\n      - { path: '${path}', reason: r }\n`,
+    );
+
+    expect(outcome).toMatchObject({
+      status: "read",
+      config: { entries: [{ entry: { frameworkRoutes: [{ path, reason: "r" }] } }] },
+    });
+  },
+);
+
 test("reads the framework-route check switched off", async () => {
   const outcome = await readConfigText(
     `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { frameworkRoutes: false } }\n`,
@@ -119,6 +133,9 @@ test("refuses frameworkDocs: off beside nativeDocs: true, naming both", async ()
   });
 });
 
+const FRAMEWORK_ROUTE_PATH_RULE =
+  "The key 'path' of a framework route is '/' then segments, each '*', '**', or text without '?', '{' or '}' holding at most two '*'.";
+
 test.each([
   ["no reason", "{ path: /metrics }", "The key 'reason' is required here."],
   [
@@ -126,8 +143,13 @@ test.each([
     '{ path: /metrics, reason: "" }',
     "The value must NOT have fewer than 1 characters.",
   ],
-  ["a star inside a segment", "{ path: '/metrics*', reason: r }", "The value must match pattern"],
-  ["a relative path", "{ path: metrics, reason: r }", "The value must match pattern"],
+  ["two stars inside a segment", "{ path: '/metrics**', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["three stars", "{ path: '/a/***', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["three stars in one segment", "{ path: '/a/*-*-*/z', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["a question mark", "{ path: '/a/b?', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["a route parameter", "{ path: '/a/{id}', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["a closing brace", "{ path: '/a/id}', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["a relative path", "{ path: metrics, reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
   [
     "an unknown method",
     "{ method: get, path: /metrics, reason: r }",

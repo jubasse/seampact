@@ -31,6 +31,8 @@ const RESERVED_KEYS: ReadonlySet<string> = new Set(["__proto__", "constructor", 
 // `strictRequired` is off: the schemas list required keys in `oneOf` branches.
 const AJV_OPTIONS = { allErrors: true, strict: true, strictRequired: false };
 
+const FRAMEWORK_ROUTE_PATH_RULE =
+  "The key 'path' of a framework route is '/' then segments, each '*', '**', or text without '?', '{' or '}' holding at most two '*'.";
 const SCHEMA_FIX = "Correct the value as the config schema states (ADR 0011 'The app config').";
 
 export interface ParsedConfig {
@@ -297,6 +299,18 @@ function schemaErrorProblem(
     };
   }
 
+  if (error.keyword === "pattern" && isFrameworkRoutePath(path)) {
+    return {
+      keyPath,
+      problem: {
+        code: "config.schema",
+        message: FRAMEWORK_ROUTE_PATH_RULE,
+        fix: "Write a route parameter as '*' and a catch-all as '**' (ADR 0011 'The app config').",
+        where: whereOf(parsed, path),
+      },
+    };
+  }
+
   if (error.keyword === "oneOf") {
     return {
       keyPath,
@@ -313,6 +327,11 @@ function schemaErrorProblem(
       where: whereOf(parsed, path),
     },
   };
+}
+
+// `<entry>.frameworkRoutes[<n>].path`, the one string pattern whose rule the schema's regular expression hides.
+function isFrameworkRoutePath(path: KeyPath): boolean {
+  return path.at(-1) === "path" && path.at(-3) === "frameworkRoutes";
 }
 
 // The forms a `oneOf` of the config schemas lets a value take, by where it sits.

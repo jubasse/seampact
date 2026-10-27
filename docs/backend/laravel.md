@@ -242,7 +242,7 @@ Filament, Livewire, Horizon, Telescope and Nova serve their own routes. Allow-li
     frameworkRoutes:
       - { path: "/admin/**", reason: "Filament panel." }
       - { path: "/filament/**", reason: "Filament exports and imports." }
-      - { path: "/livewire/**", reason: "Livewire updates and scripts." }
+      - { path: "/livewire*/**", reason: "Livewire updates, scripts and uploads." }
       - { path: "/horizon/**", reason: "Horizon dashboard." }
       - { path: "/telescope/**", reason: "Telescope dashboard." }
       - { path: "/nova/**", reason: "Nova panel." }
@@ -250,14 +250,7 @@ Filament, Livewire, Horizon, Telescope and Nova serve their own routes. Allow-li
       - { path: "/nova-vendor/**", reason: "Nova panel." }
 ```
 
-Keep only the lines of the tools you use. A panel on another path takes that path (`/backoffice/**`). Livewire 4 adds a hash to its paths, and the hash changes with `APP_KEY`. Pin its update and script paths in `AppServiceProvider::boot()`, so the `/livewire/**` line matches them in every environment:
-
-```php
-Livewire::setUpdateRoute(fn ($handle) => Route::post('/livewire/update', $handle));
-Livewire::setScriptRoute(fn ($handle) => Route::get('/livewire/livewire.js', $handle));
-```
-
-Livewire 4 file uploads keep the hashed path (`/livewire-<hash>/upload-file`), which no entry can match yet. If you use them, turn the route check off for now with `artefacts: { bootCheck: { frameworkRoutes: false } }`.
+Keep only the lines of the tools you use. A panel on another path takes that path (`/backoffice/**`). A `*` inside a segment matches any characters but `/`, so `/livewire*/**` also matches the paths Livewire 4 hashes (`/livewire-<hash>/upload-file`).
 
 Octane is not supported yet.
 

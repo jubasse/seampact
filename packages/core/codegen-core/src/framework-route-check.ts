@@ -1,7 +1,10 @@
 // The framework-route boot check of a server target entry (ADR 0012 "The boot check", ADR 0011 "The app config"):
 // the routes outside the contract the app config allow-lists, each with its reason, or the check switched off.
 
-/** One `frameworkRoutes` entry: a path or a pattern (`*` one segment, `**` any number), an optional method. */
+/**
+ * One `frameworkRoutes` entry: a path or a pattern (`*` one segment, `**` any number, a `*` inside a segment any
+ * characters but `/`), an optional method.
+ */
 export interface FrameworkRouteAllowance {
   readonly method?: string;
   readonly path: string;

@@ -27,6 +27,13 @@ describe("the allow-list patterns", () => {
     ["'**' over several segments", "/actuator/**", "/actuator/health/db", true],
     ["'**' inside a segment", "/actuator/**", "/actuatorX", false],
     ["'**' between segments", "/a/**/z", "/a/z", true],
+    ["'*' inside a segment", "/livewire-*/**", "/livewire-3f9a/upload-file", true],
+    ["'*' inside a segment over nothing", "/livewire*/**", "/livewire/update", true],
+    ["'*' inside a segment over a param", "/files-*", "/files-:id", true],
+    ["'*' inside a segment, another prefix", "/livewire-*/**", "/live-3f9a/upload-file", false],
+    ["'*' inside a segment over a slash", "/livewire-*", "/livewire-3f9a/upload-file", false],
+    ["'*' inside a segment, a suffix", "/*.json", "/up.json", true],
+    ["'*' inside a segment, another suffix", "/*.json", "/up.xml", false],
   ])("%s", (_, allowedPath, listedPath, allowed) => {
     const keys = refusedKeys(checkAllowing({ path: allowedPath, reason: REASON }), [
       { method: "GET", path: listedPath },
@@ -47,6 +54,9 @@ describe("the allow-list patterns", () => {
       `GET ${listedPath}`,
     ]);
     expect(refusedKeys(checkAllowing({ path: "/*", reason: REASON }), listed)).toEqual([
+      `GET ${listedPath}`,
+    ]);
+    expect(refusedKeys(checkAllowing({ path: "/files/*rest", reason: REASON }), listed)).toEqual([
       `GET ${listedPath}`,
     ]);
     expect(refusedKeys(checkAllowing({ path: "/**", reason: REASON }), listed)).toEqual([]);

@@ -6,8 +6,8 @@ namespace Seampact\Codegen\Runtime;
 
 /**
  * The entry's `frameworkRoutes` allow-list as the boot check reads it (FR-25): an entry takes a route when its path
- * pattern matches the route's path (`*` one segment, `**` any number) and it names no method, or the route's one
- * method besides HEAD.
+ * pattern matches the route's path (`*` one segment, `**` any number, a `*` inside a segment any characters but `/`)
+ * and it names no method, or the route's one method besides HEAD.
  */
 final class FrameworkRoutes
 {
@@ -28,12 +28,22 @@ final class FrameworkRoutes
         $methods = array_values(array_diff($methods, [self::HEAD]));
         foreach ($frameworkRoutes as $allowed) {
             $methodAllowed = $allowed['method'] === null || $methods === [$allowed['method']];
-            if ($methodAllowed && preg_match(self::pathPattern($allowed['path']), $uri) === 1) {
+            if ($methodAllowed && self::pathMatches($allowed['path'], $uri)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static function pathMatches(string $path, string $uri): bool
+    {
+        $matched = preg_match(self::pathPattern($path), $uri);
+        if ($matched === false) {
+            throw new \LogicException("seampact: the frameworkRoutes pattern '{$path}' could not be matched against the route '{$uri}': " . preg_last_error_msg() . "; write at most two '*' in a segment.");
+        }
+
+        return $matched === 1;
     }
 
     private static function pathPattern(string $path): string
@@ -42,7 +52,7 @@ final class FrameworkRoutes
             static fn (string $segment): string => match ($segment) {
                 '**' => '(?:/[^/]+)*',
                 '*' => '/[^/]+',
-                default => '/' . preg_quote($segment, '#'),
+                default => '/' . str_replace('\\*', '[^/]*', preg_quote($segment, '#')),
             },
             array_slice(explode('/', $path), 1),
         );
