@@ -10,11 +10,13 @@ import {
   type NodeServerOptions,
   operationIdentifier,
   responseSettingsOf,
+  SERVER_RUNTIME_PACKAGE,
 } from "@seampact/codegen-core/node-server";
 import type { ContractIR, Operation, TypeUse } from "@seampact/spec/ir";
 
-// The `adonis` module of one api: the boundary built from its route table, the fixed exports of ADR 0019 "Target
-// options and names", and the input accessor of each operation, named by the operation.
+// The `adonis` module of one api: the boundary built from its route table over the AdonisJS placement of
+// `@seampact/server-runtime`, the fixed exports of ADR 0019 "Target options and names", and the input accessor of
+// each operation, named by the operation.
 
 const ADONIS_MODULE = "adonis";
 
@@ -31,6 +33,8 @@ const FIXED_EXPORTS = [
 const LOCAL_NAMES = [
   "boundary",
   "createAdonisBoundary",
+  "app",
+  "string",
   "routeNamesByAccess",
   "CONTRACT_API",
   "OPERATIONS",
@@ -86,7 +90,9 @@ export function adonisModuleSource(
   );
 
   return [
-    'import { createAdonisBoundary, type LazyController, routeNamesByAccess } from "./adonis-boundary.js";',
+    'import string from "@adonisjs/core/helpers/string";',
+    'import app from "@adonisjs/core/services/app";',
+    `import { createAdonisBoundary, type LazyController, routeNamesByAccess } from "${SERVER_RUNTIME_PACKAGE}/adonis";`,
     'import type * as Handlers from "./handlers.js";',
     'import type { SeampactHooks } from "./hooks.js";',
     'import { CONTRACT_API } from "./routes.js";',
@@ -100,7 +106,7 @@ export function adonisModuleSource(
     "",
     `const OPERATIONS = ${JSON.stringify(entries)} as const;`,
     "",
-    `const boundary = createAdonisBoundary<SeampactHooks, Controllers, OperationName>(CONTRACT_API, ${JSON.stringify(responseSettingsOf(options))}, OPERATIONS);`,
+    `const boundary = createAdonisBoundary<SeampactHooks, Controllers, OperationName>(CONTRACT_API, ${JSON.stringify(responseSettingsOf(options))}, OPERATIONS, { appService: () => app, string });`,
     "",
     "/** Adds the api's routes to the router and runs the boot check; call it from start/routes.ts. */",
     "export const registerRoutes = boundary.registerRoutes;",

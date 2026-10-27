@@ -70,8 +70,6 @@ const NODE_SERVER_TARGET = nodeServerTarget({
   packageVersion: "1.0.0",
   format: async (source) => source,
   placement: {
-    runtimeModule: "express-boundary",
-    runtimeSourceUrl: new URL("./express-boundary.ts", import.meta.url),
     frameworkModule: "express",
     frameworkSource: () => "",
   },

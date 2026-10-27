@@ -1,33 +1,33 @@
 // The shared runtime of the generated Node and Web-standard server boundaries (ADR 0025): the 27 framework-neutral
-// modules at this root export, the transport modules at `/node` and `/web`, and one placement per framework. Until
-// every Node target imports this package, the neutral and transport sources stay in codegen-core, which still copies
-// them for the targets that have not moved, and this package builds them from there.
-export * from "../../../core/codegen-core/node-server-runtime/access-checks.js";
-export * from "../../../core/codegen-core/node-server-runtime/base-path-claims.js";
-export * from "../../../core/codegen-core/node-server-runtime/boundary-context.js";
-export * from "../../../core/codegen-core/node-server-runtime/boundary-hooks.js";
-export * from "../../../core/codegen-core/node-server-runtime/contract-error.js";
-export * from "../../../core/codegen-core/node-server-runtime/contract-route.js";
-export * from "../../../core/codegen-core/node-server-runtime/cursor-exclusion.js";
-export * from "../../../core/codegen-core/node-server-runtime/error-reply.js";
-export * from "../../../core/codegen-core/node-server-runtime/framework-route-patterns.js";
-export * from "../../../core/codegen-core/node-server-runtime/framework-routes.js";
-export * from "../../../core/codegen-core/node-server-runtime/handler-map.js";
-export * from "../../../core/codegen-core/node-server-runtime/handler-reply.js";
-export * from "../../../core/codegen-core/node-server-runtime/idempotency.js";
-export * from "../../../core/codegen-core/node-server-runtime/idempotency-fingerprint.js";
-export * from "../../../core/codegen-core/node-server-runtime/input-checks.js";
-export * from "../../../core/codegen-core/node-server-runtime/input-issues.js";
-export * from "../../../core/codegen-core/node-server-runtime/outgoing-verdict.js";
-export * from "../../../core/codegen-core/node-server-runtime/page-reply.js";
-export * from "../../../core/codegen-core/node-server-runtime/plain-object.js";
-export * from "../../../core/codegen-core/node-server-runtime/replay-retention.js";
-export * from "../../../core/codegen-core/node-server-runtime/reply-headers.js";
-export * from "../../../core/codegen-core/node-server-runtime/retry-after.js";
-export * from "../../../core/codegen-core/node-server-runtime/runtime-logger.js";
-export * from "../../../core/codegen-core/node-server-runtime/sha256.js";
-export * from "../../../core/codegen-core/node-server-runtime/signature-header.js";
-export * from "../../../core/codegen-core/node-server-runtime/transport-checks.js";
-export * from "../../../core/codegen-core/node-server-runtime/wire-decoding.js";
+// modules at this root export, the transport modules at `/node` and `/web`, and one placement per framework at
+// `/express`, `/fastify`, `/nestjs`, `/adonis` and `/hono`. Every api of an app shares it; what must tell two apis
+// apart is keyed by the api's route table or generated per api.
+export * from "./access-checks.js";
+export * from "./base-path-claims.js";
+export * from "./boundary-context.js";
+export * from "./boundary-hooks.js";
+export * from "./contract-error.js";
+export * from "./contract-route.js";
+export * from "./cursor-exclusion.js";
+export * from "./error-reply.js";
+export * from "./framework-route-patterns.js";
+export * from "./framework-routes.js";
 export * from "./generator-version-check.js";
+export * from "./handler-map.js";
+export * from "./handler-reply.js";
+export * from "./idempotency.js";
+export * from "./idempotency-fingerprint.js";
+export * from "./input-checks.js";
+export * from "./input-issues.js";
+export * from "./outgoing-verdict.js";
+export * from "./page-reply.js";
+export * from "./plain-object.js";
+export * from "./replay-retention.js";
+export * from "./reply-headers.js";
+export * from "./retry-after.js";
+export * from "./runtime-logger.js";
+export * from "./sha256.js";
+export * from "./signature-header.js";
+export * from "./transport-checks.js";
 export * from "./version.js";
+export * from "./wire-decoding.js";

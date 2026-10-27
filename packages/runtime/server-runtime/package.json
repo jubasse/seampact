@@ -13,71 +13,104 @@
     "./node": "./src/node.ts",
     "./web": "./src/web.ts",
     "./express": "./src/express.ts",
+    "./fastify": "./src/fastify.ts",
+    "./nestjs": "./src/nestjs.ts",
+    "./adonis": "./src/adonis.ts",
     "./hono": "./src/hono.ts",
     "./version": "./src/version.ts"
   },
   "publishConfig": {
-    "main": "./dist/cjs/runtime/server-runtime/src/index.js",
-    "types": "./dist/cjs/runtime/server-runtime/src/index.d.ts",
+    "main": "./dist/cjs/index.js",
+    "types": "./dist/cjs/index.d.ts",
     "exports": {
       ".": {
         "import": {
-          "types": "./dist/esm/runtime/server-runtime/src/index.d.ts",
-          "default": "./dist/esm/runtime/server-runtime/src/index.js"
+          "types": "./dist/esm/index.d.ts",
+          "default": "./dist/esm/index.js"
         },
         "require": {
-          "types": "./dist/cjs/runtime/server-runtime/src/index.d.ts",
-          "default": "./dist/cjs/runtime/server-runtime/src/index.js"
+          "types": "./dist/cjs/index.d.ts",
+          "default": "./dist/cjs/index.js"
         }
       },
       "./node": {
         "import": {
-          "types": "./dist/esm/runtime/server-runtime/src/node.d.ts",
-          "default": "./dist/esm/runtime/server-runtime/src/node.js"
+          "types": "./dist/esm/node.d.ts",
+          "default": "./dist/esm/node.js"
         },
         "require": {
-          "types": "./dist/cjs/runtime/server-runtime/src/node.d.ts",
-          "default": "./dist/cjs/runtime/server-runtime/src/node.js"
+          "types": "./dist/cjs/node.d.ts",
+          "default": "./dist/cjs/node.js"
         }
       },
       "./web": {
         "import": {
-          "types": "./dist/esm/runtime/server-runtime/src/web.d.ts",
-          "default": "./dist/esm/runtime/server-runtime/src/web.js"
+          "types": "./dist/esm/web.d.ts",
+          "default": "./dist/esm/web.js"
         },
         "require": {
-          "types": "./dist/cjs/runtime/server-runtime/src/web.d.ts",
-          "default": "./dist/cjs/runtime/server-runtime/src/web.js"
+          "types": "./dist/cjs/web.d.ts",
+          "default": "./dist/cjs/web.js"
         }
       },
       "./express": {
         "import": {
-          "types": "./dist/esm/runtime/server-runtime/src/express.d.ts",
-          "default": "./dist/esm/runtime/server-runtime/src/express.js"
+          "types": "./dist/esm/express.d.ts",
+          "default": "./dist/esm/express.js"
         },
         "require": {
-          "types": "./dist/cjs/runtime/server-runtime/src/express.d.ts",
-          "default": "./dist/cjs/runtime/server-runtime/src/express.js"
+          "types": "./dist/cjs/express.d.ts",
+          "default": "./dist/cjs/express.js"
+        }
+      },
+      "./fastify": {
+        "import": {
+          "types": "./dist/esm/fastify.d.ts",
+          "default": "./dist/esm/fastify.js"
+        },
+        "require": {
+          "types": "./dist/cjs/fastify.d.ts",
+          "default": "./dist/cjs/fastify.js"
+        }
+      },
+      "./nestjs": {
+        "import": {
+          "types": "./dist/esm/nestjs.d.ts",
+          "default": "./dist/esm/nestjs.js"
+        },
+        "require": {
+          "types": "./dist/cjs/nestjs.d.ts",
+          "default": "./dist/cjs/nestjs.js"
+        }
+      },
+      "./adonis": {
+        "import": {
+          "types": "./dist/esm/adonis.d.ts",
+          "default": "./dist/esm/adonis.js"
+        },
+        "require": {
+          "types": "./dist/cjs/adonis.d.ts",
+          "default": "./dist/cjs/adonis.js"
         }
       },
       "./hono": {
         "import": {
-          "types": "./dist/esm/runtime/server-runtime/src/hono.d.ts",
-          "default": "./dist/esm/runtime/server-runtime/src/hono.js"
+          "types": "./dist/esm/hono.d.ts",
+          "default": "./dist/esm/hono.js"
         },
         "require": {
-          "types": "./dist/cjs/runtime/server-runtime/src/hono.d.ts",
-          "default": "./dist/cjs/runtime/server-runtime/src/hono.js"
+          "types": "./dist/cjs/hono.d.ts",
+          "default": "./dist/cjs/hono.js"
         }
       },
       "./version": {
         "import": {
-          "types": "./dist/esm/runtime/server-runtime/src/version.d.ts",
-          "default": "./dist/esm/runtime/server-runtime/src/version.js"
+          "types": "./dist/esm/version.d.ts",
+          "default": "./dist/esm/version.js"
         },
         "require": {
-          "types": "./dist/cjs/runtime/server-runtime/src/version.d.ts",
-          "default": "./dist/cjs/runtime/server-runtime/src/version.js"
+          "types": "./dist/cjs/version.d.ts",
+          "default": "./dist/cjs/version.js"
         }
       }
     }
@@ -92,26 +125,56 @@
     "@seampact/hooks": "workspace:*"
   },
   "peerDependencies": {
+    "@adonisjs/core": "^6.0.0 || ^7.0.0",
+    "@nestjs/common": "^12.0.0",
+    "@nestjs/core": "^12.0.0",
     "@types/express": "^4.0.0 || ^5.0.0",
     "express": "^4.22.0 || ^5.0.0",
-    "hono": "^4.0.0"
+    "fastify": "^5.0.0",
+    "hono": "^4.0.0",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.0.0"
   },
   "peerDependenciesMeta": {
+    "@adonisjs/core": {
+      "optional": true
+    },
+    "@nestjs/common": {
+      "optional": true
+    },
+    "@nestjs/core": {
+      "optional": true
+    },
     "@types/express": {
       "optional": true
     },
     "express": {
       "optional": true
     },
+    "fastify": {
+      "optional": true
+    },
     "hono": {
+      "optional": true
+    },
+    "reflect-metadata": {
+      "optional": true
+    },
+    "rxjs": {
       "optional": true
     }
   },
   "devDependencies": {
+    "@adonisjs/core": "7.6.0",
+    "@nestjs/common": "12.2.0",
+    "@nestjs/core": "12.2.0",
     "@types/express": "5.0.6",
     "@types/node": "24.19.1",
     "express": "5.3.0",
+    "fastify": "5.12.7",
     "hono": "4.13.13",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
     "typescript": "6.0.3"
   }
 }

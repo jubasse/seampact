@@ -2,7 +2,6 @@ import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve, sep } from "node:path";
 import type { Refusal } from "../refusal.js";
-import { SERVER_RUNTIME_PACKAGE } from "./runtime-files.js";
 
 // The generate-time check of the runtime package (ADR 0025, G2): the runtime the entry's output directory resolves,
 // never the copy the target package or the config's directory would resolve, compared with the generator's full
@@ -16,6 +15,9 @@ export const OUTPUT_DIRECTORY_MISSING = "runtime.output-directory-missing";
 
 /** The rule id of a generate refused because the installed runtime is not one the generator writes for. */
 export const RUNTIME_VERSION_MISMATCH = "runtime.version-mismatch";
+
+/** The package the generated code of every Node server target imports its runtime from (ADR 0025). */
+export const SERVER_RUNTIME_PACKAGE = "@seampact/server-runtime";
 
 // The runtime module that holds its version constant and imports nothing, so it loads alone.
 const VERSION_MODULE = `${SERVER_RUNTIME_PACKAGE}/version`;

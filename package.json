@@ -20,7 +20,6 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@changesets/cli": "3.0.3",
-    "@seampact/hooks": "workspace:*",
     "@seampact/pack-api-platform": "workspace:*",
     "@seampact/pack-crud-rights": "workspace:*",
     "@seampact/pack-hal": "workspace:*",

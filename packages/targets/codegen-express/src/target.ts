@@ -1,5 +1,5 @@
 import type { Target } from "@seampact/codegen-core";
-import { nodeServerTarget, PACKAGED_RUNTIME } from "@seampact/codegen-core/node-server";
+import { nodeServerTarget } from "@seampact/codegen-core/node-server";
 import { serverTargetCompatibility } from "@seampact/spec/compatibility";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
@@ -12,7 +12,6 @@ export const target: Target = nodeServerTarget({
   packageVersion: packageJson.version,
   format,
   placement: {
-    runtimeSource: PACKAGED_RUNTIME,
     frameworkModule: "express",
     frameworkSource: expressModuleSource,
   },

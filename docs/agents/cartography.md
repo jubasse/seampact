@@ -70,7 +70,7 @@ In pipeline order (ADR 0006 section 1).
 - `packages/core/codegen-core/src`: The API the code generators are written against: target definitions, link descriptors, refusals, and the steps around a target's generate (IR support and link checks, header, formatting, file writer), and the helpers targets share (IR locations, located refusals, planned names, property keys, the front query plan).
 - `packages/core/codegen-core/src/fetch-client`: The fetch client's reading of the contract (ADR 0021): the per-operation request and success plan, the page and payload readers, the wire format forms it refuses, and the type namespace names.
 - `packages/core/codegen-core/src/front-queries`: The framework-neutral query plan the front targets render (ADR 0021): per operation its form, export names, key, resource, call options and next-page rule, the front runtime each front target copies into its output, and the query module sources the TypeScript front targets share (plain fetch and TanStack Query factories, and the parts of the plain fetch hooks and composables).
-- `packages/core/codegen-core/src/node-server`: The shared server boundary every Node and Web-standard server target generates (ADR 0016, ADR 0020): the framework-neutral runtime, imported from `@seampact/server-runtime` or still copied into the generated tree, the generate-time check of the installed runtime (ADR 0025), the emitters of the route table, handler interfaces and hook types, the target options parser, the path segments a router cannot read, and the assembly of one api's boundary files around a target's placement.
+- `packages/core/codegen-core/src/node-server`: The shared server boundary every Node and Web-standard server target generates (ADR 0016, ADR 0020) over the runtime it imports from `@seampact/server-runtime`: the generate-time check of the installed runtime (ADR 0025), the emitters of the route table, handler interfaces and hook types, the target options parser, the path segments a router cannot read, and the assembly of one api's boundary files around a target's placement.
 - `packages/core/codegen-core/src/validators`: The validator-neutral half of every validators target: the module layout and export names, the descriptor, the `rules` option, the shared wire checks, and the plan of each schema and operation input with every refusal, which a target renders in its own library.
 
 ### `@seampact/compiler`
@@ -134,7 +134,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/server-runtime`
 
-- `packages/runtime/server-runtime/src`: The shared runtime of the generated Node and Web-standard server boundaries (ADR 0025): the 27 framework-neutral modules at this root export, the transport modules at `/node` and `/web`, and one placement per framework.
+- `packages/runtime/server-runtime/src`: The shared runtime of the generated Node and Web-standard server boundaries (ADR 0025): the 27 framework-neutral modules at this root export, the transport modules at `/node` and `/web`, and one placement per framework at `/express`, `/fastify`, `/nestjs`, `/adonis` and `/hono`.
 
 ### `@seampact/signed-webhooks`
 

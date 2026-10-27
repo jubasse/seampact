@@ -7,6 +7,7 @@ import {
   REFERENCE_COMPILER_OPTIONS,
   readGoldenIr,
   referenceLinks,
+  referenceServerOutput,
   TYPE_CHECK_TIMEOUT_MILLISECONDS,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
@@ -59,6 +60,7 @@ describe("the generated reference boundary compiles", () => {
         ir: readGoldenIr("tasks"),
         options: { reply },
         links: await referenceLinks(PROJECT, "tasks"),
+        outputDirectory: referenceServerOutput(PROJECT, "tasks"),
         artefacts: new Set(["boundary", "index"]),
       });
       const nestjsModule =
@@ -67,7 +69,9 @@ describe("the generated reference boundary compiles", () => {
           : undefined;
 
       expect(nestjsModule?.contents).toMatch(
-        new RegExp(`createNestBoundary<SeampactHooks>\\(CONTRACT_API, \\{[^}]*reply: "${reply}"`),
+        new RegExp(
+          `createNestBoundary<SeampactHooks>\\(\\s*CONTRACT_API,\\s*\\{[^}]*reply: "${reply}"`,
+        ),
       );
     },
   );
@@ -127,6 +131,7 @@ async function reportedForms(
     ir,
     options: {},
     links: await referenceLinks(PROJECT, api),
+    outputDirectory: referenceServerOutput(PROJECT, api),
     artefacts: new Set(["boundary", "index"]),
   });
 

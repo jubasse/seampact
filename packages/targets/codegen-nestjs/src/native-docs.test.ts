@@ -10,6 +10,7 @@ import {
   readGoldenIr,
   referenceLinks,
   referenceNativeDocsDocument,
+  referenceServerOutput,
 } from "@seampact/codegen-core/node-server/test-support";
 import { beforeAll, describe, expect, test } from "vitest";
 import { target as nestjsTarget } from "./index.js";
@@ -140,6 +141,7 @@ describe("the NestJS native document", () => {
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await referenceLinks(PROJECT, "tasks"),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index"]),
     });
 
@@ -165,6 +167,7 @@ describe("the NestJS native document", () => {
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await referenceLinks(PROJECT, "tasks"),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
       artefacts: new Set(["boundary", "index", "nativeDocs"]),
       ...(nativeDocsDocument === undefined ? {} : { nativeDocsDocument }),
     });

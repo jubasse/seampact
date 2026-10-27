@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   type FingerprintRoute,
   idempotencyFingerprint,
-} from "../../node-server-runtime/idempotency-fingerprint.js";
+} from "../../../../runtime/server-runtime/src/idempotency-fingerprint.js";
 import { fingerprintHeaderNames } from "./fingerprint-headers.js";
 
 const CREATE_EVENT: FingerprintRoute = {

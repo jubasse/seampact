@@ -27,8 +27,6 @@ function stubOwnValidatorsTarget() {
     packageVersion: "1.2.3",
     format,
     placement: {
-      runtimeModule: "stub-boundary",
-      runtimeSourceUrl: new URL("./stub-boundary.ts", import.meta.url),
       frameworkModule: "stub",
       frameworkSource: () => "",
       ownValidators: () => undefined,
@@ -43,8 +41,6 @@ function stubNodeServerTarget(validatorStyles: readonly ValidatorStyle[]) {
     packageVersion: "1.2.3",
     format,
     placement: {
-      runtimeModule: "stub-boundary",
-      runtimeSourceUrl: new URL("./stub-boundary.ts", import.meta.url),
       frameworkModule: "stub",
       frameworkSource: () => "",
     },
