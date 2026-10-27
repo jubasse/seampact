@@ -1,13 +1,14 @@
 package com.example.tasks.api.spring;
 
-import com.example.tasks.api.spring.runtime.BootCheck;
-import com.example.tasks.api.spring.runtime.BoundaryFilter;
-import com.example.tasks.api.spring.runtime.BoundaryMvcConfigurer;
-import com.example.tasks.api.spring.runtime.ReplyHandlerFirst;
-import com.example.tasks.api.spring.runtime.SeampactBoundary;
+import io.github.jubasse.seampact.springboot.runtime.BootCheck;
+import io.github.jubasse.seampact.springboot.runtime.BoundaryFilter;
+import io.github.jubasse.seampact.springboot.runtime.BoundaryMvcConfigurer;
+import io.github.jubasse.seampact.springboot.runtime.ReplyHandlerFirst;
+import io.github.jubasse.seampact.springboot.runtime.SeampactBoundary;
 import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -29,7 +30,8 @@ public class TasksSeampactConfiguration {
     }
 
     @Bean
-    public FilterRegistrationBean<BoundaryFilter> tasksSeampactFilter(SeampactBoundary boundary) {
+    public FilterRegistrationBean<BoundaryFilter> tasksSeampactFilter(
+            @Qualifier("tasksSeampactBoundary") SeampactBoundary boundary) {
         FilterRegistrationBean<BoundaryFilter> registration = new FilterRegistrationBean<>(new BoundaryFilter(boundary));
         registration.setOrder(BoundaryFilter.ORDER);
         registration.setDispatcherTypes(DispatcherType.REQUEST, DispatcherType.ASYNC);
@@ -38,18 +40,20 @@ public class TasksSeampactConfiguration {
     }
 
     @Bean
-    public WebMvcConfigurer tasksSeampactMvc(SeampactBoundary boundary) {
+    public WebMvcConfigurer tasksSeampactMvc(
+            @Qualifier("tasksSeampactBoundary") SeampactBoundary boundary) {
         return new BoundaryMvcConfigurer(boundary);
     }
 
     @Bean
     public static BeanPostProcessor tasksSeampactReplyHandlerFirst(
-            ObjectProvider<SeampactBoundary> boundary) {
+            @Qualifier("tasksSeampactBoundary") ObjectProvider<SeampactBoundary> boundary) {
         return new ReplyHandlerFirst(boundary);
     }
 
     @Bean
-    public BootCheck tasksSeampactBootCheck(SeampactBoundary boundary) {
+    public BootCheck tasksSeampactBootCheck(
+            @Qualifier("tasksSeampactBoundary") SeampactBoundary boundary) {
         return new BootCheck(boundary);
     }
 }

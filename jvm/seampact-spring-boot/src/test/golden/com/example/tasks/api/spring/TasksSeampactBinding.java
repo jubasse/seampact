@@ -49,6 +49,9 @@ import com.example.tasks.api.StripeAuthenticateHook;
 import com.example.tasks.api.StripeAuthenticateRequest;
 import com.example.tasks.api.StripeCredentials;
 import com.example.tasks.api.TasksContractException;
+import com.example.tasks.api.TasksDecider;
+import com.example.tasks.api.TasksScopeResolver;
+import com.example.tasks.api.TasksUnexpectedErrorListener;
 import com.example.tasks.api.UpdatePreferencesErrors;
 import com.example.tasks.api.UpdatePreferencesInput;
 import com.example.tasks.api.UpdatePreferencesResult;
@@ -58,12 +61,15 @@ import com.example.tasks.api.UpdateTaskResult;
 import com.example.tasks.api.UserAuthenticateHook;
 import com.example.tasks.api.UserAuthenticateRequest;
 import com.example.tasks.api.UserCredentials;
-import com.example.tasks.api.spring.runtime.ApiBinding;
-import com.example.tasks.api.spring.runtime.Denial;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
 import io.github.jubasse.seampact.hooks.SignedTemplateRequest;
+import io.github.jubasse.seampact.springboot.runtime.ApiBinding;
+import io.github.jubasse.seampact.springboot.runtime.Decider;
+import io.github.jubasse.seampact.springboot.runtime.Denial;
+import io.github.jubasse.seampact.springboot.runtime.ScopeResolver;
+import io.github.jubasse.seampact.springboot.runtime.UnexpectedErrorListener;
 import java.lang.annotation.Annotation;
 import java.util.Map;
 import java.util.Optional;
@@ -263,6 +269,26 @@ public final class TasksSeampactBinding implements ApiBinding {
         return Map.ofEntries(
         Map.entry("user", UserAuthenticateHook.class),
         Map.entry("stripe", StripeAuthenticateHook.class));
+    }
+
+    @Override
+    public Class<? extends Decider> deciderType() {
+        return TasksDecider.class;
+    }
+
+    @Override
+    public Class<? extends ScopeResolver> scopeResolverType() {
+        return TasksScopeResolver.class;
+    }
+
+    @Override
+    public Class<? extends UnexpectedErrorListener> unexpectedErrorListenerType() {
+        return TasksUnexpectedErrorListener.class;
+    }
+
+    @Override
+    public String generatorVersion() {
+        return "0.0.0";
     }
 
     @Override

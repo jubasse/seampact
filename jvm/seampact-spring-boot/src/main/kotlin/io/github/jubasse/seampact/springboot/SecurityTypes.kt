@@ -123,13 +123,13 @@ private fun securityConfigurationType(layout: JavaLayout, mode: SpringSecurityMo
         .addAnnotation(AnnotationSpec.builder(CONFIGURATION).addMember("proxyBeanMethods", "false").build())
         .addMethod(
             securityBean("${prefix}Matchers", matchers)
-                .addParameter(boundary, "boundary")
+                .addParameter(boundaryParameter(layout, boundary))
                 .addStatement("return new \$T(boundary)", matchers)
                 .build(),
         )
         .addMethod(
             securityBean("${prefix}Refusals", securityRefusals)
-                .addParameter(boundary, "boundary")
+                .addParameter(boundaryParameter(layout, boundary))
                 .addStatement("return new \$T(boundary)", securityRefusals)
                 .build(),
         )

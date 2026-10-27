@@ -7,12 +7,18 @@ import com.example.tasksservice.api.ServiceAuthenticateHook;
 import com.example.tasksservice.api.ServiceAuthenticateRequest;
 import com.example.tasksservice.api.ServiceCredentials;
 import com.example.tasksservice.api.TasksServiceContractException;
-import com.example.tasksservice.api.spring.runtime.ApiBinding;
-import com.example.tasksservice.api.spring.runtime.Denial;
+import com.example.tasksservice.api.TasksServiceDecider;
+import com.example.tasksservice.api.TasksServiceScopeResolver;
+import com.example.tasksservice.api.TasksServiceUnexpectedErrorListener;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
 import io.github.jubasse.seampact.hooks.SignedTemplateRequest;
+import io.github.jubasse.seampact.springboot.runtime.ApiBinding;
+import io.github.jubasse.seampact.springboot.runtime.Decider;
+import io.github.jubasse.seampact.springboot.runtime.Denial;
+import io.github.jubasse.seampact.springboot.runtime.ScopeResolver;
+import io.github.jubasse.seampact.springboot.runtime.UnexpectedErrorListener;
 import java.lang.annotation.Annotation;
 import java.util.Map;
 import java.util.Optional;
@@ -57,6 +63,26 @@ public final class TasksServiceSeampactBinding implements ApiBinding {
     public Map<String, Class<?>> authenticateHooks() {
         return Map.ofEntries(
         Map.entry("service", ServiceAuthenticateHook.class));
+    }
+
+    @Override
+    public Class<? extends Decider> deciderType() {
+        return TasksServiceDecider.class;
+    }
+
+    @Override
+    public Class<? extends ScopeResolver> scopeResolverType() {
+        return TasksServiceScopeResolver.class;
+    }
+
+    @Override
+    public Class<? extends UnexpectedErrorListener> unexpectedErrorListenerType() {
+        return TasksServiceUnexpectedErrorListener.class;
+    }
+
+    @Override
+    public String generatorVersion() {
+        return "0.0.0";
     }
 
     @Override

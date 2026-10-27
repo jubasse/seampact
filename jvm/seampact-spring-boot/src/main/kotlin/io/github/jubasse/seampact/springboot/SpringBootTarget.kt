@@ -20,12 +20,18 @@ public object SpringBootTarget {
     /** The `use` of a target entry this target generates (ADR 0011 "The app config"). */
     public const val USE: String = "io.github.jubasse:seampact-spring-boot"
 
+    /** The full version of this target, stamped into each api's binding and compared with the runtime's (ADR 0025). */
+    public const val VERSION: String = SpringBootTargetVersion.VERSION
+
+    /** The coordinates of the runtime the generated code imports, released at [VERSION] (ADR 0025, G1). */
+    public const val RUNTIME_MODULE: String = "io.github.jubasse:seampact-spring-runtime"
+
     /** The IR kinds and features this target reads: a build plugin reads each api's IR with it (`IrReader.read`). */
     public val IR_SUPPORT: IrSupport = IrSupport.ofModel(kinds = listOf("httpOperation"))
 
     /**
      * The Java files of one api: its types, the endpoints interfaces, the composed annotations, the results, the
-     * exceptions, the boundary's registration and contract table, the copied boundary runtime, and under
+     * exceptions, the per-api hook interfaces, the boundary's registration and contract table, and under
      * `frameworkDocs: off` the properties file that turns springdoc's document off, sorted by path.
      *
      * @throws SpringBootRefusedException an option, an entry member or an IR form this release does not serve
@@ -44,9 +50,7 @@ public object SpringBootTarget {
         val types = javaTypes(layout, NativeDocs.of(entry), entry.mount, refusals) + boundaryTypes(layout, options, entry, refusals)
         refusals.throwIfAny()
 
-        val runtime = runtimeFiles(layout, options)
-
-        return (types.map { (packageName, type) -> javaFile(packageName, type, options) } + runtime + frameworkDocsFiles(ir, entry))
+        return (types.map { (packageName, type) -> javaFile(packageName, type, options) } + frameworkDocsFiles(ir, entry))
             .sortedBy { it.path }
     }
 
@@ -98,7 +102,7 @@ public object SpringBootTarget {
 
     // The Spring placement of the api's boundary: its contract table, binding, registration and hook interfaces.
     private fun boundaryTypes(layout: JavaLayout, options: SpringBootOptions, entry: SpringBootEntry, refusals: Refusals): List<Pair<String, TypeSpec>> =
-        authenticateHookTypes(layout).map { layout.operationsPackage to it } +
+        (authenticateHookTypes(layout) + apiHookTypes(layout)).map { layout.operationsPackage to it } +
             listOf(
                 layout.springPackage to contractTableType(layout, options, entry),
                 layout.springPackage to bindingType(layout),

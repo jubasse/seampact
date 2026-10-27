@@ -1,6 +1,6 @@
 package com.example.optins.api.spring;
 
-import com.example.optins.api.spring.runtime.SeampactBoundary;
+import io.github.jubasse.seampact.springboot.runtime.SeampactBoundary;
 import java.util.Set;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 

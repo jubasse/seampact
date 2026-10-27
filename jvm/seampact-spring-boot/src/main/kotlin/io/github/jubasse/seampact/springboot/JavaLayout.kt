@@ -60,13 +60,15 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
 
     val contractException: ClassName = ClassName.get(operationsPackage, "${apiTypeName}ContractException")
     val redaction: ClassName = ClassName.get(operationsPackage, "${apiTypeName}Redaction")
-    val runtimePackage: String = "$springPackage.runtime"
+    val decider: ClassName = ClassName.get(operationsPackage, "${apiTypeName}Decider")
+    val scopeResolver: ClassName = ClassName.get(operationsPackage, "${apiTypeName}ScopeResolver")
+    val unexpectedErrorListener: ClassName = ClassName.get(operationsPackage, "${apiTypeName}UnexpectedErrorListener")
     val contractTable: ClassName = ClassName.get(springPackage, "${apiTypeName}ContractTable")
     val binding: ClassName = ClassName.get(springPackage, "${apiTypeName}SeampactBinding")
     val configuration: ClassName = ClassName.get(springPackage, "${apiTypeName}SeampactConfiguration")
 
-    /** A class of the copied runtime. */
-    fun runtime(simpleName: String): ClassName = ClassName.get(runtimePackage, simpleName)
+    /** A class of seampact-spring-runtime, which the generated code imports (ADR 0025). */
+    fun runtime(simpleName: String): ClassName = ClassName.get(RUNTIME_PACKAGE, simpleName)
 
     private val schemaClasses = LinkedHashMap<SchemaId, ClassName>()
     private val enumClasses = LinkedHashMap<EnumId, ClassName>()
@@ -79,6 +81,9 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
     init {
         claim(contractException, "the api's contract exception base", IrPlace.ROOT.below("api", "name"), refusals)
         claim(redaction, "the api's redaction constant", IrPlace.ROOT.below("api", "name"), refusals)
+        claim(decider, "the api's decider interface", IrPlace.ROOT.below("api", "name"), refusals)
+        claim(scopeResolver, "the api's scope resolver interface", IrPlace.ROOT.below("api", "name"), refusals)
+        claim(unexpectedErrorListener, "the api's unexpected-error listener interface", IrPlace.ROOT.below("api", "name"), refusals)
 
         for (enumId in kept.enums) {
             val place = IrPlace.ROOT.below("enums", enumId, "name")

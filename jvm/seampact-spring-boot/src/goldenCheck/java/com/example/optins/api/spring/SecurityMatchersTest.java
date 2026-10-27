@@ -3,9 +3,9 @@ package com.example.optins.api.spring;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.example.optins.api.spring.runtime.BoundaryFilter;
-import com.example.optins.api.spring.runtime.SeampactBoundary;
-import com.example.optins.api.spring.runtime.UnexpectedErrorListener;
+import com.example.optins.api.TasksServiceUnexpectedErrorListener;
+import io.github.jubasse.seampact.springboot.runtime.BoundaryFilter;
+import io.github.jubasse.seampact.springboot.runtime.SeampactBoundary;
 import jakarta.servlet.FilterChain;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
@@ -53,7 +53,7 @@ class SecurityMatchersTest {
 
     private static SeampactBoundary boundary() {
         StaticListableBeanFactory beans = new StaticListableBeanFactory();
-        UnexpectedErrorListener listener = failure -> { };
+        TasksServiceUnexpectedErrorListener listener = failure -> { };
         beans.addBean("unexpectedFailures", listener);
 
         return new SeampactBoundary(TasksServiceContractTable.json(), new TasksServiceSeampactBinding(), beans, new StandardEnvironment());
@@ -62,7 +62,7 @@ class SecurityMatchersTest {
     private static AnnotationConfigWebApplicationContext securityContext(SeampactBoundary boundary) {
         AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
         context.setServletContext(new MockServletContext());
-        context.addBeanFactoryPostProcessor(beanFactory -> beanFactory.registerSingleton("seampactBoundary", boundary));
+        context.addBeanFactoryPostProcessor(beanFactory -> beanFactory.registerSingleton("tasksServiceSeampactBoundary", boundary));
         context.register(AppSecurity.class, TasksServiceSecurityConfiguration.class);
         context.refresh();
 
