@@ -67,6 +67,20 @@ test("reads the framework-route allow-list of a target entry", async () => {
   });
 });
 
+test.each(["/livewire-*/**", "/livewire*/**", "/*.json", "/a/*-*-*/z"])(
+  "reads the framework-route pattern %s, a star inside a segment",
+  async (path) => {
+    const outcome = await readConfigText(
+      `${SERVER_ENTRY_HEAD}    frameworkRoutes:\n      - { path: '${path}', reason: r }\n`,
+    );
+
+    expect(outcome).toMatchObject({
+      status: "read",
+      config: { entries: [{ entry: { frameworkRoutes: [{ path, reason: "r" }] } }] },
+    });
+  },
+);
+
 test("reads the framework-route check switched off", async () => {
   const outcome = await readConfigText(
     `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { frameworkRoutes: false } }\n`,
@@ -126,7 +140,8 @@ test.each([
     '{ path: /metrics, reason: "" }',
     "The value must NOT have fewer than 1 characters.",
   ],
-  ["a star inside a segment", "{ path: '/metrics*', reason: r }", "The value must match pattern"],
+  ["two stars inside a segment", "{ path: '/metrics**', reason: r }", "The value must match pattern"],
+  ["three stars", "{ path: '/a/***', reason: r }", "The value must match pattern"],
   ["a relative path", "{ path: metrics, reason: r }", "The value must match pattern"],
   [
     "an unknown method",

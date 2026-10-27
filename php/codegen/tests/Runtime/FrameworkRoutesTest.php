@@ -9,7 +9,7 @@ use Seampact\Codegen\Runtime\FrameworkRoutes;
 
 /**
  * The framework-route allow-list of the boot check, the rule Spring's `BootCheck.isAllowListed` shares: `*` takes
- * one segment, `**` any number, and a method takes only a route answering that one method besides HEAD.
+ * one segment, `**` any number, a `*` inside a segment any characters but `/`, and a method takes only a route answering that one method besides HEAD.
  */
 final class FrameworkRoutesTest extends TestCase
 {
@@ -30,6 +30,19 @@ final class FrameworkRoutesTest extends TestCase
         self::assertTrue(FrameworkRoutes::allows($allowed, '/__seampact/script', ['PUT']));
         self::assertTrue(FrameworkRoutes::allows($allowed, '/__seampact/a/b', ['GET', 'HEAD']));
         self::assertFalse(FrameworkRoutes::allows($allowed, '/__seampactx/script', ['PUT']));
+    }
+
+    public function testAStarInsideASegmentTakesAnyCharactersButASlash(): void
+    {
+        $allowed = [['path' => '/livewire-*/**', 'method' => null]];
+
+        self::assertTrue(FrameworkRoutes::allows($allowed, '/livewire-3f9a/upload-file', ['POST']));
+        self::assertTrue(FrameworkRoutes::allows($allowed, '/livewire-/update', ['POST']));
+        self::assertFalse(FrameworkRoutes::allows($allowed, '/live-3f9a/upload-file', ['POST']));
+        self::assertTrue(FrameworkRoutes::allows([['path' => '/livewire*/**', 'method' => null]], '/livewire/update', ['POST']));
+        self::assertFalse(FrameworkRoutes::allows([['path' => '/livewire-*', 'method' => null]], '/livewire-3f9a/upload-file', ['POST']));
+        self::assertTrue(FrameworkRoutes::allows([['path' => '/*.json', 'method' => null]], '/up.json', ['GET']));
+        self::assertFalse(FrameworkRoutes::allows([['path' => '/*.json', 'method' => null]], '/up.xml', ['GET']));
     }
 
     public function testAMethodTakesOnlyARouteAnsweringThatOneMethod(): void
