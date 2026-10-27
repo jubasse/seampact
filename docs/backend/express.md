@@ -79,7 +79,7 @@ npx tsc -p .
 
 You see no output.
 
-A throttler's 429 works out of the box with `express-rate-limit`. When the operation's `rateLimited` code takes `retryAfterMs`, seampact fills it from the throttler's `Retry-After` (seconds or an HTTP date), read from the reply or from the exception. Without a usable `Retry-After`, the reply is a logged 500 that names the fix: answer the code from the handler with its params.
+A throttler's 429 works out of the box with `express-rate-limit`. When the operation's `rateLimited` code requires `retryAfterMs`, seampact fills it from the throttler's `Retry-After` (seconds or an HTTP date), read from the reply or from the exception. Without a usable `Retry-After`, the reply is a logged 500 (with an optional `retryAfterMs`, the code is answered without it) that names the fix: answer the code from the handler with its params.
 
 ## Behind a reverse proxy and in Docker
 
