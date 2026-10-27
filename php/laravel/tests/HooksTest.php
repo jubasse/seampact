@@ -9,6 +9,10 @@ use Illuminate\Container\Container;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\UnexpectedFailure;
+use Seampact\Hooks\IdempotencyBegin;
+use Seampact\Hooks\IdempotencyClaim;
+use Seampact\Hooks\IdempotencyStore;
+use Seampact\Hooks\StoredResponse;
 use Seampact\Laravel\Runtime\Hooks;
 
 final class HooksTest extends TestCase
@@ -49,6 +53,19 @@ final class HooksTest extends TestCase
         self::assertSame($serviceListener, $hooks->unexpectedErrorListener(ApiContract::of(ServiceListenerContract::class)));
     }
 
+    public function testTwoApisEachReachTheIdempotencyStoreBoundUnderTheirOwnKey(): void
+    {
+        $tasksStore = self::unusedStore();
+        $serviceStore = self::unusedStore();
+        $container = new Container();
+        $container->instance(Hooks::idempotencyStoreKey('tasks'), $tasksStore);
+        $container->instance(Hooks::idempotencyStoreKey('service'), $serviceStore);
+        $hooks = new Hooks($container);
+
+        self::assertSame($tasksStore, $hooks->idempotencyStore(ApiContract::of(TasksListenerContract::class)));
+        self::assertSame($serviceStore, $hooks->idempotencyStore(ApiContract::of(ServiceListenerContract::class)));
+    }
+
     public function testADenialAsNotFoundIsAnAccessDenialHidingTheRecord(): void
     {
         $hooks = new Hooks(new Container());
@@ -58,5 +75,25 @@ final class HooksTest extends TestCase
         self::assertTrue($hooks->isNotFoundDenial($hidden));
         self::assertFalse($hooks->isNotFoundDenial(new AuthorizationException()));
         self::assertFalse($hooks->isNotFoundDenial((new AuthorizationException())->withStatus(403)));
+    }
+
+    private static function unusedStore(): IdempotencyStore
+    {
+        return new class () implements IdempotencyStore {
+            public function begin(IdempotencyClaim $claim): IdempotencyBegin
+            {
+                throw new \LogicException('not called by this test');
+            }
+
+            public function complete(string $key, StoredResponse $response): void
+            {
+                throw new \LogicException('not called by this test');
+            }
+
+            public function abandon(string $key): void
+            {
+                throw new \LogicException('not called by this test');
+            }
+        };
     }
 }
