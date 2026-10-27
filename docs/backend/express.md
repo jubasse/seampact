@@ -97,6 +97,24 @@ getNote(input: NotesExpress.HandlerInputs["getNote"]) {
 
 The scope's `value` is `unknown`: narrow it before use.
 
+## Test your routes
+
+Build the app as `main.ts` does, without `listen`, and send requests with `supertest`. Send the credential header your authenticate hook reads.
+
+```ts
+const reply = await request(app).get(`/v1/notes/${noteId}`).set("authorization", "Bearer test-user");
+```
+
+To test a handler without HTTP, call it with a plain input. Add `principal` and `scopes` yourself: nothing checks them on a direct call.
+
+```ts
+const reply = await notesHandlers.getNote({ path: { noteId }, principal: { userId } });
+```
+
+To use test hooks, pass them to the router in the test app: `router({ handlers, hooks: testHooks })`.
+
+With `NODE_ENV=development`, an exception your handler throws goes to Express's error handler, which shows its stack. seampact logs its message and the file and line it came from. In any other environment the client gets the api's 500.
+
 ## Behind a reverse proxy and in Docker
 
 Trust only your proxy's addresses, never `true`, so `req.ip` and `req.protocol` are the caller's:

@@ -176,6 +176,24 @@ getNote(input: NotesAdonis.HandlerInputs['getNote']) {
 
 The scope's `value` is `unknown`: narrow it before use.
 
+## Test your routes
+
+Send requests with Japa's API client (`@japa/api-client`). Send the credential header your authenticate hook reads.
+
+```ts
+const reply = await client.get(`/v1/notes/${noteId}`).header('authorization', 'Bearer test-user')
+```
+
+To test a controller method without HTTP, call it with a plain input. Add `principal` and `scopes` yourself: nothing checks them on a direct call.
+
+```ts
+const reply = await new NotesController().getNote({ path: { noteId }, principal: { userId } })
+```
+
+`registerRoutes` runs once when the app starts. To use test hooks, have `tasksHooks()` return them when `app.inTest` is true (`import app from '@adonisjs/core/services/app'`).
+
+With `NODE_ENV=development` (what `node ace serve` sets), an exception your controller throws goes to your exception handler, which shows AdonisJS's error page. seampact logs its message and the file and line it came from. In any other environment the client gets the api's 500.
+
 ## Pick the port
 
 AdonisJS listens on port 3333. The run step uses 3000. In `.env`, set `PORT=3000`.

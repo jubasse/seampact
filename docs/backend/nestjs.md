@@ -72,7 +72,7 @@ import { NotesController } from "./notes-controller.js";
 export class AppModule {}
 ```
 
-Create `src/main.ts`. The body parser and the filter make bad JSON and unknown routes answer in the contract's error format.
+Create `src/main.ts`. `configureApp` installs the JSON parser and the filter that make bad JSON and unknown routes answer in the contract's error format.
 
 ```ts
 import "reflect-metadata";
@@ -81,10 +81,9 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import * as NotesNest from "./__generated__/server/notes/index.js";
 import { AppModule } from "./app-module.js";
 
-const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-app.useBodyParser("json", { limit: NotesNest.LARGEST_BODY_LIMIT, strict: false });
-app.useGlobalFilters(NotesNest.preRoutingFilter);
+NotesNest.configureApp(app);
 
 await app.listen(3000);
 ```
@@ -115,6 +114,35 @@ getNote(
 ```
 
 The input typed with `HandlerInputs` carries the same `principal` and `scopes`, read-only. Spreading or serialising it leaves them out. The scope's `value` is `unknown`: narrow it before use.
+
+## Test your routes
+
+Build a testing module, set the app up with `configureApp`, as `main.ts` does, and send requests with `supertest`. Send the credential header your authenticate hook reads.
+
+```ts
+const moduleRef = await Test.createTestingModule({
+  imports: [NotesNest.SeampactModule.forRoot(testHooks, { unboundOperations: "warn" })],
+  controllers: [NotesController],
+}).compile();
+const app = moduleRef.createNestApplication<NestExpressApplication>();
+
+NotesNest.configureApp(app);
+await app.init();
+
+const reply = await request(app.getHttpServer()).get(`/v1/notes/${noteId}`).set("authorization", "Bearer test-user");
+```
+
+`unboundOperations: "warn"` lets a testing module hold only some controllers. The app starts, logs the operations no controller serves, and their routes answer the api's 404. Leave it out of your app module: there, a missing operation stops the boot.
+
+To test a controller method without HTTP, call it with a plain input and the caller. Nothing checks them on a direct call.
+
+```ts
+const reply = await new NotesController().getNote({ path: { noteId } }, { userId });
+```
+
+To replace your hooks in a test, use `overrideProvider(NotesNest.SEAMPACT_HOOKS).useValue(testHooks)`.
+
+With `NODE_ENV=development`, an exception your handler throws goes to NestJS's exception filters, which log its stack. seampact logs its message and the file and line it came from. In any other environment the client gets the api's 500.
 
 ## Behind a reverse proxy and in Docker
 
@@ -152,16 +180,15 @@ TasksNest.SeampactModule.forRootAsync({
 });
 ```
 
-Install `@nestjs/platform-express` (the Fastify platform is refused at boot), `reflect-metadata` and `rxjs`, and set `experimentalDecorators` in `tsconfig.json`. Import the generated module with your hooks, start the app with `rawBody: true` so signed routes see the bytes that were signed, and register `preRoutingFilter`. Without the filter, malformed JSON and unknown routes under the api's prefix answer with NestJS's own error body instead of the contract's format.
+Install `@nestjs/platform-express` (the Fastify platform is refused at boot), `reflect-metadata` and `rxjs`, and set `experimentalDecorators` in `tsconfig.json`. Import the generated module with your hooks and call `configureApp(app)` before `listen`. It installs the JSON parser at `LARGEST_BODY_LIMIT`, keeping the bytes of signed routes, and registers `preRoutingFilter`. Without the filter, malformed JSON and unknown routes under the api's prefix answer with NestJS's own error body instead of the contract's format. With two apis, or a global filter of your own, write these steps yourself: `app.useBodyParser("json", { limit, strict: false, verify: TasksNest.keepRawBody })`, then call each api's `renderPreRoutingError` from your filter.
 
 ```ts
 @Module({ imports: [TasksNest.SeampactModule.forRoot(tasksHooks())], controllers: [TasksController] })
 export class AppModule {}
 
-const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-app.useBodyParser("json", { limit: TasksNest.LARGEST_BODY_LIMIT, strict: false });
-app.useGlobalFilters(TasksNest.preRoutingFilter);
+TasksNest.configureApp(app);
 ```
 
 For `@nestjs/swagger`, write the document with one call. It adds the contract schemas and stops the app if one of your classes replaces one. The setup is in [OpenAPI and docs](../configuration/openapi-and-docs.md).

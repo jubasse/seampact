@@ -114,6 +114,24 @@ getNote(input: NotesHono.HandlerInputs["getNote"]) {
 
 The scope's `value` is `unknown`: narrow it before use.
 
+## Test your routes
+
+Build the app as `main.ts` does, without `serve`, and send requests with `app.request`. Send the credential header your authenticate hook reads.
+
+```ts
+const reply = await app.request(`/v1/notes/${noteId}`, { headers: { authorization: "Bearer test-user" } });
+```
+
+To test a handler without HTTP, call it with a plain input. Add `principal` and `scopes` yourself: nothing checks them on a direct call.
+
+```ts
+const reply = await notesEndpoints.getNote({ path: { noteId }, principal: { userId } });
+```
+
+To use test hooks, pass them to `registerRoutes` in the test app: `registerRoutes(app, { handlers, hooks: testHooks })`.
+
+An exception your handler throws reaches your `onError`. With the `onError` of `main.ts`, the client gets the api's 500 and seampact logs the exception. To see it in the reply while you develop, return your own reply from `onError` when `NODE_ENV` is `development`.
+
 ## Behind a reverse proxy and in Docker
 
 Hono has no trust-proxy setting. Behind a proxy, `getConnInfo` gives the proxy's address: in `clientAddress`, read the last `X-Forwarded-For` entry instead, and only when the request comes from your proxy. Your hooks get the address it returns.
