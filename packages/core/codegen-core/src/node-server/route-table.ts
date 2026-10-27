@@ -921,6 +921,7 @@ function errorEntry(
     return null;
   }
 
+  const paramMembers = objectParamMembers(ir, declaration.params);
   const roles =
     error.roles?.map((binding) => binding.role) ??
     (declaration.default === undefined ? [] : [declaration.default]);
@@ -952,32 +953,19 @@ function errorEntry(
             param: error.retryHeader.param,
             unit: error.retryHeader.unit,
           },
-    requiresParams: paramsRequireAMember(ir, declaration.params) ? true : undefined,
-    requiredParams: requiredParamNames(ir, declaration.params),
+    requiresParams: paramsRequireAMember(declaration.params, paramMembers) ? true : undefined,
+    requiredParams: namesOf(paramMembers?.filter((member) => member.required)),
+    paramNames: namesOf(paramMembers),
     noStore: declaration.noStore === true ? true : undefined,
   };
 }
 
-// Whether an error code's params schema has a member with no default the reply must carry; a schema that is not an
-// object counts as required, so a status alone never answers it.
-function paramsRequireAMember(ir: ContractIR, paramsSchema: SchemaId | undefined): boolean {
-  if (paramsSchema === undefined) return false;
-
-  const schema = Object.hasOwn(ir.schemas, paramsSchema) ? ir.schemas[paramsSchema] : undefined;
-
-  if (schema === undefined || !isKnownVariant("Schema", schema) || schema.kind !== "object") {
-    return true;
-  }
-
-  return schema.properties.some((property) => !property.optional && property.default === undefined);
-}
-
-// The members of an object params schema with no default; undefined when there are none or the schema is not an
-// object, whose params the boundary can never fill itself.
-function requiredParamNames(
+// The members of an error code's object params schema; undefined when there are no params or they are not an object,
+// whose members the boundary can never fill itself.
+function objectParamMembers(
   ir: ContractIR,
   paramsSchema: SchemaId | undefined,
-): string[] | undefined {
+): readonly { readonly name: string; readonly required: boolean }[] | undefined {
   const schema =
     paramsSchema !== undefined && Object.hasOwn(ir.schemas, paramsSchema)
       ? ir.schemas[paramsSchema]
@@ -987,11 +975,27 @@ function requiredParamNames(
     return undefined;
   }
 
-  const names = schema.properties
-    .filter((property) => !property.optional && property.default === undefined)
-    .map((property) => property.name);
+  return schema.properties.map((property) => ({
+    name: property.name,
+    required: !property.optional && property.default === undefined,
+  }));
+}
 
-  return names.length === 0 ? undefined : names;
+function namesOf(members: ReturnType<typeof objectParamMembers>): string[] | undefined {
+  return members === undefined || members.length === 0
+    ? undefined
+    : members.map((member) => member.name);
+}
+
+// Whether the params schema has a member with no default the reply must carry; a schema that is not an object counts
+// as required, so a status alone never answers it.
+function paramsRequireAMember(
+  paramsSchema: SchemaId | undefined,
+  members: ReturnType<typeof objectParamMembers>,
+): boolean {
+  if (paramsSchema === undefined) return false;
+
+  return members === undefined || members.some((member) => member.required);
 }
 
 // Whether a template writes the slot anywhere: as a value, a member name, a text part or inside a nested template.

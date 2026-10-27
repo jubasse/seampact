@@ -254,6 +254,9 @@ importers:
         specifier: workspace:*
         version: link:../spec
     devDependencies:
+      '@seampact/hooks':
+        specifier: workspace:*
+        version: link:../../runtime/hooks
       prettier:
         specifier: 3.9.10
         version: 3.9.10

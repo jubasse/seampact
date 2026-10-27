@@ -206,11 +206,11 @@ function statusCodeError(
   fixes: StatusErrorFixes,
   roleData: unknown,
 ): ContractError {
-  if (entry.requiresParams !== true) return new ContractError(entry.code);
-
   const filled = filledRoleParams(entry, status, roleData);
 
   if (filled !== undefined) return new ContractError(entry.code, filled);
+
+  if (entry.requiresParams !== true) return new ContractError(entry.code);
 
   return unexpectedError(
     route,
@@ -224,18 +224,20 @@ function statusCodeError(
 function filledRoleParams(entry: ErrorEntry, status: number, roleData: unknown): unknown {
   const role = STATUS_ROLES[status];
 
-  if (role === undefined || roleData === undefined || entry.requiredParams === undefined) {
-    return undefined;
-  }
+  if (role === undefined || roleData === undefined) return undefined;
 
+  // Params that are not an object of members can never be filled by the boundary.
+  if (entry.requiresParams === true && entry.requiredParams === undefined) return undefined;
+
+  const requiredNames = entry.requiredParams ?? [];
   const params =
     entry.roleParams?.[role] === undefined
-      ? byNameParams(entry.requiredParams, roleData)
+      ? byNameParams(entry.paramNames ?? requiredNames, roleData)
       : roleParams(entry, role, roleData);
 
-  if (!isPlainObject(params)) return undefined;
+  if (!isPlainObject(params) || Object.keys(params).length === 0) return undefined;
 
-  return entry.requiredParams.every((name) => params[name] !== undefined) ? params : undefined;
+  return requiredNames.every((name) => params[name] !== undefined) ? params : undefined;
 }
 
 // A code bound by its default role has no template: each param takes the role's datum of the same name (IR section 7).

@@ -7,4 +7,4 @@
 "@seampact/codegen-adonis": patch
 ---
 
-The Node servers' frameworkRoutes check now stays fast with many `**` in a pattern, and a framework 401, 403 or 429 whose code requires params answers that code when a throttler's `Retry-After` fills them, else a logged 500 naming the fix.
+The Node servers' frameworkRoutes check now stays fast with many `**` in a pattern, a framework 429 whose rate-limited code needs its delay answers it from the throttler's `Retry-After` (seconds or an HTTP-date, read as UTC), and any other refusal whose code requires params answers a logged 500 naming the fix.

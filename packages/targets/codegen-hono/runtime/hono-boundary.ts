@@ -473,11 +473,12 @@ function claimedError(route: ContractRoute, error: unknown, c: Context): Contrac
   return frameworkRefusal(route, error, retryAfterSet(c));
 }
 
-// The `Retry-After` a rate-limit middleware set with `c.header()` before it raised its 429.
+// The `Retry-After` a rate-limit middleware set with `c.header()` before it raised its 429; `Headers.get` joins
+// duplicate values with a comma, so the first one is the value taken.
 function retryAfterSet(c: Context): string[] {
-  const value = c.res.headers.get(RETRY_AFTER_HEADER);
+  const value = c.res.headers.get(RETRY_AFTER_HEADER)?.split(",")[0];
 
-  return value === null ? [] : [value];
+  return value === undefined ? [] : [value];
 }
 
 function optionProblems(options: { readonly clientAddress?: unknown }): BootProblem[] {
