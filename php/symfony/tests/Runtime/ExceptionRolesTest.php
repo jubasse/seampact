@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Seampact\Symfony\Tests\Runtime;
 
 use PHPUnit\Framework\TestCase;
-use Seampact\Codegen\Runtime\FrameworkRefusal;
 use Seampact\Symfony\Runtime\ExceptionRoles;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -19,8 +18,21 @@ final class ExceptionRolesTest extends TestCase
 {
     public function testTheTooManyRequestsExceptionGivesItsRetryAfterHeader(): void
     {
-        self::assertSame('30', FrameworkRefusal::retryAfterOf(new TooManyRequestsHttpException(30), new Response('', 429)));
-        self::assertSame('Wed, 21 Oct 2026 07:28:00 GMT', FrameworkRefusal::retryAfterOf(new TooManyRequestsHttpException('Wed, 21 Oct 2026 07:28:00 GMT'), new Response('', 429)));
+        self::assertSame(['30'], ExceptionRoles::retryAfterValues(new TooManyRequestsHttpException(30), new Response('', 429)));
+        self::assertSame(['Wed, 21 Oct 2026 07:28:00 GMT'], ExceptionRoles::retryAfterValues(new TooManyRequestsHttpException('Wed, 21 Oct 2026 07:28:00 GMT'), new Response('', 429)));
+    }
+
+    // Shaped like RateLimiter's `RateLimitExceededException`: no HTTP status or headers, a delay through `getRetryAfter()`.
+    public function testTheRateLimitersDelayComesBeforeTheResponsesRetryAfter(): void
+    {
+        $exceeded = new class extends \RuntimeException {
+            public function getRetryAfter(): \DateTimeImmutable
+            {
+                return new \DateTimeImmutable('+30 seconds');
+            }
+        };
+
+        self::assertSame(['30', '7'], ExceptionRoles::retryAfterValues($exceeded, new Response('', 500, ['Retry-After' => '7'])));
     }
 
     public function testAnHttpExceptionOf401403404429Or503TakesTheRoleOfItsStatus(): void

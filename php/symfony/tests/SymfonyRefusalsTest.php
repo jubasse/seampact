@@ -97,7 +97,7 @@ final class SymfonyRefusalsTest extends TestCase
 
     public function testAStaticPathSegmentThatNeedsPercentEncodingWaitsForAConsumer(): void
     {
-        foreach (['my tasks', 'tâches', 'a\\b'] as $segment) {
+        foreach (['my tasks', 'tâches', 'a\\b', 'a^b'] as $segment) {
             $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation) use ($segment): void {
                 self::assertIsString($operation->path);
                 $operation->path = str_replace('/tasks/', "/{$segment}/", $operation->path);

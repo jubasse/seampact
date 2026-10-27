@@ -11,8 +11,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The one rule both PHP targets map a framework exception with: its role's code first, else the operation's single
- * code of its status, either one answered only when it declares no required params or when its one required param is
- * the delay a `Retry-After` header gives; else none (the api's logged 500).
+ * code of its status, either one answered with the params its role binding renders from the role's data (the delay a
+ * `Retry-After` header gives), when they hold every required param; else none (the api's logged 500).
  */
 final class FrameworkRefusalTest extends TestCase
 {
@@ -60,9 +60,47 @@ final class FrameworkRefusalTest extends TestCase
         self::assertEquals(['code' => 'api.rate_limited', 'params' => (object) ['retryAfterMs' => 0]], self::answerOf('throttled', gmdate(self::HTTP_DATE, self::NOW - 10)));
     }
 
-    public function testTheRetryDelayParamIsKnownFromAnotherOperationsRetryHeader(): void
+    public function testTheRetryDelayParamIsFilledByNameWithoutARetryHeader(): void
     {
         self::assertEquals(['code' => 'api.rate_limited', 'params' => (object) ['retryAfterMs' => 2000]], self::answerOf('throttledWithoutRule', '2'));
+        self::assertEquals(['code' => 'api.rate_limited', 'params' => (object) ['retryAfterMs' => 30000]], self::rateLimitedAnswerOf('limited', ['30']));
+    }
+
+    public function testAnOptionalRetryDelayParamIsFilledWhenTheDelayIsKnown(): void
+    {
+        self::assertEquals(['code' => 'tasks.patience', 'params' => (object) ['retryAfterMs' => 30000]], self::rateLimitedAnswerOf('patient', ['30']));
+        self::assertEquals(['code' => 'tasks.patience', 'params' => null], self::rateLimitedAnswerOf('patient', []));
+    }
+
+    public function testAnAuthoredRoleTemplateRendersTheRetryDelay(): void
+    {
+        self::assertEquals(['code' => 'tasks.wait', 'params' => (object) ['waitMs' => 30000]], self::rateLimitedAnswerOf('waiting', ['30']));
+        self::assertNull(self::rateLimitedAnswerOf('waiting', []));
+    }
+
+    public function testTheFirstUsableRetryAfterValueGivesTheDelay(): void
+    {
+        self::assertEquals(['code' => 'api.rate_limited', 'params' => (object) ['retryAfterMs' => 30000]], self::rateLimitedAnswerOf('limited', ['soon', '30', '7']));
+    }
+
+    public function testALongDeltaSecondsValueIsCappedAtTheLargestSafeInteger(): void
+    {
+        self::assertEquals(['code' => 'api.rate_limited', 'params' => (object) ['retryAfterMs' => 30000]], self::answerOf('throttled', '0000000000030'));
+        self::assertEquals(['code' => 'api.rate_limited', 'params' => (object) ['retryAfterMs' => self::MAX_SAFE_INTEGER]], self::answerOf('throttled', '99999999999999999999999'));
+        self::assertEquals(['code' => 'api.rate_limited', 'params' => (object) ['retryAfterMs' => self::MAX_SAFE_INTEGER]], self::answerOf('throttled', '9007199254741'));
+    }
+
+    public function testRfc850AndAsctimeDatesAreReadAsUtc(): void
+    {
+        $later = self::NOW + 45;
+        $rfc850 = gmdate('l, d-M-y H:i:s \\G\\M\\T', $later);
+        $singleDigitDay = gmmktime(8, 0, 0, 2, 1, 2027);
+        $asctime = gmdate('D M ', $singleDigitDay) . str_pad(gmdate('j', $singleDigitDay), 2, ' ', STR_PAD_LEFT) . gmdate(' H:i:s Y', $singleDigitDay);
+
+        self::assertSame('Mon Feb  1 08:00:00 2027', $asctime);
+        self::assertEquals(['code' => 'api.rate_limited', 'params' => (object) ['retryAfterMs' => 45000]], self::answerOf('throttled', $rfc850));
+        self::assertEquals(['code' => 'api.rate_limited', 'params' => (object) ['retryAfterMs' => ($singleDigitDay - self::NOW) * 1000]], self::answerOf('throttled', $asctime));
+        self::assertNull(self::codeOf('throttled', 'rateLimited', 429, 'Mon Feb 31 08:00:00 2027'));
     }
 
     public function testACodeWithAnotherRequiredParamAnswersNoneWhateverTheRetryDelay(): void
@@ -75,9 +113,9 @@ final class FrameworkRefusalTest extends TestCase
     {
         $response = new Response('', 429, ['Retry-After' => '7']);
 
-        self::assertSame('7', FrameworkRefusal::retryAfterOf(new \RuntimeException('throttled'), $response));
-        self::assertSame('7', FrameworkRefusal::retryAfterOf(null, $response));
-        self::assertNull(FrameworkRefusal::retryAfterOf(null, new Response('', 429)));
+        self::assertSame(['7'], FrameworkRefusal::retryAfterValuesOf(new \RuntimeException('throttled'), $response));
+        self::assertSame(['7'], FrameworkRefusal::retryAfterValuesOf(null, $response));
+        self::assertSame([], FrameworkRefusal::retryAfterValuesOf(null, new Response('', 429)));
     }
 
     public function testAStatusTakesItsRole(): void
@@ -89,16 +127,26 @@ final class FrameworkRefusalTest extends TestCase
 
     private const NOW = 1_800_000_000;
     private const HTTP_DATE = 'D, d M Y H:i:s \\G\\M\\T';
+    private const MAX_SAFE_INTEGER = 9007199254740991;
 
     private static function codeOf(string $operationId, ?string $role, ?int $status, ?string $retryAfter = null): ?string
     {
-        return FrameworkRefusal::answerOf(self::contract(), $operationId, $role, $status, $retryAfter, self::NOW)['code'] ?? null;
+        return FrameworkRefusal::answerOf(self::contract(), $operationId, $role, $status, $retryAfter === null ? [] : [$retryAfter], self::NOW)['code'] ?? null;
     }
 
     /** @return ?array{code: string, params: ?\stdClass} */
     private static function answerOf(string $operationId, string $retryAfter): ?array
     {
-        return FrameworkRefusal::answerOf(self::contract(), $operationId, 'rateLimited', 429, $retryAfter, self::NOW);
+        return FrameworkRefusal::answerOf(self::contract(), $operationId, 'rateLimited', 429, [$retryAfter], self::NOW);
+    }
+
+    /**
+     * @param list<string> $retryAfterValues
+     * @return ?array{code: string, params: ?\stdClass}
+     */
+    private static function rateLimitedAnswerOf(string $operationId, array $retryAfterValues): ?array
+    {
+        return FrameworkRefusal::answerOf(ApiContract::of(RateLimitedContract::class), $operationId, 'rateLimited', 429, $retryAfterValues, self::NOW);
     }
 
     private static function contract(): ApiContract

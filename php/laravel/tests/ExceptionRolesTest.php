@@ -23,12 +23,13 @@ final class ExceptionRolesTest extends TestCase
         self::assertSame('serviceUnavailable', ExceptionRoles::roleOf(new HttpException(503)));
     }
 
-    public function testTheThrottleRefusalGivesItsRetryAfterHeaderBeforeTheResponses(): void
+    public function testTheResponsesRetryAfterComesBeforeTheThrottleRefusalsHeader(): void
     {
         $throttled = new ThrottleRequestsException('Too Many Attempts.', null, ['retry-after' => 30]);
 
-        self::assertSame('30', FrameworkRefusal::retryAfterOf($throttled, new Response('', 429, ['Retry-After' => '7'])));
-        self::assertNull(FrameworkRefusal::retryAfterOf(new HttpException(429), new Response('', 429)));
+        self::assertSame(['7', '30'], FrameworkRefusal::retryAfterValuesOf($throttled, new Response('', 429, ['Retry-After' => '7'])));
+        self::assertSame(['30'], FrameworkRefusal::retryAfterValuesOf($throttled, new Response('', 429)));
+        self::assertSame([], FrameworkRefusal::retryAfterValuesOf(new HttpException(429), new Response('', 429)));
     }
 
     public function testAMissingModelAndAnAbortOf404TakeTheNotFoundRole(): void
