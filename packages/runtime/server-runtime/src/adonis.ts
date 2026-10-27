@@ -42,6 +42,7 @@ import { frameworkRefusal, notFoundError, type ReportedRequest } from "./error-r
 import type { ListedRoute } from "./framework-route-patterns.js";
 import { frameworkRouteProblems, isBoundaryRoute, markBoundaryRoute } from "./framework-routes.js";
 import { refuseCodeOfOtherVersion } from "./generator-version-check.js";
+import { inputWithAccess } from "./handler-access.js";
 import { handlerReply } from "./handler-reply.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
@@ -509,7 +510,7 @@ export function createAdonisBoundary<
         );
 
         context.input = input;
-        inputs.set(ctx, { id: route.id, input });
+        inputs.set(ctx, { id: route.id, input: inputWithAccess(route, grant, input) });
         replay = await beginIdempotency(state, grant, input);
       } catch (error) {
         await answerStepError(ctx, context, error);
@@ -558,13 +559,12 @@ export function createAdonisBoundary<
           );
         }
 
-        const result: unknown = await method.call(controller, context.input);
-        const reply = await handlerReply(
-          checkState(context),
-          requireGrant(context),
-          context.input,
-          result,
+        const grant = requireGrant(context);
+        const result: unknown = await method.call(
+          controller,
+          inputWithAccess(route, grant, context.input),
         );
+        const reply = await handlerReply(checkState(context), grant, context.input, result);
 
         await writeContractReply(ctx.response.response, api, context, reply);
       } catch (error) {

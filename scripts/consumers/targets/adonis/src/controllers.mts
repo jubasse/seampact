@@ -17,7 +17,7 @@ export class ChannelsController implements TasksAdonis.ChannelsEndpoints {
     return tasksHandlers.listChannels(input);
   }
 
-  getChannel(input: Tasks.GetChannelInput) {
+  getChannel(input: TasksAdonis.HandlerInputs["getChannel"]) {
     return tasksHandlers.getChannel(input);
   }
 }

@@ -11,7 +11,7 @@ import {
   responseSettingsOf,
   SERVER_RUNTIME_PACKAGE,
 } from "@seampact/codegen-core/node-server";
-import type { ContractIR } from "@seampact/spec/ir";
+import type { ContractIR, Operation } from "@seampact/spec/ir";
 import { deriveName, splitName } from "@seampact/spec/naming";
 import type { NestjsOptions } from "./nestjs-options.js";
 
@@ -74,6 +74,14 @@ function operationSource(operationId: string, docsModule: string | undefined): s
     : `documentedOperation(${boundaryOperation}, ${JSON.stringify(operationId)})`;
 }
 
+// The caller's param decorators of an operation: no principal on a public route, no scopes outside any scope.
+function callerDecorators(operation: Operation): string[] {
+  return [
+    ...(operation.access.kind === "public" ? [] : ["principal"]),
+    ...(operation.scopes.length === 0 ? [] : ["scopes"]),
+  ];
+}
+
 export function nestjsModuleSource(
   ir: ContractIR,
   options: NestjsOptions,
@@ -92,7 +100,18 @@ export function nestjsModuleSource(
 
     names.claim(name, operationLocation(index, operation.id), refusals);
 
-    return `/** The route of '${operation.id}'; \`${name}.input()\` is its validated input. */\nexport const ${name} = ${operationSource(operation.id, docsModule)};`;
+    const caller = callerDecorators(operation);
+    const callerDoc =
+      caller.length === 0
+        ? ""
+        : `; ${caller.map((member) => `\`${name}.${member}()\``).join(" and ")} read its caller`;
+    const source = operationSource(operation.id, docsModule);
+    const decorator =
+      caller.length === 0
+        ? source
+        : `Object.assign(${source}, { ${caller.map((member) => `${member}: boundary.${member}(${JSON.stringify(operation.id)})`).join(", ")} })`;
+
+    return `/** The route of '${operation.id}'; \`${name}.input()\` is its validated input${callerDoc}. */\nexport const ${name} = ${decorator};`;
   });
 
   const handlerMethods = ir.operations.map(

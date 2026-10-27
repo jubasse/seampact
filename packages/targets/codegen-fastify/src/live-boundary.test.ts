@@ -6,6 +6,8 @@ import {
   CLIENT_ADDRESS_CASES,
   clientAddressesTheHookSees,
   copyTestApp,
+  describeHandlerAccess,
+  describeTwoApiHandlerAccess,
   emitProject,
   generateReferenceProject,
   problemBody,
@@ -47,6 +49,7 @@ interface ReferenceAppModule {
   readonly scenario: {
     answers: Record<string, (input: unknown) => unknown>;
     authenticate: (request: unknown) => unknown;
+    resolvedScopeName: string;
     trustsProxy: boolean;
   };
   readonly AppReply: new (
@@ -97,6 +100,13 @@ afterAll(async () => {
 beforeEach(() => {
   app.resetScenario();
   vi.restoreAllMocks();
+});
+
+describe("what a handler reads of its caller", () => {
+  describeHandlerAccess(() => ({
+    app,
+    send: (method, path, headers) => send(method, path, { headers }),
+  }));
 });
 
 describe("replies on contract routes", () => {
@@ -544,6 +554,11 @@ describe("two apis on one base path", () => {
   beforeEach(() => {
     twoApiApp.resetScenario();
   });
+
+  describeTwoApiHandlerAccess(() => ({
+    app: twoApiApp,
+    send: (method, path, headers) => sendRawRequest(twoApiServer, method, path, { headers }),
+  }));
 
   test.each([
     ["the first api", `/v1/channels/${CHANNEL}/tasks/${TASK}`],

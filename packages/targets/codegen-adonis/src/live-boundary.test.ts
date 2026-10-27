@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import {
   CLIENT_ADDRESS_CASES,
   clientAddressesTheHookSees,
+  describeHandlerAccess,
   emitProject,
   problemBody,
   projectDirectory,
@@ -48,6 +49,7 @@ interface ReferenceAppModule {
   readonly scenario: {
     answers: Record<string, (input: unknown) => unknown>;
     authenticate: (request: unknown) => unknown;
+    resolvedScopeName: string;
     trustsProxy: boolean;
   };
   readonly AppReply: new (
@@ -165,6 +167,13 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
   beforeEach(() => {
     app.resetScenario();
     vi.restoreAllMocks();
+  });
+
+  describe("what a handler reads of its caller", () => {
+    describeHandlerAccess(() => ({
+      app,
+      send: (method, path, headers) => send(method, path, { headers }),
+    }));
   });
 
   describe("replies on contract routes", () => {

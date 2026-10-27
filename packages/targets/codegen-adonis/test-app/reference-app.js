@@ -49,6 +49,7 @@ export function resetScenario() {
   scenario.answers = {};
   scenario.authenticate = authenticateByBearer;
   scenario.decide = () => ({ allow: true });
+  scenario.resolvedScopeName = "channel";
   // The app's `http.trustProxy` setting, read per request, so one app serves a request with and without a trusted
   // proxy.
   scenario.trustsProxy = false;
@@ -265,7 +266,9 @@ export function registration() {
       deciders: [{ names: "all", decider: { decide: (request) => scenario.decide(request) } }],
       scopeResolvers: {
         channel: {
-          resolveScope: (request) => ({ resolved: { scope: "channel", id: request.source.id } }),
+          resolveScope: (request) => ({
+            resolved: { scope: scenario.resolvedScopeName, id: request.source.id },
+          }),
         },
       },
       idempotencyStore: memoryIdempotencyStore(),

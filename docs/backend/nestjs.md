@@ -99,6 +99,23 @@ You see no output.
 
 A throttler's 429 works out of the box with `@nestjs/throttler`. When the operation's `rateLimited` code requires `retryAfterMs`, seampact fills it from the throttler's `Retry-After` (seconds or an HTTP date), read from the reply or from the exception. Without a usable `Retry-After`, the reply is a logged 500 (with an optional `retryAfterMs`, the code is answered without it): throw `new NotesNest.ContractException(code, params)` instead.
 
+## Who is calling
+
+When an operation declares an identity, take its caller with `@<operation>.principal()`: what your authenticate hook returned, typed with the identity's principal schema. A public operation has no `principal()` decorator.
+
+When an operation runs in a scope, `@<operation>.scopes()` gives one entry per scope, as your resolver returned it. An operation in no scope has no `scopes()` decorator.
+
+```ts
+@NotesNest.getNote()
+getNote(
+  @NotesNest.getNote.input() input: NotesNest.HandlerInputs["getNote"],
+  @NotesNest.getNote.principal() principal: NotesNest.OperationAccess["getNote"]["principal"],
+) {
+  const ownerId = principal.userId;
+```
+
+The input typed with `HandlerInputs` carries the same `principal` and `scopes`, read-only. Spreading or serialising it leaves them out. The scope's `value` is `unknown`: narrow it before use.
+
 ## Behind a reverse proxy and in Docker
 
 Trust only your proxy's addresses on the Express platform, so `req.ip` is the caller's:
