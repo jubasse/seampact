@@ -17,6 +17,8 @@ use Seampact\Golden\TasksConsistent\Symfony\TasksSettings;
 use Seampact\Codegen\Runtime\RuntimeVersion;
 use Seampact\Symfony\Runtime\BootCheckPass;
 use Seampact\Symfony\Runtime\Regeneration;
+use Seampact\Symfony\Runtime\VoterDecider;
+use Seampact\Symfony\Tests\Support\GrantedChannelsController;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\ResolveClassPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -24,6 +26,7 @@ use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Symfony\Component\HttpKernel\DependencyInjection\MergeExtensionConfigurationPass;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /** The container part of the boot check, run on the golden bundles. */
 final class BootCheckPassTest extends TestCase
@@ -89,6 +92,27 @@ final class BootCheckPassTest extends TestCase
     public function testUnderRelativeUrlsAnUnsetPublicOriginPasses(): void
     {
         self::assertStringNotContainsString('public_origin', self::compiledProblems(new FirstBundle(), null, self::relativeBootCheck()));
+    }
+
+    public function testAnIsGrantedRefusalPrintsTheAccessControlRuleOrTheVoterDecider(): void
+    {
+        $container = new ContainerBuilder();
+        $container->setParameter('kernel.environment', 'test');
+        $container->setParameter('kernel.build_dir', sys_get_temp_dir());
+        $container->register('event_dispatcher', EventDispatcher::class);
+        $container->register(GrantedChannelsController::class, GrantedChannelsController::class);
+        self::load(new SecondBundle(), $container);
+
+        $problems = '';
+        try {
+            (new BootCheckPass(TasksContract::class, TasksOperation::class, SecondBundle::BOUNDARY_SERVICE, SecondBundle::INPUT_RESOLVER_SERVICE, SecondBundle::SETTINGS_SERVICE, TasksSettings::class, true))->process($container);
+        } catch (\LogicException $failure) {
+            $problems = $failure->getMessage();
+        }
+
+        $method = GrantedChannelsController::class . '::getChannel carries #[' . IsGranted::class . "], which runs after the contract's input checks; use ";
+        self::assertStringContainsString($method . 'the access_control rule `- { request_matcher: seampact.tasks.matcher.identity, roles: ' . GrantedChannelsController::ROLE . ' }`, which guards every route of that kind, or a decider of the right, such as ' . VoterDecider::class, $problems);
+        self::assertStringContainsString($method . 'a decider of the right, such as ' . VoterDecider::class . ', which asks your voters', $problems);
     }
 
     public function testAContainerWithoutTheValidatorIsRefusedNamingThePackage(): void

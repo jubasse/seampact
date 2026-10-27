@@ -34,11 +34,14 @@ final class BootCheckPass implements CompilerPassInterface
     private const HTTP_CACHE = 'http_cache';
     private const VALIDATOR = 'validator';
     private const VALUE_RESOLVER_TAG = 'controller.argument_value_resolver';
+    private const IS_GRANTED = 'Symfony\\Component\\Security\\Http\\Attribute\\IsGranted';
+    private const VOTER_DECIDER_FIX = 'a decider of the right, such as ' . VoterDecider::class . ", which asks your voters";
     private const REFUSED_ATTRIBUTES = [
-        'Symfony\\Component\\Security\\Http\\Attribute\\IsGranted' => 'an access_control rule or a decider of the right',
+        self::IS_GRANTED => 'an access_control rule or ' . self::VOTER_DECIDER_FIX,
         'Symfony\\Component\\Security\\Http\\Attribute\\IsCsrfTokenValid' => 'the authenticate hook with the CSRF companion value',
         'Symfony\\Component\\HttpKernel\\Attribute\\IsSignatureValid' => 'nothing: a signed URI is not a form the contract declares',
     ];
+    private const UNKNOWN_KIND = '<kind>';
     private const SUPPORTED_MAJORS = ['/^7\.4\./', '/^8\./'];
 
     /**
@@ -113,11 +116,11 @@ final class BootCheckPass implements CompilerPassInterface
             }
 
             $class = array_values($implementing)[0];
-            foreach (self::refusedAttributes($class->getAttributes()) as $attribute => $fix) {
+            foreach (self::refusedAttributes($container, $contract, $class->getAttributes(), array_values($operations)) as [$attribute, $fix]) {
                 $problems[] = "the controller {$class->name} carries #[{$attribute}], which runs after the contract's input checks; use {$fix}";
             }
             foreach ($operations as $method => $operationId) {
-                $problems = [...$problems, ...$this->method($class, $method, $operationId)];
+                $problems = [...$problems, ...$this->method($container, $contract, $class, $method, $operationId)];
             }
         }
 
@@ -128,7 +131,7 @@ final class BootCheckPass implements CompilerPassInterface
      * @param \ReflectionClass<object> $class
      * @return list<string>
      */
-    private function method(\ReflectionClass $class, string $method, string $operationId): array
+    private function method(ContainerBuilder $container, ApiContract $contract, \ReflectionClass $class, string $method, string $operationId): array
     {
         if (!$class->hasMethod($method)) {
             return [];
@@ -140,7 +143,7 @@ final class BootCheckPass implements CompilerPassInterface
         if ($marks !== [$operationId]) {
             $problems[] = "the method {$class->name}::{$method} handles operation '{$operationId}' but is not marked #[SeampactOperation('{$operationId}')]; add the attribute";
         }
-        foreach (self::refusedAttributes($reflection->getAttributes()) as $attribute => $fix) {
+        foreach (self::refusedAttributes($container, $contract, $reflection->getAttributes(), [$operationId]) as [$attribute, $fix]) {
             $problems[] = "the method {$class->name}::{$method} carries #[{$attribute}], which runs after the contract's input checks; use {$fix}";
         }
 
@@ -149,19 +152,47 @@ final class BootCheckPass implements CompilerPassInterface
 
     /**
      * @param list<\ReflectionAttribute<object>> $attributes
-     * @return array<string, string> each refused attribute found, with its fix
+     * @param list<string> $operationIds the operations the attributes guard
+     * @return list<array{string, string}> each refused attribute found, with its fix
      */
-    private static function refusedAttributes(array $attributes): array
+    private static function refusedAttributes(ContainerBuilder $container, ApiContract $contract, array $attributes, array $operationIds): array
     {
         $refused = [];
         foreach ($attributes as $attribute) {
-            $fix = self::REFUSED_ATTRIBUTES[$attribute->getName()] ?? null;
+            $name = $attribute->getName();
+            $fix = $name === self::IS_GRANTED ? self::isGrantedFix($container, $contract, $attribute, $operationIds) : self::REFUSED_ATTRIBUTES[$name] ?? null;
             if ($fix !== null) {
-                $refused[$attribute->getName()] = $fix;
+                $refused[] = [$name, $fix];
             }
         }
 
         return $refused;
+    }
+
+    /**
+     * The fix of `#[IsGranted]`: an attribute without a subject is the same check as an `access_control` rule on the
+     * matcher of each guarded operation's access kind, printed ready to paste; one with a subject or an expression
+     * needs a decider, which receives the subject.
+     *
+     * @param \ReflectionAttribute<object> $attribute
+     * @param list<string> $operationIds
+     */
+    private static function isGrantedFix(ContainerBuilder $container, ApiContract $contract, \ReflectionAttribute $attribute, array $operationIds): string
+    {
+        $arguments = $attribute->getArguments();
+        $grantedAttribute = $arguments[0] ?? $arguments['attribute'] ?? null;
+        $subject = $arguments[1] ?? $arguments['subject'] ?? null;
+        if (!is_string($grantedAttribute) || $subject !== null) {
+            return self::VOTER_DECIDER_FIX;
+        }
+
+        $rules = [];
+        foreach ($operationIds as $operationId) {
+            $kind = KindRequestMatcher::kindIn($container, $contract, $operationId) ?? self::UNKNOWN_KIND;
+            $rules[$kind] = '`- { request_matcher: ' . KindRequestMatcher::serviceId($contract->api, $kind) . ", roles: {$grantedAttribute} }`";
+        }
+
+        return 'the access_control rule ' . implode(' and ', $rules) . ', which guards every route of that kind, or ' . self::VOTER_DECIDER_FIX;
     }
 
     /** @return list<string> */
