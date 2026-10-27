@@ -10,6 +10,7 @@ use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\OperationNames;
 use Seampact\Codegen\PhpClassFile;
+use Seampact\Codegen\PhpNames;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\RulesMode;
 use Seampact\Ir\Model\InputProof;
@@ -20,7 +21,8 @@ use Seampact\Ir\Model\RefuseUnknownQuery;
  * The FormRequest of each operation (ADR 0023 "Types and validation"): `authorize()` fails closed unless the access
  * middleware marked the request for this operation, `validationData()` is the boundary's decoded input with every
  * wire name escaped, and `rules()` holds the operation's rules, which `contractRules()` builds over an input tree;
- * under `unknownQuery: refuse` an undeclared query key is an issue.
+ * under `unknownQuery: refuse` an undeclared query key is an issue. `forTest()` builds an admitted request for a
+ * unit test that calls the handler directly.
  */
 final class FormRequests
 {
@@ -130,6 +132,39 @@ final class FormRequests
                 ->addComment('The scopes the operation runs in, as their resolvers resolved them.')
                 ->setBody("return {$access}::scopes({$state}, self::OPERATION_ID, {$scopes}::class);");
         }
+
+        $this->forTest($file, $operation, $names, $principalClass);
+    }
+
+    // A unit test's direct handler call: the request holds an admitted state with the input, caller and scopes given.
+    private function forTest(PhpClassFile $file, Operation $operation, OperationNames $names, ?string $principalClass): void
+    {
+        $method = LaravelReplies::classOf($file)->addMethod('forTest')->setStatic()->setReturnType('self')
+            ->addComment('A request for a unit test that calls the handler directly, never served: the handler reads the input, the caller')
+            ->addComment('and the scopes given here.');
+        $method->addParameter('input')->setType($file->type($names->input));
+
+        $principal = 'null';
+        if ($principalClass !== null) {
+            $method->addParameter('principal')->setType($file->type($principalClass))->setNullable(HandlerAccessTypes::anonymousAllowed($operation));
+            $principal = '$principal';
+        }
+
+        $scopes = [];
+        if ($names->scopes !== null) {
+            $method->addParameter('scopes')->setType($file->type($names->scopes));
+            foreach ($operation->scopes as $scope) {
+                // A scope without a name segment is refused where the scopes class is written.
+                $member = PhpNames::memberIdentifier($scope->scope);
+                if ($member !== null) {
+                    $scopes[] = "\$scopes->{$member}()";
+                }
+            }
+        }
+
+        $testRequest = $file->name($this->layout->runtime('HandlerTestRequest'));
+        $contract = $file->name($this->layout->contract);
+        $method->setBody("return {$testRequest}::admitted(new self(), {$contract}::class, self::OPERATION_ID, \$input, {$principal}, [" . implode(', ', $scopes) . ']);');
     }
 
     /** @param array<string, list<string>> $rules */

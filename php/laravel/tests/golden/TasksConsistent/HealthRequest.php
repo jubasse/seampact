@@ -7,8 +7,10 @@ namespace Seampact\Golden\TasksConsistent;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Golden\TasksConsistent\Laravel\TasksContract;
 use Seampact\Laravel\Runtime\BoundaryMark;
 use Seampact\Laravel\Runtime\FormSteps;
+use Seampact\Laravel\Runtime\HandlerTestRequest;
 use Seampact\Laravel\Runtime\InputTree;
 use Seampact\Laravel\Runtime\Position;
 use Seampact\Laravel\Runtime\UnknownKeysRule;
@@ -65,6 +67,15 @@ final class HealthRequest extends FormRequest
         $input = BoundaryState::required($this, self::API)->contractInput;
 
         return $input instanceof HealthInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
+    }
+
+    /**
+     * A request for a unit test that calls the handler directly, never served: the handler reads the input, the caller
+     * and the scopes given here.
+     */
+    public static function forTest(HealthInput $input): self
+    {
+        return HandlerTestRequest::admitted(new self(), TasksContract::class, self::OPERATION_ID, $input, null, []);
     }
 
     /**
