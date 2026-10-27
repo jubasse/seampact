@@ -71,7 +71,7 @@ beforeAll(async () => {
     rawBody: true,
     logger: false,
   });
-  app.useBodyParser("json", { strict: false, limit: TasksNest.LARGEST_BODY_LIMIT });
+  TasksNest.configureApp(app);
   app.use(openAppRequestStore);
   useAppInterceptors(app);
   await app.listen(0, HOST);

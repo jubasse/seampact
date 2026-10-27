@@ -33,6 +33,7 @@ import {
   type ContractRequest,
   type ContractRoute,
   isUnderPrefix,
+  largestRouteBodyLimit,
   matchContractPath,
   matchContractRoute,
   matchesContractPath,
@@ -1005,16 +1006,12 @@ function bodyparserProblems(api: ContractApi, services: AdonisServices): BootPro
   ];
 }
 
-function largestBodyLimit(routes: readonly ContractRoute[]): number {
-  return Math.max(0, ...routes.map((route) => route.input?.limitBytes ?? 0));
-}
-
 function jsonLimitProblems(
   routes: readonly ContractRoute[],
   limit: unknown,
   string: AdonisServices["string"],
 ): BootProblem[] {
-  const largest = largestBodyLimit(routes);
+  const largest = largestRouteBodyLimit(routes);
   const bytes =
     typeof limit === "number"
       ? limit

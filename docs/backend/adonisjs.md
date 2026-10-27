@@ -192,7 +192,7 @@ const reply = await new NotesController().getNote({ path: { noteId }, principal:
 
 `registerRoutes` runs once when the app starts. To use test hooks, have `tasksHooks()` return them when `app.inTest` is true (`import app from '@adonisjs/core/services/app'`).
 
-With `NODE_ENV=development` (what `node ace serve` sets), an exception your controller throws goes to your exception handler, which shows AdonisJS's error page. seampact logs its message and the file and line it came from. In any other environment the client gets the api's 500.
+With `NODE_ENV=development` (the starter's `.env` sets it), an exception your controller throws goes to your exception handler, which shows AdonisJS's error page. seampact logs its message and the file and line it came from. Outside development, under the default `responses: strict` the client gets the api's 500; under `responses: warn` the framework's reply goes out as written and the violation is logged.
 
 ## Pick the port
 

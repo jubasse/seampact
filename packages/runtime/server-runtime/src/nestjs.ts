@@ -79,6 +79,7 @@ import {
   type ContractRoute,
   isUnderBasePath,
   isUnderPrefix,
+  largestRouteBodyLimit,
   matchContractPath,
   matchContractRoute,
   matchesContractPath,
@@ -1107,6 +1108,11 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   )
   class ContractFilter implements ExceptionFilter {
     catch(exception: unknown, host: ArgumentsHost): void {
+      const context = boundaryContext.getStore();
+
+      // The contract answers this exception, so it is no longer unclaimed.
+      if (context !== undefined) context.unclaimedException = undefined;
+
       void renderContractError(host, exception);
     }
   }
@@ -1634,10 +1640,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   // limit, non-strict, keeping the raw body of signed routes, and the pre-routing filter.
   // An api without a body leaves the parser's own limit, which its routes never reach.
   function configureApp(app: ConfigurableNestApp): void {
-    const largestBodyLimit = Math.max(
-      NO_BODY_LIMIT,
-      ...api.routes.map((route) => route.input?.limitBytes ?? NO_BODY_LIMIT),
-    );
+    const largestBodyLimit = largestRouteBodyLimit(api.routes);
 
     app.useBodyParser("json", {
       ...(largestBodyLimit === NO_BODY_LIMIT ? {} : { limit: largestBodyLimit }),

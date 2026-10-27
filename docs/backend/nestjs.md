@@ -142,7 +142,7 @@ const reply = await new NotesController().getNote({ path: { noteId } }, { userId
 
 To replace your hooks in a test, use `overrideProvider(NotesNest.SEAMPACT_HOOKS).useValue(testHooks)`.
 
-With `NODE_ENV=development`, an exception your handler throws goes to NestJS's exception filters, which log its stack. seampact logs its message and the file and line it came from. In any other environment the client gets the api's 500.
+With `NODE_ENV=development`, an exception your handler throws goes to NestJS's exception filters, which log its stack. seampact logs its message and the file and line it came from. Outside development, under the default `responses: strict` the client gets the api's 500; under `responses: warn` the framework's reply goes out as written and the violation is logged.
 
 ## Behind a reverse proxy and in Docker
 

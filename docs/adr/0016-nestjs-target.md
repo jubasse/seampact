@@ -245,6 +245,12 @@ What the generated code depends on adds `@seampact/server-runtime` as a producti
 
 The boot check runs one step first, before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `nestjs.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
 
+### Amendment 2026-10-28: configureApp, unbound operations and the debug path
+
+- `configureApp(app)`, exported per api, does what `main.ts` and an e2e setup of an app serving this api alone need: the JSON parser at the largest route limit (the shared `largestRouteBodyLimit`), non-strict, keeping the raw body of signed routes, and the pre-routing filter. An app serving two apis keeps the explicit calls.
+- `SeampactModule.forRoot(hooks, { unboundOperations })` takes `error` (the default, the boot check refuses an operation no controller method binds) or `warn`, which logs the unbound operations once and lets a test module hold some controllers; any other value is a boot problem. A request to an unbound operation's route answers the api's `notFound` 404 in its format, not a 500.
+- Debug path: under `NODE_ENV=development`, an exception no seampact filter claims, whose reply NestJS's filters wrote and which breaks the contract, goes out as written, whatever the `responses` mode. The boundary logs once the exception's message and where it was thrown, and calls `onUnexpectedError` as before. Outside it the api's 500 replaces the reply as before. `NODE_ENV` is read at each request. A reply that an app error handler wrote for a non-contract exception that breaks the contract is passed the same way, so the check does not report it as a violation in debug.
+
 ## Consequences
 
 - An app keeps its `main.ts`, its global pipes, guards, interceptors and filters; on contract routes the boundary's checks and reply win, and its own routes are unchanged, Express ETags included. A cache interceptor must skip contract routes with `isContractRoute(context)`, or the app does not start. Any app interceptor on a contract route brings back NestJS's per-request interceptor path there: its CPU cost, and on NestJS 12.1.x its native-memory growth, which 12.2.0 cures; the interceptor mode puts every route of the app on that path.

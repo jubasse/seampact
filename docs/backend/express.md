@@ -113,7 +113,7 @@ const reply = await notesHandlers.getNote({ path: { noteId }, principal: { userI
 
 To use test hooks, pass them to the router in the test app: `router({ handlers, hooks: testHooks })`.
 
-With `NODE_ENV=development`, an exception your handler throws goes to Express's error handler, which shows its stack. seampact logs its message and the file and line it came from. In any other environment the client gets the api's 500.
+With `NODE_ENV=development`, an exception your handler throws goes to Express's error handler, which shows its stack. seampact logs its message and the file and line it came from. Outside development, under the default `responses: strict`, the client gets the api's 500. Under `responses: warn` Express's reply goes out as written and the violation is logged, with its stack unless `NODE_ENV=production`.
 
 ## Behind a reverse proxy and in Docker
 

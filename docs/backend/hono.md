@@ -130,7 +130,7 @@ const reply = await notesEndpoints.getNote({ path: { noteId }, principal: { user
 
 To use test hooks, pass them to `registerRoutes` in the test app: `registerRoutes(app, { handlers, hooks: testHooks })`.
 
-An exception your handler throws reaches your `onError`. With the `onError` of `main.ts`, the client gets the api's 500 and seampact logs the exception. To see it in the reply while you develop, return your own reply from `onError` when `NODE_ENV` is `development`.
+An exception your handler throws reaches your `onError`. With the `onError` of `main.ts`, the client gets the api's 500 and seampact logs the exception. With `NODE_ENV=development`, `renderContractError` leaves the exception to Hono instead: seampact logs its message and the file and line it came from, and Hono answers its plain 500. To show your own reply while you develop, return it from `onError` before the call.
 
 ## Behind a reverse proxy and in Docker
 

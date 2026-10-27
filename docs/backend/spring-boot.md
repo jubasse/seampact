@@ -252,7 +252,7 @@ To test a controller without HTTP, build the input record yourself, with the cal
 GetNoteResult result = controller.getNote(new GetNoteInput(new GetNotePath(noteId), new UserPrincipal(userId)));
 ```
 
-While Spring Boot devtools is active, an exception your controller throws goes to Spring's own error handling (Boot's error page or JSON). seampact logs its message and the file and line it came from. Without devtools the client gets the api's 500.
+While Spring Boot devtools is active, an exception your controller throws goes to Spring's own error handling (Boot's error page or JSON). seampact logs its message and the file and line it came from. Without devtools, under the default `responses: strict` the client gets the api's 500; under `responses: warn` the framework's reply goes out as written and the violation is logged.
 
 ## Behind a reverse proxy and in Docker
 
