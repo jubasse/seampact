@@ -53,6 +53,7 @@ public data class AppConfigEntry(val entry: JsonObject, val root: Path) {
     public val options: JsonObject get() = entry["options"] as? JsonObject ?: JsonObject(emptyMap())
     public val artefacts: JsonObject get() = entry["artefacts"] as? JsonObject ?: JsonObject(emptyMap())
     public val frameworkDocs: String? get() = entry.stringAt("frameworkDocs")
+    public val mount: String? get() = entry.stringAt("mount")
     public val link: Map<String, String> get() =
         (entry["link"] as? JsonObject)?.mapNotNull { (kind, provider) -> provider.stringValue()?.let { kind to it } }?.toMap() ?: emptyMap()
 }

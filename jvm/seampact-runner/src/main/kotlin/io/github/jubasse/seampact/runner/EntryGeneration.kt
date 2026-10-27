@@ -164,6 +164,7 @@ private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, settings
         frameworkDocs = entry.frameworkDocs,
         link = entry.link,
         frameworkRoutes = frameworkRoutesOf(entry),
+        mount = entry.mount ?: "",
     )
     val files = mutableListOf<GeneratedFile>()
     val problems = mutableListOf<ConfigProblem>()

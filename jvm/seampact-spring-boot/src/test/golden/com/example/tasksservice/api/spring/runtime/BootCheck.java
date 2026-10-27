@@ -17,7 +17,6 @@ import org.springframework.boot.web.server.servlet.ServletWebServerFactory;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.core.env.Environment;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.handler.AbstractUrlHandlerMapping;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping;
@@ -32,20 +31,19 @@ import tools.jackson.databind.JsonNode;
  * The boot check (ADR 0022 "The boot check"), once every bean is built and before the server starts: it lists every
  * problem at once (a missing hook, a contract operation with no handler or two, a framework route the config does
  * not allow-list, a filter ordered before the boundary, a mapping ordered before Spring MVC's that takes a contract
- * route, a configured mount the context and servlet paths differ from, a container other than Tomcat, a reactive
+ * route, a container other than Tomcat, a reactive
  * app, an unsupported Spring Boot major, a missing or malformed public origin under absolute URLs) and throws, so
  * the app does not start.
  */
 public final class BootCheck implements SmartInitializingSingleton {
     private static final String SUPPORTED_BOOT_MAJOR = "4";
+    private static final String STRICT_SCOPE = "strict";
     private static final String OPERATION_ID_ATTRIBUTE = "operationId";
     private static final String ERROR_PATH_PROPERTY = "server.error.path";
     private static final String SPRINGDOC_PATH_PROPERTY = "springdoc.api-docs.path";
     private static final String SPRINGDOC_UI_PROPERTY = "springdoc.swagger-ui.path";
     private static final String FRAMEWORK_DOCS_SETTING = "frameworkDocs";
     private static final String FRAMEWORK_DOCS_OFF = "off";
-    private static final String CONTEXT_PATH_PROPERTY = "server.servlet.context-path";
-    private static final String SERVLET_PATH_PROPERTY = "spring.mvc.servlet.path";
     private static final String TOMCAT_FACTORY = "Tomcat";
     private static final String SAMPLE_SEGMENT = "x";
     private static final List<String> HTTP_METHODS = List.of("GET", "POST", "PUT", "PATCH", "DELETE");
@@ -70,7 +68,6 @@ public final class BootCheck implements SmartInitializingSingleton {
         if (bootCheck.path("frameworkRoutes").asBoolean(true)) frameworkRouteProblems(problems);
         filterProblems(problems);
         earlierMappingProblems(problems);
-        mountProblem(boundary.table().settings(), boundary.environment(), boundary.servletPath()).ifPresent(problems::add);
         platformProblems(problems);
         PublicOrigin.bootProblem(boundary.table(), boundary.environment()).ifPresent(problems::add);
         if (!SpringBootVersion.getVersion().startsWith(SUPPORTED_BOOT_MAJOR + ".")) {
@@ -158,11 +155,20 @@ public final class BootCheck implements SmartInitializingSingleton {
             Set<String> methods = new LinkedHashSet<>();
             mapping.getKey().getMethodsCondition().getMethods().forEach(method -> methods.add(method.name()));
             for (String pattern : mapping.getKey().getPatternValues()) {
-                if (accepted.contains(pattern) || isAllowListed(methods, pattern)) continue;
+                if (accepted.contains(pattern) || !isInScope(pattern) || isAllowListed(methods, pattern)) continue;
                 problems.add("the framework route " + (methods.isEmpty() ? "" : String.join(",", methods) + " ") + pattern
                         + " is outside the contract and not allow-listed; " + frameworkRouteFix(pattern));
             }
         }
+    }
+
+    // The default scope reads only a mapping that can serve a path under one of the api's (mounted) base paths;
+    // `frameworkRoutes: strict` reads every mapping.
+    private boolean isInScope(String pattern) {
+        JsonNode bootCheck = boundary.table().settings().path("bootCheck");
+        if (STRICT_SCOPE.equals(bootCheck.path("frameworkRouteScope").asString(""))) return true;
+
+        return FrameworkRoutePattern.overlapsAny(boundary.table().basePaths(), pattern);
     }
 
     private boolean isAllowListed(Set<String> methods, String pattern) {
@@ -265,23 +271,6 @@ public final class BootCheck implements SmartInitializingSingleton {
         }
 
         return null;
-    }
-
-    /**
-     * The entry's `mount` is the prefix every contract path is served under: the context path then the servlet path.
-     * Without a mount nothing is compared, since the boundary strips both paths from each request.
-     */
-    static Optional<String> mountProblem(JsonNode settings, Environment environment, String servletPath) {
-        JsonNode mountSetting = settings.path("mount");
-        if (mountSetting.isMissingNode() || mountSetting.isNull()) return Optional.empty();
-
-        String mount = mountSetting.asString();
-        String contextPath = environment.getProperty(CONTEXT_PATH_PROPERTY, "").replaceAll("/+$", "");
-        String configured = contextPath + servletPath;
-        if (configured.equals(mount)) return Optional.empty();
-
-        return Optional.of("the app serves under '" + configured + "' (" + CONTEXT_PATH_PROPERTY + " then " + SERVLET_PATH_PROPERTY
-                + ") and the entry's mount is '" + mount + "'; fix: make them equal.");
     }
 
     // The boundary is a servlet filter, tested on Tomcat (ADR 0022 "Refused by name or waiting").

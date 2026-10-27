@@ -32,9 +32,10 @@ public final class ContractTable {
 
         List<ContractRoute> built = new ArrayList<>();
         Set<String> prefixes = new LinkedHashSet<>();
+        String mount = ir.path("settings").path("mount").asString("");
         for (JsonNode operation : ir.path("operations")) {
-            String prefix = ir.path("api").path("surfaces").path(operation.path("surface").asString()).path("prefix").asString("");
-            built.add(new ContractRoute(operation, ir.path("errors"), prefix));
+            String prefix = mount + ir.path("api").path("surfaces").path(operation.path("surface").asString()).path("prefix").asString("");
+            built.add(new ContractRoute(operation, ir.path("errors"), mount, prefix));
             prefixes.add(prefix);
         }
 
@@ -49,6 +50,11 @@ public final class ContractTable {
 
     public List<ContractRoute> routes() {
         return routes;
+    }
+
+    /** The api's base paths under the entry's mount, as `/api/v1`; an empty one for a surface without a prefix. */
+    List<String> basePaths() {
+        return basePaths;
     }
 
     JsonNode ir() {

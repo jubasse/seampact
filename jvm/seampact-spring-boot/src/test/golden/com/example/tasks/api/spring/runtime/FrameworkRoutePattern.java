@@ -13,6 +13,7 @@ final class FrameworkRoutePattern {
     private static final String ONE_SEGMENT = "*";
     private static final String ANY_SEGMENTS = "**";
     private static final String CAPTURE_ALL_START = "{*";
+    private static final String VARIABLE_START = "{";
     // No allowance segment can be empty, so this token never equals one.
     private static final String CATCH_ALL_SEGMENT = "";
 
@@ -103,6 +104,32 @@ final class FrameworkRoutePattern {
         }
 
         return segments;
+    }
+
+    /**
+     * Whether a route pattern can serve a path at or under one of [basePaths]: each of its first segments takes the
+     * base path's (the same text, a variable, `*` or a catch-all), and it has as many segments, or a catch-all.
+     */
+    static boolean overlapsAny(List<String> basePaths, String routePattern) {
+        List<String> route = routeSegmentsOf(routePattern);
+
+        return basePaths.stream().anyMatch(basePath -> overlaps(route, segmentsOf(basePath)));
+    }
+
+    private static boolean overlaps(List<String> route, List<String> base) {
+        for (int index = 0; index < base.size(); index++) {
+            if (index >= route.size()) return false;
+
+            String segment = route.get(index);
+            if (segment.equals(CATCH_ALL_SEGMENT)) return true;
+            if (!isVariable(segment) && !segment.equals(base.get(index))) return false;
+        }
+
+        return true;
+    }
+
+    private static boolean isVariable(String segment) {
+        return segment.equals(ONE_SEGMENT) || segment.contains(VARIABLE_START);
     }
 
     // Spring writes a catch-all as `**` or `{*name}`; a one-segment variable (`{id}`) or wildcard (`*`) stays one

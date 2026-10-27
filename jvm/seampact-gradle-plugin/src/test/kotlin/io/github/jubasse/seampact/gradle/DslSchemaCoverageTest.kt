@@ -75,6 +75,7 @@ class DslSchemaCoverageTest {
                 route.reason.set("probe")
             }
             target.frameworkDocs.set("keep")
+            target.mount.set("/api")
         }
         seampact.target("client") { target ->
             target.use.set("@seampact/client")
