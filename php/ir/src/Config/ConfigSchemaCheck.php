@@ -24,6 +24,12 @@ final class ConfigSchemaCheck
 
     private const SCHEMA_FIX = "Correct the value as the config schema states (ADR 0011 'The app config').";
 
+    private const MOUNT_KEY = 'mount';
+
+    private const MOUNT_RULE = "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'.";
+
+    private const MOUNT_FIX = "Write the path prefix the api is served under, such as '/api' (ADR 0011 'The app config').";
+
     private static ?Validator $validator = null;
 
     private function __construct()
@@ -179,6 +185,10 @@ final class ConfigSchemaCheck
             return $problems;
         }
 
+        if ($error->keyword() === 'pattern' && ($path[array_key_last($path) ?? 0] ?? null) === self::MOUNT_KEY) {
+            return [[KeyPath::format($path), false, new ConfigProblem('config.schema', self::MOUNT_RULE, self::MOUNT_FIX, $tree->whereOf($path))]];
+        }
+
         $message = self::interpolated($error->message(), $args);
 
         return [[KeyPath::format($path), false, new ConfigProblem(
@@ -278,6 +288,10 @@ final class ConfigSchemaCheck
             $first === 'sources' => [
                 "A source takes one form: 'path', 'package' with 'version', 'release', 'git' or 'maven'; 'integrity' goes with a bundle form only.",
                 "Keep the keys of one form (ADR 0011 'The app config').",
+            ],
+            $last === 'frameworkRoutes' && ($path[count($path) - 2] ?? null) === 'bootCheck' => [
+                "'bootCheck.frameworkRoutes' is true, false or 'strict'.",
+                "Write true to check the app routes under the contract's base paths, 'strict' to check every app route, or false to switch the check off.",
             ],
             $last === 'bootCheck' => [
                 "'bootCheck' is true, false or '{ frameworkRoutes }'.",

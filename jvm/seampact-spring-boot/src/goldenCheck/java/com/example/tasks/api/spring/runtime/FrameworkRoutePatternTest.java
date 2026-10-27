@@ -1,6 +1,10 @@
 package com.example.tasks.api.spring.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -60,5 +64,35 @@ class FrameworkRoutePatternTest {
         assertMatch(true, "/files/**", "/files/{*rest}");
         assertMatch(true, "/files/**", "/files/**");
         assertMatch(true, "/**", "/{*rest}");
+    }
+
+    @Test
+    void theDefaultScopeChecksOnlyARouteThatCanServeAPathUnderABasePath() {
+        List<String> basePaths = List.of("/api/v1");
+
+        assertTrue(FrameworkRoutePattern.overlapsAny(basePaths, "/api/v1"));
+        assertTrue(FrameworkRoutePattern.overlapsAny(basePaths, "/api/v1/docs"));
+        assertTrue(FrameworkRoutePattern.overlapsAny(basePaths, "/{page}/v1/x"));
+        assertTrue(FrameworkRoutePattern.overlapsAny(basePaths, "/**"));
+        assertTrue(FrameworkRoutePattern.overlapsAny(basePaths, "/{*rest}"));
+        assertFalse(FrameworkRoutePattern.overlapsAny(basePaths, "/health"));
+        assertFalse(FrameworkRoutePattern.overlapsAny(basePaths, "/api"));
+        assertFalse(FrameworkRoutePattern.overlapsAny(basePaths, "/{page}"));
+        assertTrue(FrameworkRoutePattern.overlapsAny(List.of(""), "/health"));
+    }
+
+    @Test
+    void aSegmentWithAWildcardOrAVariableTakesTheBasePathSegment() {
+        List<String> basePaths = List.of("/api/v1");
+
+        assertTrue(FrameworkRoutePattern.overlapsAny(basePaths, "/ap*/**"));
+        assertTrue(FrameworkRoutePattern.overlapsAny(basePaths, "/api/v?/tasks"));
+        assertTrue(FrameworkRoutePattern.overlapsAny(basePaths, "/api/v{version}/tasks"));
+        assertFalse(FrameworkRoutePattern.overlapsAny(basePaths, "/ap*"));
+    }
+
+    @Test
+    void aLiteralInAnotherCaseTakesTheBasePathSegment() {
+        assertTrue(FrameworkRoutePattern.overlapsAny(List.of("/api/v1"), "/API/v1/tasks"));
     }
 }

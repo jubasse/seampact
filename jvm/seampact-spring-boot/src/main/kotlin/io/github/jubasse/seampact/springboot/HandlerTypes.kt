@@ -62,11 +62,11 @@ internal fun endpointsTypes(layout: JavaLayout, nativeDocs: NativeDocs, operatio
 
 /**
  * The composed annotation of an operation (ADR 0022 "Placement"): `@RequestMapping` with the method and the full
- * contract path, its variables positional, and the operation id and access kind as attributes the boundary reads.
+ * contract path under the entry's [mount], its variables positional, and the operation id and access kind as attributes the boundary reads.
  * It carries no `@ResponseStatus`, and no `@AliasFor` exposes anything that changes the route.
  */
-internal fun composedAnnotation(layout: JavaLayout, operation: Operation, at: IrPlace, refusals: Refusals): TypeSpec? {
-    val pattern = springPattern(operation.path, at.below("path"), refusals) ?: return null
+internal fun composedAnnotation(layout: JavaLayout, operation: Operation, mount: String, at: IrPlace, refusals: Refusals): TypeSpec? {
+    val pattern = springPattern(mount + operation.path, at.below("path"), refusals) ?: return null
     val method = requestMethod(operation.method) ?: return null
 
     return TypeSpec.annotationBuilder(layout.operation(operation.id).annotation)

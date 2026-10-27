@@ -114,6 +114,8 @@ export interface TargetEntry {
   artefacts?: ArtefactSwitches;
   // Framework majors the compatibility matrix has not tested, accepted without its warning: `<framework>@<major>`.
   allowUntested?: string[];
+  // The path prefix a server target serves every contract route under, as `/api` (ADR 0011).
+  mount?: string;
   // The server's routes outside the contract the boot check accepts (ADR 0011, ADR 0012).
   frameworkRoutes?: FrameworkRouteEntry[];
   // `off` asks the target to switch its framework's own OpenAPI document off; `keep` when absent (ADR 0011).
@@ -131,10 +133,14 @@ export interface ArtefactSwitches {
 }
 
 export interface BootCheckSwitches {
-  frameworkRoutes?: boolean;
+  // `true` checks the app routes that overlap the contract's base paths, `strict` every app route, `false` none.
+  frameworkRoutes?: boolean | typeof STRICT_FRAMEWORK_ROUTE_CHECK;
   // How the boot check treats a hook the contract needs and the app did not register; `error` when absent.
   hooks?: HookBootCheckLevel;
 }
+
+// The `bootCheck.frameworkRoutes` value that checks every app route, not only those under the contract's base paths.
+export const STRICT_FRAMEWORK_ROUTE_CHECK = "strict";
 
 export const HOOK_BOOT_CHECK_LEVELS = ["error", "warn", "off"] as const;
 
@@ -181,6 +187,14 @@ const FRAMEWORK_ROUTE_SEGMENT = [
   .map((form) => `(?:${form})`)
   .join("|");
 const FRAMEWORK_ROUTE_PATH_PATTERN = `^/(?:(?:${FRAMEWORK_ROUTE_SEGMENT})(?:/(?:${FRAMEWORK_ROUTE_SEGMENT}))*)?$`;
+
+// A mount is '/' then segments of plain ASCII, with no trailing '/': no '*', no character a client sends
+// percent-encoded or a server reads as syntax (the static path segment rule of the server targets), no '%', '?' or
+// '#', no segment starting with ':', which Hono reads as a param, and no '.' or '..' segment, which a client
+// resolves away.
+const MOUNT_SEGMENT = "(?!\\.\\.?(?:/|$))[A-Za-z0-9._~!$&'()+,;=@-][A-Za-z0-9._~!$&'()+,;=@:-]*";
+
+export const MOUNT_PATTERN = `^(?:/${MOUNT_SEGMENT})+$`;
 
 export const APP_CONFIG_SCHEMA: JsonSchema = {
   $schema: JSON_SCHEMA_DIALECT,
@@ -251,7 +265,9 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
                   type: "object",
                   additionalProperties: false,
                   properties: {
-                    frameworkRoutes: { type: "boolean" },
+                    frameworkRoutes: {
+                      oneOf: [{ type: "boolean" }, { const: STRICT_FRAMEWORK_ROUTE_CHECK }],
+                    },
                     hooks: { enum: [...HOOK_BOOT_CHECK_LEVELS] },
                   },
                 },
@@ -265,6 +281,7 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
           items: { type: "string", pattern: ALLOW_UNTESTED_PATTERN },
           uniqueItems: true,
         },
+        mount: { type: "string", pattern: MOUNT_PATTERN },
         frameworkRoutes: { type: "array", items: { $ref: "#/$defs/frameworkRoute" } },
         frameworkDocs: { enum: [...FRAMEWORK_DOCS_SWITCHES] },
       },

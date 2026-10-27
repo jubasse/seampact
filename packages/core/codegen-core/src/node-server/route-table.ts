@@ -48,6 +48,8 @@ export interface RouteTableOptions {
   readonly frameworkRoutes: FrameworkRouteCheck;
   /** The entry's hook boot check level, read by the boot check of the hooks. */
   readonly hookCheck: HookBootCheck;
+  /** The entry's `mount`, written before every route path and base path; empty for none. */
+  readonly mount: string;
   /** The entry's `compression` and `frameworkEtag` options, read by the outgoing reply. */
   readonly compression: CompressionOption;
   readonly frameworkEtag: FrameworkEtagMode;
@@ -65,9 +67,12 @@ interface ValidatorLink {
   readonly imports: ModuleImports;
 }
 
-// A value written into the module as source text, such as an imported validator.
-// The allow-list as written in the config, each entry copied member by member.
-function frameworkRoutesValue(check: FrameworkRouteCheck): SourceValue {
+// The allow-list as written in the config, each entry copied member by member, and the (mounted) base paths whose
+// overlapping app routes the check reads, unless it is strict.
+function frameworkRoutesValue(
+  check: FrameworkRouteCheck,
+  basePaths: readonly string[],
+): SourceValue {
   if (check.status === "off") return { status: "off" };
 
   return {
@@ -77,6 +82,7 @@ function frameworkRoutesValue(check: FrameworkRouteCheck): SourceValue {
       path: allowance.path,
       reason: allowance.reason,
     })),
+    scope: check.scope === "strict" ? "strict" : { basePaths: [...basePaths] },
   };
 }
 
@@ -129,8 +135,12 @@ export function routeTableSource(
     );
   }
 
-  const basePaths = [...new Set(Object.values(ir.api.surfaces).map((surface) => surface.prefix))];
-  const frameworkRoutes = frameworkRoutesValue(options.frameworkRoutes);
+  const basePaths = [
+    ...new Set(
+      Object.values(ir.api.surfaces).map((surface) => `${options.mount}${surface.prefix}`),
+    ),
+  ];
+  const frameworkRoutes = frameworkRoutesValue(options.frameworkRoutes, basePaths);
   const table: SourceValue = {
     id: ir.api.id,
     basePaths,
@@ -209,7 +219,7 @@ function routeEntry(
   return {
     id: operation.id,
     method: operation.method,
-    path: operation.path,
+    path: `${options.mount}${operation.path}`,
     safe: operation.safe,
     access: accessEntry(ir, operation, location, { validators, imports }, refusals),
     scopes: operation.scopes.map((scope, index) => ({

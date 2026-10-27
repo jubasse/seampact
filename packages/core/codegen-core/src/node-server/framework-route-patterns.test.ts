@@ -7,7 +7,7 @@ import {
 } from "../../node-server-runtime/framework-route-patterns.js";
 
 function checkAllowing(...allowed: FrameworkRouteAllowance[]): FrameworkRouteCheck {
-  return { status: "on", allowed };
+  return { status: "on", allowed, scope: "strict" };
 }
 
 function refusedKeys(check: FrameworkRouteCheck, listed: readonly ListedRoute[]): string[] {

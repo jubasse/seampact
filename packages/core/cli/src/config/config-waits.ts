@@ -21,7 +21,6 @@ const BOOT_CHECK_SWITCH_WAITS: Readonly<Record<string, string>> = {
 };
 
 const ENTRY_KEY_WAITS: Readonly<Record<string, string>> = {
-  mount: SERVER_ENTRY_BRINGER,
   access: SERVER_ENTRY_BRINGER,
 };
 

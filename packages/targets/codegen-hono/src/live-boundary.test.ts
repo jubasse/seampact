@@ -78,7 +78,8 @@ interface UncheckedAppModule {
   readonly LISTED_OWN_ROUTE: string;
   uncheckedApp(): { request(path: string, init?: RequestInit): Promise<Response> };
   checkFrameworkRoutes(app: unknown): void;
-  appWithOwnRoutes(addOwnRoutes: (app: Hono) => void): unknown;
+  appWithOwnRoutes(addOwnRoutes: (app: Hono) => void): Hono;
+  registerApi(app: Hono): void;
 }
 
 let app: ReferenceAppModule;
@@ -694,6 +695,7 @@ describe("the framework-route check of an app", () => {
     const files = await generateReferenceProject(project, honoTarget, {}, undefined, {
       status: "on",
       allowed: [{ path: "/own/listed", reason: "the test app's own route" }],
+      scope: "strict",
     });
     const build = join(project, "build");
 
@@ -741,5 +743,127 @@ describe("the framework-route check of an app", () => {
     );
 
     expect(() => uncheckedModule.checkFrameworkRoutes(app)).not.toThrow();
+  });
+});
+
+describe("an api mounted under a path prefix", () => {
+  const project = projectDirectory(import.meta.url, "live-mounted");
+  let mountedModule: UncheckedAppModule;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(
+      project,
+      honoTarget,
+      {},
+      undefined,
+      { status: "on", allowed: [], scope: "contract" },
+      { mount: "/api" },
+    );
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    mountedModule = await import(copyTestApp(build, APP_SOURCE));
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  // The app with no route of its own, its framework-route check run.
+  function checkedApp(): { request(path: string, init?: RequestInit): Promise<Response> } {
+    const app = mountedModule.appWithOwnRoutes(() => undefined);
+
+    mountedModule.checkFrameworkRoutes(app);
+
+    return app as { request(path: string, init?: RequestInit): Promise<Response> };
+  }
+
+  test("serves each contract route under the mount", async () => {
+    const reply = await checkedApp().request(`/api/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+      headers: BEARER,
+    });
+
+    expect(reply.status).toBe(200);
+  });
+
+  test("leaves the unmounted contract path to the app", async () => {
+    const reply = await checkedApp().request(`/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+      headers: BEARER,
+    });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers.get("content-type")).not.toContain(PROBLEM_MEDIA);
+  });
+
+  test("answers the api's 404 under the mounted base path", async () => {
+    const reply = await checkedApp().request("/api/v1/unknown", { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers.get("content-type")).toContain(PROBLEM_MEDIA);
+  });
+
+  test("the default framework-route check leaves an app route outside the mounted base paths alone", () => {
+    const app = mountedModule.appWithOwnRoutes((own) =>
+      own.all("/proxy/*", (c) => c.text("proxied")),
+    );
+
+    expect(() => mountedModule.checkFrameworkRoutes(app)).not.toThrow();
+  });
+
+  test("the default framework-route check refuses an app route under a mounted base path", () => {
+    const app = mountedModule.appWithOwnRoutes((own) =>
+      own.get("/api/v1/docs", (c) => c.text("docs")),
+    );
+
+    expect(() => mountedModule.checkFrameworkRoutes(app)).toThrow("'GET /api/v1/docs'");
+  });
+});
+
+describe("two apis on different mounts in one app", () => {
+  const firstProject = projectDirectory(import.meta.url, "live-first-mount");
+  const secondProject = projectDirectory(import.meta.url, "live-second-mount");
+  let firstModule: UncheckedAppModule;
+  let secondModule: UncheckedAppModule;
+
+  async function mountedApiModule(project: string, mount: string): Promise<UncheckedAppModule> {
+    const files = await generateReferenceProject(
+      project,
+      honoTarget,
+      {},
+      undefined,
+      { status: "on", allowed: [], scope: "contract" },
+      { mount },
+    );
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+
+    return import(copyTestApp(build, APP_SOURCE));
+  }
+
+  beforeAll(async () => {
+    firstModule = await mountedApiModule(firstProject, "/api");
+    secondModule = await mountedApiModule(secondProject, "/partners");
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  // The second api registered on the first api's app, before the first api registers.
+  function appWithBothApis(): Hono {
+    return firstModule.appWithOwnRoutes((own) => secondModule.registerApi(own));
+  }
+
+  test.each(["/api", "/partners"])("the api mounted under %s serves its routes", async (mount) => {
+    const app = appWithBothApis();
+
+    firstModule.checkFrameworkRoutes(app);
+    secondModule.checkFrameworkRoutes(app);
+
+    const reply = await app.request(`${mount}/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+      headers: BEARER,
+    });
+
+    expect(reply.status).toBe(200);
+  });
+
+  test("the default framework-route check of each api leaves the other api's routes alone", () => {
+    const app = appWithBothApis();
+
+    expect(() => firstModule.checkFrameworkRoutes(app)).not.toThrow();
+    expect(() => secondModule.checkFrameworkRoutes(app)).not.toThrow();
   });
 });

@@ -25,6 +25,7 @@ public abstract class TargetSpec @Inject constructor(public val id: String, priv
     public abstract val artefacts: MapProperty<String, Any>
     public abstract val allowUntested: ListProperty<String>
     public abstract val frameworkDocs: Property<String>
+    public abstract val mount: Property<String>
 
     private var operations: OperationsSpec? = null
     private val frameworkRoutes = mutableListOf<FrameworkRouteSpec>()
@@ -55,6 +56,7 @@ public abstract class TargetSpec @Inject constructor(public val id: String, priv
         members.strings("allowUntested", allowUntested)
         if (frameworkRoutes.isNotEmpty()) members.element("frameworkRoutes", JsonArray(frameworkRoutes.map { it.toJson() }))
         members.string("frameworkDocs", frameworkDocs)
+        members.string("mount", mount)
 
         return members.toJson()
     }

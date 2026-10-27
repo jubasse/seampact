@@ -28,7 +28,8 @@ final class RouteHelpers
     private readonly string $routeNamesClass;
     private readonly string $urlsClass;
 
-    public function __construct(private readonly BoundaryNames $names, private readonly PhpTypes $types, private readonly Refusals $refusals)
+    /** @param string $mount the entry's `mount`, written before every contract path; empty for none */
+    public function __construct(private readonly BoundaryNames $names, private readonly PhpTypes $types, private readonly Refusals $refusals, private readonly string $mount)
     {
         $layout = $names->layout();
         $namespace = PhpClassFile::namespaceOf($names->contractClass());
@@ -69,7 +70,7 @@ final class RouteHelpers
             }
 
             $routeNamesType->addConstant(self::constantName($operation), self::routeName($apiId, $operation->id))->setPublic()
-                ->addComment("The route of operation '{$operation->id}', `" . strtoupper($operation->method->value) . " {$operation->path}`.");
+                ->addComment("The route of operation '{$operation->id}', `" . strtoupper($operation->method->value) . " {$this->mount}{$operation->path}`.");
             $this->addUrlMethod($urls, $urlsType, $operation, $operationNames->method, IrPlace::ofOperation($index, $operation->id));
         }
 
@@ -79,7 +80,7 @@ final class RouteHelpers
     private function addUrlMethod(PhpClassFile $file, ClassType $class, Operation $operation, string $methodName, IrPlace $at): void
     {
         $method = $class->addMethod($methodName)->setStatic()->setReturnType('string')
-            ->addComment("The path of operation '{$operation->id}', `{$operation->path}`.");
+            ->addComment("The path of operation '{$operation->id}', `{$this->mount}{$operation->path}`.");
         $wireValues = $file->name($this->names->runtime(self::WIRE_VALUES));
         $parameters = [];
         foreach ($operation->params->path as $position => $param) {
@@ -88,7 +89,7 @@ final class RouteHelpers
 
         $parts = [];
         $literal = '';
-        foreach (explode('/', $operation->path) as $segmentIndex => $segment) {
+        foreach (explode('/', $this->mount . $operation->path) as $segmentIndex => $segment) {
             $literal .= $segmentIndex === 0 ? '' : '/';
             if (preg_match(RoutePlaceholder::PLACEHOLDER_SEGMENT, $segment) !== 1) {
                 $literal .= $segment;

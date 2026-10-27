@@ -78,7 +78,7 @@ An app-wide JSON parser mounted before the router reads the body first, and the 
 
 ### Mount, options and registration
 
-The router serves the contract paths at the app's root. Express gives a router no public way to read its mount path when `router()` is called, so the first middleware checks `req.baseUrl` per request: a router mounted under a path (`app.use('/v1', router)`) answers 500 with a log naming the mount, as ADR 0016 does for NestJS's global prefix.
+The router serves the contract paths at the app's root, under the entry's `mount`. Express gives a router no public way to read its mount path when `router()` is called, so the first middleware checks `req.baseUrl` per request: a router mounted under a path (`app.use('/v1', router)`) answers 500 with a log naming the entry's `mount` as the place for the prefix, as ADR 0016 does for NestJS's global prefix.
 
 The target options are ADR 0016's: `responses` (`strict`, the default, or `warn`) and `bodyValidation` (`false`, the default, or `true`). The `router()` options are `handlers`, `hooks` as one value (`{ authenticate, deciders, scopeResolvers, idempotencyStore, onUnexpectedError }`, `onUnexpectedError` optional), `responses` and `bodyValidation` for the api, and `operations`, the per-operation override keyed by the operation's identifier: `{ operations: { createTask: { responses: "warn" } } }`. An operation's override wins over the router option, which wins over the target option. Two apis are two routers, each with its own boot check.
 

@@ -6,7 +6,7 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * One spring-boot target entry of the app config, as a build plugin reads it (ADR 0011 "The app config"): its [id],
- * its `options`, `artefacts`, `frameworkDocs` and `link` members. The build plugin checks the Spring Boot version it
+ * its `options`, `artefacts`, `frameworkDocs`, `link` and `mount` members, the mount empty when the entry writes none. The build plugin checks the Spring Boot version it
  * resolved against the compatibility matrix before. The IR passed beside it is already the entry's view.
  */
 public data class SpringBootEntry(
@@ -16,6 +16,7 @@ public data class SpringBootEntry(
     val frameworkDocs: String? = null,
     val link: Map<String, String> = emptyMap(),
     val frameworkRoutes: List<FrameworkRoute> = emptyList(),
+    val mount: String = "",
 )
 
 /** One framework route the boot check accepts outside the contract (ADR 0011 `frameworkRoutes`, FR-25). */

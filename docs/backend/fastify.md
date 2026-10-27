@@ -125,7 +125,7 @@ const app = Fastify({ trustProxy: ["127.0.0.1", "10.0.0.0/8"] });
 
 The client address your hooks get is `request.ip`, so it follows this setting.
 
-The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Register the plugin without a prefix: another prefix is refused at boot.
+The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Register the plugin without a prefix: another prefix is refused at boot. To serve the api under a prefix, set `mount: /api` on the target entry instead.
 
 Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
 

@@ -100,7 +100,7 @@ A throttler's 429 works out of the box with `hono-rate-limiter`. When the operat
 
 Hono has no trust-proxy setting. Behind a proxy, `getConnInfo` gives the proxy's address: in `clientAddress`, read the last `X-Forwarded-For` entry instead, and only when the request comes from your proxy. Your hooks get the address it returns.
 
-The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Call `registerRoutes` on an app without `basePath()`: a base path is refused at boot.
+The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Call `registerRoutes` on an app without `basePath()`: a base path is refused at boot. To serve the api under a prefix, set `mount: /api` on the target entry instead.
 
 Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
 

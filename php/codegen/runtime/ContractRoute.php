@@ -15,10 +15,10 @@ final readonly class ContractRoute
     }
 
     /** @param array<array-key, mixed> $operation */
-    public static function of(array $operation, string $basePath): self
+    public static function of(array $operation, string $mount, string $basePath): self
     {
         $segments = [];
-        foreach (array_slice(explode('/', Ir::string($operation, 'path') ?? ''), 1) as $segment) {
+        foreach (array_slice(explode('/', $mount . (Ir::string($operation, 'path') ?? '')), 1) as $segment) {
             $segments[] = preg_match(self::PARAMETER, $segment, $parameter) === 1
                 ? ['literal' => false, 'text' => $parameter[1]]
                 : ['literal' => true, 'text' => $segment];

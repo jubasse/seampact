@@ -21,8 +21,17 @@ final class ContractClass
 
     private readonly ApiLayout $layout;
 
-    /** @param list<FrameworkRoute> $frameworkRoutes */
-    public function __construct(private readonly BoundaryNames $names, private readonly KeptForms $kept, private readonly array $frameworkRoutes)
+    /**
+     * @param list<FrameworkRoute> $frameworkRoutes
+     * @param string $mount the entry's `mount`, the prefix of every contract path; empty for none
+     */
+    public function __construct(
+        private readonly BoundaryNames $names,
+        private readonly KeptForms $kept,
+        private readonly array $frameworkRoutes,
+        private readonly string $mount,
+        private readonly FrameworkRouteScope $frameworkRouteScope,
+    )
     {
         $this->layout = $names->layout();
     }
@@ -42,6 +51,10 @@ final class ContractClass
             static fn (FrameworkRoute $route): array => ['method' => $route->method, 'path' => $route->path],
             $this->frameworkRoutes,
         ))->setPublic()->addComment("The app routes the entry's `frameworkRoutes` lets through the boot check.");
+        $class->addConstant('FRAMEWORK_ROUTE_SCOPE', $this->frameworkRouteScope->value)->setPublic()
+            ->addComment("The app routes the boot check reads: `contract` those under the api's base paths, `strict` every one.");
+        $class->addConstant('MOUNT', $this->mount)->setPublic()
+            ->addComment("The entry's `mount`, the path prefix every contract route is served under.");
 
         return $file;
     }

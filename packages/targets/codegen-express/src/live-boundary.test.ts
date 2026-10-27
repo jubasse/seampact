@@ -977,7 +977,7 @@ interface UncheckedAppModule {
     withUnlistedRoute: boolean;
   }): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startUncheckedSubApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
-  checkAppWithOwnRoute(ownPath: string): void;
+  checkAppWithOwnRoute(ownPath: string | RegExp): void;
 }
 
 // A catch-all below the contract route `GET /v1/channels/{channelId}/tasks/{taskId}`, as each major writes it.
@@ -997,6 +997,7 @@ describe.each(EXPRESS_MAJORS)(
       const files = await generateReferenceProject(project, expressTarget, {}, undefined, {
         status: "on",
         allowed: [{ path: "/own/listed", reason: "the test app's own route" }],
+        scope: "strict",
       });
       const build = join(project, "build");
 
@@ -1064,6 +1065,41 @@ describe.each(EXPRESS_MAJORS)(
       } finally {
         await clean.close();
       }
+    });
+  },
+);
+
+describe.each(EXPRESS_MAJORS)(
+  "the default framework-route scope on %s",
+  (_major, expressPackage) => {
+    const project = projectDirectory(import.meta.url, `live-scoped-${expressPackage}`);
+    let scopedModule: UncheckedAppModule;
+
+    beforeAll(async () => {
+      const files = await generateReferenceProject(project, expressTarget, {}, undefined, {
+        status: "on",
+        allowed: [],
+        scope: "contract",
+      });
+      const build = join(project, "build");
+
+      expect(emitProject(project, files, build)).toEqual([]);
+      linkExpress(project, expressPackage);
+      scopedModule = await import(copyTestApp(build, APP_SOURCE));
+    }, SETUP_TIMEOUT_MILLISECONDS);
+
+    test("leaves an app route outside the base paths alone", () => {
+      expect(() => scopedModule.checkAppWithOwnRoute("/health")).not.toThrow();
+    });
+
+    test("refuses an app route under a base path written in another case, which Express matches", () => {
+      const ownPath = "/V1/channels/:channelId/tasks/:taskId";
+
+      expect(() => scopedModule.checkAppWithOwnRoute(ownPath)).toThrow(`'GET ${ownPath}'`);
+    });
+
+    test("refuses an app route written as a regular expression, which the scope cannot read", () => {
+      expect(() => scopedModule.checkAppWithOwnRoute(/channels/)).toThrow("'GET /channels/'");
     });
   },
 );

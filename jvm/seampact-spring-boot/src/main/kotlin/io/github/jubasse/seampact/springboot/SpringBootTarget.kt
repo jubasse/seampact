@@ -41,7 +41,7 @@ public object SpringBootTarget {
         val layout = JavaLayout(ir, options.packageName, kept, refusals)
         refusals.throwIfAny()
 
-        val types = javaTypes(layout, NativeDocs.of(entry), refusals) + boundaryTypes(layout, options, entry, refusals)
+        val types = javaTypes(layout, NativeDocs.of(entry), entry.mount, refusals) + boundaryTypes(layout, options, entry, refusals)
         refusals.throwIfAny()
 
         val runtime = runtimeFiles(layout, options)
@@ -57,7 +57,7 @@ public object SpringBootTarget {
         return listOf(GeneratedFile("seampact-${ir.api.id}.properties", "$SPRINGDOC_API_DOCS_ENABLED=false\n"))
     }
 
-    private fun javaTypes(layout: JavaLayout, nativeDocs: NativeDocs, refusals: Refusals): List<Pair<String, TypeSpec>> {
+    private fun javaTypes(layout: JavaLayout, nativeDocs: NativeDocs, mount: String, refusals: Refusals): List<Pair<String, TypeSpec>> {
         val mapper = TypeMapper(layout)
         val operationTypes = OperationTypes(layout, mapper, refusals)
         val exceptions = ContractExceptions(layout, mapper)
@@ -88,7 +88,7 @@ public object SpringBootTarget {
             val at = IrPlace.ofOperation(index, operation.id)
             operationTypes.inputTypes(operation, at).forEach { types += layout.operationsPackage to it }
             operationTypes.resultTypes(operation).forEach { types += layout.operationsPackage to it }
-            composedAnnotation(layout, operation, at, refusals)?.let { types += layout.springPackage to it }
+            composedAnnotation(layout, operation, mount, at, refusals)?.let { types += layout.springPackage to it }
         }
 
         endpointsTypes(layout, nativeDocs, operationTypes, refusals).forEach { types += layout.operationsPackage to it }

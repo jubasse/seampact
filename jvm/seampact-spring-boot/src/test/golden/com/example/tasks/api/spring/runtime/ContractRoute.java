@@ -28,10 +28,10 @@ public final class ContractRoute {
     private final String[] templateSegments;
     private final String basePath;
 
-    ContractRoute(JsonNode operation, JsonNode errorCatalog, String basePath) {
+    ContractRoute(JsonNode operation, JsonNode errorCatalog, String mount, String basePath) {
         this.operation = operation;
         this.errorCatalog = errorCatalog;
-        this.templateSegments = operation.path("path").asString().split("/", -1);
+        this.templateSegments = (mount + operation.path("path").asString()).split("/", -1);
         this.basePath = basePath;
     }
 

@@ -77,6 +77,10 @@ private fun contractTable(layout: JavaLayout, options: SpringBootOptions, entry:
     return withoutToolingMembers(view) as JsonObject
 }
 
+// Which app routes the framework-route check reads: those under the contract's base paths, or every one.
+private const val STRICT_SCOPE = "strict"
+private const val CONTRACT_SCOPE = "contract"
+
 private fun settings(options: SpringBootOptions, entry: SpringBootEntry, operations: List<JsonElement>): JsonObject {
     val bootCheck = entry.artefacts[BOOT_CHECK]
     val everyCheck = bootCheck != JsonPrimitive(false)
@@ -89,12 +93,14 @@ private fun settings(options: SpringBootOptions, entry: SpringBootEntry, operati
         put("catchAll", options.catchAll)
         put("frameworkDocs", entry.frameworkDocs ?: FRAMEWORK_DOCS_KEEP)
         put("frameworkRoutes", JsonArray(entry.frameworkRoutes.map { it.toJson() }))
+        put("mount", entry.mount)
         put(
             BOOT_CHECK,
             buildJsonObject {
                 put("hooks", everyCheck && (checks?.get("hooks") as? JsonPrimitive)?.content != HOOKS_OFF)
                 put("handlers", everyCheck)
                 put("frameworkRoutes", everyCheck && checks?.get("frameworkRoutes") != JsonPrimitive(false))
+                put("frameworkRouteScope", if (checks?.get("frameworkRoutes") == JsonPrimitive(STRICT_SCOPE)) STRICT_SCOPE else CONTRACT_SCOPE)
             },
         )
         put("fingerprintHeaders", fingerprintHeaders(operations))

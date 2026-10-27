@@ -9,6 +9,7 @@ use Seampact\Codegen\ApiLayout;
 use Seampact\Codegen\ArtefactSwitches;
 use Seampact\Codegen\BootCheckSwitches;
 use Seampact\Codegen\ContractClass;
+use Seampact\Codegen\FrameworkRouteScope;
 use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\Delivery;
 use Seampact\Codegen\IdentityTypes;
@@ -71,14 +72,15 @@ final class SymfonyGenerator implements Generator
         $types = new PhpTypes($layout);
         $operationTypes = new OperationTypes($layout, $types, $refusals);
         $constraints = new InputConstraintFiles($ir, $placement, $options->rules, $refusals);
-        $contract = new ContractClass($placement, $kept, $entry->frameworkRoutes);
+        $mount = $entry->mount ?? '';
+        $contract = new ContractClass($placement, $kept, $entry->frameworkRoutes, $mount, FrameworkRouteScope::of($entry->artefacts));
         $classFiles = [
             ...(new SchemaTypes($layout, $types, $refusals, new SchemaConstraints($options->rules)))->files($kept->enums(), $kept->objects()),
             ...(new ContractExceptions($layout, $operationTypes))->files($kept),
             ...(new EndpointsInterfaces($placement))->files(),
             $contract->file(),
             ...(new IdentityTypes($placement, $contract, $refusals, self::HOOK_REGISTRATION))->files(),
-            (new RouteLoaderFile($placement, $options, $refusals))->file(),
+            (new RouteLoaderFile($placement, $options, $refusals, $mount))->file(),
             (new InputResolverFile($placement))->file(),
             ...(new BundleFiles($placement, $options, BootCheckSwitches::of($entry->artefacts)))->files(),
         ];
@@ -89,7 +91,7 @@ final class SymfonyGenerator implements Generator
             array_push($classFiles, ...$constraints->files($operation, $at));
         }
         if (ArtefactSwitches::routeHelpersOn($entry->artefacts)) {
-            array_push($classFiles, ...(new RouteHelpers($placement, $types, $refusals))->files($placement->operations()));
+            array_push($classFiles, ...(new RouteHelpers($placement, $types, $refusals, $mount))->files($placement->operations()));
         }
         $refusals->throwIfAny();
 

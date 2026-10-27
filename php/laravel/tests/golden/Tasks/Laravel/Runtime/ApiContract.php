@@ -17,6 +17,7 @@ final class ApiContract
     public const ERRORS_RESULT = 0;
     private const HEAD = 'HEAD';
     private const GET = 'GET';
+    private const STRICT_SCOPE = 'strict';
 
     /** @var array<string, self> */
     private static array $loaded = [];
@@ -45,13 +46,17 @@ final class ApiContract
         public readonly string $routesClass,
         /** @var list<array{method: ?string, path: string}> */
         public readonly array $frameworkRoutes,
+        /** The entry's `mount`, the prefix of every contract path and base path; empty for none. */
+        public readonly string $mount,
+        /** Whether the framework-route check reads every app route (`strict`), not only those under a base path. */
+        public readonly bool $checksEveryAppRoute,
     ) {
         foreach (Ir::maps($ir, 'operations') as $operation) {
             $id = Ir::string($operation, 'id') ?? '';
             $this->operations[$id] = $operation;
             $surface = Ir::string($operation, 'surface') ?? '';
-            $basePath = Ir::string(Ir::map(Ir::map(Ir::map($ir, 'api'), 'surfaces'), $surface), 'prefix') ?? '';
-            $this->routes[] = ContractRoute::of($operation, $basePath);
+            $basePath = $mount . (Ir::string(Ir::map(Ir::map(Ir::map($ir, 'api'), 'surfaces'), $surface), 'prefix') ?? '');
+            $this->routes[] = ContractRoute::of($operation, $mount, $basePath);
             if (!in_array($basePath, $this->basePaths, true)) {
                 $this->basePaths[] = $basePath;
             }
@@ -83,8 +88,10 @@ final class ApiContract
         $types = $constant('TYPES');
         $routesClass = $constant('ROUTES_CLASS');
         $frameworkRoutes = $constant('FRAMEWORK_ROUTES');
-        if (!is_string($api) || !is_array($ir) || !is_array($types) || !is_string($routesClass) || !is_array($frameworkRoutes)) {
-            throw new \LogicException("The generated contract class {$contractClass} lacks its API, IR, TYPES, ROUTES_CLASS or FRAMEWORK_ROUTES constant; regenerate it.");
+        $frameworkRouteScope = $constant('FRAMEWORK_ROUTE_SCOPE');
+        $mount = $constant('MOUNT');
+        if (!is_string($api) || !is_array($ir) || !is_array($types) || !is_string($routesClass) || !is_array($frameworkRoutes) || !is_string($frameworkRouteScope) || !is_string($mount)) {
+            throw new \LogicException("The generated contract class {$contractClass} lacks its API, IR, TYPES, ROUTES_CLASS, FRAMEWORK_ROUTES, FRAMEWORK_ROUTE_SCOPE or MOUNT constant; regenerate it.");
         }
 
         $defaults = constant("{$routesClass}::DEFAULTS");
@@ -96,7 +103,7 @@ final class ApiContract
         /** @var array<string, mixed> $defaults */
         /** @var list<array<string, mixed>> $routeTable */
         /** @var list<array{method: ?string, path: string}> $frameworkRoutes */
-        return self::$loaded[$contractClass] = new self($api, $ir, $types, $defaults, $routeTable, $routesClass, $frameworkRoutes);
+        return self::$loaded[$contractClass] = new self($api, $ir, $types, $defaults, $routeTable, $routesClass, $frameworkRoutes, $mount, $frameworkRouteScope === self::STRICT_SCOPE);
     }
 
     /** @return array<array-key, mixed> */
@@ -115,6 +122,12 @@ final class ApiContract
     public function basePaths(): array
     {
         return $this->basePaths;
+    }
+
+    /** Whether the framework-route check reads the app route at `$uri`: every route when strict, else one under a base path. */
+    public function checksAppRoute(string $uri): bool
+    {
+        return $this->checksEveryAppRoute || FrameworkRoutes::overlapsAny($this->basePaths, $uri);
     }
 
     /** @return array{string, int}|null the operation and status a generated result class answers, status 0 for its errors */

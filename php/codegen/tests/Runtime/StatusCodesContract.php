@@ -47,4 +47,6 @@ final class StatusCodesContract
     public const TYPES = [];
     public const ROUTES_CLASS = SelectionRoutes::class;
     public const FRAMEWORK_ROUTES = [];
+    public const FRAMEWORK_ROUTE_SCOPE = 'contract';
+    public const MOUNT = '';
 }

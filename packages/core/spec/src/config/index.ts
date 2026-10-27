@@ -26,10 +26,12 @@ export {
   HOOK_BOOT_CHECK_LEVELS,
   type HookBootCheckLevel,
   type MavenBundleSource,
+  MOUNT_PATTERN,
   type OperationsFilter,
   type PackageBundleSource,
   type PathSource,
   type ReleaseBundleSource,
+  STRICT_FRAMEWORK_ROUTE_CHECK,
   type TargetEntry,
 } from "./app-config.js";
 export {

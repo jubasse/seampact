@@ -21,6 +21,10 @@ private val CONFIG_SCHEMAS by lazy {
 private const val SCHEMA_FIX = "Correct the value as the config schema states (ADR 0011 'The app config')."
 private const val ONE_OF = "oneOf"
 private const val BOOT_CHECK_ARTEFACT = "bootCheck"
+private const val MOUNT_KEY = "mount"
+private const val MOUNT_RULE =
+    "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!\$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'."
+private const val MOUNT_FIX = "Write the path prefix the api is served under, such as '/api' (ADR 0011 'The app config')."
 
 /** A problem the reader reports at a key before the schema check; the schema errors at or under it would repeat it. */
 internal data class KeyProblem(val path: KeyPath, val problem: ConfigProblem)
@@ -32,7 +36,7 @@ internal fun schemaProblems(tree: ConfigTree, kind: ConfigKind, schema: String, 
     val oneOfPaths = violations.filter { it.keyword == ONE_OF }.map { formatKeyPath(it.instancePath) }.toSet()
 
     val schemaProblems = violations
-        .filterNot { "/$ONE_OF/" in it.evaluationPath && formatKeyPath(it.instancePath) in oneOfPaths }
+        .filterNot { it.keyword != ONE_OF && "/$ONE_OF/" in it.evaluationPath && formatKeyPath(it.instancePath) in oneOfPaths }
         .filterNot { it.keyword == ONE_OF && hasDeeperPath(it.instancePath, oneOfPaths) }
         .map { it.keyword to violationProblem(tree, kind, it) }
         .filterNot { (_, located) -> isAtOrUnder(located.keyPath, reportedPaths) }
@@ -86,6 +90,10 @@ private fun violationProblem(tree: ConfigTree, kind: ConfigKind, violation: Sche
         )
     }
 
+    if (violation.keyword == "pattern" && path.lastOrNull() == MOUNT_KEY) {
+        return LocatedProblem(formatKeyPath(path), ConfigProblem("config.schema", MOUNT_RULE, MOUNT_FIX, tree.whereOf(path)))
+    }
+
     if (violation.keyword == ONE_OF) {
         val (message, fix) = oneOfSentences(path)
         return LocatedProblem(formatKeyPath(path), ConfigProblem("config.schema", message, fix, tree.whereOf(path)))
@@ -105,6 +113,10 @@ private fun oneOfSentences(path: KeyPath): Pair<String, String> {
         first == "sources" -> Pair(
             "A source takes one form: 'path', 'package' with 'version', 'release', 'git' or 'maven'; 'integrity' goes with a bundle form only.",
             "Keep the keys of one form (ADR 0011 'The app config').",
+        )
+        path.lastOrNull() == "frameworkRoutes" && path.getOrNull(path.size - 2) == BOOT_CHECK_ARTEFACT -> Pair(
+            "'bootCheck.frameworkRoutes' is true, false or 'strict'.",
+            "Write true to check the app routes under the contract's base paths, 'strict' to check every app route, or false to switch the check off.",
         )
         path.lastOrNull() == BOOT_CHECK_ARTEFACT -> Pair(
             "'bootCheck' is true, false or '{ frameworkRoutes }'.",

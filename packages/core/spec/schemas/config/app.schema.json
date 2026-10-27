@@ -489,7 +489,14 @@
                   "additionalProperties": false,
                   "properties": {
                     "frameworkRoutes": {
-                      "type": "boolean"
+                      "oneOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "const": "strict"
+                        }
+                      ]
                     },
                     "hooks": {
                       "enum": ["error", "warn", "off"]
@@ -510,6 +517,10 @@
             "pattern": "^[a-z][a-z0-9-]*@(0|[1-9][0-9]*)$"
           },
           "uniqueItems": true
+        },
+        "mount": {
+          "type": "string",
+          "pattern": "^(?:/(?!\\.\\.?(?:/|$))[A-Za-z0-9._~!$&'()+,;=@-][A-Za-z0-9._~!$&'()+,;=@:-]*)+$"
         },
         "frameworkRoutes": {
           "type": "array",

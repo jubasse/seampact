@@ -67,9 +67,9 @@ final class ReferenceContract
      * @param array<string, mixed> $artefacts
      * @param list<FrameworkRoute> $frameworkRoutes
      */
-    public static function entry(string $package, string $api, string $namespace, array $options = [], array $artefacts = [], array $frameworkRoutes = []): TargetEntry
+    public static function entry(string $package, string $api, string $namespace, array $options = [], array $artefacts = [], array $frameworkRoutes = [], ?string $mount = null): TargetEntry
     {
-        return new TargetEntry('server', $package, $api, null, (object) $options, (object) $artefacts, '/app/generated', $namespace, $frameworkRoutes, null);
+        return new TargetEntry('server', $package, $api, null, (object) $options, (object) $artefacts, '/app/generated', $namespace, $frameworkRoutes, $mount);
     }
 
     /** The one operation `$operationId` of the reference tasks IR, which `$change` edits in place. */

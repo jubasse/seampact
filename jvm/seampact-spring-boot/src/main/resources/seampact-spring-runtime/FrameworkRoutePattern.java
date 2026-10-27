@@ -13,6 +13,10 @@ final class FrameworkRoutePattern {
     private static final String ONE_SEGMENT = "*";
     private static final String ANY_SEGMENTS = "**";
     private static final String CAPTURE_ALL_START = "{*";
+    private static final String VARIABLE_START = "{";
+    private static final char VARIABLE_OPENING = '{';
+    private static final char VARIABLE_CLOSING = '}';
+    private static final String ONE_CHARACTER = "?";
     // No allowance segment can be empty, so this token never equals one.
     private static final String CATCH_ALL_SEGMENT = "";
 
@@ -103,6 +107,40 @@ final class FrameworkRoutePattern {
         }
 
         return segments;
+    }
+
+    /**
+     * Whether a route pattern can serve a path at or under one of [basePaths]: each of its first segments takes the
+     * base path's (the same text in any case, as a parser set case-insensitive matches it, a segment holding a
+     * variable or a wildcard, or a catch-all), and it has as many segments, or a catch-all.
+     */
+    static boolean overlapsAny(List<String> basePaths, String routePattern) {
+        List<String> route = routeSegmentsOf(routePattern);
+
+        return basePaths.stream().anyMatch(basePath -> overlaps(route, segmentsOf(basePath)));
+    }
+
+    private static boolean overlaps(List<String> route, List<String> base) {
+        for (int index = 0; index < base.size(); index++) {
+            if (index >= route.size()) return false;
+
+            String segment = route.get(index);
+            if (segment.equals(CATCH_ALL_SEGMENT) || hasUnclosedBrace(segment)) return true;
+            if (!isVariable(segment) && !segment.equalsIgnoreCase(base.get(index))) return false;
+        }
+
+        return true;
+    }
+
+    // `*`, `ap*`, `v?` and `{id}`, `v{version}` or `{id:[0-9]+}` each take one segment.
+    private static boolean isVariable(String segment) {
+        return segment.contains(ONE_SEGMENT) || segment.contains(ONE_CHARACTER) || segment.contains(VARIABLE_START);
+    }
+
+    // A variable pattern split at a `/` it holds cannot be read, so the scope takes it as a catch-all.
+    private static boolean hasUnclosedBrace(String segment) {
+        return segment.chars().filter(character -> character == VARIABLE_OPENING).count()
+            != segment.chars().filter(character -> character == VARIABLE_CLOSING).count();
     }
 
     // Spring writes a catch-all as `**` or `{*name}`; a one-segment variable (`{id}`) or wildcard (`*`) stays one

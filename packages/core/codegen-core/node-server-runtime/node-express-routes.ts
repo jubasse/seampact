@@ -5,7 +5,7 @@
 // Copied into the generated tree as is.
 import { basePathClaimsOf } from "./base-path-claims.js";
 import type { BootProblem } from "./boundary-hooks.js";
-import type { ListedRoute } from "./framework-route-patterns.js";
+import { type ListedRoute, REGULAR_EXPRESSION_PATH } from "./framework-route-patterns.js";
 import { isBoundaryRoute } from "./framework-routes.js";
 
 export interface ExpressRouteListing {
@@ -108,10 +108,13 @@ export function routeEntries(route: object): ListedRoute[] {
   return Object.keys(methods)
     .filter((method) => Reflect.get(methods, method) === true)
     .flatMap((method) =>
-      pathList.map((path: unknown) => ({
-        method: method === EXPRESS_ANY_METHOD ? ANY_METHOD : method.toUpperCase(),
-        path: String(path),
-      })),
+      pathList.map(
+        (path: unknown): ListedRoute => ({
+          method: method === EXPRESS_ANY_METHOD ? ANY_METHOD : method.toUpperCase(),
+          path: String(path),
+          ...(path instanceof RegExp ? { pathSyntax: REGULAR_EXPRESSION_PATH } : {}),
+        }),
+      ),
     );
 }
 

@@ -2,7 +2,9 @@ import type { ArtefactDeclaration, Target } from "@seampact/codegen-core";
 import {
   type ArtefactSwitches,
   BOOT_CHECK_ARTEFACT,
+  type BootCheckSwitches,
   type HookBootCheckLevel,
+  STRICT_FRAMEWORK_ROUTE_CHECK,
   type TargetEntry,
 } from "@seampact/spec/config";
 import { type CliProblem, entryWhere } from "../cli-problem.js";
@@ -48,7 +50,7 @@ export function selectArtefacts(entry: TargetEntry, target: Target): ArtefactSel
 // The `bootCheck.frameworkRoutes` switch an entry writes in `bootCheck`'s object form.
 export function frameworkRoutesSwitchOf(
   artefacts: ArtefactSwitches | undefined,
-): boolean | undefined {
+): BootCheckSwitches["frameworkRoutes"] {
   const bootCheck = artefacts?.[BOOT_CHECK_ARTEFACT];
 
   return typeof bootCheck === "object" ? bootCheck.frameworkRoutes : undefined;
@@ -72,6 +74,11 @@ export function hookCheckLevelOf(artefacts: ArtefactSwitches | undefined): HookB
 // Off when the entry switches the whole boot check off, or its framework-route check alone.
 export function isFrameworkRouteCheckOff(artefacts: ArtefactSwitches | undefined): boolean {
   return artefacts?.[BOOT_CHECK_ARTEFACT] === false || frameworkRoutesSwitchOf(artefacts) === false;
+}
+
+// Strict when the entry asks every app route checked, not only those under the contract's base paths.
+export function isFrameworkRouteCheckStrict(artefacts: ArtefactSwitches | undefined): boolean {
+  return frameworkRoutesSwitchOf(artefacts) === STRICT_FRAMEWORK_ROUTE_CHECK;
 }
 
 // The on and off switches by artefact id; `bootCheck`'s object form tunes its checks and leaves it at its default.

@@ -359,6 +359,8 @@ export function referenceChanges(...changes: readonly ReferenceIrChange[]): Refe
 export interface ReferenceServerRequest {
   readonly artefacts?: ReadonlySet<string>;
   readonly hookCheck?: HookBootCheck;
+  /** The entry's `mount`, the path prefix every contract route is served under. */
+  readonly mount?: string;
   readonly nativeDocsDocument?: (api: string) => NativeDocsDocument;
 }
 
@@ -553,6 +555,7 @@ async function generateApi(
         artefacts: serverRequest.artefacts ?? BOUNDARY_ONLY,
         frameworkRoutes,
         ...(serverRequest.hookCheck === undefined ? {} : { hookCheck: serverRequest.hookCheck }),
+        ...(serverRequest.mount === undefined ? {} : { mount: serverRequest.mount }),
         ...(serverRequest.nativeDocsDocument === undefined
           ? {}
           : { nativeDocsDocument: serverRequest.nativeDocsDocument(api) }),

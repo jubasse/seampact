@@ -93,6 +93,7 @@ async function generateApi(
     artefacts: new Set(artefacts),
     frameworkRoutes: frameworkRouteCheckOf(entry),
     hookCheck: hookCheckLevelOf(entry.artefacts),
+    ...(entry.mount === undefined ? {} : { mount: entry.mount }),
     ...(nativeDocs === undefined ? {} : { nativeDocsDocument: nativeDocs.value }),
   });
 

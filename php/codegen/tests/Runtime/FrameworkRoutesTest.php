@@ -16,6 +16,68 @@ use Seampact\Codegen\Runtime\FrameworkRoutes;
  */
 final class FrameworkRoutesTest extends TestCase
 {
+    public function testTheDefaultScopeLeavesAnAppRouteOutsideTheContractBasePathsAlone(): void
+    {
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/health'));
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/api'));
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/api/v2/users'));
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/api/v1'));
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/api/v1/docs'));
+    }
+
+    public function testAPlaceholderOrACatchAllRouteOverlapsTheBasePathItCanServe(): void
+    {
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/{page}/v1/x'));
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/{a}/{b}'));
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/{any*}'), 'a catch-all serves every path below it');
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/{any}'), 'one segment serves /api, a parent of the base path only');
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/api/{rest}'), 'a placeholder serves the base path itself');
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/files/{rest}'));
+    }
+
+    public function testAPlaceholderWhosePatternTakesASlashIsACatchAll(): void
+    {
+        $patterns = ['any' => '.*', 'id' => '[0-9]+'];
+        $patternOf = static fn (string $name): ?string => $patterns[$name] ?? null;
+
+        self::assertSame('/{any*}', FrameworkRoutes::withCatchAlls('/{any}', $patternOf));
+        self::assertSame('/users/{id}', FrameworkRoutes::withCatchAlls('/users/{id}', $patternOf));
+        self::assertSame('/{page}', FrameworkRoutes::withCatchAlls('/{page}', $patternOf));
+    }
+
+    public function testAPlaceholderInsideASegmentWhosePatternTakesASlashIsACatchAll(): void
+    {
+        $patternOf = static fn (string $name): ?string => $name === 'rest' ? '.+' : null;
+
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], FrameworkRoutes::withCatchAlls('/api{rest}', $patternOf)), 'Symfony matches /api/v1/tasks with rest=/v1/tasks');
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], FrameworkRoutes::withCatchAlls('/v{rest}', $patternOf)), 'a partial segment reads as a placeholder');
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], FrameworkRoutes::withCatchAlls('/api{page}', $patternOf)), 'the default pattern keeps to one segment');
+    }
+
+    public function testAPlaceholderPatternTheCheckCannotReadIsACatchAll(): void
+    {
+        $patternOf = static fn (string $name): ?string => $name === 'rest' ? 'v\\d/tasks' : null;
+
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], FrameworkRoutes::withCatchAlls('/{rest}', $patternOf)));
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], FrameworkRoutes::withCatchAlls('/{rest', $patternOf)), 'an unclosed brace');
+    }
+
+    public function testAPlaceholderPatternThatKeepsToOneSegmentStaysOneSegment(): void
+    {
+        $patterns = ['uuid' => '[0-9a-f]{8}-[0-9a-f]{4}-[13-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}', 'slug' => '[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*', 'lang' => 'en|fr', 'id' => '\\d+'];
+        $patternOf = static fn (string $name): ?string => $patterns[$name] ?? null;
+
+        foreach (array_keys($patterns) as $name) {
+            self::assertSame("/{{$name}}", FrameworkRoutes::withCatchAlls("/{{$name}}", $patternOf));
+        }
+    }
+
+    public function testAnEmptyBasePathOverlapsEveryRoute(): void
+    {
+        self::assertTrue(FrameworkRoutes::overlapsAny([''], '/health'));
+        self::assertTrue(FrameworkRoutes::overlapsAny([''], '/'));
+    }
+
     public function testOneStarTakesExactlyOneSegment(): void
     {
         $allowed = [['path' => '/admin/*', 'method' => null]];

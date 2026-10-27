@@ -492,7 +492,7 @@ function optionProblems(options: { readonly clientAddress?: unknown }): BootProb
   ];
 }
 
-// `app.basePath()` prefixes every route the registration adds, which differs from the contract's empty mount.
+// `app.basePath()` prefixes every route the registration adds, which differs from the entry's mount.
 function basePathProblems(added: readonly { readonly basePath: string }[]): BootProblem[] {
   const basePath = added.find((route) => route.basePath !== ROOT_BASE_PATH)?.basePath;
 
@@ -500,7 +500,7 @@ function basePathProblems(added: readonly { readonly basePath: string }[]): Boot
 
   return [
     {
-      problem: `the app has the base path '${basePath}', which differs from the contract's empty mount`,
+      problem: `the app has the base path '${basePath}', which differs from the entry's mount (write the prefix as the entry's 'mount' in seampact.config.yaml instead)`,
       fix: "call registerRoutes on an app without basePath()",
     },
   ];
