@@ -9,12 +9,9 @@ use Seampact\Golden\Tasks\Symfony\TasksSeampactBundle as FirstBundle;
 use Seampact\Golden\Tasks\Symfony\Runtime\BootCheckPass as RelativeBootCheckPass;
 use Seampact\Golden\Tasks\Symfony\TasksBoundary as RelativeBoundary;
 use Seampact\Golden\Tasks\Symfony\TasksContract as RelativeContract;
-use Seampact\Golden\Tasks\Symfony\TasksInputResolver as RelativeInputResolver;
 use Seampact\Golden\Tasks\Symfony\TasksSettings as RelativeSettings;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\BootCheckPass;
-use Seampact\Golden\TasksConsistent\Symfony\TasksBoundary;
 use Seampact\Golden\TasksConsistent\Symfony\TasksContract;
-use Seampact\Golden\TasksConsistent\Symfony\TasksInputResolver;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSeampactBundle as SecondBundle;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSettings;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -28,6 +25,7 @@ use Symfony\Component\HttpKernel\DependencyInjection\MergeExtensionConfiguration
 /** The container part of the boot check, run on the golden bundles. */
 final class BootCheckPassTest extends TestCase
 {
+    private const EARLIER_BOUNDARY = 'test.earlier_boundary';
     private const RELATIVE_URLS_REFUSAL = "the api writes relative URLs ('api.wire.urls: relative') and 'seampact_tasks.public_origin' is set";
 
     public function testAnEarlierApiWhoseCatchAllCoversThisApisBasePathIsRefused(): void
@@ -37,14 +35,17 @@ final class BootCheckPassTest extends TestCase
         $container->setParameter('kernel.environment', 'test');
         $container->setParameter('kernel.build_dir', sys_get_temp_dir());
         $container->register('event_dispatcher', EventDispatcher::class);
-        self::load(new FirstBundle(), $container);
+        // Both golden apis are named tasks, so the first one's boundary is registered under an id of its own.
+        $container->register(self::EARLIER_BOUNDARY, RelativeBoundary::class)
+            ->addTag('kernel.event_subscriber')
+            ->addTag(RelativeBootCheckPass::BOUNDARY_TAG, [RelativeBootCheckPass::CONTRACT_ATTRIBUTE => RelativeContract::class]);
         self::load(new SecondBundle(), $container);
         (new ResolveClassPass())->process($container);
         (new RegisterListenersPass())->process($container);
 
         $problems = '';
         try {
-            (new BootCheckPass(TasksContract::class, TasksBoundary::class, TasksInputResolver::class, TasksSettings::class, false))->process($container);
+            (self::bootCheck())->process($container);
         } catch (\LogicException $failure) {
             $problems = $failure->getMessage();
         }
@@ -56,14 +57,14 @@ final class BootCheckPassTest extends TestCase
 
     public function testUnderAbsoluteUrlsAnEnvDrivenPublicOriginPassesAtBuild(): void
     {
-        $problems = self::compiledProblems(new SecondBundle(), '%env(TASKS_PUBLIC_ORIGIN)%', new BootCheckPass(TasksContract::class, TasksBoundary::class, TasksInputResolver::class, TasksSettings::class, false));
+        $problems = self::compiledProblems(new SecondBundle(), '%env(TASKS_PUBLIC_ORIGIN)%', self::bootCheck());
 
         self::assertStringNotContainsString('public_origin', $problems);
     }
 
     public function testUnderAbsoluteUrlsALiteralPublicOriginThatIsNotAnOriginIsRefusedAtBuild(): void
     {
-        $problems = self::compiledProblems(new SecondBundle(), 'https://api.example.com/v1', new BootCheckPass(TasksContract::class, TasksBoundary::class, TasksInputResolver::class, TasksSettings::class, false));
+        $problems = self::compiledProblems(new SecondBundle(), 'https://api.example.com/v1', self::bootCheck());
 
         self::assertStringContainsString("'seampact_tasks.public_origin' is 'https://api.example.com/v1'", $problems);
     }
@@ -87,9 +88,19 @@ final class BootCheckPassTest extends TestCase
         self::assertStringNotContainsString('public_origin', self::compiledProblems(new FirstBundle(), null, self::relativeBootCheck()));
     }
 
+    public function testAContainerWithoutTheValidatorIsRefusedNamingThePackage(): void
+    {
+        self::assertStringContainsString('install symfony/validator', self::compiledProblems(new FirstBundle(), null, self::relativeBootCheck()));
+    }
+
+    private static function bootCheck(): BootCheckPass
+    {
+        return new BootCheckPass(TasksContract::class, SecondBundle::BOUNDARY_SERVICE, SecondBundle::INPUT_RESOLVER_SERVICE, SecondBundle::SETTINGS_SERVICE, TasksSettings::class, false);
+    }
+
     private static function relativeBootCheck(): RelativeBootCheckPass
     {
-        return new RelativeBootCheckPass(RelativeContract::class, RelativeBoundary::class, RelativeInputResolver::class, RelativeSettings::class, false);
+        return new RelativeBootCheckPass(RelativeContract::class, FirstBundle::BOUNDARY_SERVICE, FirstBundle::INPUT_RESOLVER_SERVICE, FirstBundle::SETTINGS_SERVICE, RelativeSettings::class, false);
     }
 
     /** The boot check's problems on a container built as a Kernel builds it, the bundle configuration merged first. */

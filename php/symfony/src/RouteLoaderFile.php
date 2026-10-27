@@ -34,7 +34,7 @@ final class RouteLoaderFile
     public function file(): PhpClassFile
     {
         $file = new PhpClassFile($this->placement->routeLoader);
-        $class = $file->namespace->addClass($file->shortName)->setFinal()
+        $class = BundleWiredClass::excludeFromResourceLoading($file, $file->namespace->addClass($file->shortName))->setFinal()
             ->setExtends($file->type('Symfony\\Component\\Config\\Loader\\Loader'))
             ->addComment("The routes of the contract, imported once from the app's routing configuration:\n")
             ->addComment("    resource: {$this->placement->apiKey}\n    type: seampact");

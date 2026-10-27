@@ -8,6 +8,7 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Seampact\Hooks\AuthenticateHook;
 use Seampact\Hooks\IdempotencyStore;
+use Symfony\Component\DependencyInjection\Attribute\Exclude;
 
 /**
  * The api's hooks as tagged services, which the bundle autoconfigures from the hook interfaces: a service locator of
@@ -16,6 +17,7 @@ use Seampact\Hooks\IdempotencyStore;
  * answers with the api's 500. Symfony's `AccessDeniedException` (`denyAccessUnlessGranted()`) is a decider's access
  * denial, named as a string so an app without SecurityBundle still loads this class.
  */
+#[Exclude]
 final class Hooks implements HookLookup, IdempotencyStoreLookup
 {
     /** The tags are `TAG_PREFIX . <api> . <kind suffix>`; the generated bundle builds its tags from these. */

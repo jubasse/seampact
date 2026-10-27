@@ -11,6 +11,7 @@ use Seampact\Golden\TasksConsistent\HooksEndpoints;
 use Seampact\Golden\TasksConsistent\PreferencesEndpoints;
 use Seampact\Golden\TasksConsistent\TasksEndpoints;
 use Symfony\Component\Config\Loader\Loader;
+use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
@@ -20,6 +21,7 @@ use Symfony\Component\Routing\RouteCollection;
  *     resource: tasks
  *     type: seampact
  */
+#[Exclude]
 final class TasksRouteLoader extends Loader
 {
   public const TYPE = 'seampact';

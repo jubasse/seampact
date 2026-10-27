@@ -11,8 +11,10 @@ composer config minimum-stability dev
 composer config prefer-stable true
 composer config repositories.seampact path "$HOME/src/seampact/php/*"
 composer require --dev seampact/symfony
-composer require seampact/hooks
+composer require seampact/hooks symfony/validator
 ```
+
+The boundary checks every input with `symfony/validator`.
 
 In `seampact.config.yaml`, add one entry per api:
 
@@ -28,6 +30,10 @@ targets:
 ```
 
 `out` names the PHP namespace folder under `outDir`. Map `outDir` in `composer.json` (`"App\\": "src/"` covers `src/Generated`).
+
+The skeleton's `config/services.yaml` loads all of `src/`, so it loads `src/Generated` too. That works as is: the bundle registers its own services, and the classes it registers carry `#[Exclude]`. You do not need an `exclude` line.
+
+The classes the bundle wires itself (the settings, the hooks and the boundary) are not injected by type in your app: use the services they call.
 
 Generate, then list the api's bundle for every environment and import its routes:
 
@@ -164,7 +170,7 @@ seampact_tasks:
     public_origin: '%env(TASKS_PUBLIC_ORIGIN)%'
 ```
 
-An operation's value wins over the api's. A bad value answers the api's 500 on every contract route and logs the key, never the value.
+An operation's value wins over the api's. A bad written value, such as `responses: stric`, stops `cache:clear` and names the key. A bad `%env()%` value is only seen at run time: it answers the api's 500 on every contract route and logs the key, never the value.
 
 When the contract writes absolute URLs, set `public_origin` to the origin your clients call, such as `https://api.example.com`: a scheme, a host and an optional port, no path.
 

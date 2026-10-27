@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Symfony\Runtime;
 
+use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestMatcherInterface;
 
@@ -13,6 +14,7 @@ use Symfony\Component\HttpFoundation\RequestMatcherInterface;
  * request whose method and raw path step 1 matches to an operation of that kind, so a public template never covers its
  * identity sibling. A path no operation serves matches no kind.
  */
+#[Exclude]
 final class KindRequestMatcher implements RequestMatcherInterface
 {
     public const SERVICE_PREFIX = 'seampact.';

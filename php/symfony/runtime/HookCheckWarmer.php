@@ -7,6 +7,7 @@ namespace Seampact\Symfony\Runtime;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\HookCheck;
 use Seampact\Codegen\Runtime\HookLookup;
+use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
 
 /**
@@ -14,6 +15,7 @@ use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
  * the container, then ask the registered hooks, and fail listing every hook problem, so a deploy that warms its cache
  * never serves without them. The boundary asks the same on the first contract request of each container instance.
  */
+#[Exclude]
 final class HookCheckWarmer implements CacheWarmerInterface
 {
     public function __construct(private readonly HookLookup $hooks, private readonly string $contractClass)

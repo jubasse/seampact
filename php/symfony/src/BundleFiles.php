@@ -14,7 +14,8 @@ use Seampact\Ir\Model\UrlForm;
 /**
  * The api's bundle (ADR 0024 "Options and registration"), which the app lists in `config/bundles.php`: its
  * configuration under `seampact_<api>` (`responses`, `body_validation` and `operations.<operationId>.responses`, all
- * scalar nodes, defaulting to the target options), its services (the route loader, the input resolver, the settings
+ * scalar nodes, defaulting to the target options, a literal outside its values failing the container build), its
+ * services under `seampact.<api>.<role>` ids (the route loader, the input resolver, the settings
  * that read that configuration, the hooks, the boundary subscriber and the boot check's route decorator), the
  * autoconfiguration tags of the hook interfaces, the compiler passes that point each endpoints interface at the one
  * service implementing it and run the boot check, and the worker refusal of its `boot()`; then the boundary subscriber
@@ -23,6 +24,16 @@ use Seampact\Ir\Model\UrlForm;
 final class BundleFiles
 {
     private const IDEMPOTENCY_STORE = 'Seampact\\Hooks\\IdempotencyStore';
+    /** The bundle's constants naming the id of each service it registers, and the role ending the id. */
+    private const SERVICE_ROLES = [
+        'ROUTE_LOADER_SERVICE' => 'route_loader',
+        'INPUT_RESOLVER_SERVICE' => 'input_resolver',
+        'SETTINGS_SERVICE' => 'settings',
+        'HOOKS_SERVICE' => 'hooks',
+        'BOUNDARY_SERVICE' => 'boundary',
+        'HOOK_CHECK_WARMER_SERVICE' => 'hook_check_warmer',
+        'ROUTE_CHECK_SERVICE' => 'route_check',
+    ];
 
     public function __construct(
         private readonly SymfonyPlacement $placement,
@@ -47,13 +58,17 @@ final class BundleFiles
 
         $operationIds = array_map(static fn (array $kept): string => $kept[1]->id, $this->placement->operations());
         $class->addConstant('OPERATION_IDS', $operationIds)->setPrivate()->addComment('@var list<string>');
+        // Ids that are not class names, so an app's resource import of the generated classes never replaces them.
+        foreach (self::SERVICE_ROLES as $constant => $role) {
+            $class->addConstant($constant, "seampact.{$this->placement->layout->ir->api->id}.{$role}");
+        }
 
         $configure = $class->addMethod('configure')->setPublic()->setReturnType('void');
         $configure->addParameter('definition')->setType($file->type('Symfony\\Component\\Config\\Definition\\Configurator\\DefinitionConfigurator'));
         $invalid = $file->name('Symfony\\Component\\Config\\Definition\\Exception\\InvalidConfigurationException');
         $configure->setBody(str_replace(['__INVALID__', '__ALIAS__'], [$invalid, $this->placement->configurationAlias], (new Dumper())->format(
             <<<'PHP'
-                // Scalar nodes only, so an %env()% placeholder is never refused here; the settings check each value.
+                // Scalar nodes only, so an %env()% placeholder is never refused here; loadExtension checks each literal.
                 $children = $definition->rootNode()->children();
                 $children->scalarNode('responses')->defaultValue(?);
                 $children->scalarNode('body_validation')->defaultValue(?);
@@ -99,15 +114,20 @@ final class BundleFiles
         $access = $file->name($this->placement->access);
         $tag = static fn (string $suffix): string => "{$hooks}::tag(self::API, {$hooks}::{$suffix})";
         $body = <<<PHP
+            \$refusals = {$settings}::literalRefusals(\$config, \$builder);
+            if (\$refusals !== []) {
+                throw new {$file->name('Symfony\\Component\\Config\\Definition\\Exception\\InvalidConfigurationException')}(implode("\\n", \$refusals));
+            }
+
             \$services = \$container->services();
-            \$services->set({$routeLoader}::class)->tag('routing.loader');
-            \$services->set({$resolver}::class)->tag('controller.argument_value_resolver', ['priority' => {$resolver}::PRIORITY]);
-            \$services->set({$settings}::class)->args([
+            \$services->set(self::ROUTE_LOADER_SERVICE, {$routeLoader}::class)->tag('routing.loader');
+            \$services->set(self::INPUT_RESOLVER_SERVICE, {$resolver}::class)->tag('controller.argument_value_resolver', ['priority' => {$resolver}::PRIORITY]);
+            \$services->set(self::SETTINGS_SERVICE, {$settings}::class)->args([
                 '\$responses' => \$config['responses'] ?? null,
                 '\$bodyValidation' => \$config['body_validation'] ?? null,
                 '\$operations' => \$config['operations'] ?? [],{$publicOriginArgument}
             ]);
-            \$services->set({$hooks}::class)->args([
+            \$services->set(self::HOOKS_SERVICE, {$hooks}::class)->args([
                 tagged_locator({$tag('AUTHENTICATE_TAG_SUFFIX')}, {$hooks}::HOOK_ATTRIBUTE),
                 tagged_iterator({$tag('DECIDERS_TAG_SUFFIX')}),
                 tagged_iterator({$tag('SCOPE_RESOLVERS_TAG_SUFFIX')}),
@@ -115,7 +135,7 @@ final class BundleFiles
                 service('logger'),
                 service({$idempotencyStore}::class)->nullOnInvalid(),
             ]);
-            \$services->set({$boundary}::class)->args([service({$hooks}::class), service({$settings}::class), service('validator')])->tag('kernel.event_subscriber')->tag({$bootCheck}::BOUNDARY_TAG, [{$bootCheck}::CONTRACT_ATTRIBUTE => {$contract}::class]);
+            \$services->set(self::BOUNDARY_SERVICE, {$boundary}::class)->args([service(self::HOOKS_SERVICE), service(self::SETTINGS_SERVICE), service('validator')])->tag('kernel.event_subscriber')->tag({$bootCheck}::BOUNDARY_TAG, [{$bootCheck}::CONTRACT_ATTRIBUTE => {$contract}::class]);
             foreach ({$access}::KINDS as \$kind) {
                 \$services->set({$matcher}::serviceId(self::API, \$kind), {$matcher}::class)->args([{$contract}::class, {$access}::ROUTES, \$kind]);
             }
@@ -129,10 +149,10 @@ final class BundleFiles
         }
         if ($this->bootCheck !== null && $this->bootCheck->hooks) {
             $warmer = $file->name($this->placement->runtime('HookCheckWarmer'));
-            $body .= "\$services->set({$warmer}::class)->args([service({$hooks}::class), {$contract}::class])->tag('kernel.cache_warmer');\n";
+            $body .= "\$services->set(self::HOOK_CHECK_WARMER_SERVICE, {$warmer}::class)->args([service(self::HOOKS_SERVICE), {$contract}::class])->tag('kernel.cache_warmer');\n";
         }
         if ($this->bootCheck !== null) {
-            $body .= "\$services->set({$routeCheck}::class)->decorate('routing.loader')->args([service('.inner'), {$contract}::class, {$routeLoader}::RESOURCE, " . var_export($this->bootCheck->frameworkRoutes, true) . ']);';
+            $body .= "\$services->set(self::ROUTE_CHECK_SERVICE, {$routeCheck}::class)->decorate('routing.loader')->args([service('.inner'), {$contract}::class, {$routeLoader}::RESOURCE, " . var_export($this->bootCheck->frameworkRoutes, true) . ']);';
         }
         $load->setBody(rtrim($body));
         $class->addConstant('API', $this->placement->layout->ir->api->id)->setPrivate();
@@ -147,7 +167,7 @@ final class BundleFiles
             PHP;
         if ($this->bootCheck !== null) {
             $bootCheckPass = $file->name($this->placement->runtime('BootCheckPass'));
-            $buildBody .= "\n\$container->addCompilerPass(new {$bootCheckPass}({$contract}::class, {$boundary}::class, {$resolver}::class, {$settings}::class, "
+            $buildBody .= "\n\$container->addCompilerPass(new {$bootCheckPass}({$contract}::class, self::BOUNDARY_SERVICE, self::INPUT_RESOLVER_SERVICE, self::SETTINGS_SERVICE, {$settings}::class, "
                 . var_export($this->bootCheck->handlers, true) . "), {$passConfig}::TYPE_BEFORE_REMOVING, {$bootCheckPass}::PRIORITY);";
         }
         $build->setBody($buildBody);
@@ -210,10 +230,11 @@ final class BundleFiles
     {
         $file = new PhpClassFile($this->placement->settings);
         $alias = $this->placement->configurationAlias;
-        $class = $file->namespace->addClass($file->shortName)->setFinal()->setReadOnly()
+        $class = BundleWiredClass::excludeFromResourceLoading($file, $file->namespace->addClass($file->shortName))->setFinal()->setReadOnly()
             ->addImplement($file->type($this->placement->runtime('ContractSettings')))
-            ->addComment("The '{$alias}' bundle configuration, each value checked when the boundary reads it, so a value\n"
-                . 'the configuration cannot hold is refused naming its key and the accepted values, never the value.');
+            ->addComment("The '{$alias}' bundle configuration, a literal value checked at the container build\n"
+                . "and an `%env()%` one when the boundary reads it, so a value the configuration cannot hold is refused\n"
+                . 'naming its key and the accepted values, never the value.');
         $class->addConstant('ALIAS', $alias);
         $class->addConstant('RESPONSES_VALUES', ['strict', 'warn'])->setPrivate();
         $class->addConstant('TRUE_TEXTS', ['true', '1'])->setPrivate();
@@ -227,6 +248,38 @@ final class BundleFiles
         $originParameter = $this->writesAbsoluteUrls() ? $constructor->addPromotedParameter('publicOrigin') : $constructor->addPromotedParameter('publicOrigin', null);
         $originParameter->setPrivate()->setType('mixed');
 
+        $class->addConstant('BODY_VALIDATION_REFUSAL', "The bundle configuration key {$alias}.body_validation takes true or false.")->setPrivate();
+
+        $literals = $class->addMethod('literalRefusals')->setPublic()->setStatic()->setReturnType('array')
+            ->addComment("The refusal of each literal value outside its values, for the container build; an `%env()%` value is\n"
+                . "left to the run-time check.\n\n@param array<mixed> \$config\n@return list<string>");
+        $literals->addParameter('config')->setType('array');
+        $literals->addParameter('container')->setType($file->type('Symfony\\Component\\DependencyInjection\\ContainerBuilder'));
+        $envValue = $file->name($this->placement->runtime('EnvValue'));
+        $literals->setBody(<<<PHP
+            \$literals = ['{$alias}.responses' => \$config['responses'] ?? null];
+            \$operations = \$config['operations'] ?? [];
+            foreach (is_array(\$operations) ? \$operations : [] as \$operationId => \$operation) {
+                if (is_array(\$operation) && (\$operation['responses'] ?? null) !== null) {
+                    \$literals["{$alias}.operations.{\$operationId}.responses"] = \$operation['responses'];
+                }
+            }
+
+            \$refusals = [];
+            foreach (\$literals as \$key => \$value) {
+                if (self::responsesValue(\$value) === null && !{$envValue}::isPlaceholder(\$container, \$value)) {
+                    \$refusals[] = self::responsesRefusal(\$key);
+                }
+            }
+
+            \$bodyValidation = \$config['body_validation'] ?? null;
+            if (self::bodyValidationOf(\$bodyValidation) === null && !{$envValue}::isPlaceholder(\$container, \$bodyValidation)) {
+                \$refusals[] = self::BODY_VALIDATION_REFUSAL;
+            }
+
+            return \$refusals;
+            PHP);
+
         $responses = $class->addMethod('responsesOf')->setPublic()->setReturnType('string')
             ->addComment("The outgoing check's mode of an operation: its own value, else the api's.");
         $responses->addParameter('operationId')->setType('string');
@@ -235,30 +288,46 @@ final class BundleFiles
             \$own = is_array(\$operation) ? (\$operation['responses'] ?? null) : null;
             \$value = \$own ?? \$this->responses;
             \$key = \$own === null ? '{$alias}.responses' : "{$alias}.operations.{\$operationId}.responses";
-            if (!is_string(\$value) || !in_array(\$value, self::RESPONSES_VALUES, true)) {
-                throw new \\UnexpectedValueException("The bundle configuration key {\$key} takes 'strict' or 'warn'.");
-            }
 
-            return \$value;
+            return self::responsesValue(\$value) ?? throw new \\UnexpectedValueException(self::responsesRefusal(\$key));
             PHP);
 
         $body = $class->addMethod('bodyValidation')->setPublic()->setReturnType('bool')
             ->addComment('Whether the outgoing check validates success bodies; an environment value is text.');
-        $body->setBody(<<<PHP
-            \$value = \$this->bodyValidation;
-            if (is_bool(\$value)) {
-                return \$value;
+        $body->setBody(<<<'PHP'
+            return self::bodyValidationOf($this->bodyValidation) ?? throw new \UnexpectedValueException(self::BODY_VALIDATION_REFUSAL);
+            PHP);
+
+        $responsesValue = $class->addMethod('responsesValue')->setPrivate()->setStatic()->setReturnType('?string')
+            ->addComment('The mode, or null for a value outside the modes.');
+        $responsesValue->addParameter('value')->setType('mixed');
+        $responsesValue->setBody(<<<'PHP'
+            return is_string($value) && in_array($value, self::RESPONSES_VALUES, true) ? $value : null;
+            PHP);
+
+        $responsesRefusal = $class->addMethod('responsesRefusal')->setPrivate()->setStatic()->setReturnType('string');
+        $responsesRefusal->addParameter('key')->setType('string');
+        $responsesRefusal->setBody(<<<'PHP'
+            return "The bundle configuration key {$key} takes 'strict' or 'warn'.";
+            PHP);
+
+        $bodyValidationOf = $class->addMethod('bodyValidationOf')->setPrivate()->setStatic()->setReturnType('?bool')
+            ->addComment('A boolean, or its text as an environment value gives it; null for any other value.');
+        $bodyValidationOf->addParameter('value')->setType('mixed');
+        $bodyValidationOf->setBody(<<<'PHP'
+            if (is_bool($value)) {
+                return $value;
             }
 
-            if (is_string(\$value) && in_array(strtolower(\$value), self::TRUE_TEXTS, true)) {
+            if (is_string($value) && in_array(strtolower($value), self::TRUE_TEXTS, true)) {
                 return true;
             }
 
-            if (is_string(\$value) && in_array(strtolower(\$value), self::FALSE_TEXTS, true)) {
+            if (is_string($value) && in_array(strtolower($value), self::FALSE_TEXTS, true)) {
                 return false;
             }
 
-            throw new \\UnexpectedValueException('The bundle configuration key {$alias}.body_validation takes true or false.');
+            return null;
             PHP);
 
         $origin = $class->addMethod('publicOrigin')->setPublic()->setReturnType($this->writesAbsoluteUrls() ? 'string' : '?string');
@@ -292,7 +361,7 @@ final class BundleFiles
     private function boundary(): PhpClassFile
     {
         $file = new PhpClassFile($this->placement->boundary);
-        $class = $file->namespace->addClass($file->shortName)->setFinal()
+        $class = BundleWiredClass::excludeFromResourceLoading($file, $file->namespace->addClass($file->shortName))->setFinal()
             ->setExtends($file->type($this->placement->runtime('BoundarySubscriber')))
             ->addComment("The boundary of api '{$this->placement->apiKey}', which the bundle registers as an event subscriber.");
         $class->addMethod('contractClass')->setProtected()->setReturnType('string')

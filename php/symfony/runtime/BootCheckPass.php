@@ -19,9 +19,9 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * does not serve. It checks the handlers (one service per endpoints interface, each method marked with its operation,
  * no access attribute the boundary would run after the input checks), the boundary's listeners and the value resolver,
  * the listeners placed where the outgoing check cannot see them, an api registered before this one whose catch-all
- * answers this api's paths, ext-zlib, the Symfony major, `framework.http_cache`, and the bundle's `public_origin`:
- * needed under absolute URLs (a literal checked here, an `%env()%` value by the settings at run time), refused under
- * relative ones.
+ * answers this api's paths, ext-zlib, the Symfony major, the validator, `framework.http_cache`, and the bundle's
+ * `public_origin`: needed under absolute URLs (a literal checked here, an `%env()%` value by the settings at run time),
+ * refused under relative ones.
  */
 final class BootCheckPass implements CompilerPassInterface
 {
@@ -32,20 +32,24 @@ final class BootCheckPass implements CompilerPassInterface
     public const CONTRACT_ATTRIBUTE = 'contract';
     private const DEBUG_HANDLERS_LISTENER = 'debug.debug_handlers_listener';
     private const HTTP_CACHE = 'http_cache';
+    private const VALIDATOR = 'validator';
     private const VALUE_RESOLVER_TAG = 'controller.argument_value_resolver';
     private const REFUSED_ATTRIBUTES = [
         'Symfony\\Component\\Security\\Http\\Attribute\\IsGranted' => 'an access_control rule or a decider of the right',
         'Symfony\\Component\\Security\\Http\\Attribute\\IsCsrfTokenValid' => 'the authenticate hook with the CSRF companion value',
         'Symfony\\Component\\HttpKernel\\Attribute\\IsSignatureValid' => 'nothing: a signed URI is not a form the contract declares',
     ];
-    private const ENV_PLACEHOLDER = '/%env\(/';
     private const SUPPORTED_MAJORS = ['/^7\.4\./', '/^8\./'];
 
-    /** @param bool $checksHandlers the `handlers` switch of `artefacts.bootCheck` */
+    /**
+     * @param string $boundaryService the ids of the bundle's boundary, input resolver and settings services
+     * @param bool $checksHandlers the `handlers` switch of `artefacts.bootCheck`
+     */
     public function __construct(
         private readonly string $contractClass,
-        private readonly string $boundaryClass,
-        private readonly string $resolverClass,
+        private readonly string $boundaryService,
+        private readonly string $resolverService,
+        private readonly string $settingsService,
         private readonly string $settingsClass,
         private readonly bool $checksHandlers,
     ) {
@@ -75,12 +79,13 @@ final class BootCheckPass implements CompilerPassInterface
      */
     private function publicOrigin(ContainerBuilder $container, ApiContract $contract): array
     {
-        $arguments = $container->hasDefinition($this->settingsClass) ? $container->getDefinition($this->settingsClass)->getArguments() : [];
-        // The merge pass has turned each `%env()%` into an `env_<hash>` placeholder; resolving gives the `%env()%` back.
-        $configured = $container->resolveEnvPlaceholders($arguments[ContractSettings::PUBLIC_ORIGIN_ARGUMENT] ?? null);
-        if (PublicOrigin::writesAbsoluteUrls($contract) && is_string($configured) && preg_match(self::ENV_PLACEHOLDER, $configured) === 1) {
+        $arguments = $container->hasDefinition($this->settingsService) ? $container->getDefinition($this->settingsService)->getArguments() : [];
+        $placeholder = $arguments[ContractSettings::PUBLIC_ORIGIN_ARGUMENT] ?? null;
+        if (PublicOrigin::writesAbsoluteUrls($contract) && EnvValue::isPlaceholder($container, $placeholder)) {
             return [];
         }
+
+        $configured = $container->resolveEnvPlaceholders($placeholder);
 
         $aliasConstant = "{$this->settingsClass}::" . ContractSettings::ALIAS_CONSTANT;
         $alias = defined($aliasConstant) ? constant($aliasConstant) : null;
@@ -161,13 +166,13 @@ final class BootCheckPass implements CompilerPassInterface
     private function listeners(ContainerBuilder $container): array
     {
         $problems = [];
-        if (!$container->hasDefinition($this->resolverClass) || !$container->getDefinition($this->resolverClass)->hasTag(self::VALUE_RESOLVER_TAG)) {
-            $problems[] = "the input resolver {$this->resolverClass} is not registered as a value resolver; list the api's bundle in config/bundles.php";
+        if (!$container->hasDefinition($this->resolverService) || !$container->getDefinition($this->resolverService)->hasTag(self::VALUE_RESOLVER_TAG)) {
+            $problems[] = "the input resolver service {$this->resolverService} is not registered as a value resolver; list the api's bundle in config/bundles.php";
         }
 
         $boundaryListeners = [];
         foreach (self::dispatcherListeners($container) as [$event, $service, $priority]) {
-            if ($service === $this->boundaryClass) {
+            if ($service === $this->boundaryService) {
                 $boundaryListeners[] = "{$event}@{$priority}";
             } elseif ($event === KernelEvents::REQUEST && $priority > BoundarySubscriber::REQUEST_PRIORITY && $service !== self::DEBUG_HANDLERS_LISTENER) {
                 $problems[] = "the service {$service} listens to kernel.request at priority {$priority}, above the boundary's " . BoundarySubscriber::REQUEST_PRIORITY . ', so a reply it sets escapes the contract; lower its priority';
@@ -184,7 +189,7 @@ final class BootCheckPass implements CompilerPassInterface
         }
         $missing = array_diff($expected, $boundaryListeners);
         if ($missing !== []) {
-            $problems[] = "the boundary {$this->boundaryClass} does not listen to " . implode(', ', $missing) . "; keep the api's bundle's subscriber as it is";
+            $problems[] = "the boundary service {$this->boundaryService} does not listen to " . implode(', ', $missing) . "; keep the api's bundle's subscriber as it is";
         }
 
         return $problems;
@@ -204,7 +209,7 @@ final class BootCheckPass implements CompilerPassInterface
             if ($event !== KernelEvents::REQUEST || $priority !== BoundarySubscriber::REQUEST_PRIORITY) {
                 continue;
             }
-            if ($service === $this->boundaryClass) {
+            if ($service === $this->boundaryService) {
                 break;
             }
 
@@ -249,6 +254,10 @@ final class BootCheckPass implements CompilerPassInterface
         $supported = array_filter(self::SUPPORTED_MAJORS, static fn (string $major): bool => preg_match($major, Kernel::VERSION) === 1);
         if ($supported === []) {
             $problems[] = 'Symfony ' . Kernel::VERSION . ' is not supported; use Symfony 7.4 or 8';
+        }
+
+        if (!$container->has(self::VALIDATOR)) {
+            $problems[] = 'the service validator is missing, and the boundary checks every input with it; install symfony/validator (composer require symfony/validator) and keep framework.validation on';
         }
 
         if ($container->hasDefinition(self::HTTP_CACHE) && $container->getDefinition(self::HTTP_CACHE)->isPublic()) {
