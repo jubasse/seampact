@@ -30,6 +30,7 @@ import {
   isBoundaryRoute,
   isStatusDenial,
   type ListedRoute,
+  leftToFrameworkInDebug,
   markBoundaryRoute,
   matchContractRoute,
   matchesContractPath,
@@ -75,6 +76,7 @@ const HONO_FIXES: PlatformFixes = {
   rawBody: SKIP_CONTRACT_ROUTES_FIX,
   bodySize: SKIP_CONTRACT_ROUTES_FIX,
 };
+const INTERNAL_SERVER_ERROR_STATUS = 500;
 const ROOT_BASE_PATH = "/";
 const NO_BODY: ReadRequestBody = { body: undefined };
 
@@ -366,12 +368,24 @@ export function createHonoBoundary<
     };
   }
 
+  // What Hono answers when no `onError` is set; the debug path leaves it to the app's own handler.
+  function honoDefaultErrorResponse(c: Context): Response {
+    return c.text("Internal Server Error", INTERNAL_SERVER_ERROR_STATUS);
+  }
+
   /** The reply of a contract error, or a 401, 403 or 429 mapped to its role, in the api's format; for `onError`. */
   async function renderContractError(c: Context, error: unknown): Promise<Response> {
     const slot = currentRequestSlot();
     const context = slot === undefined ? undefined : contexts.get(slot);
     const reported = webReportedRequest(c.req.raw);
     const route = context?.route ?? matchContractRoute(api, reported.method, reported.path)?.route;
+
+    if (context !== undefined && claimedError(context.route, error, c) === undefined) {
+      context.unclaimedException = error;
+
+      if (leftToFrameworkInDebug(context, reported)) return honoDefaultErrorResponse(c);
+    }
+
     const contractError =
       route === undefined
         ? unexpectedError(undefined, error)
