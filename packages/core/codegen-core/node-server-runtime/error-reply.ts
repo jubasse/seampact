@@ -7,6 +7,7 @@ import {
   codeOfRole,
   codeOfStatus,
   roleEntryOf,
+  roleParams,
   unexpectedError,
 } from "./contract-error.js";
 import {
@@ -16,6 +17,7 @@ import {
   matchesContractPath,
 } from "./contract-route.js";
 import { isPlainObject } from "./plain-object.js";
+import { retryAfterFacts } from "./retry-after.js";
 import { runtimeLog } from "./runtime-logger.js";
 
 /** The status of a request the api does not serve. */
@@ -122,17 +124,36 @@ export function isStatusDenial(error: unknown): boolean {
 }
 
 /**
- * A framework refusal (an error carrying a 401, 403 or 429 status) mapped as `statusError` maps it. Undefined for any
- * other error.
+ * A framework refusal (an error carrying a 401, 403 or 429 status) mapped as `statusError` maps it, a 429 with the
+ * delay of the `Retry-After` values the reply already holds or the error carries. Undefined for any other error.
  */
-export function frameworkRefusal(route: ContractRoute, error: unknown): ContractError | undefined {
+export function frameworkRefusal(
+  route: ContractRoute,
+  error: unknown,
+  replyRetryAfterValues: readonly string[],
+): ContractError | undefined {
   const status = errorStatus(error);
 
   if (status !== UNAUTHORIZED && status !== FORBIDDEN && status !== TOO_MANY_REQUESTS) {
     return undefined;
   }
 
-  return statusError(route, status, error, FRAMEWORK_REFUSAL_FIXES);
+  return statusError(
+    route,
+    status,
+    error,
+    FRAMEWORK_REFUSAL_FIXES,
+    refusalFacts(status, error, replyRetryAfterValues),
+  );
+}
+
+/** The role data a refusal gives: a 429's `Retry-After` delay; none for another status or without a usable one. */
+export function refusalFacts(
+  status: number,
+  error: unknown,
+  replyRetryAfterValues: readonly string[],
+): unknown {
+  return status === TOO_MANY_REQUESTS ? retryAfterFacts(error, replyRetryAfterValues) : undefined;
 }
 
 /** Whether the operation answers a status: a code of the status's role, or a code of that status. */
@@ -142,18 +163,21 @@ export function declaresStatus(route: ContractRoute, status: number): boolean {
 
 /**
  * An HTTP status thrown on an operation, as its code: the code of the status's role first, else the operation's one
- * code of that status, either answered only when it requires no params, since a status carries none; else a 500 whose
- * cause names the fix.
+ * code of that status. A code with required params is answered only when the role's data (`refusalFacts`) fills
+ * every one through the role's binding; otherwise, and for two codes of the status, a 500 whose cause names the fix.
  */
 export function statusError(
   route: ContractRoute,
   status: number,
   cause: unknown,
   fixes: StatusErrorFixes,
+  roleData?: unknown,
 ): ContractError {
   const roleEntry = statusRoleEntry(route, status);
 
-  if (roleEntry !== undefined) return statusCodeError(route, status, roleEntry, fixes);
+  if (roleEntry !== undefined) {
+    return statusCodeError(route, status, roleEntry, fixes, roleData);
+  }
 
   const [entry, ...otherEntries] = Object.values(route.errors).filter(
     (candidate) => candidate.status === status,
@@ -172,7 +196,7 @@ export function statusError(
     );
   }
 
-  return statusCodeError(route, status, entry, fixes);
+  return statusCodeError(route, status, entry, fixes, undefined);
 }
 
 function statusCodeError(
@@ -180,14 +204,46 @@ function statusCodeError(
   status: number,
   entry: ErrorEntry,
   fixes: StatusErrorFixes,
+  roleData: unknown,
 ): ContractError {
   if (entry.requiresParams !== true) return new ContractError(entry.code);
+
+  const filled = filledRoleParams(entry, status, roleData);
+
+  if (filled !== undefined) return new ContractError(entry.code, filled);
 
   return unexpectedError(
     route,
     new Error(
       `seampact: a ${status} error on '${route.id}' maps to '${entry.code}', which declares required params; ${fixes.requiredParams}.`,
     ),
+  );
+}
+
+// The params the status's role binding renders from the data, kept only when they hold every required member.
+function filledRoleParams(entry: ErrorEntry, status: number, roleData: unknown): unknown {
+  const role = STATUS_ROLES[status];
+
+  if (role === undefined || roleData === undefined || entry.requiredParams === undefined) {
+    return undefined;
+  }
+
+  const params =
+    entry.roleParams?.[role] === undefined
+      ? byNameParams(entry.requiredParams, roleData)
+      : roleParams(entry, role, roleData);
+
+  if (!isPlainObject(params)) return undefined;
+
+  return entry.requiredParams.every((name) => params[name] !== undefined) ? params : undefined;
+}
+
+// A code bound by its default role has no template: each param takes the role's datum of the same name (IR section 7).
+function byNameParams(names: readonly string[], roleData: unknown): Record<string, unknown> {
+  if (!isPlainObject(roleData)) return {};
+
+  return Object.fromEntries(
+    names.flatMap((name) => (roleData[name] === undefined ? [] : [[name, roleData[name]]])),
   );
 }
 

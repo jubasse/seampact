@@ -61,6 +61,7 @@ import { installOutgoingCheck } from "./node-server/node-outgoing-check.js";
 import {
   respondNotServed,
   respondWithError,
+  responseHeaderValues,
   writeContractReply,
 } from "./node-server/node-reply.js";
 import {
@@ -73,6 +74,7 @@ import {
   ownBodyParserRefusal,
   reportedRequest,
 } from "./node-server/node-request.js";
+import { RETRY_AFTER_HEADER } from "./node-server/retry-after.js";
 import { runtimeLog, useRuntimeLogger } from "./node-server/runtime-logger.js";
 import {
   bodySizeRefusal,
@@ -418,7 +420,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
       return;
     }
 
-    const claimed = claimedError(context.route, error);
+    const claimed = claimedError(context.route, error, response);
 
     if (claimed === undefined) {
       // The outgoing check reports this exception if the app's reply violates the contract.
@@ -510,7 +512,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
     const contractError =
       route === undefined
         ? unexpectedError(undefined, error)
-        : (claimedError(route, error) ?? unexpectedError(route, error));
+        : (claimedError(route, error, response) ?? unexpectedError(route, error));
     const request: IncomingMessage | undefined = response.req;
 
     await respondWithError(
@@ -567,7 +569,8 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
     const contractError =
       error === undefined
         ? notFoundError(route)
-        : (bodyParserRefusal(route, error) ?? frameworkRefusal(route, error));
+        : (bodyParserRefusal(route, error) ??
+          frameworkRefusal(route, error, responseHeaderValues(response, RETRY_AFTER_HEADER)));
 
     if (contractError === undefined) return false;
 
@@ -724,10 +727,18 @@ function unreadableRouterStackMessage(api: ContractApi): string {
   );
 }
 
-function claimedError(route: ContractRoute, error: unknown): ContractError | undefined {
+// A throttler sets `Retry-After` on the response before it raises its 429.
+function claimedError(
+  route: ContractRoute,
+  error: unknown,
+  response: ServerResponse,
+): ContractError | undefined {
   if (error instanceof ContractError) return error;
 
-  return bodyParserRefusal(route, error) ?? frameworkRefusal(route, error);
+  return (
+    bodyParserRefusal(route, error) ??
+    frameworkRefusal(route, error, responseHeaderValues(response, RETRY_AFTER_HEADER))
+  );
 }
 
 function methodOf(route: ContractRoute): "get" | "post" | "put" | "patch" | "delete" {

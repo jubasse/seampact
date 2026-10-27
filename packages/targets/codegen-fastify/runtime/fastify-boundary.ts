@@ -86,6 +86,7 @@ import {
   pathnameOf,
   reportedRequest,
 } from "./node-server/node-request.js";
+import { headerValueTexts, RETRY_AFTER_HEADER } from "./node-server/retry-after.js";
 import { runtimeLog, useRuntimeLogger } from "./node-server/runtime-logger.js";
 import {
   bodySizeRefusal,
@@ -564,7 +565,7 @@ export function createFastifyBoundary<
 
       if (route === undefined) throw error;
 
-      const claimed = claimedError(route, error);
+      const claimed = claimedError(route, error, reply);
 
       if (claimed === undefined) {
         context ??= openContext(
@@ -669,7 +670,7 @@ export function createFastifyBoundary<
     const contractError =
       route === undefined
         ? unexpectedError(undefined, error)
-        : (claimedError(route, error) ?? unexpectedError(route, error));
+        : (claimedError(route, error, reply) ?? unexpectedError(route, error));
 
     return sendError(reply, context, context?.hooks ?? registered.hooks, route, contractError);
   }
@@ -862,12 +863,17 @@ function listedRoutes(routeOptions: RouteOptions): ListedRoute[] {
   return methods.map((method) => ({ method: method.toUpperCase(), path: routeOptions.url }));
 }
 
-function claimedError(route: ContractRoute, error: unknown): ContractError | undefined {
+// `@fastify/rate-limit` sets `Retry-After` on the reply before it raises its 429.
+function claimedError(
+  route: ContractRoute,
+  error: unknown,
+  reply: FastifyReply,
+): ContractError | undefined {
   if (error instanceof ContractError) return error;
 
   if (isBodyReadRefusal(error)) return bodyParserError(route, error.statusCode, error);
 
-  return frameworkRefusal(route, error);
+  return frameworkRefusal(route, error, headerValueTexts(reply.getHeader(RETRY_AFTER_HEADER)));
 }
 
 // Every 4xx `FST_ERR_CTP_*` the route's body read raises: too large, a bad media type or content length.

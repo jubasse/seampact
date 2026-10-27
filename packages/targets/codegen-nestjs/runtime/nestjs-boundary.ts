@@ -94,6 +94,7 @@ import {
   declaresStatus,
   logWriteFailure,
   notFoundError,
+  refusalFacts,
   type StatusErrorFixes,
   statusError,
 } from "./node-server/error-reply.js";
@@ -111,6 +112,7 @@ import { installOutgoingCheck } from "./node-server/node-outgoing-check.js";
 import {
   respondNotServed,
   respondWithError,
+  responseHeaderValues,
   writeContractReply,
 } from "./node-server/node-reply.js";
 import {
@@ -125,6 +127,7 @@ import {
   reportedRequest,
 } from "./node-server/node-request.js";
 import { isPlainObject } from "./node-server/plain-object.js";
+import { RETRY_AFTER_HEADER } from "./node-server/retry-after.js";
 import {
   loggerProblems,
   type RuntimeLogger,
@@ -1042,7 +1045,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     const contractError =
       context === undefined
         ? unexpectedError(undefined, error)
-        : asContractError(context.route, error);
+        : asContractError(context.route, error, throttlerRetryAfterValues(response));
 
     await respondWithError(
       response,
@@ -1638,7 +1641,20 @@ function copyMethodIdentity(
   }
 }
 
-function asContractError(route: ContractRoute, error: unknown): ContractError {
+// `@nestjs/throttler` sets `Retry-After` on the response before it throws its `ThrottlerException`, a named
+// throttler as `Retry-After-<name>`.
+function throttlerRetryAfterValues(response: ServerResponse): string[] {
+  return response
+    .getHeaderNames()
+    .filter((name) => name === RETRY_AFTER_HEADER || name.startsWith(`${RETRY_AFTER_HEADER}-`))
+    .flatMap((name) => responseHeaderValues(response, name));
+}
+
+function asContractError(
+  route: ContractRoute,
+  error: unknown,
+  replyRetryAfterValues: readonly string[],
+): ContractError {
   if (error instanceof ContractException && !declaresCode(route, error.code)) {
     return unexpectedError(
       route,
@@ -1652,7 +1668,15 @@ function asContractError(route: ContractRoute, error: unknown): ContractError {
 
   if (!(error instanceof HttpException)) return unexpectedError(route, error);
 
-  return statusError(route, error.getStatus(), error, NEST_STATUS_FIXES);
+  const status = error.getStatus();
+
+  return statusError(
+    route,
+    status,
+    error,
+    NEST_STATUS_FIXES,
+    refusalFacts(status, error, replyRetryAfterValues),
+  );
 }
 
 function declaresCode(route: ContractRoute, code: string): boolean {

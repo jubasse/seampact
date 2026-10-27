@@ -953,6 +953,7 @@ function errorEntry(
             unit: error.retryHeader.unit,
           },
     requiresParams: paramsRequireAMember(ir, declaration.params) ? true : undefined,
+    requiredParams: requiredParamNames(ir, declaration.params),
     noStore: declaration.noStore === true ? true : undefined,
   };
 }
@@ -969,6 +970,28 @@ function paramsRequireAMember(ir: ContractIR, paramsSchema: SchemaId | undefined
   }
 
   return schema.properties.some((property) => !property.optional && property.default === undefined);
+}
+
+// The members of an object params schema with no default; undefined when there are none or the schema is not an
+// object, whose params the boundary can never fill itself.
+function requiredParamNames(
+  ir: ContractIR,
+  paramsSchema: SchemaId | undefined,
+): string[] | undefined {
+  const schema =
+    paramsSchema !== undefined && Object.hasOwn(ir.schemas, paramsSchema)
+      ? ir.schemas[paramsSchema]
+      : undefined;
+
+  if (schema === undefined || !isKnownVariant("Schema", schema) || schema.kind !== "object") {
+    return undefined;
+  }
+
+  const names = schema.properties
+    .filter((property) => !property.optional && property.default === undefined)
+    .map((property) => property.name);
+
+  return names.length === 0 ? undefined : names;
 }
 
 // Whether a template writes the slot anywhere: as a value, a member name, a text part or inside a nested template.

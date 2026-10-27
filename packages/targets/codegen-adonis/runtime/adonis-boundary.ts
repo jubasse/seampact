@@ -66,6 +66,7 @@ import {
 } from "./node-server/node-reply.js";
 import { announcesBody, DEFAULT_METHOD, requestTarget } from "./node-server/node-request.js";
 import { isPlainObject } from "./node-server/plain-object.js";
+import { headerValueTexts, RETRY_AFTER_HEADER } from "./node-server/retry-after.js";
 import {
   loggerProblems,
   type RuntimeLogger,
@@ -175,15 +176,22 @@ function isClaimed(error: unknown): boolean {
   );
 }
 
-// The claimed refusals carry a 401, 403 or 429 status, which the rule every Node server shares maps.
-function asContractError(route: ContractRoute, error: unknown): ContractError {
+// The claimed refusals carry a 401, 403 or 429 status, which the rule every Node server shares maps; the limiter's
+// exception carries its `Retry-After`, and an app middleware may have set one on the response.
+function asContractError(route: ContractRoute, error: unknown, ctx: HttpContext): ContractError {
   if (error instanceof ContractError) return error;
 
-  return frameworkRefusal(route, error) ?? unexpectedError(route, error);
+  const replyRetryAfterValues = headerValueTexts(ctx.response.getHeader(RETRY_AFTER_HEADER));
+
+  return frameworkRefusal(route, error, replyRetryAfterValues) ?? unexpectedError(route, error);
 }
 
 // A refusal raised before the boundary's first middleware, in the route's terms; anything unknown is a 500.
-function preRoutingError(route: ContractRoute | undefined, error: unknown): ContractError {
+function preRoutingError(
+  route: ContractRoute | undefined,
+  error: unknown,
+  ctx: HttpContext,
+): ContractError {
   if (route === undefined) return unexpectedError(route, error);
 
   if (isRefusal(error, BAD_CSRF_TOKEN)) {
@@ -192,7 +200,7 @@ function preRoutingError(route: ContractRoute | undefined, error: unknown): Cont
     return code === undefined ? unexpectedError(route, error) : new ContractError(code);
   }
 
-  if (isClaimed(error)) return asContractError(route, error);
+  if (isClaimed(error)) return asContractError(route, error, ctx);
 
   if (errorCode(error) === ENTITY_TOO_LARGE_CODE) {
     return roleError(route, PAYLOAD_TOO_LARGE_ROLE, { limitBytes: route.input?.limitBytes });
@@ -342,7 +350,7 @@ export function createAdonisBoundary<
       context.hooks,
       api,
       context.route,
-      asContractError(context.route, error),
+      asContractError(context.route, error, ctx),
       requestLine(ctx),
     );
   }
@@ -739,7 +747,7 @@ export function createAdonisBoundary<
       context.hooks,
       api,
       context.route,
-      asContractError(context.route, error),
+      asContractError(context.route, error, ctx),
       requestLine(ctx),
     );
 
@@ -789,7 +797,7 @@ export function createAdonisBoundary<
       registered.hooks,
       api,
       route,
-      preRoutingError(route, error),
+      preRoutingError(route, error, ctx),
       { method, path },
     );
 
