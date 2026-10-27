@@ -2,9 +2,22 @@
 // request the api does not serve (a bare one when no operation can answer it), and a thrown HTTP status (a framework
 // refusal of 401, 403 or 429 among them) mapped to the operation's code. Copied into the generated tree as is.
 import { type BoundaryHooks, reportUnexpected } from "./boundary-hooks.js";
-import { ContractError, codeOfRole, codeOfStatus, unexpectedError } from "./contract-error.js";
-import { type ContractApi, type ContractRoute, matchesContractPath } from "./contract-route.js";
+import {
+  ContractError,
+  codeOfRole,
+  codeOfStatus,
+  roleEntryOf,
+  roleParams,
+  unexpectedError,
+} from "./contract-error.js";
+import {
+  type ContractApi,
+  type ContractRoute,
+  type ErrorEntry,
+  matchesContractPath,
+} from "./contract-route.js";
 import { isPlainObject } from "./plain-object.js";
+import { retryAfterFacts } from "./retry-after.js";
 import { runtimeLog } from "./runtime-logger.js";
 
 /** The status of a request the api does not serve. */
@@ -111,37 +124,60 @@ export function isStatusDenial(error: unknown): boolean {
 }
 
 /**
- * A framework refusal (an error carrying a 401, 403 or 429 status) mapped as `statusError` maps it. Undefined for any
- * other error.
+ * A framework refusal (an error carrying a 401, 403 or 429 status) mapped as `statusError` maps it, a 429 with the
+ * delay of the `Retry-After` values the reply already holds or the error carries. Undefined for any other error.
  */
-export function frameworkRefusal(route: ContractRoute, error: unknown): ContractError | undefined {
+export function frameworkRefusal(
+  route: ContractRoute,
+  error: unknown,
+  replyRetryAfterValues: readonly string[],
+): ContractError | undefined {
   const status = errorStatus(error);
 
   if (status !== UNAUTHORIZED && status !== FORBIDDEN && status !== TOO_MANY_REQUESTS) {
     return undefined;
   }
 
-  return statusError(route, status, error, FRAMEWORK_REFUSAL_FIXES);
+  return statusError(
+    route,
+    status,
+    error,
+    FRAMEWORK_REFUSAL_FIXES,
+    refusalFacts(status, error, replyRetryAfterValues),
+  );
+}
+
+/** The role data a refusal gives: a 429's `Retry-After` delay; none for another status or without a usable one. */
+export function refusalFacts(
+  status: number,
+  error: unknown,
+  replyRetryAfterValues: readonly string[],
+): unknown {
+  return status === TOO_MANY_REQUESTS ? retryAfterFacts(error, replyRetryAfterValues) : undefined;
 }
 
 /** Whether the operation answers a status: a code of the status's role, or a code of that status. */
 export function declaresStatus(route: ContractRoute, status: number): boolean {
-  return statusRoleCode(route, status) !== undefined || codeOfStatus(route, status) !== undefined;
+  return statusRoleEntry(route, status) !== undefined || codeOfStatus(route, status) !== undefined;
 }
 
 /**
  * An HTTP status thrown on an operation, as its code: the code of the status's role first, else the operation's one
- * code of that status when it requires no params, else a 500 whose cause names the fix.
+ * code of that status. A code with required params is answered only when the role's data (`refusalFacts`) fills
+ * every one through the role's binding; otherwise, and for two codes of the status, a 500 whose cause names the fix.
  */
 export function statusError(
   route: ContractRoute,
   status: number,
   cause: unknown,
   fixes: StatusErrorFixes,
+  roleData?: unknown,
 ): ContractError {
-  const roleCode = statusRoleCode(route, status);
+  const roleEntry = statusRoleEntry(route, status);
 
-  if (roleCode !== undefined) return new ContractError(roleCode);
+  if (roleEntry !== undefined) {
+    return statusCodeError(route, status, roleEntry, fixes, roleData);
+  }
 
   const [entry, ...otherEntries] = Object.values(route.errors).filter(
     (candidate) => candidate.status === status,
@@ -160,22 +196,63 @@ export function statusError(
     );
   }
 
-  if (entry.requiresParams === true) {
-    return unexpectedError(
-      route,
-      new Error(
-        `seampact: a ${status} error on '${route.id}' maps to '${entry.code}', which declares required params; ${fixes.requiredParams}.`,
-      ),
-    );
-  }
-
-  return new ContractError(entry.code);
+  return statusCodeError(route, status, entry, fixes, undefined);
 }
 
-function statusRoleCode(route: ContractRoute, status: number): string | undefined {
+function statusCodeError(
+  route: ContractRoute,
+  status: number,
+  entry: ErrorEntry,
+  fixes: StatusErrorFixes,
+  roleData: unknown,
+): ContractError {
+  const filled = filledRoleParams(entry, status, roleData);
+
+  if (filled !== undefined) return new ContractError(entry.code, filled);
+
+  if (entry.requiresParams !== true) return new ContractError(entry.code);
+
+  return unexpectedError(
+    route,
+    new Error(
+      `seampact: a ${status} error on '${route.id}' maps to '${entry.code}', which declares required params; ${fixes.requiredParams}.`,
+    ),
+  );
+}
+
+// The params the status's role binding renders from the data, kept only when they hold every required member.
+function filledRoleParams(entry: ErrorEntry, status: number, roleData: unknown): unknown {
   const role = STATUS_ROLES[status];
 
-  return role === undefined ? undefined : codeOfRole(route, role);
+  if (role === undefined || roleData === undefined) return undefined;
+
+  // Params that are not an object of members can never be filled by the boundary.
+  if (entry.requiresParams === true && entry.requiredParams === undefined) return undefined;
+
+  const requiredNames = entry.requiredParams ?? [];
+  const params =
+    entry.roleParams?.[role] === undefined
+      ? byNameParams(entry.paramNames ?? requiredNames, roleData)
+      : roleParams(entry, role, roleData);
+
+  if (!isPlainObject(params) || Object.keys(params).length === 0) return undefined;
+
+  return requiredNames.every((name) => params[name] !== undefined) ? params : undefined;
+}
+
+// A code bound by its default role has no template: each param takes the role's datum of the same name (IR section 7).
+function byNameParams(names: readonly string[], roleData: unknown): Record<string, unknown> {
+  if (!isPlainObject(roleData)) return {};
+
+  return Object.fromEntries(
+    names.flatMap((name) => (roleData[name] === undefined ? [] : [[name, roleData[name]]])),
+  );
+}
+
+function statusRoleEntry(route: ContractRoute, status: number): ErrorEntry | undefined {
+  const role = STATUS_ROLES[status];
+
+  return role === undefined ? undefined : roleEntryOf(route, role);
 }
 
 /** A client error a body read raises, as the operation's code of its status; a 500 when it declares none. */

@@ -11,6 +11,9 @@ export const ALLOWED_ORIGIN = "https://app.example";
 /** A request carrying this header with a status is refused with it by app middleware before the router. */
 export const FAIL_BEFORE_HEADER = "x-fail-before-router";
 
+/** A request carrying this header gets its value as the reply's `Retry-After` from app middleware, as a throttler sets it. */
+export const THROTTLE_RETRY_AFTER_HEADER = "x-throttle-retry-after";
+
 const HANDLER_INTERFACES = {
   AppEndpoints: ["health"],
   ChannelsEndpoints: ["listChannels", "getChannel"],

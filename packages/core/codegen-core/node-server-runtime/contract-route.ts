@@ -76,6 +76,10 @@ export interface ErrorEntry {
   };
   /** Set when the code's params have a required member: an HTTP status alone cannot answer the code. */
   readonly requiresParams?: true;
+  /** The names of those required members when the params are an object, so the boundary can tell what it can fill. */
+  readonly requiredParams?: readonly string[];
+  /** The names of every member of the code's params when they are an object, so a role's data can fill optional ones. */
+  readonly paramNames?: readonly string[];
   /** Set when the code's params carry a sensitive value: its reply is `Cache-Control: no-store`. */
   readonly noStore?: true;
 }

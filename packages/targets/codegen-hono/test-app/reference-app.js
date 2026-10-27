@@ -18,6 +18,7 @@ import {
   handlers,
   hooks,
   resetScenario,
+  THROTTLE_RETRY_AFTER_HEADER,
 } from "./reference-scenario.js";
 
 export * from "./reference-scenario.js";
@@ -81,6 +82,10 @@ function referenceApp(registration) {
 
     c.header("strict-transport-security", "max-age=63072000");
     c.header("x-content-type-options", "nosniff");
+
+    const retryAfter = c.req.header(THROTTLE_RETRY_AFTER_HEADER);
+
+    if (retryAfter !== undefined) c.header("retry-after", retryAfter);
 
     const failure = c.req.header(FAIL_BEFORE_HEADER);
 

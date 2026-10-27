@@ -60,7 +60,7 @@ export function unexpectedError(route: ContractRoute | undefined, cause: unknown
  * section 7); a role the operation does not bind is a 500.
  */
 export function roleError(route: ContractRoute, role: string, data?: unknown): ContractError {
-  const entry = Object.values(route.errors).find((candidate) => candidate.roles.includes(role));
+  const entry = roleEntryOf(route, role);
 
   if (entry === undefined) {
     return unexpectedError(route, new Error(`operation '${route.id}' declares no ${role} code`));
@@ -87,7 +87,12 @@ export function internalCode(route: ContractRoute | undefined): string {
 
 /** The first code of the operation that answers a role. */
 export function codeOfRole(route: ContractRoute, role: string): string | undefined {
-  return Object.values(route.errors).find((entry) => entry.roles.includes(role))?.code;
+  return roleEntryOf(route, role)?.code;
+}
+
+/** The first error entry of the operation that answers a role. */
+export function roleEntryOf(route: ContractRoute, role: string): ErrorEntry | undefined {
+  return Object.values(route.errors).find((entry) => entry.roles.includes(role));
 }
 
 /** The first code of the operation with a status. */

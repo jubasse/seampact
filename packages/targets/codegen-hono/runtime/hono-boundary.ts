@@ -56,6 +56,7 @@ import {
   runInputSteps,
   settingsOf,
 } from "./web-server/handler-map.js";
+import { RETRY_AFTER_HEADER } from "./web-server/retry-after.js";
 import { runtimeLog, useRuntimeLogger } from "./web-server/runtime-logger.js";
 import { mediaTypeRefusal, type PlatformFixes } from "./web-server/transport-checks.js";
 import { checkOutgoingResponse, recordBoundaryResponse } from "./web-server/web-outgoing-check.js";
@@ -327,7 +328,7 @@ export function createHonoBoundary<
 
       return await answer(c, context, reply);
     } catch (error) {
-      const claimed = claimedError(route, error);
+      const claimed = claimedError(route, error, c);
 
       if (claimed === undefined) {
         context.unclaimedException = error;
@@ -382,7 +383,7 @@ export function createHonoBoundary<
     const contractError =
       route === undefined
         ? unexpectedError(undefined, error)
-        : (claimedError(route, error) ?? unexpectedError(route, error));
+        : (claimedError(route, error, c) ?? unexpectedError(route, error));
     const reply = renderContractReply(api, route, contractError);
 
     await reportContractError(
@@ -411,7 +412,8 @@ export function createHonoBoundary<
 
     const reported = webReportedRequest(c.req.raw);
     const matched = matchContractRoute(api, reported.method, reported.path);
-    const refusal = matched === undefined ? undefined : frameworkRefusal(matched.route, error);
+    const refusal =
+      matched === undefined ? undefined : frameworkRefusal(matched.route, error, retryAfterSet(c));
 
     if (matched === undefined || refusal === undefined) return undefined;
 
@@ -465,10 +467,18 @@ function isMiddlewareEntry(entry: HonoRouteEntry): boolean {
   return typeof entry.handler === "function" && entry.handler.length >= MIDDLEWARE_ARITY;
 }
 
-function claimedError(route: ContractRoute, error: unknown): ContractError | undefined {
+function claimedError(route: ContractRoute, error: unknown, c: Context): ContractError | undefined {
   if (error instanceof ContractError) return error;
 
-  return frameworkRefusal(route, error);
+  return frameworkRefusal(route, error, retryAfterSet(c));
+}
+
+// The `Retry-After` a rate-limit middleware set with `c.header()` before it raised its 429; `Headers.get` joins
+// duplicate values with a comma, so the first one is the value taken.
+function retryAfterSet(c: Context): string[] {
+  const value = c.res.headers.get(RETRY_AFTER_HEADER)?.split(",")[0];
+
+  return value === undefined ? [] : [value];
 }
 
 function optionProblems(options: { readonly clientAddress?: unknown }): BootProblem[] {
