@@ -64,7 +64,7 @@ private fun runtimeVerdict(installedVersion: String, generatorVersion: String): 
 
     if (installed[1] != generator[1] || installed[2] != generator[2]) return RuntimeVerdict.OTHER_MINOR
 
-    return if (installed[3].toLong() >= generator[3].toLong()) RuntimeVerdict.SERVES else RuntimeVerdict.OLDER_PATCH
+    return if (installed[3].toBigInteger() >= generator[3].toBigInteger()) RuntimeVerdict.SERVES else RuntimeVerdict.OLDER_PATCH
 }
 
 private fun generatorName(version: String): String = "`${SpringBootTarget.USE} $version`"

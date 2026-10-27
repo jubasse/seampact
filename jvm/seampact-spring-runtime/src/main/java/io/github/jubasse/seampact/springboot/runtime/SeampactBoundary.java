@@ -54,6 +54,11 @@ public final class SeampactBoundary {
     private final Optional<String> publicOrigin;
 
     public SeampactBoundary(String tableJson, ApiBinding binding, ListableBeanFactory beans, Environment environment) {
+        // ADR 0025, G3: code another version generated is refused before its table is read.
+        GeneratorVersionCheck.problem(binding.apiId(), binding.generatorVersion(), SeampactRuntimeVersion.VERSION).ifPresent(problem -> {
+            throw new IllegalStateException(BootCheck.cannotStart(binding.apiId(), List.of(problem)));
+        });
+
         this.table = new ContractTable(mapper.readTree(tableJson));
         this.binding = binding;
         this.validator = new StructuralValidator(table);

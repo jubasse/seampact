@@ -42,6 +42,9 @@ public interface ApiBinding {
     /** The api's unexpected-error listener interface: the boundary reports to the listener beans implementing it. */
     Class<? extends UnexpectedErrorListener> unexpectedErrorListenerType();
 
+    /** The api's id, which the version check names before the contract table is read. */
+    String apiId();
+
     /** The full version of the generator that wrote this api's code, which the boot check compares first (ADR 0025, G3). */
     String generatorVersion();
 

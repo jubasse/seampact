@@ -46,6 +46,7 @@ public final class BootCheck implements SmartInitializingSingleton {
     private static final String FRAMEWORK_DOCS_OFF = "off";
     private static final String TOMCAT_FACTORY = "Tomcat";
     private static final String SAMPLE_SEGMENT = "x";
+    private static final List<Class<?>> HOOK_TYPES = List.of(Decider.class, ScopeResolver.class, UnexpectedErrorListener.class);
     private static final List<String> HTTP_METHODS = List.of("GET", "POST", "PUT", "PATCH", "DELETE");
     private static final Set<String> BODY_READING_FILTERS = Set.of(
             "org.springframework.web.filter.FormContentFilter",
@@ -60,11 +61,6 @@ public final class BootCheck implements SmartInitializingSingleton {
 
     @Override
     public void afterSingletonsInstantiated() {
-        GeneratorVersionCheck.problem(boundary.apiId(), boundary.binding().generatorVersion(), SeampactRuntimeVersion.VERSION)
-                .ifPresent(problem -> {
-                    throw new IllegalStateException(cannotStart(List.of(problem)));
-                });
-
         JsonNode bootCheck = boundary.table().settings().path("bootCheck");
         List<String> problems = new ArrayList<>();
 
@@ -81,11 +77,11 @@ public final class BootCheck implements SmartInitializingSingleton {
 
         if (problems.isEmpty()) return;
 
-        throw new IllegalStateException(cannotStart(problems));
+        throw new IllegalStateException(cannotStart(boundary.apiId(), problems));
     }
 
-    private String cannotStart(List<String> problems) {
-        return "seampact: the api '" + boundary.apiId() + "' cannot start:\n- " + String.join("\n- ", problems);
+    static String cannotStart(String apiId, List<String> problems) {
+        return "seampact: the api '" + apiId + "' cannot start:\n- " + String.join("\n- ", problems);
     }
 
     private void hookProblems(List<String> problems) {
@@ -133,19 +129,28 @@ public final class BootCheck implements SmartInitializingSingleton {
         problems.addAll(found);
     }
 
-    // A bean implementing a runtime hook type itself, not the interface an api generates from it, which no api calls.
+    // A hook bean implementing none of the interfaces the app's apis generate from its runtime type, which no api calls.
     private void unkeyedHookProblems(List<String> problems) {
-        Map<Class<?>, Class<?>> apiTypes = new LinkedHashMap<>();
-        apiTypes.put(Decider.class, boundary.binding().deciderType());
-        apiTypes.put(ScopeResolver.class, boundary.binding().scopeResolverType());
-        apiTypes.put(UnexpectedErrorListener.class, boundary.binding().unexpectedErrorListenerType());
+        List<ApiBinding> bindings = appBindings();
 
-        apiTypes.forEach((runtimeType, apiType) -> {
-            for (String bean : ApiHookBeans.unkeyed(boundary.beans(), runtimeType)) {
-                problems.add("the bean '" + bean + "' implements " + runtimeType.getSimpleName() + " itself, which no api calls; fix: implement the interface"
-                        + " its api generates, " + apiType.getSimpleName() + " for the api '" + boundary.apiId() + "'.");
+        for (Class<?> runtimeType : HOOK_TYPES) {
+            List<Class<?>> generatedTypes = bindings.stream().<Class<?>>map(binding -> ApiHookBeans.generatedType(binding, runtimeType)).toList();
+            String apiType = ApiHookBeans.generatedType(boundary.binding(), runtimeType).getSimpleName();
+
+            for (String bean : ApiHookBeans.unkeyed(boundary.beans(), runtimeType, generatedTypes)) {
+                problems.add("the bean '" + bean + "' implements " + runtimeType.getSimpleName() + " but no interface an api generates from it, so no api"
+                        + " calls it; fix: implement the interface its api generates, " + apiType + " for the api '" + boundary.apiId() + "'.");
             }
-        });
+        }
+    }
+
+    // The bindings of every api the app serves: this one and those of the other boundary beans.
+    private List<ApiBinding> appBindings() {
+        List<ApiBinding> bindings = new ArrayList<>();
+        bindings.add(boundary.binding());
+        boundary.beans().getBeansOfType(SeampactBoundary.class).values().forEach(other -> bindings.add(other.binding()));
+
+        return bindings;
     }
 
     private static List<String> requirementNames(JsonNode operation) {

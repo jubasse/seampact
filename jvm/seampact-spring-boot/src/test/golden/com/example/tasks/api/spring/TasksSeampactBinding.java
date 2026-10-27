@@ -287,6 +287,11 @@ public final class TasksSeampactBinding implements ApiBinding {
     }
 
     @Override
+    public String apiId() {
+        return "tasks";
+    }
+
+    @Override
     public String generatorVersion() {
         return "0.0.0";
     }

@@ -76,9 +76,12 @@ jobs:
         id: channel-smoke
         uses: ./.github/actions/lane-changes
         with:
-          # The runner, both plugins, the bundle fetcher, the smoke's channels and consumer script, and this workflow.
+          # The runner, both plugins, the runtime the consumer compiles against and the build logic that writes the
+          # version constants G2 compares, the bundle fetcher, the smoke's channels and consumer script, and this workflow.
           watched-paths: |
             ^jvm/seampact-runner/
+            ^jvm/seampact-spring-runtime/
+            ^jvm/build-logic/
             ^jvm/seampact-gradle-plugin/
             ^jvm/seampact-maven-plugin/
             ^jvm/seampact-ir/src/main/kotlin/io/github/jubasse/seampact/ir/bundle/

@@ -110,6 +110,14 @@ internal fun bindingType(layout: JavaLayout): TypeSpec {
         .addMethod(hookTypeMethod("scopeResolverType", layout.runtime("ScopeResolver"), layout.scopeResolver))
         .addMethod(hookTypeMethod("unexpectedErrorListenerType", layout.runtime("UnexpectedErrorListener"), layout.unexpectedErrorListener))
         .addMethod(
+            MethodSpec.methodBuilder("apiId")
+                .addAnnotation(Override::class.java)
+                .addModifiers(Modifier.PUBLIC)
+                .returns(JavaTypes.STRING)
+                .addStatement("return \$S", layout.ir.api.id)
+                .build(),
+        )
+        .addMethod(
             MethodSpec.methodBuilder("generatorVersion")
                 .addAnnotation(Override::class.java)
                 .addModifiers(Modifier.PUBLIC)

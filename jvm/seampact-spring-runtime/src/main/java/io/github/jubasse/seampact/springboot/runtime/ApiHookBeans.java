@@ -20,35 +20,22 @@ final class ApiHookBeans {
         return new LinkedHashMap<>(beans.getBeansOfType(apiType));
     }
 
-    /** The names of the beans implementing [runtimeType] but none of the interfaces an api generates from it. */
-    static List<String> unkeyed(ListableBeanFactory beans, Class<?> runtimeType) {
+    /** The interface [binding]'s api generates from the runtime hook type [runtimeType]. */
+    static Class<?> generatedType(ApiBinding binding, Class<?> runtimeType) {
+        if (runtimeType.equals(Decider.class)) return binding.deciderType();
+        if (runtimeType.equals(ScopeResolver.class)) return binding.scopeResolverType();
+        if (runtimeType.equals(UnexpectedErrorListener.class)) return binding.unexpectedErrorListenerType();
+
+        throw new IllegalArgumentException("seampact: " + runtimeType.getName() + " is not a runtime hook type");
+    }
+
+    /** The names of the beans implementing [runtimeType] but none of [generatedTypes], the interfaces the apis generate. */
+    static List<String> unkeyed(ListableBeanFactory beans, Class<?> runtimeType, List<Class<?>> generatedTypes) {
         List<String> names = new ArrayList<>();
         beans.getBeansOfType(runtimeType).forEach((name, bean) -> {
-            if (!implementsApiInterface(bean.getClass(), runtimeType)) names.add(name);
+            if (generatedTypes.stream().noneMatch(generatedType -> generatedType.isInstance(bean))) names.add(name);
         });
 
         return names;
-    }
-
-    private static boolean implementsApiInterface(Class<?> type, Class<?> runtimeType) {
-        for (Class<?> current = type; current != null; current = current.getSuperclass()) {
-            for (Class<?> implemented : current.getInterfaces()) {
-                if (extendsRuntimeType(implemented, runtimeType)) return true;
-            }
-        }
-
-        return false;
-    }
-
-    // An interface below [runtimeType], at any depth, other than [runtimeType] itself.
-    private static boolean extendsRuntimeType(Class<?> implemented, Class<?> runtimeType) {
-        if (implemented.equals(runtimeType)) return false;
-        if (runtimeType.isAssignableFrom(implemented)) return true;
-
-        for (Class<?> parent : implemented.getInterfaces()) {
-            if (extendsRuntimeType(parent, runtimeType)) return true;
-        }
-
-        return false;
     }
 }
