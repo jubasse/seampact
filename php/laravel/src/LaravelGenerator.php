@@ -68,9 +68,8 @@ final class LaravelGenerator implements Generator
 
         $layout = new PhpLayout($ir, $options->namespace, $kept, $refusals);
         $types = new PhpTypes($layout);
-        $handlerAccess = new HandlerAccessTypes($layout, $refusals);
-        $operationTypes = new OperationTypes($layout->api, $types, $refusals, $handlerAccess, HandlerAccessPlacement::Request, self::nativePageClasses($ir));
-        $formRequests = new FormRequests($layout, $options->rules, $refusals, $handlerAccess);
+        $operationTypes = new OperationTypes($layout->api, $types, $refusals, new HandlerAccessTypes($layout, $refusals), HandlerAccessPlacement::Request, self::nativePageClasses($ir));
+        $formRequests = new FormRequests($layout, $options->rules, $refusals);
         $mount = $entry->mount ?? '';
         $routes = new RouteTable($layout, $options, $refusals, $mount);
         $replies = new LaravelReplies($layout, $operationTypes);

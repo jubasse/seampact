@@ -36,16 +36,10 @@ final class HandlerAccessTypes
         return $identity === null ? null : $names->identities()[$identity]['principal'] ?? null;
     }
 
-    /** The principal's type: null for an anonymous caller on an optional-auth route, else always set. */
-    public function principalType(Operation $operation, PhpClassFile $file): ?PhpType
+    /** Whether the principal is null for an anonymous caller: on an optional-auth route only. */
+    public static function anonymousAllowed(Operation $operation): bool
     {
-        $class = self::principalClass($this->names, $operation);
-        if ($class === null) {
-            return null;
-        }
-        $nullable = $operation->access instanceof OptionalAccess;
-
-        return new PhpType($file->type($class), $file->name($class), $nullable);
+        return $operation->access instanceof OptionalAccess;
     }
 
     /**
@@ -72,9 +66,9 @@ final class HandlerAccessTypes
     /** Promotes `principal` and `scopes` on the constructor of an input of placement `Input`. */
     public function promoteOnInput(Method $constructor, PhpClassFile $input, Operation $operation, OperationNames $names): void
     {
-        $principal = $this->principalType($operation, $input);
+        $principal = self::principalClass($this->names, $operation);
         if ($principal !== null) {
-            PhpTypes::promote($constructor, self::PRINCIPAL_MEMBER, $principal);
+            PhpTypes::promote($constructor, self::PRINCIPAL_MEMBER, new PhpType($input->type($principal), $input->name($principal), self::anonymousAllowed($operation)));
         }
         if ($names->scopes !== null) {
             PhpTypes::promote($constructor, self::SCOPES_MEMBER, new PhpType($input->type($names->scopes), $input->name($names->scopes)));

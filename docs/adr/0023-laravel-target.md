@@ -42,6 +42,7 @@ Codegen emits, per api, under the target entry's `out`, in its PSR-4 namespace:
 
 - **Per operation**:
   - the FormRequest (`UpdateTaskRequest`, in the root namespace), which runs steps 6 to 8 and hands over the typed input with `contractInput()`;
+  - on the FormRequest, who is calling (ADR 0012 "Open tenancy"), read from the api's boundary state and never from the wire input: `principal()` on a route with an identity, the generated `<Identity>Principal` built from the declared members (null for an anonymous caller on an optional-auth route), and `scopes()` on a scoped route, the generated `<Operation>Scopes` with one accessor per scope returning its `ResolvedScope`;
   - the input class, the result classes and one exception class per code. The input holds the path, query and header parameters and the body; the credential and CSRF headers, which the boundary reads, are not in it.
 - **The boundary middleware** (`TasksBoundary`), a global middleware prepended before every other one, `ValidatePathEncoding` and `TrustProxies` included (spike); only the boundaries of the app's other apis, which pass every request outside their own base paths on unchanged, may come before it, and none whose base path equals or prefixes one of this api's with its `catch_all` on, since that boundary answers its 404 on this api's paths. It runs step 1:
   - the request context;

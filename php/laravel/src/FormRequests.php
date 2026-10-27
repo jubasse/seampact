@@ -31,7 +31,6 @@ final class FormRequests
         private readonly PhpLayout $layout,
         private readonly RulesMode $mode,
         private readonly Refusals $refusals,
-        private readonly HandlerAccessTypes $handlerAccess,
     ) {
     }
 
@@ -114,12 +113,14 @@ final class FormRequests
         $state = $file->name($this->layout->runtime('BoundaryState'));
         $access = $file->name($this->layout->runtime('HandlerAccess'));
 
-        $principal = $this->handlerAccess->principalType($operation, $file);
-        if ($principal !== null) {
-            $read = $principal->nullable ? 'principal' : 'authenticatedPrincipal';
-            $class->addMethod('principal')->setReturnType($principal->native)->setReturnNullable($principal->nullable)
-                ->addComment($principal->nullable ? 'The caller, null for an anonymous caller.' : 'The caller.')
-                ->setBody("return {$access}::{$read}({$state}::required(\$this, self::API), {$principal->doc}::class);");
+        $principalClass = HandlerAccessTypes::principalClass($this->layout, $operation);
+        if ($principalClass !== null) {
+            $anonymous = HandlerAccessTypes::anonymousAllowed($operation);
+            $read = $anonymous ? 'principal' : 'authenticatedPrincipal';
+            $principal = $file->name($principalClass);
+            $class->addMethod('principal')->setReturnType($file->type($principalClass))->setReturnNullable($anonymous)
+                ->addComment($anonymous ? 'The caller, null for an anonymous caller.' : 'The caller.')
+                ->setBody("return {$access}::{$read}({$state}::required(\$this, self::API), {$principal}::class);");
         }
 
         if ($names->scopes !== null) {
