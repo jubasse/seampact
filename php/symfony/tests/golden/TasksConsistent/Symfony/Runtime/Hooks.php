@@ -106,4 +106,10 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup
     {
         return is_a($failure, self::ACCESS_DENIED);
     }
+
+    // Symfony's `AccessDeniedException` carries no status; `#[IsGranted(statusCode: 404)]` throws an `HttpException` instead, which takes the `notFound` role.
+    public function isNotFoundDenial(\Throwable $failure): bool
+    {
+        return false;
+    }
 }

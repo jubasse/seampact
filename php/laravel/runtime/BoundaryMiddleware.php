@@ -128,7 +128,7 @@ abstract class BoundaryMiddleware
         }
 
         if ($exception !== null && ExceptionRoles::isNativeRefusal($exception)) {
-            return ReplyVerdict::mapped($state, $response, ExceptionRoles::roleOf($exception), $exception, FrameworkRefusal::retryAfterValuesOf($exception, $response), ExceptionRoles::KEPT_HEADERS);
+            return ReplyVerdict::mapped($state, $response, ExceptionRoles::roleIn($contract, $state->operationId, $exception), $exception, FrameworkRefusal::retryAfterValuesOf($exception, $response), ExceptionRoles::KEPT_HEADERS);
         }
 
         // An exception no role or status maps and no contract reply rendered answers the api's 500 in every `responses` mode,

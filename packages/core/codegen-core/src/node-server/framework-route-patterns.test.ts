@@ -39,6 +39,14 @@ describe("the allow-list patterns", () => {
     ["two '**', literals out of order", "/a/**/b/**/c", "/a/c/b", false],
     ["'**' then '*'", "/**/*", "/", false],
     ["'**' beside '**'", "/**/**", "/x", true],
+    ["a trailing slash, as its path without it", "/a", "/a/", true],
+    ["'**' over a trailing slash", "/a/**", "/a/", true],
+    ["'*' over a trailing slash", "/a/*", "/a/", false],
+    ["a doubled slash, as one", "/a/b", "/a//b", true],
+    ["'*' over a doubled slash", "/a/*/b", "/a//b", false],
+    ["the root", "/", "/", true],
+    ["'**' over the root", "/**", "/", true],
+    ["'*' over the root", "/*", "/", false],
   ])("%s", (_, allowedPath, listedPath, allowed) => {
     const keys = refusedKeys(checkAllowing({ path: allowedPath, reason: REASON }), [
       { method: "GET", path: listedPath },

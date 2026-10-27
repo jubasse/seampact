@@ -33,4 +33,10 @@ interface HookLookup
 
     /** Whether `$failure`, thrown by a decider, is the framework's access denial, which answers the requirement's first denial code. */
     public function isAccessDenial(\Throwable $failure): bool;
+
+    /**
+     * Whether `$failure`, an access denial, hides the record (Laravel's `denyAsNotFound()`), which answers the
+     * operation's not-found code when it declares one.
+     */
+    public function isNotFoundDenial(\Throwable $failure): bool;
 }

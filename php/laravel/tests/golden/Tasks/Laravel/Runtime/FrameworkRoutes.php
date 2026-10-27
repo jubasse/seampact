@@ -6,8 +6,8 @@ namespace Seampact\Golden\Tasks\Laravel\Runtime;
 
 /**
  * The entry's `frameworkRoutes` allow-list as the boot check reads it (FR-25): an entry takes a route when its path
- * pattern matches the route's path (`*` one segment, `**` any number, a `*` inside a segment any characters but `/`)
- * and it names no method, or the route's one method besides HEAD.
+ * pattern matches the route's path (`*` one segment, `**` any number, a `*` inside a segment any characters but `/`,
+ * an empty segment dropped on both sides) and it names no method, or the route's one method besides HEAD.
  */
 final class FrameworkRoutes
 {
@@ -38,7 +38,7 @@ final class FrameworkRoutes
 
     private static function pathMatches(string $path, string $uri): bool
     {
-        $matched = preg_match(self::pathPattern($path), $uri);
+        $matched = preg_match(self::pathPattern($path), self::withoutEmptySegments($uri));
         if ($matched === false) {
             throw new \LogicException("seampact: the frameworkRoutes pattern '{$path}' could not be matched against the route '{$uri}': " . preg_last_error_msg() . "; write at most two '*' in a segment.");
         }
@@ -54,9 +54,25 @@ final class FrameworkRoutes
                 '*' => '/[^/]+',
                 default => '/' . str_replace('\\*', '[^/]*', preg_quote($segment, '#')),
             },
-            array_slice(explode('/', $path), 1),
+            self::segmentsOf($path),
         );
 
-        return '#^' . ($segments === [] ? '/' : implode('', $segments)) . '$#D';
+        return '#^' . implode('', $segments) . '$#D';
+    }
+
+    // The root reads as the empty string, which `**` matches as it matches no segment.
+    private static function withoutEmptySegments(string $uri): string
+    {
+        return implode('', array_map(static fn (string $segment): string => '/' . $segment, self::segmentsOf($uri)));
+    }
+
+    /**
+     * The non-empty segments of a path, so `/a/`, `/a//b` and `/` read as `/a`, `/a/b` and no segment on both sides.
+     *
+     * @return list<string>
+     */
+    private static function segmentsOf(string $path): array
+    {
+        return array_values(array_filter(explode('/', $path), static fn (string $segment): bool => $segment !== ''));
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel\Tests;
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Container\Container;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\Runtime\UnexpectedErrorListener;
@@ -24,5 +25,16 @@ final class HooksTest extends TestCase
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('the container binds ' . UnexpectedErrorListener::class . ' to stdClass');
         (new Hooks($container))->unexpectedErrorListener();
+    }
+
+    public function testADenialAsNotFoundIsAnAccessDenialHidingTheRecord(): void
+    {
+        $hooks = new Hooks(new Container());
+        $hidden = (new AuthorizationException())->asNotFound();
+
+        self::assertTrue($hooks->isAccessDenial($hidden));
+        self::assertTrue($hooks->isNotFoundDenial($hidden));
+        self::assertFalse($hooks->isNotFoundDenial(new AuthorizationException()));
+        self::assertFalse($hooks->isNotFoundDenial((new AuthorizationException())->withStatus(403)));
     }
 }
