@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -43,6 +44,8 @@ public final class SeampactBoundary {
     private static final String CACHE_CONTROL_HEADER = "Cache-Control";
     private static final long MILLISECONDS_PER_SECOND = 1000;
     private static final String SERVLET_PATH_PROPERTY = "spring.mvc.servlet.path";
+    // The property source Spring Boot devtools adds when its defaults are active, read as the debug switch.
+    private static final String DEVTOOLS_PROPERTY_SOURCE = "devtools";
 
     private final ContractTable table;
     private final ApiBinding binding;
@@ -52,6 +55,7 @@ public final class SeampactBoundary {
     private final Environment environment;
     private final String exchangeAttribute;
     private final Optional<String> publicOrigin;
+    private final boolean debug;
 
     public SeampactBoundary(String tableJson, ApiBinding binding, ListableBeanFactory beans, Environment environment) {
         // ADR 0025, G3: code another version generated is refused before its table is read.
@@ -66,6 +70,8 @@ public final class SeampactBoundary {
         this.environment = environment;
         this.exchangeAttribute = SeampactBoundary.class.getName() + "." + table.apiId();
         this.publicOrigin = PublicOrigin.of(table, environment);
+        this.debug = environment instanceof ConfigurableEnvironment configurable
+                && configurable.getPropertySources().contains(DEVTOOLS_PROPERTY_SOURCE);
     }
 
     public String apiId() {
@@ -138,6 +144,40 @@ public final class SeampactBoundary {
 
     void attach(HttpServletRequest request, BoundaryExchange exchange) {
         request.setAttribute(exchangeAttribute, exchange);
+    }
+
+    /**
+     * Under Spring Boot devtools, an exception that escaped the handler chain before the commit goes to Spring's own
+     * error handling (Boot's `/error`), with a log line naming its message and where it was thrown; false outside
+     * devtools or once the reply is committed, where the boundary answers the api's 500.
+     */
+    boolean leaveToFramework(HttpServletRequest request, BoundaryExchange exchange, Throwable failure) {
+        if (!debug || exchange.response.isCommittedUnderneath()) return false;
+
+        exchange.response.discard();
+        IdempotencyStep.abandon(this, exchange);
+        request.removeAttribute(exchangeAttribute);
+
+        Throwable unwrapped = unwrapped(failure);
+        LOG.error("seampact: unexpected failure in {}.{}: {} at {}; left to Spring's error handling (devtools active)",
+                apiId(), exchange.route().id(), unwrapped.getMessage(), thrownAt(unwrapped));
+        notifyListeners(new UnexpectedErrorListener.UnexpectedFailure(apiId(), Optional.of(exchange.route().id()),
+                "an exception escaped the handler chain", Optional.of(unwrapped)));
+
+        return true;
+    }
+
+    // `File.java:line` of the frame that threw, or the class when the frame has no source line.
+    private static String thrownAt(Throwable failure) {
+        StackTraceElement[] frames = failure.getStackTrace();
+        if (frames.length == 0) return "an unknown location";
+
+        StackTraceElement thrower = frames[0];
+        return thrower.getFileName() == null ? thrower.getClassName() : thrower.getFileName() + ":" + thrower.getLineNumber();
+    }
+
+    private static Throwable unwrapped(Throwable cause) {
+        return cause instanceof ServletException wrapped && wrapped.getCause() != null ? wrapped.getCause() : cause;
     }
 
     /**
@@ -289,17 +329,21 @@ public final class SeampactBoundary {
 
     /** Calls every `onUnexpectedError` bean of this api, or logs the failure when the app registers none. */
     void report(Optional<String> operationId, String reason, Throwable cause) {
-        Throwable unwrapped = cause instanceof ServletException wrapped && wrapped.getCause() != null ? wrapped.getCause() : cause;
+        Throwable unwrapped = unwrapped(cause);
         UnexpectedErrorListener.UnexpectedFailure failure =
                 new UnexpectedErrorListener.UnexpectedFailure(apiId(), operationId, reason, Optional.ofNullable(unwrapped));
-        List<UnexpectedErrorListener> listeners = new ArrayList<>(ApiHookBeans.of(beans, binding.unexpectedErrorListenerType()).values());
 
-        if (listeners.isEmpty()) {
+        if (!notifyListeners(failure)) {
             LOG.error("seampact: unexpected failure in {}.{}: {}", apiId(), operationId.orElse("(none)"), reason, unwrapped);
-            return;
         }
+    }
 
+    // False when the app registers no `onUnexpectedError` bean for this api.
+    private boolean notifyListeners(UnexpectedErrorListener.UnexpectedFailure failure) {
+        List<UnexpectedErrorListener> listeners = new ArrayList<>(ApiHookBeans.of(beans, binding.unexpectedErrorListenerType()).values());
         listeners.forEach(listener -> listener.onUnexpectedError(failure));
+
+        return !listeners.isEmpty();
     }
 
     JsonNode paramsOf(Throwable exception) {

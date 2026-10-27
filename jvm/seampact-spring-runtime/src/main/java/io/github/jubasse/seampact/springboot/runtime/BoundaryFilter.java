@@ -22,7 +22,8 @@ import tools.jackson.databind.node.MissingNode;
  * Step 1 of the check order (ADR 0022 "Placement"), ordered before Spring Security and Boot's request-wrapper
  * filters: the raw-path match, the api's 404 for the paths under its base paths that no route serves, the media type
  * and the bounded body read; then it wraps the response in the checking wrapper and gives the verdict once the last
- * dispatch returns. An exception that escapes the chain is the api's 500, never the container's error page.
+ * dispatch returns. An exception that escapes the chain is the api's 500, never the container's error page, except
+ * under Spring Boot devtools, where it goes on to Spring's error handling.
  */
 public final class BoundaryFilter implements Filter {
     /** The order before Boot's request-wrapper filters (`-10000`) and Spring Security's chain (`-100`). */
@@ -72,13 +73,15 @@ public final class BoundaryFilter implements Filter {
         if (!request.isAsyncStarted()) OutgoingCheck.finish(boundary, exchange);
     }
 
-    private void runChain(HttpServletRequest request, BoundaryExchange exchange, FilterChain chain) {
+    private void runChain(HttpServletRequest request, BoundaryExchange exchange, FilterChain chain) throws IOException, ServletException {
         try {
             HttpServletRequest forwarded = readInput(request, exchange);
             chain.doFilter(forwarded, exchange.response);
         } catch (ContractRefusal refusal) {
             boundary.writeRefusal(exchange, refusal);
         } catch (IOException | ServletException | RuntimeException failure) {
+            if (boundary.leaveToFramework(request, exchange, failure)) throw failure;
+
             boundary.writeUnexpected(exchange, "an exception escaped the handler chain", failure);
         }
     }
