@@ -8,6 +8,7 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\AuthenticateCall;
+use Seampact\Codegen\Runtime\DebugLookup;
 use Seampact\Codegen\Runtime\Decider;
 use Seampact\Codegen\Runtime\HookLookup;
 use Seampact\Codegen\Runtime\IdempotencyStoreLookup;
@@ -23,10 +24,10 @@ use Symfony\Component\DependencyInjection\Attribute\Exclude;
  * optional unexpected-error listener of the api's generated interface and idempotency store of the api's own service
  * id, and the app's logger. A
  * missing hook is a `LogicException`, which the boundary answers with the api's 500. Symfony's `AccessDeniedException` (`denyAccessUnlessGranted()`) is a decider's access
- * denial, named as a string so an app without SecurityBundle still loads this class.
+ * denial, named as a string so an app without SecurityBundle still loads this class. Debug mode is `kernel.debug`.
  */
 #[Exclude]
-final class Hooks implements HookLookup, IdempotencyStoreLookup
+final class Hooks implements HookLookup, IdempotencyStoreLookup, DebugLookup
 {
     /** The tags are `TAG_PREFIX . <api> . <kind suffix>`; the generated bundle builds its tags from these. */
     public const TAG_PREFIX = 'seampact.';
@@ -53,6 +54,7 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup
         private readonly mixed $unexpectedErrorListener,
         private readonly LoggerInterface $logger,
         private readonly mixed $idempotencyStore = null,
+        private readonly bool $debug = false,
     ) {
     }
 
@@ -133,5 +135,10 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup
     public function isNotFoundDenial(\Throwable $failure): bool
     {
         return false;
+    }
+
+    public function isDebug(): bool
+    {
+        return $this->debug;
     }
 }

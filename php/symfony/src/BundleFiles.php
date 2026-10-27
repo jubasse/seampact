@@ -96,7 +96,7 @@ final class BundleFiles
         $load->addParameter('container')->setType($file->type('Symfony\\Component\\DependencyInjection\\Loader\\Configurator\\ContainerConfigurator'));
         $load->addParameter('builder')->setType($file->type('Symfony\\Component\\DependencyInjection\\ContainerBuilder'));
         $configurator = 'Symfony\\Component\\DependencyInjection\\Loader\\Configurator';
-        foreach (['service', 'tagged_iterator', 'tagged_locator'] as $function) {
+        foreach (['param', 'service', 'tagged_iterator', 'tagged_locator'] as $function) {
             $file->namespace->addUseFunction("{$configurator}\\{$function}");
         }
         $routeLoader = $file->name($this->placement->routeLoader);
@@ -135,6 +135,7 @@ final class BundleFiles
                 service({$listener}::class)->nullOnInvalid(),
                 service('logger'),
                 service(self::IDEMPOTENCY_STORE_SERVICE)->nullOnInvalid(),
+                param('kernel.debug'),
             ]);
             \$services->set(self::BOUNDARY_SERVICE, {$boundary}::class)->args([service(self::HOOKS_SERVICE), service(self::SETTINGS_SERVICE), service('validator')])->tag('kernel.event_subscriber')->tag({$bootCheck}::BOUNDARY_TAG, [{$bootCheck}::CONTRACT_ATTRIBUTE => {$contract}::class]);
             foreach ({$access}::KINDS as \$kind) {

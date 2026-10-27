@@ -20,6 +20,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
+use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\tagged_iterator;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\tagged_locator;
@@ -104,6 +105,7 @@ final class TasksSeampactBundle extends AbstractBundle
         service(UnexpectedErrorListener::class)->nullOnInvalid(),
         service('logger'),
         service(self::IDEMPOTENCY_STORE_SERVICE)->nullOnInvalid(),
+        param('kernel.debug'),
     ]);
     $services->set(self::BOUNDARY_SERVICE, TasksBoundary::class)->args([service(self::HOOKS_SERVICE), service(self::SETTINGS_SERVICE), service('validator')])->tag('kernel.event_subscriber')->tag(BootCheckPass::BOUNDARY_TAG, [BootCheckPass::CONTRACT_ATTRIBUTE => TasksContract::class]);
     foreach (TasksAccess::KINDS as $kind) {

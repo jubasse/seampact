@@ -7,6 +7,7 @@ namespace Seampact\Symfony\Runtime;
 use Seampact\Codegen\Runtime\AccessSteps;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\BoundaryFailure;
+use Seampact\Codegen\Runtime\BoundaryLog;
 use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Codegen\Runtime\ContractRefusal;
@@ -40,7 +41,8 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * 8 once the controller is known, the reply of a generated result, the rendering of the boundary's own refusals and of
  * the generated exceptions, the record of the request's first exception, and on the way out the route check, the
  * mapping of a native layer's refusal to its role and step 10. A boundary failure and an exception no role maps answer
- * the api's 500 in every `responses` mode, without Symfony's error page.
+ * the api's 500 in every `responses` mode, without Symfony's error page, except under `kernel.debug`, where Symfony's
+ * error page answers it, so the developer sees the exception.
  */
 abstract class BoundarySubscriber implements EventSubscriberInterface
 {
@@ -67,6 +69,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
     private const FORBIDDEN_ROLE = 'forbidden';
     private const PARTS = ['path', 'query', 'header', 'body'];
     private const HEADER_PART = 'header';
+    private const DEBUG_PAGE = 'debug_page';
 
     private int $mainRequests = 0;
     /** @var list<string>|null the hook problems, read once per container instance */
@@ -286,11 +289,11 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
 
         if ($exception instanceof BoundaryFailure || $exception instanceof ContractBypassedException) {
             $cause = $exception instanceof BoundaryFailure ? ($exception->getPrevious() ?? $exception) : $exception;
-            $this->answer($event, ReplyVerdict::internalError($this->hooks, $state->contract, $state->operationId, 'a boundary step failed', $cause));
+            $this->unmapped($event, $state, 'a boundary step failed', $cause);
         }
     }
 
-    /** An exception no app listener answered: the api's 500, never Symfony's error page. */
+    /** An exception no app listener answered: the api's 500, never Symfony's error page outside `kernel.debug`. */
     public function onUnmappedException(ExceptionEvent $event): void
     {
         $request = $event->getRequest();
@@ -299,7 +302,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         // The firewall's listener replaces a refusal with an HTTP exception; the recorded first exception keeps its kind.
         $recorded = $request->attributes->get($this->attribute('exception'));
         $first = $recorded instanceof \Throwable ? $recorded : $exception;
-        if ($state === null || $event->hasResponse() || ExceptionRoles::isNativeRefusal($exception) || ExceptionRoles::isNativeRefusal($first)) {
+        if ($state === null || $event->hasResponse() || $request->attributes->has($this->attribute(self::DEBUG_PAGE)) || ExceptionRoles::isNativeRefusal($exception) || ExceptionRoles::isNativeRefusal($first)) {
             return;
         }
 
@@ -308,8 +311,21 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
             return;
         }
 
-        $event->allowCustomResponseCode();
-        $this->answer($event, ReplyVerdict::internalError($this->hooks, $state->contract, $state->operationId, 'an exception reached the boundary unmapped', $exception));
+        $this->unmapped($event, $state, 'an exception reached the boundary unmapped', $exception);
+    }
+
+    /** The api's 500, logged; under `kernel.debug`, logged and left to Symfony's error page, which the way out keeps. */
+    private function unmapped(ExceptionEvent $event, BoundaryState $state, string $reason, \Throwable $cause): void
+    {
+        if (!BoundaryLog::inDebug($this->hooks)) {
+            $event->allowCustomResponseCode();
+            $this->answer($event, ReplyVerdict::internalError($this->hooks, $state->contract, $state->operationId, $reason, $cause));
+
+            return;
+        }
+
+        BoundaryLog::unexpected($this->hooks, $state->contract, $state->operationId, $reason, $cause);
+        $event->getRequest()->attributes->set($this->attribute(self::DEBUG_PAGE), true);
     }
 
     /** An authenticator's failure, whose reply never reaches `kernel.exception`, recorded when it ends with a reply. */
@@ -345,6 +361,13 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
 
         $state = $event->isMainRequest() ? BoundaryState::of($request, $this->contract()->api) : null;
         if ($state === null) {
+            return;
+        }
+
+        // Symfony's error page for an exception left to it under `kernel.debug` is not a contract reply to check.
+        if ($request->attributes->has($this->attribute(self::DEBUG_PAGE))) {
+            IdempotencyStep::settle($state, $response);
+
             return;
         }
 
