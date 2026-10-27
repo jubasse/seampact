@@ -107,23 +107,49 @@ function methodFollows(listed: string, named: string): boolean {
   );
 }
 
-// A catch-all segment of a route serves any number of segments, so only `**` matches it, never `*` or a literal.
+// One step per pattern segment, as a glob matcher does: `ends[index]` says the pattern so far can end before path
+// segment `index`. Pattern times path steps, never a backtrack, however many `**` the pattern has.
 function segmentsMatch(pattern: readonly string[], path: readonly string[]): boolean {
-  const [first, ...rest] = pattern;
+  let ends = path.map(() => false).concat(false);
 
-  if (first === undefined) return path.length === 0;
+  ends[0] = true;
 
-  if (first === ANY_SEGMENTS) {
-    return (
-      path.some((_, index) => segmentsMatch(rest, path.slice(index))) || segmentsMatch(rest, [])
-    );
+  for (const patternSegment of pattern) {
+    ends =
+      patternSegment === ANY_SEGMENTS
+        ? endsAfterAnySegments(ends)
+        : endsAfterOneSegment(ends, patternSegment, path);
   }
 
-  const [segment, ...pathRest] = path;
+  return ends[path.length] === true;
+}
 
-  if (segment === undefined || segment === CATCH_ALL_SEGMENT) return false;
+// `**` takes any number of segments, catch-all segments included.
+function endsAfterAnySegments(ends: readonly boolean[]): boolean[] {
+  let reached = false;
 
-  return segmentMatches(first, segment) && segmentsMatch(rest, pathRest);
+  return ends.map((end) => {
+    reached ||= end;
+
+    return reached;
+  });
+}
+
+// A catch-all segment of a route serves any number of segments, so only `**` matches it, never `*` or a literal.
+function endsAfterOneSegment(
+  ends: readonly boolean[],
+  patternSegment: string,
+  path: readonly string[],
+): boolean[] {
+  return ends.map((_, index) => {
+    const segment = path[index - 1];
+
+    if (index === 0 || ends[index - 1] !== true) return false;
+
+    if (segment === undefined || segment === CATCH_ALL_SEGMENT) return false;
+
+    return segmentMatches(patternSegment, segment);
+  });
 }
 
 // A `*` inside a pattern segment takes any characters, none included; the rest of the segment is literal.
