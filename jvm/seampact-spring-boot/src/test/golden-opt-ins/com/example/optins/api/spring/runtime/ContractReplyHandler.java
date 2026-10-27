@@ -49,7 +49,7 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
         }
 
         if (value == null) {
-            exchange.violation = Optional.of("the handler returned null");
+            handlerFailed(exchange, "the handler returned null");
             return;
         }
 
@@ -61,7 +61,7 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
 
         String code = boundary.binding().errorArms().get(value.getClass());
         if (code == null) {
-            exchange.violation = Optional.of("the handler returned " + value.getClass().getName() + ", not an arm of its result");
+            handlerFailed(exchange, "the handler returned " + value.getClass().getName() + ", not an arm of its result");
             return;
         }
 
@@ -77,7 +77,7 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
         if (hasBody(response, status)) {
             String shape = response.path("shape").asString();
             if (bodyValue == null && !ITEM_SHAPE.equals(shape)) {
-                exchange.violation = Optional.of("the handler returned a null " + shape);
+                handlerFailed(exchange, "the handler returned a null " + shape);
                 return;
             }
 
@@ -87,11 +87,11 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
                     : boundary.mapper().valueToTree(isPage ? boundary.binding().pageFacts(bodyValue) : bodyValue);
             JsonNode payload = isPage ? handlerBody.path(ITEMS) : handlerBody;
             if (isPage && !payload.isArray()) {
-                exchange.violation = Optional.of("the handler returned a page without items");
+                handlerFailed(exchange, "the handler returned a page without items");
                 return;
             }
             if (isPage && handlerBody.path(TOTAL).asLong(0) < 0) {
-                exchange.violation = Optional.of("the handler returned a page whose total is negative");
+                handlerFailed(exchange, "the handler returned a page whose total is negative");
                 return;
             }
 
@@ -127,6 +127,12 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
 
         checking.setStatus(status);
         exchange.markBoundaryWrote();
+    }
+
+    // A result that breaks its own type is the handler's failure, the api's 500 under `responses: warn` too, as on Node;
+    // only a reply the boundary could send goes out as written under `warn`.
+    private void handlerFailed(BoundaryExchange exchange, String reason) {
+        boundary.writeUnexpected(exchange, reason, null);
     }
 
     private static boolean hasBody(JsonNode response, int status) {
