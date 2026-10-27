@@ -12,6 +12,8 @@ In [Install](../getting-started/01-install.md), use these dependencies in `packa
   },
 ```
 
+Keep `@seampact/server-runtime`, which Install put in `dependencies`: the generated code imports it. Keep it at the version of your other seampact packages.
+
 In [Generate](../getting-started/03-generate-and-run.md), the `server` target uses `@seampact/codegen-hono`. It has no `bodyValidation` option.
 
 ```yaml
