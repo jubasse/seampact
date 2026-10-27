@@ -213,6 +213,24 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
       expect(JSON.parse(reply.text)).toMatchObject({ code: "api.forbidden" });
     });
 
+    test("a limiter's ThrottleException answers the rateLimited code with its Retry-After delay", async () => {
+      app.scenario.answers.createTask = () => {
+        throw Object.assign(app.frameworkRefusal("E_TOO_MANY_REQUESTS", 429), {
+          getDefaultHeaders: () => ({ "Retry-After": 2 }),
+        });
+      };
+
+      const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: writeHeaders(),
+        body: JSON.stringify({ title: "Plan" }),
+      });
+
+      expect(reply.status).toBe(429);
+      expect(JSON.parse(reply.text)).toMatchObject({ code: "api.rate_limited" });
+      expect(reply.text).toContain('"retryAfterMs":2000');
+      expect(reply.headers["retry-after"]).toBe("2");
+    });
+
     test("a throttle refusal whose rateLimited code requires params is a 500", async () => {
       vi.spyOn(console, "error").mockImplementation(() => undefined);
       app.scenario.answers.createTask = () => {

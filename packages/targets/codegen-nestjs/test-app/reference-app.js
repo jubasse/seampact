@@ -34,6 +34,9 @@ export {
 } from "@nestjs/common";
 
 /** The api's typed exception, for the scenario's handlers. */
+/** A request carrying this header gets its value as the reply's `Retry-After-short`, as a named throttler sets it. */
+export const THROTTLE_RETRY_AFTER_HEADER = "x-throttle-retry-after";
+
 export const ContractException = TasksNest.ContractException;
 
 export const ALLOWED_ORIGIN = "https://app.example";
@@ -712,9 +715,15 @@ export async function startReferenceApp() {
 
   app.set("trust proxy", () => scenario.trustsProxy);
   app.enableCors({ origin: ALLOWED_ORIGIN });
-  app.use((_request, response, next) => {
+  app.use((request, response, next) => {
     response.setHeader("strict-transport-security", "max-age=63072000");
     response.setHeader("x-content-type-options", "nosniff");
+
+    const retryAfter = request.headers[THROTTLE_RETRY_AFTER_HEADER];
+
+    // As a named throttler of `@nestjs/throttler` writes it.
+    if (typeof retryAfter === "string") response.setHeader("retry-after-short", retryAfter);
+
     next();
   });
   app.useBodyParser("json", { limit: TasksNest.LARGEST_BODY_LIMIT, strict: false });

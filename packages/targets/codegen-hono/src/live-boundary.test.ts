@@ -41,6 +41,7 @@ const MILLISECONDS_PER_SECOND = 1000;
 
 interface ReferenceAppModule {
   readonly ALLOWED_ORIGIN: string;
+  readonly THROTTLE_RETRY_AFTER_HEADER: string;
   readonly FAIL_BEFORE_HEADER: string;
   readonly READ_BODY_HEADER: string;
   readonly REWRITE_REPLY_HEADER: string;
@@ -258,6 +259,44 @@ describe("the request body", () => {
 
     expect(reply.status).toBe(413);
     expect(reply.headers["cache-control"]).toBe("no-store");
+  });
+
+  test("a framework 429 after a throttler's Retry-After answers the rateLimited code with its delay", async () => {
+    app.scenario.answers.createTask = () => {
+      throw Object.assign(new Error("Too many requests"), { status: 429 });
+    };
+
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: { ...writeHeaders(), [app.THROTTLE_RETRY_AFTER_HEADER]: "2" },
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(429);
+    expect(JSON.parse(reply.text)).toMatchObject({ code: "api.rate_limited" });
+    expect(reply.text).toContain('"retryAfterMs":2000');
+    expect(reply.headers["retry-after"]).toBe("2");
+  });
+
+  test("a framework 429 whose rateLimited code requires params is a reported 500", async () => {
+    app.scenario.answers.createTask = () => {
+      throw Object.assign(new Error("Too many requests"), { status: 429 });
+    };
+
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(500);
+    expect(app.calls.unexpected).toEqual([
+      expect.objectContaining({
+        exceptionOrReply: expect.objectContaining({
+          message: expect.stringContaining(
+            "maps to 'api.rate_limited', which declares required params",
+          ),
+        }),
+      }),
+    ]);
   });
 
   test("an app-written noStore error reply without Cache-Control: no-store is replaced by a 500", async () => {

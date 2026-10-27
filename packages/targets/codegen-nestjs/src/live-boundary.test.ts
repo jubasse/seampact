@@ -70,6 +70,7 @@ interface UnexpectedCall {
 
 interface ReferenceAppModule {
   readonly ALLOWED_ORIGIN: string;
+  readonly THROTTLE_RETRY_AFTER_HEADER: string;
   readonly APP_MARKER: string;
   readonly TasksController: new () => Record<string, (...args: unknown[]) => unknown>;
   readonly calls: {
@@ -690,6 +691,22 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       expect(String(app.calls.unexpected[0]?.exceptionOrReply)).toContain(
         `a ${BAD_REQUEST} error on 'getTask' maps to 'api.schema_invalid', which declares required params`,
       );
+    });
+
+    test("a 429 HttpException after a named throttler's Retry-After answers the rateLimited code with its delay", async () => {
+      app.scenario.answers.createTask = () => {
+        throw new app.HttpException("slow down", TOO_MANY_REQUESTS);
+      };
+
+      const served = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: { ...writeHeaders(), [app.THROTTLE_RETRY_AFTER_HEADER]: "2" },
+        body: JSON.stringify({ title: "Plan" }),
+      });
+
+      expect(served.status).toBe(429);
+      expect(JSON.parse(served.text)).toMatchObject({ code: "api.rate_limited" });
+      expect(served.text).toContain('"retryAfterMs":2000');
+      expect(served.headers["retry-after"]).toBe("2");
     });
 
     test("a 429 HttpException whose rateLimited code requires params is a reported 500", async () => {

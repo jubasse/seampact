@@ -14,6 +14,7 @@ import {
   handlers,
   hooks,
   resetScenario,
+  THROTTLE_RETRY_AFTER_HEADER,
   trustsProxy,
 } from "./reference-scenario.js";
 
@@ -116,6 +117,10 @@ export async function startReferenceApp() {
 
     reply.header("strict-transport-security", "max-age=63072000");
     reply.header("x-content-type-options", "nosniff");
+
+    const retryAfter = request.headers[THROTTLE_RETRY_AFTER_HEADER];
+
+    if (typeof retryAfter === "string") reply.header("retry-after", retryAfter);
 
     const failure = request.headers[FAIL_BEFORE_HEADER];
 

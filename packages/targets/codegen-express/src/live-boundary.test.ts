@@ -59,6 +59,7 @@ const WRITTEN_TITLE = "Sign in first.";
 
 interface ReferenceAppModule {
   readonly ALLOWED_ORIGIN: string;
+  readonly THROTTLE_RETRY_AFTER_HEADER: string;
   readonly FAIL_BEFORE_HEADER: string;
   readonly APP_RENDERED_ERROR: string;
   readonly mountedRouterUnexpected: unknown[];
@@ -300,6 +301,22 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
 
     expect(reply.status).toBe(500);
     expect(app.calls.unexpected).toHaveLength(1);
+  });
+
+  test("a framework 429 after a throttler's Retry-After answers the rateLimited code with its delay", async () => {
+    app.scenario.answers.createTask = () => {
+      throw Object.assign(new Error("Too many requests"), { status: TOO_MANY_REQUESTS });
+    };
+
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: { ...writeHeaders(), [app.THROTTLE_RETRY_AFTER_HEADER]: "2" },
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(429);
+    expect(JSON.parse(reply.text)).toMatchObject({ code: "api.rate_limited" });
+    expect(reply.text).toContain('"retryAfterMs":2000');
+    expect(reply.headers["retry-after"]).toBe("2");
   });
 
   test("a framework 429 whose rateLimited code requires params is a reported 500", async () => {
