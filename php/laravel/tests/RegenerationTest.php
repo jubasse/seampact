@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Seampact\Laravel\Tests;
 
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Facade;
+use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\Runtime\RuntimeVersion;
 
@@ -21,16 +23,21 @@ final class RegenerationTest extends TestCase
 
     protected function tearDown(): void
     {
+        Facade::clearResolvedInstances();
+        Facade::setFacadeApplication(null);
         $_SERVER['argv'] = $this->argumentsBefore;
     }
 
     public function testTheGenerateCommandBootsUnderARuntimeVersionMismatch(): void
     {
         $_SERVER['argv'] = ['artisan', 'seampact:generate'];
-        $provider = new ForeignVersionServiceProvider(new Application(sys_get_temp_dir()));
+        $application = new Application(sys_get_temp_dir());
+        Facade::setFacadeApplication($application);
+        $provider = new ForeignVersionServiceProvider($application);
 
         $provider->register();
         $provider->boot();
+        Route::macroCall('seampact', ['tasks']);
 
         $this->addToAssertionCount(1);
     }

@@ -70,6 +70,7 @@ abstract class ContractServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        self::defineRouteMacro();
         if ($this->regenerating()) {
             return;
         }
@@ -80,18 +81,6 @@ abstract class ContractServiceProvider extends ServiceProvider
         if (method_exists($kernel, 'prependMiddleware') && method_exists($kernel, 'addToMiddlewarePriorityBefore')) {
             $kernel->prependMiddleware($this->boundaryClass());
             $kernel->addToMiddlewarePriorityBefore(self::SUBSTITUTE_BINDINGS, $this->accessClass());
-        }
-
-        if (!Route::hasMacro(self::MACRO)) {
-            // The macro runs bound to the router, where `self` names the router: the key function is captured here.
-            $routeTableKey = self::routeTableKey(...);
-            Route::macro(self::MACRO, static function (string $api) use ($routeTableKey): void {
-                $routesClass = app($routeTableKey($api));
-                if (!is_string($routesClass) || !method_exists($routesClass, 'register')) {
-                    throw new \LogicException("seampact: no generated routes for the api '{$api}'; list its service provider in bootstrap/providers.php.");
-                }
-                $routesClass::register();
-            });
         }
 
         $api = $contract->api;
@@ -117,16 +106,44 @@ abstract class ContractServiceProvider extends ServiceProvider
         }
     }
 
+    private static function defineRouteMacro(): void
+    {
+        if (Route::hasMacro(self::MACRO)) {
+            return;
+        }
+
+        // The macro runs bound to the router, where `self` names the router: the functions are captured here.
+        $routeTableKey = self::routeTableKey(...);
+        $generateCommandRuns = self::generateCommandRuns(...);
+        Route::macro(self::MACRO, function (string $api) use ($routeTableKey, $generateCommandRuns): void {
+            $application = app();
+            $routesClass = $application->bound($routeTableKey($api)) ? $application->make($routeTableKey($api)) : null;
+            // An api whose provider the generate command skipped serves no route there.
+            if ($routesClass === null && $generateCommandRuns($application)) {
+                return;
+            }
+            if (!is_string($routesClass) || !method_exists($routesClass, 'register')) {
+                throw new \LogicException("seampact: no generated routes for the api '{$api}'; list its service provider in bootstrap/providers.php.");
+            }
+            $routesClass::register();
+        });
+    }
+
     // The generate command serves no request, so an api generated for another runtime version leaves it to run.
     private function regenerating(): bool
     {
-        return $this->runningConsoleCommand([self::GENERATE_COMMAND]) && !ApiContract::servesInstalledRuntime($this->contractClass());
+        return self::generateCommandRuns($this->app) && !ApiContract::servesInstalledRuntime($this->contractClass());
+    }
+
+    private static function generateCommandRuns(Application $application): bool
+    {
+        return self::runningConsoleCommand($application, [self::GENERATE_COMMAND]);
     }
 
     /** @param list<string> $commands */
-    private function runningConsoleCommand(array $commands): bool
+    private static function runningConsoleCommand(Application $application, array $commands): bool
     {
-        return method_exists($this->app, 'runningConsoleCommand') && $this->app->runningConsoleCommand($commands);
+        return method_exists($application, 'runningConsoleCommand') && $application->runningConsoleCommand($commands);
     }
 
     // An HTTP boot without a route cache, and `route:cache` and `optimize`, which boot a fresh application.
@@ -137,7 +154,7 @@ abstract class ContractServiceProvider extends ServiceProvider
         }
 
         return !$this->app->runningInConsole()
-            || $this->runningConsoleCommand(self::CACHING_COMMANDS);
+            || self::runningConsoleCommand($this->app, self::CACHING_COMMANDS);
     }
 
     /**
