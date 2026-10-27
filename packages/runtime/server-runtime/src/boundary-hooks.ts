@@ -13,7 +13,7 @@ import type {
 } from "@seampact/hooks";
 import { ContractError, unexpectedError } from "./contract-error.js";
 import type { ContractApi, ContractRoute } from "./contract-route.js";
-import { runtimeLog, runtimeLogOf } from "./runtime-logger.js";
+import { runtimeLogOf } from "./runtime-logger.js";
 
 export type AnyAuthenticateHook = AuthenticateHook<
   AuthenticateRequest<object, object>,
@@ -113,6 +113,7 @@ export function deciderFor(hooks: BoundaryHooks, name: string): AnyDecideHook | 
 /** Calls `onUnexpectedError`; a failure inside it is logged, never raised. */
 export async function reportUnexpected(
   hooks: BoundaryHooks | undefined,
+  api: object,
   exceptionOrReply: unknown,
   context: UnexpectedErrorContext,
 ): Promise<void> {
@@ -123,7 +124,7 @@ export async function reportUnexpected(
   try {
     await hook(exceptionOrReply, context);
   } catch (error) {
-    runtimeLog.error(
+    runtimeLogOf(api).error(
       `seampact: onUnexpectedError failed for operation '${context.operation ?? "(none)"}' of api '${context.api}'`,
       error,
     );

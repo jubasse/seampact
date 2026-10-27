@@ -75,7 +75,7 @@ export async function reportContractError(
     );
   }
 
-  await reportUnexpected(hooks, error.unexpectedCause, where);
+  await reportUnexpected(hooks, api, error.unexpectedCause, where);
 }
 
 /** The path's 404: the route's `notFound` code, else its code of status 404, else a 500. */

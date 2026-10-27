@@ -487,6 +487,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       );
       await writeContractReply(
         response,
+        api,
         undefined,
         renderContractReply(api, undefined, unexpectedError(undefined, undefined)),
       );
@@ -625,7 +626,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     const started = await beginIdempotency(state, grant, context.input);
 
     if (started?.outcome === "replay") {
-      await writeContractReply(response, context, started.reply);
+      await writeContractReply(response, api, context, started.reply);
       context.replyWritten = true;
 
       return undefined;
@@ -651,7 +652,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     const { state, grant } = guardedRequest(context);
     const reply = await handlerReply(state, grant, context.input, result);
 
-    await writeContractReply(response, context, reply);
+    await writeContractReply(response, api, context, reply);
     context.replyWritten = true;
   }
 

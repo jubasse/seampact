@@ -1,6 +1,6 @@
 // The `server-cjs` tree of this consumer is CommonJS (`generated/server-cjs/package.json`), as in a NestJS app on
-// CommonJS: its modules require the CommonJS build of `@seampact/server-runtime`, and the consumer's typecheck reads
-// that build's types.
+// CommonJS: its modules require the CommonJS build of `@seampact/server-runtime`, an app boots and serves on it, and
+// the consumer's typecheck reads that build's types.
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
@@ -35,4 +35,17 @@ test("the CommonJS tree requires the runtime's CommonJS build and names its modu
     moduleClassName: "TasksSeampactModule",
     requiredModules: expect.arrayContaining([expect.stringMatching(COMMONJS_PLACEMENT)]),
   });
+});
+
+test("a NestJS app on the CommonJS tree boots and serves an operation", {
+  timeout: SPAWN_TIMEOUT_MILLISECONDS,
+}, () => {
+  const run = spawnSync(process.execPath, ["--import", "tsx", "test/boot-commonjs.cts"], {
+    cwd: CONSUMER_ROOT,
+    encoding: "utf8",
+  });
+
+  expect(run.stderr).toBe("");
+  expect(run.status).toBe(0);
+  expect(JSON.parse(run.stdout)).toEqual({ status: 200, body: { status: "ok" } });
 });

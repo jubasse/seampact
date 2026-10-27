@@ -609,7 +609,7 @@ export function createFastifyBoundary<
     context: BoundaryContext,
     contractReply: ContractReply,
   ): Promise<void> {
-    await writeContractReply(hijackForBoundary(reply), context, contractReply);
+    await writeContractReply(hijackForBoundary(reply), api, context, contractReply);
   }
 
   async function sendError(

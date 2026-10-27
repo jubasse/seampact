@@ -20,11 +20,7 @@ import { type NativeDocsContract, readNativeDocsDocument } from "./native-docs-r
 import { nativeDocsRuntimeFile } from "./native-docs-runtime-file.js";
 import { type NodeServerOptions, parseNodeServerOptions } from "./options.js";
 import { routeTableSource } from "./route-table.js";
-import {
-  type RuntimeGenerator,
-  SERVER_RUNTIME_PACKAGE,
-  serverRuntimeRefusals,
-} from "./server-runtime-check.js";
+import { type RuntimeGenerator, serverRuntimeRefusals } from "./server-runtime-check.js";
 import { handlersSource, hookTypesSource } from "./server-types.js";
 
 // The files of one api's Node server boundary: the route table, handler interfaces and hook types, the target's
@@ -329,7 +325,6 @@ function boundaryFiles(
     validators,
     moduleFile(ROUTES_MODULE),
     {
-      runtimeModule: SERVER_RUNTIME_PACKAGE,
       generatorVersion,
       withItemValidators: options.bodyValidation,
       frameworkRoutes: input.frameworkRoutes,
@@ -343,13 +338,7 @@ function boundaryFiles(
     warnings,
   );
   const handlers = handlersSource(ir, links.types, moduleFile(HANDLERS_MODULE), refusals);
-  const hooks = hookTypesSource(
-    ir,
-    links.types,
-    moduleFile(HOOKS_MODULE),
-    SERVER_RUNTIME_PACKAGE,
-    refusals,
-  );
+  const hooks = hookTypesSource(ir, links.types, moduleFile(HOOKS_MODULE), refusals);
   const docs = input.artefacts.has(NATIVE_DOCS_ARTEFACT)
     ? nativeDocsFiles(input, placement, refusals)
     : [];

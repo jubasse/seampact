@@ -34,14 +34,13 @@ import {
   sourceOf,
   template,
 } from "./route-table-source.js";
+import { SERVER_RUNTIME_PACKAGE } from "./server-runtime-check.js";
 import { successEnvelope } from "./success-envelope.js";
 
 // The route table module of one api: every operation as the node-server runtime reads it (`ContractApi`), with
 // the validators link's input validator per operation. A form the runtime does not serve is refused by name.
 
 export interface RouteTableOptions {
-  /** The module that holds the runtime's types, as `./node-server/contract-route.js` or `@seampact/server-runtime`. */
-  readonly runtimeModule: string;
   /** The full version of the target package that generates the table. */
   readonly generatorVersion: string;
   /** Adds each JSON response's item validator, for the target option `bodyValidation`. */
@@ -158,7 +157,7 @@ export function routeTableSource(
   };
 
   return [
-    `import type { ContractApi } from "${options.runtimeModule}";`,
+    `import type { ContractApi } from "${SERVER_RUNTIME_PACKAGE}";`,
     ...imports.lines(),
     "",
     "/** Every operation of the api as the boundary checks it. */",

@@ -193,7 +193,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
 
       if (started === undefined) return "continue";
 
-      await writeContractReply(response, context, started.replay);
+      await writeContractReply(response, api, context, started.replay);
 
       return "stop";
     });
@@ -209,7 +209,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
         binding,
       );
 
-      await writeContractReply(response, context, reply);
+      await writeContractReply(response, api, context, reply);
 
       return "stop";
     });

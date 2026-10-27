@@ -93,7 +93,7 @@ export async function reportViolation(
     );
   }
 
-  await reportUnexpected(context.hooks, reported, where);
+  await reportUnexpected(context.hooks, context.api, reported, where);
 }
 
 /** The violation of an error body longer than the check holds. */

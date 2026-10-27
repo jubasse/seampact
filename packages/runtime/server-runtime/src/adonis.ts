@@ -518,7 +518,7 @@ export function createAdonisBoundary<
       }
 
       if (replay?.outcome === "replay") {
-        await writeContractReply(ctx.response.response, context, replay.reply);
+        await writeContractReply(ctx.response.response, api, context, replay.reply);
 
         return;
       }
@@ -566,7 +566,7 @@ export function createAdonisBoundary<
           result,
         );
 
-        await writeContractReply(ctx.response.response, context, reply);
+        await writeContractReply(ctx.response.response, api, context, reply);
       } catch (error) {
         await answerStepError(ctx, context, error);
       }
@@ -586,6 +586,7 @@ export function createAdonisBoundary<
       ...controllerProblems(registration.controllers),
       ...bodyValidationProblems(registration, hooks),
       ...unknownOperationProblems(registration),
+      ...appServiceProblems(api, services),
       ...bodyparserProblems(api, services),
       ...repeatedRegistrationProblems(router),
       ...loggerProblems(registration.logger),
@@ -940,23 +941,37 @@ export function routeNamesByAccess(
   return names;
 }
 
+/**
+ * The app service the registration reads: the bodyparser config of a body route and, once the app is ready, the app's
+ * routes outside the contract. It is set once the app boots, before it preloads `start/routes.ts`.
+ */
+function appServiceProblems(api: ContractApi, services: AdonisServices): BootProblem[] {
+  const readsBodyparser = api.routes.some((route) => route.input !== undefined);
+  const checksFrameworkRoutes = api.frameworkRoutes.status !== "off";
+
+  if (services.appService() !== undefined) return [];
+
+  if (!readsBodyparser && !checksFrameworkRoutes) return [];
+
+  return [
+    {
+      problem:
+        "the AdonisJS app service is not set, so the bodyparser config and the app's routes cannot be read",
+      fix: "call registerRoutes from start/routes.ts, which the app preloads once it boots, and import the generated module only after the app is created",
+    },
+  ];
+}
+
 /** Every bodyparser setting a contract route needs, read through the app's config (ADR 0019 "The boot check"). */
 function bodyparserProblems(api: ContractApi, services: AdonisServices): BootProblem[] {
   const bodyRoutes = api.routes.filter((route) => route.input !== undefined);
 
   if (bodyRoutes.length === 0) return [];
 
-  // The app service is set once the app boots, before it preloads `start/routes.ts`.
   const app = services.appService();
 
-  if (app === undefined) {
-    return [
-      {
-        problem: "the AdonisJS app service is not set, so the bodyparser config cannot be read",
-        fix: "call registerRoutes from start/routes.ts, which the app preloads once it boots, and import the generated module only after the app is created",
-      },
-    ];
-  }
+  // An unset app service is refused once, by appServiceProblems.
+  if (app === undefined) return [];
 
   const config: unknown = app.config.get(BODYPARSER_CONFIG_KEY, undefined);
   const json: unknown = isPlainObject(config) ? config.json : undefined;
