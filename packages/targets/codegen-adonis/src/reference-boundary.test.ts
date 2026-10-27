@@ -3,7 +3,6 @@ import { dirname, join } from "node:path";
 import type { LinkSet } from "@seampact/codegen-core";
 import {
   GENERATE_TIMEOUT_MILLISECONDS,
-  generateReferenceProject,
   hooksRequirementErrors,
   projectDirectory,
   publicTasksApi,
