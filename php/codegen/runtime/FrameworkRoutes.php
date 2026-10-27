@@ -6,8 +6,8 @@ namespace Seampact\Codegen\Runtime;
 
 /**
  * The entry's `frameworkRoutes` allow-list as the boot check reads it (FR-25): an entry takes a route when its path
- * pattern matches the route's path (`*` one segment, `**` any number) and it names no method, or the route's one
- * method besides HEAD.
+ * pattern matches the route's path (`*` one segment, `**` any number, a `*` inside a segment any characters but `/`)
+ * and it names no method, or the route's one method besides HEAD.
  */
 final class FrameworkRoutes
 {
@@ -42,7 +42,7 @@ final class FrameworkRoutes
             static fn (string $segment): string => match ($segment) {
                 '**' => '(?:/[^/]+)*',
                 '*' => '/[^/]+',
-                default => '/' . preg_quote($segment, '#'),
+                default => '/' . str_replace('\\*', '[^/]*', preg_quote($segment, '#')),
             },
             array_slice(explode('/', $path), 1),
         );

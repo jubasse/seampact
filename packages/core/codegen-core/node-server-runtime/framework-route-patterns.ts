@@ -1,8 +1,11 @@
 // The allow-list of the framework-route boot check (ADR 0012 "The boot check", ADR 0011 "The app config"): which
-// routes a framework lists the app config allow-lists, by path or pattern (`*` one segment, `**` any number), each
-// listed route once. Copied into the generated tree as is.
+// routes a framework lists the app config allow-lists, by path or pattern (`*` one segment, `**` any number, a `*`
+// inside a segment any characters but `/`), each listed route once. Copied into the generated tree as is.
 
-/** One `frameworkRoutes` entry of the app config: a path or a pattern (`*` one segment, `**` any number). */
+/**
+ * One `frameworkRoutes` entry of the app config: a path or a pattern (`*` one segment, `**` any number, a `*` inside
+ * a segment any characters but `/`).
+ */
 export interface FrameworkRouteAllowance {
   readonly method?: string;
   readonly path: string;
@@ -120,7 +123,40 @@ function segmentsMatch(pattern: readonly string[], path: readonly string[]): boo
 
   if (segment === undefined || segment === CATCH_ALL_SEGMENT) return false;
 
-  return (first === ONE_SEGMENT || first === segment) && segmentsMatch(rest, pathRest);
+  return segmentMatches(first, segment) && segmentsMatch(rest, pathRest);
+}
+
+// A `*` inside a pattern segment takes any characters, none included; the rest of the segment is literal.
+function segmentMatches(patternSegment: string, segment: string): boolean {
+  if (patternSegment === ONE_SEGMENT) return true;
+
+  const [prefix = "", ...afterStars] = patternSegment.split(STAR);
+
+  if (afterStars.length === 0) return patternSegment === segment;
+
+  const suffix = afterStars[afterStars.length - 1] ?? "";
+  const middles = afterStars.slice(0, -1);
+
+  if (segment.length < prefix.length + suffix.length) return false;
+
+  if (!segment.startsWith(prefix) || !segment.endsWith(suffix)) return false;
+
+  return middlesFollow(middles, segment.slice(prefix.length, segment.length - suffix.length));
+}
+
+// The literal parts between stars appear in order; taking each at its first place leaves the most room for the next.
+function middlesFollow(middles: readonly string[], text: string): boolean {
+  let searchFrom = 0;
+
+  for (const middle of middles) {
+    const found = text.indexOf(middle, searchFrom);
+
+    if (found === -1) return false;
+
+    searchFrom = found + middle.length;
+  }
+
+  return true;
 }
 
 function segmentsOf(path: string): string[] {

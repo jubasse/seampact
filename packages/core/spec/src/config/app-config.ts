@@ -149,7 +149,8 @@ export const ARTEFACT_ID_PATTERN = "^[a-z][A-Za-z0-9]*$";
 // `<framework>@<major>`, the framework by its id in the compatibility matrix.
 export const ALLOW_UNTESTED_PATTERN = "^[a-z][a-z0-9-]*@(0|[1-9][0-9]*)$";
 
-// A path or a pattern (`*` one segment, `**` any number), for one method or every method, with its reason.
+// A path or a pattern (`*` one segment, `**` any number, a `*` inside a segment any characters but `/`), for one
+// method or every method, with its reason.
 export interface FrameworkRouteEntry {
   method?: HttpMethod;
   path: string;
@@ -166,8 +167,10 @@ export interface OperationsFilter {
   exclude?: string[];
 }
 
-// A path from the root whose segments are literal, `*` or `**`; a star never sits inside a segment.
-const FRAMEWORK_ROUTE_PATH_PATTERN = "^/(?:(?:[^/*]+|\\*|\\*\\*)(?:/(?:[^/*]+|\\*|\\*\\*))*)?$";
+// A path from the root whose segments are `*`, `**`, or literal text with single stars inside (`livewire-*`); two
+// stars are always a whole segment.
+const FRAMEWORK_ROUTE_SEGMENT = "(?:\\*\\*|\\*|\\*?[^/*]+(?:\\*[^/*]+)*\\*?)";
+const FRAMEWORK_ROUTE_PATH_PATTERN = `^/(?:${FRAMEWORK_ROUTE_SEGMENT}(?:/${FRAMEWORK_ROUTE_SEGMENT})*)?$`;
 
 export const APP_CONFIG_SCHEMA: JsonSchema = {
   $schema: JSON_SCHEMA_DIALECT,
