@@ -10,6 +10,7 @@ use Seampact\Golden\Tasks\GetTaskInput;
 use Seampact\Golden\Tasks\GetTasksBatchInput;
 use Seampact\Golden\Tasks\HealthInput;
 use Seampact\Golden\Tasks\Symfony\Runtime\ContractBypassedException;
+use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
@@ -17,6 +18,7 @@ use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
 /**
  * Hands each contract handler the input the boundary checked for its operation.
  */
+#[Exclude]
 final class TasksInputResolver implements ValueResolverInterface
 {
     public const INPUT_ATTRIBUTE = '_seampact_tasks_input';

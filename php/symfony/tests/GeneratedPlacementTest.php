@@ -108,8 +108,8 @@ final class GeneratedPlacementTest extends TestCase
         $container->setParameter('kernel.build_dir', sys_get_temp_dir());
         $extension->load([['operations' => ['getTask' => ['responses' => 'warn']]]], $container);
 
-        self::assertTrue($container->getDefinition(TasksRouteLoader::class)->hasTag('routing.loader'));
-        $settings = new TasksSettings(...self::namedArguments($container->getDefinition(TasksSettings::class)->getArguments()));
+        self::assertTrue($container->getDefinition(TasksSeampactBundle::ROUTE_LOADER_SERVICE)->hasTag('routing.loader'));
+        $settings = new TasksSettings(...self::namedArguments($container->getDefinition(TasksSeampactBundle::SETTINGS_SERVICE)->getArguments()));
         self::assertSame('warn', $settings->responsesOf('getTask'));
         self::assertSame('strict', $settings->responsesOf('getDraft'));
         self::assertFalse($settings->bodyValidation());
@@ -228,7 +228,7 @@ final class GeneratedPlacementTest extends TestCase
     {
         $container = self::mergedConfiguration(['responses' => '%env(TASKS_RESPONSES)%', 'body_validation' => '%env(TASKS_BODY_VALIDATION)%']);
 
-        self::assertTrue($container->hasDefinition(TasksSettings::class));
+        self::assertTrue($container->hasDefinition(TasksSeampactBundle::SETTINGS_SERVICE));
     }
 
     /** @param array<string, mixed> $configuration */

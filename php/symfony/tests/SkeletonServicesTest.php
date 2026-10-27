@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\HookCheckWarmer;
-use Seampact\Golden\TasksConsistent\Symfony\Runtime\RouteCheck;
-use Seampact\Golden\TasksConsistent\Symfony\TasksBoundary;
+use Seampact\Golden\TasksConsistent\Symfony\Runtime\BootCheckPass;
+use Seampact\Golden\TasksConsistent\Symfony\TasksContract;
 use Seampact\Symfony\Tests\Support\SkeletonKernel;
 use Symfony\Component\Filesystem\Filesystem;
 
@@ -30,8 +29,7 @@ final class SkeletonServicesTest extends TestCase
     {
         $container = (new SkeletonKernel($this->workDirectory))->compiledContainer();
 
-        self::assertTrue($container->getDefinition(TasksBoundary::class)->hasTag('kernel.event_subscriber'));
-        self::assertTrue($container->has(HookCheckWarmer::class));
-        self::assertTrue($container->has(RouteCheck::class));
+        self::assertTrue($container->findDefinition(SkeletonKernel::BOUNDARY_ALIAS)->hasTag(BootCheckPass::BOUNDARY_TAG));
+        self::assertSame(TasksContract::class, $container->findDefinition(SkeletonKernel::WARMER_ALIAS)->getArgument(1));
     }
 }

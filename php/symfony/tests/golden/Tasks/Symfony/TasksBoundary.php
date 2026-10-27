@@ -6,11 +6,13 @@ namespace Seampact\Golden\Tasks\Symfony;
 
 use Seampact\Golden\Tasks\Symfony\Runtime\BoundarySubscriber;
 use Seampact\Golden\Tasks\TasksContractException;
+use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\Validator\Constraint;
 
 /**
  * The boundary of api 'tasks', which the bundle registers as an event subscriber.
  */
+#[Exclude]
 final class TasksBoundary extends BoundarySubscriber
 {
     protected function contractClass(): string

@@ -21,7 +21,7 @@ final class InputResolverFile
     public function file(): PhpClassFile
     {
         $file = new PhpClassFile($this->placement->inputResolver);
-        $class = $file->namespace->addClass($file->shortName)->setFinal()
+        $class = BundleWiredClass::excludeFromResourceLoading($file, $file->namespace->addClass($file->shortName))->setFinal()
             ->addImplement($file->type('Symfony\\Component\\HttpKernel\\Controller\\ValueResolverInterface'))
             ->addComment("Hands each contract handler the input the boundary checked for its operation.");
         $class->addConstant('INPUT_ATTRIBUTE', "_seampact_{$this->placement->apiKey}_input");

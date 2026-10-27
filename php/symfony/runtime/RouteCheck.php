@@ -8,6 +8,7 @@ use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\FrameworkRoutes;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\Config\Loader\LoaderResolverInterface;
+use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
@@ -18,6 +19,7 @@ use Symfony\Component\Routing\RouteCollection;
  * operation's one contract route as the loader wrote it, an app route the router would match before one, an app route
  * to a contract handler, and, under the `frameworkRoutes` switch, each other route against the entry's allow-list.
  */
+#[Exclude]
 final class RouteCheck implements LoaderInterface
 {
     private const OPERATION_DEFAULT = '_seampact_operation';

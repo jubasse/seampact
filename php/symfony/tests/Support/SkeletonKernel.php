@@ -25,6 +25,9 @@ final class SkeletonKernel extends Kernel
 
     private const GOLDEN_NAMESPACE = 'Seampact\\Golden\\TasksConsistent\\';
     private const GOLDEN_DIRECTORY = __DIR__ . '/../golden/TasksConsistent/';
+    /** Public aliases of two services the bundle wires, so the compiled container keeps them for the test to read. */
+    public const BOUNDARY_ALIAS = 'test.boundary';
+    public const WARMER_ALIAS = 'test.hook_check_warmer';
 
     public function __construct(private readonly string $workDirectory)
     {
@@ -72,7 +75,7 @@ final class SkeletonKernel extends Kernel
         )));
     }
 
-    private function configureContainer(ContainerConfigurator $container): void
+    protected function configureContainer(ContainerConfigurator $container): void
     {
         $container->extension('framework', [
             'secret' => 'seampact-test',
@@ -83,11 +86,13 @@ final class SkeletonKernel extends Kernel
         ]);
         $container->extension('seampact_tasks', ['public_origin' => 'https://api.example.com']);
 
-        $container->services()->defaults()->autowire()->autoconfigure()
-            ->load(self::GOLDEN_NAMESPACE, self::GOLDEN_DIRECTORY);
+        $services = $container->services();
+        $services->defaults()->autowire()->autoconfigure()->load(self::GOLDEN_NAMESPACE, self::GOLDEN_DIRECTORY);
+        $services->alias(self::BOUNDARY_ALIAS, TasksSeampactBundle::BOUNDARY_SERVICE)->public();
+        $services->alias(self::WARMER_ALIAS, TasksSeampactBundle::HOOK_CHECK_WARMER_SERVICE)->public();
     }
 
-    private function configureRoutes(RoutingConfigurator $routes): void
+    protected function configureRoutes(RoutingConfigurator $routes): void
     {
     }
 }

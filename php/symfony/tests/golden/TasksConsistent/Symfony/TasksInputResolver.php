@@ -17,6 +17,7 @@ use Seampact\Golden\TasksConsistent\PurgeTaskInput;
 use Seampact\Golden\TasksConsistent\SearchTasksInput;
 use Seampact\Golden\TasksConsistent\Symfony\Runtime\ContractBypassedException;
 use Seampact\Golden\TasksConsistent\UpdateTaskInput;
+use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
@@ -24,6 +25,7 @@ use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
 /**
  * Hands each contract handler the input the boundary checked for its operation.
  */
+#[Exclude]
 final class TasksInputResolver implements ValueResolverInterface
 {
   public const INPUT_ATTRIBUTE = '_seampact_tasks_input';
