@@ -231,6 +231,14 @@ final class GeneratedPlacementTest extends TestCase
         self::assertTrue($container->hasDefinition(TasksSeampactBundle::SETTINGS_SERVICE));
     }
 
+    public function testANullPerOperationValueFallsBackToTheApisValue(): void
+    {
+        $container = self::mergedConfiguration(['responses' => 'warn', 'operations' => ['getTask' => ['responses' => null]]]);
+        $settings = new TasksSettings(...self::namedArguments($container->getDefinition(TasksSeampactBundle::SETTINGS_SERVICE)->getArguments()));
+
+        self::assertSame('warn', $settings->responsesOf('getTask'));
+    }
+
     /** @param array<string, mixed> $configuration */
     private static function mergedConfiguration(array $configuration): ContainerBuilder
     {
