@@ -205,16 +205,17 @@ final class InputStep {
         Class<?> inputType = boundary.binding().inputTypes().get(route.id());
         InjectableValues.Std injected = new InjectableValues.Std();
         ObjectNode parts = NODES.objectNode();
+        Class<?> scopesType = null;
 
         for (RecordComponent component : inputType.getRecordComponents()) {
             switch (component.getName()) {
                 case PRINCIPAL_COMPONENT -> injected.addValue(PRINCIPAL_COMPONENT, exchange.principal);
-                // The scopes record holds only injected components, so it binds from an empty object.
-                case SCOPES_COMPONENT -> parts.set(SCOPES_COMPONENT, NODES.objectNode());
+                case SCOPES_COMPONENT -> scopesType = component.getType();
                 default -> parts.set(component.getName(), tree.path(component.getName()));
             }
         }
         exchange.scopes.forEach(resolved -> injected.addValue(SCOPE_INJECTION_PREFIX + resolved.scope(), resolved));
+        if (scopesType != null) injected.addValue(SCOPES_COMPONENT, bindScopes(boundary, route, scopesType, injected));
 
         if (takesPageable(inputType)) {
             injected.addValue(PAGEABLE_COMPONENT, boundary.binding().pageable(route.id(), boundary.table().pagingStyle(route), tree.path("query")));
@@ -224,6 +225,15 @@ final class InputStep {
             return boundary.mapper().readerFor(inputType).with(injected).readValue(parts);
         } catch (JacksonException failure) {
             throw new IllegalStateException("seampact: binding the validated input of '" + route.id() + "' to " + inputType.getName() + " failed", failure);
+        }
+    }
+
+    // The scopes record holds only injected components, so it binds from an empty object.
+    private static Object bindScopes(SeampactBoundary boundary, ContractRoute route, Class<?> scopesType, InjectableValues.Std injected) {
+        try {
+            return boundary.mapper().readerFor(scopesType).with(injected).readValue(NODES.objectNode());
+        } catch (JacksonException failure) {
+            throw new IllegalStateException("seampact: binding the scopes of '" + route.id() + "' to " + scopesType.getName() + " failed", failure);
         }
     }
 }

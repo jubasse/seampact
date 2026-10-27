@@ -174,10 +174,19 @@ final class AccessSteps {
                     new ResolveScopeRequest.Extensions<>(Map.of(), Map.of())));
 
             switch (resolution) {
-                case ScopeResolution.Resolved<ResolvedScope<?, ?>, Denial> resolved -> exchange.scopes.add(resolved.resolved());
+                case ScopeResolution.Resolved<ResolvedScope<?, ?>, Denial> resolved -> exchange.scopes.add(answeredFor(scope, resolved.resolved()));
                 case ScopeResolution.Denied<ResolvedScope<?, ?>, Denial> denied -> throw refusalOf(boundary, denied.deny());
             }
         }
+    }
+
+    // A resolver answers the scope it was asked for; another scope's name would fill that scope's member of the input.
+    private static ResolvedScope<?, ?> answeredFor(String declaredScope, ResolvedScope<?, ?> answer) {
+        if (!declaredScope.equals(answer.scope())) {
+            throw new IllegalStateException("seampact: the resolver of scope '" + declaredScope + "' answered scope '" + answer.scope() + "'");
+        }
+
+        return answer;
     }
 
     // A value a scope or a subject reads from the request: a path parameter, decoded and checked by its type.

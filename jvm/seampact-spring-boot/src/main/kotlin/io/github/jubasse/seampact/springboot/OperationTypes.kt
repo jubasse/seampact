@@ -64,12 +64,12 @@ internal class OperationTypes(
 
         // Null for an anonymous caller on an optional-auth route; a public route has no principal component.
         identityOf(operation)?.let { layout.principalClass(it) }?.let { principal ->
-            components += RecordComponent(PRINCIPAL_COMPONENT, principal, injectedAs = PRINCIPAL_COMPONENT)
+            components += RecordComponent(PRINCIPAL_COMPONENT, principal, injectedAs = PRINCIPAL_COMPONENT, withheld = true)
         }
 
         scopesType(operation, at)?.let { scopes ->
             parts += scopes
-            components += RecordComponent(SCOPES_COMPONENT, names.scopes)
+            components += RecordComponent(SCOPES_COMPONENT, names.scopes, injectedAs = SCOPES_COMPONENT, withheld = true)
         }
 
         return parts + generatedRecord(names.input, components, layout).build()
