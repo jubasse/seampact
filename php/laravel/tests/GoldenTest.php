@@ -6,8 +6,10 @@ namespace Seampact\Laravel\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\GoldenTree;
+use Seampact\Codegen\Tests\Support\PhpLint;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Ir\Run\FrameworkRoute;
+use Seampact\Ir\Write\GeneratedFile;
 use Seampact\Laravel\LaravelGenerator;
 
 /**
@@ -79,5 +81,30 @@ final class GoldenTest extends TestCase
 
             self::assertNotSame([], $files, "The api '{$api}' generated no file.");
         }
+    }
+
+    public function testAnOperationIdThatIsAReservedWordGeneratesParsablePhp(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            $operation->id = 'class';
+            $operation->name = (object) ['role' => 'operation', 'segments' => ['class']];
+        });
+
+        $files = (new LaravelGenerator())->generate(ReferenceContract::read(new LaravelGenerator(), $document), ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+
+        self::assertSame([], PhpLint::failures($files));
+    }
+
+    public function testAStaticSegmentIsEncodedAsTheFetchClientSendsIt(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            $operation->path = '/v1/channels/{channelId}/tâches dues/{taskId}';
+        });
+
+        $files = (new LaravelGenerator())->generate(ReferenceContract::read(new LaravelGenerator(), $document), ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+        $urls = array_values(array_filter($files, static fn (GeneratedFile $file): bool => str_ends_with($file->path, 'TasksUrls.php')));
+
+        self::assertCount(1, $urls);
+        self::assertStringContainsString("'/t%C3%A2ches%20dues/'", $urls[0]->contents);
     }
 }

@@ -90,6 +90,8 @@ Other methods:
 
 `mount` is the route group prefix that the generated registration applies around the contract routes.
 
+Beside the route table, the shared `RouteHelpers` of `php/codegen` writes `<Api>RouteNames`, one constant per operation holding its route name, and `<Api>Urls`, one static method per operation taking one typed argument per path parameter in path order and returning the contract path, each value written as one segment by `WireValues::pathSegment` (its wire text, a number as JavaScript writes it, `encodeURIComponent`-encoded as the generated clients send it; an empty, `.`, `..` or non-UTF-8 value refused) and each static segment as a URL parser writes it, never prefixed (the boot check refuses a prefix while `mount` waits) and never absolute; `artefacts.routeHelpers: false` leaves both out.
+
 ### The reply path
 
 Every result class implements `Responsable` and every generated exception has a `render()` method; both write the contract reply themselves:

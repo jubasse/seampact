@@ -57,6 +57,33 @@ The resource is the api key, the snake case of the api name (`tasks_service` for
 
 `bin/console seampact:generate` does the same as the vendor binary. To use it, list `Seampact\Symfony\SeampactCommandsBundle` in `config/bundles.php` for `dev` only.
 
+## Routes
+
+The loader declares one route per operation, with the contract's method and path. Import it once per api, as in [Set up](#set-up).
+
+Each route is named `seampact.<api>.<operation>`. Its parameters take the names of the input properties, so the router builds a URL by name:
+
+```php
+// $urls is Symfony's UrlGeneratorInterface
+$urls->generate('seampact.tasks.getTask', ['taskId' => $task->id]);
+```
+
+Each api also gets `TasksRouteNames`, one constant per route name, and `TasksUrls`, one method per operation that builds its path from typed parameters. `TasksUrls` returns the contract's path, encoded as the generated clients encode it:
+
+```php
+use App\Generated\Tasks\Symfony\TasksRouteNames;
+use App\Generated\Tasks\Symfony\TasksUrls;
+
+$urls->generate(TasksRouteNames::GET_TASK, ['taskId' => $task->id]);
+TasksUrls::getTask($task->id); // '/v1/tasks/42'
+```
+
+`artefacts: { routeHelpers: false }` leaves both classes out.
+
+The boot check refuses a `prefix`, a `host`, `schemes` or a `condition` on the import, and a `#[Route]` on an endpoints method: the loader already declares that route. `generate` refuses a path segment that mixes a parameter with text (`path.segment.mixed.unsupported`), and a static segment with `{`, `}` or `?` (`path.segment.literal.unsupported`). A parameter name over 32 characters gets a positional name instead (`{p2}` for the second parameter).
+
+Your own routes stay beside the contract's. The boot check refuses one that is not in the contract unless `frameworkRoutes` allow-lists it (see [The boot check](#the-boot-check)).
+
 ## Write a controller
 
 Each resource has a generated `<Resource>Endpoints` interface. Implement it as a service, and mark each method with `#[SeampactOperation]`. Return one arm of the operation's result: a `Response200` class and the like, or an error from `<Operation>Errors`.

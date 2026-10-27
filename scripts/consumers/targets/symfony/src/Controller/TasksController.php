@@ -16,6 +16,7 @@ use App\Generated\Tasks\CreateTaskResponse201;
 use App\Generated\Tasks\CreateTaskResult;
 use App\Generated\Tasks\GetTaskErrors;
 use App\Generated\Tasks\GetTaskInput;
+use App\Generated\Tasks\GetTaskPath;
 use App\Generated\Tasks\GetTaskResponse200;
 use App\Generated\Tasks\GetTaskResult;
 use App\Generated\Tasks\GetTasksBatchInput;
@@ -33,6 +34,8 @@ use App\Generated\Tasks\SearchTasksInput;
 use App\Generated\Tasks\SearchTasksResponse200;
 use App\Generated\Tasks\SearchTasksResult;
 use App\Generated\Tasks\Symfony\Runtime\SeampactOperation;
+use App\Generated\Tasks\Symfony\TasksRouteNames;
+use App\Generated\Tasks\Symfony\TasksUrls;
 use App\Generated\Tasks\TasksEndpoints;
 use App\Generated\Tasks\UpdateTaskErrors;
 use App\Generated\Tasks\UpdateTaskInput;
@@ -40,9 +43,16 @@ use App\Generated\Tasks\UpdateTaskResponse200;
 use App\Generated\Tasks\UpdateTaskResult;
 use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\ScriptedAnswers;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
+/** The tasks endpoints; `getTask` also checks the route helpers against the router. */
 final class TasksController implements TasksEndpoints
 {
+    public function __construct(private readonly UrlGeneratorInterface $urls, private readonly RequestStack $requests)
+    {
+    }
+
     #[SeampactOperation('getTask')]
     public function getTask(GetTaskInput $input): GetTaskResult
     {
@@ -51,7 +61,7 @@ final class TasksController implements TasksEndpoints
             200,
             static fn (array $body): GetTaskResult => new GetTaskResponse200(SampleData::taskOf($body)),
             ['api.not_found' => static fn (): GetTaskResult => GetTaskErrors::apiNotFound()],
-        ) ?? new GetTaskResponse200(SampleData::task($input->path->taskId));
+        ) ?? new GetTaskResponse200(SampleData::task($this->checkedTaskPath($input)->taskId));
     }
 
     #[SeampactOperation('getTasksBatch')]
@@ -124,5 +134,19 @@ final class TasksController implements TasksEndpoints
     public function searchTasks(SearchTasksInput $input): SearchTasksResult
     {
         return new SearchTasksResponse200(new TaskSearchResult([SampleData::task(SampleData::NEW_TASK_ID)], 1));
+    }
+
+    // The route helpers build the path this request came on, as the router builds it from the route name.
+    private function checkedTaskPath(GetTaskInput $input): GetTaskPath
+    {
+        $path = $input->path;
+        $built = TasksUrls::getTask($path->channelId, $path->taskId);
+        $routed = $this->urls->generate(TasksRouteNames::GET_TASK, ['channelId' => $path->channelId, 'taskId' => $path->taskId]);
+        $requested = $this->requests->getCurrentRequest()?->getPathInfo();
+        if ($built !== $requested || $built !== $routed) {
+            throw new \LogicException("TasksUrls::getTask built '{$built}', the router '{$routed}', for the request path '{$requested}'.");
+        }
+
+        return $path;
     }
 }

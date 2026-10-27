@@ -11,6 +11,7 @@ use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\OperationNames;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
+use Seampact\Codegen\RouteHelpers;
 use Seampact\Codegen\RoutePlaceholder;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Write\GeneratedFile;
@@ -212,7 +213,7 @@ final class RouteTable
 
     private function routeName(Operation $operation): string
     {
-        return "seampact.{$this->layout->ir->api->id}.{$operation->id}";
+        return RouteHelpers::routeName($this->layout->ir->api->id, $operation->id);
     }
 
     /** @return list<array{operation: Operation, uri: string, placeholders: list<string>, depthKey: list<int>, names: OperationNames}> */

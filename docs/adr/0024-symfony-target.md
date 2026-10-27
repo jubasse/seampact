@@ -81,7 +81,7 @@ seampact_tasks:
     type: seampact
 ```
 
-Each api's loader supports the `seampact` type for its own api name only, so two apis load apart. The loader writes each contract path as declared, and the app prefixes the routes with its routing import's `prefix`. The runner passes `mount` and `frameworkRoutes` to the generator through the target entry, and the boot check refuses a contract route whose path is not `mount` followed by the contract path, so the import `prefix` must equal `mount`; an import `host`, `schemes` or `condition` on a contract route is refused too.
+Each api's loader supports the `seampact` type for its own api name only, so two apis load apart. The loader writes each contract path as declared, and the routing import takes no `prefix` while `mount` waits: the boot check refuses a contract route whose path is not the contract path, and an import `host`, `schemes` or `condition` on a contract route too. The runner passes `frameworkRoutes` to the generator through the target entry.
 
 The `kernel.request` listener matches the raw path, `getPathInfo()`, against the contract templates. That path is the request target without the query, minus the front controller's own base path; a trusted `X-Forwarded-Prefix` does not change it (spike). The `kernel.controller` listener then compares the operation of the route the router chose with that match. The router decodes the path before matching, so the two can differ:
 
@@ -96,6 +96,8 @@ Other methods:
 - `HEAD` runs the path's `GET` operation fully, and `Response::prepare()` drops the body.
 - A method the path does not serve answers the path's `notFound` 404 from the `kernel.request` listener, where the router would answer 405 (spike).
 - A CORS preflight (`OPTIONS` with `Origin` and `Access-Control-Request-Method`) is left to the app's CORS listener, such as NelmioCorsBundle's, which runs after the boundary.
+
+Beside the route loader, the shared `RouteHelpers` of `php/codegen` writes `<Api>RouteNames`, one constant per operation holding its route name, and `<Api>Urls`, one static method per operation taking one typed argument per path parameter in path order and returning the contract path, each value written as one segment by `WireValues::pathSegment` (its wire text, a number as JavaScript writes it, `encodeURIComponent`-encoded as the generated clients send it; an empty, `.`, `..` or non-UTF-8 value refused) and each static segment as a URL parser writes it, never prefixed (the boot check refuses a prefix while `mount` waits) and never absolute; `artefacts.routeHelpers: false` leaves both out.
 
 ### The reply path
 

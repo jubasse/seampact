@@ -18,6 +18,7 @@ use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpTypes;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\RestrictedSortKeys;
+use Seampact\Codegen\RouteHelpers;
 use Seampact\Codegen\SchemaTypes;
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Model\IrModelVersion;
@@ -29,8 +30,8 @@ use Seampact\Ir\Write\GeneratedFile;
 /**
  * The laravel target (ADR 0023), which `vendor/bin/seampact` finds through `extra.seampact.generator`: per api, the
  * value types, the controller interfaces, the results and exceptions replying through the boundary, the FormRequests
- * with their rules, the route table (and `routes.php` under `routes: file`), the contract class, the identity hooks,
- * the middleware and service provider, and the copied runtime.
+ * with their rules, the route table (and `routes.php` under `routes: file`), the route names and URL builders, the
+ * contract class, the identity hooks, the middleware and service provider, and the copied runtime.
  */
 final class LaravelGenerator implements Generator
 {
@@ -69,6 +70,7 @@ final class LaravelGenerator implements Generator
         $routes = new RouteTable($layout, $options, $refusals);
         $replies = new LaravelReplies($layout, $operationTypes);
         $contract = new ContractClass($layout, $kept, $entry->frameworkRoutes);
+        $routeHelpers = ArtefactSwitches::routeHelpersOn($entry->artefacts) ? new RouteHelpers($layout, $types, $refusals) : null;
 
         $exceptionFiles = (new ContractExceptions($layout->api, $operationTypes, [self::SHOULDNT_REPORT]))->files($kept);
         $replies->exceptions($exceptionFiles, $kept);
@@ -96,6 +98,9 @@ final class LaravelGenerator implements Generator
             $routes->add($operation, $names, $at);
         }
         $classFiles[] = $routes->tableFile();
+        if ($routeHelpers !== null) {
+            array_push($classFiles, ...$routeHelpers->files($kept->operations()));
+        }
 
         $refusals->throwIfAny();
 
