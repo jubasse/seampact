@@ -18,7 +18,6 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.env.Environment;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.handler.AbstractUrlHandlerMapping;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping;
@@ -56,7 +55,6 @@ public final class BootCheck implements SmartInitializingSingleton {
             "org.springframework.web.filter.ShallowEtagHeaderFilter");
 
     private final SeampactBoundary boundary;
-    private final AntPathMatcher paths = new AntPathMatcher();
 
     public BootCheck(SeampactBoundary boundary) {
         this.boundary = boundary;
@@ -171,7 +169,7 @@ public final class BootCheck implements SmartInitializingSingleton {
         for (JsonNode allowed : boundary.table().settings().path("frameworkRoutes")) {
             String method = allowed.path("method").asString("");
             boolean methodAllowed = method.isEmpty() || (methods.size() == 1 && methods.contains(method));
-            if (methodAllowed && paths.match(allowed.path("path").asString(), pattern)) return true;
+            if (methodAllowed && FrameworkRoutePattern.allows(allowed.path("path").asString(), pattern)) return true;
         }
 
         return false;

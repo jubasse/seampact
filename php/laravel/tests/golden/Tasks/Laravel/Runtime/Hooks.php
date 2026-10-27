@@ -14,7 +14,8 @@ use Seampact\Hooks\IdempotencyStore;
  * The api's hooks as container bindings, resolved per request: an authenticate hook per identity bound to its
  * generated interface, the deciders and scope resolvers tagged with the provider's tags, the optional
  * unexpected-error listener and the app's logger. A missing hook is a `LogicException`, which the boundary answers
- * with the api's 500. Laravel's `AuthorizationException` (`Gate::authorize()`) is a decider's access denial.
+ * with the api's 500. Laravel's `AuthorizationException` (`Gate::authorize()`) is a decider's access denial, and one
+ * with status 404 (`Response::denyAsNotFound()`) hides the record.
  */
 final class Hooks implements HookLookup, IdempotencyStoreLookup
 {
@@ -22,6 +23,7 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup
     public const TAG_PREFIX = 'seampact.';
     public const DECIDERS_TAG_SUFFIX = '.deciders';
     public const SCOPE_RESOLVERS_TAG_SUFFIX = '.scope-resolvers';
+    private const NOT_FOUND_STATUS = 404;
 
     public function __construct(private readonly Container $container)
     {
@@ -103,5 +105,10 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup
     public function isAccessDenial(\Throwable $failure): bool
     {
         return $failure instanceof AuthorizationException;
+    }
+
+    public function isNotFoundDenial(\Throwable $failure): bool
+    {
+        return $failure instanceof AuthorizationException && $failure->status() === self::NOT_FOUND_STATUS;
     }
 }

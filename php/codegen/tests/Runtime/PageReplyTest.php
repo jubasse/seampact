@@ -59,6 +59,11 @@ final class PageReplyTest extends TestCase
             {
                 return false;
             }
+
+            public function isNotFoundDenial(\Throwable $failure): bool
+            {
+                return false;
+            }
         };
     }
 }
