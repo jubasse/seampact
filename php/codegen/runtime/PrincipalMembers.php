@@ -20,7 +20,7 @@ final class PrincipalMembers
     public static function read(ApiContract $contract, string $identity, object $principal): array
     {
         $members = [];
-        foreach (self::byAccessor($contract, $identity, $principal) as $name => [$accessor, $value]) {
+        foreach (self::byAccessor($contract, $identity, $principal) as $name => [, $value]) {
             // An enum member keys a partition or a bucket by its wire value.
             $members[$name] = $value instanceof \BackedEnum ? $value->value : $value;
         }
