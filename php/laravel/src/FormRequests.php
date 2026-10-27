@@ -110,24 +110,25 @@ final class FormRequests
     private function handlerAccess(PhpClassFile $file, Operation $operation, OperationNames $names): void
     {
         $class = LaravelReplies::classOf($file);
-        $state = $file->name($this->layout->runtime('BoundaryState'));
-        $access = $file->name($this->layout->runtime('HandlerAccess'));
+        $state = "{$file->name($this->layout->runtime('BoundaryState'))}::required(\$this, self::API)";
 
         $principalClass = HandlerAccessTypes::principalClass($this->layout, $operation);
         if ($principalClass !== null) {
             $anonymous = HandlerAccessTypes::anonymousAllowed($operation);
             $read = $anonymous ? 'principal' : 'authenticatedPrincipal';
+            $access = $file->name($this->layout->runtime('HandlerAccess'));
             $principal = $file->name($principalClass);
             $class->addMethod('principal')->setReturnType($file->type($principalClass))->setReturnNullable($anonymous)
                 ->addComment($anonymous ? 'The caller, null for an anonymous caller.' : 'The caller.')
-                ->setBody("return {$access}::{$read}({$state}::required(\$this, self::API), {$principal}::class);");
+                ->setBody("return {$access}::{$read}({$state}, self::OPERATION_ID, {$principal}::class);");
         }
 
         if ($names->scopes !== null) {
+            $access = $file->name($this->layout->runtime('HandlerAccess'));
             $scopes = $file->name($names->scopes);
             $class->addMethod('scopes')->setReturnType($file->type($names->scopes))
                 ->addComment('The scopes the operation runs in, as their resolvers resolved them.')
-                ->setBody("return {$access}::scopes({$state}::required(\$this, self::API), {$scopes}::class);");
+                ->setBody("return {$access}::scopes({$state}, self::OPERATION_ID, {$scopes}::class);");
         }
     }
 

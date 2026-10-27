@@ -79,7 +79,7 @@ final class GetChannelRequest extends FormRequest
      */
     public function principal(): UserPrincipal
     {
-        return HandlerAccess::authenticatedPrincipal(BoundaryState::required($this, self::API), UserPrincipal::class);
+        return HandlerAccess::authenticatedPrincipal(BoundaryState::required($this, self::API), self::OPERATION_ID, UserPrincipal::class);
     }
 
     /**
@@ -87,7 +87,7 @@ final class GetChannelRequest extends FormRequest
      */
     public function scopes(): GetChannelScopes
     {
-        return HandlerAccess::scopes(BoundaryState::required($this, self::API), GetChannelScopes::class);
+        return HandlerAccess::scopes(BoundaryState::required($this, self::API), self::OPERATION_ID, GetChannelScopes::class);
     }
 
     /**

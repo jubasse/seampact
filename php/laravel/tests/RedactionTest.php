@@ -152,11 +152,17 @@ final class RedactionTest extends TestCase
             $contents = array_values(array_filter($files, static fn (object $file): bool => str_ends_with($file->path, $suffix)))[0]->contents ?? self::fail("No generated {$suffix}.");
             eval(substr($contents, strlen('<?php')));
         }
-        $class = $namespace . '\\Laravel\\UserPrincipal';
-        $dumped = print_r(new $class(userId: 'alice', email: self::SECRET), true);
+        $dumped = print_r(self::principalIn($namespace, 'alice', self::SECRET), true);
 
         self::assertStringContainsString('alice', $dumped);
         self::assertRedacted($dumped);
+    }
+
+    private static function principalIn(string $namespace, string $userId, string $email): object
+    {
+        $class = $namespace . '\\Laravel\\UserPrincipal';
+
+        return new $class(userId: $userId, email: $email);
     }
 
     private static function formRequestHoldingTheSecret(): GetChannelRequest

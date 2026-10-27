@@ -63,14 +63,16 @@ final class OperationTypes
         if ($operation->input !== null) {
             PhpTypes::promote($constructor, 'body', $this->types->of($operation->input->schema, $input));
         }
-        if ($this->handlerAccessPlacement === HandlerAccessPlacement::Input) {
-            $this->handlerAccess->promoteOnInput($constructor, $input, $operation, $names);
-        }
+        $handlerAccessMembers = $this->handlerAccessPlacement === HandlerAccessPlacement::Input
+            ? $this->handlerAccess->promoteOnInput($constructor, $input, $operation, $names)
+            : [];
         if ($constructor->getParameters() !== []) {
             $inputClass->addMember($constructor);
-            // A signed route's body is the signed payload, redacted whole (ADR 0023 "Redaction").
+            HandlerAccessTypes::addInputAccessors($inputClass, $constructor, $handlerAccessMembers);
+            // A signed route's body is the signed payload, redacted whole (ADR 0023 "Redaction"); who is calling may
+            // hold sensitive data, so it is redacted too.
             $bodyRedacted = $operation->input !== null && ($operation->input->rawBody || RedactedMembers::isSensitive($operation->input->schema));
-            RedactedMembers::redact($inputClass, $constructor, $bodyRedacted ? ['body'] : []);
+            RedactedMembers::redact($inputClass, $constructor, [...($bodyRedacted ? ['body'] : []), ...$handlerAccessMembers]);
         }
         $files[] = $input;
 

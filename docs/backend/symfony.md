@@ -113,13 +113,13 @@ The boundary has already checked the path, query, headers and body. You never wr
 
 ### Who is calling
 
-On a route with an identity, the input's `principal` is the caller in the generated `<Identity>Principal` class. It is `null` for an anonymous caller on an optional-auth route. A public route has no `principal`.
+On a route with an identity, the input's `principal()` returns the caller in the generated `<Identity>Principal` class. It is `null` for an anonymous caller on an optional-auth route. A public route has no `principal()`.
 
-When the route runs in scopes, the input's `scopes` has one method per scope. Each returns what your scope resolver returned, with its `id` and its `value`. Load an entity once in the resolver, then read it here:
+When the route runs in scopes, the input's `scopes()` has one method per scope. Each returns what your scope resolver returned, with its `id` and its `value`. Load an entity once in the resolver, then read it here:
 
 ```php
-$workspace = $input->scopes->workspace()->value;
-$userId = $input->principal->userId;
+$workspace = $input->scopes()->workspace()->value;
+$userId = $input->principal()->userId;
 ```
 
 Neither comes from the request body or is validated with it, and each api reads its own. `$this->getUser()` and `#[CurrentUser]` are set only when the firewall authenticates.

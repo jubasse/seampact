@@ -80,7 +80,7 @@ final class GetTasksBatchRequest extends FormRequest
      */
     public function principal(): UserPrincipal
     {
-        return HandlerAccess::authenticatedPrincipal(BoundaryState::required($this, self::API), UserPrincipal::class);
+        return HandlerAccess::authenticatedPrincipal(BoundaryState::required($this, self::API), self::OPERATION_ID, UserPrincipal::class);
     }
 
     /**
@@ -88,7 +88,7 @@ final class GetTasksBatchRequest extends FormRequest
      */
     public function scopes(): GetTasksBatchScopes
     {
-        return HandlerAccess::scopes(BoundaryState::required($this, self::API), GetTasksBatchScopes::class);
+        return HandlerAccess::scopes(BoundaryState::required($this, self::API), self::OPERATION_ID, GetTasksBatchScopes::class);
     }
 
     /**

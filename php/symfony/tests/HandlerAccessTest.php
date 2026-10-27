@@ -30,9 +30,9 @@ final class HandlerAccessTest extends TestCase
         $input = TypedInput::build($state, ['path' => (object) ['channelId' => self::CHANNEL_ID]]);
 
         self::assertInstanceOf(GetChannelInput::class, $input);
-        self::assertEquals(new UserPrincipal('alice'), $input->principal);
-        self::assertSame(self::CHANNEL_ID, $input->scopes->channel()->id);
-        self::assertSame($channel, $input->scopes->channel()->value);
+        self::assertEquals(new UserPrincipal('alice'), $input->principal());
+        self::assertSame(self::CHANNEL_ID, $input->scopes()->channel()->id);
+        self::assertSame($channel, $input->scopes()->channel()->value);
         self::assertSame(self::CHANNEL_ID, $input->path->channelId);
     }
 

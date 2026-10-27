@@ -147,7 +147,7 @@ $workspace = $request->scopes()->workspace()->value;
 $userId = $request->principal()->userId;
 ```
 
-Neither is part of the input, and both come from this api's own boundary. `$request->user()` is set only when your authenticate hook reads a Laravel guard.
+Neither is part of the input, and both come from this api's own boundary. `$request->user()` is Laravel's default guard, which the boundary does not set: read the caller from `principal()`.
 
 ### With Eloquent
 

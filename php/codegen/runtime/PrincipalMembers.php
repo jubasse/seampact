@@ -19,6 +19,34 @@ final class PrincipalMembers
     /** @return array<string, mixed> each declared member's value, by wire name */
     public static function read(ApiContract $contract, string $identity, object $principal): array
     {
+        $members = [];
+        foreach (self::byAccessor($contract, $identity, $principal) as $name => [$accessor, $value]) {
+            // An enum member keys a partition or a bucket by its wire value.
+            $members[$name] = $value instanceof \BackedEnum ? $value->value : $value;
+        }
+
+        return $members;
+    }
+
+    /**
+     * Each declared member's value as its accessor returns it, keyed by accessor: the named arguments of the
+     * identity's generated principal class.
+     *
+     * @return array<string, mixed>
+     */
+    public static function accessorValues(ApiContract $contract, string $identity, object $principal): array
+    {
+        $values = [];
+        foreach (self::byAccessor($contract, $identity, $principal) as [$accessor, $value]) {
+            $values[$accessor] = $value;
+        }
+
+        return $values;
+    }
+
+    /** @return array<string, array{string, mixed}> each declared member's accessor and value, by wire name */
+    private static function byAccessor(ApiContract $contract, string $identity, object $principal): array
+    {
         $types = Ir::map(Ir::map($contract->types, 'identities'), $identity);
         $interface = Ir::string($types, 'principalMembers')
             ?? throw new \LogicException("seampact: the contract class of api '{$contract->api}' names no principal members interface for identity '{$identity}'; regenerate it.");
@@ -36,9 +64,7 @@ final class PrincipalMembers
             if (!is_string($accessor) || !method_exists($principal, $accessor)) {
                 throw new \LogicException("seampact: the principal members interface of identity '{$identity}' has no accessor for '{$name}'; regenerate it.");
             }
-            $value = $principal->{$accessor}();
-            // An enum member keys a partition or a bucket by its wire value.
-            $members[(string) $name] = $value instanceof \BackedEnum ? $value->value : $value;
+            $members[(string) $name] = [$accessor, $principal->{$accessor}()];
         }
 
         return $members;

@@ -40,7 +40,7 @@ final class HandlerAccessTest extends TestCase
 
     public function testAnAnonymousCallerHasANullPrincipal(): void
     {
-        self::assertNull(HandlerAccess::principal(self::admittedState(null, null), UserPrincipal::class));
+        self::assertNull(HandlerAccess::principal(self::admittedState(null, null), 'getChannel', UserPrincipal::class));
     }
 
     public function testEachApiReadsItsOwnState(): void

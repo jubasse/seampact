@@ -255,7 +255,8 @@ final class AccessSteps
         return null;
     }
 
-    private static function resolveScopes(BoundaryState $state): void
+    /** Resolves each scope of the operation, outermost first; a resolver must answer the scope it resolves. */
+    public static function resolveScopes(BoundaryState $state): void
     {
         foreach (Ir::maps($state->contract->operation($state->operationId), 'scopes') as $entry) {
             $scope = Ir::string($entry, 'scope') ?? '';
@@ -266,6 +267,9 @@ final class AccessSteps
 
             $resolution = $resolver->resolveScope(new ScopeCall($scope, new ScopeIdSource\Declared($id), $state->principal, $state->scopes));
             if ($resolution instanceof ScopeResolution\Resolved) {
+                if ($resolution->resolved->scope !== $scope) {
+                    throw new \LogicException('seampact: the scope resolver ' . get_debug_type($resolver) . " answered the scope '{$resolution->resolved->scope}' for the scope '{$scope}'; return a ResolvedScope named '{$scope}'.");
+                }
                 $state->scopes[] = $resolution->resolved;
                 continue;
             }

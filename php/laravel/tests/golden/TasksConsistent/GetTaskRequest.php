@@ -79,7 +79,7 @@ final class GetTaskRequest extends FormRequest
      */
     public function principal(): UserPrincipal
     {
-        return HandlerAccess::authenticatedPrincipal(BoundaryState::required($this, self::API), UserPrincipal::class);
+        return HandlerAccess::authenticatedPrincipal(BoundaryState::required($this, self::API), self::OPERATION_ID, UserPrincipal::class);
     }
 
     /**
@@ -87,7 +87,7 @@ final class GetTaskRequest extends FormRequest
      */
     public function scopes(): GetTaskScopes
     {
-        return HandlerAccess::scopes(BoundaryState::required($this, self::API), GetTaskScopes::class);
+        return HandlerAccess::scopes(BoundaryState::required($this, self::API), self::OPERATION_ID, GetTaskScopes::class);
     }
 
     /**

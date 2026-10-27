@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen;
 
+use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
 use Seampact\Ir\Model\IdentityAccess;
 use Seampact\Ir\Model\OptionalAccess;
@@ -63,15 +64,44 @@ final class HandlerAccessTypes
         return $types;
     }
 
-    /** Promotes `principal` and `scopes` on the constructor of an input of placement `Input`. */
-    public function promoteOnInput(Method $constructor, PhpClassFile $input, Operation $operation, OperationNames $names): void
+    /**
+     * Promotes `principal` and `scopes` on the constructor of an input of placement `Input`, private, so a JSON
+     * encoding or a serializer of the input never writes them; returns the members promoted.
+     *
+     * @return list<string>
+     */
+    public function promoteOnInput(Method $constructor, PhpClassFile $input, Operation $operation, OperationNames $names): array
     {
+        $promoted = [];
         $principal = self::principalClass($this->names, $operation);
         if ($principal !== null) {
-            PhpTypes::promote($constructor, self::PRINCIPAL_MEMBER, new PhpType($input->type($principal), $input->name($principal), self::anonymousAllowed($operation)));
+            PhpTypes::promote($constructor, self::PRINCIPAL_MEMBER, new PhpType($input->type($principal), $input->name($principal), self::anonymousAllowed($operation)))->setPrivate();
+            $promoted[] = self::PRINCIPAL_MEMBER;
         }
         if ($names->scopes !== null) {
-            PhpTypes::promote($constructor, self::SCOPES_MEMBER, new PhpType($input->type($names->scopes), $input->name($names->scopes)));
+            PhpTypes::promote($constructor, self::SCOPES_MEMBER, new PhpType($input->type($names->scopes), $input->name($names->scopes)))->setPrivate();
+            $promoted[] = self::SCOPES_MEMBER;
+        }
+
+        return $promoted;
+    }
+
+    /**
+     * The accessor of each member `promoteOnInput` promoted, typed as its constructor parameter.
+     *
+     * @param list<string> $promoted
+     */
+    public static function addInputAccessors(ClassType $inputClass, Method $constructor, array $promoted): void
+    {
+        foreach ($promoted as $member) {
+            $parameter = $constructor->getParameter($member);
+            $comment = match ($member) {
+                self::PRINCIPAL_MEMBER => $parameter->isNullable() ? 'The caller, null for an anonymous caller.' : 'The caller.',
+                default => 'The scopes the operation runs in, as their resolvers resolved them.',
+            };
+            $inputClass->addMethod($member)->setPublic()->setReturnType($parameter->getType())->setReturnNullable($parameter->isNullable())
+                ->addComment($comment)
+                ->setBody("return \$this->{$member};");
         }
     }
 

@@ -17,8 +17,17 @@ final readonly class PaymentsInput
   public function __construct(
     #[\SensitiveParameter]
     public PaymentEvent $body,
-    public StripePrincipal $principal,
+    #[\SensitiveParameter]
+    private StripePrincipal $principal,
   ) {
+  }
+
+  /**
+   * The caller.
+   */
+  public function principal(): StripePrincipal
+  {
+    return $this->principal;
   }
 
   /**
@@ -28,7 +37,7 @@ final readonly class PaymentsInput
   {
     return [
       'body' => self::REDACTED,
-      'principal' => $this->principal,
+      'principal' => self::REDACTED,
     ];
   }
 }

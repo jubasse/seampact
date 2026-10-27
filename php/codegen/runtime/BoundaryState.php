@@ -98,7 +98,8 @@ final class BoundaryState
 
     /**
      * The state without the request's values: the body, raw and decoded, the typed input, the query and the
-     * idempotency key may hold a sensitive or signed value (ADR 0023 "Redaction").
+     * idempotency key may hold a sensitive or signed value (ADR 0023 "Redaction"), and the principal and the scopes'
+     * loaded values may hold who is calling and their records.
      *
      * @return array<string, mixed>
      */
@@ -106,8 +107,8 @@ final class BoundaryState
     {
         return [
             'operationId' => $this->operationId,
-            'principal' => $this->principal,
-            'scopes' => $this->scopes,
+            'principal' => $this->principal === null ? null : \Seampact\Hooks\Redaction::REDACTED,
+            'scopes' => $this->scopes === [] ? [] : \Seampact\Hooks\Redaction::REDACTED,
             'admitted' => $this->admitted,
             'body' => \Seampact\Hooks\Redaction::REDACTED,
             'rawBody' => $this->rawBody === null ? null : \Seampact\Hooks\Redaction::REDACTED,

@@ -26,12 +26,13 @@ final class HandlerAccess
      * The caller's principal, null for an anonymous caller on an optional-auth route.
      *
      * @template T of object
+     * @param string $operationId the operation of the class that reads it
      * @param class-string<T> $principalClass the generated principal class of the operation's identity
      * @return ?T
      */
-    public static function principal(BoundaryState $state, string $principalClass): ?object
+    public static function principal(BoundaryState $state, string $operationId, string $principalClass): ?object
     {
-        self::assertAdmitted($state);
+        self::assertReadable($state, $operationId);
         if ($state->principal === null) {
             return null;
         }
@@ -40,17 +41,10 @@ final class HandlerAccess
         }
 
         // Members the schema does not declare are dropped: the handler gets the generated class, built from the accessors.
-        $identity = Ir::string(Ir::map($state->contract->operation($state->operationId), 'access'), 'identity')
-            ?? throw new \LogicException("seampact: operation '{$state->operationId}' has no identity, so it has no principal; regenerate the code.");
-        $arguments = [];
-        foreach (Ir::map(Ir::map(Ir::map($state->contract->types, 'identities'), $identity), 'principalAccessors') as $accessor) {
-            if (!is_string($accessor) || !method_exists($state->principal, $accessor)) {
-                throw new \LogicException("seampact: the principal of identity '{$identity}' has no accessor for a declared member; regenerate the contract class.");
-            }
-            $arguments[$accessor] = $state->principal->{$accessor}();
-        }
+        $identity = Ir::string(Ir::map($state->contract->operation($operationId), 'access'), 'identity')
+            ?? throw new \LogicException("seampact: operation '{$operationId}' has no identity, so it has no principal; regenerate the code.");
 
-        return new $principalClass(...$arguments);
+        return new $principalClass(...PrincipalMembers::accessorValues($state->contract, $identity, $state->principal));
     }
 
     /**
@@ -60,10 +54,10 @@ final class HandlerAccess
      * @param class-string<T> $principalClass
      * @return T
      */
-    public static function authenticatedPrincipal(BoundaryState $state, string $principalClass): object
+    public static function authenticatedPrincipal(BoundaryState $state, string $operationId, string $principalClass): object
     {
-        return self::principal($state, $principalClass)
-            ?? throw new \LogicException("seampact: operation '{$state->operationId}' requires its identity, but the boundary admitted it without a principal.");
+        return self::principal($state, $operationId, $principalClass)
+            ?? throw new \LogicException("seampact: operation '{$operationId}' requires its identity, but the boundary admitted it without a principal.");
     }
 
     /**
@@ -73,14 +67,15 @@ final class HandlerAccess
      * @param class-string<T> $scopesClass the operation's generated scopes class
      * @return T
      */
-    public static function scopes(BoundaryState $state, string $scopesClass): object
+    public static function scopes(BoundaryState $state, string $operationId, string $scopesClass): object
     {
-        self::assertAdmitted($state);
+        self::assertReadable($state, $operationId);
 
-        $declared = array_map(static fn (array $entry): string => Ir::string($entry, 'scope') ?? '', Ir::maps($state->contract->operation($state->operationId), 'scopes'));
+        // The access step refuses a resolver answering another scope; this holds a state built another way to it.
+        $declared = array_map(static fn (array $entry): string => Ir::string($entry, 'scope') ?? '', Ir::maps($state->contract->operation($operationId), 'scopes'));
         $resolved = array_map(static fn (ResolvedScope $scope): string => $scope->scope, $state->scopes);
         if ($declared !== $resolved) {
-            throw new \LogicException("seampact: operation '{$state->operationId}' runs in the scopes " . implode(', ', $declared) . ', but the boundary resolved ' . (implode(', ', $resolved) ?: 'none') . '.');
+            throw new \LogicException("seampact: operation '{$operationId}' runs in the scopes " . implode(', ', $declared) . ', but the boundary resolved ' . (implode(', ', $resolved) ?: 'none') . '.');
         }
 
         return new $scopesClass(...$state->scopes);
@@ -101,13 +96,13 @@ final class HandlerAccess
         if ($principalClass !== null) {
             $optional = Ir::string(Ir::map($state->contract->operation($state->operationId), 'access'), 'kind') === self::OPTIONAL_ACCESS;
             $members['principal'] = $optional
-                ? self::principal($state, self::existingClass($principalClass))
-                : self::authenticatedPrincipal($state, self::existingClass($principalClass));
+                ? self::principal($state, $state->operationId, self::existingClass($principalClass))
+                : self::authenticatedPrincipal($state, $state->operationId, self::existingClass($principalClass));
         }
 
         $scopesClass = Ir::string($types, self::INPUT_SCOPES);
         if ($scopesClass !== null) {
-            $members['scopes'] = self::scopes($state, self::existingClass($scopesClass));
+            $members['scopes'] = self::scopes($state, $state->operationId, self::existingClass($scopesClass));
         }
 
         return $members;
@@ -119,10 +114,13 @@ final class HandlerAccess
         return class_exists($className) ? $className : throw new \LogicException("seampact: the contract class names the class {$className}, which is not loaded; regenerate the code.");
     }
 
-    private static function assertAdmitted(BoundaryState $state): void
+    private static function assertReadable(BoundaryState $state, string $operationId): void
     {
+        if ($state->operationId !== $operationId) {
+            throw new \LogicException("seampact: operation '{$operationId}' read the boundary state of operation '{$state->operationId}'; read it on that operation's own route.");
+        }
         if (!$state->admitted) {
-            throw new \LogicException("seampact: the principal and scopes of operation '{$state->operationId}' were read before the boundary's access step admitted the request.");
+            throw new \LogicException("seampact: the principal and scopes of operation '{$operationId}' were read before the boundary's access step admitted the request.");
         }
     }
 }

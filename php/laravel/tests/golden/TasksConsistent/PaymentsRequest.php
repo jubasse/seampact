@@ -77,7 +77,7 @@ final class PaymentsRequest extends FormRequest
      */
     public function principal(): StripePrincipal
     {
-        return HandlerAccess::authenticatedPrincipal(BoundaryState::required($this, self::API), StripePrincipal::class);
+        return HandlerAccess::authenticatedPrincipal(BoundaryState::required($this, self::API), self::OPERATION_ID, StripePrincipal::class);
     }
 
     /**
