@@ -182,6 +182,21 @@ describe("pages under the Laravel pack", () => {
     });
   });
 
+  test("an empty list counts no page, and its last link is the first page", async () => {
+    laravel.app.scenario.answers.listChannels = () => ({
+      status: 200,
+      body: { items: [], total: 0 },
+    });
+
+    const reply = await laravel.send("/v1/channels?per_page=2");
+
+    expect(JSON.parse(reply.text)).toMatchObject({
+      data: [],
+      links: { first: "?per_page=2&page=1", last: "?per_page=2&page=1", prev: null, next: null },
+      meta: { current_page: 1, last_page: 0, total: 0 },
+    });
+  });
+
   test("the last page has no next link, written null as the style's absent says", async () => {
     answerPage(laravel, "listChannels", { total: 4 });
 

@@ -119,6 +119,44 @@ describe("a path the router cannot read as written is refused by name", () => {
       ],
     });
   });
+
+  // The boundary matches the raw path, so a static segment a client percent-encodes would never be served.
+  test.each(["my tasks", "tâches", "a^b", "a\\b"])(
+    "a static segment a client sends percent-encoded, '%s'",
+    async (segment) => {
+      const ir = readGoldenIr("tasks");
+      const archiveIndex = ir.operations.findIndex((operation) => operation.id === "archiveTask");
+      const encodedSegmentIr = {
+        ...ir,
+        operations: ir.operations.map((operation, index) =>
+          index === archiveIndex
+            ? { ...operation, path: operation.path.replace(/archive$/, segment) }
+            : operation,
+        ),
+      };
+
+      const outcome = await honoTarget.generate({
+        ir: encodedSegmentIr,
+        options: { bodyValidation: true },
+        links: await referenceLinks(PROJECT, "tasks"),
+        artefacts: new Set(["boundary", "index"]),
+      });
+
+      expect(outcome).toMatchObject({
+        status: "refused",
+        refusals: [
+          {
+            code: "path.segment.encoded.unsupported",
+            message: expect.stringContaining(
+              `The static path segment '${segment}', which a client sends percent-encoded,`,
+            ),
+            member: `/operations/${archiveIndex}/path`,
+            operation: "archiveTask",
+          },
+        ],
+      });
+    },
+  );
 });
 
 describe("an api with only public operations asks for no hooks", () => {

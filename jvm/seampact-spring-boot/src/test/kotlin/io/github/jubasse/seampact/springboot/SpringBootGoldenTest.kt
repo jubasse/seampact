@@ -289,6 +289,20 @@ class SpringBootGoldenTest {
         assertTrue(refusalsOf(ownerless).any { it.code == "endpoints.owner.no-segment" && it.operation == "health" })
     }
 
+    // The boundary matches the raw path, so a static segment a client percent-encodes would never be served.
+    @Test
+    fun refusesAStaticSegmentAClientSendsPercentEncoded() {
+        val ir = coreView(apis.first())
+
+        for (segment in listOf("my tasks", "tâches", "a^b", "a\\b")) {
+            val encoded = ir.copy(operations = ir.operations.map { if (it.id == "health") it.copy(path = "/v1/$segment") else it })
+
+            val refusal = refusalsOf(encoded).single { it.code == "path.segment.encoded.unsupported" }
+            assertTrue(refusal.message.contains("The static path segment '$segment', which a client sends percent-encoded"), refusal.message)
+            assertEquals("health", refusal.operation)
+        }
+    }
+
     @Test
     fun refusesASortKeyRestrictedByARight() {
         val ir = coreView(apis.first())
