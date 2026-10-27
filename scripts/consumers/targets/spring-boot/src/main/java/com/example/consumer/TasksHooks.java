@@ -1,19 +1,19 @@
 package com.example.consumer;
 
+import com.example.tasks.api.TasksDecider;
+import com.example.tasks.api.TasksScopeResolver;
+import com.example.tasks.api.TasksUnexpectedErrorListener;
 import com.example.tasks.api.UserAuthenticateHook;
 import com.example.tasks.api.UserAuthenticateRequest;
 import com.example.tasks.api.schemas.UserPrincipal;
-import com.example.tasks.api.spring.runtime.Decider;
-import com.example.tasks.api.spring.runtime.Denial;
-import com.example.tasks.api.spring.runtime.RequirementCall;
-import com.example.tasks.api.spring.runtime.ScopeCall;
-import com.example.tasks.api.spring.runtime.ScopeResolver;
-import com.example.tasks.api.spring.runtime.UnexpectedErrorListener;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.Decision;
 import io.github.jubasse.seampact.hooks.ResolvedScope;
 import io.github.jubasse.seampact.hooks.ScopeIdSource;
 import io.github.jubasse.seampact.hooks.ScopeResolution;
+import io.github.jubasse.seampact.springboot.runtime.Denial;
+import io.github.jubasse.seampact.springboot.runtime.RequirementCall;
+import io.github.jubasse.seampact.springboot.runtime.ScopeCall;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -50,7 +50,7 @@ final class TasksHooks {
     /** Denies what the script denies; allows every other right and rule. */
     @Component
     @SkippedUnder("missing-decider")
-    static final class TasksDecider implements Decider {
+    static final class ScriptedDecider implements TasksDecider {
         private static final String THROTTLE_RULE = "throttle";
         private static final String ROLES_RIGHT = "roles";
         private static final String RATE_LIMITED = "api.rate_limited";
@@ -96,7 +96,7 @@ final class TasksHooks {
      */
     @Component
     @SkippedUnder("missing-decider")
-    static final class OverriddenRightDecider implements Decider {
+    static final class OverriddenRightDecider implements TasksDecider {
         private static final String OVERRIDDEN_RIGHT = "tasks.update";
 
         @Override
@@ -117,7 +117,7 @@ final class TasksHooks {
     /** Resolves a declared channel id to itself, every channel existing, unless the script denies the scope. */
     @Component
     @SkippedUnder("missing-scope-resolver")
-    static final class ChannelResolver implements ScopeResolver {
+    static final class ChannelResolver implements TasksScopeResolver {
         @Override
         public String scope() {
             return "channel";
@@ -138,7 +138,7 @@ final class TasksHooks {
 
     /** Writes each unexpected failure to the log, which the log-lines route captures. */
     @Component
-    static final class TasksUnexpectedErrors implements UnexpectedErrorListener {
+    static final class TasksUnexpectedErrors implements TasksUnexpectedErrorListener {
         @Override
         public void onUnexpectedError(UnexpectedFailure failure) {
             UnexpectedFailures.log(failure.api(), failure.operation(), failure.reason(), failure.cause());

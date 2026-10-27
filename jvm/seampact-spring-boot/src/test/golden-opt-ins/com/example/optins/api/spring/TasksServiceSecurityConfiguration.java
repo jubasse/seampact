@@ -1,7 +1,8 @@
 package com.example.optins.api.spring;
 
-import com.example.optins.api.spring.runtime.SeampactBoundary;
-import com.example.optins.api.spring.runtime.SecurityRefusals;
+import io.github.jubasse.seampact.springboot.runtime.SeampactBoundary;
+import io.github.jubasse.seampact.springboot.runtime.SecurityRefusals;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -17,12 +18,14 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 )
 public class TasksServiceSecurityConfiguration {
     @Bean
-    public TasksServiceSecurityMatchers tasksServiceSecurityMatchers(SeampactBoundary boundary) {
+    public TasksServiceSecurityMatchers tasksServiceSecurityMatchers(
+            @Qualifier("tasksServiceSeampactBoundary") SeampactBoundary boundary) {
         return new TasksServiceSecurityMatchers(boundary);
     }
 
     @Bean
-    public SecurityRefusals tasksServiceSecurityRefusals(SeampactBoundary boundary) {
+    public SecurityRefusals tasksServiceSecurityRefusals(
+            @Qualifier("tasksServiceSeampactBoundary") SeampactBoundary boundary) {
         return new SecurityRefusals(boundary);
     }
 

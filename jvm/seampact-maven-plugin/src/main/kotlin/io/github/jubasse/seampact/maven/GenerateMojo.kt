@@ -3,6 +3,7 @@ package io.github.jubasse.seampact.maven
 import io.github.jubasse.seampact.runner.GenerateOutcome
 import io.github.jubasse.seampact.runner.RunSettings
 import io.github.jubasse.seampact.runner.generate
+import io.github.jubasse.seampact.runner.installedSpringRuntimeVersion
 import org.apache.maven.model.Resource
 import org.apache.maven.plugins.annotations.LifecyclePhase
 import org.apache.maven.plugins.annotations.Mojo
@@ -15,23 +16,25 @@ import javax.inject.Inject
 /**
  * The `generate` goal, bound to `generate-sources`: generates each JVM target entry of the app config into its
  * output root (ADR 0015 "Writing files"), adds the roots to the project's compile sources and their properties files
- * to its resources. Every entry is planned first; one refusal writes nothing. The goal skips when the stamp of its
- * inputs and outputs is unchanged.
+ * to its resources. Every entry is planned first and the seampact-spring-runtime the compile classpath holds is
+ * checked (ADR 0025, G2); one refusal writes nothing. The goal skips when the stamp of its inputs, the runtime's
+ * version among them, and its outputs is unchanged.
  */
 @Mojo(name = "generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES, threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem) : SeampactMojo(repositorySystem) {
     override fun execute() {
         val settings = runSettings()
         val layout = layoutOf(settings)
+        val compileClasspath = project.compileClasspathElements.map { Path.of(it) }
         val roots = layout.entryRoots.map { Path.of(it) }
         val outputs = roots + (layout.documentDirectories + layout.documentFiles).map { Path.of(it) }
         val stamp = GenerateStamp(buildDirectory.resolve(STAMP_FILE))
-        val inputsHash = inputsHash(settings, layout.pathSources.map { Path.of(it) }, bundleOrigins(layout))
+        val inputsHash = inputsHash(settings, layout.pathSources.map { Path.of(it) }, bundleOrigins(layout), installedSpringRuntimeVersion(compileClasspath))
 
         if (stamp.isCurrent(inputsHash, outputs)) {
             log.info("seampact: inputs and generated files unchanged since the last run; nothing to generate.")
         } else {
-            when (val outcome = generate(settings)) {
+            when (val outcome = generate(settings, compileClasspath)) {
                 is GenerateOutcome.Refused -> throw refused(outcome.problems)
                 is GenerateOutcome.Generated -> {
                     outcome.lines.forEach(log::info)
@@ -54,8 +57,9 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
     }
 
     // Every input of a run: the app config as the POM or the file writes it, the `path` source trees, the binary pin,
-    // SEAMPACT_ALLOW_LOCAL, the Spring Boot and Spring Security versions, where each `maven` bundle is served from, and the plugin's code.
-    private fun inputsHash(settings: RunSettings, pathSources: List<Path>, bundleOrigins: List<String>): String {
+    // SEAMPACT_ALLOW_LOCAL, the Spring Boot and Spring Security versions, where each `maven` bundle is served from, the
+    // runtime's version, and the plugin's code.
+    private fun inputsHash(settings: RunSettings, pathSources: List<Path>, bundleOrigins: List<String>, springRuntimeVersion: String?): String {
         val inputs = GenerateStamp.Inputs()
         inputs.code("code", pluginCodeArtefacts())
         inputs.text("dsl", settings.dslTree)
@@ -70,6 +74,7 @@ public class GenerateMojo @Inject constructor(repositorySystem: RepositorySystem
         inputs.text("springSecurityWeb", settings.springSecurityWebVersion)
         inputs.text("springSecurityConfig", settings.springSecurityConfigVersion)
         inputs.text("bundleOrigins", bundleOrigins.joinToString(","))
+        inputs.text("springRuntime", springRuntimeVersion)
 
         return inputs.hash()
     }

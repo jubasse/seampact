@@ -4,6 +4,7 @@ import com.palantir.javapoet.AnnotationSpec
 import com.palantir.javapoet.ClassName
 import com.palantir.javapoet.CodeBlock
 import com.palantir.javapoet.MethodSpec
+import com.palantir.javapoet.ParameterSpec
 import com.palantir.javapoet.ParameterizedTypeName
 import com.palantir.javapoet.TypeName
 import com.palantir.javapoet.TypeSpec
@@ -18,6 +19,7 @@ private val BEAN = ClassName.get("org.springframework.context.annotation", "Bean
 private val IMPORT = ClassName.get("org.springframework.context.annotation", "Import")
 private val LISTABLE_BEAN_FACTORY = ClassName.get("org.springframework.beans.factory", "ListableBeanFactory")
 private val OBJECT_PROVIDER = ClassName.get("org.springframework.beans.factory", "ObjectProvider")
+private val QUALIFIER = ClassName.get("org.springframework.beans.factory.annotation", "Qualifier")
 private val BEAN_POST_PROCESSOR = ClassName.get("org.springframework.beans.factory.config", "BeanPostProcessor")
 private val ENVIRONMENT = ClassName.get("org.springframework.core.env", "Environment")
 private val FILTER_REGISTRATION_BEAN = ClassName.get("org.springframework.boot.web.servlet", "FilterRegistrationBean")
@@ -59,6 +61,23 @@ internal fun authenticateHookTypes(layout: JavaLayout): List<TypeSpec> = layout.
         .build()
 }
 
+/**
+ * The api's own interfaces of the runtime's hook types (ADR 0025 "The runtime packages"): two apis share the runtime,
+ * so each boundary calls only the deciders, scope resolvers and unexpected-error listeners implementing its own.
+ */
+internal fun apiHookTypes(layout: JavaLayout): List<TypeSpec> = listOf(
+    apiHookType(layout.decider, layout.runtime("Decider"), "decide hook", layout),
+    apiHookType(layout.scopeResolver, layout.runtime("ScopeResolver"), "scope resolver", layout),
+    apiHookType(layout.unexpectedErrorListener, layout.runtime("UnexpectedErrorListener"), "unexpected-error listener", layout),
+)
+
+private fun apiHookType(apiType: ClassName, runtimeType: ClassName, hook: String, layout: JavaLayout): TypeSpec =
+    TypeSpec.interfaceBuilder(apiType)
+        .addJavadoc("The \$L of the api '\$L': its boundary calls the beans implementing this interface, never another api's.\n", hook, layout.ir.api.id)
+        .addModifiers(Modifier.PUBLIC)
+        .addSuperinterface(runtimeType)
+        .build()
+
 /** What the runtime needs to know of the api's Java types: inputs, annotations, result arms, exceptions, hooks. */
 internal fun bindingType(layout: JavaLayout): TypeSpec {
     val operations = layout.kept.operations.map { (_, operation) -> operation }
@@ -87,12 +106,38 @@ internal fun bindingType(layout: JavaLayout): TypeSpec {
         .addMethod(mapMethod("successArms", ANY_CLASS, INTEGER, successArms))
         .addMethod(mapMethod("errorArms", ANY_CLASS, JavaTypes.STRING, errorArms))
         .addMethod(mapMethod("authenticateHooks", JavaTypes.STRING, ANY_CLASS, hooks))
+        .addMethod(hookTypeMethod("deciderType", layout.runtime("Decider"), layout.decider))
+        .addMethod(hookTypeMethod("scopeResolverType", layout.runtime("ScopeResolver"), layout.scopeResolver))
+        .addMethod(hookTypeMethod("unexpectedErrorListenerType", layout.runtime("UnexpectedErrorListener"), layout.unexpectedErrorListener))
+        .addMethod(
+            MethodSpec.methodBuilder("apiId")
+                .addAnnotation(Override::class.java)
+                .addModifiers(Modifier.PUBLIC)
+                .returns(JavaTypes.STRING)
+                .addStatement("return \$S", layout.ir.api.id)
+                .build(),
+        )
+        .addMethod(
+            MethodSpec.methodBuilder("generatorVersion")
+                .addAnnotation(Override::class.java)
+                .addModifiers(Modifier.PUBLIC)
+                .returns(JavaTypes.STRING)
+                .addStatement("return \$S", SpringBootTarget.VERSION)
+                .build(),
+        )
         .addMethod(contractCodeMethod(layout))
         .addMethod(authenticateMethod(layout, identities))
     if (usesSpringPages(layout)) springPageMethods(layout).forEach(binding::addMethod)
 
     return binding.build()
 }
+
+private fun hookTypeMethod(name: String, runtimeType: ClassName, apiType: ClassName): MethodSpec = MethodSpec.methodBuilder(name)
+    .addAnnotation(Override::class.java)
+    .addModifiers(Modifier.PUBLIC)
+    .returns(ParameterizedTypeName.get(CLASS, WildcardTypeName.subtypeOf(runtimeType)))
+    .addStatement("return \$T.class", apiType)
+    .build()
 
 // The Spring Data bridge of an api with a `springPage` list: only its binding and `SpringDataPages` name Spring Data
 // types, so an app without such a list needs no Spring Data on its classpath.
@@ -204,7 +249,7 @@ private fun authenticateMethod(layout: JavaLayout, identities: List<Pair<String,
 internal fun configurationType(layout: JavaLayout, springSecurity: SpringSecurityMode): TypeSpec {
     val boundary = layout.runtime("SeampactBoundary")
     val filter = layout.runtime("BoundaryFilter")
-    val prefix = javaIdentifier(layout.ir.api.name.segments + listOf("seampact"), io.github.jubasse.seampact.ir.naming.NamingRole.MEMBER)
+    val prefix = registrationPrefix(layout)
     val registration = ParameterizedTypeName.get(FILTER_REGISTRATION_BEAN, filter)
 
     return TypeSpec.classBuilder(layout.configuration)
@@ -217,7 +262,7 @@ internal fun configurationType(layout: JavaLayout, springSecurity: SpringSecurit
             }
         }
         .addMethod(
-            bean("${prefix}Boundary", boundary)
+            bean(boundaryBeanName(layout), boundary)
                 .addParameter(LISTABLE_BEAN_FACTORY, "beans")
                 .addParameter(ENVIRONMENT, "environment")
                 .addStatement("return new \$T(\$T.json(), new \$T(), beans, environment)", boundary, layout.contractTable, layout.binding)
@@ -225,7 +270,7 @@ internal fun configurationType(layout: JavaLayout, springSecurity: SpringSecurit
         )
         .addMethod(
             bean("${prefix}Filter", registration)
-                .addParameter(boundary, "boundary")
+                .addParameter(boundaryParameter(layout, boundary))
                 .addStatement("\$T registration = new \$T<>(new \$T(boundary))", registration, FILTER_REGISTRATION_BEAN, filter)
                 .addStatement("registration.setOrder(\$T.ORDER)", filter)
                 .addStatement("registration.setDispatcherTypes(\$T.REQUEST, \$T.ASYNC)", DISPATCHER_TYPE, DISPATCHER_TYPE)
@@ -235,25 +280,38 @@ internal fun configurationType(layout: JavaLayout, springSecurity: SpringSecurit
         )
         .addMethod(
             bean("${prefix}Mvc", WEB_MVC_CONFIGURER)
-                .addParameter(boundary, "boundary")
+                .addParameter(boundaryParameter(layout, boundary))
                 .addStatement("return new \$T(boundary)", layout.runtime("BoundaryMvcConfigurer"))
                 .build(),
         )
         .addMethod(
             bean("${prefix}ReplyHandlerFirst", BEAN_POST_PROCESSOR)
                 .addModifiers(Modifier.STATIC)
-                .addParameter(ParameterizedTypeName.get(OBJECT_PROVIDER, boundary), "boundary")
+                .addParameter(boundaryParameter(layout, ParameterizedTypeName.get(OBJECT_PROVIDER, boundary)))
                 .addStatement("return new \$T(boundary)", layout.runtime("ReplyHandlerFirst"))
                 .build(),
         )
         .addMethod(
             bean("${prefix}BootCheck", layout.runtime("BootCheck"))
-                .addParameter(boundary, "boundary")
+                .addParameter(boundaryParameter(layout, boundary))
                 .addStatement("return new \$T(boundary)", layout.runtime("BootCheck"))
                 .build(),
         )
         .build()
 }
+
+private fun registrationPrefix(layout: JavaLayout): String =
+    javaIdentifier(layout.ir.api.name.segments + listOf("seampact"), io.github.jubasse.seampact.ir.naming.NamingRole.MEMBER)
+
+private fun boundaryBeanName(layout: JavaLayout): String = "${registrationPrefix(layout)}Boundary"
+
+/**
+ * A bean method's parameter that takes the api's boundary bean by its name: every api's boundary is a
+ * `SeampactBoundary` of the shared runtime, so a parameter matched by type alone would find two.
+ */
+internal fun boundaryParameter(layout: JavaLayout, type: TypeName): ParameterSpec = ParameterSpec.builder(type, "boundary")
+    .addAnnotation(AnnotationSpec.builder(QUALIFIER).addMember("value", "\$S", boundaryBeanName(layout)).build())
+    .build()
 
 private fun bean(name: String, type: TypeName): MethodSpec.Builder = MethodSpec.methodBuilder(name)
     .addAnnotation(BEAN)

@@ -53,7 +53,13 @@ class IdenticalFilesTest {
                 id("io.github.jubasse.seampact")
             }
 
-            repositories { mavenCentral() }
+            repositories {
+                maven {
+                    url = uri("${Path.of(System.getProperty("seampact.testRepository")).toUri()}")
+                    content { includeGroup("io.github.jubasse") }
+                }
+                mavenCentral()
+            }
 
             dependencies {
                 implementation(platform("org.springframework.boot:spring-boot-dependencies:${System.getProperty("seampact.springBootVersion")}"))

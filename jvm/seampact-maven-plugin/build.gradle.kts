@@ -69,7 +69,7 @@ kotlin {
 }
 
 // The modules a test's Maven build resolves, published to the root build's file repository.
-val publishedModules = listOf(":seampact-ir", ":seampact-hooks", ":seampact-spring-boot", ":seampact-runner", ":seampact-maven-plugin")
+val publishedModules = listOf(":seampact-ir", ":seampact-hooks", ":seampact-spring-runtime", ":seampact-spring-boot", ":seampact-runner", ":seampact-maven-plugin")
 
 tasks.test {
     useJUnitPlatform()

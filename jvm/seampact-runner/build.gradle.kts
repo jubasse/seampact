@@ -27,6 +27,10 @@ dependencies {
     api(project(":seampact-spring-boot"))
     implementation(libs.kotlinx.serialization.json)
     testFixturesImplementation(libs.kotlinx.serialization.json)
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testImplementation(kotlin("test"))
+    testRuntimeOnly(libs.junit.platform.launcher)
 
     "pinsImplementation"(project(":seampact-ir"))
 }
@@ -75,4 +79,8 @@ val copyCompatibilityMatrix = tasks.register<Sync>("copyCompatibilityMatrix") {
 sourceSets.main {
     resources.srcDir(files(generatedResources).builtBy(writeBinaryPins, writeRunnerVersion))
     resources.srcDir(copyCompatibilityMatrix)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

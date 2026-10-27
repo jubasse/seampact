@@ -28,21 +28,32 @@ internal class SampleApp(val directory: Path) {
         writeBuildScript("")
     }
 
-    /** Writes the build file, with [seampactBlock] after the plugin's setup and [extraDependencies] in `dependencies`. */
-    fun writeBuildScript(seampactBlock: String, extraDependencies: String = "") {
+    /**
+     * Writes the build file, with [seampactBlock] after the plugin's setup, [extraDependencies] in `dependencies` and
+     * [extraRepositories] before the others.
+     */
+    fun writeBuildScript(seampactBlock: String, extraDependencies: String = "", extraRepositories: String = "") {
         val classpath = System.getProperty("seampact.sampleAppClasspath").split(java.io.File.pathSeparator)
             .joinToString(", ") { "\"${it.replace("\\", "/")}\"" }
-        write("build.gradle.kts", buildScript(classpath, seampactBlock, extraDependencies))
+        write("build.gradle.kts", buildScript(classpath, seampactBlock, extraDependencies, extraRepositories))
     }
 
-    private fun buildScript(classpath: String, seampactBlock: String, extraDependencies: String): String =
+    // The seampact modules, seampact-spring-runtime among them, come from the root build's file repository.
+    private fun buildScript(classpath: String, seampactBlock: String, extraDependencies: String, extraRepositories: String): String =
         """
         plugins {
             java
             id("io.github.jubasse.seampact")
         }
 
-        repositories { mavenCentral() }
+        repositories {
+            $extraRepositories
+            maven {
+                url = uri("${Path.of(System.getProperty("seampact.testRepository")).toUri()}")
+                content { includeGroup("io.github.jubasse") }
+            }
+            mavenCentral()
+        }
 
         dependencies {
             implementation(platform("org.springframework.boot:spring-boot-dependencies:${System.getProperty("seampact.springBootVersion")}"))

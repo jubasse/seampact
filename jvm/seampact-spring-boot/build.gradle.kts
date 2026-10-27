@@ -1,6 +1,8 @@
 // seampact-spring-boot (ADR 0022): the Spring Boot server target, a pure generator both build plugins call. Its
-// golden tree is compiled by javac of the test JDK against Spring Boot 4, then its records' redaction is checked.
+// golden tree is compiled by javac of the test JDK against Spring Boot 4 and seampact-spring-runtime, then its
+// records' redaction is checked.
 
+import io.github.jubasse.seampact.conventions.WriteVersionConstant
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
@@ -28,10 +30,24 @@ dependencies {
     implementation(libs.javapoet)
     implementation(libs.kotlinx.serialization.json)
 
+    // Test only: the generator and the runtime of one build carry one version (ADR 0025, G1).
+    testImplementation(project(":seampact-spring-runtime"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(kotlin("test"))
     testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+// The version the generated code carries, which the runtime's boot check compares with its own (ADR 0025, G3).
+val writeTargetVersion = tasks.register<WriteVersionConstant>("writeTargetVersion") {
+    version = project.version.toString()
+    className = "io.github.jubasse.seampact.springboot.SpringBootTargetVersion"
+    documentation = "The version of the seampact-spring-boot target, which it stamps into the code it generates."
+    outputDirectory = layout.buildDirectory.dir("generated/target-version")
+}
+
+sourceSets.main {
+    java.srcDir(writeTargetVersion)
 }
 
 kotlin {
@@ -56,7 +72,7 @@ tasks.test {
     inputs.dir(optInsGoldenDirectory)
 }
 
-// The golden tree as an app compiles it: the Spring Boot 4 starters the generated code needs, seampact-hooks, and
+// The golden tree as an app compiles it: the Spring Boot 4 starters the generated code needs, the runtime, and
 // the checks that run the compiled tree: its records' redaction and the boundary runtime on mock requests.
 val golden: SourceSet = sourceSets.create("golden") {
     java.srcDir(goldenDirectory)
@@ -74,7 +90,7 @@ dependencies {
     "goldenImplementation"(libs.spring.boot.starter.security)
     "goldenImplementation"(libs.swagger.annotations.jakarta)
     "goldenImplementation"(libs.springdoc.webmvc.api)
-    "goldenImplementation"(project(":seampact-hooks"))
+    "goldenImplementation"(project(":seampact-spring-runtime"))
     "goldenImplementation"(libs.spring.test)
     "goldenImplementation"(platform(libs.junit.bom))
     "goldenImplementation"(libs.junit.jupiter)

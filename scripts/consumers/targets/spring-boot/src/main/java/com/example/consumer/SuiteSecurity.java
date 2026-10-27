@@ -1,7 +1,7 @@
 package com.example.consumer;
 
 import com.example.tasks.api.spring.TasksSecurityMatchers;
-import com.example.tasks.api.spring.runtime.SecurityRefusals;
+import io.github.jubasse.seampact.springboot.runtime.SecurityRefusals;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;

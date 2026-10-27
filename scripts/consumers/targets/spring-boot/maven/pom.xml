@@ -2,8 +2,8 @@
 <!--
   The Spring Boot consumer's Maven build root (ADR 0022 "The consumer and the proof"): its sources, the code the
   seampact Maven plugin generates from `seampact.config.yaml`, and the compiler binary pinned by its hash
-  (`-DseampactBinary=<path> -DseampactBinarySha256=<sha256>`). The seampact plugin and seampact-hooks come from the
-  local repository (`./gradlew publishToMavenLocal` in the repository's `jvm/`), Spring Boot from Maven Central.
+  (`-DseampactBinary=<path> -DseampactBinarySha256=<sha256>`). The seampact plugin, seampact-hooks and
+  seampact-spring-runtime come from the local repository (`./gradlew publishToMavenLocal` in the repository's `jvm/`), Spring Boot from Maven Central.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -42,6 +42,11 @@
     <dependency>
       <groupId>io.github.jubasse</groupId>
       <artifactId>seampact-hooks</artifactId>
+      <version>${seampact.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.jubasse</groupId>
+      <artifactId>seampact-spring-runtime</artifactId>
       <version>${seampact.version}</version>
     </dependency>
     <dependency>

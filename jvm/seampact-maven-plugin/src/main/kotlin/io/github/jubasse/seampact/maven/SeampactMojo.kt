@@ -159,6 +159,8 @@ public abstract class SeampactMojo(private val repositorySystem: RepositorySyste
             generateCommand = "mvn generate-sources",
             unresolvedBinaryFix = "Add the repository that holds it to the POM or settings.xml (Maven Central, or your mirror of it), or point `<binary><path>` at your own build with its `<sha256>`.",
             binaryCacheSetting = "the `user.home` system property (the binary cache is `~/.m2/seampact/binaries`)",
+            runtimeInstallTemplate = "declare `<dependency><groupId>io.github.jubasse</groupId><artifactId>seampact-spring-runtime</artifactId>" +
+                "<version>${BuildTool.VERSION_PLACEHOLDER}</version></dependency>` in the POM's `<dependencies>`",
         )
     }
 }

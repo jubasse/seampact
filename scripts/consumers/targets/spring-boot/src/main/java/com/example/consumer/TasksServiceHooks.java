@@ -2,14 +2,14 @@ package com.example.consumer;
 
 import com.example.tasksservice.api.ServiceAuthenticateHook;
 import com.example.tasksservice.api.ServiceAuthenticateRequest;
+import com.example.tasksservice.api.TasksServiceDecider;
+import com.example.tasksservice.api.TasksServiceUnexpectedErrorListener;
 import com.example.tasksservice.api.schemas.Service;
 import com.example.tasksservice.api.schemas.ServicePrincipal;
-import com.example.tasksservice.api.spring.runtime.Decider;
-import com.example.tasksservice.api.spring.runtime.Denial;
-import com.example.tasksservice.api.spring.runtime.RequirementCall;
-import com.example.tasksservice.api.spring.runtime.UnexpectedErrorListener;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.Decision;
+import io.github.jubasse.seampact.springboot.runtime.Denial;
+import io.github.jubasse.seampact.springboot.runtime.RequirementCall;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -45,7 +45,7 @@ final class TasksServiceHooks {
 
     /** Denies what the script denies, else `callerService` for a service its params do not list. */
     @Component
-    static final class ServiceDecider implements Decider {
+    static final class ServiceDecider implements TasksServiceDecider {
         @Override
         public Set<String> names() {
             return Set.of(EVERY_NAME);
@@ -77,7 +77,7 @@ final class TasksServiceHooks {
     }
 
     @Component
-    static final class TasksServiceUnexpectedErrors implements UnexpectedErrorListener {
+    static final class TasksServiceUnexpectedErrors implements TasksServiceUnexpectedErrorListener {
         @Override
         public void onUnexpectedError(UnexpectedFailure failure) {
             UnexpectedFailures.log(failure.api(), failure.operation(), failure.reason(), failure.cause());

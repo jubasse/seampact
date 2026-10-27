@@ -26,7 +26,7 @@ private val CUSTOMIZER = ClassName.get("org.springframework.security.config", "C
 private val HTTP_SECURITY = ClassName.get("org.springframework.security.config.annotation.web.builders", "HttpSecurity")
 private val STRING_SET = ParameterizedTypeName.get(ClassName.get(Set::class.java), JavaTypes.STRING)
 
-/** The runtime class answering Spring Security's refusals, copied only with the Spring Security beans. */
+/** The runtime class answering Spring Security's refusals, named only by the Spring Security beans. */
 internal const val SECURITY_REFUSALS = "SecurityRefusals"
 
 /** The access kinds a matcher groups, in the order the matchers class declares them. */
@@ -123,13 +123,13 @@ private fun securityConfigurationType(layout: JavaLayout, mode: SpringSecurityMo
         .addAnnotation(AnnotationSpec.builder(CONFIGURATION).addMember("proxyBeanMethods", "false").build())
         .addMethod(
             securityBean("${prefix}Matchers", matchers)
-                .addParameter(boundary, "boundary")
+                .addParameter(boundaryParameter(layout, boundary))
                 .addStatement("return new \$T(boundary)", matchers)
                 .build(),
         )
         .addMethod(
             securityBean("${prefix}Refusals", securityRefusals)
-                .addParameter(boundary, "boundary")
+                .addParameter(boundaryParameter(layout, boundary))
                 .addStatement("return new \$T(boundary)", securityRefusals)
                 .build(),
         )

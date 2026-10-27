@@ -19,12 +19,18 @@ import com.example.optins.api.StripeAuthenticateHook;
 import com.example.optins.api.StripeAuthenticateRequest;
 import com.example.optins.api.StripeCredentials;
 import com.example.optins.api.TasksServiceContractException;
-import com.example.optins.api.spring.runtime.ApiBinding;
-import com.example.optins.api.spring.runtime.Denial;
+import com.example.optins.api.TasksServiceDecider;
+import com.example.optins.api.TasksServiceScopeResolver;
+import com.example.optins.api.TasksServiceUnexpectedErrorListener;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
 import io.github.jubasse.seampact.hooks.SignedTemplateRequest;
+import io.github.jubasse.seampact.springboot.runtime.ApiBinding;
+import io.github.jubasse.seampact.springboot.runtime.Decider;
+import io.github.jubasse.seampact.springboot.runtime.Denial;
+import io.github.jubasse.seampact.springboot.runtime.ScopeResolver;
+import io.github.jubasse.seampact.springboot.runtime.UnexpectedErrorListener;
 import java.lang.annotation.Annotation;
 import java.util.Map;
 import java.util.Optional;
@@ -97,6 +103,31 @@ public final class TasksServiceSeampactBinding implements ApiBinding {
         return Map.ofEntries(
         Map.entry("service", ServiceAuthenticateHook.class),
         Map.entry("stripe", StripeAuthenticateHook.class));
+    }
+
+    @Override
+    public Class<? extends Decider> deciderType() {
+        return TasksServiceDecider.class;
+    }
+
+    @Override
+    public Class<? extends ScopeResolver> scopeResolverType() {
+        return TasksServiceScopeResolver.class;
+    }
+
+    @Override
+    public Class<? extends UnexpectedErrorListener> unexpectedErrorListenerType() {
+        return TasksServiceUnexpectedErrorListener.class;
+    }
+
+    @Override
+    public String apiId() {
+        return "tasksService";
+    }
+
+    @Override
+    public String generatorVersion() {
+        return "0.0.0";
     }
 
     @Override
