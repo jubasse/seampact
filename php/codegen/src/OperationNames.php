@@ -10,6 +10,7 @@ final readonly class OperationNames
     /**
      * @param array<int, string> $responses each declared success status and its result class
      * @param ?string $page the class of the page a paged list's handler returns, null for any other operation
+     * @param ?string $scopes the class of the scopes the operation runs in, null when it runs in none
      */
     public function __construct(
         public string $method,
@@ -22,6 +23,7 @@ final readonly class OperationNames
         public string $endpoints,
         public array $responses,
         public ?string $page = null,
+        public ?string $scopes = null,
     ) {
     }
 }

@@ -4505,6 +4505,8 @@ final class TasksContract
         ],
         'responses' => [201 => 'Seampact\Golden\TasksConsistent\CreateTaskResponse201'],
         'errors' => 'Seampact\Golden\TasksConsistent\CreateTaskErrors',
+        'inputPrincipal' => 'Seampact\Golden\TasksConsistent\Symfony\UserPrincipal',
+        'inputScopes' => 'Seampact\Golden\TasksConsistent\CreateTaskScopes',
       ],
       'getChannel' => [
         'input' => 'Seampact\Golden\TasksConsistent\GetChannelInput',
@@ -4516,6 +4518,8 @@ final class TasksContract
         ],
         'responses' => [200 => 'Seampact\Golden\TasksConsistent\GetChannelResponse200'],
         'errors' => 'Seampact\Golden\TasksConsistent\GetChannelErrors',
+        'inputPrincipal' => 'Seampact\Golden\TasksConsistent\Symfony\UserPrincipal',
+        'inputScopes' => 'Seampact\Golden\TasksConsistent\GetChannelScopes',
       ],
       'getDraft' => [
         'input' => 'Seampact\Golden\TasksConsistent\GetDraftInput',
@@ -4527,6 +4531,7 @@ final class TasksContract
         ],
         'responses' => [200 => 'Seampact\Golden\TasksConsistent\GetDraftResponse200'],
         'errors' => 'Seampact\Golden\TasksConsistent\GetDraftErrors',
+        'inputPrincipal' => 'Seampact\Golden\TasksConsistent\Symfony\UserPrincipal',
       ],
       'getPreferences' => [
         'input' => 'Seampact\Golden\TasksConsistent\GetPreferencesInput',
@@ -4541,6 +4546,7 @@ final class TasksContract
           304 => 'Seampact\Golden\TasksConsistent\GetPreferencesResponse304',
         ],
         'errors' => 'Seampact\Golden\TasksConsistent\GetPreferencesErrors',
+        'inputPrincipal' => 'Seampact\Golden\TasksConsistent\Symfony\UserPrincipal',
       ],
       'getTask' => [
         'input' => 'Seampact\Golden\TasksConsistent\GetTaskInput',
@@ -4552,6 +4558,8 @@ final class TasksContract
         ],
         'responses' => [200 => 'Seampact\Golden\TasksConsistent\GetTaskResponse200'],
         'errors' => 'Seampact\Golden\TasksConsistent\GetTaskErrors',
+        'inputPrincipal' => 'Seampact\Golden\TasksConsistent\Symfony\UserPrincipal',
+        'inputScopes' => 'Seampact\Golden\TasksConsistent\GetTaskScopes',
       ],
       'getTasksBatch' => [
         'input' => 'Seampact\Golden\TasksConsistent\GetTasksBatchInput',
@@ -4563,6 +4571,8 @@ final class TasksContract
         ],
         'responses' => [200 => 'Seampact\Golden\TasksConsistent\GetTasksBatchResponse200'],
         'errors' => 'Seampact\Golden\TasksConsistent\GetTasksBatchErrors',
+        'inputPrincipal' => 'Seampact\Golden\TasksConsistent\Symfony\UserPrincipal',
+        'inputScopes' => 'Seampact\Golden\TasksConsistent\GetTasksBatchScopes',
       ],
       'health' => [
         'input' => 'Seampact\Golden\TasksConsistent\HealthInput',
@@ -4584,12 +4594,15 @@ final class TasksContract
         ],
         'responses' => [200 => 'Seampact\Golden\TasksConsistent\ListTasksResponse200'],
         'errors' => 'Seampact\Golden\TasksConsistent\ListTasksErrors',
+        'inputPrincipal' => 'Seampact\Golden\TasksConsistent\Symfony\UserPrincipal',
+        'inputScopes' => 'Seampact\Golden\TasksConsistent\ListTasksScopes',
       ],
       'payments' => [
         'input' => 'Seampact\Golden\TasksConsistent\PaymentsInput',
         'parts' => [],
         'responses' => [204 => 'Seampact\Golden\TasksConsistent\PaymentsResponse204'],
         'errors' => 'Seampact\Golden\TasksConsistent\PaymentsErrors',
+        'inputPrincipal' => 'Seampact\Golden\TasksConsistent\Symfony\StripePrincipal',
       ],
       'purgeTask' => [
         'input' => 'Seampact\Golden\TasksConsistent\PurgeTaskInput',
@@ -4605,6 +4618,8 @@ final class TasksContract
         ],
         'responses' => [204 => 'Seampact\Golden\TasksConsistent\PurgeTaskResponse204'],
         'errors' => 'Seampact\Golden\TasksConsistent\PurgeTaskErrors',
+        'inputPrincipal' => 'Seampact\Golden\TasksConsistent\Symfony\UserPrincipal',
+        'inputScopes' => 'Seampact\Golden\TasksConsistent\PurgeTaskScopes',
       ],
       'searchTasks' => [
         'input' => 'Seampact\Golden\TasksConsistent\SearchTasksInput',
@@ -4616,6 +4631,8 @@ final class TasksContract
         ],
         'responses' => [200 => 'Seampact\Golden\TasksConsistent\SearchTasksResponse200'],
         'errors' => 'Seampact\Golden\TasksConsistent\SearchTasksErrors',
+        'inputPrincipal' => 'Seampact\Golden\TasksConsistent\Symfony\UserPrincipal',
+        'inputScopes' => 'Seampact\Golden\TasksConsistent\SearchTasksScopes',
       ],
       'updateTask' => [
         'input' => 'Seampact\Golden\TasksConsistent\UpdateTaskInput',
@@ -4631,6 +4648,8 @@ final class TasksContract
         ],
         'responses' => [200 => 'Seampact\Golden\TasksConsistent\UpdateTaskResponse200'],
         'errors' => 'Seampact\Golden\TasksConsistent\UpdateTaskErrors',
+        'inputPrincipal' => 'Seampact\Golden\TasksConsistent\Symfony\UserPrincipal',
+        'inputScopes' => 'Seampact\Golden\TasksConsistent\UpdateTaskScopes',
       ],
     ],
     'identities' => [

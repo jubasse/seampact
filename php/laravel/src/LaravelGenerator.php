@@ -11,6 +11,8 @@ use Seampact\Codegen\ContractClass;
 use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\Delivery;
 use Seampact\Codegen\FrameworkRouteScope;
+use Seampact\Codegen\HandlerAccessPlacement;
+use Seampact\Codegen\HandlerAccessTypes;
 use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -66,8 +68,9 @@ final class LaravelGenerator implements Generator
 
         $layout = new PhpLayout($ir, $options->namespace, $kept, $refusals);
         $types = new PhpTypes($layout);
-        $operationTypes = new OperationTypes($layout->api, $types, $refusals, self::nativePageClasses($ir));
-        $formRequests = new FormRequests($layout, $options->rules, $refusals);
+        $handlerAccess = new HandlerAccessTypes($layout, $refusals);
+        $operationTypes = new OperationTypes($layout->api, $types, $refusals, $handlerAccess, HandlerAccessPlacement::Request, self::nativePageClasses($ir));
+        $formRequests = new FormRequests($layout, $options->rules, $refusals, $handlerAccess);
         $mount = $entry->mount ?? '';
         $routes = new RouteTable($layout, $options, $refusals, $mount);
         $replies = new LaravelReplies($layout, $operationTypes);

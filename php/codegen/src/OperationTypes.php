@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen;
 
+use Nette\PhpGenerator\Method;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\Response;
@@ -23,7 +24,14 @@ final class OperationTypes
      * @param array<string, string> $nativePageClasses the framework class a handler answers instead of the generated
      *     page, by paging style id (a pack's style the framework pages natively)
      */
-    public function __construct(private readonly ApiLayout $layout, private readonly PhpTypes $types, private readonly Refusals $refusals, private readonly array $nativePageClasses = [])
+    public function __construct(
+        private readonly ApiLayout $layout,
+        private readonly PhpTypes $types,
+        private readonly Refusals $refusals,
+        private readonly HandlerAccessTypes $handlerAccess,
+        private readonly HandlerAccessPlacement $handlerAccessPlacement,
+        private readonly array $nativePageClasses = [],
+    )
     {
     }
 
@@ -48,19 +56,28 @@ final class OperationTypes
         $input = new PhpClassFile($names->input);
         $inputClass = $input->namespace->addClass($input->shortName)->setFinal()->setReadOnly();
         $inputClass->addComment("The input of operation '{$operation->id}', as its handler reads it.");
-        if ($inputMembers !== [] || $operation->input !== null) {
-            $constructor = $inputClass->addMethod('__construct');
-            foreach ($inputMembers as $part => $type) {
-                PhpTypes::promote($constructor, $part, $type);
-            }
-            if ($operation->input !== null) {
-                PhpTypes::promote($constructor, 'body', $this->types->of($operation->input->schema, $input));
-            }
+        $constructor = (new Method('__construct'))->setPublic();
+        foreach ($inputMembers as $part => $type) {
+            PhpTypes::promote($constructor, $part, $type);
+        }
+        if ($operation->input !== null) {
+            PhpTypes::promote($constructor, 'body', $this->types->of($operation->input->schema, $input));
+        }
+        if ($this->handlerAccessPlacement === HandlerAccessPlacement::Input) {
+            $this->handlerAccess->promoteOnInput($constructor, $input, $operation, $names);
+        }
+        if ($constructor->getParameters() !== []) {
+            $inputClass->addMember($constructor);
             // A signed route's body is the signed payload, redacted whole (ADR 0023 "Redaction").
             $bodyRedacted = $operation->input !== null && ($operation->input->rawBody || RedactedMembers::isSensitive($operation->input->schema));
             RedactedMembers::redact($inputClass, $constructor, $bodyRedacted ? ['body'] : []);
         }
         $files[] = $input;
+
+        $scopesFile = $this->handlerAccess->scopesFile($operation, $names, $at);
+        if ($scopesFile !== null) {
+            $files[] = $scopesFile;
+        }
 
         $result = new PhpClassFile($names->result);
         $result->namespace->addInterface($result->shortName)

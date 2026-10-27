@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\Literal;
+use Seampact\Codegen\HandlerAccessTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
+use Seampact\Codegen\OperationNames;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\RulesMode;
@@ -25,8 +27,12 @@ final class FormRequests
     private const FORM_REQUEST = 'Illuminate\\Foundation\\Http\\FormRequest';
     private const VALIDATOR = 'Illuminate\\Contracts\\Validation\\Validator';
 
-    public function __construct(private readonly PhpLayout $layout, private readonly RulesMode $mode, private readonly Refusals $refusals)
-    {
+    public function __construct(
+        private readonly PhpLayout $layout,
+        private readonly RulesMode $mode,
+        private readonly Refusals $refusals,
+        private readonly HandlerAccessTypes $handlerAccess,
+    ) {
     }
 
     public function file(Operation $operation, IrPlace $at): PhpClassFile
@@ -70,6 +76,7 @@ final class FormRequests
             ->setBody("return self::contractRules({$tree}::of(\$this, self::API));");
 
         $this->contractSteps($file, $operation);
+        $this->handlerAccess($file, $operation, $this->layout->operation($operation->id) ?? throw new \LogicException("The operation '{$operation->id}' has no names."));
 
         $contractRules = $class->addMethod('contractRules')->setStatic()->setReturnType('array')
             ->addComment('@return array<string, list<mixed>>')
@@ -98,6 +105,29 @@ final class FormRequests
         $class->addMethod('contractInput')->setReturnType($file->type($names->input))
             ->addComment('The validated input of the operation, typed.')
             ->setBody("\$input = {$state}::required(\$this, self::API)->contractInput;\n\nreturn \$input instanceof {$input} ? \$input : throw new \\LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');");
+    }
+
+    // Who is calling: read from the boundary state of this api, never from the wire input (ADR 0012 "Open tenancy").
+    private function handlerAccess(PhpClassFile $file, Operation $operation, OperationNames $names): void
+    {
+        $class = LaravelReplies::classOf($file);
+        $state = $file->name($this->layout->runtime('BoundaryState'));
+        $access = $file->name($this->layout->runtime('HandlerAccess'));
+
+        $principal = $this->handlerAccess->principalType($operation, $file);
+        if ($principal !== null) {
+            $read = $principal->nullable ? 'principal' : 'authenticatedPrincipal';
+            $class->addMethod('principal')->setReturnType($principal->native)->setReturnNullable($principal->nullable)
+                ->addComment($principal->nullable ? 'The caller, null for an anonymous caller.' : 'The caller.')
+                ->setBody("return {$access}::{$read}({$state}::required(\$this, self::API), {$principal->doc}::class);");
+        }
+
+        if ($names->scopes !== null) {
+            $scopes = $file->name($names->scopes);
+            $class->addMethod('scopes')->setReturnType($file->type($names->scopes))
+                ->addComment('The scopes the operation runs in, as their resolvers resolved them.')
+                ->setBody("return {$access}::scopes({$state}::required(\$this, self::API), {$scopes}::class);");
+        }
     }
 
     /** @param array<string, list<string>> $rules */

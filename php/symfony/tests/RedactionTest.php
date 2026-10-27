@@ -14,6 +14,7 @@ use Seampact\Codegen\Runtime\SignatureHeader;
 use Seampact\Golden\TasksConsistent\PaymentsInput;
 use Seampact\Golden\TasksConsistent\Schemas\CreateTask;
 use Seampact\Golden\TasksConsistent\Schemas\PaymentEvent;
+use Seampact\Golden\TasksConsistent\Symfony\StripePrincipal;
 use Seampact\Golden\TasksConsistent\Symfony\TasksContract;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSeampactBundle;
 use Seampact\Golden\TasksConsistent\Symfony\UserCredentials;
@@ -55,7 +56,7 @@ final class RedactionTest extends TestCase
     public static function holders(): iterable
     {
         yield 'a sensitive member' => [new CreateTask(self::SECRET, null)];
-        yield 'a signed route\'s parsed body' => [new PaymentsInput(new PaymentEvent(self::SECRET, 'invoice.paid', null))];
+        yield 'a signed route\'s parsed body' => [new PaymentsInput(new PaymentEvent(self::SECRET, 'invoice.paid', null), new StripePrincipal('acct_1'))];
         yield 'an identity\'s credentials' => [new UserCredentials(self::SECRET, self::SECRET)];
         yield 'the credentials, CSRF token and signed request a hook receives' => [new AuthenticateCall(
             'user',

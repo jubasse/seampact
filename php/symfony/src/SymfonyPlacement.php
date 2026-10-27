@@ -7,6 +7,7 @@ namespace Seampact\Symfony;
 use Seampact\Codegen\ApiLayout;
 use Seampact\Codegen\BoundaryNames;
 use Seampact\Codegen\IdentityTypes;
+use Seampact\Codegen\HandlerAccessTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\OperationNames;
@@ -118,10 +119,16 @@ final class SymfonyPlacement implements BoundaryNames
         return $this->identities;
     }
 
-    /** @return array<string, string> none: the Symfony placement adds no class per operation the runtime reads */
+    /** @return array<string, string> the principal and scopes classes the operation's input takes beside its wire parts */
     public function operationClasses(string $operationId): array
     {
-        return [];
+        foreach ($this->operations as [, $operation]) {
+            if ($operation->id === $operationId) {
+                return HandlerAccessTypes::inputTypes($this, $operation);
+            }
+        }
+
+        throw new \LogicException("The operation '{$operationId}' is not a kept operation of the Symfony placement.");
     }
 
     /** The api key of an api name's segments: lower-case words joined by `_`. */

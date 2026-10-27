@@ -7,8 +7,10 @@ namespace Seampact\Golden\Tasks;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\HandlerAccess;
 use Seampact\Codegen\Runtime\Nullability;
 use Seampact\Codegen\Runtime\Presence;
+use Seampact\Golden\Tasks\Laravel\UserPrincipal;
 use Seampact\Laravel\Runtime\BlankStrings;
 use Seampact\Laravel\Runtime\BoundaryMark;
 use Seampact\Laravel\Runtime\FormSteps;
@@ -74,6 +76,22 @@ final class GetTasksBatchRequest extends FormRequest
         $input = BoundaryState::required($this, self::API)->contractInput;
 
         return $input instanceof GetTasksBatchInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
+    }
+
+    /**
+     * The caller.
+     */
+    public function principal(): UserPrincipal
+    {
+        return HandlerAccess::authenticatedPrincipal(BoundaryState::required($this, self::API), UserPrincipal::class);
+    }
+
+    /**
+     * The scopes the operation runs in, as their resolvers resolved them.
+     */
+    public function scopes(): GetTasksBatchScopes
+    {
+        return HandlerAccess::scopes(BoundaryState::required($this, self::API), GetTasksBatchScopes::class);
     }
 
     /**

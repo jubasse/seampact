@@ -7,6 +7,7 @@ namespace Seampact\Golden\Tasks;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\HandlerAccess;
 use Seampact\Laravel\Runtime\BoundaryMark;
 use Seampact\Laravel\Runtime\FormSteps;
 use Seampact\Laravel\Runtime\InputTree;
