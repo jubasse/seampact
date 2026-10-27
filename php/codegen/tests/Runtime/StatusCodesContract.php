@@ -20,14 +20,16 @@ final class StatusCodesContract
             'tasks.other_teapot' => ['http' => ['status' => 418]],
             'tasks.conflict' => ['http' => ['status' => 409], 'params' => 'ConflictParams'],
             'tasks.hint' => ['http' => ['status' => 422], 'params' => 'HintParams'],
+            'tasks.stale' => ['http' => ['status' => 409], 'params' => 'StaleParams'],
         ],
         'schemas' => [
             'ConflictParams' => ['kind' => 'object', 'properties' => [['name' => 'version', 'optional' => false]]],
             'HintParams' => ['kind' => 'object', 'properties' => [['name' => 'hint', 'optional' => true]]],
+            'StaleParams' => ['kind' => 'object', 'properties' => [['name' => 'version', 'optional' => false, 'default' => 1]]],
         ],
         'operations' => [
             ['id' => 'byRole', 'errors' => [['code' => 'api.not_found'], ['code' => 'tasks.missing']]],
-            ['id' => 'byStatus', 'errors' => [['code' => 'tasks.missing'], ['code' => 'tasks.teapot'], ['code' => 'tasks.hint']]],
+            ['id' => 'byStatus', 'errors' => [['code' => 'tasks.missing'], ['code' => 'tasks.teapot'], ['code' => 'tasks.hint'], ['code' => 'tasks.stale']]],
             ['id' => 'ambiguous', 'errors' => [['code' => 'tasks.teapot'], ['code' => 'tasks.other_teapot'], ['code' => 'tasks.conflict']]],
         ],
     ];

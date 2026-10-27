@@ -25,9 +25,15 @@ final class FrameworkRefusalTest extends TestCase
         self::assertSame('tasks.teapot', FrameworkRefusal::codeOf(self::contract(), 'byStatus', null, 418));
     }
 
-    public function testACodeWhoseParamsAreAllOptionalAnswers(): void
+    public function testARoleWithoutAStatusTakesTheStatusOfItsRole(): void
+    {
+        self::assertSame('tasks.missing', FrameworkRefusal::codeOf(self::contract(), 'byStatus', 'notFound', null));
+    }
+
+    public function testACodeWhoseParamsAreAllOptionalOrDefaultedAnswers(): void
     {
         self::assertSame('tasks.hint', FrameworkRefusal::codeOf(self::contract(), 'byStatus', null, 422));
+        self::assertSame('tasks.stale', FrameworkRefusal::codeOf(self::contract(), 'byStatus', null, 409));
     }
 
     public function testTwoCodesOfTheStatusARequiredParamOrNoCodeAnswerNone(): void

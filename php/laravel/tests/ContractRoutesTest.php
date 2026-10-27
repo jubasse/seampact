@@ -35,6 +35,15 @@ final class ContractRoutesTest extends TestCase
         self::assertSame('/v1/channels/c1/tasks/t1', $urls->route('seampact.tasks.getTask', ['channelId' => 'c1', 'taskId' => 't1'], false));
     }
 
+    public function testAnAppsGlobalPatternNeverNarrowsAContractPlaceholder(): void
+    {
+        $router = self::registeredRouter(['channelId' => '[0-9]+']);
+
+        $matched = $router->getRoutes()->match(Request::create('http://localhost/v1/channels/c1/tasks/t1'));
+
+        self::assertSame('seampact.tasks.getTask', $matched->getName());
+    }
+
     public function testCsrfIsLeftOffEveryOperationThatReadsNoCookieCredential(): void
     {
         $router = self::registeredRouter();
@@ -49,13 +58,15 @@ final class ContractRoutesTest extends TestCase
         return $router->getRoutes()->getByName($name) ?? self::fail("No route named '{$name}' was registered.");
     }
 
-    private static function registeredRouter(): Router
+    /** @param array<string, string> $appPatterns the app's global `Route::pattern` constraints */
+    private static function registeredRouter(array $appPatterns = []): Router
     {
         $app = new Application(sys_get_temp_dir());
         $app->instance('config', new Repository(['seampact' => ['tasks' => TasksRoutes::DEFAULTS]]));
         $router = new Router(new Dispatcher($app), $app);
         $app->instance('router', $router);
         Facade::setFacadeApplication($app);
+        $router->patterns($appPatterns);
 
         TasksRoutes::register();
         $router->getRoutes()->refreshNameLookups();

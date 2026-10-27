@@ -32,7 +32,7 @@ final class SymfonyRefusalsTest extends TestCase
         self::assertStringContainsString("'page-size' and 'pageSize'", $refused['name.collision']);
     }
 
-    public function testAPlaceholderLongerThanTheRouterAcceptsIsRefusedByName(): void
+    public function testAPlaceholderLongerThanTheRouterAcceptsKeepsAPositionalName(): void
     {
         $longName = 'theTaskIdentifierOfTheChannelTaskToRead';
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation) use ($longName): void {
@@ -47,9 +47,10 @@ final class SymfonyRefusalsTest extends TestCase
             }
         });
 
-        $refused = self::refused($document);
+        $routes = self::generatedFile($document, 'TasksRouteLoader.php');
 
-        self::assertStringContainsString("'{$longName}'", $refused['path.parameter.long.unsupported'] ?? '');
+        self::assertStringContainsString("'/v1/channels/{channelId}/tasks/{p2}'", $routes);
+        self::assertStringNotContainsString($longName, $routes);
     }
 
     public function testFormsAbsentFromTheReferenceWaitForAConsumerAfterOneZero(): void
@@ -132,6 +133,18 @@ final class SymfonyRefusalsTest extends TestCase
 
         self::assertSame(['artefacts.accessHooks.unsupported'], array_keys($refused));
         self::assertStringContainsString('it waits for an app that needs it', $refused['artefacts.accessHooks.unsupported']);
+    }
+
+    private static function generatedFile(\stdClass $document, string $pathSuffix): string
+    {
+        $files = (new SymfonyGenerator())->generate(ReferenceContract::read(new SymfonyGenerator(), $document), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+        foreach ($files as $file) {
+            if (str_ends_with($file->path, $pathSuffix)) {
+                return $file->contents;
+            }
+        }
+
+        self::fail("No generated file ends with '{$pathSuffix}'.");
     }
 
     /**
