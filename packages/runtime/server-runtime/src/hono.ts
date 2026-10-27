@@ -47,7 +47,7 @@ import {
   reportContractError,
   resolvedHooks,
   runInputSteps,
-  runtimeLog,
+  runtimeLogOf,
   settingsOf,
   unexpectedError,
   useRuntimeLogger,
@@ -208,7 +208,7 @@ export function createHonoBoundary<
       `seampact: the framework-route check of api '${api.id}' has not run on the app that serves it; call checkFrameworkRoutes(app) once every route is added, before serving, or switch it off with 'artefacts.bootCheck.frameworkRoutes: false'.`,
     );
 
-    runtimeLog.error(cause.message);
+    runtimeLogOf(api).error(cause.message);
 
     return errorResponse(undefined, hooks, api, route, unexpectedError(route, cause), reported);
   }

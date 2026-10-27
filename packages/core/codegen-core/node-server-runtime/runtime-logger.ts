@@ -20,12 +20,26 @@ export const runtimeLog: RuntimeLogger = {
   error: (...parts) => currentLogger().error(...parts),
 };
 
+/**
+ * The logger of one api, for a message written outside its requests (a mount error, a failed write): the api's own
+ * when its registration keyed one, else the last registration's, else the console.
+ */
+export function runtimeLogOf(api: object): RuntimeLogger {
+  return {
+    warn: (...parts) => loggerOf(api).warn(...parts),
+    error: (...parts) => loggerOf(api).error(...parts),
+  };
+}
+
 // Inside a contract request, the logger of the request's api; outside one, the last registration's.
 function currentLogger(): RuntimeLogger {
-  const api = boundaryContext.getStore()?.api;
-  const requestLogger = api === undefined ? undefined : apiLoggers.get(api);
+  return loggerOf(boundaryContext.getStore()?.api);
+}
 
-  return requestLogger ?? installedLogger ?? console;
+function loggerOf(api: object | undefined): RuntimeLogger {
+  const apiLogger = api === undefined ? undefined : apiLoggers.get(api);
+
+  return apiLogger ?? installedLogger ?? console;
 }
 
 function isRuntimeLogger(logger: unknown): logger is RuntimeLogger {

@@ -54,7 +54,7 @@ import {
   registrationProblems,
   resolvedHooks,
   runInputSteps,
-  runtimeLog,
+  runtimeLogOf,
   settingsOf,
   unexpectedError,
   useRuntimeLogger,
@@ -312,7 +312,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
 
       if (!warnedGlobalParser.has(route.id)) {
         warnedGlobalParser.add(route.id);
-        runtimeLog.warn(
+        runtimeLogOf(api).warn(
           `seampact: an app-wide body parser read the body of '${route.id}' before the router of api '${api.id}'; mount the router before it, or give it verify: keepRawBody and limit: LARGEST_BODY_LIMIT.`,
         );
       }
@@ -383,7 +383,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
         `${bootProblemsMessage(api, problems)}\nThe check ran on the first request, since the app did not call checkFrameworkRoutes(app) before listening; every request answers 500 until the app restarts.`,
       );
 
-      runtimeLog.error(cause.message);
+      runtimeLogOf(api).error(cause.message);
       respondDetached(response, hooks, route, unexpectedError(route, cause), reported);
     };
   }
@@ -471,7 +471,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
       `seampact: the router of api '${api.id}' is mounted under '${request.baseUrl}', which differs from the entry's mount (write the prefix as the entry's 'mount' in seampact.config.yaml instead); mount it at the app's root with app.use(router).`,
     );
 
-    runtimeLog.error(cause.message);
+    runtimeLogOf(api).error(cause.message);
     respondDetached(response, hooks, route, unexpectedError(route, cause), reported);
   }
 
@@ -511,7 +511,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
 
     if (routersMade.count === 1) return routersMade.lastHooks;
 
-    runtimeLog.error(noOwningRouterMessage(api, routersMade.count));
+    runtimeLogOf(api).error(noOwningRouterMessage(api, routersMade.count));
 
     return undefined;
   }

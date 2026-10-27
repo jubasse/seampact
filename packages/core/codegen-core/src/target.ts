@@ -74,7 +74,7 @@ export interface GenerateInput<
   nativeDocsDocument?: NativeDocsDocument;
   /**
    * The api's output directory, from which a target whose generated code imports a runtime package reads the
-   * installed runtime before writing; the CLI gives it, and a request without it checks no runtime.
+   * installed runtime before writing; the CLI gives it, and such a target refuses a request without it.
    */
   outputDirectory?: string;
 }
@@ -154,7 +154,7 @@ export interface GenerateRequest {
   nativeDocsDocument?: NativeDocsDocument;
   /**
    * The api's output directory, from which a target whose generated code imports a runtime package reads the
-   * installed runtime before writing; the CLI gives it, and a request without it checks no runtime.
+   * installed runtime before writing; the CLI gives it, and such a target refuses a request without it.
    */
   outputDirectory?: string;
 }

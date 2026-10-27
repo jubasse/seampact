@@ -18,7 +18,7 @@ import {
 } from "./contract-route.js";
 import { isPlainObject } from "./plain-object.js";
 import { retryAfterFacts } from "./retry-after.js";
-import { runtimeLog } from "./runtime-logger.js";
+import { runtimeLogOf } from "./runtime-logger.js";
 
 /** The status of a request the api does not serve. */
 export const NOT_FOUND_STATUS = 404;
@@ -69,7 +69,7 @@ export async function reportContractError(
   };
 
   if (hooks?.onUnexpectedError === undefined) {
-    runtimeLog.error(
+    runtimeLogOf(api).error(
       `seampact: unexpected failure on operation '${where.operation ?? "(none)"}'`,
       error.unexpectedCause,
     );
@@ -268,5 +268,5 @@ export function clientStatusError(
 
 /** Logs a failure of a reply the boundary writes outside a framework's error path; nothing else can answer it. */
 export function logWriteFailure(api: ContractApi, error: unknown): void {
-  runtimeLog.error(`seampact: writing a reply of api '${api.id}' failed`, error);
+  runtimeLogOf(api).error(`seampact: writing a reply of api '${api.id}' failed`, error);
 }

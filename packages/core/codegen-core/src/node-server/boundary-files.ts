@@ -219,7 +219,8 @@ function ownValidatorsLibrary(targetPackage: NodeServerTargetPackage): string | 
 
 // Every module of one api's boundary, or every refusal at once (A47). With no `validators` link, the own
 // validators of the placement are written and read instead, when the `validators` artefact is on. A boundary that
-// imports the runtime package is refused first when the output directory resolves no runtime that serves it.
+// imports the runtime package is refused first when the request gives no output directory, or the output directory
+// resolves no runtime that serves it.
 export function nodeServerBoundaryFiles(
   input: GenerateInput<NodeServerOptions, NodeServerArtefact, "types" | "validators", "validators">,
   placement: NodeServerPlacement,
@@ -227,11 +228,7 @@ export function nodeServerBoundaryFiles(
 ): GenerateOutcome {
   const boundaryOn = input.artefacts.has(BOUNDARY_ARTEFACT);
 
-  if (
-    boundaryOn &&
-    placement.runtimeSource === PACKAGED_RUNTIME &&
-    input.outputDirectory !== undefined
-  ) {
+  if (boundaryOn && placement.runtimeSource === PACKAGED_RUNTIME) {
     const runtimeRefusals = serverRuntimeRefusals(input.outputDirectory, generator);
 
     if (runtimeRefusals.length > 0) return { status: "refused", refusals: runtimeRefusals };

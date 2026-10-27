@@ -93,7 +93,7 @@
   },
   "peerDependencies": {
     "@types/express": "^4.0.0 || ^5.0.0",
-    "express": "^4.0.0 || ^5.0.0",
+    "express": "^4.22.0 || ^5.0.0",
     "hono": "^4.0.0"
   },
   "peerDependenciesMeta": {

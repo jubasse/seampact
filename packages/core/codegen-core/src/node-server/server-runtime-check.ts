@@ -11,6 +11,9 @@ import { SERVER_RUNTIME_PACKAGE } from "./runtime-files.js";
 /** The rule id of a generate refused because the app does not install the runtime. */
 export const RUNTIME_MISSING = "runtime.missing";
 
+/** The rule id of a generate refused because the request does not give the api's output directory to check from. */
+export const OUTPUT_DIRECTORY_MISSING = "runtime.output-directory-missing";
+
 /** The rule id of a generate refused because the installed runtime is not one the generator writes for. */
 export const RUNTIME_VERSION_MISMATCH = "runtime.version-mismatch";
 
@@ -26,11 +29,16 @@ export interface RuntimeGenerator {
   readonly packageVersion: string;
 }
 
-/** The refusals of the runtime installed for `outputDirectory`; none when it serves the generator's code. */
+/**
+ * The refusals of the runtime installed for `outputDirectory`; none when it serves the generator's code. A request
+ * without the output directory is refused, never let through unchecked.
+ */
 export function serverRuntimeRefusals(
-  outputDirectory: string,
+  outputDirectory: string | undefined,
   generator: RuntimeGenerator,
 ): Refusal[] {
+  if (outputDirectory === undefined) return [outputDirectoryMissing(generator)];
+
   const installed = installedRuntimeVersion(outputDirectory);
 
   if (installed === undefined) return [runtimeMissing(generator)];
@@ -47,13 +55,13 @@ export function serverRuntimeRefusals(
 }
 
 // The version constant of the runtime resolved from the output directory, which may not exist yet; undefined when
-// no runtime resolves from there.
+// no runtime resolves from there. Read afresh at each check, so a long-lived process sees a reinstall.
 function installedRuntimeVersion(outputDirectory: string): string | undefined {
   const installRoot = nearestRuntimeInstall(resolve(outputDirectory));
 
   if (installRoot === undefined) return undefined;
 
-  const versionModule: unknown = createRequire(join(installRoot, sep))(VERSION_MODULE);
+  const versionModule = freshlyLoadedVersionModule(installRoot, outputDirectory);
   const version: unknown =
     typeof versionModule === "object" && versionModule !== null
       ? Reflect.get(versionModule, VERSION_EXPORT)
@@ -66,6 +74,23 @@ function installedRuntimeVersion(outputDirectory: string): string | undefined {
   }
 
   return version;
+}
+
+function freshlyLoadedVersionModule(installRoot: string, outputDirectory: string): unknown {
+  const requireFromInstall = createRequire(join(installRoot, sep));
+  let versionFile: string;
+
+  try {
+    versionFile = requireFromInstall.resolve(VERSION_MODULE);
+  } catch (failure) {
+    throw new Error(
+      `${VERSION_MODULE} does not resolve from ${outputDirectory} (${String(failure)}); reinstall ${SERVER_RUNTIME_PACKAGE}.`,
+    );
+  }
+
+  Reflect.deleteProperty(requireFromInstall.cache, versionFile);
+
+  return requireFromInstall(versionFile);
 }
 
 // The nearest directory, from `directory` up, whose `node_modules` holds the runtime: Node's own lookup without the
@@ -99,6 +124,14 @@ function runtimeVerdict(installedVersion: string, generatorVersion: string): Run
 
 function installLine(version: string): string {
   return `\`npm install ${SERVER_RUNTIME_PACKAGE}@${version}\``;
+}
+
+function outputDirectoryMissing(generator: RuntimeGenerator): Refusal {
+  return {
+    code: OUTPUT_DIRECTORY_MISSING,
+    message: `\`${generator.packageName} ${generator.packageVersion}\` generates code that imports \`${SERVER_RUNTIME_PACKAGE}\` and checks the installed one from the api's output directory, which this generate request does not give (\`outputDirectory\`).`,
+    fix: "Pass the api's output directory as `outputDirectory` in the generate request, as `seampact generate` does.",
+  };
 }
 
 function runtimeMissing(generator: RuntimeGenerator): Refusal {

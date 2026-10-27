@@ -10,6 +10,7 @@ import {
   projectDirectory,
   queryRole,
   referenceLinks,
+  referenceServerOutput,
   requirePaging,
   slot,
   withRequestStyle,
@@ -225,6 +226,10 @@ describe("pages under the Laravel pack", () => {
       ir,
       options: {},
       links: await referenceLinks(projectDirectory(import.meta.url, "live-pages-laravel"), "tasks"),
+      outputDirectory: referenceServerOutput(
+        projectDirectory(import.meta.url, "live-pages-laravel"),
+        "tasks",
+      ),
       artefacts: new Set(["boundary"]),
     });
     const codes =

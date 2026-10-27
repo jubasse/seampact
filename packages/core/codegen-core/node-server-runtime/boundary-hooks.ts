@@ -13,7 +13,7 @@ import type {
 } from "@seampact/hooks";
 import { ContractError, unexpectedError } from "./contract-error.js";
 import type { ContractApi, ContractRoute } from "./contract-route.js";
-import { runtimeLog } from "./runtime-logger.js";
+import { runtimeLog, runtimeLogOf } from "./runtime-logger.js";
 
 export type AnyAuthenticateHook = AuthenticateHook<
   AuthenticateRequest<object, object>,
@@ -170,7 +170,7 @@ export function enforcedHookBootProblems(api: HookCheckedApi, hooks: BoundaryHoo
   if (api.hookCheck === "error") return [...claims, ...missing];
 
   if (missing.length > 0) {
-    runtimeLog.warn(bootProblemsMessage(api, missing, HOOKS_WARN_HEADING));
+    runtimeLogOf(api).warn(bootProblemsMessage(api, missing, HOOKS_WARN_HEADING));
   }
 
   return claims;
