@@ -237,6 +237,51 @@ $violations = $validator->validate(new Task(taskId: $id, title: $title));
 
 The boundary does not use these attributes: it checks the raw JSON with the generated constraint. A `uuid` format, a length or pattern on a `date-time` member, and a member both optional and nullable have no attribute.
 
+## Test your routes
+
+A functional test goes through the boundary like a real request. Send the credential the contract requires, and replace your hook in the test container:
+
+```php
+$client = static::createClient();
+static::getContainer()->set(UserHook::class, new FakeUserHook('alice'));
+
+$client->jsonRequest('GET', '/v1/tasks/t-1', server: ['HTTP_AUTHORIZATION' => 'Bearer test-token']);
+
+self::assertResponseIsSuccessful();
+```
+
+- `loginUser($user)` alone answers 401: the boundary asks for the contract's credential before your hook runs. Send the header too.
+- The client reboots the kernel between requests, which drops a replaced service: set it again before each request. `disableReboot()` is refused, as a worker runtime is.
+- Replace a decider, a scope resolver or a store the same way.
+- A request with a body works as usual: `$client->jsonRequest('POST', '/v1/tasks', [...])` reaches the handler with that body, checked like a real request.
+
+To call a handler directly in a unit test, build its input yourself: it is a plain class. The caller and the scopes come after the wire parts:
+
+```php
+$result = $controller->getTask(new GetTaskInput(
+    new GetTaskPath('t-1'),
+    new UserPrincipal('alice'),
+    new GetTaskScopes(new ResolvedScope('channel', 'c-1', $channel)),
+));
+```
+
+`ResolvedScope` is `Seampact\Hooks\ResolvedScope`. A sub-request from `forward()` skips the boundary, so the handler never runs for it.
+
+### Debug locally
+
+With `kernel.debug` on (the `dev` and `test` environments by default), an exception that no contract error maps shows Symfony's exception page, as on any route. The boundary's log line also names its message and `file:line`. Without debug, the client gets the api's 500, and the log names only the exception class.
+
+A reply that breaks the contract is still a 500 in debug. To see it while you work, let it through in `dev` only:
+
+```yaml
+# config/packages/seampact_tasks.yaml
+when@dev:
+    seampact_tasks:
+        responses: warn
+```
+
+The profiler records the reply before the boundary checks it. When the boundary replaced it with a 500, the profiler still shows your handler's reply: read the log line for the reason.
+
 ## The boot check
 
 The app refuses to start, and lists every problem, when:
@@ -262,9 +307,7 @@ Find each message in [Troubleshooting](../troubleshooting/boot.md).
 
 `generate` refuses these by name, until an app needs them: multipart and file values, form bodies, download and redirect responses, and `artefacts: { accessHooks: false }`. Remove the operation from the entry's `operations` filter to generate the rest. See [Troubleshooting](../troubleshooting/generate.md).
 
-Serve the app with php-fpm. A worker runtime (FrankenPHP worker, RoadRunner, Swoole) is refused with `runtime.worker.unsupported`. A functional test that calls `disableReboot()` meets the same guard: keep the default reboot between requests.
-
-A functional test that sends a body works as usual: `$client->jsonRequest('POST', '/v1/tasks', [...])` reaches the handler with that body, checked like a real request.
+Serve the app with php-fpm. A worker runtime (FrankenPHP worker, RoadRunner, Swoole) is refused with `runtime.worker.unsupported`.
 
 ## Versions
 

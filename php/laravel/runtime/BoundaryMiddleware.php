@@ -9,6 +9,7 @@ use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\BoundaryFailure;
+use Seampact\Codegen\Runtime\BoundaryLog;
 use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Codegen\Runtime\ContractRefusal;
@@ -26,7 +27,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * The api's global middleware, prepended before every other one: step 1 (the raw-path match, the query, the media
  * type, the bounded body read and its decoding) on the way in, and on the way out the route check, the mapping of a
  * native layer's refusal to its role, and step 10, the outgoing response check. It answers its own refusals in the
- * api's format, and the api's 500 on every contract request while it is not the first global middleware.
+ * api's format, and the api's 500 on every contract request while it is not the first global middleware. Under
+ * `app.debug` only, an exception no role maps goes to Laravel's own handler, so its error page shows it.
  */
 abstract class BoundaryMiddleware
 {
@@ -104,6 +106,13 @@ abstract class BoundaryMiddleware
         } catch (ContractRefusal $refusal) {
             return $refusal->render($request);
         } catch (\Throwable $failure) {
+            // Under `withoutExceptionHandling()` a handler's exception arrives here, never as a rendered reply.
+            if (BoundaryLog::inDebug($this->hooks())) {
+                BoundaryLog::unexpected($this->hooks(), $state->contract, $state->operationId, 'the request failed before a reply was written', $failure);
+
+                throw $failure;
+            }
+
             return ReplyVerdict::internalError($this->hooks(), $state->contract, $state->operationId, 'the request failed before a reply was written', $failure);
         }
 
@@ -120,21 +129,19 @@ abstract class BoundaryMiddleware
         }
 
         if ($exception instanceof ContractBypassedException) {
-            return ReplyVerdict::internalError($this->hooks(), $contract, $state->operationId, 'a contract FormRequest ran without the access middleware\'s mark', $exception);
+            return $this->unmapped($state, $response, 'a contract FormRequest ran without the access middleware\'s mark', $exception);
         }
 
         if ($exception instanceof BoundaryFailure) {
-            return ReplyVerdict::internalError($this->hooks(), $contract, $state->operationId, 'a boundary step failed', $exception->getPrevious() ?? $exception);
+            return $this->unmapped($state, $response, 'a boundary step failed', $exception->getPrevious() ?? $exception);
         }
 
         if ($exception !== null && ExceptionRoles::isNativeRefusal($exception)) {
             return ReplyVerdict::mapped($state, $response, ExceptionRoles::roleIn($contract, $state->operationId, $exception), $exception, FrameworkRefusal::retryAfterValuesOf($exception, $response), ExceptionRoles::KEPT_HEADERS);
         }
 
-        // An exception no role or status maps and no contract reply rendered answers the api's 500 in every `responses` mode,
-        // so Laravel's error page and its debug trace never reach the client.
         if ($exception !== null && !$state->authored($response)) {
-            return ReplyVerdict::internalError($this->hooks(), $contract, $state->operationId, 'an exception reached the boundary unmapped', $exception);
+            return $this->unmapped($state, $response, 'an exception reached the boundary unmapped', $exception);
         }
 
         return ReplyVerdict::checked(
@@ -144,6 +151,21 @@ abstract class BoundaryMiddleware
             self::text($this->setting($contract, $state->operationId, 'responses')),
             self::text($this->setting($contract, $state->operationId, 'framework_etag')),
         );
+    }
+
+    /**
+     * An exception no role or status maps and no contract reply rendered: the api's 500 in every `responses` mode, so
+     * Laravel's error page and its debug trace never reach the client; under `app.debug`, Laravel's own reply, logged.
+     */
+    private function unmapped(BoundaryState $state, Response $rendered, string $reason, \Throwable $cause): Response
+    {
+        if (!BoundaryLog::inDebug($this->hooks())) {
+            return ReplyVerdict::internalError($this->hooks(), $state->contract, $state->operationId, $reason, $cause);
+        }
+
+        BoundaryLog::unexpected($this->hooks(), $state->contract, $state->operationId, $reason, $cause);
+
+        return $rendered;
     }
 
     // Once routing ran, a route other than this operation's contract route answers the raw path's 404.

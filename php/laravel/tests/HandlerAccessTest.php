@@ -12,7 +12,10 @@ use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Codegen\Runtime\HandlerAccess;
 use Seampact\Codegen\Runtime\ScopeResolver;
+use Seampact\Golden\TasksConsistent\GetChannelInput;
+use Seampact\Golden\TasksConsistent\GetChannelPath;
 use Seampact\Golden\TasksConsistent\GetChannelRequest;
+use Seampact\Golden\TasksConsistent\GetChannelScopes;
 use Seampact\Golden\TasksConsistent\Laravel\TasksContract;
 use Seampact\Golden\TasksConsistent\Laravel\UserPrincipal;
 use Seampact\Golden\TasksConsistent\ListTasksRequest;
@@ -69,6 +72,26 @@ final class HandlerAccessTest extends TestCase
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage("operation 'listTasks' read the boundary state of operation 'getChannel'");
         $request->principal();
+    }
+
+    public function testATestBuildsTheRequestOfADirectHandlerCallWithItsInputCallerAndScopes(): void
+    {
+        $input = new GetChannelInput(new GetChannelPath(self::CHANNEL_ID));
+        $channel = new ResolvedScope('channel', self::CHANNEL_ID, new \stdClass());
+
+        $request = GetChannelRequest::forTest($input, new UserPrincipal('alice'), new GetChannelScopes($channel));
+
+        self::assertSame($input, $request->contractInput());
+        self::assertEquals(new UserPrincipal('alice'), $request->principal());
+        self::assertSame($channel, $request->scopes()->channel());
+    }
+
+    public function testTheRequestOfADirectHandlerCallIsNeverServed(): void
+    {
+        $request = GetChannelRequest::forTest(new GetChannelInput(new GetChannelPath(self::CHANNEL_ID)), new UserPrincipal('alice'), new GetChannelScopes(new ResolvedScope('channel', self::CHANNEL_ID)));
+
+        $this->expectException(ContractBypassedException::class);
+        $request->authorize();
     }
 
     public function testJsonEncodingTheFormRequestShowsNeitherThePrincipalNorTheScopes(): void

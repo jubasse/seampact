@@ -10,11 +10,13 @@ use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\HandlerAccess;
 use Seampact\Codegen\Runtime\Nullability;
 use Seampact\Codegen\Runtime\Presence;
+use Seampact\Golden\TasksConsistent\Laravel\TasksContract;
 use Seampact\Golden\TasksConsistent\Laravel\UserPrincipal;
 use Seampact\Laravel\Runtime\BlankStrings;
 use Seampact\Laravel\Runtime\BoundaryMark;
 use Seampact\Laravel\Runtime\FormSteps;
 use Seampact\Laravel\Runtime\FormatRule;
+use Seampact\Laravel\Runtime\HandlerTestRequest;
 use Seampact\Laravel\Runtime\InputTree;
 use Seampact\Laravel\Runtime\ItemCountRule;
 use Seampact\Laravel\Runtime\Position;
@@ -89,6 +91,18 @@ final class GetTasksBatchRequest extends FormRequest
     public function scopes(): GetTasksBatchScopes
     {
         return HandlerAccess::scopes(BoundaryState::required($this, self::API), self::OPERATION_ID, GetTasksBatchScopes::class);
+    }
+
+    /**
+     * A request for a unit test that calls the handler directly, never served: the handler reads the input, the caller
+     * and the scopes given here.
+     */
+    public static function forTest(
+        GetTasksBatchInput $input,
+        UserPrincipal $principal,
+        GetTasksBatchScopes $scopes,
+    ): self {
+        return HandlerTestRequest::admitted(new self(), TasksContract::class, self::OPERATION_ID, $input, $principal, [$scopes->channel()]);
     }
 
     /**

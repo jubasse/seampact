@@ -9,6 +9,7 @@ use Illuminate\Contracts\Container\Container;
 use Psr\Log\LoggerInterface;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\AuthenticateCall;
+use Seampact\Codegen\Runtime\DebugLookup;
 use Seampact\Codegen\Runtime\HookLookup;
 use Seampact\Codegen\Runtime\IdempotencyStoreLookup;
 use Seampact\Codegen\Runtime\Ir;
@@ -22,9 +23,9 @@ use Seampact\Hooks\IdempotencyStore;
  * unexpected-error listener bound to the api's generated interface, the optional idempotency store bound under the
  * api's own key, and the app's logger. A missing hook is a
  * `LogicException`, which the boundary answers with the api's 500. Laravel's `AuthorizationException` (`Gate::authorize()`) is a decider's access denial, and one
- * with status 404 (`Response::denyAsNotFound()`) hides the record.
+ * with status 404 (`Response::denyAsNotFound()`) hides the record. Debug mode is Laravel's `app.debug`.
  */
-final class Hooks implements HookLookup, IdempotencyStoreLookup
+final class Hooks implements HookLookup, IdempotencyStoreLookup, DebugLookup
 {
     /** The tags are `TAG_PREFIX . <api> . <kind suffix>`; the generated provider builds its constants from these. */
     public const TAG_PREFIX = 'seampact.';
@@ -32,6 +33,7 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup
     public const SCOPE_RESOLVERS_TAG_SUFFIX = '.scope-resolvers';
     public const IDEMPOTENCY_STORE_KEY_SUFFIX = '.idempotency-store';
     private const NOT_FOUND_STATUS = 404;
+    private const DEBUG_KEY = 'app.debug';
 
     public function __construct(private readonly Container $container)
     {
@@ -127,5 +129,11 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup
     public function isNotFoundDenial(\Throwable $failure): bool
     {
         return $failure instanceof AuthorizationException && $failure->status() === self::NOT_FOUND_STATUS;
+    }
+
+    // Read as Laravel's own exception handler reads it; a container without a config repository sets no debug mode.
+    public function isDebug(): bool
+    {
+        return $this->container->bound('config') && (bool) Services::config($this->container)->get(self::DEBUG_KEY);
     }
 }
