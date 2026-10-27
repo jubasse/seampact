@@ -39,9 +39,7 @@ final class ExceptionRoles
             }
         }
 
-        $status = FrameworkRefusal::statusOf($exception);
-
-        return $status === null ? null : FrameworkRefusal::roleOfStatus($status);
+        return FrameworkRefusal::statusRoleOf($exception);
     }
 
     /** Whether the boundary maps `$exception` to a contract code: a mapped class or any HTTP exception. */

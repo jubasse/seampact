@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Laravel;
 
+use Nette\PhpGenerator\Dumper;
 use Nette\PhpGenerator\Literal;
 use Seampact\Codegen\AccessKind;
 use Seampact\Codegen\IrPlace;
@@ -16,7 +17,8 @@ use Seampact\Ir\Write\GeneratedFile;
 
 /**
  * The contract routes of one api (ADR 0023 "Routes"): Laravel patterns with each placeholder named after its input
- * property (`{taskId}`), a `:` in a static segment kept literal, registered per depth with literal segments before placeholders, since Laravel
+ * property (`{taskId}`, a name over 32 characters a positional `{p2}`) and pinned to one whole segment, so an app's
+ * global `Route::pattern` never narrows it, a `:` in a static segment kept literal, registered per depth with literal segments before placeholders, since Laravel
  * matches in registration order. The route table class carries them and the option defaults for the `Route::seampact()`
  * macro; under `routes: file` a `routes.php` with one `Route::` line per operation is written beside it. Each route
  * carries the access middleware, then the app's list for its access kind (`config('seampact.<api>.middleware.<kind>')`).
@@ -36,7 +38,7 @@ final class RouteTable
     private const PLACEHOLDER_SEGMENT = 1;
     private const KIND_MIDDLEWARE = 'KindMiddleware';
 
-    /** @var list<array{operation: Operation, uri: string, depthKey: list<int>, names: OperationNames}> */
+    /** @var list<array{operation: Operation, uri: string, placeholders: list<string>, depthKey: list<int>, names: OperationNames}> */
     private array $routes = [];
 
     public function __construct(private readonly PhpLayout $layout, private readonly LaravelOptions $options, private readonly Refusals $refusals)
@@ -47,14 +49,17 @@ final class RouteTable
     {
         $segments = [];
         $depthKey = [];
+        $pathSegments = explode('/', $operation->path);
+        // A parameter that yields no name is refused with its input type, so its route is only left out here.
+        $placeholders = RoutePlaceholder::namesOf($pathSegments);
+        if ($placeholders === null) {
+            return;
+        }
+        $unplaced = $placeholders;
 
-        foreach (explode('/', $operation->path) as $segment) {
-            if (preg_match('/^\{[^{}\/]+\}$/D', $segment) === 1) {
-                $placeholder = $this->placeholder(substr($segment, 1, -1), $at);
-                if ($placeholder === null) {
-                    return;
-                }
-                $segments[] = "{{$placeholder}}";
+        foreach ($pathSegments as $segment) {
+            if (preg_match(RoutePlaceholder::PLACEHOLDER_SEGMENT, $segment) === 1) {
+                $segments[] = '{' . array_shift($unplaced) . '}';
                 $depthKey[] = self::PLACEHOLDER_SEGMENT;
                 continue;
             }
@@ -75,7 +80,7 @@ final class RouteTable
             $depthKey[] = self::LITERAL_SEGMENT;
         }
 
-        $this->routes[] = ['operation' => $operation, 'uri' => implode('/', $segments), 'depthKey' => $depthKey, 'names' => $names];
+        $this->routes[] = ['operation' => $operation, 'uri' => implode('/', $segments), 'placeholders' => $placeholders, 'depthKey' => $depthKey, 'names' => $names];
     }
 
     public function tableFile(): PhpClassFile
@@ -94,6 +99,7 @@ final class RouteTable
                 . "\t\t'operation' => " . var_export($operation->id, true) . ",\n"
                 . "\t\t'method' => " . var_export(strtoupper($operation->method->value), true) . ",\n"
                 . "\t\t'uri' => " . var_export($route['uri'], true) . ",\n"
+                . "\t\t'placeholders' => " . (new Dumper())->dump($route['placeholders']) . ",\n"
                 . "\t\t'name' => " . var_export($this->routeName($operation), true) . ",\n"
                 . "\t\t'access' => " . var_export($operation->access->tag(), true) . ",\n"
                 . (AccessKind::isSigned($this->layout->ir, $operation) ? "\t\t'signed' => true,\n" : '')
@@ -102,7 +108,7 @@ final class RouteTable
                 . "\t],";
         }
         $class->addConstant('ROUTES', new Literal($lines === [] ? '[]' : "[\n" . implode("\n", $lines) . "\n]"))->setPublic()
-            ->addComment('@var list<array{operation: string, method: string, uri: string, name: string, access: string, signed?: true, cookieless?: true, action: array{class-string, string}}>');
+            ->addComment('@var list<array{operation: string, method: string, uri: string, placeholders: list<string>, name: string, access: string, signed?: true, cookieless?: true, action: array{class-string, string}}>');
 
         $route = $file->name(self::ROUTE_FACADE);
         $access = $file->name($this->layout->accessMiddleware);
@@ -110,6 +116,7 @@ final class RouteTable
         $anySigned = array_filter($this->routes, fn (array $kept): bool => AccessKind::isSigned($this->layout->ir, $kept['operation'])) !== [];
         $kind = $anySigned ? "(\$route['signed'] ?? false) ? " . var_export(AccessKind::SIGNED, true) . " : \$route['access']" : "\$route['access']";
         $registration = "{$route}::match([\$route['method']], \$route['uri'], \$route['action'])->name(\$route['name'])"
+            . "->where(array_fill_keys(\$route['placeholders'], " . var_export(RoutePlaceholder::SEGMENT_REQUIREMENT, true) . '))'
             . "->middleware([{$access}::class, ...{$kindMiddleware}::of(self::API, {$kind})]);";
         $anyCookieless = array_filter($this->routes, fn (array $kept): bool => $this->skipsForgeryCheck($kept['operation'])) !== [];
         $body = $anyCookieless
@@ -140,7 +147,7 @@ final class RouteTable
             $imports[$names->endpoints] = true;
             $lines[] = 'Route::' . $route['operation']->method->value . '(' . var_export($route['uri'], true) . ', ['
                 . PhpClassFile::shortNameOf($names->endpoints) . '::class, ' . var_export($names->method, true) . '])->name('
-                . var_export($this->routeName($route['operation']), true) . ")->middleware([{$access}::class, ...{$kindMiddleware}::of({$api}, "
+                . var_export($this->routeName($route['operation']), true) . ')' . self::segmentRequirements($route['placeholders']) . "->middleware([{$access}::class, ...{$kindMiddleware}::of({$api}, "
                 . var_export(AccessKind::of($this->layout->ir, $route['operation']), true) . ')])'
                 . ($this->skipsForgeryCheck($route['operation']) ? '->withoutMiddleware(' . PhpClassFile::shortNameOf(self::FORGERY_MIDDLEWARE) . '::class)' : '') . ';';
             if ($this->skipsForgeryCheck($route['operation'])) {
@@ -207,7 +214,7 @@ final class RouteTable
         return "seampact.{$this->layout->ir->api->id}.{$operation->id}";
     }
 
-    /** @return list<array{operation: Operation, uri: string, depthKey: list<int>, names: OperationNames}> */
+    /** @return list<array{operation: Operation, uri: string, placeholders: list<string>, depthKey: list<int>, names: OperationNames}> */
     private function ordered(): array
     {
         $routes = $this->routes;
@@ -216,17 +223,14 @@ final class RouteTable
         return $routes;
     }
 
-    // A parameter that yields no name is refused with its input type, so its route is only left out here.
-    private function placeholder(string $parameter, IrPlace $at): ?string
+    /** @param list<string> $placeholders */
+    private static function segmentRequirements(array $placeholders): string
     {
-        $placeholder = RoutePlaceholder::nameOf($parameter);
-        if ($placeholder !== null && RoutePlaceholder::isTooLong($placeholder)) {
-            $this->refusals->add(RoutePlaceholder::TOO_LONG_RULE, RoutePlaceholder::tooLongMessage($parameter, $placeholder), RoutePlaceholder::tooLongFix(), $at->below('path'));
-
-            return null;
+        if ($placeholders === []) {
+            return '';
         }
 
-        return $placeholder;
+        return '->where(' . (new Dumper())->dump(array_fill_keys($placeholders, RoutePlaceholder::SEGMENT_REQUIREMENT)) . ')';
     }
 
     private function refusePath(string $form, string $description, IrPlace $at): void

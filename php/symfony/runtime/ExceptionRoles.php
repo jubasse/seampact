@@ -52,7 +52,7 @@ final class ExceptionRoles
         }
 
         if (!is_a($exception, self::ACCESS_DENIED)) {
-            return self::statusRoleOf($exception);
+            return FrameworkRefusal::statusRoleOf($exception);
         }
 
         $status = $reply->getStatusCode();
@@ -61,13 +61,6 @@ final class ExceptionRoles
         }
 
         return $status === self::FORBIDDEN ? 'forbidden' : null;
-    }
-
-    private static function statusRoleOf(\Throwable $exception): ?string
-    {
-        $status = FrameworkRefusal::statusOf($exception);
-
-        return $status === null ? null : FrameworkRefusal::roleOfStatus($status);
     }
 
     /** Whether `$exception` is Symfony's `AccessDeniedException`, from `access_control`, a voter or app code. */

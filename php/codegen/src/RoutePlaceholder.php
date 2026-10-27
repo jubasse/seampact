@@ -5,37 +5,62 @@ declare(strict_types=1);
 namespace Seampact\Codegen;
 
 /**
- * The name of a route placeholder on the PHP targets: the input property's name (`{taskId}`), so `route()`, a route's
- * parameters and model binding read it by name. Symfony's route compiler, which Laravel uses too, takes at most 32
- * characters, so a longer name is refused by name.
+ * The names of a route's placeholders on the PHP targets: each input property's name (`{taskId}`), so `route()`, a
+ * route's parameters and model binding read it by name. Symfony's route compiler, which Laravel uses too, takes at
+ * most 32 characters, so a longer name keeps a positional one (`{p2}` for the second placeholder), which the boundary
+ * never reads.
  */
 final class RoutePlaceholder
 {
     public const MAX_LENGTH = 32;
-    public const TOO_LONG_RULE = 'path.parameter.long.unsupported';
+    /** The requirement of every placeholder: one whole segment, as Symfony's default, so no app pattern narrows it. */
+    public const SEGMENT_REQUIREMENT = '[^/]++';
+    /** A path segment that is one whole placeholder, `{taskId}`. */
+    public const PLACEHOLDER_SEGMENT = '/^\{[^{}\/]+\}$/D';
+    private const POSITIONAL_PREFIX = 'p';
 
     private function __construct()
     {
     }
 
-    /** The placeholder of the path parameter `$parameter`, null when it yields no name segment (refused with its type). */
-    public static function nameOf(string $parameter): ?string
+    /**
+     * The placeholders of the path segments `$segments`, in path order, or null when a parameter yields no name
+     * segment (refused with its input type).
+     *
+     * @param list<string> $segments
+     * @return list<string>|null
+     */
+    public static function namesOf(array $segments): ?array
     {
-        return PhpNames::memberIdentifier($parameter);
+        $named = [];
+        foreach ($segments as $segment) {
+            if (preg_match(self::PLACEHOLDER_SEGMENT, $segment) !== 1) {
+                continue;
+            }
+
+            $name = PhpNames::memberIdentifier(substr($segment, 1, -1));
+            if ($name === null) {
+                return null;
+            }
+            $named[] = $name;
+        }
+
+        $placeholders = [];
+        foreach ($named as $position => $name) {
+            $placeholders[] = strlen($name) > self::MAX_LENGTH ? self::positionalName($position + 1, $named) : $name;
+        }
+
+        return $placeholders;
     }
 
-    public static function isTooLong(string $placeholder): bool
+    /** @param list<string> $named */
+    private static function positionalName(int $ordinal, array $named): string
     {
-        return strlen($placeholder) > self::MAX_LENGTH;
-    }
+        $placeholder = self::POSITIONAL_PREFIX . $ordinal;
+        while (in_array($placeholder, $named, true)) {
+            $placeholder = self::POSITIONAL_PREFIX . $placeholder;
+        }
 
-    public static function tooLongMessage(string $parameter, string $placeholder): string
-    {
-        return "The path parameter '{$parameter}' gives the route placeholder '{$placeholder}', longer than the " . self::MAX_LENGTH . " characters the router's compiler accepts.";
-    }
-
-    public static function tooLongFix(): string
-    {
-        return 'Shorten the parameter name in the contract.';
+        return $placeholder;
     }
 }

@@ -16,12 +16,11 @@ use Seampact\Ir\Model\Operation;
  * The api's route loader (ADR 0024 "Routes"), tagged `routing.loader`: it serves the `seampact` type for its own api
  * key only and registers each operation as `seampact.<api>.<operationId>`, pointing at the endpoints interface's
  * method, with the operation id under `_seampact_operation`. Each placeholder is named after its input property
- * (`{taskId}`), so the router builds a URL by name, while the boundary reads the raw path. Per path depth a literal
+ * (`{taskId}`, a name over 32 characters a positional `{p2}`), so the router builds a URL by name, while the boundary reads the raw path. Per path depth a literal
  * segment comes before a placeholder, since the router matches in registration order. A static segment holding `{`, `}` or `?`, or one mixing a placeholder with text, is refused.
  */
 final class RouteLoaderFile
 {
-    private const PLACEHOLDER = '/^\{[^{}\/]+\}$/D';
     private const PLACEHOLDER_INSIDE = '/\{[^{}\/]*\}/';
     private const ROUTE_SYNTAX_CHARACTERS = ['{', '}', '?'];
 
@@ -108,14 +107,15 @@ final class RouteLoaderFile
     {
         $segments = explode('/', $operation->path);
         $order = [];
+        // A parameter that yields no name is refused with its input type, so its route is only left out here.
+        $placeholders = RoutePlaceholder::namesOf($segments);
+        if ($placeholders === null) {
+            return null;
+        }
 
         foreach ($segments as $position => $segment) {
-            if (preg_match(self::PLACEHOLDER, $segment) === 1) {
-                $placeholder = $this->placeholder($operation, $index, substr($segment, 1, -1));
-                if ($placeholder === null) {
-                    return null;
-                }
-                $segments[$position] = "{{$placeholder}}";
+            if (preg_match(RoutePlaceholder::PLACEHOLDER_SEGMENT, $segment) === 1) {
+                $segments[$position] = '{' . array_shift($placeholders) . '}';
                 $order[] = 1;
                 continue;
             }
@@ -136,19 +136,6 @@ final class RouteLoaderFile
         }
 
         return [implode('/', $segments), $order];
-    }
-
-    // A parameter that yields no name is refused with its input type, so its route is only left out here.
-    private function placeholder(Operation $operation, int $index, string $parameter): ?string
-    {
-        $placeholder = RoutePlaceholder::nameOf($parameter);
-        if ($placeholder !== null && RoutePlaceholder::isTooLong($placeholder)) {
-            $this->refuse($operation, $index, RoutePlaceholder::TOO_LONG_RULE, RoutePlaceholder::tooLongMessage($parameter, $placeholder), RoutePlaceholder::tooLongFix());
-
-            return null;
-        }
-
-        return $placeholder;
     }
 
     private function refuse(Operation $operation, int $index, string $code, string $message, string $fix): void
