@@ -145,6 +145,9 @@ interface ReferenceAppModule {
     close(): Promise<void>;
   }>;
   startOverriddenHooksApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startHealthOnlyTestingApp(moduleOptions?: {
+    unboundOperations?: string;
+  }): Promise<{ host: string; port: number; close(): Promise<void> }>;
   readonly NotFoundException: new () => Error;
   readonly BadRequestException: new () => Error;
   readonly HttpException: new (message: string, status: number) => Error;
@@ -828,6 +831,41 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       } finally {
         await testingServer.close();
       }
+    });
+  });
+
+  describe("a testing module holding some controllers", () => {
+    test("unboundOperations: warn boots it, and an unbound route answers the api's 404", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const testingServer = await app.startHealthOnlyTestingApp({ unboundOperations: "warn" });
+
+      try {
+        const health = await sendRawRequest(testingServer, "GET", "/v1/health", {});
+        const unbound = await sendRawRequest(
+          testingServer,
+          "GET",
+          `/v1/channels/${CHANNEL}/tasks/${TASK}`,
+          { headers: BEARER },
+        );
+
+        expect(health.status).toBe(200);
+        expect(unbound.status).toBe(404);
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("'getTask'"));
+      } finally {
+        await testingServer.close();
+      }
+    });
+
+    test("without the option the boot check refuses each unbound operation", async () => {
+      await expect(app.startHealthOnlyTestingApp()).rejects.toThrow(
+        /getTask.*no controller method carries its decorator/,
+      );
+    });
+
+    test("an unknown unboundOperations value is refused at boot", async () => {
+      await expect(app.startHealthOnlyTestingApp({ unboundOperations: "ignore" })).rejects.toThrow(
+        /'unboundOperations' is "ignore", not 'error' or 'warn'/,
+      );
     });
   });
 
