@@ -91,15 +91,19 @@ public object ReferenceApp {
     /** The coordinates [publishValidBundle] publishes the valid bundle under. */
     public const val VALID_BUNDLE_COORDINATES: String = "com.example:contract:1.0.0"
 
-    /** Publishes the valid bundle of the shared vectors to the Maven [repository] as `com.example:contract:1.0.0@tgz`. */
+    /**
+     * Publishes the valid bundle of the shared vectors to the Maven [repository] as `com.example:contract:1.0.0@tgz`,
+     * each file with its `.sha1` and `.md5`, as a deployed repository holds them (Maven 4 refuses files without).
+     */
     public fun publishValidBundle(repository: Path) {
         val vectors = repositoryRoot.resolve("packages/core/spec/vectors/bundle/vectors.json")
         val valid = Json.parseToJsonElement(vectors.readText()).jsonObject.getValue("archives").jsonArray
             .first { it.jsonObject.getValue("id").jsonPrimitive.content == "valid" }.jsonObject
         val version = repository.resolve("com/example/contract/1.0.0").createDirectories()
 
-        version.resolve("contract-1.0.0.tgz").writeBytes(Base64.getDecoder().decode(valid.getValue("base64").jsonPrimitive.content))
-        version.resolve("contract-1.0.0.pom").writeText(
+        writeWithChecksums(version.resolve("contract-1.0.0.tgz"), Base64.getDecoder().decode(valid.getValue("base64").jsonPrimitive.content))
+        writeWithChecksums(
+            version.resolve("contract-1.0.0.pom"),
             """
             <project xmlns="http://maven.apache.org/POM/4.0.0">
               <modelVersion>4.0.0</modelVersion>
@@ -108,9 +112,22 @@ public object ReferenceApp {
               <version>1.0.0</version>
               <packaging>tgz</packaging>
             </project>
-            """.trimIndent(),
+            """.trimIndent().toByteArray(),
         )
     }
+
+    // Writes [content] to [file], then the checksum files Maven repositories keep next to it.
+    private fun writeWithChecksums(file: Path, content: ByteArray) {
+        file.writeBytes(content)
+
+        for ((algorithm, extension) in REPOSITORY_CHECKSUMS) {
+            file.resolveSibling("${file.fileName}.$extension").writeText(hexDigestOf(algorithm, content))
+        }
+    }
+
+    private val REPOSITORY_CHECKSUMS = listOf("SHA-1" to "sha1", "MD5" to "md5")
+
+    private fun hexDigestOf(algorithm: String, content: ByteArray): String = HexFormat.of().formatHex(MessageDigest.getInstance(algorithm).digest(content))
 
     /** What the stub prints on `generate` and `check`, before the command. */
     public const val STUB_DOCUMENTS_LINE: String = "stub documents:"
@@ -122,5 +139,5 @@ public object ReferenceApp {
         file.writeText(text.trimIndent() + "\n")
     }
 
-    public fun sha256Of(file: Path): String = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file)))
+    public fun sha256Of(file: Path): String = hexDigestOf("SHA-256", Files.readAllBytes(file))
 }
