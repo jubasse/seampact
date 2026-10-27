@@ -1,6 +1,11 @@
 package com.example.tasks.api.spring.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 
 import com.example.tasks.api.HealthResult;
 import com.example.tasks.api.ListTasksResult;
@@ -9,6 +14,7 @@ import com.example.tasks.api.spring.TasksSeampactBinding;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.mock.env.MockEnvironment;
@@ -53,6 +59,25 @@ class ContractReplyHandlerTest {
         MockHttpServletResponse response = answer(new MockEnvironment().withProperty(BODY_VALIDATION, "true"), HEALTH_PATH, new HealthResult.Status200(null));
 
         assertEquals(INTERNAL_ERROR, response.getStatus());
+    }
+
+    @Test
+    void aBodyThatBreaksItsSchemaGoesOutAsWrittenAndIsLoggedUnderWarn() throws Exception {
+        Logger seampactLog = (Logger) LoggerFactory.getLogger("seampact");
+        ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        logged.start();
+        seampactLog.addAppender(logged);
+
+        try {
+            MockEnvironment warn = new MockEnvironment().withProperty(BODY_VALIDATION, "true").withProperty("seampact.tasks.responses", "warn");
+            MockHttpServletResponse response = answer(warn, HEALTH_PATH, new HealthResult.Status200(null));
+
+            assertEquals(OK, response.getStatus());
+            assertEquals("null", response.getContentAsString());
+            assertTrue(logged.list.stream().anyMatch(event -> event.getFormattedMessage().contains("breaks its schema")));
+        } finally {
+            seampactLog.detachAppender(logged);
+        }
     }
 
     @Test
