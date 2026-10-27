@@ -21,7 +21,7 @@
 | `degradable.unsupported` (Node servers, Spring, Laravel, Symfony) | "A degradable operation ... is not generated ... yet". `degradable` operations are not generated yet (after 1.0 on Spring, Laravel and Symfony). Remove the operation from the entry's `operations`. |
 | `artefacts.accessHooks.unsupported` (Laravel) | `accessHooks: false` (native access) waits for an app that needs it. Keep the hooks, and read Laravel's own guards in the authenticate hook. |
 | `options.layout.unsupported`, `options.handlers.unsupported` (Laravel) | The target writes one PSR-4 file per class and one controller interface per resource. Remove the option. |
-| `path.segment.encoded.unsupported` (Laravel, Symfony) | "The static path segment 'my tasks', which a client sends percent-encoded, ...". A space, a non-ASCII letter or `\` in a fixed path part would never reach the route. Use plain ASCII letters, digits and `-` in that path part. |
+| `path.segment.encoded.unsupported` (Laravel, Symfony) | "The static path segment 'my tasks', which a client sends percent-encoded, ...". A space, a non-ASCII letter, `^` or `\` in a fixed path part would never reach the route. Use plain ASCII letters, digits and `-` in that path part. |
 
 A warning does not stop `generate`.
 

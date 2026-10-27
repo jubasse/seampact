@@ -78,6 +78,19 @@ final class ExceptionRoles
         return self::roleOf($exception, new Response('', self::FORBIDDEN)) !== null || FrameworkRefusal::statusOf($exception) !== null;
     }
 
+    /**
+     * The refusal's `Retry-After` values: the delay a RateLimiter or login-throttling exception carries first, then the
+     * framework's reply and the HTTP exception's own headers.
+     *
+     * @return list<string>
+     */
+    public static function retryAfterValues(\Throwable $exception, Response $response): array
+    {
+        $carried = self::retryAfter($exception);
+
+        return [...($carried === null ? [] : [$carried]), ...FrameworkRefusal::retryAfterValuesOf($exception, $response)];
+    }
+
     /** The `Retry-After` an exception carries (`getRetryAfter()`), in whole seconds from now, rounded up, never below 0. */
     public static function retryAfter(\Throwable $exception): ?string
     {

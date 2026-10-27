@@ -66,7 +66,7 @@ final class KeptForms
     private const BOUNDARY_HEADER_DERIVATIONS = ['identity.authenticate', 'csrf.'];
     // The WHATWG URL path percent-encode set, byte by byte, and `\`, which a URL parser reads as `/`; a brace is a
     // placeholder's, refused in a mixed segment by the target.
-    private const PERCENT_ENCODED_PATH_BYTES = '/[\x00-\x20"<>`\x5C\x7F-\xFF]/';
+    private const PERCENT_ENCODED_PATH_BYTES = '/[\x00-\x20"<>\x5E`\x5C\x7F-\xFF]/';
 
     /** @var list<array{int, Operation}> */
     private array $operations = [];

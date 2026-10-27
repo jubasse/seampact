@@ -94,7 +94,7 @@ final class FrameworkRefusalTest extends TestCase
     {
         $later = self::NOW + 45;
         $rfc850 = gmdate('l, d-M-y H:i:s \\G\\M\\T', $later);
-        $singleDigitDay = gmmktime(8, 0, 0, 2, 1, 2027);
+        $singleDigitDay = self::NOW + 17 * 86400;
         $asctime = gmdate('D M ', $singleDigitDay) . str_pad(gmdate('j', $singleDigitDay), 2, ' ', STR_PAD_LEFT) . gmdate(' H:i:s Y', $singleDigitDay);
 
         self::assertSame('Mon Feb  1 08:00:00 2027', $asctime);
