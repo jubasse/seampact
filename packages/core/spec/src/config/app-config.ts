@@ -192,6 +192,7 @@ const FRAMEWORK_ROUTE_PATH_PATTERN = `^/(?:(?:${FRAMEWORK_ROUTE_SEGMENT})(?:/(?:
 // percent-encoded or a server reads as syntax (the static path segment rule of the server targets), no '%', '?' or
 // '#', and no segment starting with ':', which Hono reads as a param.
 const MOUNT_SEGMENT = "[A-Za-z0-9._~!$&'()+,;=@-][A-Za-z0-9._~!$&'()+,;=@:-]*";
+
 export const MOUNT_PATTERN = `^(?:/${MOUNT_SEGMENT})+$`;
 
 export const APP_CONFIG_SCHEMA: JsonSchema = {
