@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Golden\TasksConsistent\Laravel;
+namespace Seampact\Golden\TasksConsistent;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -19,15 +19,14 @@ use Seampact\Golden\TasksConsistent\Laravel\Runtime\Presence;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\StringRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\TypeRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\UnknownKeysRule;
-use Seampact\Golden\TasksConsistent\ListTasksInput;
 
 /**
- * The request of operation 'listTasks': its access mark and its validation rules.
+ * The request of operation 'createTask': its access mark and its validation rules.
  */
-final class ListTasksRequest extends FormRequest
+final class CreateTaskRequest extends FormRequest
 {
     public const API = 'tasks';
-    public const OPERATION_ID = 'listTasks';
+    public const OPERATION_ID = 'createTask';
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
     public const NATIVE_RULE_NAMES = [];
@@ -68,11 +67,11 @@ final class ListTasksRequest extends FormRequest
     /**
      * The validated input of the operation, typed.
      */
-    public function contractInput(): ListTasksInput
+    public function contractInput(): CreateTaskInput
     {
         $input = BoundaryState::required($this, self::API)->contractInput;
 
-        return $input instanceof ListTasksInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
+        return $input instanceof CreateTaskInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
     }
 
     /**
@@ -86,26 +85,27 @@ final class ListTasksRequest extends FormRequest
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
                 new FormatRule($input, Position::Member, FormatRule::UUID, BlankStrings::Every),
             ],
-            'query.cursor' => [
+            'headers.Idempotency-Key' => [
                 'bail',
-                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Optional, Nullability::NotNull),
-            ],
-            'query.limit' => [
-                'bail',
-                new TypeRule($input, Position::Member, TypeRule::INTEGER, Presence::Optional, Nullability::NotNull),
-                new NumberRule($input, Position::Member, minimum: 1, maximum: 50),
-            ],
-            'query.sort' => [
-                'bail',
-                new TypeRule($input, Position::Member, TypeRule::ARRAY, Presence::Optional, Nullability::NotNull),
-            ],
-            'query.sort.*' => [
-                'bail',
-                new TypeRule($input, Position::Item, TypeRule::STRING, Presence::Required, Nullability::NotNull),
-                new StringRule($input, Position::Item, BlankStrings::Every, pattern: '/^(?:createdAt|-createdAt)$/uD'),
+                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
             ],
             'query' => [
-                new UnknownKeysRule($input, Position::Member, ['cursor', 'limit', 'sort']),
+                new UnknownKeysRule($input, Position::Member, []),
+            ],
+            'body' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::OBJECT, Presence::Required, Nullability::NotNull),
+                new UnknownKeysRule($input, Position::Member, ['title', 'effort']),
+            ],
+            'body.title' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
+                new StringRule($input, Position::Member, BlankStrings::Every, minLength: 1, maxLength: 200),
+            ],
+            'body.effort' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::INTEGER, Presence::Optional, Nullability::NotNull),
+                new NumberRule($input, Position::Member, minimum: 0),
             ],
         ];
     }

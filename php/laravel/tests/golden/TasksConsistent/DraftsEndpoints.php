@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent;
 
-use Seampact\Golden\TasksConsistent\Laravel\GetDraftRequest;
-
 /**
  * The handlers a controller implements; each returns a declared success or error, or throws a declared error.
  */

@@ -2,30 +2,32 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Golden\TasksConsistent\Laravel;
+namespace Seampact\Golden\TasksConsistent;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BlankStrings;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryMark;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\EnumRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormSteps;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormatRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\InputTree;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\Nullability;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\NumberRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\Position;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\Presence;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\StringRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\TypeRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\UnknownKeysRule;
-use Seampact\Golden\TasksConsistent\PurgeTaskInput;
 
 /**
- * The request of operation 'purgeTask': its access mark and its validation rules.
+ * The request of operation 'updateTask': its access mark and its validation rules.
  */
-final class PurgeTaskRequest extends FormRequest
+final class UpdateTaskRequest extends FormRequest
 {
     public const API = 'tasks';
-    public const OPERATION_ID = 'purgeTask';
+    public const OPERATION_ID = 'updateTask';
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
     public const NATIVE_RULE_NAMES = [];
@@ -66,11 +68,11 @@ final class PurgeTaskRequest extends FormRequest
     /**
      * The validated input of the operation, typed.
      */
-    public function contractInput(): PurgeTaskInput
+    public function contractInput(): UpdateTaskInput
     {
         $input = BoundaryState::required($this, self::API)->contractInput;
 
-        return $input instanceof PurgeTaskInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
+        return $input instanceof UpdateTaskInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
     }
 
     /**
@@ -99,7 +101,27 @@ final class PurgeTaskRequest extends FormRequest
             'body' => [
                 'bail',
                 new TypeRule($input, Position::Member, TypeRule::OBJECT, Presence::Required, Nullability::NotNull),
-                new UnknownKeysRule($input, Position::Member, ['reauthToken']),
+                new UnknownKeysRule($input, Position::Member, ['title', 'state', 'effort', 'expectedVersion']),
+            ],
+            'body.title' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Optional, Nullability::NotNull),
+                new StringRule($input, Position::Member, BlankStrings::Every, minLength: 1, maxLength: 200),
+            ],
+            'body.state' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Optional, Nullability::NotNull),
+                new EnumRule($input, Position::Member, ['open', 'done', 'archived']),
+            ],
+            'body.effort' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::INTEGER, Presence::Optional, Nullability::NotNull),
+                new NumberRule($input, Position::Member, minimum: 0),
+            ],
+            'body.expectedVersion' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::INTEGER, Presence::Required, Nullability::NotNull),
+                new NumberRule($input, Position::Member, minimum: 1),
             ],
         ];
     }

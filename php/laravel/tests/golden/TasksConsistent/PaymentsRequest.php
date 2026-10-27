@@ -2,33 +2,30 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Golden\Tasks\Laravel;
+namespace Seampact\Golden\TasksConsistent;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Seampact\Golden\Tasks\GetTaskInput;
-use Seampact\Golden\Tasks\Laravel\Runtime\BlankStrings;
-use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryMark;
-use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryState;
-use Seampact\Golden\Tasks\Laravel\Runtime\FormSteps;
-use Seampact\Golden\Tasks\Laravel\Runtime\FormatRule;
-use Seampact\Golden\Tasks\Laravel\Runtime\InputTree;
-use Seampact\Golden\Tasks\Laravel\Runtime\Nullability;
-use Seampact\Golden\Tasks\Laravel\Runtime\Position;
-use Seampact\Golden\Tasks\Laravel\Runtime\Presence;
-use Seampact\Golden\Tasks\Laravel\Runtime\TypeRule;
-use Seampact\Golden\Tasks\Laravel\Runtime\UnknownKeysRule;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryMark;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormSteps;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\InputTree;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\Nullability;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\Position;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\Presence;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\TypeRule;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\UnknownKeysRule;
 
 /**
- * The request of operation 'getTask': its access mark and its validation rules.
+ * The request of operation 'payments': its access mark and its validation rules.
  */
-final class GetTaskRequest extends FormRequest
+final class PaymentsRequest extends FormRequest
 {
     public const API = 'tasks';
-    public const OPERATION_ID = 'getTask';
+    public const OPERATION_ID = 'payments';
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
-    public const NATIVE_RULE_NAMES = ['path.channelId' => ['Uuid' => 'format'], 'path.taskId' => ['Uuid' => 'format']];
+    public const NATIVE_RULE_NAMES = [];
 
     public function authorize(): bool
     {
@@ -66,11 +63,11 @@ final class GetTaskRequest extends FormRequest
     /**
      * The validated input of the operation, typed.
      */
-    public function contractInput(): GetTaskInput
+    public function contractInput(): PaymentsInput
     {
         $input = BoundaryState::required($this, self::API)->contractInput;
 
-        return $input instanceof GetTaskInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
+        return $input instanceof PaymentsInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
     }
 
     /**
@@ -79,20 +76,25 @@ final class GetTaskRequest extends FormRequest
     public static function contractRules(InputTree $input): array
     {
         return [
-            'path.channelId' => [
-                'bail',
-                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
-                'uuid',
-                new FormatRule($input, Position::Member, FormatRule::UUID, BlankStrings::BlankOnly),
-            ],
-            'path.taskId' => [
-                'bail',
-                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
-                'uuid',
-                new FormatRule($input, Position::Member, FormatRule::UUID, BlankStrings::BlankOnly),
-            ],
             'query' => [
                 new UnknownKeysRule($input, Position::Member, []),
+            ],
+            'body' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::OBJECT, Presence::Required, Nullability::NotNull),
+                new UnknownKeysRule($input, Position::Member, ['id', 'type', 'data']),
+            ],
+            'body.id' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
+            ],
+            'body.type' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
+            ],
+            'body.data' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::ANY, Presence::Required, Nullability::NotNull),
             ],
         ];
     }

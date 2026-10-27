@@ -2,28 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Golden\TasksConsistent\Laravel;
+namespace Seampact\Golden\TasksConsistent;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Seampact\Golden\TasksConsistent\GetPreferencesInput;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryMark;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormSteps;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\InputTree;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\Nullability;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\Position;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\Presence;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\TypeRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\UnknownKeysRule;
 
 /**
- * The request of operation 'getPreferences': its access mark and its validation rules.
+ * The request of operation 'health': its access mark and its validation rules.
  */
-final class GetPreferencesRequest extends FormRequest
+final class HealthRequest extends FormRequest
 {
     public const API = 'tasks';
-    public const OPERATION_ID = 'getPreferences';
+    public const OPERATION_ID = 'health';
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
     public const NATIVE_RULE_NAMES = [];
@@ -64,11 +60,11 @@ final class GetPreferencesRequest extends FormRequest
     /**
      * The validated input of the operation, typed.
      */
-    public function contractInput(): GetPreferencesInput
+    public function contractInput(): HealthInput
     {
         $input = BoundaryState::required($this, self::API)->contractInput;
 
-        return $input instanceof GetPreferencesInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
+        return $input instanceof HealthInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
     }
 
     /**
@@ -77,10 +73,6 @@ final class GetPreferencesRequest extends FormRequest
     public static function contractRules(InputTree $input): array
     {
         return [
-            'headers.If-None-Match' => [
-                'bail',
-                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Optional, Nullability::NotNull),
-            ],
             'query' => [
                 new UnknownKeysRule($input, Position::Member, []),
             ],

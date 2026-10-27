@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Generated\Tasks\HooksEndpoints;
-use App\Generated\Tasks\Laravel\PaymentsRequest;
+use App\Generated\Tasks\PaymentsRequest;
 use App\Generated\Tasks\PaymentsResponse204;
 use App\Generated\Tasks\PaymentsResult;
 

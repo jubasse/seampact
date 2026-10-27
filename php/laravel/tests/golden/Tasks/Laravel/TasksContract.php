@@ -2291,7 +2291,7 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\Tasks\GetChannelResponse200'],
                 'errors' => 'Seampact\Golden\Tasks\GetChannelErrors',
-                'request' => 'Seampact\Golden\Tasks\Laravel\GetChannelRequest',
+                'request' => 'Seampact\Golden\Tasks\GetChannelRequest',
             ],
             'getDraft' => [
                 'input' => 'Seampact\Golden\Tasks\GetDraftInput',
@@ -2300,7 +2300,7 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\Tasks\GetDraftResponse200'],
                 'errors' => 'Seampact\Golden\Tasks\GetDraftErrors',
-                'request' => 'Seampact\Golden\Tasks\Laravel\GetDraftRequest',
+                'request' => 'Seampact\Golden\Tasks\GetDraftRequest',
             ],
             'getTask' => [
                 'input' => 'Seampact\Golden\Tasks\GetTaskInput',
@@ -2312,7 +2312,7 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\Tasks\GetTaskResponse200'],
                 'errors' => 'Seampact\Golden\Tasks\GetTaskErrors',
-                'request' => 'Seampact\Golden\Tasks\Laravel\GetTaskRequest',
+                'request' => 'Seampact\Golden\Tasks\GetTaskRequest',
             ],
             'getTasksBatch' => [
                 'input' => 'Seampact\Golden\Tasks\GetTasksBatchInput',
@@ -2324,14 +2324,14 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\Tasks\GetTasksBatchResponse200'],
                 'errors' => 'Seampact\Golden\Tasks\GetTasksBatchErrors',
-                'request' => 'Seampact\Golden\Tasks\Laravel\GetTasksBatchRequest',
+                'request' => 'Seampact\Golden\Tasks\GetTasksBatchRequest',
             ],
             'health' => [
                 'input' => 'Seampact\Golden\Tasks\HealthInput',
                 'parts' => [],
                 'responses' => [200 => 'Seampact\Golden\Tasks\HealthResponse200'],
                 'errors' => 'Seampact\Golden\Tasks\HealthErrors',
-                'request' => 'Seampact\Golden\Tasks\Laravel\HealthRequest',
+                'request' => 'Seampact\Golden\Tasks\HealthRequest',
             ],
         ],
         'identities' => [

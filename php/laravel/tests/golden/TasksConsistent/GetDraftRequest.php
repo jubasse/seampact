@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Golden\TasksConsistent\Laravel;
+namespace Seampact\Golden\TasksConsistent;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Seampact\Golden\TasksConsistent\GetChannelInput;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BlankStrings;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryMark;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
@@ -20,12 +19,12 @@ use Seampact\Golden\TasksConsistent\Laravel\Runtime\TypeRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\UnknownKeysRule;
 
 /**
- * The request of operation 'getChannel': its access mark and its validation rules.
+ * The request of operation 'getDraft': its access mark and its validation rules.
  */
-final class GetChannelRequest extends FormRequest
+final class GetDraftRequest extends FormRequest
 {
     public const API = 'tasks';
-    public const OPERATION_ID = 'getChannel';
+    public const OPERATION_ID = 'getDraft';
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
     public const NATIVE_RULE_NAMES = [];
@@ -66,11 +65,11 @@ final class GetChannelRequest extends FormRequest
     /**
      * The validated input of the operation, typed.
      */
-    public function contractInput(): GetChannelInput
+    public function contractInput(): GetDraftInput
     {
         $input = BoundaryState::required($this, self::API)->contractInput;
 
-        return $input instanceof GetChannelInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
+        return $input instanceof GetDraftInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
     }
 
     /**
@@ -79,7 +78,7 @@ final class GetChannelRequest extends FormRequest
     public static function contractRules(InputTree $input): array
     {
         return [
-            'path.channelId' => [
+            'path.draftId' => [
                 'bail',
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
                 new FormatRule($input, Position::Member, FormatRule::UUID, BlankStrings::Every),

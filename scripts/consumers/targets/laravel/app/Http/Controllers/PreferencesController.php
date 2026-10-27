@@ -6,8 +6,8 @@ namespace App\Http\Controllers;
 
 use App\Generated\Tasks\GetPreferencesResponse200;
 use App\Generated\Tasks\GetPreferencesResult;
-use App\Generated\Tasks\Laravel\GetPreferencesRequest;
-use App\Generated\Tasks\Laravel\UpdatePreferencesRequest;
+use App\Generated\Tasks\GetPreferencesRequest;
+use App\Generated\Tasks\UpdatePreferencesRequest;
 use App\Generated\Tasks\PreferencesEndpoints;
 use App\Generated\Tasks\Schemas\Preferences;
 use App\Generated\Tasks\UpdatePreferencesResponse200;

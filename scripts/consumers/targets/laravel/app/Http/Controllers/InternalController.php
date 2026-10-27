@@ -8,7 +8,7 @@ use App\Generated\TasksService\ApiDeadlineExceededError;
 use App\Generated\TasksService\GetTaskResponse200;
 use App\Generated\TasksService\GetTaskResult;
 use App\Generated\TasksService\InternalEndpoints;
-use App\Generated\TasksService\Laravel\GetTaskRequest;
+use App\Generated\TasksService\GetTaskRequest;
 use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\ScriptedAnswers;
 
