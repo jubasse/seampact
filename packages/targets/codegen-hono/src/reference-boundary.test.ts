@@ -132,43 +132,40 @@ describe("a path the router cannot read as written is refused by name", () => {
     ["a[b", "a[b"],
     ["a]b", "a]b"],
     ["a\u0007b", "a\\u0007b"],
-  ])(
-    "a static segment a client sends percent-encoded, %j",
-    async (segment, shownSegment) => {
-      const ir = readGoldenIr("tasks");
-      const archiveIndex = ir.operations.findIndex((operation) => operation.id === "archiveTask");
-      const encodedSegmentIr = {
-        ...ir,
-        operations: ir.operations.map((operation, index) =>
-          index === archiveIndex
-            ? { ...operation, path: operation.path.replace(/archive$/, segment) }
-            : operation,
-        ),
-      };
+  ])("a static segment a client sends percent-encoded, %j", async (segment, shownSegment) => {
+    const ir = readGoldenIr("tasks");
+    const archiveIndex = ir.operations.findIndex((operation) => operation.id === "archiveTask");
+    const encodedSegmentIr = {
+      ...ir,
+      operations: ir.operations.map((operation, index) =>
+        index === archiveIndex
+          ? { ...operation, path: operation.path.replace(/archive$/, segment) }
+          : operation,
+      ),
+    };
 
-      const outcome = await honoTarget.generate({
-        ir: encodedSegmentIr,
-        options: { bodyValidation: true },
-        links: await referenceLinks(PROJECT, "tasks"),
-        artefacts: new Set(["boundary", "index"]),
-      });
+    const outcome = await honoTarget.generate({
+      ir: encodedSegmentIr,
+      options: { bodyValidation: true },
+      links: await referenceLinks(PROJECT, "tasks"),
+      artefacts: new Set(["boundary", "index"]),
+    });
 
-      expect(outcome).toMatchObject({
-        status: "refused",
-        refusals: [
-          {
-            code: "path.segment.encoded.unsupported",
-            message: expect.stringContaining(
-              `The static path segment '${shownSegment}', which a client sends percent-encoded,`,
-            ),
-            fix: "Use plain ASCII letters, digits and '-' in that path part.",
-            member: `/operations/${archiveIndex}/path`,
-            operation: "archiveTask",
-          },
-        ],
-      });
-    },
-  );
+    expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: [
+        {
+          code: "path.segment.encoded.unsupported",
+          message: expect.stringContaining(
+            `The static path segment '${shownSegment}', which a client sends percent-encoded,`,
+          ),
+          fix: "Use plain ASCII letters, digits and '-' in that path part.",
+          member: `/operations/${archiveIndex}/path`,
+          operation: "archiveTask",
+        },
+      ],
+    });
+  });
 });
 
 describe("an api with only public operations asks for no hooks", () => {

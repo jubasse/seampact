@@ -9,8 +9,12 @@ const PLACEHOLDER = /\{[^}]+\}/;
 const WHOLE_PLACEHOLDER = /^\{[^}]+\}$/;
 const PARAMETER_PREFIX = ":";
 const WILDCARD = "*";
-// A client percent-encodes in a path the controls, the space, DEL, every non-ASCII character and these.
-const PERCENT_ENCODED_PRINTABLE_CHARACTERS = '"<>^`\\';
+// A client percent-encodes in a path the controls, the space, DEL and every non-ASCII character, and a server refuses
+// or rewrites these (`\` becomes `/`, a brace is a placeholder's, Tomcat rejects `|`, `[` and `]`): every target holds
+// the same set.
+const UNREACHABLE_PRINTABLE_CHARACTERS = '"<>^`\\{}|[]';
+const ENCODED_SEGMENT_FIX = "Use plain ASCII letters, digits and '-' in that path part.";
+const CONTROL_ESCAPE_WIDTH = 4;
 const LAST_ENCODED_LOW_CODE_POINT = 0x20;
 const FIRST_ENCODED_HIGH_CODE_POINT = 0x7f;
 
@@ -43,7 +47,7 @@ export function literalSegmentRefusals(ir: ContractIR): Refusal[] {
 }
 
 /**
- * A static segment a client sends percent-encoded, such as `my tasks`: the boundary matches the raw path, so no
+ * A static segment a client sends percent-encoded or a server cannot read raw, such as `my tasks`: the boundary matches the raw path, so no
  * request would reach the route.
  */
 export function encodedSegmentRefusals(ir: ContractIR): Refusal[] {
@@ -51,24 +55,35 @@ export function encodedSegmentRefusals(ir: ContractIR): Refusal[] {
     operation.path
       .split("/")
       .filter((segment) => !PLACEHOLDER.test(segment) && isSentPercentEncoded(segment))
-      .map((segment) =>
-        refuseNotGeneratedYet(
+      .map((segment) => ({
+        ...refuseNotGeneratedYet(
           "path.segment.encoded",
-          `The static path segment '${segment}', which a client sends percent-encoded,`,
+          `The static path segment '${withControlsEscaped(segment)}', which a client sends percent-encoded,`,
           below(operationLocation(index, operation.id), "path"),
         ),
-      ),
+        fix: ENCODED_SEGMENT_FIX,
+      })),
+  );
+}
+
+// A control character is printed as `\u0007`, never raw, since the CLI prints the message as is.
+function withControlsEscaped(segment: string): string {
+  return segment.replace(
+    /\p{Cc}/gu,
+    (control) =>
+      `\\u${control.charCodeAt(0).toString(16).padStart(CONTROL_ESCAPE_WIDTH, "0").toUpperCase()}`,
   );
 }
 
 function isSentPercentEncoded(segment: string): boolean {
   return [...segment].some((character) => {
-    const codePoint = character.codePointAt(0) ?? 0;
+    // Never undefined: a character of the spread string has a code point.
+    const codePoint = character.codePointAt(0) ?? FIRST_ENCODED_HIGH_CODE_POINT;
 
     return (
       codePoint <= LAST_ENCODED_LOW_CODE_POINT ||
       codePoint >= FIRST_ENCODED_HIGH_CODE_POINT ||
-      PERCENT_ENCODED_PRINTABLE_CHARACTERS.includes(character)
+      UNREACHABLE_PRINTABLE_CHARACTERS.includes(character)
     );
   });
 }

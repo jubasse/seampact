@@ -22,7 +22,8 @@ private const val PLACEHOLDER_END = '}'
 private const val PATTERN_WILDCARD = '*'
 // The characters a client percent-encodes in a path: controls, space, `"`, `<`, `>`, `^`, a backquote, `\`, DEL and
 // every non-ASCII character (its UTF-16 units included).
-private val PERCENT_ENCODED_PATH_CHARACTER = Regex("[\\u0000-\\u0020\"<>^`\\\\\\u007F-\\uFFFF]")
+private val PERCENT_ENCODED_PATH_CHARACTER = Regex("[\\u0000-\\u0020\"<>^`\\\\{}|\\[\\]\\u007F-\\uFFFF]")
+private val CONTROL_CHARACTER = Regex("[\\u0000-\\u001F\\u007F]")
 private const val SYNTAX_SEGMENT_FIX = "Give the segment its own path parameter, or rename it without '{', '}' or '*'."
 private const val ENCODED_SEGMENT_FIX = "Use plain ASCII letters, digits and '-' in that path part."
 
@@ -124,7 +125,7 @@ internal fun springPattern(path: String, at: IrPlace, refusals: Refusals): Strin
             }
             PERCENT_ENCODED_PATH_CHARACTER.containsMatchIn(segment) -> {
                 refused = true
-                refusePath(refusals, at, "path.segment.encoded", "The static path segment '$segment', which a client sends percent-encoded, never matches the raw path the boundary routes", ENCODED_SEGMENT_FIX)
+                refusePath(refusals, at, "path.segment.encoded", "The static path segment '${withControlsEscaped(segment)}', which a client sends percent-encoded, never matches the raw path the boundary routes", ENCODED_SEGMENT_FIX)
                 segment
             }
             else -> segment
@@ -133,6 +134,10 @@ internal fun springPattern(path: String, at: IrPlace, refusals: Refusals): Strin
 
     return if (refused) null else segments.joinToString("/")
 }
+
+// A control character is printed as `\u0007`, never raw, since the CLI prints the message as is.
+private fun withControlsEscaped(segment: String): String =
+    segment.replace(CONTROL_CHARACTER) { control -> "\\u%04X".format(control.value.single().code) }
 
 private fun refusePath(refusals: Refusals, at: IrPlace, form: String, description: String, fix: String) {
     refusals.add(

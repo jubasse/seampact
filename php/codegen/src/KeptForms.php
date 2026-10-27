@@ -64,9 +64,11 @@ final class KeptForms
 
     // Header params the boundary consumes itself: the credentials and the CSRF token never reach the handler.
     private const BOUNDARY_HEADER_DERIVATIONS = ['identity.authenticate', 'csrf.'];
-    // The WHATWG URL path percent-encode set, byte by byte, and `\`, which a URL parser reads as `/`; a brace is a
-    // placeholder's, refused in a mixed segment by the target.
-    private const PERCENT_ENCODED_PATH_BYTES = '/[\x00-\x20"<>\x5E`\x5C\x7F-\xFF]/';
+    // The WHATWG URL path percent-encode set, byte by byte, `\`, which a URL parser reads as `/`, and `|`, `[` and `]`,
+    // which Tomcat rejects raw: the one set every target refuses.
+    private const PERCENT_ENCODED_PATH_BYTES = '/[\x00-\x20"<>\x5E`\x5C{}|\[\]\x7F-\xFF]/';
+    private const CONTAINED_PLACEHOLDER = '/\{[^{}\/]+\}/';
+    private const ENCODED_SEGMENT_FIX = "Use plain ASCII letters, digits and '-' in that path part.";
 
     /** @var list<array{int, Operation}> */
     private array $operations = [];
@@ -209,10 +211,21 @@ final class KeptForms
     private function readPath(Operation $operation, IrPlace $at): void
     {
         foreach (explode('/', $operation->path) as $segment) {
-            if (preg_match(RoutePlaceholder::PLACEHOLDER_SEGMENT, $segment) !== 1 && preg_match(self::PERCENT_ENCODED_PATH_BYTES, $segment) === 1) {
-                $this->refusals->waiting('path.segment.encoded', "The static path segment '{$segment}', which a client sends percent-encoded,", $at->below('path'), Delivery::Consumer);
+            if (preg_match(self::CONTAINED_PLACEHOLDER, $segment) !== 1 && preg_match(self::PERCENT_ENCODED_PATH_BYTES, $segment) === 1) {
+                $shown = self::withControlsEscaped($segment);
+                $this->refusals->waitingWithFix('path.segment.encoded', "The static path segment '{$shown}', which a client sends percent-encoded,", $at->below('path'), Delivery::Consumer, self::ENCODED_SEGMENT_FIX);
             }
         }
+    }
+
+    // A control character is printed as `\u0007`, never raw, since the CLI prints the message as is.
+    private static function withControlsEscaped(string $segment): string
+    {
+        return preg_replace_callback(
+            '/[\x00-\x1F\x7F]/',
+            static fn (array $control): string => sprintf('\\u%04X', ord($control[0])),
+            $segment,
+        ) ?? $segment;
     }
 
     private function readAccess(Operation $operation, IrPlace $at): void
