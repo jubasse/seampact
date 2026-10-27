@@ -20,6 +20,7 @@ use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\PhpTypes;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\RestrictedSortKeys;
+use Seampact\Codegen\RouteHelpers;
 use Seampact\Codegen\RuntimeCopy;
 use Seampact\Codegen\RuntimeSource;
 use Seampact\Codegen\SchemaTypes;
@@ -34,8 +35,9 @@ use Seampact\Ir\Write\GeneratedFile;
 /**
  * The symfony target (ADR 0024), which `vendor/bin/seampact` finds through `extra.seampact.generator`: per api, the
  * shared value types, inputs, results and exceptions of `seampact/codegen`, then the Symfony placement: the endpoints
- * interfaces, each operation's input constraint, the contract class, the identity hooks, the route loader, the
- * input resolver, the bundle with its configuration, passes and boundary subscriber, and the copied runtime.
+ * interfaces, each operation's input constraint, the contract class, the identity hooks, the route loader, the route
+ * names and URL builders, the input resolver, the bundle with its configuration, passes and boundary subscriber,
+ * and the copied runtime.
  */
 final class SymfonyGenerator implements Generator
 {
@@ -85,6 +87,9 @@ final class SymfonyGenerator implements Generator
             RestrictedSortKeys::refuse($operation, $at, $refusals);
             array_push($classFiles, ...$operationTypes->files($operation, $placement->names($operation->id), $at));
             array_push($classFiles, ...$constraints->files($operation, $at));
+        }
+        if (ArtefactSwitches::routeHelpersOn($entry->artefacts)) {
+            array_push($classFiles, ...(new RouteHelpers($placement, $types, $refusals))->files($placement->operations()));
         }
         $refusals->throwIfAny();
 

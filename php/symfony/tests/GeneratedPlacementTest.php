@@ -14,6 +14,8 @@ use Seampact\Golden\Tasks\Symfony\Runtime\KindRequestMatcher;
 use Seampact\Golden\Tasks\Symfony\TasksAccess;
 use Seampact\Golden\Tasks\Symfony\TasksContract;
 use Seampact\Golden\Tasks\Symfony\TasksRouteLoader;
+use Seampact\Golden\Tasks\Symfony\TasksRouteNames;
+use Seampact\Golden\Tasks\Symfony\TasksUrls;
 use Seampact\Golden\Tasks\Symfony\TasksSeampactBundle;
 use Seampact\Golden\Tasks\Symfony\TasksSettings;
 use Seampact\Golden\TasksConsistent\Symfony\PaymentsInputConstraint;
@@ -57,6 +59,24 @@ final class GeneratedPlacementTest extends TestCase
         $urls = new UrlGenerator((new TasksRouteLoader())->load('tasks', 'seampact'), new RequestContext());
 
         self::assertSame('/v1/channels/c1/tasks/t1', $urls->generate('seampact.tasks.getTask', ['channelId' => 'c1', 'taskId' => 't1']));
+    }
+
+    public function testEachRouteNameConstantNamesOneLoadedRoute(): void
+    {
+        $loaded = array_keys((new TasksRouteLoader())->load('tasks', 'seampact')->all());
+        $constants = array_values((new \ReflectionClass(TasksRouteNames::class))->getConstants());
+        sort($loaded);
+        sort($constants);
+
+        self::assertSame($loaded, $constants);
+    }
+
+    public function testTheUrlBuilderGivesThePathTheRouterBuilds(): void
+    {
+        $urls = new UrlGenerator((new TasksRouteLoader())->load('tasks', 'seampact'), new RequestContext());
+
+        self::assertSame($urls->generate(TasksRouteNames::GET_TASK, ['channelId' => 'c1', 'taskId' => 't1']), TasksUrls::getTask('c1', 't1'));
+        self::assertSame('/v1/channels/a%2Fb/tasks/%20%3F%23', TasksUrls::getTask('a/b', ' ?#'));
     }
 
     public function testTheInputConstraintReportsEachIssueWithItsRuleAndPointer(): void

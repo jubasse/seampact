@@ -72,6 +72,29 @@ final class WireValues
         return $encoded;
     }
 
+    /**
+     * The path parameter `$name`'s value as one segment, as the generated clients send it: its wire text, encoded as
+     * `componentEncoded` writes it.
+     *
+     * @throws \InvalidArgumentException for an empty, `.` or `..` text, which a URL parser reads as another route
+     */
+    public static function pathSegment(string $name, string|int|float|bool|\BackedEnum|\DateTimeInterface $value): string
+    {
+        $text = match (true) {
+            $value instanceof \BackedEnum => (string) $value->value,
+            $value instanceof \DateTimeInterface => $value->format(WireCodec::DATE_TIME_WIRE),
+            is_bool($value) => $value ? 'true' : 'false',
+            is_float($value) => self::numberText($name, $value),
+            default => (string) $value,
+        };
+
+        if ($text === '' || $text === '.' || $text === '..') {
+            throw new \InvalidArgumentException("The path parameter '{$name}' must be one non-empty segment, not '{$text}': it would reach another route.");
+        }
+
+        return self::componentEncoded($text);
+    }
+
     /** A raw path segment percent-decoded, or null when its bytes are not UTF-8. */
     public static function decodedSegment(string $raw): ?string
     {
@@ -177,6 +200,16 @@ final class WireValues
             'boolean' => is_bool($value) ? null : 'type',
             default => null,
         };
+    }
+
+    /** The shortest text that reads back as `$value`, as JSON writes a number. */
+    private static function numberText(string $name, float $value): string
+    {
+        if (!is_finite($value)) {
+            throw new \InvalidArgumentException("The path parameter '{$name}' must be a finite number, not {$value}.");
+        }
+
+        return json_encode($value, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION);
     }
 
     private static function number(string $text): int|float

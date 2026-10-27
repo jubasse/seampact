@@ -14,7 +14,7 @@ use Seampact\Hooks\Field;
 final class WireCodec
 {
     private const DATE_TIME = 'date-time';
-    private const DATE_TIME_WIRE = 'Y-m-d\TH:i:s.vP';
+    public const DATE_TIME_WIRE = 'Y-m-d\TH:i:s.vP';
     private const OPAQUE = 'opaque';
 
     private function __construct()

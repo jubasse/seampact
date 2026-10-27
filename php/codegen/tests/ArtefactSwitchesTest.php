@@ -19,7 +19,7 @@ final class ArtefactSwitchesTest extends TestCase
 
         self::assertStringContainsString('symfony-2 generates it', $refused['artefacts.bootCheck.unsupported'] ?? '');
         self::assertStringContainsString('symfony-4 generates it', $refused['artefacts.accessHooks.unsupported'] ?? '');
-        self::assertStringContainsString("it takes 'bootCheck' and 'accessHooks'", $refused['artefacts.unknown'] ?? '');
+        self::assertStringContainsString("it takes 'bootCheck', 'accessHooks' and 'routeHelpers'", $refused['artefacts.unknown'] ?? '');
     }
 
     public function testHooksAccessComesWithTheBoundaryRelease(): void
@@ -33,6 +33,16 @@ final class ArtefactSwitchesTest extends TestCase
         (new ArtefactSwitches('laravel', null, 'laravel-4'))->read((object) ['bootCheck' => (object) ['frameworkRoutes' => false, 'hooks' => 'off'], 'accessHooks' => true], $refusals);
 
         self::assertTrue($refusals->isEmpty());
+    }
+
+    public function testTheRouteHelpersSwitchIsReadAndOnByDefault(): void
+    {
+        $refusals = new Refusals('server', 'laravel', 'seampact/laravel');
+        (new ArtefactSwitches('laravel', null, 'laravel-4'))->read((object) ['routeHelpers' => false], $refusals);
+
+        self::assertTrue($refusals->isEmpty());
+        self::assertFalse(ArtefactSwitches::routeHelpersOn((object) ['routeHelpers' => false]));
+        self::assertTrue(ArtefactSwitches::routeHelpersOn(new \stdClass()));
     }
 
     public function testAReleasedBoundaryStillRefusesHooksWarn(): void

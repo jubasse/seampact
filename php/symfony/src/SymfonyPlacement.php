@@ -11,6 +11,7 @@ use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\OperationNames;
 use Seampact\Codegen\PhpClassFile;
+use Seampact\Codegen\RouteHelpers;
 use Seampact\Ir\Model\Operation;
 
 /**
@@ -137,7 +138,7 @@ final class SymfonyPlacement implements BoundaryNames
     /** Named by the api's id, as the boundary reads it (`ApiContract::routeName`), not by its routing resource key. */
     public function routeName(string $operationId): string
     {
-        return "seampact.{$this->layout->ir->api->id}.{$operationId}";
+        return RouteHelpers::routeName($this->layout->ir->api->id, $operationId);
     }
 
     public function runtime(string $simpleName): string

@@ -7,12 +7,14 @@ namespace Seampact\Codegen;
 /**
  * The artefact switches a PHP framework target reads (ADR 0023 and 0024 "Refused by name or waiting"): `bootCheck`
  * and `accessHooks: true` come with the target's boundary release, `accessHooks: false` with its native access
- * release or, on a target that names none, waits for a consumer; any other key is refused as unknown. Once the boundary release is out, only `bootCheck.hooks: warn` waits.
+ * release or, on a target that names none, waits for a consumer; `routeHelpers` turns the route helpers on or off; any
+ * other key is refused as unknown. Once the boundary release is out, only `bootCheck.hooks: warn` waits.
  */
 final readonly class ArtefactSwitches
 {
     private const BOOT_CHECK = 'bootCheck';
     private const ACCESS_HOOKS = 'accessHooks';
+    private const ROUTE_HELPERS = 'routeHelpers';
     private const HOOKS_WARN = 'warn';
 
     /**
@@ -25,6 +27,12 @@ final readonly class ArtefactSwitches
     {
     }
 
+    /** Whether the entry keeps the route helpers (`RouteHelpers`), on unless `routeHelpers: false`. */
+    public static function routeHelpersOn(\stdClass $artefacts): bool
+    {
+        return ($artefacts->{self::ROUTE_HELPERS} ?? true) !== false;
+    }
+
     public function read(\stdClass $artefacts, Refusals $refusals): void
     {
         foreach (get_object_vars($artefacts) as $artefact => $value) {
@@ -34,9 +42,12 @@ final readonly class ArtefactSwitches
                 $this->readKnown($artefact, $value, $at, $refusals);
                 continue;
             }
+            if ($artefact === self::ROUTE_HELPERS) {
+                continue;
+            }
             $refusals->add(
                 'artefacts.unknown',
-                "The artefact '{$artefact}' is not one the {$this->target} target declares; it takes '" . self::BOOT_CHECK . "' and '" . self::ACCESS_HOOKS . "'.",
+                "The artefact '{$artefact}' is not one the {$this->target} target declares; it takes '" . self::BOOT_CHECK . "', '" . self::ACCESS_HOOKS . "' and '" . self::ROUTE_HELPERS . "'.",
                 "Remove '{$artefact}' from the entry's `artefacts`.",
                 $at,
             );
