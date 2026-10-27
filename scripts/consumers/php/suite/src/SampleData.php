@@ -10,6 +10,7 @@ use App\Generated\Tasks\Schemas\Task;
 use App\Generated\Tasks\Schemas\TaskState;
 use App\Generated\TasksService\Schemas\Task as ServiceTask;
 use App\Generated\TasksService\Schemas\TaskState as ServiceTaskState;
+use Seampact\Hooks\ResolvedScope;
 
 /** The values the handlers answer without a script, and the scripted bodies read into the generated types. */
 final class SampleData
@@ -44,6 +45,19 @@ final class SampleData
     public static function channel(string $channelId): Channel
     {
         return new Channel($channelId, 'General');
+    }
+
+    /**
+     * The channel the scope resolver loaded, as the handler of a channel operation reads it with its caller's id: the
+     * consumer proves the principal and the scopes reach the handler without a second lookup.
+     */
+    public static function loadedChannel(ResolvedScope $scope, string $callerId): Channel
+    {
+        if ($callerId === '') {
+            throw new \LogicException("the handler of scope '{$scope->scope}' read no caller id from its principal");
+        }
+
+        return $scope->value instanceof Channel ? $scope->value : throw new \LogicException("the resolver of scope '{$scope->scope}' loaded no channel for the handler");
     }
 
     public static function draft(string $draftId): Draft

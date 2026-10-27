@@ -6,6 +6,7 @@ namespace App\Suite;
 
 use App\Generated\Tasks\Symfony\ScopeResolver;
 use Seampact\Codegen\Runtime\Denial;
+use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\ResolvedScope;
 use Seampact\Hooks\ResolveScopeRequest;
@@ -13,7 +14,7 @@ use Seampact\Hooks\ScopeIdSource;
 use Seampact\Hooks\ScopeResolution;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
-/** Resolves a declared channel id to itself, every channel existing, unless the script denies the scope. */
+/** Resolves a declared channel id to itself and loads its sample channel, every channel existing, unless the script denies the scope. */
 final class ChannelResolver implements ScopeResolver
 {
     /** The channel whose resolution throws Symfony's `AccessDeniedException`, as a voter called by a resolver would. */
@@ -40,6 +41,6 @@ final class ChannelResolver implements ScopeResolver
             return new ScopeResolution\Denied(new Denial($denied));
         }
 
-        return new ScopeResolution\Resolved(new ResolvedScope($request->scope(), $source->id));
+        return new ScopeResolution\Resolved(new ResolvedScope($request->scope(), $source->id, SampleData::channel((string) $source->id)));
     }
 }
