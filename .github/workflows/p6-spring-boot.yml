@@ -62,6 +62,8 @@ jobs:
             ^fixtures/golden/reference/
             ^fixtures/golden/pack-spring/
             ^packages/packs/pack-spring/
+            ^fixtures/golden/pack-laravel/
+            ^packages/packs/pack-laravel/
             ^scripts/consumers/targets/spring-boot/
             ^scripts/consumers/served-app\.ts$
             ^packages/core/
@@ -126,8 +128,9 @@ jobs:
           retention-days: 3
           if-no-files-found: error
 
-  # The consumer built by one plugin three times: as configured, with the boot variant's route allow-listed, and from
-  # the contract with @seampact/pack-spring applied (the pack:spring profile). A `bundle` row fetches each contract as
+  # The consumer built by one plugin four times: as configured, with the boot variant's route allow-listed, from the
+  # contract with @seampact/pack-spring applied (the pack:spring profile) and from the contract with
+  # @seampact/pack-laravel applied, whose format wraps every success body (the pack:laravel profile). A `bundle` row fetches each contract as
   # a release asset from a loopback HTTPS server; a `local-yaml` row compiles the `path` source.
   # The PR rows; the post-merge job below runs the same steps on the other rows, and http-suite pairs with each.
   build:
@@ -196,7 +199,7 @@ jobs:
             sleep "$delay"
           done
           ./mvnw -B --version
-      - name: Build the consumer and its allow-listed and pack-spring variants
+      - name: Build the consumer and its allow-listed, pack-spring and pack-laravel variants
         shell: bash
         env:
           BUILD_TOOL: ${{ matrix.build-tool }}
@@ -211,7 +214,7 @@ jobs:
           fi
           # Maven runs on the row's JDK; Gradle on the last one, compiling and testing with the row's toolchain.
           java_home_variable="JAVA_HOME_${JDK}_X64"
-          for variant in configured allow-listed pack-spring; do
+          for variant in configured allow-listed pack-spring pack-laravel; do
             app="$RUNNER_TEMP/$variant"
             sh scripts/consumers/targets/spring-boot/assemble.sh "$app" "${variant/configured/}" "$BUILD_TOOL"
             if [ "$CONTRACT" = "bundle" ]; then
@@ -277,11 +280,12 @@ jobs:
         with:
           name: spring-boot-consumer-${{ matrix.build-tool }}-jdk${{ matrix.jdk }}-${{ matrix.contract }}
           path: jars
-      - name: Run the default, hand-written, boot and pack:spring profiles
+      - name: Run the default, hand-written, boot, pack:spring and pack:laravel profiles
         env:
           SEAMPACT_SPRING_JAR: ${{ github.workspace }}/jars/configured.jar
           SEAMPACT_SPRING_ALLOW_LISTED_JAR: ${{ github.workspace }}/jars/allow-listed.jar
           SEAMPACT_SPRING_PACK_JAR: ${{ github.workspace }}/jars/pack-spring.jar
+          SEAMPACT_SPRING_PACK_LARAVEL_JAR: ${{ github.workspace }}/jars/pack-laravel.jar
           SEAMPACT_SPRING_REPORTS: ${{ github.workspace }}/reports
         run: pnpm vitest run --config scripts/consumers/targets/spring-boot/suite/vitest.config.ts
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
