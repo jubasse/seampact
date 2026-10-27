@@ -24,6 +24,7 @@ import type { Refusal } from "../refusal.js";
 import { fingerprintHeaderNames } from "./fingerprint-headers.js";
 import type { CompressionOption, FrameworkEtagMode } from "./options.js";
 import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
+import { encodedSegmentRefusals } from "./path-segment-refusals.js";
 import { compareRouteSpecificity } from "./route-order.js";
 import {
   isSlot,
@@ -93,6 +94,8 @@ export function routeTableSource(
 ): string {
   const imports = new ModuleImports(validators, fromFile);
   const format = errorFormat(ir, refusals);
+
+  refusals.push(...encodedSegmentRefusals(ir));
 
   ir.operations.forEach((operation, index) => {
     warnings.push(...handlerForms(ir, operation, operationLocation(index, operation.id)));

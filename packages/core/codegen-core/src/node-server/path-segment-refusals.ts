@@ -9,6 +9,10 @@ const PLACEHOLDER = /\{[^}]+\}/;
 const WHOLE_PLACEHOLDER = /^\{[^}]+\}$/;
 const PARAMETER_PREFIX = ":";
 const WILDCARD = "*";
+// A client percent-encodes in a path the controls, the space, DEL, every non-ASCII character and these.
+const PERCENT_ENCODED_PRINTABLE_CHARACTERS = '"<>^`\\';
+const LAST_ENCODED_LOW_CODE_POINT = 0x20;
+const FIRST_ENCODED_HIGH_CODE_POINT = 0x7f;
 
 /**
  * A segment that mixes a placeholder with literal text, such as `{id}:archive`: find-my-way and Hono read a param up
@@ -36,6 +40,37 @@ export function literalSegmentRefusals(ir: ContractIR): Refusal[] {
     "path.segment.literal",
     "A static path segment that starts with ':' or holds '*', such as ':batch',",
   );
+}
+
+/**
+ * A static segment a client sends percent-encoded, such as `my tasks`: the boundary matches the raw path, so no
+ * request would reach the route.
+ */
+export function encodedSegmentRefusals(ir: ContractIR): Refusal[] {
+  return ir.operations.flatMap((operation, index) =>
+    operation.path
+      .split("/")
+      .filter((segment) => !PLACEHOLDER.test(segment) && isSentPercentEncoded(segment))
+      .map((segment) =>
+        refuseNotGeneratedYet(
+          "path.segment.encoded",
+          `The static path segment '${segment}', which a client sends percent-encoded,`,
+          below(operationLocation(index, operation.id), "path"),
+        ),
+      ),
+  );
+}
+
+function isSentPercentEncoded(segment: string): boolean {
+  return [...segment].some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+
+    return (
+      codePoint <= LAST_ENCODED_LOW_CODE_POINT ||
+      codePoint >= FIRST_ENCODED_HIGH_CODE_POINT ||
+      PERCENT_ENCODED_PRINTABLE_CHARACTERS.includes(character)
+    );
+  });
 }
 
 function segmentRefusals(

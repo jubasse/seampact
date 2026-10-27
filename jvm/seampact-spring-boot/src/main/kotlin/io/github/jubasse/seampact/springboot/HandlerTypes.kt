@@ -20,6 +20,11 @@ private val DOCUMENTED = ClassName.get("java.lang.annotation", "Documented")
 private const val PLACEHOLDER_START = '{'
 private const val PLACEHOLDER_END = '}'
 private const val PATTERN_WILDCARD = '*'
+// The characters a client percent-encodes in a path: controls, space, `"`, `<`, `>`, `^`, a backquote, `\`, DEL and
+// every non-ASCII character (its UTF-16 units included).
+private val PERCENT_ENCODED_PATH_CHARACTER = Regex("[\\u0000-\\u0020\"<>^`\\\\\\u007F-\\uFFFF]")
+private const val SYNTAX_SEGMENT_FIX = "Give the segment its own path parameter, or rename it without '{', '}' or '*'."
+private const val ENCODED_SEGMENT_FIX = "Use plain ASCII letters, digits and '-' in that path part."
 
 /**
  * The endpoints interface of each resource (ADR 0007 `handlers: perResource`): one synchronous method per operation,
@@ -93,8 +98,8 @@ private fun requestMethod(method: HttpMethod): String? = when (method) {
 
 /**
  * The `PathPatternParser` pattern of a contract path: each `{name}` segment becomes `{p1}`, `{p2}`... in order, and a
- * static segment is kept as is (a `:` in it is literal). A static segment holding `{`, `}` or `*`, or a segment
- * mixing a placeholder with text, is refused by name (ADR 0022 "Routes").
+ * static segment is kept as is (a `:` in it is literal). A static segment holding `{`, `}` or `*`, one a client sends
+ * percent-encoded, or a segment mixing a placeholder with text, is refused by name (ADR 0022 "Routes").
  */
 internal fun springPattern(path: String, at: IrPlace, refusals: Refusals): String? {
     var position = 0
@@ -109,12 +114,17 @@ internal fun springPattern(path: String, at: IrPlace, refusals: Refusals): Strin
             }
             segment.any { it == PLACEHOLDER_START || it == PLACEHOLDER_END } && segment.contains(Regex("\\{[^/{}]+}")) -> {
                 refused = true
-                refusePath(refusals, at, "path.segment.mixed", "The segment '$segment' mixes a placeholder with literal text, which Spring's patterns do not read as the contract does")
+                refusePath(refusals, at, "path.segment.mixed", "The segment '$segment' mixes a placeholder with literal text, which Spring's patterns do not read as the contract does", SYNTAX_SEGMENT_FIX)
                 segment
             }
             segment.any { it == PLACEHOLDER_START || it == PLACEHOLDER_END || it == PATTERN_WILDCARD } -> {
                 refused = true
-                refusePath(refusals, at, "path.segment.literal", "The static segment '$segment' holds '{', '}' or '*', which Spring's patterns read as syntax")
+                refusePath(refusals, at, "path.segment.literal", "The static segment '$segment' holds '{', '}' or '*', which Spring's patterns read as syntax", SYNTAX_SEGMENT_FIX)
+                segment
+            }
+            PERCENT_ENCODED_PATH_CHARACTER.containsMatchIn(segment) -> {
+                refused = true
+                refusePath(refusals, at, "path.segment.encoded", "The static path segment '$segment', which a client sends percent-encoded, never matches the raw path the boundary routes", ENCODED_SEGMENT_FIX)
                 segment
             }
             else -> segment
@@ -124,12 +134,12 @@ internal fun springPattern(path: String, at: IrPlace, refusals: Refusals): Strin
     return if (refused) null else segments.joinToString("/")
 }
 
-private fun refusePath(refusals: Refusals, at: IrPlace, form: String, description: String) {
+private fun refusePath(refusals: Refusals, at: IrPlace, form: String, description: String, fix: String) {
     refusals.add(
         SpringBootRefusal(
             code = "$form.unsupported",
             message = "$description, at ${at.member}.",
-            fix = "Give the segment its own path parameter, or rename it without '{', '}' or '*'.",
+            fix = fix,
             member = at.member,
             operation = at.operation,
         ),
