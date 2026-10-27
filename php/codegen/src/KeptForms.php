@@ -64,6 +64,9 @@ final class KeptForms
 
     // Header params the boundary consumes itself: the credentials and the CSRF token never reach the handler.
     private const BOUNDARY_HEADER_DERIVATIONS = ['identity.authenticate', 'csrf.'];
+    // The WHATWG URL path percent-encode set, byte by byte, and `\`, which a URL parser reads as `/`; a brace is a
+    // placeholder's, refused in a mixed segment by the target.
+    private const PERCENT_ENCODED_PATH_BYTES = '/[\x00-\x20"<>`\x5C\x7F-\xFF]/';
 
     /** @var list<array{int, Operation}> */
     private array $operations = [];
@@ -168,6 +171,7 @@ final class KeptForms
             $this->refusals->unknownValue($at->below('unknownQuery', 'policy'), $operation->unknownQuery->policy);
         }
 
+        $this->readPath($operation, $at);
         $this->readAccess($operation, $at);
         $this->readFormat($operation->format);
         $this->readWaitingMembers($operation, $at);
@@ -197,6 +201,17 @@ final class KeptForms
                 $this->pending(PendingForm::RetryHeader, 'error.retryHeader', 'A retry header on an error', $errorAt->below('retryHeader'));
             }
             $this->readError($error->code, $errorAt);
+        }
+    }
+
+    // Laravel's and Symfony's routers match the decoded path, which the boundary refuses for a percent-encoded static
+    // segment (ADR 0023 and 0024 "Routes"), so such a route would answer 404 to every request.
+    private function readPath(Operation $operation, IrPlace $at): void
+    {
+        foreach (explode('/', $operation->path) as $segment) {
+            if (preg_match(RoutePlaceholder::PLACEHOLDER_SEGMENT, $segment) !== 1 && preg_match(self::PERCENT_ENCODED_PATH_BYTES, $segment) === 1) {
+                $this->refusals->waiting('path.segment.encoded', "The static path segment '{$segment}', which a client sends percent-encoded,", $at->below('path'), Delivery::Consumer);
+            }
         }
     }
 

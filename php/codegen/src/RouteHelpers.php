@@ -24,8 +24,6 @@ final class RouteHelpers
 {
     private const WIRE_VALUES = 'WireValues';
     private const RESERVED_ESCAPE = '_';
-    // The WHATWG URL path percent-encode set, byte by byte.
-    private const URL_PATH_ENCODED_BYTES = '/[\x00-\x20"<>`{}\x7F-\xFF]/';
 
     private readonly string $routeNamesClass;
     private readonly string $urlsClass;
@@ -93,7 +91,7 @@ final class RouteHelpers
         foreach (explode('/', $operation->path) as $segmentIndex => $segment) {
             $literal .= $segmentIndex === 0 ? '' : '/';
             if (preg_match(RoutePlaceholder::PLACEHOLDER_SEGMENT, $segment) !== 1) {
-                $literal .= self::literalEncoded($segment);
+                $literal .= $segment;
                 continue;
             }
 
@@ -135,19 +133,6 @@ final class RouteHelpers
         $method->addParameter($variable)->setType($type->native);
 
         return $variable;
-    }
-
-    /**
-     * A static segment as a URL parser writes it, which is what the fetch client sends: a space, a control byte, a
-     * non-ASCII byte and `"<>`{}` percent-encoded, everything else kept (the compiler refuses `?`, `#` and `%` in a path).
-     */
-    private static function literalEncoded(string $segment): string
-    {
-        return (string) preg_replace_callback(
-            self::URL_PATH_ENCODED_BYTES,
-            static fn (array $byte): string => sprintf('%%%02X', ord($byte[0])),
-            $segment,
-        );
     }
 
     /**
