@@ -16,6 +16,7 @@ use Seampact\Codegen\Runtime\RequirementCall;
 use Seampact\Codegen\Runtime\UnexpectedErrorListener;
 use Seampact\Hooks\AuthenticateHook;
 use Seampact\Hooks\Decision;
+use Seampact\Hooks\FieldDirection;
 use Seampact\Hooks\OperationRef;
 use Seampact\Hooks\Purpose;
 use Seampact\Hooks\RequestView;
@@ -24,7 +25,8 @@ use Seampact\Hooks\RequirementRequest;
 
 /**
  * A framework denial a decider throws: a plain one answers the requirement's first denial code, one that hides the
- * record (Laravel's `denyAsNotFound()`) the operation's not-found code when it declares one.
+ * record (Laravel's `denyAsNotFound()`) the operation's not-found code when it declares one and a route requirement
+ * denied, so a field right keeps its own code.
  */
 final class NotFoundDenialTest extends TestCase
 {
@@ -43,10 +45,17 @@ final class NotFoundDenialTest extends TestCase
         self::assertSame('tasks.not_owner', self::deniedCode('getTask', new \DomainException('denied')));
     }
 
-    private static function deniedCode(string $operationId, \Throwable $denial): string
+    public function testAFieldRightsDenialHidingTheRecordKeepsTheFirstDenialCode(): void
+    {
+        $fieldPurpose = new Purpose\Field('/title', FieldDirection::Input);
+
+        self::assertSame('tasks.not_owner', self::deniedCode('getTask', new \OutOfBoundsException('hidden'), $fieldPurpose));
+    }
+
+    private static function deniedCode(string $operationId, \Throwable $denial, ?Purpose $purpose = null): string
     {
         $state = new BoundaryState(ApiContract::of(NotFoundDenialContract::class), $operationId, [], new RequestView('GET', '/v1/tasks/1', []), self::lookup($denial));
-        $call = new RequirementCall(RequirementKind::Rule, 'tasks.owner', null, null, null, [], null, new Purpose\Route(), new OperationRef('tasks', $operationId), $state->view);
+        $call = new RequirementCall(RequirementKind::Rule, 'tasks.owner', null, null, null, [], null, $purpose ?? new Purpose\Route(), new OperationRef('tasks', $operationId), $state->view);
 
         $decision = AccessSteps::decide($state, $call);
 
