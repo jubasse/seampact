@@ -50,6 +50,7 @@ const TASK_ITEM = {
   createdAt: "2026-10-18T09:00:00.000Z",
 };
 const TOO_LARGE_BODY_BYTES = 1_048_577;
+const TOO_MANY_REQUESTS = 429;
 // The code of a body over its limit, marked as a code whose params carry a sensitive value.
 const NO_STORE_CODE = "api.payload_too_large";
 // A code given a written title; every other code of the reference api declares none.
@@ -299,6 +300,28 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
 
     expect(reply.status).toBe(500);
     expect(app.calls.unexpected).toHaveLength(1);
+  });
+
+  test("a framework 429 whose rateLimited code requires params is a reported 500", async () => {
+    app.scenario.answers.createTask = () => {
+      throw Object.assign(new Error("Too many requests"), { status: TOO_MANY_REQUESTS });
+    };
+
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(500);
+    expect(app.calls.unexpected).toEqual([
+      expect.objectContaining({
+        exceptionOrReply: expect.objectContaining({
+          message: expect.stringContaining(
+            "maps to 'api.rate_limited', which declares required params",
+          ),
+        }),
+      }),
+    ]);
   });
 
   test("an app-written success reply of a noStore operation without no-store is replaced by a 500", async () => {

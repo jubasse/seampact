@@ -692,6 +692,22 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       );
     });
 
+    test("a 429 HttpException whose rateLimited code requires params is a reported 500", async () => {
+      app.scenario.answers.createTask = () => {
+        throw new app.HttpException("slow down", TOO_MANY_REQUESTS);
+      };
+
+      const served = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: writeHeaders(),
+        body: JSON.stringify({ title: "Plan" }),
+      });
+
+      expect(served.status).toBe(500);
+      expect(String(app.calls.unexpected[0]?.exceptionOrReply)).toContain(
+        `a ${TOO_MANY_REQUESTS} error on 'createTask' maps to 'api.rate_limited', which declares required params; throw ContractException(code, params)`,
+      );
+    });
+
     test("a ContractException answers its code in the api's format", async () => {
       app.scenario.answers.getTask = () => {
         throw new app.ContractException("api.not_found");

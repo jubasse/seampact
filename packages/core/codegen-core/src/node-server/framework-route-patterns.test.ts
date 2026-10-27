@@ -34,6 +34,11 @@ describe("the allow-list patterns", () => {
     ["'*' inside a segment over a slash", "/livewire-*", "/livewire-3f9a/upload-file", false],
     ["'*' inside a segment, a suffix", "/*.json", "/up.json", true],
     ["'*' inside a segment, another suffix", "/*.json", "/up.xml", false],
+    ["two '**' around literals", "/a/**/b/**/c", "/a/x/b/y/z/c", true],
+    ["two '**' over nothing", "/a/**/b/**/c", "/a/b/c", true],
+    ["two '**', literals out of order", "/a/**/b/**/c", "/a/c/b", false],
+    ["'**' then '*'", "/**/*", "/", false],
+    ["'**' beside '**'", "/**/**", "/x", true],
   ])("%s", (_, allowedPath, listedPath, allowed) => {
     const keys = refusedKeys(checkAllowing({ path: allowedPath, reason: REASON }), [
       { method: "GET", path: listedPath },
@@ -60,6 +65,24 @@ describe("the allow-list patterns", () => {
       `GET ${listedPath}`,
     ]);
     expect(refusedKeys(checkAllowing({ path: "/**", reason: REASON }), listed)).toEqual([]);
+  });
+});
+
+describe("the allow-list cost", () => {
+  // Backtracking over every split of the path took seconds on this case.
+  const BOUND_MILLISECONDS = 1_000;
+
+  test("many '**' against a long path that does not match finish fast", () => {
+    const pattern = `${"/**/x".repeat(8)}/end`;
+    const longPath = `/${Array.from({ length: 30 }, () => "x").join("/")}/other`;
+    const started = performance.now();
+
+    const keys = refusedKeys(checkAllowing({ path: pattern, reason: REASON }), [
+      { method: "GET", path: longPath },
+    ]);
+
+    expect(keys).toEqual([`GET ${longPath}`]);
+    expect(performance.now() - started).toBeLessThan(BOUND_MILLISECONDS);
   });
 });
 
