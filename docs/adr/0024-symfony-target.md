@@ -67,11 +67,10 @@ The handler method returns the operation's generated result: an interface implem
 
 ### Routes
 
-Patterns use Symfony's syntax, each placeholder named after its input property (`/v1/tasks/{taskId}`), so the router builds a URL by name; the boundary still matches the raw path. A `:` inside a static segment is literal (`/v1/tasks:batch`, spike). `generate` refuses by name:
+Patterns use Symfony's syntax, each placeholder named after its input property (`/v1/tasks/{taskId}`), so the router builds a URL by name; a name longer than the 32 characters of the route compiler keeps a positional name (`{p2}` for the second placeholder), as on Laravel. The boundary still matches the raw path. A `:` inside a static segment is literal (`/v1/tasks:batch`, spike). `generate` refuses by name:
 
 - a static segment holding `{`, `}` or `?` (`path.segment.literal.unsupported`);
-- a segment that mixes a placeholder with literal text (`path.segment.mixed.unsupported`), as on Laravel, Spring and the Node targets;
-- a placeholder name longer than the 32 characters of the route compiler (`path.parameter.long.unsupported`), as on Laravel.
+- a segment that mixes a placeholder with literal text (`path.segment.mixed.unsupported`), as on Laravel, Spring and the Node targets.
 
 The router matches routes in registration order, so the loader registers, per path depth, literal segments before placeholders: `/v1/tasks/search` before `/v1/tasks/{taskId}` (spike). The app imports the routes from its own routing configuration, once per api, with the api name as the resource:
 
@@ -119,11 +118,11 @@ Every other exception is left to Symfony and the app, untouched: the firewall's 
 - an `AccessDeniedException` answered with a 403 (`access_control`, a voter that app code calls): `forbidden` (403) (spike);
 - any other `HttpException` that a handler, an app listener or a value resolver throws (`UnauthorizedHttpException`, `AccessDeniedHttpException`, `createNotFoundException()`, a `MapEntity` miss, `new HttpException(429)`): the role of its status, `unauthenticated` (401), `forbidden` (403), `notFound` (404), `rateLimited` (429) or `serviceUnavailable` (503), as the Laravel target maps `abort()`.
 
-Each of them answers by the rule the Laravel target uses: the code of its role when the operation declares one; else, for an `HttpException`, the operation's single code of that status, when that code declares no required params; else the api's 500, logged. An `HttpException` of any status is mapped this way, even when an app listener wrote a reply for it.
+Each of them answers by one rule, shared with every server target (ADR 0016): the code of its role when the operation declares one; else, for an `HttpException`, the operation's single code of that status, when that code declares no required params (a param with a default is not required); else the api's 500, logged. An `HttpException` of any status is mapped this way, even when an app listener wrote a reply for it.
 
 `#[IsGranted]` and `#[IsCsrfTokenValid]` are not among these layers: their listeners run at `kernel.controller_arguments`, after steps 6 to 8, so a caller without access would get step 6's issues first, against the check order (FR-5). The boot check refuses them on a contract method ("The boot check").
 
-The security and RateLimiter classes are named in `instanceof` checks only, which need neither package installed. The boundary's internal exception ("Types and validation") is the api's 500 with `onUnexpectedError` called. Any other exception's reply is checked as written, below. An app's own listener renders a contract error with the exported `renderContractError($request, $throwable)`.
+The security and RateLimiter classes are named in `instanceof` checks only, which need neither package installed. The boundary's internal exception ("Types and validation") is the api's 500 with `onUnexpectedError` called. Any other exception's reply is checked as written, below. An exported `renderContractError($request, $throwable)` for an app's own listener waits for a consumer that needs it.
 
 ### The outgoing response check
 

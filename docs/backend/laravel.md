@@ -70,7 +70,7 @@ The provider puts the boundary first in the global middleware, before every othe
 
 `Route::seampact('notes')` declares one route per operation, with the contract's method and path. Each route runs the access middleware, then your middleware for its kind (see the config below).
 
-Call it once, outside any route prefix. `withRouting(then:)` does that. In `routes/api.php`, set `apiPrefix: ''` in `withRouting()`, since the contract's paths already hold their prefix. Avoid `routes/web.php`: its group adds sessions and cookies that an API client does not need.
+Call it once, outside any route prefix. `withRouting(then:)` does that. In `routes/api.php`, set `apiPrefix: ''` in `withRouting()`, since the contract's paths already hold their prefix. Avoid `routes/web.php`: its group adds sessions and cookies that an API client does not need. One exception: when the contract's cookie credential is Laravel's session (the `web` guard, a Sanctum SPA), call it inside the `web` group. That group starts the session and checks CSRF.
 
 Each route is named `seampact.<api>.<operation>`. Its parameters take the names of the input properties:
 
@@ -78,9 +78,11 @@ Each route is named `seampact.<api>.<operation>`. Its parameters take the names 
 route('seampact.notes.getNote', ['noteId' => $note->id]);
 ```
 
-`$request->route('noteId')` and `Route::bind('noteId', ...)` work too.
+`$request->route('noteId')` works too. Each parameter matches one whole segment, whatever `Route::pattern()` your app sets.
 
-`generate` refuses a path segment that mixes a parameter with text (`path.segment.mixed.unsupported`), a static segment with `{`, `}` or `?` (`path.segment.literal.unsupported`), and a parameter name over 32 characters (`path.parameter.long.unsupported`).
+`Route::bind('noteId', ...)` needs the `SubstituteBindings` middleware. Routes declared in `withRouting(then:)` do not run it: add `Illuminate\Routing\Middleware\SubstituteBindings::class` to `middleware.<kind>` in the config.
+
+`generate` refuses a path segment that mixes a parameter with text (`path.segment.mixed.unsupported`), and a static segment with `{`, `}` or `?` (`path.segment.literal.unsupported`). A parameter name over 32 characters gets a positional name instead (`{p2}` for the second parameter), since Laravel's router refuses longer ones.
 
 Your own routes stay beside the contract's, in your routes files. The boot check refuses one that is not in the contract unless `frameworkRoutes` allow-lists it (see [The boot check](#the-boot-check)).
 
@@ -240,7 +242,7 @@ Filament, Livewire, Horizon, Telescope and Nova serve their own routes. Allow-li
     frameworkRoutes:
       - { path: "/admin/**", reason: "Filament panel." }
       - { path: "/filament/**", reason: "Filament exports and imports." }
-      - { path: "/livewire/**", reason: "Livewire 3 updates and uploads." }
+      - { path: "/livewire/**", reason: "Livewire updates, scripts and uploads." }
       - { path: "/horizon/**", reason: "Horizon dashboard." }
       - { path: "/telescope/**", reason: "Telescope dashboard." }
       - { path: "/nova/**", reason: "Nova panel." }
@@ -248,7 +250,12 @@ Filament, Livewire, Horizon, Telescope and Nova serve their own routes. Allow-li
       - { path: "/nova-vendor/**", reason: "Nova panel." }
 ```
 
-Keep only the lines of the tools you use. A panel on another path takes that path (`/backoffice/**`). Livewire 4 adds a hash to its paths: copy the `livewire-<hash>` segment that `php artisan route:list --path=livewire` shows (`/livewire-<hash>/**`).
+Keep only the lines of the tools you use. A panel on another path takes that path (`/backoffice/**`). Livewire 4 adds a hash to its paths, and the hash changes with `APP_KEY`. Pin its update and script paths in `AppServiceProvider::boot()`, so the `/livewire/**` line matches them in every environment:
+
+```php
+Livewire::setUpdateRoute(fn ($handle) => Route::post('/livewire/update', $handle));
+Livewire::setScriptRoute(fn ($handle) => Route::get('/livewire/livewire.js', $handle));
+```
 
 Octane is not supported yet.
 
