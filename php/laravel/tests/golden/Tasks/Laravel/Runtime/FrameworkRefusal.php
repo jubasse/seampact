@@ -168,7 +168,7 @@ final class FrameworkRefusal
     private static function delayMsOf(string $retryAfter, int $nowSeconds): ?int
     {
         $value = trim($retryAfter);
-        if (preg_match('/^[0-9]{1,15}$/', $value) === 1) {
+        if (preg_match('/^[0-9]{1,12}$/', $value) === 1) {
             return (int) $value * self::MILLISECONDS_PER_SECOND;
         }
 
