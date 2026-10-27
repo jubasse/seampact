@@ -22,6 +22,8 @@ You implement one lane PR, one review's fixes or committed docs on the seampact 
 
 Run this on your own diff, fix what it finds, then run the end-of-PR gate: `pnpm install --frozen-lockfile`, the tests of the packages you touched and of the packages that import them (`pnpm vitest run <paths>`; for `jvm/`, `./gradlew :<module>:check`), `pnpm typecheck`, `pnpm lint`, `pnpm exec biome check <touched files>`, `node scripts/checklist/cli.ts check`, `node scripts/cartography/cli.ts --check`, and a clean tree. The full `pnpm gate` runs in CI, not locally: several agents share one machine. A stale map: `node scripts/cartography/cli.ts --write`, then commit `docs/agents/cartography.md`.
 
+- `pnpm lint` passes when it exits 0: the warnings it prints (biome and others) are not failures, and develop prints some. Report a lint failure only with a non-zero exit code.
+
 - No silent drop or fallback: every input is used, refused with a diagnostic, or listed as out of scope.
 - Every value a pass stores is copied (`pipelineCopy`), never kept by reference.
 - Tests follow A47: unit tests on stable bricks, the slice's end-to-end test otherwise; a bug fix has a test that failed before.
