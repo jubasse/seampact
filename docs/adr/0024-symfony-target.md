@@ -97,6 +97,8 @@ Other methods:
 - A method the path does not serve answers the path's `notFound` 404 from the `kernel.request` listener, where the router would answer 405 (spike).
 - A CORS preflight (`OPTIONS` with `Origin` and `Access-Control-Request-Method`) is left to the app's CORS listener, such as NelmioCorsBundle's, which runs after the boundary.
 
+Beside the route loader, the shared `RouteHelpers` of `php/codegen` writes `<Api>RouteNames`, one constant per operation holding its route name, and `<Api>Urls`, one static method per operation taking one typed argument per path parameter in path order and returning the contract path, each value written as one segment by `WireValues::pathSegment` (its wire text, `encodeURIComponent`-encoded as the generated clients send it; an empty, `.` or `..` value refused), never prefixed and never absolute; `artefacts.routeHelpers: false` leaves both out.
+
 ### The reply path
 
 Every result class is turned into the reply by the `kernel.view` listener, and every generated exception by the `kernel.exception` listener; both write the contract reply themselves:

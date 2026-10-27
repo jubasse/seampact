@@ -78,6 +78,18 @@ Each route is named `seampact.<api>.<operation>`. Its parameters take the names 
 route('seampact.notes.getNote', ['noteId' => $note->id]);
 ```
 
+Each api also gets `NotesRouteNames`, one constant per route name, and `NotesUrls`, one method per operation that builds its path from typed parameters. `NotesUrls` returns the contract's path, encoded as the generated clients encode it, without the prefix of the group that serves it:
+
+```php
+use App\Generated\Notes\Laravel\NotesRouteNames;
+use App\Generated\Notes\Laravel\NotesUrls;
+
+route(NotesRouteNames::GET_NOTE, ['noteId' => $note->id]);
+NotesUrls::getNote($note->id); // '/v1/notes/42'
+```
+
+`artefacts: { routeHelpers: false }` leaves both classes out.
+
 `$request->route('noteId')` works too. Each parameter matches one whole segment, whatever `Route::pattern()` your app sets.
 
 `Route::bind('noteId', ...)` needs the `SubstituteBindings` middleware. Routes declared in `withRouting(then:)` do not run it: add `Illuminate\Routing\Middleware\SubstituteBindings::class` to `middleware.<kind>` in the config.
