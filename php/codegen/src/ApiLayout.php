@@ -163,6 +163,7 @@ final class ApiLayout implements TypeNames
             endpoints: $this->namespace . '\\' . PhpNames::identifier($owner, NamingRole::Endpoints),
             responses: $responses,
             page: $operation->paging === null ? null : $this->claim($this->namespace . '\\' . PhpNames::identifier([...$segments, 'page'], NamingRole::Schema), "the page of operation '{$operation->id}'", $at),
+            scopes: $operation->scopes === [] ? null : $this->claim($this->namespace . '\\' . PhpNames::identifier([...$segments, 'scopes'], NamingRole::Schema), "the scopes of operation '{$operation->id}'", $at),
         );
     }
 

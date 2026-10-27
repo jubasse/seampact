@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Golden\TasksConsistent;
 
 use Seampact\Golden\TasksConsistent\Schemas\PaymentEvent;
+use Seampact\Golden\TasksConsistent\Symfony\StripePrincipal;
 
 /**
  * The input of operation 'payments', as its handler reads it.
@@ -16,7 +17,17 @@ final readonly class PaymentsInput
   public function __construct(
     #[\SensitiveParameter]
     public PaymentEvent $body,
+    #[\SensitiveParameter]
+    private StripePrincipal $principal,
   ) {
+  }
+
+  /**
+   * The caller.
+   */
+  public function principal(): StripePrincipal
+  {
+    return $this->principal;
   }
 
   /**
@@ -26,6 +37,7 @@ final readonly class PaymentsInput
   {
     return [
       'body' => self::REDACTED,
+      'principal' => self::REDACTED,
     ];
   }
 }

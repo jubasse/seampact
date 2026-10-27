@@ -111,6 +111,19 @@ final class TasksController implements TasksEndpoints
 
 The boundary has already checked the path, query, headers and body. You never write a status or a content type yourself.
 
+### Who is calling
+
+On a route with an identity, the input's `principal()` returns the caller in the generated `<Identity>Principal` class. It is `null` for an anonymous caller on an optional-auth route. A public route has no `principal()`.
+
+When the route runs in scopes, the input's `scopes()` has one method per scope. Each returns what your scope resolver returned, with its `id` and its `value`. Load an entity once in the resolver, then read it here:
+
+```php
+$workspace = $input->scopes()->workspace()->value;
+$userId = $input->principal()->userId;
+```
+
+Neither comes from the request body or is validated with it, and each api reads its own. `$this->getUser()` and `#[CurrentUser]` are set only when the firewall authenticates.
+
 Do not put `#[IsGranted]` or `#[IsCsrfTokenValid]` on these methods: the boot check refuses them. Use a decider or an `access_control` rule instead (below). The routes come from the generated loader, not from `#[Route]`.
 
 A version in a body is checked for its format only. Compare it with the stored one and return the operation's conflict error when they differ.

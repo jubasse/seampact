@@ -136,6 +136,19 @@ if ($request->contractInput()->body->expectedVersion !== $task->version) {
 
 A deadline is a declared header, so read it from the checked input headers. Once the deadline has passed, stop the work and answer the operation's `deadlineExceeded` error. `budgetMs` is the client's timeout; the boundary does not enforce it.
 
+### Who is calling
+
+On a route with an identity, `principal()` returns the caller in the generated `<Identity>Principal` class. It is `null` for an anonymous caller on an optional-auth route. A public route has no `principal()`.
+
+When the route runs in scopes, `scopes()` has one method per scope. Each returns what your scope resolver returned, with its `id` and its `value`. Load a record once in the resolver, then read it here:
+
+```php
+$workspace = $request->scopes()->workspace()->value;
+$userId = $request->principal()->userId;
+```
+
+Neither is part of the input, and both come from this api's own boundary. `$request->user()` is Laravel's default guard, which the boundary does not set: read the caller from `principal()`.
+
 ### With Eloquent
 
 The handler maps your model to the contract's type. Extra columns never leave the boundary: the reply holds only the contract's fields.

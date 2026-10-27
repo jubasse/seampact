@@ -2294,6 +2294,8 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\Tasks\GetChannelResponse200'],
                 'errors' => 'Seampact\Golden\Tasks\GetChannelErrors',
+                'inputPrincipal' => 'Seampact\Golden\Tasks\Symfony\UserPrincipal',
+                'inputScopes' => 'Seampact\Golden\Tasks\GetChannelScopes',
             ],
             'getDraft' => [
                 'input' => 'Seampact\Golden\Tasks\GetDraftInput',
@@ -2302,6 +2304,7 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\Tasks\GetDraftResponse200'],
                 'errors' => 'Seampact\Golden\Tasks\GetDraftErrors',
+                'inputPrincipal' => 'Seampact\Golden\Tasks\Symfony\UserPrincipal',
             ],
             'getTask' => [
                 'input' => 'Seampact\Golden\Tasks\GetTaskInput',
@@ -2313,6 +2316,8 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\Tasks\GetTaskResponse200'],
                 'errors' => 'Seampact\Golden\Tasks\GetTaskErrors',
+                'inputPrincipal' => 'Seampact\Golden\Tasks\Symfony\UserPrincipal',
+                'inputScopes' => 'Seampact\Golden\Tasks\GetTaskScopes',
             ],
             'getTasksBatch' => [
                 'input' => 'Seampact\Golden\Tasks\GetTasksBatchInput',
@@ -2324,6 +2329,8 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\Tasks\GetTasksBatchResponse200'],
                 'errors' => 'Seampact\Golden\Tasks\GetTasksBatchErrors',
+                'inputPrincipal' => 'Seampact\Golden\Tasks\Symfony\UserPrincipal',
+                'inputScopes' => 'Seampact\Golden\Tasks\GetTasksBatchScopes',
             ],
             'health' => [
                 'input' => 'Seampact\Golden\Tasks\HealthInput',

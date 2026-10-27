@@ -18,7 +18,7 @@ final class ChannelsController implements ChannelsEndpoints
     public function getChannel(GetChannelRequest $request): GetChannelResult
     {
         return ScriptedAnswers::answer('getChannel', 200, static fn (array $body): GetChannelResult => new GetChannelResponse200(SampleData::channelOf($body)))
-            ?? new GetChannelResponse200(SampleData::channel($request->contractInput()->path->channelId));
+            ?? new GetChannelResponse200(SampleData::loadedChannel($request->scopes()->channel(), $request->principal()->userId));
     }
 
     public function listChannels(ListChannelsRequest $request): ListChannelsResult

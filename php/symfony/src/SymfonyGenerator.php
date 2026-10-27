@@ -12,6 +12,8 @@ use Seampact\Codegen\ContractClass;
 use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\Delivery;
 use Seampact\Codegen\FrameworkRouteScope;
+use Seampact\Codegen\HandlerAccessPlacement;
+use Seampact\Codegen\HandlerAccessTypes;
 use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -66,7 +68,7 @@ final class SymfonyGenerator implements Generator
         $refusals->throwIfAny();
 
         $types = new PhpTypes($layout);
-        $operationTypes = new OperationTypes($layout, $types, $refusals);
+        $operationTypes = new OperationTypes($layout, $types, $refusals, new HandlerAccessTypes($placement, $refusals), HandlerAccessPlacement::Input);
         $constraints = new InputConstraintFiles($ir, $placement, $options->rules, $refusals);
         $mount = $entry->mount ?? '';
         $contract = new ContractClass($placement, $kept, $entry->frameworkRoutes, $mount, FrameworkRouteScope::of($entry->artefacts));

@@ -125,6 +125,7 @@ final class IdentityTypes
             );
         }
 
+        $sensitive = [];
         foreach ($properties as [$property, $at]) {
             $member = PhpNames::memberIdentifier($property->name, $property->codeName);
             if ($member === null) {
@@ -138,10 +139,14 @@ final class IdentityTypes
 
             $memberType = $types->ofProperty($property, $file);
             PhpTypes::promote($constructor, $member, $memberType);
+            if ($property->sensitive || RedactedMembers::isSensitive($property->type)) {
+                $sensitive[] = $member;
+            }
             $interface->addMethod($member)->setPublic()->setReturnType($memberType->native)->setReturnNullable($memberType->nullable);
             $class->addMethod($member)->setPublic()->setReturnType($memberType->native)->setReturnNullable($memberType->nullable)
                 ->setBody("return \$this->{$member};");
         }
+        RedactedMembers::redact($class, $constructor, $sensitive);
 
         return [$interfaceFile, $file];
     }

@@ -36,7 +36,7 @@ final class TypedInput
             $arguments['body'] = WireCodec::decode($state->contract, Ir::map($operation['input'], 'schema'), $state->body);
         }
 
-        return $state->contractInput = new $inputClass(...$arguments);
+        return $state->contractInput = new $inputClass(...$arguments, ...HandlerAccess::inputMembers($state));
     }
 
     /**
