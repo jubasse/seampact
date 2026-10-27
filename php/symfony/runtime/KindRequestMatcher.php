@@ -7,6 +7,7 @@ namespace Seampact\Symfony\Runtime;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\RawTarget;
 use Symfony\Component\DependencyInjection\Attribute\Exclude;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestMatcherInterface;
 
@@ -21,6 +22,8 @@ final class KindRequestMatcher implements RequestMatcherInterface
 {
     public const SERVICE_PREFIX = 'seampact.';
     public const SERVICE_INFIX = '.matcher.';
+    /** The position of the access table among the service's arguments. */
+    private const ACCESS_ARGUMENT = 1;
 
     /** @param array<string, array{operation: string, kind: string}> $access the generated access table, by route name */
     public function __construct(
@@ -33,6 +36,25 @@ final class KindRequestMatcher implements RequestMatcherInterface
     public static function serviceId(string $api, string $kind): string
     {
         return self::SERVICE_PREFIX . $api . self::SERVICE_INFIX . $kind;
+    }
+
+    /**
+     * The access kind of an operation, read from the access table the api's matcher services carry; null when the api
+     * registers no matcher, so a boot check message can still name the rule to write.
+     */
+    public static function kindIn(ContainerBuilder $container, ApiContract $contract, string $operationId): ?string
+    {
+        $prefix = self::SERVICE_PREFIX . $contract->api . self::SERVICE_INFIX;
+        foreach ($container->getDefinitions() as $id => $definition) {
+            $access = str_starts_with($id, $prefix) ? $definition->getArguments()[self::ACCESS_ARGUMENT] ?? null : null;
+            $route = is_array($access) ? $access[$contract->routeName($operationId)] ?? null : null;
+            $kind = is_array($route) ? $route['kind'] ?? null : null;
+            if (is_string($kind)) {
+                return $kind;
+            }
+        }
+
+        return null;
     }
 
     public function matches(Request $request): bool

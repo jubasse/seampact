@@ -307,7 +307,7 @@ Symfony's firewall, `access_control` and voters stay the app's. The target expor
 
 Their refusals are mapped to roles as "Exceptions on contract routes" says. Symfony has no global CSRF check on JSON routes. A contract route's CSRF check is the authenticate hook's, with the CSRF companion value, and an `InvalidCsrfTokenException` that an app's authenticator throws answers `csrfInvalid`; `#[IsCsrfTokenValid]` and `#[IsGranted]` on a contract method are refused by the boot check.
 
-Symfony answers the hooks as application code, with no adapter package in 1.0 (ADR 0012 "Optional adapters"):
+Symfony answers the hooks as application code, with no adapter package in 1.0 (ADR 0012 "Optional adapters"). The runtime ships one opt-in decider, `VoterDecider`, that an app turns on by tagging it `seampact.<api>.deciders`: it answers a right by `isGranted(name, $request)`, so voters decide, and a denial still answers the operation's first declared code:
 
 - an authenticate hook reads the user from the token storage (`Security::getUser()`); the `kernel.controller` listener runs after the firewall, so the user is set (spike);
 - a decider calls `isGranted` with the right name and a subject object carrying params and scopes, which the app's voters decide; the `AccessDeniedException` of `denyAccessUnlessGranted()` answers the first declared denial code;
