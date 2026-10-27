@@ -6,16 +6,16 @@ import { unexpectedError } from "./contract-error.js";
 import type { ContractRoute } from "./contract-route.js";
 import { isPlainObject } from "./plain-object.js";
 
-/** The caller of an operation: its principal (null when anonymous) and each scope it runs in, by scope name. */
-export interface HandlerAccess<
-  Principal = unknown,
-  Scopes extends Readonly<Record<string, ResolvedScope>> = Readonly<Record<string, ResolvedScope>>,
-> {
-  readonly principal: Principal;
-  readonly scopes: Scopes;
+/**
+ * The caller of an operation: its principal (null for an anonymous caller on an optional-auth route) unless the
+ * route is public, and each scope it runs in, by scope name, unless it runs in none.
+ */
+export interface HandlerAccess {
+  readonly principal?: unknown;
+  readonly scopes?: Readonly<Record<string, ResolvedScope>>;
 }
 
-/** The principal and the scopes of a granted request, the scopes keyed by the route's declared scope names. */
+/** The members a public route, or one in no scope, leaves out, as the generated handler input types do. */
 export function handlerAccess(route: ContractRoute, grant: AccessGrant): HandlerAccess {
   const scopes = route.scopes.map((declared, index) => {
     const resolved = grant.scopes[index];
@@ -31,27 +31,23 @@ export function handlerAccess(route: ContractRoute, grant: AccessGrant): Handler
   });
 
   return {
-    principal: grant.principal ?? null,
-    scopes: Object.freeze(Object.fromEntries(scopes)),
+    ...(route.access.kind === "public" ? {} : { principal: grant.principal ?? null }),
+    ...(scopes.length === 0 ? {} : { scopes: Object.freeze(Object.fromEntries(scopes)) }),
   };
 }
 
 /**
- * The input a handler receives: a copy of the validated input with `principal` and `scopes` added as read-only,
- * non-enumerable members, so serialising or spreading the input never carries them.
+ * The input a handler receives: a copy of the validated input with its caller's `principal` and `scopes` added as
+ * read-only, non-enumerable members, so serialising or spreading the input never carries them.
  */
 export function inputWithAccess(route: ContractRoute, grant: AccessGrant, input: unknown): object {
   if (input !== undefined && !isPlainObject(input)) {
     throw unexpectedError(route, new Error("seampact: the validated input is not an object"));
   }
 
-  const access = handlerAccess(route, grant);
-
-  return Object.defineProperties(
-    { ...input },
-    {
-      principal: { value: access.principal, enumerable: false, writable: false },
-      scopes: { value: access.scopes, enumerable: false, writable: false },
-    },
+  const members = Object.entries(handlerAccess(route, grant)).map(
+    ([name, value]) => [name, { value, enumerable: false, writable: false }] as const,
   );
+
+  return Object.defineProperties({ ...input }, Object.fromEntries(members));
 }

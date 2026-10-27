@@ -197,7 +197,7 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
     test("the principal and scopes decorators hand over the caller the input carries, past the app's pipe", async () => {
       const decorated: unknown[] = [];
 
-      app.scenario.answers.getChannel = (input, _controller, caller) => {
+      app.scenario.answers.getChannel = (_input, _controller, caller) => {
         decorated.push(caller);
 
         return { status: 200, body: { channelId: CHANNEL, name: "General" } };

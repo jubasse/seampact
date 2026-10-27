@@ -1,6 +1,7 @@
 // The handlers every Node server consumer's controllers delegate to, framework-neutral and typed by the generated
 // operation types: one declared success per operation, as the http suite expects, unless the script a case loaded
 // answers for the operation.
+import type * as TasksServer from "../generated/server/tasks/index.js";
 import type * as Tasks from "../generated/types/tasks/index.js";
 import type * as TasksService from "../generated/types/tasksService/index.js";
 import { scriptedAnswer } from "./suite-control.mjs";
@@ -59,7 +60,12 @@ export const tasksHandlers = scripted("tasks", {
     return { status: 200, body: { items: [{ channelId: GENERAL_CHANNEL_ID, name: "General" }] } };
   },
 
-  getChannel(input: Tasks.GetChannelInput): Tasks.GetChannelOutput {
+  getChannel(input: TasksServer.HandlerInputs["getChannel"]): Tasks.GetChannelOutput {
+    // The boundary authenticated the caller and resolved the channel from the path before the handler ran.
+    if (input.principal.userId === "" || input.scopes.channel.id !== input.path.channelId) {
+      throw new Error("the handler did not receive the caller and the channel the boundary resolved");
+    }
+
     return { status: 200, body: { channelId: input.path.channelId, name: "General" } };
   },
 

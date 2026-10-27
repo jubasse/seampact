@@ -15,6 +15,7 @@ import { SERVER_RUNTIME_PACKAGE } from "./server-runtime-check.js";
 const HOOKS_PACKAGE = "@seampact/hooks";
 const WORD = /[a-z0-9]+/g;
 const OPERATION_ACCESS_EXPORT = "OperationAccess";
+const HANDLER_INPUTS_EXPORT = "HandlerInputs";
 
 class TypeImports {
   private readonly aliases = new Map<string, string>();
@@ -73,9 +74,11 @@ export function handlersSource(
   const imports = new TypeImports(types, fromFile);
   const groups = new Map<string, string[]>();
   const accessMembers: string[] = [];
+  const inputMembers: string[] = [];
   const names = new ExportNames(fromFile);
 
   names.claim(OPERATION_ACCESS_EXPORT, { member: "the generated access map" }, refusals);
+  names.claim(HANDLER_INPUTS_EXPORT, { member: "the generated handler input map" }, refusals);
 
   ir.operations.forEach((operation, index) => {
     const location = operationLocation(index, operation.id);
@@ -106,8 +109,11 @@ export function handlersSource(
     accessMembers.push(
       `  readonly ${accessKey}: ${handlerAccessType(ir, operation, types.descriptor, imports)};`,
     );
+    inputMembers.push(
+      `  readonly ${accessKey}: ${imports.reference(exports.input)} & ${OPERATION_ACCESS_EXPORT}[${accessKey}];`,
+    );
     members.push(
-      `  ${method}(input: ${imports.reference(exports.input)} & ${OPERATION_ACCESS_EXPORT}[${accessKey}]): Awaitable<${imports.reference(exports.output)} | ${imports.reference(exports.errors)}>;`,
+      `  ${method}(input: ${HANDLER_INPUTS_EXPORT}[${accessKey}]): Awaitable<${imports.reference(exports.output)} | ${imports.reference(exports.errors)}>;`,
     );
     groups.set(group, members);
   });
@@ -121,12 +127,14 @@ export function handlersSource(
     "/** What each operation's handler reads of its caller: the principal (null when anonymous) and the resolved scopes. */",
     `export type ${OPERATION_ACCESS_EXPORT} = {\n${accessMembers.join("\n")}\n};`,
     "",
+    "/** The input each operation's handler receives: the validated input with its caller's read-only members. */",
+    `export type ${HANDLER_INPUTS_EXPORT} = {\n${inputMembers.join("\n")}\n};`,
+    "",
     interfaces.join("\n\n"),
   ].join("\n");
 
   return [
     importLine(["Awaitable", "ResolvedScope"], HOOKS_PACKAGE, body),
-    importLine(["HandlerAccess"], SERVER_RUNTIME_PACKAGE, body),
     ...imports.lines(),
     "",
     body,
@@ -134,8 +142,8 @@ export function handlersSource(
   ].join("\n");
 }
 
-// What the operation's handler reads of its caller: the principal (null when the route lets an anonymous caller
-// in) and each scope the operation runs in, as its resolver answered it.
+// What the operation's handler reads of its caller: the principal unless the route is public (null for an
+// anonymous caller on an optional-auth route), and each scope the operation runs in, as its resolver answered it.
 function handlerAccessType(
   ir: ContractIR,
   operation: Operation,
@@ -147,16 +155,19 @@ function handlerAccessType(
   const reportedByHooksModule: Refusal[] = [];
   const principal =
     access.kind === "public" || !("identity" in access)
-      ? "null"
+      ? undefined
       : principalType(ir, String(access.identity), descriptor, imports, reportedByHooksModule);
-  const nullable =
-    access.kind === "optional" && principal !== "null" ? `${principal} | null` : principal;
   const scopes = operation.scopes.map(
     (scope) => `readonly ${JSON.stringify(scope.scope)}: ResolvedScope`,
   );
-  const scopesType = scopes.length === 0 ? "Record<never, never>" : `{ ${scopes.join("; ")} }`;
+  const members = [
+    ...(principal === undefined
+      ? []
+      : [`readonly principal: ${access.kind === "optional" ? `${principal} | null` : principal}`]),
+    ...(scopes.length === 0 ? [] : [`readonly scopes: { ${scopes.join("; ")} }`]),
+  ];
 
-  return `HandlerAccess<${nullable}, ${scopesType}>`;
+  return members.length === 0 ? "Record<never, never>" : `{ ${members.join("; ")} }`;
 }
 
 /** The hooks module: the hook types of each identity, right, rule and scope, and the registration object. */

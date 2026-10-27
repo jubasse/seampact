@@ -10,6 +10,7 @@ const OTHER_CHANNEL = "22222222-2222-4222-8222-222222222222";
 const USER = "55555555-5555-4555-8555-555555555555";
 const OTHER_USER = "66666666-6666-4666-8666-666666666666";
 const CHANNEL_OPERATION = "getChannel";
+const CALLER_MEMBERS = ["principal", "scopes"];
 // Long enough for the requests of two apis to be served at once.
 const HANDLER_DELAY_MILLISECONDS = 20;
 
@@ -24,9 +25,13 @@ export interface HandlerAccessBoot {
   send(method: string, path: string, headers: Record<string, string>): Promise<RawReply>;
 }
 
-/** What a handler read: its path, principal and scopes, and the input members a serialisation keeps. */
+/**
+ * What a handler read: its path, the caller members its input has, their values, and the input members a
+ * serialisation keeps.
+ */
 export interface ReadAccess {
   readonly path: unknown;
+  readonly callerMembers: readonly string[];
   readonly principal: unknown;
   readonly scopes: unknown;
   readonly serialisedMembers: readonly string[];
@@ -52,6 +57,7 @@ export function readAccessOf(
 
     reads.push({
       path: Reflect.get(input, "path"),
+      callerMembers: CALLER_MEMBERS.filter((member) => member in input),
       principal: Reflect.get(input, "principal"),
       scopes: Reflect.get(input, "scopes"),
       serialisedMembers: Object.keys(JSON.parse(JSON.stringify(input))),
@@ -72,7 +78,7 @@ function channelAnswer(input: unknown): unknown {
   return { status: 200, body: { channelId, name: "General" } };
 }
 
-/** The handler access tests of one api: an identified caller, and a public route's anonymous one. */
+/** The handler access tests of one api: an identified caller in a scope, and a public route outside any. */
 export function describeHandlerAccess(booted: () => HandlerAccessBoot): void {
   test("a handler reads its caller's principal and scopes, which the wire input never carries", async () => {
     const { app, send } = booted();
@@ -83,6 +89,7 @@ export function describeHandlerAccess(booted: () => HandlerAccessBoot): void {
     expect(reads).toEqual([
       {
         path: { channelId: CHANNEL },
+        callerMembers: CALLER_MEMBERS,
         principal: { userId: USER },
         scopes: { channel: { scope: "channel", id: CHANNEL } },
         serialisedMembers: expect.not.arrayContaining(["principal", "scopes"]),
@@ -90,13 +97,13 @@ export function describeHandlerAccess(booted: () => HandlerAccessBoot): void {
     ]);
   });
 
-  test("a public route's handler reads a null principal and no scope", async () => {
+  test("a public route's handler has no principal, and one in no scope no scopes", async () => {
     const { app, send } = booted();
     const reads = readAccessOf(app, "health", () => ({ status: 200, body: { status: "ok" } }));
     const reply = await send("GET", "/v1/health", {});
 
     expect(reply.status).toBe(200);
-    expect(reads).toMatchObject([{ principal: null, scopes: {} }]);
+    expect(reads).toMatchObject([{ callerMembers: [] }]);
   });
 }
 

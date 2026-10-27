@@ -1100,11 +1100,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         markResponseHandled,
       );
 
-    return Object.assign(composite, {
-      input,
-      principal: (): ParameterDecorator => principalDecorator(id),
-      scopes: (): ParameterDecorator => scopesDecorator(id),
-    });
+    return Object.assign(composite, { input });
   };
 
   // The value NestJS extracts is ignored: the input pipe validates the request the guard recorded.
@@ -1149,8 +1145,24 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
   const principalPipe = new PrincipalPipe();
   const scopesPipe = new ScopesPipe();
-  const principalDecorator = (id: string): ParameterDecorator => accessDecorator(id, principalPipe);
-  const scopesDecorator = (id: string): ParameterDecorator => accessDecorator(id, scopesPipe);
+
+  // The `principal` param decorator of an operation with an identity; a public route has none.
+  function principalDecorator(id: string): () => ParameterDecorator {
+    if (routeOf(id).access.kind === "public") {
+      throw new Error(`seampact: '${id}' is public, so its handler has no principal.`);
+    }
+
+    return () => accessDecorator(id, principalPipe);
+  }
+
+  // The `scopes` param decorator of an operation that runs in a scope.
+  function scopesDecorator(id: string): () => ParameterDecorator {
+    if (routeOf(id).scopes.length === 0) {
+      throw new Error(`seampact: '${id}' runs in no scope, so its handler has no scopes.`);
+    }
+
+    return () => accessDecorator(id, scopesPipe);
+  }
 
   // The app's hooks under the exported token, so a test's `overrideProvider` replaces them before they are resolved.
   function moduleOf(
@@ -1544,6 +1556,8 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     SeampactModule: apiModule,
     SEAMPACT_HOOKS,
     operation,
+    principal: principalDecorator,
+    scopes: scopesDecorator,
     responses: (mode: ResponsesMode) => SetMetadata(RESPONSES_METADATA, mode),
     renderContractError,
     isContractRoute,
