@@ -4,11 +4,15 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.Base64
 import java.util.HexFormat
+import java.util.jar.JarEntry
+import java.util.jar.JarOutputStream
+import javax.tools.ToolProvider
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
@@ -115,6 +119,64 @@ public object ReferenceApp {
             """.trimIndent().toByteArray(),
         )
     }
+
+    /**
+     * Publishes a seampact-spring-runtime of [version] to the Maven [repository]: a jar holding only the runtime's
+     * version constant, which is all the generate-time check reads (ADR 0025, G2), with its POM and checksums.
+     */
+    public fun publishSpringRuntime(repository: Path, version: String) {
+        val directory = repository.resolve("io/github/jubasse/seampact-spring-runtime/$version").createDirectories()
+
+        writeWithChecksums(directory.resolve("seampact-spring-runtime-$version.jar"), runtimeVersionJar(repository, version))
+        writeWithChecksums(
+            directory.resolve("seampact-spring-runtime-$version.pom"),
+            """
+            <project xmlns="http://maven.apache.org/POM/4.0.0">
+              <modelVersion>4.0.0</modelVersion>
+              <groupId>io.github.jubasse</groupId>
+              <artifactId>seampact-spring-runtime</artifactId>
+              <version>$version</version>
+            </project>
+            """.trimIndent().toByteArray(),
+        )
+    }
+
+    // The runtime's version class compiled by the test JDK, in a jar; the build directory sits in [repository] and is
+    // removed after.
+    private fun runtimeVersionJar(repository: Path, version: String): ByteArray {
+        val work = Files.createTempDirectory(repository.createDirectories(), "runtime-version-build")
+        val source = work.resolve("$RUNTIME_VERSION_CLASS.java")
+        source.writeText(
+            """
+            package $RUNTIME_PACKAGE;
+
+            public final class $RUNTIME_VERSION_CLASS {
+                public static final String VERSION = "$version";
+
+                private $RUNTIME_VERSION_CLASS() {
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val compiler = checkNotNull(ToolProvider.getSystemJavaCompiler()) { "The tests run on a JRE; the runtime fixture needs a JDK's javac." }
+        val status = compiler.run(null, null, null, "--release", "21", "-d", work.absolutePathString(), source.absolutePathString())
+        check(status == 0) { "javac failed on the runtime version fixture $source" }
+
+        val entry = RUNTIME_PACKAGE.replace('.', '/') + "/$RUNTIME_VERSION_CLASS.class"
+        val jar = ByteArrayOutputStream()
+        JarOutputStream(jar).use { output ->
+            output.putNextEntry(JarEntry(entry))
+            output.write(Files.readAllBytes(work.resolve(entry)))
+            output.closeEntry()
+        }
+        work.toFile().deleteRecursively()
+
+        return jar.toByteArray()
+    }
+
+    private const val RUNTIME_PACKAGE = "io.github.jubasse.seampact.springboot.runtime"
+    private const val RUNTIME_VERSION_CLASS = "SeampactRuntimeVersion"
 
     // Writes [content] to [file], then the checksum files Maven repositories keep next to it.
     private fun writeWithChecksums(file: Path, content: ByteArray) {

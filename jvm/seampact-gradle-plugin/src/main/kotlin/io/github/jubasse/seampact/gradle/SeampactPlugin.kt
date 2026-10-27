@@ -6,8 +6,10 @@ import io.github.jubasse.seampact.ir.binary.BinaryPin
 import io.github.jubasse.seampact.ir.binary.BinaryPinResolution
 import io.github.jubasse.seampact.ir.config.AppConfigReader
 import io.github.jubasse.seampact.ir.config.LocalSourcePolicy
+import io.github.jubasse.seampact.runner.AppLayout
 import io.github.jubasse.seampact.runner.BinarySettings
 import io.github.jubasse.seampact.runner.pinBinary
+import io.github.jubasse.seampact.springboot.SpringBootTarget
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -85,13 +87,21 @@ public class SeampactPlugin : Plugin<Project> {
             task.buildDirectory.set(project.layout.buildDirectory.map { it.asFile.absolutePath })
         }
 
-        project.pluginManager.withPlugin(JAVA_PLUGIN) { wireIntoJava(project, generate, check) }
+        project.pluginManager.withPlugin(JAVA_PLUGIN) { wireIntoJava(project, layout, generate, check) }
     }
 
-    private fun wireIntoJava(project: Project, generate: TaskProvider<SeampactGenerateTask>, check: TaskProvider<SeampactCheckTask>) {
+    private fun wireIntoJava(project: Project, layout: Provider<AppLayout>, generate: TaskProvider<SeampactGenerateTask>, check: TaskProvider<SeampactCheckTask>) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
         // The entry roots only: the task's other outputs are the OpenAPI documents, not sources.
         sourceSets.named(MAIN_SOURCE_SET) { it.java.srcDir(generate.map { task -> task.entryRoots }) }
+
+        // The runtime the generated code imports, at this plugin's version (ADR 0025); the generate task checks the
+        // version the classpath resolves, which a platform or a forced version can move.
+        val runtime = layout.map { appLayout ->
+            if (appLayout.entryRoots.isEmpty()) emptyList() else listOf(project.dependencies.create("${SpringBootTarget.RUNTIME_MODULE}:${SpringBootTarget.VERSION}"))
+        }
+        project.configurations.named(IMPLEMENTATION) { it.dependencies.addAllLater(runtime) }
+        generate.configure { task -> task.compileClasspath.from(sourceSets.named(MAIN_SOURCE_SET).map { it.compileClasspath }) }
 
         // The properties files the target writes (`frameworkDocs: off`) go on the classpath; the sources do not.
         project.tasks.named(PROCESS_RESOURCES_TASK, ProcessResources::class.java) { task ->
@@ -145,6 +155,7 @@ public class SeampactPlugin : Plugin<Project> {
         const val JAVA_PLUGIN = "java"
         const val MAIN_SOURCE_SET = "main"
         const val COMPILE_CLASSPATH = "compileClasspath"
+        const val IMPLEMENTATION = "implementation"
         const val PROCESS_RESOURCES_TASK = "processResources"
         const val GENERATED_RESOURCES = "*.properties"
         const val CHECK_LIFECYCLE_TASK = "check"

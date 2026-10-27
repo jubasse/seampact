@@ -59,8 +59,13 @@ kotlin {
     }
 }
 
+// The modules a TestKit build resolves from the root build's file repository: the runtime the plugin adds.
+val publishedModules = listOf(":seampact-hooks", ":seampact-spring-runtime")
+
 tasks.test {
     useJUnitPlatform()
+    dependsOn(publishedModules.map { "$it:publishAllPublicationsToTestRepository" })
+    systemProperty("seampact.testRepository", rootProject.layout.buildDirectory.dir("test-repository").get().asFile.absolutePath)
     systemProperty("seampact.repositoryRoot", repositoryRoot.absolutePath)
     // The TestKit builds share one Gradle user home under build/, so Spring Boot is downloaded once per clean build.
     systemProperty("seampact.testKitDirectory", layout.buildDirectory.dir("testkit").get().asFile.absolutePath)

@@ -3,6 +3,7 @@ package io.github.jubasse.seampact.gradle
 import io.github.jubasse.seampact.runner.BinarySettings
 import io.github.jubasse.seampact.runner.BuildTool
 import io.github.jubasse.seampact.runner.RunSettings
+import io.github.jubasse.seampact.springboot.SpringBootTarget
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.provider.ListProperty
@@ -125,4 +126,6 @@ internal val GRADLE_BUILD_TOOL = BuildTool(
     generateCommand = "gradle seampactGenerate",
     unresolvedBinaryFix = "Add the repository that holds it (mavenCentral(), or your mirror of it), or point `binary { path }` at your own build with its `sha256`.",
     binaryCacheSetting = "the Gradle user home (`--gradle-user-home` or `GRADLE_USER_HOME`)",
+    runtimeInstallTemplate = "the Gradle plugin adds `${SpringBootTarget.RUNTIME_MODULE}:${BuildTool.VERSION_PLACEHOLDER}` to the main source set's `implementation`;" +
+        " remove the exclusion, constraint, platform or forced version that drops or moves it",
 )

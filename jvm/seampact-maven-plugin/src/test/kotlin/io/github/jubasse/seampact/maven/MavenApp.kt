@@ -26,10 +26,15 @@ internal class MavenApp(val directory: Path) {
     }
 
     /**
-     * Writes the POM, with [configuration] as the seampact plugin's `<configuration>` content and [repositories] as
-     * the project's `<repositories>` content.
+     * Writes the POM, with [configuration] as the seampact plugin's `<configuration>` content, [repositories] as
+     * the project's `<repositories>` content and [runtimeVersion] as the version of the seampact-spring-runtime
+     * dependency, none when null.
      */
-    fun writePom(configuration: String, repositories: String = "") {
+    fun writePom(configuration: String, repositories: String = "", runtimeVersion: String? = PLUGIN_VERSION) {
+        val runtimeDependency = runtimeVersion?.let {
+            "<dependency><groupId>io.github.jubasse</groupId><artifactId>seampact-spring-runtime</artifactId><version>$it</version></dependency>"
+        } ?: ""
+
         write(
             "pom.xml",
             """
@@ -64,6 +69,7 @@ internal class MavenApp(val directory: Path) {
                   <artifactId>seampact-hooks</artifactId>
                   <version>$PLUGIN_VERSION</version>
                 </dependency>
+                $runtimeDependency
               </dependencies>
               <build>
                 <plugins>
