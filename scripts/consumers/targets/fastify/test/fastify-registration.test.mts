@@ -1,13 +1,11 @@
 // What the shared suite cannot set up: the boundary's own compression under `@fastify/compress`, which skips the
 // hijacked contract replies, with the 304 of a reply above its threshold, and the boot check on a registration prefix. The suite's server registers the tasks
 // plugin under its base path, so every suite case also runs under that prefix.
+
+import { COMPRESSION_THRESHOLD_BYTES, compressedReply } from "@seampact/server-runtime/node";
 import Fastify from "fastify";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import * as TasksFastify from "../generated/server/tasks/index.js";
-import {
-  COMPRESSION_THRESHOLD_BYTES,
-  compressedReply,
-} from "../generated/server/tasks/node-server/node-reply-compression.js";
 import { USER_TOKEN } from "./credentials.mjs";
 import { startServer, tasksRegistration } from "./server.mjs";
 
