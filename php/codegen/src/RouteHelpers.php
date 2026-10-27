@@ -94,8 +94,13 @@ final class RouteHelpers
             }
 
             $wireName = substr($segment, 1, -1);
-            [$position, $param] = $parameters[$wireName] ?? [null, null];
-            $variable = $param === null ? null : $this->addParameter($file, $method, $param, $at->below('params', 'path', (int) $position));
+            if (!isset($parameters[$wireName])) {
+                $this->refusals->inconsistent('path.param.missing', "The path placeholder '{$segment}' names no path parameter", $at->below('path'));
+
+                return;
+            }
+            [$position, $param] = $parameters[$wireName];
+            $variable = $this->addParameter($file, $method, $param, $at->below('params', 'path', $position));
             if ($variable === null) {
                 return;
             }
@@ -104,11 +109,10 @@ final class RouteHelpers
             $parts[] = "{$wireValues}::pathSegment(" . var_export($wireName, true) . ", \${$variable})";
             $literal = '';
         }
-        if ($literal !== '' || $parts === []) {
-            $parts[] = var_export($literal, true);
-        }
+        $parts[] = var_export($literal, true);
+        $written = array_values(array_filter($parts, static fn (string $part): bool => $part !== "''"));
 
-        $method->setBody('return ' . implode(' . ', array_filter($parts, static fn (string $part): bool => $part !== "''")) . ';');
+        $method->setBody('return ' . ($written === [] ? "''" : implode(' . ', $written)) . ';');
     }
 
     /** The parameter's variable name, or null when its type is refused. */
