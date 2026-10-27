@@ -123,6 +123,7 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     "nestjs-consumer": [
       { target: "nestjs", validators: "class-validator", reply: "handler" },
       { target: "nestjs", validators: "zod", reply: "interceptor" },
+      { target: "nestjs-cjs", validators: "zod", reply: "handler" },
     ],
     "nestjs-consumer-post-merge": [
       { target: "nestjs", validators: "zod", reply: "handler" },
