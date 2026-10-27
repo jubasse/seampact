@@ -119,14 +119,17 @@ test("refuses a framework-route switch that is neither a boolean nor strict", as
   });
 });
 
-test.each(["/api", "/api/v2", "/my-app.v1"])("reads the mount %s", async (mount) => {
-  const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    mount: ${mount}\n`);
+test.each(["/api", "/api/v2", "/my-app.v1", "/.well", "/v1..2"])(
+  "reads the mount %s",
+  async (mount) => {
+    const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    mount: ${mount}\n`);
 
-  expect(outcome).toMatchObject({
-    status: "read",
-    config: { entries: [{ entry: { mount } }] },
-  });
-});
+    expect(outcome).toMatchObject({
+      status: "read",
+      config: { entries: [{ entry: { mount } }] },
+    });
+  },
+);
 
 test.each([
   ["no leading slash", "api"],
@@ -138,10 +141,24 @@ test.each([
   ["a brace", "'/{tenant}'"],
   ["a percent-encoded character", "/caf%C3%A9"],
   ["a non-ASCII character", "/café"],
+  ["a dot segment", "/api/."],
+  ["a dot-dot segment", "/.."],
+  ["a dot-dot segment between two others", "/api/../v1"],
 ])("refuses a mount with %s", async (_, mount) => {
   expect(await readConfigText(`${SERVER_ENTRY_HEAD}    mount: ${mount}\n`)).toMatchObject({
     status: "refused",
     problems: [{ code: "config.schema", message: expect.stringContaining("'mount'") }],
+  });
+});
+
+test("names the mount rule, dot segments included", async () => {
+  expect(await readConfigText(`${SERVER_ENTRY_HEAD}    mount: /..\n`)).toMatchObject({
+    problems: [
+      {
+        message:
+          "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'.",
+      },
+    ],
   });
 });
 

@@ -225,6 +225,12 @@ export function startTwoApiApp() {
   return listen(app);
 }
 
+/** Registers the api on an app another module built, for two apis in one app. */
+export function registerApi(app) {
+  resetScenario();
+  TasksHono.registerRoutes(app, { handlers, hooks });
+}
+
 /** An app that adds its own routes with `addOwnRoutes` before registering the api, for the framework-route check. */
 export function appWithOwnRoutes(addOwnRoutes) {
   resetScenario();

@@ -80,4 +80,19 @@ class FrameworkRoutePatternTest {
         assertFalse(FrameworkRoutePattern.overlapsAny(basePaths, "/{page}"));
         assertTrue(FrameworkRoutePattern.overlapsAny(List.of(""), "/health"));
     }
+
+    @Test
+    void aSegmentWithAWildcardOrAVariableTakesTheBasePathSegment() {
+        List<String> basePaths = List.of("/api/v1");
+
+        assertTrue(FrameworkRoutePattern.overlapsAny(basePaths, "/ap*/**"));
+        assertTrue(FrameworkRoutePattern.overlapsAny(basePaths, "/api/v?/tasks"));
+        assertTrue(FrameworkRoutePattern.overlapsAny(basePaths, "/api/v{version}/tasks"));
+        assertFalse(FrameworkRoutePattern.overlapsAny(basePaths, "/ap*"));
+    }
+
+    @Test
+    void aLiteralInAnotherCaseTakesTheBasePathSegment() {
+        assertTrue(FrameworkRoutePattern.overlapsAny(List.of("/api/v1"), "/API/v1/tasks"));
+    }
 }

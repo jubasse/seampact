@@ -71,11 +71,18 @@ class ConfigReaderTest {
     }
 
     @Test
+    fun refusesAMountWithADotSegment() {
+        for (mount in listOf("/..", "/api/.", "/api/../v1")) {
+            assertEquals("config.schema", refused("targets:\n  - { id: a, use: 'g:a', api: x, mount: $mount }\n").single().code, mount)
+        }
+    }
+
+    @Test
     fun namesTheMountRuleAsTheNodeCliDoes() {
         val problems = refused("targets:\n  - { id: a, use: 'g:a', api: x, mount: /api/ }\n")
 
         assertEquals(
-            "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!\$&'()+,;=@:', with no trailing '/', no '*' and no segment starting with ':'.",
+            "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!\$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'.",
             problems.single().message,
         )
     }

@@ -45,6 +45,33 @@ final class FrameworkRoutesTest extends TestCase
         self::assertSame('/{page}', FrameworkRoutes::withCatchAlls('/{page}', $patternOf));
     }
 
+    public function testAPlaceholderInsideASegmentWhosePatternTakesASlashIsACatchAll(): void
+    {
+        $patternOf = static fn (string $name): ?string => $name === 'rest' ? '.+' : null;
+
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], FrameworkRoutes::withCatchAlls('/api{rest}', $patternOf)), 'Symfony matches /api/v1/tasks with rest=/v1/tasks');
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], FrameworkRoutes::withCatchAlls('/v{rest}', $patternOf)), 'a partial segment reads as a placeholder');
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], FrameworkRoutes::withCatchAlls('/api{page}', $patternOf)), 'the default pattern keeps to one segment');
+    }
+
+    public function testAPlaceholderPatternTheCheckCannotReadIsACatchAll(): void
+    {
+        $patternOf = static fn (string $name): ?string => $name === 'rest' ? 'v\\d/tasks' : null;
+
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], FrameworkRoutes::withCatchAlls('/{rest}', $patternOf)));
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], FrameworkRoutes::withCatchAlls('/{rest', $patternOf)), 'an unclosed brace');
+    }
+
+    public function testAPlaceholderPatternThatKeepsToOneSegmentStaysOneSegment(): void
+    {
+        $patterns = ['uuid' => '[0-9a-f]{8}-[0-9a-f]{4}-[13-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}', 'slug' => '[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*', 'lang' => 'en|fr', 'id' => '\\d+'];
+        $patternOf = static fn (string $name): ?string => $patterns[$name] ?? null;
+
+        foreach (array_keys($patterns) as $name) {
+            self::assertSame("/{{$name}}", FrameworkRoutes::withCatchAlls("/{{$name}}", $patternOf));
+        }
+    }
+
     public function testAnEmptyBasePathOverlapsEveryRoute(): void
     {
         self::assertTrue(FrameworkRoutes::overlapsAny([''], '/health'));

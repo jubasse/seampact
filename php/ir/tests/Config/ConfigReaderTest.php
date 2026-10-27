@@ -124,6 +124,8 @@ final class ConfigReaderTest extends TestCase
             'a waiting key' => ["targets:\n  - { id: a, use: x/y, api: t, access: { native: n } }\n", ['config.key.waits']],
             'a framework-route switch neither a boolean nor strict' => ["targets:\n  - { id: a, use: x/y, api: t, artefacts: { bootCheck: { frameworkRoutes: all } } }\n", ['config.schema']],
             'a mount with a trailing slash' => ["targets:\n  - { id: a, use: x/y, api: t, mount: /api/ }\n", ['config.schema']],
+            'a mount with a dot-dot segment' => ["targets:\n  - { id: a, use: x/y, api: t, mount: /api/.. }\n", ['config.schema']],
+            'a mount with a dot segment' => ["targets:\n  - { id: a, use: x/y, api: t, mount: /./api }\n", ['config.schema']],
             'an allow-list switched off' => [
                 "targets:\n  - id: a\n    use: x/y\n    api: t\n    artefacts: { bootCheck: false }\n    frameworkRoutes: [{ path: /up, reason: health }]\n",
                 ['config.key.conflict'],
@@ -183,7 +185,7 @@ final class ConfigReaderTest extends TestCase
 
         self::assertIsArray($problems);
         self::assertSame(
-            "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*' and no segment starting with ':'.",
+            "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'.",
             $problems[0]->message,
         );
     }
