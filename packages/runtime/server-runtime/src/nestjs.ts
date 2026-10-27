@@ -1608,15 +1608,10 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   }
 
   // Hands an exception no api claims to NestJS's own filter, which answers and logs it as without this filter.
-  @Catch()
+  @Catch(RaisedOutsideContractRoutes)
   class PreRoutingFilter implements ExceptionFilter {
     catch(exception: unknown, host: ArgumentsHost): void {
       if (renderPreRoutingError(exception, host)) return;
-
-      const context = boundaryContext.getStore();
-
-      // On a contract route the outgoing check reports this exception if NestJS's reply violates the contract.
-      if (context !== undefined) context.unclaimedException = exception;
 
       const httpAdapter = platform.adapterHost?.httpAdapter;
 
@@ -1664,6 +1659,24 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     preRoutingFilter,
     configureApp,
   };
+}
+
+// The exceptions the pre-routing filter takes, as a class NestJS's `@Catch` tests with `instanceof`: those raised
+// outside any contract route. NestJS gives an exception to the first matching filter alone, and this filter is
+// registered after the app's `APP_FILTER`s, so on a contract route it matches nothing and the app's filters, then
+// NestJS's own, keep the exception (ADR 0016). The exception is kept there, so the outgoing check reports it if the
+// reply written for it violates the contract.
+// biome-ignore lint/complexity/noStaticOnlyClass: `@Catch` takes a class, and matches it by `instanceof`.
+class RaisedOutsideContractRoutes {
+  static [Symbol.hasInstance](value: unknown): boolean {
+    const context = boundaryContext.getStore();
+
+    if (context === undefined) return true;
+
+    context.unclaimedException = value;
+
+    return false;
+  }
 }
 
 // The contract errors one api's filter answers, as a class NestJS's `@Catch` tests with `instanceof`: the runtime's
