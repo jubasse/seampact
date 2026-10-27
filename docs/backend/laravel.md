@@ -260,7 +260,7 @@ $this->withToken('test-token')
 - Replace a decider, a scope resolver or a store the same way, with `$this->app->instance()`.
 - A request with a body works as usual: `postJson()` reaches the handler with that body, checked like a real request.
 
-To call a handler directly in a unit test, build its request with `forTest()`. It takes the input, then the caller when the route has an identity, then the scopes when it runs in scopes:
+To call a handler directly in a unit test, build its request with `forTest()`. It takes the input, then the caller when the route has an identity, then the scopes when it runs in scopes: A `forTest()` request is for direct handler calls only: never bind it into the container in a feature test.
 
 ```php
 $request = GetNoteRequest::forTest(
