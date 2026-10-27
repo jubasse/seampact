@@ -18,9 +18,10 @@ use Seampact\Ir\Write\GeneratedFile;
 /**
  * The contract routes of one api (ADR 0023 "Routes"): Laravel patterns with each placeholder named after its input
  * property (`{taskId}`, a name over 32 characters a positional `{p2}`) and pinned to one whole segment, so an app's
- * global `Route::pattern` never narrows it, a `:` in a static segment kept literal, registered per depth with literal segments before placeholders, since Laravel
- * matches in registration order. The route table class carries them and the option defaults for the `Route::seampact()`
- * macro; under `routes: file` a `routes.php` with one `Route::` line per operation is written beside it. Each route
+ * global `Route::pattern` never narrows it, a `:` in a static segment kept literal, registered per depth with literal
+ * segments before placeholders, since Laravel matches in registration order. The route table class carries them and
+ * the option defaults for the `Route::seampact()` macro; under `routes: file` a `routes.php` with one `Route::` line
+ * per operation is written beside it. Each route
  * carries the access middleware, then the app's list for its access kind (`config('seampact.<api>.middleware.<kind>')`).
  * A route that reads no cookie credential (a bearer, header or signed caller, or a public one) is registered without
  * the CSRF middleware, so a `web` group never refuses a client that cannot hold its token; the boundary still checks
