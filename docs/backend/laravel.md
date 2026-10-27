@@ -242,7 +242,7 @@ Filament, Livewire, Horizon, Telescope and Nova serve their own routes. Allow-li
     frameworkRoutes:
       - { path: "/admin/**", reason: "Filament panel." }
       - { path: "/filament/**", reason: "Filament exports and imports." }
-      - { path: "/livewire/**", reason: "Livewire updates, scripts and uploads." }
+      - { path: "/livewire/**", reason: "Livewire updates and scripts." }
       - { path: "/horizon/**", reason: "Horizon dashboard." }
       - { path: "/telescope/**", reason: "Telescope dashboard." }
       - { path: "/nova/**", reason: "Nova panel." }
@@ -256,6 +256,8 @@ Keep only the lines of the tools you use. A panel on another path takes that pat
 Livewire::setUpdateRoute(fn ($handle) => Route::post('/livewire/update', $handle));
 Livewire::setScriptRoute(fn ($handle) => Route::get('/livewire/livewire.js', $handle));
 ```
+
+Livewire 4 file uploads keep the hashed path (`/livewire-<hash>/upload-file`), which no entry can match yet. If you use them, turn the route check off for now with `artefacts: { bootCheck: { frameworkRoutes: false } }`.
 
 Octane is not supported yet.
 
