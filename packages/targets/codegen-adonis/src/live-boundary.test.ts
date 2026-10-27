@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import {
   CLIENT_ADDRESS_CASES,
   clientAddressesTheHookSees,
+  describeDebugExceptions,
   describeHandlerAccess,
   emitProject,
   problemBody,
@@ -171,6 +172,11 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
 
   describe("what a handler reads of its caller", () => {
     describeHandlerAccess(() => ({
+      app,
+      send: (method, path, headers) => send(method, path, { headers }),
+    }));
+
+    describeDebugExceptions(() => ({
       app,
       send: (method, path, headers) => send(method, path, { headers }),
     }));

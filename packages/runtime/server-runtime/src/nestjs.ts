@@ -636,13 +636,28 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
     if (started?.outcome === "started") context.idempotencyKey = started.key;
 
-    const result: unknown = await callMethod();
+    const result: unknown = await methodResult(context, callMethod);
 
     if (options.reply === INTERCEPTOR_REPLY) return result;
 
     await writeHandlerReply(context, response, result);
 
     return undefined;
+  }
+
+  // An exception of the method is kept, so the outgoing check reports it, or leaves it to NestJS under debug, when
+  // no seampact filter claims it, with or without the pre-routing filter.
+  async function methodResult(
+    context: BoundaryContext,
+    callMethod: () => unknown,
+  ): Promise<unknown> {
+    try {
+      return await callMethod();
+    } catch (exception) {
+      context.unclaimedException = exception;
+
+      throw exception;
+    }
   }
 
   // Step 10 on the handler's result, or on the value the app's interceptors mapped it to, then the write.

@@ -1,6 +1,7 @@
 // The verdict rules of the outgoing response check (ADR 0016 "The outgoing response check"), shared by every server
 // profile: whoever writes the reply, an undeclared status, a framework ETag or 304, or an error body outside the
-// api's format or codes is a violation, handled by the `responses` mode.
+// api's format or codes is a violation, handled by the `responses` mode, except under debug for a reply the
+// framework wrote for an exception the boundary does not map.
 import { type BoundaryContext, unexpectedContext } from "./boundary-context.js";
 import { reportUnexpected } from "./boundary-hooks.js";
 import type { ContractReply } from "./contract-error.js";
@@ -16,6 +17,13 @@ const NOT_MODIFIED = 304;
 const LIST_SHAPES: ReadonlySet<string> = new Set(["list", "page"]);
 const TABLE_SHAPE = "table";
 const UTF8_KEEPING_BOM = new TextDecoder("utf-8", { ignoreBOM: true });
+// The `NODE_ENV` under which an exception the boundary does not map is left to the framework's own error handler.
+const DEBUG_NODE_ENV = "development";
+// A stack frame's location: `at name (file:line:column)` or `at file:line:column`.
+const STACK_FRAME_LOCATION = /^\s*at (?:.*\()?(.+):(\d+):\d+\)?$/;
+const UNKNOWN_LOCATION = "an unknown location";
+// The requests whose exception the debug line already named, so a reply checked twice logs it once.
+const debugPassedContexts = new WeakSet<BoundaryContext>();
 
 /** What `onUnexpectedError` receives for a reply outside the contract when no exception is known. */
 export interface ViolatingReply {
@@ -63,6 +71,58 @@ export function statusVerdict(
   }
 
   return { kind: "violation", reason: `the undeclared status ${status}` };
+}
+
+/** True under `NODE_ENV=development`, read at each request so a test or a process can switch it. */
+export function isDebugMode(): boolean {
+  return typeof process !== "undefined" && process.env.NODE_ENV === DEBUG_NODE_ENV;
+}
+
+/**
+ * Under debug, a violating reply written for an exception the boundary does not map goes out as the framework's
+ * error handler wrote it, whatever the `responses` mode: logged once with the exception's message and where it was
+ * thrown, and reported to `onUnexpectedError`. False outside debug or without such an exception.
+ */
+export function leftToFrameworkInDebug(
+  context: BoundaryContext,
+  request: ReportedRequest,
+): boolean {
+  const exception = context.unclaimedException;
+
+  if (exception === undefined || !isDebugMode()) return false;
+
+  if (debugPassedContexts.has(context)) return true;
+
+  debugPassedContexts.add(context);
+  runtimeLog.error(
+    `seampact: unexpected failure on operation '${context.route.id}': ${messageOf(exception)} at ${thrownAt(exception)}; left to the framework's error handler (NODE_ENV=development).`,
+    exception,
+  );
+  void reportUnexpected(
+    context.hooks,
+    context.api,
+    exception,
+    unexpectedContext(context, request.method, request.path),
+  );
+
+  return true;
+}
+
+function messageOf(exception: unknown): string {
+  return exception instanceof Error ? exception.message : String(exception);
+}
+
+// `file:line` of the first stack frame that names one.
+function thrownAt(exception: unknown): string {
+  const stack = exception instanceof Error ? (exception.stack ?? "") : "";
+
+  for (const line of stack.split("\n")) {
+    const location = STACK_FRAME_LOCATION.exec(line);
+
+    if (location !== null) return `${location[1]}:${location[2]}`;
+  }
+
+  return UNKNOWN_LOCATION;
 }
 
 /** Logs a violation that goes out as written under `responses: warn`; the check logs it once per reply. */

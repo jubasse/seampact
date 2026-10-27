@@ -7,6 +7,7 @@ import {
   besideTasksOnSharedBasePaths,
   CLIENT_ADDRESS_CASES,
   clientAddressesTheHookSees,
+  describeDebugExceptions,
   describeHandlerAccess,
   describeTwoApiHandlerAccess,
   emitProject,
@@ -194,6 +195,11 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
 
   describe("what a handler reads of its caller", () => {
     describeHandlerAccess(() => ({
+      app,
+      send: (method, path, headers) => send(method, path, { headers }),
+    }));
+
+    describeDebugExceptions(() => ({
       app,
       send: (method, path, headers) => send(method, path, { headers }),
     }));

@@ -6,6 +6,7 @@ import {
   CLIENT_ADDRESS_CASES,
   clientAddressesTheHookSees,
   copyTestApp,
+  describeDebugExceptions,
   describeHandlerAccess,
   describeTwoApiHandlerAccess,
   emitProject,
@@ -104,6 +105,11 @@ beforeEach(() => {
 
 describe("what a handler reads of its caller", () => {
   describeHandlerAccess(() => ({
+    app,
+    send: (method, path, headers) => send(method, path, { headers }),
+  }));
+
+  describeDebugExceptions(() => ({
     app,
     send: (method, path, headers) => send(method, path, { headers }),
   }));

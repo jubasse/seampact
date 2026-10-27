@@ -11,6 +11,7 @@ import { applyReplyHeaders } from "./node-reply.js";
 import {
   errorBodyViolation,
   type HoldReason,
+  leftToFrameworkInDebug,
   MAX_CHECKED_ERROR_BODY_BYTES,
   oversizedDecodedBodyViolation,
   oversizedErrorBodyViolation,
@@ -57,6 +58,8 @@ export function installOutgoingCheck(
 
   // Under `warn` the violation is logged once and the caller lets the reply go out; under `strict` it is replaced.
   const violation = (reason: string): void => {
+    if (leftToFrameworkInDebug(context, request)) return;
+
     if (context.mode === "warn") {
       if (!warned) warnViolation(context, reason);
 
