@@ -6,6 +6,7 @@ namespace Seampact\Laravel\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\GoldenTree;
+use Seampact\Codegen\Tests\Support\PhpLint;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Ir\Run\FrameworkRoute;
 use Seampact\Laravel\LaravelGenerator;
@@ -79,5 +80,17 @@ final class GoldenTest extends TestCase
 
             self::assertNotSame([], $files, "The api '{$api}' generated no file.");
         }
+    }
+
+    public function testAnOperationIdThatIsAReservedWordGeneratesParsablePhp(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            $operation->id = 'class';
+            $operation->name = (object) ['role' => 'operation', 'segments' => ['class']];
+        });
+
+        $files = (new LaravelGenerator())->generate(ReferenceContract::read(new LaravelGenerator(), $document), ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+
+        self::assertSame([], PhpLint::failures($files));
     }
 }

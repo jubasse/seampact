@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\Runtime\WireValues;
 
-/** The path segments the URL builders write, encoded as the generated clients send them. */
+/** The path segments the URL builders write, encoded as the generated clients send them (a number as JavaScript writes it). */
 final class PathSegmentsTest extends TestCase
 {
     /** @return iterable<string, array{string|int|float|bool|\BackedEnum|\DateTimeInterface, string}> */
@@ -21,7 +21,12 @@ final class PathSegmentsTest extends TestCase
         yield 'a dot inside a value' => ['..a', '..a'];
         yield 'integer' => [-42, '-42'];
         yield 'number' => [1.5, '1.5'];
-        yield 'integral number' => [2.0, '2.0'];
+        yield 'whole number' => [3.0, '3'];
+        yield 'negative zero' => [-0.0, '0'];
+        yield 'large whole number' => [1e20, '100000000000000000000'];
+        yield 'number past the decimal range' => [1e25, '1e+25'];
+        yield 'small number' => [0.000001, '0.000001'];
+        yield 'number below the decimal range' => [1.5e-7, '1.5e-7'];
         yield 'boolean' => [false, 'false'];
         yield 'backed enum' => [PathSegmentStatus::InReview, 'in%20review'];
         yield 'date-time' => [new \DateTimeImmutable('2026-10-27T08:30:00+02:00'), '2026-10-27T08%3A30%3A00.000%2B02%3A00'];

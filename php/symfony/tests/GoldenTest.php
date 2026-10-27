@@ -6,6 +6,7 @@ namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\GoldenTree;
+use Seampact\Codegen\Tests\Support\PhpLint;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Ir\Config\ConfigProblem;
 use Seampact\Ir\Run\GenerationRefusedException;
@@ -99,5 +100,17 @@ final class GoldenTest extends TestCase
             self::assertSame(['path.segment.mixed.unsupported'], array_map(static fn (ConfigProblem $problem): string => $problem->code, $refused->problems));
             self::assertStringContainsString("entry 'server' /operations/0/path (operation 'getTask')", $refused->getMessage());
         }
+    }
+
+    public function testAnOperationIdThatIsAReservedWordGeneratesParsablePhp(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            $operation->id = 'class';
+            $operation->name = (object) ['role' => 'operation', 'segments' => ['class']];
+        });
+
+        $files = (new SymfonyGenerator())->generate(ReferenceContract::read(new SymfonyGenerator(), $document), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+
+        self::assertSame([], PhpLint::failures($files));
     }
 }
