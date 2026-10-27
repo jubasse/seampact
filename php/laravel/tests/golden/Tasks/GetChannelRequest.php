@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Golden\Tasks\Laravel;
+namespace Seampact\Golden\Tasks;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Seampact\Golden\Tasks\GetTasksBatchInput;
 use Seampact\Golden\Tasks\Laravel\Runtime\BlankStrings;
 use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryMark;
 use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryState;
@@ -20,19 +19,15 @@ use Seampact\Golden\Tasks\Laravel\Runtime\TypeRule;
 use Seampact\Golden\Tasks\Laravel\Runtime\UnknownKeysRule;
 
 /**
- * The request of operation 'getTasksBatch': its access mark and its validation rules.
+ * The request of operation 'getChannel': its access mark and its validation rules.
  */
-final class GetTasksBatchRequest extends FormRequest
+final class GetChannelRequest extends FormRequest
 {
     public const API = 'tasks';
-    public const OPERATION_ID = 'getTasksBatch';
+    public const OPERATION_ID = 'getChannel';
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
-    public const NATIVE_RULE_NAMES = [
-        'path.channelId' => ['Uuid' => 'format'],
-        'body.ids' => ['Max' => 'maxItems'],
-        'body.ids.*' => ['Uuid' => 'format'],
-    ];
+    public const NATIVE_RULE_NAMES = ['path.channelId' => ['Uuid' => 'format']];
 
     public function authorize(): bool
     {
@@ -70,11 +65,11 @@ final class GetTasksBatchRequest extends FormRequest
     /**
      * The validated input of the operation, typed.
      */
-    public function contractInput(): GetTasksBatchInput
+    public function contractInput(): GetChannelInput
     {
         $input = BoundaryState::required($this, self::API)->contractInput;
 
-        return $input instanceof GetTasksBatchInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
+        return $input instanceof GetChannelInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
     }
 
     /**
@@ -91,22 +86,6 @@ final class GetTasksBatchRequest extends FormRequest
             ],
             'query' => [
                 new UnknownKeysRule($input, Position::Member, []),
-            ],
-            'body' => [
-                'bail',
-                new TypeRule($input, Position::Member, TypeRule::OBJECT, Presence::Required, Nullability::NotNull),
-                new UnknownKeysRule($input, Position::Member, ['ids']),
-            ],
-            'body.ids' => [
-                'bail',
-                new TypeRule($input, Position::Member, TypeRule::ARRAY, Presence::Required, Nullability::NotNull),
-                'max:200',
-            ],
-            'body.ids.*' => [
-                'bail',
-                new TypeRule($input, Position::Item, TypeRule::STRING, Presence::Required, Nullability::NotNull),
-                'uuid',
-                new FormatRule($input, Position::Item, FormatRule::UUID, BlankStrings::BlankOnly),
             ],
         ];
     }

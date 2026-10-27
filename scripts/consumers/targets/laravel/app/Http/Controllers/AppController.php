@@ -7,7 +7,7 @@ namespace App\Http\Controllers;
 use App\Generated\Tasks\AppEndpoints;
 use App\Generated\Tasks\HealthResponse200;
 use App\Generated\Tasks\HealthResult;
-use App\Generated\Tasks\Laravel\HealthRequest;
+use App\Generated\Tasks\HealthRequest;
 use App\Generated\Tasks\Schemas\Health;
 use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\ScriptedAnswers;

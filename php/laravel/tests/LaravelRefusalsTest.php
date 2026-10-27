@@ -7,7 +7,12 @@ namespace Seampact\Laravel\Tests;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Ir\Run\GenerationRefusedException;
+use Seampact\Codegen\IrPlace;
+use Seampact\Codegen\KeptForms;
+use Seampact\Codegen\Refusals;
 use Seampact\Laravel\LaravelGenerator;
+use Seampact\Laravel\LaravelReleases;
+use Seampact\Laravel\PhpLayout;
 
 /**
  * What `generate` refuses by name: each form with the release that brings it (ADR 0023 "Refused by name or waiting"),
@@ -30,6 +35,25 @@ final class LaravelRefusalsTest extends TestCase
 
         self::assertArrayHasKey('name.collision', $refused);
         self::assertStringContainsString("'page-size' and 'pageSize'", $refused['name.collision']);
+    }
+
+    public function testAClassOfTheRootNamespaceTakingAFormRequestNameIsRefusedAsACollision(): void
+    {
+        $generator = new LaravelGenerator();
+        $ir = ReferenceContract::read($generator, ReferenceContract::kept(ReferenceContract::document(ReferenceContract::TASKS), ['getTask']));
+        $refusals = new Refusals('tasks', 'laravel', LaravelGenerator::PACKAGE);
+        $layout = new PhpLayout($ir, 'App\\Tasks', new KeptForms($ir, $refusals, new LaravelReleases()), $refusals);
+        self::assertTrue($refusals->isEmpty());
+
+        $layout->api->claim('App\\Tasks\\GetTaskRequest', 'a class of the root namespace', IrPlace::root());
+
+        try {
+            $refusals->throwIfAny();
+            self::fail('The FormRequest name, taken twice, should be refused.');
+        } catch (GenerationRefusedException $refused) {
+            self::assertSame('name.collision', $refused->problems[0]->code);
+            self::assertStringContainsString("'App\\Tasks\\GetTaskRequest' would be written for both the FormRequest of operation 'getTask' and a class of the root namespace", $refused->problems[0]->message);
+        }
     }
 
     public function testAPlaceholderLongerThanTheRouterAcceptsKeepsAPositionalName(): void

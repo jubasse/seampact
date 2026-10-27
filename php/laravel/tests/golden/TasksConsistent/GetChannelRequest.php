@@ -2,25 +2,29 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Golden\Tasks\Laravel;
+namespace Seampact\Golden\TasksConsistent;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Seampact\Golden\Tasks\HealthInput;
-use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryMark;
-use Seampact\Golden\Tasks\Laravel\Runtime\BoundaryState;
-use Seampact\Golden\Tasks\Laravel\Runtime\FormSteps;
-use Seampact\Golden\Tasks\Laravel\Runtime\InputTree;
-use Seampact\Golden\Tasks\Laravel\Runtime\Position;
-use Seampact\Golden\Tasks\Laravel\Runtime\UnknownKeysRule;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\BlankStrings;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryMark;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormSteps;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormatRule;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\InputTree;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\Nullability;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\Position;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\Presence;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\TypeRule;
+use Seampact\Golden\TasksConsistent\Laravel\Runtime\UnknownKeysRule;
 
 /**
- * The request of operation 'health': its access mark and its validation rules.
+ * The request of operation 'getChannel': its access mark and its validation rules.
  */
-final class HealthRequest extends FormRequest
+final class GetChannelRequest extends FormRequest
 {
     public const API = 'tasks';
-    public const OPERATION_ID = 'health';
+    public const OPERATION_ID = 'getChannel';
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
     public const NATIVE_RULE_NAMES = [];
@@ -61,11 +65,11 @@ final class HealthRequest extends FormRequest
     /**
      * The validated input of the operation, typed.
      */
-    public function contractInput(): HealthInput
+    public function contractInput(): GetChannelInput
     {
         $input = BoundaryState::required($this, self::API)->contractInput;
 
-        return $input instanceof HealthInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
+        return $input instanceof GetChannelInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
     }
 
     /**
@@ -74,6 +78,11 @@ final class HealthRequest extends FormRequest
     public static function contractRules(InputTree $input): array
     {
         return [
+            'path.channelId' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
+                new FormatRule($input, Position::Member, FormatRule::UUID, BlankStrings::Every),
+            ],
             'query' => [
                 new UnknownKeysRule($input, Position::Member, []),
             ],

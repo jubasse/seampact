@@ -18,7 +18,7 @@ use Seampact\Ir\Naming\NamingRole;
 
 /**
  * Every PHP name the target writes for one api, computed once (ADR 0023 "Placement"): the shared names of
- * `ApiLayout`, then the Laravel placement under `<namespace>\Laravel` and the copied runtime under
+ * `ApiLayout`, the FormRequests beside each operation's input in the root namespace, then the Laravel placement under `<namespace>\Laravel` and the copied runtime under
  * `<namespace>\Laravel\Runtime`, so a declared schema and a placement class never share a namespace. Two classes
  * taking one name are refused by name.
  */
@@ -56,7 +56,7 @@ final class PhpLayout implements TypeNames, BoundaryNames
         foreach ($kept->operations() as [$index, $operation]) {
             if ($this->api->operation($operation->id) !== null) {
                 $this->requests[$operation->id] = $this->api->claim(
-                    $this->laravelNamespace . '\\' . PhpNames::identifier([...$operation->name->segments, 'request'], NamingRole::Schema),
+                    $namespace . '\\' . PhpNames::identifier([...$operation->name->segments, 'request'], NamingRole::Schema),
                     "the FormRequest of operation '{$operation->id}'",
                     IrPlace::ofOperation($index, $operation->id)->below('name'),
                 );

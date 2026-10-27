@@ -2,14 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Golden\TasksConsistent\Laravel;
+namespace Seampact\Golden\TasksConsistent;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BlankStrings;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryMark;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\BoundaryState;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\EnumRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormSteps;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\FormatRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\InputTree;
@@ -17,18 +16,16 @@ use Seampact\Golden\TasksConsistent\Laravel\Runtime\ItemCountRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\Nullability;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\Position;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\Presence;
-use Seampact\Golden\TasksConsistent\Laravel\Runtime\StringRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\TypeRule;
 use Seampact\Golden\TasksConsistent\Laravel\Runtime\UnknownKeysRule;
-use Seampact\Golden\TasksConsistent\SearchTasksInput;
 
 /**
- * The request of operation 'searchTasks': its access mark and its validation rules.
+ * The request of operation 'getTasksBatch': its access mark and its validation rules.
  */
-final class SearchTasksRequest extends FormRequest
+final class GetTasksBatchRequest extends FormRequest
 {
     public const API = 'tasks';
-    public const OPERATION_ID = 'searchTasks';
+    public const OPERATION_ID = 'getTasksBatch';
 
     /** Laravel's own rules on each attribute, by the name `failed()` gives, and the contract rule each one checks. */
     public const NATIVE_RULE_NAMES = [];
@@ -69,11 +66,11 @@ final class SearchTasksRequest extends FormRequest
     /**
      * The validated input of the operation, typed.
      */
-    public function contractInput(): SearchTasksInput
+    public function contractInput(): GetTasksBatchInput
     {
         $input = BoundaryState::required($this, self::API)->contractInput;
 
-        return $input instanceof SearchTasksInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
+        return $input instanceof GetTasksBatchInput ? $input : throw new \LogicException('seampact: the input of operation ' . self::OPERATION_ID . ' was not validated.');
     }
 
     /**
@@ -93,22 +90,17 @@ final class SearchTasksRequest extends FormRequest
             'body' => [
                 'bail',
                 new TypeRule($input, Position::Member, TypeRule::OBJECT, Presence::Required, Nullability::NotNull),
-                new UnknownKeysRule($input, Position::Member, ['text', 'states']),
+                new UnknownKeysRule($input, Position::Member, ['ids']),
             ],
-            'body.text' => [
+            'body.ids' => [
                 'bail',
-                new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Optional, Nullability::NotNull),
-                new StringRule($input, Position::Member, BlankStrings::Every, maxLength: 200),
+                new TypeRule($input, Position::Member, TypeRule::ARRAY, Presence::Required, Nullability::NotNull),
+                new ItemCountRule($input, Position::Member, maxItems: 200),
             ],
-            'body.states' => [
-                'bail',
-                new TypeRule($input, Position::Member, TypeRule::ARRAY, Presence::Optional, Nullability::NotNull),
-                new ItemCountRule($input, Position::Member, maxItems: 3),
-            ],
-            'body.states.*' => [
+            'body.ids.*' => [
                 'bail',
                 new TypeRule($input, Position::Item, TypeRule::STRING, Presence::Required, Nullability::NotNull),
-                new EnumRule($input, Position::Item, ['open', 'done', 'archived']),
+                new FormatRule($input, Position::Item, FormatRule::UUID, BlankStrings::Every),
             ],
         ];
     }

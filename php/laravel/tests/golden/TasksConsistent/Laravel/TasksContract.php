@@ -4502,7 +4502,7 @@ final class TasksContract
                 ],
                 'responses' => [201 => 'Seampact\Golden\TasksConsistent\CreateTaskResponse201'],
                 'errors' => 'Seampact\Golden\TasksConsistent\CreateTaskErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\CreateTaskRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\CreateTaskRequest',
             ],
             'getChannel' => [
                 'input' => 'Seampact\Golden\TasksConsistent\GetChannelInput',
@@ -4514,7 +4514,7 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\TasksConsistent\GetChannelResponse200'],
                 'errors' => 'Seampact\Golden\TasksConsistent\GetChannelErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\GetChannelRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\GetChannelRequest',
             ],
             'getDraft' => [
                 'input' => 'Seampact\Golden\TasksConsistent\GetDraftInput',
@@ -4526,7 +4526,7 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\TasksConsistent\GetDraftResponse200'],
                 'errors' => 'Seampact\Golden\TasksConsistent\GetDraftErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\GetDraftRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\GetDraftRequest',
             ],
             'getPreferences' => [
                 'input' => 'Seampact\Golden\TasksConsistent\GetPreferencesInput',
@@ -4541,7 +4541,7 @@ final class TasksContract
                     304 => 'Seampact\Golden\TasksConsistent\GetPreferencesResponse304',
                 ],
                 'errors' => 'Seampact\Golden\TasksConsistent\GetPreferencesErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\GetPreferencesRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\GetPreferencesRequest',
             ],
             'getTask' => [
                 'input' => 'Seampact\Golden\TasksConsistent\GetTaskInput',
@@ -4553,7 +4553,7 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\TasksConsistent\GetTaskResponse200'],
                 'errors' => 'Seampact\Golden\TasksConsistent\GetTaskErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\GetTaskRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\GetTaskRequest',
             ],
             'getTasksBatch' => [
                 'input' => 'Seampact\Golden\TasksConsistent\GetTasksBatchInput',
@@ -4565,14 +4565,14 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\TasksConsistent\GetTasksBatchResponse200'],
                 'errors' => 'Seampact\Golden\TasksConsistent\GetTasksBatchErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\GetTasksBatchRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\GetTasksBatchRequest',
             ],
             'health' => [
                 'input' => 'Seampact\Golden\TasksConsistent\HealthInput',
                 'parts' => [],
                 'responses' => [200 => 'Seampact\Golden\TasksConsistent\HealthResponse200'],
                 'errors' => 'Seampact\Golden\TasksConsistent\HealthErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\HealthRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\HealthRequest',
             ],
             'listTasks' => [
                 'input' => 'Seampact\Golden\TasksConsistent\ListTasksInput',
@@ -4588,14 +4588,14 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\TasksConsistent\ListTasksResponse200'],
                 'errors' => 'Seampact\Golden\TasksConsistent\ListTasksErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\ListTasksRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\ListTasksRequest',
             ],
             'payments' => [
                 'input' => 'Seampact\Golden\TasksConsistent\PaymentsInput',
                 'parts' => [],
                 'responses' => [204 => 'Seampact\Golden\TasksConsistent\PaymentsResponse204'],
                 'errors' => 'Seampact\Golden\TasksConsistent\PaymentsErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\PaymentsRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\PaymentsRequest',
             ],
             'purgeTask' => [
                 'input' => 'Seampact\Golden\TasksConsistent\PurgeTaskInput',
@@ -4611,7 +4611,7 @@ final class TasksContract
                 ],
                 'responses' => [204 => 'Seampact\Golden\TasksConsistent\PurgeTaskResponse204'],
                 'errors' => 'Seampact\Golden\TasksConsistent\PurgeTaskErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\PurgeTaskRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\PurgeTaskRequest',
             ],
             'searchTasks' => [
                 'input' => 'Seampact\Golden\TasksConsistent\SearchTasksInput',
@@ -4623,7 +4623,7 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\TasksConsistent\SearchTasksResponse200'],
                 'errors' => 'Seampact\Golden\TasksConsistent\SearchTasksErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\SearchTasksRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\SearchTasksRequest',
             ],
             'updateTask' => [
                 'input' => 'Seampact\Golden\TasksConsistent\UpdateTaskInput',
@@ -4639,7 +4639,7 @@ final class TasksContract
                 ],
                 'responses' => [200 => 'Seampact\Golden\TasksConsistent\UpdateTaskResponse200'],
                 'errors' => 'Seampact\Golden\TasksConsistent\UpdateTaskErrors',
-                'request' => 'Seampact\Golden\TasksConsistent\Laravel\UpdateTaskRequest',
+                'request' => 'Seampact\Golden\TasksConsistent\UpdateTaskRequest',
             ],
         ],
         'identities' => [

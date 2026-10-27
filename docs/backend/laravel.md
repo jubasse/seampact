@@ -100,7 +100,7 @@ Your own routes stay beside the contract's, in your routes files. The boot check
 
 ## Write a controller
 
-Each resource has a generated `<Resource>Endpoints` interface. Each method takes the operation's `FormRequest` and returns one arm of its result: `GetNoteResponse200` and the like, or an error of `GetNoteErrors`. Bind the interface to your controller in a service provider.
+Each resource has a generated `<Resource>Endpoints` interface. Each method takes the operation's `FormRequest`, which sits in the root namespace (`App\Generated\Notes\GetNoteRequest`) beside its result and errors, and returns one arm of its result: `GetNoteResponse200` and the like, or an error of `GetNoteErrors`. Bind the interface to your controller in a service provider.
 
 ```php
 final class NotesController implements NotesEndpoints

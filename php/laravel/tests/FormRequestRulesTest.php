@@ -166,7 +166,7 @@ final class FormRequestRulesTest extends TestCase
     public function testNativeRuleFailuresAreNamedWithTheirContractRules(): void
     {
         $failed = $this->failed(['ids' => [], 'count' => 11, 'label' => 'label-without-prefix']);
-        $requestClass = self::NATIVE_NAMESPACE . '\\Laravel\\GetTasksBatchRequest';
+        $requestClass = self::NATIVE_NAMESPACE . '\\GetTasksBatchRequest';
         $names = constant("{$requestClass}::NATIVE_RULE_NAMES");
         self::assertIsArray($names);
 
@@ -194,7 +194,7 @@ final class FormRequestRulesTest extends TestCase
     private function issuesOfJson(string $json, string $namespace = self::NATIVE_NAMESPACE, array $path = [], array $query = []): array
     {
         [$issues, $validator] = $this->validate($json, $namespace, $path, $query);
-        $names = constant("{$namespace}\\Laravel\\GetTasksBatchRequest::NATIVE_RULE_NAMES");
+        $names = constant("{$namespace}\\GetTasksBatchRequest::NATIVE_RULE_NAMES");
         self::assertIsArray($names);
 
         foreach ($validator->failed() as $attribute => $rules) {
@@ -238,7 +238,7 @@ final class FormRequestRulesTest extends TestCase
     private function validate(string $json, string $namespace, array $path = [], array $query = []): array
     {
         $withBody = ["{$namespace}\\Laravel\\Runtime\\InputTree", 'withBody'];
-        $contractRules = ["{$namespace}\\Laravel\\GetTasksBatchRequest", 'contractRules'];
+        $contractRules = ["{$namespace}\\GetTasksBatchRequest", 'contractRules'];
         self::assertIsCallable($withBody);
         self::assertIsCallable($contractRules);
 

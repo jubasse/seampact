@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Generated\Tasks\Laravel\ListChannelsRequest;
-use App\Generated\Tasks\Laravel\ListTasksRequest;
+use App\Generated\Tasks\ListChannelsRequest;
+use App\Generated\Tasks\ListTasksRequest;
 use App\Generated\Tasks\ListChannelsResponse200;
 use App\Generated\Tasks\ListChannelsResult;
 use App\Generated\Tasks\ListTasksResponse200;
