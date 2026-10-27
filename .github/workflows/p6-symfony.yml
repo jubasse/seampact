@@ -96,9 +96,11 @@ jobs:
           composer config platform.php 8.5.12
           composer require --no-update --no-interaction symfony/console:8.1.9 symfony/framework-bundle:8.1.9
           composer require --dev --no-update --no-interaction \
-            symfony/http-kernel:8.1.9 symfony/routing:8.1.9 symfony/validator:8.1.9 symfony/var-dumper:8.1.9
+            symfony/http-kernel:8.1.9 symfony/routing:8.1.9 symfony/validator:8.1.9 symfony/var-dumper:8.1.9 \
+            symfony/security-core:8.1.9 symfony/security-http:8.1.9
           composer update --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies \
-            symfony/console symfony/framework-bundle symfony/http-kernel symfony/routing symfony/validator symfony/var-dumper
+            symfony/console symfony/framework-bundle symfony/http-kernel symfony/routing symfony/validator symfony/var-dumper \
+            symfony/security-core symfony/security-http
       - name: Audit the locked dependencies
         working-directory: php/symfony
         run: composer audit --locked --no-interaction
