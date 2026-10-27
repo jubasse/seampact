@@ -29,7 +29,7 @@ abstract class ContractServiceProvider extends ServiceProvider
     private const OCTANE_WORKER_STARTING = 'Laravel\\Octane\\Events\\WorkerStarting';
     private const CACHING_COMMANDS = ['route:cache', 'optimize'];
     private const CONFIG_TAG = 'seampact-config';
-    // The same key in every api's copied runtime, so each api's provider sees the others' boundaries.
+    // One key for every api's provider, so each sees the others' boundaries.
     private const BOUNDARIES_KEY = 'seampact.boundaries';
 
     abstract protected function contractClass(): string;

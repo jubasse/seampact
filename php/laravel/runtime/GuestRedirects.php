@@ -38,8 +38,8 @@ final class GuestRedirects
     }
 
     /**
-     * Another api's runtime copy wraps this copy's callback in turn, so in a long-lived process two apis grow the
-     * chain by one closure per request; php-fpm and the built-in server start each request afresh, and Octane is refused.
+     * A callback the app installs after this one is wrapped in turn, so in a long-lived process the chain could grow
+     * by one closure per request; php-fpm and the built-in server start each request afresh, and Octane is refused.
      *
      * @param class-string<Authenticate|AuthenticateSession> $middleware
      */
