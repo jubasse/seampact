@@ -227,6 +227,11 @@ public final class SeampactBoundary {
      * Replaces whatever was written with the api's 500 and calls `onUnexpectedError`. A reply already committed past
      * the wrapper cannot be replaced: it is logged and closed, and `onUnexpectedError` is called.
      */
+    void warnViolation(BoundaryExchange exchange, String reason) {
+        LOG.warn("seampact: the reply of {}.{} breaks the contract ({}); sent as written under 'responses: warn'",
+                apiId(), exchange.route().id(), reason);
+    }
+
     void writeUnexpected(BoundaryExchange exchange, String reason, Throwable cause) {
         ContractRoute route = exchange.route();
         if (exchange.response.isCommittedUnderneath()) {

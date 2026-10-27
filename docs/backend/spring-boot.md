@@ -198,7 +198,7 @@ Allow-list your own routes in the entry, with a reason:
 
 ## Replies that break the contract
 
-By default a reply that breaks the contract becomes the api's 500. With `seampact.<api>.responses: warn` it goes out as written and the violation is logged, a body that fails `bodyValidation` included.
+By default a reply that breaks the contract becomes the api's 500. With `seampact.<api>.responses: warn` it goes out as written and the violation is logged, a body that fails `bodyValidation` included. A result that breaks its own type (a null, a page without items or with a negative total) is still a 500.
 
 ## Format envelopes and null
 
