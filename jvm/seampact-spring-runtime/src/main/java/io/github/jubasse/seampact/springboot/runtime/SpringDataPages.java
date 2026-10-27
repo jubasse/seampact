@@ -10,7 +10,7 @@ import org.springframework.data.domain.Sort;
 import tools.jackson.databind.JsonNode;
 
 /**
- * The Spring Data bridge of a `springPage` list (ADR 0022 "Paging"), copied only for an api that has one: the
+ * The Spring Data bridge of a `springPage` list (ADR 0022 "Paging"), loaded only by an api that has one: the
  * `Pageable` built from the query the boundary validated (its limit already filled), and the page facts read from the
  * `Page` the handler returned.
  */

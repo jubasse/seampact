@@ -59,7 +59,7 @@ Codegen emits, per api, under the target entry's `out` and the `package` option:
 - **The exception resolver**, a `HandlerExceptionResolver` placed first with `extendHandlerExceptionResolvers`.
 - **The registration**: one `@Configuration(proxyBeanMethods = false)` class per api, the hook beans' lookup, the boot check, and the Spring Security beans of "Native security layers".
 
-The generated types go into the `package` option (no default: ADR 0010 "Namespaces"). The Spring placement goes into its `spring` sub-package, and the copied runtime into `spring.runtime`. A declared schema `UpdateTask` and the annotation `@UpdateTask` therefore never share a package, as ADR 0007 "Amendment 2026-10-19: generated modules" keeps names apart in TypeScript. Fixed class names that ADR 0007 has no role for are Pascal-case words prefixed by the api's type name (`TasksSeampactConfiguration`, `TasksSecurityMatchers`). Constants are upper snake case (`MAX_CHECKED_ERROR_BODY_BYTES`).
+The generated types go into the `package` option (no default: ADR 0010 "Namespaces"). The Spring placement goes into its `spring` sub-package. The boundary runtime is not generated: the code imports `io.github.jubasse.seampact.springboot.runtime` from `seampact-spring-runtime` (ADR 0025). A declared schema `UpdateTask` and the annotation `@UpdateTask` therefore never share a package, as ADR 0007 "Amendment 2026-10-19: generated modules" keeps names apart in TypeScript. Fixed class names that ADR 0007 has no role for are Pascal-case words prefixed by the api's type name (`TasksSeampactConfiguration`, `TasksSecurityMatchers`). Constants are upper snake case (`MAX_CHECKED_ERROR_BODY_BYTES`).
 
 The handler method returns the operation's generated result: a sealed interface whose arms are one record per declared success status and the typed error result (ADR 0007 `errors` role). It may instead throw one of the generated exceptions, one class per code, declared on the interface method (ADR 0012 "Errors the handler answers"). The interface is synchronous. Blocking handlers scale with Boot's virtual threads (`spring.threads.virtual.enabled`), and download bodies return their stream form (ADR 0012 bodies table).
 
@@ -226,7 +226,7 @@ At run time, the generated configuration binds `seampact.<api>.*` Boot propertie
 
 An operation's property wins over the api's property, which wins over the target option.
 
-Hooks are beans: authenticate hooks, deciders, scope resolvers and the idempotency store implement the `seampact-hooks` interfaces, narrowed by the generated request records, and `onUnexpectedError` is an optional bean of a generated functional interface. A decider bean names the rights and rules it serves; two beans claiming one name fail the boot check, and no default hook exists (ADR 0012 "Registration and per-right overrides"). The request context is a request attribute under a generated name (ADR 0012 "Open tenancy").
+Hooks are beans: authenticate hooks, deciders, scope resolvers and the idempotency store implement the `seampact-hooks` interfaces, narrowed by the generated request records, and `onUnexpectedError` is an optional bean of a functional interface. Each api generates its own `<Api>Decider`, `<Api>ScopeResolver` and `<Api>UnexpectedErrorListener` over the runtime's `Decider`, `ScopeResolver` and `UnexpectedErrorListener`; its boundary looks up only the beans of its own interfaces, so two apis never call each other's deciders or receive each other's failures (ADR 0025), and a bean of a runtime type itself fails the boot check. The generated bean methods take the api's `SeampactBoundary` by its bean name, since every api's boundary has that one class. A decider bean names the rights and rules it serves; two beans claiming one name fail the boot check, and no default hook exists (ADR 0012 "Registration and per-right overrides"). The request context is a request attribute under a generated name (ADR 0012 "Open tenancy").
 
 The configuration class is picked up by component scan when the `package` option is under the app's own package, or by `@Import(TasksSeampactConfiguration.class)`; registering it twice is deduplicated by Spring. A non-servlet application (WebFlux) fails the start, naming the fix, instead of skipping the boundary silently. Two apis are two configuration classes, each with its own filter, interceptor and boot check.
 
@@ -234,7 +234,7 @@ The registration uses no `@Profile` or `@ConditionalOnProperty` to change behavi
 
 ### The boot check
 
-The boot check runs in a `SmartInitializingSingleton`, before the server starts (spike). It reads `RequestMappingHandlerMapping`, every `HandlerMapping` bean ordered before it (`RouterFunctionMapping` at `-1`, the actuator's at `-100`, the app's own) and the context, lists every problem at once with the operation id, the name and the fix, and throws, so the app does not start:
+The boot check runs in a `SmartInitializingSingleton`, before the server starts (spike). It first compares the version the api's generated binding carries with the runtime's, as ADR 0025 G3 says, and refuses alone with `runtime.generated-for-other-version`. It then reads `RequestMappingHandlerMapping`, every `HandlerMapping` bean ordered before it (`RouterFunctionMapping` at `-1`, the actuator's at `-100`, the app's own) and the context, lists every problem at once with the operation id, the name and the fix, and throws, so the app does not start:
 
 - the hook problems of ADR 0016's list;
 - a contract operation without a bound handler (no mapped method carries its composed annotation), or with two;
@@ -302,7 +302,7 @@ At compile and run time:
 - `seampact-hooks`;
 - Spring Security 7 in the security class only, and `io.swagger.v3.oas.annotations` under `nativeDocs` only.
 
-The boundary runtime is copied into `spring.runtime` with the generated header, as the Node targets copy theirs (ADR 0015 "Runtime helpers"). Generated code never imports Jackson 2, which springdoc 3 brings to the classpath for swagger-core (spike), nor Kotlin. Bytecode and sources target Java 21, compiled and tested on 21 and 25 ([A13](../decisions.md#a13)).
+The boundary runtime is `io.github.jubasse:seampact-spring-runtime`, at the plugin's version (ADR 0025): the Gradle plugin adds it to the main source set's `implementation`, a Maven app declares it. Before it writes, `generate` reads the runtime on that compile classpath and refuses `runtime.missing` or `runtime.version-mismatch` (ADR 0025 G2). Generated code never imports Jackson 2, which springdoc 3 brings to the classpath for swagger-core (spike), nor Kotlin. Bytecode and sources target Java 21, compiled and tested on 21 and 25 ([A13](../decisions.md#a13)).
 
 ### Refused by name or waiting
 

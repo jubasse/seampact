@@ -3,7 +3,7 @@ package com.example.consumer;
 import com.example.tasks.api.StripeAuthenticateHook;
 import com.example.tasks.api.StripeAuthenticateRequest;
 import com.example.tasks.api.schemas.WebhookCaller;
-import com.example.tasks.api.spring.runtime.Denial;
+import io.github.jubasse.seampact.springboot.runtime.Denial;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.SignatureEncoding;
 import io.github.jubasse.seampact.hooks.SignedTemplateRequest;

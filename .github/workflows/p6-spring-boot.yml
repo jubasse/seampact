@@ -100,7 +100,7 @@ jobs:
       - uses: ./.github/actions/gradle-retry
       - name: Generate, compare and compile the golden tree on Java ${{ matrix.test-jdk }}
         working-directory: jvm
-        run: ./gradlew :seampact-spring-boot:check -PtestJdk=${{ matrix.test-jdk }}
+        run: ./gradlew :seampact-spring-runtime:check :seampact-spring-boot:check -PtestJdk=${{ matrix.test-jdk }}
 
   binary:
     name: binary (linux x64)
@@ -174,13 +174,14 @@ jobs:
         with:
           cache-read-only: ${{ github.event_name != 'schedule' }}
       - uses: ./.github/actions/gradle-retry
-      # The Maven build takes the plugin and seampact-hooks from Maven local (ADR 0011 "Unpublished installs").
+      # The Maven build takes the plugin, seampact-hooks and seampact-spring-runtime from Maven local (ADR 0011
+      # "Unpublished installs").
       - name: Publish the JVM modules to Maven local
         if: matrix.build-tool == 'maven'
         working-directory: jvm
         run: >-
           ./gradlew :seampact-ir:publishToMavenLocal :seampact-hooks:publishToMavenLocal
-          :seampact-spring-boot:publishToMavenLocal :seampact-runner:publishToMavenLocal
+          :seampact-spring-runtime:publishToMavenLocal :seampact-spring-boot:publishToMavenLocal :seampact-runner:publishToMavenLocal
           :seampact-maven-plugin:publishToMavenLocal
       - name: Serve the contract bundles over HTTPS
         if: matrix.contract == 'bundle'

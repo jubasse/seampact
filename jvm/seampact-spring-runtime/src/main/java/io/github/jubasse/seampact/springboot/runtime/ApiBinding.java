@@ -13,8 +13,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * What the generated code of one api tells the runtime about its own Java types: the input record and composed
- * annotation of each operation, the arms of each result, the codes of the contract exceptions, and the typed call of
- * each identity's authenticate hook.
+ * annotation of each operation, the arms of each result, the codes of the contract exceptions, the typed call of
+ * each identity's authenticate hook, the api's own hook interfaces and the version of the generator that wrote it.
  */
 public interface ApiBinding {
     Map<String, Class<?>> inputTypes();

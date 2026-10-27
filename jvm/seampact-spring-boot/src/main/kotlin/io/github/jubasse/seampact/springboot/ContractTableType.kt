@@ -33,7 +33,7 @@ private const val HOOKS_OFF = "off"
 
 /**
  * The api's contract table (ADR 0022 "Placement"): the IR view of the kept operations, the declarations they read
- * and the entry's settings, as JSON text the copied runtime reads with its own mapper. It is the IR itself, with the
+ * and the entry's settings, as JSON text the runtime reads with its own mapper. It is the IR itself, with the
  * members only tooling reads removed, so no third format exists between the IR and the boundary. The one fact read
  * from a removed member, which header params count for an idempotency fingerprint, is in the settings (`fingerprintHeaders`).
  */
