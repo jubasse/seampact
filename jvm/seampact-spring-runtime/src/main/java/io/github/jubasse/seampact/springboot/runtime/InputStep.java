@@ -10,7 +10,6 @@ import java.util.Map;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.InjectableValues;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectReader;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.MissingNode;
@@ -28,6 +27,10 @@ final class InputStep {
     private static final String REFUSE = "refuse";
     private static final String PAGEABLE_COMPONENT = "pageable";
     private static final String PAGEABLE_TYPE = "org.springframework.data.domain.Pageable";
+    // The caller's principal and scopes the generated input record takes as injected components (ADR 0012 "Open tenancy").
+    private static final String PRINCIPAL_COMPONENT = "principal";
+    private static final String SCOPES_COMPONENT = "scopes";
+    private static final String SCOPE_INJECTION_PREFIX = "scope.";
 
     private InputStep() {}
 
@@ -50,7 +53,7 @@ final class InputStep {
         InputFieldRights.apply(boundary, exchange, boundary.requestView(request, exchange), tree.path("body"));
         exchange.query = query;
         exchange.inputTree = tree;
-        exchange.input = bind(boundary, exchange.route(), tree);
+        exchange.input = bind(boundary, exchange, tree);
     }
 
     /** The `schemaInvalid` refusal of [issues], at most `MAX_RENDERED_ISSUES` of them. */
@@ -195,24 +198,42 @@ final class InputStep {
         return false;
     }
 
-    // The tree holds every part; the record takes the parts the operation declares, by its component names.
-    private static Object bind(SeampactBoundary boundary, ContractRoute route, ObjectNode tree) {
+    // The tree holds every part; the record takes the parts the operation declares, by its component names, and the
+    // values the boundary injects: the pageable, the principal and each resolved scope.
+    private static Object bind(SeampactBoundary boundary, BoundaryExchange exchange, ObjectNode tree) {
+        ContractRoute route = exchange.route();
         Class<?> inputType = boundary.binding().inputTypes().get(route.id());
+        InjectableValues.Std injected = new InjectableValues.Std();
         ObjectNode parts = NODES.objectNode();
-        for (RecordComponent component : inputType.getRecordComponents()) {
-            parts.set(component.getName(), tree.path(component.getName()));
-        }
+        Class<?> scopesType = null;
 
-        ObjectReader reader = boundary.mapper().readerFor(inputType);
+        for (RecordComponent component : inputType.getRecordComponents()) {
+            switch (component.getName()) {
+                case PRINCIPAL_COMPONENT -> injected.addValue(PRINCIPAL_COMPONENT, exchange.principal);
+                case SCOPES_COMPONENT -> scopesType = component.getType();
+                default -> parts.set(component.getName(), tree.path(component.getName()));
+            }
+        }
+        exchange.scopes.forEach(resolved -> injected.addValue(SCOPE_INJECTION_PREFIX + resolved.scope(), resolved));
+        if (scopesType != null) injected.addValue(SCOPES_COMPONENT, bindScopes(boundary, route, scopesType, injected));
+
         if (takesPageable(inputType)) {
-            Object pageable = boundary.binding().pageable(route.id(), boundary.table().pagingStyle(route), tree.path("query"));
-            reader = reader.with(new InjectableValues.Std().addValue(PAGEABLE_COMPONENT, pageable));
+            injected.addValue(PAGEABLE_COMPONENT, boundary.binding().pageable(route.id(), boundary.table().pagingStyle(route), tree.path("query")));
         }
 
         try {
-            return reader.readValue(parts);
+            return boundary.mapper().readerFor(inputType).with(injected).readValue(parts);
         } catch (JacksonException failure) {
             throw new IllegalStateException("seampact: binding the validated input of '" + route.id() + "' to " + inputType.getName() + " failed", failure);
+        }
+    }
+
+    // The scopes record holds only injected components, so it binds from an empty object.
+    private static Object bindScopes(SeampactBoundary boundary, ContractRoute route, Class<?> scopesType, InjectableValues.Std injected) {
+        try {
+            return boundary.mapper().readerFor(scopesType).with(injected).readValue(NODES.objectNode());
+        } catch (JacksonException failure) {
+            throw new IllegalStateException("seampact: binding the scopes of '" + route.id() + "' to " + scopesType.getName() + " failed", failure);
         }
     }
 }

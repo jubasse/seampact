@@ -120,6 +120,20 @@ With `@seampact/pack-spring`, a list in the `springPage` style gets a `Pageable`
 - A sort key reaches the `Pageable` as the item's Java member name: `sort=created_at,desc` sorts by `createdAt`. Name your entity's properties like the generated record's members.
 - A page number past Spring Data's range (a page index above 2147483647) gets a 400 at the page parameter.
 
+## Who is calling
+
+The input also tells you who calls and in which scopes:
+
+- `input.principal()` is what your authenticate hook returned, typed as the identity's principal. It is null for an anonymous caller on an optional-auth route. A public route has no `principal()`.
+- `input.scopes()` has one member per scope the operation runs in, each the `ResolvedScope` your resolver returned. An operation without scopes has no `scopes()`.
+
+```java
+UUID userId = input.principal().userId();
+Object channelId = input.scopes().channel().id();
+```
+
+Neither comes from the request body: the client cannot set them.
+
 ## Register the hooks
 
 Hooks are beans. Write one per identity, one decider for your rights and rules, and one resolver per scope.

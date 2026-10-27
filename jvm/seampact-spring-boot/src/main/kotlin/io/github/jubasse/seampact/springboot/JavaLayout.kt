@@ -11,6 +11,8 @@ import io.github.jubasse.seampact.ir.model.Name
 import io.github.jubasse.seampact.ir.model.Operation
 import io.github.jubasse.seampact.ir.model.OptionalAccess
 import io.github.jubasse.seampact.ir.model.SchemaId
+import io.github.jubasse.seampact.ir.model.SchemaPrincipal
+import io.github.jubasse.seampact.ir.model.SignedIdentity
 import io.github.jubasse.seampact.ir.naming.IrName
 import io.github.jubasse.seampact.ir.naming.NameSource
 import io.github.jubasse.seampact.ir.naming.NamingLanguage
@@ -39,6 +41,7 @@ internal data class OperationNames(
     val result: ClassName,
     val page: ClassName,
     val errors: ClassName,
+    val scopes: ClassName,
     val annotation: ClassName,
     val endpoints: ClassName,
 )
@@ -145,7 +148,8 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
 
             if (endpointsClaimed.add(names.endpoints)) claim(names.endpoints, "the endpoints interface '${names.endpoints.simpleName()}'", place, refusals)
             val pageName = if (operation.paging?.style != null) listOf(names.page) else emptyList()
-            for (className in listOf(names.input, names.path, names.query, names.headers, names.result, names.errors, names.annotation) + pageName) {
+            val scopesName = if (operation.scopes.isNotEmpty()) listOf(names.scopes) else emptyList()
+            for (className in listOf(names.input, names.path, names.query, names.headers, names.result, names.errors, names.annotation) + pageName + scopesName) {
                 claim(className, "a type of operation '${operation.id}'", place, refusals)
             }
         }
@@ -163,6 +167,17 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
 
     fun identity(identityId: IdentityId): IdentityNames? = identityNames[identityId]
 
+    /** The class of an identity's principal schema; null for an identity whose principal is not one schema. */
+    fun principalClass(identityId: IdentityId): ClassName? {
+        val principal = when (val identity = ir.identities[identityId]) {
+            is CredentialIdentity -> identity.principal
+            is SignedIdentity -> identity.principal
+            else -> return null
+        }
+
+        return (principal as? SchemaPrincipal)?.schema?.let { schemaClass(it) }
+    }
+
     private fun operationNamesOf(operation: Operation, endpointsOwner: List<String>): OperationNames {
         val segments = operation.name.segments
         val inOperations = { role: NamingRole -> ClassName.get(operationsPackage, javaIdentifier(segments, role)) }
@@ -176,6 +191,7 @@ internal class JavaLayout(val ir: ContractIR, packageName: String, val kept: Kep
             result = ClassName.get(operationsPackage, javaIdentifier(segments + "result", NamingRole.SCHEMA)),
             page = ClassName.get(operationsPackage, javaIdentifier(segments + "page", NamingRole.SCHEMA)),
             errors = inOperations(NamingRole.ERRORS),
+            scopes = ClassName.get(operationsPackage, javaIdentifier(segments + "scopes", NamingRole.SCHEMA)),
             annotation = ClassName.get(springPackage, javaIdentifier(segments, NamingRole.SCHEMA)),
             endpoints = ClassName.get(operationsPackage, javaIdentifier(endpointsOwner, NamingRole.ENDPOINTS)),
         )

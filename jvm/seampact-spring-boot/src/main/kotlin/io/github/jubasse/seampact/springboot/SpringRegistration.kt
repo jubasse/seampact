@@ -9,8 +9,6 @@ import com.palantir.javapoet.ParameterizedTypeName
 import com.palantir.javapoet.TypeName
 import com.palantir.javapoet.TypeSpec
 import com.palantir.javapoet.WildcardTypeName
-import io.github.jubasse.seampact.ir.model.CredentialIdentity
-import io.github.jubasse.seampact.ir.model.SchemaPrincipal
 import io.github.jubasse.seampact.ir.model.SignedIdentity
 import javax.lang.model.element.Modifier
 
@@ -45,14 +43,8 @@ private val ANNOTATION_CLASS: TypeName = ParameterizedTypeName.get(CLASS, Wildca
  * the app's hook bean implements it, narrowed by the identity's request record and principal.
  */
 internal fun authenticateHookTypes(layout: JavaLayout): List<TypeSpec> = layout.kept.identities.mapNotNull { identityId ->
-    val principal = when (val identity = layout.ir.identities[identityId]) {
-        is CredentialIdentity -> identity.principal
-        is SignedIdentity -> identity.principal
-        else -> return@mapNotNull null
-    }
     val names = layout.identity(identityId) ?: return@mapNotNull null
-    val principalSchema = (principal as? SchemaPrincipal)?.schema ?: return@mapNotNull null
-    val principalClass = layout.schemaClass(principalSchema) ?: return@mapNotNull null
+    val principalClass = layout.principalClass(identityId) ?: return@mapNotNull null
 
     TypeSpec.interfaceBuilder(names.hook)
         .addJavadoc("The authenticate hook of the identity '\$L': register one bean implementing it.\n", identityId)

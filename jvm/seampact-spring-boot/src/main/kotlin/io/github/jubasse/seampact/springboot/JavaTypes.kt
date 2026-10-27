@@ -30,6 +30,7 @@ internal object JavaTypes {
     val OFFSET_DATE_TIME: ClassName = ClassName.get("java.time", "OffsetDateTime")
     val LOCAL_DATE: ClassName = ClassName.get("java.time", "LocalDate")
     val FIELD: ClassName = ClassName.get("io.github.jubasse.seampact.hooks", "Field")
+    val JSON_IGNORE: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "JsonIgnore")
     val JSON_PROPERTY: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "JsonProperty")
     val JSON_FORMAT: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "JsonFormat")
     val JSON_INCLUDE: ClassName = ClassName.get("com.fasterxml.jackson.annotation", "JsonInclude")
@@ -205,6 +206,8 @@ internal data class RecordComponent(
     val writtenAsString: Boolean = false,
     /** The id of a value the boundary injects when it binds the record, never read from the request. */
     val injectedAs: String? = null,
+    /** Left out of the record's Jackson serialization and of its `toString()`: not a wire value, may hold sensitive data. */
+    val withheld: Boolean = false,
 )
 
 /**
@@ -227,6 +230,7 @@ internal fun recordConstructor(components: List<RecordComponent>): MethodSpec {
                     .build(),
             )
         }
+        if (component.withheld) parameter.addAnnotation(JavaTypes.JSON_IGNORE)
         if (component.writtenAsString) {
             parameter.addAnnotation(AnnotationSpec.builder(JavaTypes.JSON_FORMAT).addMember("shape", "\$T.Shape.STRING", JavaTypes.JSON_FORMAT).build())
         }
@@ -246,7 +250,7 @@ internal fun redactedToString(typeName: String, components: List<RecordComponent
     val body = CodeBlock.builder()
     var pendingText = "$typeName["
 
-    components.forEachIndexed { index, component ->
+    components.filterNot { it.withheld }.forEachIndexed { index, component ->
         pendingText += (if (index > 0) ", " else "") + component.name + "="
         if (component.redacted) {
             body.add("\$S + \$T.REDACTED + ", pendingText, redaction)

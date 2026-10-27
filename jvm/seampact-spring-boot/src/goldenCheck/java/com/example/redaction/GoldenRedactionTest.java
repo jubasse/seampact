@@ -68,6 +68,6 @@ class GoldenRedactionTest {
     void signedRouteInputHidesTheParsedBody() {
         PaymentEvent event = new PaymentEvent(SIGNED_BODY_SECRET, "charge.succeeded", JsonNodeFactory.instance.objectNode().put("note", SIGNED_BODY_SECRET));
 
-        assertRedacted(new PaymentsInput(new PaymentsHeaders("t=1,v1=" + SIGNATURE_SECRET), event), SIGNED_BODY_SECRET, SIGNATURE_SECRET);
+        assertRedacted(new PaymentsInput(new PaymentsHeaders("t=1,v1=" + SIGNATURE_SECRET), event, null), SIGNED_BODY_SECRET, SIGNATURE_SECRET);
     }
 }
