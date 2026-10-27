@@ -11,6 +11,9 @@ use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\AuthenticateCall;
 use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\SignatureHeader;
+use Seampact\Golden\TasksConsistent\GetChannelInput;
+use Seampact\Golden\TasksConsistent\GetChannelPath;
+use Seampact\Golden\TasksConsistent\GetChannelScopes;
 use Seampact\Golden\TasksConsistent\PaymentsInput;
 use Seampact\Golden\TasksConsistent\Schemas\CreateTask;
 use Seampact\Golden\TasksConsistent\Schemas\PaymentEvent;
@@ -18,8 +21,10 @@ use Seampact\Golden\TasksConsistent\Symfony\StripePrincipal;
 use Seampact\Golden\TasksConsistent\Symfony\TasksContract;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSeampactBundle;
 use Seampact\Golden\TasksConsistent\Symfony\UserCredentials;
+use Seampact\Golden\TasksConsistent\Symfony\UserPrincipal;
 use Seampact\Hooks\OperationRef;
 use Seampact\Hooks\RequestView;
+use Seampact\Hooks\ResolvedScope;
 use Seampact\Hooks\SignatureEncoding;
 use Seampact\Hooks\SignatureTemplate;
 use Seampact\Hooks\SignedTemplateRequest;
@@ -58,6 +63,7 @@ final class RedactionTest extends TestCase
         yield 'a sensitive member' => [new CreateTask(self::SECRET, null)];
         yield 'a signed route\'s parsed body' => [new PaymentsInput(new PaymentEvent(self::SECRET, 'invoice.paid', null), new StripePrincipal('acct_1'))];
         yield 'an identity\'s credentials' => [new UserCredentials(self::SECRET, self::SECRET)];
+        yield 'an input\'s principal and scopes' => [new GetChannelInput(new GetChannelPath('1'), new UserPrincipal(self::SECRET), new GetChannelScopes(new ResolvedScope('channel', '1', (object) ['name' => self::SECRET])))];
         yield 'the credentials, CSRF token and signed request a hook receives' => [new AuthenticateCall(
             'user',
             new UserCredentials(self::SECRET, null),

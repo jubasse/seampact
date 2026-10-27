@@ -6,13 +6,18 @@ namespace Seampact\Laravel\Tests;
 
 use Illuminate\Container\Container;
 use PHPUnit\Framework\TestCase;
+use Seampact\Codegen\Runtime\AccessSteps;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\ContractBypassedException;
 use Seampact\Codegen\Runtime\HandlerAccess;
+use Seampact\Codegen\Runtime\ScopeResolver;
 use Seampact\Golden\TasksConsistent\GetChannelRequest;
 use Seampact\Golden\TasksConsistent\Laravel\TasksContract;
 use Seampact\Golden\TasksConsistent\Laravel\UserPrincipal;
+use Seampact\Golden\TasksConsistent\ListTasksRequest;
+use Seampact\Hooks\ResolveScopeRequest;
+use Seampact\Hooks\ScopeResolution;
 use Seampact\Hooks\RequestView;
 use Seampact\Hooks\ResolvedScope;
 use Seampact\Laravel\Runtime\Hooks;
@@ -54,6 +59,50 @@ final class HandlerAccessTest extends TestCase
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('before the boundary');
         self::requestHolding(self::API, $state)->principal();
+    }
+
+    public function testAFormRequestDoesNotReadTheStateOfAnotherOperation(): void
+    {
+        $request = ListTasksRequest::create('/v1/tasks');
+        $request->attributes->set(BoundaryState::attributeName(self::API), self::admittedState(new UserPrincipal('alice'), null));
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage("operation 'listTasks' read the boundary state of operation 'getChannel'");
+        $request->principal();
+    }
+
+    public function testJsonEncodingTheFormRequestShowsNeitherThePrincipalNorTheScopes(): void
+    {
+        $request = self::requestHolding(self::API, self::admittedState(new UserPrincipal('alice-secret-id'), (object) ['name' => 'channel-secret']));
+
+        $encoded = json_encode($request, JSON_THROW_ON_ERROR);
+
+        self::assertStringNotContainsString('alice-secret-id', $encoded);
+        self::assertStringNotContainsString('channel-secret', $encoded);
+    }
+
+    public function testAResolverAnsweringAnotherScopeIsRefusedWhileTheBoundaryResolves(): void
+    {
+        $resolver = new class () implements ScopeResolver {
+            public function scope(): string
+            {
+                return 'channel';
+            }
+
+            public function resolveScope(ResolveScopeRequest $request): ScopeResolution
+            {
+                return new ScopeResolution\Resolved(new ResolvedScope('workspace', 'w-1'));
+            }
+        };
+        $container = new Container();
+        $container->instance('channelResolver', $resolver);
+        $container->tag('channelResolver', Hooks::scopeResolversTag(self::API));
+        $state = new BoundaryState(ApiContract::of(TasksContract::class), 'getChannel', ['channelId' => self::CHANNEL_ID], new RequestView('GET', '/v1/channels/' . self::CHANNEL_ID, []), new Hooks($container));
+        $state->principal = new UserPrincipal('alice');
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage("answered the scope 'workspace' for the scope 'channel'");
+        AccessSteps::resolveScopes($state);
     }
 
     private static function admittedState(?object $principal, ?object $channel): BoundaryState

@@ -46,6 +46,17 @@ final class HandlerAccessTest extends TestCase
         TypedInput::build($state, ['path' => (object) ['channelId' => self::CHANNEL_ID]]);
     }
 
+    public function testJsonEncodingTheInputShowsNeitherThePrincipalNorTheScopes(): void
+    {
+        $state = self::admittedState(new UserPrincipal('alice-secret-id'), (object) ['name' => 'channel-secret']);
+
+        $encoded = json_encode(TypedInput::build($state, ['path' => (object) ['channelId' => self::CHANNEL_ID]]), JSON_THROW_ON_ERROR);
+
+        self::assertStringContainsString(self::CHANNEL_ID, $encoded);
+        self::assertStringNotContainsString('alice-secret-id', $encoded);
+        self::assertStringNotContainsString('channel-secret', $encoded);
+    }
+
     private static function admittedState(object $principal, ?object $channel): BoundaryState
     {
         $hooks = new Hooks(new ServiceLocator([]), [], [], null, new NullLogger());
