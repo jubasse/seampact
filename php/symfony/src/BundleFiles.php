@@ -174,9 +174,9 @@ final class BundleFiles
         $build->setBody($buildBody);
 
         $class->addMethod('boot')->setPublic()->setReturnType('void')
-            ->addComment("Checks the runtime version first, except under the generate command, then redacts credentials in VarDumper\nand refuses a worker runtime, which serves many requests from one container.")
-            ->setBody("parent::boot();\nif (!{$file->name($this->placement->runtime('Regeneration'))}::skips({$file->name($this->placement->contract)}::class)) {\n"
-                . "    {$file->name($this->placement->runtime('DumpRedaction'))}::register({$file->name($this->placement->runtime('ApiContract'))}::of({$file->name($this->placement->contract)}::class));\n}\n"
+            ->addComment("Checks the runtime version first (except while the generate command runs), then redacts credentials in\nVarDumper and refuses a worker runtime, which serves many requests from one container.")
+            ->setBody("parent::boot();\n"
+                . "{$file->name($this->placement->runtime('DumpRedaction'))}::register({$file->name($this->placement->runtime('Regeneration'))}::contract({$file->name($this->placement->contract)}::class));\n"
                 . "{$file->name($this->placement->runtime('BoundarySubscriber'))}::refuseWorker(\$this->container);");
 
         return $file;

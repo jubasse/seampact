@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\TasksConsistent\Symfony;
 
-use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\DumpRedaction;
 use Seampact\Symfony\Runtime\BootCheckPass;
 use Seampact\Symfony\Runtime\BoundarySubscriber;
@@ -126,15 +125,13 @@ final class TasksSeampactBundle extends AbstractBundle
   }
 
   /**
-   * Checks the runtime version first, except under the generate command, then redacts credentials in VarDumper
-   * and refuses a worker runtime, which serves many requests from one container.
+   * Checks the runtime version first (except while the generate command runs), then redacts credentials in
+   * VarDumper and refuses a worker runtime, which serves many requests from one container.
    */
   public function boot(): void
   {
     parent::boot();
-    if (!Regeneration::skips(TasksContract::class)) {
-        DumpRedaction::register(ApiContract::of(TasksContract::class));
-    }
+    DumpRedaction::register(Regeneration::contract(TasksContract::class));
     BoundarySubscriber::refuseWorker($this->container);
   }
 }

@@ -14,7 +14,9 @@ use Seampact\Golden\TasksConsistent\Symfony\SeampactOperation as TasksOperation;
 use Seampact\Golden\TasksConsistent\Symfony\TasksContract;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSeampactBundle as SecondBundle;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSettings;
+use Seampact\Codegen\Runtime\RuntimeVersion;
 use Seampact\Symfony\Runtime\BootCheckPass;
+use Seampact\Symfony\Runtime\Regeneration;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\ResolveClassPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -92,6 +94,26 @@ final class BootCheckPassTest extends TestCase
     public function testAContainerWithoutTheValidatorIsRefusedNamingThePackage(): void
     {
         self::assertStringContainsString('install symfony/validator', self::compiledProblems(new FirstBundle(), null, self::relativeBootCheck()));
+    }
+
+    public function testAContainerCompiledUnderTheGenerateCommandRunsEveryCheckButTheVersionAndHttpStillRefuses(): void
+    {
+        $argumentsBefore = $_SERVER['argv'] ?? null;
+        try {
+            $_SERVER['argv'] = ['bin/console', '-v', 'seampact:generate'];
+            $skewed = new BootCheckPass(SkewedTasksContract::class, TasksOperation::class, SecondBundle::BOUNDARY_SERVICE, SecondBundle::INPUT_RESOLVER_SERVICE, SecondBundle::SETTINGS_SERVICE, TasksSettings::class, false);
+            $problems = self::compiledProblems(new SecondBundle(), null, $skewed);
+
+            self::assertSame(self::compiledProblems(new SecondBundle(), null, self::bootCheck()), $problems);
+
+            // An HTTP boot of the app with that container: the bundle's boot reads the contract again.
+            $_SERVER['argv'] = ['public/index.php'];
+            $this->expectException(\LogicException::class);
+            $this->expectExceptionMessage(RuntimeVersion::GENERATED_FOR_OTHER_VERSION);
+            Regeneration::contract(SkewedTasksContract::class);
+        } finally {
+            $_SERVER['argv'] = $argumentsBefore;
+        }
     }
 
     private static function bootCheck(): BootCheckPass

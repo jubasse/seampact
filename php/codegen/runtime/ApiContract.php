@@ -75,14 +75,28 @@ final class ApiContract
         usort($this->routes, ContractRoute::mostSpecificFirst(...));
     }
 
-    /** The contract of the generated class `$contractClass`, read once per process. */
+    /** The contract of the generated class `$contractClass`, read once per process, its version checked on every call. */
     public static function of(string $contractClass): self
+    {
+        self::refuseOtherRuntime($contractClass);
+
+        return self::load($contractClass);
+    }
+
+    /**
+     * The contract read for the generate command alone, which runs under a version skew to fix it: the version check
+     * steps aside for this call only, so a later `of()` in the same process still refuses the skew.
+     */
+    public static function forRegeneration(string $contractClass): self
+    {
+        return self::load($contractClass);
+    }
+
+    private static function load(string $contractClass): self
     {
         if (isset(self::$loaded[$contractClass])) {
             return self::$loaded[$contractClass];
         }
-
-        self::refuseOtherRuntime($contractClass);
 
         $constant = static fn (string $name): mixed => constant("{$contractClass}::{$name}");
         $api = $constant('API');
@@ -109,14 +123,6 @@ final class ApiContract
     }
 
     // The first check of every boot: a boundary never runs against a runtime of another version.
-    /** Whether the installed runtime serves `$contractClass`, the check `of()` refuses on, without throwing. */
-    public static function servesInstalledRuntime(string $contractClass): bool
-    {
-        $generatedBy = defined("{$contractClass}::GENERATED_BY") ? constant("{$contractClass}::GENERATED_BY") : null;
-
-        return is_string($generatedBy) && RuntimeVersion::accepts($generatedBy);
-    }
-
     private static function refuseOtherRuntime(string $contractClass): void
     {
         $generatedBy = defined("{$contractClass}::GENERATED_BY") ? constant("{$contractClass}::GENERATED_BY") : null;

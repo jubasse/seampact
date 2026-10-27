@@ -45,11 +45,7 @@ final class HookCheckWarmer implements CacheWarmerInterface
     /** @return list<string> */
     public function warmUp(string $cacheDir, ?string $buildDir = null): array
     {
-        if (Regeneration::skips($this->contractClass)) {
-            return [];
-        }
-
-        $contract = ApiContract::of($this->contractClass);
+        $contract = Regeneration::contract($this->contractClass);
         $problems = self::problems($this->hooks, $contract);
         if ($problems !== []) {
             throw new \LogicException('seampact: ' . self::report($contract, $problems));

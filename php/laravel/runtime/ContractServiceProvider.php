@@ -28,7 +28,7 @@ abstract class ContractServiceProvider extends ServiceProvider
     private const SUBSTITUTE_BINDINGS = 'Illuminate\\Routing\\Middleware\\SubstituteBindings';
     private const OCTANE_WORKER_STARTING = 'Laravel\\Octane\\Events\\WorkerStarting';
     private const CACHING_COMMANDS = ['route:cache', 'optimize'];
-    /** The command that regenerates the api, which boots even when the api was generated for another runtime version. */
+    /** The command that regenerates the api, under which the runtime version check steps aside. */
     public const GENERATE_COMMAND = 'seampact:generate';
     private const CONFIG_TAG = 'seampact-config';
     // One key for every api's provider, so each sees the others' boundaries.
@@ -48,11 +48,7 @@ abstract class ContractServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        if ($this->regenerating()) {
-            return;
-        }
-
-        $contract = ApiContract::of($this->contractClass());
+        $contract = $this->contract();
         $this->app->instance(self::routeTableKey($contract->api), $contract->routesClass);
         $this->app->instance(self::BOUNDARIES_KEY, [...self::boundaries($this->app), $this->boundaryClass() => ['api' => $contract->api, 'basePaths' => $contract->basePaths()]]);
 
@@ -70,17 +66,24 @@ abstract class ContractServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        self::defineRouteMacro();
-        if ($this->regenerating()) {
-            return;
-        }
-
-        $contract = ApiContract::of($this->contractClass());
+        $contract = $this->contract();
         RedactingDumper::install($this->app, $contract);
         $kernel = $this->app->make(Kernel::class);
         if (method_exists($kernel, 'prependMiddleware') && method_exists($kernel, 'addToMiddlewarePriorityBefore')) {
             $kernel->prependMiddleware($this->boundaryClass());
             $kernel->addToMiddlewarePriorityBefore(self::SUBSTITUTE_BINDINGS, $this->accessClass());
+        }
+
+        if (!Route::hasMacro(self::MACRO)) {
+            // The macro runs bound to the router, where `self` names the router: the key function is captured here.
+            $routeTableKey = self::routeTableKey(...);
+            Route::macro(self::MACRO, static function (string $api) use ($routeTableKey): void {
+                $routesClass = app($routeTableKey($api));
+                if (!is_string($routesClass) || !method_exists($routesClass, 'register')) {
+                    throw new \LogicException("seampact: no generated routes for the api '{$api}'; list its service provider in bootstrap/providers.php.");
+                }
+                $routesClass::register();
+            });
         }
 
         $api = $contract->api;
@@ -106,33 +109,10 @@ abstract class ContractServiceProvider extends ServiceProvider
         }
     }
 
-    private static function defineRouteMacro(): void
+    // The version check steps aside while the generate command runs, read from the command line at each boot.
+    private function contract(): ApiContract
     {
-        if (Route::hasMacro(self::MACRO)) {
-            return;
-        }
-
-        // The macro runs bound to the router, where `self` names the router: the functions are captured here.
-        $routeTableKey = self::routeTableKey(...);
-        $generateCommandRuns = self::generateCommandRuns(...);
-        Route::macro(self::MACRO, function (string $api) use ($routeTableKey, $generateCommandRuns): void {
-            $application = app();
-            $routesClass = $application->bound($routeTableKey($api)) ? $application->make($routeTableKey($api)) : null;
-            // An api whose provider the generate command skipped serves no route there.
-            if ($routesClass === null && $generateCommandRuns($application)) {
-                return;
-            }
-            if (!is_string($routesClass) || !method_exists($routesClass, 'register')) {
-                throw new \LogicException("seampact: no generated routes for the api '{$api}'; list its service provider in bootstrap/providers.php.");
-            }
-            $routesClass::register();
-        });
-    }
-
-    // The generate command serves no request, so an api generated for another runtime version leaves it to run.
-    private function regenerating(): bool
-    {
-        return self::generateCommandRuns($this->app) && !ApiContract::servesInstalledRuntime($this->contractClass());
+        return self::generateCommandRuns($this->app) ? ApiContract::forRegeneration($this->contractClass()) : ApiContract::of($this->contractClass());
     }
 
     private static function generateCommandRuns(Application $application): bool

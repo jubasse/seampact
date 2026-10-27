@@ -253,7 +253,7 @@ Two apis are two providers, each with its own middleware, route table and boot c
 
 ### The boot check
 
-Before any other check, the contract class's `GENERATED_BY`, the full version of the generator that wrote it, is compared with the installed runtime's `RuntimeVersion::VERSION` (ADR 0025 "Version guards", G3): another `major.minor` or a lower patch refuses the boot as `runtime.generated-for-other-version`, with the fix to regenerate or install the runtime at the generator's version. `php artisan seampact:generate` is the one boot it leaves to run, since that command serves no request and fixes the mismatch: under it the api's provider registers nothing.
+Before any other check, the contract class's `GENERATED_BY`, the full version of the generator that wrote it, is compared with the installed runtime's `RuntimeVersion::VERSION` (ADR 0025 "Version guards", G3): another `major.minor` or a lower patch refuses the boot as `runtime.generated-for-other-version`, with the fix to regenerate or install the runtime at the generator's version. While `php artisan seampact:generate` runs, read from the command line at each boot and never cached, the version check alone steps aside so the command that fixes the mismatch can run; every other boot, the next one included, refuses again.
 
 The boot check runs in an `$app->booted()` callback of the provider. It runs:
 

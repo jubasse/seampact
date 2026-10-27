@@ -267,7 +267,7 @@ Two apis are two bundles, each with its own subscriber, resolver, loader, config
 
 ### The boot check
 
-Before any other check, the contract class's `GENERATED_BY`, the full version of the generator that wrote it, is compared with the installed runtime's `RuntimeVersion::VERSION` (ADR 0025 "Version guards", G3): another `major.minor` or a lower patch refuses the boot as `runtime.generated-for-other-version`, with the fix to regenerate or install the runtime at the generator's version. `bin/console seampact:generate` is the one boot it leaves to run, since that command serves no request and fixes the mismatch: under it the bundle's boot, the boot check pass and the hook check warmer skip the api, and the container compiled then tracks the contract and runtime files, so a debug kernel rebuilds it with the checks once either changes.
+Before any other check, the contract class's `GENERATED_BY`, the full version of the generator that wrote it, is compared with the installed runtime's `RuntimeVersion::VERSION` (ADR 0025 "Version guards", G3): another `major.minor` or a lower patch refuses the boot as `runtime.generated-for-other-version`, with the fix to regenerate or install the runtime at the generator's version. While `bin/console seampact:generate` runs, read from the command line at each call and never compiled into the container, the version check alone steps aside so the command that fixes the mismatch can run; the boot check pass and the hook check warmer run every other check as before, and the next boot refuses the skew again.
 
 The boot check has two parts, each of which keeps a failing app from serving.
 

@@ -59,13 +59,7 @@ final class BootCheckPass implements CompilerPassInterface
 
     public function process(ContainerBuilder $container): void
     {
-        if (Regeneration::skips($this->contractClass)) {
-            Regeneration::trackVersions($container, $this->contractClass);
-
-            return;
-        }
-
-        $contract = ApiContract::of($this->contractClass);
+        $contract = Regeneration::contract($this->contractClass);
         $problems = [
             ...($this->checksHandlers ? $this->handlers($container, $contract) : []),
             ...$this->listeners($container),
@@ -226,11 +220,7 @@ final class BootCheckPass implements CompilerPassInterface
                 continue;
             }
 
-            if (Regeneration::skips($earlierContractClass)) {
-                continue;
-            }
-
-            $earlier = ApiContract::of($earlierContractClass);
+            $earlier = Regeneration::contract($earlierContractClass);
             if (($earlier->defaults['catch_all'] ?? true) !== false && ApiContract::basePathsCover($earlier->basePaths(), $contract->basePaths())) {
                 $basePaths = implode(', ', array_map(static fn (string $basePath): string => $basePath === '' ? '/' : $basePath, $earlier->basePaths()));
                 $problems[] = "the api '{$earlier->api}' registered before this one answers its catch-all 404 under {$basePaths}, which covers this api's paths; set catchAll to false on the api whose base path equals or prefixes this api's";
