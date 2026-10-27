@@ -8,11 +8,13 @@ namespace Seampact\Codegen\Runtime;
  * The boundary's own log lines, written to the app's PSR-3 logger, and the unexpected-error listener: a line carries
  * the api, the operation, the reason and a pointer, never an input value; in the framework's debug mode only, it also
  * names the exception's message and `file:line` (`DebugLookup`). A pointer can hold client text, so a
- * logged pointer is cut to `MAX_LOGGED_POINTER_BYTES` on a UTF-8 boundary, with its control characters escaped.
+ * logged pointer is cut to `MAX_LOGGED_POINTER_BYTES` on a UTF-8 boundary, with its control characters escaped; a
+ * debug exception message is cut the same way to `MAX_LOGGED_MESSAGE_BYTES`.
  */
 final class BoundaryLog
 {
     public const MAX_LOGGED_POINTER_BYTES = 256;
+    public const MAX_LOGGED_MESSAGE_BYTES = 2048;
 
     private function __construct()
     {
@@ -55,7 +57,7 @@ final class BoundaryLog
             return $cause::class;
         }
 
-        return $cause::class . ': ' . self::escaped($cause->getMessage()) . ' at ' . $cause->getFile() . ':' . $cause->getLine();
+        return $cause::class . ': ' . self::escaped(mb_strcut($cause->getMessage(), 0, self::MAX_LOGGED_MESSAGE_BYTES, 'UTF-8')) . ' at ' . $cause->getFile() . ':' . $cause->getLine();
     }
 
     private static function escaped(string $text): string

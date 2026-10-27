@@ -9,6 +9,7 @@ use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\BoundaryLog;
+use Seampact\Codegen\Runtime\DebugLookup;
 use Seampact\Codegen\Runtime\HookLookup;
 use Seampact\Codegen\Runtime\UnexpectedErrorListener;
 use Seampact\Hooks\AuthenticateHook;
@@ -35,11 +36,35 @@ final class BoundaryLogTest extends TestCase
         self::assertStringContainsString('the unexpected-error listener is unusable: bind it to a class implementing', $logger->lines[1]);
     }
 
-    private static function lookup(LoggerInterface $logger): HookLookup
+    public function testADebugExceptionMessageIsCutBeforeItIsLogged(): void
     {
-        return new class ($logger) implements HookLookup {
-            public function __construct(private readonly LoggerInterface $logger)
+        $logger = new class () extends AbstractLogger {
+            /** @var list<string> */
+            public array $lines = [];
+
+            public function log($level, \Stringable|string $message, array $context = []): void
             {
+                $this->lines[] = (string) $message;
+            }
+        };
+
+        BoundaryLog::unexpected(self::lookup($logger, true), ApiContract::of(SelectionContract::class), 'getTask', 'a boundary step failed', new \RuntimeException(str_repeat('a', 100_000)));
+
+        self::assertLessThan(BoundaryLog::MAX_LOGGED_MESSAGE_BYTES + 1024, strlen($logger->lines[0]));
+        self::assertStringContainsString(str_repeat('a', BoundaryLog::MAX_LOGGED_MESSAGE_BYTES), $logger->lines[0]);
+        self::assertStringNotContainsString(str_repeat('a', BoundaryLog::MAX_LOGGED_MESSAGE_BYTES + 1), $logger->lines[0]);
+    }
+
+    private static function lookup(LoggerInterface $logger, bool $debug = false): HookLookup
+    {
+        return new class ($logger, $debug) implements HookLookup, DebugLookup {
+            public function __construct(private readonly LoggerInterface $logger, private readonly bool $debug)
+            {
+            }
+
+            public function isDebug(): bool
+            {
+                return $this->debug;
             }
 
             public function authenticateHook(ApiContract $contract, string $identity): AuthenticateHook
