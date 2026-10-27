@@ -41,7 +41,10 @@ final class BootCheckPass implements CompilerPassInterface
         'Symfony\\Component\\Security\\Http\\Attribute\\IsCsrfTokenValid' => 'the authenticate hook with the CSRF companion value',
         'Symfony\\Component\\HttpKernel\\Attribute\\IsSignatureValid' => 'nothing: a signed URI is not a form the contract declares',
     ];
-    private const UNKNOWN_KIND = '<kind>';
+    /** The `#[IsGranted]` attributes that ignore the subject, so access_control (whose subject is the Request) checks them alike. */
+    private const SUBJECTLESS_ATTRIBUTE_PREFIXES = ['ROLE_', 'IS_AUTHENTICATED'];
+    /** The `#[IsGranted]` arguments an access_control rule on a kind matcher cannot carry, with their positions. */
+    private const NARROWING_IS_GRANTED_ARGUMENTS = ['subject' => 1, 'statusCode' => 3, 'exceptionCode' => 4, 'methods' => 5];
     private const SUPPORTED_MAJORS = ['/^7\.4\./', '/^8\./'];
 
     /**
@@ -170,9 +173,9 @@ final class BootCheckPass implements CompilerPassInterface
     }
 
     /**
-     * The fix of `#[IsGranted]`: an attribute without a subject is the same check as an `access_control` rule on the
-     * matcher of each guarded operation's access kind, printed ready to paste; one with a subject or an expression
-     * needs a decider, which receives the subject.
+     * The fix of `#[IsGranted]`: a role check with no subject, method list, status or exception code is the same check
+     * as an `access_control` rule on the matcher of each guarded operation's access kind, printed ready to paste. Any
+     * other needs a decider: a rule on a kind matcher cannot take `methods`, and answers 403 with no exception code.
      *
      * @param \ReflectionAttribute<object> $attribute
      * @param list<string> $operationIds
@@ -181,18 +184,46 @@ final class BootCheckPass implements CompilerPassInterface
     {
         $arguments = $attribute->getArguments();
         $grantedAttribute = $arguments[0] ?? $arguments['attribute'] ?? null;
-        $subject = $arguments[1] ?? $arguments['subject'] ?? null;
-        if (!is_string($grantedAttribute) || $subject !== null) {
+        if (!is_string($grantedAttribute) || !self::ignoresTheSubject($grantedAttribute) || self::narrowsTheRule($arguments)) {
             return self::VOTER_DECIDER_FIX;
         }
 
         $rules = [];
         foreach ($operationIds as $operationId) {
-            $kind = KindRequestMatcher::kindIn($container, $contract, $operationId) ?? self::UNKNOWN_KIND;
+            $kind = KindRequestMatcher::kindIn($container, $contract, $operationId);
+            if ($kind === null) {
+                return self::VOTER_DECIDER_FIX;
+            }
             $rules[$kind] = '`- { request_matcher: ' . KindRequestMatcher::serviceId($contract->api, $kind) . ", roles: {$grantedAttribute} }`";
         }
 
-        return 'the access_control rule ' . implode(' and ', $rules) . ', which guards every route of that kind, or ' . self::VOTER_DECIDER_FIX;
+        $guards = count($rules) === 1 ? 'the access_control rule ' . implode('', $rules) . ', which guards every route of that kind' : 'the access_control rules ' . implode(' and ', $rules) . ', each guarding every route of its kind';
+
+        return $guards . ', or ' . self::VOTER_DECIDER_FIX;
+    }
+
+    private static function ignoresTheSubject(string $grantedAttribute): bool
+    {
+        foreach (self::SUBJECTLESS_ATTRIBUTE_PREFIXES as $prefix) {
+            if (str_starts_with($grantedAttribute, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @param array<array-key, mixed> $arguments */
+    private static function narrowsTheRule(array $arguments): bool
+    {
+        foreach (self::NARROWING_IS_GRANTED_ARGUMENTS as $name => $position) {
+            $value = $arguments[$position] ?? $arguments[$name] ?? null;
+            if ($value !== null && $value !== []) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return list<string> */

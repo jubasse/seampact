@@ -215,8 +215,8 @@ Gate::define('notes.update', [NotePolicy::class, 'update']);
 
 - It asks `Gate::forUser($principal)->authorize('<right>', ...)` for every right and rule. A decider of your own that names a right wins over it.
 - The user is the principal your authenticate hook returns. To get your `User` model in the Policy, let it implement the identity's generated `<Identity>PrincipalMembers` and return it.
-- The arguments are the subject first, then the other scopes, then the request. A scope is the value its resolver loaded, else its id: load the model in the resolver and the Policy receives it.
-- A denial answers the right's first denial code, as `Gate::authorize()` in a decider does. `Response::denyAsNotFound()` answers the operation's `notFound` code.
+- The arguments are the subject first, then the other scopes, then the request. A scope is the value its resolver loaded: load the model in the resolver and the Policy receives it. A scope with no loaded value arrives as its `SubjectRef` or `ResolvedScope`, never as the raw id, so a client cannot pick the Policy.
+- A denial answers the right's first denial code, as `Gate::authorize()` in a decider does. `Response::denyAsNotFound()` answers the operation's `notFound` code when the operation declares one, else the first denial code.
 
 The generated per-kind lists put your own middleware on a kind of route (see the config below). To keep Laravel's rules on a route, add them there:
 

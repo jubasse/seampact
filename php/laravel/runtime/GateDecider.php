@@ -13,10 +13,11 @@ use Seampact\Hooks\ResolvedScope;
 /**
  * An opt-in decider that asks Laravel's Gate, so the app answers its rights and rules with Policies and `Gate::define()`:
  * the ability is the right or rule name, the user is the principal, and the arguments are the subject first, then the
- * other resolved scopes, then the request. A subject or scope is its loaded record or value, else its id, so a Policy
- * is found by the class of the model the scope resolver loaded. A denial throws `AuthorizationException`, which answers
- * the first declared denial code, or the `notFound` code for `Response::denyAsNotFound()`. The app enables it by
- * tagging it with the api's deciders tag; a decider that names a right wins over it.
+ * other resolved scopes, then the request. A subject or scope is its loaded record or value, else its `SubjectRef` or
+ * `ResolvedScope`, so a Policy is found by the class of the model the scope resolver loaded, never by an id the client
+ * sent (the Gate reads a string as a class name). A denial throws `AuthorizationException`, which answers the first
+ * declared denial code; `Response::denyAsNotFound()` answers the operation's `notFound` code when it declares one. The
+ * app enables it by tagging it with the api's deciders tag; a decider that names a right wins over it.
  */
 final class GateDecider implements Decider
 {
@@ -45,12 +46,12 @@ final class GateDecider implements Decider
         $subject = $request->subject();
         if ($subject !== null) {
             $subjectScope = self::scopeOf($otherScopes, $subject->type, $subject->id);
-            $arguments[] = $subject->record ?? $subjectScope->value ?? $subject->id;
+            $arguments[] = $subject->record ?? $subjectScope->value ?? $subject;
             $otherScopes = array_values(array_filter($otherScopes, static fn (ResolvedScope $scope): bool => $scope !== $subjectScope));
         }
 
         foreach ($otherScopes as $scope) {
-            $arguments[] = $scope->value ?? $scope->id;
+            $arguments[] = $scope->value ?? $scope;
         }
 
         $arguments[] = $request;

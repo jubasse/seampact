@@ -51,7 +51,7 @@ Same start check, run by `bin/console cache:warmup` and on the first request. Th
 | `no idempotency store for '<operation>'` | Alias `seampact.<api key>.idempotency_store` to a service implementing `Seampact\Hooks\IdempotencyStore`. |
 | `operation '<id>' has no handler` | Register one controller service implementing the `<Resource>Endpoints` interface. |
 | `the method <class>::<method> handles operation '<id>' but is not marked #[SeampactOperation('<id>')]` | Add the attribute. |
-| `the controller <class> carries #[IsGranted]` or `#[IsCsrfTokenValid]`, and the same with `the method <class>::<method> carries` | Remove it. For `#[IsGranted]` without a subject, paste the `access_control` rule the message prints; otherwise register `VoterDecider` or write a decider. For `#[IsCsrfTokenValid]`, check the CSRF value in the authenticate hook. |
+| `the controller <class> carries #[IsGranted]` or `#[IsCsrfTokenValid]`, and the same with `the method <class>::<method> carries` | Remove it. For a plain role check in `#[IsGranted]`, paste the `access_control` rule the message prints; otherwise (a subject, `methods`, `statusCode`, `exceptionCode` or a custom attribute) register `VoterDecider` or write a decider. For `#[IsCsrfTokenValid]`, check the CSRF value in the authenticate hook. |
 | `the controller <class> carries #[IsSignatureValid]`, or the method form | Remove it and use nothing instead: a signed URI is not a form the contract declares. |
 | `framework.http_cache is on` | Turn it off: a reply HttpCache serves never reaches the boundary. |
 | `the input resolver service ... is not registered as a value resolver` | List the api's bundle in `config/bundles.php`. |

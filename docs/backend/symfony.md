@@ -304,7 +304,7 @@ The app refuses to start, and lists every problem, when:
 - a route that is not in the contract is served and not allow-listed;
 - an app route sits before a contract route on the same path;
 - `framework.http_cache` is on;
-- a contract method or controller carries `#[IsGranted]`: the message prints the `access_control` rule to paste instead;
+- a contract method or controller carries `#[IsGranted]`: for a plain `ROLE_*` or `IS_AUTHENTICATED_*` check, the message prints the `access_control` rule to paste instead; with a subject, `methods`, `statusCode` or `exceptionCode`, it points to `VoterDecider`;
 - the contract writes absolute URLs and `public_origin` is missing or is not an origin;
 - the contract writes relative URLs and `public_origin` is set, from an `%env()%` value too.
 
