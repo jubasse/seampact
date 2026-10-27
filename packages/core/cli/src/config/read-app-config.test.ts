@@ -140,7 +140,11 @@ test.each([
     '{ path: /metrics, reason: "" }',
     "The value must NOT have fewer than 1 characters.",
   ],
-  ["two stars inside a segment", "{ path: '/metrics**', reason: r }", "The value must match pattern"],
+  [
+    "two stars inside a segment",
+    "{ path: '/metrics**', reason: r }",
+    "The value must match pattern",
+  ],
   ["three stars", "{ path: '/a/***', reason: r }", "The value must match pattern"],
   ["a relative path", "{ path: metrics, reason: r }", "The value must match pattern"],
   [
