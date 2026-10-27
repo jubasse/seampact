@@ -45,7 +45,7 @@ One entry per name. Write the keys of one form.
 | `artefacts` | map of booleans | the target's own | Switch each generated part on or off. `bootCheck` also takes `{ frameworkRoutes: false }`. `index: false` skips the api `index` module of a Node server target. |
 | `artefacts.bootCheck.hooks` | `error`, `warn`, `off` | `error` | What a Node server does at boot when a hook the contract needs is not registered: refuse to start, log and start, or start silently. A route whose hook is missing answers 500 on every request, whatever the level; an output field right with a missing decider runs the handler first, then answers 500. A right claimed by two deciders always refuses to start. `bootCheck: false` does not change it. |
 | `allowUntested` | list of strings | none | Accept a framework major that is not tested: `nestjs@13`. |
-| `frameworkRoutes` | list | none | Server targets. Routes outside the contract that the boot check accepts: `path`, `reason`, optional `method`. In `path`, `*` is one segment, `**` any number, and a `*` inside a segment any characters but `/` (`/livewire-*/**`). |
+| `frameworkRoutes` | list | none | Server targets. Routes outside the contract that the boot check accepts: `path`, `reason`, optional `method`. In `path`, `*` is one segment, `**` any number, and a `*` inside a segment any characters but `/` (`/livewire-*/**`). A segment holds at most two `*` and no `?`, `{` or `}`: write a route parameter as `*`. |
 | `frameworkDocs` | `keep` or `off` | `keep` | Server targets. `off` drops the framework's own document. |
 
 `mount` and `access` are planned. They are refused with `config.key.waits`.

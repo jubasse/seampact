@@ -74,8 +74,9 @@ final class FrameworkRoutesTest extends TestCase
         // The JIT has no backtrack limit, so the test reads the limit the interpreter applies.
         $jit = ini_set('pcre.jit', '0');
         $backtrackLimit = ini_set('pcre.backtrack_limit', '1000');
+        $route = '/' . str_repeat('a', 200) . 'bx';
         try {
-            FrameworkRoutes::allows([['path' => $pattern, 'method' => null]], '/' . str_repeat('a', 200) . 'bx', ['GET']);
+            FrameworkRoutes::allows([['path' => $pattern, 'method' => null]], $route, ['GET']);
         } finally {
             ini_set('pcre.jit', (string) $jit);
             ini_set('pcre.backtrack_limit', (string) $backtrackLimit);
