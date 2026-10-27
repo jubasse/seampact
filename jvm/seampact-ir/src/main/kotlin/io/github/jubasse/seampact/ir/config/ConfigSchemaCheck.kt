@@ -32,7 +32,7 @@ internal fun schemaProblems(tree: ConfigTree, kind: ConfigKind, schema: String, 
     val oneOfPaths = violations.filter { it.keyword == ONE_OF }.map { formatKeyPath(it.instancePath) }.toSet()
 
     val schemaProblems = violations
-        .filterNot { "/$ONE_OF/" in it.evaluationPath && formatKeyPath(it.instancePath) in oneOfPaths }
+        .filterNot { it.keyword != ONE_OF && "/$ONE_OF/" in it.evaluationPath && formatKeyPath(it.instancePath) in oneOfPaths }
         .filterNot { it.keyword == ONE_OF && hasDeeperPath(it.instancePath, oneOfPaths) }
         .map { it.keyword to violationProblem(tree, kind, it) }
         .filterNot { (_, located) -> isAtOrUnder(located.keyPath, reportedPaths) }
@@ -105,6 +105,10 @@ private fun oneOfSentences(path: KeyPath): Pair<String, String> {
         first == "sources" -> Pair(
             "A source takes one form: 'path', 'package' with 'version', 'release', 'git' or 'maven'; 'integrity' goes with a bundle form only.",
             "Keep the keys of one form (ADR 0011 'The app config').",
+        )
+        path.lastOrNull() == "frameworkRoutes" && path.getOrNull(path.size - 2) == BOOT_CHECK_ARTEFACT -> Pair(
+            "'bootCheck.frameworkRoutes' is true, false or 'strict'.",
+            "Write true to check the app routes under the contract's base paths, 'strict' to check every app route, or false to switch the check off.",
         )
         path.lastOrNull() == BOOT_CHECK_ARTEFACT -> Pair(
             "'bootCheck' is true, false or '{ frameworkRoutes }'.",

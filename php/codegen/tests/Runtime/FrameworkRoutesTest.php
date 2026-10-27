@@ -31,8 +31,18 @@ final class FrameworkRoutesTest extends TestCase
         self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/{a}/{b}'));
         self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/{any*}'), 'a catch-all serves every path below it');
         self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/{any}'), 'one segment serves /api, a parent of the base path only');
-        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/api/{rest}'));
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/api/{rest}'), 'a placeholder serves the base path itself');
         self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/files/{rest}'));
+    }
+
+    public function testAPlaceholderWhosePatternTakesASlashIsACatchAll(): void
+    {
+        $patterns = ['any' => '.*', 'id' => '[0-9]+'];
+        $patternOf = static fn (string $name): ?string => $patterns[$name] ?? null;
+
+        self::assertSame('/{any*}', FrameworkRoutes::withCatchAlls('/{any}', $patternOf));
+        self::assertSame('/users/{id}', FrameworkRoutes::withCatchAlls('/users/{id}', $patternOf));
+        self::assertSame('/{page}', FrameworkRoutes::withCatchAlls('/{page}', $patternOf));
     }
 
     public function testAnEmptyBasePathOverlapsEveryRoute(): void

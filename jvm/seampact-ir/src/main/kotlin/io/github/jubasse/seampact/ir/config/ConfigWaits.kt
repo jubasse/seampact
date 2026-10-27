@@ -15,7 +15,7 @@ private const val SERVER_ENTRY_BRINGER = "the boundary runtime of the native ser
 // A module link only arises across the apps of a monorepo, and no app links across apps yet.
 private const val MODULE_LINK_BRINGER = "links across the apps of a monorepo, once an app needs one"
 
-private val ENTRY_KEY_WAITS = listOf("mount", "access")
+private val ENTRY_KEY_WAITS = listOf("access")
 
 // The handler check of the boot check comes with the access hooks (ADR 0012).
 private const val BOOT_CHECK_HANDLERS = "handlers"

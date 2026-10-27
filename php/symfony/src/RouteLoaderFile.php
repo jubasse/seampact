@@ -28,6 +28,8 @@ final class RouteLoaderFile
         private readonly SymfonyPlacement $placement,
         private readonly TargetOptions $options,
         private readonly Refusals $refusals,
+        /** The entry's `mount`, written before every contract path; empty for none. */
+        private readonly string $mount,
     ) {
     }
 
@@ -105,7 +107,7 @@ final class RouteLoaderFile
     /** @return array{string, list<int>}|null the path with named placeholders, and 1 per placeholder segment, 0 per literal */
     private function symfonyPath(Operation $operation, int $index): ?array
     {
-        $segments = explode('/', $operation->path);
+        $segments = explode('/', $this->mount . $operation->path);
         $order = [];
         // A parameter that yields no name is refused with its input type, so its route is only left out here.
         $placeholders = RoutePlaceholder::namesOf($segments);

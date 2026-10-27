@@ -2348,4 +2348,10 @@ final class TasksContract
 
     /** The app routes the entry's `frameworkRoutes` lets through the boot check. */
     public const FRAMEWORK_ROUTES = [];
+
+    /** The app routes the boot check reads: `contract` those under the api's base paths, `strict` every one. */
+    public const FRAMEWORK_ROUTE_SCOPE = 'contract';
+
+    /** The entry's `mount`, the path prefix every contract route is served under. */
+    public const MOUNT = '';
 }

@@ -279,6 +279,10 @@ final class ConfigSchemaCheck
                 "A source takes one form: 'path', 'package' with 'version', 'release', 'git' or 'maven'; 'integrity' goes with a bundle form only.",
                 "Keep the keys of one form (ADR 0011 'The app config').",
             ],
+            $last === 'frameworkRoutes' && ($path[count($path) - 2] ?? null) === 'bootCheck' => [
+                "'bootCheck.frameworkRoutes' is true, false or 'strict'.",
+                "Write true to check the app routes under the contract's base paths, 'strict' to check every app route, or false to switch the check off.",
+            ],
             $last === 'bootCheck' => [
                 "'bootCheck' is true, false or '{ frameworkRoutes }'.",
                 "Switch the boot check with a boolean, or its framework-route check alone with '{ frameworkRoutes: false }'.",

@@ -139,7 +139,7 @@ final class BootCheck
             $controller = explode('@', $route->getActionName())[0];
             if (isset($contractActions[$controller])) {
                 $problems[] = "the route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " calls a contract handler ({$route->getActionName()}) but no generated registration made it: remove it";
-            } elseif ($switches[self::FRAMEWORK_ROUTES] && !self::isLaravelsOwn($route) && !self::isOtherApisRoute($app, $name) && !self::isAllowListed($contract, $route)) {
+            } elseif ($switches[self::FRAMEWORK_ROUTES] && !self::isLaravelsOwn($route) && !self::isOtherApisRoute($app, $name) && $contract->checksAppRoute(self::scopedUri($route)) && !self::isAllowListed($contract, $route)) {
                 $problems[] = "the framework route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it";
             }
         }
@@ -154,7 +154,7 @@ final class BootCheck
             $route = $routes[0];
             $uri = is_string($entry['uri'] ?? null) ? $entry['uri'] : '';
             if ('/' . ltrim($route->uri(), '/') !== $uri) {
-                $problems[] = "operation '{$operation}' is served at /" . ltrim($route->uri(), '/') . " instead of {$uri}: call the macro outside any route group prefix";
+                $problems[] = "operation '{$operation}' is served at /" . ltrim($route->uri(), '/') . " instead of {$uri}: call the macro outside any route group prefix, and write that prefix as the entry's mount in seampact.config.yaml";
             }
             if (!in_array($accessClass, $route->gatherMiddleware(), true)) {
                 $problems[] = "operation '{$operation}' runs without the access middleware: remove the withoutMiddleware() call on its route";
@@ -174,6 +174,13 @@ final class BootCheck
     private static function isAllowListed(ApiContract $contract, Route $route): bool
     {
         return FrameworkRoutes::allows($contract->frameworkRoutes, '/' . ltrim($route->uri(), '/'), array_values(array_filter($route->methods(), is_string(...))));
+    }
+
+    // The route's URI as the scope of the check reads it: a placeholder whose `where` pattern takes a `/` (the
+    // `->where('any', '.*')` of a fallback page) is a catch-all.
+    private static function scopedUri(Route $route): string
+    {
+        return FrameworkRoutes::withCatchAlls('/' . ltrim($route->uri(), '/'), static fn (string $name): ?string => is_string($route->wheres[$name] ?? null) ? $route->wheres[$name] : null);
     }
 
     // A generated route of another api of the app: its name is in the route table that api's provider registered.

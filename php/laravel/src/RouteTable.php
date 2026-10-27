@@ -43,7 +43,8 @@ final class RouteTable
     /** @var list<array{operation: Operation, uri: string, placeholders: list<string>, depthKey: list<int>, names: OperationNames}> */
     private array $routes = [];
 
-    public function __construct(private readonly PhpLayout $layout, private readonly LaravelOptions $options, private readonly Refusals $refusals)
+    /** @param string $mount the entry's `mount`, written before every contract path; empty for none */
+    public function __construct(private readonly PhpLayout $layout, private readonly LaravelOptions $options, private readonly Refusals $refusals, private readonly string $mount)
     {
     }
 
@@ -51,7 +52,7 @@ final class RouteTable
     {
         $segments = [];
         $depthKey = [];
-        $pathSegments = explode('/', $operation->path);
+        $pathSegments = explode('/', $this->mount . $operation->path);
         // A parameter that yields no name is refused with its input type, so its route is only left out here.
         $placeholders = RoutePlaceholder::namesOf($pathSegments);
         if ($placeholders === null) {

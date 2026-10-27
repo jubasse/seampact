@@ -6,6 +6,7 @@ namespace Seampact\Laravel;
 
 use Nette\PhpGenerator\PsrPrinter;
 use Seampact\Codegen\ContractClass;
+use Seampact\Codegen\FrameworkRouteScope;
 use Seampact\Codegen\ContractExceptions;
 use Seampact\Codegen\ArtefactSwitches;
 use Seampact\Codegen\BootCheckSwitches;
@@ -67,10 +68,11 @@ final class LaravelGenerator implements Generator
         $types = new PhpTypes($layout);
         $operationTypes = new OperationTypes($layout->api, $types, $refusals, self::nativePageClasses($ir));
         $formRequests = new FormRequests($layout, $options->rules, $refusals);
-        $routes = new RouteTable($layout, $options, $refusals);
+        $mount = $entry->mount ?? '';
+        $routes = new RouteTable($layout, $options, $refusals, $mount);
         $replies = new LaravelReplies($layout, $operationTypes);
-        $contract = new ContractClass($layout, $kept, $entry->frameworkRoutes);
-        $routeHelpers = ArtefactSwitches::routeHelpersOn($entry->artefacts) ? new RouteHelpers($layout, $types, $refusals) : null;
+        $contract = new ContractClass($layout, $kept, $entry->frameworkRoutes, $mount, FrameworkRouteScope::of($entry->artefacts));
+        $routeHelpers = ArtefactSwitches::routeHelpersOn($entry->artefacts) ? new RouteHelpers($layout, $types, $refusals, $mount) : null;
 
         $exceptionFiles = (new ContractExceptions($layout->api, $operationTypes, [self::SHOULDNT_REPORT]))->files($kept);
         $replies->exceptions($exceptionFiles, $kept);

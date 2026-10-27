@@ -16,7 +16,7 @@ final class ConfigWaits
     // A module link only arises across the apps of a monorepo, and no app links across apps yet.
     private const MODULE_LINK_BRINGER = 'links across the apps of a monorepo, once an app needs one';
 
-    private const ENTRY_KEY_WAITS = ['mount', 'access'];
+    private const ENTRY_KEY_WAITS = ['access'];
 
     // The handler check of the boot check comes with the access hooks (ADR 0012).
     private const BOOT_CHECK_HANDLERS = 'handlers';
