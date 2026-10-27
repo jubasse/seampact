@@ -162,9 +162,21 @@ final class TasksControllers {
         @Override
         @GetTask
         public GetTaskResult getTask(GetTaskInput input) {
+            requireCallerAndChannel(input);
+
             return answers.answer(API, "getTask", 200, Task.class, GetTaskResult.Status200::new,
                             Map.<String, java.util.function.Supplier<GetTaskResult>>of("api.not_found", GetTaskErrors.ApiNotFound::new))
                     .orElseGet(() -> new GetTaskResult.Status200(SampleData.task(input.path().taskId())));
+        }
+
+        // The handler reads who calls and the channel the resolver answered; a wrong value is a 500 the suite sees.
+        private static void requireCallerAndChannel(GetTaskInput input) {
+            if (input.principal() == null) throw new IllegalStateException("getTask received no principal");
+
+            Object channelId = input.scopes().channel().id();
+            if (!input.path().channelId().equals(channelId)) {
+                throw new IllegalStateException("getTask received the channel '" + channelId + "', not the path's '" + input.path().channelId() + "'");
+            }
         }
 
         @Override
