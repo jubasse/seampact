@@ -46,6 +46,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
     private const OPERATION_DEFAULT = '_seampact_operation';
     private const NOT_FOUND_ROLE = 'notFound';
     private const NOT_FOUND_STATUS = 404;
+    private const RETRY_AFTER = 'Retry-After';
     private const UNAUTHENTICATED_ROLE = 'unauthenticated';
     private const FORBIDDEN_ROLE = 'forbidden';
     private const PARTS = ['path', 'query', 'header', 'body'];
@@ -352,13 +353,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
 
         $role = $exception === null ? null : $this->roleOf($state, $exception, $response);
         if ($exception !== null && ($role !== null || FrameworkRefusal::statusOf($exception) !== null)) {
-            $reply = ReplyVerdict::mapped($state, $response, $role, $exception, ExceptionRoles::retryAfterValues($exception, $response), ExceptionRoles::KEPT_HEADERS);
-            $retryAfter = ExceptionRoles::retryAfter($exception);
-            if ($retryAfter !== null && !$reply->headers->has('Retry-After')) {
-                $reply->headers->set('Retry-After', $retryAfter);
-            }
-
-            return $reply;
+            return ReplyVerdict::mapped($state, self::withCarriedRetryAfter($response, $exception), $role, $exception, ExceptionRoles::retryAfterValues($exception, $response), ExceptionRoles::KEPT_HEADERS);
         }
 
         // A reply an app's own `kernel.exception` listener wrote for an exception no role or status maps is judged as written below.
@@ -371,6 +366,23 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         $etag = $contract->defaults['framework_etag'] ?? null;
 
         return ReplyVerdict::checked($state, $response, $exception, $responses, is_string($etag) ? $etag : null);
+    }
+
+    /**
+     * The response with the exception's own `Retry-After` when it writes none, so the delay is kept as the native
+     * headers are: on the reply of a declared code only, never on the api's 500.
+     */
+    private static function withCarriedRetryAfter(Response $response, \Throwable $exception): Response
+    {
+        $retryAfter = ExceptionRoles::retryAfter($exception);
+        if ($retryAfter === null || $response->headers->has(self::RETRY_AFTER)) {
+            return $response;
+        }
+
+        $carrying = clone $response;
+        $carrying->headers->set(self::RETRY_AFTER, $retryAfter);
+
+        return $carrying;
     }
 
     /**

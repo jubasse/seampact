@@ -70,7 +70,7 @@ The handler method returns the operation's generated result: an interface implem
 Patterns use Symfony's syntax, each placeholder named after its input property (`/v1/tasks/{taskId}`), so the router builds a URL by name; a name longer than the 32 characters of the route compiler keeps a positional name (`{p2}` for the second placeholder), as on Laravel. The boundary still matches the raw path. A `:` inside a static segment is literal (`/v1/tasks:batch`, spike). `generate` refuses by name:
 
 - a static segment holding `{`, `}` or `?` (`path.segment.literal.unsupported`);
-- a static segment a client sends percent-encoded, one holding a space, a control or non-ASCII byte, `"`, `<`, `>`, `^`, `` ` `` or `\` (`path.segment.encoded.unsupported`), since the boundary answers such a raw path 404 ("Routes"), until a consumer needs one;
+- a static segment a client sends percent-encoded, one holding a space, a control or non-ASCII byte, `"`, `<`, `>`, `^`, `` ` ``, `\`, `{`, `}`, `|`, `[` or `]` (`path.segment.encoded.unsupported`), since the boundary answers such a raw path 404 ("Routes"), until a consumer needs one;
 - a segment that mixes a placeholder with literal text (`path.segment.mixed.unsupported`), as on Laravel, Spring and the Node targets.
 
 The router matches routes in registration order, so the loader registers, per path depth, literal segments before placeholders: `/v1/tasks/search` before `/v1/tasks/{taskId}` (spike). The app imports the routes from its own routing configuration, once per api, with the api name as the resource:

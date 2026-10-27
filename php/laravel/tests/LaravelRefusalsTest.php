@@ -82,13 +82,38 @@ final class LaravelRefusalsTest extends TestCase
 
     public function testAStaticPathSegmentThatNeedsPercentEncodingWaitsForAConsumer(): void
     {
-        foreach (['my tasks', 'tâches', 'a\\b', 'a^b'] as $segment) {
+        foreach (['my tasks', 'tâches', 'a\\b', 'a^b', 'a{b', 'a}b', 'a|b', 'a[b', 'a]b'] as $segment) {
             $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation) use ($segment): void {
                 self::assertIsString($operation->path);
                 $operation->path = str_replace('/tasks/', "/{$segment}/", $operation->path);
             });
 
             self::assertStringContainsString("'{$segment}'", self::refused($document)['path.segment.encoded.unsupported'] ?? '', $segment);
+        }
+    }
+
+    public function testAControlCharacterInAStaticPathSegmentIsEscapedAndTheFixNamesPlainCharacters(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            self::assertIsString($operation->path);
+            $operation->path = str_replace('/tasks/', "/a\x07b/", $operation->path);
+        });
+
+        try {
+            (new LaravelGenerator())->generate(ReferenceContract::read(new LaravelGenerator(), $document), ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+            self::fail('The contract was generated, but a form in it should be refused.');
+        } catch (GenerationRefusedException $refused) {
+            $problem = null;
+            foreach ($refused->problems as $candidate) {
+                if ($candidate->code === 'path.segment.encoded.unsupported') {
+                    $problem = $candidate;
+                }
+            }
+
+            self::assertNotNull($problem);
+            self::assertStringContainsString("'a\\u0007b'", $problem->message);
+            self::assertStringNotContainsString("\x07", $problem->message);
+            self::assertSame("Use plain ASCII letters, digits and '-' in that path part.", $problem->fix);
         }
     }
 

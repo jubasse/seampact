@@ -70,6 +70,7 @@ A decide hook that throws Spring Security's `AccessDeniedException` answers the 
 Patterns use `PathPatternParser` syntax with positional variable names (`/v1/tasks/{p1}`), which the boundary never reads. A `:` inside a static segment is literal (`/v1/tasks:batch`, spike). `generate` refuses by name:
 
 - a static segment holding `{`, `}` or `*` (`path.segment.literal.unsupported`);
+- a static segment a client sends percent-encoded, one holding a space, a control or non-ASCII character, `"`, `<`, `>`, `^`, `` ` ``, `\`, `{`, `}`, `|`, `[` or `]` (`path.segment.encoded.unsupported`), since the filter's raw-path match below answers such a path 404, as on Laravel, Symfony and the Node targets;
 - a segment that mixes a placeholder with literal text (`path.segment.mixed.unsupported`), as on Fastify and Hono.
 
 Spring orders patterns by specificity, so `/v1/tasks/search` wins over `/v1/tasks/{p1}` whatever the declaration order.
