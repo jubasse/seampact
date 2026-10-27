@@ -11,6 +11,7 @@ use Seampact\Ir\Model\OpaqueTypeUse;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\RefTypeUse;
+use Seampact\Ir\Naming\ReservedWords;
 
 /**
  * The route helpers of one api on the PHP targets (ADR 0023 and 0024 "Routes"), beside the contract class:
@@ -22,6 +23,9 @@ use Seampact\Ir\Model\RefTypeUse;
 final class RouteHelpers
 {
     private const WIRE_VALUES = 'WireValues';
+    private const RESERVED_ESCAPE = '_';
+    // The WHATWG URL path percent-encode set, byte by byte.
+    private const URL_PATH_ENCODED_BYTES = '/[\x00-\x20"<>`{}\x7F-\xFF]/';
 
     private readonly string $routeNamesClass;
     private readonly string $urlsClass;
@@ -57,8 +61,8 @@ final class RouteHelpers
         $urlsType = $urls->namespace->addClass($urls->shortName)->setFinal()
             ->addComment("The path of each operation of api '{$apiId}', as the contract defines it.")
             ->addComment('')
-            ->addComment('Each path value is encoded as one segment. The path carries no prefix of the route group or import serving it,')
-            ->addComment('and stays a path when the api writes absolute URLs: the router builds a full URL from the route name.');
+            ->addComment('Each path value is encoded as one segment. The path is the contract\'s, which the boot check keeps equal to the')
+            ->addComment('routed path, and stays a path when the api writes absolute URLs: the router builds a full URL from the route name.');
 
         foreach ($operations as [$index, $operation]) {
             $operationNames = $this->names->layout()->operation($operation->id);
@@ -89,7 +93,7 @@ final class RouteHelpers
         foreach (explode('/', $operation->path) as $segmentIndex => $segment) {
             $literal .= $segmentIndex === 0 ? '' : '/';
             if (preg_match(RoutePlaceholder::PLACEHOLDER_SEGMENT, $segment) !== 1) {
-                $literal .= $segment;
+                $literal .= self::literalEncoded($segment);
                 continue;
             }
 
@@ -115,7 +119,7 @@ final class RouteHelpers
         $method->setBody('return ' . ($written === [] ? "''" : implode(' . ', $written)) . ';');
     }
 
-    /** The parameter's variable name, or null when its type is refused. */
+    /** The parameter's variable name, or null when its wire name yields no identifier. */
     private function addParameter(PhpClassFile $file, Method $method, Param $param, IrPlace $at): ?string
     {
         $variable = PhpNames::memberIdentifier($param->name);
@@ -124,14 +128,7 @@ final class RouteHelpers
         }
 
         if ($param->type instanceof ArrayTypeUse || $param->type instanceof RefTypeUse || $param->type instanceof OpaqueTypeUse) {
-            $this->refusals->add(
-                'routeHelpers.param.unsupported',
-                "The path parameter '{$param->name}' is a {$param->type->tag()} value, which the URL builder does not write as one segment.",
-                "Give the parameter a scalar or enum type, or switch the route helpers off with `artefacts: { routeHelpers: false }`.",
-                $at,
-            );
-
-            return null;
+            throw new \LogicException("The path parameter '{$param->name}' at {$at->member} is a {$param->type->tag()} value, which the target refuses before the route helpers run.");
         }
 
         $type = $this->types->of($param->type, $file);
@@ -140,9 +137,27 @@ final class RouteHelpers
         return $variable;
     }
 
-    /** `GET_TASK` for operation `getTask`: its name's segments, upper-cased and joined by `_`. */
+    /**
+     * A static segment as a URL parser writes it, which is what the fetch client sends: a space, a control byte, a
+     * non-ASCII byte and `"<>`{}` percent-encoded, everything else kept (the compiler refuses `?`, `#` and `%` in a path).
+     */
+    private static function literalEncoded(string $segment): string
+    {
+        return (string) preg_replace_callback(
+            self::URL_PATH_ENCODED_BYTES,
+            static fn (array $byte): string => sprintf('%%%02X', ord($byte[0])),
+            $segment,
+        );
+    }
+
+    /**
+     * `GET_TASK` for operation `getTask`: its name's segments, upper-cased and joined by `_`, with the trailing `_` an enum
+     * member gets when the result is a word PHP refuses as a class constant (`CLASS_`).
+     */
     private static function constantName(Operation $operation): string
     {
-        return strtoupper(implode('_', $operation->name->segments));
+        $constant = strtoupper(implode('_', $operation->name->segments));
+
+        return in_array(strtolower($constant), ReservedWords::enumMembers(), true) ? $constant . self::RESERVED_ESCAPE : $constant;
     }
 }

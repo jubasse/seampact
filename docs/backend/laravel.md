@@ -78,7 +78,7 @@ Each route is named `seampact.<api>.<operation>`. Its parameters take the names 
 route('seampact.notes.getNote', ['noteId' => $note->id]);
 ```
 
-Each api also gets `NotesRouteNames`, one constant per route name, and `NotesUrls`, one method per operation that builds its path from typed parameters. `NotesUrls` returns the contract's path, encoded as the generated clients encode it, without the prefix of the group that serves it:
+Each api also gets `NotesRouteNames`, one constant per route name, and `NotesUrls`, one method per operation that builds its path from typed parameters. `NotesUrls` returns the contract's path, encoded as the generated clients encode it. That is the routed path, since the boot check refuses a route group prefix:
 
 ```php
 use App\Generated\Notes\Laravel\NotesRouteNames;

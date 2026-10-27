@@ -9,8 +9,8 @@ use Seampact\Golden\TasksConsistent\Laravel\Runtime\WireValues;
 /**
  * The path of each operation of api 'tasks', as the contract defines it.
  *
- * Each path value is encoded as one segment. The path carries no prefix of the route group or import serving it,
- * and stays a path when the api writes absolute URLs: the router builds a full URL from the route name.
+ * Each path value is encoded as one segment. The path is the contract's, which the boot check keeps equal to the
+ * routed path, and stays a path when the api writes absolute URLs: the router builds a full URL from the route name.
  */
 final class TasksUrls
 {

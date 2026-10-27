@@ -23,8 +23,9 @@ final class PathSegmentsTest extends TestCase
         yield 'number' => [1.5, '1.5'];
         yield 'whole number' => [3.0, '3'];
         yield 'negative zero' => [-0.0, '0'];
+        yield 'negative number' => [-2.5, '-2.5'];
         yield 'large whole number' => [1e20, '100000000000000000000'];
-        yield 'number past the decimal range' => [1e25, '1e+25'];
+        yield 'number past the decimal range' => [1e25, '1e%2B25'];
         yield 'small number' => [0.000001, '0.000001'];
         yield 'number below the decimal range' => [1.5e-7, '1.5e-7'];
         yield 'boolean' => [false, 'false'];
@@ -45,6 +46,7 @@ final class PathSegmentsTest extends TestCase
         yield 'dot' => ['.'];
         yield 'dot dot' => ['..'];
         yield 'not finite' => [INF];
+        yield 'not UTF-8' => ["\xC3\x28"];
     }
 
     #[DataProvider('otherRoutes')]
