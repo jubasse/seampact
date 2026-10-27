@@ -5,16 +5,24 @@ declare(strict_types=1);
 namespace Seampact\Symfony\Tests\Runtime;
 
 use PHPUnit\Framework\TestCase;
+use Seampact\Codegen\Runtime\FrameworkRefusal;
 use Seampact\Symfony\Runtime\ExceptionRoles;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 
 /** The role map of native refusals: an HTTP exception from a handler or an app listener takes the role of its status. */
 final class ExceptionRolesTest extends TestCase
 {
+    public function testTheTooManyRequestsExceptionGivesItsRetryAfterHeader(): void
+    {
+        self::assertSame('30', FrameworkRefusal::retryAfterOf(new TooManyRequestsHttpException(30), new Response('', 429)));
+        self::assertSame('Wed, 21 Oct 2026 07:28:00 GMT', FrameworkRefusal::retryAfterOf(new TooManyRequestsHttpException('Wed, 21 Oct 2026 07:28:00 GMT'), new Response('', 429)));
+    }
+
     public function testAnHttpExceptionOf401403404429Or503TakesTheRoleOfItsStatus(): void
     {
         $written = new Response('', 500);

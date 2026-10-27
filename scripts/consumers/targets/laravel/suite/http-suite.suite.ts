@@ -283,6 +283,19 @@ describe("Laravel's native layers on identity routes", () => {
     });
   }
 
+  function createTaskThrough(layer: string): Promise<Response> {
+    return fetch(`${running?.baseUrl}${GENERAL_CHANNEL}/tasks`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${credentials.userToken}`,
+        "content-type": "application/json",
+        "idempotency-key": crypto.randomUUID(),
+        [NATIVE_LAYER_HEADER]: layer,
+      },
+      body: JSON.stringify({ title: "Throttled" }),
+    });
+  }
+
   test("auth:sanctum without a login route answers the unauthenticated role to a browser", async () => {
     const response = await signedIn(TASK_PATH, "sanctum", "text/html");
 
@@ -306,6 +319,21 @@ describe("Laravel's native layers on identity routes", () => {
     const { lines } = (await logged.json()) as { lines: string[] };
 
     expect(lines.some((line) => line.includes("the role 'forbidden'"))).toBe(true);
+  });
+
+  // createTask declares api.rate_limited, whose required retryAfterMs only a Retry-After header gives.
+  test("Laravel's throttle refusal answers the rate-limited code with the delay of its Retry-After", async () => {
+    const response = await createTaskThrough("throttle-30");
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("30");
+    expect(await response.json()).toMatchObject({ code: "api.rate_limited", retryAfterMs: 30_000 });
+  });
+
+  test("abort(429) without a Retry-After answers the api's 500 on a rate-limited code with required params", async () => {
+    const response = await createTaskThrough("abort-429");
+
+    expect(response.status).toBe(500);
   });
 
   test("a public route does not carry the identity routes' middleware", async () => {

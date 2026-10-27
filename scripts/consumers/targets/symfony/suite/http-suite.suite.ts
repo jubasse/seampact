@@ -433,6 +433,43 @@ describeServed("Symfony's native layers on identity routes", {}, (running) => {
     expect(await loggedRole("rateLimited")).toBe(true);
   });
 
+  function createTaskThrough(layer: string): Promise<Response> {
+    return fetch(`${running()?.baseUrl}${GENERAL_CHANNEL}/tasks`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${credentials.userToken}`,
+        "content-type": "application/json",
+        "idempotency-key": crypto.randomUUID(),
+        [NATIVE_LAYER_HEADER]: layer,
+      },
+      body: JSON.stringify({ title: "Throttled" }),
+    });
+  }
+
+  // createTask declares api.rate_limited, whose required retryAfterMs only a Retry-After header gives.
+  test("a TooManyRequestsHttpException answers the rate-limited code with the delay of its Retry-After", async () => {
+    await loadScript(running(), {});
+    const inSeconds = await createTaskThrough("throttle-30");
+    const atDate = await createTaskThrough("throttle-date");
+    const atDateBody = (await atDate.json()) as { retryAfterMs?: number };
+
+    expect([inSeconds.status, atDate.status]).toEqual([429, 429]);
+    expect(inSeconds.headers.get("retry-after")).toBe("30");
+    expect(await inSeconds.json()).toMatchObject({
+      code: "api.rate_limited",
+      retryAfterMs: 30_000,
+    });
+    expect(atDateBody.retryAfterMs).toBeGreaterThanOrEqual(58_000);
+    expect(atDateBody.retryAfterMs).toBeLessThanOrEqual(60_000);
+  });
+
+  test("an HttpException 429 without a Retry-After answers the api's 500 on a rate-limited code with required params", async () => {
+    await loadScript(running(), {});
+    const response = await createTaskThrough("abort-429");
+
+    expect(response.status).toBe(500);
+  });
+
   test("the app listener on the identity request matcher leaves a public route alone", async () => {
     const response = await withBearer("/v1/health", { [NATIVE_LAYER_HEADER]: "abort-403" });
 
