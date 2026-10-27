@@ -18,6 +18,7 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 | `config.schema ... 'bootCheck.frameworkRoutes' is true, false or 'strict'` | Write `true`, `false` or `strict`. |
 | `config.schema ... A source takes one form` | Keep the keys of one form: `path`, or `package` with `version`, or `release`, or `git`. `integrity` goes with the last three only. |
 | `config.key.waits` | The key is not read yet. Remove it from the config. |
+| `config.schema ... The key 'path' of a framework route is '/' then segments ...` | Each segment is `*`, `**` or text without `?`, `{` or `}` holding at most two `*`. Write a route parameter as `*`. |
 | `config.key.unsupported` | `mount`, `frameworkRoutes` and `frameworkDocs` belong to a server target. Remove them from this entry. |
 | `config.key.conflict` | You set two keys that cancel each other, such as `frameworkRoutes` with `artefacts.bootCheck: false`. Keep one. |
 

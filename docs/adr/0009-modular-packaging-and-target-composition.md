@@ -47,6 +47,7 @@ npm, scope `@seampact` ([A1](../decisions.md#a1), [A27](../decisions.md#a27)):
 | `codegen-ts`, `codegen-zod`, `codegen-yup`, `codegen-class-validator`, `codegen-fetch` | target | types, validators, typed client (FR-15) |
 | `codegen-nestjs`, `codegen-fastify`, `codegen-express`, `codegen-adonis`, `codegen-hono` | target | server boundaries (FR-16, FR-19) |
 | `codegen-react`, `codegen-angular`, `codegen-vue` | target | frontend clients (FR-19) |
+| `server-runtime` | helper | the boundary runtime the Node server targets' generated code imports (ADR 0025); production dependency of the app |
 | `hooks` | hooks | access hook interfaces, decision and subject types, store and redaction interfaces, the three-state `Field` type of ADR 0003 section 5; types only |
 | `nestjs-casl` | adapter | CASL behind the decide hook ([A24](../decisions.md#a24)) |
 | `pack-crud-rights`, `pack-api-platform`, `pack-laravel`, `pack-spring`, `pack-jsonapi`, `pack-hal` | pack | ADR 0008 (A24, [A28](../decisions.md#a28), [A32](../decisions.md#a32)) |
@@ -54,7 +55,7 @@ npm, scope `@seampact` ([A1](../decisions.md#a1), [A27](../decisions.md#a27)):
 
 Optional runtime helpers are named `@seampact/<concern>` when they work with every server target of the ecosystem (for example `@seampact/signed-webhooks`, `@seampact/idempotency-memory`) and `@seampact/<framework>-<concern>` only when framework glue is unavoidable. Each target adds the helpers it needs, under these names and rules.
 
-JVM, groupId `io.github.jubasse` (A27), and Composer, vendor `seampact`: the IR model, the hooks interfaces, the plugins and the PHP targets are listed in ADR 0010. Their roles follow the same table.
+JVM, groupId `io.github.jubasse` (A27), and Composer, vendor `seampact`: the IR model, the hooks interfaces, the Spring runtime (`seampact-spring-runtime`), the plugins and the PHP targets are listed in ADR 0010. Their roles follow the same table.
 
 The standalone compiler binary (ADR 0010) is a release asset, not a package.
 
@@ -86,6 +87,7 @@ What the two required installs pull, by construction:
 
 The CLI reads the app config, `seampact.config.yaml` (ADR 0011). For each target entry it resolves the named package from the consumer project, starting at the config file's directory, never from the CLI's own install location. A globally installed CLI therefore still uses the project's pinned targets.
 
+- A runtime package is in lockstep with its generators: the same version, no line of its own (ADR 0025, G1). `generate` reads the installed `@seampact/server-runtime` or `seampact-spring-runtime` and refuses another `major.minor` or an older patch (G2).
 - A missing package fails `generate` with a diagnostic naming the package and the install command for the project's package manager.
 - Each target exports its metadata: name, the irVersion range and, before 1.0, the exact irRevision it reads (ADR 0005), the codegen-core API range, the `hooks` range of the code it emits, and the link kinds it provides or consumes. The CLI refuses a mismatch before calling `generate`, naming both versions.
 - A target receives each api's IR in its serialised member order (ADR 0004 section 10), whether the source is a `path` compiled in the run or a bundle, so the same contract generates the same files from either.
