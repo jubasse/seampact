@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import {
+  OUTPUT_DIRECTORY_MISSING,
   RUNTIME_MISSING,
   RUNTIME_VERSION_MISMATCH,
   serverRuntimeRefusals,
@@ -53,6 +54,27 @@ describe("the generate-time check of @seampact/server-runtime", () => {
           "`@seampact/codegen-express 1.4.2` generates code that imports `@seampact/server-runtime`, which this app does not install.",
         fix: "Install it as a production dependency at the generator's version: `npm install @seampact/server-runtime@1.4.2`.",
       },
+    ]);
+  });
+
+  test("refuses a request without the api's output directory, naming the argument", () => {
+    expect(serverRuntimeRefusals(undefined, GENERATOR)).toEqual([
+      {
+        code: OUTPUT_DIRECTORY_MISSING,
+        message:
+          "`@seampact/codegen-express 1.4.2` generates code that imports `@seampact/server-runtime` and checks the installed one from the api's output directory, which this generate request does not give (`outputDirectory`).",
+        fix: "Pass the api's output directory as `outputDirectory` in the generate request, as `seampact generate` does.",
+      },
+    ]);
+  });
+
+  test("reads the version installed now, not one an earlier check loaded", () => {
+    const output = outputUnderAppWithRuntime("1.4.2");
+
+    expect(serverRuntimeRefusals(output, GENERATOR)).toEqual([]);
+    outputUnderAppWithRuntime("1.3.0");
+    expect(serverRuntimeRefusals(output, GENERATOR)).toMatchObject([
+      { code: RUNTIME_VERSION_MISMATCH },
     ]);
   });
 
