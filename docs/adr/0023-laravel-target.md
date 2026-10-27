@@ -367,6 +367,8 @@ The suite runs every case of the reference contract: the consumer's refusal list
 | laravel-3 | paging with its `sort` parameter, idempotency, throttle, cache headers and the response headers of these features, retry headers, the signed raw body, opaque values, redaction (`__debugInfo()`, `#[\SensitiveParameter]`, the VarDumper caster); the full suite profile and `RedactionTest.php` |
 | laravel-3b | absolute URLs, deadline budgets and relayed operations, with the tasksService api in the consumer; the `pack:laravel` profile and the pack suite profile |
 | laravel-4 | guards and Sanctum for authenticate, Gates and Policies for decide, `AuthorizationException` in a decider answering the first denial code, `abort(401|403|429)` mapped to its role, Laravel's `auth` and `auth.session` middleware in an app without a `login` route, coexistence with the native layers and their per-kind middleware lists, the published `config/seampact/<api>.php`; a Sanctum row and the native layers on identity routes in the sample app. Multipart, downloads, redirects and native access wait for a consumer ("Refused by name or waiting") |
+| laravel-dx-1 | request bodies read through the request (`postJson()` in a feature test), CSRF skipped on routes without a cookie credential, one rule mapping framework exceptions (`findOrFail()`, `abort(404)`), route placeholders named after the input properties and pinned to one segment, `SEAMPACT_<API>_*` variables read before the config is published |
+| laravel-routes | `<Api>RouteNames` constants and typed `<Api>Urls` path builders, off with `artefacts: { routeHelpers: false }` |
 
 ## Spike
 
