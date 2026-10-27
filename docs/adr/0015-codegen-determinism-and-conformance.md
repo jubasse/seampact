@@ -55,6 +55,8 @@ Changing a formatter version is a target release, and its golden diffs are revie
 
 ### Golden tests
 
+The golden trees of the server targets hold no runtime: generated code imports the runtime package (ADR 0025).
+
 Every target has golden tests:
 - inputs: the reference contract (the tasks api with a tenant-scoped route with rights, a signed webhook and a service api with relays) and one fixture per feature the target supports;
 - one golden set per wire format the target claims: the core default (bare payloads with problem+json errors) for every target, plus each format pack it supports, such as the api-platform pack for the api-platform target (A30);

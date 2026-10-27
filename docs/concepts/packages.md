@@ -23,7 +23,7 @@ Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codege
 | types only | `@seampact/codegen-ts` |
 | validators | `@seampact/codegen-zod`, `@seampact/codegen-yup` or `@seampact/codegen-class-validator` |
 | a typed `fetch` client | `@seampact/codegen-fetch` |
-| a server boundary | `@seampact/codegen-nestjs`, `@seampact/codegen-fastify`, `@seampact/codegen-express` or `@seampact/codegen-adonis`, plus `@seampact/hooks` unless the target vendors its types |
+| a server boundary | `@seampact/codegen-nestjs`, `@seampact/codegen-fastify`, `@seampact/codegen-express` or `@seampact/codegen-adonis`, plus `@seampact/server-runtime` as a production dependency, at the same version as the generators, and `@seampact/hooks` unless the target vendors its types |
 | React hooks (TanStack Query, SWR, RTK Query or no library) | `@seampact/codegen-react` |
 | an Angular or Vue client (planned) | `@seampact/codegen-angular` or `@seampact/codegen-vue` |
 | a Web-standard server boundary (Hono 4) | `@seampact/codegen-hono` |
@@ -41,9 +41,9 @@ These run with no Node.js installed. The standalone compiler binary (built for l
 
 | Framework | Install |
 |---|---|
-| Spring Boot 4 | the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `io.github.jubasse:seampact-maven-plugin`, and `io.github.jubasse:seampact-hooks` unless the target vendors its types |
-| Laravel | `seampact/laravel` as a development dependency, and `seampact/hooks` unless the target vendors its types |
-| Symfony | `seampact/symfony` as a development dependency, and `seampact/hooks` unless the target vendors its types |
+| Spring Boot 4 | the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `io.github.jubasse:seampact-maven-plugin`, `io.github.jubasse:seampact-spring-runtime` (the Gradle plugin adds it, Maven declares it; the app provides Spring Boot itself), and `io.github.jubasse:seampact-hooks` unless the target vendors its types |
+| Laravel | `seampact/laravel` as a dependency (not `--dev`), and `seampact/hooks` unless the target vendors its types |
+| Symfony | `seampact/symfony` as a dependency (not `--dev`), and `seampact/hooks` unless the target vendors its types |
 | API Platform | `seampact/api-platform` as a development dependency, and `seampact/hooks` unless the target vendors its types |
 
 

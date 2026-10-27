@@ -14,6 +14,7 @@ Fix every line, then start again.
 | `the framework route 'GET /docs' is outside the contract and not allow-listed` | List the route under `frameworkRoutes` of the server target, with a reason, then run `seampact generate`. See [OpenAPI and docs](../configuration/openapi-and-docs.md). |
 | A route of yours outside the api's paths is no longer reported | That is the default: only routes that reach a path of the api are checked. Set `artefacts.bootCheck.frameworkRoutes: strict` to check every route. |
 | `... differs from the entry's mount (write the prefix as the entry's 'mount' ...)` | Remove the prefix from the framework (route group, plugin prefix, `basePath`, mount path) and set `mount` on the target entry instead. |
+| `runtime.generated-for-other-version` | The generated code was written by another seampact version than the installed runtime. Run `seampact generate` again, or install the runtime at the generator's version. On PHP, `seampact:generate` still runs under the skew. See [Generate errors](generate.md). |
 | `handlers has no 'NotesEndpoints' object` | Pass one object per generated handler interface. |
 | `handlers.NotesEndpoints has no method getNote()` | Implement the method on that object. |
 | `'bodyValidation' is turned on, but the target generated no output validators` | Set `bodyValidation: true` in the target's `options`, then run `generate`. |

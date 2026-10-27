@@ -18,6 +18,7 @@ Find your error by its code. The code is the first word of the message, such as 
 | `seampact/unused-declaration` and other `seampact/<rule>` | linting | [Lint](../features/lint.md) |
 | `seampact: the api '...' cannot start` | starting the generated server | [Boot errors](boot.md) |
 | `cli.`, `lint.`, `diff.`, `explain.`, `binary.`, `compile.`, `ir.` | running a command, or the Gradle or Maven plugin | [CLI errors](cli.md) |
+| `runtime.` | generating (a missing or mismatched runtime), or starting a server whose code is from another version | [Target option errors](generate.md), [Boot errors](boot.md) |
 | `signature.` | verifying a signed webhook with a seampact helper | [Signed webhook errors](signed-webhooks.md) |
 
 Errors with no code:

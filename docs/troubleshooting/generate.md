@@ -23,6 +23,10 @@
 | `options.layout.unsupported`, `options.handlers.unsupported` (Laravel) | The target writes one PSR-4 file per class and one controller interface per resource. Remove the option. |
 | `path.segment.encoded.unsupported` | "The static path segment 'my tasks', which a client sends percent-encoded, ...". A space, a control or non-ASCII character, or one of `"` `<` `>` `^` `\` `{` `}` `\|` `[` `]` or a backtick in a fixed path part would never reach the route. Use plain ASCII letters, digits and `-` in that path part. |
 
+| `runtime.missing` (Node servers, Spring) | The app does not install the runtime. Install `@seampact/server-runtime` (Node) or add `seampact-spring-runtime` (Maven; the Gradle plugin adds it) at the generator's version. |
+| `runtime.version-mismatch` (Node servers, Spring) | The installed runtime has another `major.minor` or an older patch than the generator. Install the runtime at the generator's version. A later patch passes. |
+| `runtime.output-directory-missing` (Node servers) | A programmatic generate request gave no `outputDirectory`. Pass the api's output directory. `seampact generate` always does. |
+
 A warning does not stop `generate`.
 
 | You see | Do |
