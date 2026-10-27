@@ -694,6 +694,7 @@ describe("the framework-route check of an app", () => {
     const files = await generateReferenceProject(project, honoTarget, {}, undefined, {
       status: "on",
       allowed: [{ path: "/own/listed", reason: "the test app's own route" }],
+      scope: "strict",
     });
     const build = join(project, "build");
 
@@ -741,5 +742,74 @@ describe("the framework-route check of an app", () => {
     );
 
     expect(() => uncheckedModule.checkFrameworkRoutes(app)).not.toThrow();
+  });
+});
+
+describe("an api mounted under a path prefix", () => {
+  const project = projectDirectory(import.meta.url, "live-mounted");
+  let mountedModule: UncheckedAppModule;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(
+      project,
+      honoTarget,
+      {},
+      undefined,
+      { status: "on", allowed: [], scope: "contract" },
+      { mount: "/api" },
+    );
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    mountedModule = await import(copyTestApp(build, APP_SOURCE));
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  // The app with no route of its own, its framework-route check run.
+  function checkedApp(): { request(path: string, init?: RequestInit): Promise<Response> } {
+    const app = mountedModule.appWithOwnRoutes(() => undefined);
+
+    mountedModule.checkFrameworkRoutes(app);
+
+    return app as { request(path: string, init?: RequestInit): Promise<Response> };
+  }
+
+  test("serves each contract route under the mount", async () => {
+    const reply = await checkedApp().request(`/api/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+      headers: BEARER,
+    });
+
+    expect(reply.status).toBe(200);
+  });
+
+  test("leaves the unmounted contract path to the app", async () => {
+    const reply = await checkedApp().request(`/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+      headers: BEARER,
+    });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers.get("content-type")).not.toContain(PROBLEM_MEDIA);
+  });
+
+  test("answers the api's 404 under the mounted base path", async () => {
+    const reply = await checkedApp().request("/api/v1/unknown", { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers.get("content-type")).toContain(PROBLEM_MEDIA);
+  });
+
+  test("the default framework-route check leaves an app route outside the mounted base paths alone", () => {
+    const app = mountedModule.appWithOwnRoutes((own) =>
+      own.all("/proxy/*", (c) => c.text("proxied")),
+    );
+
+    expect(() => mountedModule.checkFrameworkRoutes(app)).not.toThrow();
+  });
+
+  test("the default framework-route check refuses an app route under a mounted base path", () => {
+    const app = mountedModule.appWithOwnRoutes((own) =>
+      own.get("/api/v1/docs", (c) => c.text("docs")),
+    );
+
+    expect(() => mountedModule.checkFrameworkRoutes(app)).toThrow("'GET /api/v1/docs'");
   });
 });

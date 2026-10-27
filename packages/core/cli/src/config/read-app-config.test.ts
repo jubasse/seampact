@@ -92,6 +92,43 @@ test("reads the framework-route check switched off", async () => {
   });
 });
 
+test("reads the strict framework-route check", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { frameworkRoutes: strict } }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: { entries: [{ entry: { artefacts: { bootCheck: { frameworkRoutes: "strict" } } } }] },
+  });
+});
+
+test.each(["/api", "/api/v2", "/my-app.v1"])("reads the mount %s", async (mount) => {
+  const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    mount: ${mount}\n`);
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: { entries: [{ entry: { mount } }] },
+  });
+});
+
+test.each([
+  ["no leading slash", "api"],
+  ["a trailing slash", "/api/"],
+  ["the root alone", "/"],
+  ["a star", "/api/*"],
+  ["an empty segment", "/api//v1"],
+  ["a space", "'/my api'"],
+  ["a brace", "'/{tenant}'"],
+  ["a percent-encoded character", "/caf%C3%A9"],
+  ["a non-ASCII character", "/café"],
+])("refuses a mount with %s", async (_, mount) => {
+  expect(await readConfigText(`${SERVER_ENTRY_HEAD}    mount: ${mount}\n`)).toMatchObject({
+    status: "refused",
+    problems: [{ code: "config.schema", message: expect.stringContaining("'mount'") }],
+  });
+});
+
 test("refuses an allow-list beside the framework-route check switched off", async () => {
   const outcome = await readConfigText(
     `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { frameworkRoutes: false } }\n    frameworkRoutes:\n      - { path: /metrics, reason: r }\n`,
@@ -442,7 +479,6 @@ test("refuses an api's documents that are neither a path, a placed document nor 
 });
 
 test.each([
-  ["a mount", `${SERVER_ENTRY_HEAD}    mount: /api\n`, "'mount'"],
   ["native access", `${SERVER_ENTRY_HEAD}    access: { native: "Spring Security." }\n`, "'access'"],
   [
     "the boot check's handler switch",

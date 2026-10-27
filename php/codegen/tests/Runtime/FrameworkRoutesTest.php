@@ -16,6 +16,31 @@ use Seampact\Codegen\Runtime\FrameworkRoutes;
  */
 final class FrameworkRoutesTest extends TestCase
 {
+    public function testTheDefaultScopeLeavesAnAppRouteOutsideTheContractBasePathsAlone(): void
+    {
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/health'));
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/api'));
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/api/v2/users'));
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/api/v1'));
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/api/v1/docs'));
+    }
+
+    public function testAPlaceholderOrACatchAllRouteOverlapsTheBasePathItCanServe(): void
+    {
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/{page}/v1/x'));
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/{a}/{b}'));
+        self::assertTrue(FrameworkRoutes::overlapsAny(['/api/v1'], '/{any*}'), 'a catch-all serves every path below it');
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/{any}'), 'one segment serves /api, a parent of the base path only');
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/api/{rest}'));
+        self::assertFalse(FrameworkRoutes::overlapsAny(['/api/v1'], '/files/{rest}'));
+    }
+
+    public function testAnEmptyBasePathOverlapsEveryRoute(): void
+    {
+        self::assertTrue(FrameworkRoutes::overlapsAny([''], '/health'));
+        self::assertTrue(FrameworkRoutes::overlapsAny([''], '/'));
+    }
+
     public function testOneStarTakesExactlyOneSegment(): void
     {
         $allowed = [['path' => '/admin/*', 'method' => null]];
