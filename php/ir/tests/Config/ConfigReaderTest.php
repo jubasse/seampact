@@ -177,6 +177,17 @@ final class ConfigReaderTest extends TestCase
         self::assertSame('app/seampact.config.yaml targets[0].colour', $problems[0]->where);
     }
 
+    public function testNamesTheMountRuleAsTheNodeCliDoes(): void
+    {
+        $problems = $this->read("targets:\n  - { id: a, use: x/y, api: t, mount: /api/ }\n");
+
+        self::assertIsArray($problems);
+        self::assertSame(
+            "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*' and no segment starting with ':'.",
+            $problems[0]->message,
+        );
+    }
+
     public function testRefusesAMissingFile(): void
     {
         $problems = AppConfigReader::readFile("{$this->project}/missing/seampact.config.yaml");

@@ -71,6 +71,16 @@ class ConfigReaderTest {
     }
 
     @Test
+    fun namesTheMountRuleAsTheNodeCliDoes() {
+        val problems = refused("targets:\n  - { id: a, use: 'g:a', api: x, mount: /api/ }\n")
+
+        assertEquals(
+            "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!\$&'()+,;=@:', with no trailing '/', no '*' and no segment starting with ':'.",
+            problems.single().message,
+        )
+    }
+
+    @Test
     fun refusesAnUnknownKeyAtItsPosition() {
         val problems = refused("targets:\n  - id: a\n    use: 'g:a'\n    api: x\n    bogus: 1\n")
 

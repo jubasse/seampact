@@ -21,6 +21,10 @@ private val CONFIG_SCHEMAS by lazy {
 private const val SCHEMA_FIX = "Correct the value as the config schema states (ADR 0011 'The app config')."
 private const val ONE_OF = "oneOf"
 private const val BOOT_CHECK_ARTEFACT = "bootCheck"
+private const val MOUNT_KEY = "mount"
+private const val MOUNT_RULE =
+    "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!\$&'()+,;=@:', with no trailing '/', no '*' and no segment starting with ':'."
+private const val MOUNT_FIX = "Write the path prefix the api is served under, such as '/api' (ADR 0011 'The app config')."
 
 /** A problem the reader reports at a key before the schema check; the schema errors at or under it would repeat it. */
 internal data class KeyProblem(val path: KeyPath, val problem: ConfigProblem)
@@ -84,6 +88,10 @@ private fun violationProblem(tree: ConfigTree, kind: ConfigKind, violation: Sche
             formatKeyPath(path),
             ConfigProblem("config.schema", "The key '$property' is required here.", "Add '$property'.", tree.whereOf(path)),
         )
+    }
+
+    if (violation.keyword == "pattern" && path.lastOrNull() == MOUNT_KEY) {
+        return LocatedProblem(formatKeyPath(path), ConfigProblem("config.schema", MOUNT_RULE, MOUNT_FIX, tree.whereOf(path)))
     }
 
     if (violation.keyword == ONE_OF) {
