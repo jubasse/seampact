@@ -49,6 +49,7 @@ interface ReferenceAppModule {
   readonly READ_BODY_HEADER: string;
   readonly REWRITE_REPLY_HEADER: string;
   readonly RELABEL_REPLY_HEADER: string;
+  readonly RENDER_CONTRACT_ERROR_HEADER: string;
   readonly calls: {
     readonly handled: string[];
     readonly unexpected: { readonly exceptionOrReply: unknown }[];
@@ -532,6 +533,43 @@ describe("the app's own routes keep Hono's behaviour", () => {
     const reply = await send("POST", "/own/echo", { body: "{" });
 
     expect(reply.headers["content-type"] ?? "").not.toContain(PROBLEM_MEDIA);
+  });
+});
+
+describe("renderContractError under NODE_ENV=development", () => {
+  const THROWN_MESSAGE = "renderContractError debug failure";
+
+  async function unmappedGetTask(): Promise<{ status: number; contentType: string }> {
+    app.scenario.answers.getTask = () => {
+      throw new Error(THROWN_MESSAGE);
+    };
+
+    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+      headers: { ...BEARER, [app.RENDER_CONTRACT_ERROR_HEADER]: "1" },
+    });
+
+    return { status: reply.status, contentType: reply.headers["content-type"] ?? "" };
+  }
+
+  test("an unmapped exception is the api's 500 outside debug", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+
+    const reply = await unmappedGetTask().finally(() => vi.unstubAllEnvs());
+
+    expect(reply.status).toBe(500);
+    expect(reply.contentType).toContain(PROBLEM_MEDIA);
+  });
+
+  test("an unmapped exception is left to Hono's own error handling in debug", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    vi.stubEnv("NODE_ENV", "development");
+
+    const reply = await unmappedGetTask().finally(() => vi.unstubAllEnvs());
+
+    expect(reply.status).toBe(500);
+    expect(reply.contentType).not.toContain(PROBLEM_MEDIA);
+    expect(consoleError.mock.calls.flat().join("\n")).toContain(THROWN_MESSAGE);
   });
 });
 
