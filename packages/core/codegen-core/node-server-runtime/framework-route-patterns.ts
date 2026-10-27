@@ -12,9 +12,19 @@ export interface FrameworkRouteAllowance {
   readonly reason: string;
 }
 
+/**
+ * Which listed routes the check reads: every one (`strict`), or those that can serve a path at or under one of the
+ * api's (mounted) base paths, the default.
+ */
+export type FrameworkRouteScope = "strict" | { readonly basePaths: readonly string[] };
+
 /** The check as the app config asks it: on with its allow-list, or off (`artefacts.bootCheck.frameworkRoutes`). */
 export type FrameworkRouteCheck =
-  | { readonly status: "on"; readonly allowed: readonly FrameworkRouteAllowance[] }
+  | {
+      readonly status: "on";
+      readonly allowed: readonly FrameworkRouteAllowance[];
+      readonly scope: FrameworkRouteScope;
+    }
   | { readonly status: "off" };
 
 /** A route as a framework lists it: its upper-case method, `ALL` for every method, and its path pattern. */
@@ -31,10 +41,12 @@ const ANY_SEGMENTS = "**";
 const STAR = "*";
 // No allowance segment can be empty, so this token never equals one.
 const CATCH_ALL_SEGMENT = "";
+const PARAM_PREFIX = ":";
+const PARAM_OPENING = "{";
 
 /**
- * The listed routes the allow-list does not name, each once; none when the check is off. A `HEAD` route the
- * framework adds beside a `GET` route follows that route.
+ * The listed routes in the check's scope the allow-list does not name, each once; none when the check is off. A
+ * `HEAD` route the framework adds beside a `GET` route follows that route.
  */
 export function unlistedFrameworkRoutes(
   check: FrameworkRouteCheck,
@@ -49,6 +61,8 @@ export function unlistedFrameworkRoutes(
     const key = routeKey(route.method, route.path);
 
     if (reported.has(key)) continue;
+
+    if (!isInScope(check.scope, route.path)) continue;
 
     if (check.allowed.some((allowance) => isAllowedBy(route, allowance))) continue;
 
@@ -86,6 +100,34 @@ export function unlistedFrameworkRoutesProblem(
 /** A route as the boot check names it: `'<METHOD> <path>'`. */
 export function routeKey(method: string, path: string): string {
   return `${method} ${path}`;
+}
+
+function isInScope(scope: FrameworkRouteScope, routePath: string): boolean {
+  return scope === "strict" || scope.basePaths.some((basePath) => overlaps(routePath, basePath));
+}
+
+// Whether a route can serve a path at or under the base path: each of its first segments takes the base path's
+// segment (the same literal, a param or a catch-all), and it has at least as many segments, or a catch-all.
+function overlaps(routePath: string, basePath: string): boolean {
+  const routeSegments = routeSegmentsOf(routePath);
+  const baseSegments = segmentsOf(basePath);
+
+  for (const [index, baseSegment] of baseSegments.entries()) {
+    const routeSegment = routeSegments[index];
+
+    if (routeSegment === undefined) return false;
+
+    if (routeSegment === CATCH_ALL_SEGMENT) return true;
+
+    if (!isParamSegment(routeSegment) && routeSegment !== baseSegment) return false;
+  }
+
+  return true;
+}
+
+// `:id` (Express, Fastify, Hono, Adonis, NestJS) or `{id}`; a param with a pattern (`:id{[0-9]+}`) is still one.
+function isParamSegment(segment: string): boolean {
+  return segment.startsWith(PARAM_PREFIX) || segment.includes(PARAM_OPENING);
 }
 
 function isAllowedBy(route: ListedRoute, allowance: FrameworkRouteAllowance): boolean {

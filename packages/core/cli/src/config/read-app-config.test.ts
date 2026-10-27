@@ -103,6 +103,22 @@ test("reads the strict framework-route check", async () => {
   });
 });
 
+test("refuses a framework-route switch that is neither a boolean nor strict", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { frameworkRoutes: all } }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    problems: [
+      {
+        code: "config.schema",
+        message: "'bootCheck.frameworkRoutes' is true, false or 'strict'.",
+      },
+    ],
+  });
+});
+
 test.each(["/api", "/api/v2", "/my-app.v1"])("reads the mount %s", async (mount) => {
   const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    mount: ${mount}\n`);
 

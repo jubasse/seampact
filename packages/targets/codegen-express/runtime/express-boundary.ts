@@ -449,7 +449,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
     reported: ReportedRequest,
   ): void {
     const cause = new Error(
-      `seampact: the router of api '${api.id}' is mounted under '${request.baseUrl}', which differs from the contract's empty mount; mount it at the app's root with app.use(router).`,
+      `seampact: the router of api '${api.id}' is mounted under '${request.baseUrl}', which differs from the entry's mount (write the prefix as the entry's 'mount' in seampact.config.yaml instead); mount it at the app's root with app.use(router).`,
     );
 
     runtimeLog.error(cause.message);

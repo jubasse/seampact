@@ -469,7 +469,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   ): Promise<void> {
     if (isUnderPrefix(api, request.path)) {
       runtimeLog.error(
-        `seampact: ${request.method} ${request.path} reached a contract route under another path; a global prefix differs from the contract's empty mount. Exclude the contract routes with setGlobalPrefix's 'exclude' option.`,
+        `seampact: ${request.method} ${request.path} reached a contract route under another path; a global prefix differs from the entry's mount (write the prefix as the entry's 'mount' in seampact.config.yaml instead). Exclude the contract routes with setGlobalPrefix's 'exclude' option.`,
       );
       await writeContractReply(
         response,

@@ -456,7 +456,7 @@ export function createAdonisBoundary<
         unexpectedError(
           route,
           new Error(
-            `seampact: ${request.method} ${request.path} reached the route of '${route.id}' under another path; a route group's prefix differs from the contract's empty mount. Call registerRoutes outside any router.group() with a prefix.`,
+            `seampact: ${request.method} ${request.path} reached the route of '${route.id}' under another path; a route group's prefix differs from the entry's mount (write the prefix as the entry's 'mount' in seampact.config.yaml instead). Call registerRoutes outside any router.group() with a prefix.`,
           ),
         ),
         request,

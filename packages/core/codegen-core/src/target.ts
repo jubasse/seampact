@@ -68,6 +68,8 @@ export interface GenerateInput<
   artefacts: ReadonlySet<Artefact>;
   frameworkRoutes: FrameworkRouteCheck;
   hookCheck: HookBootCheck;
+  /** The entry's `mount`, the path prefix every contract route is served under; empty when the entry writes none. */
+  mount: string;
   /** The api's document the framework's docs follow; present exactly when the `nativeDocs` artefact is on. */
   nativeDocsDocument?: NativeDocsDocument;
 }
@@ -141,6 +143,8 @@ export interface GenerateRequest {
   frameworkRoutes?: FrameworkRouteCheck;
   /** The entry's hook boot check level; `error` when absent. */
   hookCheck?: HookBootCheck;
+  /** The entry's `mount`; no prefix when absent. */
+  mount?: string;
   /** The parsed seampact document the `nativeDocs` artefact follows; the target refuses `nativeDocs` without it. */
   nativeDocsDocument?: NativeDocsDocument;
 }

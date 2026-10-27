@@ -5,6 +5,7 @@ import {
   frameworkRoutesSwitchOf,
   hookCheckSwitchOf,
   isFrameworkRouteCheckOff,
+  isFrameworkRouteCheckStrict,
 } from "../config/artefact-switches.js";
 
 // The framework-route boot check of a target entry (ADR 0012 "The boot check"): its `frameworkRoutes` allow-list
@@ -13,7 +14,10 @@ import {
 const FRAMEWORK_ROUTE_CHECK = "frameworkRoutes";
 const HOOK_CHECK = "hooks";
 
-/** The check the entry asks: off when switched off, else on with the entry's allow-list, copied. */
+/**
+ * The check the entry asks: off when switched off, else on with the entry's allow-list, copied, over the app routes
+ * that overlap the contract's base paths, or every app route when `strict`.
+ */
 export function frameworkRouteCheckOf(entry: TargetEntry): FrameworkRouteCheck {
   if (isFrameworkRouteCheckOff(entry.artefacts)) return { status: "off" };
 
@@ -24,6 +28,7 @@ export function frameworkRouteCheckOf(entry: TargetEntry): FrameworkRouteCheck {
       path: allowance.path,
       reason: allowance.reason,
     })),
+    scope: isFrameworkRouteCheckStrict(entry.artefacts) ? "strict" : "contract",
   };
 }
 
@@ -39,8 +44,10 @@ export function unreadFrameworkRouteKeyProblems(entry: TargetEntry, target: Targ
   ];
   const hookKeys =
     hookCheckSwitchOf(entry.artefacts) === undefined ? [] : ["artefacts.bootCheck.hooks"];
+  // A target that checks the app's routes is one that serves the contract's: it alone reads `mount`.
+  const mountKeys = entry.mount === undefined ? [] : ["mount"];
   const unreadKeys = [
-    ...(generates(FRAMEWORK_ROUTE_CHECK) ? [] : frameworkRouteKeys),
+    ...(generates(FRAMEWORK_ROUTE_CHECK) ? [] : [...frameworkRouteKeys, ...mountKeys]),
     ...(generates(HOOK_CHECK) ? [] : hookKeys),
   ];
 

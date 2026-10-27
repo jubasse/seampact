@@ -40,6 +40,7 @@ export {
   DEFAULT_HOOK_BOOT_CHECK,
   type FrameworkRouteAllowance,
   type FrameworkRouteCheck,
+  type FrameworkRouteScope,
   type HookBootCheck,
   type TunableBootCheck,
 } from "./framework-route-check.js";

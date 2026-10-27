@@ -997,6 +997,7 @@ describe.each(EXPRESS_MAJORS)(
       const files = await generateReferenceProject(project, expressTarget, {}, undefined, {
         status: "on",
         allowed: [{ path: "/own/listed", reason: "the test app's own route" }],
+        scope: "strict",
       });
       const build = join(project, "build");
 

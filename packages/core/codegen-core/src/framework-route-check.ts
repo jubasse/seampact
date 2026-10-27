@@ -11,13 +11,30 @@ export interface FrameworkRouteAllowance {
   readonly reason: string;
 }
 
+/**
+ * Which app routes the check reads: `contract` those that can serve a path under one of the contract's (mounted)
+ * base paths, `strict` every app route (`artefacts.bootCheck.frameworkRoutes: strict`).
+ */
+export type FrameworkRouteScope = "contract" | "strict";
+
 /** The check as the target entry asks it: on with its allow-list, or off (`artefacts.bootCheck.frameworkRoutes`). */
 export type FrameworkRouteCheck =
-  | { readonly status: "on"; readonly allowed: readonly FrameworkRouteAllowance[] }
+  | {
+      readonly status: "on";
+      readonly allowed: readonly FrameworkRouteAllowance[];
+      readonly scope: FrameworkRouteScope;
+    }
   | { readonly status: "off" };
 
-/** The check of an entry that writes neither key: on, with nothing allow-listed. */
-export const DEFAULT_FRAMEWORK_ROUTE_CHECK: FrameworkRouteCheck = { status: "on", allowed: [] };
+/** The check of an entry that writes neither key: on, with nothing allow-listed, over the contract's base paths. */
+export const DEFAULT_FRAMEWORK_ROUTE_CHECK: FrameworkRouteCheck = {
+  status: "on",
+  allowed: [],
+  scope: "contract",
+};
+
+/** The mount of an entry that writes none: every contract route at its contract path. */
+export const NO_MOUNT = "";
 
 /** The boot checks a target generates that an app config entry may tune; a server target declares them. */
 export type TunableBootCheck = "frameworkRoutes" | "hooks";

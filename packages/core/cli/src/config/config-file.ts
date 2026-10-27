@@ -1,6 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import type { JsonSchema } from "@seampact/spec/authoring";
-import { BOOT_CHECK_ARTEFACT } from "@seampact/spec/config";
+import { BOOT_CHECK_ARTEFACT, STRICT_FRAMEWORK_ROUTE_CHECK } from "@seampact/spec/config";
 import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import {
   type Document,
@@ -33,6 +33,9 @@ const AJV_OPTIONS = { allErrors: true, strict: true, strictRequired: false };
 
 const FRAMEWORK_ROUTE_PATH_RULE =
   "The key 'path' of a framework route is '/' then segments, each '*', '**', or text without '?', '{' or '}' holding at most two '*'.";
+const FRAMEWORK_ROUTE_SWITCH = "frameworkRoutes";
+const MOUNT_RULE =
+  "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*' and no segment starting with ':'.";
 const SCHEMA_FIX = "Correct the value as the config schema states (ADR 0011 'The app config').";
 
 export interface ParsedConfig {
@@ -230,7 +233,12 @@ function schemaErrorProblems(
 
   return errors
     .filter(
-      (error) => !(error.schemaPath.includes("/oneOf/") && oneOfPaths.has(error.instancePath)),
+      (error) =>
+        !(
+          error.keyword !== "oneOf" &&
+          error.schemaPath.includes("/oneOf/") &&
+          oneOfPaths.has(error.instancePath)
+        ),
     )
     .filter(
       (error) => !(error.keyword === "oneOf" && hasDeeperPath(error.instancePath, oneOfPaths)),
@@ -311,6 +319,18 @@ function schemaErrorProblem(
     };
   }
 
+  if (error.keyword === "pattern" && path.at(-1) === "mount") {
+    return {
+      keyPath,
+      problem: {
+        code: "config.schema",
+        message: MOUNT_RULE,
+        fix: "Write the path prefix the api is served under, such as '/api' (ADR 0011 'The app config').",
+        where: whereOf(parsed, path),
+      },
+    };
+  }
+
   if (error.keyword === "oneOf") {
     return {
       keyPath,
@@ -343,6 +363,13 @@ function oneOfSentences(path: KeyPath): { message: string; fix: string } {
       message:
         "A source takes one form: 'path', 'package' with 'version', 'release', 'git' or 'maven'; 'integrity' goes with a bundle form only.",
       fix: "Keep the keys of one form (ADR 0011 'The app config').",
+    };
+  }
+
+  if (path.at(-1) === FRAMEWORK_ROUTE_SWITCH && path.at(-2) === BOOT_CHECK_ARTEFACT) {
+    return {
+      message: `'bootCheck.frameworkRoutes' is true, false or '${STRICT_FRAMEWORK_ROUTE_CHECK}'.`,
+      fix: `Write true to check the app routes under the contract's base paths, '${STRICT_FRAMEWORK_ROUTE_CHECK}' to check every app route, or false to switch the check off.`,
     };
   }
 

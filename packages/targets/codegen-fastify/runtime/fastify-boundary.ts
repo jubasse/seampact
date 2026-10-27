@@ -247,7 +247,7 @@ export function createFastifyBoundary<
 
     if (!isServedPrefix(fastify.prefix)) {
       problems.push({
-        problem: `the plugin is registered under the prefix '${fastify.prefix}', which is neither the contract's empty mount nor its base path`,
+        problem: `the plugin is registered under the prefix '${fastify.prefix}', which is neither the entry's mount (write the prefix as the entry's 'mount' in seampact.config.yaml instead) nor its base path`,
         fix: `register the plugin without a prefix${servedPrefixHint()}`,
       });
     }

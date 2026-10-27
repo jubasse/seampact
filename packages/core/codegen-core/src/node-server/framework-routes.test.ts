@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { unlistedFrameworkRoutesProblem } from "../../node-server-runtime/framework-route-patterns.js";
 
-const CHECK_ON = { status: "on", allowed: [] } as const;
+const CHECK_ON = { status: "on", allowed: [], scope: "strict" } as const;
 
 test("many unlisted framework routes are one problem naming each of them", () => {
   const problem = unlistedFrameworkRoutesProblem(CHECK_ON, [

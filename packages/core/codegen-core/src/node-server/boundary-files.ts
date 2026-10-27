@@ -331,6 +331,7 @@ function boundaryFiles(
       withItemValidators: options.bodyValidation,
       frameworkRoutes: input.frameworkRoutes,
       hookCheck: input.hookCheck,
+      mount: input.mount,
       compression: options.compression,
       frameworkEtag: options.frameworkEtag,
       catchAll: options.catchAll,
