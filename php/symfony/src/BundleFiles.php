@@ -260,7 +260,7 @@ final class BundleFiles
             \$literals = ['{$alias}.responses' => \$config['responses'] ?? null];
             \$operations = \$config['operations'] ?? [];
             foreach (is_array(\$operations) ? \$operations : [] as \$operationId => \$operation) {
-                if (is_array(\$operation) && array_key_exists('responses', \$operation)) {
+                if (is_array(\$operation) && (\$operation['responses'] ?? null) !== null) {
                     \$literals["{$alias}.operations.{\$operationId}.responses"] = \$operation['responses'];
                 }
             }

@@ -33,6 +33,8 @@ targets:
 
 The skeleton's `config/services.yaml` loads all of `src/`, so it loads `src/Generated` too. That works as is: the bundle registers its own services, and the classes it registers carry `#[Exclude]`. You do not need an `exclude` line.
 
+The classes the bundle wires itself (the settings, the hooks and the boundary) are not injected by type in your app: use the services they call.
+
 Generate, then list the api's bundle for every environment and import its routes:
 
 ```bash
