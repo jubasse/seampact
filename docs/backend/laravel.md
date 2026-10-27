@@ -132,6 +132,8 @@ if ($request->contractInput()->body->expectedVersion !== $task->version) {
 }
 ```
 
+A deadline is a declared header, so read it from the checked input headers. Once the deadline has passed, stop the work and answer the operation's `deadlineExceeded` error. `budgetMs` is the client's timeout; the boundary does not enforce it.
+
 ### With Eloquent
 
 The handler maps your model to the contract's type. Extra columns never leave the boundary: the reply holds only the contract's fields.
@@ -272,4 +274,5 @@ Octane is not supported yet.
 - The web server's body limit and `post_max_size` must be at least the largest route limit of the contract.
 - Run `php artisan route:cache` and `config:cache` in production. The boot check then runs once, at build time.
 - Form, multipart, file, download and redirect bodies, and `accessHooks: false`, are refused by `generate` by name: they wait for an app that needs them. See [Target option errors](../troubleshooting/generate.md).
+- A feature test that sends a body works as usual: `postJson()` reaches the handler with that body, checked like a real request.
 - Laravel 12 and older are refused. Symfony and API Platform are separate targets.

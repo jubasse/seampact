@@ -196,6 +196,14 @@ Allow-list your own routes in the entry, with a reason:
       - { path: "/admin/**", reason: "Back office, not part of the api." }
 ```
 
+## Format envelopes and null
+
+- The success body goes out in its format's envelope. With `pack:laravel` your `Note` leaves as `{ "data": { ... } }`; with a bare format it leaves as it is. You still return the plain value.
+- A `null` body answers the format's null (`null`, or the envelope with a null payload). The boundary refuses it unless the schema is nullable. A `null` list, table or page is always refused.
+- An opaque value takes `null` only when it is `nullable`.
+- A number past the range of a double inside an opaque value is a `type` issue (400).
+- A format with meta members, success headers or envelope slots the boundary cannot write is refused at generate time: see [Generate errors](../troubleshooting/generate.md).
+
 ## Behind a reverse proxy and in Docker
 
 Set the forwarded-headers strategy, so Spring reads the proxy's headers:

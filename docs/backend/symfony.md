@@ -116,6 +116,8 @@ Do not put `#[IsGranted]` or `#[IsCsrfTokenValid]` on these methods: the boot ch
 
 A version in a body is checked for its format only. Compare it with the stored one and return the operation's conflict error when they differ.
 
+A deadline is a declared header, so read it from the checked input headers. Once the deadline has passed, stop the work and answer the operation's `deadlineExceeded` error. `budgetMs` is the client's timeout; the boundary does not enforce it.
+
 ## Register the hooks
 
 Hooks are services. With autoconfiguration on, implementing the generated interface is enough. Write one hook per identity, one decider for your rights and rules, and one resolver per scope.
@@ -247,6 +249,8 @@ Find each message in [Troubleshooting](../troubleshooting/boot.md).
 `generate` refuses these by name, until an app needs them: multipart and file values, form bodies, download and redirect responses, and `artefacts: { accessHooks: false }`. Remove the operation from the entry's `operations` filter to generate the rest. See [Troubleshooting](../troubleshooting/generate.md).
 
 Serve the app with php-fpm. A worker runtime (FrankenPHP worker, RoadRunner, Swoole) is refused with `runtime.worker.unsupported`. A functional test that calls `disableReboot()` meets the same guard: keep the default reboot between requests.
+
+A functional test that sends a body works as usual: `$client->jsonRequest('POST', '/v1/tasks', [...])` reaches the handler with that body, checked like a real request.
 
 ## Versions
 

@@ -57,6 +57,7 @@ Same start check, run by `bin/console cache:warmup` and on the first request. Th
 | `the api writes relative URLs ... and 'seampact_<api>.public_origin' is set` | Remove `public_origin`, or set `api.wire.urls: absolute` in the contract and generate again. |
 | `the PHP extension zlib is not loaded`, `Symfony <x> is not supported` | Enable ext-zlib. Use Symfony 7.4 or 8. |
 | `the service validator is missing` | Run `composer require symfony/validator`, and keep `framework.validation` on. |
+| `the generated settings class ... lacks its ALIAS constant`, `the access table of api '<api>' has no route for operation '<id>'` | The generated code is stale or edited. Run `seampact generate` again, and do not edit the generated files. |
 | `The bundle configuration key seampact_<api>.<key> takes ...` | Fix the value in `config/packages/seampact_<api>.yaml`. `responses` takes `strict` or `warn`, `body_validation` takes `true` or `false`. |
 | `the route of operation '<id>' has the path ...`, `... carries a host, a scheme or a condition` | Import the api's routes with no `prefix`, `host`, `schemes` or `condition`. |
 | `an app route with the path ... is registered before the route of operation '<id>'` | Import the contract routes first. |
@@ -88,6 +89,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `the api writes relative URLs ... and 'seampact.<api>.public_origin' is set` | Unset `SEAMPACT_<API>_PUBLIC_ORIGIN` (it fills `public_origin` in `config/seampact/<api>.php`) and run `php artisan config:cache` again if the config is cached, or set `api.wire.urls: absolute` in the contract and generate again. |
 | `Laravel <version> runs here, and the generated code serves Laravel 13 only` | Run the app on Laravel 13. |
 | `ext-zlib is not loaded` | Enable the `zlib` PHP extension. |
+| `... does not return the settings array; regenerate the api '<api>'` | The published `config/seampact/<api>.php` is stale or edited. Run `seampact generate` again, and republish the config if you changed it. |
 | `runtime.octane.unsupported` | Serve the app with php-fpm, or keep this api's provider out of the Octane app. |
 | `seampact: no generated routes for the api '<api>'; list its service provider in bootstrap/providers.php.` | Add the generated `<Api>SeampactServiceProvider` to `bootstrap/providers.php`. |
 | `config('seampact.<api>.middleware.<kind>') is not a list of middleware names` | Set that key in `config/seampact/<api>.php` to a list of strings such as `['auth:sanctum']`, or to `[]`. |
