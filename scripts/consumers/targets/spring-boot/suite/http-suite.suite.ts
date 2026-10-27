@@ -1,7 +1,7 @@
-// Runs the shared http suite's `default`, `hand-written`, `boot` and `pack:spring` profiles against the Spring Boot
-// consumer's jars (ADR 0015 "Suite profiles") and writes one report per profile. The jars and the report directory
-// come from the environment: SEAMPACT_SPRING_JAR, SEAMPACT_SPRING_ALLOW_LISTED_JAR, SEAMPACT_SPRING_PACK_JAR and
-// SEAMPACT_SPRING_REPORTS.
+// Runs the shared http suite's `default`, `hand-written`, `boot`, `pack:spring` and `pack:laravel` profiles against the
+// Spring Boot consumer's jars (ADR 0015 "Suite profiles") and writes one report per profile. The jars and the report
+// directory come from the environment: SEAMPACT_SPRING_JAR, SEAMPACT_SPRING_ALLOW_LISTED_JAR, SEAMPACT_SPRING_PACK_JAR,
+// SEAMPACT_SPRING_PACK_LARAVEL_JAR and SEAMPACT_SPRING_REPORTS.
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
@@ -30,12 +30,13 @@ const ALLOW_LISTED_ELSEWHERE = "Runs on the jar built with the route allow-liste
 const SUITE_TIMEOUT_MS = 600_000;
 const BOOT_TIMEOUT_MS = 120_000;
 const TARGET_PROFILES: readonly SuiteProfile[] = ["default", "hand-written", "boot"];
-const SPRING_PACK = "@seampact/pack-spring";
-const PACK_SPRING_GOLDEN = join(import.meta.dirname, "../../../../../fixtures/golden/pack-spring");
+const GOLDEN_DIRECTORY = join(import.meta.dirname, "../../../../../fixtures/golden");
+const LIST_TASKS_PATH = "/v1/channels/10000000-0000-4000-8000-000000000001/tasks";
 
 const jar = requiredEnvironment("SEAMPACT_SPRING_JAR");
 const allowListedJar = requiredEnvironment("SEAMPACT_SPRING_ALLOW_LISTED_JAR");
 const packJar = requiredEnvironment("SEAMPACT_SPRING_PACK_JAR");
+const packLaravelJar = requiredEnvironment("SEAMPACT_SPRING_PACK_LARAVEL_JAR");
 const reportDirectory = requiredEnvironment("SEAMPACT_SPRING_REPORTS");
 const credentials = readCredentials();
 
@@ -96,40 +97,92 @@ function describeHttpProfile(profile: SuiteProfile): void {
   });
 }
 
-function packSpringIr(contract: string): ContractIR {
-  return JSON.parse(readFileSync(join(PACK_SPRING_GOLDEN, `${contract}.ir.json`), "utf8"));
+function packGoldenIr(pack: string, contract: string): ContractIR {
+  return JSON.parse(readFileSync(join(GOLDEN_DIRECTORY, pack, `${contract}.ir.json`), "utf8"));
 }
 
-// The pack-spring jar serves the reference contract with `@seampact/pack-spring` applied; its profile reads the
-// default cases through the pack's paging style, then runs the pack's own cases.
-describe("http suite, pack:spring profile", () => {
-  const pack = packProfileOf([packSpringIr("tasks"), packSpringIr("tasksService")], SPRING_PACK);
+// A pack jar serves the reference contract with the pack applied; its profile reads the default cases through the
+// pack's format and paging style, then runs the pack's own cases.
+function describePackProfile(pack: string, packJarPath: string): void {
+  const profile = packProfileOf(
+    [packGoldenIr(pack, "tasks"), packGoldenIr(pack, "tasksService")],
+    `@seampact/${pack}`,
+  );
   const refusals = {
-    ...pack.refusals,
-    ...refusalsOf(pack.cases, SPRING_SUITE_REFUSALS),
+    ...profile.refusals,
+    ...refusalsOf(profile.cases, SPRING_SUITE_REFUSALS),
+  };
+
+  describe(`http suite, ${profile.profile} profile`, () => {
+    let app: RunningApp | undefined;
+    let report: SuiteReport | undefined;
+
+    beforeAll(async () => {
+      app = await startSpringApp(packJarPath);
+      report = await runSuite({
+        baseUrl: app.baseUrl,
+        target: TARGET,
+        profile: profile.profile,
+        credentials,
+        cases: profile.cases,
+        reader: profile.reader,
+        refusals,
+      });
+      writeSuiteReport(report, reportFileOf(reportDirectory, profile.profile));
+    }, SUITE_TIMEOUT_MS);
+
+    afterAll(async () => {
+      await app?.close();
+    });
+
+    testEachCase(profile.cases, () => report, refusals, test);
+  });
+}
+
+// `pack:spring` proves Spring Data's page on the wire; `pack:laravel` a format that wraps every success body.
+describePackProfile("pack-spring", packJar);
+describePackProfile("pack-laravel", packLaravelJar);
+
+// A null page is the handler's failure, not a reply to send as written: the api's 500 under `responses: warn` too,
+// as on Node.
+describe("under responses: warn, a handler's null page", () => {
+  const nullPageCase: SuiteCase = {
+    id: "null-page-under-warn",
+    title: "A handler's null page is the api's 500 under responses: warn",
+    checks: [],
+    profiles: ["default"],
+    script: { answers: { "tasks.listTasks": { status: 200, body: null } } },
+    steps: [
+      {
+        request: {
+          method: "GET",
+          path: LIST_TASKS_PATH,
+          headers: { authorization: "Bearer {{userToken}}" },
+        },
+        expect: { status: 500 },
+      },
+    ],
   };
   let app: RunningApp | undefined;
   let report: SuiteReport | undefined;
 
   beforeAll(async () => {
-    app = await startSpringApp(packJar);
+    app = await startSpringApp(jar, { "seampact.tasks.responses": "warn" });
     report = await runSuite({
       baseUrl: app.baseUrl,
       target: TARGET,
-      profile: pack.profile,
+      profile: "default",
       credentials,
-      cases: pack.cases,
-      reader: pack.reader,
-      refusals,
+      cases: [nullPageCase],
+      refusals: {},
     });
-    writeSuiteReport(report, reportFileOf(reportDirectory, pack.profile));
   }, SUITE_TIMEOUT_MS);
 
   afterAll(async () => {
     await app?.close();
   });
 
-  testEachCase(pack.cases, () => report, refusals, test);
+  testEachCase([nullPageCase], () => report, {}, test);
 });
 
 // The allow-listed variant needs the route in the config, so it boots the second jar; the other cases boot the first.
