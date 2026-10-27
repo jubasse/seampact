@@ -52,7 +52,8 @@ final class AccessSteps
 
     /**
      * Asks the decider of `$name`; the framework's access denial (HookLookup::isAccessDenial()) is its first declared
-     * code, or the operation's not-found code when the denial hides the record and the operation declares one.
+     * code, or the operation's not-found code when the denial of a route requirement hides the record and the operation
+     * declares one; a field right keeps its own code.
      */
     public static function decide(BoundaryState $state, RequirementCall $call): Decision
     {
@@ -66,7 +67,8 @@ final class AccessSteps
                 throw $failure;
             }
 
-            $notFoundCode = $state->hooks->isNotFoundDenial($failure) ? $state->contract->roleCode($state->operationId, ApiContract::NOT_FOUND_ROLE) : null;
+            $hidesTheRecord = $call->purpose() instanceof Purpose\Route && $state->hooks->isNotFoundDenial($failure);
+            $notFoundCode = $hidesTheRecord ? $state->contract->roleCode($state->operationId, ApiContract::NOT_FOUND_ROLE) : null;
             if ($notFoundCode !== null) {
                 return new \Seampact\Hooks\Decision\Denied(new Denial($notFoundCode));
             }

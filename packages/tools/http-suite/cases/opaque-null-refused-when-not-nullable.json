@@ -25,7 +25,8 @@
           "code": "api.schema_invalid",
           "issues": [
             {
-              "pointer": "/data"
+              "pointer": "/data",
+              "rule": "type"
             }
           ]
         }

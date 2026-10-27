@@ -29,7 +29,9 @@ final class FrameworkRoutePattern {
         ends[0] = true;
 
         for (String patternSegment : pattern) {
-            ends = ANY_SEGMENTS.equals(patternSegment) ? endsAfterAnySegments(ends) : endsAfterOneSegment(ends, patternSegment, route);
+            ends = ANY_SEGMENTS.equals(patternSegment)
+                    ? endsAfterAnySegments(ends)
+                    : endsAfterOneSegment(ends, patternSegment, route);
         }
 
         return ends[route.size()];
@@ -53,7 +55,9 @@ final class FrameworkRoutePattern {
 
         for (int index = 1; index < ends.length; index++) {
             String segment = route.get(index - 1);
-            next[index] = ends[index - 1] && !segment.equals(CATCH_ALL_SEGMENT) && segmentMatches(patternSegment, segment);
+            next[index] = ends[index - 1]
+                    && !segment.equals(CATCH_ALL_SEGMENT)
+                    && segmentMatches(patternSegment, segment);
         }
 
         return next;
@@ -71,10 +75,13 @@ final class FrameworkRoutePattern {
         if (segment.length() < prefix.length() + suffix.length()) return false;
         if (!segment.startsWith(prefix) || !segment.endsWith(suffix)) return false;
 
-        return middlesFollow(Arrays.asList(parts).subList(1, parts.length - 1), segment.substring(prefix.length(), segment.length() - suffix.length()));
+        List<String> middles = Arrays.asList(parts).subList(1, parts.length - 1);
+
+        return middlesFollow(middles, segment.substring(prefix.length(), segment.length() - suffix.length()));
     }
 
-    // The literal parts between stars appear in order; taking each at its first place leaves the most room for the next.
+    // The literal parts between stars appear in order; taking each at its first place leaves the most room for the
+    // next.
     private static boolean middlesFollow(List<String> middles, String text) {
         int searchFrom = 0;
 
@@ -98,7 +105,8 @@ final class FrameworkRoutePattern {
         return segments;
     }
 
-    // Spring writes a catch-all as `**` or `{*name}`; a one-segment variable (`{id}`) or wildcard (`*`) stays one segment.
+    // Spring writes a catch-all as `**` or `{*name}`; a one-segment variable (`{id}`) or wildcard (`*`) stays one
+    // segment.
     private static List<String> routeSegmentsOf(String routePattern) {
         List<String> segments = segmentsOf(routePattern);
         segments.replaceAll(segment -> isCatchAll(segment) ? CATCH_ALL_SEGMENT : segment);
