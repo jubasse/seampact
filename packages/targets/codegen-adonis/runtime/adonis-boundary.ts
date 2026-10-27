@@ -44,7 +44,11 @@ import {
   matchesContractPath,
   type ResponsesMode,
 } from "./node-server/contract-route.js";
-import { notFoundError, type ReportedRequest } from "./node-server/error-reply.js";
+import {
+  frameworkRefusal,
+  notFoundError,
+  type ReportedRequest,
+} from "./node-server/error-reply.js";
 import type { ListedRoute } from "./node-server/framework-route-patterns.js";
 import {
   frameworkRouteProblems,
@@ -127,8 +131,6 @@ const ROUTE_NOT_FOUND_CODE = "E_ROUTE_NOT_FOUND";
 const ENTITY_TOO_LARGE_CODE = "E_REQUEST_ENTITY_TOO_LARGE";
 const BAD_REQUEST = 400;
 const STRICT_JSON_REFUSAL = 422;
-const UNAUTHENTICATED_ROLE = "unauthenticated";
-const FORBIDDEN_ROLE = "forbidden";
 const CSRF_INVALID_ROLE = "csrfInvalid";
 const HEAD_METHOD = "HEAD";
 const GET_METHOD = "get";
@@ -173,18 +175,11 @@ function isClaimed(error: unknown): boolean {
   );
 }
 
+// The claimed refusals carry a 401, 403 or 429 status, which the rule every Node server shares maps.
 function asContractError(route: ContractRoute, error: unknown): ContractError {
   if (error instanceof ContractError) return error;
 
-  const code = isRefusal(error, UNAUTHORIZED_ACCESS)
-    ? (codeOfRole(route, UNAUTHENTICATED_ROLE) ?? codeOfStatus(route, UNAUTHORIZED_ACCESS.status))
-    : isRefusal(error, AUTHORIZATION_FAILURE)
-      ? (codeOfRole(route, FORBIDDEN_ROLE) ?? codeOfStatus(route, AUTHORIZATION_FAILURE.status))
-      : isRefusal(error, TOO_MANY_REQUESTS)
-        ? codeOfStatus(route, TOO_MANY_REQUESTS.status)
-        : undefined;
-
-  return code === undefined ? unexpectedError(route, error) : new ContractError(code);
+  return frameworkRefusal(route, error) ?? unexpectedError(route, error);
 }
 
 // A refusal raised before the boundary's first middleware, in the route's terms; anything unknown is a 500.
