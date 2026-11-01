@@ -31,6 +31,17 @@ class GoodGenerator:
         options = dict(entry.options)
         return [GeneratedFile("models.py", f"API = {ir.api.id!r}\\nOPTIONS = {options!r}\\n")]
 """
+_WRONG_ITEMS_MODULE = """
+from seampact.ir.read import IrSupport
+
+
+class WrongItemsGenerator:
+    def ir_support(self):
+        return IrSupport.of_model(kinds=%s)
+
+    def generate(self, ir, entry):
+        return ["models.py"]
+"""
 _NOT_A_GENERATOR_MODULE = "class Plain:\n    pass\n"
 
 
@@ -58,6 +69,7 @@ def site_packages(
     site.mkdir(parents=True, exist_ok=True)
     kinds = json.loads(valid_bundle[0]["ir/t.json"])["kinds"]
     _install(site, "acme-good", "1.2.0", ["good = acme_good:GoodGenerator"], _GOOD_MODULE % kinds)
+    _install(site, "acme-wrong", "1.0.0", ["wrong = acme_wrong:WrongItemsGenerator"], _WRONG_ITEMS_MODULE % kinds)
     _install(site, "acme-broken", "1.0.0", ["bad = acme_broken:Plain"], _NOT_A_GENERATOR_MODULE)
     _install(site, "acme-twice", "1.0.0", ["a = acme_twice:Plain", "b = acme_twice:Plain"], _NOT_A_GENERATOR_MODULE)
     _install(site, "acme-plain", "1.0.0", [], None)
@@ -95,13 +107,15 @@ def test_a_target_that_cannot_be_used_is_refused_by_name(site_packages: Path, us
     assert target.code == code
 
 
-def _project(tmp_path: Path, repository: Path, pin: str, entry_extra: str = "") -> Path:
+def _project(
+    tmp_path: Path, repository: Path, pin: str, entry_extra: str = "", distribution: str = "acme-good"
+) -> Path:
     project = tmp_path / "project"
     project.mkdir()
     (project / "seampact.config.yaml").write_text(
         f"sources:\n  contract:\n    git: {{ url: {json.dumps(str(repository))}, tag: v1, directory: contract }}\n"
         f"    integrity: {pin}\nopenapi: none\ntargets:\n"
-        f"  - {{ id: main, use: 'pypi:acme-good', api: t, options: {{ flavour: plain }}{entry_extra} }}\n",
+        f"  - {{ id: main, use: 'pypi:{distribution}', api: t, options: {{ flavour: plain }}{entry_extra} }}\n",
         encoding="utf-8",
     )
 
@@ -195,3 +209,20 @@ def test_a_missing_config_is_refused_with_its_code(tmp_path: Path) -> None:
 
     assert code == EXIT_REFUSED
     assert "config.file.missing" in stderr
+
+
+def test_a_generator_returning_something_but_generated_files_is_named(
+    site_packages: Path,
+    tmp_path: Path,
+    git_repository: GitRepositoryFactory,
+    valid_bundle: tuple[dict[str, bytes], str],
+) -> None:
+    (tmp_path / "git").mkdir()
+    repository, environment = git_repository(tmp_path / "git", valid_bundle[0])
+    project = _project(tmp_path, repository, valid_bundle[1], distribution="acme-wrong")
+
+    code, _, stderr = _run(project, {**environment, "XDG_CACHE_HOME": str(tmp_path / "cache")}, "generate")
+
+    assert code == EXIT_REFUSED
+    assert "config.target.generate-failed" in stderr
+    assert "GeneratedFile" in stderr

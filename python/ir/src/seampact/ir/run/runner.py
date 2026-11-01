@@ -5,7 +5,7 @@ documents passed, so one refusal leaves every entry directory as it was; check c
 disk at the `checks.generated` level and writes nothing."""
 
 import os
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from importlib import metadata
 from typing import Final
@@ -276,7 +276,7 @@ def _generated_api(
 
     try:
         ir = read_document(copy_of(api.ir), target.generator.ir_support())
-        files = list(
+        files = _generated_files(
             target.generator.generate(
                 ir,
                 TargetEntry(
@@ -319,6 +319,22 @@ def _generated_api(
         for file in headed
         if isinstance(file, GeneratedFile)
     ]
+
+
+def _generated_files(generated: Iterable[object]) -> list[GeneratedFile]:
+    """The generator's items, each a `GeneratedFile` of text paths and contents; anything else is the generator's fault
+    and ends as `config.target.generate-failed`."""
+    files: list[GeneratedFile] = []
+
+    for item in generated:
+        if not (isinstance(item, GeneratedFile) and isinstance(item.path, str) and isinstance(item.contents, str)):
+            raise TypeError(
+                f"generate() must return GeneratedFile items of text paths and contents, got {type(item).__name__}"
+            )
+
+        files.append(item)
+
+    return files
 
 
 def _framework_routes(entry: AppConfigEntry) -> list[FrameworkRoute]:
