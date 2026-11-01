@@ -162,8 +162,9 @@ final class RouteCheck implements LoaderInterface
             }
         }
 
-        $scopedPath = FrameworkRoutes::withCatchAlls($route->getPath(), static fn (string $placeholder): ?string => $route->getRequirement($placeholder));
-        if (!$this->checksFrameworkRoutes || self::isSymfonyRoute($name, $controller) || !$contract->checksAppRoute($scopedPath) || FrameworkRoutes::allows($contract->frameworkRoutes, $route->getPath(), array_values($route->getMethods()))) {
+        $requirementOf = static fn (string $placeholder): ?string => $route->getRequirement($placeholder);
+        $scopedPath = FrameworkRoutes::withCatchAlls($route->getPath(), $requirementOf);
+        if (!$this->checksFrameworkRoutes || self::isSymfonyRoute($name, $controller) || !$contract->checksAppRoute($scopedPath) || FrameworkRoutes::allows($contract->frameworkRoutes, $route->getPath(), $requirementOf, array_values($route->getMethods()))) {
             return [];
         }
 
