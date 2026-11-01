@@ -305,7 +305,11 @@ test("refuses an allow-list beside the whole boot check switched off", async () 
 test.each([
   ["an artefact switch that is no boolean", "artefacts: { types: off }", "must be boolean"],
   ["a boot check of another form", "artefacts: { bootCheck: on }", "'bootCheck' is true, false"],
-  ["an allowUntested item without its major", "allowUntested: [express]", "An `allowUntested` item is"],
+  [
+    "an allowUntested item without its major",
+    "allowUntested: [express]",
+    "An `allowUntested` item is",
+  ],
 ])("refuses %s", async (_, key, message) => {
   const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    ${key}\n`);
 
