@@ -2,7 +2,9 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import ClassVar
 
+from seampact.hooks._redaction import RedactedRepr
 from seampact.hooks.operation_ref import OperationRef
 from seampact.hooks.purpose import Purpose
 from seampact.hooks.request_view import RequestView
@@ -12,9 +14,12 @@ from seampact.hooks.subject_ref import SubjectRef
 from seampact.hooks.throttle_bucket import ThrottleBucket
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class RequirementRequest:
-    """`scopes` are the resolved scopes, outermost first; `principal` is None for an anonymous request."""
+@dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class RequirementRequest(RedactedRepr):
+    """`scopes` are the resolved scopes, outermost first; `principal` is None for an anonymous request. The rule
+    proof is sensitive by construction, so it renders redacted."""
+
+    _REDACTED_FIELDS: ClassVar[frozenset[str]] = frozenset({"proof"})
 
     @dataclass(frozen=True, slots=True, kw_only=True)
     class Extensions:

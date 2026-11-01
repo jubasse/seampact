@@ -226,6 +226,17 @@ jobs:
         with:
           version: "0.13.6"
           enable-cache: false
+      - name: Remove Node from the runner, so the Python build and install are proven to need none
+        shell: bash
+        run: |
+          set -euo pipefail
+          for node in $(which -a node nodejs npm npx corepack 2>/dev/null | sort -u); do
+            sudo rm -f "$node"
+          done
+          if command -v node || command -v npm || command -v npx; then
+            echo "Node is still on the PATH."
+            exit 1
+          fi
       - name: Build each package's wheel, its build requirements checked against their hashes
         working-directory: python
         env:
@@ -243,17 +254,6 @@ jobs:
               exit 1
             fi
           done
-      - name: Remove Node from the runner, so the Python install is proven to need none
-        shell: bash
-        run: |
-          set -euo pipefail
-          for node in $(which -a node nodejs npm npx corepack 2>/dev/null | sort -u); do
-            sudo rm -f "$node"
-          done
-          if command -v node || command -v npm || command -v npx; then
-            echo "Node is still on the PATH."
-            exit 1
-          fi
       - name: Install the wheels into a fresh virtual environment from the built wheels only, then import each package
         shell: bash
         working-directory: ${{ runner.temp }}

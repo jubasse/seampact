@@ -60,7 +60,8 @@ class SignatureToleranceInvalidError(ValueError):
 
 
 class EmptySignatureSecretError(ValueError):
-    """The lookup returned an empty secret, or one that is neither text nor bytes: anyone could compute the MAC.
+    """The lookup returned an empty secret, one that is neither text nor bytes, or text that does not encode as UTF-8:
+    no MAC can be computed safely with it.
 
     The message names the key id and the position in the list, never a secret.
     """
@@ -69,8 +70,9 @@ class EmptySignatureSecretError(ValueError):
 
     def __init__(self, key_id: str, index: int) -> None:
         super().__init__(
-            f"The secret at position {index} looked up for the key '{key_id}' is empty or neither text nor bytes, so "
-            "any request could pass. Configure the secret (check the environment variable behind the lookup)."
+            f"The secret at position {index} looked up for the key '{key_id}' is empty, neither text nor bytes, or "
+            "text that does not encode as UTF-8, so no request can be verified safely with it. Configure the secret "
+            "(check the environment variable behind the lookup)."
         )
         self.key_id = key_id
         self.index = index

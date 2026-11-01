@@ -5,6 +5,7 @@ with each candidate, then checks the timestamp against the tolerance in both dir
 """
 
 import base64
+import contextlib
 import hashlib
 import hmac
 import re
@@ -43,14 +44,51 @@ class _LookedUpSecrets:
     def is_empty(self) -> bool:
         return len(self._secrets) == 0
 
-    # Every secret is checked before any is kept or hashed: a frame captured at the refusal holds only the refused
-    # value, never the usable secrets around it.
-    def usable(self, key_id: str) -> tuple[bytes, ...]:
-        for index, secret in enumerate(self._secrets):
-            if not _is_usable_secret(secret):
+    # Every secret is checked before any is kept or hashed, and no secret is ever bound to a local name: a frame
+    # captured at a refusal holds only this redacted holder and a position.
+    def usable(self, key_id: str) -> "_UsableSecrets":
+        for index in range(len(self._secrets)):
+            if not _is_usable_secret(self._secrets[index]):
                 raise EmptySignatureSecretError(key_id, index)
 
-        return tuple(secret.encode("utf-8") if isinstance(secret, str) else secret for secret in self._secrets)
+        return _UsableSecrets(tuple(self._encoded(index, key_id) for index in range(len(self._secrets))))
+
+    # A text secret that is not valid Unicode (a byte that is not UTF-8 in an environment variable) is refused. The
+    # refusal is raised outside the handler, so it carries neither the encoding error nor the secret inside it.
+    def _encoded(self, index: int, key_id: str) -> bytes:
+        with contextlib.suppress(UnicodeEncodeError):
+            return _as_utf8(self._secrets[index])
+
+        raise EmptySignatureSecretError(key_id, index) from None
+
+
+class _UsableSecrets:
+    """The encoded secrets of one verification, kept in the holder through the MAC loop."""
+
+    __slots__ = ("_secrets",)
+
+    def __init__(self, secrets: tuple[bytes, ...]) -> None:
+        self._secrets = secrets
+
+    def __repr__(self) -> str:
+        return REDACTED
+
+    # Every secret against every candidate, without stopping at the first match.
+    def any_matches(self, payload: bytes, candidates: Sequence[bytes]) -> bool:
+        matched = False
+
+        for index in range(len(self._secrets)):
+            expected = hmac.new(self._secrets[index], payload, hashlib.sha256).digest()
+
+            for candidate in candidates:
+                if hmac.compare_digest(expected, candidate):
+                    matched = True
+
+        return matched
+
+
+def _as_utf8(secret: str | bytes) -> bytes:
+    return secret.encode("utf-8") if isinstance(secret, str) else secret
 
 
 def _is_usable_secret(secret: object) -> bool:
@@ -68,7 +106,8 @@ class TemplateSignatureVerifier:
 
     def verify(self, message: SignedMessage, key_id: str, scheme: SignatureScheme) -> SignatureVerification:
         """Raises `UnsupportedSignatureAlgorithmError` for another algorithm than hmac-sha256, and
-        `EmptySignatureSecretError` when the lookup returns an empty secret or one that is neither text nor bytes."""
+        `EmptySignatureSecretError` when the lookup returns an empty secret, one that is neither text nor bytes, or
+        text that does not encode as UTF-8."""
         if scheme.algorithm != SUPPORTED_ALGORITHM:
             raise UnsupportedSignatureAlgorithmError(scheme.algorithm)
 
@@ -80,7 +119,9 @@ class TemplateSignatureVerifier:
         if secrets.is_empty():
             return SignatureVerification.failed(SignatureFailure.NO_SECRET)
 
-        if not _any_secret_matches(secrets.usable(key_id), message, scheme):
+        usable_secrets = secrets.usable(key_id)
+
+        if not usable_secrets.any_matches(_signed_payload(message, scheme), _decoded_candidates(message, scheme)):
             return SignatureVerification.failed(SignatureFailure.SIGNATURE_MISMATCH)
 
         timestamp_failure = self._timestamp_failure(message.timestamp, scheme.tolerance_ms)
@@ -134,21 +175,9 @@ def _decoded_candidate(candidate: str, encoding: SignatureEncoding) -> bytes | N
     return decoded if decoded is not None and len(decoded) == _HMAC_SHA256_BYTES else None
 
 
-# Every secret against every candidate, without stopping at the first match.
-def _any_secret_matches(secrets: tuple[bytes, ...], message: SignedMessage, scheme: SignatureScheme) -> bool:
-    payload = _signed_payload(message, scheme)
-    candidates = [
+def _decoded_candidates(message: SignedMessage, scheme: SignatureScheme) -> list[bytes]:
+    return [
         decoded
         for decoded in (_decoded_candidate(candidate, scheme.encoding) for candidate in message.candidate_signatures)
         if decoded is not None
     ]
-    matched = False
-
-    for secret in secrets:
-        expected = hmac.new(secret, payload, hashlib.sha256).digest()
-
-        for candidate in candidates:
-            if hmac.compare_digest(expected, candidate):
-                matched = True
-
-    return matched
