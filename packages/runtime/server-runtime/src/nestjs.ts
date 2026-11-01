@@ -1269,6 +1269,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
     return () => inputDecorator(id, inputPartPipes[part]);
   }
+
   // The value NestJS extracts is ignored: the param's own pipe reads the caller the guard granted.
   const accessFactory = (): undefined => undefined;
   const accessDecorator = createParamDecorator(accessFactory);
