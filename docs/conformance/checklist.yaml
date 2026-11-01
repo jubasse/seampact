@@ -1078,7 +1078,7 @@ not_in_checklist:
   - source: "A4, A16"
     reason: Development process decisions (how features are framed, what research may inform); nothing to test in the product.
   - source: "A10"
-    reason: .NET and Python targets are a v2 objective; nothing in 1.0.
+    reason: .NET targets are a v2 objective; nothing in 1.0. The Python targets of A48 are in 1.0.
   - source: "A11"
     reason: No performance threshold gates CI in v1.
   - source: "A12 (production adoption)"
