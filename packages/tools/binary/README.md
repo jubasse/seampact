@@ -2,7 +2,7 @@
 
 The standalone compiler binary (ADR 0010): the seampact CLI as a Node single executable application (SEA) on Node 24.21.0, for linux x64 and arm64 (glibc), macOS x64 and arm64 and Windows x64. It runs `init`, `compile`, `lint` (core rules), `diff`, `bundle` and `explain` with the first-party packs embedded, and needs no Node.js or `node_modules`.
 
-`generate` and `check` run only on an app config whose target entries are all native (a Maven coordinate or a Composer package): the binary writes or checks the config's OpenAPI documents and pinned bundles and leaves each entry to its build plugin. An npm entry is refused by name (`binary.generate-unavailable`, `binary.check-unavailable`): use the npm CLI.
+`generate` and `check` run only on an app config whose target entries are all native (a Maven coordinate, a Composer package or a `pypi:` distribution): the binary writes or checks the config's OpenAPI documents and pinned bundles and leaves each entry to its build plugin. An npm entry is refused by name (`binary.generate-unavailable`, `binary.check-unavailable`): use the npm CLI.
 
 ## Build
 
