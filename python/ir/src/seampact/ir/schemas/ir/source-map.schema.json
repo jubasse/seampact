@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/ir/source-map.schema.json",
+  "title": "seampact IR: source-location side table",
+  "description": "Source locations, written next to the IR and never inside it (ADR 0004 section 11).",
+  "$ref": "#/$defs/SourceMap",
+  "$defs": {
+    "SourceMap": {
+      "type": "object",
+      "required": ["irRevision", "locations"],
+      "properties": {
+        "irRevision": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "locations": {
+          "type": "object",
+          "description": "Keyed by '<layer>#<pointer>', the serialised form of an Origin; a 'core' origin has no entry (ADR 0004 section 11).",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^(api|shared|base|workspace|pack:[^#]+)#(/.*)?$"
+          },
+          "additionalProperties": { "$ref": "#/$defs/SourceLocation" }
+        }
+      }
+    },
+    "SourceLocation": {
+      "type": "object",
+      "description": "A location in a source file.",
+      "required": ["file", "line", "column", "endLine", "endColumn"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "pattern": "^([^/\\\\:.][^/\\\\:]*|\\.[^/\\\\:.][^/\\\\:]*|\\.\\.[^/\\\\:]+)(/([^/\\\\:.][^/\\\\:]*|\\.[^/\\\\:.][^/\\\\:]*|\\.\\.[^/\\\\:]+))*$",
+          "description": "Relative to the workspace root, with forward slashes: never absolute, no '.' or '..' segment, no backslash or ':'."
+        },
+        "line": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "column": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "endLine": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "endColumn": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
+      }
+    }
+  }
+}

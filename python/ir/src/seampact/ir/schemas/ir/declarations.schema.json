@@ -1,0 +1,578 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/ir/declarations.schema.json",
+  "title": "seampact IR: declarations",
+  "description": "The api-level declarations referenced by id (ADR 0004 section 4).",
+  "$defs": {
+    "NatureBase": {
+      "type": "string",
+      "description": "A base nature: every client's retry rule reads it.",
+      "x-seampact-known": ["refused", "unavailable", "failed"]
+    },
+    "ErrorRole": {
+      "type": "string",
+      "description": "A role of ADR 0006 section 6.",
+      "x-seampact-known": [
+        "schemaInvalid",
+        "payloadTooLarge",
+        "unsupportedMediaType",
+        "unauthenticated",
+        "csrfInvalid",
+        "idempotencyKeyReused",
+        "idempotencyInProgress",
+        "stateConflict",
+        "preconditionFailed",
+        "preconditionRequired",
+        "notFound",
+        "forbidden",
+        "sortKeyForbidden",
+        "rateLimited",
+        "deadlineExceeded",
+        "gone",
+        "upstreamUnavailable",
+        "serviceUnavailable",
+        "upstreamTimeout",
+        "undeclaredStatus"
+      ]
+    },
+    "ErrorHttp": {
+      "type": "object",
+      "description": "The HTTP attributes of an error code (ADR 0014).",
+      "required": ["status"],
+      "properties": { "status": { "type": "integer", "minimum": 100, "maximum": 599 } }
+    },
+    "ErrorDecl": {
+      "type": "object",
+      "description": "An error code of the registry (ADR 0004 section 4).",
+      "required": ["code", "nature", "http", "docs", "origin"],
+      "properties": {
+        "code": { "$ref": "common.schema.json#/$defs/ErrorCode" },
+        "family": {
+          "type": "string",
+          "description": "The declared family, or the code up to its first dot."
+        },
+        "nature": { "$ref": "#/$defs/NatureBase" },
+        "natureName": { "$ref": "common.schema.json#/$defs/NatureId" },
+        "http": { "$ref": "#/$defs/ErrorHttp" },
+        "params": { "$ref": "common.schema.json#/$defs/SchemaRef" },
+        "example": {},
+        "title": { "type": "string" },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" },
+        "default": { "$ref": "#/$defs/ErrorRole" },
+        "noStore": {
+          "type": "boolean",
+          "description": "Every response of this code carries Cache-Control: no-store, since its params reach a sensitive value (ADR 0003 section 6, conventions.cache.sensitiveElsewhere: noStore); absent means false (invariant ir.error.sensitive-no-store)."
+        }
+      }
+    },
+    "NatureDecl": {
+      "type": "object",
+      "description": "A nature of the contract (ADR 0002 section 11).",
+      "required": ["id", "base", "docs", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/NatureId" },
+        "base": { "$ref": "#/$defs/NatureBase" },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "HeaderSemantic": {
+      "type": "string",
+      "description": "What an identity header carries (ADR 0002 section 9).",
+      "x-seampact-known": ["deadline", "traceContext", "actorSurface", "versionToken"]
+    },
+    "HeaderSide": {
+      "type": "string",
+      "description": "The message a header travels in.",
+      "x-seampact-known": ["request", "response"]
+    },
+    "HeaderDecl": {
+      "type": "object",
+      "description": "An identity header (ADR 0002 section 9). 'name' and 'in' for every semantic but versionToken; 'response' and 'request' for versionToken (invariant ir.header.members).",
+      "required": ["id", "semantic", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/HeaderId" },
+        "semantic": { "$ref": "#/$defs/HeaderSemantic" },
+        "name": { "type": "string" },
+        "in": { "$ref": "#/$defs/HeaderSide" },
+        "response": { "type": "string" },
+        "request": { "type": "string" },
+        "schema": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "SchemeKey": {
+      "type": "object",
+      "description": "The key a signature is verified with: an id the application resolves to its secret, never the secret itself, written as a value or read from the request.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [{ "$ref": "#/$defs/ValueSchemeKey" }, { "$ref": "#/$defs/SourceSchemeKey" }],
+      "x-seampact-must-act": true
+    },
+    "ValueSchemeKey": {
+      "type": "object",
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": { "type": "string", "const": "value" },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The key id the application looks its secret up by; never the secret."
+        }
+      }
+    },
+    "SourceSchemeKey": {
+      "type": "object",
+      "required": ["kind", "from"],
+      "properties": {
+        "kind": { "type": "string", "const": "from" },
+        "from": {
+          "$ref": "common.schema.json#/$defs/ValueSource",
+          "description": "Where the request carries the key id (path, query or header)."
+        }
+      }
+    },
+    "OAuth2": {
+      "type": "object",
+      "description": "The OAuth 2 facts of a bearer scheme, for documents only.",
+      "required": ["flows"],
+      "properties": { "flows": { "description": "OpenAPI OAuth flows, copied as written." } }
+    },
+    "BearerFacts": {
+      "type": "object",
+      "description": "Document-only facts of a bearer scheme.",
+      "properties": {
+        "format": { "type": "string" },
+        "oauth2": { "$ref": "#/$defs/OAuth2" },
+        "openIdConnectUrl": { "type": "string" }
+      }
+    },
+    "SignatureVerify": {
+      "type": "object",
+      "description": "How a signature is verified (ADR 0004 section 4).",
+      "discriminator": { "propertyName": "verify" },
+      "oneOf": [
+        { "$ref": "#/$defs/TemplateSignature" },
+        { "$ref": "#/$defs/ApplicationSignature" }
+      ],
+      "x-seampact-must-act": true
+    },
+    "SignatureEncoding": {
+      "type": "string",
+      "description": "How a signature is encoded.",
+      "x-seampact-known": ["hex", "base64"]
+    },
+    "TemplateSignature": {
+      "type": "object",
+      "required": ["verify", "format", "algorithm", "payload", "encoding", "key"],
+      "properties": {
+        "verify": { "type": "string", "const": "template" },
+        "format": { "type": "string" },
+        "algorithm": { "type": "string" },
+        "payload": { "type": "string" },
+        "encoding": { "$ref": "#/$defs/SignatureEncoding" },
+        "toleranceMs": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "key": { "$ref": "#/$defs/SchemeKey" }
+      }
+    },
+    "ApplicationSignature": {
+      "type": "object",
+      "required": ["verify", "headers"],
+      "properties": {
+        "verify": { "type": "string", "const": "application" },
+        "headers": { "type": "array", "items": { "type": "string" } },
+        "key": { "$ref": "#/$defs/SchemeKey" }
+      }
+    },
+    "Scheme": {
+      "type": "object",
+      "description": "A security scheme (ADR 0004 section 4), tagged on its kind.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [
+        { "$ref": "#/$defs/CookieScheme" },
+        { "$ref": "#/$defs/HeaderScheme" },
+        { "$ref": "#/$defs/QueryScheme" },
+        { "$ref": "#/$defs/BearerScheme" },
+        { "$ref": "#/$defs/BasicScheme" },
+        { "$ref": "#/$defs/SignatureScheme" }
+      ],
+      "x-seampact-must-act": true
+    },
+    "CookieScheme": {
+      "type": "object",
+      "description": "A credential in a cookie; 'csrf' names the scheme that carries the CSRF token.",
+      "required": ["id", "kind", "name", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "kind": { "type": "string", "const": "cookie" },
+        "name": { "type": "string", "description": "The cookie name." },
+        "csrf": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "HeaderScheme": {
+      "type": "object",
+      "description": "A credential in a request header.",
+      "required": ["id", "kind", "name", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "kind": { "type": "string", "const": "header" },
+        "name": { "type": "string", "description": "The header name." },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "QueryScheme": {
+      "type": "object",
+      "description": "A credential in a query parameter.",
+      "required": ["id", "kind", "name", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "kind": { "type": "string", "const": "query" },
+        "name": { "type": "string", "description": "The query parameter name." },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "BearerScheme": {
+      "type": "object",
+      "description": "A bearer token in the Authorization header.",
+      "required": ["id", "kind", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "kind": { "type": "string", "const": "bearer" },
+        "bearer": { "$ref": "#/$defs/BearerFacts" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "BasicScheme": {
+      "type": "object",
+      "description": "HTTP basic credentials in the Authorization header.",
+      "required": ["id", "kind", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "kind": { "type": "string", "const": "basic" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "SignatureScheme": {
+      "type": "object",
+      "description": "A signed request, verified as 'signature' says.",
+      "required": ["id", "kind", "signature", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "kind": { "type": "string", "const": "signature" },
+        "name": { "type": "string", "description": "The signature header." },
+        "signature": { "$ref": "#/$defs/SignatureVerify" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "CredentialSchemes": {
+      "type": "object",
+      "description": "The schemes of a credential identity.",
+      "required": ["read", "write", "optionalRead"],
+      "properties": {
+        "read": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/SchemeId" } },
+        "write": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/SchemeId" },
+          "description": "Empty when the identity is refused on writes."
+        },
+        "optionalRead": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/SchemeId" }
+        }
+      }
+    },
+    "Principal": {
+      "type": "object",
+      "description": "The principal schema: one schema, or one per credential variant.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [{ "$ref": "#/$defs/SchemaPrincipal" }, { "$ref": "#/$defs/VariantsPrincipal" }]
+    },
+    "SchemaPrincipal": {
+      "type": "object",
+      "required": ["kind", "schema"],
+      "properties": {
+        "kind": { "type": "string", "const": "schema" },
+        "schema": { "$ref": "common.schema.json#/$defs/SchemaRef" }
+      }
+    },
+    "VariantsPrincipal": {
+      "type": "object",
+      "required": ["kind", "variants"],
+      "properties": {
+        "kind": { "type": "string", "const": "variants" },
+        "variants": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/VariantId" },
+          "additionalProperties": { "$ref": "common.schema.json#/$defs/SchemaRef" }
+        }
+      }
+    },
+    "KeysPolicy": {
+      "type": "object",
+      "description": "Unknown keys of a signed identity's payload: ignored or kept, with the reason.",
+      "discriminator": { "propertyName": "policy" },
+      "oneOf": [{ "$ref": "#/$defs/IgnoreKeysPolicy" }, { "$ref": "#/$defs/KeepKeysPolicy" }],
+      "x-seampact-must-act": true
+    },
+    "IgnoreKeysPolicy": {
+      "type": "object",
+      "required": ["policy", "reason"],
+      "properties": {
+        "policy": { "type": "string", "const": "ignore" },
+        "reason": { "$ref": "common.schema.json#/$defs/Reason" }
+      }
+    },
+    "KeepKeysPolicy": {
+      "type": "object",
+      "required": ["policy", "reason"],
+      "properties": {
+        "policy": { "type": "string", "const": "keep" },
+        "reason": { "$ref": "common.schema.json#/$defs/Reason" }
+      }
+    },
+    "HeaderUseFor": {
+      "type": "string",
+      "description": "The operations an identity header applies to.",
+      "x-seampact-known": ["all", "reads", "writes"]
+    },
+    "IdentityHeaderUse": {
+      "type": "object",
+      "description": "A use of the headers catalogue by an identity.",
+      "required": ["header", "for", "required", "origin"],
+      "properties": {
+        "header": { "$ref": "common.schema.json#/$defs/HeaderId" },
+        "for": { "$ref": "#/$defs/HeaderUseFor" },
+        "required": { "type": "boolean" },
+        "schema": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
+        "from": { "$ref": "common.schema.json#/$defs/ValueSource" },
+        "stale": { "$ref": "common.schema.json#/$defs/ErrorCode" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "Identity": {
+      "type": "object",
+      "description": "An identity (ADR 0004 section 4), tagged on its kind.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [{ "$ref": "#/$defs/CredentialIdentity" }, { "$ref": "#/$defs/SignedIdentity" }],
+      "x-seampact-must-act": true
+    },
+    "CredentialIdentity": {
+      "type": "object",
+      "description": "An identity reached through credential schemes.",
+      "required": [
+        "id",
+        "kind",
+        "schemes",
+        "principal",
+        "errors",
+        "headers",
+        "docs",
+        "extensions",
+        "origin"
+      ],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/IdentityId" },
+        "kind": { "type": "string", "const": "credential" },
+        "schemes": { "$ref": "#/$defs/CredentialSchemes" },
+        "principal": { "$ref": "#/$defs/Principal" },
+        "errors": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/ErrorCode" } },
+        "headers": { "type": "array", "items": { "$ref": "#/$defs/IdentityHeaderUse" } },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "SignedIdentity": {
+      "type": "object",
+      "description": "An identity reached through one signature scheme (ADR 0013).",
+      "required": [
+        "id",
+        "kind",
+        "signed",
+        "principal",
+        "errors",
+        "headers",
+        "docs",
+        "extensions",
+        "origin"
+      ],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/IdentityId" },
+        "kind": { "type": "string", "const": "signed" },
+        "signed": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "principal": { "$ref": "#/$defs/Principal" },
+        "unknownKeys": { "$ref": "#/$defs/KeysPolicy" },
+        "errors": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/ErrorCode" } },
+        "headers": { "type": "array", "items": { "$ref": "#/$defs/IdentityHeaderUse" } },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "RightSubject": {
+      "type": "object",
+      "description": "The subject a right is checked against.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [
+        { "$ref": "#/$defs/NoSubject" },
+        { "$ref": "#/$defs/ScopeSubject" },
+        { "$ref": "#/$defs/ResourceSubject" }
+      ],
+      "x-seampact-must-act": true
+    },
+    "NoSubject": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": { "kind": { "type": "string", "const": "none" } }
+    },
+    "ScopeSubject": {
+      "type": "object",
+      "required": ["kind", "scope"],
+      "properties": {
+        "kind": { "type": "string", "const": "scope" },
+        "scope": { "$ref": "common.schema.json#/$defs/ScopeId" }
+      }
+    },
+    "ResourceSubject": {
+      "type": "object",
+      "required": ["kind", "type", "idSchema"],
+      "properties": {
+        "kind": { "type": "string", "const": "resource" },
+        "type": { "$ref": "common.schema.json#/$defs/Name" },
+        "idSchema": { "$ref": "schemas.schema.json#/$defs/TypeUse" }
+      }
+    },
+    "Right": {
+      "type": "object",
+      "description": "A right (ADR 0004 section 4).",
+      "required": ["id", "subject", "errors", "docs", "extensions", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/RightId" },
+        "params": { "$ref": "common.schema.json#/$defs/SchemaRef" },
+        "subject": { "$ref": "#/$defs/RightSubject" },
+        "guest": { "$ref": "common.schema.json#/$defs/Reason" },
+        "errors": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/ErrorCode" } },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" },
+        "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" },
+        "codeName": { "$ref": "common.schema.json#/$defs/Name" }
+      }
+    },
+    "ProofPlacement": {
+      "type": "string",
+      "description": "Where a rule proof is read.",
+      "x-seampact-known": ["body", "header"]
+    },
+    "RuleProof": {
+      "type": "object",
+      "required": ["in", "name", "schema"],
+      "properties": {
+        "in": { "$ref": "#/$defs/ProofPlacement" },
+        "name": { "type": "string" },
+        "schema": { "$ref": "schemas.schema.json#/$defs/TypeUse" }
+      }
+    },
+    "Rule": {
+      "type": "object",
+      "description": "A rule (ADR 0004 section 4).",
+      "required": ["id", "takesBucket", "errors", "docs", "extensions", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/RuleId" },
+        "params": { "$ref": "common.schema.json#/$defs/SchemaRef" },
+        "takesBucket": { "type": "boolean" },
+        "proof": { "$ref": "#/$defs/RuleProof" },
+        "errors": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/ErrorCode" } },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "Scope": {
+      "type": "object",
+      "description": "A scope (ADR 0004 section 4).",
+      "required": ["id", "idSchema", "errors", "docs", "extensions", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/ScopeId" },
+        "idSchema": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
+        "within": { "$ref": "common.schema.json#/$defs/ScopeId" },
+        "errors": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/ErrorCode" } },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "Bucket": {
+      "type": "object",
+      "description": "A rate-limit bucket (ADR 0004 section 4).",
+      "required": ["id", "key", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/BucketId" },
+        "key": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/ValueSource" } },
+        "limit": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "windowMs": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "Service": {
+      "type": "object",
+      "description": "An upstream service (ADR 0004 section 4).",
+      "required": ["id", "maturity", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/ServiceId" },
+        "maturity": { "$ref": "common.schema.json#/$defs/Maturity" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "EnumSource": {
+      "type": "object",
+      "description": "Where an enum's values come from: a shared vocabulary or another enum.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [
+        { "$ref": "#/$defs/VocabularyEnumSource" },
+        { "$ref": "#/$defs/CatalogueEnumSource" }
+      ]
+    },
+    "VocabularyEnumSource": {
+      "type": "object",
+      "required": ["kind", "vocabulary"],
+      "properties": {
+        "kind": { "type": "string", "const": "vocabulary" },
+        "vocabulary": { "type": "string" }
+      }
+    },
+    "CatalogueEnumSource": {
+      "type": "object",
+      "required": ["kind", "enum"],
+      "properties": {
+        "kind": { "type": "string", "const": "enum" },
+        "enum": { "$ref": "common.schema.json#/$defs/EnumId" }
+      }
+    },
+    "Enum": {
+      "type": "object",
+      "description": "An enum; values keep the written order (ADR 0004 section 4).",
+      "required": ["id", "name", "values", "directions", "docs", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/EnumId" },
+        "name": { "$ref": "common.schema.json#/$defs/Name" },
+        "values": { "type": "array", "items": { "type": "string" } },
+        "codeNames": {
+          "type": "object",
+          "description": "Identifier override per value (ADR 0007).",
+          "additionalProperties": { "$ref": "common.schema.json#/$defs/Name" }
+        },
+        "source": { "$ref": "#/$defs/EnumSource" },
+        "localReason": { "$ref": "common.schema.json#/$defs/Reason" },
+        "fallback": { "type": "string" },
+        "directions": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/Direction" }
+        },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    }
+  }
+}

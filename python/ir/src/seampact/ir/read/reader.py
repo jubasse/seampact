@@ -1,20 +1,17 @@
 """Reads an IR document into the generated model, after the checks that make it safe to act on."""
 
-import json
 from typing import Final
 
 from seampact.ir.hydration import IrModelError
 from seampact.ir.model import ContractIR
 from seampact.ir.read.must_act import check_must_act
 from seampact.ir.read.nesting import check_document_nesting, check_text_nesting
+from seampact.ir.read.parse import parse_json_value
 from seampact.ir.read.refusal import IrMalformedError, IrRefusal, IrRefusedError, in_message
 from seampact.ir.read.support import IrSupport, check_support
 
 # The error's own message keeps this much of a cause that can quote untrusted input.
 _MAX_CAUSE_MESSAGE_LENGTH: Final = 400
-# An integer literal longer than this reads as a float, as other JSON parsers read one past 64 bits; it also keeps
-# `int()` off a literal of thousands of digits.
-_MAX_INTEGER_DIGITS: Final = 19
 
 
 def read_ir(text: str, support: IrSupport) -> ContractIR:
@@ -54,19 +51,9 @@ def _read_within_nesting_bound(document: object, support: IrSupport) -> Contract
 
 def _parse(text: str) -> object:
     try:
-        return json.loads(text, parse_constant=_refuse_constant, parse_int=_parse_integer)
+        return parse_json_value(text)
     except ValueError as error:
         raise IrMalformedError(f"The IR is not JSON: {_cause_of(error)}") from error
-
-
-def _refuse_constant(constant: str) -> object:
-    raise ValueError(f"{constant} is not a JSON value")
-
-
-def _parse_integer(literal: str) -> int | float:
-    digits = literal.removeprefix("-")
-
-    return int(literal) if len(digits) <= _MAX_INTEGER_DIGITS else float(literal)
 
 
 def _cause_of(error: Exception) -> str:
