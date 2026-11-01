@@ -19,33 +19,42 @@ function isLanguage(language: unknown): language is Language {
   return typeof language === "string" && (LANGUAGES as readonly string[]).includes(language);
 }
 
-// One entry per language, read through `usedBy`; the schema pins each list's `usedBy` to its key.
+// One entry per language this implementation names, read by its key; the schema pins each list's
+// `usedBy` to its key. A list for another language (`python`) serves that language's own
+// implementation and is not read here.
 const LISTS = new Map<Language, Lists>();
 
-for (const raw of Object.values(data.lists)) {
-  const lists: Lists = {
+for (const language of LANGUAGES) {
+  const raw = data.lists[language];
+
+  if (raw === undefined) throw new Error(`reserved-words.json: no list for ${language}`);
+
+  if (raw.usedBy.length !== 1 || raw.usedBy[0] !== language) {
+    throw new Error(
+      `reserved-words.json: the ${language} list is used by ${raw.usedBy.join(", ")}`,
+    );
+  }
+
+  LISTS.set(language, {
     caseInsensitive: raw.caseInsensitive,
     keywords: new Set(raw.keywords),
     types: new Set(raw.types),
     members: new Set(raw.members),
     enumMembers: new Set(raw.enumMembers),
-  };
-
-  for (const language of raw.usedBy) {
-    if (!isLanguage(language)) throw new Error(`reserved-words.json: unknown language ${language}`);
-
-    if (LISTS.has(language)) throw new Error(`reserved-words.json: ${language} listed twice`);
-    LISTS.set(language, lists);
-  }
-}
-
-for (const language of LANGUAGES) {
-  if (!LISTS.has(language)) throw new Error(`reserved-words.json: no list for ${language}`);
+  });
 }
 
 /** Throws for a language this version does not know. */
 export function assertLanguage(language: unknown): asserts language is Language {
   if (!isLanguage(language)) throw new Error(`unknown naming language ${JSON.stringify(language)}`);
+}
+
+function listOf(language: Language): Lists {
+  const list = LISTS.get(language);
+
+  if (list === undefined) throw new Error(`reserved-words.json: no list for ${language}`);
+
+  return list;
 }
 
 /**
@@ -58,7 +67,7 @@ export function assertLanguage(language: unknown): asserts language is Language 
 export function isReserved(identifier: string, language: Language, role: Role): boolean {
   assertLanguage(language);
   assertRole(role);
-  const list = LISTS.get(language) as Lists;
+  const list = listOf(language);
   const key = list.caseInsensitive ? identifier.toLowerCase() : identifier;
 
   if (list.keywords.has(key)) return true;

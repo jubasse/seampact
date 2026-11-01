@@ -9,7 +9,8 @@
       "typescript": "TasksEndpoints",
       "kotlin": "TasksEndpoints",
       "java": "TasksEndpoints",
-      "php": "TasksEndpoints"
+      "php": "TasksEndpoints",
+      "python": "TasksEndpoints"
     },
     "canonicalId": "TasksEndpoints"
   },
@@ -23,7 +24,8 @@
       "typescript": "TasksLockedError",
       "kotlin": "TasksLockedError",
       "java": "TasksLockedError",
-      "php": "TasksLockedError"
+      "php": "TasksLockedError",
+      "python": "TasksLockedError"
     },
     "canonicalId": "TasksLockedError"
   },
@@ -37,7 +39,8 @@
       "typescript": "_404GoneError",
       "kotlin": "_404GoneError",
       "java": "_404GoneError",
-      "php": "_404GoneError"
+      "php": "_404GoneError",
+      "python": "_404GoneError"
     },
     "canonicalId": "_404GoneError"
   },
@@ -51,7 +54,8 @@
       "typescript": "UpdateTaskErrors",
       "kotlin": "UpdateTaskErrors",
       "java": "UpdateTaskErrors",
-      "php": "UpdateTaskErrors"
+      "php": "UpdateTaskErrors",
+      "python": "UpdateTaskErrors"
     },
     "canonicalId": "UpdateTaskErrors"
   },
@@ -65,7 +69,8 @@
       "typescript": "CreateTaskHeaders",
       "kotlin": "CreateTaskHeaders",
       "java": "CreateTaskHeaders",
-      "php": "CreateTaskHeaders"
+      "php": "CreateTaskHeaders",
+      "python": "CreateTaskHeaders"
     },
     "canonicalId": "CreateTaskHeaders"
   },
@@ -79,7 +84,8 @@
       "typescript": "AssignTaskInput",
       "kotlin": "AssignTaskInput",
       "java": "AssignTaskInput",
-      "php": "AssignTaskInput"
+      "php": "AssignTaskInput",
+      "python": "AssignTaskInput"
     },
     "canonicalId": "AssignTaskInput"
   },
@@ -93,7 +99,8 @@
       "typescript": "_2faInput",
       "kotlin": "_2faInput",
       "java": "_2faInput",
-      "php": "_2faInput"
+      "php": "_2faInput",
+      "python": "_2faInput"
     },
     "canonicalId": "_2faInput"
   },
@@ -107,7 +114,8 @@
       "typescript": "OrderLinesItem",
       "kotlin": "OrderLinesItem",
       "java": "OrderLinesItem",
-      "php": "OrderLinesItem"
+      "php": "OrderLinesItem",
+      "python": "OrderLinesItem"
     },
     "canonicalId": "OrderLinesItem"
   },
@@ -121,7 +129,8 @@
       "typescript": "createdAt",
       "kotlin": "createdAt",
       "java": "createdAt",
-      "php": "createdAt"
+      "php": "createdAt",
+      "python": "created_at"
     }
   },
   {
@@ -134,7 +143,8 @@
       "typescript": "userId",
       "kotlin": "userId",
       "java": "userId",
-      "php": "userId"
+      "php": "userId",
+      "python": "user_id"
     }
   },
   {
@@ -147,7 +157,8 @@
       "typescript": "assignTask",
       "kotlin": "assignTask",
       "java": "assignTask",
-      "php": "assignTask"
+      "php": "assignTask",
+      "python": "assign_task"
     },
     "operationId": {
       "camel": "assignTask",
@@ -164,7 +175,8 @@
       "typescript": "getTasksBatch",
       "kotlin": "getTasksBatch",
       "java": "getTasksBatch",
-      "php": "getTasksBatch"
+      "php": "getTasksBatch",
+      "python": "get_tasks_batch"
     },
     "operationId": {
       "camel": "getTasksBatch",
@@ -181,7 +193,8 @@
       "typescript": "listTasks",
       "kotlin": "listTasks",
       "java": "listTasks",
-      "php": "listTasks"
+      "php": "listTasks",
+      "python": "list_tasks"
     },
     "operationId": {
       "camel": "listTasks",
@@ -198,7 +211,8 @@
       "typescript": "tasksList",
       "kotlin": "tasksList",
       "java": "tasksList",
-      "php": "tasksList"
+      "php": "tasksList",
+      "python": "tasks_list"
     },
     "operationId": {
       "camel": "tasksList",
@@ -215,7 +229,8 @@
       "typescript": "list",
       "kotlin": "list",
       "java": "list",
-      "php": "list"
+      "php": "list",
+      "python": "list_"
     },
     "operationId": {
       "camel": "list",
@@ -232,7 +247,8 @@
       "typescript": "GetTaskOutput",
       "kotlin": "GetTaskOutput",
       "java": "GetTaskOutput",
-      "php": "GetTaskOutput"
+      "php": "GetTaskOutput",
+      "python": "GetTaskOutput"
     },
     "canonicalId": "GetTaskOutput"
   },
@@ -246,7 +262,8 @@
       "typescript": "_1042Params",
       "kotlin": "_1042Params",
       "java": "_1042Params",
-      "php": "_1042Params"
+      "php": "_1042Params",
+      "python": "_1042Params"
     },
     "canonicalId": "_1042Params"
   },
@@ -260,7 +277,8 @@
       "typescript": "ApiRateLimitedParams",
       "kotlin": "ApiRateLimitedParams",
       "java": "ApiRateLimitedParams",
-      "php": "ApiRateLimitedParams"
+      "php": "ApiRateLimitedParams",
+      "python": "ApiRateLimitedParams"
     },
     "canonicalId": "ApiRateLimitedParams"
   },
@@ -274,7 +292,8 @@
       "typescript": "TasksUpdateParams",
       "kotlin": "TasksUpdateParams",
       "java": "TasksUpdateParams",
-      "php": "TasksUpdateParams"
+      "php": "TasksUpdateParams",
+      "python": "TasksUpdateParams"
     },
     "canonicalId": "TasksUpdateParams"
   },
@@ -288,7 +307,8 @@
       "typescript": "GetTaskPath",
       "kotlin": "GetTaskPath",
       "java": "GetTaskPath",
-      "php": "GetTaskPath"
+      "php": "GetTaskPath",
+      "python": "GetTaskPath"
     },
     "canonicalId": "GetTaskPath"
   },
@@ -302,7 +322,8 @@
       "typescript": "OrderAddress",
       "kotlin": "OrderAddress",
       "java": "OrderAddress",
-      "php": "OrderAddress"
+      "php": "OrderAddress",
+      "python": "OrderAddress"
     },
     "canonicalId": "OrderAddress"
   },
@@ -316,7 +337,8 @@
       "typescript": "RolesParamsScope",
       "kotlin": "RolesParamsScope",
       "java": "RolesParamsScope",
-      "php": "RolesParamsScope"
+      "php": "RolesParamsScope",
+      "python": "RolesParamsScope"
     },
     "canonicalId": "RolesParamsScope"
   },
@@ -330,7 +352,8 @@
       "typescript": "ListTasksQuery",
       "kotlin": "ListTasksQuery",
       "java": "ListTasksQuery",
-      "php": "ListTasksQuery"
+      "php": "ListTasksQuery",
+      "python": "ListTasksQuery"
     },
     "canonicalId": "ListTasksQuery"
   },
@@ -345,7 +368,8 @@
       "typescript": "ListTasksResponse200",
       "kotlin": "ListTasksResponse200",
       "java": "ListTasksResponse200",
-      "php": "ListTasksResponse200"
+      "php": "ListTasksResponse200",
+      "python": "ListTasksResponse200"
     },
     "canonicalId": "ListTasksResponse200"
   },
@@ -360,7 +384,8 @@
       "typescript": "CreateTaskResponse201",
       "kotlin": "CreateTaskResponse201",
       "java": "CreateTaskResponse201",
-      "php": "CreateTaskResponse201"
+      "php": "CreateTaskResponse201",
+      "python": "CreateTaskResponse201"
     },
     "canonicalId": "CreateTaskResponse201"
   },
@@ -374,7 +399,8 @@
       "typescript": "OrderLabelsValue",
       "kotlin": "OrderLabelsValue",
       "java": "OrderLabelsValue",
-      "php": "OrderLabelsValue"
+      "php": "OrderLabelsValue",
+      "python": "OrderLabelsValue"
     },
     "canonicalId": "OrderLabelsValue"
   },
@@ -388,7 +414,8 @@
       "typescript": "NoticeAssigned",
       "kotlin": "NoticeAssigned",
       "java": "NoticeAssigned",
-      "php": "NoticeAssigned"
+      "php": "NoticeAssigned",
+      "python": "NoticeAssigned"
     },
     "canonicalId": "NoticeAssigned"
   },
@@ -404,7 +431,8 @@
       "typescript": null,
       "kotlin": "_2_FA",
       "java": "_2_FA",
-      "php": "_2Fa"
+      "php": "_2Fa",
+      "python": "_2_FA"
     }
   },
   {
@@ -419,7 +447,8 @@
       "typescript": null,
       "kotlin": "_2FA",
       "java": "_2FA",
-      "php": "_2fa"
+      "php": "_2fa",
+      "python": "_2FA"
     }
   },
   {
@@ -434,7 +463,8 @@
       "typescript": null,
       "kotlin": "_1",
       "java": "_1",
-      "php": "_1"
+      "php": "_1",
+      "python": "_1"
     }
   },
   {
@@ -448,7 +478,8 @@
       "typescript": "_1042Error",
       "kotlin": "_1042Error",
       "java": "_1042Error",
-      "php": "_1042Error"
+      "php": "_1042Error",
+      "python": "_1042Error"
     }
   },
   {
@@ -462,7 +493,8 @@
       "typescript": "_404GoneError",
       "kotlin": "_404GoneError",
       "java": "_404GoneError",
-      "php": "_404GoneError"
+      "php": "_404GoneError",
+      "python": "_404GoneError"
     }
   },
   {
@@ -476,7 +508,8 @@
       "typescript": "_1042Params",
       "kotlin": "_1042Params",
       "java": "_1042Params",
-      "php": "_1042Params"
+      "php": "_1042Params",
+      "python": "_1042Params"
     }
   },
   {
@@ -490,7 +523,8 @@
       "typescript": "_404GoneParams",
       "kotlin": "_404GoneParams",
       "java": "_404GoneParams",
-      "php": "_404GoneParams"
+      "php": "_404GoneParams",
+      "python": "_404GoneParams"
     }
   },
   {
@@ -504,7 +538,8 @@
       "typescript": "_2Fa",
       "kotlin": "_2Fa",
       "java": "_2Fa",
-      "php": "_2Fa"
+      "php": "_2Fa",
+      "python": "field_2_fa"
     }
   },
   {
@@ -518,7 +553,8 @@
       "typescript": "_2fa",
       "kotlin": "_2fa",
       "java": "_2fa",
-      "php": "_2fa"
+      "php": "_2fa",
+      "python": "field_2fa"
     }
   },
   {
@@ -532,7 +568,8 @@
       "typescript": "_2faVerify",
       "kotlin": "_2faVerify",
       "java": "_2faVerify",
-      "php": "_2faVerify"
+      "php": "_2faVerify",
+      "python": "_2fa_verify"
     }
   },
   {
@@ -546,7 +583,23 @@
       "typescript": "_3dSecure",
       "kotlin": "_3dSecure",
       "java": "_3dSecure",
-      "php": "_3dSecure"
+      "php": "_3dSecure",
+      "python": "_3dSecure"
+    }
+  },
+  {
+    "id": "digits/type-3dSecure",
+    "category": "digits",
+    "source": "name",
+    "written": "3dSecure",
+    "role": "schema",
+    "segments": ["3d", "secure"],
+    "expected": {
+      "typescript": "_3dSecure",
+      "kotlin": "_3dSecure",
+      "java": "_3dSecure",
+      "php": "_3dSecure",
+      "python": "_3dSecure"
     }
   },
   {
@@ -571,7 +624,8 @@
       "typescript": null,
       "kotlin": "VALUE2",
       "java": "VALUE2",
-      "php": "Value2"
+      "php": "Value2",
+      "python": "VALUE2"
     }
   },
   {
@@ -586,7 +640,8 @@
       "typescript": null,
       "kotlin": "VALUE1",
       "java": "VALUE1",
-      "php": "Value1"
+      "php": "Value1",
+      "python": "VALUE1"
     }
   },
   {
@@ -601,7 +656,8 @@
       "typescript": null,
       "kotlin": "VALUE7",
       "java": "VALUE7",
-      "php": "Value7"
+      "php": "Value7",
+      "python": "VALUE7"
     }
   },
   {
@@ -616,7 +672,8 @@
       "typescript": null,
       "kotlin": "IN_PROGRESS",
       "java": "IN_PROGRESS",
-      "php": "InProgress"
+      "php": "InProgress",
+      "python": "IN_PROGRESS"
     }
   },
   {
@@ -631,7 +688,8 @@
       "typescript": null,
       "kotlin": "VALUE3",
       "java": "VALUE3",
-      "php": "Value3"
+      "php": "Value3",
+      "python": "VALUE3"
     }
   },
   {
@@ -646,7 +704,8 @@
       "typescript": null,
       "kotlin": "DONE",
       "java": "DONE",
-      "php": "Done"
+      "php": "Done",
+      "python": "DONE"
     }
   },
   {
@@ -661,7 +720,8 @@
       "typescript": null,
       "kotlin": "VALUE12",
       "java": "VALUE12",
-      "php": "Value12"
+      "php": "Value12",
+      "python": "VALUE12"
     }
   },
   {
@@ -675,7 +735,8 @@
       "typescript": "Array_",
       "kotlin": "Array_",
       "java": "Array",
-      "php": "Array_"
+      "php": "Array_",
+      "python": "Array"
     }
   },
   {
@@ -690,7 +751,8 @@
       "typescript": null,
       "kotlin": "CLASS",
       "java": "CLASS",
-      "php": "Class_"
+      "php": "Class_",
+      "python": "CLASS"
     }
   },
   {
@@ -705,7 +767,8 @@
       "typescript": null,
       "kotlin": "CLASS",
       "java": "CLASS",
-      "php": "Class_"
+      "php": "Class_",
+      "python": "CLASS"
     }
   },
   {
@@ -719,7 +782,8 @@
       "typescript": "Fn",
       "kotlin": "Fn",
       "java": "Fn",
-      "php": "Fn_"
+      "php": "Fn_",
+      "python": "Fn"
     }
   },
   {
@@ -733,7 +797,8 @@
       "typescript": "List",
       "kotlin": "List_",
       "java": "List_",
-      "php": "List_"
+      "php": "List_",
+      "python": "List"
     }
   },
   {
@@ -747,7 +812,8 @@
       "typescript": "List",
       "kotlin": "List_",
       "java": "List_",
-      "php": "List_"
+      "php": "List_",
+      "python": "List"
     }
   },
   {
@@ -761,7 +827,8 @@
       "typescript": "List",
       "kotlin": "List_",
       "java": "List_",
-      "php": "List_"
+      "php": "List_",
+      "python": "List"
     }
   },
   {
@@ -775,7 +842,8 @@
       "typescript": "Match",
       "kotlin": "Match",
       "java": "Match",
-      "php": "Match_"
+      "php": "Match_",
+      "python": "Match"
     }
   },
   {
@@ -789,7 +857,8 @@
       "typescript": "list",
       "kotlin": "list",
       "java": "list",
-      "php": "list"
+      "php": "list",
+      "python": "list_"
     }
   },
   {
@@ -804,7 +873,8 @@
       "typescript": null,
       "kotlin": "CLASS",
       "java": "CLASS",
-      "php": "Class_"
+      "php": "Class_",
+      "python": "CLASS"
     }
   },
   {
@@ -819,7 +889,8 @@
       "typescript": null,
       "kotlin": "ENUM",
       "java": "ENUM",
-      "php": "Enum"
+      "php": "Enum",
+      "python": "ENUM"
     }
   },
   {
@@ -834,7 +905,8 @@
       "typescript": null,
       "kotlin": "LIST",
       "java": "LIST",
-      "php": "List"
+      "php": "List",
+      "python": "LIST"
     }
   },
   {
@@ -849,7 +921,8 @@
       "typescript": null,
       "kotlin": "MATCH",
       "java": "MATCH",
-      "php": "Match"
+      "php": "Match",
+      "python": "MATCH"
     }
   },
   {
@@ -864,7 +937,8 @@
       "typescript": null,
       "kotlin": "NEW",
       "java": "NEW",
-      "php": "New"
+      "php": "New",
+      "python": "NEW"
     }
   },
   {
@@ -879,7 +953,8 @@
       "typescript": null,
       "kotlin": "NULL",
       "java": "NULL",
-      "php": "Null"
+      "php": "Null",
+      "python": "NULL"
     }
   },
   {
@@ -893,7 +968,8 @@
       "typescript": "arguments_",
       "kotlin": "arguments",
       "java": "arguments",
-      "php": "arguments"
+      "php": "arguments",
+      "python": "arguments"
     }
   },
   {
@@ -907,7 +983,8 @@
       "typescript": "class_",
       "kotlin": "class_",
       "java": "class_",
-      "php": "class"
+      "php": "class",
+      "python": "class_"
     }
   },
   {
@@ -921,7 +998,8 @@
       "typescript": "constructor_",
       "kotlin": "constructor",
       "java": "constructor",
-      "php": "constructor"
+      "php": "constructor",
+      "python": "constructor"
     }
   },
   {
@@ -935,7 +1013,8 @@
       "typescript": "default_",
       "kotlin": "default",
       "java": "default_",
-      "php": "default"
+      "php": "default",
+      "python": "default"
     }
   },
   {
@@ -949,7 +1028,8 @@
       "typescript": "delete_",
       "kotlin": "delete",
       "java": "delete",
-      "php": "delete"
+      "php": "delete",
+      "python": "delete"
     }
   },
   {
@@ -963,7 +1043,8 @@
       "typescript": "fun",
       "kotlin": "fun_",
       "java": "fun",
-      "php": "fun"
+      "php": "fun",
+      "python": "fun"
     }
   },
   {
@@ -977,7 +1058,8 @@
       "typescript": "function_",
       "kotlin": "function",
       "java": "function",
-      "php": "function"
+      "php": "function",
+      "python": "function"
     }
   },
   {
@@ -991,7 +1073,8 @@
       "typescript": "hashCode",
       "kotlin": "hashCode",
       "java": "hashCode_",
-      "php": "hashCode"
+      "php": "hashCode",
+      "python": "hash_code"
     }
   },
   {
@@ -1005,7 +1088,23 @@
       "typescript": "is",
       "kotlin": "is_",
       "java": "is",
-      "php": "is"
+      "php": "is",
+      "python": "is_"
+    }
+  },
+  {
+    "id": "reserved/member-json",
+    "category": "reserved",
+    "source": "name",
+    "written": "json",
+    "role": "member",
+    "segments": ["json"],
+    "expected": {
+      "typescript": "json",
+      "kotlin": "json",
+      "java": "json",
+      "php": "json",
+      "python": "json_"
     }
   },
   {
@@ -1019,7 +1118,8 @@
       "typescript": "let_",
       "kotlin": "let",
       "java": "let",
-      "php": "let"
+      "php": "let",
+      "python": "let"
     }
   },
   {
@@ -1033,7 +1133,38 @@
       "typescript": "list",
       "kotlin": "list",
       "java": "list",
-      "php": "list"
+      "php": "list",
+      "python": "list_"
+    }
+  },
+  {
+    "id": "reserved/member-match",
+    "category": "reserved",
+    "source": "name",
+    "written": "match",
+    "role": "member",
+    "segments": ["match"],
+    "expected": {
+      "typescript": "match",
+      "kotlin": "match",
+      "java": "match",
+      "php": "match",
+      "python": "match_"
+    }
+  },
+  {
+    "id": "reserved/member-model-config",
+    "category": "reserved",
+    "source": "name",
+    "written": "model_config",
+    "role": "member",
+    "segments": ["model", "config"],
+    "expected": {
+      "typescript": "modelConfig",
+      "kotlin": "modelConfig",
+      "java": "modelConfig",
+      "php": "modelConfig",
+      "python": "model_config_"
     }
   },
   {
@@ -1047,7 +1178,8 @@
       "typescript": "print",
       "kotlin": "print",
       "java": "print",
-      "php": "print"
+      "php": "print",
+      "python": "print_"
     }
   },
   {
@@ -1061,7 +1193,8 @@
       "typescript": "record",
       "kotlin": "record",
       "java": "record",
-      "php": "record"
+      "php": "record",
+      "python": "record"
     }
   },
   {
@@ -1075,7 +1208,8 @@
       "typescript": "string",
       "kotlin": "string",
       "java": "string",
-      "php": "string"
+      "php": "string",
+      "python": "string"
     }
   },
   {
@@ -1089,7 +1223,8 @@
       "typescript": "this_",
       "kotlin": "this_",
       "java": "this_",
-      "php": "this_"
+      "php": "this_",
+      "python": "this"
     }
   },
   {
@@ -1103,7 +1238,8 @@
       "typescript": "type",
       "kotlin": "type",
       "java": "type",
-      "php": "type"
+      "php": "type",
+      "python": "type_"
     }
   },
   {
@@ -1117,7 +1253,8 @@
       "typescript": "val",
       "kotlin": "val_",
       "java": "val",
-      "php": "val"
+      "php": "val",
+      "python": "val"
     }
   },
   {
@@ -1131,7 +1268,8 @@
       "typescript": "delete_",
       "kotlin": "delete",
       "java": "delete",
-      "php": "delete"
+      "php": "delete",
+      "python": "delete"
     }
   },
   {
@@ -1145,7 +1283,8 @@
       "typescript": "hashCode",
       "kotlin": "hashCode",
       "java": "hashCode_",
-      "php": "hashCode"
+      "php": "hashCode",
+      "python": "hash_code"
     }
   },
   {
@@ -1159,7 +1298,23 @@
       "typescript": "list",
       "kotlin": "list",
       "java": "list",
-      "php": "list"
+      "php": "list",
+      "python": "list_"
+    }
+  },
+  {
+    "id": "reserved/operation-type",
+    "category": "reserved",
+    "source": "name",
+    "written": "type",
+    "role": "operation",
+    "segments": ["type"],
+    "expected": {
+      "typescript": "type",
+      "kotlin": "type",
+      "java": "type",
+      "php": "type",
+      "python": "type_"
     }
   },
   {
@@ -1173,7 +1328,8 @@
       "typescript": "Any",
       "kotlin": "Any_",
       "java": "Any",
-      "php": "Any"
+      "php": "Any",
+      "python": "Any"
     }
   },
   {
@@ -1187,7 +1343,8 @@
       "typescript": "Array_",
       "kotlin": "Array_",
       "java": "Array",
-      "php": "Array_"
+      "php": "Array_",
+      "python": "Array"
     }
   },
   {
@@ -1201,7 +1358,8 @@
       "typescript": "Bool",
       "kotlin": "Bool",
       "java": "Bool",
-      "php": "Bool_"
+      "php": "Bool_",
+      "python": "Bool"
     }
   },
   {
@@ -1215,7 +1373,8 @@
       "typescript": "Class",
       "kotlin": "Class_",
       "java": "Class_",
-      "php": "Class_"
+      "php": "Class_",
+      "python": "Class"
     }
   },
   {
@@ -1229,7 +1388,8 @@
       "typescript": "Date_",
       "kotlin": "Date",
       "java": "Date",
-      "php": "Date"
+      "php": "Date",
+      "python": "Date"
     }
   },
   {
@@ -1243,7 +1403,8 @@
       "typescript": "Enum",
       "kotlin": "Enum_",
       "java": "Enum_",
-      "php": "Enum_"
+      "php": "Enum_",
+      "python": "Enum"
     }
   },
   {
@@ -1257,7 +1418,23 @@
       "typescript": "Error_",
       "kotlin": "Error_",
       "java": "Error_",
-      "php": "Error"
+      "php": "Error",
+      "python": "Error"
+    }
+  },
+  {
+    "id": "reserved/schema-exception",
+    "category": "reserved",
+    "source": "name",
+    "written": "Exception",
+    "role": "schema",
+    "segments": ["exception"],
+    "expected": {
+      "typescript": "Exception",
+      "kotlin": "Exception_",
+      "java": "Exception_",
+      "php": "Exception",
+      "python": "Exception_"
     }
   },
   {
@@ -1271,7 +1448,8 @@
       "typescript": "File_",
       "kotlin": "File",
       "java": "File",
-      "php": "File"
+      "php": "File",
+      "python": "File"
     }
   },
   {
@@ -1285,7 +1463,8 @@
       "typescript": "Float",
       "kotlin": "Float_",
       "java": "Float_",
-      "php": "Float_"
+      "php": "Float_",
+      "python": "Float"
     }
   },
   {
@@ -1299,7 +1478,8 @@
       "typescript": "Fn",
       "kotlin": "Fn",
       "java": "Fn",
-      "php": "Fn_"
+      "php": "Fn_",
+      "python": "Fn"
     }
   },
   {
@@ -1313,7 +1493,8 @@
       "typescript": "Function_",
       "kotlin": "Function",
       "java": "Function",
-      "php": "Function_"
+      "php": "Function_",
+      "python": "Function"
     }
   },
   {
@@ -1327,7 +1508,8 @@
       "typescript": "Headers_",
       "kotlin": "Headers",
       "java": "Headers",
-      "php": "Headers"
+      "php": "Headers",
+      "python": "Headers"
     }
   },
   {
@@ -1341,7 +1523,8 @@
       "typescript": "Int",
       "kotlin": "Int_",
       "java": "Int",
-      "php": "Int_"
+      "php": "Int_",
+      "python": "Int"
     }
   },
   {
@@ -1355,7 +1538,8 @@
       "typescript": "Integer",
       "kotlin": "Integer_",
       "java": "Integer_",
-      "php": "Integer"
+      "php": "Integer",
+      "python": "Integer"
     }
   },
   {
@@ -1369,7 +1553,8 @@
       "typescript": "Iterable_",
       "kotlin": "Iterable_",
       "java": "Iterable_",
-      "php": "Iterable_"
+      "php": "Iterable_",
+      "python": "Iterable"
     }
   },
   {
@@ -1383,7 +1568,8 @@
       "typescript": "List",
       "kotlin": "List_",
       "java": "List_",
-      "php": "List_"
+      "php": "List_",
+      "python": "List"
     }
   },
   {
@@ -1397,7 +1583,8 @@
       "typescript": "Map_",
       "kotlin": "Map_",
       "java": "Map_",
-      "php": "Map"
+      "php": "Map",
+      "python": "Map"
     }
   },
   {
@@ -1411,7 +1598,8 @@
       "typescript": "Match",
       "kotlin": "Match",
       "java": "Match",
-      "php": "Match_"
+      "php": "Match_",
+      "python": "Match"
     }
   },
   {
@@ -1425,7 +1613,8 @@
       "typescript": "Mixed",
       "kotlin": "Mixed",
       "java": "Mixed",
-      "php": "Mixed_"
+      "php": "Mixed_",
+      "python": "Mixed"
     }
   },
   {
@@ -1439,7 +1628,23 @@
       "typescript": "Never",
       "kotlin": "Never",
       "java": "Never",
-      "php": "Never_"
+      "php": "Never_",
+      "python": "Never"
+    }
+  },
+  {
+    "id": "reserved/schema-none",
+    "category": "reserved",
+    "source": "name",
+    "written": "None",
+    "role": "schema",
+    "segments": ["none"],
+    "expected": {
+      "typescript": "None",
+      "kotlin": "None",
+      "java": "None",
+      "php": "None",
+      "python": "None_"
     }
   },
   {
@@ -1453,7 +1658,8 @@
       "typescript": "Null",
       "kotlin": "Null",
       "java": "Null",
-      "php": "Null_"
+      "php": "Null_",
+      "python": "Null"
     }
   },
   {
@@ -1467,7 +1673,8 @@
       "typescript": "Object_",
       "kotlin": "Object_",
       "java": "Object_",
-      "php": "Object_"
+      "php": "Object_",
+      "python": "Object"
     }
   },
   {
@@ -1481,7 +1688,8 @@
       "typescript": "Optional",
       "kotlin": "Optional",
       "java": "Optional_",
-      "php": "Optional"
+      "php": "Optional",
+      "python": "Optional"
     }
   },
   {
@@ -1495,7 +1703,8 @@
       "typescript": "Override",
       "kotlin": "Override_",
       "java": "Override_",
-      "php": "Override"
+      "php": "Override",
+      "python": "Override"
     }
   },
   {
@@ -1509,7 +1718,8 @@
       "typescript": "Pair",
       "kotlin": "Pair_",
       "java": "Pair",
-      "php": "Pair"
+      "php": "Pair",
+      "python": "Pair"
     }
   },
   {
@@ -1523,7 +1733,8 @@
       "typescript": "Partial_",
       "kotlin": "Partial",
       "java": "Partial",
-      "php": "Partial"
+      "php": "Partial",
+      "python": "Partial"
     }
   },
   {
@@ -1537,7 +1748,8 @@
       "typescript": "Promise_",
       "kotlin": "Promise",
       "java": "Promise",
-      "php": "Promise"
+      "php": "Promise",
+      "python": "Promise"
     }
   },
   {
@@ -1551,7 +1763,8 @@
       "typescript": "Readonly_",
       "kotlin": "Readonly",
       "java": "Readonly",
-      "php": "Readonly_"
+      "php": "Readonly_",
+      "python": "Readonly"
     }
   },
   {
@@ -1565,7 +1778,8 @@
       "typescript": "Record_",
       "kotlin": "Record_",
       "java": "Record_",
-      "php": "Record"
+      "php": "Record",
+      "python": "Record"
     }
   },
   {
@@ -1579,7 +1793,8 @@
       "typescript": "RegExp_",
       "kotlin": "RegExp",
       "java": "RegExp",
-      "php": "RegExp"
+      "php": "RegExp",
+      "python": "RegExp"
     }
   },
   {
@@ -1593,7 +1808,8 @@
       "typescript": "Request_",
       "kotlin": "Request",
       "java": "Request",
-      "php": "Request"
+      "php": "Request",
+      "python": "Request"
     }
   },
   {
@@ -1607,7 +1823,8 @@
       "typescript": "Response_",
       "kotlin": "Response",
       "java": "Response",
-      "php": "Response"
+      "php": "Response",
+      "python": "Response"
     }
   },
   {
@@ -1621,7 +1838,8 @@
       "typescript": "Result",
       "kotlin": "Result_",
       "java": "Result",
-      "php": "Result"
+      "php": "Result",
+      "python": "Result"
     }
   },
   {
@@ -1635,7 +1853,8 @@
       "typescript": "Self",
       "kotlin": "Self",
       "java": "Self",
-      "php": "Self_"
+      "php": "Self_",
+      "python": "Self"
     }
   },
   {
@@ -1649,7 +1868,8 @@
       "typescript": "Set_",
       "kotlin": "Set_",
       "java": "Set_",
-      "php": "Set"
+      "php": "Set",
+      "python": "Set"
     }
   },
   {
@@ -1663,7 +1883,8 @@
       "typescript": "Static",
       "kotlin": "Static",
       "java": "Static",
-      "php": "Static_"
+      "php": "Static_",
+      "python": "Static"
     }
   },
   {
@@ -1677,7 +1898,8 @@
       "typescript": "String_",
       "kotlin": "String_",
       "java": "String_",
-      "php": "String_"
+      "php": "String_",
+      "python": "String"
     }
   },
   {
@@ -1691,7 +1913,8 @@
       "typescript": "Symbol_",
       "kotlin": "Symbol",
       "java": "Symbol",
-      "php": "Symbol"
+      "php": "Symbol",
+      "python": "Symbol"
     }
   },
   {
@@ -1705,7 +1928,8 @@
       "typescript": "Task",
       "kotlin": "Task",
       "java": "Task",
-      "php": "Task"
+      "php": "Task",
+      "python": "Task"
     }
   },
   {
@@ -1719,7 +1943,8 @@
       "typescript": "Thread",
       "kotlin": "Thread_",
       "java": "Thread_",
-      "php": "Thread"
+      "php": "Thread",
+      "python": "Thread"
     }
   },
   {
@@ -1733,7 +1958,8 @@
       "typescript": "True",
       "kotlin": "True",
       "java": "True",
-      "php": "True_"
+      "php": "True_",
+      "python": "True_"
     }
   },
   {
@@ -1747,7 +1973,8 @@
       "typescript": "Unit",
       "kotlin": "Unit_",
       "java": "Unit",
-      "php": "Unit"
+      "php": "Unit",
+      "python": "Unit"
     }
   },
   {
@@ -1761,7 +1988,8 @@
       "typescript": "Void",
       "kotlin": "Void_",
       "java": "Void_",
-      "php": "Void_"
+      "php": "Void_",
+      "python": "Void"
     }
   },
   {
@@ -1776,7 +2004,8 @@
       "typescript": "EditTask",
       "kotlin": "EditTask",
       "java": "EditTask",
-      "php": "EditTask"
+      "php": "EditTask",
+      "python": "EditTask"
     }
   },
   {
@@ -1791,7 +2020,8 @@
       "typescript": "Any",
       "kotlin": "Any_",
       "java": "Any",
-      "php": "Any"
+      "php": "Any",
+      "python": "Any"
     }
   },
   {
@@ -1805,7 +2035,8 @@
       "typescript": "TasksWrite",
       "kotlin": "TasksWrite",
       "java": "TasksWrite",
-      "php": "TasksWrite"
+      "php": "TasksWrite",
+      "python": "TasksWrite"
     }
   },
   {
@@ -1819,7 +2050,8 @@
       "typescript": "TasksUpdate",
       "kotlin": "TasksUpdate",
       "java": "TasksUpdate",
-      "php": "TasksUpdate"
+      "php": "TasksUpdate",
+      "python": "TasksUpdate"
     }
   },
   {
@@ -1834,7 +2066,8 @@
       "typescript": "Wildcard",
       "kotlin": "Wildcard",
       "java": "Wildcard",
-      "php": "Wildcard"
+      "php": "Wildcard",
+      "python": "Wildcard"
     }
   },
   {
@@ -1858,7 +2091,8 @@
       "typescript": "AnyRight",
       "kotlin": "AnyRight",
       "java": "AnyRight",
-      "php": "AnyRight"
+      "php": "AnyRight",
+      "python": "AnyRight"
     }
   },
   {
@@ -1888,7 +2122,8 @@
       "typescript": "Tasks",
       "kotlin": "Tasks",
       "java": "Tasks",
-      "php": "Tasks"
+      "php": "Tasks",
+      "python": "Tasks"
     }
   },
   {
@@ -1902,7 +2137,8 @@
       "typescript": "UserId",
       "kotlin": "UserId",
       "java": "UserId",
-      "php": "UserId"
+      "php": "UserId",
+      "python": "UserId"
     }
   },
   {
@@ -1916,7 +2152,8 @@
       "typescript": "HttpServer2",
       "kotlin": "HttpServer2",
       "java": "HttpServer2",
-      "php": "HttpServer2"
+      "php": "HttpServer2",
+      "python": "HttpServer2"
     }
   },
   {
@@ -1930,7 +2167,8 @@
       "typescript": "Http2Server",
       "kotlin": "Http2Server",
       "java": "Http2Server",
-      "php": "Http2Server"
+      "php": "Http2Server",
+      "python": "Http2Server"
     }
   },
   {
@@ -1944,7 +2182,8 @@
       "typescript": "HttpServer",
       "kotlin": "HttpServer",
       "java": "HttpServer",
-      "php": "HttpServer"
+      "php": "HttpServer",
+      "python": "HttpServer"
     }
   },
   {
@@ -1958,7 +2197,8 @@
       "typescript": "UserId2",
       "kotlin": "UserId2",
       "java": "UserId2",
-      "php": "UserId2"
+      "php": "UserId2",
+      "python": "UserId2"
     }
   },
   {
@@ -1972,7 +2212,8 @@
       "typescript": "Url",
       "kotlin": "Url",
       "java": "Url",
-      "php": "Url"
+      "php": "Url",
+      "python": "Url"
     }
   },
   {
@@ -1986,7 +2227,8 @@
       "typescript": "Id",
       "kotlin": "Id",
       "java": "Id",
-      "php": "Id"
+      "php": "Id",
+      "python": "Id"
     }
   },
   {
@@ -2000,7 +2242,8 @@
       "typescript": "UserId",
       "kotlin": "UserId",
       "java": "UserId",
-      "php": "UserId"
+      "php": "UserId",
+      "python": "UserId"
     }
   },
   {
@@ -2014,7 +2257,8 @@
       "typescript": "Oauth2Token",
       "kotlin": "Oauth2Token",
       "java": "Oauth2Token",
-      "php": "Oauth2Token"
+      "php": "Oauth2Token",
+      "python": "Oauth2Token"
     }
   },
   {
@@ -2028,7 +2272,8 @@
       "typescript": "A1B2",
       "kotlin": "A1B2",
       "java": "A1B2",
-      "php": "A1B2"
+      "php": "A1B2",
+      "python": "A1B2"
     }
   },
   {
@@ -2042,7 +2287,8 @@
       "typescript": "A1b2",
       "kotlin": "A1b2",
       "java": "A1b2",
-      "php": "A1b2"
+      "php": "A1b2",
+      "python": "A1b2"
     }
   },
   {
@@ -2056,7 +2302,8 @@
       "typescript": "ApiRateLimited",
       "kotlin": "ApiRateLimited",
       "java": "ApiRateLimited",
-      "php": "ApiRateLimited"
+      "php": "ApiRateLimited",
+      "python": "ApiRateLimited"
     }
   },
   {
@@ -2070,7 +2317,8 @@
       "typescript": "Init",
       "kotlin": "Init",
       "java": "Init",
-      "php": "Init"
+      "php": "Init",
+      "python": "Init"
     }
   },
   {
@@ -2084,7 +2332,8 @@
       "typescript": "User",
       "kotlin": "User",
       "java": "User",
-      "php": "User"
+      "php": "User",
+      "python": "User"
     }
   },
   {
@@ -2106,7 +2355,8 @@
       "typescript": "V2",
       "kotlin": "V2",
       "java": "V2",
-      "php": "V2"
+      "php": "V2",
+      "python": "V2"
     }
   },
   {
@@ -2120,7 +2370,8 @@
       "typescript": "AB",
       "kotlin": "AB",
       "java": "AB",
-      "php": "AB"
+      "php": "AB",
+      "python": "AB"
     }
   },
   {
@@ -2134,7 +2385,8 @@
       "typescript": "ABCDE",
       "kotlin": "ABCDE",
       "java": "ABCDE",
-      "php": "ABCDE"
+      "php": "ABCDE",
+      "python": "ABCDE"
     }
   },
   {
@@ -2148,7 +2400,8 @@
       "typescript": "CafAuLait",
       "kotlin": "CafAuLait",
       "java": "CafAuLait",
-      "php": "CafAuLait"
+      "php": "CafAuLait",
+      "python": "CafAuLait"
     }
   },
   {
@@ -2162,7 +2415,8 @@
       "typescript": "TaskList",
       "kotlin": "TaskList",
       "java": "TaskList",
-      "php": "TaskList"
+      "php": "TaskList",
+      "python": "TaskList"
     }
   },
   {
@@ -2176,7 +2430,8 @@
       "typescript": "ABC",
       "kotlin": "ABC",
       "java": "ABC",
-      "php": "ABC"
+      "php": "ABC",
+      "python": "ABC"
     }
   },
   {
@@ -2198,7 +2453,8 @@
       "typescript": "X",
       "kotlin": "X",
       "java": "X",
-      "php": "X"
+      "php": "X",
+      "python": "X"
     }
   },
   {
@@ -2212,7 +2468,8 @@
       "typescript": "HelloWorld",
       "kotlin": "HelloWorld",
       "java": "HelloWorld",
-      "php": "HelloWorld"
+      "php": "HelloWorld",
+      "python": "HelloWorld"
     }
   },
   {
@@ -2226,7 +2483,8 @@
       "typescript": "ABC",
       "kotlin": "ABC",
       "java": "ABC",
-      "php": "ABC"
+      "php": "ABC",
+      "python": "ABC"
     }
   },
   {
@@ -2240,7 +2498,8 @@
       "typescript": "GetHttpResponseCode",
       "kotlin": "GetHttpResponseCode",
       "java": "GetHttpResponseCode",
-      "php": "GetHttpResponseCode"
+      "php": "GetHttpResponseCode",
+      "python": "GetHttpResponseCode"
     }
   },
   {
@@ -2254,7 +2513,8 @@
       "typescript": "IoError",
       "kotlin": "IoError",
       "java": "IoError",
-      "php": "IoError"
+      "php": "IoError",
+      "python": "IoError"
     }
   },
   {
@@ -2268,7 +2528,8 @@
       "typescript": "RateLimited",
       "kotlin": "RateLimited",
       "java": "RateLimited",
-      "php": "RateLimited"
+      "php": "RateLimited",
+      "python": "RateLimited"
     }
   },
   {
@@ -2282,7 +2543,8 @@
       "typescript": "ABc",
       "kotlin": "ABc",
       "java": "ABc",
-      "php": "ABc"
+      "php": "ABc",
+      "python": "ABc"
     }
   },
   {
@@ -2296,7 +2558,8 @@
       "typescript": "UpperSnakeCase",
       "kotlin": "UpperSnakeCase",
       "java": "UpperSnakeCase",
-      "php": "UpperSnakeCase"
+      "php": "UpperSnakeCase",
+      "python": "UpperSnakeCase"
     }
   },
   {
@@ -2310,7 +2573,8 @@
       "typescript": "XmlHttpRequest",
       "kotlin": "XmlHttpRequest",
       "java": "XmlHttpRequest",
-      "php": "XmlHttpRequest"
+      "php": "XmlHttpRequest",
+      "python": "XmlHttpRequest"
     }
   }
 ]
