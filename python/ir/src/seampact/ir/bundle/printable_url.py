@@ -18,7 +18,7 @@ def printable_url(text: str) -> str:
         host = parts.hostname
         port = parts.port
     except ValueError:
-        return text
+        return _redacted_by_text(text)
 
     if not parts.scheme or not host:
         return text
@@ -27,3 +27,13 @@ def printable_url(text: str) -> str:
     path = parts.path or "/"
 
     return f"{parts.scheme.lower()}://{host.lower()}{shown_port}{path}"
+
+
+def _redacted_by_text(text: str) -> str:
+    """A URL that does not parse (a bad port, a bad bracket) still may hold a token: drop the query, the fragment, and
+    everything from the scheme's `//` to the last `@`, by text."""
+    scheme_end = text.index("://") + len("://")
+    without_query = re.split(r"[?#]", text[scheme_end:], maxsplit=1)[0]
+    without_user = without_query.rpartition("@")[2]
+
+    return text[:scheme_end] + without_user
