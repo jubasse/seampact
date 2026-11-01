@@ -72,7 +72,7 @@ import { NotesController } from "./notes-controller.js";
 export class AppModule {}
 ```
 
-Create `src/main.ts`. `configureApp` installs the JSON parser and the filter that make bad JSON and unknown routes answer in the contract's error format.
+Create `src/main.ts`. `configureApp` installs the JSON parser of the contract routes and the filter that make bad JSON and unknown routes answer in the contract's error format. Your own routes keep NestJS's default JSON parser.
 
 ```ts
 import "reflect-metadata";
@@ -114,6 +114,16 @@ getNote(
 ```
 
 The input typed with `HandlerInputs` carries the same `principal` and `scopes`, read-only. Spreading or serialising it leaves them out. The scope's `value` is `unknown`: narrow it before use.
+
+## Read one part of the input
+
+Instead of the whole input, take only the parts you use: `@<operation>.path()`, `.query()`, `.headers()` and `.body()`. Each exists when the operation declares that part. The request is checked once, whichever parts you take.
+
+```ts
+@NotesNest.getNote()
+getNote(@NotesNest.getNote.path() path: Notes.GetNoteInput["path"]) {
+  const note = notes.get(path.noteId);
+```
 
 ## Test your routes
 
@@ -168,7 +178,9 @@ Every server target takes four options: `bodyValidation` (check request bodies, 
 
 The NestJS target also takes `reply`. With `handler` (the default), seampact writes the reply when your handler returns. With `interceptor`, your global interceptors (`app.useGlobalInterceptors(...)` or `APP_INTERCEPTOR`) map the result first, and seampact checks the mapped value against the contract.
 
-Pass `{ logger }` as the second argument of `forRoot` to send seampact's warnings to your logger: `TasksNest.SeampactModule.forRoot(tasksHooks(), { logger })`. It needs `warn` and `error` functions.
+seampact writes its warnings through NestJS's `Logger`, under the context `Seampact:<api>`, so `app.useLogger(...)` applies to them. Pass `{ logger }` as the second argument of `forRoot` to send them elsewhere: `TasksNest.SeampactModule.forRoot(tasksHooks(), { logger })`. It needs `warn` and `error` functions.
+
+The same argument takes `responses` and `bodyValidation`, to change the generated values at startup, for example from your config: `forRoot(tasksHooks(), { bodyValidation: process.env.NODE_ENV !== "production" })`. A `responses()` decorator on a controller or a method still wins. A wrong value stops the app at boot.
 
 When your hooks need providers, build them with `forRootAsync`. In a test, replace them with `overrideProvider(TasksNest.SEAMPACT_HOOKS).useValue(testHooks)`.
 
@@ -180,7 +192,7 @@ TasksNest.SeampactModule.forRootAsync({
 });
 ```
 
-Install `@nestjs/platform-express` (the Fastify platform is refused at boot), `reflect-metadata` and `rxjs`, and set `experimentalDecorators` in `tsconfig.json`. Import the generated module with your hooks and call `configureApp(app)` before `listen`. It installs the JSON parser at `LARGEST_BODY_LIMIT`, keeping the bytes of signed routes, and registers `preRoutingFilter`. Without the filter, malformed JSON and unknown routes under the api's prefix answer with NestJS's own error body instead of the contract's format. With two apis, or a global filter of your own, write these steps yourself: `app.useBodyParser("json", { limit, strict: false, verify: TasksNest.keepRawBody })`, then call each api's `renderPreRoutingError` from your filter.
+Install `@nestjs/platform-express` (the Fastify platform is refused at boot), `reflect-metadata` and `rxjs`, and set `experimentalDecorators` in `tsconfig.json`. Import the generated module with your hooks and call `configureApp(app)` before `listen`. On the contract routes, it reads JSON bodies at each route's limit, accepts a plain value such as `"text"` (the contract then checks it), and keeps the bytes of signed routes. Your own routes keep NestJS's default JSON parser: strict, 100 KB, and the raw body only with `rawBody: true`. It also registers `preRoutingFilter`. Without the filter, malformed JSON and unknown routes under the api's prefix answer with NestJS's own error body instead of the contract's format. With two apis, or a global filter of your own, write these steps yourself: `app.useBodyParser("json", { limit, strict: false, verify: TasksNest.keepRawBody })`, then call each api's `renderPreRoutingError` from your filter. A contract body no parser read answers 500, with a log naming `configureApp`.
 
 ```ts
 @Module({ imports: [TasksNest.SeampactModule.forRoot(tasksHooks())], controllers: [TasksController] })
