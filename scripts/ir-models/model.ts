@@ -527,6 +527,15 @@ export function buildNeutralModel(
   return { definitions: sorted };
 }
 
+/** The doc text of a definition: its description, then the must-act rule when it has one. */
+export function definitionDoc(definition: Definition): string | undefined {
+  if (!definition.mustAct) return definition.description;
+  const unknown = definition.kind === "union" ? "an unknown tag" : "an unknown value";
+  const rule = `Must act: ${unknown} makes the IR invalid for every reader.`;
+
+  return definition.description === undefined ? rule : `${definition.description} ${rule}`;
+}
+
 /** Code-unit order, independent of the locale. */
 export function compareNames(left: string, right: string): number {
   if (left === right) return 0;

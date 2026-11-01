@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "seampact-ir"
+version = "0.0.0"
+description = "The seampact IR model, naming and reader for Python generators."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Typing :: Typed",
+]
+
+# PEP 420: `seampact` is a namespace shared by every seampact distribution, so it has no `__init__.py`.
+[tool.hatch.build.targets.wheel]
+packages = ["src/seampact"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/seampact"]

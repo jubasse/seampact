@@ -6,8 +6,9 @@ import { buildNeutralModel, compareNames, type Definition } from "./model.ts";
 import { type DefinitionNames, definitionNames } from "./names.ts";
 import { emitNamingLists } from "./naming.ts";
 import { emitPhp, PHP_CLAIMED_NAMES, PHP_MODEL_DIRECTORY } from "./php.ts";
+import { emitPython, PYTHON_MODEL_DIRECTORY, pythonTypeName } from "./python.ts";
 
-// Generates every file of the native IR models (ADR 0010) from the IR JSON Schema: the Kotlin and PHP models and the
+// Generates every file of the native IR models (ADR 0010) from the IR JSON Schema: the Kotlin, PHP and Python models and the
 // mapping table of every definition to its type in each model language.
 
 export const WRITE_COMMAND =
@@ -16,12 +17,16 @@ export const WRITE_COMMAND =
 export const MAPPING_TABLE_FILE = "scripts/ir-models/mapping.generated.json";
 
 /** The directories the generator owns whole: a file there that it does not write is stale. */
-const GENERATED_DIRECTORIES = [KOTLIN_MODEL_DIRECTORY, PHP_MODEL_DIRECTORY];
+const GENERATED_DIRECTORIES = [KOTLIN_MODEL_DIRECTORY, PHP_MODEL_DIRECTORY, PYTHON_MODEL_DIRECTORY];
+
+// Python writes its bytecode cache beside the modules it imports; git ignores it and it is never stale.
+const PYTHON_BYTECODE_CACHE = "__pycache__";
 
 export type MappingEntry = {
   construct: Definition["kind"];
   kotlin: string;
   php: string;
+  python: string;
   /** Present when a language's name took the reserved-word escape. */
   escapedIn?: string[];
 };
@@ -48,6 +53,15 @@ export function generateIrModels(
   });
 
   for (const [path, content] of phpFiles) files.set(path, content);
+
+  const pythonFiles = emitPython({
+    model,
+    irVersion: IR_VERSION,
+    irRevision: IR_REVISION,
+    regenerateCommand: WRITE_COMMAND,
+  });
+
+  for (const [path, content] of pythonFiles) files.set(path, content);
 
   for (const [path, content] of emitNamingLists(WRITE_COMMAND)) files.set(path, content);
 
@@ -88,6 +102,8 @@ export function findOrphanFiles(files: Map<string, string>, root: string): Orpha
     for (const entry of entries.sort((left, right) => compareNames(left.name, right.name))) {
       const path = `${directory}/${entry.name}`;
 
+      if (entry.name === PYTHON_BYTECODE_CACHE && entry.isDirectory()) continue;
+
       if (!files.has(path)) orphans.push({ path, isDirectory: entry.isDirectory() });
     }
   }
@@ -110,6 +126,7 @@ export function mappingTable(
       construct: definition.kind,
       kotlin: entry.names.kotlin,
       php: entry.names.php,
+      python: pythonTypeName(definition.name),
       ...(entry.escapedIn.length === 0 ? {} : { escapedIn: entry.escapedIn }),
     };
   }
