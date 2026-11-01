@@ -57,10 +57,10 @@ ADR 0010 "Amendment 2026-11-01: the Python channels" holds. The `seampact-compil
 #### Versions
 
 - **Python.** 3.12 is the floor of every distribution; CI runs 3.12 and the latest Python. 3.10 reached its end of life in October 2026, and Django 6 needs 3.12.
-- **FastAPI.** 0.162, the latest minor today, is the matrix `floor`. FastAPI breaks in minors, so the matrix records it per minor, and CI runs the floor and the latest. An older minor is refused (`config.matrix.incompatible`); a newer one is untested (ADR 0009).
+- **FastAPI.** 0.162, the latest minor today, is the matrix `floor`. FastAPI breaks in minors, so the matrix records it per minor, and CI runs the floor and the latest. An older minor is refused (`config.matrix.incompatible`); a newer one is untested (ADR 0009). `allowUntested` names a 0.x framework by its minor (`fastapi@0.163`), since 0.x minors break.
 - **Starlette.** Through FastAPI's own range: FastAPI 0.162 asks for `starlette>=0.46.0`. The spike ran 0.46.0 and 1.10.0.
 - **Pydantic.** 2.9 or later, FastAPI 0.162's own floor. Pydantic 1 is refused (`config.matrix.incompatible`). The generated models never use the `pydantic.v1` shim.
-- **Distributions and locks.** A distribution declares a range from its floor for the framework it serves. The workspace lock pins every package exactly, with hashes; the CI rows install from it.
+- **Distributions and locks.** A distribution declares a range from its floor for the framework it serves, and the exact `==<self>` for the seampact distributions it needs (G1). The workspace lock and the CI rows pin every package exactly, with hashes.
 
 #### Sync and async
 
@@ -148,9 +148,9 @@ Codegen emits, per api, a package under the target entry's `out`:
 - **The access dependency**, in each contract route's `dependencies`. It runs steps 2 to 5: authenticate, principal requirements, scopes and requirements. It first checks that the route Starlette chose (`scope["route"]`) carries the operation the raw path matched. Once steps 2 to 5 admit the request, it marks the request scope with the operation id.
 - **The input dependency**, an endpoint parameter. It runs steps 6 to 8 on the boundary's decoded tree and builds the typed input. Without the access mark for its own operation, it fails closed: the api's 500 and `onUnexpectedError`, before any input is read.
 - **The endpoint**, one per operation. It takes only the `Request`, the input dependency and the handler factory, in that order, so the input is checked before the factory opens a session. It calls the handler method and writes its result.
-- **`bind_tasks(app, ...)`**, the one call the app makes, last, after its own middleware and exception handlers. It builds the api's `APIRouter` with the app's factories as dependencies and includes it with no prefix, registers the exception handlers, wraps the app's `HTTPException` handler ("Exceptions on contract routes"), and adds the boundary with `add_middleware`, so it is the outermost of `app.user_middleware`.
+- **`bind_tasks(target, ...)`**, the one call the app makes, last, after its own middleware and exception handlers. `target` is the app, or an `APIRouter` of the app's choosing. It builds the api's `APIRouter` with the app's factories as dependencies and includes it into `target` with no prefix, registers the exception handlers, wraps the app's `HTTPException` handler ("Exceptions on contract routes"), and adds the boundary with `add_middleware`, so it is the outermost of `app.user_middleware`.
 
-`bind_<api>()` builds the router itself, rather than leaving `include_router` to the app: FastAPI fixes a route's dependency tree when the route is added, and the factories are known only when the app calls `bind_<api>()`. An override in `app.dependency_overrides` would also be lost to an app test's `dependency_overrides.clear()`.
+`bind_<api>()` builds the router itself, rather than leaving `include_router` to the app: FastAPI fixes a route's dependency tree when the route is added, and the factories are known only when the app calls `bind_<api>()`. An override in `app.dependency_overrides` would also be lost to an app test's `dependency_overrides.clear()`. The routes stay the framework's: generated code declares them, and the app chooses the router tree they join. When `target` is an `APIRouter`, the app also passes itself (`app=`), since the boundary and the exception handlers belong to the app, and calls `bind_<api>()` before it includes that router: FastAPI copies a router's routes when it is included.
 
 The schema types go into the package's `schemas` module, the operation types into its root, and the FastAPI placement into its `fastapi` module. A declared schema and a placement class never share a module; a name taken twice in a module is refused as `name.collision`. No runtime is generated: the code imports it from the installed distributions (ADR 0025).
 
@@ -175,7 +175,7 @@ Starlette decodes the path before routing, so the raw match and the chosen route
 
 `HEAD` runs the path's `GET` operation; the boundary drops the body. A method the path does not serve answers the path's `notFound` 404 from the boundary, where Starlette would answer 405. A CORS preflight is left to the app's `CORSMiddleware`. The boot check refuses a `CORSMiddleware` outside the boundary, so the app adds it before `bind_<api>()`.
 
-`mount` is the prefix the generated router writes before each contract path; `bind_<api>()` includes the router with no prefix. An ASGI `root_path` (an app mounted by another ASGI app, or `--root-path`) stays outside the mount, as a servlet context path does.
+`mount` is the prefix the generated router writes before each contract path; `bind_<api>()` includes the router with no prefix, and neither the target router nor the routers it joins may add one: the boot check refuses a prefix and points to `mount`. An ASGI `root_path` (an app mounted by another ASGI app, or `--root-path`) stays outside the mount, as a servlet context path does.
 
 Beside the routes, the shared route helpers of `seampact-codegen` write `<Api>RouteNames` and `<Api>Urls`, as ADR 0023 "Routes" describes them; `artefacts.routeHelpers: false` leaves both out.
 
@@ -243,7 +243,7 @@ The target takes `rules` (ADR 0009):
 - **`native`, the default.** A value rule renders as Pydantic's own constraint wherever Pydantic has one: `min_length` and `max_length` (counted in code points, as the contract counts), `ge`, `gt`, `le`, `lt`, `multiple_of`, `pattern`. `enum` and `const` stay generated. A format Pydantic has no matching rule for stays a generated validator. The FastAPI guide lists the differences in a few lines.
 - **`seampact-consistent`.** Every value rule is a generated validator with ADR 0003's meaning.
 
-In both modes a `pattern` is the IR's normalised pattern (ADR 0003 section 9), checked by Pydantic's Rust engine; the generated models pin `regex_engine="rust-regex"`. Every normalised pattern of the golden IRs compiles there and gives the contract's verdicts, `$` before a final newline and `.` on an astral code point included (spike). The written pattern is never used: Rust's `\d` and `\w` are Unicode. The compiler already refuses lookaround and backreferences, which Rust refuses too, when the model class is built.
+In both modes a `pattern` is the IR's normalised pattern (ADR 0003 section 9), checked by Pydantic's Rust engine; the generated models pin `regex_engine="rust-regex"`. Every normalised pattern of the golden IRs compiles there and gives the contract's verdicts, `$` before a final newline and `.` on an astral code point included (spike). The written pattern is never used: Rust's `\d` and `\w` are Unicode. The compiler already refuses lookaround and backreferences, which Rust refuses too, when the model class is built. So patterns give the same verdicts as on the other targets, and the FastAPI guide lists no pattern difference.
 
 The contract input is the boundary's decoding, never `await request.json()` or `request.query_params`. The boundary replays the body bytes as received to the app through the wrapped `receive`, so app code that reads `await request.body()` sees them.
 
