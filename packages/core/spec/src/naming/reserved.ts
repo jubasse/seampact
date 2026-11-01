@@ -49,6 +49,14 @@ export function assertLanguage(language: unknown): asserts language is Language 
   if (!isLanguage(language)) throw new Error(`unknown naming language ${JSON.stringify(language)}`);
 }
 
+function listOf(language: Language): Lists {
+  const list = LISTS.get(language);
+
+  if (list === undefined) throw new Error(`reserved-words.json: no list for ${language}`);
+
+  return list;
+}
+
 /**
  * Whether `identifier`, the final identifier of a name with `role`, collides in `language` with:
  * a keyword (every role); for a type role, a shadowed type name; for a member or an operation,
@@ -59,7 +67,7 @@ export function assertLanguage(language: unknown): asserts language is Language 
 export function isReserved(identifier: string, language: Language, role: Role): boolean {
   assertLanguage(language);
   assertRole(role);
-  const list = LISTS.get(language) as Lists;
+  const list = listOf(language);
   const key = list.caseInsensitive ? identifier.toLowerCase() : identifier;
 
   if (list.keywords.has(key)) return true;

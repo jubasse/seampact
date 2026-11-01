@@ -739,6 +739,7 @@
         "model_validate",
         "model_validate_json",
         "model_validate_strings",
+        "mro",
         "next",
         "object",
         "oct",
@@ -751,6 +752,7 @@
         "print",
         "property",
         "range",
+        "register",
         "repr",
         "reversed",
         "round",
@@ -772,7 +774,7 @@
         "zip"
       ],
       "enumMembers": [],
-      "source": "Python 3.12.16 and 3.15.2, the union of both: keyword.kwlist and keyword.softkwlist; types: the public names of dir(builtins) that start with an uppercase letter (the builtin exception classes, Ellipsis, NotImplemented); members: the other public names of dir(builtins) and the public names of dir(pydantic.BaseModel) on Pydantic 2.14.2, which a field or a method would shadow; dir(builtins) is read under python -S, without the interactive helpers site adds; a keyword is not repeated in types or members"
+      "source": "Python 3.12.16 and 3.15.2, the union of both: keyword.kwlist and keyword.softkwlist; types: the public names of dir(builtins) that start with an uppercase letter (the builtin exception classes, Ellipsis, NotImplemented); members: the other public names of dir(builtins) and the public names of dir(pydantic.BaseModel) and dir(type(pydantic.BaseModel)) on Pydantic 2.14.2, which a field or a method would shadow; dir(builtins) is read under python -S, without the interactive helpers site adds; a keyword is not repeated in types or members"
     }
   }
 }

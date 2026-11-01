@@ -2,4 +2,4 @@
 "@seampact/spec": patch
 ---
 
-The shared naming vectors and reserved-word lists now give the Python identifier of every name, with Python keywords, builtins and Pydantic model attributes escaped by a trailing `_`.
+Add the Python column to the shared naming vectors and a Python reserved-word list; the existing languages are unchanged.

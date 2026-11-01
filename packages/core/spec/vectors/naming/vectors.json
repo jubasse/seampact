@@ -539,7 +539,7 @@
       "kotlin": "_2Fa",
       "java": "_2Fa",
       "php": "_2Fa",
-      "python": "_2_fa"
+      "python": "field_2_fa"
     }
   },
   {
@@ -554,7 +554,7 @@
       "kotlin": "_2fa",
       "java": "_2fa",
       "php": "_2fa",
-      "python": "_2fa"
+      "python": "field_2fa"
     }
   },
   {
@@ -577,6 +577,21 @@
     "category": "digits",
     "source": "name",
     "written": "3d_secure",
+    "role": "schema",
+    "segments": ["3d", "secure"],
+    "expected": {
+      "typescript": "_3dSecure",
+      "kotlin": "_3dSecure",
+      "java": "_3dSecure",
+      "php": "_3dSecure",
+      "python": "_3dSecure"
+    }
+  },
+  {
+    "id": "digits/type-3dSecure",
+    "category": "digits",
+    "source": "name",
+    "written": "3dSecure",
     "role": "schema",
     "segments": ["3d", "secure"],
     "expected": {
