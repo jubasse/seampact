@@ -1,0 +1,140 @@
+"""The generated-file writer (ADR 0015 "Writing files" and "The generated header")."""
+
+import hashlib
+import json
+import os
+from pathlib import Path
+
+from seampact.ir.write import (
+    GeneratedFile,
+    HandEditPolicy,
+    PlannedWrite,
+    WriterRefusal,
+    add_header,
+    commit_write,
+    plan_write,
+)
+from seampact.ir.write.manifest import MANIFEST_FILE_NAME
+
+
+def _planned(out: Path, files: list[GeneratedFile], policy: HandEditPolicy = HandEditPolicy.REFUSE) -> PlannedWrite:
+    planned = plan_write(str(out), "main", files, policy)
+    assert isinstance(planned, PlannedWrite), planned
+
+    return planned
+
+
+def _refusal_codes(out: Path, files: list[GeneratedFile], policy: HandEditPolicy = HandEditPolicy.REFUSE) -> list[str]:
+    planned = plan_write(str(out), "main", files, policy)
+    assert isinstance(planned, list)
+
+    return [refusal.code for refusal in planned]
+
+
+def test_a_write_normalises_the_text_and_records_a_sorted_manifest(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    files = [GeneratedFile("b/second.py", "﻿one\r\ntwo"), GeneratedFile("a.py", "x = 1\n")]
+
+    written = commit_write(_planned(out, files))
+
+    assert written.written == ["a.py", "b/second.py"]
+    assert (out / "b/second.py").read_bytes() == b"one\ntwo\n"
+    manifest = json.loads((out / MANIFEST_FILE_NAME).read_text(encoding="utf-8"))
+    assert manifest["owner"] == "main"
+    assert [entry["path"] for entry in manifest["files"]] == ["a.py", "b/second.py"]
+    assert manifest["files"][0]["sha256"] == hashlib.sha256(b"x = 1\n").hexdigest()
+
+
+def test_a_second_run_keeps_unchanged_files_and_removes_stale_ones(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    commit_write(_planned(out, [GeneratedFile("keep.py", "a\n"), GeneratedFile("old/gone.py", "b\n")]))
+
+    second = commit_write(_planned(out, [GeneratedFile("keep.py", "a\n")]))
+
+    assert (second.written, second.unchanged, second.removed) == ([], ["keep.py"], ["old/gone.py"])
+    assert not (out / "old").exists()
+
+
+def test_a_hand_edited_file_is_refused_unless_forced(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    commit_write(_planned(out, [GeneratedFile("a.py", "a\n")]))
+    (out / "a.py").write_text("edited\n", encoding="utf-8")
+    files = [GeneratedFile("a.py", "a\n")]
+
+    assert _refusal_codes(out, files) == ["writer.file.edited"]
+
+    forced = commit_write(_planned(out, files, HandEditPolicy.OVERWRITE))
+
+    assert forced.written == ["a.py"]
+    assert (out / "a.py").read_text(encoding="utf-8") == "a\n"
+
+
+def test_a_file_the_writer_did_not_generate_is_never_overwritten(tmp_path: Path) -> None:
+    (tmp_path / "a.py").write_text("mine\n", encoding="utf-8")
+
+    assert _refusal_codes(tmp_path, [GeneratedFile("a.py", "a\n")], HandEditPolicy.OVERWRITE) == [
+        "writer.file.not-generated"
+    ]
+
+
+def test_a_directory_owned_by_another_target_is_refused(tmp_path: Path) -> None:
+    commit_write(_planned(tmp_path, [GeneratedFile("a.py", "a\n")]))
+    planned = plan_write(str(tmp_path), "other", [GeneratedFile("a.py", "a\n")], HandEditPolicy.REFUSE)
+
+    assert isinstance(planned, list)
+    assert [refusal.code for refusal in planned] == ["writer.manifest.other-owner"]
+
+
+def test_an_unreadable_manifest_is_refused(tmp_path: Path) -> None:
+    (tmp_path / MANIFEST_FILE_NAME).write_text("not json", encoding="utf-8")
+
+    assert _refusal_codes(tmp_path, [GeneratedFile("a.py", "a\n")]) == ["writer.manifest.invalid"]
+
+
+def test_unsafe_duplicate_and_reserved_paths_are_refused(tmp_path: Path) -> None:
+    for path in ("../up.py", "/abs.py", "a\\b.py", "a//b.py", MANIFEST_FILE_NAME):
+        assert _refusal_codes(tmp_path, [GeneratedFile(path, "x")]) == ["file.path.invalid"], path
+
+    twice = [GeneratedFile("a.py", "x"), GeneratedFile("a.py", "y")]
+
+    assert _refusal_codes(tmp_path, twice) == ["file.path.invalid"]
+
+
+def test_a_link_leaving_the_output_directory_is_refused(tmp_path: Path) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    out = tmp_path / "out"
+    out.mkdir()
+    os.symlink(outside, out / "linked")
+
+    assert _refusal_codes(out, [GeneratedFile("linked/a.py", "x")]) == ["writer.path.outside"]
+
+
+def test_files_are_sorted_in_utf16_code_unit_order(tmp_path: Path) -> None:
+    # U+FF5E (one unit, 0xFF5E) sorts after U+1F600 (surrogates 0xD83D...) in UTF-16 order.
+    fullwidth_tilde = chr(0xFF5E)
+    planned = _planned(tmp_path, [GeneratedFile(f"{fullwidth_tilde}.py", "x"), GeneratedFile("\U0001f600.py", "y")])
+
+    assert list(planned.bytes_by_path) == ["\U0001f600.py", f"{fullwidth_tilde}.py"]
+
+
+def test_the_header_is_one_comment_line_and_json_carries_none() -> None:
+    headed = add_header(
+        [GeneratedFile("models.py", "x = 1\n"), GeneratedFile("schema.json", "{}\n")],
+        "seampact-fastapi",
+        "1.2.0",
+        "tasks",
+    )
+
+    assert headed == [
+        GeneratedFile("models.py", '# Generated by seampact-fastapi 1.2.0 from api "tasks". Do not edit.\nx = 1\n'),
+        GeneratedFile("schema.json", "{}\n"),
+    ]
+
+
+def test_the_header_refuses_an_unknown_extension_and_a_control_character() -> None:
+    unknown = add_header([GeneratedFile("a.xyz", "")], "t", "1", "tasks")
+    unsafe = add_header([GeneratedFile("a.py", "")], "t", "1", "ta\nsks")
+
+    assert [item.code for item in unknown if isinstance(item, WriterRefusal)] == ["file.extension.unsupported"]
+    assert [item.code for item in unsafe if isinstance(item, WriterRefusal)] == ["file.header.unsafe"]

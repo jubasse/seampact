@@ -30,6 +30,16 @@ class BundleFailureCode(StrEnum):
     ARCHIVE_ENTRY_PATH = "bundle.archive-entry-path"
     ARCHIVE_ENTRY_TYPE = "bundle.archive-entry-type"
     ARCHIVE_ENTRY_DUPLICATE = "bundle.archive-entry-duplicate"
+    RELEASE_URL = "bundle.release-url"
+    RELEASE_FAILED = "bundle.release-failed"
+    GIT_URL = "bundle.git-url"
+    GIT_TAG = "bundle.git-tag"
+    GIT_DIRECTORY = "bundle.git-directory"
+    GIT_FAILED = "bundle.git-failed"
+    SOURCE_LOCAL = "bundle.source-local"
+    CACHE_INVALID = "bundle.cache-invalid"
+    PACKAGE_UNSUPPORTED = "bundle.package-unsupported"
+    MAVEN_JVM_ONLY = "bundle.maven-jvm-only"
 
 
 @dataclass(frozen=True, slots=True)

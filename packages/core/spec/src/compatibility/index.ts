@@ -3,6 +3,7 @@
 // queries. Its one relative import is that JSON file, so the repository scripts that Node runs from source can import it.
 
 import matrix from "../../compatibility/matrix.json" with { type: "json" };
+import pythonMatrix from "../../compatibility/python-targets.json" with { type: "json" };
 
 export type ProviderKind = "validators" | "types" | "client";
 
@@ -191,6 +192,47 @@ export function phpTargetOf(target: PhpTargetCompatibility): PhpTargetCompatibil
 }
 
 export const PHP_TARGETS: readonly PhpTargetCompatibility[] = matrix.phpTargets;
+
+// The targets `seampact generate` of a Python build generates: `package` is the `pypi:<distribution>` `use`, and the
+// installed version of each framework is read with `importlib.metadata`. A framework is checked by `unit`: its major,
+// or its `<major>.<minor>` (FastAPI and Starlette are 0.x, where a minor breaks), so `tested` holds units and
+// `allowUntested` names one (`fastapi@0.162`). `floor` is the lowest `<major>.<minor>` the target works on. The data
+// is `compatibility/python-targets.json`, which `seampact-ir` ships a copy of.
+export type PythonVersionUnit = "major" | "minor";
+
+export interface PythonFrameworkSupport {
+  readonly id: string;
+  readonly package: string;
+  readonly unit: PythonVersionUnit;
+  readonly floor: string;
+  readonly tested: readonly string[];
+  readonly incompatible: readonly { readonly unit: string; readonly reason: string }[];
+}
+
+export interface PythonTargetCompatibility {
+  readonly package: string;
+  readonly framework: PythonFrameworkSupport;
+  readonly companions: readonly PythonFrameworkSupport[];
+}
+
+export function pythonFrameworkOf(framework: {
+  readonly id: string;
+  readonly package: string;
+  readonly unit: string;
+  readonly floor: string;
+  readonly tested: readonly string[];
+  readonly incompatible: readonly { readonly unit: string; readonly reason: string }[];
+}): PythonFrameworkSupport {
+  return { ...framework, unit: oneOf(framework.unit, ["major", "minor"], `${framework.id} unit`) };
+}
+
+export const PYTHON_TARGETS: readonly PythonTargetCompatibility[] = pythonMatrix.pythonTargets.map(
+  (target) => ({
+    package: target.package,
+    framework: pythonFrameworkOf(target.framework),
+    companions: target.companions.map(pythonFrameworkOf),
+  }),
+);
 
 // Every target the matrix records, servers then clients.
 export const ALL_TARGETS: readonly TargetCompatibility[] = [...SERVER_TARGETS, ...CLIENT_TARGETS];

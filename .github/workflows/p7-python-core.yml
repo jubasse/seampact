@@ -288,6 +288,7 @@ jobs:
               sys.exit(f"{sys.argv[1]} wheels installed, but {len(packages)} seampact packages import: {packages}")
           print("Imported", ", ".join(packages))
           PYTHON
+          clean-venv/bin/seampact --help
 
   audit:
     needs: changes

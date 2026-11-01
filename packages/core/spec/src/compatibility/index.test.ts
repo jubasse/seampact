@@ -9,6 +9,7 @@ import {
   JVM_TARGETS,
   offeredValidatorPairs,
   PHP_TARGETS,
+  PYTHON_TARGETS,
   phpTargetOf,
   SERVER_TARGETS,
   serverTargetCompatibility,
@@ -281,4 +282,15 @@ test("php/ir ships an exact copy of the matrix", () => {
     readFileSync(join(repositoryRoot, directory, "compatibility/matrix.json"), "utf8");
 
   expect(matrixOf("php/ir/resources")).toBe(matrixOf("packages/core/spec"));
+});
+
+test("the fastapi Python target is checked by FastAPI minor and Starlette major", () => {
+  const fastapi = PYTHON_TARGETS.find((target) => target.package === "pypi:seampact-fastapi");
+
+  expect(fastapi?.framework).toMatchObject({ id: "fastapi", unit: "minor", floor: "0.162" });
+  expect(fastapi?.framework.tested).toEqual(["0.162"]);
+  expect(fastapi?.companions.map((companion) => [companion.id, companion.unit])).toEqual([
+    ["starlette", "major"],
+  ]);
+  expect(fastapi?.companions[0]?.tested).toEqual(["0", "1"]);
 });

@@ -1,0 +1,25 @@
+{
+  "pythonTargets": [
+    {
+      "package": "pypi:seampact-fastapi",
+      "framework": {
+        "id": "fastapi",
+        "package": "fastapi",
+        "unit": "minor",
+        "floor": "0.162",
+        "tested": ["0.162"],
+        "incompatible": []
+      },
+      "companions": [
+        {
+          "id": "starlette",
+          "package": "starlette",
+          "unit": "major",
+          "floor": "0.46",
+          "tested": ["0", "1"],
+          "incompatible": []
+        }
+      ]
+    }
+  ]
+}

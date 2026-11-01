@@ -16,6 +16,7 @@ from typing import Final
 
 from seampact.ir.binary.absolute_path import is_absolute, resolved
 from seampact.ir.binary.child_environment import child_environment
+from seampact.ir.binary.documents_command import DocumentsCommand
 from seampact.ir.binary.failure import BinaryFailureCode, BinaryRefusedError
 from seampact.ir.binary.installed_binary import InstalledBinary
 
@@ -77,6 +78,74 @@ def compile_with_binary(
         return _output(exit_code, diagnostics, output_directory, apis)
     finally:
         shutil.rmtree(output_directory, ignore_errors=True)
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentsOutput:
+    """A documents run that exited with 0: the lines the binary printed on standard output and its warnings on
+    standard error, with control characters other than newline and tab removed. Exits 1 and 2 are refused
+    (`binary.documents-refused`), never returned."""
+
+    stdout: str
+    stderr: str
+
+
+def documents_with_binary(
+    binary: InstalledBinary,
+    config_file: str,
+    command: DocumentsCommand,
+    bundle_directories: Mapping[str, str],
+    parent_environment: Mapping[str, str],
+    *,
+    windows: bool,
+    timeout_seconds: float = DEADLINE_SECONDS,
+) -> DocumentsOutput:
+    """Runs `generate` or `check` on the app config `config_file`, from its directory, with the checks, environment
+    and deadline of `compile_with_binary`: the binary writes or checks the config's OpenAPI documents and leaves the
+    entries of this runner to it. Each `bundle_directories` item hands over, by source name, a bundle this runner
+    already fetched and checked (`--bundle-directory <source>=<dir>`); the binary checks it again against the source's
+    integrity and fetches nothing. Raises `BinaryRefusedError` (`binary.cache-unsafe`, `binary.hash-mismatch`,
+    `binary.documents-refused`, `binary.compile-timeout` or `binary.compile-failed`)."""
+    config_file = resolved(config_file)
+
+    if not is_absolute(binary.path):
+        raise _failed(f"path '{binary.path}' is relative, so the file checked and the file started could differ", "")
+
+    binary.refuse_unless_intact()
+    arguments = [binary.path, *command.arguments, "--config", config_file]
+
+    for source in sorted(bundle_directories):
+        arguments += ["--bundle-directory", f"{source}={resolved(bundle_directories[source])}"]
+
+    scratch_directory = _new_output_directory()
+
+    try:
+        exit_code, stdout, stderr = _run(
+            arguments,
+            os.path.dirname(config_file),
+            child_environment(parent_environment, windows=windows),
+            timeout_seconds,
+            scratch_directory,
+        )
+    finally:
+        shutil.rmtree(scratch_directory, ignore_errors=True)
+
+    if exit_code < 0:
+        raise _failed(f"was stopped by the signal {-exit_code}", stderr)
+
+    if exit_code in (_EXIT_REFUSED, _EXIT_USAGE):
+        raise BinaryRefusedError(
+            BinaryFailureCode.DOCUMENTS_REFUSED,
+            f"The compiler binary exited with {exit_code} on the app's OpenAPI documents:\n{stderr}{stdout}".rstrip(),
+            "Fix what the diagnostics say, reading `seampact generate` there as `seampact generate` of this runner: a "
+            "document that differs is written again by it, then committed; a document edited by hand is not "
+            "overwritten, so delete it first or run `seampact generate --force`.",
+        )
+
+    if exit_code != _EXIT_COMPILED:
+        raise _failed(f"exited with the code {exit_code}", stderr)
+
+    return DocumentsOutput(stdout, stderr)
 
 
 def _output(exit_code: int, diagnostics: str, output_directory: str, apis: Sequence[str]) -> CompileOutput:
