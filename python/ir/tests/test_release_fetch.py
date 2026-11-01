@@ -19,6 +19,11 @@ from seampact.ir.bundle.source import ReleaseSource
 from seampact.ir.config.local_source_policy import LocalSourcePolicy
 
 _SLOW_SECONDS = 2.0
+_TRICKLE_BYTES_SENT = 50
+_TRICKLE_BYTES_PROMISED = 100_000
+_TRICKLE_PAUSE_SECONDS = 0.1
+_TRICKLE_DEADLINE_SECONDS = 0.5
+_TRICKLE_STOP_WITHIN_SECONDS = 3.0
 
 
 class _TlsServer:
@@ -49,8 +54,25 @@ class _TlsServer:
                 elif self.path == "/slow":
                     time.sleep(_SLOW_SECONDS)
                     self._send(200, server.tarball)
+                elif self.path == "/trickle":
+                    self._trickle()
+                elif self.path == "/bad-port":
+                    self._redirect("https://127.0.0.1:99999/bundle.tgz")
                 else:
                     self._send(404, b"no")
+
+            def _trickle(self) -> None:
+                self.send_response(200)
+                self.send_header("Content-Length", str(_TRICKLE_BYTES_PROMISED))
+                self.end_headers()
+
+                try:
+                    for _ in range(_TRICKLE_BYTES_SENT):
+                        self.wfile.write(b"x")
+                        self.wfile.flush()
+                        time.sleep(_TRICKLE_PAUSE_SECONDS)
+                except OSError:
+                    return
 
             def _redirect(self, location: str) -> None:
                 self.send_response(302)
@@ -191,6 +213,34 @@ def test_a_download_past_the_deadline_is_refused(server: _TlsServer, tmp_path: P
     assert isinstance(result, list)
     assert result[0].code is BundleFailureCode.RELEASE_FAILED
     assert "took over" in result[0].message
+
+
+def test_a_body_trickling_past_the_deadline_stops_at_the_deadline(server: _TlsServer, tmp_path: Path) -> None:
+    started = time.monotonic()
+
+    result = _fetcher(tmp_path / "cache", server, deadline=_TRICKLE_DEADLINE_SECONDS).fetch(
+        ReleaseSource(server.url("/trickle"), None), str(tmp_path), LocalSourcePolicy.ALLOW
+    )
+
+    assert time.monotonic() - started < _TRICKLE_STOP_WITHIN_SECONDS
+    assert isinstance(result, list)
+    assert [failure.code for failure in result] == [BundleFailureCode.RELEASE_FAILED]
+    assert "took over" in result[0].message
+
+
+def test_a_port_out_of_range_is_refused_by_name_in_the_url_and_in_a_redirect(
+    server: _TlsServer, tmp_path: Path
+) -> None:
+    fetcher = _fetcher(tmp_path / "cache", server)
+
+    for url, code in (
+        ("https://127.0.0.1:99999/bundle.tgz", BundleFailureCode.RELEASE_URL),
+        ("https://127.0.0.1:abc/bundle.tgz", BundleFailureCode.RELEASE_URL),
+        (server.url("/bad-port"), BundleFailureCode.RELEASE_FAILED),
+    ):
+        result = fetcher.fetch(ReleaseSource(url, None), str(tmp_path), LocalSourcePolicy.ALLOW)
+
+        assert _failure_codes(result) == [code], url
 
 
 def test_a_cache_entry_changed_after_it_was_cached_names_itself(

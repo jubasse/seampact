@@ -7,6 +7,7 @@ import pytest
 
 from seampact.ir.bundle import BundleChannel, BundleFailure, BundleFailureCode, BundleFiles, verify_bundle
 from seampact.ir.bundle.git_fetch import GitFetch
+from seampact.ir.bundle.layout import EXTRACTED_BYTES_MAX
 from seampact.ir.bundle.source import GitSource
 from seampact.ir.config.local_source_policy import LocalSourcePolicy
 
@@ -104,3 +105,15 @@ def test_the_user_repository_in_git_dir_is_never_touched(
 
     assert isinstance(result, BundleFiles)
     assert not (tmp_path / "elsewhere").exists()
+
+
+def test_a_blob_past_the_size_cap_is_refused_before_it_is_read(
+    tmp_path: Path, git_repository: GitRepositoryFactory
+) -> None:
+    oversized = b"\0" * (EXTRACTED_BYTES_MAX + 1)
+    repository, environment = git_repository(tmp_path, {"seampact-bundle.json": b"{}", "sources/big.bin": oversized})
+
+    result = GitFetch(environment).fetch(_source(repository), str(tmp_path), LocalSourcePolicy.ALLOW)
+
+    assert isinstance(result, BundleFailure)
+    assert result.code is BundleFailureCode.ARCHIVE_EXTRACTED_TOO_LARGE
