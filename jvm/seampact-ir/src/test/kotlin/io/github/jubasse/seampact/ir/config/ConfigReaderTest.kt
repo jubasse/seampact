@@ -3,10 +3,15 @@ package io.github.jubasse.seampact.ir.config
 import io.github.jubasse.seampact.ir.bundle.BundleSource
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.readText
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
@@ -85,6 +90,33 @@ class ConfigReaderTest {
             "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!\$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'.",
             problems.single().message,
         )
+    }
+
+    // The shared `use` vectors (`packages/core/spec/vectors/config/use-forms.json`) the Node and PHP readers pass too.
+    @Test
+    fun readsEachAcceptedUseFormAsItsEcosystem() {
+        for (case in useFormVectors.getValue("accepted").jsonArray) {
+            val use = case.jsonObject.getValue("use").jsonPrimitive.content
+            val ecosystem = TargetEcosystem.valueOf(case.jsonObject.getValue("ecosystem").jsonPrimitive.content.uppercase())
+
+            val config = read("targets:\n  - { id: a, use: '$use', api: x }\n")
+
+            assertEquals(ecosystem, (config.entries + config.otherEntries).single().ecosystem, use)
+            assertEquals(ecosystem == TargetEcosystem.MAVEN, config.entries.isNotEmpty(), use)
+        }
+    }
+
+    @Test
+    fun refusesEachBadPypiUseByItsRule() {
+        for (case in useFormVectors.getValue("refused").jsonArray) {
+            val use = case.jsonObject.getValue("use").jsonPrimitive.content
+
+            val problem = refused("targets:\n  - { id: a, use: '$use', api: x }\n").single()
+
+            assertEquals("config.schema", problem.code, use)
+            assertTrue("'pypi:' then its PEP 503 normalised name" in problem.message, use)
+            assertEquals("app/seampact.config.yaml:2:14 targets[0].use", problem.where, use)
+        }
     }
 
     @Test
@@ -215,6 +247,10 @@ class ConfigReaderTest {
 
         return file
     }
+
+    private val useFormVectors: JsonObject = Json.parseToJsonElement(
+        Path.of(System.getProperty("seampact.repositoryRoot"), "packages/core/spec/vectors/config/use-forms.json").readText(),
+    ).jsonObject
 
     private fun read(text: String): AppConfig {
         val outcome = AppConfigReader.readFile(write(text), "app/seampact.config.yaml")

@@ -30,6 +30,12 @@ final class ConfigSchemaCheck
 
     private const MOUNT_FIX = "Write the path prefix the api is served under, such as '/api' (ADR 0011 'The app config').";
 
+    private const USE_KEY = 'use';
+
+    private const TARGET_USE_RULE = "The key 'use' names a PyPI distribution as 'pypi:' then its PEP 503 normalised name (lowercase ASCII letters and digits, runs joined by one '-'); the Maven group 'pypi' is reserved for this form.";
+
+    private const TARGET_USE_FIX = "Write the distribution's normalised name, such as 'pypi:seampact-fastapi' (ADR 0011 'The app config').";
+
     private static ?Validator $validator = null;
 
     private function __construct()
@@ -187,6 +193,10 @@ final class ConfigSchemaCheck
 
         if ($error->keyword() === 'pattern' && ($path[array_key_last($path) ?? 0] ?? null) === self::MOUNT_KEY) {
             return [[KeyPath::format($path), false, new ConfigProblem('config.schema', self::MOUNT_RULE, self::MOUNT_FIX, $tree->whereOf($path))]];
+        }
+
+        if ($error->keyword() === 'pattern' && ($path[array_key_last($path) ?? 0] ?? null) === self::USE_KEY) {
+            return [[KeyPath::format($path), false, new ConfigProblem('config.schema', self::TARGET_USE_RULE, self::TARGET_USE_FIX, $tree->whereOf($path))]];
         }
 
         $message = self::interpolated($error->message(), $args);

@@ -36,6 +36,8 @@ const FRAMEWORK_ROUTE_PATH_RULE =
 const FRAMEWORK_ROUTE_SWITCH = "frameworkRoutes";
 const MOUNT_RULE =
   "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'.";
+const TARGET_USE_RULE =
+  "The key 'use' names a PyPI distribution as 'pypi:' then its PEP 503 normalised name (lowercase ASCII letters and digits, runs joined by one '-'); the Maven group 'pypi' is reserved for this form.";
 const SCHEMA_FIX = "Correct the value as the config schema states (ADR 0011 'The app config').";
 
 export interface ParsedConfig {
@@ -326,6 +328,18 @@ function schemaErrorProblem(
         code: "config.schema",
         message: MOUNT_RULE,
         fix: "Write the path prefix the api is served under, such as '/api' (ADR 0011 'The app config').",
+        where: whereOf(parsed, path),
+      },
+    };
+  }
+
+  if (error.keyword === "pattern" && path.at(-1) === "use") {
+    return {
+      keyPath,
+      problem: {
+        code: "config.schema",
+        message: TARGET_USE_RULE,
+        fix: "Write the distribution's normalised name, such as 'pypi:seampact-fastapi' (ADR 0011 'The app config').",
         where: whereOf(parsed, path),
       },
     };

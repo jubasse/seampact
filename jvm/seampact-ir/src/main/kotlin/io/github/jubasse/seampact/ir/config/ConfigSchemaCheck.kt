@@ -25,6 +25,10 @@ private const val MOUNT_KEY = "mount"
 private const val MOUNT_RULE =
     "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!\$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'."
 private const val MOUNT_FIX = "Write the path prefix the api is served under, such as '/api' (ADR 0011 'The app config')."
+private const val USE_KEY = "use"
+private const val TARGET_USE_RULE =
+    "The key 'use' names a PyPI distribution as 'pypi:' then its PEP 503 normalised name (lowercase ASCII letters and digits, runs joined by one '-'); the Maven group 'pypi' is reserved for this form."
+private const val TARGET_USE_FIX = "Write the distribution's normalised name, such as 'pypi:seampact-fastapi' (ADR 0011 'The app config')."
 
 /** A problem the reader reports at a key before the schema check; the schema errors at or under it would repeat it. */
 internal data class KeyProblem(val path: KeyPath, val problem: ConfigProblem)
@@ -92,6 +96,10 @@ private fun violationProblem(tree: ConfigTree, kind: ConfigKind, violation: Sche
 
     if (violation.keyword == "pattern" && path.lastOrNull() == MOUNT_KEY) {
         return LocatedProblem(formatKeyPath(path), ConfigProblem("config.schema", MOUNT_RULE, MOUNT_FIX, tree.whereOf(path)))
+    }
+
+    if (violation.keyword == "pattern" && path.lastOrNull() == USE_KEY) {
+        return LocatedProblem(formatKeyPath(path), ConfigProblem("config.schema", TARGET_USE_RULE, TARGET_USE_FIX, tree.whereOf(path)))
     }
 
     if (violation.keyword == ONE_OF) {

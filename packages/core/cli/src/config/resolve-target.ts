@@ -11,8 +11,8 @@ export type ResolveTargetOutcome =
   | { status: "resolved"; target: Target }
   | { status: "refused"; problem: CliProblem };
 
-// A Maven `group:artifact` coordinate or a Composer `vendor/name`; npm names never hold a colon, and an unscoped
-// npm name never holds a slash.
+// A Maven `group:artifact` coordinate, a `pypi:<distribution>` or a Composer `vendor/name`; npm names never hold a
+// colon, and an unscoped npm name never holds a slash.
 export function isNativeTargetUse(use: string): boolean {
   const isMavenCoordinate = use.includes(":");
   const isComposerPackage = !use.startsWith("@") && !use.startsWith(".") && use.includes("/");
@@ -24,8 +24,8 @@ export function isNativeTargetUse(use: string): boolean {
 function nativeTargetProblem(use: string, where: string): CliProblem {
   return {
     code: "config.target.native",
-    message: `The target '${use}' is a native target: the app's Gradle or Maven plugin generates it, not the Node CLI.`,
-    fix: "Run the app's build plugin to generate it; the Node CLI only compiles the contract for it (`seampact compile`).",
+    message: `The target '${use}' is a native target: the runner of its ecosystem (Gradle, Maven, Composer or pip) generates it, not the Node CLI.`,
+    fix: "Run that runner to generate it; the Node CLI only compiles the contract for it (`seampact compile`).",
     where,
   };
 }
