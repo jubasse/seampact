@@ -14,6 +14,7 @@ from urllib.request import url2pathname
 
 from seampact.ir.binary.failure import BinaryFailureCode, BinaryRefusedError
 from seampact.ir.binary.root_project import PYPROJECT_FILE, RootProject, tool_table
+from seampact.ir.bundle.text import quoted
 
 _FILE_SCHEME: Final = "file"
 _DIRECT_URL_FILE: Final = "direct_url.json"
@@ -55,7 +56,7 @@ def _workspace_members(root: RootProject) -> Iterator[tuple[str, str]]:
             pyproject_file = os.path.join(directory, PYPROJECT_FILE)
 
             if os.path.isfile(pyproject_file):
-                yield f"the workspace member '{os.path.basename(directory)}'", pyproject_file
+                yield f"the workspace member {quoted(os.path.basename(directory))}", pyproject_file
 
 
 def _local_installs() -> Iterator[tuple[str, str]]:
@@ -69,7 +70,7 @@ def _local_installs() -> Iterator[tuple[str, str]]:
         pyproject_file = os.path.join(url2pathname(unquote(urlparse(url).path)), PYPROJECT_FILE)
 
         if os.path.isfile(pyproject_file):
-            yield f"the installed package '{distribution.metadata['Name']}'", pyproject_file
+            yield f"the installed package {quoted(distribution.metadata['Name'])}", pyproject_file
 
 
 def _local_directory_url(recorded: str | None) -> str | None:

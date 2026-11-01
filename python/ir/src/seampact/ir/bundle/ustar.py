@@ -47,7 +47,7 @@ _PAX_TYPE_GLOBAL: Final = b"g"
 _CHECKSUM_SPACE: Final = 0x20
 
 _OCTAL: Final = re.compile(rb"[0-7]{1,21}\Z")
-_PAX_LENGTH: Final = re.compile(rb"[0-9]+\Z")
+_PAX_LENGTH: Final = re.compile(rb"[0-9]{1,18}\Z")
 _PAX_SIZE: Final = re.compile(rb"[0-9]{1,18}\Z")
 _DRIVE_PREFIX: Final = re.compile(r"[A-Za-z]:")
 
@@ -66,7 +66,7 @@ def archive_invalid(reason: str, file: str | None = None) -> BundleFailure:
 
 
 class UstarParser:
-    def __init__(self, archive: bytes) -> None:
+    def __init__(self, archive: bytes | bytearray) -> None:
         self._archive = archive
         self._offset = 0
         self._entry_count = 0
@@ -92,7 +92,7 @@ class UstarParser:
             if failure is not None:
                 return failure
 
-    def _entry(self, header: bytes) -> BundleFailure | None:
+    def _entry(self, header: bytes | bytearray) -> BundleFailure | None:
         self._entry_count += 1
 
         if self._entry_count > ENTRIES_MAX:
@@ -190,7 +190,7 @@ class UstarParser:
     def _add_parent_directories(self, path: str) -> None:
         self._directory_folds.update(fold(parent) for parent in _parent_paths(path))
 
-    def _read_pax(self, data: bytes, entry_path: str) -> BundleFailure | None:
+    def _read_pax(self, data: bytes | bytearray, entry_path: str) -> BundleFailure | None:
         """The records of a pax extended header, `<length> <key>=<value>\\n`: `path` and `size` are read, the others
         ignored."""
         path: str | None = None
@@ -232,7 +232,7 @@ class UstarParser:
         return None
 
 
-def _header_problem(header: bytes) -> str | None:
+def _header_problem(header: bytes | bytearray) -> str | None:
     magic = _field(header, _MAGIC, keep_nul=True)
     version = _field(header, _VERSION, keep_nul=True)
 
@@ -316,7 +316,7 @@ def _parent_paths(path: str) -> list[str]:
     return ["/".join(segments[:count]) for count in range(1, len(segments))]
 
 
-def _header_path(header: bytes) -> str:
+def _header_path(header: bytes | bytearray) -> str:
     """GNU headers hold times where ustar holds the prefix: their path is the name field only."""
     name = _field(header, _NAME, keep_nul=False)
     is_gnu = _field(header, _GNU_MAGIC_FIELD, keep_nul=True) == _GNU_MAGIC_AND_VERSION
@@ -325,20 +325,20 @@ def _header_path(header: bytes) -> str:
     return (prefix + b"/" + name if prefix else name).decode("utf-8", errors="replace")
 
 
-def _field(header: bytes, field: tuple[int, int], *, keep_nul: bool) -> bytes:
-    text = header[field[0] : field[0] + field[1]]
+def _field(header: bytes | bytearray, field: tuple[int, int], *, keep_nul: bool) -> bytes:
+    text = bytes(header[field[0] : field[0] + field[1]])
 
     return text if keep_nul else text.split(b"\0", 1)[0]
 
 
-def _octal(header: bytes, field: tuple[int, int]) -> int | None:
+def _octal(header: bytes | bytearray, field: tuple[int, int]) -> int | None:
     """Octal digits, with the leading and trailing spaces and NULs tar writers leave; base-256 sizes are refused."""
     digits = _field(header, field, keep_nul=True).strip(b" \0")
 
     return int(digits, 8) if _OCTAL.match(digits) else None
 
 
-def _checksum(header: bytes) -> int:
+def _checksum(header: bytes | bytearray) -> int:
     """The byte sum with the checksum field read as eight spaces."""
     start, length = _CHECKSUM
     blanked = header[:start] + bytes([_CHECKSUM_SPACE]) * length + header[start + length :]

@@ -31,10 +31,10 @@ def read_bundle_archive(tarball: bytes) -> BundleFiles | BundleFailure:
     sizes = {entry.path: entry.size for entry in entries}
     offsets = {entry.path: entry.offset for entry in entries}
 
-    return BundleFiles(sizes, lambda path: archive[offsets[path] : offsets[path] + sizes[path]])
+    return BundleFiles(sizes, lambda path: bytes(archive[offsets[path] : offsets[path] + sizes[path]]))
 
 
-def _uncompressed(tarball: bytes) -> bytes | BundleFailure:
+def _uncompressed(tarball: bytes) -> bytearray | BundleFailure:
     if len(tarball) > ARCHIVE_BYTES_MAX:
         return BundleFailure(
             BundleFailureCode.ARCHIVE_TOO_LARGE,
@@ -71,7 +71,8 @@ def _uncompressed(tarball: bytes) -> bytes | BundleFailure:
     if trailing:
         return archive_invalid(f"{trailing} bytes follow after the end of the gzip data")
 
-    return bytes(output)
+    # Returned as is: a copy would hold the inflated archive twice.
+    return output
 
 
 def _extracted_too_large() -> BundleFailure:
