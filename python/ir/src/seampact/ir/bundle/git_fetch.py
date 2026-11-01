@@ -11,8 +11,9 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
 from collections.abc import Mapping
-from typing import Final
+from typing import IO, Final
 
 from seampact.ir.bundle.failure import BundleFailure, BundleFailureCode
 from seampact.ir.bundle.files import BundleFiles
@@ -27,6 +28,9 @@ from seampact.ir.config.local_source_policy import LocalSourcePolicy
 TIMEOUT_SECONDS: Final = 60.0
 _TEMPORARY_PREFIX: Final = "seampact-git-"
 _FETCHED: Final = "FETCH_HEAD"
+_SIZE_TEXT_BYTES_MAX: Final = 32
+_READ_BYTES: Final = 64 * 1024
+_ERROR_BYTES_MAX: Final = 64 * 1024
 _REGULAR_FILE_MODES: Final = ("100644", "100755")
 _URL_SCHEME: Final = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*)://")
 _DRIVE_PATH: Final = re.compile(r"[A-Za-z]:[\\/]")
@@ -161,10 +165,10 @@ class GitFetch:
         total = 0
 
         for path, object_id in object_ids.items():
-            data = self._git(repository, environment, ["cat-file", "blob", object_id])
-            total += len(data)
+            remaining = EXTRACTED_BYTES_MAX - total
+            size = self._blob_size(repository, environment, object_id)
 
-            if total > EXTRACTED_BYTES_MAX:
+            if size > remaining:
                 return BundleFailure(
                     BundleFailureCode.ARCHIVE_EXTRACTED_TOO_LARGE,
                     f"The tag's bundle files hold more than {EXTRACTED_BYTES_MAX} bytes.",
@@ -172,37 +176,96 @@ class GitFetch:
                     expected=str(EXTRACTED_BYTES_MAX),
                 )
 
+            data = self._git(repository, environment, ["cat-file", "blob", object_id], output_bytes_max=remaining)
+            total += len(data)
             contents[path] = data
 
         return BundleFiles({path: len(data) for path, data in contents.items()}, lambda path: contents[path])
 
-    def _git(self, repository: str, environment: dict[str, str], arguments: list[str]) -> bytes:
-        """Runs `git` on the temporary repository, with an argument list (no shell), and returns its output."""
-        command = ["git", "-c", "protocol.ext.allow=never", f"--git-dir={repository}", *arguments]
+    def _blob_size(self, repository: str, environment: dict[str, str], object_id: str) -> int:
+        answer = self._git(
+            repository, environment, ["cat-file", "-s", object_id], output_bytes_max=_SIZE_TEXT_BYTES_MAX
+        )
 
         try:
-            completed = subprocess.run(
-                command,
-                env=environment,
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                timeout=self._timeout_seconds,
-                check=False,
+            return int(answer.decode("ascii").strip())
+        except ValueError as error:
+            raise _GitFailedError(f"git gave no size for the object {object_id}") from error
+
+    def _git(
+        self,
+        repository: str,
+        environment: dict[str, str],
+        arguments: list[str],
+        output_bytes_max: int = EXTRACTED_BYTES_MAX,
+    ) -> bytes:
+        """Runs `git` on the temporary repository, with an argument list (no shell), and returns its output. The output
+        is read as it comes and git is killed past `output_bytes_max`, so an oversized blob never fills the memory."""
+        command = ["git", "-c", "protocol.ext.allow=never", f"--git-dir={repository}", *arguments]
+
+        with tempfile.TemporaryFile() as errors:
+            output, returncode, timed_out = self._run(command, environment, errors, output_bytes_max)
+
+            if timed_out:
+                raise _GitFailedError(f"it took over {round(self._timeout_seconds * 1000)} ms")
+
+            if output is None:
+                raise _GitFailedError(f"it wrote more than {output_bytes_max} bytes")
+
+            if returncode != 0:
+                errors.seek(0)
+                text = errors.read(_ERROR_BYTES_MAX).decode("utf-8", errors="replace").strip()
+
+                raise _GitFailedError(text or f"it exited with {returncode}")
+
+            return output
+
+    def _run(
+        self, command: list[str], environment: dict[str, str], errors: IO[bytes], output_bytes_max: int
+    ) -> tuple[bytes | None, int, bool]:
+        """The output (None past the cap), the exit code and whether the timeout killed git."""
+        try:
+            process = subprocess.Popen(
+                command, env=environment, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=errors
             )
-        except subprocess.TimeoutExpired as error:
-            raise _GitFailedError(f"it took over {round(self._timeout_seconds * 1000)} ms") from error
         except OSError as error:
             raise _GitFailedError(f"git could not start ({error})") from error
 
-        if completed.returncode != 0:
-            errors = completed.stderr.decode("utf-8", errors="replace").strip()
+        timed_out = threading.Event()
+        timer = threading.Timer(self._timeout_seconds, _kill_after_timeout, (process, timed_out))
+        timer.start()
 
-            raise _GitFailedError(errors or f"it exited with {completed.returncode}")
+        with process:
+            try:
+                output = _read_capped(process, output_bytes_max)
 
-        if len(completed.stdout) > EXTRACTED_BYTES_MAX:
-            raise _GitFailedError(f"it wrote more than {EXTRACTED_BYTES_MAX} bytes")
+                if output is None:
+                    process.kill()
+            finally:
+                timer.cancel()
 
-        return completed.stdout
+            return output, process.wait(), timed_out.is_set()
+
+
+def _kill_after_timeout(process: subprocess.Popen[bytes], timed_out: threading.Event) -> None:
+    timed_out.set()
+    process.kill()
+
+
+def _read_capped(process: subprocess.Popen[bytes], output_bytes_max: int) -> bytes | None:
+    """The whole output, or None once it passes `output_bytes_max`."""
+    if process.stdout is None:
+        raise TypeError("seampact-ir: git was started without a piped output.")
+
+    output = bytearray()
+
+    while chunk := process.stdout.read(_READ_BYTES):
+        output += chunk
+
+        if len(output) > output_bytes_max:
+            return None
+
+    return bytes(output)
 
 
 def _scheme_of(url: str) -> str | None:

@@ -3,8 +3,11 @@ network, so the URL and every redirect must be `https:`, TLS is always verified,
 hand, each checked, the download has one deadline for every request and body, and it stops at the archive cap; the
 archive reader then checks the bytes. A `ca_file` replaces the system's certificate authorities."""
 
+import contextlib
 import http.client
+import socket
 import ssl
+import threading
 import time
 from typing import Final
 from urllib.parse import urljoin, urlsplit
@@ -20,6 +23,7 @@ _REDIRECTS_MAX: Final = 5
 _HTTP_OK: Final = 200
 _REDIRECT_STATUSES: Final = (301, 302, 303, 307, 308)
 _CHUNK_BYTES: Final = 64 * 1024
+_WATCHDOG_POLL_SECONDS: Final = 0.05
 _RELEASE_FIX: Final = "Check the release URL and that the asset is reachable over HTTPS, then run again."
 
 
@@ -33,6 +37,57 @@ def release_source_problem(source: ReleaseSource) -> BundleFailure | None:
         f"The release URL {quoted(printable_url(source.url))} is not an absolute https: URL.",
         "Name the bundle tarball by its https: URL.",
     )
+
+
+class _WatchedConnection(http.client.HTTPSConnection):
+    """Keeps the connected socket after the response drops `sock` (a response that closes the connection does it as
+    soon as its headers are read), so the watchdog can still shut it down while the body is read."""
+
+    connected_socket: socket.socket | None = None
+
+    def connect(self) -> None:
+        super().connect()
+        self.connected_socket = self.sock
+
+
+class _Watchdog:
+    """Shuts the connection's socket down once the deadline passes, so a server that sends a byte now and then cannot
+    hold a read (or the handshake or the headers) past it: a socket timeout bounds each `recv`, not the request."""
+
+    def __init__(self, connection: _WatchedConnection, deadline: float) -> None:
+        self.fired = False
+        self._connection = connection
+        self._deadline = deadline
+        self._stopped = threading.Event()
+        self._thread = threading.Thread(target=self._watch, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stopped.set()
+        self._thread.join()
+
+    def _watch(self) -> None:
+        while not self._stopped.wait(_WATCHDOG_POLL_SECONDS):
+            if time.monotonic() < self._deadline:
+                continue
+
+            self.fired = True
+
+            if self._shut_down_socket():
+                return
+
+    def _shut_down_socket(self) -> bool:
+        """Whether the socket is down; false while the connection has none yet."""
+        sock = self._connection.connected_socket
+
+        if sock is None:
+            return False
+
+        # The base method: an `SSLSocket`'s own `shutdown` unwraps the TLS object another thread is reading.
+        with contextlib.suppress(OSError):
+            socket.socket.shutdown(sock, socket.SHUT_RDWR)
+
+        return True
 
 
 class ReleaseFetch:
@@ -86,7 +141,9 @@ class ReleaseFetch:
         parts = urlsplit(url)
         target = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
         context = ssl.create_default_context(cafile=self._ca_file)
-        connection = http.client.HTTPSConnection(parts.hostname or "", parts.port, timeout=remaining, context=context)
+        connection = _WatchedConnection(parts.hostname or "", parts.port, timeout=remaining, context=context)
+
+        watchdog = _Watchdog(connection, deadline)
 
         try:
             connection.request("GET", target, headers={"Accept-Encoding": "identity", "User-Agent": "seampact-ir"})
@@ -95,19 +152,25 @@ class ReleaseFetch:
             if response.status != _HTTP_OK:
                 return response.status, response.getheader("Location"), None
 
-            return response.status, None, self._capped_body(response, connection, url, deadline)
+            body = self._capped_body(response, connection, deadline)
+
+            if watchdog.fired:
+                return self._took_too_long(url)
+
+            return response.status, None, body
         except _TooLargeError as error:
             return archive_too_large(error.received)
         except (OSError, http.client.HTTPException) as error:
-            if time.monotonic() >= deadline:
+            if watchdog.fired or time.monotonic() >= deadline:
                 return self._took_too_long(url)
 
             return self._failed(url, f"failed: {_without_url(str(error) or type(error).__name__, url)}")
         finally:
+            watchdog.stop()
             connection.close()
 
     def _capped_body(
-        self, response: http.client.HTTPResponse, connection: http.client.HTTPSConnection, url: str, deadline: float
+        self, response: http.client.HTTPResponse, connection: _WatchedConnection, deadline: float
     ) -> bytes:
         body = bytearray()
 
@@ -160,6 +223,8 @@ def archive_too_large(received: int) -> BundleFailure:
 def _is_https_url(url: str) -> bool:
     try:
         parts = urlsplit(url)
+        # `port` raises for one out of range or not a number.
+        _ = parts.port
 
         return parts.scheme.lower() == "https" and bool(parts.hostname)
     except ValueError:
