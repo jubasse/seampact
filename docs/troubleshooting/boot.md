@@ -96,3 +96,12 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `runtime.octane.unsupported` | Serve the app with php-fpm, or keep this api's provider out of the Octane app. |
 | `seampact: no generated routes for the api '<api>'; list its service provider in bootstrap/providers.php.` | Add the generated `<Api>SeampactServiceProvider` to `bootstrap/providers.php`. |
 | `config('seampact.<api>.middleware.<kind>') is not a list of middleware names` | Set that key in `config/seampact/<api>.php` to a list of strings such as `['auth:sanctum']`, or to `[]`. |
+
+## Spring Boot
+
+The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. See [The boot check](../backend/spring-boot.md#the-boot-check).
+
+| You see | Do |
+|---|---|
+| `operation '<id>': no handler is bound` | Implement the operation in a `@RestController` method with its annotation. In a `@WebMvcTest` slice that loads some controllers, set `seampact.<api>.unbound-operations=warn`. |
+| `'seampact.<api>.unbound-operations' is '<value>', not 'error' or 'warn'` | Set it to `warn` in a test slice, or remove it. |

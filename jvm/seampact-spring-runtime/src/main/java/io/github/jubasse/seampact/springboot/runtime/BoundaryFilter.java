@@ -20,7 +20,8 @@ import tools.jackson.databind.node.MissingNode;
 
 /**
  * Step 1 of the check order (ADR 0022 "Placement"), ordered before Spring Security and Boot's request-wrapper
- * filters: the raw-path match, the api's 404 for the paths under its base paths that no route serves, the media type
+ * filters: the raw-path match, the api's 404 for the paths under its base paths that no route serves and for the
+ * operations left unbound under `unbound-operations=warn`, the media type
  * and the bounded body read; then it wraps the response in the checking wrapper and gives the verdict once the last
  * dispatch returns. An exception that escapes the chain is the api's 500, never the container's error page, except
  * under Spring Boot devtools, where it goes on to Spring's error handling.
@@ -65,6 +66,11 @@ public final class BoundaryFilter implements Filter {
             return;
         }
 
+        if (boundary.answersNotFound(match.get().route().id())) {
+            answerUnbound(response, contractPath.get());
+            return;
+        }
+
         boolean stripEtag = !"keep".equals(boundary.table().settings().path("frameworkEtag").asString("strip"));
         BoundaryExchange exchange = new BoundaryExchange(match.get(), contractPath.get(), new CheckingResponse(response, stripEtag));
         boundary.attach(request, exchange);
@@ -104,14 +110,36 @@ public final class BoundaryFilter implements Filter {
     // A path under a base path that no route serves with this method: the api's 404 under `catchAll`, else the app's.
     private void answerUnserved(HttpServletRequest request, HttpServletResponse response, FilterChain chain, String path) throws IOException, ServletException {
         boolean catchAll = boundary.table().settings().path("catchAll").asBoolean(true);
-        Optional<ContractRoute> route = boundary.table().notFoundRoute(path);
-        if (!catchAll || route.isEmpty()) {
+        if (!catchAll) {
             chain.doFilter(request, response);
             return;
         }
 
-        String code = route.get().codeOfRole(ContractTable.NOT_FOUND_ROLE).orElseThrow();
-        boundary.writeError(response, route.get(), code, MissingNode.getInstance());
+        Optional<ContractRoute> route = boundary.table().notFoundRoute(path);
+        if (route.isEmpty()) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        writeNotFound(response, route.get());
+    }
+
+    // An operation the boot check found without a handler under `unbound-operations=warn`: the api's 404, else a bare
+    // 404 with no body, as no handler of the app can answer it.
+    private void answerUnbound(HttpServletResponse response, String path) throws IOException {
+        Optional<ContractRoute> route = boundary.table().notFoundRoute(path);
+        if (route.isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.setContentLength(0);
+            return;
+        }
+
+        writeNotFound(response, route.get());
+    }
+
+    private void writeNotFound(HttpServletResponse response, ContractRoute route) throws IOException {
+        String code = route.codeOfRole(ContractTable.NOT_FOUND_ROLE).orElseThrow();
+        boundary.writeError(response, route, code, MissingNode.getInstance());
     }
 
     // The media type and the bounded body read, for an operation with an input body.

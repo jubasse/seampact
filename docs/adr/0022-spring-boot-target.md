@@ -252,6 +252,8 @@ The boot check runs in a `SmartInitializingSingleton`, before the server starts 
 
 `artefacts.bootCheck: { handlers, frameworkRoutes }` switches those two checks apart (ADR 0011).
 
+The property `seampact.<api>.unbound-operations` takes `error` (the default, an operation without a handler is a problem) or `warn`, as NestJS's `unboundOperations` (ADR 0016): a `@WebMvcTest` slice that loads some controllers starts, the unbound operations are logged once, and the boundary filter answers their routes with the api's `notFound` reply in its format, or a bare 404 with no body when no route of the api declares one (as Node's servers). `warn` reads the unbound operations even when `artefacts.bootCheck` switches the handler check off, so their routes never reach Spring Security or Spring MVC. Any other value is a boot problem. The hook problems still cover every operation.
+
 ### Native security layers
 
 With `springSecurity` on, the target generates Spring Security 7 beans in their own class, so an app without Spring Security never compiles against it. Without the key, the plugin sets `springSecurity` from the app's compile classpath (on when `spring-security-web` is there); the generator stays a pure function of the IR and the entry (ADR 0015 "Generate is pure"). `springSecurity: false` turns it off. The beans:

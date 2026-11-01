@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ListableBeanFactory;
@@ -56,6 +57,8 @@ public final class SeampactBoundary {
     private final String exchangeAttribute;
     private final Optional<String> publicOrigin;
     private final boolean debug;
+    // The operations the boot check found without a handler under `unbound-operations=warn`.
+    private volatile Set<String> notFoundOperations = Set.of();
 
     public SeampactBoundary(String tableJson, ApiBinding binding, ListableBeanFactory beans, Environment environment) {
         // ADR 0025, G3: code another version generated is refused before its table is read.
@@ -209,6 +212,14 @@ public final class SeampactBoundary {
         }
 
         return Optional.empty();
+    }
+
+    void answerNotFoundFor(List<String> operationIds) {
+        notFoundOperations = Set.copyOf(operationIds);
+    }
+
+    boolean answersNotFound(String operationId) {
+        return notFoundOperations.contains(operationId);
     }
 
     /** `responses` of an operation: its property, then the api's property, then the target option. */
