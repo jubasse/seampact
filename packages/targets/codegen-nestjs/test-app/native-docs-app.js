@@ -1,7 +1,8 @@
 // A NestJS app around the generated boundaries of the apis it is given, for the native docs test: one controller per
 // api binds every operation its module exports, `createDocument` writes the framework's document, and each api's
-// `withContractComponents` adds its components to the config. Nothing is served; plain JavaScript, copied next to
-// the compiled generated tree, so it imports the generated modules by relative path.
+// `withContractComponents` adds its components to the config. Nothing is served, and only `bootWithSwaggerUi`
+// starts the app; plain JavaScript, copied next to the compiled generated tree, so it imports the generated modules by
+// relative path.
 import "reflect-metadata";
 import { Controller, Module } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
@@ -104,9 +105,37 @@ export async function nativeDocument(apis, openapi = "3.1.0", shadowSchemaName =
   });
 }
 
-/** The framework's document of an app that serves one api, written by that api's `createContractDocument`. */
-export async function contractDocument(api, shadowSchemaName = undefined) {
+// The config `DocumentBuilder` builds, with its own `openapi` default.
+function builderConfig() {
+  return new DocumentBuilder().setTitle("app").setVersion("1").build();
+}
+
+/**
+ * The framework's document of an app that serves one api, written by that api's `createContractDocument` from the
+ * builder's config; `openapi` replaces the builder's version, and `documentOptions` go to `createContractDocument`.
+ */
+export async function contractDocument(api, shadowSchemaName, openapi, documentOptions) {
+  const config = openapi === undefined ? builderConfig() : baseConfig(openapi);
+
   return withDocsApp([api], shadowSchemaName, (app) =>
-    api.docs.createContractDocument(app, baseConfig("3.1.0"), { autoTagControllers: false }),
+    api.docs.createContractDocument(app, config, documentOptions),
   );
+}
+
+/**
+ * Starts an app that serves one api and Swagger UI at `docsPath`, as the guide sets it up, and closes it; resolves
+ * with the boot check's message, empty when it boots. The app registers no hooks, so the hook check always speaks.
+ */
+export async function bootProblemsWithSwaggerUi(api, docsPath) {
+  return withDocsApp([api], undefined, async (app) => {
+    SwaggerModule.setup(docsPath, app, api.docs.createContractDocument(app, builderConfig()));
+
+    try {
+      await app.init();
+
+      return "";
+    } catch (failure) {
+      return String(failure);
+    }
+  });
 }

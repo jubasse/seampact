@@ -38,6 +38,8 @@ const PROBLEM_MEDIA = "application/problem+json";
 const THROTTLED_CODE = "api.throttled";
 const TOO_MANY_REQUESTS = 429;
 const BAD_REQUEST = 400;
+// The reference contract's `bodyLimit: 1MiB`, which `createTask` takes.
+const CREATE_TASK_BODY_LIMIT = 1024 * 1024;
 
 // Binds on `getTask` a 429 code with no role and no params, as an app's own throttling code.
 const throttledGetTask: ReferenceIrChange = (ir, api) => {
@@ -145,9 +147,18 @@ interface ReferenceAppModule {
     close(): Promise<void>;
   }>;
   startOverriddenHooksApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
-  startHealthOnlyTestingApp(moduleOptions?: {
-    unboundOperations?: string;
-  }): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startHealthOnlyTestingApp(
+    moduleOptions?: Record<string, unknown>,
+    healthResponses?: "strict" | "warn",
+  ): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  bootWithAppLogger(appLogger: object): Promise<void>;
+  sampleTask(taskId: string): object;
+  startInputPartsApp(
+    moduleOptions?: unknown,
+    bodySetup?: "configureApp" | "noBodyParser",
+  ): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  bootWithMisplacedInputPart(): Promise<void>;
+  bootWithAppJsonParser(order: "beforeConfigureApp" | "afterConfigureApp"): Promise<void>;
   readonly NotFoundException: new () => Error;
   readonly BadRequestException: new () => Error;
   readonly HttpException: new (message: string, status: number) => Error;
@@ -370,6 +381,29 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
   });
 
   describe("the app's own routes keep NestJS's behaviour", () => {
+    test("an app route keeps strict JSON and no raw body, while a contract route takes a JSON scalar at its limit", async () => {
+      const scalarAtLimit = JSON.stringify("x".repeat(CREATE_TASK_BODY_LIMIT - 2));
+      const scalarOverLimit = JSON.stringify("x".repeat(CREATE_TASK_BODY_LIMIT - 1));
+      const atLimit = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: writeHeaders(),
+        body: scalarAtLimit,
+      });
+      const overLimit = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: writeHeaders(),
+        body: scalarOverLimit,
+      });
+      const appScalar = await send("POST", "/own/echo", { body: JSON.stringify("x") });
+      const appObject = await send("POST", "/own/echo", { body: JSON.stringify({ note: "x" }) });
+
+      expect(atLimit.status).toBe(BAD_REQUEST);
+      expect(JSON.parse(atLimit.text).issues).toEqual([{ pointer: "", rule: "type" }]);
+      expect(overLimit.status).toBe(413);
+      expect(appScalar.status).toBe(BAD_REQUEST);
+      expect(JSON.parse(appScalar.text)).not.toHaveProperty("issues");
+      expect(JSON.parse(appObject.text)).toEqual({ body: { note: "x" }, rawBody: false });
+      expect(app.calls.handled).toEqual([]);
+    });
+
     test("a parser 413 on an app route answers NestJS's 413", async () => {
       const reply = await send("POST", "/own/echo", {
         body: JSON.stringify({ padding: "x".repeat(3 * 1024 * 1024) }),
@@ -862,9 +896,149 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       );
     });
 
+    test("forRoot's responses replaces the generated mode, and a route's responses() still wins", async () => {
+      const options = { unboundOperations: "warn", responses: "warn" };
+
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      // Written by NestJS's own filter, so the outgoing check applies the mode.
+      app.scenario.answers.health = () => {
+        throw new app.HttpException("teapot", 418);
+      };
+
+      const moduleWarnServer = await app.startHealthOnlyTestingApp(options);
+      const routeStrictServer = await app.startHealthOnlyTestingApp(options, "strict");
+
+      try {
+        const passed = await sendRawRequest(moduleWarnServer, "GET", "/v1/health", {});
+        const replaced = await sendRawRequest(routeStrictServer, "GET", "/v1/health", {});
+
+        expect(passed.status).toBe(418);
+        expect(replaced.status).toBe(500);
+      } finally {
+        await moduleWarnServer.close();
+        await routeStrictServer.close();
+      }
+    });
+
+    test("a responses or bodyValidation value of the wrong kind is refused at boot", async () => {
+      await expect(
+        app.startHealthOnlyTestingApp({ responses: "loose", bodyValidation: "yes" }),
+      ).rejects.toThrow(
+        /'responses' is "loose", not 'strict' or 'warn'.*'bodyValidation' is "yes"/s,
+      );
+    });
+
     test("an unknown unboundOperations value is refused at boot", async () => {
       await expect(app.startHealthOnlyTestingApp({ unboundOperations: "ignore" })).rejects.toThrow(
         /'unboundOperations' is "ignore", not 'error' or 'warn'/,
+      );
+    });
+  });
+
+  describe("the input part decorators", () => {
+    test("path, body and input params read one validated input, and a body param alone binds a method", async () => {
+      const received: unknown[] = [];
+      const partsServer = await app.startInputPartsApp();
+
+      app.scenario.answers.assignTask = (parts) => {
+        received.push(parts);
+
+        return { status: 200, body: app.sampleTask(TASK) };
+      };
+
+      try {
+        const assigned = await sendRawRequest(
+          partsServer,
+          "POST",
+          `/v1/channels/${CHANNEL}/tasks/${TASK}/assign`,
+          { headers: writeHeaders(), body: JSON.stringify({ userId: USER }) },
+        );
+        const created = await sendRawRequest(partsServer, "POST", `/v1/channels/${CHANNEL}/tasks`, {
+          headers: writeHeaders(),
+          body: JSON.stringify({ title: "Write" }),
+        });
+        const invalid = await sendRawRequest(partsServer, "POST", `/v1/channels/${CHANNEL}/tasks`, {
+          headers: writeHeaders(),
+          body: JSON.stringify({ title: "" }),
+        });
+
+        expect(assigned.status).toBe(200);
+        expect(received).toEqual([
+          { path: { channelId: CHANNEL, taskId: TASK }, body: { userId: USER }, sharesInput: true },
+        ]);
+        expect(created.status).toBe(201);
+        expect(invalid.status).toBe(BAD_REQUEST);
+        expect(app.calls.handled).toEqual(["assignTask", "createTask"]);
+      } finally {
+        await partsServer.close();
+      }
+    });
+
+    test("query and headers params read their parts of the validated input", async () => {
+      const received: unknown[] = [];
+      const idempotencyKey = randomUUID();
+      const partsServer = await app.startInputPartsApp();
+
+      app.scenario.answers.listTasks = (parts) => {
+        received.push(parts);
+
+        return { status: 200, body: { items: [] } };
+      };
+
+      app.scenario.answers.createTask = (parts) => {
+        received.push(parts);
+
+        return { status: 201, body: app.sampleTask(TASK) };
+      };
+
+      try {
+        const listed = await sendRawRequest(
+          partsServer,
+          "GET",
+          `/v1/channels/${CHANNEL}/tasks?cursor=next`,
+          { headers: BEARER },
+        );
+        const created = await sendRawRequest(partsServer, "POST", `/v1/channels/${CHANNEL}/tasks`, {
+          headers: { ...BEARER, "idempotency-key": idempotencyKey },
+          body: JSON.stringify({ title: "Write" }),
+        });
+
+        expect([listed.status, created.status]).toEqual([200, 201]);
+        expect(received).toEqual([
+          { query: { cursor: "next", limit: 50 } },
+          {
+            body: { title: "Write" },
+            headers: { authorization: BEARER.authorization, "idempotency-key": idempotencyKey },
+          },
+        ]);
+      } finally {
+        await partsServer.close();
+      }
+    });
+
+    test("a contract body no JSON parser read answers 500 and logs that configureApp is missing", async () => {
+      const partsServer = await app.startInputPartsApp({}, "noBodyParser");
+
+      try {
+        const created = await sendRawRequest(partsServer, "POST", `/v1/channels/${CHANNEL}/tasks`, {
+          headers: writeHeaders(),
+          body: JSON.stringify({ title: "Write" }),
+        });
+
+        expect(created.status).toBe(500);
+        expect(app.calls.unexpected).toHaveLength(1);
+        expect(String(app.calls.unexpected[0]?.exceptionOrReply)).toContain(
+          "call configureApp(app)",
+        );
+        expect(app.calls.handled).toEqual([]);
+      } finally {
+        await partsServer.close();
+      }
+    });
+
+    test("a part decorator of another operation refuses the boot by name", async () => {
+      await expect(app.bootWithMisplacedInputPart()).rejects.toThrow(
+        /@createTask\.body\(\) is on assignTask\(\).*@assignTask\.body\(\)/s,
       );
     });
   });
@@ -1051,9 +1225,44 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       );
     });
 
+    test("a JSON parser the app installs before configureApp is refused by name", async () => {
+      await expect(app.bootWithAppJsonParser("beforeConfigureApp")).rejects.toThrow(
+        /configureApp found a JSON parser.*configureApp\(app, \{ appJsonParser/s,
+      );
+    });
+
+    test("a JSON parser the app installs after configureApp refuses the boot by name", async () => {
+      await expect(app.bootWithAppJsonParser("afterConfigureApp")).rejects.toThrow(
+        /a JSON parser was installed after configureApp.*appJsonParser/s,
+      );
+    });
+
     test("a logger that is not one refuses the boot", async () => {
       await expect(app.bootWithModuleOptions({ logger: {}, level: "debug" })).rejects.toThrow(
         /'level' is not an option of SeampactModule.forRoot.*'logger' is not an object/s,
+      );
+    });
+
+    // Before the last test, which installs the api's logger again.
+    test("without a logger option the boundary writes to NestJS's Logger, which app.useLogger sets", async () => {
+      const warned: unknown[][] = [];
+      const ignore = () => undefined;
+      const appLogger = {
+        log: ignore,
+        error: ignore,
+        debug: ignore,
+        verbose: ignore,
+        fatal: ignore,
+        warn: (...parts: unknown[]) => warned.push(parts),
+      };
+
+      await app.bootWithAppLogger(appLogger);
+
+      expect(warned).toContainEqual(
+        expect.arrayContaining([
+          expect.stringContaining("(unboundOperations: warn)"),
+          "Seampact:tasks",
+        ]),
       );
     });
 
@@ -1061,13 +1270,14 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
     test("the boot writes its warnings to the logger forRoot receives", async () => {
       const logged: unknown[][] = [];
       const logger = { warn: (...parts: unknown[]) => logged.push(parts), error: () => undefined };
+      const testingServer = await app.startHealthOnlyTestingApp({
+        logger,
+        unboundOperations: "warn",
+      });
 
-      await app.bootWithModuleOptions({ logger });
-      await (reply === "interceptor"
-        ? app.bootWithLateGlobalInterceptor()
-        : app.bootWithAppInterceptors());
+      await testingServer.close();
 
-      expect(logged.length).toBeGreaterThan(0);
+      expect(logged).toContainEqual([expect.stringContaining("(unboundOperations: warn)")]);
     });
   });
 });
@@ -1102,8 +1312,53 @@ describe("two apis on one app, each through its own module", () => {
     app.resetScenario();
   });
 
+  test("each api's configureApp reads its own contract bodies, and the app's routes take the options passed once", async () => {
+    const scalar = JSON.stringify("x");
+    const firstApi = await sendRawRequest(server, "POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: writeHeaders(),
+      body: scalar,
+    });
+    const secondApi = await sendRawRequest(server, "POST", `/v1/beside/channels/${CHANNEL}/tasks`, {
+      headers: writeHeaders(),
+      body: scalar,
+    });
+    const appRoute = await sendRawRequest(server, "POST", "/own/echo", {
+      body: JSON.stringify({ padding: "x".repeat(200 * 1024) }),
+    });
+
+    expect(JSON.parse(firstApi.text).issues).toEqual([{ pointer: "", rule: "type" }]);
+    expect(JSON.parse(secondApi.text).issues).toEqual([{ pointer: "", rule: "type" }]);
+    expect(appRoute.status).toBe(201);
+    expect(JSON.parse(appRoute.text).rawBody).toBe(true);
+  });
+
   describeTwoApiHandlerAccess(() => ({
     app,
     send: (method, path, headers) => sendRawRequest(server, method, path, { headers }),
   }));
+});
+
+describe("a tree generated without its response validators", () => {
+  let app: ReferenceAppModule;
+
+  beforeAll(async () => {
+    const project = projectDirectory(import.meta.url, "live-without-validators");
+    const build = join(project, "build");
+    const files = await generateReferenceProject(project, nestjsTarget, {
+      bodyValidation: false,
+      reply: "handler",
+    });
+
+    expect(emitProject(project, files, build)).toEqual([]);
+
+    mkdirSync(join(build, "app"), { recursive: true });
+    copyFileSync(APP_SOURCE, join(build, "app", "reference-app.js"));
+    app = await import(pathToFileURL(join(build, "app", "reference-app.js")).href);
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  test("forRoot's bodyValidation: true refuses the boot by name, since nothing could check the replies", async () => {
+    await expect(app.bootWithModuleOptions({ bodyValidation: true })).rejects.toThrow(
+      /bodyValidation is on, but the target was generated without its response validators.*set the target option 'bodyValidation: true' and generate again/s,
+    );
+  });
 });

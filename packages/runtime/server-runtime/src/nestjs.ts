@@ -79,7 +79,6 @@ import {
   type ContractRoute,
   isUnderBasePath,
   isUnderPrefix,
-  largestRouteBodyLimit,
   matchContractPath,
   matchContractRoute,
   matchesContractPath,
@@ -100,6 +99,7 @@ import { type HandlerAccess, handlerAccess, inputWithAccess } from "./handler-ac
 import { handlerReply } from "./handler-reply.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
+import { nestRuntimeLogger } from "./nestjs-logger.js";
 import { everyRouteHandler, expressRouteListing, routeEntries } from "./node-express-routes.js";
 import { installOutgoingCheck } from "./node-outgoing-check.js";
 import {
@@ -109,6 +109,7 @@ import {
   writeContractReply,
 } from "./node-reply.js";
 import {
+  announcesBody,
   bodyParserError,
   clearEmptyBody,
   contractRequest,
@@ -127,7 +128,7 @@ import {
   runtimeLogOf,
   useRuntimeLogger,
 } from "./runtime-logger.js";
-import { type PlatformFixes, transportRefusal } from "./transport-checks.js";
+import { mediaTypeRefusal, type PlatformFixes, transportRefusal } from "./transport-checks.js";
 
 /** Who writes a contract route's reply after step 10: the handler wrapper, or the seampact reply interceptor. */
 export type ReplyMode = "handler" | "interceptor";
@@ -150,8 +151,12 @@ export interface NestApiIdentity {
 
 /** The options of `SeampactModule.forRoot(hooks, options)`. */
 export interface SeampactModuleOptions {
-  /** Where the boundary writes its warnings and unexpected failures; the console when absent. */
+  /** Where the boundary writes its warnings and unexpected failures; NestJS's `Logger` when absent. */
   readonly logger?: RuntimeLogger;
+  /** The `responses` mode of the api's routes, the generated target option when absent; `responses()` on a route wins. */
+  readonly responses?: ResponsesMode;
+  /** Whether request bodies are validated, the generated target option when absent. */
+  readonly bodyValidation?: boolean;
   /**
    * What the boot check does with a contract operation no controller method binds: `error` (the default) stops the
    * boot, `warn` logs them once, for a test module that holds some controllers only; their routes answer the api's 404.
@@ -162,14 +167,30 @@ export interface SeampactModuleOptions {
 /** The value of the `unboundOperations` option of `SeampactModule.forRoot`. */
 export type UnboundOperations = "error" | "warn";
 
+/** The options of the JSON parser `configureApp` installs for the app's own routes, as body-parser reads them. */
+export interface AppJsonParserOptions {
+  /** The largest JSON body of an app route, body-parser's 100 KB when absent. */
+  readonly limit?: number | string;
+  /** Whether an app route takes objects and arrays only, body-parser's `true` when absent. */
+  readonly strict?: boolean;
+}
+
+/** The second argument of `configureApp`. */
+export interface ConfigureAppOptions {
+  /** The app routes' JSON parser options; only the first `configureApp` call of an app installs that parser. */
+  readonly appJsonParser?: AppJsonParserOptions;
+}
+
 /** What `configureApp` calls on a NestJS Express app, as `NestExpressApplication` declares it. */
 export interface ConfigurableNestApp {
+  getHttpAdapter(): { getInstance(): unknown };
   useBodyParser(
     parser: "json",
     options: {
-      limit?: number;
-      strict: boolean;
-      verify: (request: IncomingMessage, response: ServerResponse, bytes: Buffer) => void;
+      limit?: number | string;
+      strict?: boolean;
+      type: (request: IncomingMessage) => boolean;
+      verify?: (request: IncomingMessage, response: ServerResponse, bytes: Buffer) => void;
     },
   ): unknown;
   useGlobalFilters(...filters: ExceptionFilter[]): unknown;
@@ -245,6 +266,15 @@ type ExcludedRoute = NonNullable<
 
 type ContractMethod = (this: unknown, ...args: unknown[]) => unknown;
 
+/** The part of an operation's input a part decorator reads, `@createTask.body()`. */
+type InputPart = "path" | "query" | "headers" | "body";
+
+// What the module middleware hands each request context: the module options over the generated settings.
+interface RequestSettings {
+  readonly responses: ResponsesMode;
+  readonly bodyValidation: boolean;
+}
+
 interface OperationMetadata {
   readonly api: string;
   readonly id: string;
@@ -282,9 +312,17 @@ const OPERATION_METADATA = "seampact:operation";
 const RESPONSE_INDEX_METADATA = "seampact:responseIndex";
 const INTERCEPTOR_REPLY: ReplyMode = "interceptor";
 const LOGGER_OPTION = "logger";
-const NO_BODY_LIMIT = 0;
+const RESPONSES_OPTION = "responses";
+const BODY_VALIDATION_OPTION = "bodyValidation";
+const RESPONSES_VALUES: readonly unknown[] = ["strict", "warn"] satisfies ResponsesMode[];
+const JSON_MEDIA = "application/json";
 const UNBOUND_OPERATIONS_OPTION = "unboundOperations";
-const MODULE_OPTION_NAMES: readonly string[] = [LOGGER_OPTION, UNBOUND_OPERATIONS_OPTION];
+const MODULE_OPTION_NAMES: readonly string[] = [
+  LOGGER_OPTION,
+  RESPONSES_OPTION,
+  BODY_VALIDATION_OPTION,
+  UNBOUND_OPERATIONS_OPTION,
+];
 const UNBOUND_OPERATIONS_VALUES: readonly unknown[] = [
   "error",
   "warn",
@@ -460,7 +498,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   };
 
   const middleware =
-    (hooks: BoundaryHooks) =>
+    (hooks: BoundaryHooks, settings: RequestSettings) =>
     (request: ExpressRequest, response: ServerResponse, next: () => void): void => {
       const { method, path } = reportedRequest(request);
       const matched = matchContractRoute(api, method, path);
@@ -487,8 +525,8 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         route: matched.route,
         pathParams: matched.pathParams,
         hooks,
-        bodyValidation: options.bodyValidation,
-        mode: options.responses,
+        bodyValidation: settings.bodyValidation,
+        mode: settings.responses,
         boundaryWriting: false,
       };
       const recorded = bodyGlue.recordedBodyBytes(request);
@@ -496,10 +534,11 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       clearEmptyBody(request, recorded);
       installOutgoingCheck(response, context, { method, path });
       boundaryContext.run(context, () => {
-        const refusal = transportRefusal(matched.route, contractRequest(request), {
-          ...(recorded === undefined ? {} : { recordedBytes: recorded }),
-          fixes: NEST_FIXES,
-        });
+        const refusal =
+          transportRefusal(matched.route, contractRequest(request), {
+            ...(recorded === undefined ? {} : { recordedBytes: recorded }),
+            fixes: NEST_FIXES,
+          }) ?? unreadBodyRefusal(matched.route, request);
 
         if (refusal === undefined) {
           next();
@@ -513,6 +552,27 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         });
       });
     };
+
+  // The item validators exist only when the target was generated with `bodyValidation: true`.
+  function missingValidatorProblems(moduleOptions: SeampactModuleOptions): BootProblem[] {
+    if (options.bodyValidation || moduleOptions.bodyValidation !== true) return [];
+
+    return [
+      {
+        problem:
+          "bodyValidation is on, but the target was generated without its response validators",
+        fix: "set the target option 'bodyValidation: true' and generate again, or leave bodyValidation out of forRoot",
+      },
+    ];
+  }
+
+  // The module options override the generated settings; the boot check refuses a value of the wrong kind.
+  function requestSettings(moduleOptions: SeampactModuleOptions): RequestSettings {
+    return {
+      responses: moduleOptions.responses ?? options.responses,
+      bodyValidation: moduleOptions.bodyValidation ?? options.bodyValidation,
+    };
+  }
 
   function isUnboundInApp(request: ExpressRequest, route: ContractRoute): boolean {
     const app = expressAppKey(Reflect.get(request, "app"));
@@ -590,18 +650,71 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   class ContractInputPipe implements PipeTransform {
     async transform(): Promise<unknown> {
       const context = requireContext();
-      const { state, grant } = guardedRequest(context);
-      const validated = await validateRequestInput(state, grant);
-      const input = await checkRestrictedInput(state, grant, validated);
-
-      context.input = input;
-      context.inputChecked = true;
+      const { grant } = guardedRequest(context);
+      const input = await checkedInput(context);
 
       return inputWithAccess(context.route, grant, input);
     }
   }
 
   const contractInputPipe = new ContractInputPipe();
+
+  // One part of the operation's checked input, read on the decorator's own operation only.
+  @Injectable()
+  class InputPartPipe implements PipeTransform {
+    constructor(readonly part: InputPart) {}
+
+    async transform(_value: unknown, metadata: ArgumentMetadata): Promise<unknown> {
+      const context = requireContext();
+
+      if (context.route.id !== metadata.data) {
+        throw unexpectedError(
+          context.route,
+          new Error(
+            `seampact: @${String(metadata.data)}.${this.part}() is on the method of '${context.route.id}'; use @${context.route.id}.${this.part}() there.`,
+          ),
+        );
+      }
+
+      const input = await checkedInput(context);
+
+      return isPlainObject(input) ? input[this.part] : undefined;
+    }
+  }
+
+  const inputPartPipes: Readonly<Record<InputPart, InputPartPipe>> = {
+    path: new InputPartPipe("path"),
+    query: new InputPartPipe("query"),
+    headers: new InputPartPipe("headers"),
+    body: new InputPartPipe("body"),
+  };
+
+  // Steps 6 to 8 once per request: the input param and the part params of one method share the result, even when
+  // NestJS resolves them at the same time.
+  const checkedInputs = new WeakMap<BoundaryContext, Promise<unknown>>();
+
+  function checkedInput(context: BoundaryContext): Promise<unknown> {
+    const started = checkedInputs.get(context);
+
+    if (started !== undefined) return started;
+
+    const checking = checkInput(context);
+
+    checkedInputs.set(context, checking);
+
+    return checking;
+  }
+
+  async function checkInput(context: BoundaryContext): Promise<unknown> {
+    const { state, grant } = guardedRequest(context);
+    const validated = await validateRequestInput(state, grant);
+    const input = await checkRestrictedInput(state, grant, validated);
+
+    context.input = input;
+    context.inputChecked = true;
+
+    return input;
+  }
 
   // What the guard recorded; a route that skipped it fails closed.
   function guardedRequest(context: BoundaryContext): { state: CheckState; grant: AccessGrant } {
@@ -624,7 +737,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     throw unexpectedError(
       context.route,
       new Error(
-        `seampact: '${context.route.id}' reached its handler without the input pipe; declare its @${context.route.id}.input() parameter, and skip contract routes with isContractRoute(context) in an interceptor that answers without next.handle().`,
+        `seampact: '${context.route.id}' reached its handler without the input pipe; declare its @${context.route.id}.input() parameter or a part of it, and skip contract routes with isContractRoute(context) in an interceptor that answers without next.handle().`,
       ),
     );
   }
@@ -1080,23 +1193,42 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       prototype.constructor,
       name,
     );
-    const declared = (isPlainObject(parameters) ? Object.values(parameters) : []).some(
+    const inputParameters = (isPlainObject(parameters) ? Object.values(parameters) : []).filter(
       (parameter) =>
         isPlainObject(parameter) &&
         parameter.factory === inputFactory &&
         Array.isArray(parameter.pipes) &&
-        parameter.pipes.includes(contractInputPipe),
+        parameter.pipes.some(isInputPipe),
     );
 
-    if (declared) return [];
+    if (inputParameters.length === 0) {
+      return [
+        {
+          operation: metadata.id,
+          problem: `${name}() has no input parameter, so its input is never validated`,
+          fix: `add the parameter \`@${metadata.id}.input() input\`, typed with the operation's generated input type, or one of its parts, such as \`@${metadata.id}.body() body\``,
+        },
+      ];
+    }
 
-    return [
-      {
-        operation: metadata.id,
-        problem: `${name}() has no input parameter, so its input is never validated`,
-        fix: `add the parameter \`@${metadata.id}.input() input\`, typed with the operation's generated input type`,
-      },
-    ];
+    return inputParameters.flatMap((parameter) =>
+      misplacedPartProblems(parameter, name, metadata.id),
+    );
+  }
+
+  // A part decorator of another operation passes NestJS's checks, then answers 500 on every request.
+  function misplacedPartProblems(parameter: unknown, name: string, id: string): BootProblem[] {
+    if (!isPlainObject(parameter) || parameter.data === id || !Array.isArray(parameter.pipes)) {
+      return [];
+    }
+
+    return parameter.pipes
+      .filter((pipe): pipe is InputPartPipe => pipe instanceof InputPartPipe)
+      .map((pipe) => ({
+        operation: id,
+        problem: `@${String(parameter.data)}.${pipe.part}() is on ${name}(), the method of '${id}'`,
+        fix: `use @${id}.${pipe.part}() there`,
+      }));
   }
 
   @Catch(
@@ -1171,6 +1303,20 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   const inputFactory = (): undefined => undefined;
   const inputDecorator = createParamDecorator(inputFactory);
   const input = (): ParameterDecorator => inputDecorator(contractInputPipe);
+
+  function isInputPipe(pipe: unknown): boolean {
+    return pipe === contractInputPipe || Object.values<unknown>(inputPartPipes).includes(pipe);
+  }
+
+  // The param decorator of one part of an operation's input; an operation without that part has none.
+  function inputPartDecorator(id: string, part: InputPart): () => ParameterDecorator {
+    if (!hasInputPart(routeOf(id), part)) {
+      throw new Error(`seampact: '${id}' declares no ${part} in its input.`);
+    }
+
+    return () => inputDecorator(id, inputPartPipes[part]);
+  }
+
   // The value NestJS extracts is ignored: the param's own pipe reads the caller the guard granted.
   const accessFactory = (): undefined => undefined;
   const accessDecorator = createParamDecorator(accessFactory);
@@ -1234,7 +1380,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     imports: NonNullable<ModuleMetadata["imports"]>,
     moduleOptions: SeampactModuleOptions,
   ): DynamicModule {
-    useRuntimeLogger(moduleOptions.logger, api);
+    useRuntimeLogger(moduleOptions.logger ?? nestRuntimeLogger(api.id), api);
 
     return {
       module: SeampactModule,
@@ -1302,7 +1448,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         recordMiddlewareRoutes(adapter, api.routes);
       }
 
-      consumer.apply(middleware(this.hooks)).forRoutes(
+      consumer.apply(middleware(this.hooks, requestSettings(this.moduleOptions))).forRoutes(
         ...api.routes.map((route) => ({
           path: nestPath(route.path),
           method: REQUEST_METHODS[methodOf(route)],
@@ -1319,6 +1465,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       const problems = [
         ...enforcedHookBootProblems(api, this.hooks),
         ...moduleOptionsProblems(this.moduleOptions),
+        ...missingValidatorProblems(this.moduleOptions),
         ...this.handlerProblems(contractMethods),
         ...this.unboundOperationProblems(contractMethods),
         ...this.pathPrefixProblems(contractMethods),
@@ -1326,6 +1473,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
         ...this.platformProblems(),
         ...this.repeatedRegistrationProblems(),
         ...this.frameworkRouteProblems(),
+        ...lateJsonParserProblems(this.adapterHost.httpAdapter?.getInstance()),
       ];
 
       if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
@@ -1631,18 +1779,70 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
   const preRoutingFilter = new PreRoutingFilter();
 
-  // What every `main.ts` and e2e setup of an app serving this api alone needs: the JSON parser at the largest route
-  // limit, non-strict, keeping the raw body of signed routes, and the pre-routing filter.
-  // An api without a body leaves the parser's own limit, which its routes never reach.
-  function configureApp(app: ConfigurableNestApp): void {
-    const largestBodyLimit = largestRouteBodyLimit(api.routes);
+  // What every `main.ts` and e2e setup needs: a non-strict JSON parser per route limit that reads this api's contract
+  // bodies only, keeping the raw body of signed routes, then, on the app's first call, one JSON parser for the app's own
+  // routes (NestJS's defaults, or `appJsonParser`), and the pre-routing filter. A parser named `jsonParser` stops
+  // NestJS's own default one. Another JSON parser would read contract bodies strictly, or never run: it is refused.
+  function configureApp(
+    app: ConfigurableNestApp,
+    configureOptions: ConfigureAppOptions = {},
+  ): void {
+    const expressApp = expressAppKey(app.getHttpAdapter().getInstance());
 
-    app.useBodyParser("json", {
-      ...(largestBodyLimit === NO_BODY_LIMIT ? {} : { limit: largestBodyLimit }),
-      strict: false,
-      verify: bodyGlue.keepRawBody,
-    });
+    if (expressApp === undefined) {
+      throw new Error(
+        "seampact: configureApp(app) takes a NestJS app on @nestjs/platform-express.",
+      );
+    }
+
+    const configured = configuredJsonParsers.get(expressApp);
+    const parsers = configured ?? { installed: new Set<unknown>(), contractRouteTests: [] };
+
+    assertNoForeignJsonParser(expressApp, parsers);
+    assertAppJsonParserOptions(configureOptions, configured === undefined);
+    configuredJsonParsers.set(expressApp, parsers);
+    parsers.contractRouteTests.push(
+      (request) =>
+        matchContractRoute(api, request.method ?? DEFAULT_METHOD, pathnameOf(request)) !==
+        undefined,
+    );
+
+    const routeLimits = new Set(api.routes.flatMap((route) => route.input?.limitBytes ?? []));
+
+    for (const limit of routeLimits) {
+      recordInstalledParser(expressApp, parsers, () =>
+        app.useBodyParser("json", {
+          limit,
+          strict: false,
+          type: (request) => isContractBodyAt(request, limit),
+          verify: bodyGlue.keepRawBody,
+        }),
+      );
+    }
+
+    if (configured === undefined) {
+      recordInstalledParser(expressApp, parsers, () =>
+        app.useBodyParser("json", {
+          ...configureOptions.appJsonParser,
+          type: (request) => isAppJsonBody(request, parsers),
+        }),
+      );
+    }
+
     app.useGlobalFilters(preRoutingFilter);
+  }
+
+  // A body of the route's media type on a contract route of this limit; another media type answers 415 unread.
+  function isContractBodyAt(request: IncomingMessage, limit: number): boolean {
+    const route = matchContractRoute(
+      api,
+      request.method ?? DEFAULT_METHOD,
+      pathnameOf(request),
+    )?.route;
+
+    if (route?.input?.limitBytes !== limit) return false;
+
+    return mediaTypeRefusal(route, contractRequest(request)) === undefined;
   }
 
   return {
@@ -1651,6 +1851,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     operation,
     principal: principalDecorator,
     scopes: scopesDecorator,
+    inputPart: inputPartDecorator,
     responses: (mode: ResponsesMode) => SetMetadata(RESPONSES_METADATA, mode),
     renderContractError,
     isContractRoute,
@@ -1769,7 +1970,7 @@ function moduleOptionsProblems(moduleOptions: unknown): BootProblem[] {
     return [
       {
         problem: "the options of SeampactModule.forRoot are not an object",
-        fix: "pass `{ logger, unboundOperations }` as forRoot's second argument, or leave it out",
+        fix: `pass \`{ ${MODULE_OPTION_NAMES.join(", ")} }\` as forRoot's second argument, or leave it out`,
       },
     ];
   }
@@ -1782,7 +1983,159 @@ function moduleOptionsProblems(moduleOptions: unknown): BootProblem[] {
         fix: `remove '${key}'; forRoot takes \`{ ${MODULE_OPTION_NAMES.join(", ")} }\``,
       })),
     ...loggerProblems(moduleOptions[LOGGER_OPTION]),
+    ...responsesProblems(moduleOptions[RESPONSES_OPTION]),
+    ...bodyValidationProblems(moduleOptions[BODY_VALIDATION_OPTION]),
     ...unboundOperationsProblems(moduleOptions[UNBOUND_OPERATIONS_OPTION]),
+  ];
+}
+
+function responsesProblems(value: unknown): BootProblem[] {
+  if (value === undefined || RESPONSES_VALUES.includes(value)) return [];
+
+  return [
+    {
+      problem: `'${RESPONSES_OPTION}' is ${JSON.stringify(value)}, not 'strict' or 'warn'`,
+      fix: `pass \`${RESPONSES_OPTION}: 'strict'\` or \`'warn'\`, or leave it out for the generated value`,
+    },
+  ];
+}
+
+function bodyValidationProblems(value: unknown): BootProblem[] {
+  if (value === undefined || typeof value === "boolean") return [];
+
+  return [
+    {
+      problem: `'${BODY_VALIDATION_OPTION}' is ${JSON.stringify(value)}, not true or false`,
+      fix: `pass \`${BODY_VALIDATION_OPTION}: true\` or \`false\`, or leave it out for the generated value`,
+    },
+  ];
+}
+
+function hasInputPart(route: ContractRoute, part: InputPart): boolean {
+  if (part === "body") return route.input !== undefined;
+
+  return route.params[part].length > 0;
+}
+
+// A contract body no JSON parser read: its limit and its JSON were never checked, so it never reaches the handler.
+function unreadBodyRefusal(
+  route: ContractRoute,
+  request: ExpressRequest,
+): ContractError | undefined {
+  if (route.input === undefined || !announcesBody(request) || request.readableEnded)
+    return undefined;
+
+  return unexpectedError(
+    route,
+    new Error(
+      `seampact: no JSON parser read the body of '${route.id}'; call configureApp(app) before app.listen, or give the app a JSON parser with limit: LARGEST_BODY_LIMIT.`,
+    ),
+  );
+}
+
+// The name NestJS gives its default JSON parser, and body-parser every JSON parser it builds.
+const JSON_PARSER_NAME = "jsonParser";
+
+const APP_JSON_PARSER_KEYS: ReadonlySet<string> = new Set(["limit", "strict"]);
+
+const APP_JSON_PARSER_FIX =
+  "remove it and pass its options to configureApp(app, { appJsonParser: { limit: '5mb' } }), or skip configureApp and install the parsers by hand as the NestJS guide shows";
+
+// The JSON parsers `configureApp` installed on one Express app, and a test of each configured api's contract routes.
+interface ConfiguredJsonParsers {
+  readonly installed: Set<unknown>;
+  readonly contractRouteTests: ((request: IncomingMessage) => boolean)[];
+}
+
+const configuredJsonParsers = new WeakMap<object, ConfiguredJsonParsers>();
+
+// The JSON parsers on the Express app's router, as NestJS's `isMiddlewareApplied` finds them.
+function jsonParsersOf(expressApp: object): unknown[] {
+  const router: unknown = Reflect.get(expressApp, "router");
+  const stack: unknown =
+    isPlainObject(router) || typeof router === "function"
+      ? Reflect.get(router, "stack")
+      : undefined;
+
+  if (!Array.isArray(stack)) return [];
+
+  return stack
+    .map((layer: unknown) => (isPlainObject(layer) ? layer.handle : undefined))
+    .filter((handle) => typeof handle === "function" && handle.name === JSON_PARSER_NAME);
+}
+
+function foreignJsonParserCount(expressApp: object, parsers: ConfiguredJsonParsers): number {
+  return jsonParsersOf(expressApp).filter((handle) => !parsers.installed.has(handle)).length;
+}
+
+function assertNoForeignJsonParser(expressApp: object, parsers: ConfiguredJsonParsers): void {
+  if (foreignJsonParserCount(expressApp, parsers) === 0) return;
+
+  throw new Error(
+    `seampact: configureApp found a JSON parser installed before it (app.useBodyParser('json'), express.json() or app.init()); it would read the contract bodies strictly, at its own limit, without their raw body. Fix: ${APP_JSON_PARSER_FIX}.`,
+  );
+}
+
+// The app routes' parser is installed once, by the app's first call; its options are checked by name.
+function assertAppJsonParserOptions(options: ConfigureAppOptions, isFirstCall: boolean): void {
+  const parserOptions = options.appJsonParser;
+
+  if (parserOptions === undefined) return;
+
+  if (!isFirstCall) {
+    throw new Error(
+      "seampact: appJsonParser is passed to a second configureApp call of this app; the first call installs the app routes' JSON parser, so pass appJsonParser to that call only.",
+    );
+  }
+
+  const unknownKeys = Object.keys(parserOptions).filter((key) => !APP_JSON_PARSER_KEYS.has(key));
+
+  if (unknownKeys.length > 0) {
+    throw new Error(
+      `seampact: configureApp's appJsonParser takes limit and strict, not ${unknownKeys.join(", ")}; for other parser options, skip configureApp and install the parsers by hand as the NestJS guide shows.`,
+    );
+  }
+}
+
+// Records the JSON parsers `install` adds to the router, so a later check tells them from the app's own.
+function recordInstalledParser(
+  expressApp: object,
+  parsers: ConfiguredJsonParsers,
+  install: () => unknown,
+): void {
+  const before = new Set(jsonParsersOf(expressApp));
+
+  install();
+
+  for (const handle of jsonParsersOf(expressApp)) {
+    if (!before.has(handle)) parsers.installed.add(handle);
+  }
+}
+
+// A JSON body on a route of the app's own, no configured api's contract route, as NestJS's default parser reads it.
+function isAppJsonBody(request: IncomingMessage, parsers: ConfiguredJsonParsers): boolean {
+  if (parsers.contractRouteTests.some((isContractRoute) => isContractRoute(request))) return false;
+
+  const contentType = request.headers["content-type"];
+
+  return contentType?.split(";")[0]?.trim().toLowerCase() === JSON_MEDIA;
+}
+
+// A JSON parser installed after `configureApp` never runs on the app's routes: configureApp's parser read them first.
+function lateJsonParserProblems(instance: unknown): BootProblem[] {
+  const expressApp = expressAppKey(instance);
+  const parsers = expressApp === undefined ? undefined : configuredJsonParsers.get(expressApp);
+
+  if (expressApp === undefined || parsers === undefined) return [];
+
+  if (foreignJsonParserCount(expressApp, parsers) === 0) return [];
+
+  return [
+    {
+      problem:
+        "a JSON parser was installed after configureApp(app); configureApp's parser reads the app routes' JSON bodies first, so it never runs",
+      fix: APP_JSON_PARSER_FIX,
+    },
   ];
 }
 

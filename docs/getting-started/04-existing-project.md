@@ -2,7 +2,7 @@
 
 You keep your routes. seampact takes over the ones you put in the contract, and the rest stay yours.
 
-You need Node.js 24 or later, pnpm, and a NestJS 12 app that compiles with `experimentalDecorators` and `emitDecoratorMetadata` (the class-validator `ValidationPipe` needs the second one). Run the app from compiled output: `tsx` does not emit decorator metadata, so validation would silently do nothing. Keep the app in a git repo, to see what changes.
+You need Node.js 24 or later, pnpm, and a NestJS 12 app that compiles with `experimentalDecorators`. The generated code needs nothing more. Your own DTOs need `emitDecoratorMetadata` too, for the class-validator `ValidationPipe`. Run the app from compiled output: `tsx` does not emit decorator metadata, so validation of your DTOs would silently do nothing. Keep the app in a git repo, to see what changes.
 
 The examples use a `shop` app with `GET /health`, `POST /auth/login` and a products controller.
 
@@ -144,13 +144,10 @@ In `AppModule`, import the generated module.
 imports: [ShopNest.SeampactModule.forRoot()],
 ```
 
-In `main.ts`, add these lines before `app.listen`. `preRoutingFilter` only acts on contract paths.
+In `main.ts`, add this line before `app.listen`. It sets up the JSON parser and the error filter of the contract routes only: your other routes keep their behaviour.
 
 ```ts
-const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
-
-app.useBodyParser("json", { limit: ShopNest.LARGEST_BODY_LIMIT, strict: false });
-app.useGlobalFilters(ShopNest.preRoutingFilter);
+ShopNest.configureApp(app);
 ```
 
 Start the app. You see it refuse to start: `2 framework routes are outside the contract`. The boot check lists your other routes, here `/auth/login` and the Swagger routes.
@@ -171,7 +168,7 @@ List them under `frameworkRoutes` of the `server` target, then run `npx seampact
       - { path: "/docs-yaml", reason: "Swagger document." }
 ```
 
-`nativeDocs` and the `main.ts` lines for Swagger are in [OpenAPI and docs](../configuration/openapi-and-docs.md). You see `/docs` and your old routes working, and `/docs-json` listing both.
+The shop api serves its routes at the root, so the boot check reads every route, Swagger's included. `nativeDocs` and the `main.ts` lines for Swagger are in [OpenAPI and docs](../configuration/openapi-and-docs.md). You see `/docs` and your old routes working, and `/docs-json` listing both.
 
 ## Check it
 

@@ -34,7 +34,13 @@ interface DocsApp {
     openapi?: string,
     shadowSchemaName?: string,
   ): Promise<{ paths: object }>;
-  contractDocument(api: ApiModules, shadowSchemaName?: string): Promise<{ paths: object }>;
+  contractDocument(
+    api: ApiModules,
+    shadowSchemaName?: string,
+    openapi?: string,
+    documentOptions?: object,
+  ): Promise<{ openapi: string; paths: object }>;
+  bootProblemsWithSwaggerUi(api: ApiModules, docsPath: string): Promise<string>;
 }
 
 let app: DocsApp;
@@ -56,7 +62,8 @@ beforeAll(async () => {
     nestjsTarget,
     { bodyValidation: true },
     undefined,
-    undefined,
+    // The default scope, as an app's config gets it: only routes under the api's base paths are checked.
+    { status: "on", allowed: [], scope: "contract" },
     {
       artefacts: new Set(["boundary", "index", "nativeDocs"]),
       nativeDocsDocument: referenceNativeDocsDocument,
@@ -123,11 +130,31 @@ describe("the NestJS native document", () => {
   });
 
   test("createContractDocument writes the document in one call, agreeing with the seampact document", async () => {
+    // From the builder's config and no options: the OpenAPI version and the controller tags are its own.
     const framework = await app.contractDocument(tasks);
 
+    expect(framework.openapi).toBe("3.1.0");
     expect(
       nativeDocsDisagreements(referenceNativeDocsDocument("tasks").document, framework),
     ).toEqual([]);
+  });
+
+  test("createContractDocument refuses another OpenAPI version or autoTagControllers: true by name", async () => {
+    await expect(app.contractDocument(tasks, undefined, "3.0.3")).rejects.toThrow(
+      /says openapi "3\.0\.3".*Set `openapi: '3\.1\.0'`/s,
+    );
+    await expect(
+      app.contractDocument(tasks, undefined, undefined, { autoTagControllers: true }),
+    ).rejects.toThrow(/autoTagControllers: true.*Remove the option/s);
+  });
+
+  test("Swagger UI outside the api's base path needs no frameworkRoutes entries, under it the check names it", async () => {
+    const outside = await app.bootProblemsWithSwaggerUi(tasks, "docs");
+    const under = await app.bootProblemsWithSwaggerUi(tasks, "v1/docs");
+
+    expect(outside).toContain("cannot start");
+    expect(outside).not.toContain("framework route");
+    expect(under).toMatch(/framework routes are outside the contract.*'GET \/v1\/docs'/);
   });
 
   test("createContractDocument refuses an app class named like a contract schema", async () => {

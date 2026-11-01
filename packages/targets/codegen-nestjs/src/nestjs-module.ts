@@ -75,12 +75,43 @@ function operationSource(operationId: string, docsModule: string | undefined): s
     : `documentedOperation(${boundaryOperation}, ${JSON.stringify(operationId)})`;
 }
 
-// The caller's param decorators of an operation: no principal on a public route, no scopes outside any scope.
-function callerDecorators(operation: Operation): string[] {
-  return [
+interface MemberDecorator {
+  readonly member: string;
+  readonly source: string;
+}
+
+// The param decorators of an operation beside `input()`: one per part of its input it declares, then its caller's,
+// no principal on a public route and no scopes outside any scope.
+function memberDecorators(operation: Operation): MemberDecorator[] {
+  const id = JSON.stringify(operation.id);
+  const parts = [
+    ...(operation.params.path.length === 0 ? [] : ["path"]),
+    ...(operation.params.query.length === 0 ? [] : ["query"]),
+    ...(operation.params.header.length === 0 ? [] : ["headers"]),
+    ...(operation.input === undefined ? [] : ["body"]),
+  ];
+  const caller = [
     ...(operation.access.kind === "public" ? [] : ["principal"]),
     ...(operation.scopes.length === 0 ? [] : ["scopes"]),
   ];
+
+  return [
+    ...parts.map((part) => ({
+      member: part,
+      source: `boundary.inputPart(${id}, ${JSON.stringify(part)})`,
+    })),
+    ...caller.map((member) => ({ member, source: `boundary.${member}(${id})` })),
+  ];
+}
+
+// The decorator's doc: its input, its parts and its caller.
+function decoratorDoc(operationId: string, name: string, members: readonly string[]): string {
+  const memberDoc =
+    members.length === 0
+      ? ""
+      : `; ${members.map((member) => `\`${name}.${member}()\``).join(", ")} read one part of it or its caller`;
+
+  return `/** The route of '${operationId}'; \`${name}.input()\` is its validated input${memberDoc}. */`;
 }
 
 export function nestjsModuleSource(
@@ -101,18 +132,19 @@ export function nestjsModuleSource(
 
     names.claim(name, operationLocation(index, operation.id), refusals);
 
-    const caller = callerDecorators(operation);
-    const callerDoc =
-      caller.length === 0
-        ? ""
-        : `; ${caller.map((member) => `\`${name}.${member}()\``).join(" and ")} read its caller`;
+    const members = memberDecorators(operation);
     const source = operationSource(operation.id, docsModule);
     const decorator =
-      caller.length === 0
+      members.length === 0
         ? source
-        : `Object.assign(${source}, { ${caller.map((member) => `${member}: boundary.${member}(${JSON.stringify(operation.id)})`).join(", ")} })`;
+        : `Object.assign(${source}, { ${members.map(({ member, source: memberSource }) => `${member}: ${memberSource}`).join(", ")} })`;
+    const doc = decoratorDoc(
+      operation.id,
+      name,
+      members.map(({ member }) => member),
+    );
 
-    return `/** The route of '${operation.id}'; \`${name}.input()\` is its validated input${callerDoc}. */\nexport const ${name} = ${decorator};`;
+    return `${doc}\nexport const ${name} = ${decorator};`;
   });
 
   const handlerMethods = ir.operations.map(
@@ -139,7 +171,7 @@ export function nestjsModuleSource(
     "",
     `const boundary = createNestBoundary<SeampactHooks>(CONTRACT_API, ${JSON.stringify({ ...responseSettingsOf(options), reply: options.reply })}, { contractException: ContractException, moduleClassName: ${JSON.stringify(moduleClassName(ir))} });`,
     "",
-    "/** The api's dynamic module: `SeampactModule.forRoot(hooks, { logger })` or `forRootAsync({ imports, inject, useFactory })`. */",
+    "/** The api's dynamic module: `SeampactModule.forRoot(hooks, { logger, responses, bodyValidation })` or `forRootAsync({ imports, inject, useFactory }, options)`. */",
     "export const SeampactModule = boundary.SeampactModule;",
     "/** The injection token of the api's hooks, for a test's `overrideProvider`. */",
     "export const SEAMPACT_HOOKS = boundary.SEAMPACT_HOOKS;",
@@ -155,7 +187,7 @@ export function nestjsModuleSource(
     "export const renderPreRoutingError = boundary.renderPreRoutingError;",
     "/** A global filter for refusals raised before routing. */",
     "export const preRoutingFilter = boundary.preRoutingFilter;",
-    "/** Installs the JSON parser at the largest route limit, keeping signed routes' raw body, and `preRoutingFilter`. */",
+    "/** Installs the contract routes' JSON parsers, NestJS's default one for the app's routes, and `preRoutingFilter`. */",
     "export const configureApp = boundary.configureApp;",
     "/** The largest route body limit; the app's JSON parser limit must be at least this. */",
     `export const LARGEST_BODY_LIMIT = ${largestBodyLimit(ir)};`,

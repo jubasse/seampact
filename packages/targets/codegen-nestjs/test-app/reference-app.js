@@ -15,6 +15,7 @@ import {
   Injectable,
   Module,
   Post,
+  Req,
   Scope,
   SetMetadata,
   UseFilters,
@@ -151,7 +152,8 @@ function authenticateByBearer(request) {
   return { deny: { code: "api.unauthenticated" } };
 }
 
-function sampleTask(taskId) {
+/** A task the contract's `Task` schema accepts. */
+export function sampleTask(taskId) {
   return {
     taskId,
     title: "Write the slice",
@@ -359,8 +361,8 @@ class OwnController {
     throw new Error("own boom");
   }
 
-  echo(body) {
-    return body;
+  echo(body, request) {
+    return { body, rawBody: Buffer.isBuffer(request.rawBody) };
   }
 
   hello() {
@@ -379,6 +381,7 @@ Get("own/boom")(
   Object.getOwnPropertyDescriptor(OwnController.prototype, "boom"),
 );
 Body()(OwnController.prototype, "echo", 0);
+Req()(OwnController.prototype, "echo", 1);
 Post("own/echo")(
   OwnController.prototype,
   "echo",
@@ -437,11 +440,14 @@ const hooks = {
   },
 };
 
+// The api's warnings go to the console, which the tests read; one test boots without it, for NestJS's Logger.
+const CONSOLE_LOGGING = { logger: console };
+
 class ReferenceModule {}
 
 // The app module provides its global interceptor, which NestJS registers before the imported api's reply interceptor.
 Module({
-  imports: [TasksNest.SeampactModule.forRoot(hooks)],
+  imports: [TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING)],
   controllers: [TasksController, OwnController],
   providers: [{ provide: APP_INTERCEPTOR, useClass: RecordingInterceptor }],
 })(ReferenceModule);
@@ -492,7 +498,9 @@ export function bootWithCacheInterceptor(skipsContractRoutes) {
     health: [UseInterceptors(cacheInterceptor(skipsContractRoutes))],
   });
 
-  return bootOnce(moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controller]));
+  return bootOnce(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING)], [controller]),
+  );
 }
 
 /** Boots an app whose `health` route carries a request-scoped interceptor. */
@@ -503,13 +511,18 @@ export function bootWithRequestScopedInterceptor() {
 
   const controller = controllerOf({ health: [UseInterceptors(ScopedInterceptor)] });
 
-  return bootOnce(moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controller]));
+  return bootOnce(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING)], [controller]),
+  );
 }
 
 /** Boots an app whose `health` method declares no input param. */
 export function bootWithoutInputParam() {
   return bootOnce(
-    moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controllerOf({}, ["health"])]),
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING)],
+      [controllerOf({}, ["health"])],
+    ),
   );
 }
 
@@ -526,7 +539,10 @@ export function bootWithoutGuard() {
   Module({})(ClearGuardsModule);
 
   return bootOnce(
-    moduleOf([TasksNest.SeampactModule.forRoot(hooks), ClearGuardsModule], [controller]),
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING), ClearGuardsModule],
+      [controller],
+    ),
   );
 }
 
@@ -546,7 +562,10 @@ export function bootWithLateGuard() {
   Module({})(LateGuardModule);
 
   return bootOnce(
-    moduleOf([TasksNest.SeampactModule.forRoot(hooks), LateGuardModule], [controller]),
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING), LateGuardModule],
+      [controller],
+    ),
   );
 }
 
@@ -566,14 +585,20 @@ export function bootWithLateGlobalInterceptor() {
   Module({})(LateInterceptorModule);
 
   return bootOnce(
-    moduleOf([TasksNest.SeampactModule.forRoot(hooks), LateInterceptorModule], [controllerOf()]),
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING), LateInterceptorModule],
+      [controllerOf()],
+    ),
   );
 }
 
 /** Boots an app with the given `forRoot` options. */
 export function bootWithModuleOptions(moduleOptions) {
   return bootOnce(
-    moduleOf([TasksNest.SeampactModule.forRoot(hooks, moduleOptions)], [controllerOf()]),
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks, { ...CONSOLE_LOGGING, ...moduleOptions })],
+      [controllerOf()],
+    ),
   );
 }
 
@@ -581,7 +606,10 @@ export function bootWithModuleOptions(moduleOptions) {
 export function bootTwice() {
   return bootOnce(
     moduleOf(
-      [TasksNest.SeampactModule.forRoot(hooks), TasksNest.SeampactModule.forRoot({ ...hooks })],
+      [
+        TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING),
+        TasksNest.SeampactModule.forRoot({ ...hooks }, CONSOLE_LOGGING),
+      ],
       [TasksController],
     ),
   );
@@ -596,7 +624,7 @@ export function bootWithAppInterceptors() {
 
   return bootOnce(
     moduleOf(
-      [TasksNest.SeampactModule.forRoot(hooks)],
+      [TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING)],
       [controller],
       [{ provide: APP_INTERCEPTOR, useClass: AppModuleInterceptor }],
     ),
@@ -606,14 +634,18 @@ export function bootWithAppInterceptors() {
 /** Boots an app whose controller is mounted under a path: `@Controller('tasks')`. */
 export function bootWithControllerPrefix() {
   return bootOnce(
-    moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controllerOf({}, [], "tasks")]),
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING)],
+      [controllerOf({}, [], "tasks")],
+    ),
   );
 }
 
 /** Boots an app with `setGlobalPrefix(prefix, { exclude })`. */
 export function bootWithGlobalPrefix(prefix, exclude) {
-  return bootOnce(moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controllerOf()]), (app) =>
-    app.setGlobalPrefix(prefix, exclude === undefined ? {} : { exclude }),
+  return bootOnce(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING)], [controllerOf()]),
+    (app) => app.setGlobalPrefix(prefix, exclude === undefined ? {} : { exclude }),
   );
 }
 
@@ -624,7 +656,7 @@ export function bootWithRouterModulePrefix() {
   return bootOnce(
     moduleOf(
       [
-        TasksNest.SeampactModule.forRoot(hooks),
+        TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING),
         ControllerModule,
         RouterModule.register([{ path: "tasks", module: ControllerModule }]),
       ],
@@ -639,7 +671,9 @@ export function bootWithReplyDecorators() {
     health: [HttpCode(204), Header("cache-control", "max-age=60")],
   });
 
-  return bootOnce(moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controller]));
+  return bootOnce(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING)], [controller]),
+  );
 }
 
 /** A provider of the app, which the hooks reach through NestJS's injection. */
@@ -662,17 +696,20 @@ export async function startAsyncHooksApp() {
     exports: [USERS_SERVICE],
   })(UsersModule);
 
-  const seampact = TasksNest.SeampactModule.forRootAsync({
-    imports: [UsersModule],
-    inject: [USERS_SERVICE],
-    useFactory: async (users) => ({
-      ...hooks,
-      authenticate: {
-        ...hooks.authenticate,
-        user: { authenticate: (request) => users.authenticate(request) },
-      },
-    }),
-  });
+  const seampact = TasksNest.SeampactModule.forRootAsync(
+    {
+      imports: [UsersModule],
+      inject: [USERS_SERVICE],
+      useFactory: async (users) => ({
+        ...hooks,
+        authenticate: {
+          ...hooks.authenticate,
+          user: { authenticate: (request) => users.authenticate(request) },
+        },
+      }),
+    },
+    CONSOLE_LOGGING,
+  );
   const app = await NestFactory.create(moduleOf([seampact], [controllerOf()]), {
     rawBody: true,
     logger: recordingLogger,
@@ -686,7 +723,7 @@ export async function startAsyncHooksApp() {
   return { host: "127.0.0.1", port, registeredHooks, close: () => app.close() };
 }
 
-// Listens on a free port with the documented setup 1 (`rawBody: true`).
+// Listens on a free port.
 async function serveApp(app) {
   await app.listen(0, "127.0.0.1");
 
@@ -704,7 +741,7 @@ export async function startAnsweringInterceptorApp(placement) {
   if (placement === "controller") UseInterceptors(AnsweringInterceptor)(controller);
 
   const app = await NestFactory.create(
-    moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controller]),
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING)], [controller]),
     { rawBody: true, logger: recordingLogger },
   );
 
@@ -727,7 +764,7 @@ export async function startOverriddenHooksApp() {
     },
   };
   const testingModule = await Test.createTestingModule({
-    imports: [TasksNest.SeampactModule.forRoot(hooks)],
+    imports: [TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING)],
     controllers: [controllerOf()],
   })
     .overrideProvider(TasksNest.SEAMPACT_HOOKS)
@@ -741,19 +778,10 @@ export async function startOverriddenHooksApp() {
  * Serves a testing module holding one controller, `health` only, set up with `configureApp` as an e2e test does,
  * with the given `forRoot` options; rejects with the boot problems when the boot check refuses it.
  */
-export async function startHealthOnlyTestingApp(moduleOptions) {
-  class HealthController {
-    health(input) {
-      return answer("health", input, this);
-    }
-  }
-
-  TasksNest.health.input()(HealthController.prototype, "health", 0);
-  decorateMethod(HealthController.prototype, "health", TasksNest.health());
-  Controller()(HealthController);
-
+export async function startHealthOnlyTestingApp(moduleOptions, healthResponses) {
+  const HealthController = healthController(healthResponses);
   const testingModule = await Test.createTestingModule({
-    imports: [TasksNest.SeampactModule.forRoot(hooks, moduleOptions)],
+    imports: [TasksNest.SeampactModule.forRoot(hooks, { ...CONSOLE_LOGGING, ...moduleOptions })],
     controllers: [HealthController],
   }).compile();
   const app = testingModule.createNestApplication({ logger: recordingLogger });
@@ -763,9 +791,32 @@ export async function startHealthOnlyTestingApp(moduleOptions) {
   return serveApp(app);
 }
 
+// A controller binding `health` alone, with the `responses()` decorator of the given mode when there is one.
+function healthController(healthResponses) {
+  class HealthController {
+    health(input) {
+      return answer("health", input, this);
+    }
+  }
+
+  TasksNest.health.input()(HealthController.prototype, "health", 0);
+  decorateMethod(HealthController.prototype, "health", TasksNest.health());
+
+  if (healthResponses !== undefined) {
+    decorateMethod(HealthController.prototype, "health", TasksNest.responses(healthResponses));
+  }
+
+  Controller()(HealthController);
+
+  return HealthController;
+}
+
+// The JSON limit the two-api app gives its own routes through `configureApp`, over body-parser's 100 KB default.
+const APP_ROUTES_JSON_LIMIT = "5mb";
+
 /**
- * Serves `tasks` and the api the `tasksService` slot holds, each through its own `SeampactModule.forRoot`, on a
- * free port.
+ * Serves `tasks` and the api the `tasksService` slot holds, each through its own `SeampactModule.forRoot` and its own
+ * `configureApp`, with NestJS's `rawBody: true` and the app's own routes, on a free port.
  */
 export async function startTwoApiApp() {
   resetScenario();
@@ -777,10 +828,17 @@ export async function startTwoApiApp() {
   Controller()(SecondController);
 
   const module = moduleOf(
-    [TasksNest.SeampactModule.forRoot(hooks), TasksServiceNest.SeampactModule.forRoot(hooks)],
-    [TasksController, SecondController],
+    [
+      TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING),
+      TasksServiceNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING),
+    ],
+    [TasksController, SecondController, OwnController],
   );
   const app = await NestFactory.create(module, { rawBody: true, logger: recordingLogger });
+
+  // The app routes' parser options go to the first call; the second api's parsers compose with the first's.
+  TasksNest.configureApp(app, { appJsonParser: { limit: APP_ROUTES_JSON_LIMIT } });
+  TasksServiceNest.configureApp(app);
 
   await app.listen(0, "127.0.0.1");
 
@@ -789,11 +847,11 @@ export async function startTwoApiApp() {
   return { host: "127.0.0.1", port, close: () => app.close() };
 }
 
-/** Boots the app on a free port with the documented setup 1 (`rawBody: true`). */
+/** Boots the app on a free port, set up with `configureApp` and NestJS's default `rawBody: false`. */
 export async function startReferenceApp() {
   resetScenario();
 
-  const app = await NestFactory.create(ReferenceModule, { rawBody: true, logger: recordingLogger });
+  const app = await NestFactory.create(ReferenceModule, { logger: recordingLogger });
 
   app.set("trust proxy", () => scenario.trustsProxy);
   app.enableCors({ origin: ALLOWED_ORIGIN });
@@ -819,4 +877,135 @@ export async function startReferenceApp() {
     .map((interceptor) => interceptor.constructor.name);
 
   return { host: "127.0.0.1", port, globalInterceptors, close: () => app.close() };
+}
+
+/**
+ * Boots an app whose module takes no `logger`, holding `health` only, after `app.useLogger(appLogger)`: the boundary's
+ * boot warning goes to NestJS's logger.
+ */
+export async function bootWithAppLogger(appLogger) {
+  const app = await NestFactory.create(
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks, { unboundOperations: "warn" })],
+      [healthController()],
+    ),
+    { logger: false },
+  );
+
+  app.useLogger(appLogger);
+
+  try {
+    await app.init();
+  } finally {
+    await app.close();
+  }
+}
+
+// How `startInputPartsApp` reads the request bodies: through `configureApp`, or with no JSON parser at all.
+const BODY_SETUPS = {
+  configureApp: (app) => TasksNest.configureApp(app),
+  noBodyParser: () => undefined,
+};
+
+/**
+ * Serves an app binding `assignTask` with its path, body and whole input as three params, `createTask` with its body
+ * and headers, and `listTasks` with its query; every other operation is unbound. `bodySetup` names a `BODY_SETUPS`
+ * entry.
+ */
+export async function startInputPartsApp(moduleOptions = {}, bodySetup = "configureApp") {
+  resetScenario();
+
+  const app = await NestFactory.create(
+    moduleOf(
+      [
+        TasksNest.SeampactModule.forRoot(hooks, {
+          ...CONSOLE_LOGGING,
+          unboundOperations: "warn",
+          ...moduleOptions,
+        }),
+      ],
+      [inputPartsController()],
+    ),
+    { logger: recordingLogger, bodyParser: bodySetup !== "noBodyParser" },
+  );
+
+  BODY_SETUPS[bodySetup](app);
+
+  return serveApp(app);
+}
+
+function inputPartsController() {
+  class PartsController {
+    assignTask(path, body, input) {
+      const sharesInput = path === input.path && body === input.body;
+
+      return answer("assignTask", { path, body, sharesInput }, this);
+    }
+
+    createTask(body, headers) {
+      return answer("createTask", { body, headers }, this);
+    }
+
+    listTasks(query) {
+      return answer("listTasks", { query }, this);
+    }
+  }
+
+  const prototype = PartsController.prototype;
+
+  TasksNest.assignTask.path()(prototype, "assignTask", 0);
+  TasksNest.assignTask.body()(prototype, "assignTask", 1);
+  TasksNest.assignTask.input()(prototype, "assignTask", 2);
+  decorateMethod(prototype, "assignTask", TasksNest.assignTask());
+  TasksNest.createTask.body()(prototype, "createTask", 0);
+  TasksNest.createTask.headers()(prototype, "createTask", 1);
+  decorateMethod(prototype, "createTask", TasksNest.createTask());
+  TasksNest.listTasks.query()(prototype, "listTasks", 0);
+  decorateMethod(prototype, "listTasks", TasksNest.listTasks());
+  Controller()(PartsController);
+
+  return PartsController;
+}
+
+/** Boots an app whose `assignTask` method takes `createTask`'s body decorator. */
+export function bootWithMisplacedInputPart() {
+  class MisplacedController {
+    assignTask(body) {
+      return answer("assignTask", { body }, this);
+    }
+  }
+
+  TasksNest.createTask.body()(MisplacedController.prototype, "assignTask", 0);
+  decorateMethod(MisplacedController.prototype, "assignTask", TasksNest.assignTask());
+  Controller()(MisplacedController);
+
+  return bootOnce(
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks, { ...CONSOLE_LOGGING, unboundOperations: "warn" })],
+      [MisplacedController],
+    ),
+  );
+}
+
+// Where an app installs its own JSON parser relative to `configureApp`.
+const APP_PARSER_ORDERS = {
+  beforeConfigureApp: (app) => {
+    app.useBodyParser("json", { limit: "5mb" });
+    TasksNest.configureApp(app);
+  },
+  afterConfigureApp: (app) => {
+    TasksNest.configureApp(app);
+    app.useBodyParser("json", { limit: "5mb" });
+  },
+};
+
+/** Boots the health-only app with a JSON parser of its own, installed at the `APP_PARSER_ORDERS` entry `order`. */
+export function bootWithAppJsonParser(order) {
+  return bootOnce(
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks, { ...CONSOLE_LOGGING, unboundOperations: "warn" })],
+      [healthController()],
+    ),
+    APP_PARSER_ORDERS[order],
+  );
 }

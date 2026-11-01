@@ -24,7 +24,7 @@ Fix every line, then start again.
 | `no idempotency store for an idempotent operation` | Register `idempotencyStore`, for example `createMemoryIdempotencyStore()` of `@seampact/idempotency-memory`. |
 | `two deciders claim '<name>'` | Keep the name in one decider. |
 | `the seampact guard is not the last guard of <method>()` | Do not register a guard after the contract decorator on that route. |
-| `<method>() has no input parameter, so its input is never validated` | Add `@<Op>.input() input`. |
+| `<method>() has no input parameter, so its input is never validated` | Add `@<Op>.input() input`, or one of its parts such as `@<Op>.body() body`. |
 | `the app interceptor <name> can answer <route> from its cache` | Keep cache interceptors off contract routes. The contract's `cache` sets the reply headers. |
 | `<decorator> on <method>() writes after the boundary's reply`, `a @Res(), @Response() or @Next() parameter ...` | Remove it: return the reply instead. |
 | `@HttpCode on <method>() sets a status the boundary never writes` | Remove `@HttpCode`. Return the status from the handler. |
@@ -34,7 +34,15 @@ Fix every line, then start again.
 | `setGlobalPrefix('<prefix>') prefixes <route>` | Exclude the contract routes with the `exclude` option of `setGlobalPrefix`, or remove the prefix. |
 | `the api '<id>' is registered twice` | Import `SeampactModule.forRoot` or `forRootAsync` once per api. |
 | `the NestJS platform is '<x>'` | Use `@nestjs/platform-express`. |
-| `'<key>' is not an option of SeampactModule.forRoot` | `forRoot` takes `{ logger }`. |
+| `bodyValidation is on, but the target was generated without its response validators` | Set `bodyValidation: true` in the target's `options`, then run `generate`. Or leave `bodyValidation` out of `forRoot`. |
+| `'<key>' is not an option of SeampactModule.forRoot` | `forRoot` takes `{ logger, responses, bodyValidation, unboundOperations }`. |
+| `'responses' is "<x>", not 'strict' or 'warn'`, `'bodyValidation' is "<x>", not true or false` | Pass `'strict'` or `'warn'`, `true` or `false`, or leave the option out. |
+| `no JSON parser read the body of '<operation>'` (a 500 at run time) | Call `configureApp(app)` before `app.listen`, or give the app a JSON parser with `limit: LARGEST_BODY_LIMIT`. |
+| `configureApp found a JSON parser installed before it`, `a JSON parser was installed after configureApp(app)` | Remove your `app.useBodyParser("json", ...)` or `express.json()`, and pass its options to `configureApp(app, { appJsonParser: { limit: "5mb" } })`. Or skip `configureApp` and install the parsers yourself. |
+| `appJsonParser is passed to a second configureApp call` | Pass `appJsonParser` to the app's first `configureApp` call only. |
+| `configureApp's appJsonParser takes limit and strict` | Pass `limit` or `strict` only. For other parser options, skip `configureApp` and install the parsers yourself. |
+| `@<op>.<part>() is on <method>(), the method of '<other>'` | Use the part decorator of the method's own operation, as the fix names. |
+| `createContractDocument of api '<id>' got autoTagControllers: true` | Remove the option: `createContractDocument` sets it to `false`. |
 
 Two checks only warn, and the app still starts: global interceptors that run outside the reply interceptor, and request-scoped interceptors that cannot be checked at boot.
 
