@@ -5,7 +5,8 @@
 required-version = "==0.13.6"
 # Every build requirement of the members, pinned and hashed: hatchling, what it pulls, and `editables` for the
 # editable installs of `uv sync`. uv checks these hashes in `uv sync` and `uv build`, and refuses a build requirement
-# without one.
+# without one. To bump hatchling: `uv pip compile --generate-hashes` of `hatchling==<new>` and `editables~=0.3`, then
+# replace these pins and hashes and the `requires` of each member's `[build-system]`.
 build-constraint-dependencies = [
     { requirement = "editables==0.6", hashes = [
         "sha256:1163834902381c4613787951c5914800fdf155ae08848a373b8ea5006780977c",
@@ -41,7 +42,7 @@ require-build-hashes = true
 preview-features = ["build-dependency-hashes"]
 
 [tool.uv.workspace]
-members = ["ir", "signed-webhooks"]
+members = ["hooks", "ir", "signed-webhooks"]
 
 [dependency-groups]
 # The vulnerability audit of the lock file, installed only by its CI job.
@@ -58,7 +59,7 @@ dev = [
 
 [tool.ruff]
 target-version = "py312"
-src = ["ir/src", "signed-webhooks/src"]
+src = ["hooks/src", "ir/src", "signed-webhooks/src"]
 line-length = 120
 
 [tool.ruff.lint]
@@ -67,13 +68,13 @@ select = ["B", "E", "F", "I", "N", "RUF", "SIM", "UP", "W"]
 [tool.mypy]
 strict = true
 python_version = "3.12"
-mypy_path = ["ir/src", "signed-webhooks/src"]
-files = ["ir/src", "ir/tests", "signed-webhooks/src", "signed-webhooks/tests"]
+mypy_path = ["hooks/src", "ir/src", "signed-webhooks/src"]
+files = ["hooks/src", "hooks/tests", "ir/src", "ir/tests", "signed-webhooks/src", "signed-webhooks/tests"]
 explicit_package_bases = true
 warn_unreachable = true
 
 [tool.pytest.ini_options]
-testpaths = ["ir/tests", "signed-webhooks/tests"]
+testpaths = ["hooks/tests", "ir/tests", "signed-webhooks/tests"]
 addopts = ["--import-mode=importlib", "--strict-markers", "--strict-config", "-ra"]
 xfail_strict = true
 filterwarnings = ["error"]
