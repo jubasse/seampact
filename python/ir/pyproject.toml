@@ -9,7 +9,7 @@ description = "The seampact IR model, naming and reader for Python generators."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["jsonschema==4.26.0"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
