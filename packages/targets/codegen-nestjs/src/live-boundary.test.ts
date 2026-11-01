@@ -153,7 +153,12 @@ interface ReferenceAppModule {
   ): Promise<{ host: string; port: number; close(): Promise<void> }>;
   bootWithAppLogger(appLogger: object): Promise<void>;
   sampleTask(taskId: string): object;
-  startInputPartsApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startInputPartsApp(
+    moduleOptions?: unknown,
+    bodySetup?: "configureApp" | "noBodyParser",
+  ): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  bootWithMisplacedInputPart(): Promise<void>;
+  bootWithAppJsonParser(order: "beforeConfigureApp" | "afterConfigureApp"): Promise<void>;
   readonly NotFoundException: new () => Error;
   readonly BadRequestException: new () => Error;
   readonly HttpException: new (message: string, status: number) => Error;
@@ -968,6 +973,73 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
         await partsServer.close();
       }
     });
+
+    test("query and headers params read their parts of the validated input", async () => {
+      const received: unknown[] = [];
+      const idempotencyKey = randomUUID();
+      const partsServer = await app.startInputPartsApp();
+
+      app.scenario.answers.listTasks = (parts) => {
+        received.push(parts);
+
+        return { status: 200, body: { items: [] } };
+      };
+      app.scenario.answers.createTask = (parts) => {
+        received.push(parts);
+
+        return { status: 201, body: app.sampleTask(TASK) };
+      };
+
+      try {
+        const listed = await sendRawRequest(
+          partsServer,
+          "GET",
+          `/v1/channels/${CHANNEL}/tasks?cursor=next`,
+          { headers: BEARER },
+        );
+        const created = await sendRawRequest(partsServer, "POST", `/v1/channels/${CHANNEL}/tasks`, {
+          headers: { ...BEARER, "idempotency-key": idempotencyKey },
+          body: JSON.stringify({ title: "Write" }),
+        });
+
+        expect([listed.status, created.status]).toEqual([200, 201]);
+        expect(received).toEqual([
+          { query: { cursor: "next", limit: 50 } },
+          {
+            body: { title: "Write" },
+            headers: { authorization: BEARER.authorization, "idempotency-key": idempotencyKey },
+          },
+        ]);
+      } finally {
+        await partsServer.close();
+      }
+    });
+
+    test("a contract body no JSON parser read answers 500 and logs that configureApp is missing", async () => {
+      const partsServer = await app.startInputPartsApp({}, "noBodyParser");
+
+      try {
+        const created = await sendRawRequest(partsServer, "POST", `/v1/channels/${CHANNEL}/tasks`, {
+          headers: writeHeaders(),
+          body: JSON.stringify({ title: "Write" }),
+        });
+
+        expect(created.status).toBe(500);
+        expect(app.calls.unexpected).toHaveLength(1);
+        expect(String(app.calls.unexpected[0]?.exceptionOrReply)).toContain(
+          "call configureApp(app)",
+        );
+        expect(app.calls.handled).toEqual([]);
+      } finally {
+        await partsServer.close();
+      }
+    });
+
+    test("a part decorator of another operation refuses the boot by name", async () => {
+      await expect(app.bootWithMisplacedInputPart()).rejects.toThrow(
+        /@createTask\.body\(\) is on assignTask\(\).*@assignTask\.body\(\)/s,
+      );
+    });
   });
 
   describe("hooks built by forRootAsync", () => {
@@ -1152,6 +1224,18 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       );
     });
 
+    test("a JSON parser the app installs before configureApp is refused by name", async () => {
+      await expect(app.bootWithAppJsonParser("beforeConfigureApp")).rejects.toThrow(
+        /configureApp found a JSON parser.*configureApp\(app, \{ appJsonParser/s,
+      );
+    });
+
+    test("a JSON parser the app installs after configureApp refuses the boot by name", async () => {
+      await expect(app.bootWithAppJsonParser("afterConfigureApp")).rejects.toThrow(
+        /a JSON parser was installed after configureApp.*appJsonParser/s,
+      );
+    });
+
     test("a logger that is not one refuses the boot", async () => {
       await expect(app.bootWithModuleOptions({ logger: {}, level: "debug" })).rejects.toThrow(
         /'level' is not an option of SeampactModule.forRoot.*'logger' is not an object/s,
@@ -1225,6 +1309,26 @@ describe("two apis on one app, each through its own module", () => {
 
   beforeEach(() => {
     app.resetScenario();
+  });
+
+  test("each api's configureApp reads its own contract bodies, and the app's routes take the options passed once", async () => {
+    const scalar = JSON.stringify("x");
+    const firstApi = await sendRawRequest(server, "POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: writeHeaders(),
+      body: scalar,
+    });
+    const secondApi = await sendRawRequest(server, "POST", `/v1/beside/channels/${CHANNEL}/tasks`, {
+      headers: writeHeaders(),
+      body: scalar,
+    });
+    const appRoute = await sendRawRequest(server, "POST", "/own/echo", {
+      body: JSON.stringify({ padding: "x".repeat(200 * 1024) }),
+    });
+
+    expect(JSON.parse(firstApi.text).issues).toEqual([{ pointer: "", rule: "type" }]);
+    expect(JSON.parse(secondApi.text).issues).toEqual([{ pointer: "", rule: "type" }]);
+    expect(appRoute.status).toBe(201);
+    expect(JSON.parse(appRoute.text).rawBody).toBe(true);
   });
 
   describeTwoApiHandlerAccess(() => ({

@@ -811,9 +811,12 @@ function healthController(healthResponses) {
   return HealthController;
 }
 
+// The JSON limit the two-api app gives its own routes through `configureApp`, over body-parser's 100 KB default.
+const APP_ROUTES_JSON_LIMIT = "5mb";
+
 /**
- * Serves `tasks` and the api the `tasksService` slot holds, each through its own `SeampactModule.forRoot`, on a
- * free port.
+ * Serves `tasks` and the api the `tasksService` slot holds, each through its own `SeampactModule.forRoot` and its own
+ * `configureApp`, with NestJS's `rawBody: true` and the app's own routes, on a free port.
  */
 export async function startTwoApiApp() {
   resetScenario();
@@ -829,9 +832,13 @@ export async function startTwoApiApp() {
       TasksNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING),
       TasksServiceNest.SeampactModule.forRoot(hooks, CONSOLE_LOGGING),
     ],
-    [TasksController, SecondController],
+    [TasksController, SecondController, OwnController],
   );
   const app = await NestFactory.create(module, { rawBody: true, logger: recordingLogger });
+
+  // The app routes' parser options go to the first call; the second api's parsers compose with the first's.
+  TasksNest.configureApp(app, { appJsonParser: { limit: APP_ROUTES_JSON_LIMIT } });
+  TasksServiceNest.configureApp(app);
 
   await app.listen(0, "127.0.0.1");
 
@@ -894,13 +901,40 @@ export async function bootWithAppLogger(appLogger) {
   }
 }
 
+// How `startInputPartsApp` reads the request bodies: through `configureApp`, or with no JSON parser at all.
+const BODY_SETUPS = {
+  configureApp: (app) => TasksNest.configureApp(app),
+  noBodyParser: () => undefined,
+};
+
 /**
- * Serves an app binding `assignTask` with its path, body and whole input as three params, and `createTask` with its
- * body alone; every other operation is unbound.
+ * Serves an app binding `assignTask` with its path, body and whole input as three params, `createTask` with its body
+ * and headers, and `listTasks` with its query; every other operation is unbound. `bodySetup` names a `BODY_SETUPS`
+ * entry.
  */
-export async function startInputPartsApp() {
+export async function startInputPartsApp(moduleOptions = {}, bodySetup = "configureApp") {
   resetScenario();
 
+  const app = await NestFactory.create(
+    moduleOf(
+      [
+        TasksNest.SeampactModule.forRoot(hooks, {
+          ...CONSOLE_LOGGING,
+          unboundOperations: "warn",
+          ...moduleOptions,
+        }),
+      ],
+      [inputPartsController()],
+    ),
+    { logger: recordingLogger, bodyParser: bodySetup !== "noBodyParser" },
+  );
+
+  BODY_SETUPS[bodySetup](app);
+
+  return serveApp(app);
+}
+
+function inputPartsController() {
   class PartsController {
     assignTask(path, body, input) {
       const sharesInput = path === input.path && body === input.body;
@@ -908,8 +942,12 @@ export async function startInputPartsApp() {
       return answer("assignTask", { path, body, sharesInput }, this);
     }
 
-    createTask(body) {
-      return answer("createTask", { body }, this);
+    createTask(body, headers) {
+      return answer("createTask", { body, headers }, this);
+    }
+
+    listTasks(query) {
+      return answer("listTasks", { query }, this);
     }
   }
 
@@ -920,18 +958,54 @@ export async function startInputPartsApp() {
   TasksNest.assignTask.input()(prototype, "assignTask", 2);
   decorateMethod(prototype, "assignTask", TasksNest.assignTask());
   TasksNest.createTask.body()(prototype, "createTask", 0);
+  TasksNest.createTask.headers()(prototype, "createTask", 1);
   decorateMethod(prototype, "createTask", TasksNest.createTask());
+  TasksNest.listTasks.query()(prototype, "listTasks", 0);
+  decorateMethod(prototype, "listTasks", TasksNest.listTasks());
   Controller()(PartsController);
 
-  const app = await NestFactory.create(
+  return PartsController;
+}
+
+/** Boots an app whose `assignTask` method takes `createTask`'s body decorator. */
+export function bootWithMisplacedInputPart() {
+  class MisplacedController {
+    assignTask(body) {
+      return answer("assignTask", { body }, this);
+    }
+  }
+
+  TasksNest.createTask.body()(MisplacedController.prototype, "assignTask", 0);
+  decorateMethod(MisplacedController.prototype, "assignTask", TasksNest.assignTask());
+  Controller()(MisplacedController);
+
+  return bootOnce(
     moduleOf(
       [TasksNest.SeampactModule.forRoot(hooks, { ...CONSOLE_LOGGING, unboundOperations: "warn" })],
-      [PartsController],
+      [MisplacedController],
     ),
-    { logger: recordingLogger },
   );
+}
 
-  TasksNest.configureApp(app);
+// Where an app installs its own JSON parser relative to `configureApp`.
+const APP_PARSER_ORDERS = {
+  beforeConfigureApp: (app) => {
+    app.useBodyParser("json", { limit: "5mb" });
+    TasksNest.configureApp(app);
+  },
+  afterConfigureApp: (app) => {
+    TasksNest.configureApp(app);
+    app.useBodyParser("json", { limit: "5mb" });
+  },
+};
 
-  return serveApp(app);
+/** Boots the health-only app with a JSON parser of its own, installed at the `APP_PARSER_ORDERS` entry `order`. */
+export function bootWithAppJsonParser(order) {
+  return bootOnce(
+    moduleOf(
+      [TasksNest.SeampactModule.forRoot(hooks, { ...CONSOLE_LOGGING, unboundOperations: "warn" })],
+      [healthController()],
+    ),
+    APP_PARSER_ORDERS[order],
+  );
 }
