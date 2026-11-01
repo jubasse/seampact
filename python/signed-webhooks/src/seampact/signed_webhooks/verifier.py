@@ -5,7 +5,6 @@ with each candidate, then checks the timestamp against the tolerance in both dir
 """
 
 import base64
-import binascii
 import hashlib
 import hmac
 import re
@@ -124,21 +123,15 @@ def _signed_payload(message: SignedMessage, scheme: SignatureScheme) -> bytes:
     )
 
 
-# A candidate that does not decode in the declared encoding, or decodes to the wrong length, never matches.
+# A candidate that does not decode in the declared encoding, or decodes to the wrong length, never matches. The
+# patterns admit only text the decoders accept.
 def _decoded_candidate(candidate: str, encoding: SignatureEncoding) -> bytes | None:
-    try:
-        decoded = _decode(candidate, encoding)
-    except (binascii.Error, ValueError):
-        return None
+    if encoding is SignatureEncoding.HEX:
+        decoded = bytes.fromhex(candidate) if _HEX.fullmatch(candidate) else None
+    else:
+        decoded = base64.b64decode(candidate, validate=True) if _BASE64.fullmatch(candidate) else None
 
     return decoded if decoded is not None and len(decoded) == _HMAC_SHA256_BYTES else None
-
-
-def _decode(candidate: str, encoding: SignatureEncoding) -> bytes | None:
-    if encoding is SignatureEncoding.HEX:
-        return bytes.fromhex(candidate) if _HEX.fullmatch(candidate) else None
-
-    return base64.b64decode(candidate, validate=True) if _BASE64.fullmatch(candidate) else None
 
 
 # Every secret against every candidate, without stopping at the first match.
