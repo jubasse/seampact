@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from seampact.ir.config import ConfigProblem, read_app_config
+from seampact.ir.config.app_config import LocalSource
 from seampact.ir.config.config_kind import ConfigKind
 from seampact.ir.config.schema_check import schema_problems
 from seampact.ir.config.target_ecosystem import TargetEcosystem
@@ -137,7 +138,9 @@ def test_an_app_config_resolves_entries_sources_and_leaves_other_ecosystems(tmp_
     assert [entry.id for entry in config.entries] == ["main"]
     assert [entry.id for entry in config.other_entries] == ["web"]
     assert config.entries[0].root == f"{tmp_path}/gen/main"
-    assert config.sources["contract"].directory == f"{tmp_path.parent}/contract"  # type: ignore[union-attr]
+    contract = config.sources["contract"]
+    assert isinstance(contract, LocalSource)
+    assert contract.directory == f"{tmp_path.parent}/contract"
 
 
 @pytest.mark.parametrize(

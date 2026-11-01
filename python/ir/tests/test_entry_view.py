@@ -1,11 +1,11 @@
 """Each target entry's view of the IR: the apis it names, its document, its include and exclude lists."""
 
 from seampact.ir.config import AppConfigEntry, SourceApi, entry_view
-from seampact.ir.config.json_value import JsonObject
+from seampact.ir.config.json_value import JsonObject, JsonValue
 
 
-def _entry(**members: object) -> AppConfigEntry:
-    entry: JsonObject = {"id": "main", "use": "pypi:seampact-fastapi", **members}  # type: ignore[dict-item]
+def _entry(**members: JsonValue) -> AppConfigEntry:
+    entry: JsonObject = {"id": "main", "use": "pypi:seampact-fastapi", **members}
 
     return AppConfigEntry(entry, "/out/main")
 
@@ -28,7 +28,9 @@ def _kept(result_ir: JsonObject) -> list[str]:
     operations = result_ir["operations"]
     assert isinstance(operations, list)
 
-    return [operation["id"] for operation in operations if isinstance(operation, dict)]  # type: ignore[misc]
+    return [
+        operation["id"] for operation in operations if isinstance(operation, dict) and isinstance(operation["id"], str)
+    ]
 
 
 def test_an_entry_without_a_selection_keeps_every_operation_and_leaves_the_source_alone() -> None:

@@ -14,11 +14,13 @@ from seampact.ir.config.local_source_policy import LocalSourcePolicy
 type GitRepositoryFactory = Callable[..., tuple[Path, dict[str, str]]]
 
 
-def _source(repository: Path, **members: object) -> GitSource:
-    values: dict[str, object] = {"url": str(repository), "tag": "v1", "directory": "contract", "integrity": None}
-    values.update(members)
-
-    return GitSource(**values)  # type: ignore[arg-type]
+def _source(repository: Path, **members: str) -> GitSource:
+    return GitSource(
+        url=members.get("url", str(repository)),
+        tag=members.get("tag", "v1"),
+        directory=members.get("directory", "contract"),
+        integrity=None,
+    )
 
 
 def test_the_tag_tree_is_read_and_passes_the_pinned_bundle_check(
@@ -67,7 +69,7 @@ def test_a_relative_local_path_is_read_from_the_base_directory(
     ],
 )
 def test_a_source_that_cannot_be_fetched_is_refused_by_name(
-    tmp_path: Path, members: dict[str, object], code: BundleFailureCode, git_repository: GitRepositoryFactory
+    tmp_path: Path, members: dict[str, str], code: BundleFailureCode, git_repository: GitRepositoryFactory
 ) -> None:
     repository, environment = git_repository(tmp_path, {"a": b"x"})
 
