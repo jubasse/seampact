@@ -14,11 +14,16 @@ use Seampact\Ir\Config\AppConfigReader;
 use Seampact\Ir\Config\ConfigProblem;
 use Seampact\Ir\Config\LocalSource;
 use Seampact\Ir\Config\LocalSourcePolicy;
+use Seampact\Ir\Config\TargetEcosystem;
+use Seampact\Ir\Tests\Support\Documents;
+use Seampact\Ir\Tests\Support\Json;
 use Seampact\Ir\Tests\Support\TemporaryDirectory;
 
 /** The app config reader on valid configs and on each refusal, with the Node CLI's codes. */
 final class ConfigReaderTest extends TestCase
 {
+    private const USE_FORM_VECTORS = '/packages/core/spec/vectors/config/use-forms.json';
+
     private const VALID = <<<'YAML'
         sources:
           contract: { path: ../contract }
@@ -177,6 +182,62 @@ final class ConfigReaderTest extends TestCase
         self::assertIsArray($problems);
         self::assertSame("'colour' is not a key the app config takes here.", $problems[0]->message);
         self::assertSame('app/seampact.config.yaml targets[0].colour', $problems[0]->where);
+    }
+
+    #[DataProvider('acceptedUseForms')]
+    public function testReadsEachAcceptedUseFormAsItsEcosystem(string $use, string $ecosystem): void
+    {
+        $config = $this->read("targets:\n  - { id: a, use: '{$use}', api: t }\n");
+
+        self::assertInstanceOf(AppConfig::class, $config);
+        $entry = [...$config->entries, ...$config->otherEntries][0];
+        self::assertSame(strtolower($entry->ecosystem()->name), $ecosystem);
+        self::assertSame($entry->ecosystem() === TargetEcosystem::Composer, $config->entries !== []);
+    }
+
+    #[DataProvider('refusedUseForms')]
+    public function testRefusesEachBadPypiUseByItsRule(string $use): void
+    {
+        $problems = $this->read("targets:\n  - { id: a, use: '{$use}', api: t }\n");
+
+        self::assertIsArray($problems);
+        self::assertCount(1, $problems);
+        self::assertSame('config.schema', $problems[0]->code);
+        self::assertStringContainsString("'pypi:' then its PEP 503 normalised name", $problems[0]->message);
+        self::assertSame('app/seampact.config.yaml targets[0].use', $problems[0]->where);
+    }
+
+    /**
+     * The shared `use` vectors (`packages/core/spec/vectors/config/use-forms.json`) the Node and JVM readers pass too.
+     *
+     * @return array<string, array{string, string}>
+     */
+    public static function acceptedUseForms(): array
+    {
+        $cases = [];
+
+        foreach (Json::objects(self::useFormVectors(), 'accepted') as $vector) {
+            $cases[Json::string($vector, 'use')] = [Json::string($vector, 'use'), Json::string($vector, 'ecosystem')];
+        }
+
+        return $cases;
+    }
+
+    /** @return array<string, array{string}> */
+    public static function refusedUseForms(): array
+    {
+        $cases = [];
+
+        foreach (Json::objects(self::useFormVectors(), 'refused') as $vector) {
+            $cases[Json::string($vector, 'case')] = [Json::string($vector, 'use')];
+        }
+
+        return $cases;
+    }
+
+    private static function useFormVectors(): \stdClass
+    {
+        return Json::object(Json::decodeFile(Documents::repositoryRoot() . self::USE_FORM_VECTORS));
     }
 
     public function testNamesTheMountRuleAsTheNodeCliDoes(): void

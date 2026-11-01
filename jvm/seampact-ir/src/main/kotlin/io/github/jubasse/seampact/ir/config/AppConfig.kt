@@ -24,11 +24,17 @@ public enum class TargetEcosystem {
 
     /** A Composer `vendor/name`: the Composer runner generates it. */
     COMPOSER,
+
+    /** A `pypi:<distribution>`: the pip runner generates it. The schema keeps the Maven group `pypi` for it. */
+    PYPI,
     ;
 
     public companion object {
+        private const val PYPI_PREFIX = "pypi:"
+
         // npm names never hold a colon, and an unscoped npm name never holds a slash.
         public fun of(use: String): TargetEcosystem = when {
+            use.startsWith(PYPI_PREFIX) -> PYPI
             ':' in use -> MAVEN
             !use.startsWith("@") && !use.startsWith(".") && '/' in use -> COMPOSER
             else -> NPM

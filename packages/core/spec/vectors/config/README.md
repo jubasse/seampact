@@ -1,0 +1,1 @@
+The `use` forms of an app config's target entry every config reader proves itself on: each accepted `use` with the runner it belongs to, and each refused one, which the schema rejects with the rule of the `pypi:<distribution>` form (ADR 0011 "The app config").

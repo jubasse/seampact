@@ -14,10 +14,10 @@ export interface CliIo {
   // The name to print for a file a diagnostic locates, given the path the compiler read it at; the path itself when
   // absent. The standalone binary names the first-party packs it embeds, which do not exist on disk.
   diagnosticFileLabel?(file: string): string;
-  // Commands the host runs only on configs whose target entries are all native (a Maven coordinate or a Composer
-  // package), by name, with the problem to print for an npm entry: the host loads no npm target, writes or checks the
-  // documents and pinned bundles, and leaves each native entry to its build plugin. The standalone binary sets
-  // `generate` and `check` (ADR 0010).
+  // Commands the host runs only on configs whose target entries are all native (a Maven coordinate, a Composer
+  // package or a pip distribution), by name, with the problem to print for an npm entry: the host loads no npm
+  // target, writes or checks the documents and pinned bundles, and leaves each native entry to its build plugin. The
+  // standalone binary sets `generate` and `check` (ADR 0010).
   nativeOnlyCommands?: ReadonlyMap<string, CliProblem>;
 }
 
