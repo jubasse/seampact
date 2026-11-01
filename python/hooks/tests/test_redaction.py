@@ -66,7 +66,26 @@ def _sensitive_values() -> list[object]:
         status=201, headers=(StoredResponse.Header(name="set-cookie", value=_SECRET),), body=_SECRET.encode()
     )
 
-    return [_request_view(), _template_request(), application_request, authenticate_request, stored_response]
+    requirement_request = RequirementRequest(
+        kind=RequirementKind.RIGHT,
+        name="orders.refund",
+        principal=None,
+        scopes=(),
+        proof={"reauthToken": _SECRET},
+        purpose=Route(),
+        operation=_OPERATION,
+        request=RequestView(method="POST", path="/orders", headers={}),
+        extensions=RequirementRequest.Extensions(requirement={}, operation={}),
+    )
+
+    return [
+        _request_view(),
+        _template_request(),
+        application_request,
+        authenticate_request,
+        stored_response,
+        requirement_request,
+    ]
 
 
 @pytest.mark.parametrize("render", [repr, str, pprint.pformat, pretty_repr], ids=["repr", "str", "pprint", "rich"])
@@ -96,6 +115,12 @@ class _SyncDecide:
         return Allowed()
 
 
+# Hook parameters are positional-only, so an implementation may name its parameter freely.
+class _DecideNamingItsParameterAnotherWay:
+    def decide(self, req: RequirementRequest) -> Decision:
+        return Allowed()
+
+
 class _AsyncDecide:
     async def decide(self, request: RequirementRequest) -> Decision:
         return Allowed()
@@ -119,6 +144,6 @@ def test_a_def_and_an_async_def_hook_both_satisfy_the_protocol() -> None:
         request=_request_view(),
         extensions=RequirementRequest.Extensions(requirement={}, operation={}),
     )
-    hooks: list[DecideHook] = [_SyncDecide(), _AsyncDecide()]
+    hooks: list[DecideHook] = [_SyncDecide(), _AsyncDecide(), _DecideNamingItsParameterAnotherWay()]
 
-    assert [asyncio.run(_decision_of(hook, request)) for hook in hooks] == [Allowed(), Allowed()]
+    assert [asyncio.run(_decision_of(hook, request)) for hook in hooks] == [Allowed(), Allowed(), Allowed()]
