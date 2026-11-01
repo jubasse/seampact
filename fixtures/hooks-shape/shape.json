@@ -1,6 +1,6 @@
 {
-  "description": "The shape every hooks package shares (@seampact/hooks, io.github.jubasse:seampact-hooks, seampact/hooks): each package's test checks its types against this file. A type or member without `languages` exists in all three; `discriminant` is a literal member npm carries and Java and PHP express as the type itself.",
-  "languages": ["npm", "java", "php"],
+  "description": "The shape every hooks package shares (@seampact/hooks, io.github.jubasse:seampact-hooks, seampact/hooks, seampact-hooks): each package's test checks its types against this file. A type or member without `languages` exists in all four; `discriminant` is a literal member npm carries and Java, PHP and Python express as the type itself.",
+  "languages": ["npm", "java", "php", "python"],
   "types": [
     { "name": "Awaitable", "kind": "alias", "languages": ["npm"] },
     {
@@ -28,7 +28,7 @@
     {
       "name": "SignatureEncoding",
       "kind": "enum",
-      "languages": ["java", "php"],
+      "languages": ["java", "php", "python"],
       "values": ["hex", "base64"]
     },
     {
@@ -67,7 +67,7 @@
     {
       "name": "SignedRequest",
       "kind": "union",
-      "languages": ["java", "php"],
+      "languages": ["java", "php", "python"],
       "arms": [{ "type": "SignedTemplateRequest" }, { "type": "SignedApplicationRequest" }]
     },
     {
@@ -114,7 +114,7 @@
     {
       "name": "FieldDirection",
       "kind": "enum",
-      "languages": ["java", "php"],
+      "languages": ["java", "php", "python"],
       "values": ["input", "output"]
     },
     {
@@ -148,7 +148,7 @@
     {
       "name": "RequirementKind",
       "kind": "enum",
-      "languages": ["java", "php"],
+      "languages": ["java", "php", "python"],
       "values": ["right", "rule"]
     },
     {
@@ -251,7 +251,7 @@
     {
       "name": "StoredResponse.Header",
       "kind": "record",
-      "languages": ["java", "php"],
+      "languages": ["java", "php", "python"],
       "members": [{ "name": "name" }, { "name": "value" }]
     },
     {
@@ -302,6 +302,8 @@
         { "name": "isPresent", "parameters": [] },
         { "name": "value", "parameters": [] }
       ]
-    }
+    },
+    { "name": "Field", "kind": "alias", "languages": ["python"] },
+    { "name": "Absent", "kind": "enum", "languages": ["python"], "values": ["absent"] }
   ]
 }
