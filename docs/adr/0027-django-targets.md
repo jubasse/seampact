@@ -6,7 +6,7 @@ Status: accepted
 
 [A48](../decisions.md#a48) puts Django REST Framework and Django Ninja in v1, on the Python core of ADR 0026. Both run inside Django: the same middleware stack, URLconf, settings and exception handling. So this ADR states three things:
 
-- the shared Django layer, `seampact-django`: the boundary middleware, the routes, the exception map, the settings, the system check, the boot check and the `seampact_generate` command;
+- the shared Django layer, `seampact-django`: the boundary middleware, the routes, the exception map, the settings, the system check, the boot check, and the `seampact_generate` and `seampact_check` commands;
 - the DRF target, `seampact-drf`;
 - the Ninja target, `seampact-ninja`, in its own section. Cutting Ninja removes that section, `python/ninja`, its workflow and its consumer, and nothing else.
 
@@ -30,7 +30,7 @@ Nine Django, DRF and Ninja behaviours shape the placement (spike):
 - Recording the exception behind a reply: a `process_exception` hook, the `django.request` log records, or the root URLconf's error handlers plus `got_request_exception`. Choice: the handlers and the signal. `process_exception` sees only view exceptions, and only when no inner middleware answered first. The log records miss `Http404`.
 - DRF steps 2 to 5: in DRF authentication and permission classes, or in the generated `APIView` after `initial()`. Choice: after `initial()`. The app's DRF classes run first as its native layer, so a hook can read the user they set.
 - DRF step 6: Pydantic, or DRF serializers. Choice: serializers, behind the generated type layer. A DRF app keeps its own field rules and messages, and `seampact-drf` needs no Pydantic.
-- Boot check: in `AppConfig.ready()`, in a system check, or in the boundary's `__init__`. Choice: a system check plus the boundary's `__init__`. `ready()` runs for every command, `shell` included, so a broken api would stop them all. The system check is Django's own place for configuration errors; it runs on `check`, `runserver`, `migrate` and `test`. The boundary's `__init__` runs at every server start and at the test `Client`'s first request.
+- Boot check: in `AppConfig.ready()`, in a system check, or in the boundary's `__init__`. Choice: a system check that warns, the boundary's `__init__` that refuses, and a `seampact_check` command for CI. `ready()` runs for every command, `shell` included, so a broken api would stop them all. A warning keeps `migrate` running on a broken app, as on Laravel. The boundary's `__init__` runs at every server start and at the test `Client`'s first request.
 
 ## Decisions
 
@@ -40,20 +40,20 @@ Nine Django, DRF and Ninja behaviours shape the placement (spike):
 
 | Distribution | Module | Holds | Depends on |
 |---|---|---|---|
-| `seampact-django` | `seampact.django`, `.runtime` | the URLconf and settings emitters, the boundary middleware, the exception map, the system check, the boot check, the `seampact_generate` command | `django`, `seampact-codegen==<self>`; extra `generate` |
+| `seampact-django` | `seampact.django`, `.runtime` | the URLconf and settings emitters, the boundary middleware, the exception map, the system check, the boot check, the `seampact_generate` and `seampact_check` commands | `django`, `seampact-codegen==<self>`; extra `generate` |
 | `seampact-drf` | `seampact.drf`, `.runtime` | the DRF generator and placement | `djangorestframework`, `seampact-django==<self>`; extra `generate` |
 | `seampact-ninja` | `seampact.ninja`, `.runtime` | the Ninja generator and placement | `django-ninja`, `seampact-django==<self>`, `seampact-codegen[pydantic]==<self>`; extra `generate` |
 
-`seampact-drf` needs neither `seampact-ninja` nor Pydantic. The app adds `"seampact.django"` to `INSTALLED_APPS` for the system check and the command.
+`seampact-drf` needs neither `seampact-ninja` nor Pydantic. The app adds `"seampact.django"` to `INSTALLED_APPS` for the system check and the commands.
 
 #### Versions
 
 - **Python.** As ADR 0026: 3.12 and the latest.
-- **Django.** 5.2 LTS and 6.x. The matrix records Django by feature release (5.2, 6.0, 6.1); an older one is refused (`config.matrix.incompatible`) and a newer one is untested (ADR 0009), named in `allowUntested` as `django@6.2`.
+- **Django.** 5.2 LTS and 6.x, the matrix `floor` 5.2.
 - **DRF.** 3.18, the matrix `floor`. DRF 3.18.0 asks for Django 5.2 or later and declares 5.2, 6.0 and 6.1; 3.18.0 and 3.18.3 gave the same result in the spike.
-- **Ninja.** 1.4.5 or later, the matrix `floor`. Ninja 1.4.0 fails on Django 6.1 when the URLconf is imported ("Converter 'uuid' is already registered"); 1.4.5 passes every row (spike). The latest is 1.7.
+- **Ninja.** 1.5.3 or later, the matrix `floor`: the first release whose metadata declares Django 6.0, so pip installs it beside Django 6 (1.4.5 runs, but its metadata stops at 5.1; 1.4.0 fails on Django 6.1, spike). The latest is 1.7.
 - **Pydantic** for Ninja: ADR 0026's range.
-- DRF and Ninja are recorded by minor, as FastAPI is: the placement relies on `initial()`, `get_exception_handler()` and `perform_authentication()`, and on `on_exception()` and `api_operation()`, which a minor can change. CI runs the floor and the latest.
+- **Matrix.** The matrix records the tested minors of Django, DRF and Ninja. A version below the floor is refused (`config.matrix.incompatible`). A minor outside the tested ones, within a tested major, is untested: `generate` warns (ADR 0009). A major outside the matrix is refused at boot ("The system check and the boot check"). `allowUntested` names these frameworks by major (`django@6`, `djangorestframework@3`, `django-ninja@1`); only a 0.x framework, such as FastAPI, is named by minor. CI runs the floor and the latest.
 
 #### Sync and async
 
@@ -154,10 +154,11 @@ Before the boundary run the server, any wrapper around the application object, a
 
 Before any other check, the generated `GENERATED_BY` is compared with `RUNTIME_VERSION` (ADR 0025 "Version guards", G3), as ADR 0026 does.
 
-The same check runs in two places:
+The same check runs in three places:
 
-- **A Django system check**, registered by the `seampact.django` app. It runs on `check`, `runserver`, `migrate` and `test`, and reports each problem as a Django `Error` whose `id` is `seampact.<api>`, with the operation id, the name and the fix. A broken api therefore stops `migrate` too; `migrate --skip-checks` runs it anyway, and the guides say so.
-- **The boundary's `__init__`**, when Django builds the handler. It imports the root URLconf first, as Django's own URL check does, then raises `ImproperlyConfigured` listing every problem. gunicorn then stops ("Worker failed to boot."), uvicorn and `runserver` exit, and the test `Client` raises at its first request (spike).
+- **The boundary's `__init__`**, when Django builds the handler. It imports the root URLconf first, as Django's own URL check does, then raises `ImproperlyConfigured` listing every problem. gunicorn then stops ("Worker failed to boot."), uvicorn and `runserver` exit, and the test `Client` raises at its first request (spike). The app does not serve.
+- **A Django system check**, registered by the `seampact.django` app. It runs on `check`, `runserver`, `migrate` and `test`, and reports each problem as a Django `Warning` whose `id` is `seampact.<api>`, with the operation id, the name and the fix. A warning never stops a command, so `migrate` and `shell` work on a broken app, as on Laravel.
+- **`python manage.py seampact_check`**, for CI. It runs the check without starting a server and exits non-zero on any problem.
 
 `python manage.py seampact_generate` runs ADR 0026's runner, the same as `seampact generate`. It declares no system check, so the command that fixes a version mismatch still runs, as ADR 0023 steps aside for its own.
 
@@ -173,7 +174,7 @@ The check lists every problem at once:
 - the boundary not first in `MIDDLEWARE`, other seampact boundaries aside;
 - `DATA_UPLOAD_MAX_MEMORY_SIZE` below the api's largest body limit;
 - a `public_origin` set under relative URLs, or a missing or malformed one under absolute URLs;
-- a Django feature release, a DRF minor or a Ninja minor that `generate` did not accept, read with `importlib.metadata`, as ADR 0026 refuses a FastAPI minor.
+- a Django, DRF or Ninja major outside the matrix that `allowUntested` did not name at `generate`, read with `importlib.metadata`, as Laravel's boot check refuses a major other than 13. The generated code records the majors `generate` accepted.
 
 `artefacts.bootCheck: false` turns the whole check off; `{ frameworkRoutes: false }` and `{ hooks: off }` turn their parts off, as ADR 0026 says. The handler check runs whenever the boot check does.
 
@@ -248,7 +249,7 @@ The target takes `rules` (ADR 0009):
 - **`native`, the default.** A value rule becomes DRF's own field argument where DRF has one: `min_length`, `max_length` (both counted in code points, as the contract counts), `min_value`, `max_value`. Exclusive bounds, `multipleOf`, `enum`, `const` and formats stay generated validators. The DRF guide lists the differences in a few lines.
 - **`seampact-consistent`.** Every value rule is a generated validator with ADR 0003's meaning.
 
-In both modes a `pattern` is the IR's normalised pattern (ADR 0003 section 9), checked by the shared runtime's pattern check, never by DRF's `RegexField`: Python's `re` lets `$` match before a final newline and `\d` match any Unicode digit.
+In both modes a `pattern` is the IR's normalised pattern (ADR 0003 section 9), checked by the framework-free pattern check of `seampact-codegen`'s runtime (py-core-5), never by DRF's `RegexField`. That check runs Python's `re` on the pattern after ADR 0003 section 9's normalisation, so `$` never matches before a final newline and `\d` matches ASCII digits only, as the contract says. The same check serves `rules: seampact-consistent` on every Python target; FastAPI and Ninja keep pydantic-core's engine under `native` (ADR 0026).
 
 #### Native docs
 
@@ -297,7 +298,7 @@ Ninja re-raises any other exception to Django outside `DEBUG`, where the shared 
 
 #### The boot check
 
-Beside the shared list: Ninja's own docs routes, read from the `NinjaAPI`'s `docs_url` and `openapi_url` under its prefix, are framework routes, accepted and listed in the report (ADR 0011); and a Ninja minor `generate` did not accept is refused.
+Beside the shared list: Ninja's own docs routes, read from the `NinjaAPI`'s `docs_url` and `openapi_url` under its prefix, are framework routes, accepted and listed in the report (ADR 0011).
 
 #### Native docs
 
@@ -331,7 +332,7 @@ The targets consume no link and generate no client, as ADR 0026 says (`link.kind
 
 ### What the generated code depends on
 
-At run time: Python 3.12 or later; Django 5.2 or 6.x; DRF 3.18 for DRF; Ninja 1.4.5 or later and Pydantic for Ninja; `seampact-hooks`, `seampact-codegen`, `seampact-django` and the target's distribution. The boundary runtime is imported, not copied (ADR 0025). Generated files pass `ruff check`, `ruff format --check` and `mypy --strict` with `django-stubs` (and `djangorestframework-stubs` on DRF), on Python 3.12 and the latest, and Django 5.2 and 6.x; the Ninja golden also passes `pyright` strict.
+At run time: Python 3.12 or later; Django 5.2 or 6.x; DRF 3.18 for DRF; Ninja 1.5.3 or later and Pydantic for Ninja; `seampact-hooks`, `seampact-codegen`, `seampact-django` and the target's distribution. The boundary runtime is imported, not copied (ADR 0025). Generated files pass `ruff check`, `ruff format --check` and `mypy --strict` with `django-stubs` (and `djangorestframework-stubs` on DRF), on Python 3.12 and the latest, and Django 5.2 and 6.x; the Ninja golden also passes `pyright` strict.
 
 ### Refused by name or waiting
 
@@ -340,7 +341,7 @@ At run time: Python 3.12 or later; Django 5.2 or 6.x; DRF 3.18 for DRF; Ninja 1.
 | Waits for | What |
 |---|---|
 | a consumer that needs them | ADR 0026's list; `async def` hooks and handlers on DRF and in Ninja's sync views; `nativeDocs` on Ninja |
-| after 1.0 | Django feature releases, DRF minors and Ninja versions below the floor (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)) |
+| after 1.0 | Django, DRF and Ninja versions below the floor (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)) |
 
 ### The consumer and the proof
 
@@ -360,7 +361,7 @@ The proof is the `node`-absent step, a green suite row per row above, each targe
 | PR | Delivers |
 |---|---|
 | drf-1 | `python/django` emitters (URLconf, settings, app config) and `python/drf`: the generator, dataclass inputs, serializers, `APIView` declarations, exceptions; a golden under ruff and `mypy --strict` with the stubs, on Django 5.2 and 6.x |
-| drf-2 | the boundary middleware (sync and async), the `APIView` steps 2 to 8, the exception map and the handler wrappers, the system check and the boot check, `seampact_generate`; the sample app, the `default`, `hand-written` and `boot` profiles, the e2e job of `p7-drf.yml` |
+| drf-2 | the boundary middleware (sync and async), the `APIView` steps 2 to 8, the exception map and the handler wrappers, the system check, the boot check, `seampact_generate` and `seampact_check`; the sample app, the `default`, `hand-written` and `boot` profiles, the e2e job of `p7-drf.yml` |
 | drf-3 | paging, idempotency, throttle beside DRF's throttles, cache headers, the signed raw body, redaction, relays, absolute URLs; the `full` profile and `test_redaction.py` |
 | drf-4 | DRF authentication, permission and throttle classes per access kind, the role map of DRF's exceptions, session and CSRF beside the boundary; the suite's security rows and a token-auth row |
 | ninja-1 | `python/ninja`: the generator on the shared Pydantic emitter, `Router` declarations, views, `bind_<api>()`; a golden under ruff, `mypy --strict` and `pyright` strict |
@@ -404,7 +405,7 @@ Run on CPython 3.12.16 with gunicorn 26.2.0 and uvicorn 0.54.0, and not kept, in
 - A `DisallowedHost` 400 goes out as Django writes it.
 - Under ASGI, Django spools a body before the boundary can refuse it; under WSGI, the app's `request.body` stays empty for a chunked body the boundary read.
 - App tests that call a contract view directly get the api's 500; tests go through the test `Client`.
-- A broken api stops `migrate`, as any Django system check error does; `--skip-checks` is the way out.
+- A broken api refuses to serve, and the system check only warns, so `migrate` still runs; CI runs `manage.py seampact_check`.
 - `runserver` loses the raw-path rules; the boundary says so once at start.
 - ADR 0012's target tables gain a drf and a ninja row in the lead's follow-up.
 
