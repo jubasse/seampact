@@ -11,8 +11,8 @@ use Seampact\Codegen\Runtime\FrameworkRoutes;
 /**
  * The framework-route allow-list of the boot check, the rule Spring's `BootCheck.isAllowListed` shares: `*` takes
  * one segment, `**` any number, a `*` inside a segment any characters but `/`, an empty segment (`/a/`, `//`) is
- * dropped on both sides, and a method takes only a route
- * answering that one method besides HEAD.
+ * dropped on both sides, a catch-all route segment is taken by `**` only, and a method takes only a route answering
+ * that one method besides HEAD.
  */
 final class FrameworkRoutesTest extends TestCase
 {
@@ -82,45 +82,45 @@ final class FrameworkRoutesTest extends TestCase
     {
         $allowed = [['path' => '/admin/*', 'method' => null]];
 
-        self::assertTrue(FrameworkRoutes::allows($allowed, '/admin/users', ['GET', 'HEAD']));
-        self::assertFalse(FrameworkRoutes::allows($allowed, '/admin', ['GET', 'HEAD']));
-        self::assertFalse(FrameworkRoutes::allows($allowed, '/admin/users/1', ['GET', 'HEAD']));
+        self::assertTrue(self::allowsWithDefaultPatterns($allowed, '/admin/users', ['GET', 'HEAD']));
+        self::assertFalse(self::allowsWithDefaultPatterns($allowed, '/admin', ['GET', 'HEAD']));
+        self::assertFalse(self::allowsWithDefaultPatterns($allowed, '/admin/users/1', ['GET', 'HEAD']));
     }
 
     public function testTwoStarsTakeAnyNumberOfSegments(): void
     {
         $allowed = [['path' => '/__seampact/**', 'method' => null]];
 
-        self::assertTrue(FrameworkRoutes::allows($allowed, '/__seampact', ['PUT']));
-        self::assertTrue(FrameworkRoutes::allows($allowed, '/__seampact/script', ['PUT']));
-        self::assertTrue(FrameworkRoutes::allows($allowed, '/__seampact/a/b', ['GET', 'HEAD']));
-        self::assertFalse(FrameworkRoutes::allows($allowed, '/__seampactx/script', ['PUT']));
+        self::assertTrue(self::allowsWithDefaultPatterns($allowed, '/__seampact', ['PUT']));
+        self::assertTrue(self::allowsWithDefaultPatterns($allowed, '/__seampact/script', ['PUT']));
+        self::assertTrue(self::allowsWithDefaultPatterns($allowed, '/__seampact/a/b', ['GET', 'HEAD']));
+        self::assertFalse(self::allowsWithDefaultPatterns($allowed, '/__seampactx/script', ['PUT']));
     }
 
     public function testAStarInsideASegmentTakesAnyCharactersButASlash(): void
     {
         $allowed = [['path' => '/livewire-*/**', 'method' => null]];
 
-        self::assertTrue(FrameworkRoutes::allows($allowed, '/livewire-3f9a/upload-file', ['POST']));
-        self::assertTrue(FrameworkRoutes::allows($allowed, '/livewire-/update', ['POST']));
-        self::assertFalse(FrameworkRoutes::allows($allowed, '/live-3f9a/upload-file', ['POST']));
+        self::assertTrue(self::allowsWithDefaultPatterns($allowed, '/livewire-3f9a/upload-file', ['POST']));
+        self::assertTrue(self::allowsWithDefaultPatterns($allowed, '/livewire-/update', ['POST']));
+        self::assertFalse(self::allowsWithDefaultPatterns($allowed, '/live-3f9a/upload-file', ['POST']));
         self::assertTrue(
-            FrameworkRoutes::allows([['path' => '/livewire*/**', 'method' => null]], '/livewire/update', ['POST']),
+            self::allowsWithDefaultPatterns([['path' => '/livewire*/**', 'method' => null]], '/livewire/update', ['POST']),
         );
         self::assertFalse(
-            FrameworkRoutes::allows([['path' => '/livewire-*', 'method' => null]], '/livewire-3f9a/upload-file', ['POST']),
+            self::allowsWithDefaultPatterns([['path' => '/livewire-*', 'method' => null]], '/livewire-3f9a/upload-file', ['POST']),
         );
-        self::assertTrue(FrameworkRoutes::allows([['path' => '/*.json', 'method' => null]], '/up.json', ['GET']));
-        self::assertFalse(FrameworkRoutes::allows([['path' => '/*.json', 'method' => null]], '/up.xml', ['GET']));
+        self::assertTrue(self::allowsWithDefaultPatterns([['path' => '/*.json', 'method' => null]], '/up.json', ['GET']));
+        self::assertFalse(self::allowsWithDefaultPatterns([['path' => '/*.json', 'method' => null]], '/up.xml', ['GET']));
     }
 
     public function testAMethodTakesOnlyARouteAnsweringThatOneMethod(): void
     {
         $allowed = [['path' => '/v1/unlisted', 'method' => 'GET']];
 
-        self::assertTrue(FrameworkRoutes::allows($allowed, '/v1/unlisted', ['GET', 'HEAD']));
-        self::assertFalse(FrameworkRoutes::allows($allowed, '/v1/unlisted', ['POST']));
-        self::assertFalse(FrameworkRoutes::allows($allowed, '/v1/unlisted', ['GET', 'POST']));
+        self::assertTrue(self::allowsWithDefaultPatterns($allowed, '/v1/unlisted', ['GET', 'HEAD']));
+        self::assertFalse(self::allowsWithDefaultPatterns($allowed, '/v1/unlisted', ['POST']));
+        self::assertFalse(self::allowsWithDefaultPatterns($allowed, '/v1/unlisted', ['GET', 'POST']));
     }
 
     /** @return iterable<string, array{string, string, bool}> */
@@ -139,12 +139,12 @@ final class FrameworkRoutesTest extends TestCase
     #[DataProvider('emptySegments')]
     public function testAnEmptySegmentIsDroppedOnBothSides(string $pattern, string $route, bool $allowed): void
     {
-        self::assertSame($allowed, FrameworkRoutes::allows([['path' => $pattern, 'method' => null]], $route, ['GET']));
+        self::assertSame($allowed, self::allowsWithDefaultPatterns([['path' => $pattern, 'method' => null]], $route, ['GET']));
     }
 
     public function testALiteralSegmentIsNotAPattern(): void
     {
-        self::assertFalse(FrameworkRoutes::allows([['path' => '/up.json', 'method' => null]], '/upxjson', ['GET']));
+        self::assertFalse(self::allowsWithDefaultPatterns([['path' => '/up.json', 'method' => null]], '/upxjson', ['GET']));
     }
 
     public function testAPatternTheMatcherCannotFinishIsABootErrorNamingIt(): void
@@ -159,10 +159,42 @@ final class FrameworkRoutesTest extends TestCase
         $backtrackLimit = ini_set('pcre.backtrack_limit', '1000');
         $route = '/' . str_repeat('a', 200) . 'bx';
         try {
-            FrameworkRoutes::allows([['path' => $pattern, 'method' => null]], $route, ['GET']);
+            self::allowsWithDefaultPatterns([['path' => $pattern, 'method' => null]], $route, ['GET']);
         } finally {
             ini_set('pcre.jit', (string) $jit);
             ini_set('pcre.backtrack_limit', (string) $backtrackLimit);
         }
+    }
+
+    public function testANegatedClassExcludingASlashKeepsToOneSegment(): void
+    {
+        $allowsWith = static fn (string $pattern): bool => FrameworkRoutes::allows([['path' => '/files/*', 'method' => null]], '/files/{x}', static fn (string $name): ?string => $name === 'x' ? $pattern : null, ['GET']);
+
+        self::assertTrue($allowsWith('[^/]+'), 'a class excluding the slash is not a catch-all');
+        self::assertTrue($allowsWith('[^/.]+'));
+        self::assertFalse($allowsWith('[^.]+'), 'a negated class that can take a slash is a catch-all');
+    }
+
+    public function testACatchAllRouteSegmentIsTakenByTwoStarsOnly(): void
+    {
+        $patternOf = static fn (string $name): ?string => $name === 'path' ? '.+' : null;
+        $allows = static fn (string $pattern, string $route): bool => FrameworkRoutes::allows([['path' => $pattern, 'method' => null]], $route, $patternOf, ['GET']);
+
+        self::assertFalse($allows('/files/*', '/files/{path}'), 'one star takes one segment, not a path');
+        self::assertFalse($allows('/files/{path}', '/files/{path}'), 'a literal segment takes no catch-all');
+        self::assertFalse($allows('/files/*/**', '/files/{path}'));
+        self::assertFalse($allows('/*', '/{rest'), 'braces the check cannot read are a catch-all');
+        self::assertTrue($allows('/files/**', '/files/{path}'));
+        self::assertTrue($allows('/**', '/files/{path}/raw'));
+        self::assertTrue($allows('/files/*', '/files/{page}'), 'the default pattern keeps to one segment');
+    }
+
+    /**
+     * @param list<array{path: string, method: ?string}> $frameworkRoutes
+     * @param list<string> $methods
+     */
+    private static function allowsWithDefaultPatterns(array $frameworkRoutes, string $uri, array $methods): bool
+    {
+        return FrameworkRoutes::allows($frameworkRoutes, $uri, static fn (string $name): ?string => null, $methods);
     }
 }

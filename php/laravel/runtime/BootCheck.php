@@ -150,7 +150,7 @@ final class BootCheck
             if (isset($contractActions[$controller])) {
                 $problems[] = "the route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " calls a contract handler ({$route->getActionName()}) but no generated registration made it: remove it";
             } elseif ($switches[self::FRAMEWORK_ROUTES] && !self::isLaravelsOwn($route) && !self::isOtherApisRoute($app, $name) && $contract->checksAppRoute(self::scopedUri($route)) && !self::isAllowListed($contract, $route)) {
-                $problems[] = "the framework route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it";
+                $problems[] = "the framework route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it (a route whose parameter can take a '/' is allowed only by a '**' entry)";
             }
         }
 
@@ -180,17 +180,24 @@ final class BootCheck
     }
 
     // An entry of `frameworkRoutes` takes the route when its path pattern matches the route's URI (`*` one segment,
-    // `**` any number) and it names no method, or the route's one method besides the HEAD Laravel adds to GET.
+    // `**` any number or a catch-all) and it names no method, or the route's one method besides the HEAD Laravel adds
+    // to GET.
     private static function isAllowListed(ApiContract $contract, Route $route): bool
     {
-        return FrameworkRoutes::allows($contract->frameworkRoutes, '/' . ltrim($route->uri(), '/'), array_values(array_filter($route->methods(), is_string(...))));
+        return FrameworkRoutes::allows($contract->frameworkRoutes, '/' . ltrim($route->uri(), '/'), self::wherePatternOf($route), array_values(array_filter($route->methods(), is_string(...))));
     }
 
     // The route's URI as the scope of the check reads it: a placeholder whose `where` pattern takes a `/` (the
     // `->where('any', '.*')` of a fallback page) is a catch-all.
     private static function scopedUri(Route $route): string
     {
-        return FrameworkRoutes::withCatchAlls('/' . ltrim($route->uri(), '/'), static fn (string $name): ?string => is_string($route->wheres[$name] ?? null) ? $route->wheres[$name] : null);
+        return FrameworkRoutes::withCatchAlls('/' . ltrim($route->uri(), '/'), self::wherePatternOf($route));
+    }
+
+    /** @return \Closure(string): ?string */
+    private static function wherePatternOf(Route $route): \Closure
+    {
+        return static fn (string $name): ?string => is_string($route->wheres[$name] ?? null) ? $route->wheres[$name] : null;
     }
 
     // A generated route of another api of the app: its name is in the route table that api's provider registered.

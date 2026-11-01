@@ -7,13 +7,18 @@ namespace Seampact\Codegen\Runtime;
 /**
  * The entry's `frameworkRoutes` allow-list as the boot check reads it (FR-25): an entry takes a route when its path
  * pattern matches the route's path (`*` one segment, `**` any number, a `*` inside a segment any characters but `/`,
- * an empty segment dropped on both sides) and it names no method, or the route's one method besides HEAD.
+ * an empty segment dropped on both sides) and it names no method, or the route's one method besides HEAD. A route
+ * segment that may take a `/` is a catch-all, which only `**` takes.
  */
 final class FrameworkRoutes
 {
     private const HEAD = 'HEAD';
     private const PLACEHOLDER = '#\{!?(\w+)(?:<[^>]*>)?(?:\?[^}]*)?\}#';
     private const UNREAD_CATCH_ALL = '{*}';
+    // A segment `withCatchAlls` writes as a catch-all: `{name*}` or `{*}`.
+    private const CATCH_ALL_SEGMENT = '#^\{\w*\*\}$#D';
+    private const ANY_SEGMENTS = '**';
+    private const ONE_SEGMENT = '*';
     // What a placeholder pattern may hold and still keep to one segment once `\d`, `\w` and `(?:` are read: letters,
     // digits, `_`, `-`, alternation, groups, quantifiers, anchors and classes.
     private const ONE_SEGMENT_PATTERN = '#^[A-Za-z0-9_|(){},?+*^$\[\]-]*$#D';
@@ -24,17 +29,20 @@ final class FrameworkRoutes
     }
 
     /**
-     * Whether an entry of `$frameworkRoutes` takes the route at `$uri` answering `$methods`.
+     * Whether an entry of `$frameworkRoutes` takes the route at `$uri` answering `$methods`. The route is read through
+     * `withCatchAlls` with `$patternOf`, so a segment that may take a `/` is a catch-all only `**` takes.
      *
      * @param list<array{path: string, method: ?string}> $frameworkRoutes
+     * @param \Closure(string): ?string $patternOf
      * @param list<string> $methods
      */
-    public static function allows(array $frameworkRoutes, string $uri, array $methods): bool
+    public static function allows(array $frameworkRoutes, string $uri, \Closure $patternOf, array $methods): bool
     {
         $methods = array_values(array_diff($methods, [self::HEAD]));
+        $routeSegments = self::segmentsOf(self::withCatchAlls($uri, $patternOf));
         foreach ($frameworkRoutes as $allowed) {
             $methodAllowed = $allowed['method'] === null || $methods === [$allowed['method']];
-            if ($methodAllowed && self::pathMatches($allowed['path'], $uri)) {
+            if ($methodAllowed && self::segmentsMatch(self::segmentsOf($allowed['path']), 0, $routeSegments, 0, $allowed['path'])) {
                 return true;
             }
         }
@@ -99,7 +107,7 @@ final class FrameworkRoutes
     }
 
     // Read conservatively: a pattern keeps to one segment only when it holds no `.`, no `/`, no escape but `\d` and
-    // `\w`, no negated class and no class range that can reach `/`.
+    // `\w`, no negated class but one that excludes `/` (`[^/]`, `[^/.]`) and no class range that can reach `/`.
     private static function keepsToOneSegment(string $pattern): bool
     {
         $withoutWordClasses = preg_replace('#\\\\[dw]#', '0', $pattern);
@@ -107,7 +115,12 @@ final class FrameworkRoutes
             return false;
         }
 
-        $read = str_replace('(?:', '(', $withoutWordClasses);
+        $withoutSlashExcludingClasses = preg_replace('#\[\^[^\]]*/[^\]]*\]#', '0', $withoutWordClasses);
+        if ($withoutSlashExcludingClasses === null) {
+            return false;
+        }
+
+        $read = str_replace('(?:', '(', $withoutSlashExcludingClasses);
         if (str_contains($read, '[^') || preg_match(self::ONE_SEGMENT_PATTERN, $read) !== 1) {
             return false;
         }
@@ -157,34 +170,51 @@ final class FrameworkRoutes
         return true;
     }
 
-    private static function pathMatches(string $path, string $uri): bool
+    /**
+     * Whether the entry's segments from `$entryIndex` take the route's segments from `$routeIndex`: `**` any number of
+     * them, catch-alls included, and every other entry segment one segment that is not a catch-all.
+     *
+     * @param list<string> $entrySegments
+     * @param list<string> $routeSegments
+     */
+    private static function segmentsMatch(array $entrySegments, int $entryIndex, array $routeSegments, int $routeIndex, string $path): bool
     {
-        $matched = preg_match(self::pathPattern($path), self::withoutEmptySegments($uri));
+        $entrySegment = $entrySegments[$entryIndex] ?? null;
+        if ($entrySegment === null) {
+            return $routeIndex === count($routeSegments);
+        }
+
+        if ($entrySegment === self::ANY_SEGMENTS) {
+            for ($next = $routeIndex; $next <= count($routeSegments); $next++) {
+                if (self::segmentsMatch($entrySegments, $entryIndex + 1, $routeSegments, $next, $path)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        $routeSegment = $routeSegments[$routeIndex] ?? null;
+        if ($routeSegment === null || preg_match(self::CATCH_ALL_SEGMENT, $routeSegment) === 1) {
+            return false;
+        }
+
+        return self::segmentMatches($entrySegment, $routeSegment, $path)
+            && self::segmentsMatch($entrySegments, $entryIndex + 1, $routeSegments, $routeIndex + 1, $path);
+    }
+
+    private static function segmentMatches(string $entrySegment, string $routeSegment, string $path): bool
+    {
+        if ($entrySegment === self::ONE_SEGMENT) {
+            return true;
+        }
+
+        $matched = preg_match('#^' . str_replace('\\*', '[^/]*', preg_quote($entrySegment, '#')) . '$#D', $routeSegment);
         if ($matched === false) {
-            throw new \LogicException("seampact: the frameworkRoutes pattern '{$path}' could not be matched against the route '{$uri}': " . preg_last_error_msg() . "; write at most two '*' in a segment.");
+            throw new \LogicException("seampact: the frameworkRoutes pattern '{$path}' could not be matched against the route segment '{$routeSegment}': " . preg_last_error_msg() . "; write at most two '*' in a segment.");
         }
 
         return $matched === 1;
-    }
-
-    private static function pathPattern(string $path): string
-    {
-        $segments = array_map(
-            static fn (string $segment): string => match ($segment) {
-                '**' => '(?:/[^/]+)*',
-                '*' => '/[^/]+',
-                default => '/' . str_replace('\\*', '[^/]*', preg_quote($segment, '#')),
-            },
-            self::segmentsOf($path),
-        );
-
-        return '#^' . implode('', $segments) . '$#D';
-    }
-
-    // The root reads as the empty string, which `**` matches as it matches no segment.
-    private static function withoutEmptySegments(string $uri): string
-    {
-        return implode('', array_map(static fn (string $segment): string => '/' . $segment, self::segmentsOf($uri)));
     }
 
     /**
