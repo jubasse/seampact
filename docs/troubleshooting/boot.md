@@ -34,6 +34,7 @@ Fix every line, then start again.
 | `setGlobalPrefix('<prefix>') prefixes <route>` | Exclude the contract routes with the `exclude` option of `setGlobalPrefix`, or remove the prefix. |
 | `the api '<id>' is registered twice` | Import `SeampactModule.forRoot` or `forRootAsync` once per api. |
 | `the NestJS platform is '<x>'` | Use `@nestjs/platform-express`. |
+| `bodyValidation is on, but the target was generated without its response validators` | Set `bodyValidation: true` in the target's `options`, then run `generate`. Or leave `bodyValidation` out of `forRoot`. |
 | `'<key>' is not an option of SeampactModule.forRoot` | `forRoot` takes `{ logger, responses, bodyValidation, unboundOperations }`. |
 | `'responses' is "<x>", not 'strict' or 'warn'`, `'bodyValidation' is "<x>", not true or false` | Pass `'strict'` or `'warn'`, `true` or `false`, or leave the option out. |
 | `no JSON parser read the body of '<operation>'` (a 500 at run time) | Call `configureApp(app)` before `app.listen`, or give the app a JSON parser with `limit: LARGEST_BODY_LIMIT`. |

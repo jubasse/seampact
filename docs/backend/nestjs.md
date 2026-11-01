@@ -180,7 +180,7 @@ The NestJS target also takes `reply`. With `handler` (the default), seampact wri
 
 seampact writes its warnings through NestJS's `Logger`, under the context `Seampact:<api>`, so `app.useLogger(...)` applies to them. Pass `{ logger }` as the second argument of `forRoot` to send them elsewhere: `TasksNest.SeampactModule.forRoot(tasksHooks(), { logger })`. It needs `warn` and `error` functions.
 
-The same argument takes `responses` and `bodyValidation`, to change the generated values at startup, for example from your config: `forRoot(tasksHooks(), { bodyValidation: process.env.NODE_ENV !== "production" })`. A `responses()` decorator on a controller or a method still wins. A wrong value stops the app at boot.
+The same argument takes `responses` and `bodyValidation`, to change the generated values at startup, for example from your config: `forRoot(tasksHooks(), { bodyValidation: process.env.NODE_ENV !== "production" })`. A `responses()` decorator on a controller or a method still wins. `bodyValidation: true` here needs the validators generated, with the target option `bodyValidation: true`. A wrong value stops the app at boot.
 
 When your hooks need providers, build them with `forRootAsync`. In a test, replace them with `overrideProvider(TasksNest.SEAMPACT_HOOKS).useValue(testHooks)`.
 

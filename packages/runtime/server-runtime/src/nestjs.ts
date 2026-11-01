@@ -553,6 +553,19 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       });
     };
 
+  // The item validators exist only when the target was generated with `bodyValidation: true`.
+  function missingValidatorProblems(moduleOptions: SeampactModuleOptions): BootProblem[] {
+    if (options.bodyValidation || moduleOptions.bodyValidation !== true) return [];
+
+    return [
+      {
+        problem:
+          "bodyValidation is on, but the target was generated without its response validators",
+        fix: "set the target option 'bodyValidation: true' and generate again, or leave bodyValidation out of forRoot",
+      },
+    ];
+  }
+
   // The module options override the generated settings; the boot check refuses a value of the wrong kind.
   function requestSettings(moduleOptions: SeampactModuleOptions): RequestSettings {
     return {
@@ -1452,6 +1465,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       const problems = [
         ...enforcedHookBootProblems(api, this.hooks),
         ...moduleOptionsProblems(this.moduleOptions),
+        ...missingValidatorProblems(this.moduleOptions),
         ...this.handlerProblems(contractMethods),
         ...this.unboundOperationProblems(contractMethods),
         ...this.pathPrefixProblems(contractMethods),
