@@ -8,7 +8,7 @@ import seampact.ir
 
 _SPEC_SCHEMAS = "packages/core/spec/schemas"
 # The spec schema directories this package ships copies of, every schema of each.
-_SCHEMA_DIRECTORIES = ("bundle", "ir")
+_SCHEMA_DIRECTORIES = ("bundle", "config", "ir")
 
 
 def _copies() -> Path:

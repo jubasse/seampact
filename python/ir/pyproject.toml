@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
-dependencies = ["jsonschema==4.26.0"]
+dependencies = ["jsonschema==4.26.0", "ruamel.yaml==0.19.1"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -18,6 +18,9 @@ classifiers = [
 ]
 
 # PEP 420: `seampact` is a namespace shared by every seampact distribution, so it has no `__init__.py`.
+[project.scripts]
+seampact = "seampact.ir.run.command:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/seampact"]
 
