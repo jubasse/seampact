@@ -92,6 +92,15 @@ class ConfigReaderTest {
         )
     }
 
+    @Test
+    fun namesTheAllowUntestedRuleForAMinorOnAMajorOfOneOrMore() {
+        val problem = refused("targets:\n  - { id: a, use: 'g:a', api: x, allowUntested: [spring-boot@4.1] }\n").single()
+
+        assertEquals("config.schema", problem.code)
+        assertTrue("or '<framework>@0.<minor>' for a 0.x framework" in problem.message, problem.message)
+        assertTrue("'fastapi@0.162'" in problem.fix, problem.fix)
+    }
+
     // The shared `use` vectors (`packages/core/spec/vectors/config/use-forms.json`) the Node and PHP readers pass too.
     @Test
     fun readsEachAcceptedUseFormAsItsEcosystem() {

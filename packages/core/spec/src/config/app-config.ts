@@ -153,8 +153,15 @@ export const BOOT_CHECK_ARTEFACT = "bootCheck";
 // An artefact id as a target declares it and an app config switches it: a name every DSL can write as a key.
 export const ARTEFACT_ID_PATTERN = "^[a-z][A-Za-z0-9]*$";
 
-// `<framework>@<major>`, the framework by its id in the compatibility matrix.
-export const ALLOW_UNTESTED_PATTERN = "^[a-z][a-z0-9-]*@(0|[1-9][0-9]*)$";
+// `<framework>@<major>`, or `<framework>@0.<minor>` for a 0.x framework (its minors break), the framework by its id in
+// the compatibility matrix. A major of 1 or more takes no minor.
+export const ALLOW_UNTESTED_PATTERN = "^[a-z][a-z0-9-]*@(0\\.(0|[1-9][0-9]*)|[1-9][0-9]*)$";
+
+export const ALLOW_UNTESTED_RULE =
+  "An `allowUntested` item is '<framework>@<major>', or '<framework>@0.<minor>' for a 0.x framework; a major of 1 or more takes no minor.";
+
+export const ALLOW_UNTESTED_FIX =
+  "Write '<framework>@<major>' (such as 'spring-boot@4', not 'spring-boot@4.1'), or '<framework>@0.<minor>' for a 0.x framework (such as 'fastapi@0.162').";
 
 // A path or a pattern (`*` one segment, `**` any number, a `*` inside a segment any characters but `/`), for one
 // method or every method, with its reason.

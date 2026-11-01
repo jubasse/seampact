@@ -175,6 +175,15 @@ function checkLibrary(
   reportUntestedMajor(entry, library, installed, level, outcome);
 }
 
+// A 0.x framework breaks in its minors, so its item names the minor: `fastapi@0.162`; any other names the major.
+function allowUntestedItemOf(frameworkId: string, installed: InstalledVersion): string {
+  if (installed.major !== 0) return `${frameworkId}@${installed.major}`;
+
+  const minor = installed.version.split(".")[1]?.match(/^\d+/)?.[0];
+
+  return `${frameworkId}@0.${minor ?? "<minor>"}`;
+}
+
 // An installed major the matrix does not test is a warning, an error under `checks.matrix: error`, and nothing when
 // the entry accepts it in `allowUntested`.
 function reportUntestedMajor(
@@ -184,7 +193,7 @@ function reportUntestedMajor(
   level: MatrixCheckLevel,
   outcome: CompatibilityOutcome,
 ): void {
-  const allowItem = `${subject.id}@${installed.major}`;
+  const allowItem = allowUntestedItemOf(subject.id, installed);
 
   if (subject.testedMajors.includes(installed.major)) return;
 

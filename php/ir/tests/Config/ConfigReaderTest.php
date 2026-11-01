@@ -251,6 +251,17 @@ final class ConfigReaderTest extends TestCase
         );
     }
 
+    public function testNamesTheAllowUntestedRuleForAMinorOnAMajorOfOneOrMore(): void
+    {
+        $problems = $this->read("targets:\n  - { id: a, use: x/y, api: t, allowUntested: [laravel@13.1] }\n");
+
+        self::assertIsArray($problems);
+        self::assertSame('config.schema', $problems[0]->code);
+        self::assertStringContainsString("or '<framework>@0.<minor>' for a 0.x framework", $problems[0]->message);
+        self::assertStringContainsString("'fastapi@0.162'", $problems[0]->fix);
+        self::assertIsNotArray($this->read("targets:\n  - { id: a, use: x/y, api: t, allowUntested: [fastapi@0.162, laravel@13] }\n"));
+    }
+
     public function testRefusesAMissingFile(): void
     {
         $problems = AppConfigReader::readFile("{$this->project}/missing/seampact.config.yaml");

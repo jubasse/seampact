@@ -2,7 +2,9 @@
 // their JSON Schemas.
 
 export {
+  ALLOW_UNTESTED_FIX,
   ALLOW_UNTESTED_PATTERN,
+  ALLOW_UNTESTED_RULE,
   APP_CONFIG_FILE_NAME,
   APP_CONFIG_SCHEMA,
   type AppConfig,

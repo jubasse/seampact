@@ -24,6 +24,12 @@ final class ConfigSchemaCheck
 
     private const SCHEMA_FIX = "Correct the value as the config schema states (ADR 0011 'The app config').";
 
+    private const ALLOW_UNTESTED_KEY = 'allowUntested';
+
+    private const ALLOW_UNTESTED_RULE = "An `allowUntested` item is '<framework>@<major>', or '<framework>@0.<minor>' for a 0.x framework; a major of 1 or more takes no minor.";
+
+    private const ALLOW_UNTESTED_FIX = "Write '<framework>@<major>' (such as 'spring-boot@4', not 'spring-boot@4.1'), or '<framework>@0.<minor>' for a 0.x framework (such as 'fastapi@0.162').";
+
     private const MOUNT_KEY = 'mount';
 
     private const MOUNT_RULE = "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'.";
@@ -189,6 +195,10 @@ final class ConfigSchemaCheck
             }
 
             return $problems;
+        }
+
+        if ($error->keyword() === 'pattern' && ($path[count($path) - 2] ?? null) === self::ALLOW_UNTESTED_KEY) {
+            return [[KeyPath::format($path), false, new ConfigProblem('config.schema', self::ALLOW_UNTESTED_RULE, self::ALLOW_UNTESTED_FIX, $tree->whereOf($path))]];
         }
 
         if ($error->keyword() === 'pattern' && ($path[array_key_last($path) ?? 0] ?? null) === self::MOUNT_KEY) {

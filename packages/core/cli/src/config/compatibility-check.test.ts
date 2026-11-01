@@ -35,6 +35,7 @@ const MATRIX: readonly TargetCompatibility[] = [
 
 interface CheckCase {
   installedMajor: number;
+  installedVersion?: string;
   allowUntested?: string[];
   level?: MatrixCheckLevel;
   use?: string;
@@ -42,6 +43,7 @@ interface CheckCase {
 
 function check({
   installedMajor,
+  installedVersion = `${installedMajor}.1.0`,
   allowUntested,
   level = "warning",
   use = SERVER_PACKAGE,
@@ -54,10 +56,7 @@ function check({
   };
   const targets = new Map<string, Target>([["server", stubTarget(use)]]);
   const installedVersions = new Map([
-    [
-      "server",
-      { packageName: "web-framework", version: `${installedMajor}.1.0`, major: installedMajor },
-    ],
+    ["server", { packageName: "web-framework", version: installedVersion, major: installedMajor }],
   ]);
 
   return checkCompatibility({
@@ -97,6 +96,18 @@ test("accepts an untested major allowUntested names, under either level", () => 
     problems: [],
     warnings: [],
   });
+});
+
+test("a 0.x framework is accepted by its minor only", () => {
+  const installed = { installedMajor: 0, installedVersion: "0.162.3" };
+
+  expect(check({ ...installed, allowUntested: ["web@0.162"] })).toEqual({
+    problems: [],
+    warnings: [],
+  });
+  expect(check({ ...installed, allowUntested: ["web@0.161"] }).warnings).toMatchObject([
+    { code: "config.matrix.untested", fix: expect.stringContaining("[web@0.162]") },
+  ]);
 });
 
 test("refuses an incompatible major naming the reason and the tested majors, allowUntested or not (CHK-115)", () => {

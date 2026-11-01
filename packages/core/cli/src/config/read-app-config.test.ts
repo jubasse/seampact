@@ -162,6 +162,35 @@ test("names the mount rule, dot segments included", async () => {
   });
 });
 
+test.each(["express@6", "fastapi@0.162", "fastapi@0.0"])(
+  "reads the allowUntested item %s",
+  async (item) => {
+    expect(
+      await readConfigText(`${SERVER_ENTRY_HEAD}    allowUntested: [${item}]\n`),
+    ).toMatchObject({
+      status: "read",
+    });
+  },
+);
+
+test.each(["express@6.1", "express@0", "fastapi@0.01", "fastapi@0."])(
+  "refuses the allowUntested item %s by name, with the fix",
+  async (item) => {
+    expect(
+      await readConfigText(`${SERVER_ENTRY_HEAD}    allowUntested: [${item}]\n`),
+    ).toMatchObject({
+      status: "refused",
+      problems: [
+        {
+          code: "config.schema",
+          message: expect.stringContaining("An `allowUntested` item is"),
+          fix: expect.stringContaining("fastapi@0.162"),
+        },
+      ],
+    });
+  },
+);
+
 test("refuses an allow-list beside the framework-route check switched off", async () => {
   const outcome = await readConfigText(
     `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { frameworkRoutes: false } }\n    frameworkRoutes:\n      - { path: /metrics, reason: r }\n`,
@@ -276,7 +305,7 @@ test("refuses an allow-list beside the whole boot check switched off", async () 
 test.each([
   ["an artefact switch that is no boolean", "artefacts: { types: off }", "must be boolean"],
   ["a boot check of another form", "artefacts: { bootCheck: on }", "'bootCheck' is true, false"],
-  ["an allowUntested item without its major", "allowUntested: [express]", "must match pattern"],
+  ["an allowUntested item without its major", "allowUntested: [express]", "An `allowUntested` item is"],
 ])("refuses %s", async (_, key, message) => {
   const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    ${key}\n`);
 
