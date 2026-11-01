@@ -1,5 +1,6 @@
 """The generated model's reading rules (ADR 0010): unknowns kept or dropped, opaque presence, copies, integers."""
 
+import json
 from types import MappingProxyType
 
 import pytest
@@ -83,3 +84,13 @@ def test_an_ir_integer_reads(value: object, expected: int) -> None:
 def test_a_value_that_is_not_an_ir_integer_is_refused(value: object) -> None:
     with pytest.raises(IrModelError):
         read_integer(value, "at")
+
+
+def test_a_non_finite_number_in_an_opaque_value_is_refused() -> None:
+    with pytest.raises(IrModelError, match="finite"):
+        Param.from_json({**_PARAM, "default": {"limit": float("inf")}})
+
+
+def test_a_non_finite_number_read_from_json_text_is_refused() -> None:
+    with pytest.raises(IrModelError, match="finite"):
+        Param.from_json({**_PARAM, "default": json.loads("1e400")})

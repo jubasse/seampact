@@ -73,6 +73,19 @@ describe("python ir model", () => {
     expect(module).toContain('json["derivedFrom"] = self.derived_from');
   });
 
+  it("a member named field never shadows the dataclass field function", () => {
+    const module = pythonModule(
+      generateIrModels(
+        synthetic({ Holder: { type: "object", properties: { field: { type: "string" } } } }),
+      ),
+      DEFINITIONS_MODULE,
+    );
+
+    expect(module).toContain("from dataclasses import dataclass, field as _dataclass_field\n");
+    expect(module).toContain("    field: str | None = None\n");
+    expect(module).not.toMatch(/= field\(/);
+  });
+
   it("two members with the same snake case name fail generation", () => {
     const documents = synthetic({
       Holder: {
