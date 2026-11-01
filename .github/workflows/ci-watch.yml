@@ -33,6 +33,7 @@ on:
       - Spring Boot target
       - Vue consumers
       - Own validators consumer
+      - Python core packages
     types: [completed]
     branches: [develop]
 
