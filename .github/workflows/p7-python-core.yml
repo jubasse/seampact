@@ -254,7 +254,16 @@ jobs:
               exit 1
             fi
           done
-      - name: Install the wheels into a fresh virtual environment from the built wheels only, then import each package
+      - name: Export the third-party runtime requirements of the wheels, pinned by hash from the lock file
+        working-directory: python
+        env:
+          UV_PYTHON: ${{ steps.python.outputs.python-path }}
+          UV_PYTHON_DOWNLOADS: never
+        run: >-
+          uv export --frozen --all-packages --no-dev --no-emit-workspace --format requirements.txt
+          --output-file "$RUNNER_TEMP/third-party-requirements.txt"
+      # ADR 0011's two steps: third-party requirements from PyPI by hash, then the seampact wheels with no index.
+      - name: Install the wheels into a fresh virtual environment, the seampact ones from the built wheels only, then import each package
         shell: bash
         working-directory: ${{ runner.temp }}
         env:
@@ -262,6 +271,7 @@ jobs:
         run: |
           set -euo pipefail
           "$PYTHON" -m venv clean-venv
+          clean-venv/bin/python -I -m pip install --require-hashes --no-deps -r third-party-requirements.txt
           clean-venv/bin/python -I -m pip install --no-index --find-links dist dist/*.whl
           wheel_count=$(find dist -name '*.whl' | wc -l)
           clean-venv/bin/python -I - "$wheel_count" <<'PYTHON'
