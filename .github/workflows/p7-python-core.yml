@@ -2,10 +2,11 @@ name: Python core packages
 
 # The Python packages of the uv workspace `python/` (ADR 0010): the regenerate-and-diff check of the Python IR model,
 # then each package tested and checked on the Python 3.12 floor and the latest Python: `uv sync --locked`, ruff lint
-# and format, `mypy --strict` and pytest. On a pull request or a push they run only when the change touches the
-# Python packages, the generator of their IR model, the files their tests read or this workflow; `python-core` is the
-# one check to require. The binary row builds the linux-x64 compiler binary and runs the runner test with it, with
-# Node removed; on a pull request it runs only when what it proves changes.
+# and format, `mypy --strict` and pytest; each package's wheel built and installed into a fresh virtual environment
+# from those wheels only, with Node removed; and `pip-audit` over the lock file. On a pull request or a push they run
+# only when the change touches the Python packages, the generator of their IR model, the files their tests read or
+# this workflow; `python-core` is the one check to require. The binary row builds the linux-x64 compiler binary and
+# runs the runner test with it, with Node removed; on a pull request it runs only when what it proves changes.
 
 on:
   push:
@@ -42,10 +43,13 @@ jobs:
         id: detect
         uses: ./.github/actions/lane-changes
         with:
-          # The packages, the model generator and its sources, the golden IR files and shared vectors the tests read,
-          # the Node toolchain pins of `regenerate`, and this workflow.
+          # The packages, the model generator and its sources, the golden IR files, shared vectors and hooks shape
+          # the tests read, the LICENSE each wheel carries, the Node toolchain pins of `regenerate`, and this workflow.
           watched-paths: |
             ^python/
+            ^packages/runtime/signed-webhooks/vectors/
+            ^fixtures/hooks-shape/
+            ^LICENSE$
             ^scripts/ir-models/
             ^fixtures/golden/
             ^packages/core/spec/(schemas/(ir|bundle)|src/ir|vectors/(ir|bundle)|src/naming|vectors/naming)/
@@ -205,9 +209,124 @@ jobs:
           SEAMPACT_BINARY="$RUNNER_BINARY_DIRECTORY/seampact-linux-x64" \
             uv run --locked pytest ir/tests/test_binary_runner.py -rs
 
+  wheels:
+    needs: changes
+    if: needs.changes.outputs.python-core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - name: Remove Node from the runner, so the Python build and install are proven to need none
+        shell: bash
+        run: |
+          set -euo pipefail
+          for node in $(which -a node nodejs npm npx corepack 2>/dev/null | sort -u); do
+            sudo rm -f "$node"
+          done
+          if command -v node || command -v npm || command -v npx; then
+            echo "Node is still on the PATH."
+            exit 1
+          fi
+      - name: Build each package's wheel, its build requirements checked against their hashes
+        working-directory: python
+        env:
+          UV_PYTHON: ${{ steps.python.outputs.python-path }}
+          UV_PYTHON_DOWNLOADS: never
+        run: uv build --all-packages --out-dir "$RUNNER_TEMP/dist"
+      - name: Check each wheel carries the repository's LICENSE
+        shell: bash
+        run: |
+          set -euo pipefail
+          for wheel in "$RUNNER_TEMP"/dist/*.whl; do
+            distribution=$(basename "$wheel" | cut -d- -f1-2)
+            if ! unzip -p "$wheel" "$distribution.dist-info/licenses/LICENSE" | cmp -s - LICENSE; then
+              echo "::error::$(basename "$wheel") does not carry the repository's LICENSE."
+              exit 1
+            fi
+          done
+      - name: Export the third-party runtime requirements of the wheels, pinned by hash from the lock file
+        working-directory: python
+        env:
+          UV_PYTHON: ${{ steps.python.outputs.python-path }}
+          UV_PYTHON_DOWNLOADS: never
+        run: >-
+          uv export --frozen --all-packages --no-dev --no-emit-workspace --format requirements.txt
+          --output-file "$RUNNER_TEMP/third-party-requirements.txt"
+      # ADR 0011's two steps: third-party requirements from PyPI by hash, then the seampact wheels with no index.
+      - name: Install the wheels into a fresh virtual environment, the seampact ones from the built wheels only, then import each package
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
+        run: |
+          set -euo pipefail
+          "$PYTHON" -m venv clean-venv
+          clean-venv/bin/python -I -m pip install --require-hashes --no-deps -r third-party-requirements.txt
+          clean-venv/bin/python -I -m pip install --no-index --find-links dist dist/*.whl
+          wheel_count=$(find dist -name '*.whl' | wc -l)
+          clean-venv/bin/python -I - "$wheel_count" <<'PYTHON'
+          import importlib
+          import pkgutil
+          import sys
+
+          import seampact
+
+          packages = sorted(module.name for module in pkgutil.iter_modules(seampact.__path__, "seampact."))
+          for package in packages:
+              importlib.import_module(package)
+          if len(packages) != int(sys.argv[1]):
+              sys.exit(f"{sys.argv[1]} wheels installed, but {len(packages)} seampact packages import: {packages}")
+          print("Imported", ", ".join(packages))
+          PYTHON
+
+  audit:
+    needs: changes
+    if: needs.changes.outputs.python-core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - name: Export every locked dependency with its hashes
+        env:
+          UV_PYTHON: ${{ steps.python.outputs.python-path }}
+          UV_PYTHON_DOWNLOADS: never
+        run: >-
+          uv export --locked --all-packages --all-groups --no-emit-workspace --format requirements-txt
+          --output-file "$RUNNER_TEMP/requirements.txt"
+      - name: Audit the locked dependencies for known vulnerabilities
+        env:
+          UV_PYTHON: ${{ steps.python.outputs.python-path }}
+          UV_PYTHON_DOWNLOADS: never
+        run: >-
+          uv run --locked --only-group audit pip-audit --strict --disable-pip --require-hashes --progress-spinner off
+          --requirement "$RUNNER_TEMP/requirements.txt"
+
   python-core:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, regenerate, packages, binary, binary-runner]
+    needs: [changes, regenerate, packages, binary, binary-runner, wheels, audit]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
