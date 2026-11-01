@@ -1,13 +1,14 @@
 import { identifier, isReserved, splitName } from "@seampact/spec/naming";
-import type {
-  AliasDefinition,
-  Definition,
-  Member,
-  NeutralModel,
-  OpenEnumDefinition,
-  StructDefinition,
-  TypeRef,
-  UnionDefinition,
+import {
+  type AliasDefinition,
+  type Definition,
+  definitionDoc,
+  type Member,
+  type NeutralModel,
+  type OpenEnumDefinition,
+  type StructDefinition,
+  type TypeRef,
+  type UnionDefinition,
 } from "./model.ts";
 import { type DefinitionNames, NameCollisionError } from "./names.ts";
 import { type Shape, shapeOfDefinition } from "./shapes.ts";
@@ -442,14 +443,6 @@ function kdoc(description: string | undefined, indent: string): string[] {
   const text = description.replaceAll("*/", "*&#47;").replaceAll("/*", "&#47;*");
 
   return [`${indent}/** ${text} */`];
-}
-
-function definitionDoc(definition: Definition): string | undefined {
-  if (!definition.mustAct) return definition.description;
-  const unknown = definition.kind === "union" ? "an unknown tag" : "an unknown value";
-  const rule = `Must act: ${unknown} makes the IR invalid for every reader.`;
-
-  return definition.description === undefined ? rule : `${definition.description} ${rule}`;
 }
 
 class KotlinEmitter {

@@ -1,12 +1,13 @@
 import { identifier, isReserved, splitName } from "@seampact/spec/naming";
-import type {
-  Definition,
-  Member,
-  NeutralModel,
-  OpenEnumDefinition,
-  StructDefinition,
-  TypeRef,
-  UnionDefinition,
+import {
+  type Definition,
+  definitionDoc,
+  type Member,
+  type NeutralModel,
+  type OpenEnumDefinition,
+  type StructDefinition,
+  type TypeRef,
+  type UnionDefinition,
 } from "./model.ts";
 import { type DefinitionNames, NameCollisionError } from "./names.ts";
 import { PHP_SUPPORT_FILES } from "./php-support.ts";
@@ -129,14 +130,6 @@ function docLine(description: string | undefined, indent: string): string[] {
 
 function neutralisedComment(text: string): string {
   return text.replaceAll("*/", "*&#47;");
-}
-
-function definitionDoc(definition: Definition): string | undefined {
-  if (!definition.mustAct) return definition.description;
-  const unknown = definition.kind === "union" ? "an unknown tag" : "an unknown value";
-  const rule = `Must act: ${unknown} makes the IR invalid for every reader.`;
-
-  return definition.description === undefined ? rule : `${definition.description} ${rule}`;
 }
 
 /** A member's PHP property name: its IR name, escaped when PHP reserves it (`this` becomes `this_`). */
