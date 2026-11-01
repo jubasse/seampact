@@ -416,7 +416,7 @@
         "use": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^(?!pypi:)|^pypi:[a-z0-9]+(?:-[a-z0-9]+)*$"
+          "pattern": "^(?![Pp][Yy][Pp][Ii]:)|^pypi:[a-z0-9]+(?:-[a-z0-9]+)*$"
         },
         "api": {
           "type": "string",

@@ -197,10 +197,12 @@ const MOUNT_SEGMENT = "(?!\\.\\.?(?:/|$))[A-Za-z0-9._~!$&'()+,;=@-][A-Za-z0-9._~
 
 export const MOUNT_PATTERN = `^(?:/${MOUNT_SEGMENT})+$`;
 
-// A `use` that starts with `pypi:` names a PyPI distribution by its PEP 503 normalised name, so the Maven group
-// `pypi` is never a coordinate and the forms cannot be confused; any other `use` is left to its runner.
+// A `use` that starts with `pypi:`, in any case, names a PyPI distribution by its PEP 503 normalised name written
+// after a lowercase `pypi:`, so the Maven group `pypi` is never a coordinate and the forms cannot be confused; any
+// other `use` is left to its runner.
 const PYPI_USE_PREFIX = "pypi:";
-const TARGET_USE_PATTERN = `^(?!${PYPI_USE_PREFIX})|^${PYPI_USE_PREFIX}[a-z0-9]+(?:-[a-z0-9]+)*$`;
+const PYPI_USE_PREFIX_IN_ANY_CASE = "[Pp][Yy][Pp][Ii]:";
+const TARGET_USE_PATTERN = `^(?!${PYPI_USE_PREFIX_IN_ANY_CASE})|^${PYPI_USE_PREFIX}[a-z0-9]+(?:-[a-z0-9]+)*$`;
 
 export const APP_CONFIG_SCHEMA: JsonSchema = {
   $schema: JSON_SCHEMA_DIALECT,

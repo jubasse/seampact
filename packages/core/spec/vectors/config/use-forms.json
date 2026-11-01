@@ -9,6 +9,8 @@
   ],
   "refused": [
     { "use": "pypi:", "case": "no distribution name" },
+    { "use": "PyPI:seampact-fastapi", "case": "a prefix in mixed case" },
+    { "use": "PYPI:seampact-fastapi", "case": "a prefix in upper case" },
     { "use": "pypi:Seampact_FastAPI", "case": "a name that is not PEP 503 normalised" },
     { "use": "pypi:seampact--fastapi", "case": "a name with a run of separators" },
     { "use": "pypi:-seampact", "case": "a name that starts with a separator" },

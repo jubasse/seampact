@@ -3,9 +3,10 @@ import type { CliIo } from "../cli-io.js";
 import { type CliProblem, entryWhere } from "../cli-problem.js";
 import { isNativeTargetUse, type LoadedAppConfig } from "../config/index.js";
 
-// How a run treats the target entries whose `use` is a Maven coordinate or a Composer package (ADR 0009). The Node
-// CLI refuses them when it loads the targets. The standalone binary leaves them to their build plugin, writes or
-// checks the app's documents and pinned bundles, and refuses every npm entry with `npmEntryRefusal` (ADR 0010).
+// How a run treats the target entries whose `use` is a Maven coordinate, a Composer package or a pip distribution
+// (ADR 0009). The Node CLI refuses them when it loads the targets. The standalone binary leaves them to their build
+// plugin, writes or checks the app's documents and pinned bundles, and refuses every npm entry with `npmEntryRefusal`
+// (ADR 0010).
 export type NativeEntryPolicy =
   | { readonly kind: "refuse" }
   | { readonly kind: "leave"; readonly npmEntryRefusal: CliProblem };

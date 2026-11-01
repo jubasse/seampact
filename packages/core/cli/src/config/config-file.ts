@@ -37,7 +37,9 @@ const FRAMEWORK_ROUTE_SWITCH = "frameworkRoutes";
 const MOUNT_RULE =
   "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'.";
 const TARGET_USE_RULE =
-  "The key 'use' names a PyPI distribution as 'pypi:' then its PEP 503 normalised name (lowercase ASCII letters and digits, runs joined by one '-'); the Maven group 'pypi' is reserved for this form.";
+  "The key 'use' names a PyPI distribution as the lowercase prefix 'pypi:' then its PEP 503 normalised name (lowercase ASCII letters and digits, runs joined by one '-'); the prefix 'pypi:' in any case is reserved for this form, so the Maven group 'pypi' is never a coordinate.";
+const TARGET_USE_FIX =
+  "Write the prefix as 'pypi:' then the distribution's normalised name, such as 'pypi:seampact-fastapi' (ADR 0011 'The app config').";
 const SCHEMA_FIX = "Correct the value as the config schema states (ADR 0011 'The app config').";
 
 export interface ParsedConfig {
@@ -339,7 +341,7 @@ function schemaErrorProblem(
       problem: {
         code: "config.schema",
         message: TARGET_USE_RULE,
-        fix: "Write the distribution's normalised name, such as 'pypi:seampact-fastapi' (ADR 0011 'The app config').",
+        fix: TARGET_USE_FIX,
         where: whereOf(parsed, path),
       },
     };
