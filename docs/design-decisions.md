@@ -28,3 +28,5 @@ The ADRs cite product decisions by id (`A<n>`); [`decisions.md`](decisions.md) s
 | [0022](adr/0022-spring-boot-target.md) | the Spring Boot server target |
 | [0023](adr/0023-laravel-target.md) | the Laravel server target |
 | [0024](adr/0024-symfony-target.md) | the Symfony server target |
+| [0025](adr/0025-runtime-packaging.md) | runtime packaging and version guards |
+| [0026](adr/0026-python-fastapi-target.md) | the Python core and the FastAPI server target |
