@@ -150,7 +150,7 @@ final class BootCheck
             if (isset($contractActions[$controller])) {
                 $problems[] = "the route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " calls a contract handler ({$route->getActionName()}) but no generated registration made it: remove it";
             } elseif ($switches[self::FRAMEWORK_ROUTES] && !self::isLaravelsOwn($route) && !self::isOtherApisRoute($app, $name) && $contract->checksAppRoute(self::scopedUri($route)) && !self::isAllowListed($contract, $route)) {
-                $problems[] = "the framework route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it";
+                $problems[] = "the framework route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it (a route whose parameter can take a '/' is allowed only by a '**' entry)";
             }
         }
 

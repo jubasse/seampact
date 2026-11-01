@@ -168,7 +168,7 @@ final class RouteCheck implements LoaderInterface
             return [];
         }
 
-        return ["the app route '{$name}' ({$route->getPath()}) is not a contract route and the entry's frameworkRoutes does not list it: add it to frameworkRoutes, or turn the frameworkRoutes boot check off"];
+        return ["the app route '{$name}' ({$route->getPath()}) is not a contract route and the entry's frameworkRoutes does not list it: add it to frameworkRoutes, or turn the frameworkRoutes boot check off (a route whose parameter can take a '/' is allowed only by a '**' entry)"];
     }
 
     private static function isSymfonyRoute(string $name, mixed $controller): bool

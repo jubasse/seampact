@@ -107,7 +107,7 @@ final class FrameworkRoutes
     }
 
     // Read conservatively: a pattern keeps to one segment only when it holds no `.`, no `/`, no escape but `\d` and
-    // `\w`, no negated class and no class range that can reach `/`.
+    // `\w`, no negated class but one that excludes `/` (`[^/]`, `[^/.]`) and no class range that can reach `/`.
     private static function keepsToOneSegment(string $pattern): bool
     {
         $withoutWordClasses = preg_replace('#\\\\[dw]#', '0', $pattern);
@@ -115,7 +115,12 @@ final class FrameworkRoutes
             return false;
         }
 
-        $read = str_replace('(?:', '(', $withoutWordClasses);
+        $withoutSlashExcludingClasses = preg_replace('#\[\^[^\]]*/[^\]]*\]#', '0', $withoutWordClasses);
+        if ($withoutSlashExcludingClasses === null) {
+            return false;
+        }
+
+        $read = str_replace('(?:', '(', $withoutSlashExcludingClasses);
         if (str_contains($read, '[^') || preg_match(self::ONE_SEGMENT_PATTERN, $read) !== 1) {
             return false;
         }

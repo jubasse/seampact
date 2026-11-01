@@ -166,6 +166,15 @@ final class FrameworkRoutesTest extends TestCase
         }
     }
 
+    public function testANegatedClassExcludingASlashKeepsToOneSegment(): void
+    {
+        $allowsWith = static fn (string $pattern): bool => FrameworkRoutes::allows([['path' => '/files/*', 'method' => null]], '/files/{x}', static fn (string $name): ?string => $name === 'x' ? $pattern : null, ['GET']);
+
+        self::assertTrue($allowsWith('[^/]+'), 'a class excluding the slash is not a catch-all');
+        self::assertTrue($allowsWith('[^/.]+'));
+        self::assertFalse($allowsWith('[^.]+'), 'a negated class that can take a slash is a catch-all');
+    }
+
     public function testACatchAllRouteSegmentIsTakenByTwoStarsOnly(): void
     {
         $patternOf = static fn (string $name): ?string => $name === 'path' ? '.+' : null;
