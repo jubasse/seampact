@@ -15,18 +15,25 @@ from ruamel.yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
 from seampact.ir.config.config_kind import ConfigKind
 from seampact.ir.config.config_tree import ConfigTree
+from seampact.ir.config.javascript_number import SAFE_INTEGER_MAX, integral_float_as_integer, javascript_number_text
 from seampact.ir.config.json_value import JsonObject, JsonValue
 from seampact.ir.config.key_path import KeyPath
 from seampact.ir.config.problem import ConfigProblem
 
 # The config is trusted (A46), but a stray huge file is refused before it is parsed.
 MAX_CONFIG_BYTES: Final = 1024 * 1024
-# Aliases share their anchored value; past this many values once expanded the file is an alias bomb.
-_EXPANDED_VALUES_MAX: Final = 100_000
+# Aliases share their anchored value; past this many values read again through an alias the file is an alias bomb.
+_ALIAS_EXPANDED_VALUES_MAX: Final = 100_000
 _RESERVED_KEYS: Final = ("__proto__", "constructor", "prototype")
 _BYTE_ORDER_MARK: Final = "﻿"
 _SYNTAX_FIX: Final = "Correct the YAML at that position."
-_SAFE_INTEGER_MAX: Final = 2**53 - 1
+_KEY_NULL: Final = "null"
+_KEY_BOOLEAN: Final = "boolean"
+_KEY_NUMBER: Final = "number"
+_KEY_TEXT: Final = "text"
+
+# A map key as YAML compares it (its kind and the text of the object member it names).
+type _KeyIdentity = tuple[str, str]
 
 _NULLS: Final = ("", "~", "null", "Null", "NULL")
 _TRUES: Final = ("true", "True", "TRUE")
@@ -121,18 +128,38 @@ class _Converter:
     def __init__(self, parser: YAML, display_name: str) -> None:
         self._parser = parser
         self._tree = ConfigTree(None, display_name)
-        self._expanded = 0
+        self._alias_expanded = 0
+        self._alias_depth = 0
+        self._seen: set[int] = set()
         self.problems: list[ConfigProblem] = []
 
     def convert(self, node: Node | None, path: list[str | int]) -> JsonValue:
-        """A fresh copy of the composed value, so no two keys share one object through an alias."""
-        self._expanded += 1
-
-        if self._expanded > _EXPANDED_VALUES_MAX:
-            raise _AliasBudgetExceededError
-
+        """A fresh copy of the composed value, so no two keys share one object through an alias. A node met a second
+        time is an alias, and every value under it counts against the budget."""
         if node is None:
             return None
+
+        met_before = id(node) in self._seen
+        self._seen.add(id(node))
+        self._alias_depth += int(met_before)
+
+        try:
+            self._count_alias_expansion()
+
+            return self._convert_node(node, path)
+        finally:
+            self._alias_depth -= int(met_before)
+
+    def _count_alias_expansion(self) -> None:
+        if self._alias_depth == 0:
+            return
+
+        self._alias_expanded += 1
+
+        if self._alias_expanded > _ALIAS_EXPANDED_VALUES_MAX:
+            raise _AliasBudgetExceededError
+
+    def _convert_node(self, node: Node, path: list[str | int]) -> JsonValue:
 
         if self._has_explicit_tag(node):
             self.problems.append(
@@ -197,7 +224,7 @@ class _Converter:
         return _float_of(text)
 
     def _safe_integer(self, integer: int, text: str, path: list[str | int]) -> int | None:
-        if abs(integer) <= _SAFE_INTEGER_MAX:
+        if abs(integer) <= SAFE_INTEGER_MAX:
             return integer
 
         self.problems.append(
@@ -213,6 +240,7 @@ class _Converter:
 
     def _mapping(self, node: MappingNode, path: list[str | int]) -> JsonObject:
         members: JsonObject = {}
+        identities: set[_KeyIdentity] = set()
 
         for key_node, member_node in node.value:
             if not isinstance(key_node, ScalarNode):
@@ -220,7 +248,8 @@ class _Converter:
 
                 continue
 
-            key = str(key_node.value)
+            identity = self._key_identity(key_node, path)
+            _, key = identity
 
             if key in _RESERVED_KEYS:
                 self.problems.append(
@@ -234,16 +263,38 @@ class _Converter:
 
                 continue
 
-            if key in members:
+            if identity in identities:
                 self.problems.append(
                     self.syntax_problem(f"Map keys must be unique; '{key}' is repeated.", [*path, key])
                 )
 
                 continue
 
+            identities.add(identity)
             members[key] = self.convert(member_node, [*path, key])
 
         return members
+
+    def _key_identity(self, key_node: ScalarNode, path: list[str | int]) -> _KeyIdentity:
+        """The key as the YAML reads it: a quoted key is text, a plain one is its resolved value, so `1` and `1.0`
+        are one key and `1` and `"1"` are two that name the same object member."""
+        text = str(key_node.value)
+
+        if key_node.style is not None:
+            return (_KEY_TEXT, text)
+
+        value = self._plain_scalar(text, path)
+
+        if value is None:
+            return (_KEY_NULL, "")
+
+        if isinstance(value, bool):
+            return (_KEY_BOOLEAN, "true" if value else "false")
+
+        if isinstance(value, (int, float)):
+            return (_KEY_NUMBER, javascript_number_text(value))
+
+        return (_KEY_TEXT, str(value))
 
 
 def _integer_of(text: str) -> int | None:
@@ -259,9 +310,9 @@ def _integer_of(text: str) -> int | None:
     return None
 
 
-def _float_of(text: str) -> float | str:
+def _float_of(text: str) -> int | float | str:
     if _FLOAT.match(text):
-        return float(text)
+        return integral_float_as_integer(float(text))
 
     infinity = _INFINITY.match(text)
 
