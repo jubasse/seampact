@@ -96,7 +96,7 @@
         "expected": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["typescript", "kotlin", "java", "php"],
+          "required": ["typescript", "kotlin", "java", "php", "python"],
           "properties": {
             "typescript": {
               "type": ["string", "null"],
@@ -111,6 +111,10 @@
               "minLength": 1
             },
             "php": {
+              "type": "string",
+              "minLength": 1
+            },
+            "python": {
               "type": "string",
               "minLength": 1
             }

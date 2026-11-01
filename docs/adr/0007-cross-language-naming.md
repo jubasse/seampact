@@ -84,14 +84,17 @@ Casing joins the segments, then appends the suffix words:
 | Pascal | each segment with its first letter uppercased | `AssignTaskInput` |
 | camel | Pascal with the first letter lowercased | `assignTaskInput` |
 | upper snake | segments uppercased, joined by `_` | `ASSIGN_TASK_INPUT` |
+| snake | segments joined by `_` | `assign_task_input` |
 
-| Role | TypeScript | Kotlin and Java | PHP |
-|---|---|---|---|
-| types (`schema`, derived types, `endpoints`) | Pascal | Pascal | Pascal |
-| `operation`, `member` | camel | camel | camel |
-| `enumMember` | none (enums are string literal unions) | upper snake | Pascal (enum cases) |
+| Role | TypeScript | Kotlin and Java | PHP | Python |
+|---|---|---|---|---|
+| types (`schema`, derived types, `endpoints`) | Pascal | Pascal | Pascal | Pascal |
+| `operation`, `member` | camel | camel | camel | snake |
+| `enumMember` | none (enums are string literal unions) | upper snake | Pascal (enum cases) | upper snake |
 
-An identifier whose first segment starts with a digit gets a leading `_`, in every role. A declared schema name starts with a letter, but an error code may start with a digit (`1042`, `404-gone`, ADR 0002 section 4), and so do the types derived from it: its params type and its exception give `_1042Params` and `_404GoneError`. A member or enum member gives `_2fa`, `_2FA`. The suffix words stay last, so `suffixes` renames them as for any other name.
+Python follows PEP 8: Pascal classes, snake case attributes and functions, upper snake enum members (as a `StrEnum` names them).
+
+An identifier whose first segment starts with a digit gets a leading `_`, in every role. A declared schema name starts with a letter, but an error code may start with a digit (`1042`, `404-gone`, ADR 0002 section 4), and so do the types derived from it: its params type and its exception give `_1042Params` and `_404GoneError`. A member or enum member gives `_2fa`, `_2FA`; split segments keep their `_` in the snake styles (`2FA` gives `_2_fa` as a Python member). The suffix words stay last, so `suffixes` renames them as for any other name.
 
 The `Status` and `ErrorCode` keys of generated code follow the same rule: a status takes its IANA reason phrase in PascalCase (`NotFound`); an error code takes the whole code (`ApiNotFound` for `api.not-found`).
 
@@ -109,6 +112,7 @@ The lists, part of the published algorithm:
 - TypeScript: the reserved and strict-mode words of ECMAScript; for types, the global names a generated module would shadow, such as `Array`, `Boolean`, `Date`, `Error`, `Function`, `Headers`, `JSON`, `Map`, `Math`, `Number`, `Object`, `Partial`, `Promise`, `Record`, `RegExp`, `Request`, `Response`, `Set`, `String`, `Symbol`, `URL`.
 - Java and Kotlin: the keywords and literals of both languages; for types, every simple name of `java.lang` (`Error`, `Exception`, `Integer`, `Object`, `Override`, `Record`, `String`, `Thread` and the rest), the names Kotlin imports by default that a generated type would shadow (`Any`, `Unit`, `Nothing`, `Pair`, `Result`), and the collection types generated code uses unqualified (`List`, `Map`, `Set`, `Collection`, `Iterable`, `Optional`).
 - PHP: the reserved keywords and reserved class names, compared case-insensitively because PHP class names are (`List`, `Match`, `Enum`, `Readonly`, `Fn`, `Array`, `Object`, `String`, `Int`, `Float`, `Bool`, `Mixed`, `Never`, `Void`, `Null`, `True`, `False`, `Iterable`, `Callable`, `Parent`, `Self`, `Static`).
+- Python: the keywords and soft keywords (`match`, `case`, `type`, `_`, `lazy`), compared case-sensitively; for types, the capitalized builtins a generated class would shadow (`Exception`, `Warning` and the other builtin exceptions, `Ellipsis`, `NotImplemented`); for members and operations, the other builtins (`list`, `dict`, `str`, `int`, `id`, `filter`, `format`, `hash`, `input`, `len`, `map`, `max`, `min`, `next`, `open`, `range`, `set`, `sum` and the rest) and the attributes of Pydantic's `BaseModel` a field would shadow (`model_config`, `model_dump` and the other `model_*` names, `copy`, `dict`, `json`, `schema`, `construct`, `validate`). The trailing `_` is PEP 8's own habit (`class_`).
 
 The exact lists ship with the vectors and change only through an IR change PR (ADR 0005), because a new reserved word renames generated code.
 
@@ -142,6 +146,10 @@ The TypeScript implementation lives in `@seampact/spec/naming`, because the comp
 ### Amendment 2026-10-19: generated modules
 
 Generated names are scoped by ES module namespace imports, not by a generated object or a TypeScript `namespace`. Each target writes one `index.ts` per api (`<out>/<api>/index.ts`) that re-exports that api's modules flat (`export *`), and names are unique within one module; a role whose names repeat another module of the same target goes under a sub-namespace named by its role (`schemas`, `inputSchemas`, `outputSchemas`), and a module with internals, such as the fetch runtime, re-exports its public names by an explicit list. Two targets or two apis may export the same name. The docs and examples show namespace imports (`import * as TasksNest from '.../tasks/nestjs'`, `import type * as Tasks from '.../tasks/types'`); flat imports stay allowed ([A36](../decisions.md#a36)).
+
+### Amendment 2026-11-01: Python
+
+Python is the fifth language of the algorithm ([A48](../decisions.md#a48)): its casings are in section 4, its list in section 5, `reserved-words.json` has a `python` list and every vector a `python` identifier. The list is the union of Python 3.12.16 and 3.15.2, the oldest and the latest Python the targets support. Keywords are `keyword.kwlist` and `keyword.softkwlist`. Types are the public names of `dir(builtins)` that start with an uppercase letter, members the other public names, read under `python -S`, so the helpers `site` adds (`exit`, `help`, `license`) are not in it. Members add the public names of `dir(pydantic.BaseModel)` on Pydantic 2.14.2. A keyword is not repeated in the other lists. A soft keyword is escaped though Python accepts it as a name. The lists hold exact names: a prefix rule, such as Pydantic's protected `model_dump` and `model_validate` namespaces, is not part of them.
 
 ## Consequences
 

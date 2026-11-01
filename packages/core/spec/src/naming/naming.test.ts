@@ -152,6 +152,7 @@ describe("naming", () => {
       kotlin: "List_",
       java: "List_",
       php: "List_",
+      python: "List",
     });
     // Section 6 vector sample.
     expect(find("reserved/schema-list").segments).toEqual(["list"]);
@@ -188,7 +189,7 @@ describe("naming", () => {
       { ...find("derived/input"), status: 200 },
       {
         ...find("digits/enum-member-2fa"),
-        expected: { typescript: "x", kotlin: "A", java: "A", php: "A" },
+        expected: { typescript: "x", kotlin: "A", java: "A", php: "A", python: "A" },
       },
       {
         ...find("derived/input"),
@@ -205,7 +206,8 @@ describe("naming", () => {
     expect(validate(reservedWords) ? [] : validate.errors).toEqual([]);
     const served = Object.values(reservedWords.lists).flatMap((l) => l.usedBy);
 
-    expect([...served].sort()).toEqual([...LANGUAGES].sort());
+    // The python list serves the Python implementation; this one names the other languages.
+    expect([...served].sort()).toEqual([...LANGUAGES, "python"].sort());
 
     // A shared list is no longer possible: each list serves its own key.
     for (const [language, list] of Object.entries(reservedWords.lists)) {
