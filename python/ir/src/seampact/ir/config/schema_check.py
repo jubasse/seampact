@@ -30,6 +30,15 @@ _MOUNT_RULE: Final = (
     "'*', no '.' or '..' segment and no segment starting with ':'."
 )
 _MOUNT_FIX: Final = "Write the path prefix the api is served under, such as '/api' (ADR 0011 'The app config')."
+_ALLOW_UNTESTED_KEY: Final = "allowUntested"
+_ALLOW_UNTESTED_RULE: Final = (
+    "An `allowUntested` item is '<framework>@<major>', or '<framework>@0.<minor>' for a 0.x framework; a major of 1 or "
+    "more takes no minor."
+)
+_ALLOW_UNTESTED_FIX: Final = (
+    "Write '<framework>@<major>' (such as 'spring-boot@4', not 'spring-boot@4.1'), or '<framework>@0.<minor>' for a "
+    "0.x framework (such as 'fastapi@0.162')."
+)
 _USE_KEY: Final = "use"
 _TARGET_USE_RULE: Final = (
     "The key 'use' names a PyPI distribution as the lowercase prefix 'pypi:' then its PEP 503 normalised name "
@@ -158,6 +167,15 @@ def _leaf_problems(error: ValidationError, path: list[str | int], tree: ConfigTr
         ]
 
     last = path[-1] if path else None
+
+    if error.validator == "pattern" and len(path) >= 2 and path[-2] == _ALLOW_UNTESTED_KEY:
+        return [
+            _Located(
+                key_path,
+                False,
+                ConfigProblem("config.schema", _ALLOW_UNTESTED_RULE, _ALLOW_UNTESTED_FIX, tree.where_of(path)),
+            )
+        ]
 
     if error.validator == "pattern" and last == _MOUNT_KEY:
         return [_Located(key_path, False, ConfigProblem("config.schema", _MOUNT_RULE, _MOUNT_FIX, tree.where_of(path)))]

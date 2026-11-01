@@ -1,11 +1,12 @@
 """The compatibility read of the Python entries against the shipped copy of the matrix's `pythonTargets`."""
 
 import json
-from dataclasses import replace
 from pathlib import Path
 
+import pytest
+
 from seampact.ir.config import ConfigProblem, read_app_config
-from seampact.ir.config.app_config import AppConfig, AppConfigEntry
+from seampact.ir.config.app_config import AppConfig
 from seampact.ir.run.matrix_check import check_matrix
 from seampact.ir.run.matrix_framework import python_targets
 
@@ -13,18 +14,13 @@ _FASTAPI = "pypi:seampact-fastapi"
 
 
 def _config(tmp_path: Path, allow_untested: list[str] | None = None, checks: str = "") -> AppConfig:
-    """The config schema's `allowUntested` pattern takes a major only; the 0.x minor items are set after the read."""
     file = tmp_path / "seampact.config.yaml"
-    file.write_text(f"{checks}targets:\n  - {{ id: main, use: '{_FASTAPI}', api: tasks }}\n", encoding="utf-8")
+    allowed = "" if allow_untested is None else f", allowUntested: [{', '.join(allow_untested)}]"
+    file.write_text(f"{checks}targets:\n  - {{ id: main, use: '{_FASTAPI}', api: tasks{allowed} }}\n", encoding="utf-8")
     config = read_app_config(str(file))
     assert not isinstance(config, list), config
 
-    if allow_untested is None:
-        return config
-
-    entry = AppConfigEntry({**config.entries[0].entry, "allowUntested": list(allow_untested)}, config.entries[0].root)
-
-    return replace(config, entries=[entry])
+    return config
 
 
 def _codes(problems: list[ConfigProblem]) -> list[str]:
@@ -103,3 +99,27 @@ def test_an_entry_of_a_target_the_matrix_does_not_record_is_not_checked(tmp_path
 
 def test_the_spec_row_names_the_use_the_config_schema_accepts() -> None:
     assert json.dumps(sorted(python_targets())) == json.dumps([_FASTAPI])
+
+
+@pytest.mark.parametrize("item", ["fastapi@0.162", "fastapi@0.0", "starlette@1"])
+def test_an_allow_untested_item_is_a_major_or_a_zero_dot_minor(tmp_path: Path, item: str) -> None:
+    assert not isinstance(_read_allowing(tmp_path, item), list)
+
+
+@pytest.mark.parametrize("item", ["starlette@1.4", "starlette@0", "fastapi@0.01", "fastapi@0.", "fastapi"])
+def test_any_other_allow_untested_item_is_refused_by_name_with_its_fix(tmp_path: Path, item: str) -> None:
+    result = _read_allowing(tmp_path, item)
+
+    assert isinstance(result, list)
+    assert [problem.code for problem in result] == ["config.schema"]
+    assert result[0].message.startswith("An `allowUntested` item is")
+    assert "'fastapi@0.162'" in result[0].fix
+
+
+def _read_allowing(tmp_path: Path, item: str) -> AppConfig | list[ConfigProblem]:
+    file = tmp_path / "seampact.config.yaml"
+    file.write_text(
+        f"targets:\n  - {{ id: main, use: '{_FASTAPI}', api: tasks, allowUntested: ['{item}'] }}\n", encoding="utf-8"
+    )
+
+    return read_app_config(str(file))
