@@ -37,6 +37,10 @@ Fix every line, then start again.
 | `'<key>' is not an option of SeampactModule.forRoot` | `forRoot` takes `{ logger, responses, bodyValidation, unboundOperations }`. |
 | `'responses' is "<x>", not 'strict' or 'warn'`, `'bodyValidation' is "<x>", not true or false` | Pass `'strict'` or `'warn'`, `true` or `false`, or leave the option out. |
 | `no JSON parser read the body of '<operation>'` (a 500 at run time) | Call `configureApp(app)` before `app.listen`, or give the app a JSON parser with `limit: LARGEST_BODY_LIMIT`. |
+| `configureApp found a JSON parser installed before it`, `a JSON parser was installed after configureApp(app)` | Remove your `app.useBodyParser("json", ...)` or `express.json()`, and pass its options to `configureApp(app, { appJsonParser: { limit: "5mb" } })`. Or skip `configureApp` and install the parsers yourself. |
+| `appJsonParser is passed to a second configureApp call` | Pass `appJsonParser` to the app's first `configureApp` call only. |
+| `configureApp's appJsonParser takes limit and strict` | Pass `limit` or `strict` only. For other parser options, skip `configureApp` and install the parsers yourself. |
+| `@<op>.<part>() is on <method>(), the method of '<other>'` | Use the part decorator of the method's own operation, as the fix names. |
 | `createContractDocument of api '<id>' got autoTagControllers: true` | Remove the option: `createContractDocument` sets it to `false`. |
 
 Two checks only warn, and the app still starts: global interceptors that run outside the reply interceptor, and request-scoped interceptors that cannot be checked at boot.
