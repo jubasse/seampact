@@ -1337,3 +1337,28 @@ describe("two apis on one app, each through its own module", () => {
     send: (method, path, headers) => sendRawRequest(server, method, path, { headers }),
   }));
 });
+
+describe("a tree generated without its response validators", () => {
+  let app: ReferenceAppModule;
+
+  beforeAll(async () => {
+    const project = projectDirectory(import.meta.url, "live-without-validators");
+    const build = join(project, "build");
+    const files = await generateReferenceProject(project, nestjsTarget, {
+      bodyValidation: false,
+      reply: "handler",
+    });
+
+    expect(emitProject(project, files, build)).toEqual([]);
+
+    mkdirSync(join(build, "app"), { recursive: true });
+    copyFileSync(APP_SOURCE, join(build, "app", "reference-app.js"));
+    app = await import(pathToFileURL(join(build, "app", "reference-app.js")).href);
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  test("forRoot's bodyValidation: true refuses the boot by name, since nothing could check the replies", async () => {
+    await expect(app.bootWithModuleOptions({ bodyValidation: true })).rejects.toThrow(
+      /bodyValidation is on, but the target was generated without its response validators.*set the target option 'bodyValidation: true' and generate again/s,
+    );
+  });
+});
