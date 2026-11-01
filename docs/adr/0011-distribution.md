@@ -207,7 +207,8 @@ Test consumer projects live in `~/Dev/test-seampact-<name>` or a temporary direc
 | npm | `pnpm pack` writes a tarball per package; the consumer's `package.json` lists the tarballs, and an `overrides` entry (pnpm 11 and later read it from the consumer's `pnpm-workspace.yaml` only, not from the `pnpm` field of `package.json`) maps every `@seampact/*` package to its tarball so transitive dependencies resolve to tarballs too |
 | JVM | `publishToMavenLocal` from the monorepo; the consumer lists `mavenLocal()` in its plugin and dependency repositories |
 | PHP | Composer path repositories pointing at the split trees of ADR 0010, with symlinks off so the install is a copy |
-| Binary | a locally built binary, referenced by path and hash in the plugin's override |
+| Python | `uv build` writes one wheel per package into one directory; the install script first installs the consumer's third-party requirements from PyPI, hash-pinned, then the seampact wheels with `pip install --no-index --find-links <directory>`, so no `seampact-*` name is ever looked up on an index and a missing third-party dependency fails the install by name |
+| Binary | a locally built binary, referenced by path and hash in the plugin's override (`[tool.seampact.binary]` in `pyproject.toml` for Python) |
 
 No seampact package or bundle comes from a public registry; third-party dependencies come from their usual registries. Each test consumer records the monorepo commit it was built from in a `.seampact-commit` file written by its install script. The modularity checks of ADR 0009 run against these packed installs, never against workspace links.
 
@@ -224,5 +225,5 @@ Each channel has a CI smoke test (A26): a bundle of the reference contract is bu
 
 ## Traceability
 
-- FRs: FR-17, FR-36, FR-8 (relays to a pinned bundle), FR-11 (committed document checks and emitter options), FR-25 (framework route allow-list, native access); amendments A3, A9, A12, A26, A37, A40, A41, A42, A43 (which documents exist, merged documents).
+- FRs: FR-17, FR-36, FR-8 (relays to a pinned bundle), FR-11 (committed document checks and emitter options), FR-25 (framework route allow-list, native access); amendments A3, A9, A12, A26, A37, A40, A41, A42, A43 (which documents exist, merged documents), [A48](../decisions.md#a48) (Python wheels).
 - Checklist items enabled: CHK-052 (relays across a pinned bundle), CHK-059 (committed and drift-checked documents), CHK-063 (framework routes allow-listed with a reason), CHK-070 (test consumers), CHK-072 (unpublished installs), CHK-076 (native consumers read bundles), CHK-088 (PHP trees installable through path repositories), CHK-113 and CHK-114 (per-app configs, artefact switches, OpenAPI-only setups), CHK-136 (emitter options), CHK-141 (untested versions), CHK-147 (boot-check knobs, operations filter), CHK-154 (`outDir`), CHK-161 (`mount`), CHK-163 (native access), CHK-165 (`nativeDocs`), CHK-166 (JVM DSL), CHK-170 (the per-app document choices, `frameworkDocs`), CHK-171 (merged documents in the root config).

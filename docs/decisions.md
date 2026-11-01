@@ -1,6 +1,6 @@
 # Product decisions
 
-The ADRs and the conformance checklist cite product decisions by id, from A1 to A46. This log states each decision as it stands now. When a later decision refines an earlier one, the entry gives the final form and names the decision that refined it. The ids are stable: a decision is never renumbered.
+The ADRs and the conformance checklist cite product decisions by id, from A1 to A48. This log states each decision as it stands now. When a later decision refines an earlier one, the entry gives the final form and names the decision that refined it. The ids are stable: a decision is never renumbered.
 
 A36 is the governing principle: where an older decision reads as imposing a convention, A36 prevails.
 
@@ -27,7 +27,7 @@ The ADRs also cite six design lessons, listed under [Lessons](#lessons) below, a
 **A6.** 1.0 includes every planned target, the JVM and PHP targets included, and the end-to-end proof in test consumer projects (refined by A12, A15).
 
 <a id="a7"></a>
-**A7.** Generators outside the TypeScript ecosystem are native to their ecosystem (Gradle and Maven plugins for Java, Composer packages for PHP; later NuGet for .NET and pip for Python). They read the IR, and their users install them with the ecosystem's own tool.
+**A7.** Generators outside the TypeScript ecosystem are native to their ecosystem (Gradle and Maven plugins for Java, Composer packages for PHP, pip packages for Python (A48); later NuGet for .NET). They read the IR, and their users install them with the ecosystem's own tool.
 
 <a id="a8"></a>
 **A8.** The IR is under semver from 1.0 (before 1.0 it may change, with release notes): an additive change keeps `irVersion`, a removal or a change of meaning bumps `irVersion` and the major version, and each target declares the `irVersion` range it reads.
@@ -36,7 +36,7 @@ The ADRs also cite six design lessons, listed under [Lessons](#lessons) below, a
 **A9.** A native plugin gets the IR from the contract bundle (precompiled and hash-checked) or, for a local YAML source, from a standalone compiler binary pinned by hash. The consumer never needs Node.js.
 
 <a id="a10"></a>
-**A10.** .NET (NuGet) and Python (FastAPI, pip) targets illustrate the native principle in the design and are a v2 objective.
+**A10.** .NET (NuGet) targets illustrate the native principle in the design and are a v2 objective. The Python targets ship in v1 (amended by [A48](#a48)).
 
 <a id="a11"></a>
 **A11.** No performance threshold gates CI in 1.0; thresholds may come in v2 or v3.
@@ -148,6 +148,9 @@ The ADRs also cite six design lessons, listed under [Lessons](#lessons) below, a
 
 <a id="a47"></a>
 **A47.** Development comes before proof. Until the end-to-end slice runs (the reference contract compiled, generated and served by the four Node targets, NestJS, Fastify, Express and Adonis, with the TypeScript types, zod and the fetch client, in a test consumer project), work favours reaching it. Unit tests cover the bricks that will not move (the IR format, the YAML reader, naming); other code is covered by the slice's end-to-end test. Conformance proofs and per-branch fixtures wait for a testing phase before M3, and a case no consumer needs yet is refused by name rather than modelled. A PR carries one deliverable (a generator, a target with its consumer project), about 3,000 to 4,000 hand-written lines, with agents relaying on one branch; a seam others wait on stays small and lands first. The 1.0 scope (A6, A15, A17) is unchanged.
+
+<a id="a48"></a>
+**A48.** The Python targets ship in v1: FastAPI, Django REST Framework and Django Ninja, on a shared Python core (the IR reader, the codegen core, the hooks and the shared runtime parts), with each framework's own idioms on top. They are pip packages, published with the v1 publication beside the npm, Maven Central and Packagist ones, and read the IR as A7 says; a Python build machine needs no Node.js (A9). They support Django 5.2 LTS and 6.x and Python 3.12 or later, and CI runs them on Python 3.12 and the latest Python. This amends A10 for Python; .NET stays a v2 objective.
 
 ## Lessons
 

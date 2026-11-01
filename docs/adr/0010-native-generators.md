@@ -186,9 +186,33 @@ Composer has no classifier and no OS or arch filter, so the binary does not trav
 - **Smoke.** The PHP CI builds the linux-x64 binary and runs `vendor/bin/seampact` with it on a `path` source for each PHP target, documents included, with Node removed; a bundle hand-over row writes and checks the documents from a bundle the runner fetched, and checks again with the bundle's repository removed; its channel smoke generates from the release and git channels with no binary and refuses each tampered copy (ADR 0011 "Channel smoke tests").
 - **Until publication.** The compiler is not published yet, so there is no release asset to fetch: the embedded pin stays empty, and the download, with its version and `url` overrides, lands with the first release. Until then a `path` override with its hash is the only way to the binary, in CI and in the test consumers. An input that needs the binary without one is refused by name (`binary.unpublished`, naming the `path` override). The JVM plugins have no such code because they resolve the artefact from the build's repositories, and they refuse one they cannot resolve there.
 
+### Amendment 2026-11-01: the Python channels
+
+pip installs platform wheels and picks the one that matches the machine, so the binary travels as a wheel. `seampact-ir` runs it on the contract of the PHP channels, and a Python build machine still needs no Node.js ([A48](../decisions.md#a48)).
+
+- **Contract only.** `seampact-ir` depends on the binary through the contract of "Amendment 2026-10-26: the PHP channels", never on how it is built: the five release assets and `SHA256SUMS`, the command `compile --config <app config> --out <directory>`, its exit codes and its environment.
+- **Wheels.** `seampact-compiler` ships one platform wheel per release asset, holding that asset unchanged: manylinux x86_64 and aarch64, macOS x86_64 and arm64, and win_amd64. It has no sdist, so pip never builds the binary. `seampact-ir[compiler]` pulls it, and the extra is optional: as on PHP, the binary is resolved only when an input needs it (a `path` source, or the OpenAPI documents of an app config), so a bundle-only app with `openapi: none` never installs it.
+- **Pin.** `seampact-ir` embeds `binaries.json`: the binary version and one SHA-256 per asset, written at release time from `SHA256SUMS`. The root project's `pyproject.toml` overrides it under `[tool.seampact.binary]` with one of: a version with all its hashes, a mirror `url` with all its hashes, or a local `path` with its hash, with the PHP rules for a mirror `url` and a relative `path`. The file the wheel installed is hashed against the pin before any use, like a download.
+- **Pin refusals.** They are PHP's: an override with no hash (`binary.pin-missing`); a malformed hash or an unknown asset (`binary.pin-invalid`); a file whose hash differs from the pin (`binary.hash-mismatch`, naming both values); a `[tool.seampact.binary]` table outside the root project's `pyproject.toml` (`binary.override-not-root`, naming the file).
+- **Cache.** The cache root is `$XDG_CACHE_HOME/seampact`, else `$HOME/.cache/seampact`; on Windows it is `%LOCALAPPDATA%\seampact`. The binary, from the wheel or a `path` override, is copied owner-only into `<cache root>/<sha256>/` and only that copy runs. The cache, install and check rules are PHP's, with their codes (`binary.cache-unavailable`, `binary.cache-unsafe`); the primary group is read with `os.getgid()`.
+- **Runner.** The runner starts the binary's `compile` with `subprocess.run` on an argument list and `shell=False`, so no shell reads it, in an output directory it creates owner-only, with the contract's environment only and a deadline. The exits are PHP's: `binary.compile-refused`, `binary.compile-timeout` and `binary.compile-failed`.
+- **Platforms.** `sys.platform` gives the OS and `platform.machine()` the arch. On Linux the C library is glibc when `os.confstr("CS_GNU_LIBC_VERSION")` answers; otherwise the loader under `/lib` decides, `ld-musl-*` being musl.
+
+  | `sys.platform` | `platform.machine()` | Release asset |
+  |---|---|---|
+  | `linux`, glibc | `x86_64` | `seampact-linux-x64` |
+  | `linux`, glibc | `aarch64` | `seampact-linux-arm64` |
+  | `darwin` | `x86_64` | `seampact-darwin-x64` |
+  | `darwin` | `arm64` | `seampact-darwin-arm64` |
+  | `win32` | `AMD64` | `seampact-win32-x64.exe` |
+
+  The platform unit tests of `seampact-ir` pin these values. Any other row, musl (Alpine) and BSD included, is refused (`binary.platform-unsupported`, naming the detected OS, arch and C library) with the three fixes of the JVM and PHP. The Python guide names the bundle source and the glibc `python:3.x-slim` images.
+- **`use` form.** An app config names a pip target as `pypi:<distribution>` (`use: 'pypi:seampact-fastapi'`), beside the npm, Maven and Composer forms of ADR 0011. The Node, JVM and PHP runners leave such an entry to the Python runner, and the Maven form refuses the group `pypi`, so the forms cannot be confused. The app config schema gains the form in a spec change.
+- **Until publication.** The compiler and the pip packages are published once, at v1: until then the embedded pin stays empty and there is no `seampact-compiler` wheel on an index. A `path` override with its hash is the only way to the binary, in CI and in the test consumers, and an input that needs the binary without one is refused by name (`binary.unpublished`, naming the `path` override).
+
 ## Consequences
 
-- A Java or PHP consumer works with no Node.js installed, from a bundle (no compiler at all) or from a local source (the pinned binary).
+- A Java, PHP or Python consumer works with no Node.js installed, from a bundle (no compiler at all) or from a local source (the pinned binary).
 - Every IR change touches two generated models in the same PR; CI makes forgetting it impossible.
 - Each binary release implies a plugin release that embeds its hashes. Consumers can override them without waiting.
 - Linux musl (Alpine) is not a shipped binary platform; a consumer on Alpine uses the bundle path or a glibc build image.
@@ -196,5 +220,5 @@ Composer has no classifier and no OS or arch filter, so the binary does not trav
 
 ## Traceability
 
-- FRs: FR-40, FR-38, FR-37 (version checks), FR-14 (native targets), FR-17 (standalone binary and mirrors), FR-19 (Gradle and Maven plugins), FR-21 (PHP targets), FR-13 (`diff` in the binary); amendments A7, A9, A13, A15, A19, A26, A27, A28, [A41](../decisions.md#a41), A42, A43.
+- FRs: FR-40, FR-38, FR-37 (version checks), FR-14 (native targets), FR-17 (standalone binary and mirrors), FR-19 (Gradle and Maven plugins), FR-21 (PHP targets), FR-13 (`diff` in the binary); amendments A7, A9, A13, A15, A19, A26, A27, A28, [A41](../decisions.md#a41), A42, A43, [A48](../decisions.md#a48).
 - Checklist items enabled: CHK-072 (unpublished installs from Maven local and Composer path repositories), CHK-076 (no Node.js on native consumers), CHK-077 and CHK-078 (version checks and open enums in the native models), CHK-079 (Java 21 and 25 through Gradle and Maven), CHK-083, CHK-084 and CHK-085 (PHP targets), CHK-088 (mirror trees installable), CHK-140 (binary commands), CHK-158 (`Field`), CHK-159 (PHP decoding), CHK-166 (JVM DSL, build-directory output, artisan), CHK-167 (JSON-LD contexts).
