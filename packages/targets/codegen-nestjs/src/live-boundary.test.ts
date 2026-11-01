@@ -38,6 +38,8 @@ const PROBLEM_MEDIA = "application/problem+json";
 const THROTTLED_CODE = "api.throttled";
 const TOO_MANY_REQUESTS = 429;
 const BAD_REQUEST = 400;
+// The reference contract's `bodyLimit: 1MiB`, which `createTask` takes.
+const CREATE_TASK_BODY_LIMIT = 1024 * 1024;
 
 // Binds on `getTask` a 429 code with no role and no params, as an app's own throttling code.
 const throttledGetTask: ReferenceIrChange = (ir, api) => {
@@ -145,9 +147,13 @@ interface ReferenceAppModule {
     close(): Promise<void>;
   }>;
   startOverriddenHooksApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
-  startHealthOnlyTestingApp(moduleOptions?: {
-    unboundOperations?: string;
-  }): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startHealthOnlyTestingApp(
+    moduleOptions?: Record<string, unknown>,
+    healthResponses?: "strict" | "warn",
+  ): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  bootWithAppLogger(appLogger: object): Promise<void>;
+  sampleTask(taskId: string): object;
+  startInputPartsApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   readonly NotFoundException: new () => Error;
   readonly BadRequestException: new () => Error;
   readonly HttpException: new (message: string, status: number) => Error;
@@ -370,6 +376,29 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
   });
 
   describe("the app's own routes keep NestJS's behaviour", () => {
+    test("an app route keeps strict JSON and no raw body, while a contract route takes a JSON scalar at its limit", async () => {
+      const scalarAtLimit = JSON.stringify("x".repeat(CREATE_TASK_BODY_LIMIT - 2));
+      const scalarOverLimit = JSON.stringify("x".repeat(CREATE_TASK_BODY_LIMIT - 1));
+      const atLimit = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: writeHeaders(),
+        body: scalarAtLimit,
+      });
+      const overLimit = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: writeHeaders(),
+        body: scalarOverLimit,
+      });
+      const appScalar = await send("POST", "/own/echo", { body: JSON.stringify("x") });
+      const appObject = await send("POST", "/own/echo", { body: JSON.stringify({ note: "x" }) });
+
+      expect(atLimit.status).toBe(BAD_REQUEST);
+      expect(JSON.parse(atLimit.text).issues).toEqual([{ pointer: "", rule: "type" }]);
+      expect(overLimit.status).toBe(413);
+      expect(appScalar.status).toBe(BAD_REQUEST);
+      expect(JSON.parse(appScalar.text)).not.toHaveProperty("issues");
+      expect(JSON.parse(appObject.text)).toEqual({ body: { note: "x" }, rawBody: false });
+      expect(app.calls.handled).toEqual([]);
+    });
+
     test("a parser 413 on an app route answers NestJS's 413", async () => {
       const reply = await send("POST", "/own/echo", {
         body: JSON.stringify({ padding: "x".repeat(3 * 1024 * 1024) }),
@@ -862,10 +891,82 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       );
     });
 
+    test("forRoot's responses replaces the generated mode, and a route's responses() still wins", async () => {
+      const options = { unboundOperations: "warn", responses: "warn" };
+
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      // Written by NestJS's own filter, so the outgoing check applies the mode.
+      app.scenario.answers.health = () => {
+        throw new app.HttpException("teapot", 418);
+      };
+
+      const moduleWarnServer = await app.startHealthOnlyTestingApp(options);
+      const routeStrictServer = await app.startHealthOnlyTestingApp(options, "strict");
+
+      try {
+        const passed = await sendRawRequest(moduleWarnServer, "GET", "/v1/health", {});
+        const replaced = await sendRawRequest(routeStrictServer, "GET", "/v1/health", {});
+
+        expect(passed.status).toBe(418);
+        expect(replaced.status).toBe(500);
+      } finally {
+        await moduleWarnServer.close();
+        await routeStrictServer.close();
+      }
+    });
+
+    test("a responses or bodyValidation value of the wrong kind is refused at boot", async () => {
+      await expect(
+        app.startHealthOnlyTestingApp({ responses: "loose", bodyValidation: "yes" }),
+      ).rejects.toThrow(
+        /'responses' is "loose", not 'strict' or 'warn'.*'bodyValidation' is "yes"/s,
+      );
+    });
+
     test("an unknown unboundOperations value is refused at boot", async () => {
       await expect(app.startHealthOnlyTestingApp({ unboundOperations: "ignore" })).rejects.toThrow(
         /'unboundOperations' is "ignore", not 'error' or 'warn'/,
       );
+    });
+  });
+
+  describe("the input part decorators", () => {
+    test("path, body and input params read one validated input, and a body param alone binds a method", async () => {
+      const received: unknown[] = [];
+      const partsServer = await app.startInputPartsApp();
+
+      app.scenario.answers.assignTask = (parts) => {
+        received.push(parts);
+
+        return { status: 200, body: app.sampleTask(TASK) };
+      };
+
+      try {
+        const assigned = await sendRawRequest(
+          partsServer,
+          "POST",
+          `/v1/channels/${CHANNEL}/tasks/${TASK}/assign`,
+          { headers: writeHeaders(), body: JSON.stringify({ userId: USER }) },
+        );
+        const created = await sendRawRequest(partsServer, "POST", `/v1/channels/${CHANNEL}/tasks`, {
+          headers: writeHeaders(),
+          body: JSON.stringify({ title: "Write" }),
+        });
+        const invalid = await sendRawRequest(partsServer, "POST", `/v1/channels/${CHANNEL}/tasks`, {
+          headers: writeHeaders(),
+          body: JSON.stringify({ title: "" }),
+        });
+
+        expect(assigned.status).toBe(200);
+        expect(received).toEqual([
+          { path: { channelId: CHANNEL, taskId: TASK }, body: { userId: USER }, sharesInput: true },
+        ]);
+        expect(created.status).toBe(201);
+        expect(invalid.status).toBe(BAD_REQUEST);
+        expect(app.calls.handled).toEqual(["assignTask", "createTask"]);
+      } finally {
+        await partsServer.close();
+      }
     });
   });
 
@@ -1057,17 +1158,41 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       );
     });
 
+    // Before the last test, which installs the api's logger again.
+    test("without a logger option the boundary writes to NestJS's Logger, which app.useLogger sets", async () => {
+      const warned: unknown[][] = [];
+      const ignore = () => undefined;
+      const appLogger = {
+        log: ignore,
+        error: ignore,
+        debug: ignore,
+        verbose: ignore,
+        fatal: ignore,
+        warn: (...parts: unknown[]) => warned.push(parts),
+      };
+
+      await app.bootWithAppLogger(appLogger);
+
+      expect(warned).toContainEqual(
+        expect.arrayContaining([
+          expect.stringContaining("(unboundOperations: warn)"),
+          "Seampact:tasks",
+        ]),
+      );
+    });
+
     // Last in the mode: the logger stays installed for the api's generated tree.
     test("the boot writes its warnings to the logger forRoot receives", async () => {
       const logged: unknown[][] = [];
       const logger = { warn: (...parts: unknown[]) => logged.push(parts), error: () => undefined };
+      const testingServer = await app.startHealthOnlyTestingApp({
+        logger,
+        unboundOperations: "warn",
+      });
 
-      await app.bootWithModuleOptions({ logger });
-      await (reply === "interceptor"
-        ? app.bootWithLateGlobalInterceptor()
-        : app.bootWithAppInterceptors());
+      await testingServer.close();
 
-      expect(logged.length).toBeGreaterThan(0);
+      expect(logged).toContainEqual([expect.stringContaining("(unboundOperations: warn)")]);
     });
   });
 });
