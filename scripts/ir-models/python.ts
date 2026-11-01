@@ -1,5 +1,6 @@
 import { splitName } from "@seampact/spec/naming";
 import {
+  compareNames,
   type Definition,
   definitionDoc,
   type Member,
@@ -164,11 +165,12 @@ function compareImportNames(left: string, right: string): number {
 
     return /^[A-Z]/.test(name) ? 1 : 2;
   };
+
   const byRank = rank(left) - rank(right);
 
   if (byRank !== 0) return byRank;
 
-  return left < right ? -1 : left > right ? 1 : 0;
+  return compareNames(left, right);
 }
 
 function versionModule(irVersion: number, irRevision: number, header: string[]): string {
