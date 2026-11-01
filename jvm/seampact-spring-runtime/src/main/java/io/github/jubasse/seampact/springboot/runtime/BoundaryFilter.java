@@ -67,7 +67,7 @@ public final class BoundaryFilter implements Filter {
         }
 
         if (boundary.answersNotFound(match.get().route().id())) {
-            answerNotFound(request, response, chain, contractPath.get());
+            answerUnbound(response, contractPath.get());
             return;
         }
 
@@ -115,19 +115,31 @@ public final class BoundaryFilter implements Filter {
             return;
         }
 
-        answerNotFound(request, response, chain, path);
-    }
-
-    // The api's 404 for [path]; the app's own when no route of the api declares one.
-    private void answerNotFound(HttpServletRequest request, HttpServletResponse response, FilterChain chain, String path) throws IOException, ServletException {
         Optional<ContractRoute> route = boundary.table().notFoundRoute(path);
         if (route.isEmpty()) {
             chain.doFilter(request, response);
             return;
         }
 
-        String code = route.get().codeOfRole(ContractTable.NOT_FOUND_ROLE).orElseThrow();
-        boundary.writeError(response, route.get(), code, MissingNode.getInstance());
+        writeNotFound(response, route.get());
+    }
+
+    // An operation the boot check found without a handler under `unbound-operations=warn`: the api's 404, else a bare
+    // 404 with no body, as no handler of the app can answer it.
+    private void answerUnbound(HttpServletResponse response, String path) throws IOException {
+        Optional<ContractRoute> route = boundary.table().notFoundRoute(path);
+        if (route.isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.setContentLength(0);
+            return;
+        }
+
+        writeNotFound(response, route.get());
+    }
+
+    private void writeNotFound(HttpServletResponse response, ContractRoute route) throws IOException {
+        String code = route.codeOfRole(ContractTable.NOT_FOUND_ROLE).orElseThrow();
+        boundary.writeError(response, route, code, MissingNode.getInstance());
     }
 
     // The media type and the bounded body read, for an operation with an input body.

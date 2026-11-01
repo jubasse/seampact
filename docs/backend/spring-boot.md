@@ -255,7 +255,7 @@ A test slice that loads only some controllers (`@WebMvcTest`) fails the boot che
 class NotesControllerTest {
 ```
 
-The slice starts and logs the operations it leaves without a handler, once. A request to one of their routes answers the api's 404. Every hook the contract names is still needed. Any value other than `error` (the default) or `warn` stops the start.
+The slice starts and logs the operations it leaves without a handler, once. A request to one of their routes answers the api's 404. Set the property only in the test (`@TestPropertySource` or `@WebMvcTest(properties = ...)`), never in `application.properties`: there it lets the app start with a missing handler. Every hook the contract names is still needed. Any value other than `error` (the default) or `warn` stops the start.
 
 To test a controller without HTTP, build the input record yourself, with the caller and the scopes. Nothing checks them on a direct call.
 

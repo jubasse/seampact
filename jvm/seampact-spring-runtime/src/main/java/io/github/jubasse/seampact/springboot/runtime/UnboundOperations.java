@@ -7,7 +7,8 @@ import org.springframework.core.env.Environment;
 /**
  * The property `seampact.<api>.unbound-operations` (ADR 0022 "The boot check"): `error`, the default, refuses to start
  * when an operation has no handler; `warn` lets a test slice that loads some controllers (`@WebMvcTest`) start, logs
- * the unbound operations once and answers their routes with the api's 404.
+ * the unbound operations once and answers their routes with the api's 404. `warn` holds even when
+ * `artefacts.bootCheck` switches the handler check off; `error` refuses only when that check is on.
  */
 final class UnboundOperations {
     static final String ERROR = "error";

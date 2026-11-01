@@ -65,7 +65,14 @@ public final class BootCheck implements SmartInitializingSingleton {
         List<String> problems = new ArrayList<>();
 
         if (bootCheck.path("hooks").asBoolean(true)) hookProblems(problems);
-        if (bootCheck.path("handlers").asBoolean(true)) handlerProblems(problems);
+        Map<String, List<String>> bound = boundHandlers();
+        List<ContractRoute> unbound = unboundRoutes(bound);
+        boolean warnsOnUnbound = UnboundOperations.warns(boundary.apiId(), boundary.environment());
+        if (warnsOnUnbound) answerUnboundWithNotFound(unbound);
+        if (bootCheck.path("handlers").asBoolean(true)) {
+            handlerProblems(problems, bound);
+            if (!warnsOnUnbound) unboundProblems(problems, unbound);
+        }
         if (bootCheck.path("frameworkRoutes").asBoolean(true)) frameworkRouteProblems(problems);
         filterProblems(problems);
         earlierMappingProblems(problems);
@@ -162,39 +169,42 @@ public final class BootCheck implements SmartInitializingSingleton {
         return names;
     }
 
-    private void handlerProblems(List<String> problems) {
+    private Map<String, List<String>> boundHandlers() {
         Map<String, List<String>> bound = new LinkedHashMap<>();
         for (HandlerMethod handler : handlerMethods().values()) {
             boundary.operationOf(handler.getMethod()).ifPresent(operation -> bound.computeIfAbsent(operation, key -> new ArrayList<>()).add(handler.toString()));
         }
 
-        List<ContractRoute> unbound = new ArrayList<>();
-        for (ContractRoute route : boundary.table().routes()) {
-            List<String> handlers = bound.getOrDefault(route.id(), List.of());
-            Class<? extends Annotation> annotation = boundary.binding().annotations().get(route.id());
-            if (handlers.isEmpty()) {
-                unbound.add(route);
-            } else if (handlers.size() > 1) {
-                problems.add("operation '" + route.id() + "': two handlers are bound (" + String.join(", ", handlers) + "); fix: keep one method with @" + annotation.getSimpleName() + ".");
-            }
-        }
-
-        unboundProblems(problems, unbound);
+        return bound;
     }
 
-    // Under `unbound-operations=warn`, a test slice's operations without a controller are logged once, not refused.
-    private void unboundProblems(List<String> problems, List<ContractRoute> unbound) {
+    private List<ContractRoute> unboundRoutes(Map<String, List<String>> bound) {
+        return boundary.table().routes().stream().filter(route -> bound.getOrDefault(route.id(), List.of()).isEmpty()).toList();
+    }
+
+    private void handlerProblems(List<String> problems, Map<String, List<String>> bound) {
+        for (ContractRoute route : boundary.table().routes()) {
+            List<String> handlers = bound.getOrDefault(route.id(), List.of());
+            if (handlers.size() <= 1) continue;
+
+            Class<? extends Annotation> annotation = boundary.binding().annotations().get(route.id());
+            problems.add("operation '" + route.id() + "': two handlers are bound (" + String.join(", ", handlers) + "); fix: keep one method with @" + annotation.getSimpleName() + ".");
+        }
+    }
+
+    // Under `unbound-operations=warn`, whatever the handler check's switch: a test slice's operations without a
+    // controller are logged once and their routes answer the api's 404.
+    private void answerUnboundWithNotFound(List<ContractRoute> unbound) {
         if (unbound.isEmpty()) return;
 
-        String property = UnboundOperations.propertyOf(boundary.apiId());
-        if (UnboundOperations.warns(boundary.apiId(), boundary.environment())) {
-            boundary.answerNotFoundFor(unbound.stream().map(ContractRoute::id).toList());
-            String operations = String.join(", ", unbound.stream().map(route -> "'" + route.id() + "'").toList());
-            SeampactBoundary.LOG.warn("seampact: api '{}' serves no handler for {}; their routes answer the api's 404 ({}=warn).",
-                    boundary.apiId(), operations, property);
-            return;
-        }
+        boundary.answerNotFoundFor(unbound.stream().map(ContractRoute::id).toList());
+        String operations = String.join(", ", unbound.stream().map(route -> "'" + route.id() + "'").toList());
+        SeampactBoundary.LOG.warn("seampact: api '{}' serves no handler for {}; their routes answer the api's 404 ({}=warn).",
+                boundary.apiId(), operations, UnboundOperations.propertyOf(boundary.apiId()));
+    }
 
+    private void unboundProblems(List<String> problems, List<ContractRoute> unbound) {
+        String property = UnboundOperations.propertyOf(boundary.apiId());
         for (ContractRoute route : unbound) {
             String annotation = boundary.binding().annotations().get(route.id()).getSimpleName();
             problems.add("operation '" + route.id() + "': no handler is bound; fix: implement it in a @RestController with @" + annotation
