@@ -92,6 +92,20 @@ describe("the app config types and schema", () => {
     expect(isValid(APP_CONFIG_SCHEMA, config)).toBe(false);
   });
 
+  test("`allowUntested` names a 0.x framework by its minor and any other by its major", () => {
+    const entry = { id: "a", use: "p", api: "x" };
+    const accepts = (item: string) =>
+      isValid(APP_CONFIG_SCHEMA, { targets: [{ ...entry, allowUntested: [item] }] });
+
+    expect(["express@6", "fastapi@0.162", "fastapi@0.0"].map(accepts)).toEqual([true, true, true]);
+    expect(["express@6.1", "express@0", "fastapi@0.01", "fastapi@0."].map(accepts)).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+
   test("refuse a malformed `allowUntested` item and an artefact id no DSL can write", () => {
     const entry = { id: "a", use: "p", api: "x" };
 

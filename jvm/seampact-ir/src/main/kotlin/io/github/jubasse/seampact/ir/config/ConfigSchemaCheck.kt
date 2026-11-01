@@ -21,6 +21,11 @@ private val CONFIG_SCHEMAS by lazy {
 private const val SCHEMA_FIX = "Correct the value as the config schema states (ADR 0011 'The app config')."
 private const val ONE_OF = "oneOf"
 private const val BOOT_CHECK_ARTEFACT = "bootCheck"
+private const val ALLOW_UNTESTED_KEY = "allowUntested"
+private const val ALLOW_UNTESTED_RULE =
+    "An `allowUntested` item is '<framework>@<major>', or '<framework>@0.<minor>' for a 0.x framework; a major of 1 or more takes no minor."
+private const val ALLOW_UNTESTED_FIX =
+    "Write '<framework>@<major>' (such as 'spring-boot@4', not 'spring-boot@4.1'), or '<framework>@0.<minor>' for a 0.x framework (such as 'fastapi@0.162')."
 private const val MOUNT_KEY = "mount"
 private const val MOUNT_RULE =
     "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!\$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'."
@@ -92,6 +97,10 @@ private fun violationProblem(tree: ConfigTree, kind: ConfigKind, violation: Sche
             formatKeyPath(path),
             ConfigProblem("config.schema", "The key '$property' is required here.", "Add '$property'.", tree.whereOf(path)),
         )
+    }
+
+    if (violation.keyword == "pattern" && path.getOrNull(path.size - 2) == ALLOW_UNTESTED_KEY) {
+        return LocatedProblem(formatKeyPath(path), ConfigProblem("config.schema", ALLOW_UNTESTED_RULE, ALLOW_UNTESTED_FIX, tree.whereOf(path)))
     }
 
     if (violation.keyword == "pattern" && path.lastOrNull() == MOUNT_KEY) {

@@ -121,7 +121,8 @@ final class MatrixCheck
             );
         }
 
-        $allowItem = "{$framework->id}@{$major}";
+        // A 0.x framework breaks in its minors, so its item names the minor.
+        $allowItem = $major === 0 ? "{$framework->id}@0.{$minor}" : "{$framework->id}@{$major}";
         if (in_array($major, $framework->testedMajors, true) || in_array($allowItem, $allowed, true)) {
             return null;
         }
@@ -178,7 +179,7 @@ final class MatrixCheck
         return $frameworks;
     }
 
-    // `<framework>@<major>`, as the app config schema checked it.
+    // `<framework>@<major>` or `<framework>@0.<minor>`, as the app config schema checked it.
     private static function frameworkIdOf(string $item): string
     {
         $at = strrpos($item, '@');

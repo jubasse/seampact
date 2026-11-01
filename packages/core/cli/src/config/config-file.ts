@@ -1,6 +1,11 @@
 import { readFile, stat } from "node:fs/promises";
 import type { JsonSchema } from "@seampact/spec/authoring";
-import { BOOT_CHECK_ARTEFACT, STRICT_FRAMEWORK_ROUTE_CHECK } from "@seampact/spec/config";
+import {
+  ALLOW_UNTESTED_FIX,
+  ALLOW_UNTESTED_RULE,
+  BOOT_CHECK_ARTEFACT,
+  STRICT_FRAMEWORK_ROUTE_CHECK,
+} from "@seampact/spec/config";
 import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import {
   type Document,
@@ -318,6 +323,18 @@ function schemaErrorProblem(
         code: "config.schema",
         message: FRAMEWORK_ROUTE_PATH_RULE,
         fix: "Write a route parameter as '*' and a catch-all as '**' (ADR 0011 'The app config').",
+        where: whereOf(parsed, path),
+      },
+    };
+  }
+
+  if (error.keyword === "pattern" && path.at(-2) === "allowUntested") {
+    return {
+      keyPath,
+      problem: {
+        code: "config.schema",
+        message: ALLOW_UNTESTED_RULE,
+        fix: ALLOW_UNTESTED_FIX,
         where: whereOf(parsed, path),
       },
     };

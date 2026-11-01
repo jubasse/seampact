@@ -93,8 +93,9 @@ internal fun checkMatrix(config: AppConfig, frameworkVersion: String?, framework
             continue
         }
 
-        if (major in framework.testedMajors || "${framework.id}@$major" in allowed) continue
-        val untested = untested(entry, frameworkVersion, "${framework.id}@$major", framework)
+        val allowItem = allowUntestedItemOf(framework.id, frameworkVersion, major)
+        if (major in framework.testedMajors || allowItem in allowed) continue
+        val untested = untested(entry, frameworkVersion, allowItem, framework)
         if (untestedIsError) problems += untested else warnings += untested
     }
 
@@ -104,7 +105,16 @@ internal fun checkMatrix(config: AppConfig, frameworkVersion: String?, framework
 private fun allowUntestedOf(entry: AppConfigEntry): List<String> =
     (entry.entry[ALLOW_UNTESTED_KEY] as? JsonArray).orEmpty().map { it.jsonPrimitive.content }
 
-// `<framework>@<major>`, as the app config schema checked it.
+// A 0.x framework breaks in its minors, so its item names the minor: `fastapi@0.162`; any other names the major.
+private fun allowUntestedItemOf(frameworkId: String, version: String, major: Int): String {
+    if (major != 0) return "$frameworkId@$major"
+
+    val minor = version.substringAfter('.', "").takeWhile(Char::isDigit)
+
+    return "$frameworkId@0.${minor.ifEmpty { "<minor>" }}"
+}
+
+// `<framework>@<major>` or `<framework>@0.<minor>`, as the app config schema checked it.
 private fun frameworkIdOf(item: String): String = item.substringBeforeLast('@')
 
 private fun where(entry: AppConfigEntry): String = "entry '${entry.id}'"
