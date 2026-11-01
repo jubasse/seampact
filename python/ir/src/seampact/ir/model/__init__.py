@@ -7,7 +7,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field as _dataclass_field
 from enum import StrEnum
 from typing import Literal, final
 
@@ -1159,7 +1160,7 @@ class ApiWire:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ApplicationSignature(SignatureVerify):
-    verify: Literal["application"] = field(default="application", init=False)
+    verify: Literal["application"] = _dataclass_field(default="application", init=False)
     headers: tuple[str, ...]
     key: SchemeKey | None = None
 
@@ -1192,7 +1193,7 @@ class ApplicationSignature(SignatureVerify):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ArrayTemplate(Template):
-    kind: Literal["array"] = field(default="array", init=False)
+    kind: Literal["array"] = _dataclass_field(default="array", init=False)
     items: tuple[Template, ...]
 
     def __post_init__(self) -> None:
@@ -1216,7 +1217,7 @@ class ArrayTemplate(Template):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ArrayTypeUse(TypeUse):
-    kind: Literal["array"] = field(default="array", init=False)
+    kind: Literal["array"] = _dataclass_field(default="array", init=False)
     items: TypeUse
     min_items: int | None = None
     max_items: int | None = None
@@ -1276,7 +1277,7 @@ class BasicScheme(Scheme):
     """HTTP basic credentials in the Authorization header."""
 
     id: SchemeId
-    kind: Literal["basic"] = field(default="basic", init=False)
+    kind: Literal["basic"] = _dataclass_field(default="basic", init=False)
     origin: Origin
 
     @staticmethod
@@ -1331,7 +1332,7 @@ class BearerScheme(Scheme):
     """A bearer token in the Authorization header."""
 
     id: SchemeId
-    kind: Literal["bearer"] = field(default="bearer", init=False)
+    kind: Literal["bearer"] = _dataclass_field(default="bearer", init=False)
     bearer: BearerFacts | None = None
     origin: Origin
 
@@ -1382,7 +1383,7 @@ class Binding:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class BodyUnionTag(UnionTag):
-    in_: Literal["body"] = field(default="body", init=False)
+    in_: Literal["body"] = _dataclass_field(default="body", init=False)
     property: str
 
     @staticmethod
@@ -1620,7 +1621,7 @@ class CallerKindUnknown(UnknownEnumValue):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CatalogueEnumSource(EnumSource):
-    kind: Literal["enum"] = field(default="enum", init=False)
+    kind: Literal["enum"] = _dataclass_field(default="enum", init=False)
     enum: EnumId
 
     @staticmethod
@@ -1891,7 +1892,7 @@ class CookieScheme(Scheme):
     """A credential in a cookie; 'csrf' names the scheme that carries the CSRF token."""
 
     id: SchemeId
-    kind: Literal["cookie"] = field(default="cookie", init=False)
+    kind: Literal["cookie"] = _dataclass_field(default="cookie", init=False)
     name: str
     """The cookie name."""
     csrf: SchemeId | None = None
@@ -1925,7 +1926,7 @@ class CredentialIdentity(Identity):
     """An identity reached through credential schemes."""
 
     id: IdentityId
-    kind: Literal["credential"] = field(default="credential", init=False)
+    kind: Literal["credential"] = _dataclass_field(default="credential", init=False)
     schemes: CredentialSchemes
     principal: Principal
     errors: tuple[ErrorCode, ...]
@@ -2131,7 +2132,7 @@ type DerivationId = str
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DerivedCsrf(Csrf):
-    kind: Literal["derived"] = field(default="derived", init=False)
+    kind: Literal["derived"] = _dataclass_field(default="derived", init=False)
     header: str
     derived_from: DerivedFrom
 
@@ -2181,7 +2182,7 @@ class DerivedFrom:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DerivedIdempotency(Idempotency):
-    kind: Literal["derived"] = field(default="derived", init=False)
+    kind: Literal["derived"] = _dataclass_field(default="derived", init=False)
     header: str
     replay_header: str
     lifetime_ms: int
@@ -2276,7 +2277,7 @@ type DocumentId = str
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class EachTemplate(Template):
-    kind: Literal["each"] = field(default="each", init=False)
+    kind: Literal["each"] = _dataclass_field(default="each", init=False)
     of: Slot
     as_: Template
 
@@ -2399,7 +2400,7 @@ class EnumNarrowing:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class EnumTypeUse(TypeUse):
-    kind: Literal["enum"] = field(default="enum", init=False)
+    kind: Literal["enum"] = _dataclass_field(default="enum", init=False)
     enum: EnumId
     narrowed_to: EnumNarrowing | None = None
     nullable: bool | None = None
@@ -2647,7 +2648,7 @@ class ErrorShape:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ExemptCsrf(Csrf):
-    kind: Literal["exempt"] = field(default="exempt", init=False)
+    kind: Literal["exempt"] = _dataclass_field(default="exempt", init=False)
     reason: Reason
     origin: Origin
 
@@ -2671,7 +2672,7 @@ class ExemptCsrf(Csrf):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ExemptIdempotency(Idempotency):
-    kind: Literal["exempt"] = field(default="exempt", init=False)
+    kind: Literal["exempt"] = _dataclass_field(default="exempt", init=False)
     reason: Reason
     origin: Origin
 
@@ -2986,7 +2987,7 @@ class FieldWireKindUnknown(UnknownEnumValue):
 class FileTypeUse(TypeUse):
     """A multipart field or a download (A39)."""
 
-    kind: Literal["file"] = field(default="file", init=False)
+    kind: Literal["file"] = _dataclass_field(default="file", init=False)
     media: tuple[str, ...]
     max_size_bytes: int | None = None
     nullable: bool | None = None
@@ -3130,7 +3131,7 @@ class HeaderScheme(Scheme):
     """A credential in a request header."""
 
     id: SchemeId
-    kind: Literal["header"] = field(default="header", init=False)
+    kind: Literal["header"] = _dataclass_field(default="header", init=False)
     name: str
     """The header name."""
     origin: Origin
@@ -3214,7 +3215,7 @@ class HeaderTemplate:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class HeaderUnionTag(UnionTag):
-    in_: Literal["header"] = field(default="header", init=False)
+    in_: Literal["header"] = _dataclass_field(default="header", init=False)
     name: str
 
     @staticmethod
@@ -3286,7 +3287,7 @@ class IdempotencyEnforcementUnknown(UnknownEnumValue):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class IdentityAccess(Access):
-    kind: Literal["identity"] = field(default="identity", init=False)
+    kind: Literal["identity"] = _dataclass_field(default="identity", init=False)
     identity: IdentityId
     schemes: tuple[SchemeId, ...]
     origin: Origin
@@ -3371,7 +3372,7 @@ type IdentityId = str
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class IgnoreKeysPolicy(KeysPolicy):
-    policy: Literal["ignore"] = field(default="ignore", init=False)
+    policy: Literal["ignore"] = _dataclass_field(default="ignore", init=False)
     reason: Reason
 
     @staticmethod
@@ -3392,7 +3393,7 @@ class IgnoreKeysPolicy(KeysPolicy):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class IgnoreUnknownQuery(UnknownQuery):
-    policy: Literal["ignore"] = field(default="ignore", init=False)
+    policy: Literal["ignore"] = _dataclass_field(default="ignore", init=False)
     reason: Reason
     origin: Origin
 
@@ -3587,7 +3588,7 @@ class JsonMediaTypeUnknown(UnknownEnumValue):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class KeepKeysPolicy(KeysPolicy):
-    policy: Literal["keep"] = field(default="keep", init=False)
+    policy: Literal["keep"] = _dataclass_field(default="keep", init=False)
     reason: Reason
 
     @staticmethod
@@ -3608,7 +3609,7 @@ class KeepKeysPolicy(KeysPolicy):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class LabelApiVersion(ApiVersion):
-    kind: Literal["label"] = field(default="label", init=False)
+    kind: Literal["label"] = _dataclass_field(default="label", init=False)
     label: str
 
     @staticmethod
@@ -3729,7 +3730,7 @@ class LintSeverityUnknown(UnknownEnumValue):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class LiteralTemplate(Template):
-    kind: Literal["literal"] = field(default="literal", init=False)
+    kind: Literal["literal"] = _dataclass_field(default="literal", init=False)
     value: FrozenJson
 
     def __post_init__(self) -> None:
@@ -3753,7 +3754,7 @@ class LiteralTemplate(Template):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class MapSchema(Schema):
-    kind: Literal["map"] = field(default="map", init=False)
+    kind: Literal["map"] = _dataclass_field(default="map", init=False)
     keys: TypeUse | None = None
     values: TypeUse
     id: SchemaId
@@ -4060,7 +4061,7 @@ type NatureId = str
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class NoSubject(RightSubject):
-    kind: Literal["none"] = field(default="none", init=False)
+    kind: Literal["none"] = _dataclass_field(default="none", init=False)
 
     @staticmethod
     def from_json(value: object) -> NoSubject:
@@ -4099,7 +4100,7 @@ class OAuth2:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ObjectSchema(Schema):
-    kind: Literal["object"] = field(default="object", init=False)
+    kind: Literal["object"] = _dataclass_field(default="object", init=False)
     properties: tuple[Property, ...]
     id: SchemaId
     name: Name
@@ -4174,7 +4175,7 @@ class ObjectSchema(Schema):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ObjectTemplate(Template):
-    kind: Literal["object"] = field(default="object", init=False)
+    kind: Literal["object"] = _dataclass_field(default="object", init=False)
     members: tuple[ObjectTemplateMember, ...]
     merge: Slot | None = None
 
@@ -4251,7 +4252,7 @@ class OpShorthandUnknown(UnknownEnumValue):
 class OpaqueTypeUse(TypeUse):
     """Any JSON value, unchecked (ADR 0003 section 2)."""
 
-    kind: Literal["opaque"] = field(default="opaque", init=False)
+    kind: Literal["opaque"] = _dataclass_field(default="opaque", init=False)
     reason: Reason
     origin: Origin
     docs: Docs | None = None
@@ -4804,7 +4805,7 @@ class OperationScope:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class OptionalAccess(Access):
-    kind: Literal["optional"] = field(default="optional", init=False)
+    kind: Literal["optional"] = _dataclass_field(default="optional", init=False)
     identity: IdentityId
     schemes: tuple[SchemeId, ...]
     reason: Reason
@@ -5388,7 +5389,7 @@ class Params:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PathApiVersion(ApiVersion):
-    kind: Literal["path"] = field(default="path", init=False)
+    kind: Literal["path"] = _dataclass_field(default="path", init=False)
     number: int
     """The number paths carry ('/v1')."""
 
@@ -5476,7 +5477,7 @@ class Pattern:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PlainMemberName(MemberName):
-    kind: Literal["text"] = field(default="text", init=False)
+    kind: Literal["text"] = _dataclass_field(default="text", init=False)
     text: str
 
     @staticmethod
@@ -5495,7 +5496,7 @@ class PlainMemberName(MemberName):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PlainTextPart(TextPart):
-    kind: Literal["text"] = field(default="text", init=False)
+    kind: Literal["text"] = _dataclass_field(default="text", init=False)
     text: str
 
     @staticmethod
@@ -5628,7 +5629,7 @@ class Property:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PublicAccess(Access):
-    kind: Literal["public"] = field(default="public", init=False)
+    kind: Literal["public"] = _dataclass_field(default="public", init=False)
     reason: Reason
     origin: Origin
 
@@ -5655,7 +5656,7 @@ class QueryScheme(Scheme):
     """A credential in a query parameter."""
 
     id: SchemeId
-    kind: Literal["query"] = field(default="query", init=False)
+    kind: Literal["query"] = _dataclass_field(default="query", init=False)
     name: str
     """The query parameter name."""
     origin: Origin
@@ -5763,7 +5764,7 @@ type Reason = str
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RefTypeUse(TypeUse):
-    kind: Literal["ref"] = field(default="ref", init=False)
+    kind: Literal["ref"] = _dataclass_field(default="ref", init=False)
     schema: SchemaId
     unknown_keys: UnknownKeys | None = None
     nullable: bool | None = None
@@ -5867,7 +5868,7 @@ class Refinements:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RefuseUnknownQuery(UnknownQuery):
-    policy: Literal["refuse"] = field(default="refuse", init=False)
+    policy: Literal["refuse"] = _dataclass_field(default="refuse", init=False)
 
     @staticmethod
     def from_json(value: object) -> RefuseUnknownQuery:
@@ -5929,7 +5930,7 @@ class RequirementSubject:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ResourceSubject(RightSubject):
-    kind: Literal["resource"] = field(default="resource", init=False)
+    kind: Literal["resource"] = _dataclass_field(default="resource", init=False)
     type: Name
     id_schema: TypeUse
 
@@ -6208,7 +6209,7 @@ type RightId = str
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RightRequirement(Requirement):
-    kind: Literal["right"] = field(default="right", init=False)
+    kind: Literal["right"] = _dataclass_field(default="right", init=False)
     right: RightId
     params: FrozenJson | Omitted = OMITTED
     """Values already validated against the right's params schema."""
@@ -6335,7 +6336,7 @@ class RuleProof:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RuleRequirement(Requirement):
-    kind: Literal["rule"] = field(default="rule", init=False)
+    kind: Literal["rule"] = _dataclass_field(default="rule", init=False)
     rule: RuleId
     params: FrozenJson | Omitted = OMITTED
     """Values already validated against the rule's params schema."""
@@ -6454,7 +6455,7 @@ class ScalarTypeUse(TypeUse):
     that does not map the named format still checks it (ADR 0003 section 8).
     """
 
-    kind: Literal["scalar"] = field(default="scalar", init=False)
+    kind: Literal["scalar"] = _dataclass_field(default="scalar", init=False)
     type: ScalarType | ScalarTypeUnknown
     format: str | None = None
     """A portable format of ADR 0003 section 8 ('uuid', 'int64', 'decimal'...); a named format is 'scalar'."""
@@ -6539,7 +6540,7 @@ type SchemaId = str
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SchemaPrincipal(Principal):
-    kind: Literal["schema"] = field(default="schema", init=False)
+    kind: Literal["schema"] = _dataclass_field(default="schema", init=False)
     schema: SchemaRef
 
     @staticmethod
@@ -6617,7 +6618,7 @@ type ScopeId = str
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ScopeSubject(RightSubject):
-    kind: Literal["scope"] = field(default="scope", init=False)
+    kind: Literal["scope"] = _dataclass_field(default="scope", init=False)
     scope: ScopeId
 
     @staticmethod
@@ -6715,7 +6716,7 @@ class SignatureScheme(Scheme):
     """A signed request, verified as 'signature' says."""
 
     id: SchemeId
-    kind: Literal["signature"] = field(default="signature", init=False)
+    kind: Literal["signature"] = _dataclass_field(default="signature", init=False)
     name: str | None = None
     """The signature header."""
     signature: SignatureVerify
@@ -6749,7 +6750,7 @@ class SignedIdentity(Identity):
     """An identity reached through one signature scheme (ADR 0013)."""
 
     id: IdentityId
-    kind: Literal["signed"] = field(default="signed", init=False)
+    kind: Literal["signed"] = _dataclass_field(default="signed", init=False)
     signed: SchemeId
     principal: Principal
     unknown_keys: KeysPolicy | None = None
@@ -6818,7 +6819,7 @@ type Slot = str
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SlotMemberName(MemberName):
-    kind: Literal["slot"] = field(default="slot", init=False)
+    kind: Literal["slot"] = _dataclass_field(default="slot", init=False)
     slot: Slot
 
     @staticmethod
@@ -6837,7 +6838,7 @@ class SlotMemberName(MemberName):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SlotTemplate(Template):
-    kind: Literal["slot"] = field(default="slot", init=False)
+    kind: Literal["slot"] = _dataclass_field(default="slot", init=False)
     slot: Slot
     path: tuple[str, ...]
 
@@ -6869,7 +6870,7 @@ class SlotTemplate(Template):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SlotTextPart(TextPart):
-    kind: Literal["slot"] = field(default="slot", init=False)
+    kind: Literal["slot"] = _dataclass_field(default="slot", init=False)
     slot: Slot
     path: tuple[str, ...]
 
@@ -7012,7 +7013,7 @@ class SourceMap:
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SourceSchemeKey(SchemeKey):
-    kind: Literal["from"] = field(default="from", init=False)
+    kind: Literal["from"] = _dataclass_field(default="from", init=False)
     from_: ValueSource
     """Where the request carries the key id (path, query or header)."""
 
@@ -7095,7 +7096,7 @@ type SurfaceId = str
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TemplateSignature(SignatureVerify):
-    verify: Literal["template"] = field(default="template", init=False)
+    verify: Literal["template"] = _dataclass_field(default="template", init=False)
     format: str
     algorithm: str
     payload: str
@@ -7137,7 +7138,7 @@ class TemplateSignature(SignatureVerify):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TextTemplate(Template):
-    kind: Literal["text"] = field(default="text", init=False)
+    kind: Literal["text"] = _dataclass_field(default="text", init=False)
     parts: tuple[TextPart, ...]
 
     def __post_init__(self) -> None:
@@ -7161,7 +7162,7 @@ class TextTemplate(Template):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class UnionSchema(Schema):
-    kind: Literal["union"] = field(default="union", init=False)
+    kind: Literal["union"] = _dataclass_field(default="union", init=False)
     tag: UnionTag
     variants: tuple[UnionVariant, ...]
     id: SchemaId
@@ -7357,7 +7358,7 @@ class UrlRoleUnknown(UnknownEnumValue):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ValueSchemeKey(SchemeKey):
-    kind: Literal["value"] = field(default="value", init=False)
+    kind: Literal["value"] = _dataclass_field(default="value", init=False)
     value: str
     """The key id the application looks its secret up by; never the secret."""
 
@@ -7445,7 +7446,7 @@ type VariantId = str
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class VariantsPrincipal(Principal):
-    kind: Literal["variants"] = field(default="variants", init=False)
+    kind: Literal["variants"] = _dataclass_field(default="variants", init=False)
     variants: Mapping[str, SchemaRef]
 
     def __post_init__(self) -> None:
@@ -7474,7 +7475,7 @@ class VariantsPrincipal(Principal):
 @final
 @dataclass(frozen=True, slots=True, kw_only=True)
 class VocabularyEnumSource(EnumSource):
-    kind: Literal["vocabulary"] = field(default="vocabulary", init=False)
+    kind: Literal["vocabulary"] = _dataclass_field(default="vocabulary", init=False)
     vocabulary: str
 
     @staticmethod

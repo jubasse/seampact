@@ -81,7 +81,7 @@ describe("python ir model", () => {
       DEFINITIONS_MODULE,
     );
 
-    expect(module).toContain("from dataclasses import dataclass, field as _dataclass_field\n");
+    expect(module).toContain("from dataclasses import field as _dataclass_field\n");
     expect(module).toContain("    field: str | None = None\n");
     expect(module).not.toMatch(/= field\(/);
   });

@@ -282,7 +282,8 @@ class PythonEmitter {
       "",
       ...(this.typing.has("ABC") ? ["from abc import ABC, abstractmethod"] : []),
       "from collections.abc import Mapping",
-      "from dataclasses import dataclass, field",
+      "from dataclasses import dataclass",
+      "from dataclasses import field as _dataclass_field",
       "from enum import StrEnum",
       `from typing import ${[...this.typing]
         .filter((name) => name !== "ABC")
@@ -558,7 +559,10 @@ class PythonEmitter {
       this.typing.add("Literal");
       const value = pythonString(variant.value);
 
-      return [`${INDENT}${name}: Literal[${value}] = field(default=${value}, init=False)`, ...doc];
+      return [
+        `${INDENT}${name}: Literal[${value}] = _dataclass_field(default=${value}, init=False)`,
+        ...doc,
+      ];
     }
 
     const annotation = this.annotation(member.type);

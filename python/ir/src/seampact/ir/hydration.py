@@ -7,6 +7,7 @@ the JSON type found, never the value.
 """
 
 import enum
+import math
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -170,6 +171,9 @@ def freeze(value: object, at: str) -> FrozenJson:
         return value
 
     if isinstance(value, float):
+        if not math.isfinite(value):
+            raise IrModelError(f"{at}: expected a finite number, got {value}")
+
         return value
 
     if isinstance(value, list | tuple):

@@ -6,7 +6,7 @@ document is measured first, without recursion.
 """
 
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import Final
 
@@ -86,10 +86,10 @@ class _OpenElement:
 
 
 def _children_of(element: object) -> Iterator[tuple[str, object]] | None:
-    if isinstance(element, list):
+    if isinstance(element, list | tuple):
         return ((str(index), child) for index, child in enumerate(element))
 
-    if isinstance(element, dict):
+    if isinstance(element, Mapping):
         return ((str(key), child) for key, child in element.items())
 
     return None
