@@ -7,7 +7,8 @@ name: FastAPI target
 # with Node removed from the runner, from the reference contract's bundle in a local git repository, and served by
 # uvicorn to the shared http suite on the same two rows ("The consumer and the proof"). On a pull request or a push
 # they run only when the change touches the Python packages, the reference contract, the consumer, the binary, the
-# http suite or this workflow; `fastapi` is the one check to require.
+# http suite or this workflow; the local-YAML row generates the target from the reference contract's YAML through the
+# binary with no bundle; `fastapi` is the one check to require.
 
 on:
   push:
@@ -252,9 +253,62 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
+  # The target generated and checked from the reference contract's local YAML (a `path` source) through the pinned
+  # compiler binary, with no bundle and Node removed from the runner for the install and the generation: the entry's
+  # files and the api's OpenAPI documents are written and checked.
+  local-yaml:
+    name: local YAML (fastapi)
+    needs: [changes, contract-bundle]
+    if: needs.changes.outputs.fastapi == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      WORK: ${{ github.workspace }}/../fastapi-local-yaml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Remove Node from the runner, so the Python path is proven to need none
+        shell: bash
+        run: |
+          set -euo pipefail
+          for node in $(which -a node nodejs npm npx corepack 2>/dev/null | sort -u); do
+            sudo rm -f "$node"
+          done
+          if command -v node || command -v npm || command -v npx; then
+            echo "Node is still on the PATH."
+            exit 1
+          fi
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: fastapi-binary-linux-x64
+          path: ${{ runner.temp }}/binary
+      - name: Install from the built wheels, then generate and check from the local YAML through the binary
+        shell: bash
+        env:
+          UV_PYTHON_DOWNLOADS: never
+        run: |
+          set -euo pipefail
+          chmod +x "$RUNNER_TEMP/binary/seampact-linux-x64"
+          (cd python && uv build --all-packages --wheel --out-dir "$WORK/wheels")
+          scripts/consumers/python/requirements.sh "$WORK/requirements.txt" seampact-fastapi generate uvicorn
+          scripts/consumers/python/install.sh "$WORK/venv" "$WORK/requirements.txt" "$WORK/wheels" 'seampact-fastapi[generate]'
+          scripts/consumers/python/local-yaml.sh "$WORK/projects" "$WORK/venv" "$RUNNER_TEMP/binary/seampact-linux-x64" seampact-fastapi
+          if command -v node || command -v npm || command -v npx; then
+            echo "Node came back during the install or the generation."
+            exit 1
+          fi
+
   fastapi:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, golden, contract-bundle, e2e]
+    needs: [changes, golden, contract-bundle, e2e, local-yaml]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
