@@ -213,3 +213,21 @@ def test_the_request_state_repr_shows_no_parameter_or_typed_request() -> None:
 
     assert "task-of-alice" not in rendered
     assert "hunter2" not in rendered
+
+
+def test_an_app_route_under_a_base_path_inside_an_included_router_fails_the_boot_check() -> None:
+    app = fastapi.FastAPI()
+    outer = fastapi.APIRouter(prefix="/v1")
+    admin = fastapi.APIRouter()
+
+    @admin.get("/admin")
+    def admin_page() -> None:
+        return None
+
+    outer.include_router(admin, prefix="/tools")
+    app.include_router(outer)
+    binding = _bind(app, app)
+
+    problems = boot_problems(binding)
+
+    assert any("'/v1/tools/admin'" in problem for problem in problems)
