@@ -1,6 +1,8 @@
 """The request deadline the caller sends, refused when malformed or passed, and the version a concurrent write
 carries, with the refusals a handler raises."""
 
+import copy
+import dataclasses
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -9,10 +11,14 @@ from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.deadline import deadline_exceeded, request_deadline
 from seampact.codegen.runtime.failures import ContractRefusal
 from seampact.codegen.runtime.input_decoding import DecodedInput
+from seampact.codegen.runtime.ir_view import IrJson
 from seampact.codegen.runtime.version_token import sent_version, stale_version
 
 _NOW = datetime(2026, 10, 18, 9, 0, 0, tzinfo=UTC)
 _GET_TASK = "getTask"
+_ARCHIVE_TASK = "archiveTask"
+_PRECONDITION_FAILED = "api.precondition_failed"
+_PRECONDITION_REQUIRED = "api.precondition_required"
 
 
 def _with_deadline(value: str | None) -> DecodedInput:
@@ -52,3 +58,56 @@ def test_the_sent_version_is_read_from_its_source(tasks_contract: ApiContract) -
 
     assert sent_version(tasks_contract, "archiveTask", decoded) == 4
     assert stale_version(tasks_contract, "archiveTask").code == "state.conflict"
+
+
+def _if_match_contract(tasks_contract: ApiContract) -> ApiContract:
+    """`archiveTask` versioned by `header.If-Match`, with the two codes the compiler derives for that source."""
+    ir_view: dict[str, IrJson] = copy.deepcopy(dict(tasks_contract.ir_view))
+    operations = ir_view["operations"]
+    assert isinstance(operations, list)
+    archive = next(op for op in operations if isinstance(op, dict) and op["id"] == _ARCHIVE_TASK)
+    assert isinstance(archive, dict)
+    archive["concurrency"] = {"field": "version", "version": {"in": "header", "name": "If-Match"}}
+    errors = archive["errors"]
+    assert isinstance(errors, list)
+    errors[:] = [
+        error for error in errors if not (isinstance(error, dict) and error.get("code") == "state.conflict")
+    ] + [
+        {"code": _PRECONDITION_FAILED, "roles": [{"role": "preconditionFailed"}]},
+        {"code": _PRECONDITION_REQUIRED, "roles": [{"role": "preconditionRequired"}]},
+    ]
+
+    return dataclasses.replace(tasks_contract, ir_view=ir_view)
+
+
+def _with_if_match(value: str | None) -> DecodedInput:
+    return DecodedInput({}, {}, {} if value is None else {"If-Match": value}, {"reason": "done"}, None)
+
+
+def test_an_if_match_version_is_the_unquoted_strong_tag(tasks_contract: ApiContract) -> None:
+    contract = _if_match_contract(tasks_contract)
+
+    assert sent_version(contract, _ARCHIVE_TASK, _with_if_match('"7"')) == "7"
+
+
+def test_a_stale_if_match_version_answers_precondition_failed(tasks_contract: ApiContract) -> None:
+    contract = _if_match_contract(tasks_contract)
+
+    assert stale_version(contract, _ARCHIVE_TASK).code == _PRECONDITION_FAILED
+
+
+@pytest.mark.parametrize("sent", ['W/"7"', "7", "*"])
+def test_an_if_match_value_that_is_no_strong_tag_answers_precondition_failed(
+    tasks_contract: ApiContract, sent: str
+) -> None:
+    with pytest.raises(ContractRefusal) as refused:
+        sent_version(_if_match_contract(tasks_contract), _ARCHIVE_TASK, _with_if_match(sent))
+
+    assert refused.value.code == _PRECONDITION_FAILED
+
+
+def test_a_write_without_if_match_answers_precondition_required(tasks_contract: ApiContract) -> None:
+    with pytest.raises(ContractRefusal) as refused:
+        sent_version(_if_match_contract(tasks_contract), _ARCHIVE_TASK, _with_if_match(None))
+
+    assert refused.value.code == _PRECONDITION_REQUIRED

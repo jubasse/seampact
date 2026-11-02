@@ -86,6 +86,14 @@ def test_a_middle_page_links_its_neighbours_and_the_last_page() -> None:
     }
 
 
+def test_a_page_past_the_last_int64_offset_links_no_next_page() -> None:
+    last_page = 2**63 - 1
+    parts = _pages({"page": last_page, "per_page": 100}, f"page={last_page}&per_page=100", ["c1"], 2**70)
+
+    assert isinstance(parts.body, dict)
+    assert "next" not in parts.body
+
+
 def test_the_handler_gets_the_default_limit_and_a_clamped_one() -> None:
     contract = _pages_contract()
 

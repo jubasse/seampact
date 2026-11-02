@@ -2,6 +2,8 @@
 out for each holder the decider denies, one decision per subject."""
 
 import asyncio
+import copy
+import dataclasses
 from dataclasses import dataclass, field
 
 import pytest
@@ -10,6 +12,7 @@ from seampact.codegen.runtime.access_steps import AccessHooks, AccessState, Hook
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.failures import ContractRefusal
 from seampact.codegen.runtime.field_rights import checked_input_fields, visible_output
+from seampact.codegen.runtime.ir_view import IrJson
 from seampact.hooks import (
     Decision,
     ErrorCodeWithParams,
@@ -81,6 +84,55 @@ def test_a_denied_output_member_is_left_out_once_per_holder(
     assert items[1] == {"taskId": "t2", "effort": 5}
     assert [request.subject.id for request in decider.asked if request.subject is not None] == ["t1", "t2"]
     assert decider.asked[0].purpose == purpose.Field(pointer="/effort", direction=FieldDirection.OUTPUT)
+
+
+def _list_tasks_output(contract: ApiContract, items: object, decider: _Decider, call: HookCaller) -> object:
+    response = contract.operation("listTasks")["responses"]
+    assert isinstance(response, list)
+
+    return asyncio.run(
+        visible_output(
+            _state(contract, "listTasks", None), _hooks("tasks.seeEffort", decider), call, response[0], items
+        )
+    )
+
+
+def _with_output_pointer(contract: ApiContract, pointer: str) -> ApiContract:
+    """`listTasks` with its output field right moved to `pointer`."""
+    ir_view: dict[str, IrJson] = copy.deepcopy(dict(contract.ir_view))
+    operations = ir_view["operations"]
+    assert isinstance(operations, list)
+    list_tasks = next(op for op in operations if isinstance(op, dict) and op["id"] == "listTasks")
+    assert isinstance(list_tasks, dict)
+    field_rights = list_tasks["fieldRights"]
+    assert isinstance(field_rights, list)
+
+    for field_right in field_rights:
+        if isinstance(field_right, dict) and field_right["direction"] == "output":
+            field_right["pointer"] = pointer
+
+    return dataclasses.replace(contract, ir_view=ir_view)
+
+
+def test_an_output_pointer_names_its_member_unescaped(tasks_contract: ApiContract, hook_caller: HookCaller) -> None:
+    contract = _with_output_pointer(tasks_contract, "/effort~1hours~0max")
+
+    visible = _list_tasks_output(
+        contract, [{"taskId": "t1", "effort/hours~max": 3}], _Decider(allowed=frozenset()), hook_caller
+    )
+
+    assert visible == [{"taskId": "t1"}]
+
+
+def test_a_holder_without_its_id_asks_the_decider_with_no_subject(
+    tasks_contract: ApiContract, hook_caller: HookCaller
+) -> None:
+    decider = _Decider()
+
+    visible = _list_tasks_output(tasks_contract, [{"effort": 3}], decider, hook_caller)
+
+    assert visible == [{"effort": 3}]
+    assert [request.subject for request in decider.asked] == [None]
 
 
 def test_a_denied_input_member_is_refused_with_its_pointer(
