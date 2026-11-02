@@ -22,6 +22,7 @@ final class WireValues
     private const DECIMAL_DIGITS_MAX = 21;
     private const DECIMAL_ZEROS_MIN = -6;
     private const QUERY_SAFE = self::ALPHANUMERIC . '-._~!$&\'()*+,;=:@/?';
+    private const PATH_SAFE = self::ALPHANUMERIC . '-._~/';
 
     private function __construct()
     {
@@ -52,12 +53,27 @@ final class WireValues
      */
     public static function linkSafe(string $pair): string
     {
+        return self::escapesKeptEncoded($pair, self::QUERY_SAFE);
+    }
+
+    /**
+     * The raw request path with bytes outside the unreserved set and `/`, and a `%` that starts no escape,
+     * percent-encoded, so a path segment the server accepted cannot break a `Link` target built from it.
+     */
+    public static function linkSafePath(string $path): string
+    {
+        return self::escapesKeptEncoded($path, self::PATH_SAFE);
+    }
+
+    /** `$text` with its valid escapes kept and every other byte outside `$safeBytes` percent-encoded. */
+    private static function escapesKeptEncoded(string $text, string $safeBytes): string
+    {
         $safe = '';
-        $length = strlen($pair);
+        $length = strlen($text);
         for ($index = 0; $index < $length; $index++) {
-            $byte = $pair[$index];
-            $escapeStart = $byte === '%' && $index + 2 < $length && ctype_xdigit(substr($pair, $index + 1, 2));
-            $safe .= $escapeStart || ($byte !== '%' && str_contains(self::QUERY_SAFE, $byte)) ? $byte : sprintf('%%%02X', ord($byte));
+            $byte = $text[$index];
+            $escapeStart = $byte === '%' && $index + 2 < $length && ctype_xdigit(substr($text, $index + 1, 2));
+            $safe .= $escapeStart || ($byte !== '%' && str_contains($safeBytes, $byte)) ? $byte : sprintf('%%%02X', ord($byte));
         }
 
         return $safe;

@@ -74,7 +74,7 @@ final class PageReply
                 $slots['totalPages'] = intdiv($facts['total'] + $limit - 1, $limit);
             }
         }
-        $urlBase = $state->publicOrigin === null ? '' : $state->publicOrigin . $requestPath;
+        $urlBase = $state->publicOrigin === null ? '' : $state->publicOrigin . WireValues::linkSafePath($requestPath);
         $slots['self'] = self::pageUrl($urlBase, self::withoutQueryMembers($rawQuery, []));
 
         $position = Ir::string($style, 'position');
