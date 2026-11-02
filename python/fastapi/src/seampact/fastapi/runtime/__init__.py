@@ -13,6 +13,7 @@ from seampact.fastapi.runtime.boot_check import BootCheckError
 from seampact.fastapi.runtime.boundary import ContractBoundary
 from seampact.fastapi.runtime.handler_call import call_handler
 from seampact.fastapi.runtime.handler_reply import OperationTypes
+from seampact.fastapi.runtime.native_docs import FrameworkDocs, NativeDocsError, read_native_docs
 from seampact.fastapi.runtime.placement import (
     ApiPlacement,
     App,
@@ -41,11 +42,13 @@ __all__ = [
     "ContractBoundary",
     "CredentialsType",
     "Factory",
+    "FrameworkDocs",
     "FrameworkEtagMode",
     "FrameworkRouteRule",
     "FrameworkRoutesCheck",
     "HookFactories",
     "HooksCheck",
+    "NativeDocsError",
     "OperationRoute",
     "OperationSettings",
     "OperationTypes",
@@ -57,4 +60,5 @@ __all__ = [
     "api_binding",
     "bind_api",
     "call_handler",
+    "read_native_docs",
 ]

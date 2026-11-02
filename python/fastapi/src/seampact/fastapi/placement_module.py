@@ -12,10 +12,11 @@ from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_lit
 from seampact.codegen.routes import RouteEntry
 from seampact.codegen.runtime import RUNTIME_VERSION
 from seampact.fastapi.layout import ApiLayout
+from seampact.fastapi.native_docs_file import NATIVE_DOCS_FILE
 from seampact.fastapi.options import FastApiOptions
 from seampact.fastapi.source_lines import with_local_imports
 from seampact.ir.model import ContractIR
-from seampact.ir.run.generator import TargetEntry
+from seampact.ir.run.generator import FrameworkDocs, TargetEntry
 
 _RUNTIME: Final = "_runtime"
 _HOOKS: Final = "_hooks"
@@ -42,6 +43,10 @@ def placement_module(
     module = PythonModule(f"The FastAPI placement of api '{ir.api.id}'.")
     module.imported("collections.abc", _ABC)
     module.imported("dataclasses", "_dataclasses")
+
+    if options.native_docs:
+        module.imported("pathlib", "_pathlib")
+
     module.imported("typing", "_typing")
     module.imported("seampact.fastapi.runtime", _RUNTIME)
     module.imported("seampact.hooks", _HOOKS)
@@ -145,8 +150,23 @@ def _placement(
         *_accepted_frameworks(entry),
         f"{INDENT}),",
         *_credentials_types(layout),
+        *_framework_document(options, entry),
         ")",
     ]
+
+
+def _framework_document(options: FastApiOptions, entry: TargetEntry) -> list[str]:
+    """`frameworkDocs: off` and `nativeDocs`, each written only when the entry asks for it."""
+    lines: list[str] = []
+
+    if entry.framework_docs is FrameworkDocs.OFF:
+        lines.append(f"{INDENT}framework_docs={_RUNTIME}.FrameworkDocs.OFF,")
+
+    if options.native_docs:
+        native_docs_path = f"_pathlib.Path(__file__).with_name({string_literal(NATIVE_DOCS_FILE)})"
+        lines.append(f"{INDENT}native_docs={_RUNTIME}.read_native_docs({native_docs_path}),")
+
+    return lines
 
 
 def _accepted_frameworks(entry: TargetEntry) -> list[str]:

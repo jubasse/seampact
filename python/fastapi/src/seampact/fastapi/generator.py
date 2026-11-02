@@ -2,7 +2,8 @@
 `seampact-fastapi`. Per api it writes one package: `schemas.py` (the schema models and each operation's input model,
 through the shared Pydantic emitter), `operations.py` (the operation types), `contract.py` (the contract the runtime
 reads, shared with every Python target), `routes.py` (the route names and URL
-builders, unless `routeHelpers: false`) and `fastapi.py` (the placement and `bind_<api>()`). It refuses by name every
+builders, unless `routeHelpers: false`), `fastapi.py` (the placement and `bind_<api>()`) and, with `nativeDocs`,
+`native_docs.json` (seampact's operation objects for FastAPI's document). It refuses by name every
 option, artefact and contract form it does not serve, all at once."""
 
 from collections.abc import Sequence
@@ -19,6 +20,7 @@ from seampact.codegen.routes import route_table
 from seampact.fastapi.input_schemas import PROOFS_PART, input_schema_id, with_input_schemas
 from seampact.fastapi.kept_forms import refuse_unserved_forms
 from seampact.fastapi.layout import ApiLayout, api_layout
+from seampact.fastapi.native_docs_file import native_docs_file
 from seampact.fastapi.operation_types import operation_types_module
 from seampact.fastapi.options import read_options
 from seampact.fastapi.placement_module import placement_module
@@ -37,10 +39,7 @@ class FastApiGenerator:
         return IrSupport.of_model(kinds=[_HTTP_OPERATION])
 
     def framework_docs_off_fix(self) -> str | None:
-        return (
-            "Remove `frameworkDocs: off` from the entry and switch FastAPI's own document off in the app: "
-            "`FastAPI(openapi_url=None)`."
-        )
+        return None
 
     def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
         refusals = Refusals(entry.id, TARGET, DISTRIBUTION)
@@ -77,6 +76,10 @@ class FastApiGenerator:
 
         if options.route_helpers:
             files.append(GeneratedFile("routes.py", route_helpers_module(ir, routes, refusals)))
+
+        if options.native_docs:
+            native_docs = native_docs_file(entry.native_docs, layout.operations, refusals)
+            files.extend([] if native_docs is None else [native_docs])
 
         refusals.raise_if_any()
 
