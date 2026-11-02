@@ -1,0 +1,104 @@
+"""The `seampact-drf` generator (ADR 0027 "DRF"), the class the `seampact.generators` entry point names: per api a
+package of the schema types, the operation types and handler protocols, the route helpers, the URLconf, the typed
+settings, the boundary's declaration and the DRF placement. Every refusal is listed at once, and no file is written
+when there is one."""
+
+import json
+from collections.abc import Sequence
+from typing import Final
+
+from seampact.codegen.names import api_names
+from seampact.codegen.printer import PythonModule
+from seampact.codegen.refusals import Delivery, IrPlace, Refusals
+from seampact.codegen.route_helpers import route_helpers_module
+from seampact.codegen.routes import route_table
+from seampact.codegen.runtime.version import RUNTIME_VERSION
+from seampact.django.emitters import (
+    ContractPath,
+    SettingsKey,
+    boundary_module,
+    contract_paths,
+    settings_module,
+    urls_module,
+)
+from seampact.drf.api_layout import ApiLayout, api_layout
+from seampact.drf.dataclass_schemas import dataclass_schemas_module
+from seampact.drf.drf_module import drf_module, view_class
+from seampact.drf.operation_types import operations_module
+from seampact.drf.options import DrfOptions, drf_options
+from seampact.ir.model import ContractIR, InputMediaType
+from seampact.ir.read import IrSupport
+from seampact.ir.run.generator import TargetEntry
+from seampact.ir.write import GeneratedFile
+
+TARGET: Final = "drf"
+DISTRIBUTION: Final = "seampact-drf"
+
+# DRF's own names for the classes an app sets per access kind (ADR 0027 "DRF").
+_ACCESS_KEY: Final = SettingsKey("access", "_abc.Mapping[str, _abc.Mapping[str, _abc.Sequence[str]]]")
+
+
+class DrfGenerator:
+    def ir_support(self) -> IrSupport:
+        return IrSupport.of_model(kinds=["httpOperation"])
+
+    def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
+        refusals = Refusals(entry.id, TARGET, DISTRIBUTION)
+        options = drf_options(entry.options, entry.artefacts, refusals)
+        names = api_names(ir, refusals)
+        layout = api_layout(ir, refusals)
+        routes = route_table(ir, entry.mount or "", refusals)
+        paths = contract_paths(routes, [operation.id for operation in ir.operations])
+        _refuse_input_media(ir, refusals)
+
+        files = {
+            "__init__.py": PythonModule(f"The generated code of api '{ir.api.id}' for the DRF target.").text(),
+            "schemas.py": dataclass_schemas_module(ir, names, refusals),
+            "operations.py": operations_module(ir, names, layout, refusals),
+            "urls.py": urls_module(ir.api.id, paths, lambda module, path: _view_of(ir, module, path)),
+            "settings.py": settings_module(
+                ir.api.id, layout.api_class, [owner.key for owner in layout.owners.values()], [_ACCESS_KEY]
+            ),
+            "django.py": boundary_module(ir.api.id, layout.api_class, RUNTIME_VERSION, _run_time_options(options)),
+            "drf.py": drf_module(ir, names, layout, paths, options.rules, refusals),
+        }
+
+        if options.route_helpers:
+            files["routes.py"] = route_helpers_module(ir, routes, refusals)
+
+        refusals.raise_if_any()
+
+        return [GeneratedFile(path, contents) for path, contents in sorted(files.items())]
+
+
+def _view_of(ir: ContractIR, module: PythonModule, path: ContractPath) -> str:
+    drf = module.imported(".drf", "_drf")
+    first = next(operation for operation in ir.operations if operation.id == path.first.operation_id)
+
+    return f"{drf}.{view_class(first)}.as_view()"
+
+
+def _run_time_options(options: DrfOptions) -> list[tuple[str, str]]:
+    return [
+        ("responses", json.dumps(options.responses.value)),
+        ("body_validation", repr(options.body_validation)),
+        ("framework_etag", json.dumps(options.framework_etag.value)),
+        ("catch_all", repr(options.catch_all)),
+        ("boot_check", repr(options.boot_check.enabled)),
+        ("boot_check_framework_routes", repr(options.boot_check.framework_routes)),
+        ("boot_check_hooks", repr(options.boot_check.hooks)),
+    ]
+
+
+def _refuse_input_media(ir: ContractIR, refusals: Refusals) -> None:
+    for index, operation in enumerate(ir.operations):
+        media = operation.input.media if operation.input is not None else InputMediaType.APPLICATION_JSON
+        at = IrPlace(f"/operations/{index}/input/media", operation.id)
+
+        if not isinstance(media, InputMediaType):
+            refusals.unknown_value(media.raw, at)
+        elif media is not InputMediaType.APPLICATION_JSON:
+            refusals.waiting("input.media", f"A '{media.value}' request body", at, Delivery.CONSUMER)
+
+
+__all__ = ["ApiLayout", "DrfGenerator"]

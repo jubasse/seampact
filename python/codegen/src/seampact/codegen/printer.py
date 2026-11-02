@@ -1,8 +1,10 @@
 """The deterministic line printer of generated Python modules: a docstring, the imports as `import x as _x` sorted in
-ruff's sections (standard library, third party, seampact), then top-level blocks two blank lines apart. Output never
+ruff's sections (standard library, third party, seampact, then the api's own modules as `from . import x as _x`),
+then top-level blocks two blank lines apart. Output never
 depends on the installed Python's `ast.unparse`; the golden files check it against `ruff format --check`."""
 
 import json
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Final
@@ -11,7 +13,8 @@ LINE_LENGTH: Final = 120
 INDENT: Final = "    "
 
 _FIRST_PARTY: Final = "seampact"
-_THIRD_PARTY: Final = frozenset({"pydantic"})
+_SIBLING_PREFIX: Final = "."
+_SECTIONS: Final = 4
 _DEFINITIONS: Final = ("class ", "def ", "@")
 
 
@@ -28,7 +31,7 @@ class PythonModule:
 
     def imported(self, module: str, alias: str) -> str:
         """Imports `module` under a private alias, so no framework name sits bare beside contract names (ADR 0026
-        "Naming"); returns the alias."""
+        "Naming"); returns the alias. A module written `.name` is a sibling module of the api's package."""
         self._imports[module] = alias
 
         return alias
@@ -38,7 +41,8 @@ class PythonModule:
 
     def text(self) -> str:
         sections = [
-            [line for module, line in self._import_lines() if _section(module) == section] for section in range(3)
+            [line for module, line in self._import_lines() if _section(module) == section]
+            for section in range(_SECTIONS)
         ]
         parts = [f'"""{self.docstring}"""', *("\n".join(lines) for lines in sections if lines)]
         head = "\n\n".join(parts)
@@ -53,16 +57,27 @@ class PythonModule:
         return f"{head}{separator}{body}\n"
 
     def _import_lines(self) -> list[tuple[str, str]]:
-        return [(module, f"import {module} as {self._imports[module]}") for module in sorted(self._imports)]
+        return [(module, _import_line(module, self._imports[module])) for module in sorted(self._imports)]
+
+
+def _import_line(module: str, alias: str) -> str:
+    if module.startswith(_SIBLING_PREFIX):
+        return f"from {_SIBLING_PREFIX} import {module.removeprefix(_SIBLING_PREFIX)} as {alias}"
+
+    return f"import {module} as {alias}"
 
 
 def _section(module: str) -> int:
+    """ruff's import sections: the standard library, third party, seampact (first party), the api's own modules."""
+    if module.startswith(_SIBLING_PREFIX):
+        return 3
+
     top = module.split(".", 1)[0]
 
     if top == _FIRST_PARTY:
         return 2
 
-    return 1 if top in _THIRD_PARTY else 0
+    return 0 if top in sys.stdlib_module_names else 1
 
 
 def fits(line: str) -> bool:

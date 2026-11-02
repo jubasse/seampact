@@ -294,3 +294,16 @@ test("the fastapi Python target is checked by FastAPI minor and Starlette major"
   ]);
   expect(fastapi?.companions[0]?.tested).toEqual(["0", "1"]);
 });
+
+test("the Django Python targets are checked by framework major, with Django as a companion", () => {
+  const drf = PYTHON_TARGETS.find((target) => target.package === "pypi:seampact-drf");
+  const ninja = PYTHON_TARGETS.find((target) => target.package === "pypi:seampact-ninja");
+  const django = { id: "django", unit: "major", floor: "5.2", tested: ["5", "6"] };
+
+  expect(drf?.framework).toMatchObject({ id: "djangorestframework", unit: "major", floor: "3.18" });
+  expect(drf?.framework.tested).toEqual(["3"]);
+  expect(drf?.companions).toMatchObject([django]);
+  expect(ninja?.framework).toMatchObject({ id: "django-ninja", unit: "major", floor: "1.5" });
+  expect(ninja?.framework.tested).toEqual(["1"]);
+  expect(ninja?.companions).toMatchObject([django]);
+});
