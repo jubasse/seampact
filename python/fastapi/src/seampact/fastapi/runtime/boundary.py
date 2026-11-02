@@ -5,6 +5,7 @@ verdict of step 10, maps an `HTTPException` the app's handlers rendered to its r
 exception that crosses it. On `lifespan.startup` it runs the boot check, with a first-request fallback."""
 
 import asyncio
+import traceback
 from collections.abc import AsyncIterator, MutableMapping
 from typing import Final
 
@@ -56,7 +57,7 @@ class ContractBoundary:
         matched = None if target is None else contract.match(method, target.path)
 
         if target is None or matched is None:
-            await self.app(scope, receive, send)
+            await self._pass_or_refuse_encoded(scope, receive, send, method)
             return
 
         if not target.raw:
@@ -95,9 +96,10 @@ class ContractBoundary:
         contract = self.binding.contract
         method = str(scope["method"])
         received = _ReceivedBody(receive)
-        headers = {
-            name.decode(_BYTES_AS_TEXT).lower(): value.decode(_BYTES_AS_TEXT) for name, value in scope["headers"]
-        }
+        headers: dict[str, str] = {}
+
+        for name, value in scope["headers"]:
+            headers.setdefault(name.decode(_BYTES_AS_TEXT).lower(), value.decode(_BYTES_AS_TEXT))
 
         try:
             decoded = await decode_input(
@@ -126,21 +128,35 @@ class ContractBoundary:
 
         await checked.finish()
 
+    async def _pass_or_refuse_encoded(self, scope: Scope, receive: Receive, send: Send, method: str) -> None:
+        """A raw path that is no contract path, but whose decoded form is (an encoded static segment, `/%761/...`):
+        the router would route the decoded form, so the boundary answers the api's not-found 404 itself."""
+        decoded = asgi_raw_target({name: value for name, value in scope.items() if name != "raw_path"})
+        matched = None if decoded is None else self.binding.contract.match(method, decoded.path)
+
+        if matched is None or (matched.operation_id is None and not self.binding.placement.defaults.catch_all):
+            await self.app(scope, receive, send)
+            return
+
+        reply = role_reply(self.binding.contract, None, NOT_FOUND_ROLE, _NOT_FOUND_STATUS)
+        await _send_reply(send, reply, method)
+
     async def _failed(self, state: RequestState, checked: "_CheckedReply", failure: Exception, send: Send) -> None:
         """An exception that crossed the app: the api's 500 when no byte went out, else a body cut short; under
-        `app.debug` it is raised again after its log line, so Starlette's debug page shows it."""
-        reason = f"{type(failure).__qualname__}: {failure}"
+        `app.debug` nothing is sent and it is raised again after its log line, so Starlette's debug page shows it."""
+        reason = _failure_place(failure)
 
-        if isinstance(failure, BoundaryFailureError):
-            reason = str(failure)
+        # The message may carry an input value: it reaches the log only under `app.debug`.
+        if self.binding.app.debug and not isinstance(failure, BoundaryFailureError):
+            reason = f"{reason}: {failure}"
 
         await self.binding.tell_listener(state.operation_id, reason, failure, state.listener)
 
-        if not checked.started:
-            await _send_reply(send, internal_error_reply(state.contract, state.operation_id), state.method)
-
         if self.binding.app.debug:
             raise failure
+
+        if not checked.started:
+            await _send_reply(send, internal_error_reply(state.contract, state.operation_id), state.method)
 
     async def _problems(self) -> list[str]:
         """The boot check's problems, run once on the first request when no lifespan ran, and the dependency
@@ -253,23 +269,24 @@ class _CheckedReply:
             if replacement is not None:
                 await self._replace(replacement)
             elif _status(message) < 400 and not self._authored_status(message):
-                await self._judge(None)
+                await self._judge(None, final=False)
 
             return
 
         if kind != "http.response.body":
-            await self._send(message)
+            await self._judge_before(message)
             return
 
         self._hold(message)
+        final = not message.get("more_body", False)
 
-        if not message.get("more_body", False) or not self._held_whole:
-            await self._judge(bytes(self._held) if self._held_whole else None)
+        if final or not self._held_whole:
+            await self._judge(bytes(self._held) if self._held_whole else None, final=final)
 
     async def finish(self) -> None:
-        """A reply whose last body message never came is judged on what was held."""
+        """A reply whose last body message never came is judged on what was held, and ends there."""
         if self._start is not None and not self._passing and not self._replaced:
-            await self._judge(bytes(self._held) if self._held_whole else None)
+            await self._judge(bytes(self._held) if self._held_whole else None, final=True)
 
     def _hold(self, message: Message) -> None:
         chunk = bytes(message.get("body", b""))
@@ -303,7 +320,17 @@ class _CheckedReply:
 
         return exception_reply(self._binding, self._state, exception)
 
-    async def _judge(self, body: bytes | None) -> None:
+    async def _judge_before(self, message: Message) -> None:
+        """A message that is no body message (`pathsend`, `zerocopy`) after a held start: the body cannot be checked,
+        so the verdict comes first, then the message, which a replaced reply drops."""
+        if self._start is None:
+            await self._send(message)
+            return
+
+        await self._judge(None, final=False, following=message)
+
+    async def _judge(self, body: bytes | None, *, final: bool, following: Message | None = None) -> None:
+        """`body` is None when the reply's body cannot be checked whole; `final` when no body message follows."""
         if self._start is None:
             return
 
@@ -339,7 +366,15 @@ class _CheckedReply:
             (name.encode(_BYTES_AS_TEXT), value.encode(_BYTES_AS_TEXT)) for name, value in judged.reply.headers
         ]
         await self._send(start)
-        await self._pass({"type": "http.response.body", "body": bytes(self._held), "more_body": body is None})
+
+        if following is None:
+            await self._pass({"type": "http.response.body", "body": bytes(self._held), "more_body": not final})
+            return
+
+        if self._held:
+            await self._pass({"type": "http.response.body", "body": bytes(self._held), "more_body": True})
+
+        await self._pass(following)
 
     async def _pass(self, message: Message) -> None:
         if message["type"] == "http.response.body" and self._state.method.upper() == _HEAD:
@@ -358,6 +393,18 @@ async def _send_reply(send: Send, reply: Reply, method: str) -> None:
     headers.append((_CONTENT_LENGTH.encode(_BYTES_AS_TEXT), str(len(reply.body)).encode(_BYTES_AS_TEXT)))
     await send({"type": "http.response.start", "status": reply.status, "headers": headers})
     await send({"type": "http.response.body", "body": b"" if method.upper() == _HEAD else reply.body})
+
+
+def _failure_place(failure: Exception) -> str:
+    """The exception's class and where it was raised; the boundary's own failures name no input and keep their
+    message."""
+    if isinstance(failure, BoundaryFailureError):
+        return str(failure)
+
+    frames = traceback.extract_tb(failure.__traceback__)
+    where = f"{frames[-1].filename}:{frames[-1].lineno}" if frames else "an unknown place"
+
+    return f"{type(failure).__qualname__} raised at {where}"
 
 
 def _status(message: Message) -> int:

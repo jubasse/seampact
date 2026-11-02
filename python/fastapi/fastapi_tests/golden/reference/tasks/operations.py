@@ -129,15 +129,21 @@ class StateConflictError(TasksContractError):
 class StripeCredentials:
     """The credentials a request presents for identity 'stripe', one per scheme, None when absent."""
 
-    stripe_signature: str | None = _dataclasses.field(default=None, repr=False)
+    stripe_signature: str | None = None
+
+    def __repr__(self) -> str:
+        return "StripeCredentials(stripe_signature=[redacted])"
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class UserCredentials:
     """The credentials a request presents for identity 'user', one per scheme, None when absent."""
 
-    bearer: str | None = _dataclasses.field(default=None, repr=False)
-    session_cookie: str | None = _dataclasses.field(default=None, repr=False)
+    bearer: str | None = None
+    session_cookie: str | None = None
+
+    def __repr__(self) -> str:
+        return "UserCredentials(bearer=[redacted], session_cookie=[redacted])"
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

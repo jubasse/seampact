@@ -10,7 +10,7 @@ from typing import Annotated, Final, TypeGuard
 
 import fastapi
 
-from seampact.codegen.runtime.access_steps import AccessHooks, AccessState, run_access_steps
+from seampact.codegen.runtime.access_steps import AccessHooks, AccessState, headers_view, run_access_steps
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
 from seampact.codegen.runtime.hook_check import hook_needs
@@ -175,17 +175,12 @@ def _is_scope_resolver(value: object) -> TypeGuard[ResolveScopeHook]:
 
 
 def _request_view(request: fastapi.Request, state: RequestState) -> RequestView:
-    headers: dict[str, list[str]] = {}
-
-    for name, value in request.headers.items():
-        headers.setdefault(name, []).append(value)
-
     client = request.client
 
     return RequestView(
         method=state.method,
         path=state.target.path,
-        headers={name: tuple(values) for name, values in headers.items()},
+        headers=headers_view(request.headers.raw),
         client_address=None if client is None else client.host,
     )
 

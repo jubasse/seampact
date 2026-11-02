@@ -30,6 +30,7 @@ _FROZEN: Final = "@_dataclasses.dataclass(frozen=True, slots=True)"
 _FROZEN_KEYWORDS: Final = "@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)"
 # The fields of an `<Op>Errors` class: an error factory's name never starts with `_` and a letter.
 _ERRORS_CODE_FIELD: Final = "_code"
+_REDACTED: Final = "[redacted]"
 _ERRORS_PARAMS_FIELD: Final = "_params"
 _CREDENTIALS_DOC: Final = (
     "The credentials a request presents for identity '{identity}', one per scheme, None when absent."
@@ -162,11 +163,14 @@ class _Emission:
                 f"class {credentials.class_name}:",
                 f'{INDENT}"""{_CREDENTIALS_DOC.format(identity=identity)}"""',
             ]
-            members = [
-                f"{INDENT}{attribute}: str | None = _dataclasses.field(default=None, repr=False)"
-                for attribute in credentials.attributes.values()
+            attributes = list(credentials.attributes.values())
+            members = [f"{INDENT}{attribute}: str | None = None" for attribute in attributes]
+            rendered = ", ".join(f"{attribute}={_REDACTED}" for attribute in attributes)
+            redacted_repr = [
+                f"{INDENT}def __repr__(self) -> str:",
+                f"{INDENT * 2}return {string_literal(f'{credentials.class_name}({rendered})')}",
             ]
-            self.blocks.append(lines if not members else [*lines, "", *members])
+            self.blocks.append(lines if not members else [*lines, "", *members, "", *redacted_repr])
 
     def _scopes(self, operation: Operation, class_name: str) -> None:
         hooks = self.module.imported("seampact.hooks", "_hooks")

@@ -336,6 +336,12 @@ class PurgeTaskPath(_pydantic.BaseModel):
     task_id: _seampact.WireUuid
 
 
+class PurgeTaskProofs(_pydantic.BaseModel):
+    model_config = _MODEL_CONFIG
+
+    reauth_token: _typing.Annotated[str, _pydantic.Field(min_length=1, max_length=512)]
+
+
 class SearchTasksPath(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 

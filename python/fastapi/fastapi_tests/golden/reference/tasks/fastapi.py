@@ -8,6 +8,7 @@ import seampact.fastapi.runtime as _runtime
 import seampact.hooks as _hooks
 
 from . import contract as _contract
+from . import schemas as _schemas
 from .operations import (
     AppEndpoints,
     ArchiveTaskErrors,
@@ -436,7 +437,10 @@ def bind_tasks(
         handlers.tasks,
         _call_purge_task,
         _runtime.OperationTypes(
-            request=PurgeTaskRequest, responses=((204, PurgeTaskResponse204),), errors=PurgeTaskErrors
+            request=PurgeTaskRequest,
+            responses=((204, PurgeTaskResponse204),),
+            errors=PurgeTaskErrors,
+            proofs=_schemas.PurgeTaskProofs,
         ),
     )
 

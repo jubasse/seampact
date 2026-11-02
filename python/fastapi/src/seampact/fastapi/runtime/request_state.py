@@ -4,7 +4,7 @@ input, the replies the boundary wrote, and an `HTTPException` the app's handlers
 
 from collections.abc import MutableMapping
 from dataclasses import dataclass, field
-from typing import Final
+from typing import ClassVar, Final
 
 from starlette.exceptions import HTTPException
 
@@ -14,14 +14,18 @@ from seampact.codegen.runtime.input_decoding import DecodedInput
 from seampact.codegen.runtime.raw_target import RawTarget
 from seampact.codegen.runtime.reply_verdict import AuthoredReplies
 from seampact.hooks import UnexpectedErrorListener
+from seampact.hooks._redaction import RedactedRepr
 
 SCOPE_KEY: Final = "seampact"
 
 
-@dataclass(slots=True, kw_only=True)
-class RequestState:
+@dataclass(slots=True, kw_only=True, repr=False)
+class RequestState(RedactedRepr):
     """`operation_id` the operation the raw path matched; `admitted` once steps 2 to 5 passed; `typed_request` the
-    request the input dependency built; `http_exception` the last `HTTPException` the app's handlers rendered."""
+    request the input dependency built; `http_exception` the last `HTTPException` the app's handlers rendered. `repr`
+    shows none of the request's values."""
+
+    _REDACTED_FIELDS: ClassVar[frozenset[str]] = frozenset({"raw_parameters", "typed_request"})
 
     contract: ApiContract
     operation_id: str

@@ -7,9 +7,10 @@ base path that `frameworkRoutes` does not allow-list, the boundary not first in 
 
 import re
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from typing import Final
 
-from starlette.routing import BaseRoute, Match
+from starlette.routing import BaseRoute, Host, Match, Mount, Route
 
 from seampact.codegen.runtime.framework_versions import framework_version_problems
 from seampact.codegen.runtime.hook_check import HookFixes, hook_problems
@@ -22,6 +23,8 @@ from seampact.fastapi.runtime.unserved import unserved_features, unserved_proble
 _SAMPLE_SEGMENT: Final = "seampact"
 _PLACEHOLDER: Final = re.compile(r"\{[^{}]+\}")
 _CONTRACT_ROUTE_PREFIX: Final = "seampact."
+_FRONTEND_ROUTES: Final = "_frontend_routes"
+_FRONTEND_METHOD: Final = "GET"
 
 
 class BootCheckError(RuntimeError):
@@ -49,6 +52,7 @@ def boot_problems(binding: ApiBinding) -> list[str]:
 
     if placement.boot_check.framework_routes is not FrameworkRoutesCheck.OFF:
         problems += _framework_route_problems(binding)
+        problems += _frontend_route_problems(binding)
 
     problems += _middleware_problems(binding)
     problems += _exception_handler_problems(binding)
@@ -104,29 +108,61 @@ def _handler_problems(binding: ApiBinding) -> list[str]:
 
 
 def _route_problems(binding: ApiBinding) -> list[str]:
-    """The first full match of each contract request over `app.routes` must be the entry the api's router became."""
+    """The first full match of each contract request over `app.routes` must be the entry the api's router became.
+    With an `APIRouter` target, it must be no `Route`, `Mount` or `Host` of the app, and over `target.routes` the
+    entry: a prefix on the target or on a router it joins leaves the contract path unmatched."""
     if binding.route_entry is None:
         return [f"bind_{binding.api}() did not include the api's router; call it once, last"]
 
-    routes = binding.app.routes if binding.target is binding.app else binding.target.routes
     problems: list[str] = []
 
     for route in binding.placement.routes:
         path = _PLACEHOLDER.sub(_SAMPLE_SEGMENT, route.path)
 
         for method in route.methods:
-            winner = _first_full_match(routes, method, path)
+            request = _ContractRequest(route.operation_id, method, path)
+            winner = _first_full_match(binding.app.routes, method, path)
 
-            if winner is binding.route_entry or _allow_listed(binding.placement.framework_routes, winner, method):
+            if _allow_listed(binding.placement.framework_routes, winner, method):
                 continue
 
-            taker = "no route" if winner is None else f"the route {_describe(winner)}"
-            problems.append(
-                f"operation '{route.operation_id}': {taker} takes '{method} {path}' before the contract route; remove "
-                "it, register it after bind, or allow-list it in the entry's frameworkRoutes"
-            )
+            if binding.target is not binding.app:
+                problems += _router_target_problems(binding, request, winner)
+            elif winner is not binding.route_entry:
+                problems.append(request.taken_by(winner))
 
     return problems
+
+
+@dataclass(frozen=True, slots=True)
+class _ContractRequest:
+    operation_id: str
+    method: str
+    path: str
+
+    def taken_by(self, winner: BaseRoute | None) -> str:
+        taker = "no route" if winner is None else f"the route {_describe(winner)}"
+
+        return (
+            f"operation '{self.operation_id}': {taker} takes '{self.method} {self.path}' before the contract route; "
+            "remove it, register it after bind, or allow-list it in the entry's frameworkRoutes"
+        )
+
+
+def _router_target_problems(binding: ApiBinding, request: _ContractRequest, app_winner: BaseRoute | None) -> list[str]:
+    if app_winner is None:
+        return [
+            f"operation '{request.operation_id}': no route of the app takes '{request.method} {request.path}'; "
+            f"include the router passed to bind_{binding.api}() in the app with no prefix on it or on a router it "
+            "joins, and set the entry's `mount` for a prefix"
+        ]
+
+    if isinstance(app_winner, Route | Mount | Host):
+        return [request.taken_by(app_winner)]
+
+    target_winner = _first_full_match(binding.target.routes, request.method, request.path)
+
+    return [] if target_winner is binding.route_entry else [request.taken_by(target_winner)]
 
 
 def _first_full_match(routes: Iterable[BaseRoute], method: str, path: str) -> BaseRoute | None:
@@ -171,6 +207,31 @@ def _framework_route_problems(binding: ApiBinding) -> list[str]:
         problems.append(
             f"the app route '{path}' sits under the api's base path '{base}' and is not a contract route; remove it, "
             "or allow-list it in the entry's frameworkRoutes with a reason"
+        )
+
+    return problems
+
+
+def _frontend_route_problems(binding: ApiBinding) -> list[str]:
+    """A `frontend()` route at or under a base path. FastAPI keeps those routes apart from `app.routes`, in the app
+    router's `_frontend_routes` group; a test of the target fails by name if a FastAPI minor moves them."""
+    group = getattr(binding.app.router, _FRONTEND_ROUTES, None)
+    problems: list[str] = []
+
+    for route in getattr(group, "routes", None) or []:
+        path = getattr(route, "path", None)
+        base = (
+            None
+            if not isinstance(path, str)
+            else next((base for base in binding.contract.base_paths() if _under(path, base)), None)
+        )
+
+        if base is None or _allow_listed(binding.placement.framework_routes, route, _FRONTEND_METHOD):
+            continue
+
+        problems.append(
+            f"the frontend() route '{path}' sits under the api's base path '{base}'; serve the frontend outside it, or "
+            "allow-list it in the entry's frameworkRoutes with a reason"
         )
 
     return problems

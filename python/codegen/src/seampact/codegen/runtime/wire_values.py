@@ -9,7 +9,8 @@ from decimal import Decimal
 from typing import Final
 from urllib.parse import quote, unquote_plus, unquote_to_bytes
 
-from seampact.codegen.runtime.ir_view import ir_map, ir_string
+from seampact.codegen.runtime.ir_view import IrMap, ir_int, ir_map, ir_string
+from seampact.codegen.runtime.uuid_text import UUID_TEXT
 from seampact.codegen.runtime.wire_codec import scalar_to_wire
 
 _INTEGER: Final = re.compile(r"-?(0|[1-9][0-9]*)")
@@ -22,6 +23,42 @@ _COMPONENT_SAFE: Final = "-_.!~*'()"
 # `Number#toString` writes plain digits while the decimal point sits at most 21 digits right and 6 zeros left.
 _DECIMAL_DIGITS_MAX: Final = 21
 _DECIMAL_ZEROS_MIN: Final = -6
+_BOOLEAN: Final = (bool,)
+_SCALAR_TYPES: Final = {"integer": (int,), "number": (int, float), "boolean": _BOOLEAN, "string": (str,)}
+
+
+def scalar_issue(type_use: IrMap, value: object) -> str | None:
+    """The rule a scalar breaks among its type, its `uuid` format and its length bounds, the check a scope id, a
+    subject id and a rule's proof get before any hook reads them; None for a use of any other kind, which step 6 checks
+    in full."""
+    expected = _SCALAR_TYPES.get(ir_string(type_use, "type") or "")
+
+    if expected is None:
+        return None
+
+    if isinstance(value, bool) and expected is not _BOOLEAN:
+        return "type"
+
+    if not isinstance(value, expected):
+        return "type"
+
+    if not isinstance(value, str):
+        return None
+
+    if ir_string(type_use, "format") == "uuid" and not UUID_TEXT.fullmatch(value):
+        return "format"
+
+    refinements = ir_map(type_use, "refinements")
+    min_length = ir_int(refinements, "minLength")
+    max_length = ir_int(refinements, "maxLength")
+
+    if min_length is not None and len(value) < min_length:
+        return "minLength"
+
+    if max_length is not None and len(value) > max_length:
+        return "maxLength"
+
+    return None
 
 
 def decoded_segment(raw: str) -> str | None:

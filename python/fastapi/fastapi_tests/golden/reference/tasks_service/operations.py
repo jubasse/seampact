@@ -72,7 +72,10 @@ class ApiUnauthenticatedError(TasksServiceContractError):
 class ServiceCredentials:
     """The credentials a request presents for identity 'service', one per scheme, None when absent."""
 
-    internal_token: str | None = _dataclasses.field(default=None, repr=False)
+    internal_token: str | None = None
+
+    def __repr__(self) -> str:
+        return "ServiceCredentials(internal_token=[redacted])"
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

@@ -13,12 +13,13 @@ from seampact.codegen.runtime.wire_codec import WireCodec
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class OperationTypes:
-    """The generated types of one operation the runtime builds and reads: its request, its success classes by status
-    and its errors class."""
+    """The generated types of one operation the runtime builds and reads: its request, its success classes by status,
+    its errors class, and the model of its body's rule proofs when it has some."""
 
     request: type
     responses: tuple[tuple[int, type], ...]
     errors: type
+    proofs: type | None = None
 
 
 def result_reply(contract: ApiContract, operation_id: str, types: OperationTypes, result: object, path: str) -> Reply:

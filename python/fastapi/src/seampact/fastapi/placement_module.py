@@ -5,7 +5,7 @@ base; the run-time defaults of the target options; the boot check switches and t
 calling its handler method, and `bind_<api>()`, which declares each contract route on the api's router and hands it
 to the runtime."""
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Final
 
 from seampact.codegen.printer import INDENT, PythonModule, string_literal
@@ -23,6 +23,7 @@ _ABC: Final = "_abc"
 # Each operation's coroutine: no module alias starts so, whatever the operation's name.
 _CALL_PREFIX: Final = "_call_"
 _CONTRACT_MODULE: Final = "contract"
+_SCHEMAS_MODULE: Final = "schemas"
 _PYDANTIC: Final = "pydantic"
 _PYDANTIC_MAJOR: Final = "2"
 _LISTENER_DOC: Final = "Hears of each failure api '{api}' answers with its 500."
@@ -30,8 +31,14 @@ _BIND_DOC: Final = "Places api '{api}' in the app; call it last, after its own m
 
 
 def placement_module(
-    ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry], options: FastApiOptions, entry: TargetEntry
+    ir: ContractIR,
+    layout: ApiLayout,
+    proof_models: Mapping[str, str],
+    routes: Sequence[RouteEntry],
+    options: FastApiOptions,
+    entry: TargetEntry,
 ) -> str:
+    """`proof_models` names the `<Op>Proofs` class of the schemas module for each operation whose body has proofs."""
     module = PythonModule(f"The FastAPI placement of api '{ir.api.id}'.")
     module.imported("collections.abc", _ABC)
     module.imported("dataclasses", "_dataclasses")
@@ -46,7 +53,8 @@ def placement_module(
         root_names += [names.endpoints, names.request, names.result, names.errors, *names.responses.values()]
 
     head = [f"GENERATED_BY: _typing.Final = {string_literal(RUNTIME_VERSION)}"]
-    module.add_block(with_local_imports([_CONTRACT_MODULE], root_names, head))
+    local_modules = [_CONTRACT_MODULE, _SCHEMAS_MODULE] if proof_models else [_CONTRACT_MODULE]
+    module.add_block(with_local_imports(local_modules, root_names, head))
     module.add_block(_placement(ir, layout, routes, options, entry))
     module.add_block(_handler_factories(layout))
     module.add_block(_unexpected_error_listener(ir, layout))
@@ -65,7 +73,7 @@ def placement_module(
             ]
         )
 
-    module.add_block(_bind(ir, layout, routes))
+    module.add_block(_bind(ir, layout, proof_models, routes))
 
     return module.text()
 
@@ -211,7 +219,9 @@ def _unexpected_error_listener(ir: ContractIR, layout: ApiLayout) -> list[str]:
     ]
 
 
-def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> list[str]:
+def _bind(
+    ir: ContractIR, layout: ApiLayout, proof_models: Mapping[str, str], routes: Sequence[RouteEntry]
+) -> list[str]:
     def factories(hook: str) -> str:
         return f"{_ABC}.Mapping[str, {_RUNTIME}.Factory[{_HOOKS}.{hook}]] | None = None"
 
@@ -237,7 +247,7 @@ def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> li
     lines: list[str] = []
 
     for route in routes:
-        lines += _add_operation(layout, route.operation_id)
+        lines += _add_operation(layout, route.operation_id, proof_models.get(route.operation_id))
 
     hooks = [
         "authenticate=authenticate or {}",
@@ -270,7 +280,7 @@ def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> li
     ]
 
 
-def _add_operation(layout: ApiLayout, operation_id: str) -> list[str]:
+def _add_operation(layout: ApiLayout, operation_id: str, proof_model: str | None) -> list[str]:
     """One `add_operation` call, split as ruff splits it: the call on one line when it fits, else one argument per
     line, the operation's types a nested call split the same way."""
     names = layout.operations[operation_id]
@@ -280,6 +290,9 @@ def _add_operation(layout: ApiLayout, operation_id: str) -> list[str]:
         f"responses=({responses}{',' if len(names.responses) == 1 else ''})",
         f"errors={names.errors}",
     ]
+
+    if proof_model is not None:
+        types.append(f"proofs=_{_SCHEMAS_MODULE}.{proof_model}")
     head = f"{_RUNTIME}.add_operation"
     arguments = [
         "binding",

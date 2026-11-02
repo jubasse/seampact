@@ -74,6 +74,24 @@ def body_issues(contract: ApiContract, type_use: IrMap, error: ValidationError) 
     ][:MAX_RENDERED_ISSUES]
 
 
+def proof_issues(
+    contract: ApiContract, proofs: Mapping[str, IrMap], members: Mapping[str, str], error: ValidationError
+) -> list[Issue]:
+    """The issues of a body's rule proofs validated as one model: `proofs` holds each proof's type use by wire name,
+    `members` maps each wire name to its attribute; a pointer starts at the proof's body member."""
+    wire_names = {attribute: wire_name for wire_name, attribute in members.items()}
+    issues: list[Issue] = []
+
+    for detail in error.errors():
+        location = detail["loc"]
+        attribute = str(location[0]) if location else ""
+        wire_name = wire_names.get(attribute, attribute)
+        inner = body_pointer(contract, proofs.get(wire_name, {}), location[1:])
+        issues.append(Issue("body", f"/{_escaped(wire_name)}{inner}", contract_rule(detail["type"])))
+
+    return issues[:MAX_RENDERED_ISSUES]
+
+
 def contract_rule(error_type: str) -> str:
     """The contract rule a Pydantic error type stands for; the type layer's own errors are named after their rule."""
     if error_type in _CONTRACT_RULES:

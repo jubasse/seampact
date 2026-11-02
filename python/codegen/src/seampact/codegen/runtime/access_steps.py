@@ -4,10 +4,10 @@ scopes outermost first, then ask the deciders for each requirement in declared o
 body first. Each refusal is one of the operation's declared codes; a hook that answers a code the operation does not
 declare, or a missing hook, is a failure of the boundary, answered with the api's 500."""
 
-import re
+import copy
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Final, Protocol
+from typing import ClassVar, Final, Protocol
 
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.digests import hex_of
@@ -15,7 +15,7 @@ from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefu
 from seampact.codegen.runtime.input_decoding import Issue, role_refusal, schema_invalid
 from seampact.codegen.runtime.ir_view import IrMap, ir_int, ir_map, ir_maps, ir_string, ir_strings
 from seampact.codegen.runtime.wire_codec import scalar_to_wire
-from seampact.codegen.runtime.wire_values import decoded_segment, path_value
+from seampact.codegen.runtime.wire_values import decoded_segment, path_value, scalar_issue
 from seampact.hooks import (
     AuthenticateHook,
     AuthenticateRequest,
@@ -36,6 +36,7 @@ from seampact.hooks import (
     scope_id_source,
     scope_resolution,
 )
+from seampact.hooks._redaction import RedactedRepr
 
 UNAUTHENTICATED_ROLE: Final = "unauthenticated"
 CSRF_INVALID_ROLE: Final = "csrfInvalid"
@@ -47,8 +48,6 @@ _COOKIE: Final = "cookie"
 _HEADER: Final = "header"
 _BEARER: Final = "bearer"
 _RULE: Final = "rule"
-_UUID: Final = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
-_SCALAR_TYPES: Final = {"integer": (int,), "number": (int, float), "boolean": (bool,), "string": (str,)}
 
 
 class HookCaller(Protocol):
@@ -79,11 +78,13 @@ class AccessHooks:
     scope_resolvers: Mapping[str, ResolveScopeHook]
 
 
-@dataclass(slots=True, kw_only=True)
-class AccessState:
+@dataclass(slots=True, kw_only=True, repr=False)
+class AccessState(RedactedRepr):
     """What steps 2 to 5 read of one contract request and what they leave for the handler: `raw_parameters` the raw
     path segments by parameter name, `body` the decoded tree, `credentials_types` the generated credentials class of
-    each identity, `principal` and `scopes` set as the steps admit."""
+    each identity, `principal` and `scopes` set as the steps admit. `repr` shows none of the request's values."""
+
+    _REDACTED_FIELDS: ClassVar[frozenset[str]] = frozenset({"raw_parameters", "body", "principal", "scopes"})
 
     contract: ApiContract
     operation_id: str
@@ -315,7 +316,7 @@ async def _decide_requirements(state: AccessState, hooks: AccessHooks, call: Hoo
         request = RequirementRequest(
             kind=RequirementKind.RULE if is_rule else RequirementKind.RIGHT,
             name=name,
-            params=dict(params) if isinstance(params, Mapping) else None,
+            params=copy.deepcopy(dict(params)) if isinstance(params, Mapping) else None,
             principal=state.principal,
             subject=_subject(state, ir_map(requirement, "subject"), name),
             scopes=tuple(state.scopes),
@@ -369,7 +370,7 @@ def _proof(state: AccessState, rule: str) -> object:
         raise schema_invalid(state.contract, state.operation_id, [Issue("body", f"/{name}", "required")])
 
     value: object = state.body[name]
-    rule_name = _scalar_issue(ir_map(proof, "schema"), value)
+    rule_name = scalar_issue(ir_map(proof, "schema"), value)
 
     if rule_name is not None:
         raise schema_invalid(state.contract, state.operation_id, [Issue("body", f"/{name}", rule_name)])
@@ -444,42 +445,12 @@ def _checked_path_value(state: AccessState, name: str, type_use: IrMap) -> objec
     sees it."""
     raw = state.raw_parameters.get(name, "")
     value = path_value(raw, type_use)
-    rule_name = "type" if decoded_segment(raw) is None else _scalar_issue(type_use, value)
+    rule_name = "type" if decoded_segment(raw) is None else scalar_issue(type_use, value)
 
     if rule_name is not None:
         raise schema_invalid(state.contract, state.operation_id, [Issue("path", f"/{name}", rule_name)])
 
     return value
-
-
-def _scalar_issue(type_use: IrMap, value: object) -> str | None:
-    """The rule a scalar breaks among its type, its `uuid` format and its length bounds; the full check is step 6's."""
-    scalar_type = ir_string(type_use, "type") or "string"
-    expected = _SCALAR_TYPES.get(scalar_type, (str,))
-
-    if isinstance(value, bool) and scalar_type != "boolean":
-        return "type"
-
-    if not isinstance(value, expected):
-        return "type"
-
-    if not isinstance(value, str):
-        return None
-
-    if ir_string(type_use, "format") == "uuid" and not _UUID.fullmatch(value):
-        return "format"
-
-    refinements = ir_map(type_use, "refinements")
-    min_length = ir_int(refinements, "minLength")
-    max_length = ir_int(refinements, "maxLength")
-
-    if min_length is not None and len(value) < min_length:
-        return "minLength"
-
-    if max_length is not None and len(value) > max_length:
-        return "maxLength"
-
-    return None
 
 
 def _neither(hook: str, admitted: str, denied: str, answer: object) -> BoundaryFailureError:
@@ -489,4 +460,5 @@ def _neither(hook: str, admitted: str, denied: str, answer: object) -> BoundaryF
 
 
 def _extensions(declaration: IrMap) -> Mapping[str, object]:
-    return dict(ir_map(declaration, "extensions"))
+    """A deep copy: a hook that changes what it got never changes the contract later requests read."""
+    return copy.deepcopy(dict(ir_map(declaration, "extensions")))

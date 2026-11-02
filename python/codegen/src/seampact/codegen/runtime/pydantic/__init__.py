@@ -15,6 +15,7 @@ from pydantic import AfterValidator, BeforeValidator
 from pydantic_core import PydanticCustomError
 
 from seampact.codegen.runtime.pattern import contract_pattern
+from seampact.codegen.runtime.uuid_text import UUID_TEXT
 
 MAX_SAFE_INTEGER: Final = 2**53 - 1
 
@@ -24,7 +25,6 @@ _DATE_TIME: Final = re.compile(
     re.ASCII,
 )
 _DATE: Final = re.compile(r"\d{4}-\d{2}-\d{2}", re.ASCII)
-_UUID: Final = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 _DECIMAL: Final = re.compile(r"-?(0|[1-9][0-9]*)(\.[0-9]+)?", re.ASCII)
 _MICROSECOND_DIGITS: Final = 6
 _FORMAT_RULE: Final = "format"
@@ -88,7 +88,7 @@ def uuid_from_wire(value: object) -> object:
     if not isinstance(value, str):
         return value
 
-    if _UUID.fullmatch(value) is None:
+    if UUID_TEXT.fullmatch(value) is None:
         raise _format_error("uuid")
 
     return UUID(value)
