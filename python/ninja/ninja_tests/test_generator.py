@@ -1,6 +1,6 @@
 """The ninja target found through its entry point; its options, artefacts and forms refused by name, the shared kept
 forms among them; and the generated placement as Ninja reads it: each declared route registers on a Router without a
-warning and resolves to its URL name, and `bind_<api>()` refuses by name before it changes the app."""
+warning and resolves to its URL name, and `bind_<api>()` takes only a NinjaAPI."""
 
 import dataclasses
 import importlib
@@ -20,7 +20,7 @@ from seampact.ir.read import read_ir
 from seampact.ir.run.discovery import InstalledTarget, discover_target
 from seampact.ir.run.generator import GenerationRefusedError
 from seampact.ninja.generator import NinjaGenerator
-from seampact.ninja.runtime import ApiPlacement, BindingError, PlacementUnavailableError
+from seampact.ninja.runtime import ApiPlacement, BindingError
 
 from .test_golden import reference_entry
 
@@ -158,15 +158,12 @@ def test_each_declared_route_registers_on_a_router_and_resolves_to_its_url_name(
     assert [route.methods for route in placement.routes if route.operation_id == "getTask"] == [("GET", "HEAD")]
 
 
-def test_binding_refuses_by_name_until_the_placement_runtime_serves_it() -> None:
+def test_binding_takes_only_a_ninja_api() -> None:
     golden = _golden_placement()
     bind: Callable[..., None] = golden.bind_tasks
     factories = golden.TasksHandlerFactories(
         tasks=None, drafts=None, channels=None, preferences=None, app=None, hooks=None
     )
-
-    with pytest.raises(PlacementUnavailableError, match=r"ninja\.placement\.unavailable"):
-        bind(NinjaAPI(urls_namespace="seampact-ninja-bind"), prefix="", handlers=factories)
 
     with pytest.raises(BindingError, match="takes the app's NinjaAPI"):
         bind(object(), prefix="", handlers=factories)

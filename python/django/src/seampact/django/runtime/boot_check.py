@@ -365,12 +365,12 @@ def _imported_problems(api: str, setting: str, path: str, hook_method: str | Non
     return [
         f"settings.{SETTINGS_NAME}['{api}']{setting} builds a {built_class.__qualname__} whose method '{method}' is "
         "an async def; DRF views are sync, so write it as a plain def."
-        for built_class in _built_classes(built_by)
-        for method in _async_methods(built_class, hook_method)
+        for built_class in built_classes(built_by)
+        for method in async_methods(built_class, hook_method)
     ]
 
 
-def _built_classes(built_by: object) -> list[type]:
+def built_classes(built_by: object) -> list[type]:
     """The class a factory builds: the factory itself when it is a class, else its declared return type."""
     if isinstance(built_by, type):
         return [built_by]
@@ -383,7 +383,7 @@ def _built_classes(built_by: object) -> list[type]:
     return [returned] if isinstance(returned, type) else []
 
 
-def _async_methods(built_class: type, hook_method: str | None) -> list[str]:
+def async_methods(built_class: type, hook_method: str | None) -> list[str]:
     names = (
         [hook_method] if hook_method is not None else [name for name in dir(built_class) if not name.startswith("_")]
     )

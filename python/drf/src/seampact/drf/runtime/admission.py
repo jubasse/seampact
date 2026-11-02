@@ -36,7 +36,7 @@ from seampact.codegen.runtime.wire_codec import WireCodec
 from seampact.django.runtime.api_configuration import configuration_of
 from seampact.django.runtime.contract_replies import django_response
 from seampact.django.runtime.idempotency_records import claim_idempotency
-from seampact.django.runtime.request_state import BoundaryState, state_of
+from seampact.django.runtime.request_state import BoundaryState, raw_headers, state_of
 from seampact.drf.runtime.serializers import ContractSerializer
 from seampact.drf.runtime.typed_input import built_input, rendered, serializer_issues, typed_parts
 from seampact.hooks import RequestView, ResolvedScope
@@ -265,7 +265,7 @@ def admit(
         request=RequestView(
             method=request.method or "",
             path=request.path,
-            headers=headers_view(_raw_headers(request)),
+            headers=headers_view(raw_headers(request)),
             client_address=request.META.get("REMOTE_ADDR"),
         ),
         body=state.decoded.body,
@@ -276,11 +276,6 @@ def admit(
     state.admitted_operation = operation_id
 
     return ContractAdmission(request, state, access, hooks)
-
-
-def _raw_headers(request: HttpRequest) -> list[tuple[bytes, bytes]]:
-    """The request's headers in the server's latin-1 text, as `headers_view` reads them."""
-    return [(name.encode("latin-1"), value.encode("latin-1")) for name, value in request.headers.items()]
 
 
 def declared_error_reply(contract: ApiContract, operation_id: str, result: object) -> Reply:
