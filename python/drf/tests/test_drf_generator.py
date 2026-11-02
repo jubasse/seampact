@@ -404,6 +404,18 @@ def test_a_fractional_bound_on_an_integer_use_becomes_the_nearest_whole_number_i
     assert "max_value=9" in contents
 
 
+def test_a_form_no_python_target_serves_is_refused_by_the_drf_target(repository_root: Path) -> None:
+    ir_json = reference_ir(repository_root, "tasks")
+    operations = ir_json["operations"]
+    assert isinstance(operations, list) and isinstance(operations[0], dict)
+    operations[0]["upstream"] = ["billing"]
+
+    with pytest.raises(GenerationRefusedError) as refused:
+        generated_files(contract(ir_json))
+
+    assert {problem.code for problem in refused.value.problems} == {"upstream.unsupported"}
+
+
 def test_the_date_field_refuses_a_date_time() -> None:
     field = TypedValueField(date)
 
