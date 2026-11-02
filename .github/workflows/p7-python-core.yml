@@ -2,8 +2,8 @@ name: Python core packages
 
 # The Python packages of the uv workspace `python/` (ADR 0010): the regenerate-and-diff check of the Python IR model,
 # then each package tested and checked on the Python 3.12 floor and the latest Python: `uv sync --locked`, ruff lint
-# and format, `mypy --strict` and pytest; each package's wheel built and installed into a fresh virtual environment
-# from those wheels only, with Node removed; and `pip-audit` over the lock file. On a pull request or a push they run
+# and format, `mypy --strict`, pyright strict on the golden output of the Pydantic emitter, and pytest; each package's
+# wheel built and installed into a fresh virtual environment from those wheels only, with Node removed; and `pip-audit` over the lock file. On a pull request or a push they run
 # only when the change touches the Python packages, the generator of their IR model, the files their tests read or
 # this workflow; `python-core` is the one check to require. The binary row builds the linux-x64 compiler binary and
 # runs the runner test with it, with Node removed; on a pull request it runs only when what it proves changes.
@@ -129,6 +129,8 @@ jobs:
         run: uv run --locked ruff format --check
       - name: Type-check
         run: uv run --locked mypy
+      - name: Type-check the golden output of the Pydantic emitter as Pylance users do
+        run: uv run --locked pyright
       - name: Test on Python ${{ matrix.python-version }}
         run: uv run --locked pytest
 
