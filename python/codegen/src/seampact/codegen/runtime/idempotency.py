@@ -58,6 +58,13 @@ class IdempotencyStoreFailure:
 type IdempotencyStart = IdempotencyClaimed | IdempotencyReplayed | None
 
 
+def enforces_idempotency(contract: ApiContract, operation_id: str) -> bool:
+    """Whether the boundary enforces the operation's idempotency, so it needs the api's idempotency store."""
+    idempotency = ir_map(contract.operation(operation_id), "idempotency")
+
+    return ir_string(idempotency, "kind") == _DERIVED and ir_string(idempotency, "enforce") == _BOUNDARY
+
+
 async def begin_idempotency(
     contract: ApiContract,
     operation_id: str,
@@ -71,10 +78,10 @@ async def begin_idempotency(
 
     Raises `ContractRefusal` when the key is running or was used with another request, and `BoundaryFailureError`
     when the api has no store or the store answers something else."""
-    idempotency = ir_map(contract.operation(operation_id), "idempotency")
-
-    if ir_string(idempotency, "kind") != _DERIVED or ir_string(idempotency, "enforce") != _BOUNDARY:
+    if not enforces_idempotency(contract, operation_id):
         return None
+
+    idempotency = ir_map(contract.operation(operation_id), "idempotency")
 
     client_key = decoded.headers.get(ir_string(idempotency, "header") or "")
 

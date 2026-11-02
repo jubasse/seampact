@@ -14,6 +14,7 @@ _MODEL_CONFIG = _pydantic.ConfigDict(
     protected_namespaces=(),
     regex_engine="rust-regex",
     allow_inf_nan=False,
+    hide_input_in_errors=True,
 )
 
 
@@ -129,7 +130,7 @@ class PaymentEvent(_pydantic.BaseModel):
 
     id_: str
     type_: str
-    data: _pydantic.JsonValue
+    data: _seampact.Opaque
 
 
 class Preferences(_pydantic.BaseModel):

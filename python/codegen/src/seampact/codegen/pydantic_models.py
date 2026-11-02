@@ -2,7 +2,9 @@
 frozen model per object schema (`protected_namespaces=()`, unknown keys refused), each member typed by the runtime's
 type layer (`WholeNumber`, `WireDateTime`, `WireUuid`, ...), and the value rules as Pydantic's own `Field`
 constraints under `rules: native` or as the runtime's validators under `seampact-consistent`. A member both optional
-and nullable is a `Field` of `seampact.hooks`. Framework names are imported under private aliases."""
+and nullable is a `Field` of `seampact.hooks`. A model holding a sensitive member gets a `__repr_args__` that prints it
+as `[redacted]`, which Pydantic's `repr`, `str` and rich output read (ADR 0026 "Redaction"). Framework names are
+imported under private aliases."""
 
 from collections.abc import Sequence
 from decimal import Decimal
@@ -11,6 +13,7 @@ from typing import Final
 
 from seampact.codegen.names import ApiNames
 from seampact.codegen.printer import INDENT, PythonModule, fits, string_literal
+from seampact.codegen.redacted_members import REDACTED_CLASS, redacted_marker_block
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.ir.hydration import OMITTED
 from seampact.ir.model import (
@@ -58,6 +61,7 @@ class _Emission:
         self.seampact = self.module.imported("seampact.codegen.runtime.pydantic", "_seampact")
         self._objects = {key: value for key, value in ir.schemas.items() if isinstance(value, ObjectSchema)}
         self._defined: set[str] = set()
+        self._redacted_declared = False
 
     def text(self) -> str:
         self.module.add_block(
@@ -69,6 +73,7 @@ class _Emission:
                 f"{INDENT}protected_namespaces=(),",
                 f'{INDENT}regex_engine="rust-regex",',
                 f"{INDENT}allow_inf_nan=False,",
+                f"{INDENT}hide_input_in_errors=True,",
                 ")",
             ]
         )
@@ -139,8 +144,36 @@ class _Emission:
             if attribute is not None:
                 lines.extend(self._member(attribute, member, at.below("properties", index)))
 
+        sensitive = [
+            members[member.name] for member in schema.properties if _is_sensitive(member) and member.name in members
+        ]
+
+        if sensitive:
+            lines.extend(self._redacted_repr_args(sensitive))
+
         self._defined.add(schema_id)
         self.module.add_block(lines)
+
+    def _redacted_repr_args(self, attributes: Sequence[str]) -> list[str]:
+        """The `__repr_args__` that prints each sensitive attribute as `[redacted]`; `model_dump` still shows it."""
+        abc = self.module.imported("collections.abc", "_abc")
+        self._declare_redacted()
+        names = ", ".join(string_literal(attribute) for attribute in attributes)
+        redacted = f"frozenset({{{names}}})"
+
+        return [
+            "",
+            f"{INDENT}def __repr_args__(self) -> {abc}.Iterator[tuple[str | None, object]]:",
+            f"{INDENT}{INDENT}for name, value in super().__repr_args__():",
+            f"{INDENT}{INDENT}{INDENT}yield name, {REDACTED_CLASS}() if name in {redacted} else value",
+        ]
+
+    def _declare_redacted(self) -> None:
+        if self._redacted_declared:
+            return
+
+        self._redacted_declared = True
+        self.module.add_block(redacted_marker_block())
 
     def _member(self, attribute: str, member: Property, at: IrPlace) -> list[str]:
         annotation = self.annotation(member.type, at.below("type"))
@@ -182,7 +215,7 @@ class _Emission:
             return [f"list[{items}]"] if not rules else [f"{self.typing}.Annotated[", f"list[{items}]", *rules]
 
         if isinstance(type_use, OpaqueTypeUse):
-            return [f"{self.pydantic}.JsonValue"]
+            return [f"{self.seampact}.Opaque"]
 
         self.refusals.waiting(f"type.{type_use.kind}", f"A type use of kind '{type_use.kind}'", at, Delivery.CONSUMER)
         return ["object"]
@@ -342,6 +375,11 @@ def _referenced_schemas(type_use: TypeUse) -> list[str]:
         return [type_use.schema]
 
     return _referenced_schemas(type_use.items) if isinstance(type_use, ArrayTypeUse) else []
+
+
+def _is_sensitive(member: Property) -> bool:
+    """A sensitive property, or a property whose scalar use is sensitive (docs/ir section 5)."""
+    return member.sensitive or (isinstance(member.type, ScalarTypeUse) and member.type.sensitive is True)
 
 
 def _use_nullable(type_use: TypeUse) -> bool:

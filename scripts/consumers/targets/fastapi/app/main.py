@@ -9,9 +9,25 @@ from control import control_router
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from generated.tasks.fastapi import TasksHandlerFactories, bind_tasks
-from handlers import AppHandlers, ChannelsHandlers, DraftsHandlers
-from hooks import ChannelResolver, TasksUnexpectedErrors, UserHook
+from handlers import (
+    AppHandlers,
+    ChannelsHandlers,
+    DraftsHandlers,
+    HooksHandlers,
+    PreferencesHandlers,
+    TasksHandlers,
+)
+from hooks import (
+    OVERRIDDEN_RIGHT,
+    ChannelResolver,
+    OverriddenRightDecider,
+    StripeHook,
+    TasksDecider,
+    TasksUnexpectedErrors,
+    UserHook,
+)
 from seampact_consumer_suite.boot_variant import BootVariant, current_boot_variant, serves_unlisted_route
+from seampact_consumer_suite.file_idempotency_store import FileIdempotencyStore
 from seampact_consumer_suite.log_lines import SuiteLogHandler
 from seampact_consumer_suite.scripted_answers import ScriptedReply
 from seampact_consumer_suite.suite_files import SuiteFiles, configure_suite_files
@@ -19,8 +35,12 @@ from seampact_consumer_suite.suite_files import SuiteFiles, configure_suite_file
 APP_DIRECTORY: Final = Path(__file__).parent
 CONTROL_STATE_FILE: Final = "suite-control.json"
 CREDENTIALS_FILE: Final = "credentials.json"
+IDEMPOTENCY_STORE_FILE: Final = "suite-idempotency.json"
 UNLISTED_PATH: Final = "/v1/unlisted"
 USER_IDENTITY: Final = "user"
+STRIPE_IDENTITY: Final = "stripe"
+# Every right and rule the tasks api's operations ask a decider for.
+DECIDED_NAMES: Final = ("tasks.read", "tasks.update", "tasks.seeEffort", "roles", "throttle", "recentAuth")
 CHANNEL_SCOPE: Final = "channel"
 
 
@@ -33,6 +53,14 @@ async def _scripted_reply(_request: Request, failure: Exception) -> JSONResponse
 
 def _unlisted() -> dict[str, str]:
     return {"route": "unlisted"}
+
+
+def _idempotency_store() -> FileIdempotencyStore:
+    return FileIdempotencyStore(str(APP_DIRECTORY / IDEMPOTENCY_STORE_FILE))
+
+
+def _deciders() -> dict[str, type[TasksDecider] | type[OverriddenRightDecider]]:
+    return {name: OverriddenRightDecider if name == OVERRIDDEN_RIGHT else TasksDecider for name in DECIDED_NAMES}
 
 
 def create_app() -> FastAPI:
@@ -54,9 +82,16 @@ def create_app() -> FastAPI:
             app=None if variant is BootVariant.MISSING_HANDLER else AppHandlers,
             channels=ChannelsHandlers,
             drafts=DraftsHandlers,
+            hooks=HooksHandlers,
+            preferences=PreferencesHandlers,
+            tasks=TasksHandlers,
         ),
-        authenticate={} if variant is BootVariant.MISSING_AUTHENTICATE_HOOK else {USER_IDENTITY: UserHook},
+        authenticate={STRIPE_IDENTITY: StripeHook}
+        if variant is BootVariant.MISSING_AUTHENTICATE_HOOK
+        else {USER_IDENTITY: UserHook, STRIPE_IDENTITY: StripeHook},
+        deciders={} if variant is BootVariant.MISSING_DECIDER else _deciders(),
         scope_resolvers={} if variant is BootVariant.MISSING_SCOPE_RESOLVER else {CHANNEL_SCOPE: ChannelResolver},
+        idempotency_store=_idempotency_store,
         on_unexpected_error=TasksUnexpectedErrors,
     )
 

@@ -69,6 +69,22 @@ class ApiBinding:
         self.logger.error(
             "seampact: the '%s' boundary answered its 500 on operation '%s': %s", self.api, operation_id, reason
         )
+        await self.notify_listener(operation_id, reason, cause, listener)
+
+    async def tell_store_failure(
+        self, operation_id: str, reason: str, cause: BaseException, listener: UnexpectedErrorListener | None
+    ) -> None:
+        """A store that failed after the reply was decided: the reply stands, the failure is logged and heard."""
+        self.logger.error("seampact: the '%s' boundary on operation '%s': %s", self.api, operation_id, reason)
+        await self.notify_listener(operation_id, reason, cause, listener)
+
+    async def notify_listener(
+        self,
+        operation_id: str | None,
+        reason: str,
+        cause: BaseException | None,
+        listener: UnexpectedErrorListener | None,
+    ) -> None:
         heard = listener if listener is not None else self._listener_without_dependencies()
 
         if heard is None:

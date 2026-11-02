@@ -70,3 +70,13 @@ def test_a_proof_issue_points_at_the_proof_body_member() -> None:
     issues = proof_issues(_contract(), proofs, {"reauthToken": "reauth_token"}, error)
 
     assert issues == [Issue("body", "/reauthToken", "minLength")]
+
+
+class _HeaderPart(pydantic.BaseModel):
+    idempotency_key: str
+
+
+def test_a_header_issue_names_its_header_in_lower_case() -> None:
+    issues = part_issues("header", {"Idempotency-Key": "idempotency_key"}, _error(_HeaderPart, {}))
+
+    assert issues == [Issue("header", "/idempotency-key", "required")]

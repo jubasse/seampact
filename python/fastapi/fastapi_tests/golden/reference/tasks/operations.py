@@ -162,6 +162,13 @@ class ArchiveTaskInput:
     body: _schemas.ArchiveTask
 
 
+class _Redacted:
+    """Stands for a sensitive value in a `repr`."""
+
+    def __repr__(self) -> str:
+        return "[redacted]"
+
+
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class ArchiveTaskRequest:
     """What the handler of operation 'archiveTask' reads: its input and who is calling."""
@@ -169,6 +176,14 @@ class ArchiveTaskRequest:
     input: ArchiveTaskInput
     principal: _schemas.UserPrincipal
     scopes: ArchiveTaskScopes
+
+    def __repr__(self) -> str:
+        return f"ArchiveTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True)
@@ -253,6 +268,14 @@ class AssignTaskRequest:
     principal: _schemas.UserPrincipal
     scopes: AssignTaskScopes
 
+    def __repr__(self) -> str:
+        return f"AssignTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
+
 
 @_dataclasses.dataclass(frozen=True, slots=True)
 class AssignTaskResponse200:
@@ -336,6 +359,14 @@ class CreateTaskRequest:
     principal: _schemas.UserPrincipal
     scopes: CreateTaskScopes
 
+    def __repr__(self) -> str:
+        return f"CreateTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
+
 
 @_dataclasses.dataclass(frozen=True, slots=True)
 class CreateTaskResponse201:
@@ -414,6 +445,13 @@ class DeleteDraftRequest:
     input: DeleteDraftInput
     principal: _schemas.UserPrincipal
 
+    def __repr__(self) -> str:
+        return f"DeleteDraftRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+
 
 @_dataclasses.dataclass(frozen=True, slots=True)
 class DeleteDraftResponse200:
@@ -483,6 +521,14 @@ class GetChannelRequest:
     principal: _schemas.UserPrincipal
     scopes: GetChannelScopes
 
+    def __repr__(self) -> str:
+        return f"GetChannelRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
+
 
 @_dataclasses.dataclass(frozen=True, slots=True)
 class GetChannelResponse200:
@@ -532,6 +578,13 @@ class GetDraftRequest:
     input: GetDraftInput
     principal: _schemas.UserPrincipal
 
+    def __repr__(self) -> str:
+        return f"GetDraftRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+
 
 @_dataclasses.dataclass(frozen=True, slots=True)
 class GetDraftResponse200:
@@ -580,6 +633,13 @@ class GetPreferencesRequest:
 
     input: GetPreferencesInput
     principal: _schemas.UserPrincipal
+
+    def __repr__(self) -> str:
+        return f"GetPreferencesRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True)
@@ -643,6 +703,14 @@ class GetTaskRequest:
     principal: _schemas.UserPrincipal
     scopes: GetTaskScopes
 
+    def __repr__(self) -> str:
+        return f"GetTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
+
 
 @_dataclasses.dataclass(frozen=True, slots=True)
 class GetTaskResponse200:
@@ -700,6 +768,14 @@ class GetTasksBatchRequest:
     input: GetTasksBatchInput
     principal: _schemas.UserPrincipal
     scopes: GetTasksBatchScopes
+
+    def __repr__(self) -> str:
+        return f"GetTasksBatchRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True)
@@ -796,6 +872,13 @@ class ListChannelsRequest:
     input: ListChannelsInput
     principal: _schemas.UserPrincipal
 
+    def __repr__(self) -> str:
+        return f"ListChannelsRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class ListChannelsPage:
@@ -803,6 +886,8 @@ class ListChannelsPage:
 
     items: list[_schemas.Channel]
     next_cursor: str | None = None
+
+    _FACTS: _typing.ClassVar[dict[str, str]] = {"items": "items", "next_cursor": "nextCursor"}
 
 
 @_dataclasses.dataclass(frozen=True, slots=True)
@@ -858,6 +943,14 @@ class ListTasksRequest:
     principal: _schemas.UserPrincipal
     scopes: ListTasksScopes
 
+    def __repr__(self) -> str:
+        return f"ListTasksRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
+
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class ListTasksPage:
@@ -865,6 +958,8 @@ class ListTasksPage:
 
     items: list[_schemas.Task]
     next_cursor: str | None = None
+
+    _FACTS: _typing.ClassVar[dict[str, str]] = {"items": "items", "next_cursor": "nextCursor"}
 
 
 @_dataclasses.dataclass(frozen=True, slots=True)
@@ -907,6 +1002,12 @@ class PaymentsInput:
 
     body: _schemas.PaymentEvent
 
+    def __repr__(self) -> str:
+        return "PaymentsInput(body=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "body", _Redacted()
+
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class PaymentsRequest:
@@ -914,6 +1015,13 @@ class PaymentsRequest:
 
     input: PaymentsInput
     principal: _schemas.WebhookCaller
+
+    def __repr__(self) -> str:
+        return f"PaymentsRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True)
@@ -975,6 +1083,14 @@ class PurgeTaskRequest:
     input: PurgeTaskInput
     principal: _schemas.UserPrincipal
     scopes: PurgeTaskScopes
+
+    def __repr__(self) -> str:
+        return f"PurgeTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True)
@@ -1056,6 +1172,14 @@ class SearchTasksRequest:
     principal: _schemas.UserPrincipal
     scopes: SearchTasksScopes
 
+    def __repr__(self) -> str:
+        return f"SearchTasksRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
+
 
 @_dataclasses.dataclass(frozen=True, slots=True)
 class SearchTasksResponse200:
@@ -1121,6 +1245,13 @@ class UpdatePreferencesRequest:
 
     input: UpdatePreferencesInput
     principal: _schemas.UserPrincipal
+
+    def __repr__(self) -> str:
+        return f"UpdatePreferencesRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True)
@@ -1200,6 +1331,14 @@ class UpdateTaskRequest:
     input: UpdateTaskInput
     principal: _schemas.UserPrincipal
     scopes: UpdateTaskScopes
+
+    def __repr__(self) -> str:
+        return f"UpdateTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True)

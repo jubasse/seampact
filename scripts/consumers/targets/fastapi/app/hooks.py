@@ -1,29 +1,38 @@
-"""The hook doubles of the `tasks` api, answering from the loaded script and the suite's credentials."""
+"""The hook doubles of the `tasks` api, answering from the loaded script and the suite's credentials: the `user` and
+`stripe` identities, the channel resolver, the deciders of every right and rule, and the listener."""
 
 import logging
 from typing import Final
 
 from generated.tasks.operations import UserCredentials
-from generated.tasks.schemas import UserPrincipal
+from generated.tasks.schemas import UserPrincipal, WebhookCaller
 from sample_data import channel
 from seampact_consumer_suite.control_state import record_hook_call
-from seampact_consumer_suite.credentials import credential_text
+from seampact_consumer_suite.credentials import credential_number, credential_text
 from seampact_consumer_suite.scripted_answers import scripted_scope_denial
+from seampact_consumer_suite.scripted_decisions import scripted_decision
+from seampact_consumer_suite.stripe_signature import STRIPE_ACCOUNT, stripe_signature_verified
 
 from seampact.hooks import (
     AuthenticateRequest,
     AuthenticateResult,
+    Decision,
     ErrorCodeWithParams,
+    RequirementRequest,
     ResolvedScope,
     ResolveScopeRequest,
     ScopeResolution,
     UnexpectedFailure,
     authenticate_result,
+    decision,
     scope_id_source,
     scope_resolution,
 )
 
 UNAUTHENTICATED: Final = "api.unauthenticated"
+RATE_LIMITED: Final = "api.rate_limited"
+THROTTLE_RULE: Final = "throttle"
+OVERRIDDEN_RIGHT: Final = "tasks.update"
 _LOGGER: Final = logging.getLogger("consumer.tasks")
 
 
@@ -63,6 +72,54 @@ class ChannelResolver:
         resolved = ResolvedScope(scope=request.scope, id=source.id, value=channel(str(source.id)))
 
         return scope_resolution.Resolved(resolved=resolved)
+
+
+class StripeHook:
+    """The `stripe` identity: the shared suite check verifies the signature over the raw body."""
+
+    def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
+        record_hook_call("authenticate:stripe", request.operation.api, request.operation.id)
+        if not stripe_signature_verified(request.signature):
+            return authenticate_result.Denied(deny=ErrorCodeWithParams(code=UNAUTHENTICATED))
+
+        return authenticate_result.Authenticated(principal=WebhookCaller.model_validate({"account": STRIPE_ACCOUNT}))
+
+
+class TasksDecider:
+    """The decide double of every right and rule: it spends the throttled user's bucket, denies what the script
+    denies and allows the rest."""
+
+    def decide(self, request: RequirementRequest) -> Decision:
+        record_hook_call(f"decide:{request.name}", request.operation.api, request.operation.id)
+        denied = scripted_decision(request.name, request.purpose)
+
+        if denied is None and request.name == THROTTLE_RULE and _spends_bucket(request):
+            params = {"retryAfterMs": credential_number("throttleRetryAfterMs")}
+            return decision.Denied(deny=ErrorCodeWithParams(code=RATE_LIMITED, params=params))
+
+        return decision.Allowed() if denied is None else decision.Denied(deny=ErrorCodeWithParams(code=denied))
+
+
+class OverriddenRightDecider:
+    """The app's own decider for the overridden right: it records under its own hook name and denies what the script
+    denies, while every other right and rule reaches `TasksDecider`."""
+
+    def decide(self, request: RequirementRequest) -> Decision:
+        record_hook_call(f"decide-override:{request.name}", request.operation.api, request.operation.id)
+        denied = scripted_decision(request.name, request.purpose)
+
+        return decision.Allowed() if denied is None else decision.Denied(deny=ErrorCodeWithParams(code=denied))
+
+
+# The throttled user's bucket is always spent; every other caller's never is.
+def _spends_bucket(request: RequirementRequest) -> bool:
+    principal = request.principal
+
+    return (
+        request.bucket is not None
+        and isinstance(principal, UserPrincipal)
+        and str(principal.user_id) == credential_text("throttledUserId")
+    )
 
 
 class TasksUnexpectedErrors:

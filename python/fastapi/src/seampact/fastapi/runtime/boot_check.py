@@ -16,6 +16,7 @@ from starlette.routing import BaseRoute, Host, Match, Mount, Route
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule, allow_listed, base_path_of
 from seampact.codegen.runtime.framework_versions import framework_version_problems
 from seampact.codegen.runtime.hook_check import HookFixes, hook_problems
+from seampact.codegen.runtime.idempotency import enforces_idempotency
 from seampact.codegen.runtime.version import other_version_problem
 from seampact.fastapi.runtime.api_binding import ApiBinding
 from seampact.fastapi.runtime.exception_map import is_wrapped, takes_http_exception
@@ -82,13 +83,26 @@ def _hook_problems(binding: ApiBinding) -> list[str]:
         scope_resolver=f"pass its factory in `scope_resolvers=` of {bind}",
     )
 
-    return hook_problems(
+    problems = hook_problems(
         binding.contract,
         identities=list(binding.hooks.authenticate),
         scopes=list(binding.hooks.scope_resolvers),
         deciders=list(binding.hooks.deciders),
         fixes=fixes,
     )
+    keyed = [
+        route.operation_id
+        for route in binding.placement.routes
+        if enforces_idempotency(binding.contract, route.operation_id)
+    ]
+
+    if keyed and binding.hooks.idempotency_store is None:
+        problems.append(
+            f"no idempotency store for the operations {', '.join(keyed)}: pass its factory in `idempotency_store=` "
+            f"of {bind}"
+        )
+
+    return problems
 
 
 def _handler_problems(binding: ApiBinding) -> list[str]:

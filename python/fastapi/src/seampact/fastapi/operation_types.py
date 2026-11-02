@@ -9,9 +9,11 @@ from typing import Final
 from seampact.codegen.credentials_classes import credentials_class
 from seampact.codegen.names import ApiNames, member_identifier
 from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_literal
+from seampact.codegen.redacted_members import redacted_dataclass_reprs, redacted_marker_block
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.fastapi.input_schemas import INPUT_PARTS, input_schema_id
 from seampact.fastapi.layout import ApiLayout, OperationNames
+from seampact.fastapi.runtime.page_facts import PAGE_FACTS
 from seampact.fastapi.source_lines import with_local_imports
 from seampact.ir.model import (
     ContractIR,
@@ -32,6 +34,12 @@ _FROZEN_KEYWORDS: Final = "@_dataclasses.dataclass(frozen=True, slots=True, kw_o
 # The fields of an `<Op>Errors` class: an error factory's name never starts with `_` and a letter.
 _ERRORS_CODE_FIELD: Final = "_code"
 _ERRORS_PARAMS_FIELD: Final = "_params"
+# The members of an `<Op>Request` and the body member of an `<Op>Input`.
+_INPUT: Final = "input"
+_PRINCIPAL: Final = "principal"
+_SCOPES: Final = "scopes"
+_BODY: Final = "body"
+_PAGE_ITEMS: Final = "items"
 _ENDPOINTS_DOC: Final = "The handlers of these operations: each returns a declared success or error, or raises one."
 _PAGE_FACT_TYPES: Final = {
     HandlerResultMember.NEXT_CURSOR: "str",
@@ -50,6 +58,7 @@ class _Emission:
         self.refusals = refusals
         self.module = PythonModule(f"The operation types of api '{ir.api.id}'.")
         self.blocks: list[list[str]] = []
+        self._redacted_declared = False
 
     def text(self) -> str:
         self.module.imported("dataclasses", "_dataclasses")
@@ -174,18 +183,28 @@ class _Emission:
             f"class {names.input}:",
             f'{INDENT}"""The input of operation {operation.id!r}, as its handler reads it."""',
         ]
-        members = [
-            f"{INDENT}{part}: _schemas.{self.names.schema_classes[input_schema_id(operation.id, part)]}"
+        annotations = {
+            part: f"_schemas.{self.names.schema_classes[input_schema_id(operation.id, part)]}"
             for part, _ in INPUT_PARTS
             if input_schema_id(operation.id, part) in self.names.schema_classes
-        ]
+        }
 
         if operation.input is not None:
             body_at = at.below("input", "schema")
-            body = self._type_of(operation.input.schema, body_at, "A request body that is not an object schema")
-            members.append(f"{INDENT}body: {body}")
+            annotations[_BODY] = self._type_of(
+                operation.input.schema, body_at, "A request body that is not an object schema"
+            )
 
-        self.blocks.append(lines if not members else [*lines, "", *members])
+        if not annotations:
+            self.blocks.append(lines)
+            return
+
+        lines += ["", *(f"{INDENT}{part}: {annotation}" for part, annotation in annotations.items())]
+
+        if _BODY in annotations and self._is_signed(operation):
+            lines += self._redacted_reprs(names.input, list(annotations), {_BODY})
+
+        self.blocks.append(lines)
 
     def _request(self, operation: Operation, names: OperationNames, at: IrPlace) -> None:
         lines = [
@@ -193,17 +212,39 @@ class _Emission:
             f"class {names.request}:",
             f'{INDENT}"""What the handler of operation {operation.id!r} reads: its input and who is calling."""',
             "",
-            f"{INDENT}input: {names.input}",
+            f"{INDENT}{_INPUT}: {names.input}",
         ]
         principal = self._principal(operation, at)
 
         if principal is not None:
-            lines.append(f"{INDENT}principal: {principal}")
+            lines.append(f"{INDENT}{_PRINCIPAL}: {principal}")
 
         if names.scopes is not None:
-            lines.append(f"{INDENT}scopes: {names.scopes}")
+            lines.append(f"{INDENT}{_SCOPES}: {names.scopes}")
+
+        attributes = [_INPUT, *([_PRINCIPAL] if principal is not None else []), *([_SCOPES] if names.scopes else [])]
+
+        if len(attributes) > 1:
+            lines += self._redacted_reprs(names.request, attributes, {_PRINCIPAL, _SCOPES})
 
         self.blocks.append(lines)
+
+    def _is_signed(self, operation: Operation) -> bool:
+        access = operation.access
+
+        return isinstance(access, IdentityAccess | OptionalAccess) and isinstance(
+            self.ir.identities.get(access.identity), SignedIdentity
+        )
+
+    def _redacted_reprs(self, class_name: str, attributes: list[str], redacted: set[str]) -> list[str]:
+        """Who is calling and a signed body are printed `[redacted]` (ADR 0023 "Redaction")."""
+        if not self._redacted_declared:
+            self._redacted_declared = True
+            self.blocks.append(redacted_marker_block())
+
+        abc = self.module.imported("collections.abc", "_abc")
+
+        return redacted_dataclass_reprs(class_name, attributes, redacted, abc)
 
     def _principal(self, operation: Operation, at: IrPlace) -> str | None:
         access = operation.access
@@ -273,9 +314,10 @@ class _Emission:
             f"class {class_name}:",
             f'{INDENT}"""The page of operation {operation.id!r}: its items and the facts its paging style reads."""',
             "",
-            f"{INDENT}items: list[{item}]",
+            f"{INDENT}{_PAGE_ITEMS}: list[{item}]",
         ]
         style = self.ir.pagings.get(operation.paging.style or "") if operation.paging is not None else None
+        facts = {_PAGE_ITEMS: _PAGE_ITEMS}
 
         if style is None:
             self.refusals.inconsistent(
@@ -283,20 +325,34 @@ class _Emission:
             )
         else:
             for member in style.handler_result:
-                fact = _PAGE_FACT_TYPES.get(member) if isinstance(member, HandlerResultMember) else None
+                lines += self._page_fact(member, facts, at.below("paging", "style"))
 
-                if fact is None:
-                    self.refusals.waiting(
-                        "paging.handlerResult",
-                        f"The page fact '{member}'",
-                        at.below("paging", "style"),
-                        Delivery.AFTER_V1,
-                    )
-                    continue
-
-                lines.append(f"{INDENT}{member_identifier(str(member))}: {fact} | None = None")
-
+        table = ", ".join(f"{string_literal(attribute)}: {string_literal(fact)}" for attribute, fact in facts.items())
+        lines += ["", f"{INDENT}{PAGE_FACTS}: _typing.ClassVar[dict[str, str]] = {{{table}}}"]
         self.blocks.append(lines)
+
+    def _page_fact(self, member: object, facts: dict[str, str], at: IrPlace) -> list[str]:
+        """The attribute of one page fact, entered in the page's fact table; a fact without an attribute name of its
+        own is refused by name."""
+        fact_type = _PAGE_FACT_TYPES.get(member) if isinstance(member, HandlerResultMember) else None
+
+        if fact_type is None:
+            self.refusals.waiting("paging.handlerResult", f"The page fact '{member}'", at, Delivery.AFTER_V1)
+            return []
+
+        attribute = member_identifier(str(member))
+
+        if attribute is None or attribute in facts:
+            self.refusals.inconsistent(
+                "paging.handlerResult.attribute",
+                f"The page fact '{member}' has no attribute name of its own on the page class",
+                at,
+            )
+            return []
+
+        facts[attribute] = str(member)
+
+        return [f"{INDENT}{attribute}: {fact_type} | None = None"]
 
     def _typed_errors(self, operation: Operation, names: OperationNames) -> None:
         lines = [

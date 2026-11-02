@@ -230,3 +230,22 @@ def test_a_consistent_rule_fails_with_the_contract_rule_name(
 
 def test_a_code_point_counts_once_in_a_length() -> None:
     assert _accepts(Annotated[str, type_layer.length(max_length=1)], "\U0001f600") is True
+
+
+class _Shade(StrEnum):
+    LIGHT = "light"
+
+
+def test_a_string_the_enum_does_not_list_is_refused_by_the_enum_rule() -> None:
+    with pytest.raises(pydantic.ValidationError) as refused:
+        _validated(Annotated[_Shade, type_layer.enum_from_wire(_Shade)], "dark")
+
+    assert [error["type"] for error in refused.value.errors()] == ["enum"]
+
+
+def test_an_opaque_value_refuses_a_wire_null_and_keeps_any_other_json() -> None:
+    with pytest.raises(pydantic.ValidationError) as refused:
+        _validated(type_layer.Opaque, None)
+
+    assert [error["type"] for error in refused.value.errors()] == ["type"]
+    assert _validated(type_layer.Opaque, {"amount": [1, None]}) == {"amount": [1, None]}

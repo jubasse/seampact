@@ -1,5 +1,6 @@
 """The schema types of api 'tasks'."""
 
+import collections.abc as _abc
 import enum as _enum
 import typing as _typing
 
@@ -14,6 +15,7 @@ _MODEL_CONFIG = _pydantic.ConfigDict(
     protected_namespaces=(),
     regex_engine="rust-regex",
     allow_inf_nan=False,
+    hide_input_in_errors=True,
 )
 
 
@@ -129,7 +131,7 @@ class PaymentEvent(_pydantic.BaseModel):
 
     id_: str
     type_: str
-    data: _pydantic.JsonValue
+    data: _seampact.Opaque
 
 
 class Preferences(_pydantic.BaseModel):
@@ -336,10 +338,21 @@ class PurgeTaskPath(_pydantic.BaseModel):
     task_id: _seampact.WireUuid
 
 
+class _Redacted:
+    """Stands for a sensitive value in a `repr`."""
+
+    def __repr__(self) -> str:
+        return "[redacted]"
+
+
 class PurgeTaskProofs(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
     reauth_token: _typing.Annotated[str, _pydantic.Field(min_length=1, max_length=512)]
+
+    def __repr_args__(self) -> _abc.Iterator[tuple[str | None, object]]:
+        for name, value in super().__repr_args__():
+            yield name, _Redacted() if name in frozenset({"reauth_token"}) else value
 
 
 class SearchTasksPath(_pydantic.BaseModel):

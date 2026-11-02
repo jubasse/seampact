@@ -1,17 +1,19 @@
 """The boundary of one api (ADR 0026 "Placement", "Routes" and "The outgoing response check"): a pure ASGI middleware,
 the outermost of `app.user_middleware`. On a contract request it runs step 1 (the raw-path match, the bounded body
 read and the decoding) and answers its own refusals; it replays the body to the app, holds the reply's start until the
-verdict of step 10, maps an `HTTPException` the app's handlers rendered to its role, and answers the api's 500 for an
-exception that crosses it. On `lifespan.startup` it runs the boot check, with a first-request fallback."""
+verdict of step 10, settles the idempotency record with the reply about to go out, maps an `HTTPException` the app's
+handlers rendered to its role, and answers the api's 500 for an exception that crosses it. On `lifespan.startup` it
+runs the boot check, with a first-request fallback."""
 
 import asyncio
-from collections.abc import AsyncIterator, MutableMapping
+from collections.abc import AsyncIterator, Awaitable, Callable, MutableMapping
 from typing import Final
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal, failure_place
+from seampact.codegen.runtime.idempotency import abandon_idempotency, settle_idempotency
 from seampact.codegen.runtime.input_decoding import IncomingRequest, decode_input
 from seampact.codegen.runtime.raw_target import RawTarget, asgi_raw_target, without_origin
 from seampact.codegen.runtime.replies import Reply, error_reply, internal_error_reply, role_reply
@@ -19,6 +21,7 @@ from seampact.codegen.runtime.reply_verdict import MAX_CHECKED_ERROR_BODY_BYTES,
 from seampact.fastapi.runtime.api_binding import ApiBinding
 from seampact.fastapi.runtime.boot_check import BootCheckError, boot_problems, override_problems
 from seampact.fastapi.runtime.exception_roles import exception_reply
+from seampact.fastapi.runtime.handler_call import call_handler
 from seampact.fastapi.runtime.request_state import RequestState, scope_states
 
 _HTTP: Final = "http"
@@ -117,15 +120,47 @@ class ContractBoundary:
             decoded=decoded,
         )
         scope_states(scope)[self.binding.api] = state
-        checked = _CheckedReply(self.binding, scope, state, send)
+        checked = _CheckedReply(self.binding, scope, state, send, self._settle_claim)
 
         try:
             await self.app(scope, received.replay(), checked.send)
         except Exception as failure:
+            await self._abandon_claim(state)
             await self._failed(state, checked, failure, send)
             return
 
         await checked.finish()
+        await self._abandon_claim(state)
+
+    async def _settle_claim(self, state: RequestState, reply: Reply) -> None:
+        """The claimed idempotency record completed with the reply about to go out, before its last byte, so a retry
+        that follows the reply finds it."""
+        claimed = state.idempotency
+        store = state.idempotency_store
+
+        if claimed is None or store is None:
+            return
+
+        state.idempotency = None
+        failure = await settle_idempotency(state.contract, state.operation_id, claimed, reply, store, call_handler)
+
+        if failure is not None:
+            await self.binding.tell_store_failure(state.operation_id, failure.reason, failure.cause, state.listener)
+
+    async def _abandon_claim(self, state: RequestState) -> None:
+        """A claimed key whose reply was never settled (a failure, a reply streamed past the check) is released, so a
+        retry runs again instead of waiting for the key's lifetime."""
+        claimed = state.idempotency
+        store = state.idempotency_store
+
+        if claimed is None or store is None:
+            return
+
+        state.idempotency = None
+        failure = await abandon_idempotency(claimed, store, call_handler)
+
+        if failure is not None:
+            await self.binding.tell_store_failure(state.operation_id, failure.reason, failure.cause, state.listener)
 
     async def _pass_or_refuse_encoded(self, scope: Scope, receive: Receive, send: Send, method: str) -> None:
         """A raw path that is no contract path, but whose decoded form is (an encoded static segment, `/%761/...`):
@@ -236,11 +271,18 @@ class _ReceivedBody:
         return receive
 
 
-class _CheckedReply:
-    """The wrapped `send` of one contract request: the start is held until the verdict, then the messages pass on."""
+type _Settle = Callable[[RequestState, Reply], Awaitable[None]]
 
-    def __init__(self, binding: ApiBinding, scope: MutableMapping[str, object], state: RequestState, send: Send):
+
+class _CheckedReply:
+    """The wrapped `send` of one contract request: the start is held until the verdict, then the messages pass on;
+    `settle` hears the whole reply about to go out, before its last message."""
+
+    def __init__(
+        self, binding: ApiBinding, scope: MutableMapping[str, object], state: RequestState, send: Send, settle: _Settle
+    ):
         self._binding = binding
+        self._settle = settle
         self._scope = scope
         self._state = state
         self._send = send
@@ -358,6 +400,9 @@ class _CheckedReply:
             await self._replace(Reply(judged.reply.status, judged.reply.headers, judged.reply.body or b""))
             return
 
+        if final and following is None:
+            await self._settle(self._state, Reply(judged.reply.status, judged.reply.headers, bytes(self._held)))
+
         self._passing = True
         self.started = True
         start = dict(self._start)
@@ -384,6 +429,7 @@ class _CheckedReply:
     async def _replace(self, reply: Reply) -> None:
         self._replaced = True
         self.started = True
+        await self._settle(self._state, reply)
         await _send_reply(self._send, self._state.authored.author(reply), self._state.method)
 
 

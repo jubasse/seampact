@@ -86,12 +86,26 @@ class GetTaskInput:
     headers: _schemas.GetTaskHeaders
 
 
+class _Redacted:
+    """Stands for a sensitive value in a `repr`."""
+
+    def __repr__(self) -> str:
+        return "[redacted]"
+
+
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class GetTaskRequest:
     """What the handler of operation 'getTask' reads: its input and who is calling."""
 
     input: GetTaskInput
     principal: _schemas.ServicePrincipal
+
+    def __repr__(self) -> str:
+        return f"GetTaskRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True)
