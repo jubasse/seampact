@@ -165,7 +165,7 @@ def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> li
         f"deciders: {factories('DecideHook')}",
         f"scope_resolvers: {factories('ResolveScopeHook')}",
         f"idempotency_store: {_RUNTIME}.Factory[{_HOOKS}.IdempotencyStore] | None = None",
-        f"on_unexpected_error: {_RUNTIME}.Factory[object] | None = None",
+        f"on_unexpected_error: {_RUNTIME}.Factory[{_HOOKS}.UnexpectedErrorListener] | None = None",
         f"responses: {_RUNTIME}.ResponsesMode | None = None",
         "body_validation: bool | None = None",
         f"operations: {_ABC}.Mapping[str, {_RUNTIME}.OperationSettings] | None = None",

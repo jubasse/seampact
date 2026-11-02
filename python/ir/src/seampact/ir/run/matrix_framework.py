@@ -5,10 +5,12 @@ and the `floor`, the lowest `<major>.<minor>` it works on."""
 
 import json
 import re
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import cache
 from importlib import resources
+from types import MappingProxyType
 from typing import Final
 
 _FLOOR_PATTERN: Final = re.compile(r"(\d+)\.(\d+)\Z")
@@ -27,7 +29,7 @@ class MatrixFramework:
     unit: VersionUnit
     floor: str
     tested: tuple[str, ...]
-    incompatible: dict[str, str]
+    incompatible: Mapping[str, str]
 
     def unit_of(self, major: int, minor: int) -> str:
         return str(major) if self.unit is VersionUnit.MAJOR else f"{major}.{minor}"
@@ -35,6 +37,12 @@ class MatrixFramework:
     def tested_items(self) -> list[str]:
         """The `allowUntested` items that name a tested unit."""
         return [f"{self.id}@{unit}" for unit in self.tested]
+
+    def accepted_units(self, allow_untested: Sequence[str]) -> tuple[str, ...]:
+        """The units `generate` accepts: the tested ones, then those the entry's `allowUntested` names."""
+        allowed = [item.removeprefix(f"{self.id}@") for item in allow_untested if item.startswith(f"{self.id}@")]
+
+        return (*self.tested, *(unit for unit in allowed if unit not in self.tested))
 
     def is_below_floor(self, major: int, minor: int) -> bool:
         floor = _FLOOR_PATTERN.match(self.floor)
@@ -103,5 +111,5 @@ def _framework_of(item: dict[str, object]) -> MatrixFramework:
         VersionUnit(str(item["unit"])),
         str(item["floor"]),
         tuple(str(unit) for unit in tested),
-        {str(row["unit"]): str(row["reason"]) for row in incompatible},
+        MappingProxyType({str(row["unit"]): str(row["reason"]) for row in incompatible}),
     )

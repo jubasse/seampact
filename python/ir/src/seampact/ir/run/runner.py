@@ -33,8 +33,10 @@ from seampact.ir.run.contract_apis import ContractApis
 from seampact.ir.run.discovery import InstalledTarget, discover_target, installed_versions
 from seampact.ir.run.documents import documents_sources, run_documents
 from seampact.ir.run.entry_plan import EntryPlan
+from seampact.ir.run.framework_docs import framework_docs_problems
 from seampact.ir.run.generator import FrameworkRoute, GenerationRefusedError, TargetEntry
 from seampact.ir.run.matrix_check import check_matrix
+from seampact.ir.run.matrix_framework import python_targets
 from seampact.ir.run.problems import problem_of_binary, problem_of_ir, problem_of_writer
 from seampact.ir.run.report import RunReport, refused_report
 from seampact.ir.write import (
@@ -187,6 +189,7 @@ def _prepare(settings: RunSettings, on_hand_edit: HandEditPolicy) -> _PreparedRu
             problems.append(target)
         else:
             targets[entry.id] = target
+            problems.extend(framework_docs_problems(entry, target.generator))
 
     if problems:
         return problems
@@ -289,6 +292,8 @@ def _generated_api(
                     output_directory,
                     _framework_routes(entry),
                     string_of(entry.entry, "mount"),
+                    python_targets().get(entry.use),
+                    tuple(strings_of(entry.entry, "allowUntested") or []),
                 ),
             )
         )

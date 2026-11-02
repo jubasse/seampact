@@ -8,6 +8,7 @@ from typing import Final
 from seampact.codegen.printer import INDENT, fits
 
 _DEFINITIONS: Final = ("class ", "def ", "async def ", "@")
+OPERATIONS_MODULE: Final = "operations"
 
 
 def bracketed(indent: str, head: str, arguments: Sequence[str], tail: str) -> list[str]:
@@ -27,18 +28,15 @@ def bracketed(indent: str, head: str, arguments: Sequence[str], tail: str) -> li
 
 def with_local_imports(modules: Sequence[str], names: Sequence[str], first_block: Sequence[str]) -> list[str]:
     """The first block of a module, preceded by `from . import <module> as _<module>` for each sibling module and
-    `from . import <names>` for names of the package's root, sorted as ruff sorts them."""
-    imports: list[str] = []
+    `from .operations import <names>` for names of the package's operations module, sorted as ruff sorts them."""
+    imports = [f"from . import {module} as _{module}" for module in sorted(modules)]
     ordered = sorted(set(names), key=_member_order)
-    single = f"from . import {', '.join(ordered)}"
+    single = f"from .{OPERATIONS_MODULE} import {', '.join(ordered)}"
 
     if ordered and fits(single):
         imports.append(single)
     elif ordered:
-        imports += ["from . import (", *(f"{INDENT}{name}," for name in ordered), ")"]
-
-    # ruff writes an aliased import after the plain ones of the same module.
-    imports += [f"from . import {module} as _{module}" for module in sorted(modules)]
+        imports += [f"from .{OPERATIONS_MODULE} import (", *(f"{INDENT}{name}," for name in ordered), ")"]
 
     separator = ["", ""] if first_block and first_block[0].startswith(_DEFINITIONS) else [""]
 

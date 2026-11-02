@@ -1,12 +1,13 @@
 """The `seampact-drf` generator (ADR 0027 "DRF"), the class the `seampact.generators` entry point names: per api a
-package of the schema types, the operation types and handler protocols, the route helpers, the URLconf, the typed
-settings, the boundary's declaration and the DRF placement. Every refusal is listed at once, and no file is written
-when there is one."""
+package of the schema types, the operation types and handler protocols, the contract the runtime reads, the route
+helpers, the URLconf, the typed settings, the boundary's declaration and the DRF placement. Every refusal is listed at
+once, and no file is written when there is one."""
 
 import json
 from collections.abc import Sequence
 from typing import Final
 
+from seampact.codegen.contract_module import contract_module
 from seampact.codegen.kept_forms import refuse_kept_forms
 from seampact.codegen.names import api_names
 from seampact.codegen.printer import PythonModule
@@ -44,6 +45,9 @@ class DrfGenerator:
     def ir_support(self) -> IrSupport:
         return IrSupport.of_model(kinds=["httpOperation"])
 
+    def framework_docs_off_fix(self) -> str | None:
+        return "Remove `frameworkDocs: off` from the entry and remove the app's own schema view from its URLconf."
+
     def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
         refusals = Refusals(entry.id, TARGET, DISTRIBUTION)
         options = drf_options(entry.options, entry.artefacts, refusals)
@@ -58,6 +62,7 @@ class DrfGenerator:
             "__init__.py": PythonModule(f"The generated code of api '{ir.api.id}' for the DRF target.").text(),
             "schemas.py": dataclass_schemas_module(ir, names, refusals),
             "operations.py": operations_module(ir, names, layout, refusals),
+            "contract.py": contract_module(ir, names, entry.mount or "", refusals),
             "urls.py": urls_module(ir.api.id, paths, lambda module, path: _view_of(ir, module, path)),
             "settings.py": settings_module(
                 ir.api.id, layout.api_class, [owner.key for owner in layout.owners.values()], [_ACCESS_KEY]

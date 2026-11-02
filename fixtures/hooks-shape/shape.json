@@ -304,6 +304,23 @@
       ]
     },
     { "name": "Field", "kind": "alias", "languages": ["python"] },
-    { "name": "Absent", "kind": "enum", "languages": ["python"], "values": ["absent"] }
+    { "name": "Absent", "kind": "enum", "languages": ["python"], "values": ["absent"] },
+    {
+      "name": "UnexpectedFailure",
+      "kind": "record",
+      "languages": ["python"],
+      "members": [
+        { "name": "api" },
+        { "name": "operation", "nullable": true },
+        { "name": "reason" },
+        { "name": "cause", "optional": true }
+      ]
+    },
+    {
+      "name": "UnexpectedErrorListener",
+      "kind": "hook",
+      "languages": ["python"],
+      "methods": [{ "name": "onUnexpectedError", "parameters": ["failure"], "returns": "void" }]
+    }
   ]
 }

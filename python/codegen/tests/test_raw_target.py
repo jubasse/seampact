@@ -16,7 +16,9 @@ _TASK = "/v1/channels/c1/tasks"
 def tasks(repository_root: Path) -> ApiContract:
     ir_view = json.loads((repository_root / "fixtures/golden/reference/tasks.ir.json").read_text(encoding="utf-8"))
 
-    return ApiContract(api="tasks", generated_by="0.0.0-dev", mount="", ir_view=ir_view, members={})
+    return ApiContract(
+        api="tasks", generated_by="0.0.0-dev", mount="", ir_view=ir_view, members={}, operation_members={}
+    )
 
 
 def test_asgi_takes_the_raw_path_as_sent_and_the_raw_query() -> None:
@@ -92,7 +94,9 @@ def test_the_raw_path_matches_the_contract_templates(
 
 
 def test_a_mount_prefixes_every_template_and_base_path(tasks: ApiContract) -> None:
-    mounted = ApiContract(api="tasks", generated_by="0.0.0-dev", mount="/api", ir_view=tasks.ir_view, members={})
+    mounted = ApiContract(
+        api="tasks", generated_by="0.0.0-dev", mount="/api", ir_view=tasks.ir_view, members={}, operation_members={}
+    )
 
     assert mounted.match("GET", "/api/v1/health") == RouteMatch("health", {})
     assert mounted.match("GET", "/v1/health") is None

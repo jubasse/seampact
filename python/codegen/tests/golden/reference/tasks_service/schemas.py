@@ -89,38 +89,3 @@ class WebhookCaller(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
     account: str
-
-
-SCHEMA_MEMBERS: _typing.Final = {
-    "ApiForbiddenParams": {
-        "pointer": "pointer",
-    },
-    "ApiSchemaInvalidParams": {
-        "issues": "issues",
-    },
-    "CallerServiceParams": {
-        "allowed": "allowed",
-    },
-    "IssuesItem": {
-        "pointer": "pointer",
-        "rule": "rule",
-    },
-    "ServicePrincipal": {
-        "service": "service",
-        "userId": "user_id",
-    },
-    "Task": {
-        "taskId": "task_id",
-        "title": "title",
-        "state": "state",
-        "effort": "effort",
-        "version": "version",
-        "createdAt": "created_at",
-    },
-    "UserPrincipal": {
-        "userId": "user_id",
-    },
-    "WebhookCaller": {
-        "account": "account",
-    },
-}

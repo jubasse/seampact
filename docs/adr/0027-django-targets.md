@@ -93,6 +93,10 @@ The body read:
 - A server that does not set it (`runserver`, whose `wsgi.input` reads empty, review probe) gives the boundary no way to read the body. The boundary then refuses a chunked request without `Content-Length` as the client's 400, as ADR 0026 refuses a corrupt compressed body, and its start log line lists the gap.
 - `DATA_UPLOAD_MAX_MEMORY_SIZE` below the api's largest body limit would make Django refuse, as a 400, a body the contract accepts. The boot check refuses it.
 
+#### Generated modules
+
+As ADR 0026 says for every Python target, the schema types go into the package's `schemas` module, the operation types into its `operations` module, and the contract the runtime reads (security, access, idempotency, paging, relay, cache, wire names and the unknown-key policies per operation) into its `contract` module, which `seampact-codegen` writes the same way for FastAPI, DRF and Ninja.
+
 #### Routes
 
 Codegen emits, per api, a `urls` module of `path()` entries. The app includes it at `""` in its root URLconf. Each placeholder uses Django's `str` converter, named `path_<attribute>` after its input attribute, so it takes one whole segment and never clashes with a view argument such as `request` or `self`. Per path depth, literal segments come before placeholders. The DRF and Ninja sections say which view each entry points to. `generate` refuses the path segments ADR 0026 "Routes" lists, with the same codes.

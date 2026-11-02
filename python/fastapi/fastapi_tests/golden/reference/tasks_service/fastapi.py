@@ -7,7 +7,7 @@ import typing as _typing
 import seampact.fastapi.runtime as _runtime
 import seampact.hooks as _hooks
 
-from . import GetTaskRequest, GetTaskResult, InternalEndpoints, TasksServiceContractError
+from .operations import GetTaskRequest, GetTaskResult, InternalEndpoints, TasksServiceContractError
 
 GENERATED_BY: _typing.Final = "0.0.0-dev"
 
@@ -58,7 +58,7 @@ def bind_tasks_service(
     deciders: _abc.Mapping[str, _runtime.Factory[_hooks.DecideHook]] | None = None,
     scope_resolvers: _abc.Mapping[str, _runtime.Factory[_hooks.ResolveScopeHook]] | None = None,
     idempotency_store: _runtime.Factory[_hooks.IdempotencyStore] | None = None,
-    on_unexpected_error: _runtime.Factory[object] | None = None,
+    on_unexpected_error: _runtime.Factory[_hooks.UnexpectedErrorListener] | None = None,
     responses: _runtime.ResponsesMode | None = None,
     body_validation: bool | None = None,
     operations: _abc.Mapping[str, _runtime.OperationSettings] | None = None,
