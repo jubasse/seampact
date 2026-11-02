@@ -3,7 +3,6 @@ package of the schema types, the operation types and handler protocols, the cont
 helpers, the URLconf, the typed settings, the boundary's declaration and the DRF placement. Every refusal is listed at
 once, and no file is written when there is one."""
 
-import json
 from collections.abc import Sequence
 from typing import Final
 
@@ -18,9 +17,11 @@ from seampact.codegen.runtime.version import RUNTIME_VERSION
 from seampact.django.emitters import (
     BoundaryBase,
     ContractPath,
+    OptionReader,
     SettingsKey,
     boundary_module,
     contract_paths,
+    django_target_options,
     routes_named_by_path,
     settings_module,
     urls_module,
@@ -29,7 +30,7 @@ from seampact.drf.api_layout import ApiLayout, api_layout
 from seampact.drf.dataclass_schemas import dataclass_schemas_module
 from seampact.drf.drf_module import drf_module, view_class
 from seampact.drf.operation_types import operations_module
-from seampact.drf.options import DrfOptions, drf_options
+from seampact.drf.serializer_fields import RulesMode
 from seampact.ir.model import ContractIR, InputMediaType
 from seampact.ir.read import IrSupport
 from seampact.ir.run.generator import TargetEntry
@@ -41,6 +42,7 @@ DISTRIBUTION: Final = "seampact-drf"
 # DRF's own names for the classes an app sets per access kind (ADR 0027 "DRF").
 _ACCESS_KEY: Final = SettingsKey("access", "_abc.Mapping[str, _abc.Mapping[str, _abc.Sequence[str]]]")
 # The boundary base whose boot check also reads the `access` setting.
+_RULES: Final = "rules"
 _BOUNDARY_BASE: Final = BoundaryBase("seampact.drf.runtime", "_drf_runtime", "DrfContractBoundary")
 
 
@@ -53,7 +55,8 @@ class DrfGenerator:
 
     def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
         refusals = Refusals(entry.id, TARGET, DISTRIBUTION)
-        options = drf_options(entry.options, entry.artefacts, refusals)
+        options = django_target_options(TARGET, (_RULES,), entry.options, entry.artefacts, refusals)
+        rules = OptionReader(entry.options, refusals).choice(_RULES, RulesMode.NATIVE)
         refuse_kept_forms(ir, refusals)
         names = api_names(ir, refusals)
         layout = api_layout(ir, refusals)
@@ -74,11 +77,11 @@ class DrfGenerator:
                 layout.api_class,
                 RUNTIME_VERSION,
                 _operations_by_resource(layout),
-                _run_time_options(options),
+                options.run_time_options(),
                 entry,
                 _BOUNDARY_BASE,
             ),
-            "drf.py": drf_module(ir, names, layout, paths, options.rules, refusals),
+            "drf.py": drf_module(ir, names, layout, paths, rules, refusals),
         }
 
         if options.route_helpers:
@@ -104,18 +107,6 @@ def _operations_by_resource(layout: ApiLayout) -> dict[str, list[str]]:
         operations[names.owner.key].append(operation_id)
 
     return operations
-
-
-def _run_time_options(options: DrfOptions) -> list[tuple[str, str]]:
-    return [
-        ("responses", json.dumps(options.responses.value)),
-        ("body_validation", repr(options.body_validation)),
-        ("framework_etag", json.dumps(options.framework_etag.value)),
-        ("catch_all", repr(options.catch_all)),
-        ("boot_check", repr(options.boot_check.enabled)),
-        ("boot_check_framework_routes", repr(options.boot_check.framework_routes)),
-        ("boot_check_hooks", repr(options.boot_check.hooks)),
-    ]
 
 
 def _refuse_input_media(ir: ContractIR, refusals: Refusals) -> None:
