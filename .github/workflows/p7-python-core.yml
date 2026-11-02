@@ -342,3 +342,4 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.python-core }}
+          allow-skip: ${{ needs.changes.outputs.binary-row == 'false' && 'binary binary-runner' || '' }}
