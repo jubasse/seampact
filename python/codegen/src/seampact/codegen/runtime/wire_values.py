@@ -22,6 +22,7 @@ _PLACEHOLDER: Final = re.compile(r"\{([^{}]+)\}")
 _COMPONENT_SAFE: Final = "-_.!~*'()"
 # RFC 3986's query characters beside the alphanumerics: what a kept query pair may hold unescaped in a `Link` target.
 _QUERY_SAFE: Final = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~!$&'()*+,;=:@/?")
+_PATH_SAFE: Final = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~/")
 _HEX_DIGITS: Final = frozenset(b"0123456789abcdefABCDEF")
 _PERCENT: Final = ord("%")
 # The raw query is text read from its bytes one to one (`RawTarget`), so a pair goes back to its bytes the same way.
@@ -183,12 +184,22 @@ def kept_query_pairs(raw: str, names: Sequence[str]) -> list[str]:
 def link_safe(pair: str) -> str:
     """Bytes outside the RFC 3986 query set, and a `%` that starts no escape, percent-encoded, so a raw `>` or `"` the
     server accepted cannot break a `Link` target built from the pair."""
-    data = pair.encode(_BYTES_AS_TEXT, errors="strict")
+    return _escaped_outside(pair, _QUERY_SAFE)
+
+
+def path_link_safe(request_path: str) -> str:
+    """The request path with every byte but the unreserved ones and `/` percent-encoded, valid escapes kept, so a
+    segment the server accepted adds no relation to a `Link` header or an absolute link built from it."""
+    return _escaped_outside(request_path, _PATH_SAFE)
+
+
+def _escaped_outside(text: str, safe_bytes: frozenset[int]) -> str:
+    data = text.encode(_BYTES_AS_TEXT, errors="strict")
     safe: list[str] = []
 
     for index, byte in enumerate(data):
         starts_escape = byte == _PERCENT and _is_escape(data, index)
-        kept = starts_escape or (byte != _PERCENT and byte in _QUERY_SAFE)
+        kept = starts_escape or (byte != _PERCENT and byte in safe_bytes)
         safe.append(chr(byte) if kept else f"%{byte:02X}")
 
     return "".join(safe)

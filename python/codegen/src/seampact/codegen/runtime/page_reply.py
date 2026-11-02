@@ -1,6 +1,7 @@
 """The page a paged list answers (ADR 0002 section 14): the limit the handler receives, then the body, headers and
 `Link` relations the paging style writes from the handler's page facts and the request's position. Links are
-relative references (`api.wire.urls: relative`); absolute URLs are refused by name until a consumer needs them."""
+query-only references under relative URLs (`api.wire.urls: relative`), and start with the public origin and the
+request path under absolute ones."""
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -9,8 +10,9 @@ from typing import Final, TypeGuard
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError
 from seampact.codegen.runtime.ir_view import IrMap, ir_int, ir_map, ir_maps, ir_string, ir_strings
+from seampact.codegen.runtime.public_origin import writes_absolute_urls
 from seampact.codegen.runtime.templates import render
-from seampact.codegen.runtime.wire_values import component_encoded, kept_query_pairs
+from seampact.codegen.runtime.wire_values import component_encoded, kept_query_pairs, path_link_safe
 
 LINK: Final = "link"
 
@@ -25,11 +27,25 @@ _SINCE: Final = "since"
 _CURSOR: Final = "cursor"
 _MORE: Final = "more"
 _TOTAL: Final = "total"
-_ABSOLUTE_URLS: Final = "absolute"
 _DEFAULT_PAGE_BASE: Final = 1
 _FIRST_OFFSET: Final = 0
 # The largest position the contract's int64 page and offset parameters carry.
 _INT64_MAX: Final = 2**63 - 1
+
+
+@dataclass(frozen=True, slots=True)
+class _PageLinks:
+    """The query the client sent and what each link starts with: nothing under relative URLs, the public origin and
+    the request path under absolute ones."""
+
+    raw_query: str
+    url_base: str
+
+    def with_member(self, name: str, value: str) -> str:
+        return _page_url(self.url_base, _with_query_member(self.raw_query, name, value))
+
+    def without_members(self, names: Sequence[str]) -> str:
+        return _page_url(self.url_base, _without_query_members(self.raw_query, names))
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,17 +84,15 @@ def page_parts(
     facts: Mapping[str, object],
     status: int,
     request_path: str,
+    *,
+    public_origin: str | None = None,
 ) -> PageParts:
     """The page body and headers from the handler's page facts by name (`items` already encoded and projected), the
-    decoded `query` and the raw one the links keep.
+    decoded `query` and the raw one the links keep. `request_path` is the path as the client sent it, still
+    percent-encoded; `public_origin` is `configured_origin`'s answer, None under relative URLs.
 
-    Raises `BoundaryFailureError` for absolute URLs, or a numbered style without a limit."""
-    if ir_string(ir_map(ir_map(contract.ir_view, "api"), "wire"), "urls") == _ABSOLUTE_URLS:
-        raise BoundaryFailureError(
-            f"seampact: the api '{contract.api}' writes absolute URLs ('api.wire.urls: absolute'), which this "
-            "seampact release does not write in page links yet; write relative URLs."
-        )
-
+    Raises `BoundaryFailureError` for absolute URLs without a public origin, an origin under relative URLs, or a
+    numbered style without a limit."""
     style = _style(contract, operation_id)
     write_nulls = ir_string(style, "absent") == _NULL_ABSENT
     slots: dict[str, object] = {
@@ -93,13 +107,14 @@ def page_parts(
         if _is_int(total) and limit > 0:
             slots["totalPages"] = -(-total // limit)
 
-    slots["self"] = _page_url(_without_query_members(raw_query, []))
+    links = _PageLinks(raw_query, _url_base(contract, public_origin, request_path))
+    slots["self"] = links.without_members([])
     position = ir_string(style, "position")
 
     if position in (_PAGE, _OFFSET):
-        _add_numbered_slots(operation_id, style, query, raw_query, facts, len(items), limit, slots)
+        _add_numbered_slots(operation_id, style, query, links, facts, len(items), limit, slots)
     else:
-        _add_token_slots(style, raw_query, facts, position, slots)
+        _add_token_slots(style, links, facts, position, slots)
 
     slots["items"] = list(items)
     slots["status"] = status
@@ -172,7 +187,7 @@ def _add_numbered_slots(
     operation_id: str,
     style: IrMap,
     query: Mapping[str, object],
-    raw_query: str,
+    links: _PageLinks,
     facts: Mapping[str, object],
     item_count: int,
     limit: int | None,
@@ -213,34 +228,34 @@ def _add_numbered_slots(
         slots["from"] = offset + 1
         slots["to"] = offset + item_count
 
-    slots["first"] = _page_url(_with_query_member(raw_query, position_param, _position_at(position, base, 0, limit)))
+    slots["first"] = links.with_member(position_param, _position_at(position, base, 0, limit))
 
     if offset > _FIRST_OFFSET:
         previous = str(base + page_index - 1) if is_page else str(max(offset - limit, _FIRST_OFFSET))
-        slots["previous"] = _page_url(_with_query_member(raw_query, position_param, previous))
+        slots["previous"] = links.with_member(position_param, previous)
 
     if has_next:
         # An offset the client chose need not fall on a page start: the next page starts one limit further.
         following = _position_at(_PAGE, base, page_index + 1, limit) if is_page else str(offset + limit)
-        slots["next"] = _page_url(_with_query_member(raw_query, position_param, following))
+        slots["next"] = links.with_member(position_param, following)
 
     total_pages = slots.get("totalPages")
 
     if _is_int(total_pages):
         last_index = max(total_pages - 1, 0)
         last = _position_at(position, base, last_index, limit)
-        slots["last"] = _page_url(_with_query_member(raw_query, position_param, last))
+        slots["last"] = links.with_member(position_param, last)
 
 
 def _add_token_slots(
-    style: IrMap, raw_query: str, facts: Mapping[str, object], position: str | None, slots: dict[str, object]
+    style: IrMap, links: _PageLinks, facts: Mapping[str, object], position: str | None, slots: dict[str, object]
 ) -> None:
     """A cursor or since position: the URLs carry the tokens the handler returned."""
     position_param = ir_string(_position_role(style), "name") or ""
     before_param = _role_name(style, _BEFORE_ROLE)
     removed = [position_param] if before_param is None else [position_param, before_param]
-    without_position = _without_query_members(raw_query, removed)
-    slots["first"] = _page_url(without_position)
+    without_position = _PageLinks(_without_query_members(links.raw_query, removed), links.url_base)
+    slots["first"] = without_position.without_members([])
     tokens = (
         [("next", position_param, facts.get("nextSince"))]
         if position == _SINCE
@@ -252,7 +267,7 @@ def _add_token_slots(
 
     for role, param, token in tokens:
         if isinstance(token, str):
-            slots[role] = _page_url(_with_query_member(without_position, param, token))
+            slots[role] = without_position.with_member(param, token)
 
 
 def _position_at(position: str | None, base: int, index: int, limit: int) -> str:
@@ -318,10 +333,31 @@ def _with_query_member(raw_query: str, name: str, value: str) -> str:
     return member if kept == "" else f"{kept}&{member}"
 
 
-def _page_url(query: str) -> str:
-    """A query-only reference (RFC 3986): it resolves against the URL the client called, so it keeps a path prefix a
-    reverse proxy stripped. An empty query is `?`, since an empty reference would keep the called query."""
-    return f"?{query}"
+def _url_base(contract: ApiContract, public_origin: str | None, request_path: str) -> str:
+    if not writes_absolute_urls(contract):
+        if public_origin is not None:
+            raise BoundaryFailureError(
+                f"seampact: the api '{contract.api}' writes relative URLs and its page links were given a public "
+                "origin; remove public_origin, or set 'api.wire.urls: absolute'."
+            )
+
+        return ""
+
+    if public_origin is None:
+        raise BoundaryFailureError(
+            f"seampact: the api '{contract.api}' writes absolute URLs ('api.wire.urls: absolute') and its page links "
+            "have no valid public origin; set public_origin to the origin clients call, such as "
+            "https://api.example.com."
+        )
+
+    return f"{public_origin}{path_link_safe(request_path)}"
+
+
+def _page_url(url_base: str, query: str) -> str:
+    """Under relative URLs a query-only reference (RFC 3986): it resolves against the URL the client called, so it
+    keeps a path prefix a reverse proxy stripped. An empty query is `?`, since an empty reference would keep the
+    called query. Under absolute URLs the base is the public origin and the request path."""
+    return f"{url_base}?{query}"
 
 
 def _is_int(value: object) -> TypeGuard[int]:
