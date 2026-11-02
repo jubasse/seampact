@@ -2,17 +2,26 @@
 number or boolean its type names when the text spells one, and kept as text otherwise, so the type rule reports it.
 The query is read from the raw query string with form decoding, never through a framework's parsed query."""
 
+import math
 import re
 from collections.abc import Mapping, Sequence
+from decimal import Decimal
 from typing import Final
-from urllib.parse import unquote_plus, unquote_to_bytes
+from urllib.parse import quote, unquote_plus, unquote_to_bytes
 
 from seampact.codegen.runtime.ir_view import ir_map, ir_string
+from seampact.codegen.runtime.wire_codec import scalar_to_wire
 
 _INTEGER: Final = re.compile(r"-?(0|[1-9][0-9]*)")
 _NUMBER: Final = re.compile(r"-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?")
 _TRUE: Final = "true"
 _FALSE: Final = "false"
+_PLACEHOLDER: Final = re.compile(r"\{([^{}]+)\}")
+# `encodeURIComponent` keeps the unreserved set and `!*'()`.
+_COMPONENT_SAFE: Final = "-_.!~*'()"
+# `Number#toString` writes plain digits while the decimal point sits at most 21 digits right and 6 zeros left.
+_DECIMAL_DIGITS_MAX: Final = 21
+_DECIMAL_ZEROS_MIN: Final = -6
 
 
 def decoded_segment(raw: str) -> str | None:
@@ -87,3 +96,71 @@ def _form_decoded(text: str) -> str:
         return unquote_plus(text, encoding="utf-8", errors="strict")
     except UnicodeDecodeError:
         return text
+
+
+def contract_path(template: str, values: Mapping[str, object]) -> str:
+    """The contract path `template` with each `{wire name}` replaced by its value encoded as one segment, as the
+    generated route helpers build a path.
+
+    Raises `ValueError` for a value that cannot be one segment."""
+    return _PLACEHOLDER.sub(
+        lambda placeholder: path_segment(placeholder.group(1), values[placeholder.group(1)]), template
+    )
+
+
+def path_segment(name: str, value: object) -> str:
+    """A path value as one segment, as the generated clients send it: its wire text, encoded as JavaScript's
+    `encodeURIComponent` writes it.
+
+    Raises `ValueError` for an empty, `.` or `..` text, which a URL parser reads as another route, or a value with no
+    wire text."""
+    text = _wire_text(name, value)
+
+    if text in ("", ".", ".."):
+        raise ValueError(
+            f"The path parameter '{name}' must be one non-empty segment, not '{text}': it would reach another route."
+        )
+
+    return quote(text, safe=_COMPONENT_SAFE)
+
+
+def _wire_text(name: str, value: object) -> str:
+    if isinstance(value, bool):
+        return _TRUE if value else _FALSE
+
+    if isinstance(value, float):
+        return _javascript_number(name, value)
+
+    wire = scalar_to_wire(value)
+
+    if not isinstance(wire, str | int):
+        raise ValueError(f"The path parameter '{name}' has no wire text: {type(value).__qualname__}.")
+
+    return str(wire)
+
+
+def _javascript_number(name: str, value: float) -> str:
+    """The text JavaScript's `String(value)` writes: plain digits from 1e-7 up to 1e21, an exponent outside."""
+    if not math.isfinite(value):
+        raise ValueError(f"The path parameter '{name}' must be a finite number, not {value}.")
+
+    if value == 0:
+        return "0"
+
+    _sign, digit_tuple, exponent = Decimal(repr(abs(value))).normalize().as_tuple()
+    digits = "".join(str(digit) for digit in digit_tuple)
+    point = len(digits) + int(exponent)
+    prefix = "-" if value < 0 else ""
+
+    if len(digits) <= point <= _DECIMAL_DIGITS_MAX:
+        return prefix + digits + "0" * (point - len(digits))
+
+    if 0 < point <= _DECIMAL_DIGITS_MAX:
+        return prefix + digits[:point] + "." + digits[point:]
+
+    if _DECIMAL_ZEROS_MIN < point <= 0:
+        return prefix + "0." + "0" * -point + digits
+
+    mantissa = digits[0] + ("." + digits[1:] if len(digits) > 1 else "")
+
+    return f"{prefix}{mantissa}e{'+' if point > 0 else '-'}{abs(point - 1)}"
