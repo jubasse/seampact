@@ -183,7 +183,7 @@ The check lists every problem at once:
 - a root URLconf whose error handlers carry no wrapper;
 - the boundary not first in `MIDDLEWARE`, other seampact boundaries aside;
 - `DATA_UPLOAD_MAX_MEMORY_SIZE` below the api's largest body limit;
-- a `public_origin` set under relative URLs, or a missing or malformed one under absolute URLs, with ADR 0026's item; page links write it before the raw request path;
+- a `public_origin` set under relative URLs, or a missing or malformed one under absolute URLs, with ADR 0026's item; page links write it before the script name and the raw request path;
 - on DRF, an `access` setting the views cannot use: an unknown access kind or DRF name, a kind no operation has, a path that does not import or names no class of DRF's matching base;
 - a Django, DRF or Ninja major outside the matrix that `allowUntested` did not name at `generate`, read with `importlib.metadata`, as Laravel's boot check refuses a major other than 13. The generated code records the majors `generate` accepted.
 

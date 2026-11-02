@@ -9,6 +9,7 @@ import logging
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping, Sequence
 from types import MappingProxyType
 from typing import ClassVar, Final
+from urllib.parse import quote
 
 from asgiref.sync import iscoroutinefunction, markcoroutinefunction, sync_to_async
 from django.conf import settings
@@ -68,6 +69,7 @@ _TECHNICAL_PAGE_STATUSES: Final = frozenset({400, 404})
 _HTML: Final = "text/html"
 _HEAD: Final = "HEAD"
 _WSGI_CHUNK_BYTES: Final = 65536
+_SCRIPT_PREFIX_SAFE: Final = "/"
 
 
 class ContractBoundary:
@@ -219,7 +221,8 @@ class ContractBoundary:
         except BoundaryFailureError as failure:
             return unexpected_response(request, self.contract, operation_id, "decoding the input failed", failure)
 
-        attach(request, BoundaryState(self.contract, operation_id, matched.raw_parameters, decoded, target.path))
+        request_path = _script_prefix(request) + target.path
+        attach(request, BoundaryState(self.contract, operation_id, matched.raw_parameters, decoded, request_path))
         _route_without_origin(request)
 
         return None
@@ -453,6 +456,15 @@ def _route_without_origin(request: HttpRequest) -> None:
 
     request.path = request.path.removesuffix(request.path_info) + path_info
     request.path_info = path_info
+
+
+def _script_prefix(request: HttpRequest) -> str:
+    """The prefix the raw target lost before the match, as page links name it: the ASGI `root_path` or the WSGI
+    `SCRIPT_NAME`, percent-encoded."""
+    scope = getattr(request, "scope", None)
+    prefix = scope.get("root_path", "") if isinstance(scope, dict) else request.META.get("SCRIPT_NAME", "")
+
+    return quote(str(prefix).rstrip("/"), safe=_SCRIPT_PREFIX_SAFE)
 
 
 def _raw_target(request: HttpRequest) -> RawTarget | None:

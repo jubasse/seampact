@@ -31,7 +31,8 @@ class BoundaryState:
     operation_id: str
     raw_parameters: dict[str, str]
     decoded: DecodedInput
-    # The path as the client sent it, still percent-encoded where the server keeps it; page links start with it.
+    # The path as the client sent it, script name included, still percent-encoded where the server keeps it; page
+    # links start with it.
     request_path: str
     authored: AuthoredReplies = field(default_factory=AuthoredReplies)
     admitted_operation: str | None = None

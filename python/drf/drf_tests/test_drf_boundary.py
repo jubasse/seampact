@@ -248,6 +248,14 @@ class CorsMiddleware:
         return self.get_response(request)
 
 
+class _MountedAsyncClient(AsyncClient):
+    """An ASGI server mounting the app under `/svc`: Django's test client sets no `root_path`, and the stubs leave out
+    the private method that builds its scope."""
+
+    def _base_scope(self, **request: object) -> dict[str, object]:
+        return {**super()._base_scope(**request), "root_path": "/svc"}  # type: ignore[misc]
+
+
 def user_reading_hooks(request: HttpRequest) -> _Hooks:
     """The hooks, after recording the user DRF's authentication set on the Django request."""
     hook_factory_users.append(request.user)
@@ -529,7 +537,7 @@ def test_absolute_page_links_keep_the_script_name_under_wsgi_and_asgi(monkeypatc
     page = f"/v1/channels/{_CHANNEL_ID}/tasks"
 
     async def under_asgi() -> HttpResponseBase:
-        return await AsyncClient().get(f"/svc{page}", headers=_bearer(), root_path="/svc")
+        return await _MountedAsyncClient().get(f"/svc{page}", headers=_bearer())
 
     with override_settings(SEAMPACT={"tasks": {**_settings(), "public_origin": _PUBLIC_ORIGIN}}):
         wsgi = Client().get(page, headers=_bearer(), SCRIPT_NAME="/svc")
