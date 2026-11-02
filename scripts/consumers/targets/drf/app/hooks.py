@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Final
 
 from django.http import HttpRequest
+from drf_auth import TokenUser, user_id_of
 from generated.tasks.operations import StripeCredentials, UserCredentials
 from generated.tasks.schemas import UserPrincipal, WebhookCaller
 from generated.tasks_service.operations import ServiceCredentials
@@ -46,22 +47,29 @@ _LOGGER: Final = logging.getLogger("consumer.tasks")
 
 
 class UserHook:
-    """The `user` identity: a bearer token of the credentials, or the same token as the session cookie."""
+    """The `user` identity: a bearer token DRF's `SuiteTokenAuthentication` signed in, or a token of the credentials
+    as the session cookie."""
+
+    def __init__(self, drf_user: object) -> None:
+        self._drf_user = drf_user
 
     def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
         record_hook_call("authenticate:user", request.operation.api, request.operation.id)
         credentials = request.credentials
-        token = (credentials.bearer or credentials.session_cookie) if isinstance(credentials, UserCredentials) else None
-        user_ids = {
-            credential_text("userToken"): credential_text("userId"),
-            credential_text("throttledUserToken"): credential_text("throttledUserId"),
-        }
-        user_id = None if token is None else user_ids.get(token)
+        user_id = self._user_id(credentials) if isinstance(credentials, UserCredentials) else None
 
         if user_id is None:
             return authenticate_result.Denied(deny=ErrorCodeWithParams(code=UNAUTHENTICATED))
 
         return authenticate_result.Authenticated(principal=UserPrincipal(user_id=uuid.UUID(user_id)))
+
+    def _user_id(self, credentials: UserCredentials) -> str | None:
+        if credentials.bearer is not None:
+            user = self._drf_user
+            signed_in = isinstance(user, TokenUser) and user.token == credentials.bearer
+            return user.user_id if signed_in else None
+
+        return None if credentials.session_cookie is None else user_id_of(credentials.session_cookie)
 
 
 class ChannelResolver:
@@ -179,7 +187,7 @@ class TasksUnexpectedErrors:
 
 
 def user_hook(request: HttpRequest) -> UserHook:
-    return UserHook()
+    return UserHook(getattr(request, "user", None))
 
 
 def channel_resolver(request: HttpRequest) -> ChannelResolver:

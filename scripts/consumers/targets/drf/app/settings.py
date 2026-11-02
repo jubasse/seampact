@@ -1,6 +1,6 @@
 """The Django settings of the DRF consumer: the `tasks` and `tasksService` apis' boundaries first in MIDDLEWARE, their
-handlers, hook doubles and idempotency store in SEAMPACT, less what the boot variant (`SEAMPACT_SUITE_BOOT_VARIANT`)
-leaves out."""
+handlers, hook doubles, idempotency store and the DRF token authentication of the `identity` access kind in SEAMPACT,
+less what the boot variant (`SEAMPACT_SUITE_BOOT_VARIANT`) leaves out, and DRF defaults that refuse every request."""
 
 import logging
 from pathlib import Path
@@ -44,6 +44,13 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
 ]
 
+# DRF defaults that would refuse every request: they never apply to a contract route.
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAdminUser"],
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.AnonRateThrottle"],
+    "DEFAULT_THROTTLE_RATES": {"anon": "1/day"},
+}
+
 _handlers = {
     "app": "handlers.app_handlers",
     "channels": "handlers.channels_handlers",
@@ -74,6 +81,7 @@ SEAMPACT = {
         ),
         "idempotency_store": "hooks.idempotency_store",
         "on_unexpected_error": "hooks.unexpected_errors",
+        "access": {"identity": {"authentication_classes": ["drf_auth.SuiteTokenAuthentication"]}},
     },
     "tasksService": {
         "handlers": {"internal": "handlers.internal_handlers"},
