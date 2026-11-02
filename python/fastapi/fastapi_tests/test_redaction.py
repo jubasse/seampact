@@ -1,6 +1,7 @@
 """A generated class of each kind that holds a secret (ADR 0026 "Redaction"): the Pydantic model of a sensitive member,
-an identity's credentials, a replayed idempotent reply and the boundary's request state never show it through `repr`,
-`str`, `pprint`, `logging` with `%r` or `rich`, and print `[redacted]` instead."""
+an identity's credentials, a signed route's input, a handler's request (who is calling), a replayed idempotent reply and
+the boundary's request state never show it through `repr`, `str`, `pprint`, `logging` with `%r` or `rich`, and print
+`[redacted]` instead. A validation error of a generated model never echoes the value it refused."""
 
 import importlib
 import io
@@ -95,6 +96,11 @@ def _secret_holders() -> dict[str, object]:
     return {
         "sensitive model member": _proofs(_SECRET),
         "identity credentials": _golden_class("operations", "UserCredentials")(bearer=_SECRET, session_cookie=_SECRET),
+        "signed route input": _golden_class("operations", "PaymentsInput")(body=_SECRET),
+        "handler request principal": _golden_class("operations", "PaymentsRequest")(input=None, principal=_SECRET),
+        "handler request scopes": _golden_class("operations", "PurgeTaskRequest")(
+            input=None, principal=None, scopes=_SECRET
+        ),
         "replayed reply": ReplayedReply("tasks", IdempotencyReplayed(reply)),
         "request state": state,
     }
@@ -114,3 +120,18 @@ def test_a_sensitive_model_member_stays_readable_by_the_handler() -> None:
 
     assert getattr(proofs, "reauth_token") == _SECRET  # noqa: B009 - the golden model is not type-checked here
     assert proofs.model_dump() == {"reauth_token": _SECRET}
+
+
+def test_the_handler_request_still_shows_its_input() -> None:
+    shown_input = "the-input-the-handler-reads"
+    request = _golden_class("operations", "PaymentsRequest")(input=shown_input, principal=_SECRET)
+
+    assert shown_input in repr(request)
+    assert shown_input in _rich(request)
+
+
+def test_a_validation_error_never_echoes_the_refused_value() -> None:
+    with pytest.raises(pydantic.ValidationError) as refused:
+        _golden_class("schemas", "PurgeTaskProofs")(reauth_token=_SECRET.encode())
+
+    assert _SECRET not in str(refused.value)
