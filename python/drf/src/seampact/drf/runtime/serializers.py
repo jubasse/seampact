@@ -6,6 +6,7 @@ value as it is, with the offset a date-time was sent with. A contract string is 
 sent, NUL and lone surrogates included, and runs every validator, on an empty string too."""
 
 from collections.abc import Callable, Sequence
+from enum import Enum
 from typing import Any, Final
 
 from django.core.validators import MaxLengthValidator, MinLengthValidator
@@ -15,6 +16,7 @@ from rest_framework import serializers
 type SerializerFields = dict[str, serializers.Field[Any, Any, Any, Any]]
 
 _WRONG_TYPE: Final = "type"
+_ENUM: Final = "enum"
 
 
 class ContractSerializer(serializers.Serializer[object]):
@@ -40,10 +42,23 @@ class TypedValueField[V](serializers.Field[V, object, V, object]):
         if type(data) is self.value_type and isinstance(data, self.value_type):
             return data
 
+        if issubclass(self.value_type, Enum) and isinstance(data, str):
+            member = _enum_member(self.value_type, data)
+
+            if isinstance(member, self.value_type):
+                return member
+
+            raise serializers.ValidationError("Not one of the enum's values.", code=_ENUM)
+
         raise serializers.ValidationError("Not a value of the contract's type.", code=_WRONG_TYPE)
 
     def to_representation(self, value: V) -> V:
         return value
+
+
+def _enum_member(enum_type: type[Enum], wire_value: str) -> Enum | None:
+    """The enum member the type layer left as its wire text."""
+    return next((member for member in enum_type if member.value == wire_value), None)
 
 
 class ContractTextField(TypedValueField[str]):

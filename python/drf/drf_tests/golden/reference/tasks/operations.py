@@ -153,6 +153,7 @@ class ArchiveTaskRequest:
 class ArchiveTaskResponse200:
     """The 200 reply of operation 'archiveTask'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.Task
 
 
@@ -251,6 +252,7 @@ class AssignTaskRequest:
 class AssignTaskResponse200:
     """The 200 reply of operation 'assignTask'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.Task
 
 
@@ -348,6 +350,7 @@ class CreateTaskRequest:
 class CreateTaskResponse201:
     """The 201 reply of operation 'createTask'."""
 
+    status: _typing.ClassVar[int] = 201
     body: _schemas.Task
 
 
@@ -440,6 +443,7 @@ class DeleteDraftRequest:
 class DeleteDraftResponse200:
     """The 200 reply of operation 'deleteDraft'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.Draft
 
 
@@ -516,6 +520,7 @@ class GetChannelRequest:
 class GetChannelResponse200:
     """The 200 reply of operation 'getChannel'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.Channel
 
 
@@ -572,6 +577,7 @@ class GetDraftRequest:
 class GetDraftResponse200:
     """The 200 reply of operation 'getDraft'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.Draft
 
 
@@ -628,12 +634,15 @@ class GetPreferencesRequest:
 class GetPreferencesResponse200:
     """The 200 reply of operation 'getPreferences'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.Preferences
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class GetPreferencesResponse304:
     """The 304 reply of operation 'getPreferences'."""
+
+    status: _typing.ClassVar[int] = 304
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -698,6 +707,7 @@ class GetTaskRequest:
 class GetTaskResponse200:
     """The 200 reply of operation 'getTask'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.Task
 
 
@@ -763,6 +773,7 @@ class GetTasksBatchRequest:
 class GetTasksBatchResponse200:
     """The 200 reply of operation 'getTasksBatch'."""
 
+    status: _typing.ClassVar[int] = 200
     body: dict[str, _schemas.Task]
 
 
@@ -817,6 +828,7 @@ class HealthRequest:
 class HealthResponse200:
     """The 200 reply of operation 'health'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.Health
 
 
@@ -874,6 +886,7 @@ class ListChannelsPage:
 class ListChannelsResponse200:
     """The 200 reply of operation 'listChannels'."""
 
+    status: _typing.ClassVar[int] = 200
     body: ListChannelsPage
 
 
@@ -952,6 +965,7 @@ class ListTasksPage:
 class ListTasksResponse200:
     """The 200 reply of operation 'listTasks'."""
 
+    status: _typing.ClassVar[int] = 200
     body: ListTasksPage
 
 
@@ -1000,6 +1014,8 @@ class PaymentsRequest:
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class PaymentsResponse204:
     """The 204 reply of operation 'payments'."""
+
+    status: _typing.ClassVar[int] = 204
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -1076,6 +1092,8 @@ class PurgeTaskRequest:
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class PurgeTaskResponse204:
     """The 204 reply of operation 'purgeTask'."""
+
+    status: _typing.ClassVar[int] = 204
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -1164,6 +1182,7 @@ class SearchTasksRequest:
 class SearchTasksResponse200:
     """The 200 reply of operation 'searchTasks'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.TaskSearchResult
 
 
@@ -1237,6 +1256,7 @@ class UpdatePreferencesRequest:
 class UpdatePreferencesResponse200:
     """The 200 reply of operation 'updatePreferences'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.Preferences
 
 
@@ -1331,6 +1351,7 @@ class UpdateTaskRequest:
 class UpdateTaskResponse200:
     """The 200 reply of operation 'updateTask'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.Task
 
 
@@ -1387,6 +1408,27 @@ class UpdateTaskErrors:
 
 
 type UpdateTaskResult = UpdateTaskResponse200 | UpdateTaskErrors
+
+
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class StripeCredentials:
+    """The credentials a request presents for identity 'stripe', one per scheme, None when absent."""
+
+    stripe_signature: str | None = None
+
+    def __repr__(self) -> str:
+        return "StripeCredentials(stripe_signature=[redacted])"
+
+
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class UserCredentials:
+    """The credentials a request presents for identity 'user', one per scheme, None when absent."""
+
+    bearer: str | None = None
+    session_cookie: str | None = None
+
+    def __repr__(self) -> str:
+        return "UserCredentials(bearer=[redacted], session_cookie=[redacted])"
 
 
 @_typing.runtime_checkable

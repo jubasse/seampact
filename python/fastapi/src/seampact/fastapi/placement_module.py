@@ -8,12 +8,12 @@ to the runtime."""
 from collections.abc import Mapping, Sequence
 from typing import Final
 
-from seampact.codegen.printer import INDENT, PythonModule, string_literal
+from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_literal
 from seampact.codegen.routes import RouteEntry
 from seampact.codegen.runtime import RUNTIME_VERSION
 from seampact.fastapi.layout import ApiLayout
 from seampact.fastapi.options import FastApiOptions
-from seampact.fastapi.source_lines import bracketed, with_local_imports
+from seampact.fastapi.source_lines import with_local_imports
 from seampact.ir.model import ContractIR
 from seampact.ir.run.generator import TargetEntry
 

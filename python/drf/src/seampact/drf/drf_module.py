@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from typing import Final
 
 from seampact.codegen.names import ApiNames, member_identifier, part_attributes
-from seampact.codegen.printer import INDENT, PythonModule, string_literal
+from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_literal
 from seampact.codegen.refusals import IrPlace, Refusals
 from seampact.django.emitters import ContractPath
 from seampact.drf.api_layout import ApiLayout, NameClaims, OperationNames, handler_headers, principal_schema
@@ -166,17 +166,44 @@ class _Emission:
             ]
         )
         base_view = self.claims.name(self.layout.api_class + "View", IrPlace("/api/name"))
+        contract = self.module.imported(".contract", "_contract")
         self.module.add_block(
             [
                 f"class {base_view}({self.runtime}.ContractView):",
                 f'{INDENT}"""The base of the contract views of api \'{self.ir.api.id}\'."""',
                 "",
                 f"{INDENT}api = {api}",
+                f"{INDENT}contract = {contract}.CONTRACT",
+                *self._credentials_types(),
                 "",
                 f"{INDENT}def get_exception_handler(self) -> {self.runtime}.ExceptionHandler:",
                 f"{INDENT * 2}return contract_exception_handler",
             ]
         )
+
+    def _credentials_types(self) -> list[str]:
+        """The generated credentials class of each identity, by identity, and its attribute per scheme id."""
+        if not self.layout.credentials:
+            return []
+
+        typing = self.module.imported("typing", "_typing")
+        abc = self.module.imported("collections.abc", "_abc")
+        mapping = f"{abc}.Mapping[str, {self.runtime}.CredentialsType]"
+        lines = [f"{INDENT}credentials: {typing}.ClassVar[{mapping}] = {{"]
+
+        for identity, credentials in self.layout.credentials.items():
+            attributes = ", ".join(
+                f"{string_literal(scheme)}: {string_literal(attribute)}"
+                for scheme, attribute in credentials.attributes.items()
+            )
+            lines += bracketed(
+                INDENT * 2,
+                f"{string_literal(identity)}: {self.runtime}.CredentialsType",
+                [f"{self.operations}.{credentials.class_name}", "{" + attributes + "}"],
+                ",",
+            )
+
+        return [*lines, f"{INDENT}}}"]
 
     def _handlers_builder(self, key: str, protocol: str) -> None:
         http = self.module.imported("django.http", "_http")

@@ -7,9 +7,9 @@ placement's own names. Two classes of one module taking one name are refused as 
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from seampact.codegen.names import member_identifier
+from seampact.codegen.credentials_classes import CredentialsNames, identity_credentials
 from seampact.codegen.refusals import IrPlace, Refusals
-from seampact.ir.model import ContractIR, IdentityAccess, Operation, OptionalAccess, ResponseShape
+from seampact.ir.model import ContractIR, Operation, ResponseShape
 from seampact.ir.naming import IrName, NameSource, NamingRole, python_identifier, segments_of
 
 
@@ -25,14 +25,6 @@ class OperationNames:
     scopes: str | None
     endpoints: str
     owner_attribute: str
-
-
-@dataclass(frozen=True, slots=True)
-class CredentialsNames:
-    """The credentials class of one identity and its attribute per scheme, in scheme order."""
-
-    class_name: str
-    attributes: Mapping[str, str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,56 +123,8 @@ def api_layout(ir: ContractIR, error_codes: list[str], refusals: Refusals) -> Ap
         error_classes,
         error_factories,
         operations,
-        _credentials(ir, operations, root, refusals),
+        identity_credentials(ir, operations, root.claim, refusals),
     )
-
-
-def _credentials(
-    ir: ContractIR, operations: Mapping[str, OperationNames], root: _Claims, refusals: Refusals
-) -> dict[str, CredentialsNames]:
-    """Per identity the kept operations read, its credentials class and the schemes those operations read it through."""
-    schemes_by_identity: dict[str, dict[str, IrPlace]] = {}
-
-    for index, operation in enumerate(ir.operations):
-        access = operation.access
-
-        if operation.id in operations and isinstance(access, IdentityAccess | OptionalAccess):
-            at = IrPlace(f"/operations/{index}", operation.id).below("access")
-            schemes = schemes_by_identity.setdefault(access.identity, {})
-            schemes.update({scheme: at.below("schemes") for scheme in access.schemes if scheme not in schemes})
-
-    credentials: dict[str, CredentialsNames] = {}
-
-    for identity, schemes in sorted(schemes_by_identity.items()):
-        segments = segments_of(identity, NameSource.NAME) or [identity]
-        class_name = root.claim(
-            python_identifier(IrName((*segments, "credentials"), NamingRole.SCHEMA)),
-            f"the credentials of identity '{identity}'",
-            IrPlace(f"/identities/{identity}"),
-        )
-        attributes: dict[str, str] = {}
-
-        for scheme, at in sorted(schemes.items()):
-            attribute = member_identifier(scheme)
-
-            if attribute is None:
-                refusals.inconsistent("scheme.no-segment", f"The scheme '{scheme}' yields no name segment", at)
-                continue
-
-            if attribute in attributes.values():
-                refusals.add(
-                    "name.collision",
-                    f"The credentials of identity '{identity}' would hold two schemes as '{attribute}'.",
-                    "Rename one of the schemes in the contract.",
-                    at,
-                )
-                continue
-
-            attributes[scheme] = attribute
-
-        credentials[identity] = CredentialsNames(class_name, attributes)
-
-    return credentials
 
 
 def _operation_names(operation: Operation, owner: tuple[str, ...], root: _Claims, at: IrPlace) -> OperationNames:

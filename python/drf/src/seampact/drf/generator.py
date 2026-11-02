@@ -58,16 +58,17 @@ class DrfGenerator:
         paths = contract_paths(routes, [operation.id for operation in ir.operations])
         _refuse_input_media(ir, refusals)
 
+        resources = [owner.key for owner in layout.owners.values()]
         files = {
             "__init__.py": PythonModule(f"The generated code of api '{ir.api.id}' for the DRF target.").text(),
             "schemas.py": dataclass_schemas_module(ir, names, refusals),
             "operations.py": operations_module(ir, names, layout, refusals),
             "contract.py": contract_module(ir, names, entry.mount or "", refusals),
             "urls.py": urls_module(ir.api.id, paths, lambda module, path: _view_of(ir, module, path)),
-            "settings.py": settings_module(
-                ir.api.id, layout.api_class, [owner.key for owner in layout.owners.values()], [_ACCESS_KEY]
+            "settings.py": settings_module(ir.api.id, layout.api_class, resources, [_ACCESS_KEY]),
+            "django.py": boundary_module(
+                ir.api.id, layout.api_class, RUNTIME_VERSION, resources, _run_time_options(options)
             ),
-            "django.py": boundary_module(ir.api.id, layout.api_class, RUNTIME_VERSION, _run_time_options(options)),
             "drf.py": drf_module(ir, names, layout, paths, options.rules, refusals),
         }
 

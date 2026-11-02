@@ -95,6 +95,7 @@ class GetTaskRequest:
 class GetTaskResponse200:
     """The 200 reply of operation 'getTask'."""
 
+    status: _typing.ClassVar[int] = 200
     body: _schemas.Task
 
 
@@ -131,6 +132,16 @@ class GetTaskErrors:
 
 
 type GetTaskResult = GetTaskResponse200 | GetTaskErrors
+
+
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class ServiceCredentials:
+    """The credentials a request presents for identity 'service', one per scheme, None when absent."""
+
+    internal_token: str | None = None
+
+    def __repr__(self) -> str:
+        return "ServiceCredentials(internal_token=[redacted])"
 
 
 @_typing.runtime_checkable

@@ -177,5 +177,20 @@ def _section(module: str) -> int:
     return 0 if top in sys.stdlib_module_names else 1
 
 
+def bracketed(indent: str, head: str, arguments: Sequence[str], tail: str) -> list[str]:
+    """`head(arguments)tail` at `indent`, split as ruff splits it."""
+    single = f"{indent}{head}({', '.join(arguments)}){tail}"
+
+    if fits(single):
+        return [single]
+
+    hugged = f"{indent}{INDENT}{', '.join(arguments)}"
+
+    if fits(hugged) and not any(argument == "*" for argument in arguments):
+        return [f"{indent}{head}(", hugged, f"{indent}){tail}"]
+
+    return [f"{indent}{head}(", *(f"{indent}{INDENT}{argument}," for argument in arguments), f"{indent}){tail}"]
+
+
 def fits(line: str) -> bool:
     return len(line) <= LINE_LENGTH

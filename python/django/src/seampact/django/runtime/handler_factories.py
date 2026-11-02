@@ -4,7 +4,7 @@ code checks what a factory built against the resource's protocol."""
 
 from django.http import HttpRequest
 
-from seampact.django.runtime.unavailable import PlacementUnavailableError
+from seampact.django.runtime.api_settings import HANDLERS_KEY, built
 
 
 class HandlersMismatchError(TypeError):
@@ -20,6 +20,4 @@ class HandlersMismatchError(TypeError):
 
 def built_handlers(api: str, resource: str, request: HttpRequest) -> object:
     """What the factory of `resource` builds for this request."""
-    raise PlacementUnavailableError(
-        f"Building the handlers of resource '{resource}' of api '{api}' for a {request.method} request"
-    )
+    return built(api, HANDLERS_KEY, resource, request)

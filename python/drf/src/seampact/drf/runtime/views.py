@@ -5,7 +5,8 @@ content negotiation, so `Accept` never answers 406; no parser and no versioning,
 kind; no schema. A generated method admits the request, builds the typed request from the `Admission` and replies
 with the handler's result."""
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from types import MappingProxyType
 from typing import ClassVar, Final, Protocol
 
 from django.http import HttpResponseBase
@@ -16,8 +17,10 @@ from rest_framework.request import Request
 from rest_framework.throttling import BaseThrottle
 from rest_framework.views import APIView
 
+from seampact.codegen.runtime.access_steps import CredentialsType
+from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.replies import JSON_MEDIA
-from seampact.django.runtime import PlacementUnavailableError
+from seampact.drf.runtime.admission import admit
 from seampact.drf.runtime.serializers import ContractSerializer
 from seampact.hooks import ResolvedScope
 
@@ -46,6 +49,8 @@ class Admission(Protocol):
 
 class ContractView(APIView):
     api: ClassVar[str]
+    contract: ClassVar[ApiContract]
+    credentials: ClassVar[Mapping[str, CredentialsType]] = MappingProxyType({})
     renderer_classes: Sequence[type[BaseRenderer]] = (_RENDERER,)
     parser_classes = ()
     versioning_class = None
@@ -68,4 +73,5 @@ class ContractView(APIView):
         return []
 
     def admit(self, request: Request, operation_id: str) -> Admission:
-        raise PlacementUnavailableError(f"The DRF steps of operation '{operation_id}' of api '{self.api}'")
+        """Raises `BoundaryFailureError` or `ContractRefusal`, which the api's exception handler answers."""
+        return admit(request._request, self.contract, self.credentials, operation_id)

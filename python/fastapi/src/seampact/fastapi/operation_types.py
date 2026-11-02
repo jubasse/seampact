@@ -6,12 +6,13 @@ or an `async def` satisfies."""
 
 from typing import Final
 
+from seampact.codegen.credentials_classes import credentials_class
 from seampact.codegen.names import ApiNames, member_identifier
-from seampact.codegen.printer import INDENT, PythonModule, string_literal
+from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_literal
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.fastapi.input_schemas import INPUT_PARTS, input_schema_id
 from seampact.fastapi.layout import ApiLayout, OperationNames
-from seampact.fastapi.source_lines import bracketed, with_local_imports
+from seampact.fastapi.source_lines import with_local_imports
 from seampact.ir.model import (
     ContractIR,
     CredentialIdentity,
@@ -30,11 +31,7 @@ _FROZEN: Final = "@_dataclasses.dataclass(frozen=True, slots=True)"
 _FROZEN_KEYWORDS: Final = "@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)"
 # The fields of an `<Op>Errors` class: an error factory's name never starts with `_` and a letter.
 _ERRORS_CODE_FIELD: Final = "_code"
-_REDACTED: Final = "[redacted]"
 _ERRORS_PARAMS_FIELD: Final = "_params"
-_CREDENTIALS_DOC: Final = (
-    "The credentials a request presents for identity '{identity}', one per scheme, None when absent."
-)
 _ENDPOINTS_DOC: Final = "The handlers of these operations: each returns a declared success or error, or raises one."
 _PAGE_FACT_TYPES: Final = {
     HandlerResultMember.NEXT_CURSOR: "str",
@@ -158,19 +155,7 @@ class _Emission:
 
     def _credentials(self) -> None:
         for identity, credentials in self.layout.credentials.items():
-            lines = [
-                _FROZEN_KEYWORDS,
-                f"class {credentials.class_name}:",
-                f'{INDENT}"""{_CREDENTIALS_DOC.format(identity=identity)}"""',
-            ]
-            attributes = list(credentials.attributes.values())
-            members = [f"{INDENT}{attribute}: str | None = None" for attribute in attributes]
-            rendered = ", ".join(f"{attribute}={_REDACTED}" for attribute in attributes)
-            redacted_repr = [
-                f"{INDENT}def __repr__(self) -> str:",
-                f"{INDENT * 2}return {string_literal(f'{credentials.class_name}({rendered})')}",
-            ]
-            self.blocks.append(lines if not members else [*lines, "", *members, "", *redacted_repr])
+            self.blocks.append(credentials_class(_FROZEN_KEYWORDS, identity, credentials))
 
     def _scopes(self, operation: Operation, class_name: str) -> None:
         hooks = self.module.imported("seampact.hooks", "_hooks")
