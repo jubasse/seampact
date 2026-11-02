@@ -150,7 +150,7 @@ def test_a_generated_value_encodes_with_wire_names_and_text_formats(codec: WireC
 
     assert codec.to_wire(_TASK, task) == {
         "id": "00000000-0000-0000-0000-000000000001",
-        "createdAt": "2026-01-02T03:04:05.120+02:00",
+        "createdAt": "2026-01-02T03:04:05.12+02:00",
         "state": "open",
         "note": None,
         "owner": {"userId": "u1"},
@@ -178,10 +178,39 @@ def test_a_date_decimal_and_table_body_encode_as_text(codec: WireCodec) -> None:
 
 
 @pytest.mark.parametrize(
+    ("value", "wire"),
+    [
+        (Decimal("0.0000001"), "0.0000001"),
+        (Decimal("1e2"), "100"),
+        (Decimal("0.01") * Decimal("0.00001"), "0.0000001"),
+        (Decimal("-1.50"), "-1.50"),
+    ],
+)
+def test_a_decimal_is_written_in_its_wire_form_without_an_exponent(codec: WireCodec, value: Decimal, wire: str) -> None:
+    assert codec.to_wire({"kind": "scalar", "type": "string", "format": "decimal"}, value) == wire
+
+
+@pytest.mark.parametrize(
+    ("value", "wire"),
+    [
+        (datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC), "2026-01-02T03:04:05+00:00"),
+        (datetime(2026, 1, 2, 3, 4, 5, 100, tzinfo=UTC), "2026-01-02T03:04:05.0001+00:00"),
+        (datetime(2026, 1, 2, 3, 4, 5, 500000, tzinfo=timezone(timedelta(hours=-5))), "2026-01-02T03:04:05.5-05:00"),
+        (datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone(timedelta(seconds=30))), "2026-01-02T03:03:35+00:00"),
+    ],
+)
+def test_a_date_time_is_written_without_trailing_zeros_and_in_utc_for_a_sub_minute_offset(
+    codec: WireCodec, value: datetime, wire: str
+) -> None:
+    assert codec.to_wire({"kind": "scalar", "type": "string", "format": "date-time"}, value) == wire
+
+
+@pytest.mark.parametrize(
     ("type_use", "value", "message"),
     [
         ({"kind": "scalar", "type": "string"}, datetime(2026, 1, 2), "without an offset"),
         ({"kind": "opaque"}, None, "does not make nullable"),
+        ({"kind": "scalar", "type": "string", "format": "decimal"}, Decimal("NaN"), "finite decimal"),
         (_TASK, Owner("u1"), "has the member 'id'"),
     ],
 )

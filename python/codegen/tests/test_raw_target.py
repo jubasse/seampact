@@ -58,6 +58,11 @@ def test_wsgi_takes_the_raw_uri_minus_the_script_name() -> None:
     assert wsgi_raw_target(environ) == RawTarget("/v1/a%2Fb", "x=1", raw=True)
 
 
+@pytest.mark.parametrize("uri", ["/v1/health", "/application/v1/health"])
+def test_wsgi_target_outside_the_script_name_is_not_a_contract_request(uri: str) -> None:
+    assert wsgi_raw_target({"RAW_URI": uri, "SCRIPT_NAME": "/app", "PATH_INFO": "/v1/health"}) is None
+
+
 def test_wsgi_without_a_raw_uri_falls_back_to_the_decoded_path_info() -> None:
     assert wsgi_raw_target({"PATH_INFO": "/v1/a/b"}) == RawTarget("/v1/a/b", "", raw=False)
 
@@ -73,7 +78,7 @@ def test_wsgi_without_a_raw_uri_falls_back_to_the_decoded_path_info() -> None:
         ("GET", f"{_TASK}/t1/", RouteMatch(None, {})),
         ("GET", "/v1/channels//tasks", RouteMatch(None, {})),
         ("GET", f"{_TASK}/%2e%2e", RouteMatch(None, {})),
-        ("GET", f"{_TASK}/7%3Bx=1", RouteMatch(None, {})),
+        ("GET", f"{_TASK}/7%3Bx=1", RouteMatch("getTask", {"channelId": "c1", "taskId": "7%3Bx=1"})),
         ("GET", f"{_TASK}/7;x=1", RouteMatch(None, {})),
         ("PUT", f"{_TASK}/t1", RouteMatch(None, {})),
         ("GET", "/v2/health", None),
