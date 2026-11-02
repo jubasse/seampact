@@ -235,6 +235,8 @@ DRF 3.18's `as_view()` sets `login_required = False`, so Django's `LoginRequired
 
 DRF copies the user it authenticated to the Django request, so a hook factory reads `request.user` and `request.auth`. On an access kind with no DRF authentication classes, DRF overwrites `request.user` with its `UNAUTHENTICATED_USER` (review probe), so the user Django's `AuthenticationMiddleware` set is lost. The DRF guide tells the app to name `SessionAuthentication`, or its own class, for that kind.
 
+The view claims an idempotency key after step 6, before the handler runs. The boundary middleware settles the claim with the reply that goes out, so a reply the exception handler or the api's 500 writes settles it too: it completes the record, or abandons it after a server error or a streamed reply. A stored reply is raised as `ReplayedReplyError`, which the exception handler answers as it was stored.
+
 DRF views are sync. An `async def` hook or handler method is refused by the boot check, naming the method and the fix, until a consumer needs it.
 
 #### Exceptions
@@ -323,7 +325,7 @@ Contract operations are always registered with `include_in_schema=False`, so Nin
 
 ### Redaction
 
-ADR 0026 "Redaction" holds: dataclasses get a generated `__repr__` and `__rich_repr__`, Pydantic models a generated `__repr_args__`. The boundary's logs go to the `seampact.<api>` logger.
+ADR 0026 "Redaction" holds: dataclasses get a generated `__repr__` and `__rich_repr__`, Pydantic models a generated `__repr_args__`. On DRF, a signed route's input prints its body `[redacted]`, and a handler's request its principal and scopes; a serializer prints none of the data it validates, and a validation error carries a fixed message per rule, never the refused value. The boundary's logs go to the `seampact.<api>` logger.
 
 ### Options and registration
 
@@ -357,7 +359,7 @@ At run time: Python 3.12 or later; Django 5.2 or 6.x; DRF 3.18 for DRF; Ninja 1.
 
 | Waits for | What |
 |---|---|
-| a consumer that needs them | ADR 0026's list; `async def` hooks and handlers on DRF and in Ninja's sync views; `nativeDocs` on Ninja |
+| a consumer that needs them | ADR 0026's list; `async def` hooks and handlers on DRF and in Ninja's sync views; relays and absolute URLs on DRF; `nativeDocs` on Ninja |
 | after 1.0 | Django, DRF and Ninja versions below the floor (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)) |
 
 ### The consumer and the proof
@@ -366,7 +368,7 @@ The sample apps live in `scripts/consumers/targets/drf/` and `scripts/consumers/
 
 `p7-drf.yml` has, beside `changes` and the `packages` tests:
 
-- `e2e`, two rows on `python:<v>-slim` images: {Python 3.12, Django 5.2, DRF 3.18 floor, gunicorn WSGI} and {the latest Python, the latest Django 6.x, the latest DRF, uvicorn ASGI}. Node is removed, the app is installed with pip only and generated, then Node comes back for the suite alone, as ADR 0026 says. It runs the `default`, `hand-written`, `boot` and `full` profiles; a boot is `manage.py check` and a gunicorn start of a misconfigured variant;
+- `e2e`, two rows on `ubuntu-24.04` with `actions/setup-python`: {Python 3.12, Django 5.2, DRF 3.18 floor, gunicorn WSGI} and {the latest Python, the latest Django 6.x, the latest DRF, uvicorn ASGI}. Node is removed, the app is installed with pip only and generated, then Node comes back for the suite alone, as ADR 0026 says. It runs the `default`, `hand-written` and `boot` profiles (ADR 0015 "Suite profiles") over every operation of both apis, from drf-3; a boot imports the WSGI or ASGI module of a misconfigured variant, whose handler runs the boot check;
 - `drf`, the aggregate.
 
 `p7-ninja.yml` has the same jobs, with rows {Python 3.12, Django 5.2, the Ninja floor, gunicorn, `views: sync`} and {the latest Python, the latest Django 6.x, the latest Ninja, uvicorn, `views: async`}, every profile, and the aggregate `ninja`.
@@ -379,7 +381,7 @@ The proof is the `node`-absent step, a green suite row per row above, each targe
 |---|---|
 | drf-1 | `python/django` emitters (URLconf, settings, app config) and `python/drf`: the generator, dataclass inputs, serializers, `APIView` declarations, exceptions; a golden under ruff and `mypy --strict` with the stubs, on Django 5.2 and 6.x |
 | drf-2 | the boundary middleware (sync and async), the `APIView` steps 2 to 8, the exception map and the handler wrappers, the system check, the boot check, `seampact_generate` and `seampact_check`; the sample app, the `default`, `hand-written` and `boot` profiles, the e2e job of `p7-drf.yml` |
-| drf-3 | paging, idempotency, throttle beside DRF's throttles, cache headers, the signed raw body, redaction, relays, absolute URLs; the `full` profile and `test_redaction.py` |
+| drf-3 | paging, idempotency, throttle beside DRF's throttles, cache headers, the signed raw body, deadlines, redaction; the suite over every operation of both apis with nothing refused, and `test_redaction.py` |
 | drf-4 | DRF authentication, permission and throttle classes per access kind, the role map of DRF's exceptions, session and CSRF beside the boundary; the suite's security rows and a token-auth row |
 | ninja-1 | `python/ninja`: the generator on the shared Pydantic emitter, `Router` declarations, views, `bind_<api>()`; a golden under ruff, `mypy --strict` and `pyright` strict |
 | ninja-2 | the Ninja placement on `seampact-django`, the `on_exception` wrapper, sync and async views; the sample app, every profile, `p7-ninja.yml` |
