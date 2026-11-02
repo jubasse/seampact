@@ -14,6 +14,9 @@ describePythonHttpSuite({
   environmentPrefix: "SEAMPACT_DRF",
   appOf: (appDirectory, venv) => drfApp(appDirectory, venv, server),
   start: (app) => startDrfApp(app, server),
-  bootArguments: [join(import.meta.dirname, "../../../python/django_boot.py"), moduleServedBy(server)],
+  bootArguments: [
+    join(import.meta.dirname, "../../../python/django_boot.py"),
+    moduleServedBy(server),
+  ],
   refusals: DRF_SUITE_REFUSALS,
 });

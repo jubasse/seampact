@@ -1,7 +1,12 @@
 // Serves the assembled DRF consumer for the http suite from the virtual environment it was installed in: under
 // gunicorn as a WSGI app (the Django 5.2 row), or under uvicorn as an ASGI app (the Django 6 row), as
 // SEAMPACT_DRF_SERVER says.
-import { type PythonApp, type RunningApp, startGunicornApp, startUvicornApp } from "../../../python/python-app.ts";
+import {
+  type PythonApp,
+  type RunningApp,
+  startGunicornApp,
+  startUvicornApp,
+} from "../../../python/python-app.ts";
 
 export type { RunningApp } from "../../../python/python-app.ts";
 
