@@ -153,3 +153,22 @@ def test_a_public_origin_under_relative_urls_is_the_boundarys_failure() -> None:
             "/v1/channels",
             public_origin="https://api.example.com",
         )
+
+
+def test_an_absolute_link_percent_encodes_the_request_path_so_a_segment_adds_no_link_relation() -> None:
+    parts = page_parts(
+        _pages_contract("absolute"),
+        _LIST_CHANNELS,
+        {"page": 1, "per_page": 2},
+        "page=1&per_page=2",
+        ["c1", "c2"],
+        {"total": 3},
+        200,
+        '/v1/a>; rel="evil",b/caf%C3%A9 x',
+        public_origin="https://api.example.com",
+    )
+
+    assert isinstance(parts.body, dict)
+    assert parts.body["next"] == (
+        "https://api.example.com/v1/a%3E%3B%20rel%3D%22evil%22%2Cb/caf%C3%A9%20x?per_page=2&page=2"
+    )

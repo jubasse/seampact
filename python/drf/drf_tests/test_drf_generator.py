@@ -446,3 +446,36 @@ def test_the_handler_reads_the_time_left_from_the_requests_deadline(repository_r
     assert deadline is not None
     assert deadline.remaining_ms(now) == 300
     assert deadline.remaining_ms(now + timedelta(seconds=1)) == 0
+
+
+def test_a_deadline_header_typed_as_a_date_time_gives_the_request_its_deadline(
+    repository_root: Path, tmp_path: Path
+) -> None:
+    ir_json = reference_ir(repository_root, "tasksService")
+    operations_json = ir_json["operations"]
+    assert isinstance(operations_json, list)
+
+    for operation_json in operations_json:
+        assert isinstance(operation_json, dict)
+        params = operation_json.get("params")
+        headers = params.get("header", []) if isinstance(params, dict) else []
+        assert isinstance(headers, list)
+
+        for header in headers:
+            if isinstance(header, dict) and header.get("name") == "X-Deadline":
+                header["type"] = {"kind": "scalar", "refinements": {}, "type": "string", "format": "date-time"}
+
+    name = "seampact_drf_date_time_deadline_tasks_service"
+    write_package(generated_files(contract(ir_json)), tmp_path / name)
+    operations = imported_package(tmp_path / name, name).operations
+    schemas = sys.modules[f"{name}.schemas"]
+    now = datetime(2026, 10, 18, 9, 0, tzinfo=UTC)
+    path = operations.GetTaskPath(channel_id=uuid.uuid4(), task_id=uuid.uuid4())
+    headers = operations.GetTaskHeaders(x_deadline=now + timedelta(milliseconds=300))
+    principal = schemas.ServicePrincipal(service=schemas.Service.CATALOG, user_id=uuid.uuid4())
+    request = operations.GetTaskRequest(input=operations.GetTaskInput(path=path, headers=headers), principal=principal)
+
+    deadline = getattr(request, "deadline", None)
+
+    assert deadline is not None
+    assert deadline.remaining_ms(now) == 300
