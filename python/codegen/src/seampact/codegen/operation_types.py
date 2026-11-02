@@ -7,15 +7,15 @@ or an `async def` satisfies."""
 from typing import Final
 
 from seampact.codegen.credentials_classes import credentials_class
+from seampact.codegen.input_schemas import INPUT_PARTS, input_schema_id
 from seampact.codegen.names import ApiNames, member_identifier
 from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_literal
+from seampact.codegen.pydantic_layout import ApiLayout, OperationNames
 from seampact.codegen.redacted_members import redacted_dataclass_reprs, redacted_marker_block
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.codegen.request_deadline import deadline_property
-from seampact.fastapi.input_schemas import INPUT_PARTS, input_schema_id
-from seampact.fastapi.layout import ApiLayout, OperationNames
-from seampact.fastapi.runtime.page_facts import PAGE_FACTS
-from seampact.fastapi.source_lines import with_local_imports
+from seampact.codegen.runtime.page_facts import PAGE_FACTS
+from seampact.codegen.source_lines import with_local_imports
 from seampact.ir.model import (
     ContractIR,
     CredentialIdentity,

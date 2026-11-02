@@ -14,11 +14,11 @@ from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError
 from seampact.codegen.runtime.field_rights import visible_output
 from seampact.codegen.runtime.ir_view import IrMap, ir_maps, ir_string
+from seampact.codegen.runtime.page_facts import page_facts
 from seampact.codegen.runtime.page_reply import PageParts, page_parts
 from seampact.codegen.runtime.replies import CONTENT_TYPE, JSON_MEDIA, Reply, error_reply, json_bytes, success_body
 from seampact.codegen.runtime.wire_codec import WireCodec
 from seampact.fastapi.runtime.handler_call import call_handler
-from seampact.fastapi.runtime.page_facts import page_facts
 
 _ITEM_SHAPE: Final = "item"
 _PAGE_SHAPE: Final = "page"
