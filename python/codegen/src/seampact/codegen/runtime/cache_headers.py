@@ -29,18 +29,18 @@ def strong_etag(body: bytes) -> str:
 
 
 def with_cache_headers(
-    contract: ApiContract, operation_id: str, reply: Reply, identified: bool, if_none_match: str | None
+    contract: ApiContract, operation_id: str, reply: Reply, principal: object | None, if_none_match: str | None
 ) -> Reply:
     """`reply` with the operation's cache headers, or the ETag's 304, with the same headers and no body, when
-    `if_none_match` names it; `reply` itself when the operation declares no cache. `identified` says whether the
-    caller is authenticated, since an identified caller always gets the private directives."""
+    `if_none_match` names it; `reply` itself when the operation declares no cache. An authenticated caller (a
+    `principal`) always gets the private directives."""
     cache = ir_map(contract.operation(operation_id), "cache")
 
     if not cache:
         return reply
 
     added: list[tuple[str, str]] = []
-    cache_control = NO_STORE if ir_true(cache, "noStore") else _cache_control(cache, identified)
+    cache_control = NO_STORE if ir_true(cache, "noStore") else _cache_control(cache, principal)
 
     if cache_control is not None:
         added.append((CACHE_CONTROL, cache_control))
@@ -65,8 +65,8 @@ def with_cache_headers(
     return Reply(NOT_MODIFIED, (*without_content_type, *added), b"")
 
 
-def _cache_control(cache: object, identified: bool) -> str | None:
-    caller = _IDENTIFIED if identified else _ANONYMOUS
+def _cache_control(cache: object, principal: object | None) -> str | None:
+    caller = _ANONYMOUS if principal is None else _IDENTIFIED
 
     return next(
         (

@@ -10,8 +10,8 @@ _BODY = b'{"locale":"fr"}'
 _JSON = ("content-type", "application/json")
 
 
-def _cached(contract: ApiContract, if_none_match: str | None, operation_id: str = _GET_PREFERENCES) -> Reply:
-    return with_cache_headers(contract, operation_id, Reply(200, (_JSON,), _BODY), True, if_none_match)
+def _cached(contract: ApiContract, if_none_match: str | None) -> Reply:
+    return with_cache_headers(contract, _GET_PREFERENCES, Reply(200, (_JSON,), _BODY), "alice", if_none_match)
 
 
 def test_the_etag_is_the_body_digest_every_target_writes() -> None:
@@ -47,4 +47,4 @@ def test_another_tag_keeps_the_success(tasks_contract: ApiContract) -> None:
 def test_an_operation_without_cache_is_left_as_is(tasks_contract: ApiContract) -> None:
     reply = Reply(200, (_JSON,), _BODY)
 
-    assert with_cache_headers(tasks_contract, "getTask", reply, True, "*") is reply
+    assert with_cache_headers(tasks_contract, "getTask", reply, "alice", "*") is reply

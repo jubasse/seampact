@@ -180,7 +180,8 @@ def _add_numbered_slots(
     if limit is None or limit <= 0:
         raise BoundaryFailureError(f"seampact: the list '{operation_id}' has no limit; regenerate the api.")
 
-    is_page = ir_string(style, "position") == _PAGE
+    position = ir_string(style, "position")
+    is_page = position == _PAGE
     position_role = _position_role(style)
     position_param = ir_string(position_role, "name") or ""
     base = ir_int(position_role, "base")
@@ -208,7 +209,7 @@ def _add_numbered_slots(
         slots["from"] = offset + 1
         slots["to"] = offset + item_count
 
-    slots["first"] = _page_url(_with_query_member(raw_query, position_param, _position_at(is_page, base, 0, limit)))
+    slots["first"] = _page_url(_with_query_member(raw_query, position_param, _position_at(position, base, 0, limit)))
 
     if offset > _FIRST_OFFSET:
         previous = str(base + page_index - 1) if is_page else str(max(offset - limit, _FIRST_OFFSET))
@@ -216,14 +217,14 @@ def _add_numbered_slots(
 
     if has_next:
         # An offset the client chose need not fall on a page start: the next page starts one limit further.
-        following = _position_at(True, base, page_index + 1, limit) if is_page else str(offset + limit)
+        following = _position_at(_PAGE, base, page_index + 1, limit) if is_page else str(offset + limit)
         slots["next"] = _page_url(_with_query_member(raw_query, position_param, following))
 
     total_pages = slots.get("totalPages")
 
     if _is_int(total_pages):
         last_index = max(total_pages - 1, 0)
-        last = _position_at(is_page, base, last_index, limit)
+        last = _position_at(position, base, last_index, limit)
         slots["last"] = _page_url(_with_query_member(raw_query, position_param, last))
 
 
@@ -250,8 +251,9 @@ def _add_token_slots(
             slots[role] = _page_url(_with_query_member(without_position, param, token))
 
 
-def _position_at(is_page: bool, base: int, index: int, limit: int) -> str:
-    return str(base + index if is_page else index * limit)
+def _position_at(position: str | None, base: int, index: int, limit: int) -> str:
+    """The page number, or the offset, of the page at `index`."""
+    return str(base + index if position == _PAGE else index * limit)
 
 
 def _position_role(style: IrMap) -> IrMap:
