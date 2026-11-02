@@ -34,6 +34,7 @@ on:
       - Vue consumers
       - Own validators consumer
       - Python core packages
+      - FastAPI target
     types: [completed]
     branches: [develop]
 
