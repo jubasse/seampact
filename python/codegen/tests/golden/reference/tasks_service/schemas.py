@@ -13,6 +13,7 @@ _MODEL_CONFIG = _pydantic.ConfigDict(
     extra="forbid",
     protected_namespaces=(),
     regex_engine="rust-regex",
+    allow_inf_nan=False,
 )
 
 
@@ -35,7 +36,7 @@ class TaskState(_enum.StrEnum):
 class ApiForbiddenParams(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
-    pointer: str | None = None
+    pointer: _seampact.Omittable[str] = None
 
 
 class IssuesItem(_pydantic.BaseModel):
@@ -73,7 +74,7 @@ class Task(_pydantic.BaseModel):
     task_id: _seampact.WireUuid
     title: _typing.Annotated[str, _pydantic.Field(min_length=1, max_length=200)]
     state: _typing.Annotated[TaskState, _seampact.enum_from_wire(TaskState)]
-    effort: _typing.Annotated[_seampact.WholeNumber, _pydantic.Field(ge=0)] | None = None
+    effort: _seampact.Omittable[_typing.Annotated[_seampact.WholeNumber, _pydantic.Field(ge=0)]] = None
     version: _typing.Annotated[_seampact.WholeNumber, _pydantic.Field(ge=1)]
     created_at: _seampact.WireDateTime
 

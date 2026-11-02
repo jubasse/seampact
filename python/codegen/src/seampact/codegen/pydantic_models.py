@@ -70,6 +70,7 @@ class _Emission:
                 f'{INDENT}extra="forbid",',
                 f"{INDENT}protected_namespaces=(),",
                 f'{INDENT}regex_engine="rust-regex",',
+                f"{INDENT}allow_inf_nan=False,",
                 ")",
             ]
         )
@@ -156,9 +157,10 @@ class _Emission:
             hooks = self.module.imported("seampact.hooks", "_hooks")
             return _wrapped(f"{INDENT}{attribute}: {hooks}.Field[", annotation, f" | None] = {hooks}.Absent.ABSENT")
 
-        suffix = " | None = None" if member.optional else (" | None" if nullable else "")
+        if member.optional:
+            return _wrapped_in(f"{INDENT}{attribute}: {self.seampact}.Omittable[", annotation, "] = None")
 
-        return _wrapped(f"{INDENT}{attribute}: ", annotation, suffix)
+        return _wrapped(f"{INDENT}{attribute}: ", annotation, " | None" if nullable else "")
 
     def annotation(self, type_use: TypeUse, at: IrPlace) -> list[str]:
         """The annotation of a type use: one item, or the items of an `Annotated` that the printer may explode."""
@@ -305,6 +307,23 @@ def _joined(items: Sequence[str]) -> str:
         return items[0]
 
     return items[0] + ", ".join(items[1:]) + "]"
+
+
+def _wrapped_in(prefix: str, annotation: Sequence[str], suffix: str) -> list[str]:
+    """A member whose annotation sits in one subscript (`prefix` ends with `[`, `suffix` starts with `]`), exploded as
+    ruff writes it: the annotation on its own line, else its `Annotated` items one per line with a trailing comma."""
+    joined = _joined(annotation)
+    single = f"{prefix}{joined}{suffix}"
+
+    if fits(single):
+        return [single]
+
+    if fits(f"{INDENT * 2}{joined}") or len(annotation) == 1:
+        return [prefix, f"{INDENT * 2}{joined}", f"{INDENT}{suffix}"]
+
+    items = [f"{INDENT * 3}{item}," for item in annotation[1:]]
+
+    return [prefix, f"{INDENT * 2}{annotation[0]}", *items, f"{INDENT * 2}]", f"{INDENT}{suffix}"]
 
 
 def _wrapped(prefix: str, annotation: Sequence[str], suffix: str) -> list[str]:

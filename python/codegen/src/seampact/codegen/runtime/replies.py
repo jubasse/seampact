@@ -38,8 +38,11 @@ class Reply:
 
 
 def json_bytes(value: object) -> bytes:
-    """The boundary's JSON: UTF-8, no escaped slashes or non-ASCII, `1.0` kept; NaN and infinities refused."""
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    """The boundary's JSON: UTF-8, no escaped slashes or non-ASCII, `1.0` kept; NaN and infinities refused. A lone
+    surrogate echoed from a request can only sit in a JSON string, so it is written as its `\\uXXXX` escape."""
+    text = json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+
+    return text.encode("utf-8", errors="backslashreplace")
 
 
 def error_reply(

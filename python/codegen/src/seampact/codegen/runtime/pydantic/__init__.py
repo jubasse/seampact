@@ -19,20 +19,32 @@ from seampact.codegen.runtime.pattern import contract_pattern
 MAX_SAFE_INTEGER: Final = 2**53 - 1
 
 _DATE_TIME: Final = re.compile(
-    r"(\d{4}-\d{2}-\d{2})[Tt](\d{2}:\d{2}:\d{2})(?:\.(\d+))?([Zz]|[+-]\d{2}:\d{2})", re.ASCII
+    r"(\d{4}-\d{2}-\d{2})[Tt](\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?([Zz]|[+-](?:[01]\d|2[0-3]):[0-5]\d)", re.ASCII
 )
 _DATE: Final = re.compile(r"\d{4}-\d{2}-\d{2}", re.ASCII)
 _UUID: Final = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 _DECIMAL: Final = re.compile(r"-?(0|[1-9][0-9]*)(\.[0-9]+)?", re.ASCII)
 _MICROSECOND_DIGITS: Final = 6
 _FORMAT_RULE: Final = "format"
+_TYPE_RULE: Final = "type"
 
 
 def whole_number(value: object) -> object:
     """A whole-number float in the safe range as an `int` (ADR 0003: `1.0` is an integer); `1.5`, `true` and `"1"`
-    stay, for the strict type rule to refuse."""
+    stay, for the strict type rule to refuse. An `int` outside the safe range is refused: it needs `int64`."""
     if isinstance(value, float) and value.is_integer() and abs(value) <= MAX_SAFE_INTEGER:
         return int(value)
+
+    if isinstance(value, int) and not isinstance(value, bool) and abs(value) > MAX_SAFE_INTEGER:
+        raise PydanticCustomError(_TYPE_RULE, "an integer outside the safe range")
+
+    return value
+
+
+def refuse_null(value: object) -> object:
+    """A wire `null` on an optional member that is not nullable (ADR 0003 section 5: absent and null differ)."""
+    if value is None:
+        raise PydanticCustomError(_TYPE_RULE, "null on a member that is not nullable")
 
     return value
 
@@ -111,6 +123,10 @@ WireDate = Annotated[date, BeforeValidator(date_from_wire)]
 WireUuid = Annotated[UUID, BeforeValidator(uuid_from_wire)]
 WireDecimal = Annotated[Decimal, BeforeValidator(decimal_from_wire)]
 
+# An optional member that is not nullable: absent, it takes the default None, which Pydantic does not validate; a
+# wire `null` meets `refuse_null` (ADR 0003 section 5: absent and null differ).
+type Omittable[T] = Annotated[T | None, BeforeValidator(refuse_null)]
+
 
 def length(min_length: int | None = None, max_length: int | None = None) -> AfterValidator:
     """`minLength` and `maxLength` of a string or a list, counted in code points for a string."""
@@ -146,7 +162,7 @@ def bounds(
     ]
 
     def check[N: int | float | Decimal](value: N) -> N:
-        exact = Decimal(value)
+        exact = _exact(value)
 
         for rule, bound, holds in rules:
             if not holds(exact, bound):
@@ -161,7 +177,7 @@ def multiple_of(divisor: str) -> AfterValidator:
     exact_divisor = Decimal(divisor)
 
     def check[N: int | float | Decimal](value: N) -> N:
-        if Decimal(value) % exact_divisor != 0:
+        if _exact(value) % exact_divisor != 0:
             raise _rule_error("multipleOf", f"not a multiple of {divisor}")
 
         return value
@@ -180,6 +196,11 @@ def pattern(normalized: str) -> AfterValidator:
         return value
 
     return AfterValidator(check)
+
+
+def _exact(value: int | float | Decimal) -> Decimal:
+    """A float as the shortest decimal that reads back to it, the text the wire wrote, never its binary expansion."""
+    return Decimal(repr(value)) if isinstance(value, float) else Decimal(value)
 
 
 def _format_error(format_: str) -> PydanticCustomError:

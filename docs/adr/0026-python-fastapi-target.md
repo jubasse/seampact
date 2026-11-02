@@ -169,7 +169,7 @@ The boundary matches the raw request target against the contract templates. The 
 Starlette decodes the path before routing, so the raw match and the chosen route can differ, as on Laravel ("Routes" of ADR 0023):
 
 - `/v1/tasks/%73earch` reaches the search route while the raw path matches `{task_id}` (spike). The access dependency answers the path's `notFound` 404 before any check.
-- A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the boundary, before routing: a trailing slash (which Starlette would redirect with a 307, spike), `//`, a dot segment (`%2e%2e`, which Starlette decodes to `..` and routes as a value), a percent-encoded static segment, and a `;` path parameter (`7%3Bx=1`).
+- A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the boundary, before routing: a trailing slash (which Starlette would redirect with a 307, spike), `//`, a dot segment (`%2e%2e`, which Starlette decodes to `..` and routes as a value), a percent-encoded static segment, and a path parameter holding a raw `;` (`7;x=1`). An encoded `%3B` is data in a parameter value: `7%3Bx=1` matches, its value `7;x=1`.
 - `a%2Fb` in a segment matches `{task_id}` raw, but Starlette routes the decoded `a/b`. On the way back, once routing ran, the boundary reads the route FastAPI's router chose. When it is not the contract route of the operation the raw path matched (no route, an app route, a mounted sub-app or another contract route), the boundary answers that path's `notFound` 404, whatever the reply.
 - `catchAll: false` leaves those paths to the app.
 - The boundary acts on `http` scopes only. A `websocket` or `lifespan` scope passes through untouched, since a contract declares no websocket. An app `WebSocketRoute` under a base path is an app route like any other: the boot check refuses it unless `frameworkRoutes` lists it.
@@ -227,7 +227,7 @@ Generated value types:
 - Pydantic models for objects, with `ConfigDict(strict=True, protected_namespaces=())` and `extra` set by the object's unknown-key rule;
 - a discriminated union of one model per variant for unions, with an `Unknown` variant only on input readers;
 - `StrEnum` classes for enums;
-- `T | None` for an optional or a nullable member, and `Field[T]` for a member both optional and nullable; presence is read from `model_fields_set` (spike);
+- `T | None` for an optional or a nullable member (an optional member that is not nullable still refuses a wire `null`, ADR 0003 section 5), and `Field[T]` for a member both optional and nullable; presence is read from `model_fields_set` (spike);
 - `datetime` for a `date-time`, kept with the offset it was sent with;
 - `int` in the IR's safe range for integers, checked as whole numbers, so `1.0` is an integer (ADR 0003 Consequences).
 

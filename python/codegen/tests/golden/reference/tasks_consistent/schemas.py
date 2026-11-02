@@ -13,6 +13,7 @@ _MODEL_CONFIG = _pydantic.ConfigDict(
     extra="forbid",
     protected_namespaces=(),
     regex_engine="rust-regex",
+    allow_inf_nan=False,
 )
 
 
@@ -49,13 +50,13 @@ class ApiEmptyBody(_pydantic.BaseModel):
 class ApiForbiddenParams(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
-    pointer: str | None = None
+    pointer: _seampact.Omittable[str] = None
 
 
 class ApiPayloadTooLargeParams(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
-    limit_bytes: _typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="0")] | None = None
+    limit_bytes: _seampact.Omittable[_typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="0")]] = None
 
 
 class ApiRateLimitedParams(_pydantic.BaseModel):
@@ -101,7 +102,7 @@ class CreateTask(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
     title: _typing.Annotated[str, _seampact.length(min_length=1, max_length=200)]
-    effort: _typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="0")] | None = None
+    effort: _seampact.Omittable[_typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="0")]] = None
 
 
 class Draft(_pydantic.BaseModel):
@@ -135,7 +136,7 @@ class Preferences(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
     locale: _typing.Annotated[str, _seampact.length(min_length=2, max_length=35)]
-    digest: bool | None = None
+    digest: _seampact.Omittable[bool] = None
 
 
 class RecentAuthParams(_pydantic.BaseModel):
@@ -166,7 +167,7 @@ class Task(_pydantic.BaseModel):
     task_id: _seampact.WireUuid
     title: _typing.Annotated[str, _seampact.length(min_length=1, max_length=200)]
     state: _typing.Annotated[TaskState, _seampact.enum_from_wire(TaskState)]
-    effort: _typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="0")] | None = None
+    effort: _seampact.Omittable[_typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="0")]] = None
     version: _typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="1")]
     created_at: _seampact.WireDateTime
 
@@ -174,36 +175,35 @@ class Task(_pydantic.BaseModel):
 class TaskQuery(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
-    text: _typing.Annotated[str, _seampact.length(max_length=200)] | None = None
-    states: (
+    text: _seampact.Omittable[_typing.Annotated[str, _seampact.length(max_length=200)]] = None
+    states: _seampact.Omittable[
         _typing.Annotated[
             list[_typing.Annotated[TaskState, _seampact.enum_from_wire(TaskState)]],
             _seampact.length(max_length=3),
         ]
-        | None
-    ) = None
+    ] = None
 
 
 class TaskSearchResult(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
     items: list[Task]
-    total: _typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="0")] | None = None
+    total: _seampact.Omittable[_typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="0")]] = None
 
 
 class UpdatePreferences(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
-    locale: _typing.Annotated[str, _seampact.length(min_length=2, max_length=35)] | None = None
-    digest: bool | None = None
+    locale: _seampact.Omittable[_typing.Annotated[str, _seampact.length(min_length=2, max_length=35)]] = None
+    digest: _seampact.Omittable[bool] = None
 
 
 class UpdateTask(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
-    title: _typing.Annotated[str, _seampact.length(min_length=1, max_length=200)] | None = None
-    state: _typing.Annotated[TaskState, _seampact.enum_from_wire(TaskState)] | None = None
-    effort: _typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="0")] | None = None
+    title: _seampact.Omittable[_typing.Annotated[str, _seampact.length(min_length=1, max_length=200)]] = None
+    state: _seampact.Omittable[_typing.Annotated[TaskState, _seampact.enum_from_wire(TaskState)]] = None
+    effort: _seampact.Omittable[_typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="0")]] = None
     expected_version: _typing.Annotated[_seampact.WholeNumber, _seampact.bounds(minimum="1")]
 
 

@@ -38,8 +38,8 @@ class ContractRoute:
 
     def match(self, raw_segments: Sequence[str]) -> dict[str, str] | None:
         """The raw path parameters when the segments match: a literal segment matches its text exactly, undecoded;
-        a parameter matches a segment that is not empty, holds no `;`, raw or percent-encoded (ADR 0026 "Routes"),
-        and is no dot segment once decoded."""
+        a parameter matches a segment that is not empty, holds no raw `;` (ADR 0026 "Routes"; an encoded `%3B` is
+        data), and is no dot segment once decoded."""
         if len(raw_segments) != len(self.segments):
             return None
 
@@ -53,7 +53,7 @@ class ContractRoute:
 
             decoded = unquote_to_bytes(raw)
 
-            if raw == "" or b";" in decoded or decoded in _DOT_SEGMENTS:
+            if raw == "" or ";" in raw or decoded in _DOT_SEGMENTS:
                 return None
 
             parameters[segment.text] = raw

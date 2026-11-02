@@ -2,12 +2,17 @@
 reference golden models."""
 
 import importlib.util
+from datetime import UTC, date, datetime, timedelta, timezone
+from decimal import Decimal
+from enum import StrEnum
 from pathlib import Path
 from types import ModuleType
 from typing import Annotated
+from uuid import UUID
 
 import pydantic
 import pytest
+from typing_extensions import TypeForm
 
 import seampact.codegen.runtime.pydantic as type_layer
 
@@ -23,13 +28,19 @@ def _golden_schemas(package: str) -> ModuleType:
     return module
 
 
-def _adapter(annotation: object) -> pydantic.TypeAdapter[object]:
-    return pydantic.TypeAdapter(annotation, config=pydantic.ConfigDict(strict=True, allow_inf_nan=False))
+_PROBE_CONFIG = pydantic.ConfigDict(strict=True, allow_inf_nan=False)
 
 
-def _accepts(annotation: object, value: object) -> bool:
+def _validated(annotation: TypeForm[object], value: object) -> object:
+    """`value` validated as a member annotated `annotation` in the generated models' strict config."""
+    probe = pydantic.create_model("Probe", __config__=_PROBE_CONFIG, value=(annotation, ...))
+
+    return probe.model_validate({"value": value}).model_dump()["value"]
+
+
+def _accepts(annotation: TypeForm[object], value: object) -> bool:
     try:
-        _adapter(annotation).validate_python(value)
+        _validated(annotation, value)
     except pydantic.ValidationError:
         return False
 
@@ -57,7 +68,7 @@ def test_the_generated_model_config_refuses_non_finite_numbers() -> None:
     with pytest.raises(pydantic.ValidationError):
         measured.model_validate({"value": float("inf")})
 
-    assert measured.model_validate({"value": 1.5}).value == 1.5
+    assert measured.model_validate({"value": 1.5}).model_dump() == {"value": 1.5}
 
 
 @pytest.mark.parametrize(
@@ -106,3 +117,88 @@ def test_consistent_bounds_and_multiples_compare_the_float_the_wire_wrote(
 )
 def test_a_date_time_takes_one_to_nine_fraction_digits_and_a_valid_offset(text: str, accepted: bool) -> None:
     assert _accepts(type_layer.WireDateTime, text) is accepted
+
+
+class _Color(StrEnum):
+    RED = "red"
+
+
+_RED = _Color.RED
+
+
+@pytest.mark.parametrize(
+    ("annotation", "value", "expected"),
+    [
+        (type_layer.WholeNumber, 1.0, 1),
+        (type_layer.WholeNumber, 100, 100),
+        (type_layer.WireDateTime, "2026-01-02t03:04:05.5z", datetime(2026, 1, 2, 3, 4, 5, 500000, tzinfo=UTC)),
+        (
+            type_layer.WireDateTime,
+            "2026-01-02T03:04:05.123456789+02:00",
+            datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=timezone(timedelta(hours=2))),
+        ),
+        (type_layer.WireDate, "2026-02-28", date(2026, 2, 28)),
+        (type_layer.WireUuid, "00000000-0000-0000-0000-00000000000A", UUID(int=10)),
+        (type_layer.WireDecimal, "-0.50", Decimal("-0.50")),
+        (type_layer.WireDecimal, "12345678901234567890.1", Decimal("12345678901234567890.1")),
+        (Annotated[_Color, type_layer.enum_from_wire(_Color)], "red", _RED),
+    ],
+)
+def test_the_type_layer_reads_a_wire_value_as_its_python_object(
+    annotation: TypeForm[object], value: object, expected: object
+) -> None:
+    assert _validated(annotation, value) == expected
+
+
+@pytest.mark.parametrize(
+    ("annotation", "value"),
+    [
+        (type_layer.WholeNumber, 1.5),
+        (type_layer.WholeNumber, True),
+        (type_layer.WholeNumber, "1"),
+        (type_layer.WholeNumber, 1e100),
+        (type_layer.WireDateTime, "2026-01-02T03:04:05"),
+        (type_layer.WireDateTime, "2026-01-02T03:04:60Z"),
+        (type_layer.WireDateTime, "2026-01-02T24:00:00Z"),
+        (type_layer.WireDateTime, "2026-01-02 03:04:05Z"),
+        (type_layer.WireDate, "2026-02-30"),
+        (type_layer.WireDate, "2026-2-3"),
+        (type_layer.WireUuid, "00000000000000000000000000000000"),
+        (type_layer.WireDecimal, "1e2"),
+        (type_layer.WireDecimal, "01.5"),
+        (type_layer.WireDecimal, ".5"),
+        (type_layer.WireDecimal, 1.5),
+        (Annotated[_Color, type_layer.enum_from_wire(_Color)], "blue"),
+    ],
+)
+def test_the_type_layer_refuses_a_value_outside_its_wire_form(annotation: TypeForm[object], value: object) -> None:
+    assert _accepts(annotation, value) is False
+
+
+@pytest.mark.parametrize(
+    ("annotation", "value", "rule"),
+    [
+        (Annotated[str, type_layer.length(min_length=2)], "a", "minLength"),
+        (Annotated[str, type_layer.length(max_length=1)], "\U0001f600a", "maxLength"),
+        (Annotated[list[int], type_layer.length(max_length=1)], [1, 2], "maxLength"),
+        (Annotated[int, type_layer.bounds(minimum="0")], -1, "minimum"),
+        (Annotated[int, type_layer.bounds(exclusive_minimum="0")], 0, "exclusiveMinimum"),
+        (Annotated[Decimal, type_layer.bounds(maximum="1.5")], Decimal("1.50001"), "maximum"),
+        (Annotated[int, type_layer.multiple_of("3")], 4, "multipleOf"),
+        (Annotated[str, type_layer.pattern("^a+$")], "ab", "pattern"),
+        (type_layer.WireDate, "x", "format"),
+        (type_layer.WholeNumber, 2**53, "type"),
+        (type_layer.Omittable[int], None, "type"),
+    ],
+)
+def test_a_consistent_rule_fails_with_the_contract_rule_name(
+    annotation: TypeForm[object], value: object, rule: str
+) -> None:
+    with pytest.raises(pydantic.ValidationError) as refused:
+        _validated(annotation, value)
+
+    assert [error["type"] for error in refused.value.errors()] == [rule]
+
+
+def test_a_code_point_counts_once_in_a_length() -> None:
+    assert _accepts(Annotated[str, type_layer.length(max_length=1)], "\U0001f600") is True

@@ -48,9 +48,10 @@ def asgi_raw_target(scope: Mapping[str, object]) -> RawTarget | None:
     return None if stripped is None else RawTarget(_rooted(stripped), query_text, raw)
 
 
-def wsgi_raw_target(environ: Mapping[str, object]) -> RawTarget:
-    """The raw target minus `SCRIPT_NAME`; under a server that gives no `RAW_URI` or `REQUEST_URI` (Django's
-    `runserver`), the decoded `PATH_INFO`."""
+def wsgi_raw_target(environ: Mapping[str, object]) -> RawTarget | None:
+    """The raw target minus `SCRIPT_NAME`, None (not a contract request) when it does not start with a non-empty
+    `SCRIPT_NAME`, as `asgi_raw_target` treats `root_path`; under a server that gives no `RAW_URI` or `REQUEST_URI`
+    (Django's `runserver`), the decoded `PATH_INFO`."""
     query = _text(environ, "QUERY_STRING")
     uri = _text(environ, "RAW_URI") or _text(environ, "REQUEST_URI")
 
@@ -59,9 +60,13 @@ def wsgi_raw_target(environ: Mapping[str, object]) -> RawTarget:
 
     path = _without_origin(_without_query(uri))
     script = _raw_text(_text(environ, "SCRIPT_NAME").rstrip("/"))
-    stripped = None if script == "" else _stripped_prefix(path, script)
 
-    return RawTarget(_rooted(path if stripped is None else stripped), query, raw=True)
+    if script == "":
+        return RawTarget(_rooted(path), query, raw=True)
+
+    stripped = _stripped_prefix(path, script)
+
+    return None if stripped is None else RawTarget(_rooted(stripped), query, raw=True)
 
 
 def _text(values: Mapping[str, object], key: str) -> str:

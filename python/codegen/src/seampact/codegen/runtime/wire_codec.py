@@ -1,12 +1,12 @@
 """Turns a decoded wire body into the tree a generated model validates, and a generated value back into the wire
 tree: object members renamed between their wire names and their Python attributes by the api's member table, unknown
 keys taken out and reported by pointer (the input use's `unknownKeys` policy decides on them), and on the way out
-`date-time` with its offset and milliseconds, `date`, `uuid`, decimals and enum members as wire text. Values are read
-by attribute, so a Pydantic model and a frozen dataclass both encode."""
+`date-time` with its offset and the fraction it holds, `date`, `uuid`, decimals and enum members as wire text. Values
+are read by attribute, so a Pydantic model and a frozen dataclass both encode."""
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from enum import Enum
 from typing import Final
@@ -20,6 +20,8 @@ from seampact.hooks import Absent
 _LIST_SHAPES: Final = frozenset({"list", "page"})
 _TABLE_SHAPE: Final = "table"
 _OBJECT_SCHEMA: Final = "object"
+_WHOLE_MINUTE: Final = timedelta(minutes=1)
+_FRACTION_DIGITS: Final = 6
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,7 +152,8 @@ class WireCodec:
 def scalar_to_wire(value: object) -> object:
     """A scalar, enum or opaque value as the wire writes it.
 
-    Raises `BoundaryFailureError` for a date-time without an offset, which the contract cannot write."""
+    Raises `BoundaryFailureError` for a date-time without an offset and a decimal that is not finite, which the
+    contract cannot write."""
     if isinstance(value, Enum):
         return value.value
 
@@ -160,15 +163,43 @@ def scalar_to_wire(value: object) -> object:
                 "seampact: the handler wrote a date-time without an offset; give it a time zone, such as UTC."
             )
 
-        return value.isoformat(timespec="milliseconds")
+        return _date_time_text(value)
 
     if isinstance(value, date):
         return value.isoformat()
 
-    if isinstance(value, UUID | Decimal):
+    if isinstance(value, Decimal):
+        return _decimal_text(value)
+
+    if isinstance(value, UUID):
         return str(value)
 
     return value
+
+
+def _date_time_text(value: datetime) -> str:
+    """RFC 3339 with the fraction the value holds, without trailing zeros (ADR 0003 section 8); an offset with
+    seconds, which RFC 3339 cannot write, is written in UTC."""
+    offset = value.utcoffset()
+
+    if offset is not None and offset % _WHOLE_MINUTE:
+        value = value.astimezone(UTC)
+
+    if value.microsecond == 0:
+        return value.isoformat(timespec="seconds")
+
+    seconds, fraction_and_offset = value.isoformat(timespec="microseconds").split(".", 1)
+    fraction = fraction_and_offset[:_FRACTION_DIGITS].rstrip("0")
+
+    return f"{seconds}.{fraction}{fraction_and_offset[_FRACTION_DIGITS:]}"
+
+
+def _decimal_text(value: Decimal) -> str:
+    """ADR 0003's decimal wire form, never an exponent."""
+    if not value.is_finite():
+        raise BoundaryFailureError(f"seampact: the handler wrote the decimal {value}; write a finite decimal.")
+
+    return format(value, "f")
 
 
 def _items(value: object) -> Sequence[object]:

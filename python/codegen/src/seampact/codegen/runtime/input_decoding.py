@@ -3,6 +3,7 @@ declared headers, and the body (bounded read, media type, `json` with objects an
 hands the decoded parts to its own step 6."""
 
 import json
+import re
 from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass
 from typing import Final
@@ -26,6 +27,7 @@ _CONTENT_TYPE: Final = "content-type"
 _CONTENT_ENCODING: Final = "content-encoding"
 _TRANSFER_ENCODING: Final = "transfer-encoding"
 _MAX_JSON_DEPTH: Final = 512
+_LONE_SURROGATE: Final = re.compile("[\ud800-\udfff]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -172,7 +174,7 @@ def _json_tree(contract: ApiContract, operation_id: str, data: bytes) -> object:
     except (ValueError, RecursionError):
         raise schema_invalid(contract, operation_id, [Issue("body", "", "type")]) from None
 
-    if _depth(tree) > _MAX_JSON_DEPTH:
+    if _depth(tree) > _MAX_JSON_DEPTH or _holds_lone_surrogate(tree):
         raise schema_invalid(contract, operation_id, [Issue("body", "", "type")])
 
     return tree
@@ -181,6 +183,24 @@ def _json_tree(contract: ApiContract, operation_id: str, data: bytes) -> object:
 def _refuse_constant(name: str) -> object:
     """`NaN` and the infinities are not JSON."""
     raise ValueError(f"{name} is not JSON")
+
+
+def _holds_lone_surrogate(tree: object) -> bool:
+    """A string value with a lone surrogate, which is not Unicode text; a key keeps it, for the unknown-key report."""
+    pending = [tree]
+
+    while pending:
+        item = pending.pop()
+
+        if isinstance(item, str) and _LONE_SURROGATE.search(item) is not None:
+            return True
+
+        if isinstance(item, dict):
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+
+    return False
 
 
 def _depth(tree: object) -> int:
