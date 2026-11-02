@@ -126,9 +126,12 @@ public object GeneratedWriter {
         val refusals = mutableListOf<WriterRefusal>()
         val unchanged = mutableListOf<String>()
         val removable = mutableListOf<String>()
+        val staleByFoldedPath = recorded.keys.filter { it !in produced }.associateBy { caseFolded(it) }
 
         for (file in planned) {
-            when (val state = existingFileState(rootDir, file.path, recorded[file.path], onHandEdit)) {
+            val renamedFrom = staleByFoldedPath[caseFolded(file.path)]
+
+            when (val state = existingFileState(rootDir, file.path, recorded[file.path], onHandEdit, renamedFrom)) {
                 is FileState.Refused -> refusals += state.refusal
                 is FileState.Generated -> if (state.sha256 == file.sha256) unchanged += file.path
                 FileState.Absent -> Unit
@@ -169,7 +172,14 @@ private sealed interface FileState {
 }
 
 // What is at [path] now: nothing, the file the manifest recorded, or something the writer must not touch.
-private fun existingFileState(rootDir: Path, path: String, recordedSha256: String?, onHandEdit: HandEditPolicy): FileState {
+// [caseRenamedFrom] is the path a previous run generated that [path] only differs from by letter case.
+private fun existingFileState(
+    rootDir: Path,
+    path: String,
+    recordedSha256: String?,
+    onHandEdit: HandEditPolicy,
+    caseRenamedFrom: String? = null,
+): FileState {
     val file = path.split("/").fold(rootDir, Path::resolve)
 
     if (leavesRoot(rootDir, file)) {
@@ -187,6 +197,14 @@ private fun existingFileState(rootDir: Path, path: String, recordedSha256: Strin
             "writer.file.not-generated",
             "'$file' is not a regular file, so the writer did not generate it.",
             "Move it out of the output directory $rootDir.",
+        )
+    }
+
+    if (recordedSha256 == null && caseRenamedFrom != null) {
+        return refusedState(
+            "writer.file.not-generated",
+            "'$file' exists, and the previous run generated '$caseRenamedFrom', so this run renames it only by letter case; on a case-insensitive file system they are one file.",
+            "Delete '${rootDir.resolve(caseRenamedFrom)}', then generate again.",
         )
     }
 

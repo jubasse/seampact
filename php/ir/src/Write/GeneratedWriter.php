@@ -113,10 +113,17 @@ final class GeneratedWriter
         $refusals = [];
         $unchanged = [];
         $removable = [];
+        $staleByFoldedPath = [];
+
+        foreach (array_keys($recorded) as $recordedPath) {
+            if (!array_key_exists($recordedPath, $bytesByPath)) {
+                $staleByFoldedPath[GeneratedPaths::caseFolded((string) $recordedPath)] = (string) $recordedPath;
+            }
+        }
 
         foreach ($bytesByPath as $path => $bytes) {
             $path = (string) $path;
-            $state = self::existingFileState($rootDir, $path, $recorded[$path] ?? null, $onHandEdit);
+            $state = self::existingFileState($rootDir, $path, $recorded[$path] ?? null, $onHandEdit, $staleByFoldedPath[GeneratedPaths::caseFolded($path)] ?? null);
             if ($state instanceof WriterRefusal) {
                 $refusals[] = $state;
             } elseif ($state === hash('sha256', $bytes)) {
@@ -146,7 +153,8 @@ final class GeneratedWriter
     }
 
     // What is at `$path` now: nothing (null), the SHA-256 of the file the manifest recorded, or a refusal.
-    private static function existingFileState(string $rootDir, string $path, ?string $recordedSha256, HandEditPolicy $onHandEdit): string|WriterRefusal|null
+    // `$caseRenamedFrom` is the path a previous run generated that `$path` only differs from by letter case.
+    private static function existingFileState(string $rootDir, string $path, ?string $recordedSha256, HandEditPolicy $onHandEdit, ?string $caseRenamedFrom = null): string|WriterRefusal|null
     {
         $file = $rootDir . '/' . $path;
 
@@ -167,6 +175,14 @@ final class GeneratedWriter
                 'writer.file.not-generated',
                 "'{$file}' is not a regular file, so the writer did not generate it.",
                 "Move it out of the output directory {$rootDir}.",
+            );
+        }
+
+        if ($recordedSha256 === null && $caseRenamedFrom !== null) {
+            return new WriterRefusal(
+                'writer.file.not-generated',
+                "'{$file}' exists, and the previous run generated '{$caseRenamedFrom}', so this run renames it only by letter case; on a case-insensitive file system they are one file.",
+                "Delete '{$rootDir}/{$caseRenamedFrom}', then generate again.",
             );
         }
 

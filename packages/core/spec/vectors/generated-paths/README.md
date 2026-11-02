@@ -1,0 +1,1 @@
+Pairs of generated file names and whether the four writers (Node, PHP, JVM, Python) must refuse them as differing only by letter case (ADR 0015 "Writing files"): the shared fold is lower case, then upper case, then lower case, and each writer's tests read `case-fold.json` by repository path.

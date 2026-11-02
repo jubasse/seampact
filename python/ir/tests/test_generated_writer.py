@@ -15,6 +15,7 @@ from seampact.ir.write import (
     plan_write,
 )
 from seampact.ir.write.manifest import MANIFEST_FILE_NAME
+from seampact.ir.write.paths import checked_files
 
 
 def _planned(out: Path, files: list[GeneratedFile], policy: HandEditPolicy = HandEditPolicy.REFUSE) -> PlannedWrite:
@@ -100,6 +101,21 @@ def test_unsafe_duplicate_and_reserved_paths_are_refused(tmp_path: Path) -> None
     assert _refusal_codes(tmp_path, twice) == ["file.path.invalid"]
 
 
+def test_two_paths_that_differ_only_by_case_are_refused_by_name(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+
+    for first, second in (("Tasks.py", "tasks.py"), ("routes/É.py", "routes/é.py")):
+        planned = plan_write(
+            str(out), "main", [GeneratedFile(first, "a"), GeneratedFile(second, "b")], HandEditPolicy.REFUSE
+        )
+
+        assert isinstance(planned, list)
+        assert [refusal.code for refusal in planned] == ["file.path.invalid"]
+        assert f"'{second}', and it differs only by letter case from '{first}'" in planned[0].message
+
+    assert not out.exists()
+
+
 def test_a_link_leaving_the_output_directory_is_refused(tmp_path: Path) -> None:
     outside = tmp_path / "outside"
     outside.mkdir()
@@ -138,3 +154,59 @@ def test_the_header_refuses_an_unknown_extension_and_a_control_character() -> No
 
     assert [item.code for item in unknown if isinstance(item, WriterRefusal)] == ["file.extension.unsupported"]
     assert [item.code for item in unsafe if isinstance(item, WriterRefusal)] == ["file.header.unsafe"]
+
+
+_CASE_FOLD_VECTORS = "packages/core/spec/vectors/generated-paths/case-fold.json"
+
+
+def _refusal_messages_of_paths(paths: list[str]) -> list[str]:
+    checked = checked_files([GeneratedFile(path, "") for path in paths])
+
+    return [item.message for item in checked if isinstance(item, WriterRefusal)]
+
+
+def test_the_case_fold_agrees_with_the_shared_vector_pairs(repository_root: Path) -> None:
+    pairs = json.loads((repository_root / _CASE_FOLD_VECTORS).read_text(encoding="utf-8"))["pairs"]
+
+    for pair in pairs:
+        refused = bool(_refusal_messages_of_paths([pair["first"], pair["second"]]))
+
+        assert refused is pair["collide"], f"{pair['first']} and {pair['second']}"
+
+
+def test_directories_that_differ_only_by_case_or_a_file_that_is_also_a_directory_are_refused() -> None:
+    cases = [
+        ["Routes/a.py", "routes/b.py"],
+        ["routes/b.py", "Routes/a.py"],
+        ["routes", "Routes/a.py"],
+        ["Routes/a.py", "routes"],
+        ["routes", "routes/a.py"],
+    ]
+
+    for paths in cases:
+        assert len(_refusal_messages_of_paths(paths)) == 1, paths
+
+    assert "differs only by letter case from the directory 'Routes'" in _refusal_messages_of_paths(cases[0])[0]
+
+
+def test_a_path_repeated_after_a_case_variant_is_reported_as_generated_twice() -> None:
+    messages = _refusal_messages_of_paths(["a.py", "A.py", "A.py"])
+
+    assert len(messages) == 2
+    assert "differs only by letter case from 'a.py'" in messages[0]
+    assert "it is generated twice" in messages[1]
+
+
+def test_a_stale_file_renamed_only_by_case_gets_its_own_message_and_fix(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    commit_write(_planned(out, [GeneratedFile("Tasks.py", "a")]))
+    # What a case-insensitive disk shows: the new spelling already exists.
+    (out / "tasks.py").write_text("a\n", encoding="utf-8")
+
+    planned = plan_write(str(out), "main", [GeneratedFile("tasks.py", "a")], HandEditPolicy.REFUSE)
+
+    assert isinstance(planned, list)
+    assert [refusal.code for refusal in planned] == ["writer.file.not-generated"]
+    assert "only by letter case" in planned[0].message
+    assert "did not generate it" not in planned[0].message
+    assert "Delete" in planned[0].fix

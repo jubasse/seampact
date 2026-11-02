@@ -14,7 +14,7 @@ from typing import Final
 from seampact.ir.write.code_unit_order import code_unit_key
 from seampact.ir.write.generated_file import GeneratedFile
 from seampact.ir.write.manifest import MANIFEST_FILE_NAME, read_manifest, serialized_manifest
-from seampact.ir.write.paths import checked_files
+from seampact.ir.write.paths import case_folded, checked_files
 from seampact.ir.write.policy import HandEditPolicy
 from seampact.ir.write.refusal import WriterRefusal
 
@@ -137,9 +137,12 @@ def _plan_files(
     refusals: list[WriterRefusal] = []
     unchanged: list[str] = []
     removable: list[str] = []
+    stale_by_folded_path = {case_folded(path): path for path in recorded if path not in bytes_by_path}
 
     for path, data in bytes_by_path.items():
-        state = _existing_file_state(root_dir, path, recorded.get(path), on_hand_edit)
+        state = _existing_file_state(
+            root_dir, path, recorded.get(path), on_hand_edit, stale_by_folded_path.get(case_folded(path))
+        )
 
         if isinstance(state, WriterRefusal):
             refusals.append(state)
@@ -164,9 +167,14 @@ def _plan_files(
 
 
 def _existing_file_state(
-    root_dir: str, path: str, recorded_sha256: str | None, on_hand_edit: HandEditPolicy
+    root_dir: str,
+    path: str,
+    recorded_sha256: str | None,
+    on_hand_edit: HandEditPolicy,
+    case_renamed_from: str | None = None,
 ) -> str | WriterRefusal | None:
-    """What is at `path` now: nothing (None), the SHA-256 of the file, or a refusal."""
+    """What is at `path` now: nothing (None), the SHA-256 of the file, or a refusal. `case_renamed_from` is the
+    path a previous run generated that `path` only differs from by letter case."""
     file = os.path.join(root_dir, path)
 
     if _leaves_root(root_dir, file):
@@ -184,6 +192,14 @@ def _existing_file_state(
             "writer.file.not-generated",
             f"'{file}' is not a regular file, so the writer did not generate it.",
             f"Move it out of the output directory {root_dir}.",
+        )
+
+    if recorded_sha256 is None and case_renamed_from is not None:
+        return WriterRefusal(
+            "writer.file.not-generated",
+            f"'{file}' exists, and the previous run generated '{case_renamed_from}', so this run renames it only by "
+            "letter case; on a case-insensitive file system they are one file.",
+            f"Delete '{os.path.join(root_dir, case_renamed_from)}', then generate again.",
         )
 
     if recorded_sha256 is None:
