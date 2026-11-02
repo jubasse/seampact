@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from seampact.codegen.refusals import IrPlace, Refusals
-from seampact.ir.model import ContractIR, Operation, Param, ResponseShape
+from seampact.ir.model import ContractIR, Operation, ResponseShape
 from seampact.ir.naming import IrName, NameSource, NamingRole, python_identifier, segments_of
 
 
@@ -150,19 +150,6 @@ def _operation_names(operation: Operation, owner: tuple[str, ...], root: _Claims
         ),
         owner_attribute=python_identifier(IrName(owner, NamingRole.MEMBER)),
     )
-
-
-def handler_headers(operation: Operation) -> list[Param]:
-    """The header parameters that reach the handler: the credential and CSRF headers stay the boundary's."""
-    return [
-        param
-        for param in operation.params.header
-        if param.derived_from is None or _handler_header_derivation(param.derived_from.derivation)
-    ]
-
-
-def _handler_header_derivation(derivation: str) -> bool:
-    return derivation != "identity.authenticate" and not derivation.startswith("csrf.")
 
 
 def _endpoints_owner(ir: ContractIR, operation: Operation) -> list[str] | None:

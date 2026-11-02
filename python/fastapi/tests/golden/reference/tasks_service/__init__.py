@@ -91,36 +91,36 @@ class GetTaskResponse200:
     body: _schemas.Task
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class GetTaskErrors:
     """A declared error of operation 'getTask', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_forbidden(cls, params: _schemas.ApiForbiddenParams) -> _typing.Self:
-        return cls("api.forbidden", params)
+        return cls(_code="api.forbidden", _params=params)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
     @classmethod
     def api_deadline_exceeded(cls) -> _typing.Self:
-        return cls("api.deadline_exceeded", None)
+        return cls(_code="api.deadline_exceeded", _params=None)
 
 
 type GetTaskResult = GetTaskResponse200 | GetTaskErrors

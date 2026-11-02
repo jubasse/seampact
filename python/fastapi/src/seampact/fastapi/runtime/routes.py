@@ -19,8 +19,9 @@ _REPLY_PIECE = "the reply of a handler's result"
 
 
 def contract_router() -> fastapi.APIRouter:
-    """The api's router: no prefix, since `mount` is already in each path, and no redirect of a trailing slash."""
-    return fastapi.APIRouter(redirect_slashes=False)
+    """The api's router: no prefix, since `mount` is already in each path. The app's router does the routing, so a
+    trailing slash is the boundary's to answer, not this router's."""
+    return fastapi.APIRouter()
 
 
 def add_operation[E, R](
@@ -51,9 +52,11 @@ async def call_handler[A, T](method: Callable[[A], T | Awaitable[T]], argument: 
         coroutine: Awaitable[T] = method(argument)
         return await coroutine
 
-    result = await run_in_threadpool(method, argument)
+    result: T | Awaitable[T] = await run_in_threadpool(method, argument)
 
     if isinstance(result, Awaitable):
+        # The checkers read `Awaitable[Any]` here, since T might be awaitable itself: a plain `def` returning an
+        # awaitable takes the `Awaitable[T]` arm its protocol declares, so the awaited value is taken as that T.
         awaited: T = await result
         return awaited
 

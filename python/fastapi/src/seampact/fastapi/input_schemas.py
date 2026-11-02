@@ -7,7 +7,8 @@ cannot be the id of a declared schema; a class name taken twice is refused as `n
 import dataclasses
 from collections.abc import Sequence
 
-from seampact.fastapi.layout import ApiLayout, handler_headers
+from seampact.codegen.kept_forms import handler_headers
+from seampact.fastapi.layout import ApiLayout
 from seampact.ir.model import (
     ContractIR,
     Direction,

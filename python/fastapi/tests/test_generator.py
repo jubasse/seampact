@@ -89,6 +89,17 @@ def test_artefacts_the_target_does_not_take_yet_are_refused_by_name(repository_r
     }
 
 
+def test_a_boot_check_value_outside_its_set_is_refused_by_name(repository_root: Path) -> None:
+    artefacts: dict[str, JsonValue] = {"bootCheck": {"frameworkRoutes": "loose", "hooks": "fail", "routes": True}}
+
+    assert _refusal_codes(_ir_json(repository_root), artefacts=artefacts) == {
+        "artefacts.bootCheck.frameworkRoutes.invalid",
+        "artefacts.bootCheck.hooks.invalid",
+        "artefacts.bootCheck.routes.invalid",
+    }
+    assert _refusal_codes(_ir_json(repository_root), artefacts={"bootCheck": "on"}) == {"artefacts.bootCheck.invalid"}
+
+
 def test_contract_forms_the_target_does_not_serve_are_refused_by_name(repository_root: Path) -> None:
     ir_json = _ir_json(repository_root)
     operations = ir_json["operations"]

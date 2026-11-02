@@ -45,7 +45,7 @@ class TasksServiceHandlerFactories:
     internal: _runtime.Factory[InternalEndpoints]
 
 
-async def _get_task(endpoints: InternalEndpoints, request: GetTaskRequest) -> GetTaskResult:
+async def _call_get_task(endpoints: InternalEndpoints, request: GetTaskRequest) -> GetTaskResult:
     return await _runtime.call_handler(endpoints.get_task, request)
 
 
@@ -67,7 +67,7 @@ def bind_tasks_service(
     """Places api 'tasksService' in the app; call it last, after its own middleware and exception handlers."""
     router = _runtime.contract_router()
 
-    _runtime.add_operation(router, PLACEMENT, "getTask", handlers.internal, _get_task)
+    _runtime.add_operation(router, PLACEMENT, "getTask", handlers.internal, _call_get_task)
 
     _runtime.bind_api(
         PLACEMENT,

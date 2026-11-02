@@ -45,6 +45,9 @@ _NATIVE_DOCS: Final = "nativeDocs"
 _ARTEFACTS: Final = (_BOOT_CHECK, _ACCESS_HOOKS, _ROUTE_HELPERS, _NATIVE_DOCS)
 _STRICT_ROUTES: Final = "strict"
 _HOOKS_WARN: Final = "warn"
+_FRAMEWORK_ROUTES: Final = "frameworkRoutes"
+_HOOKS: Final = "hooks"
+_BOOT_CHECK_KEYS: Final = (_FRAMEWORK_ROUTES, _HOOKS)
 _NATIVE_DOCS_RELEASE: Final = "fastapi-4"
 
 
@@ -72,7 +75,7 @@ def read_options(
             framework_etag=values.choice(_FRAMEWORK_ETAG, FrameworkEtagMode.STRIP),
             catch_all=values.flag(_CATCH_ALL, default=True),
         ),
-        boot_check=_boot_check(artefacts.get(_BOOT_CHECK, True)),
+        boot_check=_boot_check(artefacts.get(_BOOT_CHECK, True), refusals),
         route_helpers=_read_artefacts(artefacts, refusals),
     )
 
@@ -169,25 +172,59 @@ class _OptionValues:
         self._refusals.add(code, message, fix, IrPlace(f"/options/{key}"))
 
 
-def _boot_check(value: JsonValue) -> BootCheckSwitches:
-    """`bootCheck` as the app config's schema allows it: a boolean, or `{ frameworkRoutes, hooks }`."""
+def _boot_check(value: JsonValue, refusals: Refusals) -> BootCheckSwitches:
+    """`bootCheck`: a boolean, or `{ frameworkRoutes, hooks }`; a value outside its set is refused and reads as the
+    default."""
+    at = IrPlace(f"/artefacts/{_BOOT_CHECK}")
+
     if not isinstance(value, Mapping):
+        if not isinstance(value, bool):
+            _refuse_boot_check_value(_BOOT_CHECK, value, "true, false or an object", at, refusals)
+
         enabled = value is not False
         on = FrameworkRoutesCheck.ON if enabled else FrameworkRoutesCheck.OFF
 
         return BootCheckSwitches(enabled=enabled, framework_routes=on, hooks=HooksCheck.ERROR)
 
-    framework_routes = value.get("frameworkRoutes", True)
-    routes_check = (
-        FrameworkRoutesCheck.STRICT
-        if framework_routes == _STRICT_ROUTES
-        else FrameworkRoutesCheck.OFF
-        if framework_routes is False
-        else FrameworkRoutesCheck.ON
-    )
-    hooks = HooksCheck.OFF if value.get("hooks") == HooksCheck.OFF.value else HooksCheck.ERROR
+    for key in value:
+        if key not in _BOOT_CHECK_KEYS:
+            _refuse_boot_check_value(f"{_BOOT_CHECK}.{key}", value[key], "absent", at.below(key), refusals)
 
-    return BootCheckSwitches(enabled=True, framework_routes=routes_check, hooks=hooks)
+    framework_routes = value.get(_FRAMEWORK_ROUTES, True)
+    routes_check = _framework_routes_check(framework_routes)
+    hooks = value.get(_HOOKS, HooksCheck.ERROR.value)
+    hooks_check = HooksCheck.OFF if hooks == HooksCheck.OFF.value else HooksCheck.ERROR
+
+    if routes_check is None:
+        allowed = f"true, false or '{_STRICT_ROUTES}'"
+        _refuse_boot_check_value(
+            f"{_BOOT_CHECK}.{_FRAMEWORK_ROUTES}", framework_routes, allowed, at.below(_FRAMEWORK_ROUTES), refusals
+        )
+
+    if hooks not in (HooksCheck.ERROR.value, HooksCheck.OFF.value, _HOOKS_WARN):
+        allowed = f"'{HooksCheck.ERROR.value}', '{HooksCheck.OFF.value}' or '{_HOOKS_WARN}'"
+        _refuse_boot_check_value(f"{_BOOT_CHECK}.{_HOOKS}", hooks, allowed, at.below(_HOOKS), refusals)
+
+    return BootCheckSwitches(enabled=True, framework_routes=routes_check or FrameworkRoutesCheck.ON, hooks=hooks_check)
+
+
+def _framework_routes_check(value: JsonValue) -> FrameworkRoutesCheck | None:
+    if value is True:
+        return FrameworkRoutesCheck.ON
+
+    if value is False:
+        return FrameworkRoutesCheck.OFF
+
+    return FrameworkRoutesCheck.STRICT if value == _STRICT_ROUTES else None
+
+
+def _refuse_boot_check_value(name: str, value: JsonValue, allowed: str, at: IrPlace, refusals: Refusals) -> None:
+    refusals.add(
+        f"artefacts.{name}.invalid",
+        f"The artefact '{name}' is {value!r}, not {allowed}.",
+        f"Set '{name}' to one of the listed values, or remove it for its default.",
+        at,
+    )
 
 
 def _read_artefacts(artefacts: Mapping[str, JsonValue], refusals: Refusals) -> bool:

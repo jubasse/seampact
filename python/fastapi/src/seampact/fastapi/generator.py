@@ -7,6 +7,7 @@ option, artefact and contract form it does not serve, all at once."""
 from collections.abc import Sequence
 from typing import Final
 
+from seampact.codegen.kept_forms import refuse_kept_forms
 from seampact.codegen.names import api_names
 from seampact.codegen.pydantic_models import pydantic_schemas_module
 from seampact.codegen.refusals import Refusals
@@ -36,6 +37,7 @@ class FastApiGenerator:
         refusals = Refusals(entry.id, TARGET, DISTRIBUTION)
         options = read_options(entry.options, entry.artefacts, refusals)
 
+        refuse_kept_forms(ir, refusals)
         refuse_unserved_forms(ir, refusals)
         error_codes = sorted({error.code for operation in ir.operations for error in operation.errors})
         layout = api_layout(ir, error_codes, refusals)

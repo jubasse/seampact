@@ -20,6 +20,8 @@ from seampact.ir.run.generator import TargetEntry
 _RUNTIME: Final = "_runtime"
 _HOOKS: Final = "_hooks"
 _ABC: Final = "_abc"
+# Each operation's coroutine: no module alias starts so, whatever the operation's name.
+_CALL_PREFIX: Final = "_call_"
 _BIND_DOC: Final = "Places api '{api}' in the app; call it last, after its own middleware and exception handlers."
 
 
@@ -50,7 +52,7 @@ def placement_module(
             [
                 *bracketed(
                     "",
-                    f"async def _{names.method}",
+                    f"async def {_CALL_PREFIX}{names.method}",
                     [f"endpoints: {names.endpoints}", f"request: {names.request}"],
                     f" -> {names.result}:",
                 ),
@@ -183,7 +185,7 @@ def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> li
             "PLACEMENT",
             string_literal(route.operation_id),
             f"handlers.{names.owner_attribute}",
-            f"_{names.method}",
+            f"{_CALL_PREFIX}{names.method}",
         ]
         lines += bracketed(INDENT, f"{_RUNTIME}.add_operation", arguments, "")
 

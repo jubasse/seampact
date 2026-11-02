@@ -157,52 +157,52 @@ class ArchiveTaskResponse200:
     body: _schemas.Task
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class ArchiveTaskErrors:
     """A declared error of operation 'archiveTask', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_csrf_invalid(cls) -> _typing.Self:
-        return cls("api.csrf_invalid", None)
+        return cls(_code="api.csrf_invalid", _params=None)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_idempotency_in_progress(cls) -> _typing.Self:
-        return cls("api.idempotency_in_progress", None)
+        return cls(_code="api.idempotency_in_progress", _params=None)
 
     @classmethod
     def state_conflict(cls) -> _typing.Self:
-        return cls("state.conflict", None)
+        return cls(_code="state.conflict", _params=None)
 
     @classmethod
     def api_payload_too_large(cls, params: _schemas.ApiPayloadTooLargeParams) -> _typing.Self:
-        return cls("api.payload_too_large", params)
+        return cls(_code="api.payload_too_large", _params=params)
 
     @classmethod
     def api_unsupported_media_type(cls) -> _typing.Self:
-        return cls("api.unsupported_media_type", None)
+        return cls(_code="api.unsupported_media_type", _params=None)
 
     @classmethod
     def api_idempotency_key_reused(cls) -> _typing.Self:
-        return cls("api.idempotency_key_reused", None)
+        return cls(_code="api.idempotency_key_reused", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type ArchiveTaskResult = ArchiveTaskResponse200 | ArchiveTaskErrors
@@ -240,52 +240,52 @@ class AssignTaskResponse200:
     body: _schemas.Task
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class AssignTaskErrors:
     """A declared error of operation 'assignTask', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_csrf_invalid(cls) -> _typing.Self:
-        return cls("api.csrf_invalid", None)
+        return cls(_code="api.csrf_invalid", _params=None)
 
     @classmethod
     def api_forbidden(cls, params: _schemas.ApiForbiddenParams) -> _typing.Self:
-        return cls("api.forbidden", params)
+        return cls(_code="api.forbidden", _params=params)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_idempotency_in_progress(cls) -> _typing.Self:
-        return cls("api.idempotency_in_progress", None)
+        return cls(_code="api.idempotency_in_progress", _params=None)
 
     @classmethod
     def api_payload_too_large(cls, params: _schemas.ApiPayloadTooLargeParams) -> _typing.Self:
-        return cls("api.payload_too_large", params)
+        return cls(_code="api.payload_too_large", _params=params)
 
     @classmethod
     def api_unsupported_media_type(cls) -> _typing.Self:
-        return cls("api.unsupported_media_type", None)
+        return cls(_code="api.unsupported_media_type", _params=None)
 
     @classmethod
     def api_idempotency_key_reused(cls) -> _typing.Self:
-        return cls("api.idempotency_key_reused", None)
+        return cls(_code="api.idempotency_key_reused", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type AssignTaskResult = AssignTaskResponse200 | AssignTaskErrors
@@ -323,56 +323,56 @@ class CreateTaskResponse201:
     body: _schemas.Task
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class CreateTaskErrors:
     """A declared error of operation 'createTask', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_csrf_invalid(cls) -> _typing.Self:
-        return cls("api.csrf_invalid", None)
+        return cls(_code="api.csrf_invalid", _params=None)
 
     @classmethod
     def api_forbidden(cls, params: _schemas.ApiForbiddenParams) -> _typing.Self:
-        return cls("api.forbidden", params)
+        return cls(_code="api.forbidden", _params=params)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_idempotency_in_progress(cls) -> _typing.Self:
-        return cls("api.idempotency_in_progress", None)
+        return cls(_code="api.idempotency_in_progress", _params=None)
 
     @classmethod
     def api_payload_too_large(cls, params: _schemas.ApiPayloadTooLargeParams) -> _typing.Self:
-        return cls("api.payload_too_large", params)
+        return cls(_code="api.payload_too_large", _params=params)
 
     @classmethod
     def api_unsupported_media_type(cls) -> _typing.Self:
-        return cls("api.unsupported_media_type", None)
+        return cls(_code="api.unsupported_media_type", _params=None)
 
     @classmethod
     def api_idempotency_key_reused(cls) -> _typing.Self:
-        return cls("api.idempotency_key_reused", None)
+        return cls(_code="api.idempotency_key_reused", _params=None)
 
     @classmethod
     def api_rate_limited(cls, params: _schemas.ApiRateLimitedParams) -> _typing.Self:
-        return cls("api.rate_limited", params)
+        return cls(_code="api.rate_limited", _params=params)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type CreateTaskResult = CreateTaskResponse201 | CreateTaskErrors
@@ -401,40 +401,40 @@ class DeleteDraftResponse200:
     body: _schemas.Draft
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class DeleteDraftErrors:
     """A declared error of operation 'deleteDraft', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_csrf_invalid(cls) -> _typing.Self:
-        return cls("api.csrf_invalid", None)
+        return cls(_code="api.csrf_invalid", _params=None)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_idempotency_in_progress(cls) -> _typing.Self:
-        return cls("api.idempotency_in_progress", None)
+        return cls(_code="api.idempotency_in_progress", _params=None)
 
     @classmethod
     def api_idempotency_key_reused(cls) -> _typing.Self:
-        return cls("api.idempotency_key_reused", None)
+        return cls(_code="api.idempotency_key_reused", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type DeleteDraftResult = DeleteDraftResponse200 | DeleteDraftErrors
@@ -470,28 +470,28 @@ class GetChannelResponse200:
     body: _schemas.Channel
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class GetChannelErrors:
     """A declared error of operation 'getChannel', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type GetChannelResult = GetChannelResponse200 | GetChannelErrors
@@ -519,28 +519,28 @@ class GetDraftResponse200:
     body: _schemas.Draft
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class GetDraftErrors:
     """A declared error of operation 'getDraft', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type GetDraftResult = GetDraftResponse200 | GetDraftErrors
@@ -573,28 +573,28 @@ class GetPreferencesResponse304:
     """The 304 reply of operation 'getPreferences'."""
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class GetPreferencesErrors:
     """A declared error of operation 'getPreferences', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type GetPreferencesResult = GetPreferencesResponse200 | GetPreferencesResponse304 | GetPreferencesErrors
@@ -630,28 +630,28 @@ class GetTaskResponse200:
     body: _schemas.Task
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class GetTaskErrors:
     """A declared error of operation 'getTask', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type GetTaskResult = GetTaskResponse200 | GetTaskErrors
@@ -688,36 +688,36 @@ class GetTasksBatchResponse200:
     body: dict[str, _schemas.Task]
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class GetTasksBatchErrors:
     """A declared error of operation 'getTasksBatch', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_payload_too_large(cls, params: _schemas.ApiPayloadTooLargeParams) -> _typing.Self:
-        return cls("api.payload_too_large", params)
+        return cls(_code="api.payload_too_large", _params=params)
 
     @classmethod
     def api_unsupported_media_type(cls) -> _typing.Self:
-        return cls("api.unsupported_media_type", None)
+        return cls(_code="api.unsupported_media_type", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type GetTasksBatchResult = GetTasksBatchResponse200 | GetTasksBatchErrors
@@ -742,20 +742,20 @@ class HealthResponse200:
     body: _schemas.Health
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class HealthErrors:
     """A declared error of operation 'health', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type HealthResult = HealthResponse200 | HealthErrors
@@ -791,24 +791,24 @@ class ListChannelsResponse200:
     body: ListChannelsPage
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class ListChannelsErrors:
     """A declared error of operation 'listChannels', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type ListChannelsResult = ListChannelsResponse200 | ListChannelsErrors
@@ -853,28 +853,28 @@ class ListTasksResponse200:
     body: ListTasksPage
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class ListTasksErrors:
     """A declared error of operation 'listTasks', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type ListTasksResult = ListTasksResponse200 | ListTasksErrors
@@ -900,32 +900,32 @@ class PaymentsResponse204:
     """The 204 reply of operation 'payments'."""
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class PaymentsErrors:
     """A declared error of operation 'payments', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_payload_too_large(cls, params: _schemas.ApiPayloadTooLargeParams) -> _typing.Self:
-        return cls("api.payload_too_large", params)
+        return cls(_code="api.payload_too_large", _params=params)
 
     @classmethod
     def api_unsupported_media_type(cls) -> _typing.Self:
-        return cls("api.unsupported_media_type", None)
+        return cls(_code="api.unsupported_media_type", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type PaymentsResult = PaymentsResponse204 | PaymentsErrors
@@ -961,52 +961,52 @@ class PurgeTaskResponse204:
     """The 204 reply of operation 'purgeTask'."""
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class PurgeTaskErrors:
     """A declared error of operation 'purgeTask', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_reauthentication_required(cls) -> _typing.Self:
-        return cls("api.reauthentication_required", None)
+        return cls(_code="api.reauthentication_required", _params=None)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_csrf_invalid(cls) -> _typing.Self:
-        return cls("api.csrf_invalid", None)
+        return cls(_code="api.csrf_invalid", _params=None)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_idempotency_in_progress(cls) -> _typing.Self:
-        return cls("api.idempotency_in_progress", None)
+        return cls(_code="api.idempotency_in_progress", _params=None)
 
     @classmethod
     def api_payload_too_large(cls, params: _schemas.ApiPayloadTooLargeParams) -> _typing.Self:
-        return cls("api.payload_too_large", params)
+        return cls(_code="api.payload_too_large", _params=params)
 
     @classmethod
     def api_unsupported_media_type(cls) -> _typing.Self:
-        return cls("api.unsupported_media_type", None)
+        return cls(_code="api.unsupported_media_type", _params=None)
 
     @classmethod
     def api_idempotency_key_reused(cls) -> _typing.Self:
-        return cls("api.idempotency_key_reused", None)
+        return cls(_code="api.idempotency_key_reused", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type PurgeTaskResult = PurgeTaskResponse204 | PurgeTaskErrors
@@ -1043,44 +1043,44 @@ class SearchTasksResponse200:
     body: _schemas.TaskSearchResult
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class SearchTasksErrors:
     """A declared error of operation 'searchTasks', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_csrf_invalid(cls) -> _typing.Self:
-        return cls("api.csrf_invalid", None)
+        return cls(_code="api.csrf_invalid", _params=None)
 
     @classmethod
     def api_forbidden(cls, params: _schemas.ApiForbiddenParams) -> _typing.Self:
-        return cls("api.forbidden", params)
+        return cls(_code="api.forbidden", _params=params)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_payload_too_large(cls, params: _schemas.ApiPayloadTooLargeParams) -> _typing.Self:
-        return cls("api.payload_too_large", params)
+        return cls(_code="api.payload_too_large", _params=params)
 
     @classmethod
     def api_unsupported_media_type(cls) -> _typing.Self:
-        return cls("api.unsupported_media_type", None)
+        return cls(_code="api.unsupported_media_type", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type SearchTasksResult = SearchTasksResponse200 | SearchTasksErrors
@@ -1109,48 +1109,48 @@ class UpdatePreferencesResponse200:
     body: _schemas.Preferences
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class UpdatePreferencesErrors:
     """A declared error of operation 'updatePreferences', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_csrf_invalid(cls) -> _typing.Self:
-        return cls("api.csrf_invalid", None)
+        return cls(_code="api.csrf_invalid", _params=None)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_idempotency_in_progress(cls) -> _typing.Self:
-        return cls("api.idempotency_in_progress", None)
+        return cls(_code="api.idempotency_in_progress", _params=None)
 
     @classmethod
     def api_payload_too_large(cls, params: _schemas.ApiPayloadTooLargeParams) -> _typing.Self:
-        return cls("api.payload_too_large", params)
+        return cls(_code="api.payload_too_large", _params=params)
 
     @classmethod
     def api_unsupported_media_type(cls) -> _typing.Self:
-        return cls("api.unsupported_media_type", None)
+        return cls(_code="api.unsupported_media_type", _params=None)
 
     @classmethod
     def api_idempotency_key_reused(cls) -> _typing.Self:
-        return cls("api.idempotency_key_reused", None)
+        return cls(_code="api.idempotency_key_reused", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type UpdatePreferencesResult = UpdatePreferencesResponse200 | UpdatePreferencesErrors
@@ -1188,56 +1188,56 @@ class UpdateTaskResponse200:
     body: _schemas.Task
 
 
-@_dataclasses.dataclass(frozen=True, slots=True)
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class UpdateTaskErrors:
     """A declared error of operation 'updateTask', returned by its handler instead of raised."""
 
-    code: str
-    params: _pydantic.BaseModel | None
+    _code: str
+    _params: _pydantic.BaseModel | None
 
     @classmethod
     def api_schema_invalid(cls, params: _schemas.ApiSchemaInvalidParams) -> _typing.Self:
-        return cls("api.schema_invalid", params)
+        return cls(_code="api.schema_invalid", _params=params)
 
     @classmethod
     def api_unauthenticated(cls) -> _typing.Self:
-        return cls("api.unauthenticated", None)
+        return cls(_code="api.unauthenticated", _params=None)
 
     @classmethod
     def api_csrf_invalid(cls) -> _typing.Self:
-        return cls("api.csrf_invalid", None)
+        return cls(_code="api.csrf_invalid", _params=None)
 
     @classmethod
     def api_forbidden(cls, params: _schemas.ApiForbiddenParams) -> _typing.Self:
-        return cls("api.forbidden", params)
+        return cls(_code="api.forbidden", _params=params)
 
     @classmethod
     def api_not_found(cls) -> _typing.Self:
-        return cls("api.not_found", None)
+        return cls(_code="api.not_found", _params=None)
 
     @classmethod
     def api_idempotency_in_progress(cls) -> _typing.Self:
-        return cls("api.idempotency_in_progress", None)
+        return cls(_code="api.idempotency_in_progress", _params=None)
 
     @classmethod
     def state_conflict(cls) -> _typing.Self:
-        return cls("state.conflict", None)
+        return cls(_code="state.conflict", _params=None)
 
     @classmethod
     def api_payload_too_large(cls, params: _schemas.ApiPayloadTooLargeParams) -> _typing.Self:
-        return cls("api.payload_too_large", params)
+        return cls(_code="api.payload_too_large", _params=params)
 
     @classmethod
     def api_unsupported_media_type(cls) -> _typing.Self:
-        return cls("api.unsupported_media_type", None)
+        return cls(_code="api.unsupported_media_type", _params=None)
 
     @classmethod
     def api_idempotency_key_reused(cls) -> _typing.Self:
-        return cls("api.idempotency_key_reused", None)
+        return cls(_code="api.idempotency_key_reused", _params=None)
 
     @classmethod
     def api_internal(cls) -> _typing.Self:
-        return cls("api.internal", None)
+        return cls(_code="api.internal", _params=None)
 
 
 type UpdateTaskResult = UpdateTaskResponse200 | UpdateTaskErrors

@@ -27,6 +27,9 @@ from seampact.ir.model import (
 
 _FROZEN: Final = "@_dataclasses.dataclass(frozen=True, slots=True)"
 _FROZEN_KEYWORDS: Final = "@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)"
+# The fields of an `<Op>Errors` class: an error factory's name never starts with `_` and a letter.
+_ERRORS_CODE_FIELD: Final = "_code"
+_ERRORS_PARAMS_FIELD: Final = "_params"
 _ENDPOINTS_DOC: Final = "The handlers of these operations: each returns a declared success or error, or raises one."
 _PAGE_FACT_TYPES: Final = {
     HandlerResultMember.NEXT_CURSOR: "str",
@@ -290,12 +293,12 @@ class _Emission:
 
     def _typed_errors(self, operation: Operation, names: OperationNames) -> None:
         lines = [
-            _FROZEN,
+            _FROZEN_KEYWORDS,
             f"class {names.errors}:",
             f'{INDENT}"""A declared error of operation {operation.id!r}, returned by its handler instead of raised."""',
             "",
-            f"{INDENT}code: str",
-            f"{INDENT}params: _pydantic.BaseModel | None",
+            f"{INDENT}{_ERRORS_CODE_FIELD}: str",
+            f"{INDENT}{_ERRORS_PARAMS_FIELD}: _pydantic.BaseModel | None",
         ]
         listed: set[str] = set()
 
@@ -312,7 +315,15 @@ class _Emission:
                 "",
                 f"{INDENT}@classmethod",
                 *bracketed(INDENT, f"def {factory}", arguments, " -> _typing.Self:"),
-                f"{INDENT * 2}return cls({string_literal(error.code)}, {'None' if params is None else 'params'})",
+                *bracketed(
+                    INDENT * 2,
+                    "return cls",
+                    [
+                        f"{_ERRORS_CODE_FIELD}={string_literal(error.code)}",
+                        f"{_ERRORS_PARAMS_FIELD}={'None' if params is None else 'params'}",
+                    ],
+                    "",
+                ),
             ]
 
         self.blocks.append(lines)

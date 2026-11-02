@@ -1,7 +1,7 @@
 """The contract forms the fastapi target does not generate yet (ADR 0026 "Refused by name or waiting"), each refused by
 name: a body other than JSON, a binary or redirect response, native access, a page fact other than those the page
-class carries, and a sort key restricted by a right. Unions and other schema forms are refused by the shared Pydantic
-emitter."""
+class carries, and a sort key restricted by a right. The forms no Python target serves are refused by
+`seampact.codegen.kept_forms`, and unions and other schema forms by the shared Pydantic emitter."""
 
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.ir.model import (

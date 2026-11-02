@@ -127,73 +127,75 @@ class TasksHandlerFactories:
     hooks: _runtime.Factory[HooksEndpoints]
 
 
-async def _archive_task(endpoints: TasksEndpoints, request: ArchiveTaskRequest) -> ArchiveTaskResult:
+async def _call_archive_task(endpoints: TasksEndpoints, request: ArchiveTaskRequest) -> ArchiveTaskResult:
     return await _runtime.call_handler(endpoints.archive_task, request)
 
 
-async def _assign_task(endpoints: TasksEndpoints, request: AssignTaskRequest) -> AssignTaskResult:
+async def _call_assign_task(endpoints: TasksEndpoints, request: AssignTaskRequest) -> AssignTaskResult:
     return await _runtime.call_handler(endpoints.assign_task, request)
 
 
-async def _create_task(endpoints: TasksEndpoints, request: CreateTaskRequest) -> CreateTaskResult:
+async def _call_create_task(endpoints: TasksEndpoints, request: CreateTaskRequest) -> CreateTaskResult:
     return await _runtime.call_handler(endpoints.create_task, request)
 
 
-async def _delete_draft(endpoints: DraftsEndpoints, request: DeleteDraftRequest) -> DeleteDraftResult:
+async def _call_delete_draft(endpoints: DraftsEndpoints, request: DeleteDraftRequest) -> DeleteDraftResult:
     return await _runtime.call_handler(endpoints.delete_draft, request)
 
 
-async def _get_channel(endpoints: ChannelsEndpoints, request: GetChannelRequest) -> GetChannelResult:
+async def _call_get_channel(endpoints: ChannelsEndpoints, request: GetChannelRequest) -> GetChannelResult:
     return await _runtime.call_handler(endpoints.get_channel, request)
 
 
-async def _get_draft(endpoints: DraftsEndpoints, request: GetDraftRequest) -> GetDraftResult:
+async def _call_get_draft(endpoints: DraftsEndpoints, request: GetDraftRequest) -> GetDraftResult:
     return await _runtime.call_handler(endpoints.get_draft, request)
 
 
-async def _get_preferences(endpoints: PreferencesEndpoints, request: GetPreferencesRequest) -> GetPreferencesResult:
+async def _call_get_preferences(
+    endpoints: PreferencesEndpoints, request: GetPreferencesRequest
+) -> GetPreferencesResult:
     return await _runtime.call_handler(endpoints.get_preferences, request)
 
 
-async def _get_task(endpoints: TasksEndpoints, request: GetTaskRequest) -> GetTaskResult:
+async def _call_get_task(endpoints: TasksEndpoints, request: GetTaskRequest) -> GetTaskResult:
     return await _runtime.call_handler(endpoints.get_task, request)
 
 
-async def _get_tasks_batch(endpoints: TasksEndpoints, request: GetTasksBatchRequest) -> GetTasksBatchResult:
+async def _call_get_tasks_batch(endpoints: TasksEndpoints, request: GetTasksBatchRequest) -> GetTasksBatchResult:
     return await _runtime.call_handler(endpoints.get_tasks_batch, request)
 
 
-async def _health(endpoints: AppEndpoints, request: HealthRequest) -> HealthResult:
+async def _call_health(endpoints: AppEndpoints, request: HealthRequest) -> HealthResult:
     return await _runtime.call_handler(endpoints.health, request)
 
 
-async def _list_channels(endpoints: ChannelsEndpoints, request: ListChannelsRequest) -> ListChannelsResult:
+async def _call_list_channels(endpoints: ChannelsEndpoints, request: ListChannelsRequest) -> ListChannelsResult:
     return await _runtime.call_handler(endpoints.list_channels, request)
 
 
-async def _list_tasks(endpoints: TasksEndpoints, request: ListTasksRequest) -> ListTasksResult:
+async def _call_list_tasks(endpoints: TasksEndpoints, request: ListTasksRequest) -> ListTasksResult:
     return await _runtime.call_handler(endpoints.list_tasks, request)
 
 
-async def _payments(endpoints: HooksEndpoints, request: PaymentsRequest) -> PaymentsResult:
+async def _call_payments(endpoints: HooksEndpoints, request: PaymentsRequest) -> PaymentsResult:
     return await _runtime.call_handler(endpoints.payments, request)
 
 
-async def _purge_task(endpoints: TasksEndpoints, request: PurgeTaskRequest) -> PurgeTaskResult:
+async def _call_purge_task(endpoints: TasksEndpoints, request: PurgeTaskRequest) -> PurgeTaskResult:
     return await _runtime.call_handler(endpoints.purge_task, request)
 
 
-async def _search_tasks(endpoints: TasksEndpoints, request: SearchTasksRequest) -> SearchTasksResult:
+async def _call_search_tasks(endpoints: TasksEndpoints, request: SearchTasksRequest) -> SearchTasksResult:
     return await _runtime.call_handler(endpoints.search_tasks, request)
 
 
-async def _update_preferences(
+async def _call_update_preferences(
     endpoints: PreferencesEndpoints, request: UpdatePreferencesRequest
 ) -> UpdatePreferencesResult:
     return await _runtime.call_handler(endpoints.update_preferences, request)
 
 
-async def _update_task(endpoints: TasksEndpoints, request: UpdateTaskRequest) -> UpdateTaskResult:
+async def _call_update_task(endpoints: TasksEndpoints, request: UpdateTaskRequest) -> UpdateTaskResult:
     return await _runtime.call_handler(endpoints.update_task, request)
 
 
@@ -215,23 +217,23 @@ def bind_tasks(
     """Places api 'tasks' in the app; call it last, after its own middleware and exception handlers."""
     router = _runtime.contract_router()
 
-    _runtime.add_operation(router, PLACEMENT, "health", handlers.app, _health)
-    _runtime.add_operation(router, PLACEMENT, "listChannels", handlers.channels, _list_channels)
-    _runtime.add_operation(router, PLACEMENT, "getPreferences", handlers.preferences, _get_preferences)
-    _runtime.add_operation(router, PLACEMENT, "payments", handlers.hooks, _payments)
-    _runtime.add_operation(router, PLACEMENT, "updatePreferences", handlers.preferences, _update_preferences)
-    _runtime.add_operation(router, PLACEMENT, "deleteDraft", handlers.drafts, _delete_draft)
-    _runtime.add_operation(router, PLACEMENT, "getDraft", handlers.drafts, _get_draft)
-    _runtime.add_operation(router, PLACEMENT, "getChannel", handlers.channels, _get_channel)
-    _runtime.add_operation(router, PLACEMENT, "createTask", handlers.tasks, _create_task)
-    _runtime.add_operation(router, PLACEMENT, "listTasks", handlers.tasks, _list_tasks)
-    _runtime.add_operation(router, PLACEMENT, "getTasksBatch", handlers.tasks, _get_tasks_batch)
-    _runtime.add_operation(router, PLACEMENT, "searchTasks", handlers.tasks, _search_tasks)
-    _runtime.add_operation(router, PLACEMENT, "getTask", handlers.tasks, _get_task)
-    _runtime.add_operation(router, PLACEMENT, "updateTask", handlers.tasks, _update_task)
-    _runtime.add_operation(router, PLACEMENT, "archiveTask", handlers.tasks, _archive_task)
-    _runtime.add_operation(router, PLACEMENT, "assignTask", handlers.tasks, _assign_task)
-    _runtime.add_operation(router, PLACEMENT, "purgeTask", handlers.tasks, _purge_task)
+    _runtime.add_operation(router, PLACEMENT, "health", handlers.app, _call_health)
+    _runtime.add_operation(router, PLACEMENT, "listChannels", handlers.channels, _call_list_channels)
+    _runtime.add_operation(router, PLACEMENT, "getPreferences", handlers.preferences, _call_get_preferences)
+    _runtime.add_operation(router, PLACEMENT, "payments", handlers.hooks, _call_payments)
+    _runtime.add_operation(router, PLACEMENT, "updatePreferences", handlers.preferences, _call_update_preferences)
+    _runtime.add_operation(router, PLACEMENT, "deleteDraft", handlers.drafts, _call_delete_draft)
+    _runtime.add_operation(router, PLACEMENT, "getDraft", handlers.drafts, _call_get_draft)
+    _runtime.add_operation(router, PLACEMENT, "getChannel", handlers.channels, _call_get_channel)
+    _runtime.add_operation(router, PLACEMENT, "createTask", handlers.tasks, _call_create_task)
+    _runtime.add_operation(router, PLACEMENT, "listTasks", handlers.tasks, _call_list_tasks)
+    _runtime.add_operation(router, PLACEMENT, "getTasksBatch", handlers.tasks, _call_get_tasks_batch)
+    _runtime.add_operation(router, PLACEMENT, "searchTasks", handlers.tasks, _call_search_tasks)
+    _runtime.add_operation(router, PLACEMENT, "getTask", handlers.tasks, _call_get_task)
+    _runtime.add_operation(router, PLACEMENT, "updateTask", handlers.tasks, _call_update_task)
+    _runtime.add_operation(router, PLACEMENT, "archiveTask", handlers.tasks, _call_archive_task)
+    _runtime.add_operation(router, PLACEMENT, "assignTask", handlers.tasks, _call_assign_task)
+    _runtime.add_operation(router, PLACEMENT, "purgeTask", handlers.tasks, _call_purge_task)
 
     _runtime.bind_api(
         PLACEMENT,
