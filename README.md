@@ -224,6 +224,61 @@ final class NotesController implements NotesEndpoints
 
 </details>
 
+<details><summary>FastAPI</summary>
+
+```python
+class NotesHandlers:
+    def __init__(self, notes: NoteRepository) -> None:
+        self.notes = notes
+
+    def get_note(self, request: GetNoteRequest) -> GetNoteResult:
+        note = self.notes.get(request.input.path.note_id)
+
+        return GetNoteErrors.api_not_found() if note is None else GetNoteResponse200(note)
+
+
+bind_notes(app, handlers=NotesHandlerFactories(notes=notes_handlers))
+```
+
+</details>
+
+<details><summary>Django REST Framework</summary>
+
+```python
+class NotesHandlers:
+    def __init__(self, request: HttpRequest) -> None:
+        self.request = request
+
+    def get_note(self, request: GetNoteRequest) -> GetNoteResult:
+        note = notes.get(request.input.path.note_id)
+
+        return GetNoteErrors.api_not_found() if note is None else GetNoteResponse200(body=note)
+
+
+# settings.py
+SEAMPACT = {"notes": {"handlers": {"notes": "app.handlers.notes_handlers"}}}
+```
+
+</details>
+
+<details><summary>Django Ninja</summary>
+
+```python
+class NotesHandlers:
+    def __init__(self, request: HttpRequest) -> None:
+        self.request = request
+
+    def get_note(self, request: GetNoteRequest) -> GetNoteResult:
+        note = notes.get(request.input.path.note_id)
+
+        return GetNoteErrors.api_not_found() if note is None else GetNoteResponse200(note)
+
+
+bind_notes(api, prefix="", handlers=NotesHandlerFactories(notes=notes_handlers))
+```
+
+</details>
+
 ---
 
 ### Schemas
@@ -396,6 +451,38 @@ final readonly class Note
     JsonType::String,
     checks: new Checks(format: Format::Uuid),
 ),
+```
+
+<details><summary>Pydantic (FastAPI, Django Ninja)</summary>
+
+A frozen, strict Pydantic model. The boundary validates the input with it before your handler runs.
+
+```python
+class Note(_pydantic.BaseModel):
+    model_config = _MODEL_CONFIG  # strict, frozen, extra="forbid"
+
+    note_id: _seampact.WireUuid
+    title: _typing.Annotated[str, _pydantic.Field(min_length=1, max_length=100)]
+    created_at: _seampact.WireDateTime
+```
+
+</details>
+
+<details><summary>Django REST Framework</summary>
+
+A frozen dataclass for your code, and a generated serializer that checks the input before your handler runs.
+
+```python
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Note:
+    note_id: _uuid.UUID
+    title: str
+    created_at: _datetime.datetime
+
+
+class GetNotePathSerializer(_drf_runtime.ContractSerializer):
+    def get_fields(self) -> _drf_runtime.SerializerFields:
+        return {"note_id": _drf_runtime.TypedValueField(_uuid.UUID)}
 ```
 
 </details>
