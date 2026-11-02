@@ -13,6 +13,7 @@ from seampact.codegen.runtime.access_steps import CredentialsType
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework
 from seampact.codegen.runtime.reply_verdict import FrameworkEtagMode, ResponsesMode
+from seampact.fastapi.runtime.native_docs import FrameworkDocs, NativeDocs
 from seampact.hooks import AuthenticateHook, DecideHook, IdempotencyStore, ResolveScopeHook, UnexpectedErrorListener
 
 type App = fastapi.FastAPI
@@ -81,6 +82,8 @@ class ApiPlacement:
     framework_routes: tuple[FrameworkRouteRule, ...]
     frameworks: tuple[AcceptedFramework, ...]
     credentials: Mapping[str, CredentialsType]
+    framework_docs: FrameworkDocs = FrameworkDocs.KEEP
+    native_docs: NativeDocs | None = None
     _routes_by_operation: dict[str, OperationRoute] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:

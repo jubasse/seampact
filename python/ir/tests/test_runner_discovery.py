@@ -12,8 +12,9 @@ from pathlib import Path
 
 import pytest
 
+from seampact.ir.binary import DocumentsCommand
 from seampact.ir.config import ConfigProblem
-from seampact.ir.run import matrix_check, runner
+from seampact.ir.run import contract_apis, matrix_check, native_docs_document, runner
 from seampact.ir.run.command import EXIT_PASSED, EXIT_REFUSED, EXIT_USAGE, run
 from seampact.ir.run.discovery import InstalledTarget, discover_target
 from seampact.ir.run.matrix_framework import MatrixFramework, MatrixTarget, VersionUnit
@@ -66,6 +67,24 @@ class RecordingGenerator:
         accepted = entry.matrix.frameworks[0].accepted_units(entry.allow_untested)
         return [GeneratedFile("versions.py", f"ROW = {entry.matrix.use!r}\\nACCEPTED = {accepted!r}\\n")]
 """
+_DOCS_MODULE = """
+import json
+
+from seampact.ir.read import IrSupport
+from seampact.ir.write import GeneratedFile
+
+
+class DocsGenerator:
+    def ir_support(self):
+        return IrSupport.of_model(kinds=%s)
+
+    def framework_docs_off_fix(self):
+        return None
+
+    def generate(self, ir, entry):
+        native = None if entry.native_docs is None else [entry.native_docs.name, entry.native_docs.document]
+        return [GeneratedFile("docs.py", f"DOCS = {json.dumps([entry.framework_docs.value, native])!r}\\n")]
+"""
 _NOT_A_GENERATOR_MODULE = "class Plain:\n    pass\n"
 
 
@@ -95,6 +114,7 @@ def site_packages(
     _install(site, "acme-good", "1.2.0", ["good = acme_good:GoodGenerator"], _GOOD_MODULE % kinds)
     _install(site, "acme-wrong", "1.0.0", ["wrong = acme_wrong:WrongItemsGenerator"], _WRONG_ITEMS_MODULE % kinds)
     _install(site, "acme-recording", "1.4.0", ["rec = acme_recording:RecordingGenerator"], _RECORDING_MODULE % kinds)
+    _install(site, "acme-docs", "1.0.0", ["docs = acme_docs:DocsGenerator"], _DOCS_MODULE % kinds)
     _install(site, "acme-broken", "1.0.0", ["bad = acme_broken:Plain"], _NOT_A_GENERATOR_MODULE)
     _install(site, "acme-twice", "1.0.0", ["a = acme_twice:Plain", "b = acme_twice:Plain"], _NOT_A_GENERATOR_MODULE)
     _install(site, "acme-plain", "1.0.0", [], None)
@@ -293,3 +313,64 @@ def test_the_entry_hands_the_generator_its_matrix_row_and_allow_untested_items(
         "ROW = 'pypi:acme-recording'",
         "ACCEPTED = ('1', '2')",
     ]
+
+
+def _generated_docs(project: Path) -> object:
+    line = (project / "__generated__" / "main" / "docs.py").read_text(encoding="utf-8").splitlines()[1]
+
+    return json.loads(line.removeprefix("DOCS = ")[1:-1])
+
+
+def test_the_entry_hands_the_generator_its_frameworkdocs_and_no_document_without_nativedocs(
+    site_packages: Path,
+    tmp_path: Path,
+    git_repository: GitRepositoryFactory,
+    valid_bundle: tuple[dict[str, bytes], str],
+) -> None:
+    (tmp_path / "git").mkdir()
+    repository, environment = git_repository(tmp_path / "git", valid_bundle[0])
+    project = _project(tmp_path, repository, valid_bundle[1], ", frameworkDocs: off", "acme-docs")
+
+    code, _, stderr = _run(project, {**environment, "XDG_CACHE_HOME": str(tmp_path / "cache")}, "generate")
+
+    assert (code, stderr) == (EXIT_PASSED, "")
+    assert _generated_docs(project) == ["off", None]
+
+
+def test_nativedocs_hands_the_generator_the_document_the_binary_emits_on_a_scratch_config(
+    site_packages: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    git_repository: GitRepositoryFactory,
+    valid_bundle: tuple[dict[str, bytes], str],
+) -> None:
+    scratch_configs: list[tuple[dict[str, dict[str, object]], list[str], object]] = []
+
+    def emit(
+        binary: object, config_file: str, command: object, bundles: dict[str, str], *_: object, **__: object
+    ) -> None:
+        config = json.loads(Path(config_file).read_text(encoding="utf-8"))
+        scratch_configs.append((config, sorted(bundles), command))
+        (Path(config_file).parent / "t.yaml").write_text("# headed\nopenapi: 3.1.0\npaths: {}\n", encoding="utf-8")
+
+    monkeypatch.setattr(native_docs_document, "documents_with_binary", emit)
+    monkeypatch.setattr(contract_apis.ContractApis, "binary", lambda self: object())
+    (tmp_path / "git").mkdir()
+    repository, environment = git_repository(tmp_path / "git", valid_bundle[0])
+    extra = ", artefacts: { nativeDocs: true }"
+    project = _project(tmp_path, repository, valid_bundle[1], extra, "acme-docs")
+
+    code, _, stderr = _run(project, {**environment, "XDG_CACHE_HOME": str(tmp_path / "cache")}, "generate")
+
+    assert (code, stderr) == (EXIT_PASSED, "")
+    assert _generated_docs(project) == ["keep", [None, {"openapi": "3.1.0", "paths": {}}]]
+    [(config, bundles, command)] = scratch_configs
+    assert config["openapi"] == {"t": {"path": "t.yaml", "servers": []}}
+    assert config["sources"] == {
+        "contract": {
+            "git": {"url": str(repository), "tag": "v1", "directory": "contract"},
+            "integrity": valid_bundle[1],
+        }
+    }
+    assert "targets" not in config
+    assert (bundles, command) == (["contract"], DocumentsCommand.GENERATE)

@@ -5,9 +5,10 @@ entry give the same files, and a target never writes a file itself."""
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Protocol, runtime_checkable
 
-from seampact.ir.config.json_value import JsonValue
+from seampact.ir.config.json_value import JsonObject, JsonValue
 from seampact.ir.config.problem import ConfigProblem, problems_text
 from seampact.ir.model import ContractIR
 from seampact.ir.read import IrSupport
@@ -27,6 +28,24 @@ class FrameworkRoute:
     method: str | None
 
 
+class FrameworkDocs(StrEnum):
+    """An entry's `frameworkDocs` (ADR 0011 "Which OpenAPI documents exist"): `keep` leaves the framework's own
+    OpenAPI document as the framework has it, `off` asks the target to switch it off."""
+
+    KEEP = "keep"
+    OFF = "off"
+
+
+@dataclass(frozen=True, slots=True)
+class NativeDocsDocument:
+    """The seampact OpenAPI document an entry's `nativeDocs` follows (ADR 0011 "Which OpenAPI documents exist"): the
+    api's document `name` (None for an api that declares no document), emitted from the api's IR with the options the
+    app gives that document, its `servers` left to the framework. `document` is the generator's own copy."""
+
+    name: str | None
+    document: JsonObject
+
+
 @dataclass(frozen=True, slots=True)
 class TargetEntry:
     """One api of a target entry, as a generator receives it: the entry's `id` and `use`, the api, the entry's
@@ -34,7 +53,8 @@ class TargetEntry:
     `/<api>` for an entry with `apis`), the entry's `framework_routes` and `mount`, which the target's boot check
     reads, the target's row of the compatibility matrix (None for a target the matrix does not record) and the
     entry's `allow_untested` items, from which the generated code records the framework versions `generate`
-    accepted."""
+    accepted, the entry's `framework_docs`, and with `artefacts.nativeDocs: true` the seampact document the
+    framework's own document follows (None otherwise)."""
 
     id: str
     use: str
@@ -47,6 +67,8 @@ class TargetEntry:
     mount: str | None
     matrix: MatrixTarget | None
     allow_untested: Sequence[str]
+    framework_docs: FrameworkDocs = FrameworkDocs.KEEP
+    native_docs: NativeDocsDocument | None = None
 
 
 @runtime_checkable

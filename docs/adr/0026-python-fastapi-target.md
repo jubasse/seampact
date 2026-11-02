@@ -342,7 +342,7 @@ The target imposes no wire shape ([A36](../decisions.md#a36)):
 
 ### Native docs
 
-`nativeDocs` is off by default, as on every target (ADR 0009). Contract routes are then registered with `include_in_schema=False`, so FastAPI's `/docs` and `/openapi.json` show the app's own routes only (spike). With `artefacts.nativeDocs: true`, the routes join FastAPI's document with seampact's operation objects, so it describes them as seampact's document does (ADR 0011, CHK-165). `frameworkDocs: keep` is accepted, as on every server target. `nativeDocs: true` and `frameworkDocs: off` wait for the Python runner to hand a generator seampact's OpenAPI document of the entry and the entry's `frameworkDocs`, as the Node CLI hands its targets: until then `nativeDocs: true` is refused by name (`artefacts.nativeDocs.unsupported`), and so is `frameworkDocs: off` (`config.frameworkDocs.unsupported`), with the fix `FastAPI(openapi_url=None)`.
+`nativeDocs` is off by default, as on every target (ADR 0009). Contract routes are then registered with `include_in_schema=False`, so FastAPI's `/docs` and `/openapi.json` show the app's own routes only (spike). With `artefacts.nativeDocs: true`, the routes join FastAPI's document with seampact's operation objects, so it describes them as seampact's document does (ADR 0011, CHK-165). The Python runner gets that document from the pinned binary, which emits the document the entry names, else the one declared document that holds every route the entry generates, with the options the app's `openapi` gives it and no `servers`; the generator writes each kept operation's object and the components those operations reach to `native_docs.json`, and `bind_<api>()` places each object at its path under the entry's `mount` in `app.openapi()`. A component the app's own document holds with another value fails `/openapi.json`, naming it; a contract schema named `ValidationError` or `HTTPValidationError`, which FastAPI's document owns, fails `generate` with `artefacts.nativeDocs.component-clash`; a route `native_docs.json` lacks (a stale file) fails at boot, naming it, until `seampact generate` runs again. `frameworkDocs: keep` is the default; `frameworkDocs: off` makes `bind_<api>()` remove FastAPI's `/openapi.json`, `/docs`, `/docs/oauth2-redirect` and `/redoc`, as `FastAPI(openapi_url=None, docs_url=None, redoc_url=None)` does.
 
 ### Links and the client
 
@@ -367,7 +367,6 @@ The generator's code sits in production `site-packages`, its dependencies behind
 | Waits for | What |
 |---|---|
 | a consumer that needs them | form, multipart, download and redirect bodies; native access (`artefacts.accessHooks: false`); sort keys restricted by a right; unions (`oneOf`); `handlers: perOperation`; per-access-kind dependency lists |
-| the Python runner handing a generator seampact's document and `frameworkDocs` | `nativeDocs` and `frameworkDocs: off` |
 | after 1.0 | FastAPI minors below the floor and Pydantic 1 (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs, as ADR 0023 lists them |
 
 ### The consumer and the proof
