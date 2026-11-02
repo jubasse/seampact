@@ -7,6 +7,7 @@ import asyncio
 import gzip
 import importlib
 import json
+import logging
 import sys
 from collections.abc import Callable, Iterator
 from http import HTTPStatus
@@ -21,7 +22,7 @@ from django.core.checks import run_checks
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase, StreamingHttpResponse
 from django.test import AsyncClient, Client, override_settings
 from django.urls import include, path, re_path
 
@@ -51,6 +52,7 @@ _TOKEN: Final = "good-token"
 _USER_ID: Final = "8d0f3c3e-6a52-4c0e-9b8e-3f1f2f6f1a11"
 _CHANNEL_ID: Final = "0a2c3b7e-1d4f-4e8a-9c1b-2e3d4f5a6b7c"
 _LATER_FEATURES: Final = ("fieldRights", "cache", "concurrency")
+_SECRET: Final = "secret-token-123"
 
 # What the hooks and handlers of one test answer; each test sets what it needs.
 answers: dict[str, Callable[[object], object]] = {}
@@ -119,16 +121,32 @@ class RaisingMiddleware:
     def __init__(self, get_response: Callable[[HttpRequest], HttpResponseBase]) -> None:
         self.get_response = get_response
 
-    def __call__(self, request: HttpRequest) -> HttpResponseBase:
+    def __call__(self, request: HttpRequest) -> HttpResponseBase | None:
         raised = {"404": Http404, "403": PermissionDenied, "500": ValueError}.get(request.headers.get("X-Raise", ""))
 
         if raised is not None:
-            raise raised("raised by the app")
+            raise raised(f"raised by the app with {_SECRET}")
 
-        if request.headers.get("X-Answer") == "foreign":
+        answer = request.headers.get("X-Answer")
+
+        if answer == "foreign":
             return HttpResponse(b"{}", status=200, content_type="application/json")
 
+        if answer == "html":
+            return HttpResponse(b"<p>app page</p>", status=200, content_type="text/html")
+
+        if answer == "stream":
+            return StreamingHttpResponse(_failing_stream(), status=200, content_type="application/json")
+
+        if answer == "none":
+            return None
+
         return self.get_response(request)
+
+
+def _failing_stream() -> Iterator[bytes]:
+    yield b'{"status": '
+    raise ValueError(f"the stream broke with {_SECRET}")
 
 
 @pytest.fixture(scope="module")
@@ -427,6 +445,123 @@ def test_the_system_check_warns_and_seampact_check_fails_on_a_problem() -> None:
 
     assert any("not first in MIDDLEWARE" in warning.msg for warning in warnings)
     assert "passes" in passing.getvalue()
+
+
+def test_seampact_check_and_the_system_check_pass_a_correct_app_in_a_fresh_process() -> None:
+    checked = StringIO()
+
+    with override_settings(ROOT_URLCONF=_fresh_root("seampact_drf_boundary_fresh_command").__name__):
+        call_command("seampact_check", stdout=checked)
+
+    with override_settings(ROOT_URLCONF=_fresh_root("seampact_drf_boundary_fresh_checks").__name__):
+        warnings = [message.msg for message in run_checks() if message.id == "seampact.tasks"]
+
+    assert "passes" in checked.getvalue()
+    assert warnings == []
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("access", {"authenticated": {"permission_classes": ["rest_framework.permissions.IsAdminUser"]}}),
+        ("body_validation", True),
+        ("idempotency_store", f"{__name__}.listener"),
+    ],
+)
+def test_a_setting_a_later_release_serves_is_refused_by_name(key: str, value: object) -> None:
+    with (
+        override_settings(SEAMPACT={"tasks": {**_settings(), key: value}}),
+        pytest.raises(ImproperlyConfigured) as refused,
+    ):
+        Client().get("/v1/health")
+
+    assert f"settings.SEAMPACT['tasks']['{key}']" in str(refused.value)
+    assert "does not serve yet" in str(refused.value)
+
+
+@pytest.mark.parametrize(
+    ("own", "named"),
+    [
+        ({"responses": "bogus"}, "['responses'] is 'bogus'"),
+        ({"operations": {"health": {"responses": "bogus"}}}, "['operations']['health']['responses'] is 'bogus'"),
+        ({"operations": {"health": {"cache": "off"}}}, "['operations']['health'] has the unknown key 'cache'"),
+        ({"operations": {"unknownOperation": {}}}, "the operation 'unknownOperation', which the api does not keep"),
+        ({"operations": ["health"]}, "['operations'] is a list"),
+    ],
+)
+def test_a_wrong_responses_or_operations_setting_is_refused_at_boot(own: dict[str, object], named: str) -> None:
+    with (
+        override_settings(SEAMPACT={"tasks": {**_settings(), **own}}),
+        pytest.raises(ImproperlyConfigured) as refused,
+    ):
+        Client().get("/v1/health")
+
+    assert named in str(refused.value)
+
+
+def test_the_log_line_and_the_listener_name_the_class_and_place_and_the_message_only_under_debug(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def get_channel(request: object) -> object:
+        raise ValueError(f"the handler broke with {_SECRET}")
+
+    answers["get_channel"] = get_channel
+    url = f"/v1/channels/{_CHANNEL_ID}"
+
+    with caplog.at_level(logging.DEBUG, logger="seampact"):
+        from_handler = Client().get(url, headers=_bearer())
+        from_middleware = Client(raise_request_exception=False).get(url, headers={"X-Raise": "500"})
+
+    assert (from_handler.status_code, from_middleware.status_code) == (500, 500)
+    seampact_log = "\n".join(caplog.handler.format(item) for item in caplog.records if item.name.startswith("seampact"))
+    assert "ValueError raised at" in seampact_log
+    assert _SECRET not in seampact_log
+    assert [_SECRET in failure.reason for failure in failures] == [False, False]
+    assert all("ValueError raised at" in failure.reason for failure in failures)
+
+    failures.clear()
+
+    with override_settings(DEBUG=True):
+        Client().get(url, headers=_bearer())
+
+    assert _SECRET in failures[0].reason
+
+
+def test_under_debug_only_djangos_technical_pages_leave_unchecked() -> None:
+    with override_settings(DEBUG=True):
+        app_page = Client().get("/v1/health", headers={"X-Answer": "html"})
+        technical_404 = Client().get(f"/v1/channels/{_CHANNEL_ID}", headers={"X-Raise": "404"})
+
+    assert (app_page.status_code, _code(app_page)) == (500, "api.internal")
+    assert technical_404.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_an_inner_middleware_answering_no_response_gets_the_apis_500() -> None:
+    response = Client().get("/v1/health", headers={"X-Answer": "none"})
+
+    assert (response.status_code, _code(response)) == (500, "api.internal")
+    assert "not a response" in failures[0].reason
+
+    with override_settings(DEBUG_PROPAGATE_EXCEPTIONS=True), pytest.raises(Exception, match="not a response"):
+        Client().get("/v1/health", headers={"X-Answer": "none"})
+
+
+def test_a_stream_that_fails_after_its_head_ends_short_and_the_listener_hears_of_it() -> None:
+    with override_settings(SEAMPACT={"tasks": {**_settings(), "responses": "warn"}}):
+        response = Client().get("/v1/health", headers={"X-Answer": "stream"})
+        body = b"".join(response.streaming_content)  # type: ignore[attr-defined]
+
+    assert (response.status_code, body) == (200, b'{"status": ')
+    assert any("ValueError raised at" in failure.reason for failure in failures)
+
+
+def _fresh_root(name: str) -> ModuleType:
+    """A root URLconf whose error handlers no boundary wrapped yet, as in a process that built no request handler."""
+    root = ModuleType(name)
+    root.__dict__["urlpatterns"] = [path("", include(f"{_PACKAGE}.urls"))]
+    sys.modules[name] = root
+
+    return root
 
 
 def _served_ir(repository_root: Path) -> dict[str, JsonValue]:
