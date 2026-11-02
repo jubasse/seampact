@@ -24,7 +24,13 @@ _FORMAT_ANNOTATIONS: Final = {
 }
 
 
-def route_helpers_module(ir: ContractIR, routes: Sequence[RouteEntry], refusals: Refusals) -> str:
+_NAMES_REGISTERED: Final = "The route name of each operation, as the target registers it."
+
+
+def route_helpers_module(
+    ir: ContractIR, routes: Sequence[RouteEntry], refusals: Refusals, names_registered: str = _NAMES_REGISTERED
+) -> str:
+    """`names_registered` is the route names' docstring: a target that registers them under a namespace says so."""
     api_class = python_identifier(IrName(tuple(ir.api.name.segments), NamingRole.SCHEMA))
     module = PythonModule(f"The route names and contract paths of api '{ir.api.id}'.")
     typing = module.imported("typing", "_typing")
@@ -32,7 +38,7 @@ def route_helpers_module(ir: ContractIR, routes: Sequence[RouteEntry], refusals:
     operations = {operation.id: (index, operation) for index, operation in enumerate(ir.operations)}
     names = [
         f"class {api_class}RouteNames:",
-        f'{INDENT}"""The route name of each operation, as the target registers it."""',
+        f'{INDENT}"""{names_registered}"""',
         "",
     ]
     urls = [f"class {api_class}Urls:", f'{INDENT}"""The path of each operation, each value encoded as one segment."""']

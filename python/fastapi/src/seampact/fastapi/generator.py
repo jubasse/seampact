@@ -12,13 +12,14 @@ from typing import Final
 from seampact.codegen.contract_module import contract_module
 from seampact.codegen.input_schemas import proof_models, with_input_schemas
 from seampact.codegen.kept_forms import refuse_kept_forms
+from seampact.codegen.matrix_row import refuse_missing_matrix_row
 from seampact.codegen.names import api_names
 from seampact.codegen.operation_types import operation_types_module
 from seampact.codegen.printer import PythonModule
 from seampact.codegen.pydantic_forms import refuse_unserved_forms
 from seampact.codegen.pydantic_layout import api_layout
 from seampact.codegen.pydantic_models import pydantic_schemas_module
-from seampact.codegen.refusals import IrPlace, Refusals
+from seampact.codegen.refusals import Refusals
 from seampact.codegen.route_helpers import route_helpers_module
 from seampact.codegen.routes import route_table
 from seampact.fastapi.native_docs_file import native_docs_file
@@ -47,15 +48,7 @@ class FastApiGenerator:
 
         refuse_kept_forms(ir, refusals)
 
-        if entry.matrix is None:
-            refusals.add(
-                "config.matrix.row-missing",
-                f"The compatibility matrix has no row for {entry.use}, so the boot check would not know the FastAPI "
-                "and Starlette versions generate accepted.",
-                "Reinstall seampact-ir: its copy of the compatibility matrix lacks the FastAPI row.",
-                IrPlace(""),
-            )
-
+        refuse_missing_matrix_row(entry, refusals, "FastAPI and Starlette")
         refuse_unserved_forms(ir, refusals)
         error_codes = sorted({error.code for operation in ir.operations for error in operation.errors})
         layout = api_layout(ir, error_codes, refusals)

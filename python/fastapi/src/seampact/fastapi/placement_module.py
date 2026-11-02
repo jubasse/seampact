@@ -17,6 +17,7 @@ from seampact.codegen.placement_lines import (
 )
 from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_literal
 from seampact.codegen.pydantic_layout import ApiLayout
+from seampact.codegen.pydantic_models import PYDANTIC_MAJOR, PYDANTIC_PACKAGE
 from seampact.codegen.routes import RouteEntry
 from seampact.codegen.runtime import RUNTIME_VERSION
 from seampact.codegen.source_lines import with_local_imports
@@ -32,8 +33,6 @@ _ABC: Final = "_abc"
 _CALL_PREFIX: Final = "_call_"
 _CONTRACT_MODULE: Final = "contract"
 _SCHEMAS_MODULE: Final = "schemas"
-_PYDANTIC: Final = "pydantic"
-_PYDANTIC_MAJOR: Final = "2"
 _BIND_DOC: Final = "Places api '{api}' in the app; call it last, after its own middleware and exception handlers."
 
 
@@ -182,7 +181,7 @@ def _accepted_frameworks(entry: TargetEntry) -> list[str]:
         (framework.package, framework.unit.name, framework.accepted_units(entry.allow_untested))
         for framework in (entry.matrix.frameworks if entry.matrix is not None else ())
     ]
-    accepted.append((_PYDANTIC, "MAJOR", (_PYDANTIC_MAJOR,)))
+    accepted.append((PYDANTIC_PACKAGE, "MAJOR", (PYDANTIC_MAJOR,)))
     lines: list[str] = []
 
     for package, unit, units in accepted:

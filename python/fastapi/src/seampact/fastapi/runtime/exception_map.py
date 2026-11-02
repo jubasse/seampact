@@ -14,9 +14,9 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from seampact.codegen.runtime.failures import ContractRefusal
+from seampact.codegen.runtime.handler_reply import code_reply
 from seampact.codegen.runtime.replies import Reply, error_reply
 from seampact.fastapi.runtime.api_binding import ApiBinding
-from seampact.fastapi.runtime.handler_reply import code_reply
 from seampact.fastapi.runtime.input_features import ReplayedReply
 from seampact.fastapi.runtime.request_state import scope_states, state_of
 

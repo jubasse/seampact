@@ -2,6 +2,7 @@
 forms among them; and the generated placement as Ninja reads it: each declared route registers on a Router without a
 warning and resolves to its URL name, and `bind_<api>()` refuses by name before it changes the app."""
 
+import dataclasses
 import importlib
 import json
 from collections.abc import Callable, Mapping
@@ -98,6 +99,16 @@ def test_native_docs_and_artefacts_the_target_does_not_take_are_refused_by_name(
         "artefacts.accessHooks.unsupported",
         "artefacts.bootCheck.hooks.warn.unsupported",
     }
+
+
+def test_an_entry_whose_target_has_no_matrix_row_is_refused_by_name(repository_root: Path) -> None:
+    generator = NinjaGenerator()
+    ir = read_ir(json.dumps(_ir_json(repository_root)), generator.ir_support())
+
+    with pytest.raises(GenerationRefusedError) as refused:
+        generator.generate(ir, dataclasses.replace(reference_entry("tasks"), matrix=None))
+
+    assert {problem.code for problem in refused.value.problems} == {"config.matrix.row-missing"}
 
 
 def test_framework_docs_off_names_ninjas_own_switch() -> None:

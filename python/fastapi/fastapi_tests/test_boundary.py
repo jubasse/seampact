@@ -15,10 +15,10 @@ import seampact.fastapi.runtime as fastapi_runtime
 from seampact.codegen.runtime.access_steps import AccessState
 from seampact.codegen.runtime.failures import ContractRefusal
 from seampact.codegen.runtime.input_decoding import DecodedInput
+from seampact.codegen.runtime.pydantic.contract_input import InputBuilder
 from seampact.codegen.runtime.raw_target import RawTarget
 from seampact.fastapi.runtime import ApiBinding, OperationTypes, ResponsesMode
 from seampact.fastapi.runtime.boot_check import boot_problems
-from seampact.fastapi.runtime.contract_input import InputBuilder
 from seampact.fastapi.runtime.request_state import RequestState
 from seampact.hooks import RequestView
 

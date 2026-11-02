@@ -32,6 +32,10 @@ from seampact.ir.model import (
     UnionSchema,
 )
 
+# The Pydantic the generated models are written for; the boot check refuses another major.
+PYDANTIC_PACKAGE: Final = "pydantic"
+PYDANTIC_MAJOR: Final = "2"
+
 
 class RulesMode(StrEnum):
     NATIVE = "native"

@@ -11,17 +11,18 @@ from typing import Final
 from seampact.codegen.contract_module import contract_module
 from seampact.codegen.input_schemas import proof_models, with_input_schemas
 from seampact.codegen.kept_forms import refuse_kept_forms
+from seampact.codegen.matrix_row import refuse_missing_matrix_row
 from seampact.codegen.names import api_names
 from seampact.codegen.operation_types import operation_types_module
 from seampact.codegen.printer import PythonModule
 from seampact.codegen.pydantic_forms import refuse_unserved_forms
 from seampact.codegen.pydantic_layout import api_layout
-from seampact.codegen.pydantic_models import pydantic_schemas_module
+from seampact.codegen.pydantic_models import PYDANTIC_MAJOR, PYDANTIC_PACKAGE, pydantic_schemas_module
 from seampact.codegen.refusals import Refusals
 from seampact.codegen.route_helpers import route_helpers_module
 from seampact.codegen.routes import route_table
 from seampact.codegen.runtime.version import RUNTIME_VERSION
-from seampact.django.emitters import boundary_module, contract_paths, routes_named_by_path
+from seampact.django.emitters import BoundaryBase, boundary_module, contract_paths, routes_named_by_path
 from seampact.ir.model import ContractIR
 from seampact.ir.naming import IrName, NamingRole, python_identifier
 from seampact.ir.read import IrSupport
@@ -33,6 +34,10 @@ from seampact.ninja.placement_module import placement_module
 TARGET: Final = "ninja"
 DISTRIBUTION: Final = "seampact-ninja"
 _HTTP_OPERATION: Final = "httpOperation"
+_NAMES_REGISTERED: Final = (
+    'The route name of each operation, under the NinjaAPI\'s urls_namespace: reverse "<namespace>:<name>".'
+)
+_BOUNDARY_BASE: Final = BoundaryBase("seampact.ninja.runtime", "_ninja_runtime", "NinjaContractBoundary")
 
 
 class NinjaGenerator:
@@ -51,6 +56,7 @@ class NinjaGenerator:
         mount = entry.mount or ""
 
         refuse_kept_forms(ir, refusals)
+        refuse_missing_matrix_row(entry, refusals, "Django and Django Ninja")
         refuse_unserved_forms(ir, refusals)
         error_codes = sorted({error.code for operation in ir.operations for error in operation.errors})
         layout = api_layout(ir, error_codes, refusals)
@@ -71,13 +77,15 @@ class NinjaGenerator:
                 {},
                 options.shared.run_time_options(),
                 entry,
+                base=_BOUNDARY_BASE,
                 settings_module=None,
+                model_framework=(PYDANTIC_PACKAGE, PYDANTIC_MAJOR),
             ),
             "ninja.py": placement_module(ir, layout, proof_models(layout, names), routes, mount, options.views),
         }
 
         if options.shared.route_helpers:
-            files["routes.py"] = route_helpers_module(ir, routes, refusals)
+            files["routes.py"] = route_helpers_module(ir, routes, refusals, _NAMES_REGISTERED)
 
         refusals.raise_if_any()
 

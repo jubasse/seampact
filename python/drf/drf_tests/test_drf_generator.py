@@ -55,7 +55,17 @@ def generated_files(
     mount: str | None = None,
 ) -> list[GeneratedFile]:
     entry = TargetEntry(
-        "reference", "pypi:seampact-drf", ir.api.id, None, options or {}, artefacts or {}, "/out", (), mount, None, ()
+        "reference",
+        "pypi:seampact-drf",
+        ir.api.id,
+        None,
+        options or {},
+        artefacts or {},
+        "/out",
+        (),
+        mount,
+        python_targets()["pypi:seampact-drf"],
+        (),
     )
 
     return list(DrfGenerator().generate(ir, entry))
@@ -481,3 +491,13 @@ def test_a_deadline_header_typed_as_a_date_time_gives_the_request_its_deadline(
 
     assert deadline is not None
     assert deadline.remaining_ms(now) == 300
+
+
+def test_an_entry_whose_target_has_no_matrix_row_is_refused_by_name(repository_root: Path) -> None:
+    ir = contract(reference_ir(repository_root, "tasks"))
+    entry = TargetEntry("reference", "pypi:seampact-drf", ir.api.id, None, {}, {}, "/out", (), None, None, ())
+
+    with pytest.raises(GenerationRefusedError) as refused:
+        DrfGenerator().generate(ir, entry)
+
+    assert {problem.code for problem in refused.value.problems} == {"config.matrix.row-missing"}

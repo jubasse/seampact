@@ -14,14 +14,14 @@ import fastapi
 from seampact.codegen.runtime.access_steps import AccessHooks, AccessState, headers_view, run_access_steps
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
+from seampact.codegen.runtime.handler_reply import ReplyContext, result_reply
 from seampact.codegen.runtime.hook_check import hook_needs
 from seampact.codegen.runtime.idempotency import enforces_idempotency
 from seampact.codegen.runtime.public_origin import configured_origin
+from seampact.codegen.runtime.pydantic.contract_input import InputBuilder
 from seampact.codegen.runtime.run_settings import OperationTypes
 from seampact.fastapi.runtime.api_binding import ApiBinding, is_unexpected_error_listener
-from seampact.fastapi.runtime.contract_input import InputBuilder
 from seampact.fastapi.runtime.handler_call import call_handler
-from seampact.fastapi.runtime.handler_reply import ReplyContext, result_reply
 from seampact.fastapi.runtime.input_features import featured_input
 from seampact.fastapi.runtime.placement import Factory, OperationRoute
 from seampact.fastapi.runtime.request_state import RequestState, state_of
@@ -271,6 +271,7 @@ def _endpoint[E, R](
         context = ReplyContext(
             access=state.access,
             hooks=state.hooks,
+            call=call_handler,
             query=state.input_query,
             raw_query=state.target.query,
             path=_link_path(request, state),

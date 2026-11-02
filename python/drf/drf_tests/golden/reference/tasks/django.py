@@ -3,6 +3,7 @@
 import collections.abc as _abc
 import typing as _typing
 
+import seampact.django.runtime as _django_runtime
 import seampact.drf.runtime as _drf_runtime
 
 from . import contract as _contract
@@ -41,5 +42,15 @@ class TasksBoundary(_drf_runtime.DrfContractBoundary):
     boot_check = True
     boot_check_framework_routes = True
     boot_check_hooks = True
-    frameworks = ()
+    frameworks = (
+        _django_runtime.AcceptedFramework(
+            package="djangorestframework",
+            unit=_django_runtime.VersionUnit.MAJOR,
+            accepted=("3",),
+            tested_minors=("3.18",),
+        ),
+        _django_runtime.AcceptedFramework(
+            package="django", unit=_django_runtime.VersionUnit.MAJOR, accepted=("5", "6"), tested_minors=("5.2", "6.1")
+        ),
+    )
     framework_routes = ()
