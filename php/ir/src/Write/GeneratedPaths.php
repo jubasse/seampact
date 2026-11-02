@@ -24,6 +24,12 @@ final class GeneratedPaths
         };
     }
 
+    /** The key two paths share on a case-insensitive file system. */
+    private static function caseFolded(string $path): string
+    {
+        return mb_convert_case($path, MB_CASE_FOLD, 'UTF-8');
+    }
+
     /**
      * Each unsafe, duplicate or reserved path refused, else the files in code-unit order of path.
      *
@@ -36,9 +42,11 @@ final class GeneratedPaths
         $refusals = [];
 
         foreach ($files as $file) {
+            $folded = self::caseFolded($file->path);
             $reason = self::unsafeReason($file->path) ?? match (true) {
                 preg_match('//u', $file->path) !== 1 => 'it is not UTF-8',
-                isset($seen[$file->path]) => 'it is generated twice',
+                ($seen[$folded] ?? null) === $file->path => 'it is generated twice',
+                isset($seen[$folded]) => "it differs only by letter case from '{$seen[$folded]}'",
                 basename($file->path) === WriterManifest::FILE_NAME => "'" . WriterManifest::FILE_NAME . "' is the writer's manifest",
                 default => null,
             };
@@ -50,7 +58,7 @@ final class GeneratedPaths
                     "Report this to the target's maintainers: a target emits distinct relative POSIX paths inside its output root.",
                 );
             }
-            $seen[$file->path] = true;
+            $seen[$folded] ??= $file->path;
         }
 
         if ($refusals !== []) {

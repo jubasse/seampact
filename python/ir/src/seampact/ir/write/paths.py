@@ -15,7 +15,7 @@ _REPORT_FIX: Final = (
 
 def checked_files(files: list[GeneratedFile]) -> list[GeneratedFile] | list[WriterRefusal]:
     """Each unsafe, duplicate or reserved path refused, else the files in code-unit order of path."""
-    seen: set[str] = set()
+    seen: dict[str, str] = {}
     refusals: list[WriterRefusal] = []
 
     for file in files:
@@ -28,7 +28,7 @@ def checked_files(files: list[GeneratedFile]) -> list[GeneratedFile] | list[Writ
                 )
             )
 
-        seen.add(file.path)
+        seen.setdefault(file.path.casefold(), file.path)
 
     if refusals:
         return refusals
@@ -36,14 +36,19 @@ def checked_files(files: list[GeneratedFile]) -> list[GeneratedFile] | list[Writ
     return sorted(files, key=lambda file: code_unit_key(file.path))
 
 
-def _other_reason(path: str, seen: set[str]) -> str | None:
+def _other_reason(path: str, seen: dict[str, str]) -> str | None:
     try:
         path.encode("utf-8")
     except UnicodeEncodeError:
         return "it is not UTF-8"
 
-    if path in seen:
+    earlier = seen.get(path.casefold())
+
+    if earlier == path:
         return "it is generated twice"
+
+    if earlier is not None:
+        return f"it differs only by letter case from '{earlier}'"
 
     if path.rsplit("/", 1)[-1] == MANIFEST_FILE_NAME:
         return f"'{MANIFEST_FILE_NAME}' is the writer's manifest"

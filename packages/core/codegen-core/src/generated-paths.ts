@@ -29,7 +29,7 @@ export function checkGeneratedPaths(
   files: readonly GeneratedFile[],
 ): { status: "checked"; files: GeneratedFile[] } | { status: "refused"; refusals: Refusal[] } {
   const refusals: Refusal[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<string, string>();
 
   for (const file of files) {
     const reason = pathRefusalReason(file.path, seen);
@@ -42,7 +42,7 @@ export function checkGeneratedPaths(
       });
     }
 
-    seen.add(file.path);
+    seen.set(caseFolded(file.path), seen.get(caseFolded(file.path)) ?? file.path);
   }
 
   if (refusals.length > 0) return { status: "refused", refusals };
@@ -54,12 +54,21 @@ export function checkGeneratedPaths(
   return { status: "checked", files: sorted };
 }
 
-function pathRefusalReason(path: string, seen: ReadonlySet<string>): string | undefined {
+// The key two paths share on a case-insensitive file system: upper then lower case folds `ß` to `ss` too.
+function caseFolded(path: string): string {
+  return path.toUpperCase().toLowerCase();
+}
+
+function pathRefusalReason(path: string, seen: ReadonlyMap<string, string>): string | undefined {
   const unsafe = unsafePathReason(path);
 
   if (unsafe !== undefined) return unsafe;
 
-  if (seen.has(path)) return "it is generated twice";
+  const earlier = seen.get(caseFolded(path));
+
+  if (earlier === path) return "it is generated twice";
+
+  if (earlier !== undefined) return `it differs only by letter case from '${earlier}'`;
 
   if (path.split("/").at(-1) === MANIFEST_FILE_NAME)
     return `'${MANIFEST_FILE_NAME}' is the writer's manifest`;

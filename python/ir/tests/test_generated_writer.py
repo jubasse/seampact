@@ -104,7 +104,9 @@ def test_two_paths_that_differ_only_by_case_are_refused_by_name(tmp_path: Path) 
     out = tmp_path / "out"
 
     for first, second in (("Tasks.py", "tasks.py"), ("routes/É.py", "routes/é.py")):
-        planned = plan_write(str(out), "main", [GeneratedFile(first, "a"), GeneratedFile(second, "b")], HandEditPolicy.REFUSE)
+        planned = plan_write(
+            str(out), "main", [GeneratedFile(first, "a"), GeneratedFile(second, "b")], HandEditPolicy.REFUSE
+        )
 
         assert isinstance(planned, list)
         assert [refusal.code for refusal in planned] == ["file.path.invalid"]

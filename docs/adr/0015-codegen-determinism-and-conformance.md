@@ -30,6 +30,7 @@ The file writer (in `codegen-core`, and its equivalent in the native IR packages
 - it writes only inside the configured output directory;
 - it keeps a manifest in that directory listing each generated file and its hash, and removes files a previous run generated that are no longer produced;
 - it refuses to overwrite a file it did not generate, and a generated file whose hash shows a hand edit, naming the file and the fix (move the code next to the generated files, then delete the edited file).
+- it refuses a run whose files include two paths equal once case-folded (`Tasks.ts`, `tasks.ts`), naming both before writing anything, since on a case-insensitive file system the second would overwrite the first (`file.path.invalid`, as for a path generated twice).
 
 `seampact check` with `checks.generated` (ADR 0011) regenerates into memory and reports any byte difference with the committed files, listing them; at `error`, the default, the difference fails the check.
 
