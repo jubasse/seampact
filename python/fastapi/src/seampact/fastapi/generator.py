@@ -10,15 +10,15 @@ from typing import Final
 
 from seampact.codegen.contract_module import contract_module
 from seampact.codegen.kept_forms import refuse_kept_forms
-from seampact.codegen.names import api_names
+from seampact.codegen.names import ApiNames, api_names
 from seampact.codegen.printer import PythonModule
 from seampact.codegen.pydantic_models import pydantic_schemas_module
-from seampact.codegen.refusals import Refusals
+from seampact.codegen.refusals import IrPlace, Refusals
 from seampact.codegen.route_helpers import route_helpers_module
 from seampact.codegen.routes import route_table
-from seampact.fastapi.input_schemas import with_input_schemas
+from seampact.fastapi.input_schemas import PROOFS_PART, input_schema_id, with_input_schemas
 from seampact.fastapi.kept_forms import refuse_unserved_forms
-from seampact.fastapi.layout import api_layout
+from seampact.fastapi.layout import ApiLayout, api_layout
 from seampact.fastapi.operation_types import operation_types_module
 from seampact.fastapi.options import read_options
 from seampact.fastapi.placement_module import placement_module
@@ -47,6 +47,16 @@ class FastApiGenerator:
         options = read_options(entry.options, entry.artefacts, refusals)
 
         refuse_kept_forms(ir, refusals)
+
+        if entry.matrix is None:
+            refusals.add(
+                "config.matrix.row-missing",
+                f"The compatibility matrix has no row for {entry.use}, so the boot check would not know the FastAPI "
+                "and Starlette versions generate accepted.",
+                "Reinstall seampact-ir: its copy of the compatibility matrix lacks the FastAPI row.",
+                IrPlace(""),
+            )
+
         refuse_unserved_forms(ir, refusals)
         error_codes = sorted({error.code for operation in ir.operations for error in operation.errors})
         layout = api_layout(ir, error_codes, refusals)
@@ -60,7 +70,9 @@ class FastApiGenerator:
             ),
             GeneratedFile("operations.py", operation_types_module(with_inputs, names, layout, refusals)),
             GeneratedFile("contract.py", contract_module(ir, names, entry.mount or "", refusals)),
-            GeneratedFile("fastapi.py", placement_module(ir, layout, routes, options, entry)),
+            GeneratedFile(
+                "fastapi.py", placement_module(ir, layout, _proof_models(layout, names), routes, options, entry)
+            ),
         ]
 
         if options.route_helpers:
@@ -69,3 +81,12 @@ class FastApiGenerator:
         refusals.raise_if_any()
 
         return sorted(files, key=lambda generated: generated.path)
+
+
+def _proof_models(layout: ApiLayout, names: ApiNames) -> dict[str, str]:
+    """The `<Op>Proofs` class of each kept operation whose body carries rule proofs."""
+    return {
+        operation_id: names.schema_classes[input_schema_id(operation_id, PROOFS_PART)]
+        for operation_id in layout.operations
+        if input_schema_id(operation_id, PROOFS_PART) in names.schema_classes
+    }

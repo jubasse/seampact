@@ -11,6 +11,7 @@ export const SERVER_TARGETS: readonly string[] = [
   "laravel",
   "symfony",
   "api-platform",
+  "fastapi",
 ];
 
 export const CONCRETE_TARGETS: readonly string[] = [

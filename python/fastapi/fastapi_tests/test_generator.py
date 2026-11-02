@@ -1,6 +1,5 @@
 """The fastapi target found through its entry point, its refusals by name, and the generated placement importing and
-binding: until the boundary ships, `bind_<api>()` declares every contract route, then refuses by name before it
-changes the app."""
+binding: `bind_<api>()` includes every contract route and adds the boundary as the outermost middleware."""
 
 import importlib
 import json
@@ -12,7 +11,7 @@ import fastapi
 import pytest
 
 from seampact.fastapi.generator import FastApiGenerator
-from seampact.fastapi.runtime import PLACEMENT_UNAVAILABLE, BindingError, PlacementUnavailableError
+from seampact.fastapi.runtime import ApiBinding, BindingError
 from seampact.ir.config.json_value import JsonValue
 from seampact.ir.read import read_ir
 from seampact.ir.run.discovery import InstalledTarget, discover_target
@@ -112,7 +111,7 @@ def test_contract_forms_the_target_does_not_serve_are_refused_by_name(repository
     assert _refusal_codes(ir_json) == {"input.media.unsupported", "response.binary.unsupported"}
 
 
-def test_binding_declares_the_contract_routes_then_refuses_by_name_leaving_the_app_unchanged() -> None:
+def test_binding_includes_the_contract_routes_and_adds_the_boundary_outermost() -> None:
     placement = importlib.import_module(_GOLDEN_PLACEMENT)
     bind: Callable[..., None] = placement.bind_tasks
     app = fastapi.FastAPI()
@@ -121,11 +120,10 @@ def test_binding_declares_the_contract_routes_then_refuses_by_name_leaving_the_a
         tasks=object, drafts=object, channels=object, preferences=object, app=object, hooks=object
     )
 
-    with pytest.raises(PlacementUnavailableError, match=PLACEMENT_UNAVAILABLE):
-        bind(app, handlers=handlers)
+    bind(app, handlers=handlers)
 
-    assert app.routes == routes_before
-    assert app.user_middleware == []
+    assert len(app.routes) > len(routes_before)
+    assert isinstance(app.user_middleware[0].kwargs.get("binding"), ApiBinding)
 
 
 def test_binding_a_router_without_the_app_is_refused_with_its_fix() -> None:

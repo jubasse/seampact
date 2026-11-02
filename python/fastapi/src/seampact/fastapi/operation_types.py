@@ -1,7 +1,8 @@
 """The `operations` module of an api's package (ADR 0026 "Placement"): the api's contract exception base and one
-exception per error code; per operation its scopes, its request (the typed input and who is calling), one frozen class
-per declared success, its page, its typed errors and its result union; and the endpoints protocol of each resource,
-whose methods a plain `def` or an `async def` satisfies."""
+exception per error code; the credentials class of each identity, one `str | None` per scheme, hidden from `repr`; per
+operation its scopes, its request (the typed input and who is calling), one frozen class per declared success, its
+page, its typed errors and its result union; and the endpoints protocol of each resource, whose methods a plain `def`
+or an `async def` satisfies."""
 
 from typing import Final
 
@@ -29,7 +30,11 @@ _FROZEN: Final = "@_dataclasses.dataclass(frozen=True, slots=True)"
 _FROZEN_KEYWORDS: Final = "@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)"
 # The fields of an `<Op>Errors` class: an error factory's name never starts with `_` and a letter.
 _ERRORS_CODE_FIELD: Final = "_code"
+_REDACTED: Final = "[redacted]"
 _ERRORS_PARAMS_FIELD: Final = "_params"
+_CREDENTIALS_DOC: Final = (
+    "The credentials a request presents for identity '{identity}', one per scheme, None when absent."
+)
 _ENDPOINTS_DOC: Final = "The handlers of these operations: each returns a declared success or error, or raises one."
 _PAGE_FACT_TYPES: Final = {
     HandlerResultMember.NEXT_CURSOR: "str",
@@ -54,6 +59,7 @@ class _Emission:
         self.module.imported("typing", "_typing")
         self.module.imported("pydantic", "_pydantic")
         self._errors()
+        self._credentials()
 
         for index, operation in enumerate(self.ir.operations):
             names = self.layout.operations.get(operation.id)
@@ -149,6 +155,22 @@ class _Emission:
         self._typed_errors(operation, names)
         alternatives = [*names.responses.values(), names.errors]
         self.blocks.append([f"type {names.result} = {' | '.join(alternatives)}"])
+
+    def _credentials(self) -> None:
+        for identity, credentials in self.layout.credentials.items():
+            lines = [
+                _FROZEN_KEYWORDS,
+                f"class {credentials.class_name}:",
+                f'{INDENT}"""{_CREDENTIALS_DOC.format(identity=identity)}"""',
+            ]
+            attributes = list(credentials.attributes.values())
+            members = [f"{INDENT}{attribute}: str | None = None" for attribute in attributes]
+            rendered = ", ".join(f"{attribute}={_REDACTED}" for attribute in attributes)
+            redacted_repr = [
+                f"{INDENT}def __repr__(self) -> str:",
+                f"{INDENT * 2}return {string_literal(f'{credentials.class_name}({rendered})')}",
+            ]
+            self.blocks.append(lines if not members else [*lines, "", *members, "", *redacted_repr])
 
     def _scopes(self, operation: Operation, class_name: str) -> None:
         hooks = self.module.imported("seampact.hooks", "_hooks")

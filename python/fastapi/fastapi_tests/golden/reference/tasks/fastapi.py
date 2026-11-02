@@ -7,48 +7,87 @@ import typing as _typing
 import seampact.fastapi.runtime as _runtime
 import seampact.hooks as _hooks
 
+from . import contract as _contract
+from . import schemas as _schemas
 from .operations import (
     AppEndpoints,
+    ArchiveTaskErrors,
     ArchiveTaskRequest,
+    ArchiveTaskResponse200,
     ArchiveTaskResult,
+    AssignTaskErrors,
     AssignTaskRequest,
+    AssignTaskResponse200,
     AssignTaskResult,
     ChannelsEndpoints,
+    CreateTaskErrors,
     CreateTaskRequest,
+    CreateTaskResponse201,
     CreateTaskResult,
+    DeleteDraftErrors,
     DeleteDraftRequest,
+    DeleteDraftResponse200,
     DeleteDraftResult,
     DraftsEndpoints,
+    GetChannelErrors,
     GetChannelRequest,
+    GetChannelResponse200,
     GetChannelResult,
+    GetDraftErrors,
     GetDraftRequest,
+    GetDraftResponse200,
     GetDraftResult,
+    GetPreferencesErrors,
     GetPreferencesRequest,
+    GetPreferencesResponse200,
+    GetPreferencesResponse304,
     GetPreferencesResult,
+    GetTaskErrors,
     GetTaskRequest,
+    GetTaskResponse200,
     GetTaskResult,
+    GetTasksBatchErrors,
     GetTasksBatchRequest,
+    GetTasksBatchResponse200,
     GetTasksBatchResult,
+    HealthErrors,
     HealthRequest,
+    HealthResponse200,
     HealthResult,
     HooksEndpoints,
+    ListChannelsErrors,
     ListChannelsRequest,
+    ListChannelsResponse200,
     ListChannelsResult,
+    ListTasksErrors,
     ListTasksRequest,
+    ListTasksResponse200,
     ListTasksResult,
+    PaymentsErrors,
     PaymentsRequest,
+    PaymentsResponse204,
     PaymentsResult,
     PreferencesEndpoints,
+    PurgeTaskErrors,
     PurgeTaskRequest,
+    PurgeTaskResponse204,
     PurgeTaskResult,
+    SearchTasksErrors,
     SearchTasksRequest,
+    SearchTasksResponse200,
     SearchTasksResult,
+    StripeCredentials,
     TasksContractError,
     TasksEndpoints,
+    UpdatePreferencesErrors,
     UpdatePreferencesRequest,
+    UpdatePreferencesResponse200,
     UpdatePreferencesResult,
+    UpdateTaskErrors,
     UpdateTaskRequest,
+    UpdateTaskResponse200,
     UpdateTaskResult,
+    UserCredentials,
 )
 
 GENERATED_BY: _typing.Final = "0.0.0-dev"
@@ -112,19 +151,32 @@ PLACEMENT: _typing.Final = _runtime.ApiPlacement(
         enabled=True, framework_routes=_runtime.FrameworkRoutesCheck.ON, hooks=_runtime.HooksCheck.ERROR
     ),
     framework_routes=(),
+    frameworks=(
+        _runtime.AcceptedFramework(package="fastapi", unit=_runtime.VersionUnit.MINOR, accepted=("0.162",)),
+        _runtime.AcceptedFramework(package="starlette", unit=_runtime.VersionUnit.MAJOR, accepted=("0", "1")),
+        _runtime.AcceptedFramework(package="pydantic", unit=_runtime.VersionUnit.MAJOR, accepted=("2",)),
+    ),
+    credentials={
+        "stripe": _runtime.CredentialsType(StripeCredentials, {"stripeSignature": "stripe_signature"}),
+        "user": _runtime.CredentialsType(UserCredentials, {"bearer": "bearer", "sessionCookie": "session_cookie"}),
+    },
 )
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class TasksHandlerFactories:
-    """The FastAPI dependency that builds the handlers of each endpoints protocol."""
+    """The FastAPI dependency that builds each endpoints protocol's handlers; None fails the boot."""
 
-    tasks: _runtime.Factory[TasksEndpoints]
-    drafts: _runtime.Factory[DraftsEndpoints]
-    channels: _runtime.Factory[ChannelsEndpoints]
-    preferences: _runtime.Factory[PreferencesEndpoints]
-    app: _runtime.Factory[AppEndpoints]
-    hooks: _runtime.Factory[HooksEndpoints]
+    tasks: _runtime.Factory[TasksEndpoints] | None
+    drafts: _runtime.Factory[DraftsEndpoints] | None
+    channels: _runtime.Factory[ChannelsEndpoints] | None
+    preferences: _runtime.Factory[PreferencesEndpoints] | None
+    app: _runtime.Factory[AppEndpoints] | None
+    hooks: _runtime.Factory[HooksEndpoints] | None
+
+
+class TasksUnexpectedErrorListener(_hooks.UnexpectedErrorListener, _typing.Protocol):
+    """Hears of each failure api 'tasks' answers with its 500."""
 
 
 async def _call_archive_task(endpoints: TasksEndpoints, request: ArchiveTaskRequest) -> ArchiveTaskResult:
@@ -208,37 +260,17 @@ def bind_tasks(
     deciders: _abc.Mapping[str, _runtime.Factory[_hooks.DecideHook]] | None = None,
     scope_resolvers: _abc.Mapping[str, _runtime.Factory[_hooks.ResolveScopeHook]] | None = None,
     idempotency_store: _runtime.Factory[_hooks.IdempotencyStore] | None = None,
-    on_unexpected_error: _runtime.Factory[_hooks.UnexpectedErrorListener] | None = None,
+    on_unexpected_error: _runtime.Factory[TasksUnexpectedErrorListener] | None = None,
     responses: _runtime.ResponsesMode | None = None,
     body_validation: bool | None = None,
     operations: _abc.Mapping[str, _runtime.OperationSettings] | None = None,
     public_origin: str | None = None,
 ) -> None:
     """Places api 'tasks' in the app; call it last, after its own middleware and exception handlers."""
-    router = _runtime.contract_router()
-
-    _runtime.add_operation(router, PLACEMENT, "health", handlers.app, _call_health)
-    _runtime.add_operation(router, PLACEMENT, "listChannels", handlers.channels, _call_list_channels)
-    _runtime.add_operation(router, PLACEMENT, "getPreferences", handlers.preferences, _call_get_preferences)
-    _runtime.add_operation(router, PLACEMENT, "payments", handlers.hooks, _call_payments)
-    _runtime.add_operation(router, PLACEMENT, "updatePreferences", handlers.preferences, _call_update_preferences)
-    _runtime.add_operation(router, PLACEMENT, "deleteDraft", handlers.drafts, _call_delete_draft)
-    _runtime.add_operation(router, PLACEMENT, "getDraft", handlers.drafts, _call_get_draft)
-    _runtime.add_operation(router, PLACEMENT, "getChannel", handlers.channels, _call_get_channel)
-    _runtime.add_operation(router, PLACEMENT, "createTask", handlers.tasks, _call_create_task)
-    _runtime.add_operation(router, PLACEMENT, "listTasks", handlers.tasks, _call_list_tasks)
-    _runtime.add_operation(router, PLACEMENT, "getTasksBatch", handlers.tasks, _call_get_tasks_batch)
-    _runtime.add_operation(router, PLACEMENT, "searchTasks", handlers.tasks, _call_search_tasks)
-    _runtime.add_operation(router, PLACEMENT, "getTask", handlers.tasks, _call_get_task)
-    _runtime.add_operation(router, PLACEMENT, "updateTask", handlers.tasks, _call_update_task)
-    _runtime.add_operation(router, PLACEMENT, "archiveTask", handlers.tasks, _call_archive_task)
-    _runtime.add_operation(router, PLACEMENT, "assignTask", handlers.tasks, _call_assign_task)
-    _runtime.add_operation(router, PLACEMENT, "purgeTask", handlers.tasks, _call_purge_task)
-
-    _runtime.bind_api(
+    binding = _runtime.api_binding(
         PLACEMENT,
+        _contract.CONTRACT,
         target,
-        router,
         app=app,
         hooks=_runtime.HookFactories(
             authenticate=authenticate or {},
@@ -254,3 +286,162 @@ def bind_tasks(
             public_origin=public_origin,
         ),
     )
+
+    _runtime.add_operation(
+        binding,
+        "health",
+        handlers.app,
+        _call_health,
+        _runtime.OperationTypes(request=HealthRequest, responses=((200, HealthResponse200),), errors=HealthErrors),
+    )
+    _runtime.add_operation(
+        binding,
+        "listChannels",
+        handlers.channels,
+        _call_list_channels,
+        _runtime.OperationTypes(
+            request=ListChannelsRequest, responses=((200, ListChannelsResponse200),), errors=ListChannelsErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "getPreferences",
+        handlers.preferences,
+        _call_get_preferences,
+        _runtime.OperationTypes(
+            request=GetPreferencesRequest,
+            responses=((200, GetPreferencesResponse200), (304, GetPreferencesResponse304)),
+            errors=GetPreferencesErrors,
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "payments",
+        handlers.hooks,
+        _call_payments,
+        _runtime.OperationTypes(
+            request=PaymentsRequest, responses=((204, PaymentsResponse204),), errors=PaymentsErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "updatePreferences",
+        handlers.preferences,
+        _call_update_preferences,
+        _runtime.OperationTypes(
+            request=UpdatePreferencesRequest,
+            responses=((200, UpdatePreferencesResponse200),),
+            errors=UpdatePreferencesErrors,
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "deleteDraft",
+        handlers.drafts,
+        _call_delete_draft,
+        _runtime.OperationTypes(
+            request=DeleteDraftRequest, responses=((200, DeleteDraftResponse200),), errors=DeleteDraftErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "getDraft",
+        handlers.drafts,
+        _call_get_draft,
+        _runtime.OperationTypes(
+            request=GetDraftRequest, responses=((200, GetDraftResponse200),), errors=GetDraftErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "getChannel",
+        handlers.channels,
+        _call_get_channel,
+        _runtime.OperationTypes(
+            request=GetChannelRequest, responses=((200, GetChannelResponse200),), errors=GetChannelErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "createTask",
+        handlers.tasks,
+        _call_create_task,
+        _runtime.OperationTypes(
+            request=CreateTaskRequest, responses=((201, CreateTaskResponse201),), errors=CreateTaskErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "listTasks",
+        handlers.tasks,
+        _call_list_tasks,
+        _runtime.OperationTypes(
+            request=ListTasksRequest, responses=((200, ListTasksResponse200),), errors=ListTasksErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "getTasksBatch",
+        handlers.tasks,
+        _call_get_tasks_batch,
+        _runtime.OperationTypes(
+            request=GetTasksBatchRequest, responses=((200, GetTasksBatchResponse200),), errors=GetTasksBatchErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "searchTasks",
+        handlers.tasks,
+        _call_search_tasks,
+        _runtime.OperationTypes(
+            request=SearchTasksRequest, responses=((200, SearchTasksResponse200),), errors=SearchTasksErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "getTask",
+        handlers.tasks,
+        _call_get_task,
+        _runtime.OperationTypes(request=GetTaskRequest, responses=((200, GetTaskResponse200),), errors=GetTaskErrors),
+    )
+    _runtime.add_operation(
+        binding,
+        "updateTask",
+        handlers.tasks,
+        _call_update_task,
+        _runtime.OperationTypes(
+            request=UpdateTaskRequest, responses=((200, UpdateTaskResponse200),), errors=UpdateTaskErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "archiveTask",
+        handlers.tasks,
+        _call_archive_task,
+        _runtime.OperationTypes(
+            request=ArchiveTaskRequest, responses=((200, ArchiveTaskResponse200),), errors=ArchiveTaskErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "assignTask",
+        handlers.tasks,
+        _call_assign_task,
+        _runtime.OperationTypes(
+            request=AssignTaskRequest, responses=((200, AssignTaskResponse200),), errors=AssignTaskErrors
+        ),
+    )
+    _runtime.add_operation(
+        binding,
+        "purgeTask",
+        handlers.tasks,
+        _call_purge_task,
+        _runtime.OperationTypes(
+            request=PurgeTaskRequest,
+            responses=((204, PurgeTaskResponse204),),
+            errors=PurgeTaskErrors,
+            proofs=_schemas.PurgeTaskProofs,
+        ),
+    )
+
+    _runtime.bind_api(binding)

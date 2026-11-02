@@ -1,6 +1,7 @@
 """What the generated placement of one api declares for the runtime (ADR 0026 "Placement" and "Options and
 registration"): its routes, its contract exception base, the run-time defaults the target options set, the boot
-check switches and the framework routes the entry allows, and the types of the factories `bind_<api>()` takes."""
+check switches, the framework routes the entry allows, the framework versions `generate` accepted, each identity's
+credentials class, and the types of the factories `bind_<api>()` takes."""
 
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping
 from dataclasses import dataclass, field
@@ -8,6 +9,8 @@ from enum import StrEnum
 
 import fastapi
 
+from seampact.codegen.runtime.access_steps import CredentialsType
+from seampact.codegen.runtime.framework_versions import AcceptedFramework
 from seampact.codegen.runtime.reply_verdict import FrameworkEtagMode, ResponsesMode
 from seampact.hooks import AuthenticateHook, DecideHook, IdempotencyStore, ResolveScopeHook, UnexpectedErrorListener
 
@@ -85,6 +88,8 @@ class ApiPlacement:
     defaults: TargetDefaults
     boot_check: BootCheckSwitches
     framework_routes: tuple[FrameworkRouteRule, ...]
+    frameworks: tuple[AcceptedFramework, ...]
+    credentials: Mapping[str, CredentialsType]
     _routes_by_operation: dict[str, OperationRoute] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:

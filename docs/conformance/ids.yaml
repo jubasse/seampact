@@ -20,7 +20,7 @@ frs:
   FR-18: "Committed conformance checklist and fixtures"
   FR-19: "Further Node and JVM targets"
   FR-20: "Inbound signed webhooks"
-  FR-21: "Native PHP targets laravel, symfony and api-platform"
+  FR-21: "Native PHP and Python targets laravel, symfony, api-platform and fastapi"
   FR-22: "Rights catalogue"
   FR-23: "Restricted fields, sort keys and list filtering"
   FR-24: "Open tenancy scopes"

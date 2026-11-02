@@ -5,7 +5,7 @@ base; the run-time defaults of the target options; the boot check switches and t
 calling its handler method, and `bind_<api>()`, which declares each contract route on the api's router and hands it
 to the runtime."""
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Final
 
 from seampact.codegen.printer import INDENT, PythonModule, string_literal
@@ -22,29 +22,42 @@ _HOOKS: Final = "_hooks"
 _ABC: Final = "_abc"
 # Each operation's coroutine: no module alias starts so, whatever the operation's name.
 _CALL_PREFIX: Final = "_call_"
+_CONTRACT_MODULE: Final = "contract"
+_SCHEMAS_MODULE: Final = "schemas"
+_PYDANTIC: Final = "pydantic"
+_PYDANTIC_MAJOR: Final = "2"
+_LISTENER_DOC: Final = "Hears of each failure api '{api}' answers with its 500."
 _BIND_DOC: Final = "Places api '{api}' in the app; call it last, after its own middleware and exception handlers."
 
 
 def placement_module(
-    ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry], options: FastApiOptions, entry: TargetEntry
+    ir: ContractIR,
+    layout: ApiLayout,
+    proof_models: Mapping[str, str],
+    routes: Sequence[RouteEntry],
+    options: FastApiOptions,
+    entry: TargetEntry,
 ) -> str:
+    """`proof_models` names the `<Op>Proofs` class of the schemas module for each operation whose body has proofs."""
     module = PythonModule(f"The FastAPI placement of api '{ir.api.id}'.")
     module.imported("collections.abc", _ABC)
     module.imported("dataclasses", "_dataclasses")
     module.imported("typing", "_typing")
     module.imported("seampact.fastapi.runtime", _RUNTIME)
     module.imported("seampact.hooks", _HOOKS)
-    root_names = [layout.contract_error]
+    root_names = [layout.contract_error, *(credentials.class_name for credentials in layout.credentials.values())]
     operations = [operation for operation in ir.operations if operation.id in layout.operations]
 
     for operation in operations:
         names = layout.operations[operation.id]
-        root_names += [names.endpoints, names.request, names.result]
+        root_names += [names.endpoints, names.request, names.result, names.errors, *names.responses.values()]
 
     head = [f"GENERATED_BY: _typing.Final = {string_literal(RUNTIME_VERSION)}"]
-    module.add_block(with_local_imports([], root_names, head))
+    local_modules = [_CONTRACT_MODULE, _SCHEMAS_MODULE] if proof_models else [_CONTRACT_MODULE]
+    module.add_block(with_local_imports(local_modules, root_names, head))
     module.add_block(_placement(ir, layout, routes, options, entry))
     module.add_block(_handler_factories(layout))
+    module.add_block(_unexpected_error_listener(ir, layout))
 
     for operation in operations:
         names = layout.operations[operation.id]
@@ -60,7 +73,7 @@ def placement_module(
             ]
         )
 
-    module.add_block(_bind(ir, layout, routes))
+    module.add_block(_bind(ir, layout, proof_models, routes))
 
     return module.text()
 
@@ -71,12 +84,7 @@ def _placement(
     route_lines: list[str] = []
 
     for route in routes:
-        methods = (
-            "("
-            + ", ".join(string_literal(method) for method in route.methods)
-            + ("," if len(route.methods) == 1 else "")
-            + ")"
-        )
+        methods = _tuple_literal(route.methods)
         arguments = [
             string_literal(route.operation_id),
             string_literal(route.name),
@@ -133,26 +141,87 @@ def _placement(
             if not framework_routes
             else [f"{INDENT}framework_routes=(", *framework_routes, f"{INDENT}),"]
         ),
+        f"{INDENT}frameworks=(",
+        *_accepted_frameworks(entry),
+        f"{INDENT}),",
+        *_credentials_types(layout),
         ")",
     ]
+
+
+def _accepted_frameworks(entry: TargetEntry) -> list[str]:
+    """The matrix row's frameworks (FastAPI by minor, Starlette by major) with the entry's `allowUntested` units, then
+    Pydantic 2, which the generated models are written for."""
+    accepted = [
+        (framework.package, framework.unit.name, framework.accepted_units(entry.allow_untested))
+        for framework in (entry.matrix.frameworks if entry.matrix is not None else ())
+    ]
+    accepted.append((_PYDANTIC, "MAJOR", (_PYDANTIC_MAJOR,)))
+    lines: list[str] = []
+
+    for package, unit, units in accepted:
+        arguments = [
+            f"package={string_literal(package)}",
+            f"unit={_RUNTIME}.VersionUnit.{unit}",
+            f"accepted={_tuple_literal(units)}",
+        ]
+        lines += bracketed(INDENT * 2, f"{_RUNTIME}.AcceptedFramework", arguments, ",")
+
+    return lines
+
+
+def _tuple_literal(items: Sequence[str]) -> str:
+    texts = [string_literal(item) for item in items]
+
+    return f"({texts[0]},)" if len(texts) == 1 else f"({', '.join(texts)})"
+
+
+def _credentials_types(layout: ApiLayout) -> list[str]:
+    if not layout.credentials:
+        return [f"{INDENT}credentials={{}},"]
+
+    lines = [f"{INDENT}credentials={{"]
+
+    for identity, credentials in layout.credentials.items():
+        attributes = ", ".join(
+            f"{string_literal(scheme)}: {string_literal(attribute)}"
+            for scheme, attribute in credentials.attributes.items()
+        )
+        lines += bracketed(
+            INDENT * 2,
+            f"{string_literal(identity)}: {_RUNTIME}.CredentialsType",
+            [credentials.class_name, "{" + attributes + "}"],
+            ",",
+        )
+
+    return [*lines, f"{INDENT}}},"]
 
 
 def _handler_factories(layout: ApiLayout) -> list[str]:
     lines = [
         "@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)",
         f"class {layout.handler_factories}:",
-        f'{INDENT}"""The FastAPI dependency that builds the handlers of each endpoints protocol."""',
+        f'{INDENT}"""The FastAPI dependency that builds each endpoints protocol\'s handlers; None fails the boot."""',
         "",
     ]
     lines += [
-        f"{INDENT}{attribute}: {_RUNTIME}.Factory[{endpoints}]"
+        f"{INDENT}{attribute}: {_RUNTIME}.Factory[{endpoints}] | None"
         for endpoints, attribute in layout.endpoints_owners().items()
     ]
 
     return lines
 
 
-def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> list[str]:
+def _unexpected_error_listener(ir: ContractIR, layout: ApiLayout) -> list[str]:
+    return [
+        f"class {layout.unexpected_error_listener}({_HOOKS}.UnexpectedErrorListener, _typing.Protocol):",
+        f'{INDENT}"""{_LISTENER_DOC.format(api=ir.api.id)}"""',
+    ]
+
+
+def _bind(
+    ir: ContractIR, layout: ApiLayout, proof_models: Mapping[str, str], routes: Sequence[RouteEntry]
+) -> list[str]:
     def factories(hook: str) -> str:
         return f"{_ABC}.Mapping[str, {_RUNTIME}.Factory[{_HOOKS}.{hook}]] | None = None"
 
@@ -165,29 +234,20 @@ def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> li
         f"deciders: {factories('DecideHook')}",
         f"scope_resolvers: {factories('ResolveScopeHook')}",
         f"idempotency_store: {_RUNTIME}.Factory[{_HOOKS}.IdempotencyStore] | None = None",
-        f"on_unexpected_error: {_RUNTIME}.Factory[{_HOOKS}.UnexpectedErrorListener] | None = None",
+        f"on_unexpected_error: {_RUNTIME}.Factory[{layout.unexpected_error_listener}] | None = None",
         f"responses: {_RUNTIME}.ResponsesMode | None = None",
         "body_validation: bool | None = None",
         f"operations: {_ABC}.Mapping[str, {_RUNTIME}.OperationSettings] | None = None",
         "public_origin: str | None = None",
     ]
-    lines = [
+    head = [
         *bracketed("", f"def {layout.bind_function}", parameters, " -> None:"),
         f'{INDENT}"""{_BIND_DOC.format(api=ir.api.id)}"""',
-        f"{INDENT}router = {_RUNTIME}.contract_router()",
-        "",
     ]
+    lines: list[str] = []
 
     for route in routes:
-        names = layout.operations[route.operation_id]
-        arguments = [
-            "router",
-            "PLACEMENT",
-            string_literal(route.operation_id),
-            f"handlers.{names.owner_attribute}",
-            f"{_CALL_PREFIX}{names.method}",
-        ]
-        lines += bracketed(INDENT, f"{_RUNTIME}.add_operation", arguments, "")
+        lines += _add_operation(layout, route.operation_id, proof_models.get(route.operation_id))
 
     hooks = [
         "authenticate=authenticate or {}",
@@ -204,14 +264,50 @@ def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> li
     ]
 
     return [
-        *lines,
-        "",
-        f"{INDENT}{_RUNTIME}.bind_api(",
+        *head,
+        f"{INDENT}binding = {_RUNTIME}.api_binding(",
         f"{INDENT * 2}PLACEMENT,",
+        f"{INDENT * 2}_{_CONTRACT_MODULE}.CONTRACT,",
         f"{INDENT * 2}target,",
-        f"{INDENT * 2}router,",
         f"{INDENT * 2}app=app,",
         *bracketed(INDENT * 2, f"hooks={_RUNTIME}.HookFactories", hooks, ","),
         *bracketed(INDENT * 2, f"settings={_RUNTIME}.RunSettings", settings, ","),
+        f"{INDENT})",
+        "",
+        *lines,
+        "",
+        f"{INDENT}{_RUNTIME}.bind_api(binding)",
+    ]
+
+
+def _add_operation(layout: ApiLayout, operation_id: str, proof_model: str | None) -> list[str]:
+    """One `add_operation` call, split as ruff splits it: the call on one line when it fits, else one argument per
+    line, the operation's types a nested call split the same way."""
+    names = layout.operations[operation_id]
+    responses = ", ".join(f"({status}, {name})" for status, name in sorted(names.responses.items()))
+    types = [
+        f"request={names.request}",
+        f"responses=({responses}{',' if len(names.responses) == 1 else ''})",
+        f"errors={names.errors}",
+    ]
+
+    if proof_model is not None:
+        types.append(f"proofs=_{_SCHEMAS_MODULE}.{proof_model}")
+    head = f"{_RUNTIME}.add_operation"
+    arguments = [
+        "binding",
+        string_literal(operation_id),
+        f"handlers.{names.owner_attribute}",
+        f"{_CALL_PREFIX}{names.method}",
+    ]
+    single = bracketed(INDENT, head, [*arguments, f"{_RUNTIME}.OperationTypes({', '.join(types)})"], "")
+
+    if len(single) == 1:
+        return single
+
+    return [
+        f"{INDENT}{head}(",
+        *(f"{INDENT * 2}{argument}," for argument in arguments),
+        *bracketed(INDENT * 2, f"{_RUNTIME}.OperationTypes", types, ","),
         f"{INDENT})",
     ]

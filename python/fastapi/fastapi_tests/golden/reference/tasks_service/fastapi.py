@@ -7,7 +7,16 @@ import typing as _typing
 import seampact.fastapi.runtime as _runtime
 import seampact.hooks as _hooks
 
-from .operations import GetTaskRequest, GetTaskResult, InternalEndpoints, TasksServiceContractError
+from . import contract as _contract
+from .operations import (
+    GetTaskErrors,
+    GetTaskRequest,
+    GetTaskResponse200,
+    GetTaskResult,
+    InternalEndpoints,
+    ServiceCredentials,
+    TasksServiceContractError,
+)
 
 GENERATED_BY: _typing.Final = "0.0.0-dev"
 
@@ -35,14 +44,26 @@ PLACEMENT: _typing.Final = _runtime.ApiPlacement(
         enabled=True, framework_routes=_runtime.FrameworkRoutesCheck.ON, hooks=_runtime.HooksCheck.ERROR
     ),
     framework_routes=(),
+    frameworks=(
+        _runtime.AcceptedFramework(package="fastapi", unit=_runtime.VersionUnit.MINOR, accepted=("0.162",)),
+        _runtime.AcceptedFramework(package="starlette", unit=_runtime.VersionUnit.MAJOR, accepted=("0", "1")),
+        _runtime.AcceptedFramework(package="pydantic", unit=_runtime.VersionUnit.MAJOR, accepted=("2",)),
+    ),
+    credentials={
+        "service": _runtime.CredentialsType(ServiceCredentials, {"internalToken": "internal_token"}),
+    },
 )
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class TasksServiceHandlerFactories:
-    """The FastAPI dependency that builds the handlers of each endpoints protocol."""
+    """The FastAPI dependency that builds each endpoints protocol's handlers; None fails the boot."""
 
-    internal: _runtime.Factory[InternalEndpoints]
+    internal: _runtime.Factory[InternalEndpoints] | None
+
+
+class TasksServiceUnexpectedErrorListener(_hooks.UnexpectedErrorListener, _typing.Protocol):
+    """Hears of each failure api 'tasksService' answers with its 500."""
 
 
 async def _call_get_task(endpoints: InternalEndpoints, request: GetTaskRequest) -> GetTaskResult:
@@ -58,21 +79,17 @@ def bind_tasks_service(
     deciders: _abc.Mapping[str, _runtime.Factory[_hooks.DecideHook]] | None = None,
     scope_resolvers: _abc.Mapping[str, _runtime.Factory[_hooks.ResolveScopeHook]] | None = None,
     idempotency_store: _runtime.Factory[_hooks.IdempotencyStore] | None = None,
-    on_unexpected_error: _runtime.Factory[_hooks.UnexpectedErrorListener] | None = None,
+    on_unexpected_error: _runtime.Factory[TasksServiceUnexpectedErrorListener] | None = None,
     responses: _runtime.ResponsesMode | None = None,
     body_validation: bool | None = None,
     operations: _abc.Mapping[str, _runtime.OperationSettings] | None = None,
     public_origin: str | None = None,
 ) -> None:
     """Places api 'tasksService' in the app; call it last, after its own middleware and exception handlers."""
-    router = _runtime.contract_router()
-
-    _runtime.add_operation(router, PLACEMENT, "getTask", handlers.internal, _call_get_task)
-
-    _runtime.bind_api(
+    binding = _runtime.api_binding(
         PLACEMENT,
+        _contract.CONTRACT,
         target,
-        router,
         app=app,
         hooks=_runtime.HookFactories(
             authenticate=authenticate or {},
@@ -88,3 +105,13 @@ def bind_tasks_service(
             public_origin=public_origin,
         ),
     )
+
+    _runtime.add_operation(
+        binding,
+        "getTask",
+        handlers.internal,
+        _call_get_task,
+        _runtime.OperationTypes(request=GetTaskRequest, responses=((200, GetTaskResponse200),), errors=GetTaskErrors),
+    )
+
+    _runtime.bind_api(binding)
