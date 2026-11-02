@@ -27,7 +27,6 @@ class OperationNames:
 
 @dataclass(frozen=True, slots=True)
 class ApiLayout:
-    api_class: str
     contract_error: str
     handler_factories: str
     bind_function: str
@@ -66,7 +65,6 @@ class _Claims:
 def api_layout(ir: ContractIR, error_codes: list[str], refusals: Refusals) -> ApiLayout:
     root = _Claims("operation types", refusals)
     api_segments = tuple(ir.api.name.segments)
-    api_class = python_identifier(IrName(api_segments, NamingRole.SCHEMA))
     at_api = IrPlace("/api/name")
     contract_error = root.claim(
         python_identifier(IrName((*api_segments, "contract"), NamingRole.ERROR)), "the api's contract error", at_api
@@ -109,7 +107,6 @@ def api_layout(ir: ContractIR, error_codes: list[str], refusals: Refusals) -> Ap
         operations[operation.id] = _operation_names(operation, tuple(owner), root, at)
 
     return ApiLayout(
-        api_class,
         contract_error,
         handler_factories,
         python_identifier(IrName(("bind", *api_segments), NamingRole.OPERATION)),
