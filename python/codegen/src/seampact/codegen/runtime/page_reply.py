@@ -12,7 +12,7 @@ from seampact.codegen.runtime.failures import BoundaryFailureError
 from seampact.codegen.runtime.ir_view import IrMap, ir_int, ir_map, ir_maps, ir_string, ir_strings
 from seampact.codegen.runtime.public_origin import writes_absolute_urls
 from seampact.codegen.runtime.templates import render
-from seampact.codegen.runtime.wire_values import component_encoded, kept_query_pairs
+from seampact.codegen.runtime.wire_values import component_encoded, kept_query_pairs, path_link_safe
 
 LINK: Final = "link"
 
@@ -350,7 +350,7 @@ def _url_base(contract: ApiContract, public_origin: str | None, request_path: st
             "https://api.example.com."
         )
 
-    return f"{public_origin}{request_path}"
+    return f"{public_origin}{path_link_safe(request_path)}"
 
 
 def _page_url(url_base: str, query: str) -> str:
