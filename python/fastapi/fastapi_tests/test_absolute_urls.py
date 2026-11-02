@@ -3,6 +3,7 @@ the request's host, and the boot check names a missing origin under absolute URL
 
 from typing import Final
 
+import fastapi
 import pytest
 from fastapi.testclient import TestClient
 
@@ -32,6 +33,19 @@ def test_page_links_start_with_the_public_origin_under_absolute_urls(monkeypatch
     links = response.headers.get("link", "") + response.text
     assert f"{_ORIGIN}/v1/channels?" in links
     assert "internal.host" not in links
+
+
+def test_page_links_keep_the_mount_prefix_under_a_parent_mount(monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_absolute_urls(monkeypatch)
+    parent = fastapi.FastAPI()
+    parent.mount("/svc", served(public_origin=_ORIGIN))
+    client = TestClient(parent)
+
+    response = client.get("/svc/v1/channels", headers={"Authorization": "Bearer any"})
+
+    assert response.status_code == 200
+    links = response.headers.get("link", "") + response.text
+    assert f"{_ORIGIN}/svc/v1/channels?" in links
 
 
 def test_page_links_stay_relative_under_relative_urls() -> None:

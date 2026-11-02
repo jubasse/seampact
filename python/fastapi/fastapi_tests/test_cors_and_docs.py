@@ -40,6 +40,14 @@ def test_an_options_request_that_is_no_preflight_answers_the_paths_not_found() -
     assert response.status_code == 404
 
 
+def test_a_preflight_without_a_cors_middleware_answers_the_paths_not_found() -> None:
+    client = TestClient(served())
+
+    response = client.options(_LIST_CHANNELS, headers=_PREFLIGHT_HEADERS)
+
+    assert response.status_code == 404
+
+
 def test_the_apps_cors_middleware_adds_its_headers_to_a_contract_reply() -> None:
     client = TestClient(served(before_bind=_with_cors))
 
