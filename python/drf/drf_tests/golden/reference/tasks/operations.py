@@ -1,10 +1,10 @@
 """The operation types, exceptions and handler protocols of api 'tasks'."""
 
+import collections.abc as _abc
 import dataclasses as _dataclasses
 import typing as _typing
 import uuid as _uuid
 
-import seampact.drf.runtime as _drf_runtime
 import seampact.hooks as _hooks
 
 from . import schemas as _schemas
@@ -141,14 +141,28 @@ class ArchiveTaskScopes:
     channel: _hooks.ResolvedScope
 
 
+class _Redacted:
+    """Stands for a sensitive value in a `repr`."""
+
+    def __repr__(self) -> str:
+        return "[redacted]"
+
+
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class ArchiveTaskRequest(_drf_runtime.RedactedRepr):
+class ArchiveTaskRequest:
     """What the handler of operation 'archiveTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: ArchiveTaskInput
     principal: _schemas.UserPrincipal
     scopes: ArchiveTaskScopes
+
+    def __repr__(self) -> str:
+        return f"ArchiveTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -242,13 +256,20 @@ class AssignTaskScopes:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class AssignTaskRequest(_drf_runtime.RedactedRepr):
+class AssignTaskRequest:
     """What the handler of operation 'assignTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: AssignTaskInput
     principal: _schemas.UserPrincipal
     scopes: AssignTaskScopes
+
+    def __repr__(self) -> str:
+        return f"AssignTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -341,13 +362,20 @@ class CreateTaskScopes:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class CreateTaskRequest(_drf_runtime.RedactedRepr):
+class CreateTaskRequest:
     """What the handler of operation 'createTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: CreateTaskInput
     principal: _schemas.UserPrincipal
     scopes: CreateTaskScopes
+
+    def __repr__(self) -> str:
+        return f"CreateTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -436,12 +464,18 @@ class DeleteDraftInput:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class DeleteDraftRequest(_drf_runtime.RedactedRepr):
+class DeleteDraftRequest:
     """What the handler of operation 'deleteDraft' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: DeleteDraftInput
     principal: _schemas.UserPrincipal
+
+    def __repr__(self) -> str:
+        return f"DeleteDraftRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -513,13 +547,20 @@ class GetChannelScopes:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class GetChannelRequest(_drf_runtime.RedactedRepr):
+class GetChannelRequest:
     """What the handler of operation 'getChannel' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: GetChannelInput
     principal: _schemas.UserPrincipal
     scopes: GetChannelScopes
+
+    def __repr__(self) -> str:
+        return f"GetChannelRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -572,12 +613,18 @@ class GetDraftInput:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class GetDraftRequest(_drf_runtime.RedactedRepr):
+class GetDraftRequest:
     """What the handler of operation 'getDraft' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: GetDraftInput
     principal: _schemas.UserPrincipal
+
+    def __repr__(self) -> str:
+        return f"GetDraftRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -630,12 +677,18 @@ class GetPreferencesInput:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class GetPreferencesRequest(_drf_runtime.RedactedRepr):
+class GetPreferencesRequest:
     """What the handler of operation 'getPreferences' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: GetPreferencesInput
     principal: _schemas.UserPrincipal
+
+    def __repr__(self) -> str:
+        return f"GetPreferencesRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -703,13 +756,20 @@ class GetTaskScopes:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class GetTaskRequest(_drf_runtime.RedactedRepr):
+class GetTaskRequest:
     """What the handler of operation 'getTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: GetTaskInput
     principal: _schemas.UserPrincipal
     scopes: GetTaskScopes
+
+    def __repr__(self) -> str:
+        return f"GetTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -770,13 +830,20 @@ class GetTasksBatchScopes:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class GetTasksBatchRequest(_drf_runtime.RedactedRepr):
+class GetTasksBatchRequest:
     """What the handler of operation 'getTasksBatch' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: GetTasksBatchInput
     principal: _schemas.UserPrincipal
     scopes: GetTasksBatchScopes
+
+    def __repr__(self) -> str:
+        return f"GetTasksBatchRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -877,12 +944,18 @@ class ListChannelsInput:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class ListChannelsRequest(_drf_runtime.RedactedRepr):
+class ListChannelsRequest:
     """What the handler of operation 'listChannels' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: ListChannelsInput
     principal: _schemas.UserPrincipal
+
+    def __repr__(self) -> str:
+        return f"ListChannelsRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -956,13 +1029,20 @@ class ListTasksScopes:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class ListTasksRequest(_drf_runtime.RedactedRepr):
+class ListTasksRequest:
     """What the handler of operation 'listTasks' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: ListTasksInput
     principal: _schemas.UserPrincipal
     scopes: ListTasksScopes
+
+    def __repr__(self) -> str:
+        return f"ListTasksRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -1009,20 +1089,31 @@ type ListTasksResult = ListTasksResponse200 | ListTasksErrors
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class PaymentsInput(_drf_runtime.RedactedRepr):
+class PaymentsInput:
     """The input of operation 'payments', as its handler reads it."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"body"})
     body: _schemas.PaymentEvent
+
+    def __repr__(self) -> str:
+        return "PaymentsInput(body=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "body", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class PaymentsRequest(_drf_runtime.RedactedRepr):
+class PaymentsRequest:
     """What the handler of operation 'payments' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: PaymentsInput
     principal: _schemas.WebhookCaller
+
+    def __repr__(self) -> str:
+        return f"PaymentsRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -1095,13 +1186,20 @@ class PurgeTaskScopes:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class PurgeTaskRequest(_drf_runtime.RedactedRepr):
+class PurgeTaskRequest:
     """What the handler of operation 'purgeTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: PurgeTaskInput
     principal: _schemas.UserPrincipal
     scopes: PurgeTaskScopes
+
+    def __repr__(self) -> str:
+        return f"PurgeTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -1185,13 +1283,20 @@ class SearchTasksScopes:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class SearchTasksRequest(_drf_runtime.RedactedRepr):
+class SearchTasksRequest:
     """What the handler of operation 'searchTasks' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: SearchTasksInput
     principal: _schemas.UserPrincipal
     scopes: SearchTasksScopes
+
+    def __repr__(self) -> str:
+        return f"SearchTasksRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -1261,12 +1366,18 @@ class UpdatePreferencesInput:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class UpdatePreferencesRequest(_drf_runtime.RedactedRepr):
+class UpdatePreferencesRequest:
     """What the handler of operation 'updatePreferences' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: UpdatePreferencesInput
     principal: _schemas.UserPrincipal
+
+    def __repr__(self) -> str:
+        return f"UpdatePreferencesRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -1356,13 +1467,20 @@ class UpdateTaskScopes:
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class UpdateTaskRequest(_drf_runtime.RedactedRepr):
+class UpdateTaskRequest:
     """What the handler of operation 'updateTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: UpdateTaskInput
     principal: _schemas.UserPrincipal
     scopes: UpdateTaskScopes
+
+    def __repr__(self) -> str:
+        return f"UpdateTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

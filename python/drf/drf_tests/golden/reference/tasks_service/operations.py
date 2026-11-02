@@ -1,10 +1,9 @@
 """The operation types, exceptions and handler protocols of api 'tasksService'."""
 
+import collections.abc as _abc
 import dataclasses as _dataclasses
 import typing as _typing
 import uuid as _uuid
-
-import seampact.drf.runtime as _drf_runtime
 
 from . import schemas as _schemas
 
@@ -85,13 +84,26 @@ class GetTaskInput:
     headers: GetTaskHeaders
 
 
+class _Redacted:
+    """Stands for a sensitive value in a `repr`."""
+
+    def __repr__(self) -> str:
+        return "[redacted]"
+
+
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class GetTaskRequest(_drf_runtime.RedactedRepr):
+class GetTaskRequest:
     """What the handler of operation 'getTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: GetTaskInput
     principal: _schemas.ServicePrincipal
+
+    def __repr__(self) -> str:
+        return f"GetTaskRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

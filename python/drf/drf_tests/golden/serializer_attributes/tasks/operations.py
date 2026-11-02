@@ -1,10 +1,10 @@
 """The operation types, exceptions and handler protocols of api 'tasks'."""
 
+import collections.abc as _abc
 import dataclasses as _dataclasses
 import typing as _typing
 import uuid as _uuid
 
-import seampact.drf.runtime as _drf_runtime
 import seampact.hooks as _hooks
 
 from . import schemas as _schemas
@@ -140,14 +140,28 @@ class CreateTaskScopes:
     channel: _hooks.ResolvedScope
 
 
+class _Redacted:
+    """Stands for a sensitive value in a `repr`."""
+
+    def __repr__(self) -> str:
+        return "[redacted]"
+
+
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
-class CreateTaskRequest(_drf_runtime.RedactedRepr):
+class CreateTaskRequest:
     """What the handler of operation 'createTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: CreateTaskInput
     principal: _schemas.UserPrincipal
     scopes: CreateTaskScopes
+
+    def __repr__(self) -> str:
+        return f"CreateTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
