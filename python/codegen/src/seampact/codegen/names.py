@@ -1,12 +1,13 @@
 """The Python names of one api (ADR 0007 sections 4 and 5, ADR 0026 "Naming"): a class per object schema and per
 enum, an attribute per object member and an upper snake case member per enum value. Two members of one object that
-give the same identifier (`2fa` and `field_2fa`) are refused, naming both, and so are two classes of one module."""
+give the same identifier (`2fa` and `field_2fa`) are refused, naming both, and so are two parameters of one part and
+two classes of one module."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from seampact.codegen.refusals import IrPlace, Refusals
-from seampact.ir.model import ContractIR, Name, NameRole, ObjectSchema
+from seampact.ir.model import ContractIR, Name, NameRole, ObjectSchema, Param
 from seampact.ir.naming import IrName, NameSource, NamingRole, python_identifier, segments_of
 
 
@@ -65,6 +66,25 @@ def member_identifier(written: str, code_name: Name | None = None) -> str | None
     segments = list(code_name.segments) if code_name is not None else segments_of(written, NameSource.NAME, None, None)
 
     return None if segments is None else python_identifier(IrName(tuple(segments), NamingRole.MEMBER))
+
+
+def part_attributes(params: Sequence[Param], at: IrPlace, refusals: Refusals) -> list[tuple[int, Param, str]]:
+    """The position, parameter and attribute of each parameter of one part (path, query or headers) placed at `at`; a
+    parameter with no name segment is refused, and so are two that give one attribute."""
+    attributes: list[tuple[int, Param, str]] = []
+
+    for index, param in enumerate(params):
+        attribute = member_identifier(param.name)
+
+        if attribute is None:
+            refusals.inconsistent("name.segment.missing", f"The parameter '{param.name}' has no name segment", at)
+            continue
+
+        attributes.append((index, param, attribute))
+
+    _refuse_collisions([(attribute, at.below(index)) for index, _, attribute in attributes], "parameter", refusals)
+
+    return attributes
 
 
 def _object_members(schema_id: str, schema: ObjectSchema, refusals: Refusals) -> dict[str, str]:

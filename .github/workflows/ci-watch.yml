@@ -35,6 +35,7 @@ on:
       - Own validators consumer
       - Python core packages
       - FastAPI target
+      - DRF target
     types: [completed]
     branches: [develop]
 

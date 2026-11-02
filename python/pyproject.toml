@@ -42,7 +42,7 @@ require-build-hashes = true
 preview-features = ["build-dependency-hashes"]
 
 [tool.uv.workspace]
-members = ["codegen", "fastapi", "hooks", "ir", "signed-webhooks"]
+members = ["codegen", "django", "drf", "fastapi", "hooks", "ir", "signed-webhooks"]
 
 [dependency-groups]
 # The vulnerability audit of the lock file, installed only by its CI job.
@@ -55,6 +55,10 @@ dev = [
     "pydantic==2.14.2",
     # Checks the golden output of the Pydantic emitter as Pylance users read it; Node comes as a wheel.
     "pyright[nodejs]==1.1.414",
+    # The types of Django and DRF, for the Django layer, the DRF target and its golden output; one release serves
+    # Django 5.2 and 6.x.
+    "django-stubs==6.1.2",
+    "djangorestframework-stubs==3.18.1",
     "pytest==9.2.0",
     "types-jsonschema==4.26.0.20261006",
     "rich==15.0.0",
@@ -63,12 +67,14 @@ dev = [
 
 [tool.ruff]
 target-version = "py312"
-src = ["codegen/src", "fastapi/src", "hooks/src", "ir/src", "signed-webhooks/src"]
+src = ["codegen/src", "django/src", "drf/src", "fastapi/src", "hooks/src", "ir/src", "signed-webhooks/src"]
 line-length = 120
-# The namespace package `seampact` has no `__init__.py` (PEP 420): without this, ruff would take `seampact/fastapi` for a
-# top-level `fastapi` package and sort the framework's imports as first party.
+# The namespace package `seampact` has no `__init__.py` (PEP 420): without this, ruff would take `seampact/fastapi`
+# or `seampact/django` for a top-level framework package and sort the framework's imports as first party.
 namespace-packages = [
     "codegen/src/seampact",
+    "django/src/seampact",
+    "drf/src/seampact",
     "fastapi/src/seampact",
     "hooks/src/seampact",
     "ir/src/seampact",
@@ -82,8 +88,31 @@ select = ["B", "E", "F", "I", "N", "RUF", "SIM", "UP", "W"]
 strict = true
 plugins = ["pydantic.mypy"]
 python_version = "3.12"
-mypy_path = ["codegen/src", "fastapi/src", "hooks/src", "ir/src", "signed-webhooks/src"]
-files = ["codegen/src", "codegen/tests", "fastapi/src", "fastapi/tests", "hooks/src", "hooks/tests", "ir/src", "ir/tests", "signed-webhooks/src", "signed-webhooks/tests"]
+mypy_path = [
+    "codegen/src",
+    "django/src",
+    "drf/src",
+    "fastapi/src",
+    "hooks/src",
+    "ir/src",
+    "signed-webhooks/src",
+]
+files = [
+    "codegen/src",
+    "codegen/tests",
+    "django/src",
+    "django/django_tests",
+    "drf/src",
+    "drf/drf_tests",
+    "fastapi/src",
+    "fastapi/fastapi_tests",
+    "hooks/src",
+    "hooks/tests",
+    "ir/src",
+    "ir/tests",
+    "signed-webhooks/src",
+    "signed-webhooks/tests",
+]
 explicit_package_bases = true
 warn_unreachable = true
 
@@ -94,13 +123,21 @@ warn_required_dynamic_aliases = true
 
 # The golden output of the Pydantic emitter and of the FastAPI target, as Pylance users check it.
 [tool.pyright]
-include = ["codegen/tests/golden", "fastapi/tests/golden"]
+include = ["codegen/tests/golden", "fastapi/fastapi_tests/golden"]
 extraPaths = ["codegen/src", "fastapi/src", "hooks/src"]
 typeCheckingMode = "strict"
 pythonVersion = "3.12"
 
 [tool.pytest.ini_options]
-testpaths = ["codegen/tests", "fastapi/tests", "hooks/tests", "ir/tests", "signed-webhooks/tests"]
+testpaths = [
+    "codegen/tests",
+    "django/django_tests",
+    "drf/drf_tests",
+    "fastapi/fastapi_tests",
+    "hooks/tests",
+    "ir/tests",
+    "signed-webhooks/tests",
+]
 addopts = ["--import-mode=importlib", "--strict-markers", "--strict-config", "-ra"]
 xfail_strict = true
 filterwarnings = ["error"]

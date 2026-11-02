@@ -1,0 +1,117 @@
+name: DRF target
+
+# The Django layer and the DRF target of the uv workspace `python/` (ADR 0027): the golden packages of the reference
+# contract under ruff, `ruff format --check` and `mypy --strict` with the Django and DRF stubs, and the tests of
+# `seampact-django` and `seampact-drf`, on two rows: Python 3.12 with the Django 5.2 and DRF 3.18.0 floor, installed
+# by hash over the lock, and the latest Python with the locked Django 6.x and DRF. On a pull request or a push they
+# run only when the change touches the Python packages, the golden IR files or this workflow; `drf` is the one check
+# to require.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drf-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      drf: ${{ steps.detect.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - name: Detect a change to the Python packages or the files their tests read
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          watched-paths: |
+            ^python/
+            ^fixtures/golden/
+            ^\.github/actions/
+  golden:
+    needs: changes
+    if: needs.changes.outputs.drf == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The floor: Python 3.12, Django 5.2 LTS and DRF 3.18.0, installed by hash over the lock.
+          - python-version: "3.12"
+            django: "5.2"
+            floor-requirements: drf/ci/django-floor.txt
+          # The latest Python with the locked Django 6.x and DRF.
+          - python-version: "3.x"
+            django: "6"
+            floor-requirements: ""
+    name: golden (Python ${{ matrix.python-version }}, Django ${{ matrix.django }})
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - name: Install the workspace from the lock file
+        env:
+          UV_PYTHON: ${{ steps.python.outputs.python-path }}
+          UV_PYTHON_DOWNLOADS: never
+        run: uv sync --locked --all-packages
+      - name: Install the Django and DRF floor by hash
+        if: matrix.floor-requirements != ''
+        env:
+          FLOOR_REQUIREMENTS: ${{ matrix.floor-requirements }}
+        run: uv pip install --require-hashes --no-deps -r "$FLOOR_REQUIREMENTS"
+      - name: Check the row runs the Django major it names
+        env:
+          DJANGO_ROW: ${{ matrix.django }}
+        run: uv run --no-sync python -c "import django, os; assert django.get_version().startswith(os.environ['DJANGO_ROW']), django.get_version()"
+      # `--no-sync` from here: a sync would put the locked Django back over the floor.
+      - name: Lint
+        run: uv run --no-sync ruff check django drf
+      - name: Check the format
+        run: uv run --no-sync ruff format --check django drf
+      - name: Type-check the packages and their golden output with the Django and DRF stubs
+        run: uv run --no-sync mypy django/src django/django_tests drf/src drf/drf_tests
+      - name: Test on Python ${{ matrix.python-version }} and Django ${{ matrix.django }}
+        run: uv run --no-sync pytest django/django_tests drf/drf_tests
+  drf:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, golden]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.drf }}

@@ -14,6 +14,7 @@ export default [
       "**/.vitest/**",
       "**/build/**",
       "php/**/vendor/**",
+      "python/**/.venv/**",
       "packages/core/spec/schemas/authoring/**",
       "packages/core/spec/src/authoring/grammar.snapshot.json",
     ],

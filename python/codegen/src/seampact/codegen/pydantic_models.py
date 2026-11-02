@@ -245,10 +245,10 @@ class _Emission:
 
         if self.rules is RulesMode.NATIVE:
             arguments = _length_arguments(refinements.min_length, refinements.max_length)
-            arguments += [f"{_NATIVE_BOUNDS[key]}={_number_literal(value, scalar)}" for key, value in bounds]
+            arguments += [f"{_NATIVE_BOUNDS[key]}={number_literal(value, scalar)}" for key, value in bounds]
 
             if refinements.multiple_of is not None:
-                arguments.append(f"multiple_of={_number_literal(refinements.multiple_of, scalar)}")
+                arguments.append(f"multiple_of={number_literal(refinements.multiple_of, scalar)}")
 
             if pattern is not None:
                 arguments.append(f"pattern={pattern}")
@@ -375,7 +375,7 @@ def _length_arguments(minimum: int | None, maximum: int | None) -> list[str]:
     return [f"{key}={value}" for key, value in (("min_length", minimum), ("max_length", maximum)) if value is not None]
 
 
-def _number_literal(literal: str, scalar: ScalarType) -> str:
+def number_literal(literal: str, scalar: ScalarType) -> str:
     exact = Decimal(literal)
 
     if scalar is ScalarType.INTEGER and exact == exact.to_integral_value():

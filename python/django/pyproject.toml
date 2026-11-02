@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "seampact-django"
+version = "0.0.0"
+description = "The Django layer the seampact DRF and Ninja targets share: the URLconf and settings emitters and the Django runtime of generated code."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = ["django>=5.2", "seampact-codegen==0.0.0"]
+classifiers = [
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Framework :: Django :: 6.1",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+# What the emitters need; a production install of an app leaves it out.
+generate = ["seampact-codegen[generate]==0.0.0"]
+
+# PEP 420: `seampact` is a namespace shared by every seampact distribution, so it has no `__init__.py`.
+[tool.hatch.build.targets.wheel]
+packages = ["src/seampact"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/seampact", "LICENSE"]
+
+[tool.uv.sources]
+seampact-codegen = { workspace = true }
