@@ -11,6 +11,7 @@ You need Node.js 24 or later, pnpm, and a checkout of this repository. Nothing i
 
 Also:
 
+- [On Python](01-install.md#on-python): FastAPI or Django REST Framework, with `pip` or `uv`
 - [Add seampact to an existing NestJS app](04-existing-project.md)
 - [Project layout](05-project-layout.md)
 - [Work with an AI agent](06-ai-agents.md)

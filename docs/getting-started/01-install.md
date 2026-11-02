@@ -71,4 +71,10 @@ Create `tsconfig.json`. NestJS decorators need `experimentalDecorators`.
 }
 ```
 
+## On Python
+
+Python 3.12 or later, and a FastAPI or Django REST Framework app. The Python `seampact` command has `generate` and `check` only, and reads a pinned bundle of the contract. So you write the contract as in the next pages, and pack it with `npx seampact bundle` (see [Sharing a contract](../features/sharing-contracts.md)).
+
+Install seampact from your checkout with `uv build` and `pip`, set `use: pypi:seampact-fastapi` or `use: pypi:seampact-drf` in `seampact.config.yaml`, then run `seampact generate`. The steps are in the guide of your framework: [FastAPI](../backend/fastapi.md#set-up) or [Django REST Framework](../backend/drf.md#set-up).
+
 Next: [write the contract](02-first-contract.md)

@@ -201,4 +201,8 @@ On the routes you move:
 
 Routes you did not move keep their own behaviour.
 
+## On a Python app
+
+The same way works on a FastAPI or Django REST Framework app: the routes you put in the contract move, the others stay yours. Add the target entry, generate, then bind it in your app. The boot check lists any route of yours under the api's paths that you did not allow-list. Follow [FastAPI](../backend/fastapi.md) or [Django REST Framework](../backend/drf.md).
+
 Something fails? See [troubleshooting](../troubleshooting/README.md). Every config key: [the config file](../configuration/config-file.md).

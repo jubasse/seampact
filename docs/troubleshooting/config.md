@@ -60,6 +60,11 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 | `config.php.namespace-invalid` | PHP: a folder name is not a PHP namespace name. An entry `id` such as `laravel-api` needs an `out` such as `LaravelApi`. Use letters, digits and `_`. |
 | `config.php.namespace-ambiguous` | PHP: `composer.json` maps the folder to two namespaces. Map it to one. |
 | `config.artefacts.none` | Every artefact of the entry is off, so it would generate nothing. Remove the entry. |
+| `config.frameworkDocs.unsupported` | DRF cannot switch its framework's document off, because seampact does not own it. Remove `frameworkDocs: off`, and remove your own schema view if you want no document. |
+| `config.root.unsupported` | Python: a monorepo root config lists this app, and the Python `seampact` does not read root configs yet. Remove the app from the root's `apps`, or generate it with the Node CLI. |
+| `config.api.duplicate` | Python: one entry names the same api twice (`api` and `apis`, two sources). Keep one item. |
+| `config.file.too-large`, `config.file.unreadable` | Python: the file is over the size limit or cannot be read. Pass the path of the config file itself. |
+| `config.key.reserved` | Python: the config uses `__proto__`, `constructor` or `prototype` as a key. Rename or remove it. |
 
 ## Framework versions
 

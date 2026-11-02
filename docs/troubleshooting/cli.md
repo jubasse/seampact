@@ -16,6 +16,14 @@
 | `binary.artefact-unresolved` | The Gradle or Maven plugin did not find the compiler binary it pins. Add the repository that serves `io.github.jubasse:seampact-compiler`, or set `binary { path; sha256 }` to a binary on disk. |
 | `binary.compile-refused` | The Gradle or Maven plugin compiled a `path` source and the compiler refused it. Fix the contract as the diagnostics under the message say. |
 | `binary.compile-failed` | The compiler binary exited outside its contract (another exit code, a signal, or no IR). Run the build again; report it with the binary version if it repeats. |
+| `binary.unpublished` | Python: the compiler binary is not published yet, so `seampact generate` has none to run. Read a pinned bundle source with `openapi: none`, or set `[tool.seampact.binary]` in your root `pyproject.toml` to a `path` and its `sha256`. |
+| `binary.pin-missing`, `binary.pin-invalid` | Python: `[tool.seampact.binary]` is not usable. Give `path` with the `sha256` of that file, or `version` or `url` with a `sha256` table of every release asset. Make `tool.seampact` a table. |
+| `binary.hash-mismatch` | Python: the binary's SHA-256 is not the pinned one, and it is never run. Point the override at the build the pin names, or pin your own build after you review it. |
+| `binary.override-not-root` | Python: a `pyproject.toml` that is not the root project's sets `[tool.seampact.binary]`. Remove it there, and set it in your own project. |
+| `binary.platform-unsupported` | Python: the binary has no build for this host. It exists for Linux (x86_64, aarch64), macOS (x86_64, arm64) and Windows (AMD64). Use your own build with `[tool.seampact.binary]`. |
+| `binary.compile-timeout` | Python: the compiler ran past its deadline. Run it again, and report the contract if it hangs again. |
+| `binary.document-unreadable` | Python: FastAPI's `nativeDocs` got no readable document from the binary. Report the binary version. |
+| `ir.malformed` | Python: an IR does not read. Compile or bundle the contract again with seampact, and report its source if it persists. |
 | `binary.cache-unsafe` | Keep the binary cache private: `chmod 700` the directory the message names (`chmod g-w` when the message names its group), or remove it. On Windows, keep the cache under `%LOCALAPPDATA%`. |
 | `binary.cache-unavailable` | The binary cache directory is relative. Set the setting the message names to an absolute path. |
 | `binary.ir-unreadable` | The compiler binary wrote an IR the plugin cannot read. Pin a binary of the plugin's version, and report it if they match. |

@@ -42,7 +42,38 @@ Every generator renders the default format and every format and paging style you
 | `seampact/laravel` | routes, middleware and Form Requests around your controllers | nothing | API Resources and paginators |
 | `seampact/symfony` | route loader, attributes, a listener, a value resolver and Validator constraints around your controllers | nothing | normalizers |
 | `seampact/api-platform` | resource metadata, DTOs, a listener and a decorated provider around your providers and processors | nothing | API Platform's serializer, JSON-LD and Hydra |
+| `pypi:seampact-fastapi` | routes, a boundary middleware and dependencies around your handlers, with Pydantic models | nothing | the contract's own replies |
+| `pypi:seampact-drf` | views, serializers, a boundary middleware and an exception handler around your handlers | nothing | the contract's own replies |
 
 See [React](../frontend/react.md).
+
+## Python targets
+
+`use: pypi:<distribution>` names a Python target. The distribution must be installed in the environment that runs `seampact generate`, with its `generate` extra.
+
+```yaml
+targets:
+  - id: notes
+    out: notes
+    use: pypi:seampact-fastapi
+    api: notes
+    options: { rules: seampact-consistent }
+```
+
+Both Python targets take the same options. They impose no wire shape: each switch below turns a check off.
+
+| Option | Default | Values |
+|---|---|---|
+| `rules` | `native` | `native` (the framework's own value rules) or `seampact-consistent` |
+| `responses` | `strict` | `strict` or `warn` |
+| `bodyValidation` | `false` | `true` or `false` |
+| `frameworkEtag` | `strip` | `strip` or `keep` |
+| `catchAll` | `true` | `true` or `false` |
+
+The naming options, `layout`, `handlers: perOperation` and an `indent` other than 4 are refused by name. `artefacts` takes `routeHelpers`, `bootCheck` and, on FastAPI only, `nativeDocs`.
+
+Versions: FastAPI 0.162 or later is named by minor (`allowUntested: [fastapi@0.163]`). Django and DRF are named by major (`allowUntested: [django@7]`). The guides list what is tested: [FastAPI](../backend/fastapi.md#versions), [Django REST Framework](../backend/drf.md#versions).
+
+The compiler binary is not published yet. A `path` source and the OpenAPI documents need it. Until 1.0, read a pinned bundle with `openapi: none`, or set `[tool.seampact.binary]` with a `path` and its `sha256` in the root `pyproject.toml`.
 
 In an app config, a link names the other entry's `id`: `link: { validators: validators }` for a server, `link: { client: client }` for React or Vue.
