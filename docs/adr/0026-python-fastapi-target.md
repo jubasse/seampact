@@ -80,7 +80,9 @@ The runtime keeps per-request state in the ASGI scope, in one mutable holder und
 - `Field[T]` is `T | Literal[Absent.ABSENT]`, with `Absent` a one-member enum, so an absent member and an explicit `None` stay apart (CHK-158).
 - `seampact-hooks` has no dependency, so an app can vendor it.
 
-The per-api `UnexpectedErrorListener` protocol is generated in the api's package and extends the runtime's, so two apis never receive each other's failures.
+The per-api `UnexpectedErrorListener` protocol (`TasksUnexpectedErrorListener`) is generated in the api's `fastapi` module and extends the runtime's; `bind_<api>()` takes its factory, so each api's listener hears only that api's failures.
+
+Each identity an operation reads gets a frozen credentials class in the `operations` module (`UserCredentials`), one `str | None` attribute per scheme, hidden from `repr`. The authenticate hook receives an instance in `credentials`, as the Node and PHP targets give theirs.
 
 #### Naming
 
@@ -143,7 +145,7 @@ Its `repr` prints `principal` and `scopes` as `[redacted]`.
 
 Codegen emits, per api, a package under the target entry's `out`:
 
-- **Per operation**: the request, the input model and its parts, the result classes and one exception class per code.
+- **Per operation**: the request, the input model and its parts, the result classes and one exception class per code. `bind_<api>()` hands the runtime each operation's request, success and errors classes (`OperationTypes`) with one `add_operation` call per route.
 - **The boundary middleware** (`TasksBoundary`), a pure ASGI middleware. It runs step 1: the request context, the raw-path match of "Routes", the media type, the bounded body read and the decoding. It runs the outgoing response check, the boot check on `lifespan.startup`, and the first-request fallback. It answers its own refusals in the api's format.
 - **The access dependency**, in each contract route's `dependencies`. It runs steps 2 to 5: authenticate, principal requirements, scopes and requirements. It first checks that the route FastAPI's router chose (`scope["route"]`) carries the operation the raw path matched. Once steps 2 to 5 admit the request, it marks the request scope with the operation id. Its hook factories are its sub-dependencies, so they run before that check and before step 2: they are the app's native layer, and a refusal one raises (a `Security` scheme's 401 or 403) answers as "Exceptions on contract routes" says.
 - **The input dependency**, an endpoint parameter that takes the access dependency as a sub-dependency (FastAPI resolves that once per request). It runs steps 6 to 8 on the boundary's decoded tree, builds the typed input and marks the request scope with it. Without the access mark for its own operation, it fails closed: the api's 500 and `onUnexpectedError`, before any input is read.
@@ -164,7 +166,7 @@ Each operation is one `add_api_route` call with Starlette's path syntax, each pl
 - a static segment a client sends percent-encoded (`path.segment.encoded.unsupported`);
 - a segment that mixes a placeholder with literal text (`path.segment.mixed.unsupported`).
 
-The boundary matches the raw request target against the contract templates. The raw target is the ASGI `raw_path`, which uvicorn, hypercorn and `TestClient` all give as sent, without the query (spike). The ASGI specification makes `raw_path` optional: under a server that gives none, the boundary matches the decoded `path` and logs once at start which raw-path rules it cannot apply. The suite runs only on uvicorn.
+The boundary matches the raw request target against the contract templates. The raw target is the ASGI `raw_path`, which uvicorn, hypercorn and `TestClient` all give as sent, without the query (spike). An absolute-form target (RFC 9112 section 3.2.2, `GET http://host/v1/health HTTP/1.1`) keeps `http://host` in both uvicorn's `raw_path` and its `path`, and Starlette routes that `path` to no route (probe, uvicorn 0.54 on h11). The boundary strips `scheme://authority` before the match, as ADR 0027 does, and hands the app the stripped `path` and `raw_path`, so the request reaches the contract route. The ASGI specification makes `raw_path` optional: under a server that gives none, the boundary matches the decoded `path` and logs once at start which raw-path rules it cannot apply. The suite runs only on uvicorn.
 
 Starlette decodes the path before routing, so the raw match and the chosen route can differ, as on Laravel ("Routes" of ADR 0023):
 
@@ -221,6 +223,8 @@ A reply written by a middleware outside the boundary is not seen; the boot check
 Before the boundary, the ASGI server, any ASGI wrapper around the app object and `ServerErrorMiddleware` run: the server's own limits (uvicorn's `--limit-concurrency` 503, its header limits), what such a wrapper answers, and an exception the boundary itself raises. Between the boundary and the endpoint, the app's inner middleware and its global and router dependencies refuse by raising `HTTPException` or by answering. Their replies are mapped as "Exceptions on contract routes" says.
 
 ### Types and validation
+
+A rule's proof members in the body (ADR 0012 requirements) are read by the access steps from the decoded body and handed to the rule's decider; the typed body the handler reads leaves them out.
 
 Generated value types:
 
@@ -308,7 +312,7 @@ The check lists every problem at once, with the operation id, the name and the f
 - an `app.exception_handlers` entry that can take an `HTTPException` ("Exceptions on contract routes") added or replaced after `bind_<api>()`, so it carries no wrapper;
 - an `app.dependency_overrides` entry keyed by a generated dependency (the access dependency, an input dependency), which would reach the handler without steps 2 to 8; the first-request check refuses it too, since a test may set it after start;
 - a `public_origin` set under relative URLs, or a missing or malformed one under absolute URLs;
-- a FastAPI minor or a Starlette major that `generate` did not accept, or Pydantic 1, read with `importlib.metadata`. The generated code records the FastAPI minors `generate` accepted (the matrix's tested minors and the `allowUntested` ones) and the Starlette majors of the matrix, so a `pip install -U fastapi` after `generate` refuses the boot by name, as Laravel's boot check refuses a major other than 13.
+- a FastAPI minor or a Starlette major that `generate` did not accept, or Pydantic 1, read with `importlib.metadata`. The generated code records the FastAPI minors `generate` accepted (the matrix's tested minors and the `allowUntested` ones) and the Starlette majors of the matrix, so a `pip install -U fastapi` after `generate` refuses the boot by name, as Laravel's boot check refuses a major other than 13. A Pydantic major other than 2 is refused alike. `generate` refuses an entry whose compatibility matrix has no FastAPI row (`config.matrix.row-missing`).
 
 `artefacts.bootCheck: false` turns the whole check off; `{ frameworkRoutes: false }` turns the framework-route check off and `{ hooks: off }` the hook check, as on Laravel. The handler check runs whenever the boot check does.
 
@@ -363,6 +367,7 @@ The generator's code sits in production `site-packages`, its dependencies behind
 |---|---|
 | a consumer that needs them | form, multipart, download and redirect bodies; native access (`artefacts.accessHooks: false`); sort keys restricted by a right; unions (`oneOf`); `handlers: perOperation`; per-access-kind dependency lists |
 | fastapi-4 | `nativeDocs` and `frameworkDocs: off` |
+| fastapi-3 and fastapi-4 | the operation features of later releases (idempotency, paging, cache, field rights, version tokens, budgets, deadline headers, relays, signed requests): until their PR, the boot check refuses an operation that uses one (`fastapi.feature.unavailable`), and with the boot check off it answers the api's 500 by name; the entry's `operations` filter leaves such operations out |
 | after 1.0 | FastAPI minors below the floor and Pydantic 1 (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs, as ADR 0023 lists them |
 
 ### The consumer and the proof
