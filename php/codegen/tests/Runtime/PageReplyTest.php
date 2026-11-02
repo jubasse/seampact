@@ -27,6 +27,17 @@ final class PageReplyTest extends TestCase
         self::assertEquals((object) ['lastPage' => 0, 'first' => '?per_page=2&page=1', 'last' => '?per_page=2&page=1'], $body);
     }
 
+    public function testARawPathCannotAddALinkRelation(): void
+    {
+        $state = new BoundaryState(ApiContract::of(PagesContract::class), 'listChannels', [], new RequestView('GET', '/v1/channels', []), self::lookup());
+        $state->publicOrigin = 'https://api.example.com';
+
+        [$body] = PageReply::render($state, 'per_page=2', '/v1/a>;rel="evil",<b', [], ['total' => 0], 200);
+
+        $first = 'https://api.example.com/v1/a%3E%3Brel%3D%22evil%22%2C%3Cb?per_page=2&page=1';
+        self::assertEquals((object) ['lastPage' => 0, 'first' => $first, 'last' => $first], $body);
+    }
+
     private static function lookup(): HookLookup
     {
         return new class () implements HookLookup {
