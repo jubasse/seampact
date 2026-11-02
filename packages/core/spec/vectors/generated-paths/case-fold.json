@@ -111,9 +111,9 @@
       "collide": true
     },
     {
-      "first": "K.ts",
+      "first": "K.ts",
       "second": "K.ts",
-      "collide": false
+      "collide": true
     },
     {
       "first": "Å.ts",
@@ -121,9 +121,9 @@
       "collide": true
     },
     {
-      "first": "Å.ts",
+      "first": "Å.ts",
       "second": "Å.ts",
-      "collide": false
+      "collide": true
     },
     {
       "first": "Ω.ts",
@@ -131,9 +131,9 @@
       "collide": true
     },
     {
-      "first": "Ω.ts",
+      "first": "Ω.ts",
       "second": "Ω.ts",
-      "collide": false
+      "collide": true
     },
     {
       "first": "ﬁ.ts",
@@ -207,7 +207,7 @@
     },
     {
       "first": "é.ts",
-      "second": "é.ts",
+      "second": "é.ts",
       "collide": false
     }
   ]

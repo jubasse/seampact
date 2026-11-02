@@ -68,39 +68,84 @@ internal fun unsafePathReason(path: String): String? = when {
     else -> null
 }
 
+/** The paths seen so far, by exact spelling and by case-folded key. */
+private class SeenPaths {
+    val exactPaths = HashSet<String>()
+    val fileByFoldedPath = HashMap<String, String>()
+    val directoryByFoldedPath = HashMap<String, String>()
+
+    fun remember(path: String) {
+        exactPaths += path
+        fileByFoldedPath.putIfAbsent(caseFolded(path), path)
+
+        for (directory in directoryPrefixes(path)) directoryByFoldedPath.putIfAbsent(caseFolded(directory), directory)
+    }
+}
+
 /** Each unsafe, duplicate or reserved path refused, else the files in code-unit order of path. */
 internal fun checkGeneratedPaths(files: List<GeneratedFile>): Pair<List<GeneratedFile>, List<WriterRefusal>> {
-    val seen = HashMap<String, String>()
+    val seen = SeenPaths()
     val refusals = mutableListOf<WriterRefusal>()
 
     for (file in files) {
-        val reason = pathRefusalReason(file.path, seen)
+        val unsafe = unsafePathReason(file.path)
+        val reason = unsafe ?: pathRefusalReason(file.path, seen)
 
         if (reason != null) {
             refusals += WriterRefusal(
                 "file.path.invalid",
                 "The target generated the path '${file.path}', and $reason.",
-                "Report this to the target's maintainers: a target emits distinct relative POSIX paths inside its output root.",
+                "Report this to the target's maintainers, or, if two paths differ only by letter case, rename one of the two contract names: a target emits distinct relative POSIX paths inside its output root.",
             )
         }
-        seen.putIfAbsent(caseFolded(file.path), file.path)
+
+        if (unsafe == null) seen.remember(file.path)
     }
 
     return Pair(files.sortedWith { left, right -> left.path.compareTo(right.path) }, refusals)
 }
 
-private fun pathRefusalReason(path: String, seen: Map<String, String>): String? {
-    val unsafe = unsafePathReason(path)
-    val earlier = seen[caseFolded(path)]
+private fun pathRefusalReason(path: String, seen: SeenPaths): String? {
+    if (path in seen.exactPaths) return "it is generated twice"
+
+    val folded = caseFolded(path)
+    val earlierFile = seen.fileByFoldedPath[folded]
+    val earlierDirectory = seen.directoryByFoldedPath[folded]
 
     return when {
-        unsafe != null -> unsafe
-        earlier == path -> "it is generated twice"
-        earlier != null -> "it differs only by letter case from '$earlier'"
-        path.substringAfterLast('/') == MANIFEST_FILE_NAME -> "'$MANIFEST_FILE_NAME' is the writer's manifest"
-        else -> null
+        earlierFile != null -> "it differs only by letter case from '$earlierFile'"
+        earlierDirectory != null -> "it is a file, and an earlier path uses '$earlierDirectory' as a directory"
+        else -> directoryRefusalReason(path, seen) ?: manifestRefusalReason(path)
     }
 }
 
-// The key two paths share on a case-insensitive file system: upper then lower case folds `ß` to `ss` too.
-private fun caseFolded(path: String): String = path.uppercase(Locale.ROOT).lowercase(Locale.ROOT)
+private fun directoryRefusalReason(path: String, seen: SeenPaths): String? {
+    for (directory in directoryPrefixes(path)) {
+        val folded = caseFolded(directory)
+        val fileAtDirectory = seen.fileByFoldedPath[folded]
+        val earlierDirectory = seen.directoryByFoldedPath[folded]
+
+        if (fileAtDirectory != null) return "its directory '$directory' is also the file '$fileAtDirectory'"
+
+        if (earlierDirectory != null && earlierDirectory != directory) {
+            return "its directory '$directory' differs only by letter case from the directory '$earlierDirectory' of an earlier path"
+        }
+    }
+
+    return null
+}
+
+private fun manifestRefusalReason(path: String): String? =
+    if (path.substringAfterLast('/') == MANIFEST_FILE_NAME) "'$MANIFEST_FILE_NAME' is the writer's manifest" else null
+
+// Each directory of the path, from the outermost: `a/b/c.java` has `a` and `a/b`.
+private fun directoryPrefixes(path: String): List<String> {
+    val segments = path.split("/")
+
+    return (1 until segments.size).map { count -> segments.take(count).joinToString("/") }
+}
+
+// The key two paths share on a case-insensitive file system. Lower, upper, then lower case: the same answer in
+// the four writers (a plain case fold treats the capital sharp s and the dotless i differently), as ADR 0015 says.
+internal fun caseFolded(path: String): String =
+    path.lowercase(Locale.ROOT).uppercase(Locale.ROOT).lowercase(Locale.ROOT)

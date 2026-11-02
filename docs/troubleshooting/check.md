@@ -12,7 +12,8 @@
 | `writer.manifest.other-owner` | Two entries write to one folder. Give each its own `out`. |
 | `writer.manifest.invalid`, `writer.manifest.not-regular` | The manifest in the output folder is damaged. Delete the generated files of that entry and its manifest, then run `generate`. |
 | `file.path.invalid`, `file.extension.unsupported`, `file.php.open-tag`, `file.header.unsafe` | PHP: the target generated a file the writer refuses. Update the target package, or report it to its maintainers. |
-| `file.path.invalid` naming two paths "differs only by letter case" | The target generated two files whose paths differ only by case (`Tasks.ts`, `tasks.ts`): on a case-insensitive disk the second overwrites the first. Rename one in the target's file layout option, or report it to the target's maintainers. |
+| `file.path.invalid` naming two paths "differs only by letter case" | Two generated files (or folders) have names that differ only by case (`Tasks.ts`, `tasks.ts`): on a case-insensitive disk the second overwrites the first. Rename one of the two names in the contract (two items named `Task` and `TASK`), or report it to the target's maintainers. |
+| `writer.file.not-generated` saying the run "renames it only by letter case" | A name changed only by case since the last run (`Tasks.ts` to `tasks.ts`) on a case-insensitive disk. Delete the old file named in the message, then run `generate` again. |
 | `writer.path.outside` | A symbolic link in the output folder leads out of it. Replace it with a plain folder. |
 
 You see `check: the generated files and documents match the committed ones.` when nothing drifted.

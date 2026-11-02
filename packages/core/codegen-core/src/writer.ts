@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, realpath, rmdir, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { lstatIfPresent } from "./file-presence.js";
-import { checkGeneratedPaths, MANIFEST_FILE_NAME } from "./generated-paths.js";
+import { caseFolded, checkGeneratedPaths, MANIFEST_FILE_NAME } from "./generated-paths.js";
 import { readManifest, serializeManifest } from "./manifest.js";
 import { type Refusal, type Refused, refused } from "./refusal.js";
 import type { GeneratedFile } from "./target.js";
@@ -108,6 +108,7 @@ export async function planGeneratedWrite(
   const planned = checked.files.map(planFile);
   const producedPaths = new Set(planned.map((file) => file.path));
   const stalePaths = [...manifest.hashByPath.keys()].filter((path) => !producedPaths.has(path));
+  const staleByFoldedPath = new Map(stalePaths.map((path) => [caseFolded(path), path]));
   const refusals: Refusal[] = [];
   const unchanged: string[] = [];
   const removable: string[] = [];
@@ -118,6 +119,7 @@ export async function planGeneratedWrite(
       file.path,
       manifest.hashByPath.get(file.path),
       options,
+      staleByFoldedPath.get(caseFolded(file.path)),
     );
 
     if (state.status === "refused") refusals.push(state.refusal);
@@ -219,6 +221,7 @@ async function existingFileState(
   path: string,
   recordedSha256: string | undefined,
   options: PlanWriteOptions,
+  caseRenamedFrom?: string,
 ): Promise<ExistingFileState> {
   const filePath = join(rootDir, path);
 
@@ -239,6 +242,14 @@ async function existingFileState(
       "writer.file.not-generated",
       `'${filePath}' is not a regular file, so the writer did not generate it.`,
       `Move it out of the output directory ${rootDir}.`,
+    );
+  }
+
+  if (recordedSha256 === undefined && caseRenamedFrom !== undefined) {
+    return refusedState(
+      "writer.file.not-generated",
+      `'${filePath}' exists, and the previous run generated '${caseRenamedFrom}', so this run renames it only by letter case; on a case-insensitive file system they are one file.`,
+      `Delete '${join(rootDir, caseRenamedFrom)}', then generate again.`,
     );
   }
 
