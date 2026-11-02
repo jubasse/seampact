@@ -30,3 +30,4 @@ The ADRs cite product decisions by id (`A<n>`); [`decisions.md`](decisions.md) s
 | [0024](adr/0024-symfony-target.md) | the Symfony server target |
 | [0025](adr/0025-runtime-packaging.md) | runtime packaging and version guards |
 | [0026](adr/0026-python-fastapi-target.md) | the Python core and the FastAPI server target |
+| [0027](adr/0027-django-targets.md) | the Django layer, the Django REST Framework and the Django Ninja server targets |
