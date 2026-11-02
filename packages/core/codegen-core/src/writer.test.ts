@@ -1,8 +1,10 @@
+import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { writeGeneratedFiles } from "./writer.js";
+import { checkGeneratedPaths } from "./generated-paths.js";
+import { planGeneratedWrite, writeGeneratedFiles } from "./writer.js";
 
 let sandbox: string;
 let outDir: string;
@@ -139,4 +141,72 @@ test("two generated paths that differ only by case are refused by name and nothi
   }
 
   expect(await readdir(sandbox)).toEqual([]);
+});
+
+// The pairs every writer (Node, PHP, JVM, Python) proves its case fold on.
+const CASE_FOLD_PAIRS: { first: string; second: string; collide: boolean }[] = JSON.parse(
+  readFileSync(
+    new URL("../../spec/vectors/generated-paths/case-fold.json", import.meta.url),
+    "utf8",
+  ),
+).pairs;
+
+function refusalsOfPaths(paths: readonly string[]): { code: string; message: string }[] {
+  const checked = checkGeneratedPaths(paths.map((path) => ({ path, contents: "" })));
+
+  return checked.status === "refused" ? checked.refusals : [];
+}
+
+test("the case fold agrees with the shared vector pairs", () => {
+  for (const { first, second, collide } of CASE_FOLD_PAIRS) {
+    expect(refusalsOfPaths([first, second]).length > 0, `${first} and ${second}`).toBe(collide);
+  }
+});
+
+test("directories that differ only by case, or a file that is also a directory, are refused", () => {
+  const cases = [
+    ["Routes/a.ts", "routes/b.ts"],
+    ["routes/b.ts", "Routes/a.ts"],
+    ["routes", "Routes/a.ts"],
+    ["Routes/a.ts", "routes"],
+    ["routes", "routes/a.ts"],
+  ];
+
+  for (const paths of cases) {
+    expect(
+      refusalsOfPaths(paths).map((refusal) => refusal.code),
+      paths.join(" "),
+    ).toEqual(["file.path.invalid"]);
+  }
+
+  expect(refusalsOfPaths(["Routes/a.ts", "routes/b.ts"])[0]?.message).toContain(
+    "differs only by letter case from the directory 'Routes'",
+  );
+});
+
+test("a path repeated after a case variant is reported as generated twice", () => {
+  const messages = refusalsOfPaths(["a.ts", "A.ts", "A.ts"]).map((refusal) => refusal.message);
+
+  expect(messages).toHaveLength(2);
+  expect(messages[0]).toContain("differs only by letter case from 'a.ts'");
+  expect(messages[1]).toContain("it is generated twice");
+});
+
+test("a stale file renamed only by case gets its own message and fix", async () => {
+  await writeGeneratedFiles(outDir, "node-server", [{ path: "Tasks.ts", contents: "a" }]);
+  // What a case-insensitive disk shows: the new spelling already exists.
+  await writeFile(join(outDir, "tasks.ts"), "a\n");
+
+  const outcome = await planGeneratedWrite(outDir, "node-server", [
+    { path: "tasks.ts", contents: "a" },
+  ]);
+
+  expect(outcome.status).toBe("refused");
+
+  const refusal = outcome.status === "refused" ? outcome.refusals[0] : undefined;
+
+  expect(refusal?.code).toBe("writer.file.not-generated");
+  expect(refusal?.message).toContain("only by letter case");
+  expect(refusal?.message).not.toContain("did not generate it");
+  expect(refusal?.fix).toContain("Delete");
 });

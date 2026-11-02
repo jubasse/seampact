@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Seampact\Ir\Tests\Write;
 
 use PHPUnit\Framework\TestCase;
+use Seampact\Ir\Tests\Support\Documents;
+use Seampact\Ir\Tests\Support\Json;
 use Seampact\Ir\Tests\Support\TemporaryDirectory;
 use Seampact\Ir\Write\GeneratedFile;
 use Seampact\Ir\Write\GeneratedHeader;
+use Seampact\Ir\Write\GeneratedPaths;
 use Seampact\Ir\Write\GeneratedWriter;
 use Seampact\Ir\Write\HandEditPolicy;
 use Seampact\Ir\Write\PlannedWrite;
@@ -128,6 +131,86 @@ final class GeneratedWriterTest extends TestCase
         }
 
         self::assertDirectoryDoesNotExist($this->outDir);
+    }
+
+    public function testTheCaseFoldAgreesWithTheSharedVectorPairs(): void
+    {
+        $vectors = Json::object(Json::decodeFile(Documents::repositoryRoot() . '/packages/core/spec/vectors/generated-paths/case-fold.json'));
+
+        foreach (Json::objects($vectors, 'pairs') as $pair) {
+            $first = Json::string($pair, 'first');
+            $second = Json::string($pair, 'second');
+
+            self::assertSame(Json::member($pair, 'collide'), self::refusalMessagesOfPaths([$first, $second]) !== [], "{$first} and {$second}");
+        }
+    }
+
+    public function testRefusesDirectoriesThatDifferOnlyByCaseAndAFileThatIsAlsoADirectory(): void
+    {
+        $cases = [
+            ['Routes/a.php', 'routes/b.php'],
+            ['routes/b.php', 'Routes/a.php'],
+            ['routes', 'Routes/a.php'],
+            ['Routes/a.php', 'routes'],
+            ['routes', 'routes/a.php'],
+        ];
+
+        foreach ($cases as $paths) {
+            self::assertCount(1, self::refusalMessagesOfPaths($paths), implode(' ', $paths));
+        }
+
+        self::assertStringContainsString("differs only by letter case from the directory 'Routes'", self::refusalMessagesOfPaths($cases[0])[0]);
+    }
+
+    public function testReportsAPathRepeatedAfterACaseVariantAsGeneratedTwice(): void
+    {
+        $messages = self::refusalMessagesOfPaths(['a.php', 'A.php', 'A.php']);
+
+        self::assertCount(2, $messages);
+        self::assertStringContainsString("differs only by letter case from 'a.php'", $messages[0]);
+        self::assertStringContainsString('it is generated twice', $messages[1]);
+    }
+
+    public function testRefusesAnInvalidUtf8PathOnceWithoutAFalseCaseCollision(): void
+    {
+        $messages = self::refusalMessagesOfPaths(["\xff.php", '?.php']);
+
+        self::assertCount(1, $messages);
+        self::assertStringContainsString('it is not UTF-8', $messages[0]);
+    }
+
+    public function testGivesAStaleFileRenamedOnlyByCaseItsOwnMessageAndFix(): void
+    {
+        GeneratedWriter::commit($this->planned([new GeneratedFile('Tasks.php', "<?php\n")]));
+        // What a case-insensitive disk shows: the new spelling already exists.
+        file_put_contents("{$this->outDir}/tasks.php", "<?php\n");
+
+        $outcome = GeneratedWriter::plan($this->outDir, 'server', [new GeneratedFile('tasks.php', "<?php\n")], HandEditPolicy::Refuse);
+
+        self::assertIsArray($outcome);
+        self::assertSame(['writer.file.not-generated'], self::codes($outcome));
+        self::assertInstanceOf(WriterRefusal::class, $outcome[0]);
+        self::assertStringContainsString('only by letter case', $outcome[0]->message);
+        self::assertStringNotContainsString('did not generate it', $outcome[0]->message);
+        self::assertStringContainsString('Delete', $outcome[0]->fix);
+    }
+
+    /**
+     * @param list<string> $paths
+     * @return list<string>
+     */
+    private static function refusalMessagesOfPaths(array $paths): array
+    {
+        $checked = GeneratedPaths::checked(array_map(static fn (string $path): GeneratedFile => new GeneratedFile($path, ''), $paths));
+        $messages = [];
+
+        foreach ($checked as $item) {
+            if ($item instanceof WriterRefusal) {
+                $messages[] = $item->message;
+            }
+        }
+
+        return $messages;
     }
 
     public function testRefusesPathsThatLeaveTheOutputDirectory(): void

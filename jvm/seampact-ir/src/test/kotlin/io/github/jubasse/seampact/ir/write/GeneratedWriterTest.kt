@@ -4,10 +4,16 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.HexFormat
+import kotlin.io.path.readText
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
@@ -116,6 +122,62 @@ class GeneratedWriterTest {
 
         assertFalse(Files.exists(out))
     }
+
+    @Test
+    fun theCaseFoldAgreesWithTheSharedVectorPairs() {
+        val vectors = Path.of(System.getProperty("seampact.repositoryRoot"), "packages/core/spec/vectors/generated-paths/case-fold.json")
+
+        for (pair in Json.parseToJsonElement(vectors.readText()).jsonObject.getValue("pairs").jsonArray) {
+            val first = pair.jsonObject.getValue("first").jsonPrimitive.content
+            val second = pair.jsonObject.getValue("second").jsonPrimitive.content
+            val collide = pair.jsonObject.getValue("collide").jsonPrimitive.boolean
+
+            assertEquals(collide, refusalMessagesOfPaths(first, second).isNotEmpty(), "$first and $second")
+        }
+    }
+
+    @Test
+    fun refusesDirectoriesThatDifferOnlyByCaseAndAFileThatIsAlsoADirectory() {
+        val cases = listOf(
+            listOf("Routes/a.java", "routes/b.java"),
+            listOf("routes/b.java", "Routes/a.java"),
+            listOf("routes", "Routes/a.java"),
+            listOf("Routes/a.java", "routes"),
+            listOf("routes", "routes/a.java"),
+        )
+
+        for (paths in cases) assertEquals(1, refusalMessagesOfPaths(*paths.toTypedArray()).size, paths.toString())
+
+        assertTrue("differs only by letter case from the directory 'Routes'" in refusalMessagesOfPaths(*cases[0].toTypedArray())[0])
+    }
+
+    @Test
+    fun reportsAPathRepeatedAfterACaseVariantAsGeneratedTwice() {
+        val messages = refusalMessagesOfPaths("a.java", "A.java", "A.java")
+
+        assertEquals(2, messages.size)
+        assertTrue("differs only by letter case from 'a.java'" in messages[0])
+        assertTrue("it is generated twice" in messages[1])
+    }
+
+    @Test
+    fun givesAStaleFileRenamedOnlyByCaseItsOwnMessageAndFix() {
+        write(GeneratedFile("Tasks.java", "class A {}\n"))
+        // What a case-insensitive disk shows: the new spelling already exists.
+        Files.writeString(out.resolve("tasks.java"), "class A {}\n")
+
+        val refused = assertIs<PlanOutcome.Refused>(
+            GeneratedWriter.plan(out, "server", listOf(GeneratedFile("tasks.java", "class A {}\n")), HandEditPolicy.REFUSE),
+        )
+
+        assertEquals(listOf("writer.file.not-generated"), refused.refusals.map { it.code })
+        assertTrue("only by letter case" in refused.refusals[0].message)
+        assertFalse("did not generate it" in refused.refusals[0].message)
+        assertTrue("Delete" in refused.refusals[0].fix)
+    }
+
+    private fun refusalMessagesOfPaths(vararg paths: String): List<String> =
+        checkGeneratedPaths(paths.map { GeneratedFile(it, "") }).second.map { it.message }
 
     @Test
     fun refusesPathsThatLeaveTheOutputDirectory() {
