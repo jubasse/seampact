@@ -117,6 +117,39 @@ def test_a_cursor_page_links_the_next_token_and_keeps_the_other_query_pairs(task
     assert parts.headers == (("link", '<?limit=10&q=a%20b&cursor=n%2F1>; rel="next"'),)
 
 
-def test_absolute_urls_are_refused_by_name() -> None:
-    with pytest.raises(BoundaryFailureError, match="absolute URLs"):
+def test_absolute_urls_start_with_the_public_origin_and_the_request_path() -> None:
+    parts = page_parts(
+        _pages_contract("absolute"),
+        _LIST_CHANNELS,
+        {"page": 2, "per_page": 2},
+        "page=2&per_page=2",
+        ["c3", "c4"],
+        {"total": 5},
+        200,
+        "/v1/channels",
+        public_origin="https://api.example.com:8443",
+    )
+
+    assert isinstance(parts.body, dict)
+    assert parts.body["previous"] == "https://api.example.com:8443/v1/channels?per_page=2&page=1"
+    assert parts.body["next"] == "https://api.example.com:8443/v1/channels?per_page=2&page=3"
+
+
+def test_absolute_urls_without_a_public_origin_are_the_boundarys_failure_naming_the_setting() -> None:
+    with pytest.raises(BoundaryFailureError, match=r"absolute URLs.*set public_origin"):
         page_parts(_pages_contract("absolute"), _LIST_CHANNELS, {}, "", [], {"total": 0}, 200, "/v1/channels")
+
+
+def test_a_public_origin_under_relative_urls_is_the_boundarys_failure() -> None:
+    with pytest.raises(BoundaryFailureError, match="relative URLs"):
+        page_parts(
+            _pages_contract(),
+            _LIST_CHANNELS,
+            {},
+            "",
+            [],
+            {"total": 0},
+            200,
+            "/v1/channels",
+            public_origin="https://api.example.com",
+        )
