@@ -25,7 +25,9 @@ _JSON = ("content-type", "application/json")
 def tasks(repository_root: Path) -> ApiContract:
     ir_view = json.loads((repository_root / "fixtures/golden/reference/tasks.ir.json").read_text(encoding="utf-8"))
 
-    return ApiContract(api="tasks", generated_by="0.0.0-dev", mount="", ir_view=ir_view, members={})
+    return ApiContract(
+        api="tasks", generated_by="0.0.0-dev", mount="", ir_view=ir_view, members={}, operation_members={}
+    )
 
 
 def _judge(

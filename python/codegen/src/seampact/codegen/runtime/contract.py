@@ -6,13 +6,22 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Final
 
-from seampact.codegen.runtime.ir_view import IrMap, ir_int, ir_map, ir_maps, ir_string
+from seampact.codegen.runtime.ir_view import IrJson, IrMap, ir_int, ir_map, ir_maps, ir_string
 from seampact.codegen.runtime.route_match import ContractRoute, RouteMatch, most_specific_first
 
 NOT_FOUND_ROLE: Final = "notFound"
 UNDECLARED_STATUS_ROLE: Final = "undeclaredStatus"
 INTERNAL_STATUS: Final = 500
 
+PATH_PART: Final = "path"
+QUERY_PART: Final = "query"
+HEADERS_PART: Final = "headers"
+PROOFS_PART: Final = "proofs"
+"""The parts of an operation's input whose wire names `operation_members` maps: its path, query and header
+parameters (the credential and CSRF headers stay the boundary's), and the rule proofs read in its body."""
+
+_IGNORE_POLICY: Final = "ignore"
+_REFUSE_POLICY: Final = "refuse"
 _HEAD: Final = "HEAD"
 _GET: Final = "GET"
 
@@ -20,14 +29,17 @@ _GET: Final = "GET"
 @dataclass(frozen=True, slots=True)
 class ApiContract:
     """`ir_view` is the IR's JSON subset the generator wrote (`api`, `formats`, `errors`, `schemas`, `enums`,
-    `operations`); `members` maps each schema id to its members' wire names and Python attribute names; `mount` is the
-    entry's prefix of every contract path, empty for none."""
+    `operations`, and the access declarations `identities`, `schemes`, `scopes`, `rights`, `rules`, `buckets` and
+    `pagings`); `members` maps each schema id to its members' wire names and Python attribute names;
+    `operation_members` maps each operation id, then each part of its input, to the same; `mount` is the entry's prefix
+    of every contract path, empty for none."""
 
     api: str
     generated_by: str
     mount: str
-    ir_view: IrMap
+    ir_view: Mapping[str, IrJson]
     members: Mapping[str, Mapping[str, str]]
+    operation_members: Mapping[str, Mapping[str, Mapping[str, str]]]
     _operations: dict[str, IrMap] = field(init=False, repr=False)
     _routes: tuple[ContractRoute, ...] = field(init=False, repr=False)
     _base_paths: tuple[str, ...] = field(init=False, repr=False)
@@ -62,6 +74,24 @@ class ApiContract:
             raise LookupError(f"The api '{self.api}' has no operation '{operation_id}'.")
 
         return operation
+
+    def part_members(self, operation_id: str, part: str) -> Mapping[str, str]:
+        """The wire names of one part of the operation's input and their Python attributes, empty for a part it does not
+        have."""
+        self.operation(operation_id)
+
+        return self.operation_members.get(operation_id, {}).get(part, {})
+
+    def ignores_unknown_query(self, operation_id: str) -> bool:
+        """Whether the operation ignores the query keys it does not declare, rather than refusing them."""
+        return ir_string(ir_map(self.operation(operation_id), "unknownQuery"), "policy") == _IGNORE_POLICY
+
+    def unknown_keys_policy(self, operation_id: str) -> str:
+        """`refuse`, `ignore` or `keep`: what the operation's body does with a key its schema does not declare; the
+        names of the body's rule proofs are declared keys."""
+        input_use = ir_map(ir_map(self.operation(operation_id), "input"), "schema")
+
+        return ir_string(ir_map(input_use, "unknownKeys"), "policy") or _REFUSE_POLICY
 
     def operation_ids(self) -> list[str]:
         return list(self._operations)

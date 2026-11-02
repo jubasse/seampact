@@ -80,7 +80,7 @@ def test_error_codes_named_like_the_errors_class_fields_keep_their_factories(
     ir_json = _with_error_code_renamed(ir_json, "api.not_found", "params")
     package = _generated_package(ir_json, tmp_path, "error_fields", monkeypatch)
 
-    types: ModuleType = importlib.import_module(package)
+    types: ModuleType = importlib.import_module(f"{package}.operations")
     errors_class = types.ArchiveTaskErrors
 
     assert errors_class.code() == errors_class.code()

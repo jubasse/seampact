@@ -41,7 +41,14 @@ def test_the_reference_contract_matches_its_golden_package(repository_root: Path
     text = (repository_root / f"fixtures/golden/reference/{api}.ir.json").read_text(encoding="utf-8")
     files = generator.generate(read_ir(text, generator.ir_support()), reference_entry(api))
 
-    assert [file.path for file in files] == ["__init__.py", "fastapi.py", "routes.py", "schemas.py"]
+    assert [file.path for file in files] == [
+        "__init__.py",
+        "contract.py",
+        "fastapi.py",
+        "operations.py",
+        "routes.py",
+        "schemas.py",
+    ]
 
     for file in files:
         path = _GOLDEN / package / file.path

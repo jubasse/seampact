@@ -7,7 +7,7 @@ import typing as _typing
 import seampact.fastapi.runtime as _runtime
 import seampact.hooks as _hooks
 
-from . import (
+from .operations import (
     AppEndpoints,
     ArchiveTaskRequest,
     ArchiveTaskResult,

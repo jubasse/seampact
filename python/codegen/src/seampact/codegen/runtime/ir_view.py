@@ -4,6 +4,8 @@ empty map or list, or None, so the boundary never indexes past a member the cont
 from collections.abc import Mapping, Sequence
 
 type IrMap = Mapping[str, object]
+type IrJson = bool | int | float | str | list[IrJson] | dict[str, IrJson] | None
+"""A JSON value as the generated code writes it, so a type checker reads each empty object or array it holds."""
 
 _EMPTY: IrMap = {}
 

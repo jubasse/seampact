@@ -7,7 +7,7 @@ import typing as _typing
 import seampact.fastapi.runtime as _runtime
 import seampact.hooks as _hooks
 
-from . import GetTaskRequest, GetTaskResult, InternalEndpoints, TasksServiceContractError
+from .operations import GetTaskRequest, GetTaskResult, InternalEndpoints, TasksServiceContractError
 
 GENERATED_BY: _typing.Final = "0.0.0-dev"
 

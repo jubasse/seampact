@@ -10,22 +10,23 @@ import pytest
 
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError
+from seampact.codegen.runtime.ir_view import IrJson
 from seampact.codegen.runtime.wire_codec import PythonTree, WireCodec
 from seampact.codegen.runtime.wire_values import list_items, path_value, query_value, raw_query, scalar
 from seampact.hooks import Absent, Field
 
 _INTEGER = {"kind": "scalar", "type": "integer"}
 _NUMBER = {"kind": "scalar", "type": "number"}
-_BOOLEAN = {"kind": "scalar", "type": "boolean"}
-_STRING = {"kind": "scalar", "type": "string"}
-_TASK = {"kind": "ref", "schema": "Task"}
+_BOOLEAN: dict[str, IrJson] = {"kind": "scalar", "type": "boolean"}
+_STRING: dict[str, IrJson] = {"kind": "scalar", "type": "string"}
+_TASK: dict[str, IrJson] = {"kind": "ref", "schema": "Task"}
 
 
-def _member(name: str, type_use: object, *, optional: bool = False, nullable: bool = False) -> dict[str, object]:
+def _member(name: str, type_use: IrJson, *, optional: bool = False, nullable: bool = False) -> dict[str, IrJson]:
     return {"name": name, "type": type_use, "optional": optional, "nullable": nullable}
 
 
-_IR_VIEW = {
+_IR_VIEW: dict[str, IrJson] = {
     "schemas": {
         "Task": {
             "kind": "object",
@@ -78,7 +79,11 @@ class Task:
 
 @pytest.fixture
 def codec() -> WireCodec:
-    return WireCodec(ApiContract(api="tasks", generated_by="0.0.0-dev", mount="", ir_view=_IR_VIEW, members=_MEMBERS))
+    return WireCodec(
+        ApiContract(
+            api="tasks", generated_by="0.0.0-dev", mount="", ir_view=_IR_VIEW, members=_MEMBERS, operation_members={}
+        )
+    )
 
 
 @pytest.mark.parametrize(

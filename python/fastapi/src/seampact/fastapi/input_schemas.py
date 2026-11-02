@@ -1,7 +1,7 @@
 """The parameter parts of each operation's input (ADR 0026 "Types and validation"), as object schemas the shared
 Pydantic emitter writes beside the api's own: `<Op>Path`, `<Op>Query` and `<Op>Headers` hold the parameters the
 handler reads. The input dependency validates each part of the boundary's decoded tree with its model in strict mode,
-and the runtime renames members through the same member table as every schema. Their ids (`<operationId>.path`)
+and the runtime renames members through the contract module's per-operation tables. Their ids (`<operationId>.path`)
 cannot be the id of a declared schema; a class name taken twice is refused as `name.collision`."""
 
 import dataclasses

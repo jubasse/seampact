@@ -1,7 +1,7 @@
-"""The root module of an api's package (ADR 0026 "Placement"): the api's contract exception base and one exception per
-error code; per operation its scopes, its request (the typed input and who is calling), one frozen class per declared
-success, its page, its typed errors and its result union; and the endpoints protocol of each resource, whose methods
-a plain `def` or an `async def` satisfies."""
+"""The `operations` module of an api's package (ADR 0026 "Placement"): the api's contract exception base and one
+exception per error code; per operation its scopes, its request (the typed input and who is calling), one frozen class
+per declared success, its page, its typed errors and its result union; and the endpoints protocol of each resource,
+whose methods a plain `def` or an `async def` satisfies."""
 
 from typing import Final
 
@@ -355,5 +355,5 @@ class _Emission:
 
 
 def operation_types_module(ir: ContractIR, names: ApiNames, layout: ApiLayout, refusals: Refusals) -> str:
-    """The root module of the api's package; `ir` holds the input schemas, `names` their classes."""
+    """The `operations` module of the api's package; `ir` holds the input schemas, `names` their classes."""
     return _Emission(ir, names, layout, refusals).text()

@@ -2,8 +2,7 @@
 frozen model per object schema (`protected_namespaces=()`, unknown keys refused), each member typed by the runtime's
 type layer (`WholeNumber`, `WireDateTime`, `WireUuid`, ...), and the value rules as Pydantic's own `Field`
 constraints under `rules: native` or as the runtime's validators under `seampact-consistent`. A member both optional
-and nullable is a `Field` of `seampact.hooks`. Framework names are imported under private aliases. The module also
-holds the member table the runtime's wire codec reads."""
+and nullable is a `Field` of `seampact.hooks`. Framework names are imported under private aliases."""
 
 from collections.abc import Sequence
 from decimal import Decimal
@@ -38,7 +37,6 @@ class RulesMode(StrEnum):
 
 _MODEL_CONFIG: Final = "_MODEL_CONFIG"
 _OR_NONE: Final = " | None"
-_MEMBERS_TABLE: Final = "SCHEMA_MEMBERS"
 _NATIVE_BOUNDS: Final = {"minimum": "ge", "maximum": "le", "exclusive_minimum": "gt", "exclusive_maximum": "lt"}
 _FORMAT_TYPES: Final = {
     "date-time": "WireDateTime",
@@ -91,8 +89,6 @@ class _Emission:
                 self.refusals.waiting(f"schema.{schema.kind}", f"A {schema.kind} schema", at, Delivery.CONSUMER)
             else:
                 self.refusals.unknown_value(schema.kind, at.below("kind"))
-
-        self._members_table()
 
         return self.module.text()
 
@@ -279,26 +275,9 @@ class _Emission:
 
         return [f"{helper}({', '.join(arguments)})"]
 
-    def _members_table(self) -> None:
-        lines = [f"{_MEMBERS_TABLE}: {self.typing}.Final = {{"]
-
-        for schema_id, members in self.names.members.items():
-            if not members:
-                lines.append(f"{INDENT}{string_literal(schema_id)}: {{}},")
-                continue
-
-            lines.append(f"{INDENT}{string_literal(schema_id)}: {{")
-            lines.extend(
-                f"{INDENT * 2}{string_literal(wire)}: {string_literal(name)}," for wire, name in members.items()
-            )
-            lines.append(f"{INDENT}}},")
-
-        lines.append("}")
-        self.module.add_block(lines)
-
 
 def pydantic_schemas_module(ir: ContractIR, names: ApiNames, rules: RulesMode, refusals: Refusals) -> str:
-    """The `schemas` module of an api: its enums, its object models and their member table."""
+    """The `schemas` module of an api: its enums and its object models."""
     return _Emission(ir, names, rules, refusals).text()
 
 
