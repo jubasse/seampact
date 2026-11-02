@@ -2,6 +2,7 @@
 each contract route with seampact's operation object at the path it serves; with `frameworkDocs: off`, FastAPI's
 documentation routes are gone. The api is the golden `tasks` api, generated into a temporary package."""
 
+import copy
 import dataclasses
 import importlib
 import sys
@@ -17,7 +18,7 @@ from seampact.fastapi.generator import FastApiGenerator
 from seampact.fastapi.native_docs_file import reached_components
 from seampact.fastapi.runtime import ApiBinding, FrameworkDocs
 from seampact.fastapi.runtime.framework_document import complete_framework_document
-from seampact.fastapi.runtime.native_docs import NativeDocs, NativeDocsError, NativeOperation
+from seampact.fastapi.runtime.native_docs import NativeDocs, NativeDocsError, NativeOperation, read_native_docs
 from seampact.ir.config.json_value import JsonObject, JsonValue
 from seampact.ir.config.yaml_reader import parse_config_text
 from seampact.ir.read import read_ir
@@ -140,13 +141,16 @@ def test_a_component_the_apps_document_holds_with_another_value_is_refused_namin
     binding = app.user_middleware[0].kwargs["binding"]
     assert isinstance(binding, ApiBinding)
     clashing: dict[str, dict[str, object]] = {"schemas": {"HTTPValidationError": {"type": "string"}}}
-    operation = NativeOperation("/v1/health", "get", {"operationId": "health"})
+    operations = {
+        route.operation_id: NativeOperation("/v1/health", "get", {"operationId": route.operation_id})
+        for route in binding.placement.routes
+    }
 
     @app.get("/v2/form")
     def form(item: int) -> int:
         return item
 
-    complete_framework_document(binding, NativeDocs({"health": operation}, clashing))
+    complete_framework_document(binding, NativeDocs(operations, clashing))
 
     with pytest.raises(NativeDocsError, match="component schemas 'HTTPValidationError'"):
         app.openapi()
@@ -204,3 +208,52 @@ def test_only_the_components_the_operations_reach_are_kept() -> None:
         "schemas": {"Task": task, "User": {"type": "object"}},
         "securitySchemes": {"user": {"type": "http", "scheme": "bearer"}},
     }
+
+
+def test_a_contract_route_missing_from_native_docs_json_fails_at_boot_naming_the_fix(
+    generated_app: GeneratedApp,
+) -> None:
+    app = generated_app({})
+    binding = app.user_middleware[0].kwargs["binding"]
+    assert isinstance(binding, ApiBinding)
+
+    with pytest.raises(NativeDocsError, match=r"no operation '.+'.*run `seampact generate`"):
+        complete_framework_document(binding, NativeDocs({}, {}))
+
+
+def test_a_native_docs_json_operation_without_a_path_or_method_does_not_read(tmp_path: Path) -> None:
+    file = tmp_path / "native_docs.json"
+    file.write_text('{"operations": {"health": {"operation": {}}}, "components": {}}', encoding="utf-8")
+
+    with pytest.raises(NativeDocsError, match=r"'health'.*'path'.*run `seampact generate`"):
+        read_native_docs(file)
+
+
+def test_a_contract_schema_named_like_a_fastapi_component_is_refused_with_a_fix_that_applies(
+    repository_root: Path, seampact_document: JsonObject
+) -> None:
+    document = copy.deepcopy(seampact_document)
+    operation = next(
+        item
+        for path in _member(document, "paths").values()
+        for item in _member({"p": path}, "p").values()
+        if isinstance(item, dict) and "operationId" in item
+    )
+    operation["x-clash"] = {"$ref": "#/components/schemas/HTTPValidationError"}
+    _member(_member(document, "components"), "schemas")["HTTPValidationError"] = {"type": "string"}
+
+    generator = FastApiGenerator()
+    text = (repository_root / "fixtures/golden/reference/tasks.ir.json").read_text(encoding="utf-8")
+    entry = dataclasses.replace(
+        reference_entry("tasks", artefacts={"nativeDocs": True}), native_docs=NativeDocsDocument(_DOCUMENT, document)
+    )
+
+    with pytest.raises(GenerationRefusedError) as refused:
+        generator.generate(read_ir(text, generator.ir_support()), entry)
+
+    [problem] = refused.value.problems
+    assert problem.code == "artefacts.nativeDocs.component-clash"
+    assert "HTTPValidationError" in problem.message
+    assert "FastAPI" in problem.message
+    assert "rename the schema" in problem.fix
+    assert "nativeDocs" in problem.fix
