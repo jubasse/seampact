@@ -12,7 +12,13 @@ _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 if not settings.configured:
     settings.configure(
-        INSTALLED_APPS=["django.contrib.contenttypes", "django.contrib.auth", "rest_framework", "seampact.django"],
+        INSTALLED_APPS=[
+            "django.contrib.contenttypes",
+            "django.contrib.auth",
+            "django.contrib.sessions",
+            "rest_framework",
+            "seampact.django",
+        ],
         ROOT_URLCONF="seampact_drf_golden_tasks.urls",
         USE_TZ=True,
         # An idempotency store that uses the ORM, as a Django app's would, reads it.

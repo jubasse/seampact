@@ -17,7 +17,9 @@ from types import ModuleType
 from typing import Final
 
 import pytest
+from django.conf import settings
 from django.conf.urls.i18n import i18n_patterns
+from django.contrib.auth.models import AnonymousUser, User
 from django.core.checks import run_checks
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.core.management import call_command
@@ -26,6 +28,13 @@ from django.db import connection
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase, StreamingHttpResponse
 from django.test import AsyncClient, Client, override_settings
 from django.urls import include, path, re_path
+from rest_framework.authentication import BaseAuthentication
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import PermissionDenied as DrfPermissionDenied
+from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
+from rest_framework.throttling import BaseThrottle
+from rest_framework.views import APIView
 
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, VersionUnit
@@ -67,11 +76,18 @@ _PRECONDITION_CODES: Final = (
     ("api.precondition_required", 428, "preconditionRequired"),
 )
 _SECRET: Final = "secret-token-123"
+_PUBLIC_ORIGIN: Final = "https://api.example.com"
+_BEARER: Final = {"Authorization": f"Bearer {_TOKEN}"}
+# A Django CSRF secret: 32 letters or digits.
+_CSRF_SECRET: Final = "csrfsecret0123456789abcdefghijkl"
+_THROTTLE_WAIT_SECONDS: Final = 2.5
+_DRF_PERMISSIONS: Final = "rest_framework.permissions"
 
 # What the hooks and handlers of one test answer; each test sets what it needs.
 answers: dict[str, Callable[[object], object]] = {}
 failures: list[UnexpectedFailure] = []
 idempotency_records: dict[str, tuple[str, StoredResponse | None]] = {}
+hook_factory_users: list[object] = []
 
 
 class _MemoryStore:
@@ -180,6 +196,49 @@ def database_store(request: HttpRequest) -> _DatabaseStore:
     return _DatabaseStore()
 
 
+class TokenUser:
+    is_authenticated = True
+
+
+class BearerAuthentication(BaseAuthentication):
+    """Authenticates the test token, and leaves any other request to the next class."""
+
+    def authenticate(self, request: Request) -> tuple[TokenUser, str] | None:
+        return (TokenUser(), _TOKEN) if request.headers.get("Authorization") == f"Bearer {_TOKEN}" else None
+
+    def authenticate_header(self, request: Request) -> str:
+        return "Bearer"
+
+
+class RefusingAuthentication(BaseAuthentication):
+    def authenticate(self, request: Request) -> None:
+        raise AuthenticationFailed("the token is revoked")
+
+
+class ForbiddingAuthentication(BaseAuthentication):
+    def authenticate(self, request: Request) -> None:
+        raise DrfPermissionDenied("the account is locked")
+
+
+class DenyingPermission(BasePermission):
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        return False
+
+
+class ExhaustedThrottle(BaseThrottle):
+    def allow_request(self, request: Request, view: APIView) -> bool:
+        return False
+
+    def wait(self) -> float:
+        return _THROTTLE_WAIT_SECONDS
+
+
+def user_reading_hooks(request: HttpRequest) -> _Hooks:
+    """The hooks, after recording the user DRF's authentication set on the Django request."""
+    hook_factory_users.append(request.user)
+    return _Hooks()
+
+
 class RaisingMiddleware:
     """An app middleware inside the boundary that raises what the `X-Raise` header names."""
 
@@ -246,6 +305,7 @@ def served(package: ModuleType) -> Iterator[None]:
     answers.clear()
     failures.clear()
     idempotency_records.clear()
+    hook_factory_users.clear()
 
     with override_settings(
         ROOT_URLCONF=_ROOT_URLCONF,
@@ -432,13 +492,44 @@ def test_an_operation_the_contract_relays_is_served(monkeypatch: pytest.MonkeyPa
     assert failures == []
 
 
-def test_absolute_urls_are_refused_at_boot_by_name(monkeypatch: pytest.MonkeyPatch) -> None:
-    wire = ir_map(_module("contract").CONTRACT.ir_view, "api")
-    assert isinstance(wire, dict)
-    monkeypatch.setitem(wire["wire"], "urls", "absolute")
-    absolute = {**_settings(), "public_origin": "https://api.example.com"}
+def test_page_links_start_with_the_public_origin_under_absolute_urls(monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_absolute_urls(monkeypatch)
+    answers["list_tasks"] = lambda _: _module("operations").ListTasksResponse200(
+        body=_module("operations").ListTasksPage(items=[], next_cursor="c-2")
+    )
+    absolute = {**_settings(), "public_origin": _PUBLIC_ORIGIN}
 
-    with override_settings(SEAMPACT={"tasks": absolute}), pytest.raises(ImproperlyConfigured, match="absolute URLs"):
+    with override_settings(SEAMPACT={"tasks": absolute}):
+        response = Client().get(f"/v1/channels/{_CHANNEL_ID}/tasks?limit=5", headers=_bearer())
+
+    assert response.status_code == HTTPStatus.OK, response.content
+    assert response["Link"].startswith(f"<{_PUBLIC_ORIGIN}/v1/channels/{_CHANNEL_ID}/tasks?"), response["Link"]
+
+
+@pytest.mark.parametrize(
+    ("public_origin", "named"),
+    [
+        (None, "is not set: set it to the origin clients call"),
+        ("api.example.com", "has no http or https scheme"),
+    ],
+)
+def test_a_missing_or_malformed_public_origin_under_absolute_urls_is_refused_at_boot(
+    monkeypatch: pytest.MonkeyPatch, public_origin: str | None, named: str
+) -> None:
+    _write_absolute_urls(monkeypatch)
+    own = {**_settings(), "public_origin": public_origin}
+
+    with override_settings(SEAMPACT={"tasks": own}), pytest.raises(ImproperlyConfigured) as refused:
+        Client().get("/v1/health")
+
+    assert "settings.SEAMPACT['tasks']['public_origin']" in str(refused.value)
+    assert named in str(refused.value)
+
+
+def test_a_public_origin_under_relative_urls_is_refused_at_boot() -> None:
+    own = {**_settings(), "public_origin": _PUBLIC_ORIGIN}
+
+    with override_settings(SEAMPACT={"tasks": own}), pytest.raises(ImproperlyConfigured, match="writes relative URLs"):
         Client().get("/v1/health")
 
 
@@ -678,7 +769,6 @@ def test_seampact_check_and_the_system_check_pass_a_correct_app_in_a_fresh_proce
 @pytest.mark.parametrize(
     ("key", "value"),
     [
-        ("access", {"authenticated": {"permission_classes": ["rest_framework.permissions.IsAdminUser"]}}),
         ("body_validation", True),
     ],
 )
@@ -771,6 +861,169 @@ def test_a_stream_that_fails_after_its_head_ends_short_and_the_listener_hears_of
 
     assert (response.status_code, body) == (200, b'{"status": ')
     assert any("ValueError raised at" in failure.reason for failure in failures)
+
+
+def test_the_apps_drf_defaults_never_apply_to_a_contract_route() -> None:
+    answers["health"] = lambda _: _module("operations").HealthResponse200(body=_module("schemas").Health(status="ok"))
+    answers["get_channel"] = lambda _: _module("operations").GetChannelResponse200(
+        body=_module("schemas").Channel(channel_id=_uuid(_CHANNEL_ID), name="general")
+    )
+    refusing_defaults = {
+        "DEFAULT_AUTHENTICATION_CLASSES": [f"{__name__}.RefusingAuthentication"],
+        "DEFAULT_PERMISSION_CLASSES": [f"{__name__}.DenyingPermission"],
+        "DEFAULT_THROTTLE_CLASSES": [f"{__name__}.ExhaustedThrottle"],
+    }
+
+    with override_settings(REST_FRAMEWORK=refusing_defaults):
+        public = Client().get("/v1/health")
+        identity = Client().get(f"/v1/channels/{_CHANNEL_ID}", headers=_bearer())
+
+    assert (public.status_code, identity.status_code) == (HTTPStatus.OK, HTTPStatus.OK), identity.content
+
+
+@pytest.mark.parametrize(
+    ("classes", "headers", "expected"),
+    [
+        (
+            {"authentication_classes": ["BearerAuthentication"], "permission_classes": ["IsAuthenticated"]},
+            {},
+            (HTTPStatus.UNAUTHORIZED, "api.unauthenticated"),
+        ),
+        (
+            {"authentication_classes": ["RefusingAuthentication"]},
+            _BEARER,
+            (HTTPStatus.UNAUTHORIZED, "api.unauthenticated"),
+        ),
+        ({"permission_classes": ["DenyingPermission"]}, _BEARER, (HTTPStatus.FORBIDDEN, "api.forbidden")),
+        ({"authentication_classes": ["ForbiddingAuthentication"]}, _BEARER, (HTTPStatus.FORBIDDEN, "api.forbidden")),
+        ({"throttle_classes": ["ExhaustedThrottle"]}, _BEARER, (HTTPStatus.TOO_MANY_REQUESTS, "api.rate_limited")),
+    ],
+)
+def test_drfs_exceptions_on_the_operations_access_kind_answer_their_contract_role(
+    classes: dict[str, list[str]], headers: dict[str, str], expected: tuple[int, str]
+) -> None:
+    answers["create_task"] = lambda _: pytest.fail("the handler ran")
+    access = {"identity": {name: [_class_path(short) for short in paths] for name, paths in classes.items()}}
+
+    with override_settings(SEAMPACT={"tasks": {**_settings(), "access": access}}):
+        response = _create_task(Client(), headers)
+
+    assert (response.status_code, _code(response)) == expected
+
+
+def test_the_classes_of_one_access_kind_never_reach_another_and_the_hook_factory_reads_drfs_user() -> None:
+    answers["health"] = lambda _: _module("operations").HealthResponse200(body=_module("schemas").Health(status="ok"))
+    answers["get_channel"] = lambda _: _module("operations").GetChannelResponse200(
+        body=_module("schemas").Channel(channel_id=_uuid(_CHANNEL_ID), name="general")
+    )
+    access = {
+        "identity": {
+            "authentication_classes": [f"{__name__}.BearerAuthentication"],
+            "permission_classes": ["rest_framework.permissions.IsAuthenticated"],
+        }
+    }
+    authenticate = _settings()["authenticate"]
+    assert isinstance(authenticate, dict)
+    own = {**_settings(), "access": access, "authenticate": {**authenticate, "user": f"{__name__}.user_reading_hooks"}}
+
+    with override_settings(SEAMPACT={"tasks": own}):
+        public = Client().get("/v1/health")
+        identity = Client().get(f"/v1/channels/{_CHANNEL_ID}", headers=_bearer())
+
+    assert (public.status_code, identity.status_code) == (HTTPStatus.OK, HTTPStatus.OK), identity.content
+    # DRF sets its anonymous user on a kind without authentication classes.
+    assert [type(user) for user in hook_factory_users] == [AnonymousUser, TokenUser]
+
+
+def test_the_boot_check_refuses_an_access_setting_it_cannot_use_by_name() -> None:
+    access = {
+        "authenticated": {},
+        "optional": {"permission_classes": []},
+        "identity": {
+            "renderer_classes": [],
+            "authentication_classes": "rest_framework.authentication.SessionAuthentication",
+            "permission_classes": ["app.missing.Permission"],
+        },
+        "signed": {"permission_classes": ["rest_framework.authentication.SessionAuthentication"]},
+    }
+
+    with (
+        override_settings(SEAMPACT={"tasks": {**_settings(), "access": access}}),
+        pytest.raises(ImproperlyConfigured) as refused,
+    ):
+        Client().get("/v1/health")
+
+    setting = "settings.SEAMPACT['tasks']['access']"
+    for problem in (
+        f"{setting} has the unknown access kind 'authenticated'",
+        f"{setting} names the access kind 'optional', which no operation of the api has",
+        f"{setting}['identity'] has the unknown key 'renderer_classes'",
+        f"{setting}['identity']['authentication_classes'] must be a list of dotted paths",
+        f"{setting}['identity']['permission_classes'] names 'app.missing.Permission', which does not import",
+        "names 'rest_framework.authentication.SessionAuthentication', which is no BasePermission subclass",
+    ):
+        assert problem in str(refused.value)
+
+
+def test_session_authentication_checks_djangos_csrf_token_only_for_a_session_users_unsafe_request(
+    session_user: User,
+) -> None:
+    answers["create_task"] = lambda _: _module("operations").CreateTaskResponse201(body=_task())
+    answers["get_channel"] = lambda _: _module("operations").GetChannelResponse200(
+        body=_module("schemas").Channel(channel_id=_uuid(_CHANNEL_ID), name="general")
+    )
+    signed_in = Client(enforce_csrf_checks=True)
+    signed_in.force_login(session_user)
+    with_token = Client(enforce_csrf_checks=True)
+    with_token.force_login(session_user)
+    with_token.cookies[settings.CSRF_COOKIE_NAME] = _CSRF_SECRET
+    access = {"identity": {"authentication_classes": ["rest_framework.authentication.SessionAuthentication"]}}
+
+    with override_settings(SEAMPACT={"tasks": {**_settings(), "access": access}}, MIDDLEWARE=_session_middleware()):
+        without_token = _create_task(signed_in, _BEARER, "k-session-1")
+        read = signed_in.get(f"/v1/channels/{_CHANNEL_ID}", headers=_bearer())
+        tokened = _create_task(with_token, {**_BEARER, "X-CSRFToken": _CSRF_SECRET}, "k-session-2")
+        anonymous = _create_task(Client(enforce_csrf_checks=True), _BEARER, "k-session-3")
+
+    assert (without_token.status_code, _code(without_token)) == (HTTPStatus.FORBIDDEN, "api.csrf_invalid")
+    assert read.status_code == HTTPStatus.OK, read.content
+    assert tokened.status_code == HTTPStatus.CREATED, _code(tokened)
+    assert anonymous.status_code == HTTPStatus.CREATED, _code(anonymous)
+
+
+@pytest.fixture
+def session_user() -> User:
+    call_command("migrate", verbosity=0)
+    return User.objects.create_user(username=f"ada-{User.objects.count()}")
+
+
+def _create_task(client: Client, headers: dict[str, str], idempotency_key: str = "k-1") -> HttpResponseBase:
+    return client.post(
+        f"/v1/channels/{_CHANNEL_ID}/tasks",
+        json.dumps({"title": "Write the guide"}),
+        content_type="application/json",
+        headers={**headers, "Idempotency-Key": idempotency_key},
+    )
+
+
+def _class_path(short_name: str) -> str:
+    return f"{_DRF_PERMISSIONS}.{short_name}" if short_name == "IsAuthenticated" else f"{__name__}.{short_name}"
+
+
+def _session_middleware() -> list[str]:
+    return [
+        f"{_PACKAGE}.django.TasksBoundary",
+        "django.contrib.sessions.middleware.SessionMiddleware",
+        "django.middleware.csrf.CsrfViewMiddleware",
+        "django.contrib.auth.middleware.AuthenticationMiddleware",
+        "django.middleware.common.CommonMiddleware",
+    ]
+
+
+def _write_absolute_urls(monkeypatch: pytest.MonkeyPatch) -> None:
+    api = ir_map(_module("contract").CONTRACT.ir_view, "api")
+    assert isinstance(api, dict)
+    monkeypatch.setitem(api["wire"], "urls", "absolute")
 
 
 def _fresh_root(name: str) -> ModuleType:

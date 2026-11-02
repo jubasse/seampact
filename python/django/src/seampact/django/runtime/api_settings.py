@@ -18,6 +18,7 @@ AUTHENTICATE_KEY: Final = "authenticate"
 DECIDERS_KEY: Final = "deciders"
 SCOPE_RESOLVERS_KEY: Final = "scope_resolvers"
 ON_UNEXPECTED_ERROR_KEY: Final = "on_unexpected_error"
+PUBLIC_ORIGIN_KEY: Final = "public_origin"
 HOOK_KEYS: Final = (AUTHENTICATE_KEY, DECIDERS_KEY, SCOPE_RESOLVERS_KEY)
 
 type Factory = Callable[[HttpRequest], object]

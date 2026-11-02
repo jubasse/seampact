@@ -1,8 +1,8 @@
 """What a generated DRF view does once DRF's `initial()` ran (ADR 0027 "DRF"): it checks the boundary's mark and
-the chosen route, refuses by name an api whose absolute URLs this release does not serve, runs steps 2 to 5, then
-reads the input (the version a header carries before the header check, steps 6 to 8, the restricted input fields,
-the deadline and the idempotency claim) and writes the handler's result with the boundary's own encoding: the
-restricted output fields left out, the page body and links, and the cache headers with their 304."""
+the chosen route, runs steps 2 to 5, then reads the input (the version a header carries before the header check,
+steps 6 to 8, the restricted input fields, the deadline and the idempotency claim) and writes the handler's result
+with the boundary's own encoding: the restricted output fields left out, the page body and links, absolute from the
+api's `public_origin` under absolute URLs, and the cache headers with their 304."""
 
 import dataclasses
 import inspect
@@ -28,12 +28,12 @@ from seampact.codegen.runtime.field_rights import checked_input_fields, visible_
 from seampact.codegen.runtime.input_decoding import DecodedInput, schema_invalid
 from seampact.codegen.runtime.ir_view import ir_int, ir_map, ir_maps, ir_string, ir_strings
 from seampact.codegen.runtime.page_reply import filled_page_query, page_parts
+from seampact.codegen.runtime.public_origin import configured_origin
 from seampact.codegen.runtime.replies import CONTENT_TYPE, JSON_MEDIA, Reply, error_reply, json_bytes, success_body
 from seampact.codegen.runtime.sync_driver import call_without_suspension, run_without_suspension
 from seampact.codegen.runtime.version_token import sent_version
 from seampact.codegen.runtime.wire_codec import WireCodec
-from seampact.django.runtime.api_settings import access_hooks
-from seampact.django.runtime.boot_check import writes_absolute_urls
+from seampact.django.runtime.api_settings import PUBLIC_ORIGIN_KEY, access_hooks, api_settings
 from seampact.django.runtime.contract_replies import django_response
 from seampact.django.runtime.idempotency_records import claim_idempotency
 from seampact.django.runtime.request_state import BoundaryState, state_of
@@ -216,10 +216,8 @@ class ContractAdmission:
     ) -> tuple[object, tuple[tuple[str, str], ...]]:
         """The body in its format's envelope, or the page body and the headers its paging style writes."""
         contract, operation_id = self._state.contract, self._state.operation_id
-        path = self._request.path
-
         if shape != _PAGE_SHAPE:
-            return success_body(contract.format(operation_id), shape, visible, status, path), ()
+            return success_body(contract.format(operation_id), shape, visible, status, self._request.path), ()
 
         if not isinstance(visible, list):
             raise BoundaryFailureError(
@@ -230,7 +228,18 @@ class ContractAdmission:
         items: list[object] = visible
         raw_query = str(self._request.META.get(_QUERY_STRING, ""))
         facts = _page_facts(contract, operation_id, body)
-        page = page_parts(contract, operation_id, self._query, raw_query, items, facts, status, path)
+        public_origin = configured_origin(contract, api_settings(contract.api).get(PUBLIC_ORIGIN_KEY))
+        page = page_parts(
+            contract,
+            operation_id,
+            self._query,
+            raw_query,
+            items,
+            facts,
+            status,
+            self._state.request_path,
+            public_origin=public_origin,
+        )
 
         return page.body, page.headers
 
@@ -248,7 +257,6 @@ def admit(
             "boundary's mark; list the api's boundary first in MIDDLEWARE, and test through the test Client."
         )
 
-    _refuse_absolute_urls(contract, operation_id)
     access = AccessState(
         contract=contract,
         operation_id=operation_id,
@@ -336,12 +344,3 @@ def _params(contract: ApiContract, codec: WireCodec, code: str, params: object) 
     wire = codec.to_wire({"kind": "ref", "schema": schema_id}, params)
 
     return wire if isinstance(wire, Mapping) else None
-
-
-def _refuse_absolute_urls(contract: ApiContract, operation_id: str) -> None:
-    """The boot check refuses absolute URLs; this holds when the app turned the boot check off."""
-    if writes_absolute_urls(contract):
-        raise BoundaryFailureError(
-            f"seampact: operation '{operation_id}' of api '{contract.api}' writes absolute URLs, which this release "
-            "of seampact-drf does not serve yet; the request is refused rather than served unchecked."
-        )

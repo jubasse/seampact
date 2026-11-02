@@ -92,6 +92,11 @@ class ContractBoundary:
     async_capable: ClassVar[bool] = True
     _gaps_logged: ClassVar[bool] = False
 
+    @classmethod
+    def target_settings_problems(cls, own: Mapping[str, object]) -> list[str]:
+        """The problems of the settings keys a target adds; a target's own boundary base overrides it."""
+        return []
+
     def __init__(self, get_response: GetResponse) -> None:
         self.get_response = get_response
         self.async_mode = iscoroutinefunction(get_response)
@@ -210,7 +215,7 @@ class ContractBoundary:
         except BoundaryFailureError as failure:
             return unexpected_response(request, self.contract, operation_id, "decoding the input failed", failure)
 
-        attach(request, BoundaryState(self.contract, operation_id, matched.raw_parameters, decoded))
+        attach(request, BoundaryState(self.contract, operation_id, matched.raw_parameters, decoded, target.path))
         _route_without_origin(request)
 
         return None

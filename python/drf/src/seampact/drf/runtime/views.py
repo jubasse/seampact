@@ -1,16 +1,17 @@
 """The base of the generated contract views (ADR 0027 "DRF"). It fixes what DRF would otherwise read from the app's
 defaults: one renderer and no default response header, so DRF adds neither `Allow` nor `Vary: Accept`; a fixed
-content negotiation, so `Accept` never answers 406; no parser and no versioning, since the views never read
-`request.data`; no authentication, permission or throttle class, since the classes an app names per access kind wait
-for a later release and the boot check refuses the `access` setting until then; no schema. A generated method admits
-the request, builds the typed request from the `Admission` and replies with the handler's result."""
+content negotiation, so `Accept` never answers 406; one parser, which hands DRF a copy of the body the boundary
+decoded, and no versioning; the authentication, permission and throttle classes the app names for the operation's
+access kind, and none otherwise, so the app's DRF defaults never apply; no schema. A generated method admits the
+request, builds the typed request from the `Admission` and replies with the handler's result."""
 
 from collections.abc import Mapping, Sequence
 from types import MappingProxyType
 from typing import ClassVar, Final, Protocol
 
-from django.http import HttpResponseBase
+from django.http import HttpRequest, HttpResponseBase
 from rest_framework.authentication import BaseAuthentication
+from rest_framework.parsers import BaseParser
 from rest_framework.permissions import BasePermission
 from rest_framework.renderers import BaseRenderer, JSONRenderer
 from rest_framework.request import Request
@@ -20,8 +21,17 @@ from rest_framework.views import APIView
 from seampact.codegen.runtime.access_steps import CredentialsType
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.replies import JSON_MEDIA
+from seampact.django.runtime.request_state import state_of
+from seampact.drf.runtime.access_classes import (
+    AUTHENTICATION_CLASSES,
+    PERMISSION_CLASSES,
+    THROTTLE_CLASSES,
+    access_instances,
+)
 from seampact.drf.runtime.admission import admit
+from seampact.drf.runtime.decoded_body_parser import DecodedBodyParser
 from seampact.drf.runtime.serializers import ContractSerializer
+from seampact.drf.runtime.session_csrf import csrf_tagged
 from seampact.hooks import ResolvedScope
 
 _RENDERER: Final = JSONRenderer
@@ -56,7 +66,7 @@ class ContractView(APIView):
     contract: ClassVar[ApiContract]
     credentials: ClassVar[Mapping[str, CredentialsType]] = MappingProxyType({})
     renderer_classes: Sequence[type[BaseRenderer]] = (_RENDERER,)
-    parser_classes = ()
+    parser_classes: Sequence[type[BaseParser]] = (DecodedBodyParser,)
     versioning_class = None
     schema = None
 
@@ -68,14 +78,28 @@ class ContractView(APIView):
         return _RENDERER(), JSON_MEDIA
 
     def get_authenticators(self) -> list[BaseAuthentication]:
-        return []
+        authenticators = self._access_instances(AUTHENTICATION_CLASSES, BaseAuthentication)
+
+        return [csrf_tagged(authenticator) for authenticator in authenticators]
 
     def get_permissions(self) -> Sequence[BasePermission]:
-        return []
+        return self._access_instances(PERMISSION_CLASSES, BasePermission)
 
     def get_throttles(self) -> list[BaseThrottle]:
-        return []
+        return self._access_instances(THROTTLE_CLASSES, BaseThrottle)
 
     def admit(self, request: Request, operation_id: str) -> Admission:
         """Raises `BoundaryFailureError` or `ContractRefusal`, which the api's exception handler answers."""
         return admit(request._request, self.contract, self.credentials, operation_id)
+
+    def _access_instances[B](self, name: str, base: type[B]) -> list[B]:
+        """The classes of the operation the boundary matched; none without the boundary's mark, since the generated
+        method then fails closed before any input is read."""
+        request: object = self.request
+        http_request = request._request if isinstance(request, Request) else request
+        state = state_of(http_request, self.contract.api) if isinstance(http_request, HttpRequest) else None
+
+        if state is None:
+            return []
+
+        return access_instances(self.contract, state.operation_id, name, base)

@@ -16,6 +16,7 @@ from seampact.codegen.route_helpers import route_helpers_module
 from seampact.codegen.routes import route_table
 from seampact.codegen.runtime.version import RUNTIME_VERSION
 from seampact.django.emitters import (
+    BoundaryBase,
     ContractPath,
     SettingsKey,
     boundary_module,
@@ -39,6 +40,8 @@ DISTRIBUTION: Final = "seampact-drf"
 
 # DRF's own names for the classes an app sets per access kind (ADR 0027 "DRF").
 _ACCESS_KEY: Final = SettingsKey("access", "_abc.Mapping[str, _abc.Mapping[str, _abc.Sequence[str]]]")
+# The boundary base whose boot check also reads the `access` setting.
+_BOUNDARY_BASE: Final = BoundaryBase("seampact.drf.runtime", "_drf_runtime", "DrfContractBoundary")
 
 
 class DrfGenerator:
@@ -73,6 +76,7 @@ class DrfGenerator:
                 _operations_by_resource(layout),
                 _run_time_options(options),
                 entry,
+                _BOUNDARY_BASE,
             ),
             "drf.py": drf_module(ir, names, layout, paths, options.rules, refusals),
         }

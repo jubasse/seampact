@@ -18,6 +18,7 @@ from seampact.codegen.runtime.framework_versions import AcceptedFramework, frame
 from seampact.codegen.runtime.hook_check import HookFixes, hook_needs, hook_problems
 from seampact.codegen.runtime.idempotency import enforces_idempotency
 from seampact.codegen.runtime.ir_view import ir_int, ir_map, ir_string
+from seampact.codegen.runtime.public_origin import public_origin_problem
 from seampact.codegen.runtime.reply_verdict import ResponsesMode
 from seampact.codegen.runtime.version import other_version_problem
 from seampact.django.runtime.api_settings import (
@@ -26,6 +27,7 @@ from seampact.django.runtime.api_settings import (
     HANDLERS_KEY,
     HOOK_KEYS,
     ON_UNEXPECTED_ERROR_KEY,
+    PUBLIC_ORIGIN_KEY,
     SCOPE_RESOLVERS_KEY,
     SETTINGS_NAME,
     SettingsError,
@@ -41,18 +43,13 @@ if TYPE_CHECKING:
 
 _SAMPLE_SEGMENT: Final = "seampact-sample"
 _PLACEHOLDER_START: Final = "{"
-_PUBLIC_ORIGIN_KEY: Final = "public_origin"
-_ABSOLUTE_URLS: Final = "absolute"
 # A Django pattern answers every method; an allow-list item names it with no method.
 _ANY_METHOD: Final = ""
 _ROUTE_CONVERTER: Final = re.compile(r"<[^<>]*>")
 _RESPONSES_KEY: Final = "responses"
 _OPERATIONS_KEY: Final = "operations"
 # Settings keys the generated code accepts that no release serves yet: refused by name, never ignored.
-_UNSERVED_SETTINGS: Final = {
-    "access": "names DRF classes per access kind",
-    "body_validation": "turns on the reply body validation",
-}
+_UNSERVED_SETTINGS: Final = {"body_validation": "turns on the reply body validation"}
 _HOOK_METHODS: Final = {AUTHENTICATE_KEY: "authenticate", DECIDERS_KEY: "decide", SCOPE_RESOLVERS_KEY: "resolve_scope"}
 
 
@@ -69,6 +66,11 @@ class BoundaryDeclaration(Protocol):
     body_validation: ClassVar[bool]
     boot_check_hooks: ClassVar[bool]
     boot_check_framework_routes: ClassVar[bool]
+
+    @classmethod
+    def target_settings_problems(cls, own: Mapping[str, object]) -> list[str]:
+        """The problems of the settings keys the target adds (DRF's `access`)."""
+        ...
 
 
 def operation_route_name(contract: ApiContract, operation_id: str) -> str:
@@ -153,6 +155,7 @@ def _settings_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
         if key in own
     ]
     problems += _run_time_problems(boundary.api, own, boundary.contract)
+    problems += boundary.target_settings_problems(own)
     problems += _handler_problems(boundary)
 
     if boundary.body_validation:
@@ -499,23 +502,11 @@ def _deployment_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
     return problems
 
 
-def writes_absolute_urls(contract: ApiContract) -> bool:
-    """Whether the api writes absolute URLs (`conventions.urls: absolute`), which this release does not serve."""
-    return ir_string(ir_map(ir_map(contract.ir_view, "api"), "wire"), "urls") == _ABSOLUTE_URLS
-
-
 def _public_origin_problems(api: str, contract: ApiContract) -> list[str]:
-    if writes_absolute_urls(contract):
-        return [
-            f"the api '{api}' writes absolute URLs, which this release of seampact-django does not serve yet; set "
-            "`conventions.urls: relative` and generate again."
-        ]
+    setting = f"settings.{SETTINGS_NAME}['{api}']['{PUBLIC_ORIGIN_KEY}']"
+    problem = public_origin_problem(contract, setting, api_settings(api).get(PUBLIC_ORIGIN_KEY))
 
-    if api_settings(api).get(_PUBLIC_ORIGIN_KEY) is not None:
-        setting = f"settings.{SETTINGS_NAME}['{api}']['{_PUBLIC_ORIGIN_KEY}']"
-        return [f"{setting} is set while the api writes relative URLs; remove it."]
-
-    return []
+    return [] if problem is None else [f"{problem}."]
 
 
 def _sample_path(contract: ApiContract, operation_id: str) -> str:

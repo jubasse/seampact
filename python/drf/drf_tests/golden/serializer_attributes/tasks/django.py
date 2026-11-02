@@ -3,13 +3,13 @@
 import collections.abc as _abc
 import typing as _typing
 
-import seampact.django.runtime as _django_runtime
+import seampact.drf.runtime as _drf_runtime
 
 from . import contract as _contract
 from . import settings as _settings
 
 
-class TasksBoundary(_django_runtime.ContractBoundary):
+class TasksBoundary(_drf_runtime.DrfContractBoundary):
     """The boundary middleware of api 'tasks'."""
 
     api = "tasks"
