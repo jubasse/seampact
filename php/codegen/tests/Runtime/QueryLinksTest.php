@@ -50,6 +50,22 @@ final class QueryLinksTest extends TestCase
         self::assertStringNotContainsString('>', implode('&', $kept));
     }
 
+    /** @return iterable<string, array{string, string}> */
+    public static function paths(): iterable
+    {
+        yield 'unreserved and slashes kept' => ['/v1/ch-1/a_b.c~d', '/v1/ch-1/a_b.c~d'];
+        yield 'escapes kept' => ['/v1/ch/a%2Fb/caf%C3%A9', '/v1/ch/a%2Fb/caf%C3%A9'];
+        yield 'a lone percent encoded' => ['/v1/100%', '/v1/100%25'];
+        yield 'link delimiters encoded' => ['/v1/a>;rel="evil",<b', '/v1/a%3E%3Brel%3D%22evil%22%2C%3Cb'];
+        yield 'raw bytes encoded' => ["/v1/caf\u{e9} x", '/v1/caf%C3%A9%20x'];
+    }
+
+    #[DataProvider('paths')]
+    public function testARawPathIsLinkSafe(string $path, string $safe): void
+    {
+        self::assertSame($safe, WireValues::linkSafePath($path));
+    }
+
     public function testAnUnexplodedListSplitsOnRawCommasOnlyThenDecodesEachItem(): void
     {
         $unexploded = ['kind' => 'list', 'explode' => false];
