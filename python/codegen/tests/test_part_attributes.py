@@ -14,7 +14,7 @@ _QUERY = IrPlace("/operations/0/params/query", "listChannels")
 
 def test_each_parameter_gets_its_attribute_by_position() -> None:
     refusals = Refusals("reference", "drf", "seampact-drf")
-    params = [Param("pageSize", _TEXT, False), Param("2fa", _TEXT, False)]
+    params = [Param(name="pageSize", type=_TEXT, required=False), Param(name="2fa", type=_TEXT, required=False)]
 
     attributes = part_attributes(params, _QUERY, refusals)
 
@@ -28,7 +28,11 @@ def test_each_parameter_gets_its_attribute_by_position() -> None:
 def test_two_parameters_giving_one_attribute_are_refused_naming_both() -> None:
     refusals = Refusals("reference", "drf", "seampact-drf")
 
-    part_attributes([Param("2fa", _TEXT, False), Param("field_2fa", _TEXT, False)], _QUERY, refusals)
+    part_attributes(
+        [Param(name="2fa", type=_TEXT, required=False), Param(name="field_2fa", type=_TEXT, required=False)],
+        _QUERY,
+        refusals,
+    )
 
     with pytest.raises(GenerationRefusedError) as refused:
         refusals.raise_if_any()

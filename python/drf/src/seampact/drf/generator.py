@@ -18,6 +18,7 @@ from seampact.django.emitters import (
     SettingsKey,
     boundary_module,
     contract_paths,
+    routes_named_by_path,
     settings_module,
     urls_module,
 )
@@ -64,7 +65,7 @@ class DrfGenerator:
         }
 
         if options.route_helpers:
-            files["routes.py"] = route_helpers_module(ir, routes, refusals)
+            files["routes.py"] = route_helpers_module(ir, routes_named_by_path(paths), refusals)
 
         refusals.raise_if_any()
 

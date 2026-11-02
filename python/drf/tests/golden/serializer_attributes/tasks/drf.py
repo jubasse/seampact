@@ -19,11 +19,11 @@ class CreateTaskSerializer(_drf_runtime.ContractSerializer):
 
     def get_fields(self) -> _drf_runtime.SerializerFields:
         return {
-            "title": _serializers.CharField(trim_whitespace=False, allow_blank=True, min_length=1, max_length=200),
+            "title": _drf_runtime.ContractTextField(min_length=1, max_length=200),
             "effort": _serializers.IntegerField(required=False, min_value=0),
-            "data": _serializers.CharField(trim_whitespace=False, allow_blank=True, min_length=1, max_length=200),
-            "errors": _serializers.CharField(trim_whitespace=False, allow_blank=True, min_length=1, max_length=200),
-            "fields": _serializers.CharField(trim_whitespace=False, allow_blank=True, min_length=1, max_length=200),
+            "data": _drf_runtime.ContractTextField(min_length=1, max_length=200),
+            "errors": _drf_runtime.ContractTextField(min_length=1, max_length=200),
+            "fields": _drf_runtime.ContractTextField(min_length=1, max_length=200),
         }
 
 
@@ -41,7 +41,7 @@ class CreateTaskHeadersSerializer(_drf_runtime.ContractSerializer):
 
     def get_fields(self) -> _drf_runtime.SerializerFields:
         return {
-            "idempotency_key": _serializers.CharField(trim_whitespace=False, allow_blank=True),
+            "idempotency_key": _drf_runtime.ContractTextField(),
         }
 
 

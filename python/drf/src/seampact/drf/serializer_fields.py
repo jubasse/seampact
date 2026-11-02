@@ -1,11 +1,13 @@
 """The DRF field a serializer builds for a contract type use (ADR 0027 "Types and validation"). The generated type
 layer has already checked and converted every type, so a format or an enum is a typed field that keeps the converted
-value, and strings are never trimmed or refused when blank. Under `rules: native` a value rule becomes DRF's own
-argument where DRF has one (`min_length`, `max_length`, `min_value`, `max_value`); exclusive bounds and `multipleOf`
-stay generated validators. Under `seampact-consistent` every value rule is a generated validator. A `pattern` is
-always the framework-free pattern check on the IR's normalised pattern, never DRF's `RegexField`."""
+value, and a string is the runtime text field: never trimmed, it runs every rule on an empty string too. Under
+`rules: native` a value rule becomes DRF's own argument where DRF has one (`min_length`, `max_length`, `min_value`,
+`max_value`); a rule DRF has no argument for (exclusive bounds, `multipleOf`, any rule on a formatted use) is refused
+at generate until a later release checks it. Under `seampact-consistent` every value rule is a generated validator. A
+`pattern` is always the framework-free pattern check on the IR's normalised pattern, never DRF's `RegexField`."""
 
 from collections.abc import Callable
+from decimal import Decimal
 from enum import StrEnum
 from typing import Final
 
@@ -35,6 +37,17 @@ class RulesMode(StrEnum):
 _SERIALIZERS: Final = "_serializers"
 _RUNTIME: Final = "_drf_runtime"
 _NUMBER_FIELDS: Final = {ScalarType.INTEGER: "IntegerField", ScalarType.NUMBER: "FloatField"}
+_RULE_KEYS: Final = (
+    "minLength",
+    "maxLength",
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "multipleOf",
+)
+# The rules of a number that DRF's own arguments (`min_value`, `max_value`) do not cover.
+_NUMBER_RULES_DRF_LEAVES: Final = ("exclusiveMinimum", "exclusiveMaximum", "multipleOf")
 
 
 class SerializerFields:
@@ -53,8 +66,12 @@ class SerializerFields:
         self._rules = rules
         self._refusals = refusals
         self._serializer_of = serializer_of
-        self._serializers = module.imported("rest_framework.serializers", _SERIALIZERS)
         self._runtime = module.imported("seampact.drf.runtime", _RUNTIME)
+
+    @property
+    def _serializers(self) -> str:
+        """DRF's serializers module, imported once a field needs it."""
+        return self._module.imported("rest_framework.serializers", _SERIALIZERS)
 
     def field(self, type_use: TypeUse, required: bool, nullable: bool, at: IrPlace) -> Expression:
         """The field of a member or a parameter: `required` unless optional, `allow_null` when null is allowed."""
@@ -116,21 +133,26 @@ class SerializerFields:
         if formatted is not None:
             value_type = f"{self._module.imported(formatted[0], formatted[1])}.{formatted[2]}"
             # A typed field has no bound argument of its own, so every bound is a validator.
+            self._refuse_unchecked_under_native(refinements, _RULE_KEYS, f"a '{type_use.format}' use", at)
             validators += self._length_validators(refinements)
             validators += _number_validators(self._runtime, refinements, RulesMode.SEAMPACT_CONSISTENT)
             return call(f"{self._runtime}.TypedValueField", [value_type, *presence, *_validators(validators)])
 
         if type_use.type is ScalarType.STRING:
-            text_arguments: list[Expression] = ["trim_whitespace=False", "allow_blank=True", *presence]
+            text_arguments: list[Expression] = list(presence)
             text_arguments += self._lengths(refinements.min_length, refinements.max_length, validators)
-            return call(f"{self._serializers}.CharField", [*text_arguments, *_validators(validators)])
+            return call(f"{self._runtime}.ContractTextField", [*text_arguments, *_validators(validators)])
 
         if type_use.type is ScalarType.BOOLEAN:
             return call(f"{self._serializers}.BooleanField", presence)
 
         number_arguments: list[Expression] = list(presence)
 
+        if type_use.type is ScalarType.INTEGER:
+            self._refuse_fractional_bounds(refinements, at)
+
         if self._rules is RulesMode.NATIVE:
+            self._refuse_unchecked_under_native(refinements, _NUMBER_RULES_DRF_LEAVES, f"a '{type_use.type}' use", at)
             number_arguments += _native_bounds(refinements, type_use.type)
 
         validators += _number_validators(self._runtime, refinements, self._rules)
@@ -148,6 +170,33 @@ class SerializerFields:
 
         validators += _length_validator(self._runtime, minimum, maximum)
         return []
+
+    def _refuse_unchecked_under_native(
+        self, refinements: Refinements, keys: tuple[str, ...], use: str, at: IrPlace
+    ) -> None:
+        """Under `native`, the rules DRF has no argument for on this field are refused until the release that runs
+        the DRF steps checks them, never left to fail at request time."""
+        if self._rules is not RulesMode.NATIVE:
+            return
+
+        for key, value in _rule_values(refinements).items():
+            if key in keys and value is not None:
+                self._refusals.add(
+                    f"rule.{key}.unsupported",
+                    f"The rule '{key}' on {use} has no DRF check under `rules: native` in this release.",
+                    "Remove the rule from this use until a later seampact-drf release checks it.",
+                    at.below("refinements", key),
+                )
+
+    def _refuse_fractional_bounds(self, refinements: Refinements, at: IrPlace) -> None:
+        for key, value in (("minimum", refinements.minimum), ("maximum", refinements.maximum)):
+            if value is not None and Decimal(value) % 1 != 0:
+                self._refusals.add(
+                    f"rule.{key}.fractional",
+                    f"The rule '{key}' {value} on an integer use is not a whole number.",
+                    f"Write '{key}' as the nearest whole number inside the bound.",
+                    at.below("refinements", key),
+                )
 
     def _length_validators(self, refinements: Refinements) -> list[Expression]:
         return _length_validator(self._runtime, refinements.min_length, refinements.max_length)
@@ -181,6 +230,19 @@ def _number_validators(runtime: str, refinements: Refinements, rules: RulesMode)
         validators.append(call(f"{runtime}.multiple_of", [string_literal(refinements.multiple_of)]))
 
     return validators
+
+
+def _rule_values(refinements: Refinements) -> dict[str, object]:
+    """The value rules by their contract key, None when absent."""
+    return {
+        "minLength": refinements.min_length,
+        "maxLength": refinements.max_length,
+        "minimum": refinements.minimum,
+        "maximum": refinements.maximum,
+        "exclusiveMinimum": refinements.exclusive_minimum,
+        "exclusiveMaximum": refinements.exclusive_maximum,
+        "multipleOf": refinements.multiple_of,
+    }
 
 
 def _length_validator(runtime: str, minimum: int | None, maximum: int | None) -> list[Expression]:

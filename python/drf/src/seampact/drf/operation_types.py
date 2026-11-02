@@ -6,7 +6,7 @@ result union; per error code one exception under the api's contract base; per re
 from collections.abc import Sequence
 from typing import Final
 
-from seampact.codegen.names import ApiNames, member_identifier
+from seampact.codegen.names import ApiNames, member_identifier, part_attributes
 from seampact.codegen.printer import INDENT, PythonModule, string_literal
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.drf.api_layout import ApiLayout, OperationNames, handler_headers, principal_schema
@@ -145,13 +145,7 @@ class _Emission:
 
         members = []
 
-        for index, param in enumerate(params):
-            attribute = member_identifier(param.name)
-
-            if attribute is None:
-                self.refusals.inconsistent("param.no-segment", f"The parameter '{param.name}' has no name segment", at)
-                continue
-
+        for index, param, attribute in part_attributes(params, at, self.refusals):
             if param.default is not OMITTED:
                 self.refusals.waiting(
                     "param.default", f"The parameter '{param.name}' with a default", at.below(index), Delivery.CONSUMER

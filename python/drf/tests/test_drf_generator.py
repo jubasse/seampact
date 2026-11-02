@@ -111,7 +111,7 @@ def test_the_golden_package_imports_and_routes_each_contract_path() -> None:
 
     assert len(patterns) == len(urls.urlpatterns)
     assert match.url_name == "seampact.tasks.searchTasks"
-    assert resolver.resolve("/v1/channels/7/tasks/8").kwargs == {"channel_id": "7", "task_id": "8"}
+    assert resolver.resolve("/v1/channels/7/tasks/8").kwargs == {"path_channel_id": "7", "path_task_id": "8"}
 
 
 def test_seampact_consistent_rules_are_generated_validators(repository_root: Path) -> None:

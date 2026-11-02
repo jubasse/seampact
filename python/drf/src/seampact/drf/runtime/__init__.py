@@ -3,13 +3,14 @@ value the type layer converted, the value-rule validators, and the contract exce
 of seampact-drf brings is refused by name when a contract view runs, never served half done."""
 
 from seampact.drf.runtime.exception_handler import ExceptionHandler, contract_exception_reply
-from seampact.drf.runtime.serializers import ContractSerializer, SerializerFields, TypedValueField
+from seampact.drf.runtime.serializers import ContractSerializer, ContractTextField, SerializerFields, TypedValueField
 from seampact.drf.runtime.validators import bounds, length, multiple_of, pattern
 from seampact.drf.runtime.views import Admission, ContractView
 
 __all__ = [
     "Admission",
     "ContractSerializer",
+    "ContractTextField",
     "ContractView",
     "ExceptionHandler",
     "SerializerFields",

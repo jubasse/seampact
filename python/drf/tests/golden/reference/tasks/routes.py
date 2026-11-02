@@ -14,18 +14,18 @@ class TasksRouteNames:
     CREATE_TASK: _typing.Final = "seampact.tasks.createTask"
     DELETE_DRAFT: _typing.Final = "seampact.tasks.deleteDraft"
     GET_CHANNEL: _typing.Final = "seampact.tasks.getChannel"
-    GET_DRAFT: _typing.Final = "seampact.tasks.getDraft"
+    GET_DRAFT: _typing.Final = "seampact.tasks.deleteDraft"
     GET_PREFERENCES: _typing.Final = "seampact.tasks.getPreferences"
     GET_TASK: _typing.Final = "seampact.tasks.getTask"
     GET_TASKS_BATCH: _typing.Final = "seampact.tasks.getTasksBatch"
     HEALTH: _typing.Final = "seampact.tasks.health"
     LIST_CHANNELS: _typing.Final = "seampact.tasks.listChannels"
-    LIST_TASKS: _typing.Final = "seampact.tasks.listTasks"
+    LIST_TASKS: _typing.Final = "seampact.tasks.createTask"
     PAYMENTS: _typing.Final = "seampact.tasks.payments"
     PURGE_TASK: _typing.Final = "seampact.tasks.purgeTask"
     SEARCH_TASKS: _typing.Final = "seampact.tasks.searchTasks"
-    UPDATE_PREFERENCES: _typing.Final = "seampact.tasks.updatePreferences"
-    UPDATE_TASK: _typing.Final = "seampact.tasks.updateTask"
+    UPDATE_PREFERENCES: _typing.Final = "seampact.tasks.getPreferences"
+    UPDATE_TASK: _typing.Final = "seampact.tasks.getTask"
 
 
 class TasksUrls:

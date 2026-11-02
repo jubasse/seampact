@@ -5,7 +5,6 @@ import uuid as _uuid
 
 import django.http as _http
 import rest_framework.request as _request
-import rest_framework.serializers as _serializers
 
 import seampact.django.runtime as _django_runtime
 import seampact.drf.runtime as _drf_runtime
@@ -29,8 +28,8 @@ class GetTaskHeadersSerializer(_drf_runtime.ContractSerializer):
 
     def get_fields(self) -> _drf_runtime.SerializerFields:
         return {
-            "x_deadline": _serializers.CharField(trim_whitespace=False, allow_blank=True),
-            "traceparent": _serializers.CharField(trim_whitespace=False, allow_blank=True, required=False),
+            "x_deadline": _drf_runtime.ContractTextField(),
+            "traceparent": _drf_runtime.ContractTextField(required=False),
         }
 
 

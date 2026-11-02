@@ -7,7 +7,7 @@ request, builds the typed request and replies with the handler's result."""
 from collections.abc import Sequence
 from typing import Final
 
-from seampact.codegen.names import ApiNames, member_identifier
+from seampact.codegen.names import ApiNames, member_identifier, part_attributes
 from seampact.codegen.printer import INDENT, PythonModule, string_literal
 from seampact.codegen.refusals import IrPlace, Refusals
 from seampact.django.emitters import ContractPath
@@ -147,20 +147,10 @@ class _Emission:
             self.request_serializers.add(operation.id)
 
     def _params(self, params: Sequence[Param], at: IrPlace) -> list[tuple[str, Expression]]:
-        fields = []
-
-        for index, param in enumerate(params):
-            attribute = member_identifier(param.name)
-
-            if attribute is not None:
-                fields.append(
-                    (
-                        string_literal(attribute),
-                        self.fields.field(param.type, param.required, False, at.below(index, "type")),
-                    )
-                )
-
-        return fields
+        return [
+            (string_literal(attribute), self.fields.field(param.type, param.required, False, at.below(index, "type")))
+            for index, param, attribute in part_attributes(params, at, self.refusals)
+        ]
 
     def _base_view(self) -> None:
         http = self.module.imported("django.http", "_http")
