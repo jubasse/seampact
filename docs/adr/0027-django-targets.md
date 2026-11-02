@@ -79,7 +79,7 @@ SEAMPACT = {
 }
 ```
 
-The keys mirror ADR 0026's `bind_<api>()` arguments: `handlers`, `authenticate`, `deciders`, `scope_resolvers`, `idempotency_store`, `on_unexpected_error`, `responses`, `body_validation`, `operations` and `public_origin`; DRF adds `access` ("DRF"). Unknown keys are refused by the boot check, by name. Ninja passes the same values to `bind_<api>()` instead ("Ninja").
+The keys mirror ADR 0026's `bind_<api>()` arguments: `handlers`, `authenticate`, `deciders`, `scope_resolvers`, `idempotency_store`, `on_unexpected_error`, `responses`, `body_validation`, `operations` and `public_origin`; DRF adds `access` ("DRF"). Unknown keys are refused by the boot check, by name. Ninja passes the same values to `bind_<api>()` instead ("Ninja"), which registers them as the api's values; the boot check then refuses a `settings.SEAMPACT` entry for that api, since nothing reads it.
 
 #### The boundary middleware
 
@@ -115,7 +115,7 @@ Django decodes before routing, so the raw match and the chosen route can differ,
 
 Django's ASGI handler serves `http` scopes only. A websocket router (Channels' `ProtocolTypeRouter`) sits outside Django, before the boundary, and a contract declares no websocket.
 
-`mount` is the prefix the generated patterns write before each contract path. Beside the patterns, the shared route helpers write `<Api>RouteNames` and `<Api>Urls`, as ADR 0026 says; `artefacts.routeHelpers: false` leaves both out.
+`mount` is the prefix the generated patterns write before each contract path. Beside the patterns, the shared route helpers write `<Api>RouteNames` and `<Api>Urls`, as ADR 0026 says; `artefacts.routeHelpers: false` leaves both out. Ninja registers the names under the `NinjaAPI`'s `urls_namespace`, so the app reverses `f"{api.urls_namespace}:{name}"`.
 
 #### The reply path
 
@@ -306,7 +306,7 @@ The target option `views` is `sync`, the default, or `async`. Async views run na
 
 #### Exceptions
 
-`bind_<api>()` registers one handler for the api's contract base with `add_exception_handler()`. It also wraps the app's `NinjaAPI.on_exception`, which Ninja calls for every exception it handles, `auth=` failures included (spike). The wrapper records the exception, then calls the app's. `on_exception` is not in Ninja's guide, so a test of the target fails by name if a minor stops calling it, and the boot check refuses an `on_exception` replaced after `bind_<api>()`.
+The generated view answers the api's own exceptions itself (a contract refusal, a raised contract exception, a replayed idempotent reply, a failure of the boundary), so no handler the app adds to its `NinjaAPI` takes them. `bind_<api>()` wraps the app's `NinjaAPI.on_exception`, which Ninja calls for every exception it handles, `auth=` failures included (spike). The wrapper records the exception, then calls the app's. `on_exception` is not in Ninja's guide, so a test of the target fails by name if a minor stops calling it, and the boot check refuses an `on_exception` replaced after `bind_<api>()`.
 
 On a contract route the boundary answers with the role of:
 
