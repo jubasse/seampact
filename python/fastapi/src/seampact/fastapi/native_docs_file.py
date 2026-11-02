@@ -18,6 +18,7 @@ _AT: Final = IrPlace("/artefacts/nativeDocs")
 _COMPONENTS: Final = "components"
 _REF: Final = "$ref"
 _COMPONENT_REF_PREFIX: Final = "#/components/"
+_FASTAPI_SCHEMAS: Final = ("ValidationError", "HTTPValidationError")
 _SECURITY: Final = "security"
 _SECURITY_SCHEMES: Final = "securitySchemes"
 
@@ -51,12 +52,32 @@ def native_docs_file(
 
     operations = {operation_id: found[operation_id] for operation_id in kept_operations}
     components = native_docs.document.get(_COMPONENTS)
-    content = {
-        "operations": operations,
-        _COMPONENTS: reached_components(list(operations.values()), components if isinstance(components, dict) else {}),
-    }
+    reached = reached_components(list(operations.values()), components if isinstance(components, dict) else {})
+
+    if _refuse_fastapi_clashes(reached, refusals):
+        return None
+
+    content = {"operations": operations, _COMPONENTS: reached}
 
     return GeneratedFile(NATIVE_DOCS_FILE, json.dumps(content, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+
+
+def _refuse_fastapi_clashes(reached: Mapping[str, object], refusals: Refusals) -> bool:
+    """FastAPI's document owns these schemas, so a contract schema of the same name could never join it."""
+    schemas = reached.get("schemas")
+    clashing = [name for name in _FASTAPI_SCHEMAS if isinstance(schemas, dict) and name in schemas]
+
+    for name in clashing:
+        refusals.add(
+            "artefacts.nativeDocs.component-clash",
+            f"The contract schema '{name}' has the name of a component FastAPI's own document holds, so "
+            "'nativeDocs' cannot add it.",
+            "Switch 'nativeDocs' off for this api, or rename the schema in the contract (FastAPI owns the name "
+            f"'{name}', so its model cannot be renamed).",
+            _AT,
+        )
+
+    return bool(clashing)
 
 
 def _operations_by_id(document: JsonObject) -> dict[str, JsonValue]:

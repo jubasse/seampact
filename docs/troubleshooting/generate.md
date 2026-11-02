@@ -22,6 +22,7 @@
 | `artefacts.accessHooks.unsupported` (Laravel) | `accessHooks: false` (native access) waits for an app that needs it. Keep the hooks, and read Laravel's own guards in the authenticate hook. |
 | `nativeDocs.document.ambiguous` | The api declares several documents and the framework's document can follow only one. Set `document` on the entry, or drop `nativeDocs`. |
 | `artefacts.nativeDocs.operation-missing` (FastAPI) | The document the entry names lacks an operation the entry generates. Set `document` to a document that holds them all, or drop `nativeDocs`. |
+| `artefacts.nativeDocs.component-clash` (FastAPI) | A contract schema is named `ValidationError` or `HTTPValidationError`, which FastAPI's own document holds. Rename the schema in the contract, or switch `nativeDocs` off for this api. |
 | `artefacts.nativeDocs.document-missing` (FastAPI) | Your `seampact-ir` is older than `seampact-fastapi`. Install the same release of both. |
 | `options.layout.unsupported`, `options.handlers.unsupported` (Laravel) | The target writes one PSR-4 file per class and one controller interface per resource. Remove the option. |
 | `path.segment.encoded.unsupported` | "The static path segment 'my tasks', which a client sends percent-encoded, ...". A space, a control or non-ASCII character, or one of `"` `<` `>` `^` `\` `{` `}` `\|` `[` `]` or a backtick in a fixed path part would never reach the route. Use plain ASCII letters, digits and `-` in that path part. |

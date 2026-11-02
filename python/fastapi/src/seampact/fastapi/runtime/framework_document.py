@@ -29,6 +29,7 @@ def switch_framework_docs_off(app: fastapi.FastAPI) -> None:
 def complete_framework_document(binding: ApiBinding, native_docs: NativeDocs) -> None:
     """Wraps `app.openapi()` so the document it builds, then caches, holds the api's contract routes."""
     app = binding.app
+    _require_every_route(binding.placement.routes, native_docs)
     previous: Callable[[], JsonObject] = app.openapi
 
     def openapi() -> JsonObject:
@@ -53,10 +54,18 @@ def _add_operations(
     paths = _member(document, "paths")
 
     for route in routes:
-        native = native_docs.operations.get(route.operation_id)
+        native = native_docs.operations[route.operation_id]
+        _member(paths, mount.rstrip("/") + native.path)[native.method] = copy.deepcopy(native.operation)
 
-        if native is not None:
-            _member(paths, mount.rstrip("/") + native.path)[native.method] = copy.deepcopy(native.operation)
+
+def _require_every_route(routes: Sequence[OperationRoute], native_docs: NativeDocs) -> None:
+    """A route `native_docs.json` lacks means the file is stale or edited: fail at boot, not in the document."""
+    for route in routes:
+        if route.operation_id not in native_docs.operations:
+            raise NativeDocsError(
+                f"seampact: native_docs.json holds no operation '{route.operation_id}', which the api serves; "
+                "run `seampact generate`."
+            )
 
 
 def _add_components(document: JsonObject, native_docs: NativeDocs, api: str) -> None:

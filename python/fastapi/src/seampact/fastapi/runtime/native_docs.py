@@ -57,7 +57,9 @@ def read_native_docs(file: Path) -> NativeDocs:
     for operation_id, item in json_object(document.get(_OPERATIONS), _OPERATIONS).items():
         native = json_object(item, operation_id)
         operations[operation_id] = NativeOperation(
-            str(native.get(_PATH)), str(native.get(_METHOD)), json_object(native.get(_OPERATION), operation_id)
+            _text_member(native, _PATH, operation_id),
+            _text_member(native, _METHOD, operation_id),
+            json_object(native.get(_OPERATION), operation_id),
         )
 
     components = {
@@ -65,6 +67,17 @@ def read_native_docs(file: Path) -> NativeDocs:
     }
 
     return NativeDocs(operations, components)
+
+
+def _text_member(native: JsonObject, key: str, operation_id: str) -> str:
+    value = native.get(key)
+
+    if not isinstance(value, str):
+        raise NativeDocsError(
+            f"seampact: the operation '{operation_id}' of native_docs.json has no '{key}'; run `seampact generate`."
+        )
+
+    return value
 
 
 def json_object(value: object, where: str) -> JsonObject:
