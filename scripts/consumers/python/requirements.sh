@@ -5,11 +5,13 @@
 # package <server> of the lock's serve group with what it needs. <out> is new.
 set -eu
 
-out="$1"
+here=$(cd "$(dirname "$0")" && pwd)
+. "$here/absolute-path.sh"
+
+out=$(absolute_path "$1")
 distribution="$2"
 extra="$3"
 server="$4"
-here=$(cd "$(dirname "$0")" && pwd)
 workspace=$(cd "$here/../../../python" && pwd)
 
 if [ -e "$out" ]; then

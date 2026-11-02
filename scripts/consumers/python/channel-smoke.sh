@@ -7,9 +7,12 @@
 # since it is keyed by integrity, which the tampered copy shares. <work> is new.
 set -euo pipefail
 
-work="$1"
-venv="$2"
-served="$3"
+here=$(cd "$(dirname "$0")" && pwd)
+. "$here/absolute-path.sh"
+
+work=$(absolute_path "$1")
+venv=$(absolute_path "$2")
+served=$(absolute_path "$3")
 distribution="$4"
 app="$work/app"
 

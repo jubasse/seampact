@@ -7,11 +7,13 @@
 # environment <venv>, and expects generated Python and an OpenAPI document. Nothing here starts Node.
 set -eu
 
-work="$1"
-venv="$2"
-binary=$(cd "$(dirname "$3")" && pwd)/$(basename "$3")
-distribution="$4"
 here=$(cd "$(dirname "$0")" && pwd)
+. "$here/absolute-path.sh"
+
+work=$(absolute_path "$1")
+venv=$(absolute_path "$2")
+binary=$(absolute_path "$3")
+distribution="$4"
 repo=$(cd "$here/../../.." && pwd)
 app="$work/${distribution#seampact-}"
 

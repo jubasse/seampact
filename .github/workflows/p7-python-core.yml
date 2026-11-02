@@ -71,6 +71,7 @@ jobs:
             ^python/(ir|codegen|hooks|fastapi)/
             ^scripts/dist-smoke/
             ^scripts/consumers/python/
+            ^python/uv\.lock$
             ^scripts/ir-models/
             ^packages/tools/binary/
             ^packages/core/cli/
@@ -258,6 +259,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Node stays on the PATH here: dist-smoke, a Node program, serves the channels; the runner steps run from the venv only.
           served="$RUNNER_TEMP/served.json"
           node --experimental-transform-types --import ./scripts/ir-models/register.ts scripts/dist-smoke/cli.ts serve \
             --work "$RUNNER_TEMP/channels" > "$served" 2> "$RUNNER_TEMP/channels.log" &

@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -28,6 +36,13 @@ case "$1" in
   tree) echo "server v1" ;;
 esac
 `;
+
+const SERVED = {
+  integrity: "sha256-x",
+  tamperedFile: "tampered.json",
+  release: { url: "https://r/ok", tamperedUrl: "https://r/tampered", caFile: "ca.pem" },
+  git: { url: "file:///g", directory: "bundle", tag: "v1", tamperedTag: "tampered" },
+};
 
 let sandbox: string;
 
@@ -58,7 +73,12 @@ describe("the Python consumer scripts with relative path arguments", () => {
   it("local-yaml.sh resolves work, venv and binary before it changes directory", () => {
     writeExecutable(join(sandbox, "bin/seampact-binary"), "#!/bin/sh\n");
 
-    const run = runRelative("local-yaml.sh", ["work", "venv", "bin/seampact-binary", "seampact-fastapi"]);
+    const run = runRelative("local-yaml.sh", [
+      "work",
+      "venv",
+      "bin/seampact-binary",
+      "seampact-fastapi",
+    ]);
 
     expect(run.stderr).toBe("");
     expect(run.status).toBe(0);
@@ -66,32 +86,29 @@ describe("the Python consumer scripts with relative path arguments", () => {
   });
 
   it("channel-smoke.sh resolves work, venv and served and makes the cache absolute", () => {
-    const served = {
-      integrity: "sha256-x",
-      tamperedFile: "tampered.json",
-      release: { url: "https://r/ok", tamperedUrl: "https://r/tampered", caFile: "ca.pem" },
-      git: { url: "file:///g", directory: "bundle", tag: "v1", tamperedTag: "tampered" },
-    };
-    writeFileSync(join(sandbox, "served.json"), JSON.stringify(served));
+    writeFileSync(join(sandbox, "served.json"), JSON.stringify(SERVED));
 
-    const run = runRelative("channel-smoke.sh", ["work", "venv", "served.json", "seampact-fastapi"]);
+    const run = runRelative("channel-smoke.sh", [
+      "work",
+      "venv",
+      "served.json",
+      "seampact-fastapi",
+    ]);
 
     expect(run.stderr).toBe("");
     expect(run.status).toBe(0);
   });
 
   it("channel-smoke.sh makes a relative XDG_CACHE_HOME absolute", () => {
-    const served = {
-      integrity: "sha256-x",
-      tamperedFile: "tampered.json",
-      release: { url: "https://r/ok", tamperedUrl: "https://r/tampered", caFile: "ca.pem" },
-      git: { url: "file:///g", directory: "bundle", tag: "v1", tamperedTag: "tampered" },
-    };
-    writeFileSync(join(sandbox, "served.json"), JSON.stringify(served));
+    writeFileSync(join(sandbox, "served.json"), JSON.stringify(SERVED));
 
-    const run = runRelative("channel-smoke.sh", ["work", "venv", "served.json", "seampact-fastapi"], {
-      XDG_CACHE_HOME: "cache",
-    });
+    const run = runRelative(
+      "channel-smoke.sh",
+      ["work", "venv", "served.json", "seampact-fastapi"],
+      {
+        XDG_CACHE_HOME: "cache",
+      },
+    );
 
     expect(run.stderr).toBe("");
     expect(run.status).toBe(0);
@@ -100,9 +117,13 @@ describe("the Python consumer scripts with relative path arguments", () => {
   it("requirements.sh writes its output where the relative path points from the caller", () => {
     writeExecutable(join(sandbox, "fakebin/uv"), FAKE_UV);
 
-    const run = runRelative("requirements.sh", ["requirements.txt", "seampact-fastapi", "generate", "server"], {
-      PATH: `${join(sandbox, "fakebin")}:${process.env.PATH}`,
-    });
+    const run = runRelative(
+      "requirements.sh",
+      ["requirements.txt", "seampact-fastapi", "generate", "server"],
+      {
+        PATH: `${join(sandbox, "fakebin")}:${process.env.PATH}`,
+      },
+    );
 
     expect(run.stderr).not.toContain("No such file");
     expect(existsSync(join(sandbox, "requirements.txt"))).toBe(true);
