@@ -14,11 +14,11 @@ import fastapi
 import pytest
 from fastapi.testclient import TestClient
 
+from seampact.codegen.native_docs_file import reached_components
+from seampact.codegen.runtime.native_docs import NativeDocs, NativeDocsError, NativeOperation, read_native_docs
 from seampact.fastapi.generator import FastApiGenerator
-from seampact.fastapi.native_docs_file import reached_components
 from seampact.fastapi.runtime import ApiBinding, FrameworkDocs
 from seampact.fastapi.runtime.framework_document import complete_framework_document
-from seampact.fastapi.runtime.native_docs import NativeDocs, NativeDocsError, NativeOperation, read_native_docs
 from seampact.ir.config.json_value import JsonObject, JsonValue
 from seampact.ir.config.yaml_reader import parse_config_text
 from seampact.ir.read import read_ir

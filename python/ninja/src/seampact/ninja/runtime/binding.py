@@ -27,6 +27,7 @@ from seampact.hooks import (
     UnexpectedFailure,
 )
 from seampact.ninja.runtime.exceptions import recording_on_exception
+from seampact.ninja.runtime.native_docs import complete_ninja_document
 from seampact.ninja.runtime.placement import AccessSettings, ApiPlacement, Factory, OperationRoute
 from seampact.ninja.runtime.preflight import PREFLIGHT_METHOD, unserved_preflight_view
 
@@ -200,6 +201,10 @@ def bind_api(binding: ApiBinding) -> None:
         )
 
     binding.api.add_router(binding.prefix, router)
+
+    if binding.placement.native_docs is not None:
+        complete_ninja_document(binding.api, binding.placement, binding.placement.native_docs)
+
     binding.on_exception = recording_on_exception(binding.api)
     _bindings[binding.placement.api] = binding
     register_configuration(binding.placement.api, binding)

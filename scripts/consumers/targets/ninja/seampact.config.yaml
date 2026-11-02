@@ -1,8 +1,11 @@
 # The consumer's app config: the reference contract's tasks and tasksService apis through seampact-ninja, serving every
 # operation, with the views `assemble.sh` writes in place of `sync`; the suite's control views sit outside the api's
-# base path.
+# base path. The tasks routes join Ninja's document (`nativeDocs`), which the suite compares with seampact's `full`
+# document written beside it.
 outDir: generated
-openapi: none
+openapi:
+  tasks:
+    full: openapi/tasks.full.yaml
 sources:
   contract: { path: contract }
 targets:
@@ -11,6 +14,7 @@ targets:
     use: pypi:seampact-ninja
     api: tasks
     options: { views: sync }
+    artefacts: { nativeDocs: true }
   - id: tasksService
     out: tasks_service
     use: pypi:seampact-ninja

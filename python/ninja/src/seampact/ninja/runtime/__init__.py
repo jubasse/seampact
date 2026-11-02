@@ -3,6 +3,7 @@ its binding and Router, its boundary middleware, the body of its views and their
 framework-neutral steps come from `seampact.codegen.runtime` and the shared boundary from `seampact.django.runtime`."""
 
 from seampact.codegen.runtime.access_steps import CredentialsType
+from seampact.codegen.runtime.native_docs import NativeDocsError, read_native_docs
 from seampact.codegen.runtime.reply_verdict import ResponsesMode
 from seampact.codegen.runtime.run_settings import OperationSettings, OperationTypes, RunSettings
 from seampact.ninja.runtime.binding import ApiBinding, BindingError, add_operation, api_binding, bind_api
@@ -23,6 +24,7 @@ __all__ = [
     "BindingError",
     "CredentialsType",
     "Factory",
+    "NativeDocsError",
     "NinjaAuth",
     "NinjaContractBoundary",
     "OperationRoute",
@@ -36,6 +38,7 @@ __all__ = [
     "async_handler_error",
     "bind_api",
     "call_handler_async",
+    "read_native_docs",
     "serve_operation",
     "serve_operation_async",
 ]

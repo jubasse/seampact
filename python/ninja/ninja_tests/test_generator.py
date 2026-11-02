@@ -106,8 +106,8 @@ def test_options_outside_the_target_are_refused_by_name(repository_root: Path) -
     }
 
 
-def test_native_docs_and_artefacts_the_target_does_not_take_are_refused_by_name(repository_root: Path) -> None:
-    artefacts: dict[str, JsonValue] = {"nativeDocs": True, "accessHooks": False, "bootCheck": {"hooks": "warn"}}
+def test_artefacts_the_target_does_not_take_are_refused_by_name(repository_root: Path) -> None:
+    artefacts: dict[str, JsonValue] = {"nativeDocs": "yes", "accessHooks": False, "bootCheck": {"hooks": "warn"}}
 
     assert _refusal_codes(_ir_json(repository_root), artefacts=artefacts) == {
         "artefacts.unknown",

@@ -2,7 +2,8 @@
 writes one package: `schemas.py` (the schema models and each operation's input parts, through the shared Pydantic
 emitter), `operations.py` (the operation types and endpoints protocols), `contract.py` (the contract the runtime
 reads), `routes.py` (the route names and URL builders, unless `routeHelpers: false`), `django.py` (the boundary
-middleware's declaration) and `ninja.py` (the placement and `bind_<api>()`). Every refusal is listed at once, and no
+middleware's declaration), `ninja.py` (the placement and `bind_<api>()`) and, with `nativeDocs`, `native_docs.json`
+(seampact's operation objects for Ninja's document). Every refusal is listed at once, and no
 file is written when there is one."""
 
 from collections.abc import Sequence
@@ -13,6 +14,7 @@ from seampact.codegen.input_schemas import proof_models, with_input_schemas
 from seampact.codegen.kept_forms import refuse_kept_forms
 from seampact.codegen.matrix_row import refuse_missing_matrix_row
 from seampact.codegen.names import api_names
+from seampact.codegen.native_docs_file import FrameworkDocument, native_docs_file
 from seampact.codegen.operation_types import operation_types_module
 from seampact.codegen.printer import PythonModule
 from seampact.codegen.pydantic_forms import refuse_unserved_forms
@@ -34,6 +36,7 @@ from seampact.ninja.placement_module import placement_module
 TARGET: Final = "ninja"
 DISTRIBUTION: Final = "seampact-ninja"
 _HTTP_OPERATION: Final = "httpOperation"
+_NINJA_DOCUMENT: Final = FrameworkDocument(TARGET, "Django Ninja")
 _NAMES_REGISTERED: Final = (
     'The route name of each operation, under the NinjaAPI\'s urls_namespace: reverse "<namespace>:<name>".'
 )
@@ -81,11 +84,15 @@ class NinjaGenerator:
                 settings_module=None,
                 model_framework=(PYDANTIC_PACKAGE, PYDANTIC_MAJOR),
             ),
-            "ninja.py": placement_module(ir, layout, proof_models(layout, names), routes, mount, options.views),
+            "ninja.py": placement_module(ir, layout, proof_models(layout, names), routes, mount, options),
         }
 
         if options.shared.route_helpers:
             files["routes.py"] = route_helpers_module(ir, routes, refusals, _NAMES_REGISTERED)
+
+        if options.native_docs:
+            native_docs = native_docs_file(entry.native_docs, layout.operations, _NINJA_DOCUMENT, refusals)
+            files.update({} if native_docs is None else {native_docs.path: native_docs.contents})
 
         refusals.raise_if_any()
 

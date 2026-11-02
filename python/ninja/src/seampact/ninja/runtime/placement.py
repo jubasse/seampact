@@ -8,6 +8,7 @@ from django.http import HttpRequest
 from ninja.throttling import BaseThrottle
 
 from seampact.codegen.runtime.access_steps import CredentialsType
+from seampact.codegen.runtime.native_docs import NativeDocs
 from seampact.ninja.views_mode import ViewsMode
 
 type Factory[T] = Callable[[HttpRequest], T]
@@ -46,6 +47,7 @@ class ApiPlacement:
     error_base: type[Exception]
     views: ViewsMode
     credentials: Mapping[str, CredentialsType]
+    native_docs: NativeDocs | None = None
     _routes_by_operation: dict[str, OperationRoute] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:

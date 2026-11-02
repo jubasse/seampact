@@ -8,6 +8,7 @@ to the runtime."""
 from collections.abc import Mapping, Sequence
 from typing import Final
 
+from seampact.codegen.native_docs_file import NATIVE_DOCS_FILE
 from seampact.codegen.placement_lines import (
     add_operation_call,
     credentials_types,
@@ -21,7 +22,6 @@ from seampact.codegen.pydantic_models import PYDANTIC_MAJOR, PYDANTIC_PACKAGE
 from seampact.codegen.routes import RouteEntry
 from seampact.codegen.runtime import RUNTIME_VERSION
 from seampact.codegen.source_lines import with_local_imports
-from seampact.fastapi.native_docs_file import NATIVE_DOCS_FILE
 from seampact.fastapi.options import FastApiOptions
 from seampact.ir.model import ContractIR
 from seampact.ir.run.generator import FrameworkDocs, TargetEntry
