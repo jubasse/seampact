@@ -22,6 +22,7 @@ from django.core.checks import run_checks
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase, StreamingHttpResponse
 from django.test import AsyncClient, Client, override_settings
 from django.urls import include, path, re_path
@@ -29,8 +30,9 @@ from django.urls import include, path, re_path
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, VersionUnit
 from seampact.codegen.runtime.hook_check import hook_needs
-from seampact.codegen.runtime.ir_view import ir_map, ir_string
+from seampact.codegen.runtime.ir_view import ir_map, ir_maps, ir_string
 from seampact.django.runtime.boot_check import boot_problems
+from seampact.drf.runtime import admission
 from seampact.hooks import (
     AuthenticateRequest,
     ErrorCodeWithParams,
@@ -43,6 +45,7 @@ from seampact.hooks import (
     authenticate_result,
     decision,
     idempotency_begin,
+    purpose,
     scope_id_source,
     scope_resolution,
 )
@@ -56,6 +59,9 @@ _TOKEN: Final = "good-token"
 _USER_ID: Final = "8d0f3c3e-6a52-4c0e-9b8e-3f1f2f6f1a11"
 _CHANNEL_ID: Final = "0a2c3b7e-1d4f-4e8a-9c1b-2e3d4f5a6b7c"
 _ARCHIVE_TASK: Final = "archiveTask"
+_CREATE_TASK: Final = "createTask"
+_GET_TASK: Final = "getTask"
+_DEADLINE_EXCEEDED: Final = "api.deadline_exceeded"
 _PRECONDITION_CODES: Final = (
     ("api.precondition_failed", 412, "preconditionFailed"),
     ("api.precondition_required", 428, "preconditionRequired"),
@@ -90,6 +96,24 @@ class _MemoryStore:
 
     def abandon(self, key: str, /) -> None:
         idempotency_records.pop(key, None)
+
+
+class _DatabaseStore(_MemoryStore):
+    """A store that reaches the database on every write, as an ORM-backed store does: Django refuses that call on
+    the event loop."""
+
+    def complete(self, key: str, response: StoredResponse, /) -> None:
+        _touch_the_database()
+        super().complete(key, response)
+
+    def abandon(self, key: str, /) -> None:
+        _touch_the_database()
+        super().abandon(key)
+
+
+def _touch_the_database() -> None:
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT 1")
 
 
 class _Hooks:
@@ -152,6 +176,10 @@ def store(request: HttpRequest) -> _MemoryStore:
     return _MemoryStore()
 
 
+def database_store(request: HttpRequest) -> _DatabaseStore:
+    return _DatabaseStore()
+
+
 class RaisingMiddleware:
     """An app middleware inside the boundary that raises what the `X-Raise` header names."""
 
@@ -177,6 +205,14 @@ class RaisingMiddleware:
 
         if answer == "none":
             return None
+
+        if answer == "raise-after-view":
+            self.get_response(request)
+            raise ValueError("raised by the app after the view")
+
+        if answer == "stream-after-view":
+            self.get_response(request)
+            return StreamingHttpResponse(iter([b'{"status": "ok"}']), status=200, content_type="application/json")
 
         return self.get_response(request)
 
@@ -385,16 +421,136 @@ def test_a_reply_the_boundary_did_not_write_is_replaced_by_the_apis_500() -> Non
     assert "outgoing check" in failures[0].reason
 
 
-def test_an_operation_with_a_feature_a_later_release_serves_fails_closed_by_name(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_an_operation_the_contract_relays_is_served(monkeypatch: pytest.MonkeyPatch) -> None:
     contract_view = _module("contract").CONTRACT
-    monkeypatch.setitem(contract_view.operation("getDraft"), "upstream", {"service": "drafts"})
+    monkeypatch.setitem(contract_view.operation("health"), "relays", {"api": "tasks", "id": "health"})
+    answers["health"] = lambda _: _module("operations").HealthResponse200(body=_module("schemas").Health(status="ok"))
 
-    response = Client().get(f"/v1/me/drafts/{_CHANNEL_ID}", headers=_bearer())
+    response = Client().get("/v1/health")
 
-    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-    assert "relays" in failures[0].reason
+    assert (response.status_code, json.loads(response.content)) == (HTTPStatus.OK, {"status": "ok"})
+    assert failures == []
+
+
+def test_absolute_urls_are_refused_at_boot_by_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    wire = ir_map(_module("contract").CONTRACT.ir_view, "api")
+    assert isinstance(wire, dict)
+    monkeypatch.setitem(wire["wire"], "urls", "absolute")
+    absolute = {**_settings(), "public_origin": "https://api.example.com"}
+
+    with override_settings(SEAMPACT={"tasks": absolute}), pytest.raises(ImproperlyConfigured, match="absolute URLs"):
+        Client().get("/v1/health")
+
+
+def test_a_page_projection_that_is_not_a_list_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def projected_to_a_mapping(*_: object) -> object:
+        return {"items": []}
+
+    monkeypatch.setattr(admission, "visible_output", projected_to_a_mapping)
+    answers["list_tasks"] = lambda _: _module("operations").ListTasksResponse200(
+        body=_module("operations").ListTasksPage(items=[])
+    )
+
+    response = Client().get(f"/v1/channels/{_CHANNEL_ID}/tasks", headers=_bearer())
+
+    assert (response.status_code, _code(response)) == (HTTPStatus.INTERNAL_SERVER_ERROR, "api.internal")
+    assert "not a list" in failures[0].reason
+
+
+def test_the_input_field_rights_are_applied_before_the_deadline() -> None:
+    answers["create_task"] = lambda _: pytest.fail("the handler ran")
+    answers["decide"] = lambda request: (
+        decision.Denied(deny=_denial("api.forbidden"))
+        if isinstance(request.purpose, purpose.Field)  # type: ignore[attr-defined]
+        else decision.Allowed()
+    )
+    passed = {"X-Deadline": "2020-01-01T00:00:00Z"}
+
+    response = Client().post(
+        f"/v1/channels/{_CHANNEL_ID}/tasks",
+        json.dumps({"title": "Write the guide", "effort": 3.0}),
+        content_type="application/json",
+        headers={**_bearer(), "Idempotency-Key": "k-1", **passed},
+    )
+
+    assert _code(response) == "api.forbidden", response.content
+    without_the_field = Client().post(
+        f"/v1/channels/{_CHANNEL_ID}/tasks",
+        json.dumps({"title": "Write the guide"}),
+        content_type="application/json",
+        headers={**_bearer(), "Idempotency-Key": "k-2", **passed},
+    )
+    assert _code(without_the_field) == "api.deadline_exceeded", without_the_field.content
+
+
+def test_an_orm_backed_store_settles_the_record_under_asgi() -> None:
+    created: list[object] = []
+
+    def create_task(request: object) -> object:
+        created.append(request)
+        return _module("operations").CreateTaskResponse201(body=_task())
+
+    answers["create_task"] = create_task
+    url = f"/v1/channels/{_CHANNEL_ID}/tasks"
+    body = json.dumps({"title": "Write the guide"})
+    headers = {**_bearer(), "Idempotency-Key": "k-orm"}
+
+    async def post_twice() -> list[HttpResponseBase]:
+        client = AsyncClient()
+        return [
+            await client.post(url, body, content_type="application/json", headers=headers),
+            await client.post(url, body, content_type="application/json", headers=headers),
+        ]
+
+    with override_settings(
+        MIDDLEWARE=[f"{_PACKAGE}.django.TasksBoundary"],
+        SEAMPACT={"tasks": {**_settings(), "idempotency_store": f"{__name__}.database_store"}},
+    ):
+        first, replayed = asyncio.run(post_twice())
+
+    assert (first.status_code, replayed.status_code) == (HTTPStatus.CREATED, HTTPStatus.CREATED), replayed.content
+    assert (len(created), failures) == (1, [])
+
+
+def test_the_record_is_abandoned_when_the_handler_fails() -> None:
+    def create_task(request: object) -> object:
+        raise RuntimeError("a bug")
+
+    answers["create_task"] = create_task
+
+    response = _post(f"/v1/channels/{_CHANNEL_ID}/tasks", {"title": "Write the guide"})
+
+    assert (response.status_code, idempotency_records) == (HTTPStatus.INTERNAL_SERVER_ERROR, {})
+
+
+def test_the_record_is_abandoned_when_an_exception_propagates_into_the_boundary() -> None:
+    answers["create_task"] = lambda _: _module("operations").CreateTaskResponse201(body=_task())
+
+    with override_settings(DEBUG_PROPAGATE_EXCEPTIONS=True), pytest.raises(ValueError, match="after the view"):
+        Client().post(
+            f"/v1/channels/{_CHANNEL_ID}/tasks",
+            json.dumps({"title": "Write the guide"}),
+            content_type="application/json",
+            headers={**_bearer(), "Idempotency-Key": "k-1", "X-Answer": "raise-after-view"},
+        )
+
+    assert idempotency_records == {}
+
+
+def test_the_record_is_abandoned_when_the_reply_is_a_stream(caplog: pytest.LogCaptureFixture) -> None:
+    answers["create_task"] = lambda _: _module("operations").CreateTaskResponse201(body=_task())
+
+    with override_settings(SEAMPACT={"tasks": {**_settings(), "responses": "warn"}}):
+        response = Client().post(
+            f"/v1/channels/{_CHANNEL_ID}/tasks",
+            json.dumps({"title": "Write the guide"}),
+            content_type="application/json",
+            headers={**_bearer(), "Idempotency-Key": "k-1", "X-Answer": "stream-after-view"},
+        )
+        b"".join(response.streaming_content)  # type: ignore[attr-defined]
+
+    assert idempotency_records == {}
+    assert "answered a stream" in caplog.text
 
 
 def test_a_missing_or_wildcard_if_match_is_precondition_required_before_the_header_check() -> None:
@@ -649,7 +805,35 @@ def _served_ir(repository_root: Path) -> dict[str, JsonValue]:
         catalogue[code] = {**conflict, "code": code, "default": role, "http": {"status": status}}
         archive["errors"].append({"code": code, "derivedFrom": concurrency["derivedFrom"], "roles": [{"role": role}]})
 
+    _with_a_deadline(ir, reference_ir(repository_root, "tasksService"), _CREATE_TASK)
+
     return ir
+
+
+def _with_a_deadline(ir: dict[str, JsonValue], service_ir: dict[str, JsonValue], operation_id: str) -> None:
+    """The operation reads the service api's optional deadline header, with its code: no reference operation has both
+    a deadline and an input field right."""
+    deadline_reader = _operation(service_ir, _GET_TASK)
+    header = deadline_reader["deadlineHeader"]
+    assert isinstance(header, str)
+    read_by = _operation(ir, operation_id)
+    read_by["deadlineHeader"] = header
+    params, errors = read_by["params"], read_by["errors"]
+    sent = ir_maps(ir_map(deadline_reader, "params"), "header")
+    declared = next(item for item in sent if item.get("name") == header)
+    assert isinstance(params, dict) and isinstance(params["header"], list) and isinstance(errors, list)
+    params["header"].append({**declared, "required": False})
+    code = next(item for item in ir_maps(deadline_reader, "errors") if item.get("code") == _DEADLINE_EXCEEDED)
+    errors.append(dict(code))
+    catalogues = (ir["errors"], service_ir["errors"])
+    assert isinstance(catalogues[0], dict) and isinstance(catalogues[1], dict)
+    catalogues[0][_DEADLINE_EXCEEDED] = catalogues[1][_DEADLINE_EXCEEDED]
+
+
+def _operation(ir: dict[str, JsonValue], operation_id: str) -> dict[str, JsonValue]:
+    found = next(item for item in ir["operations"] if isinstance(item, dict) and item["id"] == operation_id)  # type: ignore[union-attr]
+    assert isinstance(found, dict)
+    return found
 
 
 def _settings() -> dict[str, object]:
