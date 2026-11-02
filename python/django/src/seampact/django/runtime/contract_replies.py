@@ -13,7 +13,8 @@ from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal, failure_place
 from seampact.codegen.runtime.replies import Reply, error_reply, internal_error_reply, role_params
 from seampact.codegen.runtime.sync_driver import call_without_suspension, run_without_suspension
-from seampact.django.runtime.api_settings import SettingsError, unexpected_error_listener
+from seampact.django.runtime.api_configuration import configuration_of
+from seampact.django.runtime.api_settings import SettingsError
 from seampact.django.runtime.request_state import state_of
 from seampact.hooks import UnexpectedFailure
 
@@ -82,7 +83,7 @@ def report_unexpected(
     api_logger.error("seampact: %s (operation %s)", reason, operation_id, exc_info=cause if settings.DEBUG else None)
 
     try:
-        listener = unexpected_error_listener(contract.api, request)
+        listener = configuration_of(contract.api).unexpected_error_listener(request)
 
         if listener is not None:
             failure = UnexpectedFailure(api=contract.api, operation=operation_id, reason=reason, cause=cause)

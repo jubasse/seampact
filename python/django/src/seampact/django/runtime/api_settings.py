@@ -10,7 +10,7 @@ from django.conf import settings
 from django.http import HttpRequest
 
 from seampact.codegen.runtime.access_steps import AccessHooks
-from seampact.hooks import AuthenticateHook, DecideHook, ResolveScopeHook, UnexpectedFailure
+from seampact.hooks import AuthenticateHook, DecideHook, IdempotencyStore, ResolveScopeHook, UnexpectedFailure
 
 SETTINGS_NAME: Final = "SEAMPACT"
 HANDLERS_KEY: Final = "handlers"
@@ -19,6 +19,10 @@ DECIDERS_KEY: Final = "deciders"
 SCOPE_RESOLVERS_KEY: Final = "scope_resolvers"
 ON_UNEXPECTED_ERROR_KEY: Final = "on_unexpected_error"
 PUBLIC_ORIGIN_KEY: Final = "public_origin"
+IDEMPOTENCY_STORE_KEY: Final = "idempotency_store"
+RESPONSES_KEY: Final = "responses"
+OPERATIONS_KEY: Final = "operations"
+_STORE_METHODS: Final = ("begin", "complete", "abandon")
 HOOK_KEYS: Final = (AUTHENTICATE_KEY, DECIDERS_KEY, SCOPE_RESOLVERS_KEY)
 
 type Factory = Callable[[HttpRequest], object]
@@ -109,6 +113,70 @@ def unexpected_error_listener(api: str, request: HttpRequest) -> Callable[[Unexp
     listener = factory(api, f"['{ON_UNEXPECTED_ERROR_KEY}']", path)(request)
 
     return _method(listener, "on_unexpected_error", f"the factory '{path}' of api '{api}'", "UnexpectedErrorListener")
+
+
+def store_setting(api: str) -> str | None:
+    """The dotted path of the api's store factory, None when the app set none."""
+    path = api_settings(api).get(IDEMPOTENCY_STORE_KEY)
+
+    if path is None or isinstance(path, str):
+        return path
+
+    raise SettingsError(
+        f"settings.{SETTINGS_NAME}['{api}']['{IDEMPOTENCY_STORE_KEY}'] is a {type(path).__name__}; set the dotted "
+        "path of a factory that takes the HttpRequest."
+    )
+
+
+def idempotency_store(api: str, request: HttpRequest) -> IdempotencyStore | None:
+    """The store the api's factory builds for this request, None when the app named none."""
+    path = store_setting(api)
+
+    if path is None:
+        return None
+
+    store = factory(api, f"['{IDEMPOTENCY_STORE_KEY}']", path)(request)
+
+    if not is_idempotency_store(store):
+        missing = [method for method in _STORE_METHODS if not callable(getattr(store, method, None))]
+        raise SettingsError(
+            f"the factory of settings.{SETTINGS_NAME}['{api}']['{IDEMPOTENCY_STORE_KEY}'] built a "
+            f"{type(store).__qualname__} without {', '.join(missing)}; return an IdempotencyStore."
+        )
+
+    return store
+
+
+def is_idempotency_store(value: object) -> TypeGuard[IdempotencyStore]:
+    return all(callable(getattr(value, method, None)) for method in _STORE_METHODS)
+
+
+class SettingsConfiguration:
+    """An api's run-time values read from `settings.SEAMPACT["<api>"]`."""
+
+    def __init__(self, api: str) -> None:
+        self._api = api
+
+    def access_hooks(self, request: HttpRequest) -> AccessHooks:
+        return access_hooks(self._api, request)
+
+    def unexpected_error_listener(self, request: HttpRequest) -> Callable[[UnexpectedFailure], object] | None:
+        return unexpected_error_listener(self._api, request)
+
+    def idempotency_store(self, request: HttpRequest) -> IdempotencyStore | None:
+        return idempotency_store(self._api, request)
+
+    def public_origin(self) -> object:
+        return api_settings(self._api).get(PUBLIC_ORIGIN_KEY)
+
+    def responses(self, operation_id: str) -> str | None:
+        own = api_settings(self._api)
+        operations = own.get(OPERATIONS_KEY)
+        operation = operations.get(operation_id) if isinstance(operations, Mapping) else None
+        mode = operation.get(RESPONSES_KEY) if isinstance(operation, Mapping) else None
+        chosen = mode or own.get(RESPONSES_KEY)
+
+        return None if chosen is None else str(chosen)
 
 
 def _hooks[H](

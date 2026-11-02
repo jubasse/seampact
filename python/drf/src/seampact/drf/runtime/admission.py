@@ -33,7 +33,7 @@ from seampact.codegen.runtime.replies import CONTENT_TYPE, JSON_MEDIA, Reply, er
 from seampact.codegen.runtime.sync_driver import call_without_suspension, run_without_suspension
 from seampact.codegen.runtime.version_token import sent_version
 from seampact.codegen.runtime.wire_codec import WireCodec
-from seampact.django.runtime.api_settings import PUBLIC_ORIGIN_KEY, access_hooks, api_settings
+from seampact.django.runtime.api_configuration import configuration_of
 from seampact.django.runtime.contract_replies import django_response
 from seampact.django.runtime.idempotency_records import claim_idempotency
 from seampact.django.runtime.request_state import BoundaryState, state_of
@@ -228,7 +228,7 @@ class ContractAdmission:
         items: list[object] = visible
         raw_query = str(self._request.META.get(_QUERY_STRING, ""))
         facts = _page_facts(contract, operation_id, body)
-        public_origin = configured_origin(contract, api_settings(contract.api).get(PUBLIC_ORIGIN_KEY))
+        public_origin = configured_origin(contract, configuration_of(contract.api).public_origin())
         page = page_parts(
             contract,
             operation_id,
@@ -271,7 +271,7 @@ def admit(
         body=state.decoded.body,
         raw_body=state.decoded.raw_body,
     )
-    hooks = access_hooks(contract.api, request)
+    hooks = configuration_of(contract.api).access_hooks(request)
     run_without_suspension(run_access_steps(access, hooks, call_without_suspension))
     state.admitted_operation = operation_id
 

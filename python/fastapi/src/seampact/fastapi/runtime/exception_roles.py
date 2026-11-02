@@ -8,25 +8,18 @@ from typing import Final
 
 from starlette.exceptions import HTTPException
 
+from seampact.codegen.runtime.contract import ROLE_OF_STATUS
 from seampact.codegen.runtime.replies import Reply, error_reply, internal_error_reply, role_params
 from seampact.fastapi.runtime.api_binding import ApiBinding
 from seampact.fastapi.runtime.request_state import RequestState
 
-_ROLES: Final = {
-    401: "unauthenticated",
-    403: "forbidden",
-    404: "notFound",
-    413: "payloadTooLarge",
-    429: "rateLimited",
-    503: "serviceUnavailable",
-}
 _RETRY_AFTER: Final = "retry-after"
 _MILLISECONDS_PER_SECOND: Final = 1000
 
 
 def exception_reply(binding: ApiBinding, state: RequestState, exception: HTTPException) -> Reply | None:
     """The reply of the exception's role, None for a status that has no role."""
-    role = _ROLES.get(exception.status_code)
+    role = ROLE_OF_STATUS.get(exception.status_code)
 
     if role is None:
         return None

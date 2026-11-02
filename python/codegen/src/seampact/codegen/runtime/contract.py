@@ -10,6 +10,15 @@ from seampact.codegen.runtime.ir_view import IrJson, IrMap, ir_int, ir_map, ir_m
 from seampact.codegen.runtime.route_match import ContractRoute, RouteMatch, most_specific_first
 
 NOT_FOUND_ROLE: Final = "notFound"
+# The role a framework's HTTP error takes on a contract route, by its status; another status has no role.
+ROLE_OF_STATUS: Final[Mapping[int, str]] = {
+    401: "unauthenticated",
+    403: "forbidden",
+    404: NOT_FOUND_ROLE,
+    413: "payloadTooLarge",
+    429: "rateLimited",
+    503: "serviceUnavailable",
+}
 UNDECLARED_STATUS_ROLE: Final = "undeclaredStatus"
 INTERNAL_STATUS: Final = 500
 

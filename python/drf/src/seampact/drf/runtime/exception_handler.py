@@ -15,7 +15,7 @@ from rest_framework.request import Request
 from rest_framework.views import set_rollback
 
 from seampact.codegen.runtime.access_steps import CSRF_INVALID_ROLE, UNAUTHENTICATED_ROLE
-from seampact.codegen.runtime.contract import NOT_FOUND_ROLE, ApiContract
+from seampact.codegen.runtime.contract import NOT_FOUND_ROLE, ROLE_OF_STATUS, ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
 from seampact.django.runtime.contract_replies import django_response, role_answer, unexpected_response
 from seampact.django.runtime.idempotency_records import ReplayedReplyError
@@ -30,14 +30,6 @@ _CSRF_INVALID: Final = (CSRF_INVALID_ROLE, 403)
 _FORBIDDEN: Final = ("forbidden", 403)
 _NOT_FOUND: Final = (NOT_FOUND_ROLE, 404)
 _RATE_LIMITED: Final = ("rateLimited", 429)
-_ROLE_OF_STATUS: Final = {
-    401: UNAUTHENTICATED_ROLE,
-    403: "forbidden",
-    404: NOT_FOUND_ROLE,
-    413: "payloadTooLarge",
-    429: "rateLimited",
-    503: "serviceUnavailable",
-}
 _MILLISECONDS_PER_SECOND: Final = 1000
 _CROSSED_VIEW: Final = "an exception crossed the view"
 
@@ -113,7 +105,7 @@ def _role(exception: Exception) -> tuple[str, int] | None:
 
     if isinstance(exception, exceptions.APIException):
         status = exception.status_code
-        return (_ROLE_OF_STATUS.get(status, ""), status)
+        return (ROLE_OF_STATUS.get(status, ""), status)
 
     return None
 

@@ -4,7 +4,7 @@ per-request state, the replies it writes, the boot check, and the handler factor
 
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, VersionUnit
-from seampact.django.runtime.boundary import ContractBoundary
+from seampact.django.runtime.boundary import ContractBoundary, RecordedRole
 from seampact.django.runtime.handler_factories import HandlersMismatchError, built_handlers
 
 __all__ = [
@@ -12,6 +12,7 @@ __all__ = [
     "ContractBoundary",
     "FrameworkRouteRule",
     "HandlersMismatchError",
+    "RecordedRole",
     "VersionUnit",
     "built_handlers",
 ]
