@@ -34,6 +34,8 @@ def _golden(module: str) -> ModuleType:
 def bound_api(monkeypatch: pytest.MonkeyPatch) -> Iterator[NinjaAPI]:
     """The golden api bound on a fresh NinjaAPI, served by a root URLconf of its own; no handler or hook given."""
     monkeypatch.setattr(binding_module, "_bindings", {})
+    # Ninja 1.5 refuses a second NinjaAPI of one urls_namespace in a process; each test builds its own.
+    monkeypatch.setenv("NINJA_SKIP_REGISTRY", "1")
     placement = _golden("ninja")
     api = NinjaAPI(urls_namespace="seampact-runtime")
     factories = placement.TasksHandlerFactories(
