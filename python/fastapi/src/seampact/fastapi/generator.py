@@ -33,6 +33,12 @@ class FastApiGenerator:
     def ir_support(self) -> IrSupport:
         return IrSupport.of_model(kinds=[_HTTP_OPERATION])
 
+    def framework_docs_off_fix(self) -> str | None:
+        return (
+            "Remove `frameworkDocs: off` from the entry and switch FastAPI's own document off in the app: "
+            "`FastAPI(openapi_url=None)`."
+        )
+
     def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
         refusals = Refusals(entry.id, TARGET, DISTRIBUTION)
         options = read_options(entry.options, entry.artefacts, refusals)

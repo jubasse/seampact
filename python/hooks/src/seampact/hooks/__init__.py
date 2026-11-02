@@ -32,6 +32,8 @@ from seampact.hooks.signed_template_request import SignedTemplateRequest
 from seampact.hooks.stored_response import StoredResponse
 from seampact.hooks.subject_ref import SubjectRef
 from seampact.hooks.throttle_bucket import ThrottleBucket
+from seampact.hooks.unexpected_error_listener import UnexpectedErrorListener
+from seampact.hooks.unexpected_failure import UnexpectedFailure
 
 __all__ = [
     "Absent",
@@ -64,4 +66,6 @@ __all__ = [
     "StoredResponse",
     "SubjectRef",
     "ThrottleBucket",
+    "UnexpectedErrorListener",
+    "UnexpectedFailure",
 ]

@@ -9,7 +9,7 @@ from enum import StrEnum
 import fastapi
 
 from seampact.codegen.runtime.reply_verdict import FrameworkEtagMode, ResponsesMode
-from seampact.hooks import AuthenticateHook, DecideHook, IdempotencyStore, ResolveScopeHook
+from seampact.hooks import AuthenticateHook, DecideHook, IdempotencyStore, ResolveScopeHook, UnexpectedErrorListener
 
 type App = fastapi.FastAPI
 """The app the boundary and the exception handlers belong to."""
@@ -103,13 +103,14 @@ class ApiPlacement:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class HookFactories:
     """The hook factories `bind_<api>()` takes, keyed by the contract's names: `authenticate` per identity,
-    `deciders` per right or rule, `scope_resolvers` per scope."""
+    `deciders` per right or rule, `scope_resolvers` per scope; `on_unexpected_error` hears of each failure answered with
+    the api's 500."""
 
     authenticate: Mapping[str, Factory[AuthenticateHook]]
     deciders: Mapping[str, Factory[DecideHook]]
     scope_resolvers: Mapping[str, Factory[ResolveScopeHook]]
     idempotency_store: Factory[IdempotencyStore] | None
-    on_unexpected_error: Factory[object] | None
+    on_unexpected_error: Factory[UnexpectedErrorListener] | None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

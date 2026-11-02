@@ -13,8 +13,10 @@ from pathlib import Path
 import pytest
 
 from seampact.ir.config import ConfigProblem
+from seampact.ir.run import matrix_check, runner
 from seampact.ir.run.command import EXIT_PASSED, EXIT_REFUSED, EXIT_USAGE, run
 from seampact.ir.run.discovery import InstalledTarget, discover_target
+from seampact.ir.run.matrix_framework import MatrixFramework, MatrixTarget, VersionUnit
 
 type GitRepositoryFactory = Callable[..., tuple[Path, dict[str, str]]]
 
@@ -26,6 +28,9 @@ from seampact.ir.write import GeneratedFile
 class GoodGenerator:
     def ir_support(self):
         return IrSupport.of_model(kinds=%s)
+
+    def framework_docs_off_fix(self):
+        return "Switch the framework's document off in the app."
 
     def generate(self, ir, entry):
         options = dict(entry.options)
@@ -39,8 +44,27 @@ class WrongItemsGenerator:
     def ir_support(self):
         return IrSupport.of_model(kinds=%s)
 
+    def framework_docs_off_fix(self):
+        return None
+
     def generate(self, ir, entry):
         return ["models.py"]
+"""
+_RECORDING_MODULE = """
+from seampact.ir.read import IrSupport
+from seampact.ir.write import GeneratedFile
+
+
+class RecordingGenerator:
+    def ir_support(self):
+        return IrSupport.of_model(kinds=%s)
+
+    def framework_docs_off_fix(self):
+        return None
+
+    def generate(self, ir, entry):
+        accepted = entry.matrix.frameworks[0].accepted_units(entry.allow_untested)
+        return [GeneratedFile("versions.py", f"ROW = {entry.matrix.use!r}\\nACCEPTED = {accepted!r}\\n")]
 """
 _NOT_A_GENERATOR_MODULE = "class Plain:\n    pass\n"
 
@@ -70,6 +94,7 @@ def site_packages(
     kinds = json.loads(valid_bundle[0]["ir/t.json"])["kinds"]
     _install(site, "acme-good", "1.2.0", ["good = acme_good:GoodGenerator"], _GOOD_MODULE % kinds)
     _install(site, "acme-wrong", "1.0.0", ["wrong = acme_wrong:WrongItemsGenerator"], _WRONG_ITEMS_MODULE % kinds)
+    _install(site, "acme-recording", "1.4.0", ["rec = acme_recording:RecordingGenerator"], _RECORDING_MODULE % kinds)
     _install(site, "acme-broken", "1.0.0", ["bad = acme_broken:Plain"], _NOT_A_GENERATOR_MODULE)
     _install(site, "acme-twice", "1.0.0", ["a = acme_twice:Plain", "b = acme_twice:Plain"], _NOT_A_GENERATOR_MODULE)
     _install(site, "acme-plain", "1.0.0", [], None)
@@ -226,3 +251,45 @@ def test_a_generator_returning_something_but_generated_files_is_named(
     assert code == EXIT_REFUSED
     assert "config.target.generate-failed" in stderr
     assert "GeneratedFile" in stderr
+
+
+def test_frameworkdocs_off_is_refused_with_the_fix_of_a_target_that_cannot_switch_it(
+    site_packages: Path,
+    tmp_path: Path,
+    git_repository: GitRepositoryFactory,
+    valid_bundle: tuple[dict[str, bytes], str],
+) -> None:
+    (tmp_path / "git").mkdir()
+    repository, environment = git_repository(tmp_path / "git", valid_bundle[0])
+    project = _project(tmp_path, repository, valid_bundle[1], ", frameworkDocs: off")
+
+    code, _, stderr = _run(project, {**environment, "XDG_CACHE_HOME": str(tmp_path / "cache")}, "generate")
+
+    assert code == EXIT_REFUSED
+    assert "config.frameworkDocs.unsupported" in stderr
+    assert "Switch the framework's document off in the app." in stderr
+    assert not (project / "__generated__").exists()
+
+
+def test_the_entry_hands_the_generator_its_matrix_row_and_allow_untested_items(
+    site_packages: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    git_repository: GitRepositoryFactory,
+    valid_bundle: tuple[dict[str, bytes], str],
+) -> None:
+    acme = MatrixFramework("acme", "acme-recording", VersionUnit.MAJOR, "1.0", ("1",), {})
+    recorded = {"pypi:acme-recording": MatrixTarget("pypi:acme-recording", (acme,))}
+    monkeypatch.setattr(matrix_check, "python_targets", lambda: recorded)
+    monkeypatch.setattr(runner, "python_targets", lambda: recorded)
+    (tmp_path / "git").mkdir()
+    repository, environment = git_repository(tmp_path / "git", valid_bundle[0])
+    project = _project(tmp_path, repository, valid_bundle[1], ", allowUntested: [acme@2]", "acme-recording")
+
+    code, _, stderr = _run(project, {**environment, "XDG_CACHE_HOME": str(tmp_path / "cache")}, "generate")
+
+    assert (code, stderr) == (EXIT_PASSED, "")
+    assert (project / "__generated__" / "main" / "versions.py").read_text(encoding="utf-8").splitlines()[1:] == [
+        "ROW = 'pypi:acme-recording'",
+        "ACCEPTED = ('1', '2')",
+    ]

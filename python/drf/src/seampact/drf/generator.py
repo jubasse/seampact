@@ -44,6 +44,9 @@ class DrfGenerator:
     def ir_support(self) -> IrSupport:
         return IrSupport.of_model(kinds=["httpOperation"])
 
+    def framework_docs_off_fix(self) -> str | None:
+        return "Remove `frameworkDocs: off` from the entry and remove the app's own schema view from its URLconf."
+
     def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
         refusals = Refusals(entry.id, TARGET, DISTRIBUTION)
         options = drf_options(entry.options, entry.artefacts, refusals)

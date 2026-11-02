@@ -30,6 +30,8 @@ def reference_entry(
         output_directory="/app/generated",
         framework_routes=[],
         mount=None,
+        matrix=None,
+        allow_untested=(),
     )
 
 

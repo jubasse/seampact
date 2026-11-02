@@ -53,7 +53,7 @@ def generated_files(
     mount: str | None = None,
 ) -> list[GeneratedFile]:
     entry = TargetEntry(
-        "reference", "pypi:seampact-drf", ir.api.id, None, options or {}, artefacts or {}, "/out", (), mount
+        "reference", "pypi:seampact-drf", ir.api.id, None, options or {}, artefacts or {}, "/out", (), mount, None, ()
     )
 
     return list(DrfGenerator().generate(ir, entry))

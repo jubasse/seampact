@@ -113,6 +113,6 @@ def _generator_of(entry_point: metadata.EntryPoint) -> Generator | str:
         return f"it cannot be built with no argument ({type(error).__name__}: {error})"
 
     if not isinstance(instance, Generator):
-        return "it does not implement seampact.ir.run.Generator (ir_support and generate)"
+        return "it does not implement seampact.ir.run.Generator (ir_support, framework_docs_off_fix and generate)"
 
     return instance
