@@ -96,7 +96,7 @@ def test_a_stale_if_match_version_answers_precondition_failed(tasks_contract: Ap
     assert stale_version(contract, _ARCHIVE_TASK).code == _PRECONDITION_FAILED
 
 
-@pytest.mark.parametrize("sent", ['W/"7"', "7", "*"])
+@pytest.mark.parametrize("sent", ['W/"7"', "7"])
 def test_an_if_match_value_that_is_no_strong_tag_answers_precondition_failed(
     tasks_contract: ApiContract, sent: str
 ) -> None:
@@ -106,8 +106,11 @@ def test_an_if_match_value_that_is_no_strong_tag_answers_precondition_failed(
     assert refused.value.code == _PRECONDITION_FAILED
 
 
-def test_a_write_without_if_match_answers_precondition_required(tasks_contract: ApiContract) -> None:
+@pytest.mark.parametrize("sent", [None, "*"])
+def test_a_write_without_an_if_match_version_answers_precondition_required(
+    tasks_contract: ApiContract, sent: str | None
+) -> None:
     with pytest.raises(ContractRefusal) as refused:
-        sent_version(_if_match_contract(tasks_contract), _ARCHIVE_TASK, _with_if_match(None))
+        sent_version(_if_match_contract(tasks_contract), _ARCHIVE_TASK, _with_if_match(sent))
 
     assert refused.value.code == _PRECONDITION_REQUIRED
