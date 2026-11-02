@@ -7,7 +7,7 @@ from typing import Final
 
 from pydantic import ValidationError
 
-from seampact.codegen.runtime.contract import ApiContract
+from seampact.codegen.runtime.contract import HEADER_PART, ApiContract
 from seampact.codegen.runtime.input_decoding import Issue
 from seampact.codegen.runtime.ir_view import IrMap, ir_map, ir_string
 
@@ -61,7 +61,10 @@ def part_issues(in_: str, members: Mapping[str, str], error: ValidationError) ->
         location = detail["loc"]
         first = str(location[0]) if location else ""
         rest = "".join(f"/{_escaped(str(step))}" for step in location[1:])
-        issues.append(Issue(in_, f"/{_escaped(wire_names.get(first, first))}{rest}", contract_rule(detail["type"])))
+        wire_name = wire_names.get(first, first)
+        # Header names are case-insensitive: a header issue names its header in lower case, as the wire reads it.
+        named = wire_name.lower() if in_ == HEADER_PART else wire_name
+        issues.append(Issue(in_, f"/{_escaped(named)}{rest}", contract_rule(detail["type"])))
 
     return issues[:MAX_RENDERED_ISSUES]
 

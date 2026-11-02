@@ -222,7 +222,7 @@ class _Emission:
             return [f"list[{items}]"] if not rules else [f"{self.typing}.Annotated[", f"list[{items}]", *rules]
 
         if isinstance(type_use, OpaqueTypeUse):
-            return [f"{self.pydantic}.JsonValue"]
+            return [f"{self.seampact}.Opaque"]
 
         self.refusals.waiting(f"type.{type_use.kind}", f"A type use of kind '{type_use.kind}'", at, Delivery.CONSUMER)
         return ["object"]

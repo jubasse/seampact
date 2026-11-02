@@ -129,7 +129,7 @@ class PaymentEvent(_pydantic.BaseModel):
 
     id_: str
     type_: str
-    data: _pydantic.JsonValue
+    data: _seampact.Opaque
 
 
 class Preferences(_pydantic.BaseModel):

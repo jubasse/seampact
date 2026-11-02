@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Annotated, Final, TypeVar
 from uuid import UUID
 
-from pydantic import AfterValidator, BeforeValidator
+from pydantic import AfterValidator, BeforeValidator, JsonValue
 from pydantic_core import PydanticCustomError
 
 from seampact.codegen.runtime import value_rules
@@ -19,6 +19,7 @@ from seampact.codegen.runtime.value_rules import ValueRuleError
 
 _FORMAT_RULE: Final = "format"
 _TYPE_RULE: Final = "type"
+_ENUM_RULE: Final = "enum"
 
 
 def whole_number(value: object) -> object:
@@ -56,13 +57,19 @@ def decimal_from_wire(value: object) -> object:
 
 
 def enum_from_wire[E: Enum](enum_type: type[E]) -> BeforeValidator:
-    """A string that is one of the enum's values as its member; any other value stays, for the strict enum rule."""
+    """A string that is one of the enum's values as its member, another string refused by the `enum` rule; a value
+    that is no string stays, for the strict type rule."""
 
     def member(value: object) -> object:
         if not isinstance(value, str):
             return value
 
-        return next((item for item in enum_type if item.value == value), value)
+        listed = next((item for item in enum_type if item.value == value), None)
+
+        if listed is None:
+            raise PydanticCustomError(_ENUM_RULE, "a value the enum does not list")
+
+        return listed
 
     return BeforeValidator(member)
 
@@ -79,6 +86,9 @@ _T = TypeVar("_T")
 # wire `null` meets `refuse_null` (ADR 0003 section 5: absent and null differ). A generic `Annotated` alias, not a
 # `type` statement: Pydantic 2.9, FastAPI 0.162's floor, builds no schema from a subscripted PEP 695 alias.
 Omittable = Annotated[_T | None, BeforeValidator(refuse_null)]
+
+# An opaque value, any JSON but a wire `null`, which only a nullable use takes (ADR 0003 section 5).
+Opaque = Annotated[JsonValue, BeforeValidator(refuse_null)]
 
 
 def length(min_length: int | None = None, max_length: int | None = None) -> AfterValidator:

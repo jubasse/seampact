@@ -1,7 +1,7 @@
 """The operation features around steps 6 to 8 of one contract request, in the order every target runs them: the sent
-version first, so a missing `If-Match` answers `preconditionRequired` and never `schemaInvalid`; the paged list's limit
-filled in; the typed input; the input field rights, which leave out or refuse a restricted member; the deadline; then
-the idempotency claim, whose stored reply is raised as `ReplayedReply` so the handler never runs."""
+version first, so a missing `If-Match` answers `preconditionRequired` and never `schemaInvalid`; the typed input as
+sent; the paged list's limit filled in and the input field rights, which leave out or refuse a restricted member; the
+deadline; then the idempotency claim, whose stored reply is raised as `ReplayedReply` so the handler never runs."""
 
 import dataclasses
 from datetime import UTC, datetime
@@ -50,13 +50,14 @@ async def featured_input(state: RequestState, access: AccessState, hooks: Access
     fault of the boundary (a missing idempotency store, a hook's undeclared answer)."""
     contract = state.contract
     operation_id = state.operation_id
-    decoded = _with_sent_version(contract, operation_id, state.decoded)
-    decoded = dataclasses.replace(decoded, query=filled_page_query(contract, operation_id, decoded.query))
-    typed = builder.build(decoded, access, state.target.query)
+    sent = _with_sent_version(contract, operation_id, state.decoded)
+    typed = builder.build(sent, access, state.target.query)
+    filled_query = filled_page_query(contract, operation_id, sent.query)
     checked_body = await checked_input_fields(access, hooks, call_handler)
+    decoded = dataclasses.replace(sent, query=filled_query, body=checked_body)
 
-    if checked_body != decoded.body:
-        decoded = dataclasses.replace(decoded, body=checked_body)
+    # The input as sent was checked; the handler receives the filled limit and the body its field rights leave.
+    if filled_query != sent.query or checked_body != sent.body:
         typed = builder.build(decoded, access, state.target.query)
 
     request_deadline(contract, operation_id, decoded, datetime.now(UTC))
