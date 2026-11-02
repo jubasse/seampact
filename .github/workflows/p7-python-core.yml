@@ -6,7 +6,9 @@ name: Python core packages
 # wheel built and installed into a fresh virtual environment from those wheels only, with Node removed; and `pip-audit` over the lock file. On a pull request or a push they run
 # only when the change touches the Python packages, the generator of their IR model, the files their tests read or
 # this workflow; `python-core` is the one check to require. The binary row builds the linux-x64 compiler binary and
-# runs the runner test with it, with Node removed; on a pull request it runs only when what it proves changes.
+# runs the runner test with it, with Node removed; the channel smoke (ADR 0011 "Channel smoke tests") generates from the
+# release and git channels served locally with no binary and expects each tampered copy to be refused; on a pull
+# request these run only when what they prove changes.
 
 on:
   push:
@@ -64,9 +66,13 @@ jobs:
         uses: ./.github/actions/lane-changes
         with:
           # The runner and its binary module, the binary and the CLI and compiler it embeds, the reference
-          # contract and its golden IR, and this workflow.
+          # contract and its golden IR, the channel servers and the Python smoke scripts, and this workflow.
           watched-paths: |
-            ^python/ir/
+            ^python/(ir|codegen|hooks|fastapi)/
+            ^scripts/dist-smoke/
+            ^scripts/consumers/python/
+            ^python/uv\.lock$
+            ^scripts/ir-models/
             ^packages/tools/binary/
             ^packages/core/cli/
             ^packages/core/compiler/
@@ -211,6 +217,62 @@ jobs:
           SEAMPACT_BINARY="$RUNNER_BINARY_DIRECTORY/seampact-linux-x64" \
             uv run --locked pytest ir/tests/test_binary_runner.py -rs
 
+  # The Python leg of the channel smoke tests: a project using seampact-fastapi, installed from the built wheels, with
+  # `openapi: none` and no binary, generates and checks from the release and git channels that
+  # `scripts/dist-smoke/cli.ts serve` starts, and each tampered copy is refused as `bundle.file-hash`, naming the
+  # file. The channels are served by Node; the Python side needs none.
+  channel-smoke:
+    name: channel smoke (python)
+    needs: changes
+    if: needs.changes.outputs.python-core == 'true' && needs.changes.outputs.binary-row == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      WORK: ${{ runner.temp }}/channel-smoke
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - name: Install seampact-fastapi from the built wheels
+        shell: bash
+        env:
+          UV_PYTHON_DOWNLOADS: never
+        run: |
+          set -euo pipefail
+          (cd python && uv build --all-packages --wheel --out-dir "$WORK/wheels")
+          scripts/consumers/python/requirements.sh "$WORK/requirements.txt" seampact-fastapi generate uvicorn
+          scripts/consumers/python/install.sh "$WORK/venv" "$WORK/requirements.txt" "$WORK/wheels" 'seampact-fastapi[generate]'
+      - name: Serve the release and git channels
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Node stays on the PATH here: dist-smoke, a Node program, serves the channels; the runner steps run from the venv only.
+          served="$RUNNER_TEMP/served.json"
+          node --experimental-transform-types --import ./scripts/ir-models/register.ts scripts/dist-smoke/cli.ts serve \
+            --work "$RUNNER_TEMP/channels" > "$served" 2> "$RUNNER_TEMP/channels.log" &
+          for _ in $(seq 1 60); do
+            if [ -s "$served" ]; then exit 0; fi
+            sleep 2
+          done
+          echo "The channels did not start; their log:"
+          cat "$RUNNER_TEMP/channels.log"
+          exit 1
+      - name: Generate and check from each channel, and refuse each tampered copy
+        run: scripts/consumers/python/channel-smoke.sh "$WORK/cases" "$WORK/venv" "$RUNNER_TEMP/served.json" seampact-fastapi
+
   wheels:
     needs: changes
     if: needs.changes.outputs.python-core == 'true'
@@ -329,7 +391,7 @@ jobs:
 
   python-core:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, regenerate, packages, binary, binary-runner, wheels, audit]
+    needs: [changes, regenerate, packages, binary, binary-runner, channel-smoke, wheels, audit]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -342,4 +404,4 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.python-core }}
-          allow-skip: ${{ needs.changes.outputs.binary-row == 'false' && 'binary binary-runner' || '' }}
+          allow-skip: ${{ needs.changes.outputs.binary-row == 'false' && 'binary binary-runner channel-smoke' || '' }}

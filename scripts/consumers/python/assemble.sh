@@ -8,10 +8,12 @@
 set -eu
 
 target=$(cd "$1" && pwd)
-work="$2"
-bundled="$3"
-variant="${4:-}"
 here=$(cd "$(dirname "$0")" && pwd)
+. "$here/absolute-path.sh"
+
+work=$(absolute_path "$2")
+bundled=$(absolute_path "$3")
+variant="${4:-}"
 suite_package="$here/suite/seampact_consumer_suite"
 spring_boot="$here/../targets/spring-boot"
 contract_repo="$work/contract-repo"
@@ -43,7 +45,7 @@ cp "$target/$config" "$app/seampact.config.yaml"
 cp "$spring_boot/credentials.json" "$app/credentials.json"
 
 if [ -n "${SEAMPACT_CONSUMER_BINARY:-}" ]; then
-  binary=$(cd "$(dirname "$SEAMPACT_CONSUMER_BINARY")" && pwd)/$(basename "$SEAMPACT_CONSUMER_BINARY")
+  binary=$(absolute_path "$SEAMPACT_CONSUMER_BINARY")
   sha256=$(sha256sum "$binary" | cut -d " " -f 1)
   printf '[project]\nname = "seampact-consumer"\nversion = "0"\n\n[tool.seampact.binary]\npath = "%s"\nsha256 = "%s"\n' \
     "$binary" "$sha256" > "$app/pyproject.toml"
