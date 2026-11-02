@@ -1,5 +1,6 @@
 """Steps 2 to 5 of the check order (ADR 0012 "The check order"), written once as coroutines for every Python
-placement: authenticate with the identity's hook (and the CSRF header a cookie-only credential needs), resolve the
+placement: authenticate with the identity's hook (and the CSRF header a cookie-only credential needs, or the signature
+a signed route carries over its raw body, ADR 0013), resolve the
 scopes outermost first, then ask the deciders for each requirement in declared order, a rule's proof read from the
 body first. Each refusal is one of the operation's declared codes; a hook that answers a code the operation does not
 declare, or a missing hook, is a failure of the boundary, answered with the api's 500."""
@@ -14,7 +15,8 @@ from seampact.codegen.runtime.digests import hex_of
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
 from seampact.codegen.runtime.input_decoding import Issue, role_refusal, schema_invalid
 from seampact.codegen.runtime.ir_view import IrMap, ir_int, ir_map, ir_maps, ir_string, ir_strings
-from seampact.codegen.runtime.wire_codec import scalar_to_wire
+from seampact.codegen.runtime.principal_members import principal_members
+from seampact.codegen.runtime.signature_header import parsed_signature_header
 from seampact.codegen.runtime.wire_values import decoded_segment, path_value, scalar_issue
 from seampact.hooks import (
     AuthenticateHook,
@@ -28,6 +30,9 @@ from seampact.hooks import (
     ResolvedScope,
     ResolveScopeHook,
     ResolveScopeRequest,
+    SignatureEncoding,
+    SignatureTemplate,
+    SignedTemplateRequest,
     SubjectRef,
     ThrottleBucket,
     authenticate_result,
@@ -48,6 +53,7 @@ _COOKIE: Final = "cookie"
 _HEADER: Final = "header"
 _BEARER: Final = "bearer"
 _RULE: Final = "rule"
+_SIGNATURE: Final = "signature"
 
 
 class HookCaller(Protocol):
@@ -81,10 +87,13 @@ class AccessHooks:
 @dataclass(slots=True, kw_only=True, repr=False)
 class AccessState(RedactedRepr):
     """What steps 2 to 5 read of one contract request and what they leave for the handler: `raw_parameters` the raw
-    path segments by parameter name, `body` the decoded tree, `credentials_types` the generated credentials class of
-    each identity, `principal` and `scopes` set as the steps admit. `repr` shows none of the request's values."""
+    path segments by parameter name, `body` the decoded tree, `raw_body` the bytes as received on a signed route,
+    `credentials_types` the generated credentials class of each identity, `principal` and `scopes` set as the steps
+    admit. `repr` shows none of the request's values."""
 
-    _REDACTED_FIELDS: ClassVar[frozenset[str]] = frozenset({"raw_parameters", "body", "principal", "scopes"})
+    _REDACTED_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"raw_parameters", "body", "raw_body", "principal", "scopes"}
+    )
 
     contract: ApiContract
     operation_id: str
@@ -92,6 +101,7 @@ class AccessState(RedactedRepr):
     raw_parameters: Mapping[str, str]
     request: RequestView
     body: object
+    raw_body: bytes | None = None
     principal: object | None = None
     scopes: list[ResolvedScope] = field(default_factory=list)
 
@@ -154,12 +164,8 @@ async def _authenticate(state: AccessState, hooks: AccessHooks, call: HookCaller
     if csrf_header is not None and only_cookies and not csrf_token:
         raise role_refusal(state.contract, state.operation_id, CSRF_INVALID_ROLE)
 
-    if ir_string(state.contract.declaration("identities", identity), "signed") is not None:
-        raise BoundaryFailureError(
-            f"seampact: operation '{state.operation_id}' is signed, and this seampact release does not verify "
-            "signed requests yet; leave the operation out with the entry's `operations` filter."
-        )
-
+    signed_scheme = ir_string(state.contract.declaration("identities", identity), "signed")
+    signature = None if signed_scheme is None else _signed_request(state, signed_scheme, credentials.get(signed_scheme))
     hook = hooks.authenticate.get(identity)
 
     if hook is None:
@@ -180,9 +186,10 @@ async def _authenticate(state: AccessState, hooks: AccessHooks, call: HookCaller
         identity=identity,
         credentials=credentials_type.of(credentials),
         csrf_token=csrf_token,
+        signature=signature,
         request=state.request,
         operation=state.operation,
-        extensions=_extensions(state.contract.declaration("identities", identity)),
+        extensions=extensions_of(state.contract.declaration("identities", identity)),
     )
     result = await call(hook.authenticate, request)
 
@@ -199,6 +206,39 @@ async def _authenticate(state: AccessState, hooks: AccessHooks, call: HookCaller
     raise refusal_of(state, result.deny)
 
 
+def _signed_request(state: AccessState, scheme_id: str, header: str | None) -> SignedTemplateRequest:
+    """A signed route's signature, parsed from its header over the raw body the input step kept; a missing or
+    malformed header is the unauthenticated refusal, and the identity's hook verifies the signature (ADR 0013)."""
+    signature = ir_map(state.contract.declaration("schemes", scheme_id), _SIGNATURE)
+    parsed = parsed_signature_header(ir_string(signature, "format") or "", header)
+
+    if parsed is None:
+        raise role_refusal(state.contract, state.operation_id, UNAUTHENTICATED_ROLE)
+
+    encoding = ir_string(signature, "encoding")
+
+    if encoding not in tuple(SignatureEncoding):
+        raise BoundaryFailureError(
+            f"seampact: the signature scheme '{scheme_id}' names the encoding {encoding!r}, which this seampact "
+            "release does not read; regenerate the api."
+        )
+
+    template = SignatureTemplate(
+        algorithm=ir_string(signature, "algorithm") or "",
+        payload=ir_string(signature, "payload") or "",
+        encoding=SignatureEncoding(encoding),
+        tolerance_ms=ir_int(signature, "toleranceMs"),
+    )
+
+    return SignedTemplateRequest(
+        raw_body=state.raw_body or b"",
+        timestamp=parsed.timestamp,
+        candidate_signatures=parsed.candidate_signatures,
+        key_id=ir_string(ir_map(signature, "key"), "value") or "",
+        template=template,
+    )
+
+
 def _credentials(state: AccessState, access: IrMap) -> tuple[dict[str, str], bool]:
     """Each credential the operation's schemes find, by scheme id, and whether every one found is a cookie."""
     credentials: dict[str, str] = {}
@@ -213,7 +253,7 @@ def _credentials(state: AccessState, access: IrMap) -> tuple[dict[str, str], boo
             value = _bearer_token(state.request)
         elif kind == _COOKIE:
             value = _cookie(state.request, name)
-        elif kind == _HEADER:
+        elif kind in (_HEADER, _SIGNATURE):
             value = _first(state.request, name)
         else:
             raise BoundaryFailureError(
@@ -279,7 +319,9 @@ async def _resolve_scopes(state: AccessState, hooks: AccessHooks, call: HookCall
             source=scope_id_source.Declared(id=scope_id),
             principal=state.principal,
             outer_scopes=tuple(state.scopes),
-            extensions=ResolveScopeRequest.Extensions(scope=_extensions(declared), operation=_extensions(operation)),
+            extensions=ResolveScopeRequest.Extensions(
+                scope=extensions_of(declared), operation=extensions_of(operation)
+            ),
         )
         resolution = await call(resolver.resolve_scope, request)
 
@@ -305,20 +347,12 @@ async def _decide_requirements(state: AccessState, hooks: AccessHooks, call: Hoo
         is_rule = ir_string(requirement, "kind") == _RULE
         name = ir_string(requirement, _RULE if is_rule else "right") or ""
         params = requirement.get("params")
-        decider = hooks.deciders.get(name)
-
-        if decider is None:
-            raise BoundaryFailureError(
-                f"seampact: the api '{state.contract.api}' has no decider for '{name}'; register one as the target's "
-                "guide says."
-            )
-
         request = RequirementRequest(
             kind=RequirementKind.RULE if is_rule else RequirementKind.RIGHT,
             name=name,
             params=copy.deepcopy(dict(params)) if isinstance(params, Mapping) else None,
             principal=state.principal,
-            subject=_subject(state, ir_map(requirement, "subject"), name),
+            subject=subject_of(state, ir_map(requirement, "subject"), name),
             scopes=tuple(state.scopes),
             proof=_proof(state, name) if is_rule else None,
             bucket=_throttle_bucket(state, ir_string(requirement, "bucket")),
@@ -326,19 +360,41 @@ async def _decide_requirements(state: AccessState, hooks: AccessHooks, call: Hoo
             operation=state.operation,
             request=state.request,
             extensions=RequirementRequest.Extensions(
-                requirement=_extensions(requirement), operation=_extensions(operation)
+                requirement=extensions_of(requirement), operation=extensions_of(operation)
             ),
         )
-        answer = await call(decider.decide, request)
+        answer = await decided(hooks, call, request)
 
         if isinstance(answer, decision.Denied):
             raise refusal_of(state, answer.deny)
 
-        if not isinstance(answer, decision.Allowed):
-            raise _neither(f"the decider of '{name}'", "Allowed", "Denied", answer)
+
+async def decided(hooks: AccessHooks, call: HookCaller, request: RequirementRequest) -> decision.Decision:
+    """The decider's answer to `request`; a missing decider or an answer that is neither class fails the boundary."""
+    decider = hooks.deciders.get(request.name)
+
+    if decider is None:
+        raise BoundaryFailureError(
+            f"seampact: the api '{request.operation.api}' has no decider for '{request.name}'; register one as the "
+            "target's guide says."
+        )
+
+    answer = await call(decider.decide, request)
+
+    if not isinstance(answer, decision.Allowed | decision.Denied):
+        raise _neither(f"the decider of '{request.name}'", "Allowed", "Denied", answer)
+
+    return answer
 
 
-def _subject(state: AccessState, subject: IrMap, right: str) -> SubjectRef | None:
+def subject_type(contract: ApiContract, right: str) -> str:
+    """The subject type a right declares: its scope, or its schema type's dotted name."""
+    declared = ir_map(contract.declaration("rights", right), "subject")
+
+    return ir_string(declared, "scope") or ".".join(ir_strings(ir_map(declared, "type"), "segments"))
+
+
+def subject_of(state: AccessState, subject: IrMap, right: str) -> SubjectRef | None:
     source = ir_map(subject, "source")
 
     if not source:
@@ -352,9 +408,11 @@ def _subject(state: AccessState, subject: IrMap, right: str) -> SubjectRef | Non
         return None if resolved is None else SubjectRef(type=source_name, id=resolved.id)
 
     declared = ir_map(state.contract.declaration("rights", right), "subject")
-    subject_type = ir_string(declared, "scope") or ".".join(ir_strings(ir_map(declared, "type"), "segments"))
 
-    return SubjectRef(type=subject_type, id=_checked_path_value(state, source_name, ir_map(declared, "idSchema")))
+    return SubjectRef(
+        type=subject_type(state.contract, right),
+        id=_checked_path_value(state, source_name, ir_map(declared, "idSchema")),
+    )
 
 
 def _proof(state: AccessState, rule: str) -> object:
@@ -423,21 +481,18 @@ def _bucket_key_value(state: AccessState, source: IrMap) -> object:
 
 def _principal_member(state: AccessState, wire_name: str) -> object:
     """A principal member by its wire name, read through the principal schema's member table."""
-    if state.principal is None:
+    members = principal_members(state.contract, state.operation_id, state.principal)
+
+    if members is None:
         return None
 
-    access = ir_map(state.contract.operation(state.operation_id), "access")
-    identity = state.contract.declaration("identities", ir_string(access, "identity") or "")
-    schema_id = ir_string(ir_map(identity, "principal"), "schema") or ""
-    attribute = state.contract.members.get(schema_id, {}).get(wire_name)
-
-    if attribute is None or not hasattr(state.principal, attribute):
+    if wire_name not in members:
         raise BoundaryFailureError(
             f"seampact: a bucket of operation '{state.operation_id}' is keyed by the principal member '{wire_name}', "
-            f"which the principal does not hold; return the generated principal type of '{schema_id}'."
+            "which the identity's principal does not declare; regenerate the api."
         )
 
-    return scalar_to_wire(getattr(state.principal, attribute))
+    return members[wire_name]
 
 
 def _checked_path_value(state: AccessState, name: str, type_use: IrMap) -> object:
@@ -459,6 +514,6 @@ def _neither(hook: str, admitted: str, denied: str, answer: object) -> BoundaryF
     )
 
 
-def _extensions(declaration: IrMap) -> Mapping[str, object]:
+def extensions_of(declaration: IrMap) -> Mapping[str, object]:
     """A deep copy: a hook that changes what it got never changes the contract later requests read."""
     return copy.deepcopy(dict(ir_map(declaration, "extensions")))
