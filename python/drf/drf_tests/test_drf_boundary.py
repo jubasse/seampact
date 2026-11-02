@@ -233,6 +233,21 @@ class ExhaustedThrottle(BaseThrottle):
         return _THROTTLE_WAIT_SECONDS
 
 
+class CorsMiddleware:
+    """The app's CORS layer inside the boundary, as django-cors-headers answers a preflight."""
+
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponseBase]) -> None:
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> HttpResponseBase:
+        if request.method == "OPTIONS" and "Access-Control-Request-Method" in request.headers:
+            answered = HttpResponse(status=HTTPStatus.OK)
+            answered["Access-Control-Allow-Origin"] = request.headers.get("Origin", "")
+            return answered
+
+        return self.get_response(request)
+
+
 def user_reading_hooks(request: HttpRequest) -> _Hooks:
     """The hooks, after recording the user DRF's authentication set on the Django request."""
     hook_factory_users.append(request.user)
@@ -861,6 +876,26 @@ def test_a_stream_that_fails_after_its_head_ends_short_and_the_listener_hears_of
 
     assert (response.status_code, body) == (200, b'{"status": ')
     assert any("ValueError raised at" in failure.reason for failure in failures)
+
+
+def test_a_cors_preflight_on_a_contract_path_reaches_the_apps_cors_layer() -> None:
+    preflight = {"Origin": "https://app.example.com", "Access-Control-Request-Method": "POST"}
+
+    with override_settings(MIDDLEWARE=[*_middleware(), f"{__name__}.CorsMiddleware"]):
+        answered = Client().options(f"/v1/channels/{_CHANNEL_ID}/tasks", headers=preflight)
+
+    assert answered.status_code == HTTPStatus.OK
+    assert answered["Access-Control-Allow-Origin"] == "https://app.example.com"
+
+
+def test_a_cors_preflight_no_cors_layer_answers_and_a_plain_options_are_the_apis_404() -> None:
+    preflight = {"Origin": "https://app.example.com", "Access-Control-Request-Method": "POST"}
+
+    unanswered = Client().options(f"/v1/channels/{_CHANNEL_ID}/tasks", headers=preflight)
+    plain = Client().options(f"/v1/channels/{_CHANNEL_ID}/tasks")
+
+    for response in (unanswered, plain):
+        assert (response.status_code, _code(response)) == (HTTPStatus.NOT_FOUND, "api.not_found")
 
 
 def test_the_apps_drf_defaults_never_apply_to_a_contract_route() -> None:

@@ -24,6 +24,7 @@ from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase, St
 
 from seampact.codegen.runtime.body_reader import PAYLOAD_TOO_LARGE_ROLE
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE, ApiContract
+from seampact.codegen.runtime.cors_preflight import is_cors_preflight
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, framework_version_warnings
@@ -189,6 +190,9 @@ class ContractBoundary:
 
         if not target.raw:
             self._log_gaps_once()
+
+        if is_cors_preflight(request.method or "", request.headers.keys()):
+            return None
 
         matched = self.contract.match(request.method or "", target.path)
 

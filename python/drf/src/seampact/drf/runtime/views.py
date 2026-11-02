@@ -19,8 +19,9 @@ from rest_framework.throttling import BaseThrottle
 from rest_framework.views import APIView
 
 from seampact.codegen.runtime.access_steps import CredentialsType
-from seampact.codegen.runtime.contract import ApiContract
-from seampact.codegen.runtime.replies import JSON_MEDIA
+from seampact.codegen.runtime.contract import NOT_FOUND_ROLE, ApiContract
+from seampact.codegen.runtime.replies import JSON_MEDIA, role_reply
+from seampact.django.runtime.contract_replies import django_response
 from seampact.django.runtime.request_state import state_of
 from seampact.drf.runtime.access_classes import (
     AUTHENTICATION_CLASSES,
@@ -35,6 +36,7 @@ from seampact.drf.runtime.session_csrf import csrf_tagged
 from seampact.hooks import ResolvedScope
 
 _RENDERER: Final = JSONRenderer
+_NOT_FOUND_STATUS: Final = 404
 
 
 class Admission(Protocol):
@@ -87,6 +89,15 @@ class ContractView(APIView):
 
     def get_throttles(self) -> list[BaseThrottle]:
         return self._access_instances(THROTTLE_CLASSES, BaseThrottle)
+
+    # DRF types its handlers as answering a `Response`; the api's own reply is a Django response, as `finalize_response`
+    # accepts.
+    def options(self, request: Request, *args: object, **kwargs: object) -> HttpResponseBase:  # type: ignore[override]
+        """A CORS preflight the boundary left to the app reaches the view when no CORS layer answered it: the path's
+        404, as the boundary answers any method the path does not serve, never DRF's metadata."""
+        unserved = role_reply(self.contract, None, NOT_FOUND_ROLE, _NOT_FOUND_STATUS)
+
+        return django_response(request._request, self.contract, unserved)
 
     def admit(self, request: Request, operation_id: str) -> Admission:
         """Raises `BoundaryFailureError` or `ContractRefusal`, which the api's exception handler answers."""
