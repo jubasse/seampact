@@ -453,6 +453,8 @@ final readonly class Note
 ),
 ```
 
+</details>
+
 <details><summary>Pydantic (FastAPI, Django Ninja)</summary>
 
 A frozen, strict Pydantic model. The boundary validates the input with it before your handler runs.
