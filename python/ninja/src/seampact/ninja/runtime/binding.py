@@ -114,24 +114,17 @@ async def serve_operation_async(request: HttpRequest, placement: ApiPlacement, o
     raise PlacementUnavailableError(placement.api, _ROUTER_PIECE)
 
 
-def call_handler[A, T](method: Callable[[A], T | Awaitable[T]], argument: A) -> T:
-    """Calls a handler method from a sync view; raises `TypeError` for an `async def` method, which sync views do not
-    run (the boot check refuses it first)."""
-    if inspect.iscoroutinefunction(method):
-        raise TypeError(
-            f"seampact: the handler method {method.__qualname__} is `async def`, and the api's views are sync; "
-            "make it a plain `def`, or generate with the target option `views: async`."
-        )
+def async_handler_error(method: Callable[..., object], result: Awaitable[object]) -> TypeError:
+    """The error a sync view raises when a handler method returned an awaitable; the boot check refuses an `async def`
+    method first. A coroutine is closed, so Python never warns that it was not awaited."""
+    if inspect.iscoroutine(result):
+        result.close()
 
-    result = method(argument)
-
-    if isinstance(result, Awaitable):
-        raise TypeError(
-            f"seampact: the handler method {method.__qualname__} returned an awaitable from a sync view; return the "
-            "result itself, or generate with the target option `views: async`."
-        )
-
-    return result
+    return TypeError(
+        f"seampact: the handler method {getattr(method, '__qualname__', method)} returned an awaitable, and the api's "
+        "views are sync; make it a plain `def` returning its result, or generate with the target option "
+        "`views: async`."
+    )
 
 
 async def call_handler_async[A, T](method: Callable[[A], T | Awaitable[T]], argument: A) -> T:

@@ -35,8 +35,7 @@ _VIEW_PREFIX: Final = "_view_"
 _CONTRACT_MODULE: Final = "contract"
 _SCHEMAS_MODULE: Final = "schemas"
 _BIND_DOC: Final = (
-    "Adds api '{api}' to the app's NinjaAPI under `prefix`; the prefix where the app includes `api.urls`, plus "
-    "`prefix`, must equal the entry's mount."
+    "Adds the api's Router to `api`; the URLconf prefix of `api.urls` plus `prefix` must equal the entry's mount."
 )
 
 
@@ -138,6 +137,8 @@ def _handler_factories(layout: ApiLayout) -> list[str]:
 
 
 def _handler_call(layout: ApiLayout, operation_id: str, views: ViewsMode) -> list[str]:
+    """A sync call narrows the method's result itself: the checkers cannot infer the result union through a generic
+    helper."""
     names = layout.operations[operation_id]
     parameters = [f"endpoints: {names.endpoints}", f"request: {names.request}"]
 
@@ -149,7 +150,12 @@ def _handler_call(layout: ApiLayout, operation_id: str, views: ViewsMode) -> lis
 
     return [
         *bracketed("", f"def {_CALL_PREFIX}{names.method}", parameters, f" -> {names.result}:"),
-        f"{INDENT}return {_RUNTIME}.call_handler(endpoints.{names.method}, request)",
+        f"{INDENT}result = endpoints.{names.method}(request)",
+        "",
+        f"{INDENT}if isinstance(result, {_ABC}.Awaitable):",
+        f"{INDENT * 2}raise {_RUNTIME}.async_handler_error(endpoints.{names.method}, result)",
+        "",
+        f"{INDENT}return result",
     ]
 
 
@@ -205,7 +211,7 @@ def _bind(
     ]
     lines = [
         *bracketed("", f"def {layout.bind_function}", parameters, " -> None:"),
-        f'{INDENT}"""{_BIND_DOC.format(api=ir.api.id)}"""',
+        f'{INDENT}"""{_BIND_DOC}"""',
         f"{INDENT}binding = {_RUNTIME}.api_binding(",
         f"{INDENT * 2}PLACEMENT,",
         f"{INDENT * 2}_{_CONTRACT_MODULE}.CONTRACT,",
