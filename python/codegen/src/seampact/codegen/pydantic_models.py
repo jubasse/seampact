@@ -13,6 +13,7 @@ from typing import Final
 
 from seampact.codegen.names import ApiNames
 from seampact.codegen.printer import INDENT, PythonModule, fits, string_literal
+from seampact.codegen.redacted_members import REDACTED_CLASS, redacted_marker_block
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.ir.hydration import OMITTED
 from seampact.ir.model import (
@@ -38,7 +39,6 @@ class RulesMode(StrEnum):
 
 
 _MODEL_CONFIG: Final = "_MODEL_CONFIG"
-_REDACTED_CLASS: Final = "_Redacted"
 _OR_NONE: Final = " | None"
 _NATIVE_BOUNDS: Final = {"minimum": "ge", "maximum": "le", "exclusive_minimum": "gt", "exclusive_maximum": "lt"}
 _FORMAT_TYPES: Final = {
@@ -73,6 +73,7 @@ class _Emission:
                 f"{INDENT}protected_namespaces=(),",
                 f'{INDENT}regex_engine="rust-regex",',
                 f"{INDENT}allow_inf_nan=False,",
+                f"{INDENT}hide_input_in_errors=True,",
                 ")",
             ]
         )
@@ -164,7 +165,7 @@ class _Emission:
             "",
             f"{INDENT}def __repr_args__(self) -> {abc}.Iterator[tuple[str | None, object]]:",
             f"{INDENT}{INDENT}for name, value in super().__repr_args__():",
-            f"{INDENT}{INDENT}{INDENT}yield name, {_REDACTED_CLASS}() if name in {redacted} else value",
+            f"{INDENT}{INDENT}{INDENT}yield name, {REDACTED_CLASS}() if name in {redacted} else value",
         ]
 
     def _declare_redacted(self) -> None:
@@ -172,15 +173,7 @@ class _Emission:
             return
 
         self._redacted_declared = True
-        self.module.add_block(
-            [
-                f"class {_REDACTED_CLASS}:",
-                f'{INDENT}"""Stands for a sensitive value in a model\'s `repr`."""',
-                "",
-                f"{INDENT}def __repr__(self) -> str:",
-                f'{INDENT}{INDENT}return "[redacted]"',
-            ]
-        )
+        self.module.add_block(redacted_marker_block())
 
     def _member(self, attribute: str, member: Property, at: IrPlace) -> list[str]:
         annotation = self.annotation(member.type, at.below("type"))

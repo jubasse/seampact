@@ -15,6 +15,7 @@ _MODEL_CONFIG = _pydantic.ConfigDict(
     protected_namespaces=(),
     regex_engine="rust-regex",
     allow_inf_nan=False,
+    hide_input_in_errors=True,
 )
 
 
@@ -338,7 +339,7 @@ class PurgeTaskPath(_pydantic.BaseModel):
 
 
 class _Redacted:
-    """Stands for a sensitive value in a model's `repr`."""
+    """Stands for a sensitive value in a `repr`."""
 
     def __repr__(self) -> str:
         return "[redacted]"

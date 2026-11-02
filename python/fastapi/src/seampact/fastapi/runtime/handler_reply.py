@@ -18,6 +18,7 @@ from seampact.codegen.runtime.page_reply import PageParts, page_parts
 from seampact.codegen.runtime.replies import CONTENT_TYPE, JSON_MEDIA, Reply, error_reply, json_bytes, success_body
 from seampact.codegen.runtime.wire_codec import WireCodec
 from seampact.fastapi.runtime.handler_call import call_handler
+from seampact.fastapi.runtime.page_facts import page_facts
 
 _ITEM_SHAPE: Final = "item"
 _PAGE_SHAPE: Final = "page"
@@ -101,27 +102,27 @@ async def _page(
             "not its generated page class; return the generated page."
         )
 
-    facts = {_fact_name(field.name): getattr(page, field.name) for field in dataclasses.fields(page)}
+    attributes = {field.name: getattr(page, field.name) for field in dataclasses.fields(page)}
+    facts = page_facts(operation_id, page, attributes)
     items = WireCodec(contract).body_to_wire(response, facts.pop(_ITEMS, []))
     visible = await visible_output(context.access, context.hooks, call_handler, response, items)
+
+    if not isinstance(visible, list):
+        raise BoundaryFailureError(
+            f"seampact: the items of operation '{operation_id}' encoded to a {type(visible).__qualname__}, not a "
+            "list; return the page's items as a list."
+        )
 
     return page_parts(
         contract,
         operation_id,
         context.query,
         context.raw_query,
-        visible if isinstance(visible, list) else [],
+        visible,
         facts,
         status,
         context.path,
     )
-
-
-def _fact_name(attribute: str) -> str:
-    """The paging style's name of a generated page attribute: `next_cursor` is the fact `nextCursor`."""
-    first, *rest = attribute.split("_")
-
-    return first + "".join(word.capitalize() for word in rest)
 
 
 def code_reply(contract: ApiContract, operation_id: str, code: str, params: object) -> Reply:
