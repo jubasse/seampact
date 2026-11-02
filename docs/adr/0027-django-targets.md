@@ -95,7 +95,7 @@ The body read:
 
 #### Routes
 
-Codegen emits, per api, a `urls` module of `path()` entries. The app includes it at `""` in its root URLconf. Each placeholder uses Django's `str` converter, named after its input attribute, so it takes one whole segment. Per path depth, literal segments come before placeholders. The DRF and Ninja sections say which view each entry points to. `generate` refuses the path segments ADR 0026 "Routes" lists, with the same codes.
+Codegen emits, per api, a `urls` module of `path()` entries. The app includes it at `""` in its root URLconf. Each placeholder uses Django's `str` converter, named `path_<attribute>` after its input attribute, so it takes one whole segment and never clashes with a view argument such as `request` or `self`. Per path depth, literal segments come before placeholders. The DRF and Ninja sections say which view each entry points to. `generate` refuses the path segments ADR 0026 "Routes" lists, with the same codes.
 
 The boundary matches the raw target against the contract templates. The raw target is the WSGI `RAW_URI` without its query (gunicorn), or the WSGI `REQUEST_URI`, or the ASGI `raw_path` (uvicorn). `runserver` gives none: the boundary matches the decoded `path_info` and logs once at start which raw-path rules it cannot apply. The suite runs on gunicorn and uvicorn.
 
