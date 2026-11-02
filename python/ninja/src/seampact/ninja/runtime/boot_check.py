@@ -14,7 +14,7 @@ from seampact.codegen.runtime.public_origin import public_origin_problem
 from seampact.django.runtime.api_settings import SETTINGS_NAME, SettingsError, api_settings
 from seampact.django.runtime.boot_check import async_methods, built_classes
 from seampact.ninja.runtime.binding import ApiBinding, binding_of
-from seampact.ninja.runtime.placement import ViewsMode
+from seampact.ninja.views_mode import ViewsMode
 
 _HOOK_METHODS: Final = {"authenticate": "authenticate", "deciders": "decide", "scope_resolvers": "resolve_scope"}
 

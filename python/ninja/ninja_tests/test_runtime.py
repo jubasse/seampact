@@ -3,8 +3,10 @@ and hooks from `bind_<api>()`, the route names reverse under the NinjaAPI's name
 marks the boundary sets, Ninja still calls the wrapped `on_exception`, and Pydantic 1 is refused at boot."""
 
 import importlib
+import json
 import sys
 from collections.abc import Callable, Iterator
+from http import HTTPStatus
 from importlib import metadata
 from types import ModuleType
 
@@ -87,6 +89,16 @@ def test_the_contract_views_carry_the_boundarys_marks_once_the_urlconf_is_read(b
 
     assert getattr(view, "login_required", True) is False
     assert getattr(view, "seampact_contract", None) is boundary.contract
+
+
+def test_a_cors_preflight_no_cors_layer_answered_gets_the_paths_404_not_ninjas_405(bound_api: NinjaAPI) -> None:
+    preflight = RequestFactory().options(
+        "/v1/health", headers={"Origin": "https://app.example.com", "Access-Control-Request-Method": "GET"}
+    )
+    answered = get_resolver().resolve("/v1/health").func(preflight)
+
+    assert answered.status_code == HTTPStatus.NOT_FOUND
+    assert json.loads(answered.content)["code"] == "api.not_found"
 
 
 def test_ninja_calls_the_wrapped_on_exception_for_an_auth_failure(monkeypatch: pytest.MonkeyPatch) -> None:

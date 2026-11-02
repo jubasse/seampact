@@ -28,6 +28,7 @@ from seampact.hooks import (
 )
 from seampact.ninja.runtime.exceptions import recording_on_exception
 from seampact.ninja.runtime.placement import AccessSettings, ApiPlacement, Factory, OperationRoute
+from seampact.ninja.runtime.preflight import PREFLIGHT_METHOD, unserved_preflight_view
 
 _NO_ACCESS: Final = AccessSettings()
 
@@ -169,7 +170,8 @@ def add_operation[E, R](
 
 def bind_api(binding: ApiBinding) -> None:
     """Adds the api's Router to the app's NinjaAPI; each operation runs the `auth=` and throttles the app gave its
-    access kind, none otherwise, so an app-wide `NinjaAPI(auth=...)` never reaches a contract route."""
+    access kind, none otherwise, so an app-wide `NinjaAPI(auth=...)` never reaches a contract route; each path also
+    answers a CORS preflight no CORS layer answered with its 404."""
     router = Router()
 
     for bound in binding.operations.values():
@@ -183,6 +185,18 @@ def bind_api(binding: ApiBinding) -> None:
             throttle=list(settings.throttle),
             include_in_schema=False,
             url_name=bound.route.name,
+        )
+
+    # One preflight view per contract path, under the path's URL name.
+    for path_operation in {bound.route.path: bound for bound in binding.operations.values()}.values():
+        preflight = unserved_preflight_view(binding.contract, binding.placement.views, path_operation.view)
+        router.add_api_operation(
+            path_operation.route.path,
+            [PREFLIGHT_METHOD],
+            preflight,
+            auth=None,
+            include_in_schema=False,
+            url_name=path_operation.route.name,
         )
 
     binding.api.add_router(binding.prefix, router)
