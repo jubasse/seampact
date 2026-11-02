@@ -6,7 +6,8 @@ and runs the outgoing response check."""
 
 import inspect
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
+from types import MappingProxyType
 from typing import ClassVar, Final
 
 from asgiref.sync import iscoroutinefunction, markcoroutinefunction
@@ -72,7 +73,7 @@ class ContractBoundary:
     generated_by: ClassVar[str]
     contract: ClassVar[ApiContract]
     settings_keys: ClassVar[Sequence[str]] = ()
-    handler_resources: ClassVar[Sequence[str]] = ()
+    handler_resources: ClassVar[Mapping[str, Sequence[str]]] = MappingProxyType({})
     frameworks: ClassVar[Sequence[AcceptedFramework]] = ()
     framework_routes: ClassVar[Sequence[FrameworkRouteRule]] = ()
     # The target options of ADR 0026 the boundary reads, as the generator recorded them; `settings.SEAMPACT` and an
@@ -100,7 +101,7 @@ class ContractBoundary:
 
         if problems:
             listed = "\n".join(f"- {problem}" for problem in problems)
-            raise ImproperlyConfigured(f"seampact: the api '{self.api}' cannot serve:\n{listed}")
+            raise ImproperlyConfigured(f"seampact: the api '{self.api}' cannot start:\n{listed}")
 
     def __call__(self, request: HttpRequest) -> HttpResponseBase | Awaitable[HttpResponseBase]:
         if self.async_mode:

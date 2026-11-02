@@ -2,7 +2,7 @@
 # Writes a Python consumer's third-party requirements, every file pinned by hash, from the workspace lock
 # `python/uv.lock` (ADR 0011 "Unpublished installs for test consumers"): `requirements.sh <out> <distribution> <extra>
 # <server>` lists what <distribution> with its <extra> needs, without the seampact distributions, then the server
-# package <server> of the lock's dev group with what it needs. <out> is new.
+# package <server> of the lock's serve group with what it needs. <out> is new.
 set -eu
 
 out="$1"
@@ -30,7 +30,7 @@ if [ -z "$server_names" ]; then
   exit 1
 fi
 
-uv export --frozen --no-emit-workspace --only-group dev --no-header --no-annotate |
+uv export --frozen --no-emit-workspace --only-group serve --no-header --no-annotate |
   awk -v wanted="$server_names" -v listed="$listed_names" '
     BEGIN {
       split(wanted, names, "\n"); for (i in names) keep[names[i]] = 1

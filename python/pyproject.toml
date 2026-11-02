@@ -63,8 +63,13 @@ dev = [
     "types-jsonschema==4.26.0.20261006",
     "rich==15.0.0",
     "ruff==0.17.3",
-    "uvicorn==0.54.0",
     "httpx2==2.16.0",
+]
+# The servers the consumer tests run a generated app under: uvicorn for ASGI, gunicorn for WSGI (and ASGI through
+# uvicorn's worker). Installed by those tests only, never by a workspace sync.
+serve = [
+    "gunicorn==26.2.0",
+    "uvicorn==0.54.0",
 ]
 
 [tool.ruff]

@@ -4,7 +4,7 @@ warning, and `manage.py seampact_check` exits non-zero."""
 
 import inspect
 import re
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from importlib import import_module
 from typing import TYPE_CHECKING, ClassVar, Final, Protocol
 
@@ -15,7 +15,7 @@ from django.urls.exceptions import Resolver404
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule, allow_listed, base_path_of
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, framework_version_problems
-from seampact.codegen.runtime.hook_check import hook_needs
+from seampact.codegen.runtime.hook_check import HookFixes, hook_needs, hook_problems
 from seampact.codegen.runtime.ir_view import ir_int, ir_map, ir_string
 from seampact.codegen.runtime.version import other_version_problem
 from seampact.django.runtime.api_settings import (
@@ -54,7 +54,7 @@ class BoundaryDeclaration(Protocol):
     generated_by: ClassVar[str]
     contract: ClassVar[ApiContract]
     settings_keys: ClassVar[Sequence[str]]
-    handler_resources: ClassVar[Sequence[str]]
+    handler_resources: ClassVar[Mapping[str, Sequence[str]]]
     frameworks: ClassVar[Sequence[AcceptedFramework]]
     framework_routes: ClassVar[Sequence[FrameworkRouteRule]]
     body_validation: ClassVar[bool]
@@ -135,7 +135,7 @@ def _settings_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
         for key in own
         if key not in boundary.settings_keys
     ]
-    problems += _factory_problems(boundary.api, HANDLERS_KEY, boundary.handler_resources)
+    problems += _handler_problems(boundary)
 
     if boundary.body_validation:
         problems.append(
@@ -151,38 +151,76 @@ def _settings_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
     return problems
 
 
-def _hook_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
-    contract = boundary.contract
-    needs = hook_needs(contract)
-    authenticated = [
-        identity
-        for identity in needs.identities
-        if ir_string(contract.declaration("identities", identity), "signed") is None
-    ]
-    needed = {AUTHENTICATE_KEY: authenticated, DECIDERS_KEY: needs.deciders, SCOPE_RESOLVERS_KEY: needs.scopes}
-    problems: list[str] = []
-
-    for key in HOOK_KEYS:
-        problems += _factory_problems(boundary.api, key, sorted(needed[key]))
-
-    return problems
-
-
-def _factory_problems(api: str, key: str, names: Sequence[str]) -> list[str]:
+def _handler_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
     try:
-        paths = dotted_paths(api, key)
+        paths = dotted_paths(boundary.api, HANDLERS_KEY)
     except SettingsError as broken:
         return [str(broken)]
 
     problems = [
-        f"settings.{SETTINGS_NAME}['{api}']['{key}'] has no entry for '{name}'; add the dotted path of its factory."
-        for name in names
-        if name not in paths
+        f"operation '{operation_id}' has no handler factory: add the dotted path of the '{resource}' factory under "
+        f"settings.{SETTINGS_NAME}['{boundary.api}']['{HANDLERS_KEY}']."
+        for resource, operation_ids in boundary.handler_resources.items()
+        if resource not in paths
+        for operation_id in operation_ids
     ]
-    problems += [
+
+    return problems + _registered_problems(boundary.api, HANDLERS_KEY, paths, list(boundary.handler_resources))
+
+
+def _hook_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
+    """The hooks the contract needs and the settings do not name, worded as every Python target words them, then
+    the named hooks the contract does not use or that do not import."""
+    api, contract = boundary.api, boundary.contract
+    needs = hook_needs(contract)
+    signed = [
+        identity
+        for identity in needs.identities
+        if ir_string(contract.declaration("identities", identity), "signed") is not None
+    ]
+    needed = {
+        AUTHENTICATE_KEY: [identity for identity in needs.identities if identity not in signed],
+        DECIDERS_KEY: needs.deciders,
+        SCOPE_RESOLVERS_KEY: needs.scopes,
+    }
+    registered: dict[str, Mapping[str, str]] = {}
+    problems: list[str] = []
+
+    for key in HOOK_KEYS:
+        try:
+            registered[key] = dotted_paths(api, key)
+        except SettingsError as broken:
+            registered[key] = {}
+            problems.append(str(broken))
+
+    problems += hook_problems(
+        contract,
+        identities=[*registered[AUTHENTICATE_KEY], *signed],
+        scopes=list(registered[SCOPE_RESOLVERS_KEY]),
+        deciders=list(registered[DECIDERS_KEY]),
+        fixes=HookFixes(
+            authenticate=_add_path(api, AUTHENTICATE_KEY),
+            decider=_add_path(api, DECIDERS_KEY),
+            scope_resolver=_add_path(api, SCOPE_RESOLVERS_KEY),
+        ),
+    )
+
+    for key in HOOK_KEYS:
+        problems += _registered_problems(api, key, registered[key], needed[key])
+
+    return problems
+
+
+def _add_path(api: str, key: str) -> str:
+    return f"add the dotted path of its factory under settings.{SETTINGS_NAME}['{api}']['{key}']"
+
+
+def _registered_problems(api: str, key: str, paths: Mapping[str, str], needed: Sequence[str]) -> list[str]:
+    """The named factories the contract does not use, and those that do not import or build an `async def`."""
+    problems = [
         f"settings.{SETTINGS_NAME}['{api}']['{key}'] names '{name}', which the contract does not use; remove it."
         for name in paths
-        if name not in names
+        if name not in needed
     ]
 
     for name, path in paths.items():

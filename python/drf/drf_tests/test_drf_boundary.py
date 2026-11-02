@@ -360,7 +360,7 @@ def test_the_boot_check_refuses_to_serve_and_lists_every_problem() -> None:
 
     message = str(refused.value)
     assert "unknown key 'unknown'" in message
-    assert "no entry for 'channels'" in message
+    assert "operation 'getChannel' has no handler factory" in message
     assert "operation 'getChannel'" in message and "not its generated view" in message
 
 
