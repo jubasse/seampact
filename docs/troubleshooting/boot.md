@@ -117,6 +117,22 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `settings.SEAMPACT['<api>']['access'] names the access kind '<kind>', which no operation of the api has` | Remove that kind. |
 | `settings.SEAMPACT['<api>']['access']['<kind>']['<name>'] names '<path>', which ...` | Name DRF classes of the matching base by dotted path: `BaseAuthentication`, `BasePermission` or `BaseThrottle`. |
 
+## Django Ninja
+
+The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. It comes when the server loads the app, and `python manage.py seampact_check` prints the same list. See [The boot check](../backend/ninja.md#the-boot-check).
+
+| You see | Do |
+|---|---|
+| `the api '<api>' is not bound: call bind_<api>(...)` | Call `bind_<api>(api, prefix=..., handlers=...)` in the module that builds the `NinjaAPI` your root URLconf includes. |
+| `settings.SEAMPACT['<api>'] is set, and the api takes its values from bind_<api>()` | Remove that settings entry and pass its values to `bind_<api>()`. |
+| `the api '<api>' sets bodyValidation, which this release of seampact-ninja does not serve yet` | Remove `bodyValidation` from the entry and `body_validation` from `bind_<api>()`. |
+| `the api '<api>' writes absolute URLs ... and bind_<api>(public_origin=...) is not set` | Pass `public_origin="https://api.example.com"` (a scheme, a host, an optional port) to `bind_<api>()`. |
+| `the api '<api>' writes relative URLs ... and bind_<api>(public_origin=...) is set` | Drop `public_origin` from the call, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `bind_<api>(access=...) has the unknown access kind '<kind>'` | Key `access` by `public`, `optional`, `identity` or `signed`. |
+| `bind_<api>(access=...) names the access kind '<kind>', which no operation of the api has` | Remove that kind. |
+| `the NinjaAPI's on_exception was replaced after bind_<api>()` | Replace `api.on_exception` before calling `bind_<api>()`. |
+| `bind_<api>() gets ..., which builds a <Class> whose method '<name>' is an async def` | Write the method as a plain `def`, or generate with `views: async`. |
+
 ## Spring Boot
 
 The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. See [The boot check](../backend/spring-boot.md#the-boot-check).

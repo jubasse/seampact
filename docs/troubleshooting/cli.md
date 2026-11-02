@@ -22,7 +22,7 @@
 | `binary.override-not-root` | Python: a `pyproject.toml` that is not the root project's sets `[tool.seampact.binary]`. Remove it there, and set it in your own project. |
 | `binary.platform-unsupported` | Python: the binary has no build for this host. It exists for Linux with glibc (x86_64, aarch64; musl and Alpine are not served), macOS (x86_64, arm64) and Windows (AMD64). Use your own build with `[tool.seampact.binary]`. |
 | `binary.compile-timeout` | Python: the compiler ran past its deadline. Run it again, and report the contract if it hangs again. |
-| `binary.document-unreadable` | Python: FastAPI's `nativeDocs` got no readable document from the binary. Report the binary version. |
+| `binary.document-unreadable` | Python: the `nativeDocs` of FastAPI or Ninja got no readable document from the binary. Report the binary version. |
 | `ir.malformed` | Python: an IR does not read. Compile or bundle the contract again with seampact, and report its source if it persists. |
 | `binary.cache-unsafe` | Keep the binary cache private: `chmod 700` the directory the message names (`chmod g-w` when the message names its group), or remove it. On Windows, keep the cache under `%LOCALAPPDATA%`. |
 | `binary.cache-unavailable` | The binary cache directory is relative. Set the setting the message names to an absolute path. |

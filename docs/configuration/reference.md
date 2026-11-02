@@ -34,7 +34,7 @@ One entry per name. Write the keys of one form.
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `id` | string | required | Names the entry. It is the folder under `outDir`. |
-| `use` | string | required | The target package, such as `@seampact/codegen-ts`. A Python target is `pypi:` then the distribution: `pypi:seampact-fastapi`, `pypi:seampact-drf`. |
+| `use` | string | required | The target package, such as `@seampact/codegen-ts`. A Python target is `pypi:` then the distribution: `pypi:seampact-fastapi`, `pypi:seampact-drf`, `pypi:seampact-ninja`. |
 | `api` | string | one of `api`, `apis` | The api to generate. `<source>/<api>` when two sources hold the name. |
 | `apis` | list of strings | one of `api`, `apis` | Several apis, each under its own folder. |
 | `document` | string | all operations | Generate only the operations of this document of the api. |
