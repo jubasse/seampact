@@ -7,7 +7,7 @@ at generate until a later release checks it. Under `seampact-consistent` every v
 `pattern` is always the framework-free pattern check on the IR's normalised pattern, never DRF's `RegexField`."""
 
 from collections.abc import Callable
-from decimal import Decimal
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from enum import StrEnum
 from typing import Final
 
@@ -148,9 +148,6 @@ class SerializerFields:
 
         number_arguments: list[Expression] = list(presence)
 
-        if type_use.type is ScalarType.INTEGER:
-            self._refuse_fractional_bounds(refinements, at)
-
         if self._rules is RulesMode.NATIVE:
             self._refuse_unchecked_under_native(refinements, _NUMBER_RULES_DRF_LEAVES, f"a '{type_use.type}' use", at)
             number_arguments += _native_bounds(refinements, type_use.type)
@@ -185,16 +182,6 @@ class SerializerFields:
                     f"rule.{key}.unsupported",
                     f"The rule '{key}' on {use} has no DRF check under `rules: native` in this release.",
                     "Remove the rule from this use until a later seampact-drf release checks it.",
-                    at.below("refinements", key),
-                )
-
-    def _refuse_fractional_bounds(self, refinements: Refinements, at: IrPlace) -> None:
-        for key, value in (("minimum", refinements.minimum), ("maximum", refinements.maximum)):
-            if value is not None and Decimal(value) % 1 != 0:
-                self._refusals.add(
-                    f"rule.{key}.fractional",
-                    f"The rule '{key}' {value} on an integer use is not a whole number.",
-                    f"Write '{key}' as the nearest whole number inside the bound.",
                     at.below("refinements", key),
                 )
 
@@ -254,11 +241,17 @@ def _length_validator(runtime: str, minimum: int | None, maximum: int | None) ->
 
 
 def _native_bounds(refinements: Refinements, scalar: ScalarType) -> list[Expression]:
-    return [
-        f"{key}={number_literal(value, scalar)}"
-        for key, value in (("min_value", refinements.minimum), ("max_value", refinements.maximum))
-        if value is not None
-    ]
+    bounds = (("min_value", refinements.minimum, ROUND_CEILING), ("max_value", refinements.maximum, ROUND_FLOOR))
+
+    return [f"{key}={_bound_literal(value, scalar, rounding)}" for key, value, rounding in bounds if value is not None]
+
+
+# An integer use's fractional bound is the nearest whole number inside it: `minimum: 1.5` admits 2 and above.
+def _bound_literal(value: str, scalar: ScalarType, rounding: str) -> str:
+    if scalar is not ScalarType.INTEGER:
+        return number_literal(value, scalar)
+
+    return format(Decimal(value).to_integral_value(rounding=rounding), "f")
 
 
 def _validators(validators: list[Expression]) -> list[Expression]:
