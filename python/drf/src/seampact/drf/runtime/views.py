@@ -11,6 +11,7 @@ from typing import ClassVar, Final, Protocol
 
 from django.http import HttpRequest, HttpResponseBase
 from rest_framework.authentication import BaseAuthentication
+from rest_framework.negotiation import DefaultContentNegotiation
 from rest_framework.parsers import BaseParser
 from rest_framework.permissions import BasePermission
 from rest_framework.renderers import BaseRenderer, JSONRenderer
@@ -69,6 +70,8 @@ class ContractView(APIView):
     credentials: ClassVar[Mapping[str, CredentialsType]] = MappingProxyType({})
     renderer_classes: Sequence[type[BaseRenderer]] = (_RENDERER,)
     parser_classes: Sequence[type[BaseParser]] = (DecodedBodyParser,)
+    # DRF picks the parser through the negotiator: the app's DEFAULT_CONTENT_NEGOTIATION_CLASS must not choose it.
+    content_negotiation_class = DefaultContentNegotiation
     versioning_class = None
     schema = None
 

@@ -2,7 +2,7 @@
 kind: it signs in the caller of a bearer token of the suite's credentials and leaves any other request to the
 `user` hook. The hook then reads the user DRF set, so the suite fails if a contract route skipped the class."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Final
 
 from rest_framework.authentication import BaseAuthentication
@@ -16,7 +16,7 @@ _BEARER_CHALLENGE: Final = "Bearer"
 @dataclass(frozen=True, slots=True)
 class TokenUser:
     user_id: str
-    token: str
+    token: str = field(repr=False)
     is_authenticated: bool = True
 
 
