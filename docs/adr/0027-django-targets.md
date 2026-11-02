@@ -53,7 +53,7 @@ Nine Django, DRF and Ninja behaviours shape the placement (spike):
 - **DRF.** 3.18, the matrix `floor`. DRF 3.18.0 asks for Django 5.2 or later and declares 5.2, 6.0 and 6.1; 3.18.0 and 3.18.3 gave the same result in the spike.
 - **Ninja.** 1.5.3 or later, the matrix `floor`: the first release whose metadata declares Django 6.0, so pip installs it beside Django 6 (1.4.5 runs, but its metadata stops at 5.1; 1.4.0 fails on Django 6.1, spike). The latest is 1.7.
 - **Pydantic** for Ninja: ADR 0026's range.
-- **Matrix.** The matrix records the tested minors of Django, DRF and Ninja. A version below the floor is refused (`config.matrix.incompatible`). A minor outside the tested ones, within a tested major, is untested: `generate` warns (ADR 0009), and the boot check logs one warning. A major outside the matrix is refused at boot ("The system check and the boot check"). `allowUntested` names these frameworks by major (`django@6`, `djangorestframework@3`, `django-ninja@1`); only a 0.x framework, such as FastAPI, is named by minor. CI runs the floor and the latest.
+- **Matrix.** The matrix records the tested minors of Django, DRF and Ninja. A version below the floor is refused (`config.matrix.incompatible`). A minor outside the tested ones, within a tested major, is untested: `generate` warns, or refuses under `checks.matrix: error` (ADR 0009, ADR 0011), and the boot check logs one warning. A major outside the matrix is refused at boot ("The system check and the boot check"). `allowUntested` names these frameworks by major (`django@6`, `djangorestframework@3`, `django-ninja@1`); only a 0.x framework, such as FastAPI, is named by minor. CI runs the floor and the latest.
 
 #### Sync and async
 

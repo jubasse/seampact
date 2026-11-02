@@ -6,10 +6,11 @@ import logging
 from collections.abc import Mapping
 from typing import Final
 
+from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 
 from seampact.codegen.runtime.contract import ApiContract
-from seampact.codegen.runtime.failures import ContractRefusal
+from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal, failure_place
 from seampact.codegen.runtime.replies import Reply, error_reply, internal_error_reply, role_params
 from seampact.codegen.runtime.sync_driver import call_without_suspension, run_without_suspension
 from seampact.django.runtime.api_settings import SettingsError, unexpected_error_listener
@@ -62,20 +63,23 @@ def role_answer(
 
 
 def unexpected_response(
-    request: HttpRequest, contract: ApiContract, operation_id: str | None, reason: str, cause: BaseException | None
+    request: HttpRequest, contract: ApiContract, operation_id: str | None, context: str, cause: BaseException | None
 ) -> HttpResponse:
     """The api's 500, after the log line and the unexpected-error listener."""
-    report_unexpected(request, contract, operation_id, reason, cause)
+    report_unexpected(request, contract, operation_id, context, cause)
 
     return django_response(request, contract, internal_error_reply(contract, operation_id))
 
 
 def report_unexpected(
-    request: HttpRequest, contract: ApiContract, operation_id: str | None, reason: str, cause: BaseException | None
+    request: HttpRequest, contract: ApiContract, operation_id: str | None, context: str, cause: BaseException | None
 ) -> None:
-    """Logs the failure and tells the listener; a listener that fails is logged too, and the reply stays the 500."""
+    """Logs the failure and tells the listener; a listener that fails is logged too, and the reply stays the 500. The
+    reason names the cause's class and place; its message and traceback may carry an input value, so they reach the
+    log and the listener under `DEBUG` only."""
+    reason = context if cause is None else f"{context}: {_cause_text(cause)}"
     api_logger = logger(contract.api)
-    api_logger.error("seampact: %s (operation %s)", reason, operation_id, exc_info=cause)
+    api_logger.error("seampact: %s (operation %s)", reason, operation_id, exc_info=cause if settings.DEBUG else None)
 
     try:
         listener = unexpected_error_listener(contract.api, request)
@@ -85,3 +89,12 @@ def report_unexpected(
             run_without_suspension(call_without_suspension(listener, failure))
     except (SettingsError, Exception):
         api_logger.exception("seampact: the unexpected-error listener of api '%s' failed", contract.api)
+
+
+def _cause_text(cause: BaseException) -> str:
+    place = failure_place(cause)
+
+    if settings.DEBUG and not isinstance(cause, BoundaryFailureError):
+        return f"{place}: {cause}"
+
+    return place

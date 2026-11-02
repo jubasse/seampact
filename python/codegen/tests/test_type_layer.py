@@ -118,7 +118,7 @@ def test_a_multiple_of_a_large_number_is_judged_without_raising(
     if accepted:
         check_multiple_of(value, divisor)
     else:
-        with pytest.raises(ValueRuleError, match="multipleOf"):
+        with pytest.raises(ValueRuleError, match=f"not a multiple of {divisor}"):
             check_multiple_of(value, divisor)
 
 

@@ -537,13 +537,17 @@ def test_under_debug_only_djangos_technical_pages_leave_unchecked() -> None:
 
 
 def test_an_inner_middleware_answering_no_response_gets_the_apis_500() -> None:
-    response = Client().get("/v1/health", headers={"X-Answer": "none"})
+    # CommonMiddleware would fail on the missing response itself: the boundary must see it.
+    beside_the_boundary = [f"{_PACKAGE}.django.TasksBoundary", f"{__name__}.RaisingMiddleware"]
+
+    with override_settings(MIDDLEWARE=beside_the_boundary):
+        response = Client().get("/v1/health", headers={"X-Answer": "none"})
+
+        with override_settings(DEBUG_PROPAGATE_EXCEPTIONS=True), pytest.raises(Exception, match="not a response"):
+            Client().get("/v1/health", headers={"X-Answer": "none"})
 
     assert (response.status_code, _code(response)) == (500, "api.internal")
     assert "not a response" in failures[0].reason
-
-    with override_settings(DEBUG_PROPAGATE_EXCEPTIONS=True), pytest.raises(Exception, match="not a response"):
-        Client().get("/v1/health", headers={"X-Answer": "none"})
 
 
 def test_a_stream_that_fails_after_its_head_ends_short_and_the_listener_hears_of_it() -> None:

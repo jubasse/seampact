@@ -9,6 +9,7 @@ import re
 from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
+from fractions import Fraction
 from typing import Final
 from uuid import UUID
 
@@ -196,7 +197,8 @@ def check_bounds(
 
 
 def check_multiple_of(value: int | float | Decimal, divisor: str) -> None:
-    if exact_decimal(value) % Decimal(divisor) != 0:
+    """Compared as exact fractions: a decimal remainder raises past the context's precision on a large value."""
+    if Fraction(exact_decimal(value)) % Fraction(Decimal(divisor)) != 0:
         raise ValueRuleError("multipleOf", f"not a multiple of {divisor}")
 
 

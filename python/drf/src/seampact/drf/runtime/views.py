@@ -1,9 +1,9 @@
 """The base of the generated contract views (ADR 0027 "DRF"). It fixes what DRF would otherwise read from the app's
 defaults: one renderer and no default response header, so DRF adds neither `Allow` nor `Vary: Accept`; a fixed
 content negotiation, so `Accept` never answers 406; no parser and no versioning, since the views never read
-`request.data`; no authentication, permission or throttle class unless the app names some for the operation's access
-kind; no schema. A generated method admits the request, builds the typed request from the `Admission` and replies
-with the handler's result."""
+`request.data`; no authentication, permission or throttle class, since the classes an app names per access kind wait
+for a later release and the boot check refuses the `access` setting until then; no schema. A generated method admits
+the request, builds the typed request from the `Admission` and replies with the handler's result."""
 
 from collections.abc import Mapping, Sequence
 from types import MappingProxyType

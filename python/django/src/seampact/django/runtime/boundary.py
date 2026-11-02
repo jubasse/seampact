@@ -6,7 +6,7 @@ and runs the outgoing response check."""
 
 import inspect
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping, Sequence
 from types import MappingProxyType
 from typing import ClassVar, Final
 
@@ -20,7 +20,7 @@ from django.core.exceptions import (
     RequestDataTooBig,
     SuspiciousOperation,
 )
-from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase, StreamingHttpResponse
 
 from seampact.codegen.runtime.body_reader import PAYLOAD_TOO_LARGE_ROLE
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE, ApiContract
@@ -61,6 +61,8 @@ _ROLE_OF_EXCEPTION: Final = (
     (RequestDataTooBig, PAYLOAD_TOO_LARGE_ROLE, 413),
 )
 _CROSSED: Final = "an exception crossed the boundary"
+_STREAM_FAILED: Final = "the stream failed after its head went out"
+_TECHNICAL_PAGE_STATUSES: Final = frozenset({400, 404})
 _HTML: Final = "text/html"
 _HEAD: Final = "HEAD"
 _WSGI_CHUNK_BYTES: Final = 65536
@@ -116,12 +118,12 @@ class ContractBoundary:
             return _without_head_body(request, early)
 
         try:
-            response = _response(self.get_response(request))
+            reply: object = self.get_response(request)
         except Exception as propagated:
             self._report_propagated(request, propagated)
             raise
 
-        return self._checked(request, response)
+        return self._settled(request, reply)
 
     async def __acall__(self, request: HttpRequest) -> HttpResponseBase:
         early = self._step_one(request)
@@ -136,7 +138,29 @@ class ContractBoundary:
             self._report_propagated(request, propagated)
             raise
 
-        return self._checked(request, _response(settled))
+        return self._settled(request, settled)
+
+    def _settled(self, request: HttpRequest, reply: object) -> HttpResponseBase:
+        """The reply checked; a middleware inside that answered no response gets the api's 500 on a contract request,
+        unless the app asked Django to propagate exceptions."""
+        if isinstance(reply, HttpResponseBase):
+            return self._checked(request, reply)
+
+        failure = BoundaryFailureError(
+            f"seampact: the middleware inside the boundary answered a {type(reply).__qualname__}, not a response."
+        )
+        state = state_of(request, self.api)
+
+        if state is None:
+            raise failure
+
+        if settings.DEBUG_PROPAGATE_EXCEPTIONS:
+            report_unexpected(request, self.contract, state.operation_id, _CROSSED, failure)
+            raise failure
+
+        return _without_head_body(
+            request, unexpected_response(request, self.contract, state.operation_id, _CROSSED, failure)
+        )
 
     def _report_propagated(self, request: HttpRequest, propagated: Exception) -> None:
         """`DEBUG_PROPAGATE_EXCEPTIONS` re-raises into the boundary: it logs, tells the listener, and re-raises."""
@@ -178,7 +202,7 @@ class ContractBoundary:
         except ContractRefusal as refused:
             return refusal_response(request, self.contract, operation_id, refused)
         except BoundaryFailureError as failure:
-            return unexpected_response(request, self.contract, operation_id, str(failure), failure)
+            return unexpected_response(request, self.contract, operation_id, "decoding the input failed", failure)
 
         attach(request, BoundaryState(self.contract, operation_id, matched.raw_parameters, decoded))
         _route_without_origin(request)
@@ -243,7 +267,7 @@ class ContractBoundary:
 
         written = state.authored.find(_outgoing(response), request.method or "")
 
-        if settings.DEBUG and written is None and _is_debug_page(response):
+        if settings.DEBUG and written is None and _is_technical_page(response):
             logger(self.api).warning("seampact: Django's debug page leaves on operation %s", state.operation_id)
             return response
 
@@ -333,7 +357,35 @@ class ContractBoundary:
         if judged.reply.header("etag") is None and response.has_header("ETag"):
             del response["ETag"]
 
+        if isinstance(response, StreamingHttpResponse):
+            response.streaming_content = self._watched_chunks(request, state.operation_id, response.streaming_content)
+
         return response
+
+    def _watched_chunks(
+        self, request: HttpRequest, operation_id: str, chunks: Iterator[bytes] | AsyncIterator[bytes]
+    ) -> Iterator[bytes] | AsyncIterator[bytes]:
+        """The chunks at the writer's pace; a failure after the head went out cannot be replaced, so it is reported
+        and the body ends short (ADR 0026 "The outgoing response check")."""
+        if isinstance(chunks, AsyncIterator):
+            return self._watched_async_chunks(request, operation_id, chunks)
+
+        return self._watched_sync_chunks(request, operation_id, chunks)
+
+    def _watched_sync_chunks(self, request: HttpRequest, operation_id: str, chunks: Iterator[bytes]) -> Iterator[bytes]:
+        try:
+            yield from chunks
+        except Exception as failure:
+            report_unexpected(request, self.contract, operation_id, _STREAM_FAILED, failure)
+
+    async def _watched_async_chunks(
+        self, request: HttpRequest, operation_id: str, chunks: AsyncIterator[bytes]
+    ) -> AsyncIterator[bytes]:
+        try:
+            async for chunk in chunks:
+                yield chunk
+        except Exception as failure:
+            report_unexpected(request, self.contract, operation_id, _STREAM_FAILED, failure)
 
     def _responses_mode(self, operation_id: str) -> ResponsesMode:
         """The operation's `responses` in `settings.SEAMPACT`, else the api's, else the generated option."""
@@ -389,15 +441,6 @@ def _raw_target(request: HttpRequest) -> RawTarget | None:
     return wsgi_raw_target(request.META)
 
 
-def _response(reply: object) -> HttpResponseBase:
-    if not isinstance(reply, HttpResponseBase):
-        raise BoundaryFailureError(
-            f"seampact: the middleware inside the boundary answered a {type(reply).__qualname__}, not a response."
-        )
-
-    return reply
-
-
 def _outgoing(response: HttpResponseBase) -> OutgoingReply:
     headers = tuple((name.lower(), value) for name, value in response.items())
 
@@ -409,8 +452,12 @@ def _outgoing(response: HttpResponseBase) -> OutgoingReply:
     return OutgoingReply(response.status_code, headers, body if len(body) <= MAX_CHECKED_ERROR_BODY_BYTES else None)
 
 
-def _is_debug_page(response: HttpResponseBase) -> bool:
-    return str(response.get(CONTENT_TYPE) or "").startswith(_HTML)
+def _is_technical_page(response: HttpResponseBase) -> bool:
+    """Django's technical 404 page, or its technical page of a `BadRequest` or `SuspiciousOperation`: the pages it
+    renders under `DEBUG` without calling a handler. Its technical 500 follows a recorded exception instead."""
+    is_html = str(response.get(CONTENT_TYPE) or "").startswith(_HTML)
+
+    return is_html and response.status_code in _TECHNICAL_PAGE_STATUSES
 
 
 def _without_head_body(request: HttpRequest, response: HttpResponseBase) -> HttpResponseBase:

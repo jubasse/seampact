@@ -34,6 +34,7 @@ _ROLE_OF_STATUS: Final = {
     503: "serviceUnavailable",
 }
 _MILLISECONDS_PER_SECOND: Final = 1000
+_CROSSED_VIEW: Final = "an exception crossed the view"
 
 
 def contract_exception_reply(api: str, exception: Exception, context: Mapping[str, object]) -> HttpResponseBase | None:
@@ -51,7 +52,7 @@ def contract_exception_reply(api: str, exception: Exception, context: Mapping[st
 
     if state is None or isinstance(exception, BoundaryFailureError):
         operation_id = None if state is None else state.operation_id
-        return unexpected_response(request, contract, operation_id, str(exception), exception)
+        return unexpected_response(request, contract, operation_id, _CROSSED_VIEW, exception)
 
     operation_id = state.operation_id
 
@@ -61,10 +62,11 @@ def contract_exception_reply(api: str, exception: Exception, context: Mapping[st
 
         role = _role(exception)
     except BoundaryFailureError as failure:
-        return unexpected_response(request, contract, operation_id, str(failure), exception)
+        reason = f"the exception could not be answered: {failure}"
+        return unexpected_response(request, contract, operation_id, reason, exception)
 
     if role is None:
-        return unexpected_response(request, contract, operation_id, "an exception crossed the view", exception)
+        return unexpected_response(request, contract, operation_id, _CROSSED_VIEW, exception)
 
     reply = role_answer(contract, operation_id, role[0], role[1], _slots(exception))
 

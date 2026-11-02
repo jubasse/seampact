@@ -17,8 +17,8 @@ from seampact.ir.run.matrix_framework import (
 )
 
 _ERROR_LEVEL = "error"
-# A minor of a tested major is only warned of, whatever `checks.matrix` says (ADR 0027 "Matrix").
-_UNTESTED_MINOR = "config.matrix.untested-minor"
+# Untested versions follow `checks.matrix` (ADR 0011): a warning by default, refused at the error level.
+_UNTESTED_CODES = ("config.matrix.untested", "config.matrix.untested-minor")
 
 
 def check_matrix(
@@ -53,7 +53,7 @@ def check_matrix(
             if outcome is None:
                 continue
 
-            if outcome.code == _UNTESTED_MINOR or (outcome.code == "config.matrix.untested" and not untested_is_error):
+            if outcome.code in _UNTESTED_CODES and not untested_is_error:
                 warnings.append(outcome)
             else:
                 problems.append(outcome)
@@ -129,7 +129,7 @@ def _untested_minor(entry: AppConfigEntry, framework: MatrixFramework, version: 
     tested_minors = ", ".join(framework.tested_minors)
 
     return ConfigProblem(
-        _UNTESTED_MINOR,
+        "config.matrix.untested-minor",
         f"pip installed {framework.package} {version}, and the target '{entry.use}' is tested on {framework.id} "
         f"{tested_minors} only, so this minor is untested.",
         f"Use a tested minor of {framework.package} ({tested_minors}), or keep this one knowing it is untested.",

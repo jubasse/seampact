@@ -17,6 +17,7 @@ from seampact.codegen.runtime.framework_routes import FrameworkRouteRule, allow_
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, framework_version_problems
 from seampact.codegen.runtime.hook_check import HookFixes, hook_needs, hook_problems
 from seampact.codegen.runtime.ir_view import ir_int, ir_map, ir_string
+from seampact.codegen.runtime.reply_verdict import ResponsesMode
 from seampact.codegen.runtime.version import other_version_problem
 from seampact.django.runtime.api_settings import (
     AUTHENTICATE_KEY,
@@ -31,7 +32,7 @@ from seampact.django.runtime.api_settings import (
     dotted_paths,
     factory,
 )
-from seampact.django.runtime.error_handlers import unwrapped_error_handlers
+from seampact.django.runtime.error_handlers import unwrapped_error_handlers, wrap_error_handlers
 
 if TYPE_CHECKING:
     from django.urls.resolvers import ResolverMatch
@@ -44,6 +45,14 @@ _HTTP_ORIGIN_PREFIXES: Final = ("http://", "https://")
 # A Django pattern answers every method; an allow-list item names it with no method.
 _ANY_METHOD: Final = ""
 _ROUTE_CONVERTER: Final = re.compile(r"<[^<>]*>")
+_RESPONSES_KEY: Final = "responses"
+_OPERATIONS_KEY: Final = "operations"
+# Settings keys the generated code accepts that no release serves yet: refused by name, never ignored.
+_UNSERVED_SETTINGS: Final = {
+    "access": "names DRF classes per access kind",
+    "body_validation": "turns on the reply body validation",
+    "idempotency_store": "names an idempotency store",
+}
 _HOOK_METHODS: Final = {AUTHENTICATE_KEY: "authenticate", DECIDERS_KEY: "decide", SCOPE_RESOLVERS_KEY: "resolve_scope"}
 
 
@@ -106,7 +115,9 @@ def middleware_boundaries() -> list[type[BoundaryDeclaration]]:
 
 def every_problem() -> list[tuple[str, str]]:
     """The problems of every api the app serves, by api: those of each boundary in `MIDDLEWARE`, and the apis whose
-    patterns are in the URLconf without their boundary."""
+    patterns are in the URLconf without their boundary. It wraps the error handlers first, as the boundary does when
+    Django builds it, since a management command builds no request handler."""
+    wrap_error_handlers()
     boundaries = middleware_boundaries()
     found = [(boundary.api, problem) for boundary in boundaries for problem in boot_problems(boundary)]
     served = {boundary.api for boundary in boundaries}
@@ -135,6 +146,13 @@ def _settings_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
         for key in own
         if key not in boundary.settings_keys
     ]
+    problems += [
+        f"settings.{SETTINGS_NAME}['{boundary.api}']['{key}'] {purpose}, which this release of seampact does not "
+        "serve yet; remove it until a release serves it."
+        for key, purpose in _UNSERVED_SETTINGS.items()
+        if key in own
+    ]
+    problems += _run_time_problems(boundary.api, own, boundary.contract)
     problems += _handler_problems(boundary)
 
     if boundary.body_validation:
@@ -149,6 +167,55 @@ def _settings_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
         problems += _imported_problems(boundary.api, f"['{ON_UNEXPECTED_ERROR_KEY}']", listener, "on_unexpected_error")
 
     return problems
+
+
+def _run_time_problems(api: str, own: Mapping[str, object], contract: ApiContract) -> list[str]:
+    """The `responses` mode of the api and the per-operation settings, each by name with what it accepts."""
+    setting = f"settings.{SETTINGS_NAME}['{api}']"
+    problems = _responses_problems(f"{setting}['{_RESPONSES_KEY}']", own.get(_RESPONSES_KEY))
+    operations = own.get(_OPERATIONS_KEY)
+
+    if operations is None:
+        return problems
+
+    if not isinstance(operations, Mapping):
+        kind = type(operations).__name__
+        return [*problems, f"{setting}['{_OPERATIONS_KEY}'] is a {kind}; set a dict keyed by operation id."]
+
+    kept = set(contract.operation_ids())
+
+    for operation_id, operation in operations.items():
+        if operation_id in kept:
+            problems += _operation_problems(f"{setting}['{_OPERATIONS_KEY}']['{operation_id}']", operation)
+        else:
+            problems.append(
+                f"{setting}['{_OPERATIONS_KEY}'] names the operation '{operation_id}', which the api does not keep; "
+                "remove it, or correct its operation id."
+            )
+
+    return problems
+
+
+def _operation_problems(setting: str, operation: object) -> list[str]:
+    if not isinstance(operation, Mapping):
+        return [f"{setting} is a {type(operation).__name__}; set a dict."]
+
+    problems = [
+        f"{setting} has the unknown key '{key}'; the keys are {_RESPONSES_KEY}."
+        for key in operation
+        if key != _RESPONSES_KEY
+    ]
+
+    return problems + _responses_problems(f"{setting}['{_RESPONSES_KEY}']", operation.get(_RESPONSES_KEY))
+
+
+def _responses_problems(setting: str, value: object) -> list[str]:
+    modes = [mode.value for mode in ResponsesMode]
+
+    if value is None or value in modes:
+        return []
+
+    return [f"{setting} is {value!r}; set one of {', '.join(modes)}."]
 
 
 def _handler_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
