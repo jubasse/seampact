@@ -19,7 +19,9 @@ from seampact.codegen.runtime.pattern import contract_pattern
 MAX_SAFE_INTEGER: Final = 2**53 - 1
 
 _DATE_TIME: Final = re.compile(
-    r"(\d{4}-\d{2}-\d{2})[Tt]((?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d)(?:\.(\d{1,9}))?([Zz]|[+-](?:[01]\d|2[0-3]):[0-5]\d)", re.ASCII
+    r"(\d{4}-\d{2}-\d{2})[Tt]((?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d)"
+    r"(?:\.(\d{1,9}))?([Zz]|[+-](?:[01]\d|2[0-3]):[0-5]\d)",
+    re.ASCII,
 )
 _DATE: Final = re.compile(r"\d{4}-\d{2}-\d{2}", re.ASCII)
 _UUID: Final = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
