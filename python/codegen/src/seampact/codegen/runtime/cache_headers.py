@@ -18,7 +18,6 @@ _WEAK_ETAG_PREFIX: Final = "W/"
 _ANY_TAG: Final = "*"
 _ANONYMOUS: Final = "anonymous"
 _IDENTIFIED: Final = "identified"
-_REPLACED: Final = frozenset({CACHE_CONTROL, VARY, ETAG})
 
 
 def strong_etag(body: bytes) -> str:
@@ -55,7 +54,8 @@ def with_cache_headers(
     if etag is not None:
         added.append((ETAG, etag))
 
-    kept = [(name, value) for name, value in reply.headers if name not in _REPLACED]
+    written = {name for name, _ in added}
+    kept = [(name, value) for name, value in reply.headers if name not in written]
 
     if etag is None or not _if_none_match_holds(if_none_match, etag):
         return Reply(reply.status, (*kept, *added), reply.body)

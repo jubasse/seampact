@@ -133,6 +133,7 @@ def test_a_replayed_success_carries_the_replay_header(tasks_contract: ApiContrac
 
     assert isinstance(begun, IdempotencyReplayed)
     assert begun.reply == Reply(201, (("content-type", "application/json"), ("idempotency-replayed", "true")), b"{}")
+    assert "{}" not in repr(begun)
 
 
 def test_a_key_without_a_store_fails_the_boundary(tasks_contract: ApiContract, hook_caller: HookCaller) -> None:

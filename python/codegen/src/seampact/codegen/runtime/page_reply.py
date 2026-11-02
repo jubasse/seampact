@@ -28,6 +28,8 @@ _TOTAL: Final = "total"
 _ABSOLUTE_URLS: Final = "absolute"
 _DEFAULT_PAGE_BASE: Final = 1
 _FIRST_OFFSET: Final = 0
+# The largest position the contract's int64 page and offset parameters carry.
+_INT64_MAX: Final = 2**63 - 1
 
 
 @dataclass(frozen=True, slots=True)
@@ -192,20 +194,22 @@ def _add_numbered_slots(
         page_number = sent if _is_int(sent) else base
         slots[_PAGE] = page_number
         page_index = page_number - base
-        offset = page_index * limit
+        offset = min(page_index * limit, _INT64_MAX)
     else:
         offset = sent if _is_int(sent) else _FIRST_OFFSET
         page_index = offset // limit
 
     slots[_OFFSET] = offset
     total = facts.get(_TOTAL)
-    has_next = (
+    # A position past the last int64 offset has no next page and no record numbers, as on every target.
+    next_fits = offset <= _INT64_MAX - limit
+    has_next = next_fits and (
         facts.get(_MORE) is True
         if _MORE in ir_strings(style, "handlerResult")
         else _is_int(total) and offset + limit < total
     )
 
-    if item_count > 0:
+    if item_count > 0 and offset <= _INT64_MAX - item_count:
         slots["from"] = offset + 1
         slots["to"] = offset + item_count
 

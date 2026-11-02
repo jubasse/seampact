@@ -49,7 +49,7 @@ async def checked_input_fields(state: AccessState, hooks: AccessHooks, call: Hoo
             continue
 
         pointer = ir_string(field_right, "pointer") or ""
-        member = pointer[1:].replace("~1", "/").replace("~0", "~")
+        member = "/".join(_pointer_segments(pointer))
 
         if member not in body:
             continue
@@ -82,7 +82,7 @@ async def visible_output(
         if ir_string(field_right, "direction") != _OUTPUT or ir_string(field_right, "schema") != body_schema:
             continue
 
-        segments = (ir_string(field_right, "pointer") or "")[1:].split("/")
+        segments = _pointer_segments(ir_string(field_right, "pointer") or "")
         member = segments.pop()
 
         for instance in _instances(body, ir_string(response, "shape")):
@@ -111,11 +111,9 @@ async def _allowed(
     if ir_string(source, "in") == _HOLDER_FIELD:
         holder_id = holder.get(ir_string(source, "name") or "")
 
-        # A holder without its id names no subject to ask about, so the member stays out.
-        if not isinstance(holder_id, str | int) or isinstance(holder_id, bool):
-            return False
-
-        subject = SubjectRef(type=subject_type(state.contract, right), id=holder_id)
+        # A holder without a usable id names no subject: the decider is asked with none.
+        if isinstance(holder_id, str | int) and not isinstance(holder_id, bool):
+            subject = SubjectRef(type=subject_type(state.contract, right), id=holder_id)
     elif source:
         subject = subject_of(state, ir_map(field_right, "subject"), right)
 
@@ -126,6 +124,11 @@ async def _allowed(
         decisions[key] = isinstance(answer, decision.Allowed)
 
     return decisions[key]
+
+
+def _pointer_segments(pointer: str) -> list[str]:
+    """The member names a JSON pointer walks, `~1` and `~0` unescaped."""
+    return [segment.replace("~1", "/").replace("~0", "~") for segment in pointer[1:].split("/")]
 
 
 def _instances(body: object, shape: str | None) -> list[object]:

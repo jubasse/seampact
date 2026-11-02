@@ -1,8 +1,12 @@
 """The cache headers of a success: `Cache-Control` by caller kind, `Vary`, and the strong ETag with its 304."""
 
+import copy
+import dataclasses
+
 from seampact.codegen.runtime.cache_headers import strong_etag, with_cache_headers
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.digests import canonical
+from seampact.codegen.runtime.ir_view import IrJson
 from seampact.codegen.runtime.replies import Reply
 
 _GET_PREFERENCES = "getPreferences"
@@ -48,3 +52,18 @@ def test_an_operation_without_cache_is_left_as_is(tasks_contract: ApiContract) -
     reply = Reply(200, (_JSON,), _BODY)
 
     assert with_cache_headers(tasks_contract, "getTask", reply, "alice", "*") is reply
+
+
+def test_a_header_the_operation_does_not_write_is_kept(tasks_contract: ApiContract) -> None:
+    ir_view: dict[str, IrJson] = copy.deepcopy(dict(tasks_contract.ir_view))
+    operations = ir_view["operations"]
+    assert isinstance(operations, list)
+    preferences = next(op for op in operations if isinstance(op, dict) and op["id"] == _GET_PREFERENCES)
+    assert isinstance(preferences, dict) and isinstance(preferences["cache"], dict)
+    preferences["cache"]["etag"] = False
+    contract = dataclasses.replace(tasks_contract, ir_view=ir_view)
+
+    reply = with_cache_headers(contract, _GET_PREFERENCES, Reply(200, (_JSON, ("etag", '"v7"')), _BODY), "alice", None)
+
+    assert reply.header("etag") == '"v7"'
+    assert reply.header("vary") == "Authorization, Cookie"

@@ -3,7 +3,7 @@ fingerprint, and the replay, running and mismatch answers; once the reply is wri
 reply that went out, or abandoned after a server error or an error that forbids storing."""
 
 from dataclasses import dataclass
-from typing import Final
+from typing import ClassVar, Final
 
 from seampact.codegen.runtime.access_steps import HookCaller
 from seampact.codegen.runtime.contract import ApiContract
@@ -14,6 +14,7 @@ from seampact.codegen.runtime.ir_view import IrMap, ir_int, ir_map, ir_maps, ir_
 from seampact.codegen.runtime.principal_members import principal_members
 from seampact.codegen.runtime.replies import CACHE_CONTROL, CONTENT_TYPE, NO_STORE, Reply
 from seampact.hooks import IdempotencyClaim, IdempotencyStore, OperationRef, StoredResponse, idempotency_begin
+from seampact.hooks._redaction import RedactedRepr
 
 IN_PROGRESS_ROLE: Final = "idempotencyInProgress"
 KEY_REUSED_ROLE: Final = "idempotencyKeyReused"
@@ -35,9 +36,12 @@ class IdempotencyClaimed:
     key: str
 
 
-@dataclass(frozen=True, slots=True)
-class IdempotencyReplayed:
-    """The stored reply of an earlier request with the same key and input: the handler must not run."""
+@dataclass(frozen=True, slots=True, repr=False)
+class IdempotencyReplayed(RedactedRepr):
+    """The stored reply of an earlier request with the same key and input: the handler must not run. Its repr hides
+    the reply, whose body and headers the store keeps redacted too."""
+
+    _REDACTED_FIELDS: ClassVar[frozenset[str]] = frozenset({"reply"})
 
     reply: Reply
 
