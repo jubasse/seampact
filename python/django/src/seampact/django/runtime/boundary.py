@@ -24,6 +24,8 @@ from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase
 from seampact.codegen.runtime.body_reader import PAYLOAD_TOO_LARGE_ROLE
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE, ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
+from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
+from seampact.codegen.runtime.framework_versions import AcceptedFramework
 from seampact.codegen.runtime.input_decoding import IncomingRequest, Issue, decode_input, role_refusal, schema_invalid
 from seampact.codegen.runtime.ir_view import ir_int, ir_map
 from seampact.codegen.runtime.raw_target import RawTarget, asgi_raw_target, wsgi_raw_target
@@ -71,6 +73,8 @@ class ContractBoundary:
     contract: ClassVar[ApiContract]
     settings_keys: ClassVar[Sequence[str]] = ()
     handler_resources: ClassVar[Sequence[str]] = ()
+    frameworks: ClassVar[Sequence[AcceptedFramework]] = ()
+    framework_routes: ClassVar[Sequence[FrameworkRouteRule]] = ()
     # The target options of ADR 0026 the boundary reads, as the generator recorded them; `settings.SEAMPACT` and an
     # operation's own value win over them.
     responses: ClassVar[str] = "strict"

@@ -4,6 +4,7 @@ boundary middleware, the exception map and the boot check. The framework-neutral
 `seampact.codegen.runtime`."""
 
 from seampact.codegen.runtime.access_steps import CredentialsType
+from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, VersionUnit
 from seampact.codegen.runtime.reply_verdict import FrameworkEtagMode, ResponsesMode
 from seampact.fastapi.runtime.api_binding import ApiBinding, BindingError, api_binding
@@ -18,7 +19,6 @@ from seampact.fastapi.runtime.placement import (
     BindTarget,
     BootCheckSwitches,
     Factory,
-    FrameworkRouteRule,
     FrameworkRoutesCheck,
     HookFactories,
     HooksCheck,

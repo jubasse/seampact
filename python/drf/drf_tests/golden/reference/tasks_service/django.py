@@ -21,3 +21,5 @@ class TasksServiceBoundary(_django_runtime.ContractBoundary):
     boot_check = True
     boot_check_framework_routes = True
     boot_check_hooks = True
+    frameworks = ()
+    framework_routes = ()

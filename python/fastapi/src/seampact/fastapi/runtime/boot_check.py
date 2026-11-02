@@ -13,12 +13,13 @@ from typing import Final
 
 from starlette.routing import BaseRoute, Host, Match, Mount, Route
 
+from seampact.codegen.runtime.framework_routes import FrameworkRouteRule, allow_listed, base_path_of
 from seampact.codegen.runtime.framework_versions import framework_version_problems
 from seampact.codegen.runtime.hook_check import HookFixes, hook_problems
 from seampact.codegen.runtime.version import other_version_problem
 from seampact.fastapi.runtime.api_binding import ApiBinding
 from seampact.fastapi.runtime.exception_map import is_wrapped, takes_http_exception
-from seampact.fastapi.runtime.placement import FrameworkRouteRule, FrameworkRoutesCheck, HooksCheck
+from seampact.fastapi.runtime.placement import FrameworkRoutesCheck, HooksCheck
 from seampact.fastapi.runtime.unserved import unserved_features, unserved_problem
 
 _SAMPLE_SEGMENT: Final = "seampact"
@@ -196,7 +197,7 @@ def _framework_route_problems(binding: ApiBinding) -> list[str]:
         if not isinstance(path, str) or path in docs or name.startswith(_CONTRACT_ROUTE_PREFIX):
             continue
 
-        base = next((base for base in binding.contract.base_paths() if _under(path, base)), None)
+        base = base_path_of(path, binding.contract.base_paths())
 
         if base is None:
             continue
@@ -222,11 +223,7 @@ def _frontend_route_problems(binding: ApiBinding) -> list[str]:
 
     for route in getattr(group, "routes", None) or []:
         path = getattr(route, "path", None)
-        base = (
-            None
-            if not isinstance(path, str)
-            else next((base for base in binding.contract.base_paths() if _under(path, base)), None)
-        )
+        base = None if not isinstance(path, str) else base_path_of(path, binding.contract.base_paths())
 
         if base is None or _allow_listed(binding.placement.framework_routes, route, _FRONTEND_METHOD):
             continue
@@ -295,21 +292,7 @@ def _exception_handler_problems(binding: ApiBinding) -> list[str]:
 def _allow_listed(rules: Sequence[FrameworkRouteRule], route: object, method: str) -> bool:
     path = getattr(route, "path", None)
 
-    if not isinstance(path, str):
-        return False
-
-    return any(_path_rule(rule.path).fullmatch(path) and rule.method in (None, method) for rule in rules)
-
-
-def _path_rule(pattern: str) -> re.Pattern[str]:
-    """`*` takes one segment and `**` any number."""
-    parts = [re.escape(part).replace(r"\*", "[^/]*") for part in pattern.split("**")]
-
-    return re.compile(".*".join(parts))
-
-
-def _under(path: str, base: str) -> bool:
-    return base == "" or path == base or path.startswith(base + "/") or path.startswith(base + "{")
+    return isinstance(path, str) and allow_listed(rules, path, method)
 
 
 def _describe(route: BaseRoute) -> str:

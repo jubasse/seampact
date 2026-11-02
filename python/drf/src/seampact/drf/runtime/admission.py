@@ -2,6 +2,7 @@
 the chosen route, refuses by name an operation whose features this release does not serve, runs steps 2 to 5, and
 then reads the input (steps 6 to 8) and writes the handler's result with the boundary's own encoding."""
 
+import inspect
 from collections.abc import Mapping
 from typing import Final
 
@@ -94,6 +95,13 @@ class ContractAdmission:
     def reply(self, result: object) -> HttpResponseBase:
         """The handler's result, or its declared error, written by the boundary's own encoding."""
         contract, operation_id = self._state.contract, self._state.operation_id
+
+        if inspect.iscoroutine(result):
+            result.close()
+            raise BoundaryFailureError(
+                f"seampact: the handler of '{operation_id}' is an async def; DRF views are sync, so write it as a "
+                "plain def."
+            )
 
         return django_response(
             self._request, contract, result_reply(contract, operation_id, self._request.path, result)

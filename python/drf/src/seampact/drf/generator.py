@@ -67,7 +67,7 @@ class DrfGenerator:
             "urls.py": urls_module(ir.api.id, paths, lambda module, path: _view_of(ir, module, path)),
             "settings.py": settings_module(ir.api.id, layout.api_class, resources, [_ACCESS_KEY]),
             "django.py": boundary_module(
-                ir.api.id, layout.api_class, RUNTIME_VERSION, resources, _run_time_options(options)
+                ir.api.id, layout.api_class, RUNTIME_VERSION, resources, _run_time_options(options), entry
             ),
             "drf.py": drf_module(ir, names, layout, paths, options.rules, refusals),
         }

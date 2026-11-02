@@ -16,6 +16,7 @@ from types import ModuleType
 from typing import Final
 
 import pytest
+from django.conf.urls.i18n import i18n_patterns
 from django.core.checks import run_checks
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.core.management import call_command
@@ -24,7 +25,10 @@ from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase
 from django.test import AsyncClient, Client, override_settings
 from django.urls import include, path, re_path
 
+from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
+from seampact.codegen.runtime.framework_versions import AcceptedFramework, VersionUnit
 from seampact.codegen.runtime.ir_view import ir_map, ir_maps, ir_string
+from seampact.django.runtime.boot_check import boot_problems
 from seampact.hooks import (
     AuthenticateRequest,
     ErrorCodeWithParams,
@@ -358,6 +362,47 @@ def test_the_boot_check_refuses_to_serve_and_lists_every_problem() -> None:
     assert "unknown key 'unknown'" in message
     assert "no entry for 'channels'" in message
     assert "operation 'getChannel'" in message and "not its generated view" in message
+
+
+class _AsyncHooks(_Hooks):
+    async def decide(self, request: RequirementRequest, /) -> object:
+        return decision.Allowed()
+
+
+def async_hooks(request: HttpRequest) -> _AsyncHooks:
+    return _AsyncHooks()
+
+
+def test_the_boot_check_refuses_the_urlconf_versions_and_async_methods_the_views_cannot_serve(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = ModuleType("seampact_drf_boundary_prefixed")
+    root.__dict__["urlpatterns"] = [
+        path("v1/channels/feed", lambda request: HttpResponse()),
+        path("pre/", include(f"{_PACKAGE}.urls")),
+        *i18n_patterns(path("", include(f"{_PACKAGE}.urls")), prefix_default_language=False),
+    ]
+    sys.modules[root.__name__] = root
+    boundary = _module("django").TasksBoundary
+    monkeypatch.setattr(
+        boundary, "frameworks", (AcceptedFramework(package="django", unit=VersionUnit.MAJOR, accepted=("1",)),)
+    )
+    with_async_hook = _settings()
+    with_async_hook["deciders"] = {name: f"{__name__}.async_hooks" for name in with_async_hook["deciders"]}  # type: ignore[attr-defined]
+
+    with override_settings(ROOT_URLCONF=root.__name__, SEAMPACT={"tasks": with_async_hook}):
+        problems = boot_problems(boundary)
+        monkeypatch.setattr(
+            boundary, "framework_routes", (FrameworkRouteRule(path="/v1/channels/*", method=None, reason="feed"),)
+        )
+        allow_listed = boot_problems(boundary)
+
+    assert any(problem.startswith("django ") and "generated for django 1" in problem for problem in problems)
+    assert any("under the prefix 'pre/'" in problem for problem in problems)
+    assert any("under i18n_patterns()" in problem for problem in problems)
+    assert any("'/v1/channels/feed' sits under the api's base path" in problem for problem in problems)
+    assert any("method 'decide' is an async def" in problem for problem in problems)
+    assert not any("/v1/channels/feed" in problem for problem in allow_listed)
 
 
 def test_the_system_check_warns_and_seampact_check_fails_on_a_problem() -> None:
