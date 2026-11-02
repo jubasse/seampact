@@ -11,7 +11,7 @@ from seampact.codegen.kept_forms import handler_headers
 from seampact.codegen.names import ApiNames, member_identifier, part_attributes
 from seampact.codegen.printer import INDENT, PythonModule, literal_lines
 from seampact.codegen.refusals import IrPlace, Refusals
-from seampact.codegen.runtime.contract import HEADERS_PART, PATH_PART, PROOFS_PART, QUERY_PART
+from seampact.codegen.runtime.contract import HEADER_PART, PATH_PART, PROOFS_PART, QUERY_PART
 from seampact.codegen.runtime.version import RUNTIME_VERSION
 from seampact.ir.model import ContractIR, Operation, Param
 
@@ -73,7 +73,7 @@ def _operation_members(ir: ContractIR, refusals: Refusals) -> dict[str, dict[str
         parts = {
             PATH_PART: _part(operation.params.path, at.below("params", "path"), refusals),
             QUERY_PART: _part(operation.params.query, at.below("params", "query"), refusals),
-            HEADERS_PART: _part(handler_headers(operation), at.below("params", "header"), refusals),
+            HEADER_PART: _part(handler_headers(operation), at.below("params", "header"), refusals),
             PROOFS_PART: _proofs(operation, at.below("input", "proofs"), refusals),
         }
         members[operation.id] = {part: attributes for part, attributes in parts.items() if attributes}

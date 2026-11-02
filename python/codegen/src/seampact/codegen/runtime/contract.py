@@ -15,10 +15,12 @@ INTERNAL_STATUS: Final = 500
 
 PATH_PART: Final = "path"
 QUERY_PART: Final = "query"
-HEADERS_PART: Final = "headers"
+HEADER_PART: Final = "header"
 PROOFS_PART: Final = "proofs"
 """The parts of an operation's input whose wire names `operation_members` maps: its path, query and header
-parameters (the credential and CSRF headers stay the boundary's), and the rule proofs read in its body."""
+parameters (the credential and CSRF headers stay the boundary's), and the rule proofs read in its body. The header
+part is spelled as the IR spells it."""
+_KNOWN_PARTS: Final = (PATH_PART, QUERY_PART, HEADER_PART, PROOFS_PART)
 
 _IGNORE_POLICY: Final = "ignore"
 _REFUSE_POLICY: Final = "refuse"
@@ -77,7 +79,12 @@ class ApiContract:
 
     def part_members(self, operation_id: str, part: str) -> Mapping[str, str]:
         """The wire names of one part of the operation's input and their Python attributes, empty for a part it does not
-        have."""
+        have. Raises `ValueError` for a part name that is none of the known parts."""
+        if part not in _KNOWN_PARTS:
+            raise ValueError(
+                f"Unknown part '{part}' of an operation's input; the known parts are {', '.join(_KNOWN_PARTS)}."
+            )
+
         self.operation(operation_id)
 
         return self.operation_members.get(operation_id, {}).get(part, {})

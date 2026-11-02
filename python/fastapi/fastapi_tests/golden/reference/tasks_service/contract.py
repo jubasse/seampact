@@ -1498,7 +1498,7 @@ CONTRACT: _typing.Final = _contract.ApiContract(
                 "channelId": "channel_id",
                 "taskId": "task_id",
             },
-            "headers": {
+            "header": {
                 "X-Deadline": "x_deadline",
                 "traceparent": "traceparent",
             },

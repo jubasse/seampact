@@ -9601,7 +9601,7 @@ CONTRACT: _typing.Final = _contract.ApiContract(
                 "channelId": "channel_id",
                 "taskId": "task_id",
             },
-            "headers": {
+            "header": {
                 "Idempotency-Key": "idempotency_key",
             },
         },
@@ -9610,7 +9610,7 @@ CONTRACT: _typing.Final = _contract.ApiContract(
                 "channelId": "channel_id",
                 "taskId": "task_id",
             },
-            "headers": {
+            "header": {
                 "Idempotency-Key": "idempotency_key",
             },
         },
@@ -9618,7 +9618,7 @@ CONTRACT: _typing.Final = _contract.ApiContract(
             "path": {
                 "channelId": "channel_id",
             },
-            "headers": {
+            "header": {
                 "Idempotency-Key": "idempotency_key",
             },
         },
@@ -9626,7 +9626,7 @@ CONTRACT: _typing.Final = _contract.ApiContract(
             "path": {
                 "draftId": "draft_id",
             },
-            "headers": {
+            "header": {
                 "Idempotency-Key": "idempotency_key",
             },
         },
@@ -9641,7 +9641,7 @@ CONTRACT: _typing.Final = _contract.ApiContract(
             },
         },
         "getPreferences": {
-            "headers": {
+            "header": {
                 "If-None-Match": "if_none_match",
             },
         },
@@ -9679,7 +9679,7 @@ CONTRACT: _typing.Final = _contract.ApiContract(
                 "channelId": "channel_id",
                 "taskId": "task_id",
             },
-            "headers": {
+            "header": {
                 "Idempotency-Key": "idempotency_key",
             },
             "proofs": {
@@ -9692,7 +9692,7 @@ CONTRACT: _typing.Final = _contract.ApiContract(
             },
         },
         "updatePreferences": {
-            "headers": {
+            "header": {
                 "Idempotency-Key": "idempotency_key",
             },
         },
@@ -9701,7 +9701,7 @@ CONTRACT: _typing.Final = _contract.ApiContract(
                 "channelId": "channel_id",
                 "taskId": "task_id",
             },
-            "headers": {
+            "header": {
                 "Idempotency-Key": "idempotency_key",
             },
         },
