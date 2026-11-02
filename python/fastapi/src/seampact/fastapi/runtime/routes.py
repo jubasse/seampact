@@ -17,16 +17,27 @@ from seampact.codegen.runtime.hook_check import hook_needs
 from seampact.fastapi.runtime.api_binding import ApiBinding, is_unexpected_error_listener
 from seampact.fastapi.runtime.contract_input import InputBuilder
 from seampact.fastapi.runtime.handler_call import call_handler
-from seampact.fastapi.runtime.handler_reply import OperationTypes, result_reply
+from seampact.fastapi.runtime.handler_reply import OperationTypes, ReplyContext, result_reply
+from seampact.fastapi.runtime.idempotency_need import enforces_idempotency
+from seampact.fastapi.runtime.input_features import featured_input
 from seampact.fastapi.runtime.placement import Factory, OperationRoute
 from seampact.fastapi.runtime.request_state import RequestState, state_of
 from seampact.fastapi.runtime.unserved import unserved_features, unserved_problem
-from seampact.hooks import AuthenticateHook, DecideHook, RequestView, ResolveScopeHook, UnexpectedErrorListener
+from seampact.hooks import (
+    AuthenticateHook,
+    DecideHook,
+    IdempotencyStore,
+    RequestView,
+    ResolveScopeHook,
+    UnexpectedErrorListener,
+)
 
 _AUTHENTICATE: Final = "authenticate"
 _DECIDER: Final = "decider"
 _SCOPE_RESOLVER: Final = "scope_resolver"
 _LISTENER: Final = "on_unexpected_error"
+_IDEMPOTENCY_STORE: Final = "idempotency_store"
+_IF_NONE_MATCH: Final = "if-none-match"
 
 
 def add_operation[E, R](
@@ -75,6 +86,9 @@ def _access_dependency(binding: ApiBinding, route: OperationRoute) -> Callable[.
 
     depend(_LISTENER, "", binding.hooks.on_unexpected_error)
 
+    if enforces_idempotency(binding.contract, route.operation_id):
+        depend(_IDEMPOTENCY_STORE, "", binding.hooks.idempotency_store)
+
     async def access(request: fastapi.Request, **resolved: object) -> None:
         state = _contract_state(binding, request, route.operation_id)
         features = unserved_features(binding.contract, route.operation_id)
@@ -82,8 +96,10 @@ def _access_dependency(binding: ApiBinding, route: OperationRoute) -> Callable[.
         if features:
             raise BoundaryFailureError(unserved_problem(binding.api, route.operation_id, features))
 
-        hooks, listener = _resolved_hooks(hook_factories, resolved)
+        hooks, listener, store = _resolved_hooks(hook_factories, resolved)
         state.listener = listener
+        state.hooks = hooks
+        state.idempotency_store = store
         access_state = AccessState(
             contract=binding.contract,
             operation_id=route.operation_id,
@@ -91,6 +107,7 @@ def _access_dependency(binding: ApiBinding, route: OperationRoute) -> Callable[.
             raw_parameters=state.raw_parameters,
             request=_request_view(request, state),
             body=state.decoded.body,
+            raw_body=state.decoded.raw_body,
         )
 
         await run_access_steps(access_state, hooks, call_handler)
@@ -136,11 +153,12 @@ def _contract_state(binding: ApiBinding, request: fastapi.Request, operation_id:
 
 def _resolved_hooks(
     hook_factories: Mapping[str, tuple[str, str, Factory[object]]], resolved: Mapping[str, object]
-) -> tuple[AccessHooks, UnexpectedErrorListener | None]:
+) -> tuple[AccessHooks, UnexpectedErrorListener | None, IdempotencyStore | None]:
     authenticate: dict[str, AuthenticateHook] = {}
     deciders: dict[str, DecideHook] = {}
     scope_resolvers: dict[str, ResolveScopeHook] = {}
     listener: UnexpectedErrorListener | None = None
+    store: IdempotencyStore | None = None
 
     for parameter, (kind, name, _) in hook_factories.items():
         hook = resolved.get(parameter)
@@ -153,13 +171,17 @@ def _resolved_hooks(
             scope_resolvers[name] = hook
         elif kind == _LISTENER and is_unexpected_error_listener(hook):
             listener = hook
+        elif kind == _IDEMPOTENCY_STORE and _is_idempotency_store(hook):
+            store = hook
         else:
             raise BoundaryFailureError(
                 f"seampact: the {kind.replace('_', ' ')} factory for '{name}' built a {type(hook).__qualname__}, "
                 "which lacks the hook's method; return an object that implements the hook protocol."
             )
 
-    return AccessHooks(authenticate=authenticate, deciders=deciders, scope_resolvers=scope_resolvers), listener
+    hooks = AccessHooks(authenticate=authenticate, deciders=deciders, scope_resolvers=scope_resolvers)
+
+    return hooks, listener, store
 
 
 def _is_authenticate_hook(value: object) -> TypeGuard[AuthenticateHook]:
@@ -172,6 +194,10 @@ def _is_decide_hook(value: object) -> TypeGuard[DecideHook]:
 
 def _is_scope_resolver(value: object) -> TypeGuard[ResolveScopeHook]:
     return callable(getattr(value, "resolve_scope", None))
+
+
+def _is_idempotency_store(value: object) -> TypeGuard[IdempotencyStore]:
+    return all(callable(getattr(value, method, None)) for method in ("begin", "complete", "abandon"))
 
 
 def _request_view(request: fastapi.Request, state: RequestState) -> RequestView:
@@ -193,13 +219,19 @@ def _input_dependency(
     async def contract_input(request: fastapi.Request, admitted: Annotated[None, fastapi.Depends(access)]) -> object:
         state = state_of(request.scope, binding.api)
 
-        if state is None or state.operation_id != route.operation_id or not state.admitted or state.access is None:
+        if (
+            state is None
+            or state.operation_id != route.operation_id
+            or not state.admitted
+            or state.access is None
+            or state.hooks is None
+        ):
             raise BoundaryFailureError(
                 f"seampact: the input of operation '{route.operation_id}' was asked for before its access steps "
                 "admitted the request; remove any dependency override of the generated dependencies."
             )
 
-        typed = builder.build(state.decoded, state.access, state.target.query)
+        typed = await featured_input(state, state.access, state.hooks, builder)
         state.typed_request = typed
 
         return typed
@@ -226,16 +258,22 @@ def _endpoint[E, R](
     ) -> fastapi.Response:
         state = state_of(request.scope, binding.api)
 
-        if state is None or state.typed_request is not contract_request:
+        if state is None or state.typed_request is not contract_request or state.access is None or state.hooks is None:
             raise BoundaryFailureError(
                 f"seampact: the endpoint of operation '{route.operation_id}' got an input its input dependency did "
                 "not build; remove any dependency override of the generated dependencies."
             )
 
         result = await invoke(endpoints, contract_request)
-        reply = state.authored.author(
-            result_reply(binding.contract, route.operation_id, types, result, state.target.path)
+        context = ReplyContext(
+            access=state.access,
+            hooks=state.hooks,
+            query=state.input_query,
+            raw_query=state.target.query,
+            path=state.target.path,
+            if_none_match=request.headers.get(_IF_NONE_MATCH),
         )
+        reply = state.authored.author(await result_reply(binding.contract, route.operation_id, types, result, context))
 
         return fastapi.Response(content=reply.body, status_code=reply.status, headers=dict(reply.headers))
 
