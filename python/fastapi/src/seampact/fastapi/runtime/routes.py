@@ -7,6 +7,7 @@ that order, so FastAPI parses no parameter and the input is checked before the f
 import inspect
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Annotated, Final, TypeGuard
+from urllib.parse import quote
 
 import fastapi
 
@@ -32,6 +33,7 @@ from seampact.hooks import (
     UnexpectedErrorListener,
 )
 
+_ROOT_PATH_SAFE: Final = "/"
 _AUTHENTICATE: Final = "authenticate"
 _DECIDER: Final = "decider"
 _SCOPE_RESOLVER: Final = "scope_resolver"
@@ -195,6 +197,11 @@ def _is_idempotency_store(value: object) -> TypeGuard[IdempotencyStore]:
     return all(callable(getattr(value, method, None)) for method in ("begin", "complete", "abandon"))
 
 
+def _link_path(request: fastapi.Request, state: RequestState) -> str:
+    """The path a page link names: the mount prefix the boundary removed, then the contract path."""
+    return quote(str(request.scope.get("root_path", "")), safe=_ROOT_PATH_SAFE) + state.target.path
+
+
 def _request_view(request: fastapi.Request, state: RequestState) -> RequestView:
     client = request.client
 
@@ -265,7 +272,7 @@ def _endpoint[E, R](
             hooks=state.hooks,
             query=state.input_query,
             raw_query=state.target.query,
-            path=state.target.path,
+            path=_link_path(request, state),
             if_none_match=request.headers.get(_IF_NONE_MATCH),
             public_origin=configured_origin(binding.contract, binding.settings.public_origin),
         )

@@ -9,6 +9,7 @@ import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable, MutableMapping
 from typing import Final
 
+from starlette.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE
@@ -45,12 +46,19 @@ class ContractBoundary:
         self._check_lock = asyncio.Lock()
         self._decoded_path_logged = False
 
+    def _app_answers_preflights(self) -> bool:
+        """Without a `CORSMiddleware` a contract-path preflight gets the path's not-found reply, not Starlette's 405."""
+        return any(
+            isinstance(middleware.cls, type) and issubclass(middleware.cls, CORSMiddleware)
+            for middleware in self.binding.app.user_middleware
+        )
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == _LIFESPAN:
             await self.app(scope, receive, self._lifespan_send(send))
             return
 
-        if scope["type"] != _HTTP or _is_preflight(scope):
+        if scope["type"] != _HTTP or (_is_preflight(scope) and self._app_answers_preflights()):
             await self.app(scope, receive, send)
             return
 
