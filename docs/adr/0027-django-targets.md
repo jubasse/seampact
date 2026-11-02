@@ -53,7 +53,7 @@ Nine Django, DRF and Ninja behaviours shape the placement (spike):
 - **DRF.** 3.18, the matrix `floor`. DRF 3.18.0 asks for Django 5.2 or later and declares 5.2, 6.0 and 6.1; 3.18.0 and 3.18.3 gave the same result in the spike.
 - **Ninja.** 1.5.3 or later, the matrix `floor`: the first release whose metadata declares Django 6.0, so pip installs it beside Django 6 (1.4.5 runs, but its metadata stops at 5.1; 1.4.0 fails on Django 6.1, spike). The latest is 1.7.
 - **Pydantic** for Ninja: ADR 0026's range.
-- **Matrix.** The matrix records the tested minors of Django, DRF and Ninja. A version below the floor is refused (`config.matrix.incompatible`). A minor outside the tested ones, within a tested major, is untested: `generate` warns (ADR 0009). A major outside the matrix is refused at boot ("The system check and the boot check"). `allowUntested` names these frameworks by major (`django@6`, `djangorestframework@3`, `django-ninja@1`); only a 0.x framework, such as FastAPI, is named by minor. CI runs the floor and the latest.
+- **Matrix.** The matrix records the tested minors of Django, DRF and Ninja. A version below the floor is refused (`config.matrix.incompatible`). A minor outside the tested ones, within a tested major, is untested: `generate` warns (ADR 0009), and the boot check logs one warning. A major outside the matrix is refused at boot ("The system check and the boot check"). `allowUntested` names these frameworks by major (`django@6`, `djangorestframework@3`, `django-ninja@1`); only a 0.x framework, such as FastAPI, is named by minor. CI runs the floor and the latest.
 
 #### Sync and async
 
@@ -89,7 +89,8 @@ The body read:
 
 - A declared `Content-Length` above the route's limit answers the route's 413 before reading.
 - Otherwise the boundary reads `request.body`, so the app can read it again; a `request.read()` would leave `request.body` raising `RawPostDataException` (spike). It answers the route's 413 when the body, or its `gzip` or `deflate` decoding, passes the limit, as ADR 0026 counts.
-- Under WSGI, a chunked request without `Content-Length` reaches Django with an empty body (spike). The boundary then reads `wsgi.input` itself, bounded by the route's limit. The app's own `request.body` stays empty there, as Django gives it.
+- Under WSGI, a chunked request without `Content-Length` reaches Django with an empty body (spike). When the server sets `wsgi.input_terminated` (gunicorn does), the boundary reads `wsgi.input` itself, bounded by the route's limit; the app's own `request.body` stays empty there, as Django gives it.
+- A server that does not set it (`runserver`, whose `wsgi.input` reads empty, review probe) gives the boundary no way to read the body. The boundary then refuses a chunked request without `Content-Length` as the client's 400, as ADR 0026 refuses a corrupt compressed body, and its start log line lists the gap.
 - `DATA_UPLOAD_MAX_MEMORY_SIZE` below the api's largest body limit would make Django refuse, as a 400, a body the contract accepts. The boot check refuses it.
 
 #### Routes
@@ -97,6 +98,8 @@ The body read:
 Codegen emits, per api, a `urls` module of `path()` entries. The app includes it at `""` in its root URLconf. Each placeholder uses Django's `str` converter, named after its input attribute, so it takes one whole segment. Per path depth, literal segments come before placeholders. The DRF and Ninja sections say which view each entry points to. `generate` refuses the path segments ADR 0026 "Routes" lists, with the same codes.
 
 The boundary matches the raw target against the contract templates. The raw target is the WSGI `RAW_URI` without its query (gunicorn), or the WSGI `REQUEST_URI`, or the ASGI `raw_path` (uvicorn). `runserver` gives none: the boundary matches the decoded `path_info` and logs once at start which raw-path rules it cannot apply. The suite runs on gunicorn and uvicorn.
+
+An absolute-form request target (RFC 9112 section 3.2.2) keeps `scheme://authority` in gunicorn's `RAW_URI`, while Django routes the path alone (review probe). The boundary strips `scheme://authority` before the match.
 
 Django routes `path_info`, without the script name. The boundary strips the script name (`SCRIPT_NAME`) from the raw target as a raw prefix when the raw target starts with it: gunicorn's `SCRIPT_NAME`, uvicorn's `--root-path`, and Django's `FORCE_SCRIPT_NAME` under ASGI keep it in the raw target (spike). A raw target that does not start with it is matched whole, as Django routes it whole: `FORCE_SCRIPT_NAME` behind a proxy that already stripped the prefix (spike). The script name stays outside `mount`, as ADR 0026 keeps `root_path` outside.
 
@@ -126,9 +129,11 @@ An exception raised between the boundary and the view, by the app's own middlewa
 
 Each answers by ADR 0023's rule, as ADR 0026 applies it. The DRF and Ninja sections add their own exceptions.
 
-A `DisallowedHost` names a host this deployment does not serve, so it is not a contract request: Django's 400 goes out as written, after one log line. Any other recorded reply (`BadRequest`, another `SuspiciousOperation`) is checked as written by the outgoing check. Any other exception is the api's 500: the boundary logs it and calls `onUnexpectedError`, in every `responses` mode.
+A `DisallowedHost` names a host this deployment does not serve, so it is not a contract request: Django's 400 goes out as written, after one log line. Any other recorded reply (`BadRequest`, another `SuspiciousOperation`) is checked as written by the outgoing check. Any other exception is the api's 500: the boundary logs it and calls `onUnexpectedError`, in every `responses` mode, `DEBUG` aside.
 
-Under `DEBUG` only, Django renders `Http404`, `BadRequest` and `SuspiciousOperation` with its technical pages and calls no handler (spike). The boundary then lets a technical page out as Django wrote it, after its log line, as ADR 0026 lets Starlette's debug page out.
+Under `DEBUG` only, Django renders `Http404`, `BadRequest` and `SuspiciousOperation` with its technical pages and calls no handler (spike). The boundary then lets a technical page out as Django wrote it, after its log line, as ADR 0026 lets Starlette's debug page out. Any other exception under `DEBUG` gets Django's technical 500 page, without `handler500`, after the signal the receiver records (review probe): the boundary lets that page out too, after its log line and `onUnexpectedError`.
+
+With `DEBUG_PROPAGATE_EXCEPTIONS`, Django re-raises the exception into the boundary. The boundary logs it, calls `onUnexpectedError` and re-raises it, so the propagation the app asked for happens.
 
 A per-request URLconf (`request.urlconf`, set by an app middleware) has its own handlers, which carry no wrapper. Its replies are checked as written.
 
@@ -168,13 +173,16 @@ The check lists every problem at once:
 - a contract operation without a handler factory, or a path pattern missing or included twice;
 - an api whose patterns are in the URLconf without its boundary in `MIDDLEWARE`;
 - a contract request that another pattern would take. For each operation, the check resolves `mount` followed by the contract path, with a sample value in each placeholder, against the root URLconf. The match must be the generated view of that operation. So a `re_path` catch-all before the include, a router route, and an `include()` prefix that `mount` does not name are all refused (spike), unless `frameworkRoutes` allow-lists the pattern that wins. The run-time route-chosen check covers what a sample cannot show, such as a format-suffix route that takes only `7.json` (spike);
-- a generated pattern under an `include()` with a prefix, or under `i18n_patterns()`: with the default language unprefixed, `/fr/v1/tasks/7` still routes to the contract view (spike);
+- on DRF, a generated `urls` module under an `include()` with a prefix; on both targets, a generated pattern under `i18n_patterns()`: with the default language unprefixed, `/fr/v1/tasks/7` still routes to the contract view (spike);
+- on Ninja, a prefix where the app includes `api.urls` that, plus `bind_<api>()`'s `prefix`, does not equal `mount`, found by the resolver match above. So `<Api>Urls` holds on both targets;
 - an app pattern at or under one of the api's base paths that `frameworkRoutes` does not allow-list (FR-25), read from the patterns' own prefixes;
 - a root URLconf whose error handlers carry no wrapper;
 - the boundary not first in `MIDDLEWARE`, other seampact boundaries aside;
 - `DATA_UPLOAD_MAX_MEMORY_SIZE` below the api's largest body limit;
 - a `public_origin` set under relative URLs, or a missing or malformed one under absolute URLs;
 - a Django, DRF or Ninja major outside the matrix that `allowUntested` did not name at `generate`, read with `importlib.metadata`, as Laravel's boot check refuses a major other than 13. The generated code records the majors `generate` accepted.
+
+Beside that list, the boot check logs one warning, without refusing, for a Django, DRF or Ninja minor outside the tested minors the generated code records, as `generate` warns: a minor installed after `generate` serves with a notice.
 
 `artefacts.bootCheck: false` turns the whole check off; `{ frameworkRoutes: false }` and `{ hooks: off }` turn their parts off, as ADR 0026 says. The handler check runs whenever the boot check does.
 
@@ -214,11 +222,14 @@ DRF runs `initial()` first: authentication, permissions and throttles, the app's
 The views fix what DRF would otherwise read from the app's defaults:
 
 - `perform_content_negotiation()` returns a fixed pair, so `Accept` never answers 406;
+- `renderer_classes` holds one class and `default_response_headers` is empty, so DRF adds neither `Allow` nor `Vary: Accept` to the reply (review probe);
 - `parser_classes` is empty and `versioning_class` is `None`: the views never read `request.data`;
 - `get_authenticators()`, `get_permissions()` and `get_throttles()` return the classes the app sets for the operation's access kind in `settings.SEAMPACT["<api>"]["access"]`, keyed by DRF's own names (`authentication_classes`, `permission_classes`, `throttle_classes`), and none otherwise. The app's `DEFAULT_PERMISSION_CLASSES` never applies to a contract route, so a global `IsAuthenticated` never refuses a public operation;
 - `schema = None`, so DRF's schema generator skips them.
 
-DRF copies the user it authenticated to the Django request, so a hook factory reads `request.user` and `request.auth`.
+DRF 3.18's `as_view()` sets `login_required = False`, so Django's `LoginRequiredMiddleware` never redirects a contract request (review probe). The target relies on it, and a target test fails by name if a DRF minor drops it.
+
+DRF copies the user it authenticated to the Django request, so a hook factory reads `request.user` and `request.auth`. On an access kind with no DRF authentication classes, DRF overwrites `request.user` with its `UNAUTHENTICATED_USER` (review probe), so the user Django's `AuthenticationMiddleware` set is lost. The DRF guide tells the app to name `SessionAuthentication`, or its own class, for that kind.
 
 DRF views are sync. An `async def` hook or handler method is refused by the boot check, naming the method and the fix, until a consumer needs it.
 
@@ -227,7 +238,7 @@ DRF views are sync. An `async def` hook or handler method is refused by the boot
 `get_exception_handler()` returns the generated handler, never the app's `EXCEPTION_HANDLER` (spike). It marks the transaction for rollback, as DRF's own handler does under `ATOMIC_REQUESTS`. It renders a contract exception, and answers with the role of:
 
 - `NotAuthenticated` and `AuthenticationFailed`: `unauthenticated`, by class. DRF gives them 403 when the first authentication class sends no `WWW-Authenticate` (spike);
-- `PermissionDenied` raised during `perform_authentication()`, where `SessionAuthentication` raises its CSRF failure (spike): `csrfInvalid`;
+- the CSRF failure of `SessionAuthentication` (spike): `csrfInvalid`. `get_authenticators()` wraps `enforce_csrf` of each `SessionAuthentication` it returns, so the failure itself is tagged, not any `PermissionDenied` raised during authentication;
 - any other DRF `PermissionDenied`, and Django's: `forbidden`;
 - `NotFound` and Django's `Http404`: `notFound`;
 - `Throttled`: `rateLimited`, with `Retry-After` from its `wait`;
@@ -270,13 +281,15 @@ bind_tasks(api, prefix="/v1", handlers=TasksHandlerFactories(tasks=tasks_endpoin
 urlpatterns = [path("", api.urls)]
 ```
 
-`bind_tasks(api, ...)` builds the api's `Router` and adds it to the app's `NinjaAPI` with `add_router()`. The prefix where the app includes `api.urls`, plus `prefix`, must equal `mount`; the boot check's resolver match refuses any other sum. `bind_<api>()` also takes ADR 0026's keyword arguments (`responses`, `body_validation`, `operations`, `public_origin`), and per access kind the `auth` and `throttle` values Ninja accepts on an operation.
+`bind_tasks(api, ...)` builds the api's `Router` and adds it to the app's `NinjaAPI` with `add_router()`. The prefix where the app includes `api.urls`, plus `prefix`, must equal `mount`; the boot check's resolver match refuses any other sum. `bind_<api>()` also takes ADR 0026's keyword arguments (`responses`, `body_validation`, `operations`, `public_origin`), and per access kind the `auth` and `throttle` values Ninja accepts on an operation. For an access kind the app gave no values, `bind_<api>()` passes `auth=None` and `throttle=[]`, so a `NinjaAPI(auth=...)` set app-wide never refuses a public operation (review probe: 401 otherwise).
 
 Each operation is one `api_operation()` call:
 
 - with `["GET", "HEAD"]` for a `GET` operation, since a Ninja `GET` operation answers `HEAD` with 405 (spike);
 - with `include_in_schema=False`;
-- with a view that takes only the request, so Ninja parses nothing and answers no 422 (spike).
+- with a view that takes the request and one `str` parameter per path placeholder, which Ninja cannot refuse, so it answers no 422 (spike). The view ignores them: the input comes from the boundary's raw decoding. A view without them would make Ninja warn at URLconf import for each placeholder, and fail under `python -W error` (review probe).
+
+`bind_<api>()` marks the Django views of the contract paths `login_required = False`, so Django's `LoginRequiredMiddleware` never redirects a contract request; it would answer a bearer caller without a session with a 302 (review probe). A target test fails by name if the mark stops reaching Ninja's views.
 
 Ninja runs `auth=` and throttles first. The generated view then checks the boundary's mark and the chosen route, runs steps 2 to 5, then validates the decoded tree with the shared Pydantic models of ADR 0026 "Types and validation" (strict mode, the same type layer, the same `rules`).
 
@@ -395,6 +408,18 @@ Run on CPython 3.12.16 with gunicorn 26.2.0 and uvicorn 0.54.0, and not kept, in
 | a Ninja view taking only the request on `/plain/{item_id}`; an async view under gunicorn, the test `Client` and uvicorn | 200, no parsing; 200 |
 | Ninja 1.4.0 on Django 6.1.2; 1.4.5, 1.5.0, 1.5.3 | the URLconf import failed ("Converter 'uuid' is already registered"); every Ninja row passed |
 
+The review of this ADR ran more probes on Django 6.1.2, DRF 3.18.3 and Ninja 1.7.3 under gunicorn 26.2.0, `runserver` and the test `Client`:
+
+| Case | Result |
+|---|---|
+| a DRF `APIView` returning a plain `HttpResponse`, the app's default renderers | the reply carried `Allow: GET, HEAD, OPTIONS` and `Vary: Accept` |
+| an inner middleware sets `request.user`; the view returns no authenticator | the view read DRF's `UNAUTHENTICATED_USER` |
+| a Ninja view taking only the request on a path with a placeholder | a `UserWarning` at URLconf import |
+| a chunked `POST` without `Content-Length`, read from `wsgi.input` | gunicorn: the body, with `wsgi.input_terminated` set; `runserver`: empty, no such key |
+| Django's `LoginRequiredMiddleware`, a bearer caller without a session | DRF view: 200 (`login_required = False` from `as_view()`); Ninja view: 302 to the login page |
+| `NinjaAPI(auth=deny)`, an operation without `auth`; one with `auth=None` | 401; 200 |
+| an absolute-form target `GET http://x/v1/tasks/7` | gunicorn: `RAW_URI` with `http://x`, routed to the view; `runserver`: Django's 404 |
+
 ## Consequences
 
 - An app keeps its middleware, URLconf, settings, DRF classes and Ninja api. On contract routes the boundary's checks and reply win.
@@ -406,7 +431,7 @@ Run on CPython 3.12.16 with gunicorn 26.2.0 and uvicorn 0.54.0, and not kept, in
 - Under ASGI, Django spools a body before the boundary can refuse it; under WSGI, the app's `request.body` stays empty for a chunked body the boundary read.
 - App tests that call a contract view directly get the api's 500; tests go through the test `Client`.
 - A broken api refuses to serve, and the system check only warns, so `migrate` still runs; CI runs `manage.py seampact_check`.
-- `runserver` loses the raw-path rules; the boundary says so once at start.
+- `runserver` loses the raw-path rules and refuses a chunked body without `Content-Length`; the boundary says so once at start.
 - ADR 0012's target tables gain a drf and a ninja row in the lead's follow-up.
 
 ## Traceability
