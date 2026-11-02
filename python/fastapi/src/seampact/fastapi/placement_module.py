@@ -23,6 +23,9 @@ _ABC: Final = "_abc"
 # Each operation's coroutine: no module alias starts so, whatever the operation's name.
 _CALL_PREFIX: Final = "_call_"
 _CONTRACT_MODULE: Final = "contract"
+_PYDANTIC: Final = "pydantic"
+_PYDANTIC_MAJOR: Final = "2"
+_LISTENER_DOC: Final = "Hears of each failure api '{api}' answers with its 500."
 _BIND_DOC: Final = "Places api '{api}' in the app; call it last, after its own middleware and exception handlers."
 
 
@@ -35,7 +38,7 @@ def placement_module(
     module.imported("typing", "_typing")
     module.imported("seampact.fastapi.runtime", _RUNTIME)
     module.imported("seampact.hooks", _HOOKS)
-    root_names = [layout.contract_error]
+    root_names = [layout.contract_error, *(credentials.class_name for credentials in layout.credentials.values())]
     operations = [operation for operation in ir.operations if operation.id in layout.operations]
 
     for operation in operations:
@@ -46,6 +49,7 @@ def placement_module(
     module.add_block(with_local_imports([_CONTRACT_MODULE], root_names, head))
     module.add_block(_placement(ir, layout, routes, options, entry))
     module.add_block(_handler_factories(layout))
+    module.add_block(_unexpected_error_listener(ir, layout))
 
     for operation in operations:
         names = layout.operations[operation.id]
@@ -72,12 +76,7 @@ def _placement(
     route_lines: list[str] = []
 
     for route in routes:
-        methods = (
-            "("
-            + ", ".join(string_literal(method) for method in route.methods)
-            + ("," if len(route.methods) == 1 else "")
-            + ")"
-        )
+        methods = _tuple_literal(route.methods)
         arguments = [
             string_literal(route.operation_id),
             string_literal(route.name),
@@ -134,8 +133,60 @@ def _placement(
             if not framework_routes
             else [f"{INDENT}framework_routes=(", *framework_routes, f"{INDENT}),"]
         ),
+        f"{INDENT}frameworks=(",
+        *_accepted_frameworks(entry),
+        f"{INDENT}),",
+        *_credentials_types(layout),
         ")",
     ]
+
+
+def _accepted_frameworks(entry: TargetEntry) -> list[str]:
+    """The matrix row's frameworks (FastAPI by minor, Starlette by major) with the entry's `allowUntested` units, then
+    Pydantic 2, which the generated models are written for."""
+    accepted = [
+        (framework.package, framework.unit.name, framework.accepted_units(entry.allow_untested))
+        for framework in (entry.matrix.frameworks if entry.matrix is not None else ())
+    ]
+    accepted.append((_PYDANTIC, "MAJOR", (_PYDANTIC_MAJOR,)))
+    lines: list[str] = []
+
+    for package, unit, units in accepted:
+        arguments = [
+            f"package={string_literal(package)}",
+            f"unit={_RUNTIME}.VersionUnit.{unit}",
+            f"accepted={_tuple_literal(units)}",
+        ]
+        lines += bracketed(INDENT * 2, f"{_RUNTIME}.AcceptedFramework", arguments, ",")
+
+    return lines
+
+
+def _tuple_literal(items: Sequence[str]) -> str:
+    texts = [string_literal(item) for item in items]
+
+    return f"({texts[0]},)" if len(texts) == 1 else f"({', '.join(texts)})"
+
+
+def _credentials_types(layout: ApiLayout) -> list[str]:
+    if not layout.credentials:
+        return [f"{INDENT}credentials={{}},"]
+
+    lines = [f"{INDENT}credentials={{"]
+
+    for identity, credentials in layout.credentials.items():
+        attributes = ", ".join(
+            f"{string_literal(scheme)}: {string_literal(attribute)}"
+            for scheme, attribute in credentials.attributes.items()
+        )
+        lines += bracketed(
+            INDENT * 2,
+            f"{string_literal(identity)}: {_RUNTIME}.CredentialsType",
+            [credentials.class_name, "{" + attributes + "}"],
+            ",",
+        )
+
+    return [*lines, f"{INDENT}}},"]
 
 
 def _handler_factories(layout: ApiLayout) -> list[str]:
@@ -153,6 +204,13 @@ def _handler_factories(layout: ApiLayout) -> list[str]:
     return lines
 
 
+def _unexpected_error_listener(ir: ContractIR, layout: ApiLayout) -> list[str]:
+    return [
+        f"class {layout.unexpected_error_listener}({_HOOKS}.UnexpectedErrorListener, _typing.Protocol):",
+        f'{INDENT}"""{_LISTENER_DOC.format(api=ir.api.id)}"""',
+    ]
+
+
 def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> list[str]:
     def factories(hook: str) -> str:
         return f"{_ABC}.Mapping[str, {_RUNTIME}.Factory[{_HOOKS}.{hook}]] | None = None"
@@ -166,7 +224,7 @@ def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> li
         f"deciders: {factories('DecideHook')}",
         f"scope_resolvers: {factories('ResolveScopeHook')}",
         f"idempotency_store: {_RUNTIME}.Factory[{_HOOKS}.IdempotencyStore] | None = None",
-        f"on_unexpected_error: {_RUNTIME}.Factory[{_HOOKS}.UnexpectedErrorListener] | None = None",
+        f"on_unexpected_error: {_RUNTIME}.Factory[{layout.unexpected_error_listener}] | None = None",
         f"responses: {_RUNTIME}.ResponsesMode | None = None",
         "body_validation: bool | None = None",
         f"operations: {_ABC}.Mapping[str, {_RUNTIME}.OperationSettings] | None = None",

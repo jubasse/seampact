@@ -13,7 +13,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
 from seampact.codegen.runtime.input_decoding import IncomingRequest, decode_input
-from seampact.codegen.runtime.raw_target import RawTarget, asgi_raw_target
+from seampact.codegen.runtime.raw_target import RawTarget, asgi_raw_target, without_origin
 from seampact.codegen.runtime.replies import Reply, error_reply, internal_error_reply, role_reply
 from seampact.codegen.runtime.reply_verdict import MAX_CHECKED_ERROR_BODY_BYTES, OutgoingReply, verdict
 from seampact.fastapi.runtime.api_binding import ApiBinding
@@ -27,6 +27,7 @@ _STARTUP_COMPLETE: Final = "lifespan.startup.complete"
 _HEAD: Final = "HEAD"
 _NOT_FOUND_STATUS: Final = 404
 _CONTENT_LENGTH: Final = "content-length"
+_BYTES_AS_TEXT: Final = "latin-1"
 _RAW_PATH_RULES: Final = (
     "a percent-encoded static segment, an encoded slash or dot segment, and a raw ';' in a path value cannot be told "
     "from their decoded form"
@@ -61,6 +62,8 @@ class ContractBoundary:
         if not target.raw:
             self._log_decoded_path_once()
 
+        _drop_absolute_form_origin(scope)
+
         problems = await self._problems()
 
         if problems:
@@ -92,7 +95,9 @@ class ContractBoundary:
         contract = self.binding.contract
         method = str(scope["method"])
         received = _ReceivedBody(receive)
-        headers = {name.decode("latin-1").lower(): value.decode("latin-1") for name, value in scope["headers"]}
+        headers = {
+            name.decode(_BYTES_AS_TEXT).lower(): value.decode(_BYTES_AS_TEXT) for name, value in scope["headers"]
+        }
 
         try:
             decoded = await decode_input(
@@ -304,7 +309,8 @@ class _CheckedReply:
 
         operation_id = self._state.operation_id
         headers = tuple(
-            (name.decode("latin-1").lower(), value.decode("latin-1")) for name, value in self._start.get("headers", [])
+            (name.decode(_BYTES_AS_TEXT).lower(), value.decode(_BYTES_AS_TEXT))
+            for name, value in self._start.get("headers", [])
         )
         judged = verdict(
             self._state.contract,
@@ -329,7 +335,9 @@ class _CheckedReply:
         self._passing = True
         self.started = True
         start = dict(self._start)
-        start["headers"] = [(name.encode("latin-1"), value.encode("latin-1")) for name, value in judged.reply.headers]
+        start["headers"] = [
+            (name.encode(_BYTES_AS_TEXT), value.encode(_BYTES_AS_TEXT)) for name, value in judged.reply.headers
+        ]
         await self._send(start)
         await self._pass({"type": "http.response.body", "body": bytes(self._held), "more_body": body is None})
 
@@ -346,8 +354,8 @@ class _CheckedReply:
 
 
 async def _send_reply(send: Send, reply: Reply, method: str) -> None:
-    headers = [(name.encode("latin-1"), value.encode("latin-1")) for name, value in reply.headers]
-    headers.append((_CONTENT_LENGTH.encode("latin-1"), str(len(reply.body)).encode("latin-1")))
+    headers = [(name.encode(_BYTES_AS_TEXT), value.encode(_BYTES_AS_TEXT)) for name, value in reply.headers]
+    headers.append((_CONTENT_LENGTH.encode(_BYTES_AS_TEXT), str(len(reply.body)).encode(_BYTES_AS_TEXT)))
     await send({"type": "http.response.start", "status": reply.status, "headers": headers})
     await send({"type": "http.response.body", "body": b"" if method.upper() == _HEAD else reply.body})
 
@@ -356,3 +364,13 @@ def _status(message: Message) -> int:
     status = message.get("status")
 
     return status if isinstance(status, int) else 0
+
+
+def _drop_absolute_form_origin(scope: Scope) -> None:
+    """uvicorn keeps an absolute-form target's `scheme://authority` in both `path` and `raw_path`, and Starlette routes
+    `path`: the app receives them without it, as the raw match read them."""
+    scope["path"] = without_origin(str(scope["path"]))
+    raw_path = scope.get("raw_path")
+
+    if isinstance(raw_path, bytes):
+        scope["raw_path"] = without_origin(raw_path.decode(_BYTES_AS_TEXT)).encode(_BYTES_AS_TEXT)

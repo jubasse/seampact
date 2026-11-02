@@ -14,6 +14,7 @@ from .operations import (
     GetTaskResponse200,
     GetTaskResult,
     InternalEndpoints,
+    ServiceCredentials,
     TasksServiceContractError,
 )
 
@@ -43,6 +44,14 @@ PLACEMENT: _typing.Final = _runtime.ApiPlacement(
         enabled=True, framework_routes=_runtime.FrameworkRoutesCheck.ON, hooks=_runtime.HooksCheck.ERROR
     ),
     framework_routes=(),
+    frameworks=(
+        _runtime.AcceptedFramework(package="fastapi", unit=_runtime.VersionUnit.MINOR, accepted=("0.162",)),
+        _runtime.AcceptedFramework(package="starlette", unit=_runtime.VersionUnit.MAJOR, accepted=("0", "1")),
+        _runtime.AcceptedFramework(package="pydantic", unit=_runtime.VersionUnit.MAJOR, accepted=("2",)),
+    ),
+    credentials={
+        "service": _runtime.CredentialsType(ServiceCredentials, {"internalToken": "internal_token"}),
+    },
 )
 
 
@@ -51,6 +60,10 @@ class TasksServiceHandlerFactories:
     """The FastAPI dependency that builds each endpoints protocol's handlers; None fails the boot."""
 
     internal: _runtime.Factory[InternalEndpoints] | None
+
+
+class TasksServiceUnexpectedErrorListener(_hooks.UnexpectedErrorListener, _typing.Protocol):
+    """Hears of each failure api 'tasksService' answers with its 500."""
 
 
 async def _call_get_task(endpoints: InternalEndpoints, request: GetTaskRequest) -> GetTaskResult:
@@ -66,7 +79,7 @@ def bind_tasks_service(
     deciders: _abc.Mapping[str, _runtime.Factory[_hooks.DecideHook]] | None = None,
     scope_resolvers: _abc.Mapping[str, _runtime.Factory[_hooks.ResolveScopeHook]] | None = None,
     idempotency_store: _runtime.Factory[_hooks.IdempotencyStore] | None = None,
-    on_unexpected_error: _runtime.Factory[_hooks.UnexpectedErrorListener] | None = None,
+    on_unexpected_error: _runtime.Factory[TasksServiceUnexpectedErrorListener] | None = None,
     responses: _runtime.ResponsesMode | None = None,
     body_validation: bool | None = None,
     operations: _abc.Mapping[str, _runtime.OperationSettings] | None = None,

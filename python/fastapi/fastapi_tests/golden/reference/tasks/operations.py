@@ -126,6 +126,21 @@ class StateConflictError(TasksContractError):
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class StripeCredentials:
+    """The credentials a request presents for identity 'stripe', one per scheme, None when absent."""
+
+    stripe_signature: str | None = _dataclasses.field(default=None, repr=False)
+
+
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class UserCredentials:
+    """The credentials a request presents for identity 'user', one per scheme, None when absent."""
+
+    bearer: str | None = _dataclasses.field(default=None, repr=False)
+    session_cookie: str | None = _dataclasses.field(default=None, repr=False)
+
+
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class ArchiveTaskScopes:
     """The scopes operation 'archiveTask' resolved, one per scope."""
 

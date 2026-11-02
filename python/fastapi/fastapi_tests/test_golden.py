@@ -12,6 +12,7 @@ from seampact.fastapi.generator import FastApiGenerator
 from seampact.ir.config.json_value import JsonValue
 from seampact.ir.read import read_ir
 from seampact.ir.run.generator import TargetEntry
+from seampact.ir.run.matrix_framework import python_targets
 
 _GOLDEN = Path(__file__).parent / "golden" / "reference"
 _UPDATE = os.environ.get("SEAMPACT_UPDATE_GOLDEN") == "1"
@@ -30,7 +31,7 @@ def reference_entry(
         output_directory="/app/generated",
         framework_routes=[],
         mount=None,
-        matrix=None,
+        matrix=python_targets()["pypi:seampact-fastapi"],
         allow_untested=(),
     )
 

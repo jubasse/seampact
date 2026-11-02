@@ -38,7 +38,7 @@ def asgi_raw_target(scope: Mapping[str, object]) -> RawTarget | None:
         root = _text(scope, "root_path")
         raw = False
 
-    path = _without_origin(path)
+    path = without_origin(path)
 
     if root == "":
         return RawTarget(_rooted(path), query_text, raw)
@@ -58,7 +58,7 @@ def wsgi_raw_target(environ: Mapping[str, object]) -> RawTarget | None:
     if uri == "":
         return RawTarget(_rooted(_text(environ, "PATH_INFO")), query, raw=False)
 
-    path = _without_origin(_without_query(uri))
+    path = without_origin(_without_query(uri))
     script = _raw_text(_text(environ, "SCRIPT_NAME").rstrip("/"))
 
     if script == "":
@@ -84,7 +84,8 @@ def _without_query(target: str) -> str:
     return target.split("?", 1)[0]
 
 
-def _without_origin(path: str) -> str:
+def without_origin(path: str) -> str:
+    """The path of an absolute-form target (RFC 9112 section 3.2.2) without its `scheme://authority`."""
     origin = _ORIGIN.match(path)
 
     return path if origin is None else path[origin.end() :]

@@ -69,6 +69,13 @@ class ApiUnauthenticatedError(TasksServiceContractError):
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class ServiceCredentials:
+    """The credentials a request presents for identity 'service', one per scheme, None when absent."""
+
+    internal_token: str | None = _dataclasses.field(default=None, repr=False)
+
+
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class GetTaskInput:
     """The input of operation 'getTask', as its handler reads it."""
 

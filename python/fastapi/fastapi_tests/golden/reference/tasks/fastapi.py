@@ -75,6 +75,7 @@ from .operations import (
     SearchTasksRequest,
     SearchTasksResponse200,
     SearchTasksResult,
+    StripeCredentials,
     TasksContractError,
     TasksEndpoints,
     UpdatePreferencesErrors,
@@ -85,6 +86,7 @@ from .operations import (
     UpdateTaskRequest,
     UpdateTaskResponse200,
     UpdateTaskResult,
+    UserCredentials,
 )
 
 GENERATED_BY: _typing.Final = "0.0.0-dev"
@@ -148,6 +150,15 @@ PLACEMENT: _typing.Final = _runtime.ApiPlacement(
         enabled=True, framework_routes=_runtime.FrameworkRoutesCheck.ON, hooks=_runtime.HooksCheck.ERROR
     ),
     framework_routes=(),
+    frameworks=(
+        _runtime.AcceptedFramework(package="fastapi", unit=_runtime.VersionUnit.MINOR, accepted=("0.162",)),
+        _runtime.AcceptedFramework(package="starlette", unit=_runtime.VersionUnit.MAJOR, accepted=("0", "1")),
+        _runtime.AcceptedFramework(package="pydantic", unit=_runtime.VersionUnit.MAJOR, accepted=("2",)),
+    ),
+    credentials={
+        "stripe": _runtime.CredentialsType(StripeCredentials, {"stripeSignature": "stripe_signature"}),
+        "user": _runtime.CredentialsType(UserCredentials, {"bearer": "bearer", "sessionCookie": "session_cookie"}),
+    },
 )
 
 
@@ -161,6 +172,10 @@ class TasksHandlerFactories:
     preferences: _runtime.Factory[PreferencesEndpoints] | None
     app: _runtime.Factory[AppEndpoints] | None
     hooks: _runtime.Factory[HooksEndpoints] | None
+
+
+class TasksUnexpectedErrorListener(_hooks.UnexpectedErrorListener, _typing.Protocol):
+    """Hears of each failure api 'tasks' answers with its 500."""
 
 
 async def _call_archive_task(endpoints: TasksEndpoints, request: ArchiveTaskRequest) -> ArchiveTaskResult:
@@ -244,7 +259,7 @@ def bind_tasks(
     deciders: _abc.Mapping[str, _runtime.Factory[_hooks.DecideHook]] | None = None,
     scope_resolvers: _abc.Mapping[str, _runtime.Factory[_hooks.ResolveScopeHook]] | None = None,
     idempotency_store: _runtime.Factory[_hooks.IdempotencyStore] | None = None,
-    on_unexpected_error: _runtime.Factory[_hooks.UnexpectedErrorListener] | None = None,
+    on_unexpected_error: _runtime.Factory[TasksUnexpectedErrorListener] | None = None,
     responses: _runtime.ResponsesMode | None = None,
     body_validation: bool | None = None,
     operations: _abc.Mapping[str, _runtime.OperationSettings] | None = None,

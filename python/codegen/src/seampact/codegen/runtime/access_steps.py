@@ -58,6 +58,18 @@ class HookCaller(Protocol):
     def __call__[A, T](self, method: Callable[[A], T | Awaitable[T]], argument: A, /) -> Awaitable[T]: ...
 
 
+@dataclass(frozen=True, slots=True)
+class CredentialsType:
+    """The generated credentials class of one identity and its attribute per scheme id: the authenticate hook receives
+    an instance, each scheme's value None when the request does not present it."""
+
+    build: Callable[..., object]
+    attributes: Mapping[str, str]
+
+    def of(self, found: Mapping[str, str]) -> object:
+        return self.build(**{attribute: found.get(scheme) for scheme, attribute in self.attributes.items()})
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AccessHooks:
     """The hooks one request may call, keyed by the contract's names; a placement builds them per request."""
@@ -70,10 +82,12 @@ class AccessHooks:
 @dataclass(slots=True, kw_only=True)
 class AccessState:
     """What steps 2 to 5 read of one contract request and what they leave for the handler: `raw_parameters` the raw
-    path segments by parameter name, `body` the decoded tree, `principal` and `scopes` set as the steps admit."""
+    path segments by parameter name, `body` the decoded tree, `credentials_types` the generated credentials class of
+    each identity, `principal` and `scopes` set as the steps admit."""
 
     contract: ApiContract
     operation_id: str
+    credentials_types: Mapping[str, CredentialsType]
     raw_parameters: Mapping[str, str]
     request: RequestView
     body: object
@@ -153,9 +167,17 @@ async def _authenticate(state: AccessState, hooks: AccessHooks, call: HookCaller
             "register one as the target's guide says."
         )
 
+    credentials_type = state.credentials_types.get(identity)
+
+    if credentials_type is None:
+        raise BoundaryFailureError(
+            f"seampact: the api '{state.contract.api}' has no credentials class for the identity '{identity}'; "
+            "run seampact generate again."
+        )
+
     request = AuthenticateRequest(
         identity=identity,
-        credentials=credentials,
+        credentials=credentials_type.of(credentials),
         csrf_token=csrf_token,
         request=state.request,
         operation=state.operation,

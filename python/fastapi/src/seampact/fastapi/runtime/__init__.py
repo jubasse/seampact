@@ -3,6 +3,8 @@ declarations of one api's placement, its binding, its contract routes with the a
 boundary middleware, the exception map and the boot check. The framework-neutral steps come from
 `seampact.codegen.runtime`."""
 
+from seampact.codegen.runtime.access_steps import CredentialsType
+from seampact.codegen.runtime.framework_versions import AcceptedFramework, VersionUnit
 from seampact.codegen.runtime.reply_verdict import FrameworkEtagMode, ResponsesMode
 from seampact.fastapi.runtime.api_binding import ApiBinding, BindingError, api_binding
 from seampact.fastapi.runtime.binding import bind_api
@@ -30,6 +32,7 @@ from seampact.fastapi.runtime.unserved import FEATURE_UNAVAILABLE
 
 __all__ = [
     "FEATURE_UNAVAILABLE",
+    "AcceptedFramework",
     "ApiBinding",
     "ApiPlacement",
     "App",
@@ -38,6 +41,7 @@ __all__ = [
     "BootCheckError",
     "BootCheckSwitches",
     "ContractBoundary",
+    "CredentialsType",
     "Factory",
     "FrameworkEtagMode",
     "FrameworkRouteRule",
@@ -50,6 +54,7 @@ __all__ = [
     "ResponsesMode",
     "RunSettings",
     "TargetDefaults",
+    "VersionUnit",
     "add_operation",
     "api_binding",
     "bind_api",

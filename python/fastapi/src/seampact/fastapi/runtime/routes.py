@@ -87,6 +87,7 @@ def _access_dependency(binding: ApiBinding, route: OperationRoute) -> Callable[.
         access_state = AccessState(
             contract=binding.contract,
             operation_id=route.operation_id,
+            credentials_types=binding.placement.credentials,
             raw_parameters=state.raw_parameters,
             request=_request_view(request, state),
             body=state.decoded.body,

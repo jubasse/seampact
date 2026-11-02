@@ -1,9 +1,9 @@
 """The boot check of one api (ADR 0026 "The boot check"), run by the boundary on `lifespan.startup`, else once on the
-first request. It lists every problem at once: the runtime version (G3), the hooks, the handler factories, the
-operation features this release does not serve, a contract request another route would take (Starlette's public
-`matches()` over `app.routes`), an app route under a base path that `frameworkRoutes` does not allow-list, the boundary
-not first in `app.user_middleware`, an `HTTPException` handler added after bind, and a dependency override of a
-generated dependency."""
+first request. It lists every problem at once: the runtime version (G3), a FastAPI minor or a Starlette or Pydantic
+major `generate` did not accept, the hooks, the handler factories, the operation features this release does not serve,
+a contract request another route would take (Starlette's public `matches()` over `app.routes`), an app route under a
+base path that `frameworkRoutes` does not allow-list, the boundary not first in `app.user_middleware`, an
+`HTTPException` handler added after bind, and a dependency override of a generated dependency."""
 
 import re
 from collections.abc import Iterable, Sequence
@@ -11,6 +11,7 @@ from typing import Final
 
 from starlette.routing import BaseRoute, Match
 
+from seampact.codegen.runtime.framework_versions import framework_version_problems
 from seampact.codegen.runtime.hook_check import HookFixes, hook_problems
 from seampact.codegen.runtime.version import other_version_problem
 from seampact.fastapi.runtime.api_binding import ApiBinding
@@ -38,6 +39,7 @@ def boot_problems(binding: ApiBinding) -> list[str]:
         return [] if version is None else [version]
 
     problems = [] if version is None else [version]
+    problems += framework_version_problems(placement.frameworks, placement.api)
 
     if placement.boot_check.hooks is HooksCheck.ERROR:
         problems += _hook_problems(binding)
