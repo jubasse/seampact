@@ -1,7 +1,7 @@
 """The request deadline (grammar section 9, a header of semantic `deadline`): an RFC 3339 instant the caller sends in
 the operation's `deadlineHeader`. The boundary refuses a malformed one with `schemaInvalid` and a passed one with the
-`deadlineExceeded` role's code, and gives the handler the time left. An operation's `budgetMs` alone is the client's
-default timeout: the server receives nothing of it beside this header."""
+`deadlineExceeded` role's code; the generated request's `deadline` gives the handler the time left. An operation's
+`budgetMs` alone is the client's default timeout: the server receives nothing of it beside this header."""
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -58,6 +58,13 @@ def request_deadline(
         raise deadline_exceeded(contract, operation_id)
 
     return deadline
+
+
+def sent_deadline(text: str | None) -> RequestDeadline | None:
+    """The deadline a header's text carries, None when the caller sent none.
+
+    Raises `ValueRuleError` for a text that is not an RFC 3339 instant with its offset."""
+    return None if text is None else RequestDeadline(date_time_from_text(text))
 
 
 def deadline_exceeded(contract: ApiContract, operation_id: str) -> ContractRefusal:

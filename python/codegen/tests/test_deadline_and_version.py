@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from seampact.codegen.runtime.contract import ApiContract
-from seampact.codegen.runtime.deadline import deadline_exceeded, request_deadline
+from seampact.codegen.runtime.deadline import deadline_exceeded, request_deadline, sent_deadline
 from seampact.codegen.runtime.failures import ContractRefusal
 from seampact.codegen.runtime.input_decoding import DecodedInput
 from seampact.codegen.runtime.ir_view import IrJson
@@ -51,6 +51,14 @@ def test_a_malformed_deadline_is_a_schema_issue(tasks_service_contract: ApiContr
 
 def test_an_operation_without_a_deadline_header_reads_none(tasks_contract: ApiContract) -> None:
     assert request_deadline(tasks_contract, "searchTasks", _with_deadline(None), _NOW) is None
+
+
+def test_a_header_text_reads_as_its_deadline_and_none_sent_as_none() -> None:
+    deadline = sent_deadline("2026-10-18T11:00:00.300+02:00")
+
+    assert deadline is not None
+    assert deadline.remaining_ms(_NOW) == 300
+    assert sent_deadline(None) is None
 
 
 def test_the_sent_version_is_read_from_its_source(tasks_contract: ApiContract) -> None:

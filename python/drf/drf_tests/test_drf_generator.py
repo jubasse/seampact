@@ -9,7 +9,8 @@ import json
 import logging
 import os
 import sys
-from datetime import UTC, date, datetime
+import uuid
+from datetime import UTC, date, datetime, timedelta
 from http import HTTPStatus
 from importlib import metadata
 from pathlib import Path
@@ -427,3 +428,24 @@ def test_the_date_field_refuses_a_date_time() -> None:
         field.run_validation(datetime(2026, 1, 2, tzinfo=UTC))
 
     assert field.run_validation(date(2026, 1, 2)) == date(2026, 1, 2)
+
+
+def test_the_handler_reads_the_time_left_from_the_requests_deadline(repository_root: Path, tmp_path: Path) -> None:
+    name = "seampact_drf_deadline_tasks_service"
+    write_package(generated_files(contract(reference_ir(repository_root, "tasksService"))), tmp_path / name)
+    operations = imported_package(tmp_path / name, name).operations
+    schemas = sys.modules[f"{name}.schemas"]
+    now = datetime(2026, 10, 18, 9, 0, tzinfo=UTC)
+
+    def request(deadline: str) -> object:
+        path = operations.GetTaskPath(channel_id=uuid.uuid4(), task_id=uuid.uuid4())
+        headers = operations.GetTaskHeaders(x_deadline=deadline)
+        principal = schemas.ServicePrincipal(service=schemas.Service.CATALOG, user_id=uuid.uuid4())
+
+        return operations.GetTaskRequest(input=operations.GetTaskInput(path=path, headers=headers), principal=principal)
+
+    deadline = getattr(request("2026-10-18T09:00:00.300Z"), "deadline", None)
+
+    assert deadline is not None
+    assert deadline.remaining_ms(now) == 300
+    assert deadline.remaining_ms(now + timedelta(seconds=1)) == 0

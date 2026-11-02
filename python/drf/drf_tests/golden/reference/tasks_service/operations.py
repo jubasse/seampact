@@ -5,6 +5,8 @@ import dataclasses as _dataclasses
 import typing as _typing
 import uuid as _uuid
 
+import seampact.codegen.runtime.deadline as _deadline
+
 from . import schemas as _schemas
 
 
@@ -97,6 +99,11 @@ class GetTaskRequest:
 
     input: GetTaskInput
     principal: _schemas.ServicePrincipal
+
+    @property
+    def deadline(self) -> _deadline.RequestDeadline | None:
+        """When the caller stops waiting, from its 'X-Deadline' header; None when it sent none."""
+        return _deadline.sent_deadline(self.input.headers.x_deadline)
 
     def __repr__(self) -> str:
         return f"GetTaskRequest(input={self.input!r}, principal=[redacted])"

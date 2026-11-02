@@ -11,6 +11,7 @@ from seampact.codegen.names import ApiNames, member_identifier
 from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_literal
 from seampact.codegen.redacted_members import redacted_dataclass_reprs, redacted_marker_block
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
+from seampact.codegen.request_deadline import deadline_property
 from seampact.fastapi.input_schemas import INPUT_PARTS, input_schema_id
 from seampact.fastapi.layout import ApiLayout, OperationNames
 from seampact.fastapi.runtime.page_facts import PAGE_FACTS
@@ -223,6 +224,8 @@ class _Emission:
             lines.append(f"{INDENT}{_SCOPES}: {names.scopes}")
 
         attributes = [_INPUT, *([_PRINCIPAL] if principal is not None else []), *([_SCOPES] if names.scopes else [])]
+
+        lines += deadline_property(self.module, operation, at, self.refusals)
 
         if len(attributes) > 1:
             lines += self._redacted_reprs(names.request, attributes, {_PRINCIPAL, _SCOPES})

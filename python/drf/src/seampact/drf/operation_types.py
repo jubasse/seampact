@@ -11,6 +11,7 @@ from seampact.codegen.credentials_classes import credentials_class
 from seampact.codegen.names import ApiNames, member_identifier, part_attributes
 from seampact.codegen.printer import INDENT, PythonModule, string_literal
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
+from seampact.codegen.request_deadline import deadline_property
 from seampact.drf.api_layout import ApiLayout, OperationNames, handler_headers, principal_schema
 from seampact.drf.dataclass_schemas import DATACLASS_DECORATOR, FrozenDataclasses, is_sensitive_use
 from seampact.drf.python_types import PythonTypes
@@ -164,7 +165,11 @@ class _Emission:
             input_hidden = _HiddenMembers([*parts, _BODY], [_BODY])
 
         self.dataclass(names.input, input_doc, input_members, input_hidden)
-        request_members = [f"{INDENT}{_INPUT}: {names.input}", *self._caller(operation, names, at)]
+        request_members = [
+            f"{INDENT}{_INPUT}: {names.input}",
+            *self._caller(operation, names, at),
+            *deadline_property(self.module, operation, at, self.refusals),
+        ]
         principal = [_PRINCIPAL] if isinstance(operation.access, IdentityAccess | OptionalAccess) else []
         scopes = [_SCOPES] if names.scopes is not None else []
         request_hidden = _HiddenMembers([_INPUT, *principal, *scopes], [*principal, *scopes])
