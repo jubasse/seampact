@@ -8,6 +8,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final
 
+from seampact.codegen.placement_lines import tuple_literal
 from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_literal
 from seampact.ir.run.generator import FrameworkRoute, TargetEntry
 
@@ -81,17 +82,11 @@ def _handler_resources(module: PythonModule, handler_resources: Mapping[str, Seq
         head = f"{string_literal(resource)}: "
 
         if len(operation_ids) == 1:
-            lines.append(f"{INDENT * 2}{head}{_string_tuple(operation_ids)},")
+            lines.append(f"{INDENT * 2}{head}{tuple_literal(operation_ids)},")
         else:
             lines += bracketed(INDENT * 2, head, [string_literal(item) for item in operation_ids], ",")
 
     return [*lines, f"{INDENT}}}"]
-
-
-def _string_tuple(texts: Sequence[str]) -> str:
-    literals = [string_literal(text) for text in texts]
-
-    return f"({literals[0]},)" if len(literals) == 1 else f"({', '.join(literals)})"
 
 
 def _accepted_frameworks(runtime: str, entry: TargetEntry) -> list[str]:
@@ -102,11 +97,11 @@ def _accepted_frameworks(runtime: str, entry: TargetEntry) -> list[str]:
         arguments = [
             f"package={string_literal(framework.package)}",
             f"unit={runtime}.VersionUnit.{framework.unit.name}",
-            f"accepted={_string_tuple(framework.accepted_units(entry.allow_untested))}",
+            f"accepted={tuple_literal(framework.accepted_units(entry.allow_untested))}",
         ]
 
         if framework.tested_minors:
-            arguments.append(f"tested_minors={_string_tuple(framework.tested_minors)}")
+            arguments.append(f"tested_minors={tuple_literal(framework.tested_minors)}")
 
         lines += bracketed(INDENT * 2, f"{runtime}.AcceptedFramework", arguments, ",")
 

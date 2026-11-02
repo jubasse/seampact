@@ -8,6 +8,12 @@ to the runtime."""
 from collections.abc import Mapping, Sequence
 from typing import Final
 
+from seampact.codegen.placement_lines import (
+    credentials_types,
+    operation_types_arguments,
+    tuple_literal,
+    unexpected_error_listener,
+)
 from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_literal
 from seampact.codegen.pydantic_layout import ApiLayout
 from seampact.codegen.routes import RouteEntry
@@ -27,7 +33,6 @@ _CONTRACT_MODULE: Final = "contract"
 _SCHEMAS_MODULE: Final = "schemas"
 _PYDANTIC: Final = "pydantic"
 _PYDANTIC_MAJOR: Final = "2"
-_LISTENER_DOC: Final = "Hears of each failure api '{api}' answers with its 500."
 _BIND_DOC: Final = "Places api '{api}' in the app; call it last, after its own middleware and exception handlers."
 
 
@@ -62,7 +67,7 @@ def placement_module(
     module.add_block(with_local_imports(local_modules, root_names, head))
     module.add_block(_placement(ir, layout, routes, options, entry))
     module.add_block(_handler_factories(layout))
-    module.add_block(_unexpected_error_listener(ir, layout))
+    module.add_block(unexpected_error_listener(ir.api.id, _HOOKS, layout))
 
     for operation in operations:
         names = layout.operations[operation.id]
@@ -89,7 +94,7 @@ def _placement(
     route_lines: list[str] = []
 
     for route in routes:
-        methods = _tuple_literal(route.methods)
+        methods = tuple_literal(route.methods)
         arguments = [
             string_literal(route.operation_id),
             string_literal(route.name),
@@ -149,7 +154,7 @@ def _placement(
         f"{INDENT}frameworks=(",
         *_accepted_frameworks(entry),
         f"{INDENT}),",
-        *_credentials_types(layout),
+        *credentials_types(_RUNTIME, layout),
         *_framework_document(options, entry),
         ")",
     ]
@@ -183,38 +188,11 @@ def _accepted_frameworks(entry: TargetEntry) -> list[str]:
         arguments = [
             f"package={string_literal(package)}",
             f"unit={_RUNTIME}.VersionUnit.{unit}",
-            f"accepted={_tuple_literal(units)}",
+            f"accepted={tuple_literal(units)}",
         ]
         lines += bracketed(INDENT * 2, f"{_RUNTIME}.AcceptedFramework", arguments, ",")
 
     return lines
-
-
-def _tuple_literal(items: Sequence[str]) -> str:
-    texts = [string_literal(item) for item in items]
-
-    return f"({texts[0]},)" if len(texts) == 1 else f"({', '.join(texts)})"
-
-
-def _credentials_types(layout: ApiLayout) -> list[str]:
-    if not layout.credentials:
-        return [f"{INDENT}credentials={{}},"]
-
-    lines = [f"{INDENT}credentials={{"]
-
-    for identity, credentials in layout.credentials.items():
-        attributes = ", ".join(
-            f"{string_literal(scheme)}: {string_literal(attribute)}"
-            for scheme, attribute in credentials.attributes.items()
-        )
-        lines += bracketed(
-            INDENT * 2,
-            f"{string_literal(identity)}: {_RUNTIME}.CredentialsType",
-            [credentials.class_name, "{" + attributes + "}"],
-            ",",
-        )
-
-    return [*lines, f"{INDENT}}},"]
 
 
 def _handler_factories(layout: ApiLayout) -> list[str]:
@@ -230,13 +208,6 @@ def _handler_factories(layout: ApiLayout) -> list[str]:
     ]
 
     return lines
-
-
-def _unexpected_error_listener(ir: ContractIR, layout: ApiLayout) -> list[str]:
-    return [
-        f"class {layout.unexpected_error_listener}({_HOOKS}.UnexpectedErrorListener, _typing.Protocol):",
-        f'{INDENT}"""{_LISTENER_DOC.format(api=ir.api.id)}"""',
-    ]
 
 
 def _bind(
@@ -304,15 +275,8 @@ def _add_operation(layout: ApiLayout, operation_id: str, proof_model: str | None
     """One `add_operation` call, split as ruff splits it: the call on one line when it fits, else one argument per
     line, the operation's types a nested call split the same way."""
     names = layout.operations[operation_id]
-    responses = ", ".join(f"({status}, {name})" for status, name in sorted(names.responses.items()))
-    types = [
-        f"request={names.request}",
-        f"responses=({responses}{',' if len(names.responses) == 1 else ''})",
-        f"errors={names.errors}",
-    ]
-
-    if proof_model is not None:
-        types.append(f"proofs=_{_SCHEMAS_MODULE}.{proof_model}")
+    proofs = None if proof_model is None else f"_{_SCHEMAS_MODULE}.{proof_model}"
+    types = operation_types_arguments(layout, operation_id, proofs)
     head = f"{_RUNTIME}.add_operation"
     arguments = [
         "binding",
