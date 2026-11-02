@@ -20,7 +20,7 @@ from seampact.ir.run.generator import GenerationRefusedError
 
 from .test_golden import reference_entry
 
-_GOLDEN_PLACEMENT = "tests.golden.reference.tasks.fastapi"
+_GOLDEN_PLACEMENT = "fastapi_tests.golden.reference.tasks.fastapi"
 
 
 def _ir_json(repository_root: Path) -> dict[str, object]:

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-# python/fastapi/tests/conftest.py: the repository root is three directories up from this one.
+# python/fastapi/fastapi_tests/conftest.py: the repository root is three directories up from this one.
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 

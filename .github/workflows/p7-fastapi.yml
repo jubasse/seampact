@@ -98,7 +98,7 @@ jobs:
       - name: Type-check the golden package as Pylance users do
         run: uv run --no-sync pyright
       - name: Test the target and the shared code generation
-        run: uv run --no-sync pytest fastapi/tests codegen/tests
+        run: uv run --no-sync pytest fastapi/fastapi_tests codegen/tests
 
   fastapi:
     # Every job this check stands for is listed here, or its failure would not reach the required check.

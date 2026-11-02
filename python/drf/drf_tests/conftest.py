@@ -7,7 +7,7 @@ import django
 import pytest
 from django.conf import settings
 
-# python/drf/tests/conftest.py: the repository root is three directories up from this one.
+# python/drf/drf_tests/conftest.py: the repository root is three directories up from this one.
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 if not settings.configured:

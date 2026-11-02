@@ -97,9 +97,9 @@ jobs:
       - name: Check the format
         run: uv run --no-sync ruff format --check django drf
       - name: Type-check the packages and their golden output with the Django and DRF stubs
-        run: uv run --no-sync mypy django/src django/tests drf/src drf/tests
+        run: uv run --no-sync mypy django/src django/django_tests drf/src drf/drf_tests
       - name: Test on Python ${{ matrix.python-version }} and Django ${{ matrix.django }}
-        run: uv run --no-sync pytest django/tests drf/tests
+        run: uv run --no-sync pytest django/django_tests drf/drf_tests
   drf:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
     needs: [changes, golden]
