@@ -8,14 +8,19 @@ import importlib.util
 import json
 import os
 import sys
+from datetime import UTC, date, datetime
 from importlib import metadata
 from pathlib import Path
 from types import ModuleType
 
 import pytest
-from django.urls import URLPattern, get_resolver
+from django.test import RequestFactory
+from django.urls import URLPattern, get_resolver, reverse
+from rest_framework.exceptions import ValidationError
 
+from seampact.django.runtime import PlacementUnavailableError
 from seampact.drf.generator import DrfGenerator
+from seampact.drf.runtime import TypedValueField
 from seampact.drf.serializer_fields import RulesMode
 from seampact.ir.config.json_value import JsonValue
 from seampact.ir.model import ContractIR
@@ -226,3 +231,170 @@ def test_the_matrix_checks_drf_by_major_with_django_as_a_companion() -> None:
     ]
     assert drf.frameworks[1].is_below_floor(5, 1)
     assert drf.frameworks[1].unit_of(6, 1) == "6"
+
+
+def _golden_tasks() -> ModuleType:
+    name = "seampact_drf_golden_tasks"
+
+    return sys.modules.get(name) or imported_package(_GOLDEN / "tasks", name)
+
+
+def _drf_of_golden_tasks() -> ModuleType:
+    _golden_tasks()
+
+    return importlib.import_module("seampact_drf_golden_tasks.drf")
+
+
+def test_an_empty_string_runs_every_string_rule() -> None:
+    drf = _drf_of_golden_tasks()
+    empty_title = drf.CreateTaskSerializer(data={"title": ""})
+    empty_sort = drf.ListTasksQuerySerializer(data={"sort": [""]})
+
+    assert not empty_title.is_valid()
+    assert empty_title.errors["title"][0].code == "min_length"
+    assert not empty_sort.is_valid()
+    assert empty_sort.errors["sort"][0][0].code == "pattern"
+
+
+@pytest.mark.parametrize("title", ["a\u0000", "a\ud800", " padded "])
+def test_a_contract_string_is_kept_as_sent(title: str) -> None:
+    serializer = _drf_of_golden_tasks().CreateTaskSerializer(data={"title": title})
+
+    assert serializer.is_valid(), serializer.errors
+    assert serializer.validated_data["title"] == title
+
+
+def test_every_route_name_reverses_to_its_operation_path(repository_root: Path) -> None:
+    _golden_tasks()
+    routes = importlib.import_module("seampact_drf_golden_tasks.routes")
+    urlconf = "seampact_drf_golden_tasks.urls"
+    resolver = get_resolver(urlconf)
+    names = [value for key, value in vars(routes.TasksRouteNames).items() if key.isupper()]
+
+    assert len(names) == len(contract(reference_ir(repository_root, "tasks")).operations)
+    for name in names:
+        candidates = resolver.reverse_dict.getlist(name)
+        assert candidates, f"{name} is not registered"
+        parameters = candidates[0][0][0][1]
+        path = reverse(name, urlconf=urlconf, kwargs={parameter: "x" for parameter in parameters})
+        assert resolver.resolve(path).url_name == name
+
+
+def _renamed_draft_parameter(repository_root: Path, parameter: str) -> dict[str, JsonValue]:
+    """The reference contract whose draft operations name their path parameter `parameter`."""
+    ir = reference_ir(repository_root, "tasks")
+    operations = ir["operations"]
+    assert isinstance(operations, list)
+
+    for operation in operations:
+        assert isinstance(operation, dict) and isinstance(operation["path"], str)
+        params = operation["params"]
+        assert isinstance(params, dict) and isinstance(params["path"], list)
+
+        if operation["path"] == "/v1/me/drafts/{draftId}":
+            operation["path"] = "/v1/me/drafts/{" + parameter + "}"
+            draft = params["path"][0]
+            assert isinstance(draft, dict)
+            draft["name"] = parameter
+
+    return ir
+
+
+@pytest.mark.parametrize("parameter", ["request", "self"])
+def test_a_path_parameter_named_like_a_view_argument_reaches_the_view(
+    repository_root: Path, tmp_path: Path, parameter: str
+) -> None:
+    package = f"seampact_drf_parameter_{parameter}"
+    write_package(generated_files(contract(_renamed_draft_parameter(repository_root, parameter))), tmp_path / package)
+    imported_package(tmp_path / package, package)
+    match = get_resolver(f"{package}.urls").resolve("/v1/me/drafts/7")
+
+    # The view runs until the admission step, which this release refuses by name.
+    with pytest.raises(PlacementUnavailableError):
+        match.func(RequestFactory().get("/v1/me/drafts/7"), *match.args, **match.kwargs)
+
+
+def _query_parameters(repository_root: Path, operation_id: str, names: list[str]) -> dict[str, JsonValue]:
+    """The reference contract whose operation `operation_id` gains a text query parameter per name."""
+    ir = reference_ir(repository_root, "tasks")
+    operations = ir["operations"]
+    assert isinstance(operations, list)
+
+    for operation in operations:
+        assert isinstance(operation, dict)
+        params = operation["params"]
+        assert isinstance(params, dict) and isinstance(params["query"], list)
+
+        if operation["id"] == operation_id:
+            params["query"] += [
+                {"name": name, "required": False, "type": {"kind": "scalar", "refinements": {}, "type": "string"}}
+                for name in names
+            ]
+
+    return ir
+
+
+def test_two_parameters_of_one_part_with_one_attribute_are_refused_naming_both(repository_root: Path) -> None:
+    with pytest.raises(GenerationRefusedError) as refused:
+        generated_files(contract(_query_parameters(repository_root, "listChannels", ["2fa", "field_2fa"])))
+
+    problems = [problem for problem in refused.value.problems if problem.code == "name.collision"]
+    assert len(problems) == 1
+    assert "/params/query/2" in problems[0].message and "/params/query/3" in problems[0].message
+
+
+def _limit_refinements(repository_root: Path, type_use: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """The reference contract whose `listChannels` query parameter `limit` has the type `type_use`."""
+    ir = reference_ir(repository_root, "tasks")
+    operations = ir["operations"]
+    assert isinstance(operations, list)
+
+    for operation in operations:
+        assert isinstance(operation, dict)
+        params = operation["params"]
+        assert isinstance(params, dict) and isinstance(params["query"], list)
+
+        for param in params["query"]:
+            assert isinstance(param, dict)
+
+            if operation["id"] == "listChannels" and param["name"] == "limit":
+                param["type"] = type_use
+
+    return ir
+
+
+@pytest.mark.parametrize(
+    ("type_use", "code"),
+    [
+        (
+            {"kind": "scalar", "type": "integer", "refinements": {"exclusiveMinimum": "0"}},
+            "rule.exclusiveMinimum.unsupported",
+        ),
+        ({"kind": "scalar", "type": "number", "refinements": {"multipleOf": "0.5"}}, "rule.multipleOf.unsupported"),
+        (
+            {"kind": "scalar", "type": "string", "format": "decimal", "refinements": {"minimum": "1"}},
+            "rule.minimum.unsupported",
+        ),
+        (
+            {"kind": "scalar", "type": "string", "format": "date-time", "refinements": {"maxLength": 40}},
+            "rule.maxLength.unsupported",
+        ),
+        ({"kind": "scalar", "type": "integer", "refinements": {"minimum": "1.5"}}, "rule.minimum.fractional"),
+    ],
+)
+def test_a_value_rule_drf_cannot_check_under_native_is_refused_at_generate(
+    repository_root: Path, type_use: dict[str, JsonValue], code: str
+) -> None:
+    with pytest.raises(GenerationRefusedError) as refused:
+        generated_files(contract(_limit_refinements(repository_root, type_use)))
+
+    assert [problem.code for problem in refused.value.problems] == [code]
+
+
+def test_the_date_field_refuses_a_date_time() -> None:
+    field = TypedValueField(date)
+
+    with pytest.raises(ValidationError):
+        field.run_validation(datetime(2026, 1, 2, tzinfo=UTC))
+
+    assert field.run_validation(date(2026, 1, 2)) == date(2026, 1, 2)
