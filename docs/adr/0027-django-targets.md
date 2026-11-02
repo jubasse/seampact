@@ -318,11 +318,11 @@ On a contract route the boundary answers with the role of:
 - `Http404`: `notFound`, which Ninja renders itself without calling `handler404` (spike);
 - any other `HttpError`: the role of its status.
 
-Ninja re-raises any other exception to Django outside `DEBUG`, where the shared layer records it (spike).
+Ninja re-raises any other exception to Django outside `DEBUG` (spike), and Django would log its message on `django.request`. On a request a boundary matched, outside `DEBUG` and `DEBUG_PROPAGATE_EXCEPTIONS`, the wrapper answers such an exception with a bare 500 instead, which the boundary replaces with the api's 500, logging the class and the place only, as on DRF. A `BadRequest` or `SuspiciousOperation` still goes to Django.
 
 #### The boot check
 
-Beside the shared list: Ninja's own docs routes, read from the `NinjaAPI`'s `docs_url` and `openapi_url` under its prefix, are framework routes, accepted and listed in the report (ADR 0011).
+Beside the shared list, the check reads the values `bind_<api>()` took: a `responses` mode other than `strict` or `warn`, an `operations` value that is not an `OperationSettings`, and a `body_validation` that is not a bool are refused by name. So are an `auth=` or a throttle on an access kind with an operation that declares no reply for its refusal (`unauthenticated` or a single 401 code, `rateLimited` or a single 429 code), since Ninja's refusal would become the api's 500. A second `bind_<api>()` on the same `NinjaAPI` raises. Ninja's own docs routes, read from the `NinjaAPI`'s `docs_url` and `openapi_url` under its prefix, are framework routes, accepted and listed in the report (ADR 0011).
 
 #### Native docs
 

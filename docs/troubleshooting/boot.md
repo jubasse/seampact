@@ -130,6 +130,13 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `the api '<api>' writes relative URLs ... and bind_<api>(public_origin=...) is set` | Drop `public_origin` from the call, or set `api.wire.urls: absolute` in the contract and generate again. |
 | `bind_<api>(access=...) has the unknown access kind '<kind>'` | Key `access` by `public`, `optional`, `identity` or `signed`. |
 | `bind_<api>(access=...) names the access kind '<kind>', which no operation of the api has` | Remove that kind. |
+| `bind_<api>(responses=...) is '<value>'; set one of strict, warn.` | Pass `"strict"`, `"warn"`, or nothing. The same holds for `operations['<id>'].responses`. |
+| `bind_<api>(operations=...)['<id>'] is a <type>; set an OperationSettings.` | Pass `OperationSettings(responses=...)` from `seampact.ninja.runtime` for each operation. |
+| `bind_<api>(body_validation=...) is '<value>'; set True or False.` | Pass a bool, or leave the argument out. |
+| `bind_<api>(access=...) gives the access kind '<kind>' an auth=, and its operation '<id>' declares no code for the role 'unauthenticated' ...` | Declare an `unauthenticated` error on that operation, or remove the `auth=` from the kind. |
+| `bind_<api>(access=...) gives the access kind '<kind>' a throttle, and its operation '<id>' declares no code for the role 'rateLimited' ...` | Declare a `rateLimited` error on that operation, or remove the throttle from the kind. |
+| `operation '<id>': no URL pattern serves <path>; include the NinjaAPI's urls at a prefix that, followed by bind_<api>(prefix=...), equals the entry's mount.` | Make the include prefix of `api.urls` plus `prefix` equal the entry's `mount`. |
+| `seampact: bind_<api>() was already called on this NinjaAPI` (a `BindingError` at import) | Call `bind_<api>()` once per `NinjaAPI`. |
 | `the NinjaAPI's on_exception was replaced after bind_<api>()` | Replace `api.on_exception` before calling `bind_<api>()`. |
 | `bind_<api>() gets ..., which builds a <Class> whose method '<name>' is an async def` | Write the method as a plain `def`, or generate with `views: async`. |
 

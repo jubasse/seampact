@@ -128,11 +128,19 @@ def api_binding(
     access: Mapping[str, AccessSettings],
     settings: RunSettings,
 ) -> ApiBinding:
-    """Raises `BindingError` when `api` is not a `NinjaAPI`."""
+    """Raises `BindingError` when `api` is not a `NinjaAPI`, or when the api was already bound on it."""
     if not isinstance(api, NinjaAPI):
         raise BindingError(
             f"seampact: bind_{placement.api}() takes the app's NinjaAPI, not a {type(api).__qualname__}; pass the "
             "NinjaAPI whose urls the app includes."
+        )
+
+    earlier = binding_of(placement.api)
+
+    if earlier is not None and earlier.api is api:
+        raise BindingError(
+            f"seampact: bind_{placement.api}() was already called on this NinjaAPI, and a second call would add the "
+            "api's routes twice; call it once."
         )
 
     return ApiBinding(
@@ -172,7 +180,7 @@ def add_operation[E, R](
 def bind_api(binding: ApiBinding) -> None:
     """Adds the api's Router to the app's NinjaAPI; each operation runs the `auth=` and throttles the app gave its
     access kind, none otherwise, so an app-wide `NinjaAPI(auth=...)` never reaches a contract route; each path also
-    answers a CORS preflight no CORS layer answered with its 404."""
+    answers a CORS preflight no CORS layer answered with its 404, without `auth=` or throttles."""
     router = Router()
 
     for bound in binding.operations.values():
@@ -196,6 +204,7 @@ def bind_api(binding: ApiBinding) -> None:
             [PREFLIGHT_METHOD],
             preflight,
             auth=None,
+            throttle=[],
             include_in_schema=False,
             url_name=path_operation.route.name,
         )

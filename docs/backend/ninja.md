@@ -120,7 +120,7 @@ urlpatterns = [
 - A factory is called once per request with the Django `HttpRequest`. Its return value is your handler class or hook object.
 - Other arguments: `idempotency_store`, `access` (see [Ninja's own auth](#ninjas-own-auth)), `public_origin`, `responses`, and `operations` (per operation, `responses`). Add `public_origin` (`https://api.example.com`) when the contract writes absolute URLs.
 - The prefix where you include `api.urls`, plus `prefix`, must equal the entry's `mount` (empty by default). The boot check refuses any other sum.
-- With two apis, add two boundaries and call both `bind_` functions on the same `NinjaAPI`.
+- With two apis, add two boundaries and call both `bind_` functions on the same `NinjaAPI`. Call each `bind_` function once per `NinjaAPI`: a second call raises.
 - Leave `settings.SEAMPACT` without a key for the api: the boot check refuses one.
 
 Each route is named `seampact.<api>.<operationId>`, under the `NinjaAPI`'s `urls_namespace`: reverse `"shop:" + ShopRouteNames.GET_PRODUCT`. `ShopRouteNames` and `ShopUrls` build the names and the paths. `artefacts: { routeHelpers: false }` leaves both out.
@@ -228,10 +228,12 @@ bind_shop(
 ```
 
 - The kinds are `public`, `optional`, `identity` and `signed`. A kind with no entry runs no `auth=` and no throttle.
+- Give a kind an `auth=` only when each of its operations declares an `unauthenticated` error, and a throttle only when each declares a `rateLimited` error. The boot check names the operation otherwise.
 - Ninja refuses a request when every `auth=` callable returns a falsy value. Return a truthy value for a caller your hook should still see, such as a session-cookie caller.
 - `AuthenticationError` answers the contract's `unauthenticated` error. `AuthorizationError` answers `forbidden`, `Http404` `notFound`, and `Throttled` `rateLimited` with its `Retry-After`. Any other `HttpError` answers the contract's error of its status.
 - Without that error, the operation's one code of that status answers, if it has exactly one. Otherwise the reply is a logged 500.
 - On a contract route, the contract's error replaces what your exception handlers render. Your own routes keep their reply.
+- Outside `DEBUG`, any other exception from a handler answers the api's 500. The log names its class and where it was raised, never its message.
 - If you replace `api.on_exception`, do it before `bind_shop()`: the boot check refuses it after.
 
 ## Docs

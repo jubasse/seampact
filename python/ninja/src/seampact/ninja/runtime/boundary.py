@@ -39,6 +39,13 @@ class NinjaContractBoundary(ContractBoundary):
         return pattern.name in _NINJA_FRAMEWORK_NAMES
 
     @classmethod
+    def unserved_path_fix(cls) -> str:
+        return (
+            f"include the NinjaAPI's urls at a prefix that, followed by bind_{cls.api}(prefix=...), equals the "
+            "entry's mount"
+        )
+
+    @classmethod
     def prepare_urlconf(cls) -> None:
         binding = binding_of(cls.api)
 

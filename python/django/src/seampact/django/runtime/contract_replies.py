@@ -46,16 +46,24 @@ def refusal_response(
     return django_response(request, contract, error_reply(contract, operation_id, refused.code, refused.params))
 
 
+def role_or_status_code(contract: ApiContract, operation_id: str, role: str, status: int) -> str | None:
+    """The code the operation declares for the role, else its single code of that status; None when it has neither."""
+    code = contract.role_code(operation_id, role)
+
+    if code is not None:
+        return code
+
+    codes = contract.declared_codes(operation_id, status)
+
+    return codes[0] if len(codes) == 1 else None
+
+
 def role_answer(
     contract: ApiContract, operation_id: str, role: str, status: int, slots: Mapping[str, object] | None = None
 ) -> Reply | None:
     """The code of the role the operation declares, else its single code of that status, with the params its role
     binding renders from `slots`; None when it has neither."""
-    code = contract.role_code(operation_id, role)
-
-    if code is None:
-        codes = contract.declared_codes(operation_id, status)
-        code = codes[0] if len(codes) == 1 else None
+    code = role_or_status_code(contract, operation_id, role, status)
 
     if code is None:
         return None

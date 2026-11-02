@@ -36,8 +36,8 @@ _bound: dict[str, ApiConfiguration] = {}
 
 
 def register_configuration(api: str, configuration: ApiConfiguration) -> None:
-    """The api's values come from `configuration` from now on; a second registration replaces the first, as a
-    second `bind_<api>()` replaces the api's router."""
+    """The api's values come from `configuration` from now on; a second registration replaces the first, as
+    `bind_<api>()` on another NinjaAPI does."""
     _bound[api] = configuration
 
 

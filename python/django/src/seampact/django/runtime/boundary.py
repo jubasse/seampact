@@ -146,6 +146,11 @@ class ContractBoundary:
         """A pattern of the framework itself (Ninja's docs), accepted under the api's base paths."""
         return False
 
+    @classmethod
+    def unserved_path_fix(cls) -> str:
+        """How the app makes a contract path reach its generated view, when no URL pattern serves it."""
+        return 'include the api\'s urls module at "" in the root URLconf, without a prefix'
+
     def __init__(self, get_response: GetResponse) -> None:
         self.get_response = get_response
         self.async_mode = iscoroutinefunction(get_response)

@@ -1,20 +1,38 @@
 """The Ninja part of the boot check (ADR 0027 "The system check and the boot check"): the api's values come from
 `bind_<api>()`, so the check reads them from the binding: a missing call, a missing handler factory, the hooks the
-contract needs, the idempotency store, the per-operation settings, the access kinds, the public origin, an
-`on_exception` replaced after the call, and in sync views an `async def` factory or method."""
+contract needs, the idempotency store, the `responses`, `body_validation` and per-operation settings, the access kinds
+and the roles their `auth=` and throttles answer with, the public origin, an `on_exception` replaced after the call,
+and in sync views an `async def` factory or method."""
 
 import inspect
 from collections.abc import Callable, Collection, Mapping
+from dataclasses import dataclass
+from http import HTTPStatus
 from typing import Final
 
 from seampact.codegen.runtime.access_kinds import ACCESS_KINDS, access_kind
+from seampact.codegen.runtime.access_steps import UNAUTHENTICATED_ROLE
 from seampact.codegen.runtime.hook_check import HookFixes, hook_needs, hook_problems
 from seampact.codegen.runtime.idempotency import enforces_idempotency
 from seampact.codegen.runtime.public_origin import public_origin_problem
+from seampact.codegen.runtime.run_settings import OperationSettings
 from seampact.django.runtime.api_settings import SETTINGS_NAME, SettingsError, api_settings
-from seampact.django.runtime.boot_check import async_methods, built_classes
+from seampact.django.runtime.boot_check import async_methods, built_classes, responses_problems
+from seampact.django.runtime.contract_replies import role_or_status_code
 from seampact.ninja.runtime.binding import ApiBinding, binding_of
+from seampact.ninja.runtime.exceptions import RATE_LIMITED_ROLE
 from seampact.ninja.views_mode import ViewsMode
+
+
+@dataclass(frozen=True, slots=True)
+class _AccessRefusal:
+    """What Ninja runs for an access kind, the role its refusal takes and that role's status."""
+
+    given: str
+    removed: str
+    role: str
+    status: HTTPStatus
+
 
 _HOOK_METHODS: Final = {"authenticate": "authenticate", "deciders": "decide", "scope_resolvers": "resolve_scope"}
 
@@ -32,15 +50,21 @@ def binding_problems(api: str, body_validation: bool) -> list[str]:
             "the NinjaAPI the root URLconf includes.",
         ]
 
-    if body_validation or binding.settings.body_validation:
+    given_body_validation: object = binding.settings.body_validation
+
+    if given_body_validation is not None and not isinstance(given_body_validation, bool):
+        problems.append(f"bind_{api}(body_validation=...) is {given_body_validation!r}; set True or False.")
+    elif body_validation or given_body_validation:
         problems.append(
             f"the api '{api}' sets bodyValidation, which this release of seampact-ninja does not serve yet; remove "
             "the option until a release serves it."
         )
 
     problems += _handler_problems(binding)
+    problems += responses_problems(f"bind_{api}(responses=...)", binding.settings.responses)
     problems += _operation_settings_problems(binding)
     problems += _access_problems(binding)
+    problems += _access_role_problems(binding)
     problems += _store_problems(binding)
     problems += _on_exception_problems(binding)
     origin = public_origin_problem(binding.contract, f"bind_{api}(public_origin=...)", binding.settings.public_origin)
@@ -125,14 +149,26 @@ def _handler_problems(binding: ApiBinding) -> list[str]:
 
 
 def _operation_settings_problems(binding: ApiBinding) -> list[str]:
+    api = binding.placement.api
     kept = set(binding.contract.operation_ids())
+    problems: list[str] = []
+    # An app may read the values from its own settings, so a value is checked beyond its annotation.
+    given: Mapping[str, object] = binding.settings.operations
 
-    return [
-        f"bind_{binding.placement.api}(operations=...) names the operation '{operation_id}', which the api does not "
-        "keep; remove it, or correct its operation id."
-        for operation_id in binding.settings.operations
-        if operation_id not in kept
-    ]
+    for operation_id, operation in given.items():
+        argument = f"bind_{api}(operations=...)['{operation_id}']"
+
+        if operation_id not in kept:
+            problems.append(
+                f"bind_{api}(operations=...) names the operation '{operation_id}', which the api does not keep; "
+                "remove it, or correct its operation id."
+            )
+        elif not isinstance(operation, OperationSettings):
+            problems.append(f"{argument} is a {type(operation).__name__}; set an OperationSettings.")
+        else:
+            problems += responses_problems(f"{argument}.responses", operation.responses)
+
+    return problems
 
 
 def _access_problems(binding: ApiBinding) -> list[str]:
@@ -149,6 +185,36 @@ def _access_problems(binding: ApiBinding) -> list[str]:
             problems.append(
                 f"bind_{api}(access=...) names the access kind '{kind}', which no operation of the api has; remove it."
             )
+
+    return problems
+
+
+def _access_role_problems(binding: ApiBinding) -> list[str]:
+    """An `auth=` or a throttle on an access kind with an operation that declares no reply for its refusal: Ninja's
+    refusal would become the api's 500."""
+    api, contract = binding.placement.api, binding.contract
+    problems: list[str] = []
+
+    for kind, settings in binding.access.items():
+        refusals: list[_AccessRefusal] = []
+
+        if settings.auth is not None:
+            refusals.append(_AccessRefusal("an auth=", "the auth=", UNAUTHENTICATED_ROLE, HTTPStatus.UNAUTHORIZED))
+
+        if settings.throttle:
+            refusals.append(
+                _AccessRefusal("a throttle", "the throttle", RATE_LIMITED_ROLE, HTTPStatus.TOO_MANY_REQUESTS)
+            )
+
+        problems += [
+            f"bind_{api}(access=...) gives the access kind '{kind}' {refusal.given}, and its "
+            f"operation '{operation_id}' declares no code for the role '{refusal.role}' nor a single code of status "
+            f"{refusal.status.value}; declare one, or remove {refusal.removed}."
+            for refusal in refusals
+            for operation_id in contract.operation_ids()
+            if access_kind(contract, operation_id) == kind
+            and role_or_status_code(contract, operation_id, refusal.role, refusal.status) is None
+        ]
 
     return problems
 

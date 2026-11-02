@@ -85,6 +85,9 @@ class BoundaryDeclaration(Protocol):
     def is_framework_pattern(cls, pattern: URLPattern) -> bool: ...
 
     @classmethod
+    def unserved_path_fix(cls) -> str: ...
+
+    @classmethod
     def prepare_urlconf(cls) -> None: ...
 
 
@@ -229,7 +232,7 @@ def _store_problems(api: str, contract: ApiContract) -> list[str]:
 def _run_time_problems(api: str, own: Mapping[str, object], contract: ApiContract) -> list[str]:
     """The `responses` mode of the api and the per-operation settings, each by name with what it accepts."""
     setting = f"settings.{SETTINGS_NAME}['{api}']"
-    problems = _responses_problems(f"{setting}['{RESPONSES_KEY}']", own.get(RESPONSES_KEY))
+    problems = responses_problems(f"{setting}['{RESPONSES_KEY}']", own.get(RESPONSES_KEY))
     operations = own.get(OPERATIONS_KEY)
 
     if operations is None:
@@ -263,10 +266,11 @@ def _operation_problems(setting: str, operation: object) -> list[str]:
         if key != RESPONSES_KEY
     ]
 
-    return problems + _responses_problems(f"{setting}['{RESPONSES_KEY}']", operation.get(RESPONSES_KEY))
+    return problems + responses_problems(f"{setting}['{RESPONSES_KEY}']", operation.get(RESPONSES_KEY))
 
 
-def _responses_problems(setting: str, value: object) -> list[str]:
+def responses_problems(setting: str, value: object) -> list[str]:
+    """A `responses` mode other than strict, warn or None, named by `setting`."""
     modes = [mode.value for mode in ResponsesMode]
 
     if value is None or value in modes:
@@ -427,10 +431,7 @@ def _resolved_problems(
     try:
         resolved: ResolverMatch = get_resolver().resolve(sample)
     except Resolver404:
-        return [
-            f"operation '{operation_id}': no URL pattern serves {sample}; include the api's urls module at \"\" "
-            "in the root URLconf, without a prefix."
-        ]
+        return [f"operation '{operation_id}': no URL pattern serves {sample}; {boundary.unserved_path_fix()}."]
 
     if contract_of_view(resolved.func) is contract and resolved.url_name == route_name:
         return []
