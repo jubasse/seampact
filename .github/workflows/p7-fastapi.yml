@@ -142,7 +142,7 @@ jobs:
           if-no-files-found: error
 
   # The consumer installed from the built wheels and generated from the bundle with Node removed, then served by
-  # uvicorn to the http suite's default, hand-written and boot profiles over every operation of the tasks api; the floor
+  # uvicorn to the http suite's default, hand-written and boot profiles over every operation of the tasks and tasksService apis; the floor
   # and the latest rows are both PR rows.
   e2e:
     name: e2e (${{ matrix.row }})

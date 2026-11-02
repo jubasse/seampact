@@ -1,5 +1,6 @@
 """The FastAPI consumer of the http suite: the `tasks` api bound with the developer's handlers and the hook doubles,
-less what the boot variant (`SEAMPACT_SUITE_BOOT_VARIANT`) leaves out, beside the suite's control routes."""
+less what the boot variant (`SEAMPACT_SUITE_BOOT_VARIANT`) leaves out, and the `tasksService` api of its relays,
+beside the suite's control routes."""
 
 import logging
 from pathlib import Path
@@ -9,22 +10,27 @@ from control import control_router
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from generated.tasks.fastapi import TasksHandlerFactories, bind_tasks
+from generated.tasks_service.fastapi import TasksServiceHandlerFactories, bind_tasks_service
 from handlers import (
     AppHandlers,
     ChannelsHandlers,
     DraftsHandlers,
     HooksHandlers,
+    InternalHandlers,
     PreferencesHandlers,
     TasksHandlers,
 )
 from hooks import (
+    CALLER_SERVICE_RIGHT,
     OVERRIDDEN_RIGHT,
     ChannelResolver,
     OverriddenRightDecider,
+    ServiceDecider,
     StripeHook,
     TasksDecider,
     TasksUnexpectedErrors,
-    UserHook,
+    service_hook,
+    user_hook,
 )
 from seampact_consumer_suite.boot_variant import BootVariant, current_boot_variant, serves_unlisted_route
 from seampact_consumer_suite.file_idempotency_store import FileIdempotencyStore
@@ -39,6 +45,7 @@ IDEMPOTENCY_STORE_FILE: Final = "suite-idempotency.json"
 UNLISTED_PATH: Final = "/v1/unlisted"
 USER_IDENTITY: Final = "user"
 STRIPE_IDENTITY: Final = "stripe"
+SERVICE_IDENTITY: Final = "service"
 # Every right and rule the tasks api's operations ask a decider for.
 DECIDED_NAMES: Final = ("tasks.read", "tasks.update", "tasks.seeEffort", "roles", "throttle", "recentAuth")
 CHANNEL_SCOPE: Final = "channel"
@@ -88,10 +95,17 @@ def create_app() -> FastAPI:
         ),
         authenticate={STRIPE_IDENTITY: StripeHook}
         if variant is BootVariant.MISSING_AUTHENTICATE_HOOK
-        else {USER_IDENTITY: UserHook, STRIPE_IDENTITY: StripeHook},
+        else {USER_IDENTITY: user_hook, STRIPE_IDENTITY: StripeHook},
         deciders={} if variant is BootVariant.MISSING_DECIDER else _deciders(),
         scope_resolvers={} if variant is BootVariant.MISSING_SCOPE_RESOLVER else {CHANNEL_SCOPE: ChannelResolver},
         idempotency_store=_idempotency_store,
+        on_unexpected_error=TasksUnexpectedErrors,
+    )
+    bind_tasks_service(
+        app,
+        handlers=TasksServiceHandlerFactories(internal=InternalHandlers),
+        authenticate={SERVICE_IDENTITY: service_hook},
+        deciders={CALLER_SERVICE_RIGHT: ServiceDecider},
         on_unexpected_error=TasksUnexpectedErrors,
     )
 
