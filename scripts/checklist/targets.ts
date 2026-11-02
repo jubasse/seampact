@@ -12,6 +12,7 @@ export const SERVER_TARGETS: readonly string[] = [
   "symfony",
   "api-platform",
   "fastapi",
+  "drf",
 ];
 
 export const CONCRETE_TARGETS: readonly string[] = [

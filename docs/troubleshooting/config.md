@@ -66,6 +66,7 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 | You see | Do |
 |---|---|
 | `config.matrix.untested` | Your framework version is not tested. Accept it with `allowUntested: [nestjs@13]` (Spring Boot: `spring-boot@5`) on the entry, or install a tested one. With `checks.matrix: error` it fails. |
+| `config.matrix.untested-minor` | A warning only: your Django, DRF or Ninja minor is not tested, in a tested major. Install a tested minor the message lists, or keep yours. |
 | `config.matrix.incompatible` | Install a framework version the message lists. |
 | `config.matrix.unknown-framework` | Write the `allowUntested` item as `<framework>@<major>` for the framework this target serves (`<framework>@0.<minor>` for a 0.x framework). |
 | `config.matrix.allowed-tested` | That major is tested, so the item does nothing. Remove it. |
