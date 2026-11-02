@@ -1,6 +1,7 @@
 """The DRF placement of api 'tasks': its serializers, views and exception handler."""
 
 import collections.abc as _abc
+import typing as _typing
 import uuid as _uuid
 
 import django.http as _http
@@ -10,6 +11,7 @@ import rest_framework.serializers as _serializers
 import seampact.django.runtime as _django_runtime
 import seampact.drf.runtime as _drf_runtime
 
+from . import contract as _contract
 from . import operations as _operations
 from . import schemas as _schemas
 
@@ -485,6 +487,13 @@ class TasksView(_drf_runtime.ContractView):
     """The base of the contract views of api 'tasks'."""
 
     api = "tasks"
+    contract = _contract.CONTRACT
+    credentials: _typing.ClassVar[_abc.Mapping[str, _drf_runtime.CredentialsType]] = {
+        "stripe": _drf_runtime.CredentialsType(_operations.StripeCredentials, {"stripeSignature": "stripe_signature"}),
+        "user": _drf_runtime.CredentialsType(
+            _operations.UserCredentials, {"bearer": "bearer", "sessionCookie": "session_cookie"}
+        ),
+    }
 
     def get_exception_handler(self) -> _drf_runtime.ExceptionHandler:
         return contract_exception_handler
@@ -549,7 +558,7 @@ class HealthView(TasksView):
 
     def get(self, request: _request.Request, **path: str) -> _http.HttpResponseBase:
         admission = self.admit(request, "health")
-        contract_request = _operations.HealthRequest(input=_operations.HealthInput())
+        contract_request = _operations.HealthRequest(input=admission.empty_input(_operations.HealthInput))
 
         return admission.reply(_app_handlers(request).health(contract_request))
 

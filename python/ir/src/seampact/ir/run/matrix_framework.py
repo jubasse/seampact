@@ -1,7 +1,8 @@
 """A Python target's frameworks as the compatibility matrix records them (`compatibility/python-targets.json` of
 `@seampact/spec`, of which `seampact.ir` ships a copy): per framework the unit it is checked by (its major, or its
 `<major>.<minor>` for a 0.x framework, where a minor breaks), the units it is tested on, those it does not work on,
-and the `floor`, the lowest `<major>.<minor>` it works on."""
+the `floor`, the lowest `<major>.<minor>` it works on, and for a framework checked by major its `testedMinors`, when the
+matrix records them: a minor outside them, within a tested major, is untested and only warned of."""
 
 import json
 import re
@@ -30,6 +31,7 @@ class MatrixFramework:
     floor: str
     tested: tuple[str, ...]
     incompatible: Mapping[str, str]
+    tested_minors: tuple[str, ...] = ()
 
     def unit_of(self, major: int, minor: int) -> str:
         return str(major) if self.unit is VersionUnit.MAJOR else f"{major}.{minor}"
@@ -51,6 +53,13 @@ class MatrixFramework:
             raise ValueError(f"seampact-ir: the floor of {self.package} is not <major>.<minor>; reinstall seampact-ir.")
 
         return (major, minor) < (int(floor.group(1)), int(floor.group(2)))
+
+    def is_untested_minor(self, major: int, minor: int) -> bool:
+        """A minor outside the recorded tested minors, within a tested major."""
+        if not self.tested_minors or str(major) not in self.tested:
+            return False
+
+        return f"{major}.{minor}" not in self.tested_minors
 
     @property
     def tested_text(self) -> str:
@@ -101,8 +110,9 @@ def _target_of(target: dict[str, object]) -> MatrixTarget:
 def _framework_of(item: dict[str, object]) -> MatrixFramework:
     tested = item["tested"]
     incompatible = item["incompatible"]
+    tested_minors = item.get("testedMinors", [])
 
-    if not isinstance(tested, list) or not isinstance(incompatible, list):
+    if not isinstance(tested, list) or not isinstance(incompatible, list) or not isinstance(tested_minors, list):
         raise ValueError(f"seampact-ir: the matrix row of {item.get('id')} is malformed; reinstall seampact-ir.")
 
     return MatrixFramework(
@@ -112,4 +122,5 @@ def _framework_of(item: dict[str, object]) -> MatrixFramework:
         str(item["floor"]),
         tuple(str(unit) for unit in tested),
         MappingProxyType({str(row["unit"]): str(row["reason"]) for row in incompatible}),
+        tuple(str(minor) for minor in tested_minors),
     )

@@ -15,6 +15,7 @@ import pytest
 from typing_extensions import TypeForm
 
 import seampact.codegen.runtime.pydantic as type_layer
+from seampact.codegen.runtime.value_rules import ValueRuleError, check_bounds, check_multiple_of
 
 _GOLDEN = Path(__file__).parent / "golden" / "reference"
 
@@ -103,6 +104,29 @@ def test_consistent_bounds_and_multiples_compare_the_float_the_wire_wrote(
     rule: pydantic.AfterValidator, value: float, accepted: bool
 ) -> None:
     assert _accepts(Annotated[float, rule], value) is accepted
+
+
+@pytest.mark.parametrize(
+    ("value", "divisor", "accepted"),
+    [(1e300, "0.01", True), (10**40, "3", False), (10**40, "5", True), (1.5e30, "7", False), (1.5e30, "0.5", True)],
+)
+def test_a_multiple_of_a_large_number_is_judged_without_raising(
+    value: int | float, divisor: str, accepted: bool
+) -> None:
+    assert _accepts(Annotated[float, type_layer.multiple_of(divisor)], float(value)) is accepted
+
+    if accepted:
+        check_multiple_of(value, divisor)
+    else:
+        with pytest.raises(ValueRuleError, match=f"not a multiple of {divisor}"):
+            check_multiple_of(value, divisor)
+
+
+def test_a_bound_of_a_large_number_is_judged_without_raising() -> None:
+    check_bounds(1e300, minimum="0.01")
+
+    with pytest.raises(ValueRuleError, match="outside the bound 1e30"):
+        check_bounds(10**40, maximum="1e30")
 
 
 @pytest.mark.parametrize(

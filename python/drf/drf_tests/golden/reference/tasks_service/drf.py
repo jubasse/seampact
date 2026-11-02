@@ -1,6 +1,7 @@
 """The DRF placement of api 'tasksService': its serializers, views and exception handler."""
 
 import collections.abc as _abc
+import typing as _typing
 import uuid as _uuid
 
 import django.http as _http
@@ -9,6 +10,7 @@ import rest_framework.request as _request
 import seampact.django.runtime as _django_runtime
 import seampact.drf.runtime as _drf_runtime
 
+from . import contract as _contract
 from . import operations as _operations
 from . import schemas as _schemas
 
@@ -54,6 +56,10 @@ class TasksServiceView(_drf_runtime.ContractView):
     """The base of the contract views of api 'tasksService'."""
 
     api = "tasksService"
+    contract = _contract.CONTRACT
+    credentials: _typing.ClassVar[_abc.Mapping[str, _drf_runtime.CredentialsType]] = {
+        "service": _drf_runtime.CredentialsType(_operations.ServiceCredentials, {"internalToken": "internal_token"}),
+    }
 
     def get_exception_handler(self) -> _drf_runtime.ExceptionHandler:
         return contract_exception_handler

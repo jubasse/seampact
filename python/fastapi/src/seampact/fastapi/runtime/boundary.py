@@ -5,14 +5,13 @@ verdict of step 10, maps an `HTTPException` the app's handlers rendered to its r
 exception that crosses it. On `lifespan.startup` it runs the boot check, with a first-request fallback."""
 
 import asyncio
-import traceback
 from collections.abc import AsyncIterator, MutableMapping
 from typing import Final
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE
-from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
+from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal, failure_place
 from seampact.codegen.runtime.input_decoding import IncomingRequest, decode_input
 from seampact.codegen.runtime.raw_target import RawTarget, asgi_raw_target, without_origin
 from seampact.codegen.runtime.replies import Reply, error_reply, internal_error_reply, role_reply
@@ -144,7 +143,7 @@ class ContractBoundary:
     async def _failed(self, state: RequestState, checked: "_CheckedReply", failure: Exception, send: Send) -> None:
         """An exception that crossed the app: the api's 500 when no byte went out, else a body cut short; under
         `app.debug` nothing is sent and it is raised again after its log line, so Starlette's debug page shows it."""
-        reason = _failure_place(failure)
+        reason = failure_place(failure)
 
         # The message may carry an input value: it reaches the log only under `app.debug`.
         if self.binding.app.debug and not isinstance(failure, BoundaryFailureError):
@@ -393,18 +392,6 @@ async def _send_reply(send: Send, reply: Reply, method: str) -> None:
     headers.append((_CONTENT_LENGTH.encode(_BYTES_AS_TEXT), str(len(reply.body)).encode(_BYTES_AS_TEXT)))
     await send({"type": "http.response.start", "status": reply.status, "headers": headers})
     await send({"type": "http.response.body", "body": b"" if method.upper() == _HEAD else reply.body})
-
-
-def _failure_place(failure: Exception) -> str:
-    """The exception's class and where it was raised; the boundary's own failures name no input and keep their
-    message."""
-    if isinstance(failure, BoundaryFailureError):
-        return str(failure)
-
-    frames = traceback.extract_tb(failure.__traceback__)
-    where = f"{frames[-1].filename}:{frames[-1].lineno}" if frames else "an unknown place"
-
-    return f"{type(failure).__qualname__} raised at {where}"
 
 
 def _status(message: Message) -> int:

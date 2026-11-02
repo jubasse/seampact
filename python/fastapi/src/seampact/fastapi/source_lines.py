@@ -1,6 +1,5 @@
-"""Lines of generated Python that ruff formats as written: a call or a signature on one line when it fits, else its
-arguments on one indented line, else one per line with a trailing comma; and the package-relative imports, which ruff
-sorts after the seampact ones, one blank line before the first statement and two before a class or function."""
+"""Lines of generated Python that ruff formats as written: the package-relative imports, which ruff sorts after the
+seampact ones, one blank line before the first statement and two before a class or function."""
 
 from collections.abc import Sequence
 from typing import Final
@@ -9,21 +8,6 @@ from seampact.codegen.printer import INDENT, fits
 
 _DEFINITIONS: Final = ("class ", "def ", "async def ", "@")
 OPERATIONS_MODULE: Final = "operations"
-
-
-def bracketed(indent: str, head: str, arguments: Sequence[str], tail: str) -> list[str]:
-    """`head(arguments)tail` at `indent`, split as ruff splits it."""
-    single = f"{indent}{head}({', '.join(arguments)}){tail}"
-
-    if fits(single):
-        return [single]
-
-    hugged = f"{indent}{INDENT}{', '.join(arguments)}"
-
-    if fits(hugged) and not any(argument == "*" for argument in arguments):
-        return [f"{indent}{head}(", hugged, f"{indent}){tail}"]
-
-    return [f"{indent}{head}(", *(f"{indent}{INDENT}{argument}," for argument in arguments), f"{indent}){tail}"]
 
 
 def with_local_imports(modules: Sequence[str], names: Sequence[str], first_block: Sequence[str]) -> list[str]:

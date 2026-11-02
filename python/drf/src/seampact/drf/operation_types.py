@@ -6,6 +6,7 @@ result union; per error code one exception under the api's contract base; per re
 from collections.abc import Sequence
 from typing import Final
 
+from seampact.codegen.credentials_classes import credentials_class
 from seampact.codegen.names import ApiNames, member_identifier, part_attributes
 from seampact.codegen.printer import INDENT, PythonModule, string_literal
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
@@ -47,6 +48,12 @@ class _Emission:
         self.types = PythonTypes(ir, names, refusals, schemas=f"{SCHEMAS_ALIAS}.")
         self.names = names
 
+    def _credentials(self) -> None:
+        decorator = f"@{self.module.imported('dataclasses', '_dataclasses')}.{DATACLASS_DECORATOR}"
+
+        for identity, credentials in self.layout.credentials.items():
+            self.module.add_block(credentials_class(decorator, identity, credentials))
+
     def text(self) -> str:
         self._exceptions()
 
@@ -56,6 +63,7 @@ class _Emission:
             if operation_names is not None:
                 self._operation(operation, operation_names, IrPlace(f"/operations/{index}", operation.id))
 
+        self._credentials()
         self._protocols()
 
         return self.module.text()
@@ -204,11 +212,16 @@ class _Emission:
         return f"{self.schemas()}.{name}"
 
     def _results(self, operation: Operation, names: OperationNames, at: IrPlace) -> None:
+        typing = self.module.imported("typing", "_typing")
+
         for index, response in enumerate(operation.responses):
             self.dataclass(
                 names.responses[response.status],
                 f"The {response.status} reply of operation '{operation.id}'.",
-                self._response_body(operation, names, response.shape, response.body, at.below("responses", index)),
+                [
+                    f"{INDENT}status: {typing}.ClassVar[int] = {response.status}",
+                    *self._response_body(operation, names, response.shape, response.body, at.below("responses", index)),
+                ],
             )
 
         self._errors(operation, names)

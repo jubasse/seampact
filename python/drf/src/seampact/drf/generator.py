@@ -24,7 +24,7 @@ from seampact.django.emitters import (
     settings_module,
     urls_module,
 )
-from seampact.drf.api_layout import api_layout
+from seampact.drf.api_layout import ApiLayout, api_layout
 from seampact.drf.dataclass_schemas import dataclass_schemas_module
 from seampact.drf.drf_module import drf_module, view_class
 from seampact.drf.operation_types import operations_module
@@ -58,16 +58,22 @@ class DrfGenerator:
         paths = contract_paths(routes, [operation.id for operation in ir.operations])
         _refuse_input_media(ir, refusals)
 
+        resources = [owner.key for owner in layout.owners.values()]
         files = {
             "__init__.py": PythonModule(f"The generated code of api '{ir.api.id}' for the DRF target.").text(),
             "schemas.py": dataclass_schemas_module(ir, names, refusals),
             "operations.py": operations_module(ir, names, layout, refusals),
             "contract.py": contract_module(ir, names, entry.mount or "", refusals),
             "urls.py": urls_module(ir.api.id, paths, lambda module, path: _view_of(ir, module, path)),
-            "settings.py": settings_module(
-                ir.api.id, layout.api_class, [owner.key for owner in layout.owners.values()], [_ACCESS_KEY]
+            "settings.py": settings_module(ir.api.id, layout.api_class, resources, [_ACCESS_KEY]),
+            "django.py": boundary_module(
+                ir.api.id,
+                layout.api_class,
+                RUNTIME_VERSION,
+                _operations_by_resource(layout),
+                _run_time_options(options),
+                entry,
             ),
-            "django.py": boundary_module(ir.api.id, layout.api_class, RUNTIME_VERSION, _run_time_options(options)),
             "drf.py": drf_module(ir, names, layout, paths, options.rules, refusals),
         }
 
@@ -84,6 +90,16 @@ def _view_of(ir: ContractIR, module: PythonModule, path: ContractPath) -> str:
     first = next(operation for operation in ir.operations if operation.id == path.first.operation_id)
 
     return f"{drf}.{view_class(first)}.as_view()"
+
+
+def _operations_by_resource(layout: ApiLayout) -> dict[str, list[str]]:
+    """Each handler resource's settings key and the operations its handlers serve, in operation order."""
+    operations: dict[str, list[str]] = {owner.key: [] for owner in layout.owners.values()}
+
+    for operation_id, names in layout.operations.items():
+        operations[names.owner.key].append(operation_id)
+
+    return operations
 
 
 def _run_time_options(options: DrfOptions) -> list[tuple[str, str]]:

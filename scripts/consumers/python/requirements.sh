@@ -2,7 +2,7 @@
 # Writes a Python consumer's third-party requirements, every file pinned by hash, from the workspace lock
 # `python/uv.lock` (ADR 0011 "Unpublished installs for test consumers"): `requirements.sh <out> <distribution> <extra>
 # <server>` lists what <distribution> with its <extra> needs, without the seampact distributions, then the server
-# package <server> of the lock's dev group with what it needs. <out> is new.
+# package <server> of the lock's serve group with what it needs. <out> is new.
 set -eu
 
 out="$1"
@@ -22,15 +22,18 @@ uv export --frozen --no-emit-workspace --no-dev --no-header --no-annotate \
   --package "$distribution" --extra "$extra" > "$out"
 
 # The server's own closure, as the lock resolves it, less what the distribution already brought.
-server_names=$(uv tree --frozen --package "$server" --no-dedupe | sed -e 's/^[^a-zA-Z0-9]*//' -e 's/ .*//' | sort -u)
+# `uv tree` prints each root of the group unindented, its dependencies below it indented.
+server_names=$(uv tree --frozen --only-group serve --no-dedupe |
+  awk -v root="$server" '/^[a-zA-Z0-9]/ { inside = ($1 == root) } inside' |
+  sed -e 's/^[^a-zA-Z0-9]*//' -e 's/ .*//' | sort -u)
 listed_names=$(sed -n 's/^\([A-Za-z0-9._-]*\)==.*/\1/p' "$out")
 
 if [ -z "$server_names" ]; then
-  echo "requirements.sh: the lock has no package '$server'." >&2
+  echo "requirements.sh: the serve group of the lock has no package '$server'." >&2
   exit 1
 fi
 
-uv export --frozen --no-emit-workspace --only-group dev --no-header --no-annotate |
+uv export --frozen --no-emit-workspace --only-group serve --no-header --no-annotate |
   awk -v wanted="$server_names" -v listed="$listed_names" '
     BEGIN {
       split(wanted, names, "\n"); for (i in names) keep[names[i]] = 1

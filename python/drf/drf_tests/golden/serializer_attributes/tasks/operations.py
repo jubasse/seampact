@@ -152,6 +152,7 @@ class CreateTaskRequest:
 class CreateTaskResponse201:
     """The 201 reply of operation 'createTask'."""
 
+    status: _typing.ClassVar[int] = 201
     body: _schemas.Task
 
 
@@ -208,6 +209,17 @@ class CreateTaskErrors:
 
 
 type CreateTaskResult = CreateTaskResponse201 | CreateTaskErrors
+
+
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class UserCredentials:
+    """The credentials a request presents for identity 'user', one per scheme, None when absent."""
+
+    bearer: str | None = None
+    session_cookie: str | None = None
+
+    def __repr__(self) -> str:
+        return "UserCredentials(bearer=[redacted], session_cookie=[redacted])"
 
 
 @_typing.runtime_checkable

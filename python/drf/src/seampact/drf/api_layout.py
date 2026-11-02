@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Final
 
+from seampact.codegen.credentials_classes import CredentialsNames, identity_credentials
 from seampact.codegen.refusals import IrPlace, Refusals
 from seampact.ir.model import ContractIR, CredentialIdentity, Operation, Param, SchemaPrincipal, SignedIdentity
 from seampact.ir.naming import IrName, NameSource, NamingRole, python_identifier, segments_of
@@ -46,6 +47,7 @@ class ApiLayout:
     owners: dict[tuple[str, ...], HandlerOwner] = field(default_factory=dict)
     error_classes: dict[str, str] = field(default_factory=dict)
     error_factories: dict[str, str] = field(default_factory=dict)
+    credentials: dict[str, CredentialsNames] = field(default_factory=dict)
 
 
 def api_layout(ir: ContractIR, refusals: Refusals) -> ApiLayout:
@@ -82,6 +84,8 @@ def api_layout(ir: ContractIR, refusals: Refusals) -> ApiLayout:
             layout.owners[owner] = HandlerOwner(protocol, python_identifier(IrName(owner, NamingRole.MEMBER)))
 
         layout.operations[operation.id] = _operation_names(operation, layout.owners[owner], claim, at.below("name"))
+
+    layout.credentials = identity_credentials(ir, layout.operations, claim.owned_name, refusals)
 
     return layout
 
@@ -147,6 +151,10 @@ class NameClaims:
         self._module = module
         self._refusals = refusals
         self._claimed: dict[str, IrPlace] = {}
+
+    def owned_name(self, name: str, _owner: str, at: IrPlace) -> str:
+        """`name`, in the shape the shared emitters claim through: the place already names its owner."""
+        return self.name(name, at)
 
     def name(self, name: str, at: IrPlace) -> str:
         earlier = self._claimed.setdefault(name, at)

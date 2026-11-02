@@ -10,6 +10,7 @@ from enum import StrEnum
 import fastapi
 
 from seampact.codegen.runtime.access_steps import CredentialsType
+from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework
 from seampact.codegen.runtime.reply_verdict import FrameworkEtagMode, ResponsesMode
 from seampact.hooks import AuthenticateHook, DecideHook, IdempotencyStore, ResolveScopeHook, UnexpectedErrorListener
@@ -45,16 +46,6 @@ class BootCheckSwitches:
     enabled: bool
     framework_routes: FrameworkRoutesCheck
     hooks: HooksCheck
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class FrameworkRouteRule:
-    """An item of the entry's `frameworkRoutes`: `path` a pattern where `*` takes one segment and `**` any number,
-    `method` None for every method."""
-
-    path: str
-    method: str | None
-    reason: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

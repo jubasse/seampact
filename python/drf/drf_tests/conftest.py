@@ -15,6 +15,8 @@ if not settings.configured:
         INSTALLED_APPS=["django.contrib.contenttypes", "django.contrib.auth", "rest_framework", "seampact.django"],
         ROOT_URLCONF="seampact_drf_golden_tasks.urls",
         USE_TZ=True,
+        # Django's technical pages under DEBUG read it.
+        SECRET_KEY="seampact-drf-tests",
     )
     django.setup()
 

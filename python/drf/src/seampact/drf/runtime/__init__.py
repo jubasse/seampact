@@ -2,6 +2,7 @@
 value the type layer converted, the value-rule validators, and the contract exception handler. What a later release
 of seampact-drf brings is refused by name when a contract view runs, never served half done."""
 
+from seampact.codegen.runtime.access_steps import CredentialsType
 from seampact.drf.runtime.exception_handler import ExceptionHandler, contract_exception_reply
 from seampact.drf.runtime.serializers import ContractSerializer, ContractTextField, SerializerFields, TypedValueField
 from seampact.drf.runtime.validators import bounds, length, multiple_of, pattern
@@ -12,6 +13,7 @@ __all__ = [
     "ContractSerializer",
     "ContractTextField",
     "ContractView",
+    "CredentialsType",
     "ExceptionHandler",
     "SerializerFields",
     "TypedValueField",

@@ -6,9 +6,11 @@ generated package imported and routed; the options and forms the target refuses 
 import importlib
 import importlib.util
 import json
+import logging
 import os
 import sys
 from datetime import UTC, date, datetime
+from http import HTTPStatus
 from importlib import metadata
 from pathlib import Path
 from types import ModuleType
@@ -18,7 +20,6 @@ from django.test import RequestFactory
 from django.urls import URLPattern, get_resolver, reverse
 from rest_framework.exceptions import ValidationError
 
-from seampact.django.runtime import PlacementUnavailableError
 from seampact.drf.generator import DrfGenerator
 from seampact.drf.runtime import TypedValueField
 from seampact.drf.serializer_fields import RulesMode
@@ -302,16 +303,19 @@ def _renamed_draft_parameter(repository_root: Path, parameter: str) -> dict[str,
 
 @pytest.mark.parametrize("parameter", ["request", "self"])
 def test_a_path_parameter_named_like_a_view_argument_reaches_the_view(
-    repository_root: Path, tmp_path: Path, parameter: str
+    repository_root: Path, tmp_path: Path, parameter: str, caplog: pytest.LogCaptureFixture
 ) -> None:
     package = f"seampact_drf_parameter_{parameter}"
     write_package(generated_files(contract(_renamed_draft_parameter(repository_root, parameter))), tmp_path / package)
     imported_package(tmp_path / package, package)
     match = get_resolver(f"{package}.urls").resolve("/v1/me/drafts/7")
 
-    # The view runs until the admission step, which this release refuses by name.
-    with pytest.raises(PlacementUnavailableError):
-        match.func(RequestFactory().get("/v1/me/drafts/7"), *match.args, **match.kwargs)
+    # The view runs until the admission step, which fails closed without the boundary's mark.
+    with caplog.at_level(logging.ERROR, logger="seampact.tasks"):
+        response = match.func(RequestFactory().get("/v1/me/drafts/7"), *match.args, **match.kwargs)
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "without the boundary's mark" in caplog.text
 
 
 def _query_parameters(repository_root: Path, operation_id: str, names: list[str]) -> dict[str, JsonValue]:

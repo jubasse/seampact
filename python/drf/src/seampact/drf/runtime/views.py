@@ -1,11 +1,12 @@
 """The base of the generated contract views (ADR 0027 "DRF"). It fixes what DRF would otherwise read from the app's
 defaults: one renderer and no default response header, so DRF adds neither `Allow` nor `Vary: Accept`; a fixed
 content negotiation, so `Accept` never answers 406; no parser and no versioning, since the views never read
-`request.data`; no authentication, permission or throttle class unless the app names some for the operation's access
-kind; no schema. A generated method admits the request, builds the typed request from the `Admission` and replies
-with the handler's result."""
+`request.data`; no authentication, permission or throttle class, since the classes an app names per access kind wait
+for a later release and the boot check refuses the `access` setting until then; no schema. A generated method admits
+the request, builds the typed request from the `Admission` and replies with the handler's result."""
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from types import MappingProxyType
 from typing import ClassVar, Final, Protocol
 
 from django.http import HttpResponseBase
@@ -16,8 +17,10 @@ from rest_framework.request import Request
 from rest_framework.throttling import BaseThrottle
 from rest_framework.views import APIView
 
+from seampact.codegen.runtime.access_steps import CredentialsType
+from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.replies import JSON_MEDIA
-from seampact.django.runtime import PlacementUnavailableError
+from seampact.drf.runtime.admission import admit
 from seampact.drf.runtime.serializers import ContractSerializer
 from seampact.hooks import ResolvedScope
 
@@ -29,6 +32,10 @@ class Admission(Protocol):
 
     def input[I](self, serializer: type[ContractSerializer], input_type: type[I]) -> I:
         """Steps 6 to 8: the decoded input validated by `serializer`, built as `input_type`."""
+        ...
+
+    def empty_input[I](self, input_type: type[I]) -> I:
+        """Steps 6 to 8 of an operation without parameters or body: an unknown query key is still refused."""
         ...
 
     def principal[P](self, principal_type: type[P]) -> P: ...
@@ -46,6 +53,8 @@ class Admission(Protocol):
 
 class ContractView(APIView):
     api: ClassVar[str]
+    contract: ClassVar[ApiContract]
+    credentials: ClassVar[Mapping[str, CredentialsType]] = MappingProxyType({})
     renderer_classes: Sequence[type[BaseRenderer]] = (_RENDERER,)
     parser_classes = ()
     versioning_class = None
@@ -68,4 +77,5 @@ class ContractView(APIView):
         return []
 
     def admit(self, request: Request, operation_id: str) -> Admission:
-        raise PlacementUnavailableError(f"The DRF steps of operation '{operation_id}' of api '{self.api}'")
+        """Raises `BoundaryFailureError` or `ContractRefusal`, which the api's exception handler answers."""
+        return admit(request._request, self.contract, self.credentials, operation_id)

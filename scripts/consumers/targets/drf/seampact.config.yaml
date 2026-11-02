@@ -1,0 +1,13 @@
+# The consumer's app config: the reference contract's tasks api through seampact-drf, serving the operations this
+# release of the target covers; the suite's control views sit outside the api's base path.
+outDir: generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: tasks
+    use: pypi:seampact-drf
+    api: tasks
+    operations:
+      include: [health, getChannel, getDraft]
