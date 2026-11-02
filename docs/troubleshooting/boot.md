@@ -113,3 +113,13 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 |---|---|
 | `operation '<id>': no handler is bound` | Implement the operation in a `@RestController` method with its annotation. In a `@WebMvcTest` slice that loads some controllers, set `seampact.<api>.unbound-operations=warn`. |
 | `'seampact.<api>.unbound-operations' is '<value>', not 'error' or 'warn'` | Set it to `warn` in a test slice, or remove it. |
+
+## FastAPI
+
+Same start check, run on startup by uvicorn (`Application startup failed. Exiting.`), or on the first request without a lifespan. The message starts with `seampact: the api '<api>' cannot start:`.
+
+| You see | Do |
+|---|---|
+| `` the api '<api>' writes absolute URLs ... and the `public_origin` argument of bind_<api>() is not set `` | Pass `public_origin="https://api.example.com"` (the origin clients call: a scheme, a host, an optional port, no path) to `bind_<api>()`. |
+| `` the `public_origin` argument of bind_<api>() is '<value>', which ... `` | Fix the value as the message says: a scheme (`http` or `https`), a host and an optional port. |
+| `` the api '<api>' writes relative URLs ... and the `public_origin` argument of bind_<api>() is set `` | Drop `public_origin` from the call, or set `api.wire.urls: absolute` in the contract and generate again. |
