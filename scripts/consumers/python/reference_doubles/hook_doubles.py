@@ -45,10 +45,11 @@ _LOGGER: Final = logging.getLogger("consumer.tasks")
 
 @dataclass(frozen=True, slots=True)
 class TokenUser:
-    """The caller a bearer token of the suite's credentials signs in."""
+    """The caller a bearer token of the suite's credentials signs in; DRF reads `is_authenticated`."""
 
     user_id: str
     token: str = field(repr=False)
+    is_authenticated: bool = True
 
 
 def user_id_of(token: str) -> str | None:
@@ -149,8 +150,7 @@ class ServiceHook:
 
     def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
         record_hook_call("authenticate:service", request.operation.api, request.operation.id)
-        credentials = request.credentials
-        token = credentials.internal_token if isinstance(credentials, ServiceCredentials) else None
+        token = self.service_token(request)
         services = {
             credential_text("serviceJwt"): credential_text("serviceName"),
             credential_text("foreignServiceJwt"): credential_text("foreignServiceName"),
@@ -163,6 +163,12 @@ class ServiceHook:
         principal = ServicePrincipal(service=Service(service), user_id=uuid.UUID(credential_text("userId")))
 
         return authenticate_result.Authenticated(principal=principal)
+
+    def service_token(self, request: AuthenticateRequest) -> str | None:
+        """The service token of the request's credentials; an app reading it through its framework overrides this."""
+        credentials = request.credentials
+
+        return credentials.internal_token if isinstance(credentials, ServiceCredentials) else None
 
 
 class ServiceDecider:
