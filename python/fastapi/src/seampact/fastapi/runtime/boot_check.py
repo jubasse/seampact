@@ -1,9 +1,10 @@
 """The boot check of one api (ADR 0026 "The boot check"), run by the boundary on `lifespan.startup`, else once on the
 first request. It lists every problem at once: the runtime version (G3), a FastAPI minor or a Starlette or Pydantic
 major `generate` did not accept, the hooks, the handler factories, the operation features this release does not serve,
-a contract request another route would take (Starlette's public `matches()` over `app.routes`), an app route under a
-base path that `frameworkRoutes` does not allow-list, the boundary not first in `app.user_middleware`, an
-`HTTPException` handler added after bind, and a dependency override of a generated dependency."""
+a contract request another route would take (Starlette's public `matches()` over `app.routes`, then over an
+`APIRouter` target's routes), an app route or a `frontend()` route under a base path that `frameworkRoutes` does not
+allow-list, the boundary not first in `app.user_middleware`, an `HTTPException` handler added after bind, and a
+dependency override of a generated dependency."""
 
 import re
 from collections.abc import Iterable, Sequence

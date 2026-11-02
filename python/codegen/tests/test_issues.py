@@ -8,6 +8,7 @@ import pytest
 
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.input_decoding import Issue
+from seampact.codegen.runtime.ir_view import IrJson
 from seampact.codegen.runtime.pydantic.issues import body_pointer, contract_rule, part_issues, proof_issues
 
 _TASK = {"kind": "ref", "schema": "Task"}
@@ -22,7 +23,7 @@ class _Proofs(pydantic.BaseModel):
 
 
 def _contract() -> ApiContract:
-    task = {"kind": "object", "properties": [{"name": "due/At", "type": {"kind": "scalar", "type": "string"}}]}
+    task: IrJson = {"kind": "object", "properties": [{"name": "due/At", "type": {"kind": "scalar", "type": "string"}}]}
 
     return ApiContract(
         api="tasks",

@@ -171,7 +171,7 @@ The boundary matches the raw request target against the contract templates. The 
 Starlette decodes the path before routing, so the raw match and the chosen route can differ, as on Laravel ("Routes" of ADR 0023):
 
 - `/v1/tasks/%73earch` reaches the search route while the raw path matches `{task_id}` (spike). The access dependency answers the path's `notFound` 404 before any check.
-- A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the boundary, before routing: a trailing slash (which Starlette would redirect with a 307, spike), `//`, a dot segment (`%2e%2e`, which Starlette decodes to `..` and routes as a value), a percent-encoded static segment, and a path parameter holding a raw `;` (`7;x=1`). An encoded `%3B` is data in a parameter value: `7%3Bx=1` matches, its value `7;x=1`.
+- A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the boundary, before routing: a trailing slash (which Starlette would redirect with a 307, spike), `//`, a dot segment (`%2e%2e`, which Starlette decodes to `..` and routes as a value), a percent-encoded static segment, and a path parameter holding a raw `;` (`7;x=1`). An encoded `%3B` is data in a parameter value: `7%3Bx=1` matches, its value `7;x=1`. A raw path whose base path is itself encoded (`/%761/health`) is under no base path, but its decoded form is a contract path that Starlette would route: the boundary answers the api's `notFound` 404 for it too.
 - `a%2Fb` in a segment matches `{task_id}` raw, but Starlette routes the decoded `a/b`. On the way back, once routing ran, the boundary reads the route FastAPI's router chose. When it is not the contract route of the operation the raw path matched (no route, an app route, a mounted sub-app or another contract route), the boundary answers that path's `notFound` 404, whatever the reply.
 - `catchAll: false` leaves those paths to the app.
 - The boundary acts on `http` scopes only. A `websocket` or `lifespan` scope passes through untouched, since a contract declares no websocket. An app `WebSocketRoute` under a base path is an app route like any other: the boot check refuses it unless `frameworkRoutes` lists it.
@@ -201,7 +201,7 @@ An `HTTPException` is rendered inside Starlette's stack, so the boundary sees on
 
 Each answers by ADR 0023's rule: the code of its role when the operation declares one; else the operation's single code of that status; with the params its role binding renders, or none when the code requires none; else the api's 500, logged. An access hook that raises an `HTTPException` keeps its role. Any other reply the boundary did not write, a `RequestValidationError` 422 of an app dependency included, is checked as written by the outgoing check.
 
-Any other exception crosses the boundary (spike): it answers the api's 500, logs it and calls `onUnexpectedError`, in every `responses` mode. Under `app.debug` only, it re-raises after its log line, so Starlette's debug page shows the traceback.
+Any other exception crosses the boundary (spike): it answers the api's 500, logs it and calls `onUnexpectedError`, in every `responses` mode. Under `app.debug` only, it sends nothing and re-raises after its log line, so Starlette's debug page shows the traceback. The log line and the listener's reason name the exception's class and where it was raised; its message, which may carry an input value, only under `app.debug`.
 
 ### The outgoing response check
 
@@ -224,7 +224,7 @@ Before the boundary, the ASGI server, any ASGI wrapper around the app object and
 
 ### Types and validation
 
-A rule's proof members in the body (ADR 0012 requirements) are read by the access steps from the decoded body and handed to the rule's decider; the typed body the handler reads leaves them out.
+A rule's proof members in the body (ADR 0012 requirements) are read by the access steps from the decoded body and handed to the rule's decider; the typed body the handler reads leaves them out. The access steps check only a scalar proof's type, `uuid` format and length, as PHP's do; step 6 then validates every proof by its full type with `<Op>Proofs`, a model of the schemas module that the handler never reads, and reports its issues at the proof's body member.
 
 Generated value types:
 
@@ -307,11 +307,11 @@ The check lists every problem at once, with the operation id, the name and the f
 - a contract operation without a handler factory, without a contract route, or with two (`bind_<api>()` called twice);
 - a contract request that another route would take. The check uses Starlette's public matching, never FastAPI's route list: for each operation, it builds a scope with the method and `mount` followed by the contract path, a sample value in each placeholder, and runs it through `route.matches()` over `app.routes` in order. The first full match must be the entry `bind_<api>()` appended, captured as `target.routes[-1]` right after its `include_router`. When `target` is an `APIRouter`, the first full match over `app.routes` must be no `Route`, `Mount` or `Host` of the app, and the first one over `target.routes` must be the captured entry. So an app route with the same method and path, a convertor catch-all (`/{full_path:path}`), a parent `Mount` and a router included under a prefix ("without a contract route") are all refused, unless `frameworkRoutes` allow-lists the route that wins (review probes);
 - a `frontend()` route at or under a base path. FastAPI 0.162 keeps those routes apart from `app.routes`, so the check reads them through FastAPI's own attribute, and a test of the target fails by name if a FastAPI minor moves it;
-- a route or mount at or under one of the api's mounted base paths that no `bind_<api>()` made and that `frameworkRoutes` does not allow-list (FR-25); FastAPI's documentation routes are framework routes read from `app.docs_url`, `app.redoc_url`, `app.openapi_url` and `app.swagger_ui_oauth2_redirect_url`, accepted and listed in the report (ADR 0011);
+- a route or mount at or under one of the api's mounted base paths that no `bind_<api>()` made and that `frameworkRoutes` does not allow-list (FR-25); FastAPI's documentation routes are framework routes read from `app.docs_url`, `app.redoc_url`, `app.openapi_url` and `app.swagger_ui_oauth2_redirect_url`, accepted and listed in the report (ADR 0011). An allow-list entry must not shadow a contract path: an allow-listed route that wins over a contract request runs its handler, and only then is its reply replaced by the 404;
 - the boundary not first in `app.user_middleware`: a middleware added after `bind_<api>()` sits outside it (spike); other seampact boundaries are accepted there, as "Several apis" says;
 - an `app.exception_handlers` entry that can take an `HTTPException` ("Exceptions on contract routes") added or replaced after `bind_<api>()`, so it carries no wrapper;
 - an `app.dependency_overrides` entry keyed by a generated dependency (the access dependency, an input dependency), which would reach the handler without steps 2 to 8; the first-request check refuses it too, since a test may set it after start;
-- a `public_origin` set under relative URLs, or a missing or malformed one under absolute URLs;
+- a `public_origin` set under relative URLs, or a missing or malformed one under absolute URLs; this item comes with absolute URLs in fastapi-4, and until then `public_origin` is not read;
 - a FastAPI minor or a Starlette major that `generate` did not accept, or Pydantic 1, read with `importlib.metadata`. The generated code records the FastAPI minors `generate` accepted (the matrix's tested minors and the `allowUntested` ones) and the Starlette majors of the matrix, so a `pip install -U fastapi` after `generate` refuses the boot by name, as Laravel's boot check refuses a major other than 13. A Pydantic major other than 2 is refused alike. `generate` refuses an entry whose compatibility matrix has no FastAPI row (`config.matrix.row-missing`).
 
 `artefacts.bootCheck: false` turns the whole check off; `{ frameworkRoutes: false }` turns the framework-route check off and `{ hooks: off }` the hook check, as on Laravel. The handler check runs whenever the boot check does.
@@ -377,7 +377,7 @@ The sample app lives in `scripts/consumers/targets/fastapi/`. It holds the devel
 The workflow `p7-fastapi.yml` has, beside `changes` and the `packages` tests:
 
 - `contract-bundle` (Node), which bundles the reference contract with the compiler binary; the consumer fetches it from a local git repository with its integrity pin;
-- `e2e`, two rows on `python:<v>-slim` images: {Python 3.12, FastAPI 0.162 with its floor Starlette and Pydantic} and {the latest Python, the latest FastAPI, Starlette and Pydantic}, both on uvicorn. Node is removed first, and the step fails if `node`, `npm` or `npx` is still found. It installs the app with pip only and generates. Node then comes back for the suite alone, which runs the `default`, `hand-written`, `boot` and `full` profiles (ADR 0015 "Suite profiles"); a boot is a uvicorn start of a misconfigured variant;
+- `e2e`, two rows on `ubuntu-24.04` with `actions/setup-python`: {Python 3.12, FastAPI 0.162 with its floor Starlette and Pydantic} and {the latest Python, the latest FastAPI, Starlette and Pydantic}, both on uvicorn. Node is removed first, and the step fails if `node`, `npm` or `npx` is still found. It installs the app with pip only and generates. Node then comes back for the suite alone, which runs the `default`, `hand-written` and `boot` profiles (ADR 0015 "Suite profiles"), and the `full` profile from fastapi-3; a boot is a uvicorn start of a misconfigured variant;
 - `fastapi`, the aggregate, failing on any failed or cancelled job, or one skipped although `changes` said run.
 
 The proof is:
