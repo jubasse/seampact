@@ -26,6 +26,7 @@ _PLACEHOLDER: Final = re.compile(r"\{[^{}]+\}")
 _CONTRACT_ROUTE_PREFIX: Final = "seampact."
 _FRONTEND_ROUTES: Final = "_frontend_routes"
 _FRONTEND_METHOD: Final = "GET"
+_EFFECTIVE_ROUTES: Final = "effective_route_contexts"
 
 
 class BootCheckError(RuntimeError):
@@ -238,19 +239,31 @@ def _frontend_route_problems(binding: ApiBinding) -> list[str]:
     return problems
 
 
-def _app_routes(routes: Iterable[BaseRoute]) -> list[BaseRoute]:
-    """The app's routes, an included router's entry read through to its own routes."""
-    flat: list[BaseRoute] = []
+def _app_routes(routes: Iterable[object]) -> list[object]:
+    """The app's routes, an included router's entry read through to its own routes. FastAPI 0.162 keeps an included
+    router as one `_IncludedRouter` entry whose `effective_route_contexts()` yields each route of its tree, nested
+    routers included, with its full prefixed path, name and methods."""
+    flat: list[object] = []
 
     for route in routes:
+        contexts = getattr(route, _EFFECTIVE_ROUTES, None)
         nested = getattr(route, "routes", None)
 
-        if nested is not None and not hasattr(route, "path_regex"):
-            flat += _app_routes(nested)
+        if callable(contexts):
+            flat += _app_routes(_iterated(contexts()))
+        elif nested is not None and not hasattr(route, "path_regex"):
+            flat += _app_routes(_iterated(nested))
         else:
             flat.append(route)
 
     return flat
+
+
+def _iterated(values: object) -> list[object]:
+    if not isinstance(values, Iterable):
+        return []
+
+    return [value for value in values]
 
 
 def _middleware_problems(binding: ApiBinding) -> list[str]:
