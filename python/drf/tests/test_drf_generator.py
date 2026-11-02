@@ -379,7 +379,6 @@ def _limit_refinements(repository_root: Path, type_use: dict[str, JsonValue]) ->
             {"kind": "scalar", "type": "string", "format": "date-time", "refinements": {"maxLength": 40}},
             "rule.maxLength.unsupported",
         ),
-        ({"kind": "scalar", "type": "integer", "refinements": {"minimum": "1.5"}}, "rule.minimum.fractional"),
     ],
 )
 def test_a_value_rule_drf_cannot_check_under_native_is_refused_at_generate(
@@ -389,6 +388,20 @@ def test_a_value_rule_drf_cannot_check_under_native_is_refused_at_generate(
         generated_files(contract(_limit_refinements(repository_root, type_use)))
 
     assert [problem.code for problem in refused.value.problems] == [code]
+
+
+def test_a_fractional_bound_on_an_integer_use_becomes_the_nearest_whole_number_inside_it(repository_root: Path) -> None:
+    type_use: dict[str, JsonValue] = {
+        "kind": "scalar",
+        "type": "integer",
+        "refinements": {"minimum": "1.5", "maximum": "9.5"},
+    }
+
+    files = generated_files(contract(_limit_refinements(repository_root, type_use)))
+    contents = "\n".join(file.contents for file in files)
+
+    assert "min_value=2" in contents
+    assert "max_value=9" in contents
 
 
 def test_the_date_field_refuses_a_date_time() -> None:
