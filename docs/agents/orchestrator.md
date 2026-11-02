@@ -44,3 +44,5 @@ One line each, in this order: task and PR or lane; worktree, branch and tip, lan
 ## Paths
 
 Handoff `.work/HANDOFF.md`; decisions `.work/decisions.md` (landed ones in `.work/archive/decisions-merged.md`); lane briefs `.work/plan/`; reports `.work/<lane>-report.md`; reviews `.favir/local/review/`; cost audit `.work/tools/audit.py <session-id>` and `.work/agent-cost-audit.md`, run at each wave end.
+
+Python: the uv workspace is `python/` (lock `python/uv.lock`); every Python agent prompt sets `UV_PYTHON_INSTALL_BIN=0`, so uv links no `python` into `~/.local/bin`, and its worktree runs `uv sync --locked --all-packages` from `python/`. The consumers are `scripts/consumers/targets/fastapi/` and `drf/`; the workflows are `p7-python-core.yml`, `p7-fastapi.yml` and `p7-drf.yml`.

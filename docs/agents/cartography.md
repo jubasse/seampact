@@ -42,6 +42,20 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/binary` | `packages/tools/binary` | tool | The standalone compiler binary: the CLI as a Node single executable application for five platforms, with the first-party packs embedded. |
 | `@seampact/http-suite` | `packages/tools/http-suite` | tool | The shared black-box HTTP suite: JSON case scripts, the sample app's control routes, a runner against a base URL and a report keyed by checklist id. |
 
+## Python packages
+
+The uv workspace `python/`. A source directory is a package with an `__init__.py`; its line is the first sentence of the module docstring, and a generated `__init__.py` gets none.
+
+| Package | Directory | Description |
+|---|---|---|
+| `seampact-codegen` | `python/codegen` | The neutral code generation of the seampact Python targets and the framework-free runtime of generated code. |
+| `seampact-django` | `python/django` | The Django layer the seampact DRF and Ninja targets share: the URLconf and settings emitters and the Django runtime of generated code. |
+| `seampact-drf` | `python/drf` | The seampact Django REST Framework target: its generator and the runtime of the code it generates. |
+| `seampact-fastapi` | `python/fastapi` | The FastAPI target of seampact: its generator and the placement runtime of the generated code. |
+| `seampact-hooks` | `python/hooks` | The seampact hook protocols and the values they exchange, for Python apps and generated code. |
+| `seampact-ir` | `python/ir` | The seampact IR model, naming and reader for Python generators. |
+| `seampact-signed-webhooks` | `python/signed-webhooks` | Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook. |
+
 ## Compiler stages
 
 In pipeline order (ADR 0006 section 1).
@@ -216,3 +230,46 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/http-suite`
 
 - `packages/tools/http-suite/src`: The shared black-box HTTP suite (ADR 0015): the JSON case format and its shipped cases, the sample app's control routes and the script a sample app answers from, a runner against a base URL, the format readers of the pack profiles, the boot variants and their runner, and the report keyed by checklist id.
+
+### `seampact-codegen`
+
+- `python/codegen/src/seampact/codegen`: The neutral code generation of the Python targets: the plan every target shares (names, layout, refusals by name, the route table and the route helpers), the line printer, and the Pydantic emitter FastAPI and Ninja share.
+- `python/codegen/src/seampact/codegen/runtime`: The framework-free runtime of generated Python code: step 1's raw-target match and decoding, the wire codec, replies, the outgoing verdict, the pattern check, the runtime version (G3) and the sync driver of the steps, which are written once as coroutines.
+- `python/codegen/src/seampact/codegen/runtime/pydantic`: The type layer of the generated Pydantic models FastAPI and Ninja share: annotated types whose `BeforeValidator` turns a decoded wire value into the Python object Pydantic's strict mode expects (a whole-number float into an `int`; `date-time`, `date`, `uuid` and decimal strings, and enum values, into their objects), and the validators of `rules: seampact-consistent`, each failing with the contract rule's name as its Pydantic error type.
+
+### `seampact-django`
+
+- `python/django/src/seampact/django`: The Django layer the DRF and Ninja targets share: the emitters of each api's URLconf, settings and boundary modules, the `seampact.django` app an app lists in `INSTALLED_APPS`, and the Django runtime of generated code.
+- `python/django/src/seampact/django/emitters`: The emitters of the modules every Django target writes per api: the URLconf of the contract paths, the typed settings the api reads from `settings.SEAMPACT`, and the boundary middleware's declaration.
+- `python/django/src/seampact/django/management`: The management commands of the seampact Django layer.
+- `python/django/src/seampact/django/management/commands`: `seampact_check` and `seampact_generate`.
+- `python/django/src/seampact/django/runtime`: The Django runtime of generated code: the boundary middleware every api's generated boundary derives from, its per-request state, the replies it writes, the boot check, and the handler factories an api reads from `settings.SEAMPACT`.
+
+### `seampact-drf`
+
+- `python/drf/src/seampact/drf`: The Django REST Framework target: the `seampact-drf` generator, found through the `seampact.generators` entry point, its emitters (frozen dataclass types, operation types and handler protocols, serializers and `APIView` declarations), and the DRF runtime of the code it generates.
+- `python/drf/src/seampact/drf/runtime`: The DRF runtime of generated code: the base of the contract views and serializers, the typed field that keeps a value the type layer converted, the value-rule validators, the contract exception handler and the boundary the generated one extends.
+
+### `seampact-fastapi`
+
+- `python/fastapi/src/seampact/fastapi`: The FastAPI target of seampact (ADR 0026): the generator `seampact generate` finds through the `seampact.generators` entry point, behind the `generate` extra, and the placement runtime the generated code imports.
+- `python/fastapi/src/seampact/fastapi/runtime`: The FastAPI placement runtime the generated code imports (ADR 0026 "What the generated code depends on"): the declarations of one api's placement, its binding, its contract routes with the access and input dependencies, the boundary middleware, the exception map and the boot check.
+
+### `seampact-hooks`
+
+- `python/hooks/src/seampact/hooks`: The hook protocols an app implements and the values they exchange, with the shape every hooks package shares.
+
+### `seampact-ir`
+
+- `python/ir/src/seampact/ir`: The seampact IR for Python generators (ADR 0010): the generated model, the native naming and the reader.
+- `python/ir/src/seampact/ir/binary`: The compiler binary of a Python build (ADR 0010): wheel lookup, pin, platform, private cache and runner.
+- `python/ir/src/seampact/ir/bundle`: The bundle reader and verifier (ADR 0011): reads a tarball or a directory, runs the pinned-bundle check.
+- `python/ir/src/seampact/ir/config`: The app config of a Python build (ADR 0011 "The app config"): the YAML read, the schema check, the entry view.
+- `python/ir/src/seampact/ir/naming`: The native naming of ADR 0007: name segments, roles, operation ids and Python identifiers, checked against the shared vectors.
+- `python/ir/src/seampact/ir/read`: The IR reader: the nesting, support and must-act checks of ADR 0005, then the generated model's hydrator.
+- `python/ir/src/seampact/ir/run`: The `seampact` runner of a Python build: `generate` and `check` an app config with the targets installed as `seampact.generators` entry points, and the documents through the compiler binary.
+- `python/ir/src/seampact/ir/write`: The generated-file writer (ADR 0015 "Writing files" and "The generated header"): plans and commits the files of one target entry in its output directory.
+
+### `seampact-signed-webhooks`
+
+- `python/signed-webhooks/src/seampact/signed_webhooks`: The template signature verifier an authenticate hook calls for a signed identity (ADR 0013).

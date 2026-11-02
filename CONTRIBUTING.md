@@ -6,6 +6,24 @@ Requirements: Node 24 (see `.nvmrc`) and pnpm 12 (pinned by `packageManager`; `c
 
 For `jvm/`: JDK 21 and 25. Gradle runs through `jvm/gradlew` on the newest, `-PtestJdk=21` or `25` picks the test JDK, and the foojay resolver provides a missing one.
 
+For `python/`: Python 3.12 or later and [uv](https://docs.astral.sh/uv/), installed with `pip install uv==0.13.6` or the official installer at that version (python/pyproject.toml pins `required-version`). Set `UV_PYTHON_INSTALL_BIN=0` so uv adds no `python` links to `~/.local/bin` when it installs an interpreter. Then, from `python/`:
+
+```sh
+uv sync --locked --all-packages
+```
+
+The Python gates, run from `python/` (CI runs them on Python 3.12 and the latest):
+
+```sh
+uv run --locked ruff check
+uv run --locked ruff format --check
+uv run --locked mypy
+uv run --locked pyright
+uv run --locked pytest
+```
+
+`pytest <package>/<tests-dir>` runs one package, for example `pytest fastapi/fastapi_tests` or `pytest ir/tests`. Each Python target also has an end-to-end consumer under `scripts/consumers/targets/<target>/` (`fastapi`, `drf`), run by `.github/workflows/p7-<target>.yml`: it installs the wheels `uv build --all-packages --wheel` writes into a Python without Node, generates, then runs the HTTP suite with `pnpm vitest run --config scripts/consumers/targets/<target>/suite/vitest.config.ts`. Read the workflow for the exact steps.
+
 The front consumer tests download Playwright's Chromium headless shell on their first run, into `~/.cache/ms-playwright`.
 
 ```sh

@@ -98,7 +98,7 @@ Python names follow ADR 0007 sections 4 and 5: types in Pascal case, attributes,
 | binary fetched by a download | adapted | `seampact-compiler` platform wheels; pin, hash, cache and platform refusals stay |
 | `extra.seampact.generator` discovery | adapted | entry point group `seampact.generators` |
 | `extra.seampact.binary` in the root `composer.json` | adapted | `[tool.seampact.binary]` in the root `pyproject.toml` |
-| PSR-4 check on `outDir` | adapted | `outDir` must be an importable package path of the project (`config.python.module-path-missing`); the default stays `__generated__` ([A41](../decisions.md#a41)) |
+| PSR-4 check on `outDir` | dropped | the generated modules import each other by package-relative imports, so `outDir` need not be an importable path of the project; the default stays `__generated__` ([A41](../decisions.md#a41)) |
 | `nette/php-generator` printer | dropped | an own deterministic line printer, its golden checked by `ruff format --check`, never `ast.unparse` |
 | hooks shape manifest and `Field` | kept | `typing.Protocol`, frozen slotted dataclasses, `Field` with the `Absent` sentinel |
 | hooks as container bindings or tagged services | dropped | FastAPI: factories that are FastAPI dependencies; Django: dotted paths in `settings.SEAMPACT` |
@@ -367,7 +367,7 @@ The generator's code sits in production `site-packages`, its dependencies behind
 | Waits for | What |
 |---|---|
 | a consumer that needs them | form, multipart, download and redirect bodies; native access (`artefacts.accessHooks: false`); sort keys restricted by a right; unions (`oneOf`); `handlers: perOperation`; per-access-kind dependency lists |
-| after 1.0 | FastAPI minors below the floor and Pydantic 1 (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs, as ADR 0023 lists them |
+| after 1.0 | FastAPI minors below the floor and Pydantic 1 (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)); principal bindings, refused by name as on PHP; every IR form absent from the reference contract's golden IRs, as ADR 0023 lists them |
 
 ### The consumer and the proof
 
