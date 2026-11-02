@@ -2,7 +2,7 @@
 generated class first in `MIDDLEWARE`, and Django builds it once, when it builds the request handler, which runs the
 boot check. On a contract request it runs step 1 (the raw-path match, the bounded body read and the decoding) and
 answers its own refusals; on the way back it runs the route-chosen check, answers a recorded exception by its role,
-and runs the outgoing response check."""
+runs the outgoing response check, and settles the request's idempotency record with the reply that goes out."""
 
 import inspect
 import logging
@@ -50,6 +50,7 @@ from seampact.django.runtime.contract_replies import (
     unexpected_response,
 )
 from seampact.django.runtime.error_handlers import wrap_error_handlers
+from seampact.django.runtime.idempotency_records import abandon_claim, settle_claim
 from seampact.django.runtime.request_state import BoundaryState, attach, state_of
 
 type GetResponse = Callable[[HttpRequest], HttpResponseBase] | Callable[[HttpRequest], Awaitable[HttpResponseBase]]
@@ -154,6 +155,8 @@ class ContractBoundary:
         if state is None:
             raise failure
 
+        abandon_claim(request, state)
+
         if settings.DEBUG_PROPAGATE_EXCEPTIONS:
             report_unexpected(request, self.contract, state.operation_id, _CROSSED, failure)
             raise failure
@@ -167,6 +170,7 @@ class ContractBoundary:
         state = state_of(request, self.api)
 
         if state is not None:
+            abandon_claim(request, state)
             report_unexpected(request, self.contract, state.operation_id, _CROSSED, propagated)
 
     def _step_one(self, request: HttpRequest) -> HttpResponseBase | None:
@@ -255,6 +259,14 @@ class ContractBoundary:
         if state is None:
             return response
 
+        checked = self._checked_reply(request, state, response)
+        settle_claim(request, state, checked)
+
+        return checked
+
+    def _checked_reply(
+        self, request: HttpRequest, state: BoundaryState, response: HttpResponseBase
+    ) -> HttpResponseBase:
         route_check = self._route_chosen(request, state)
 
         if route_check is not None:

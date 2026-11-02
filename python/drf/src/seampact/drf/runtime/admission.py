@@ -1,37 +1,52 @@
 """What a generated DRF view does once DRF's `initial()` ran (ADR 0027 "DRF"): it checks the boundary's mark and
-the chosen route, refuses by name an operation whose features this release does not serve, runs steps 2 to 5, and
-then reads the input (steps 6 to 8) and writes the handler's result with the boundary's own encoding."""
+the chosen route, refuses by name an operation whose features this release does not serve, runs steps 2 to 5, then
+reads the input (the version a header carries before the header check, steps 6 to 8, the deadline, the restricted
+input fields and the idempotency claim) and writes the handler's result with the boundary's own encoding: the
+restricted output fields left out, the page body and links, and the cache headers with their 304."""
 
+import dataclasses
 import inspect
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from typing import Final
 
 from django.http import HttpRequest, HttpResponseBase
 
-from seampact.codegen.runtime.access_steps import AccessState, CredentialsType, headers_view, run_access_steps
+from seampact.codegen.names import member_identifier
+from seampact.codegen.runtime.access_steps import (
+    AccessHooks,
+    AccessState,
+    CredentialsType,
+    headers_view,
+    run_access_steps,
+)
+from seampact.codegen.runtime.cache_headers import with_cache_headers
 from seampact.codegen.runtime.contract import ApiContract
+from seampact.codegen.runtime.deadline import request_deadline
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
-from seampact.codegen.runtime.input_decoding import schema_invalid
-from seampact.codegen.runtime.ir_view import ir_int, ir_map, ir_maps, ir_string
+from seampact.codegen.runtime.field_rights import checked_input_fields, visible_output
+from seampact.codegen.runtime.input_decoding import DecodedInput, schema_invalid
+from seampact.codegen.runtime.ir_view import ir_int, ir_map, ir_maps, ir_string, ir_strings
+from seampact.codegen.runtime.page_reply import filled_page_query, page_parts
 from seampact.codegen.runtime.replies import CONTENT_TYPE, JSON_MEDIA, Reply, error_reply, json_bytes, success_body
 from seampact.codegen.runtime.sync_driver import call_without_suspension, run_without_suspension
+from seampact.codegen.runtime.version_token import sent_version
 from seampact.codegen.runtime.wire_codec import WireCodec
 from seampact.django.runtime.api_settings import access_hooks
 from seampact.django.runtime.contract_replies import django_response
+from seampact.django.runtime.idempotency_records import claim_idempotency
 from seampact.django.runtime.request_state import BoundaryState, state_of
 from seampact.drf.runtime.serializers import ContractSerializer
 from seampact.drf.runtime.typed_input import built_input, rendered, serializer_issues, typed_parts
 from seampact.hooks import RequestView, ResolvedScope
 
 _EMPTY_SHAPE: Final = "empty"
-_EXEMPT: Final = "exempt"
+_PAGE_SHAPE: Final = "page"
 _ABSOLUTE_URLS: Final = "absolute"
+_IF_NONE_MATCH: Final = "If-None-Match"
+_QUERY_STRING: Final = "QUERY_STRING"
 # The operation features a later release of seampact-drf serves; an operation that declares one is refused by name.
 _LATER_FEATURES: Final = (
-    ("paging", "paging"),
-    ("cache", "cache headers"),
-    ("concurrency", "the concurrency version check"),
-    ("fieldRights", "restricted fields"),
     ("bindings", "principal bindings"),
     ("upstream", "relays"),
 )
@@ -40,34 +55,35 @@ _LATER_FEATURES: Final = (
 class ContractAdmission:
     """A request the view admitted, and what it reads next."""
 
-    def __init__(self, request: HttpRequest, state: BoundaryState, admitted: AccessState) -> None:
+    def __init__(self, request: HttpRequest, state: BoundaryState, admitted: AccessState, hooks: AccessHooks) -> None:
         self._request = request
         self._state = state
         self._admitted = admitted
+        self._hooks = hooks
+        self._query: Mapping[str, object] = state.decoded.query
 
     def input[I](self, serializer: type[ContractSerializer], input_type: type[I]) -> I:
-        contract, operation_id = self._state.contract, self._state.operation_id
-        parts = typed_parts(contract, operation_id, self._state.decoded)
-        validating = serializer(data=parts.tree)
-        valid = validating.is_valid()
-        issues = parts.issues + ([] if valid else serializer_issues(contract, operation_id, validating.errors))
+        decoded = self._prepared()
+        validated = self._validated(serializer, decoded)
+        restricted_body = self._restricted_input(decoded)
 
-        if issues:
-            raise schema_invalid(contract, operation_id, rendered(issues))
+        if restricted_body != decoded.body:
+            validated = self._validated(serializer, dataclasses.replace(decoded, body=restricted_body))
 
-        validated = validating.validated_data
-
-        if not isinstance(validated, Mapping):
-            raise BoundaryFailureError(f"seampact: the serializer of '{operation_id}' validated no mapping.")
+        claim_idempotency(self._request, self._state, self._admitted.principal)
 
         return built_input(input_type, validated)
 
     def empty_input[I](self, input_type: type[I]) -> I:
         contract, operation_id = self._state.contract, self._state.operation_id
-        issues = typed_parts(contract, operation_id, self._state.decoded).issues
+        decoded = self._prepared()
+        issues = typed_parts(contract, operation_id, decoded).issues
 
         if issues:
             raise schema_invalid(contract, operation_id, rendered(issues))
+
+        self._restricted_input(decoded)
+        claim_idempotency(self._request, self._state, self._admitted.principal)
 
         return input_type()
 
@@ -112,9 +128,93 @@ class ContractAdmission:
                 "plain def."
             )
 
-        return django_response(
-            self._request, contract, result_reply(contract, operation_id, self._request.path, result)
+        status = getattr(type(result), "status", None)
+
+        if isinstance(status, int):
+            reply = self._success(status, result)
+        else:
+            reply = declared_error_reply(contract, operation_id, result)
+
+        return django_response(self._request, contract, reply)
+
+    def _prepared(self) -> DecodedInput:
+        """The decoded input with the page limit the handler receives, after the version check of an operation that
+        reads its version from a header, so a missing header is `preconditionRequired`, never `schemaInvalid`."""
+        contract, operation_id, decoded = self._state.contract, self._state.operation_id, self._state.decoded
+
+        if ir_map(contract.operation(operation_id), "concurrency"):
+            sent_version(contract, operation_id, decoded)
+
+        self._query = filled_page_query(contract, operation_id, decoded.query)
+
+        return dataclasses.replace(decoded, query=dict(self._query))
+
+    def _validated(self, serializer: type[ContractSerializer], decoded: DecodedInput) -> Mapping[str, object]:
+        """Step 6: the type layer, then the serializer's value rules, every issue at once."""
+        contract, operation_id = self._state.contract, self._state.operation_id
+        parts = typed_parts(contract, operation_id, decoded)
+        validating = serializer(data=parts.tree)
+        valid = validating.is_valid()
+        issues = parts.issues + ([] if valid else serializer_issues(contract, operation_id, validating.errors))
+
+        if issues:
+            raise schema_invalid(contract, operation_id, rendered(issues))
+
+        validated = validating.validated_data
+
+        if not isinstance(validated, Mapping):
+            raise BoundaryFailureError(f"seampact: the serializer of '{operation_id}' validated no mapping.")
+
+        return validated
+
+    def _restricted_input(self, decoded: DecodedInput) -> object:
+        """The deadline the caller sent, then step 7: the body without the restricted members its caller may not
+        send under `strip`; a denied member under `reject` is refused."""
+        request_deadline(self._state.contract, self._state.operation_id, decoded, datetime.now(UTC))
+
+        return run_without_suspension(checked_input_fields(self._admitted, self._hooks, call_without_suspension))
+
+    def _success(self, status: int, result: object) -> Reply:
+        contract, operation_id = self._state.contract, self._state.operation_id
+        operation = contract.operation(operation_id)
+        response = next((item for item in ir_maps(operation, "responses") if ir_int(item, "status") == status), None)
+
+        if response is None:
+            raise BoundaryFailureError(f"seampact: operation '{operation_id}' declares no {status} reply.")
+
+        shape = ir_string(response, "shape") or ""
+
+        if shape == _EMPTY_SHAPE:
+            return Reply(status, (), b"")
+
+        body = getattr(result, "body", None)
+        wire = WireCodec(contract).body_to_wire(response, _page_items(body) if shape == _PAGE_SHAPE else body)
+        visible = run_without_suspension(
+            visible_output(self._admitted, self._hooks, call_without_suspension, response, wire)
         )
+        media = ir_string(ir_map(contract.format(operation_id), "success"), "media") or JSON_MEDIA
+        written, headers = self._written_body(shape, body, visible, status)
+        reply = Reply(status, ((CONTENT_TYPE, media), *headers), json_bytes(written))
+        if_none_match = self._request.headers.get(_IF_NONE_MATCH)
+
+        return with_cache_headers(contract, operation_id, reply, self._admitted.principal, if_none_match)
+
+    def _written_body(
+        self, shape: str, body: object, visible: object, status: int
+    ) -> tuple[object, tuple[tuple[str, str], ...]]:
+        """The body in its format's envelope, or the page body and the headers its paging style writes."""
+        contract, operation_id = self._state.contract, self._state.operation_id
+        path = self._request.path
+
+        if shape != _PAGE_SHAPE:
+            return success_body(contract.format(operation_id), shape, visible, status, path), ()
+
+        items = visible if isinstance(visible, list) else []
+        raw_query = str(self._request.META.get(_QUERY_STRING, ""))
+        facts = _page_facts(contract, operation_id, body)
+        page = page_parts(contract, operation_id, self._query, raw_query, items, facts, status, path)
+
+        return page.body, page.headers
 
 
 def admit(
@@ -143,11 +243,13 @@ def admit(
             client_address=request.META.get("REMOTE_ADDR"),
         ),
         body=state.decoded.body,
+        raw_body=state.decoded.raw_body,
     )
-    run_without_suspension(run_access_steps(access, access_hooks(contract.api, request), call_without_suspension))
+    hooks = access_hooks(contract.api, request)
+    run_without_suspension(run_access_steps(access, hooks, call_without_suspension))
     state.admitted_operation = operation_id
 
-    return ContractAdmission(request, state, access)
+    return ContractAdmission(request, state, access, hooks)
 
 
 def _raw_headers(request: HttpRequest) -> list[tuple[bytes, bytes]]:
@@ -155,13 +257,8 @@ def _raw_headers(request: HttpRequest) -> list[tuple[bytes, bytes]]:
     return [(name.encode("latin-1"), value.encode("latin-1")) for name, value in request.headers.items()]
 
 
-def result_reply(contract: ApiContract, operation_id: str, path: str, result: object) -> Reply:
-    codec = WireCodec(contract)
-    status = getattr(type(result), "status", None)
-
-    if isinstance(status, int):
-        return _success(contract, codec, operation_id, path, status, result)
-
+def declared_error_reply(contract: ApiContract, operation_id: str, result: object) -> Reply:
+    """A declared error the handler returned instead of raising it."""
     code = getattr(result, "code", None)
 
     if not isinstance(code, str) or not contract.declares(operation_id, code):
@@ -170,7 +267,9 @@ def result_reply(contract: ApiContract, operation_id: str, path: str, result: ob
             "operation's generated results."
         )
 
-    return error_reply(contract, operation_id, code, _params(contract, codec, code, getattr(result, "params", None)))
+    params = _params(contract, WireCodec(contract), code, getattr(result, "params", None))
+
+    return error_reply(contract, operation_id, code, params)
 
 
 def contract_error_reply(contract: ApiContract, operation_id: str, refused: ContractRefusal | Exception) -> Reply:
@@ -190,27 +289,24 @@ def contract_error_reply(contract: ApiContract, operation_id: str, refused: Cont
     return error_reply(contract, operation_id, code, _params(contract, WireCodec(contract), code, params))
 
 
-def _success(
-    contract: ApiContract, codec: WireCodec, operation_id: str, path: str, status: int, result: object
-) -> Reply:
-    response = next(
-        (item for item in ir_maps(contract.operation(operation_id), "responses") if ir_int(item, "status") == status),
-        None,
-    )
+def _page_items(page: object) -> object:
+    return getattr(page, "items", None)
 
-    if response is None:
-        raise BoundaryFailureError(f"seampact: operation '{operation_id}' declares no {status} reply.")
 
-    shape = ir_string(response, "shape") or ""
+def _page_facts(contract: ApiContract, operation_id: str, page: object) -> dict[str, object]:
+    """The facts the paging style reads, by name, from the page the handler returned."""
+    style_id = ir_string(ir_map(contract.operation(operation_id), "paging"), "style") or ""
+    facts: dict[str, object] = {}
 
-    if shape == _EMPTY_SHAPE:
-        return Reply(status, (), b"")
+    for fact in ir_strings(contract.declaration("pagings", style_id), "handlerResult"):
+        attribute = member_identifier(fact)
 
-    format_ = contract.format(operation_id)
-    body = success_body(format_, shape, codec.body_to_wire(response, getattr(result, "body", None)), status, path)
-    media = ir_string(ir_map(format_, "success"), "media") or JSON_MEDIA
+        if attribute is None:
+            raise BoundaryFailureError(f"seampact: the page fact '{fact}' has no attribute; regenerate the api.")
 
-    return Reply(status, ((CONTENT_TYPE, media),), json_bytes(body))
+        facts[fact] = getattr(page, attribute, None)
+
+    return facts
 
 
 def _params(contract: ApiContract, codec: WireCodec, code: str, params: object) -> Mapping[str, object] | None:
@@ -227,10 +323,6 @@ def _params(contract: ApiContract, codec: WireCodec, code: str, params: object) 
 def _refuse_later_features(contract: ApiContract, operation_id: str) -> None:
     operation = contract.operation(operation_id)
     later = [description for key, description in _LATER_FEATURES if operation.get(key)]
-    idempotency = ir_map(operation, "idempotency")
-
-    if idempotency and ir_string(idempotency, "kind") != _EXEMPT:
-        later.append("idempotency")
 
     if ir_string(ir_map(ir_map(contract.ir_view, "api"), "wire"), "urls") == _ABSOLUTE_URLS:
         later.append("absolute URLs")

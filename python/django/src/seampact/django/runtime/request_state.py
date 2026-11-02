@@ -1,7 +1,7 @@
 """The per-request state of a boundary (ADR 0027 "Sync and async"): one mutable holder per api that step 1 sets on
 the `HttpRequest`, never in module globals. It carries the operation the raw path matched, the decoded input, the
-replies the boundary wrote, the operation the generated view admitted, and the exception a wrapped error handler or
-the `got_request_exception` receiver recorded."""
+replies the boundary wrote, the operation the generated view admitted, the idempotency claim its reply settles, and
+the exception a wrapped error handler or the `got_request_exception` receiver recorded."""
 
 from dataclasses import dataclass, field
 from typing import Final
@@ -9,10 +9,20 @@ from typing import Final
 from django.http import HttpRequest
 
 from seampact.codegen.runtime.contract import ApiContract
+from seampact.codegen.runtime.idempotency import IdempotencyClaimed
 from seampact.codegen.runtime.input_decoding import DecodedInput
 from seampact.codegen.runtime.reply_verdict import AuthoredReplies
+from seampact.hooks import IdempotencyStore
 
 _HOLDERS_ATTRIBUTE: Final = "seampact_boundaries"
+
+
+@dataclass(frozen=True, slots=True)
+class HeldClaim:
+    """The idempotency record a request holds, and the store that settles it once the reply is known."""
+
+    claimed: IdempotencyClaimed
+    store: IdempotencyStore
 
 
 @dataclass(slots=True, repr=False)
@@ -23,6 +33,7 @@ class BoundaryState:
     decoded: DecodedInput
     authored: AuthoredReplies = field(default_factory=AuthoredReplies)
     admitted_operation: str | None = None
+    held_claim: HeldClaim | None = None
     recorded: BaseException | None = None
 
     def __repr__(self) -> str:

@@ -1,7 +1,8 @@
 """The exception handler of the contract views (ADR 0027 "DRF", "Exceptions"): each view returns its api's handler
 from `get_exception_handler()`, so the app's `EXCEPTION_HANDLER` never applies to a contract route. It marks the
-transaction for rollback, renders a contract exception, answers DRF's and Django's exceptions with their role, and
-answers any other exception with the api's 500, logged, the unexpected-error listener told."""
+transaction for rollback, writes an idempotent request's replayed reply, renders a contract exception, answers DRF's
+and Django's exceptions with their role, and answers any other exception with the api's 500, logged, the
+unexpected-error listener told."""
 
 import math
 from collections.abc import Callable, Mapping
@@ -16,6 +17,7 @@ from rest_framework.views import set_rollback
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE, ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
 from seampact.django.runtime.contract_replies import django_response, role_answer, unexpected_response
+from seampact.django.runtime.idempotency_records import ReplayedReplyError
 from seampact.django.runtime.request_state import state_of
 from seampact.drf.runtime.admission import contract_error_reply
 
@@ -55,6 +57,9 @@ def contract_exception_reply(api: str, exception: Exception, context: Mapping[st
         return unexpected_response(request, contract, operation_id, _CROSSED_VIEW, exception)
 
     operation_id = state.operation_id
+
+    if isinstance(exception, ReplayedReplyError):
+        return django_response(request, contract, exception.replayed.reply)
 
     try:
         if isinstance(exception, ContractRefusal) or _is_contract_error(contract, operation_id, exception):

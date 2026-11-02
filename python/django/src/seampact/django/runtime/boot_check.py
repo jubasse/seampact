@@ -33,6 +33,7 @@ from seampact.django.runtime.api_settings import (
     factory,
 )
 from seampact.django.runtime.error_handlers import unwrapped_error_handlers, wrap_error_handlers
+from seampact.django.runtime.idempotency_records import IDEMPOTENCY_STORE_KEY, store_setting
 
 if TYPE_CHECKING:
     from django.urls.resolvers import ResolverMatch
@@ -51,8 +52,9 @@ _OPERATIONS_KEY: Final = "operations"
 _UNSERVED_SETTINGS: Final = {
     "access": "names DRF classes per access kind",
     "body_validation": "turns on the reply body validation",
-    "idempotency_store": "names an idempotency store",
 }
+_DERIVED: Final = "derived"
+_BOUNDARY: Final = "boundary"
 _HOOK_METHODS: Final = {AUTHENTICATE_KEY: "authenticate", DECIDERS_KEY: "decide", SCOPE_RESOLVERS_KEY: "resolve_scope"}
 
 
@@ -166,7 +168,35 @@ def _settings_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
     if isinstance(listener, str):
         problems += _imported_problems(boundary.api, f"['{ON_UNEXPECTED_ERROR_KEY}']", listener, "on_unexpected_error")
 
-    return problems
+    return problems + _store_problems(boundary.api, boundary.contract)
+
+
+def _store_problems(api: str, contract: ApiContract) -> list[str]:
+    """An api whose operations the boundary keeps idempotent needs a store; a store no operation uses is refused."""
+    enforced = [
+        operation_id
+        for operation_id in contract.operation_ids()
+        if ir_string(idempotency := ir_map(contract.operation(operation_id), "idempotency"), "kind") == _DERIVED
+        and ir_string(idempotency, "enforce") == _BOUNDARY
+    ]
+    setting = f"settings.{SETTINGS_NAME}['{api}']['{IDEMPOTENCY_STORE_KEY}']"
+
+    try:
+        path = store_setting(api)
+    except SettingsError as broken:
+        return [str(broken)]
+
+    if path is None:
+        return [
+            f"operation '{operation_id}' replays its idempotent requests and the api has no store: add the dotted "
+            f"path of its factory under {setting}."
+            for operation_id in enforced
+        ]
+
+    if not enforced:
+        return [f"{setting} names a store, which no operation of the contract uses; remove it."]
+
+    return _imported_problems(api, f"['{IDEMPOTENCY_STORE_KEY}']", path, "begin")
 
 
 def _run_time_problems(api: str, own: Mapping[str, object], contract: ApiContract) -> list[str]:
@@ -240,13 +270,8 @@ def _hook_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
     the named hooks the contract does not use or that do not import."""
     api, contract = boundary.api, boundary.contract
     needs = hook_needs(contract)
-    signed = [
-        identity
-        for identity in needs.identities
-        if ir_string(contract.declaration("identities", identity), "signed") is not None
-    ]
     needed = {
-        AUTHENTICATE_KEY: [identity for identity in needs.identities if identity not in signed],
+        AUTHENTICATE_KEY: needs.identities,
         DECIDERS_KEY: needs.deciders,
         SCOPE_RESOLVERS_KEY: needs.scopes,
     }
@@ -262,7 +287,7 @@ def _hook_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
 
     problems += hook_problems(
         contract,
-        identities=[*registered[AUTHENTICATE_KEY], *signed],
+        identities=list(registered[AUTHENTICATE_KEY]),
         scopes=list(registered[SCOPE_RESOLVERS_KEY]),
         deciders=list(registered[DECIDERS_KEY]),
         fixes=HookFixes(
