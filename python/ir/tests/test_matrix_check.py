@@ -11,12 +11,15 @@ from seampact.ir.run.matrix_check import check_matrix
 from seampact.ir.run.matrix_framework import python_targets
 
 _FASTAPI = "pypi:seampact-fastapi"
+_DRF = "pypi:seampact-drf"
 
 
-def _config(tmp_path: Path, allow_untested: list[str] | None = None, checks: str = "") -> AppConfig:
+def _config(
+    tmp_path: Path, allow_untested: list[str] | None = None, checks: str = "", use: str = _FASTAPI
+) -> AppConfig:
     file = tmp_path / "seampact.config.yaml"
     allowed = "" if allow_untested is None else f", allowUntested: [{', '.join(allow_untested)}]"
-    file.write_text(f"{checks}targets:\n  - {{ id: main, use: '{_FASTAPI}', api: tasks{allowed} }}\n", encoding="utf-8")
+    file.write_text(f"{checks}targets:\n  - {{ id: main, use: '{use}', api: tasks{allowed} }}\n", encoding="utf-8")
     config = read_app_config(str(file))
     assert not isinstance(config, list), config
 
@@ -63,6 +66,16 @@ def test_an_untested_version_is_an_error_at_the_error_level(tmp_path: Path) -> N
     )
 
     assert _codes(problems) == ["config.matrix.untested"]
+
+
+def test_a_minor_outside_the_tested_minors_of_a_tested_major_is_only_warned_of(tmp_path: Path) -> None:
+    error_level = _config(tmp_path, checks="checks: { matrix: error }\n", use=_DRF)
+    tested = check_matrix(error_level, {"djangorestframework": "3.18.0", "django": "6.1.2"})
+    untested_minor = check_matrix(error_level, {"djangorestframework": "3.18.0", "django": "6.0.4"})
+
+    assert tested == ([], [])
+    assert (untested_minor[0], _codes(untested_minor[1])) == ([], ["config.matrix.untested-minor"])
+    assert "django 5.2, 6.1 only" in untested_minor[1][0].message
 
 
 def test_a_version_below_the_floor_is_always_refused(tmp_path: Path) -> None:

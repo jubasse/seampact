@@ -26,7 +26,7 @@ from seampact.codegen.runtime.body_reader import PAYLOAD_TOO_LARGE_ROLE
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE, ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
-from seampact.codegen.runtime.framework_versions import AcceptedFramework
+from seampact.codegen.runtime.framework_versions import AcceptedFramework, framework_version_warnings
 from seampact.codegen.runtime.input_decoding import IncomingRequest, Issue, decode_input, role_refusal, schema_invalid
 from seampact.codegen.runtime.ir_view import ir_int, ir_map
 from seampact.codegen.runtime.raw_target import RawTarget, asgi_raw_target, wsgi_raw_target
@@ -102,6 +102,9 @@ class ContractBoundary:
         if problems:
             listed = "\n".join(f"- {problem}" for problem in problems)
             raise ImproperlyConfigured(f"seampact: the api '{self.api}' cannot start:\n{listed}")
+
+        if self.boot_check:
+            _log_untested_minors(type(self))
 
     def __call__(self, request: HttpRequest) -> HttpResponseBase | Awaitable[HttpResponseBase]:
         if self.async_mode:
@@ -350,6 +353,17 @@ class ContractBoundary:
             "seampact: the server gives no raw request target, so the boundary matches the decoded path: an encoded "
             "slash, an encoded dot segment and a raw ';' in a path cannot be refused, and a chunked request body "
             "without Content-Length is refused. Serve the app with gunicorn or uvicorn."
+        )
+
+
+def _log_untested_minors(boundary: type[ContractBoundary]) -> None:
+    """One warning for the installed minors outside the tested ones: the api serves, with a notice."""
+    warnings = framework_version_warnings(boundary.frameworks, boundary.api)
+
+    if warnings:
+        listed = "\n".join(f"- {warning}" for warning in warnings)
+        logging.getLogger(f"seampact.{boundary.api}").warning(
+            "seampact: the api '%s' serves untested:\n%s", boundary.api, listed
         )
 
 

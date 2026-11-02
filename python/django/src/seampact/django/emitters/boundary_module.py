@@ -65,7 +65,7 @@ def _string_tuple(texts: Sequence[str]) -> str:
 
 
 def _accepted_frameworks(runtime: str, entry: TargetEntry) -> list[str]:
-    """The matrix row's frameworks, each by its unit, with the entry's `allowUntested` units."""
+    """The matrix row's frameworks, each by its unit, with the entry's `allowUntested` units and the tested minors."""
     lines: list[str] = []
 
     for framework in entry.matrix.frameworks if entry.matrix is not None else ():
@@ -74,6 +74,10 @@ def _accepted_frameworks(runtime: str, entry: TargetEntry) -> list[str]:
             f"unit={runtime}.VersionUnit.{framework.unit.name}",
             f"accepted={_string_tuple(framework.accepted_units(entry.allow_untested))}",
         ]
+
+        if framework.tested_minors:
+            arguments.append(f"tested_minors={_string_tuple(framework.tested_minors)}")
+
         lines += bracketed(INDENT * 2, f"{runtime}.AcceptedFramework", arguments, ",")
 
     return lines

@@ -2,7 +2,12 @@
 
 from importlib import metadata
 
-from seampact.codegen.runtime.framework_versions import AcceptedFramework, VersionUnit, framework_version_problems
+from seampact.codegen.runtime.framework_versions import (
+    AcceptedFramework,
+    VersionUnit,
+    framework_version_problems,
+    framework_version_warnings,
+)
 
 
 def test_an_installed_version_in_an_accepted_unit_passes() -> None:
@@ -27,4 +32,22 @@ def test_a_missing_distribution_is_refused_by_name() -> None:
 
     assert framework_version_problems([absent], "tasks") == [
         "seampact-absent-framework is not installed; the api 'tasks' was generated for seampact-absent-framework 1"
+    ]
+
+
+def test_a_minor_outside_the_tested_minors_of_its_major_is_only_warned_of() -> None:
+    installed = metadata.version("pytest")
+    major, minor = installed.split(".")[:2]
+    untested = AcceptedFramework(
+        package="pytest", unit=VersionUnit.MAJOR, accepted=(major,), tested_minors=(f"{major}.{int(minor) + 1}",)
+    )
+    tested = AcceptedFramework(
+        package="pytest", unit=VersionUnit.MAJOR, accepted=(major,), tested_minors=(f"{major}.{minor}",)
+    )
+
+    assert framework_version_problems([untested], "tasks") == []
+    assert framework_version_warnings([tested], "tasks") == []
+    assert framework_version_warnings([untested], "tasks") == [
+        f"pytest {installed} is installed, and the api 'tasks' is tested on pytest {major}.{int(minor) + 1} only, so "
+        "this minor is untested; install a tested minor to serve on a tested version"
     ]

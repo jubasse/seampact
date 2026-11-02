@@ -196,8 +196,9 @@ export const PHP_TARGETS: readonly PhpTargetCompatibility[] = matrix.phpTargets;
 // The targets `seampact generate` of a Python build generates: `package` is the `pypi:<distribution>` `use`, and the
 // installed version of each framework is read with `importlib.metadata`. A framework is checked by `unit`: its major,
 // or its `<major>.<minor>` (FastAPI and Starlette are 0.x, where a minor breaks), so `tested` holds units and
-// `allowUntested` names one (`fastapi@0.162`). `floor` is the lowest `<major>.<minor>` the target works on. The data
-// is `compatibility/python-targets.json`, which `seampact-ir` ships a copy of.
+// `allowUntested` names one (`fastapi@0.162`). `floor` is the lowest `<major>.<minor>` the target works on. A framework
+// checked by major may list its `testedMinors`: a minor outside them, within a tested major, is untested and only
+// warned of. The data is `compatibility/python-targets.json`, which `seampact-ir` ships a copy of.
 export type PythonVersionUnit = "major" | "minor";
 
 export interface PythonFrameworkSupport {
@@ -206,6 +207,7 @@ export interface PythonFrameworkSupport {
   readonly unit: PythonVersionUnit;
   readonly floor: string;
   readonly tested: readonly string[];
+  readonly testedMinors?: readonly string[];
   readonly incompatible: readonly { readonly unit: string; readonly reason: string }[];
 }
 
@@ -221,6 +223,7 @@ export function pythonFrameworkOf(framework: {
   readonly unit: string;
   readonly floor: string;
   readonly tested: readonly string[];
+  readonly testedMinors?: readonly string[];
   readonly incompatible: readonly { readonly unit: string; readonly reason: string }[];
 }): PythonFrameworkSupport {
   return { ...framework, unit: oneOf(framework.unit, ["major", "minor"], `${framework.id} unit`) };
