@@ -42,7 +42,7 @@ require-build-hashes = true
 preview-features = ["build-dependency-hashes"]
 
 [tool.uv.workspace]
-members = ["codegen", "hooks", "ir", "signed-webhooks"]
+members = ["codegen", "fastapi", "hooks", "ir", "signed-webhooks"]
 
 [dependency-groups]
 # The vulnerability audit of the lock file, installed only by its CI job.
@@ -63,8 +63,17 @@ dev = [
 
 [tool.ruff]
 target-version = "py312"
-src = ["codegen/src", "hooks/src", "ir/src", "signed-webhooks/src"]
+src = ["codegen/src", "fastapi/src", "hooks/src", "ir/src", "signed-webhooks/src"]
 line-length = 120
+# The namespace package `seampact` has no `__init__.py` (PEP 420): without this, ruff would take `seampact/fastapi` for a
+# top-level `fastapi` package and sort the framework's imports as first party.
+namespace-packages = [
+    "codegen/src/seampact",
+    "fastapi/src/seampact",
+    "hooks/src/seampact",
+    "ir/src/seampact",
+    "signed-webhooks/src/seampact",
+]
 
 [tool.ruff.lint]
 select = ["B", "E", "F", "I", "N", "RUF", "SIM", "UP", "W"]
@@ -73,8 +82,8 @@ select = ["B", "E", "F", "I", "N", "RUF", "SIM", "UP", "W"]
 strict = true
 plugins = ["pydantic.mypy"]
 python_version = "3.12"
-mypy_path = ["codegen/src", "hooks/src", "ir/src", "signed-webhooks/src"]
-files = ["codegen/src", "codegen/tests", "hooks/src", "hooks/tests", "ir/src", "ir/tests", "signed-webhooks/src", "signed-webhooks/tests"]
+mypy_path = ["codegen/src", "fastapi/src", "hooks/src", "ir/src", "signed-webhooks/src"]
+files = ["codegen/src", "codegen/tests", "fastapi/src", "fastapi/tests", "hooks/src", "hooks/tests", "ir/src", "ir/tests", "signed-webhooks/src", "signed-webhooks/tests"]
 explicit_package_bases = true
 warn_unreachable = true
 
@@ -83,15 +92,15 @@ init_forbid_extra = true
 init_typed = true
 warn_required_dynamic_aliases = true
 
-# The golden output of the Pydantic emitter, as Pylance users check it.
+# The golden output of the Pydantic emitter and of the FastAPI target, as Pylance users check it.
 [tool.pyright]
-include = ["codegen/tests/golden"]
-extraPaths = ["codegen/src", "hooks/src"]
+include = ["codegen/tests/golden", "fastapi/tests/golden"]
+extraPaths = ["codegen/src", "fastapi/src", "hooks/src"]
 typeCheckingMode = "strict"
 pythonVersion = "3.12"
 
 [tool.pytest.ini_options]
-testpaths = ["codegen/tests", "hooks/tests", "ir/tests", "signed-webhooks/tests"]
+testpaths = ["codegen/tests", "fastapi/tests", "hooks/tests", "ir/tests", "signed-webhooks/tests"]
 addopts = ["--import-mode=importlib", "--strict-markers", "--strict-config", "-ra"]
 xfail_strict = true
 filterwarnings = ["error"]
