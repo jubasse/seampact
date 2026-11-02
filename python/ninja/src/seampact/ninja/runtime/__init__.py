@@ -7,13 +7,14 @@ from seampact.codegen.runtime.reply_verdict import ResponsesMode
 from seampact.codegen.runtime.run_settings import OperationSettings, OperationTypes, RunSettings
 from seampact.ninja.runtime.binding import ApiBinding, BindingError, add_operation, api_binding, bind_api
 from seampact.ninja.runtime.boundary import NinjaContractBoundary
-from seampact.ninja.runtime.placement import AccessSettings, ApiPlacement, Factory, NinjaAuth, OperationRoute, ViewsMode
+from seampact.ninja.runtime.placement import AccessSettings, ApiPlacement, Factory, NinjaAuth, OperationRoute
 from seampact.ninja.runtime.views import (
     async_handler_error,
     call_handler_async,
     serve_operation,
     serve_operation_async,
 )
+from seampact.ninja.views_mode import ViewsMode
 
 __all__ = [
     "AccessSettings",

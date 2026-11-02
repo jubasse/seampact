@@ -392,10 +392,17 @@ def async_methods(built_class: type, hook_method: str | None) -> list[str]:
 
 
 def _route_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
-    """Each operation's sample request must resolve to its own generated view, served by one pattern only."""
+    """Each operation's sample request must resolve to its own generated view, served by one pattern only. Ninja
+    writes one pattern per operation of a path, all with the path's route and name: one route, so one pattern."""
     contract = boundary.contract
     problems: list[str] = []
-    names = [pattern.name for pattern in _patterns(get_resolver().url_patterns)]
+    names = [
+        pattern.name
+        for pattern in {
+            (*prefixes, str(pattern.pattern)): pattern
+            for prefixes, pattern in _prefixed_patterns(get_resolver().url_patterns, ())
+        }.values()
+    ]
 
     for operation_id in contract.operation_ids():
         route_name = operation_route_name(contract, operation_id)

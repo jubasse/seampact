@@ -1,0 +1,1 @@
+Framework-free hook doubles of the reference contract's `tasks` and `tasksService` apis that a Python consumer app copies in beside its generated packages (the Django Ninja consumer first): the identities, deciders, scope resolver and unexpected-error listener, answering from the loaded script and the suite's credentials.

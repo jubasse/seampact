@@ -5,6 +5,9 @@ warning and resolves to its URL name, and `bind_<api>()` takes only a NinjaAPI."
 import dataclasses
 import importlib
 import json
+import os
+import subprocess
+import sys
 from collections.abc import Callable, Mapping
 from importlib import metadata
 from pathlib import Path
@@ -65,6 +68,18 @@ def test_the_generator_is_found_through_its_entry_point() -> None:
 
     assert isinstance(found, InstalledTarget)
     assert isinstance(found.generator, NinjaGenerator)
+
+
+def test_the_generator_imports_without_django_settings_or_ninja() -> None:
+    # `seampact generate` runs outside any Django project, where importing Ninja fails on unconfigured settings.
+    environment = {name: value for name, value in os.environ.items() if name != "DJANGO_SETTINGS_MODULE"}
+    probe = "import sys, seampact.ninja.generator; print('ninja' in sys.modules)"
+    finished = subprocess.run(
+        [sys.executable, "-c", probe], capture_output=True, text=True, env=environment, check=False
+    )
+
+    assert finished.returncode == 0, finished.stderr
+    assert finished.stdout.strip() == "False"
 
 
 def test_options_outside_the_target_are_refused_by_name(repository_root: Path) -> None:

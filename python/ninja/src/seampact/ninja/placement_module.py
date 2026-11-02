@@ -22,7 +22,7 @@ from seampact.codegen.runtime import RUNTIME_VERSION
 from seampact.codegen.source_lines import with_local_imports
 from seampact.django.emitters.urls_module import PATH_ARGUMENT_PREFIX
 from seampact.ir.model import ContractIR
-from seampact.ninja.runtime.placement import ViewsMode
+from seampact.ninja.views_mode import ViewsMode
 
 _RUNTIME: Final = "_runtime"
 _HOOKS: Final = "_hooks"

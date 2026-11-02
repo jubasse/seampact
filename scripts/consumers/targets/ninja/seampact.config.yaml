@@ -1,0 +1,18 @@
+# The consumer's app config: the reference contract's tasks and tasksService apis through seampact-ninja, serving every
+# operation, with the views `assemble.sh` writes in place of `sync`; the suite's control views sit outside the api's
+# base path.
+outDir: generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: tasks
+    use: pypi:seampact-ninja
+    api: tasks
+    options: { views: sync }
+  - id: tasksService
+    out: tasks_service
+    use: pypi:seampact-ninja
+    api: tasksService
+    options: { views: sync }

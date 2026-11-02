@@ -10,7 +10,7 @@ from seampact.codegen.pydantic_models import RulesMode
 from seampact.codegen.refusals import Refusals
 from seampact.django.emitters import DjangoTargetOptions, OptionReader, django_target_options
 from seampact.ir.config.json_value import JsonValue
-from seampact.ninja.runtime.placement import ViewsMode
+from seampact.ninja.views_mode import ViewsMode
 
 _RULES: Final = "rules"
 _VIEWS: Final = "views"

@@ -1,0 +1,19 @@
+# The consumer's app config for the `allow-listed-framework-route` boot case: the app config with the route it serves
+# beside the contract allow-listed.
+outDir: generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: tasks
+    use: pypi:seampact-ninja
+    api: tasks
+    options: { views: sync }
+    frameworkRoutes:
+      - { path: /v1/unlisted, reason: "The boot case's framework route beside the contract (ADR 0015)." }
+  - id: tasksService
+    out: tasks_service
+    use: pypi:seampact-ninja
+    api: tasksService
+    options: { views: sync }
