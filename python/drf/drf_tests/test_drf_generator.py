@@ -436,15 +436,12 @@ def test_the_handler_reads_the_time_left_from_the_requests_deadline(repository_r
     operations = imported_package(tmp_path / name, name).operations
     schemas = sys.modules[f"{name}.schemas"]
     now = datetime(2026, 10, 18, 9, 0, tzinfo=UTC)
+    path = operations.GetTaskPath(channel_id=uuid.uuid4(), task_id=uuid.uuid4())
+    headers = operations.GetTaskHeaders(x_deadline="2026-10-18T09:00:00.300Z")
+    principal = schemas.ServicePrincipal(service=schemas.Service.CATALOG, user_id=uuid.uuid4())
+    request = operations.GetTaskRequest(input=operations.GetTaskInput(path=path, headers=headers), principal=principal)
 
-    def request(deadline: str) -> object:
-        path = operations.GetTaskPath(channel_id=uuid.uuid4(), task_id=uuid.uuid4())
-        headers = operations.GetTaskHeaders(x_deadline=deadline)
-        principal = schemas.ServicePrincipal(service=schemas.Service.CATALOG, user_id=uuid.uuid4())
-
-        return operations.GetTaskRequest(input=operations.GetTaskInput(path=path, headers=headers), principal=principal)
-
-    deadline = getattr(request("2026-10-18T09:00:00.300Z"), "deadline", None)
+    deadline = getattr(request, "deadline", None)
 
     assert deadline is not None
     assert deadline.remaining_ms(now) == 300
