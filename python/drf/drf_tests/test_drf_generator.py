@@ -184,7 +184,9 @@ def test_members_named_like_serializer_attributes_validate_and_type_check(reposi
         ({"views": "async"}, {}, "options.unknown"),
         ({}, {"nativeDocs": True}, "artefacts.unknown"),
         ({}, {"accessHooks": False}, "artefacts.accessHooks.unsupported"),
-        ({}, {"bootCheck": {"hooks": "warn"}}, "artefacts.bootCheck.hooks.unsupported"),
+        ({}, {"bootCheck": {"hooks": "warn"}}, "artefacts.bootCheck.hooks.warn.unsupported"),
+        ({}, {"bootCheck": {"hooks": "on"}}, "artefacts.bootCheck.hooks.invalid"),
+        ({}, {"bootCheck": {"hooks": "fail"}}, "artefacts.bootCheck.hooks.invalid"),
     ],
 )
 def test_options_and_artefacts_the_target_does_not_take_are_refused_by_name(
