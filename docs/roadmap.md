@@ -7,7 +7,7 @@ In this order, each step reusing what the one before built:
 3. One shared core per language: each new language starts with a core (reading the contract, the boundary steps, naming) that its frameworks reuse, as the Node runtime serves five servers and the Spring Boot core will serve Quarkus and Micronaut.
 4. Web-standard server targets on the Hono adapter: Next.js route handlers, Bun, Deno, Cloudflare Workers.
 5. Mobile clients: Kotlin first (Android, Ktor client, Kotlin Multiplatform), then Swift, then Dart for Flutter.
-6. Python: FastAPI, then Django REST Framework or Django Ninja; Flask on demand.
+6. Python, beyond the FastAPI, Django REST Framework and Django Ninja targets of 1.0: Flask and Litestar with msgspec, each on demand. marshmallow is not planned.
 7. More JVM frameworks on the Spring Boot core: Quarkus, Micronaut, Ktor.
 8. Go: `net/http` handlers, then Gin, Chi and Echo.
 9. .NET: ASP.NET Core.

@@ -9,6 +9,14 @@ const SOURCE_DIR = "src";
 const INDEX_FILE = "index.ts";
 const README_FILE = "README.md";
 
+const PYTHON_DIR = "python";
+const PYTHON_MANIFEST = "pyproject.toml";
+const PYTHON_MODULE_FILE = "__init__.py";
+const PYTHON_GENERATED_MARKER = "# Generated from";
+
+/** Directories under a Python `src` that hold no source. */
+const PYTHON_SKIPPED_DIRS = new Set(["__pycache__", "schemas"]);
+
 /** Directories that hold test data, not source. */
 const SKIPPED_DIRS = new Set(["node_modules", "fixtures"]);
 
@@ -55,6 +63,13 @@ interface PackageEntry {
   sourceDirectories: SourceDirectory[];
 }
 
+interface PythonPackageEntry {
+  name: string;
+  directory: string;
+  description: string;
+  sourceDirectories: SourceDirectory[];
+}
+
 interface SourceDirectory {
   path: string;
   summary: string;
@@ -74,6 +89,7 @@ export interface Cartography {
 export function buildCartography(options: CartographyOptions): Cartography {
   const problems: string[] = [];
   const packages = readPackages(options.root, problems);
+  const pythonPackages = readPythonPackages(options.root, problems);
 
   for (const stage of options.stages) {
     for (const directory of stage.directories) {
@@ -86,7 +102,7 @@ export function buildCartography(options: CartographyOptions): Cartography {
   }
 
   return {
-    markdown: renderCartography(packages, options.stages),
+    markdown: renderCartography(packages, pythonPackages, options.stages),
     problems: problems.sort(compareText),
   };
 }
@@ -195,6 +211,95 @@ function readSourceDirectories(
   return found.sort((left, right) => compareText(left.path, right.path));
 }
 
+/** The packages of the uv workspace `python/`, each with the source directories that hold a module. */
+function readPythonPackages(root: string, problems: string[]): PythonPackageEntry[] {
+  const pythonRoot = join(root, PYTHON_DIR);
+
+  if (!existsSync(pythonRoot)) return [];
+
+  const entries: PythonPackageEntry[] = [];
+
+  for (const child of sortedSubdirectories(pythonRoot)) {
+    const directory = `${PYTHON_DIR}/${child}`;
+    const manifestFile = `${directory}/${PYTHON_MANIFEST}`;
+
+    if (!existsSync(join(root, manifestFile))) continue;
+
+    const manifest = readFileSync(join(root, manifestFile), "utf8");
+    const name = tomlProjectField(manifest, "name");
+    const description = tomlProjectField(manifest, "description");
+
+    if (name === undefined) problems.push(`${manifestFile}: no \`name\`; add the package name`);
+
+    if (description === undefined) {
+      problems.push(
+        `${manifestFile}: no \`description\`; add a one-line description of the package`,
+      );
+    }
+
+    entries.push({
+      name: name ?? directory,
+      directory,
+      description: description ?? "",
+      sourceDirectories: readPythonSourceDirectories(root, `${directory}/${SOURCE_DIR}`, problems),
+    });
+  }
+
+  return entries;
+}
+
+/** A one-line string field of the `[project]` table; the manifests keep these on one line. */
+function tomlProjectField(manifest: string, key: string): string | undefined {
+  const projectTable = /^\[project\]\n([\s\S]*?)(?=^\[|(?![\s\S]))/m.exec(manifest);
+  const line = new RegExp(`^${key} = "(.*)"$`, "m").exec(projectTable?.[1] ?? "");
+
+  return line?.[1]?.trim() || undefined;
+}
+
+/**
+ * Every package directory (one holding an `__init__.py`) under a Python `src`, with the first sentence
+ * of its module docstring. A directory whose `__init__.py` is generated gets no line.
+ */
+function readPythonSourceDirectories(
+  root: string,
+  sourceRoot: string,
+  problems: string[],
+): SourceDirectory[] {
+  const found: SourceDirectory[] = [];
+
+  const visit = (directory: string) => {
+    const absolute = join(root, directory);
+
+    for (const child of sortedSubdirectories(absolute)) {
+      if (!PYTHON_SKIPPED_DIRS.has(child)) visit(`${directory}/${child}`);
+    }
+
+    const modulePath = join(absolute, PYTHON_MODULE_FILE);
+
+    if (!existsSync(modulePath)) return;
+
+    const source = readFileSync(modulePath, "utf8");
+
+    if (source.startsWith(PYTHON_GENERATED_MARKER)) return;
+
+    const docstring = /^"""([\s\S]*?)"""/.exec(source)?.[1]?.replace(/\s+/g, " ").trim();
+
+    if (docstring === undefined || docstring === "") {
+      problems.push(
+        `${directory}: no header; add a module docstring at the top of ${directory}/${PYTHON_MODULE_FILE}`,
+      );
+
+      return;
+    }
+
+    found.push({ path: directory, summary: firstSentence(docstring) });
+  };
+
+  visit(sourceRoot);
+
+  return found.sort((left, right) => compareText(left.path, right.path));
+}
+
 function parseManifest(manifestPath: string, manifestFile: string, problems: string[]): unknown {
   try {
     return JSON.parse(readFileSync(manifestPath, "utf8"));
@@ -255,7 +360,11 @@ function firstSentence(text: string): string {
   return end === null ? text : text.slice(0, end.index + 1);
 }
 
-function renderCartography(packages: PackageEntry[], stages: CompilerStage[]): string {
+function renderCartography(
+  packages: PackageEntry[],
+  pythonPackages: PythonPackageEntry[],
+  stages: CompilerStage[],
+): string {
   const lines = [
     "# Cartography",
     "",
@@ -275,6 +384,21 @@ function renderCartography(packages: PackageEntry[], stages: CompilerStage[]): s
     );
   }
 
+  if (pythonPackages.length > 0) {
+    lines.push("", "## Python packages", "");
+    lines.push(
+      "The uv workspace `python/`. A source directory is a package with an `__init__.py`; its line is the first sentence of the module docstring, and a generated `__init__.py` gets none.",
+      "",
+    );
+    lines.push("| Package | Directory | Description |", "|---|---|---|");
+
+    for (const entry of pythonPackages) {
+      lines.push(
+        `| \`${entry.name}\` | \`${entry.directory}\` | ${tableCell(entry.description)} |`,
+      );
+    }
+  }
+
   lines.push("", "## Compiler stages", "", "In pipeline order (ADR 0006 section 1).", "");
   lines.push("| Stage | Directories |", "|---|---|");
 
@@ -287,6 +411,16 @@ function renderCartography(packages: PackageEntry[], stages: CompilerStage[]): s
   lines.push("", "## Source directories");
 
   for (const entry of packages) {
+    if (entry.sourceDirectories.length === 0) continue;
+
+    lines.push("", `### \`${entry.name}\``, "");
+
+    for (const directory of entry.sourceDirectories) {
+      lines.push(`- \`${directory.path}\`: ${directory.summary}`);
+    }
+  }
+
+  for (const entry of pythonPackages) {
     if (entry.sourceDirectories.length === 0) continue;
 
     lines.push("", `### \`${entry.name}\``, "");

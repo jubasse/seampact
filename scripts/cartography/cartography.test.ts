@@ -88,6 +88,27 @@ describe("cartography", () => {
     expect(markdown).not.toContain("fixtures");
   });
 
+  it("maps the Python packages from pyproject.toml and the module docstrings", () => {
+    const root = repositoryWith({
+      "packages/.keep": "",
+      "python/alpha/pyproject.toml":
+        '[project]\nname = "seampact-alpha"\ndescription = "Alpha for Python."\nversion = "0"\n',
+      "python/alpha/src/seampact/alpha/__init__.py": '"""The alpha target.\n\nMore detail."""\n',
+      "python/alpha/src/seampact/alpha/model/__init__.py":
+        "# Generated from a schema. Do not edit.\n",
+      "python/alpha/src/seampact/alpha/bare/__init__.py": "",
+    });
+
+    const { markdown, problems } = buildCartography({ root, stages: NO_STAGES });
+
+    expect(markdown).toContain("| `seampact-alpha` | `python/alpha` | Alpha for Python. |");
+    expect(markdown).toContain("- `python/alpha/src/seampact/alpha`: The alpha target.");
+    expect(markdown).not.toContain("alpha/model");
+    expect(problems).toEqual([
+      "python/alpha/src/seampact/alpha/bare: no header; add a module docstring at the top of python/alpha/src/seampact/alpha/bare/__init__.py",
+    ]);
+  });
+
   it("orders packages and directories by code unit and writes no timestamp", () => {
     const root = repositoryWith({
       "packages/b/package.json": manifest("@x/b", "B.", "core"),
