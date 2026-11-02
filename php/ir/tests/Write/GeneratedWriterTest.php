@@ -116,6 +116,20 @@ final class GeneratedWriterTest extends TestCase
         self::assertSame(['writer.manifest.other-owner'], self::codes(GeneratedWriter::plan($this->outDir, 'other', [], HandEditPolicy::Refuse)));
     }
 
+    public function testRefusesTwoPathsThatDifferOnlyByCase(): void
+    {
+        foreach ([['Tasks.php', 'tasks.php'], ['routes/É.php', 'routes/é.php']] as [$first, $second]) {
+            $outcome = GeneratedWriter::plan($this->outDir, 'server', [new GeneratedFile($first, "<?php\n"), new GeneratedFile($second, "<?php\n")], HandEditPolicy::Refuse);
+
+            self::assertIsArray($outcome);
+            self::assertSame(['file.path.invalid'], self::codes($outcome));
+            self::assertInstanceOf(WriterRefusal::class, $outcome[0]);
+            self::assertStringContainsString("'{$second}', and it differs only by letter case from '{$first}'", $outcome[0]->message);
+        }
+
+        self::assertDirectoryDoesNotExist($this->outDir);
+    }
+
     public function testRefusesPathsThatLeaveTheOutputDirectory(): void
     {
         foreach (['../A.php', '/A.php', 'a\\A.php', 'a/./A.php', '.seampact-manifest.json'] as $path) {

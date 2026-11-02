@@ -121,3 +121,22 @@ test("a second target writing into the same directory is refused and nothing is 
   expect(codesOf(outcome)).toEqual(["writer.manifest.other-owner"]);
   expect((await readdir(outDir)).sort()).toEqual([".seampact-manifest.json", "index.ts"]);
 });
+
+test("two generated paths that differ only by case are refused by name and nothing is written", async () => {
+  for (const [first, second] of [
+    ["Tasks.ts", "tasks.ts"],
+    ["routes/É.ts", "routes/é.ts"],
+  ] as const) {
+    const outcome = await writeGeneratedFiles(outDir, "node-server", [
+      { path: first, contents: "a" },
+      { path: second, contents: "b" },
+    ]);
+
+    expect(codesOf(outcome)).toEqual(["file.path.invalid"]);
+    expect(outcome.status === "refused" ? outcome.refusals[0]?.message : "").toContain(
+      `'${second}', and it differs only by letter case from '${first}'`,
+    );
+  }
+
+  expect(await readdir(sandbox)).toEqual([]);
+});

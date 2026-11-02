@@ -100,6 +100,19 @@ def test_unsafe_duplicate_and_reserved_paths_are_refused(tmp_path: Path) -> None
     assert _refusal_codes(tmp_path, twice) == ["file.path.invalid"]
 
 
+def test_two_paths_that_differ_only_by_case_are_refused_by_name(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+
+    for first, second in (("Tasks.py", "tasks.py"), ("routes/É.py", "routes/é.py")):
+        planned = plan_write(str(out), "main", [GeneratedFile(first, "a"), GeneratedFile(second, "b")], HandEditPolicy.REFUSE)
+
+        assert isinstance(planned, list)
+        assert [refusal.code for refusal in planned] == ["file.path.invalid"]
+        assert f"'{second}', and it differs only by letter case from '{first}'" in planned[0].message
+
+    assert not out.exists()
+
+
 def test_a_link_leaving_the_output_directory_is_refused(tmp_path: Path) -> None:
     outside = tmp_path / "outside"
     outside.mkdir()

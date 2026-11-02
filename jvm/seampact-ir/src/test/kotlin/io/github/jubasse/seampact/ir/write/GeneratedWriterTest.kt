@@ -5,6 +5,7 @@ import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.HexFormat
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
@@ -100,6 +101,20 @@ class GeneratedWriterTest {
 
         Files.writeString(out.resolve(MANIFEST_FILE_NAME), "not json")
         assertEquals(listOf("writer.manifest.invalid"), refusedCodes(GeneratedFile("A.java", "")))
+    }
+
+    @Test
+    fun refusesTwoPathsThatDifferOnlyByCase() {
+        for ((first, second) in listOf("Tasks.java" to "tasks.java", "routes/É.java" to "routes/é.java")) {
+            val refused = assertIs<PlanOutcome.Refused>(
+                GeneratedWriter.plan(out, "server", listOf(GeneratedFile(first, ""), GeneratedFile(second, "")), HandEditPolicy.REFUSE),
+            )
+
+            assertEquals(listOf("file.path.invalid"), refused.refusals.map { it.code })
+            assertTrue("'$second', and it differs only by letter case from '$first'" in refused.refusals[0].message)
+        }
+
+        assertFalse(Files.exists(out))
     }
 
     @Test
