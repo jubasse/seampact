@@ -1,6 +1,7 @@
 """An app config as the Python runner reads it. `entries` are the entries of this runner's ecosystem (PyPI
 distributions); `other_entries` those another runner generates, kept so a run can name them, never generated here.
-The `openapi`, `checks` and `warnings` members are copies, as the config writes them, None when it does not."""
+The `openapi`, `checks` and `warnings` members are copies, as the config writes them, None when it does not;
+`source_entries` is a copy of `sources` as the config writes them."""
 
 from dataclasses import dataclass
 
@@ -92,6 +93,7 @@ class AppConfig:
     out_dir: str
     allow_local: bool | None
     sources: dict[str, LocalSource | BundleSource]
+    source_entries: JsonObject
     entries: list[AppConfigEntry]
     other_entries: list[AppConfigEntry]
     openapi: JsonValue

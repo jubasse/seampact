@@ -24,8 +24,8 @@ from seampact.ir.config import (
     entry_view,
     read_app_config,
 )
-from seampact.ir.config.entry_view import unknown_source_problems, used_sources
-from seampact.ir.config.json_value import copy_of, list_of, string_of, strings_of
+from seampact.ir.config.entry_view import EntryViewResult, unknown_source_problems, used_sources
+from seampact.ir.config.json_value import copy_of, list_of, object_copy_of, string_of, strings_of
 from seampact.ir.config.local_source_policy import LocalSourcePolicy
 from seampact.ir.config.reader import CONFIG_FILE_NAME
 from seampact.ir.read import IrMalformedError, IrRefusedError, read_document
@@ -34,9 +34,21 @@ from seampact.ir.run.discovery import InstalledTarget, discover_target, installe
 from seampact.ir.run.documents import documents_sources, run_documents
 from seampact.ir.run.entry_plan import EntryPlan
 from seampact.ir.run.framework_docs import framework_docs_problems
-from seampact.ir.run.generator import FrameworkRoute, GenerationRefusedError, TargetEntry
+from seampact.ir.run.generator import (
+    FrameworkDocs,
+    FrameworkRoute,
+    GenerationRefusedError,
+    NativeDocsDocument,
+    TargetEntry,
+)
 from seampact.ir.run.matrix_check import check_matrix
 from seampact.ir.run.matrix_framework import python_targets
+from seampact.ir.run.native_docs_document import (
+    NativeDocsRequest,
+    asks_native_docs,
+    native_docs_documents,
+    native_docs_request,
+)
 from seampact.ir.run.problems import problem_of_binary, problem_of_ir, problem_of_writer
 from seampact.ir.run.report import RunReport, refused_report
 from seampact.ir.write import (
@@ -212,9 +224,41 @@ def _prepare(settings: RunSettings, on_hand_edit: HandEditPolicy) -> _PreparedRu
         return [*read_problems, *local_refusals]
 
     source_apis = [item for item in apis if isinstance(item, SourceApi) and item.source in used]
-    plans = [_plan(entry, targets[entry.id], source_apis, on_hand_edit) for entry in config.entries]
+    views = {entry.id: entry_view(entry, source_apis) for entry in config.entries}
+    native_docs = _native_docs(settings, config, contract_apis, views)
+
+    if isinstance(native_docs, list):
+        return native_docs
+
+    plans = [_plan(entry, targets[entry.id], views[entry.id], native_docs, on_hand_edit) for entry in config.entries]
 
     return _PreparedRun(config, contract_apis, plans, matrix_warnings)
+
+
+def _native_docs(
+    settings: RunSettings, config: AppConfig, contract_apis: ContractApis, views: dict[str, EntryViewResult]
+) -> dict[tuple[str, str], NativeDocsDocument] | list[ConfigProblem]:
+    """The seampact document of each api of a `nativeDocs` entry; an entry whose view is refused is left to its
+    plan, which names why."""
+    requests: list[NativeDocsRequest] = []
+    problems: list[ConfigProblem] = []
+
+    for entry in config.entries:
+        if not asks_native_docs(entry):
+            continue
+
+        for api in views[entry.id].apis:
+            request = native_docs_request(config, entry, api)
+
+            if isinstance(request, ConfigProblem):
+                problems.append(request)
+            else:
+                requests.append(request)
+
+    if problems:
+        return problems
+
+    return native_docs_documents(config, contract_apis, requests, dict(settings.environment))
 
 
 def _is_local(config: AppConfig, name: str) -> bool:
@@ -240,10 +284,12 @@ def _contract_apis(settings: RunSettings, config: AppConfig) -> ContractApis | l
 
 
 def _plan(
-    entry: AppConfigEntry, target: InstalledTarget, apis: list[SourceApi], on_hand_edit: HandEditPolicy
+    entry: AppConfigEntry,
+    target: InstalledTarget,
+    view: EntryViewResult,
+    native_docs: dict[tuple[str, str], NativeDocsDocument],
+    on_hand_edit: HandEditPolicy,
 ) -> EntryPlan:
-    view = entry_view(entry, apis)
-
     if view.problems:
         return EntryPlan(entry.id, None, [], view.problems)
 
@@ -251,7 +297,7 @@ def _plan(
     problems: list[ConfigProblem] = []
 
     for api in view.apis:
-        generated = _generated_api(entry, target, api)
+        generated = _generated_api(entry, target, api, native_docs.get((entry.id, api.api)))
 
         if isinstance(generated, list) and generated and isinstance(generated[0], ConfigProblem):
             problems.extend(item for item in generated if isinstance(item, ConfigProblem))
@@ -270,7 +316,7 @@ def _plan(
 
 
 def _generated_api(
-    entry: AppConfigEntry, target: InstalledTarget, api: SourceApi
+    entry: AppConfigEntry, target: InstalledTarget, api: SourceApi, native_docs: NativeDocsDocument | None
 ) -> list[GeneratedFile] | list[ConfigProblem]:
     """The api's files with their paths below the entry root."""
     where = f"entry '{entry.id}' api '{api.api}'"
@@ -294,6 +340,10 @@ def _generated_api(
                     string_of(entry.entry, "mount"),
                     python_targets().get(entry.use),
                     tuple(strings_of(entry.entry, "allowUntested") or []),
+                    FrameworkDocs(string_of(entry.entry, "frameworkDocs") or FrameworkDocs.KEEP),
+                    None
+                    if native_docs is None
+                    else NativeDocsDocument(native_docs.name, object_copy_of(native_docs.document)),
                 ),
             )
         )

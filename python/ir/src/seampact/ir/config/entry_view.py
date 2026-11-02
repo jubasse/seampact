@@ -179,7 +179,7 @@ def _filtered(ir: JsonObject, entry: AppConfigEntry) -> JsonObject | list[Config
     if unknown:
         return unknown
 
-    in_document = [operation for operation in operations if _is_in_document(documents, document, operation)]
+    in_document = [operation for operation in operations if is_in_document(documents, document, operation)]
     removed = [
         ConfigProblem(
             "filter.include.removed",
@@ -212,7 +212,8 @@ def _is_kept(operation: JsonObject, entry: AppConfigEntry) -> bool:
     return included and not excluded
 
 
-def _is_in_document(documents: JsonObject, document_id: str | None, operation: JsonObject) -> bool:
+def is_in_document(documents: JsonObject, document_id: str | None, operation: JsonObject) -> bool:
+    """Whether the api's document `document_id` (None: the api's one document) holds `operation`."""
     if document_id is None:
         return True
 

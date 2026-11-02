@@ -110,6 +110,7 @@ def _resolved(tree: ConfigTree, file: str, config: JsonObject) -> AppConfig | li
         out_dir,
         bool_of(config, "allowLocal"),
         sources,
+        object_copy_of(object_of(config, "sources")),
         own_entries,
         other_entries,
         copy_of(config.get("openapi")),
