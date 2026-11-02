@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from seampact.fastapi.generator import FastApiGenerator
+from seampact.fastapi.native_docs_file import reached_components
 from seampact.fastapi.runtime import ApiBinding, FrameworkDocs
 from seampact.fastapi.runtime.framework_document import complete_framework_document
 from seampact.fastapi.runtime.native_docs import NativeDocs, NativeDocsError, NativeOperation
@@ -112,8 +113,11 @@ def test_nativedocs_puts_seampacts_operation_objects_into_fastapis_document(
     seampact_operations = _operations_by_id(seampact_document)
     assert _operations_by_id(served) == seampact_operations
     assert _member(served, "paths") == _member(seampact_document, "paths")
-    seampact_schemas = _member(_member(seampact_document, "components"), "schemas")
-    assert seampact_schemas.items() <= _member(_member(served, "components"), "schemas").items()
+    reached = reached_components(
+        [{"operation": operation} for operation in seampact_operations.values()],
+        _member(seampact_document, "components"),
+    )
+    assert _member(reached, "schemas").items() <= _member(_member(served, "components"), "schemas").items()
     assert client.get("/docs").status_code == 200
 
 
@@ -172,3 +176,31 @@ def test_nativedocs_without_a_document_or_with_a_document_lacking_an_operation_i
 
 def test_the_framework_docs_switch_of_the_runtime_matches_the_entrys() -> None:
     assert [item.value for item in FrameworkDocs] == [item.value for item in EntryFrameworkDocs]
+
+
+def test_only_the_components_the_operations_reach_are_kept() -> None:
+    task: JsonValue = {"properties": {"owner": {"$ref": "#/components/schemas/User"}}}
+    components: JsonObject = {
+        "schemas": {
+            "Task": task,
+            "User": {"type": "object"},
+            "Unused": {"type": "string"},
+        },
+        "responses": {"Problem": {"description": "problem"}, "Other": {"description": "other"}},
+        "securitySchemes": {"user": {"type": "http", "scheme": "bearer"}, "service": {"type": "apiKey"}},
+    }
+    operation: JsonValue = {
+        "operation": {
+            "security": [{"user": []}],
+            "responses": {
+                "200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Task"}}}},
+                "default": {"$ref": "#/components/responses/Problem"},
+            },
+        }
+    }
+
+    assert reached_components([operation], components) == {
+        "responses": {"Problem": {"description": "problem"}},
+        "schemas": {"Task": task, "User": {"type": "object"}},
+        "securitySchemes": {"user": {"type": "http", "scheme": "bearer"}},
+    }

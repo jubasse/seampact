@@ -1,10 +1,10 @@
 """`native_docs.json`, which `nativeDocs` adds beside the placement (ADR 0026 "Native docs"): the operation object of
 each kept operation, taken by its `operationId` from the seampact OpenAPI document the runner hands the generator,
-with the path and method it sits under, and the document's components. The runtime places each object at that path
-under the entry's `mount` in FastAPI's document."""
+with the path and method it sits under, and the document's components those operations reach. The runtime places each
+object at that path under the entry's `mount` in FastAPI's document."""
 
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Final
 
 from seampact.codegen.refusals import IrPlace, Refusals
@@ -15,6 +15,11 @@ from seampact.ir.write import GeneratedFile
 NATIVE_DOCS_FILE: Final = "native_docs.json"
 _HTTP_METHODS: Final = ("get", "put", "post", "delete", "options", "head", "patch", "trace")
 _AT: Final = IrPlace("/artefacts/nativeDocs")
+_COMPONENTS: Final = "components"
+_REF: Final = "$ref"
+_COMPONENT_REF_PREFIX: Final = "#/components/"
+_SECURITY: Final = "security"
+_SECURITY_SCHEMES: Final = "securitySchemes"
 
 
 def native_docs_file(
@@ -44,10 +49,11 @@ def native_docs_file(
         )
         return None
 
-    components = native_docs.document.get("components")
+    operations = {operation_id: found[operation_id] for operation_id in kept_operations}
+    components = native_docs.document.get(_COMPONENTS)
     content = {
-        "operations": {operation_id: found[operation_id] for operation_id in kept_operations},
-        "components": components if isinstance(components, dict) else {},
+        "operations": operations,
+        _COMPONENTS: reached_components(list(operations.values()), components if isinstance(components, dict) else {}),
     }
 
     return GeneratedFile(NATIVE_DOCS_FILE, json.dumps(content, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
@@ -70,3 +76,55 @@ def _operations_by_id(document: JsonObject) -> dict[str, JsonValue]:
                 found[operation_id] = {"path": path, "method": method, "operation": operation}
 
     return found
+
+
+def reached_components(operations: Sequence[object], components: Mapping[str, object]) -> dict[str, object]:
+    """The components the operations reach: each `$ref` into `#/components/`, followed through the components it
+    names, and each security scheme an operation's `security` names."""
+    reached: dict[tuple[str, str], object] = {}
+    pending: list[object] = list(operations)
+
+    for native in operations:
+        operation = native.get("operation") if isinstance(native, dict) else None
+        requirements = operation.get(_SECURITY) if isinstance(operation, dict) else None
+
+        for requirement in requirements if isinstance(requirements, list) else []:
+            for scheme in requirement if isinstance(requirement, dict) else {}:
+                _reach(components, _SECURITY_SCHEMES, scheme, reached, pending)
+
+    while pending:
+        value = pending.pop()
+
+        if isinstance(value, list):
+            pending.extend(value)
+        elif isinstance(value, dict):
+            reference = value.get(_REF)
+
+            if isinstance(reference, str) and reference.startswith(_COMPONENT_REF_PREFIX):
+                kind, _, name = reference.removeprefix(_COMPONENT_REF_PREFIX).partition("/")
+                _reach(components, kind, name, reached, pending)
+
+            pending.extend(value.values())
+
+    kept: dict[str, dict[str, object]] = {}
+
+    for (kind, name), component in sorted(reached.items()):
+        kept.setdefault(kind, {})[name] = component
+
+    return dict(kept)
+
+
+def _reach(
+    components: Mapping[str, object],
+    kind: str,
+    name: str,
+    reached: dict[tuple[str, str], object],
+    pending: list[object],
+) -> None:
+    named = components.get(kind)
+
+    if (kind, name) in reached or not isinstance(named, dict) or name not in named:
+        return
+
+    reached[(kind, name)] = named[name]
+    pending.append(named[name])

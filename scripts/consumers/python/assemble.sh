@@ -3,6 +3,8 @@
 # consumer directory <target> and the shared suite doubles into <work>/app (or <work>/app-allow-listed, built from the
 # target's `seampact.allow-listed.config.yaml`), and points its contract at the bundle that `bundle.sh` wrote to
 # <bundled>, committed into the local git repository <work>/contract-repo with the tag v1.0.0. The app directory is new.
+# With SEAMPACT_CONSUMER_BINARY set to a compiler binary, the app's pyproject.toml pins it as `[tool.seampact.binary]`,
+# which the runner needs for `nativeDocs` until the binary is published.
 set -eu
 
 target=$(cd "$1" && pwd)
@@ -39,6 +41,13 @@ cp -R "$target/app/." "$app/"
 cp -R "$suite_package" "$app/"
 cp "$target/$config" "$app/seampact.config.yaml"
 cp "$spring_boot/credentials.json" "$app/credentials.json"
+
+if [ -n "${SEAMPACT_CONSUMER_BINARY:-}" ]; then
+  binary=$(cd "$(dirname "$SEAMPACT_CONSUMER_BINARY")" && pwd)/$(basename "$SEAMPACT_CONSUMER_BINARY")
+  sha256=$(sha256sum "$binary" | cut -d " " -f 1)
+  printf '[project]\nname = "seampact-consumer"\nversion = "0"\n\n[tool.seampact.binary]\npath = "%s"\nsha256 = "%s"\n' \
+    "$binary" "$sha256" > "$app/pyproject.toml"
+fi
 
 integrity=$(cat "$bundled/integrity")
 "$spring_boot/contract-source.sh" "$app" \
