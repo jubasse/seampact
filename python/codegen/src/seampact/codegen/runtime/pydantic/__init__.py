@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from enum import Enum
-from typing import Annotated, Final
+from typing import Annotated, Final, TypeVar
 from uuid import UUID
 
 from pydantic import AfterValidator, BeforeValidator
@@ -125,9 +125,12 @@ WireDate = Annotated[date, BeforeValidator(date_from_wire)]
 WireUuid = Annotated[UUID, BeforeValidator(uuid_from_wire)]
 WireDecimal = Annotated[Decimal, BeforeValidator(decimal_from_wire)]
 
+_T = TypeVar("_T")
+
 # An optional member that is not nullable: absent, it takes the default None, which Pydantic does not validate; a
-# wire `null` meets `refuse_null` (ADR 0003 section 5: absent and null differ).
-type Omittable[T] = Annotated[T | None, BeforeValidator(refuse_null)]
+# wire `null` meets `refuse_null` (ADR 0003 section 5: absent and null differ). A generic `Annotated` alias, not a
+# `type` statement: Pydantic 2.9, FastAPI 0.162's floor, builds no schema from a subscripted PEP 695 alias.
+Omittable = Annotated[_T | None, BeforeValidator(refuse_null)]
 
 
 def length(min_length: int | None = None, max_length: int | None = None) -> AfterValidator:
