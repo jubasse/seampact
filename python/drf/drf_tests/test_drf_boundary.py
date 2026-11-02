@@ -186,6 +186,16 @@ def test_a_path_or_method_the_api_does_not_serve_is_the_apis_404_before_routing(
         assert _code(response) == "api.not_found"
 
 
+def test_an_undeclared_query_key_is_refused_when_the_operation_declares_no_query() -> None:
+    answers["health"] = lambda _: pytest.fail("the handler ran")
+
+    response = Client().get("/v1/health?x=1")
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert _code(response) == "api.schema_invalid"
+    assert _issues(response) == [{"pointer": "/x", "rule": "unknownKeys"}]
+
+
 def test_a_request_outside_the_apis_base_paths_is_left_to_the_app() -> None:
     assert Client().get("/elsewhere").status_code == HTTPStatus.NOT_FOUND
     assert Client().get("/elsewhere")["Content-Type"].startswith("text/html")

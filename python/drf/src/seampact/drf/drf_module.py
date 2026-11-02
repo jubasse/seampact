@@ -273,7 +273,7 @@ class _Emission:
         input_type = f"{self.operations}.{names.input}"
 
         if operation.id not in self.request_serializers:
-            return call(input_type)
+            return call("admission.empty_input", [input_type])
 
         return call("admission.input", [names.request + _SERIALIZER_SUFFIX, input_type])
 

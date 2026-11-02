@@ -34,6 +34,10 @@ class Admission(Protocol):
         """Steps 6 to 8: the decoded input validated by `serializer`, built as `input_type`."""
         ...
 
+    def empty_input[I](self, input_type: type[I]) -> I:
+        """Steps 6 to 8 of an operation without parameters or body: an unknown query key is still refused."""
+        ...
+
     def principal[P](self, principal_type: type[P]) -> P: ...
 
     def optional_principal[P](self, principal_type: type[P]) -> P | None:

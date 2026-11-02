@@ -62,6 +62,15 @@ class ContractAdmission:
 
         return built_input(input_type, validated)
 
+    def empty_input[I](self, input_type: type[I]) -> I:
+        contract, operation_id = self._state.contract, self._state.operation_id
+        issues = typed_parts(contract, operation_id, self._state.decoded).issues
+
+        if issues:
+            raise schema_invalid(contract, operation_id, rendered(issues))
+
+        return input_type()
+
     def principal[P](self, principal_type: type[P]) -> P:
         principal = self.optional_principal(principal_type)
 

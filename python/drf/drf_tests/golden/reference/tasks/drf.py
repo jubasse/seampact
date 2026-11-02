@@ -558,7 +558,7 @@ class HealthView(TasksView):
 
     def get(self, request: _request.Request, **path: str) -> _http.HttpResponseBase:
         admission = self.admit(request, "health")
-        contract_request = _operations.HealthRequest(input=_operations.HealthInput())
+        contract_request = _operations.HealthRequest(input=admission.empty_input(_operations.HealthInput))
 
         return admission.reply(_app_handlers(request).health(contract_request))
 

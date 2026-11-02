@@ -56,7 +56,8 @@ def typed_parts(contract: ApiContract, operation_id: str, decoded: DecodedInput)
     for key, part, issue_in in _PARTS:
         members = contract.part_members(operation_id, part)
 
-        if not members:
+        # An undeclared query key is refused even when the operation declares no query parameter.
+        if not members and part != QUERY_PART:
             continue
 
         declared = {ir_string(param, "name") or "": param for param in ir_maps(params, part)}
@@ -74,7 +75,8 @@ def typed_parts(contract: ApiContract, operation_id: str, decoded: DecodedInput)
             part_tree[attribute] = walker.typed(ir_map(declared.get(name), "type"), value, f"/{_escaped(name)}")
             issues += walker.issues
 
-        tree[key] = part_tree
+        if members:
+            tree[key] = part_tree
 
     input_use = ir_map(ir_map(operation, "input"), "schema")
 
