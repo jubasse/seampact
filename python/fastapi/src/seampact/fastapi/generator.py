@@ -12,16 +12,17 @@ from typing import Final
 from seampact.codegen.contract_module import contract_module
 from seampact.codegen.input_schemas import proof_models, with_input_schemas
 from seampact.codegen.kept_forms import refuse_kept_forms
+from seampact.codegen.matrix_row import refuse_missing_matrix_row
 from seampact.codegen.names import api_names
+from seampact.codegen.native_docs_file import FrameworkDocument, native_docs_file
 from seampact.codegen.operation_types import operation_types_module
 from seampact.codegen.printer import PythonModule
 from seampact.codegen.pydantic_forms import refuse_unserved_forms
 from seampact.codegen.pydantic_layout import api_layout
 from seampact.codegen.pydantic_models import pydantic_schemas_module
-from seampact.codegen.refusals import IrPlace, Refusals
+from seampact.codegen.refusals import Refusals
 from seampact.codegen.route_helpers import route_helpers_module
 from seampact.codegen.routes import route_table
-from seampact.fastapi.native_docs_file import native_docs_file
 from seampact.fastapi.options import read_options
 from seampact.fastapi.placement_module import placement_module
 from seampact.ir.model import ContractIR
@@ -32,6 +33,7 @@ from seampact.ir.write import GeneratedFile
 TARGET: Final = "fastapi"
 DISTRIBUTION: Final = "seampact-fastapi"
 _HTTP_OPERATION: Final = "httpOperation"
+_FASTAPI_DOCUMENT: Final = FrameworkDocument(TARGET, "FastAPI", ("ValidationError", "HTTPValidationError"))
 
 
 class FastApiGenerator:
@@ -47,15 +49,7 @@ class FastApiGenerator:
 
         refuse_kept_forms(ir, refusals)
 
-        if entry.matrix is None:
-            refusals.add(
-                "config.matrix.row-missing",
-                f"The compatibility matrix has no row for {entry.use}, so the boot check would not know the FastAPI "
-                "and Starlette versions generate accepted.",
-                "Reinstall seampact-ir: its copy of the compatibility matrix lacks the FastAPI row.",
-                IrPlace(""),
-            )
-
+        refuse_missing_matrix_row(entry, refusals, "FastAPI and Starlette")
         refuse_unserved_forms(ir, refusals)
         error_codes = sorted({error.code for operation in ir.operations for error in operation.errors})
         layout = api_layout(ir, error_codes, refusals)
@@ -78,7 +72,7 @@ class FastApiGenerator:
             files.append(GeneratedFile("routes.py", route_helpers_module(ir, routes, refusals)))
 
         if options.native_docs:
-            native_docs = native_docs_file(entry.native_docs, layout.operations, refusals)
+            native_docs = native_docs_file(entry.native_docs, layout.operations, _FASTAPI_DOCUMENT, refusals)
             files.extend([] if native_docs is None else [native_docs])
 
         refusals.raise_if_any()

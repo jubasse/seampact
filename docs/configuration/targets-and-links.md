@@ -44,6 +44,7 @@ Every generator renders the default format and every format and paging style you
 | `seampact/api-platform` | resource metadata, DTOs, a listener and a decorated provider around your providers and processors | nothing | API Platform's serializer, JSON-LD and Hydra |
 | `pypi:seampact-fastapi` | routes, a boundary middleware and dependencies around your handlers, with Pydantic models | nothing | the contract's own replies |
 | `pypi:seampact-drf` | views, serializers, a boundary middleware and an exception handler around your handlers | nothing | the contract's own replies |
+| `pypi:seampact-ninja` | a bind function that adds a Ninja router, with a boundary middleware and Pydantic models, around your handlers | nothing | the contract's own replies |
 
 See [React](../frontend/react.md).
 
@@ -60,19 +61,20 @@ targets:
     options: { rules: seampact-consistent }
 ```
 
-Both Python targets take these options, except `bodyValidation`, which is FastAPI only (DRF refuses it at boot until it is served). They impose no wire shape.
+The Python targets take these options, except `bodyValidation`, which is FastAPI only (DRF and Ninja refuse it at boot until it is served), and `views`, which is Ninja only. They impose no wire shape.
 
 | Option | Default | Values |
 |---|---|---|
 | `rules` | `native` | `native` (the framework's own value rules) or `seampact-consistent` |
 | `responses` | `strict` | `strict` or `warn` |
 | `bodyValidation` (FastAPI only) | `false` | `true` or `false` |
+| `views` (Ninja only) | `sync` | `sync` or `async` |
 | `frameworkEtag` | `strip` | `strip` or `keep` |
 | `catchAll` | `true` | `true` or `false` |
 
-The naming options, `layout`, `handlers: perOperation` and an `indent` other than 4 are refused by name. `artefacts` takes `routeHelpers`, `bootCheck` and, on FastAPI only, `nativeDocs`.
+The naming options, `layout`, `handlers: perOperation` and an `indent` other than 4 are refused by name. `artefacts` takes `routeHelpers`, `bootCheck` and, on FastAPI and Ninja, `nativeDocs`.
 
-Versions: FastAPI 0.162 or later is named by minor (`allowUntested: [fastapi@0.163]`). Django and DRF are named by major (`allowUntested: [django@7]`). The guides list what is tested: [FastAPI](../backend/fastapi.md#versions), [Django REST Framework](../backend/drf.md#versions).
+Versions: FastAPI 0.162 or later is named by minor (`allowUntested: [fastapi@0.163]`). Django, DRF and Ninja are named by major (`allowUntested: [django@7]`, `allowUntested: [django-ninja@2]`). The guides list what is tested: [FastAPI](../backend/fastapi.md#versions), [Django REST Framework](../backend/drf.md#versions), [Django Ninja](../backend/ninja.md#versions).
 
 The compiler binary is not published yet. A `path` source and the OpenAPI documents need it. Until 1.0, read a pinned bundle with `openapi: none`, or set `[tool.seampact.binary]` with a `path` and its `sha256` in the root `pyproject.toml`.
 

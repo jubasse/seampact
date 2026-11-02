@@ -7,6 +7,7 @@ runs the outgoing response check, and settles the request's idempotency record w
 import inspect
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping, Sequence
+from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import ClassVar, Final
 from urllib.parse import quote
@@ -22,6 +23,7 @@ from django.core.exceptions import (
     SuspiciousOperation,
 )
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase, StreamingHttpResponse
+from django.urls import URLPattern
 
 from seampact.codegen.runtime.body_reader import PAYLOAD_TOO_LARGE_ROLE
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE, ApiContract
@@ -41,8 +43,14 @@ from seampact.codegen.runtime.reply_verdict import (
     verdict,
 )
 from seampact.codegen.runtime.sync_driver import run_without_suspension
-from seampact.django.runtime.api_settings import api_settings
-from seampact.django.runtime.boot_check import boot_problems, operation_route_name
+from seampact.django.runtime.api_configuration import configuration_of
+from seampact.django.runtime.boot_check import (
+    boot_problems,
+    contract_of_view,
+    operation_route_name,
+    settings_hook_problems,
+    settings_problems,
+)
 from seampact.django.runtime.contract_replies import (
     django_response,
     logger,
@@ -72,6 +80,15 @@ _WSGI_CHUNK_BYTES: Final = 65536
 _SCRIPT_PREFIX_SAFE: Final = "/"
 
 
+@dataclass(frozen=True, slots=True)
+class RecordedRole:
+    """The role an exception takes on a contract route, its status, and the slots its role binding renders."""
+
+    role: str
+    status: int
+    slots: Mapping[str, object] = field(default_factory=dict)
+
+
 class ContractBoundary:
     """Runs sync or async, as the middleware inside it lets Django choose (ADR 0027 "Sync and async")."""
 
@@ -91,6 +108,9 @@ class ContractBoundary:
     boot_check: ClassVar[bool] = True
     boot_check_framework_routes: ClassVar[bool] = True
     boot_check_hooks: ClassVar[bool] = True
+    # DRF's urls module serves the contract paths as written, so an `include()` prefix would move them; a target
+    # whose patterns sit under the app's own prefix (Ninja's `api.urls`) leaves the sum to the resolver match.
+    include_prefix_refused: ClassVar[bool] = True
     sync_capable: ClassVar[bool] = True
     async_capable: ClassVar[bool] = True
     _gaps_logged: ClassVar[bool] = False
@@ -100,6 +120,37 @@ class ContractBoundary:
         """The problems of the settings keys a target adds; a target's own boundary base overrides it."""
         return []
 
+    @classmethod
+    def configuration_problems(cls) -> list[str]:
+        """The problems of the api's run-time values: its `settings.SEAMPACT` entry, unless the target reads them
+        from elsewhere."""
+        return settings_problems(cls)
+
+    @classmethod
+    def hook_configuration_problems(cls) -> list[str]:
+        """The hooks the contract needs and the configuration does not give, and those it gives in vain."""
+        return settings_hook_problems(cls)
+
+    @classmethod
+    def recorded_role(cls, recorded: BaseException) -> RecordedRole | None:
+        """The role of an exception the target's framework rendered before the view (Ninja's `auth=` and throttles);
+        None leaves it to Django's own exceptions."""
+        return None
+
+    @classmethod
+    def prepare_urlconf(cls) -> None:
+        """Runs once the root URLconf is imported, before the boot check: a target marks its views there."""
+
+    @classmethod
+    def is_framework_pattern(cls, pattern: URLPattern) -> bool:
+        """A pattern of the framework itself (Ninja's docs), accepted under the api's base paths."""
+        return False
+
+    @classmethod
+    def unserved_path_fix(cls) -> str:
+        """How the app makes a contract path reach its generated view, when no URL pattern serves it."""
+        return 'include the api\'s urls module at "" in the root URLconf, without a prefix'
+
     def __init__(self, get_response: GetResponse) -> None:
         self.get_response = get_response
         self.async_mode = iscoroutinefunction(get_response)
@@ -108,6 +159,7 @@ class ContractBoundary:
             markcoroutinefunction(self)
 
         wrap_error_handlers()
+        type(self).prepare_urlconf()
         problems = boot_problems(type(self)) if self.boot_check else []
 
         if problems:
@@ -306,8 +358,7 @@ class ContractBoundary:
         if resolved is None:
             return None
 
-        view_class = getattr(resolved.func, "view_class", None)
-        own_view = getattr(view_class, "contract", None) is self.contract
+        own_view = contract_of_view(resolved.func) is self.contract
         route_name = operation_route_name(self.contract, state.operation_id)
 
         if own_view and resolved.url_name == route_name:
@@ -331,6 +382,11 @@ class ContractBoundary:
             logger(self.api).warning("seampact: a request for a host this deployment does not serve: %s", recorded)
             return response
 
+        target_role = self.recorded_role(recorded)
+
+        if target_role is not None:
+            return self._role_reply(request, state, target_role.role, target_role.status, target_role.slots)
+
         for exception_class, role, status in _ROLE_OF_EXCEPTION:
             if isinstance(recorded, exception_class):
                 return self._role_reply(request, state, role, status)
@@ -344,9 +400,16 @@ class ContractBoundary:
 
         return unexpected_response(request, self.contract, state.operation_id, _CROSSED, recorded)
 
-    def _role_reply(self, request: HttpRequest, state: BoundaryState, role: str, status: int) -> HttpResponseBase:
+    def _role_reply(
+        self,
+        request: HttpRequest,
+        state: BoundaryState,
+        role: str,
+        status: int,
+        slots: Mapping[str, object] = MappingProxyType({}),
+    ) -> HttpResponseBase:
         reply = role_answer(
-            self.contract, state.operation_id, role, status, {"limitBytes": self._limit(state.operation_id)}
+            self.contract, state.operation_id, role, status, {"limitBytes": self._limit(state.operation_id), **slots}
         )
 
         if reply is None:
@@ -414,13 +477,8 @@ class ContractBoundary:
             report_unexpected(request, self.contract, operation_id, _STREAM_FAILED, failure)
 
     def _responses_mode(self, operation_id: str) -> ResponsesMode:
-        """The operation's `responses` in `settings.SEAMPACT`, else the api's, else the generated option."""
-        own = api_settings(self.api)
-        operations = own.get("operations")
-        operation = operations.get(operation_id) if isinstance(operations, dict) else None
-        mode = operation.get("responses") if isinstance(operation, dict) else None
-
-        return ResponsesMode(str(mode or own.get("responses") or self.responses))
+        """The operation's `responses` in the api's configuration, else the api's, else the generated option."""
+        return ResponsesMode(configuration_of(self.api).responses(operation_id) or self.responses)
 
     @classmethod
     def _log_gaps_once(cls) -> None:

@@ -65,8 +65,11 @@ def django_target_options(
     options: Mapping[str, JsonValue],
     artefacts: Mapping[str, JsonValue],
     refusals: Refusals,
+    *,
+    own_artefacts: Sequence[str] = (),
 ) -> DjangoTargetOptions:
-    """The shared options and artefacts of `target`; `own_options` are the keys the target reads itself."""
+    """The shared options and artefacts of `target`; `own_options` are the keys the target reads itself, and
+    `own_artefacts` the `true` or `false` switches it reads itself."""
     known_options = (_HANDLERS, _INDENT, *own_options, *_SHARED_OPTIONS)
     reader = OptionReader(options, refusals)
 
@@ -113,14 +116,19 @@ def django_target_options(
         body_validation=reader.flag("bodyValidation", default=False),
         framework_etag=reader.choice("frameworkEtag", FrameworkEtagMode.STRIP),
         catch_all=reader.flag("catchAll", default=True),
-        route_helpers=_artefacts(target, artefacts, refusals),
+        route_helpers=_artefacts(target, artefacts, own_artefacts, refusals),
         boot_check=_boot_check(artefacts.get(_BOOT_CHECK, True), refusals),
     )
 
 
-def _artefacts(target: str, artefacts: Mapping[str, JsonValue], refusals: Refusals) -> bool:
+def _artefacts(
+    target: str, artefacts: Mapping[str, JsonValue], own_artefacts: Sequence[str], refusals: Refusals
+) -> bool:
     """Refuses each switch the target does not take, and returns `routeHelpers`."""
     for key, value in artefacts.items():
+        if key in own_artefacts and isinstance(value, bool):
+            continue
+
         at = IrPlace(f"/artefacts/{key}")
 
         if key == _ACCESS_HOOKS and value is False:
@@ -131,8 +139,8 @@ def _artefacts(target: str, artefacts: Mapping[str, JsonValue], refusals: Refusa
             refusals.add(
                 "artefacts.unknown",
                 f"The artefact switch '{key}: {_shown(value)}' is not one the {target} target takes.",
-                f"Remove '{key}' from the entry's `artefacts`; the {target} target takes '{_ROUTE_HELPERS}', "
-                f"'{_BOOT_CHECK}' and '{_ACCESS_HOOKS}: true'.",
+                f"Remove '{key}' from the entry's `artefacts`; the {target} target takes "
+                f"'{"', '".join((_ROUTE_HELPERS, _BOOT_CHECK, *own_artefacts))}' and '{_ACCESS_HOOKS}: true'.",
                 at,
             )
 

@@ -52,6 +52,16 @@ def state_of(request: HttpRequest, api: str) -> BoundaryState | None:
     return _holders(request).get(api)
 
 
+def matched_by_a_boundary(request: HttpRequest) -> bool:
+    """Whether step 1 of some api's boundary matched the request, so that boundary checks its reply."""
+    return bool(_holders(request))
+
+
+def raw_headers(request: HttpRequest) -> list[tuple[bytes, bytes]]:
+    """The request's headers in the server's latin-1 text, as the access steps read them."""
+    return [(name.encode("latin-1"), value.encode("latin-1")) for name, value in request.headers.items()]
+
+
 def record_exception(request: HttpRequest, exception: BaseException) -> None:
     """Keeps the first exception behind a reply, for every api whose boundary admitted the request."""
     for state in _holders(request).values():

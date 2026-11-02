@@ -8,7 +8,7 @@
 #   frs:       the FEAT-001 requirements the item realises.
 #   scenario:  the FEAT-001 scenario that proves it.
 #   targets:   who must pass it. "server" = nestjs, fastify, express, adonis, spring-boot,
-#              laravel, symfony, api-platform, fastapi, drf (A17, through the shared HTTP suite);
+#              laravel, symfony, api-platform, fastapi, drf, ninja (A17, through the shared HTTP suite);
 #              "core" = compiler, emitter or CLI only. Acceptance-area items need at least
 #              zod, fetch, nestjs and fastify fixtures.
 #   retired:   the reason an item is no longer live; the id stays and never carries a proof.
@@ -442,7 +442,7 @@ items:
     fact: A native plugin reads a bundle's IR with no compiler, or runs the hash-pinned binary for a local source; no Node.js installation is needed.
     frs: [FR-17, FR-14]
     scenario: SCN-056
-    targets: [spring-boot, laravel, symfony, api-platform, fastapi, drf]
+    targets: [spring-boot, laravel, symfony, api-platform, fastapi, drf, ninja]
   - id: CHK-077
     source: "A8"
     fact: Each target declares the irVersion range it reads and refuses an IR outside it; before 1.0 the irRevision is checked exactly.
@@ -1086,6 +1086,12 @@ items:
     frs: [FR-21]
     scenario: SCN-027
     targets: [drf]
+  - id: CHK-186
+    source: "A48"
+    fact: ninja works without Node.js and refuses to boot with an unbound hook.
+    frs: [FR-21]
+    scenario: SCN-027
+    targets: [ninja]
 not_in_checklist:
   - source: "A4, A16"
     reason: Development process decisions (how features are framed, what research may inform); nothing to test in the product.

@@ -32,6 +32,8 @@ Run `seampact generate`. It writes `native_docs.json` beside the code, and `bind
 - Name the document with `document` on the entry when the api declares several. One of them must hold every operation the entry generates (`nativeDocs.document.ambiguous`, `artefacts.nativeDocs.operation-missing`).
 - `frameworkDocs: off` removes FastAPI's own `/openapi.json`, `/docs` and `/redoc`.
 
+Django Ninja takes `nativeDocs` the same way: `bind_<api>()` adds the routes to the document Ninja builds, at `/openapi.json` and `/docs`. `frameworkDocs: off` is refused there: build the api with `NinjaAPI(docs_url=None, openapi_url=None)` instead. See [Django Ninja](../backend/ninja.md#docs).
+
 Django REST Framework has no `nativeDocs`. See [FastAPI](../backend/fastapi.md#docs).
 
 ## Serve Swagger on NestJS

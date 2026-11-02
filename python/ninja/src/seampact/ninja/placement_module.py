@@ -8,6 +8,7 @@ and `bind_<api>()`, which hands each operation to the runtime with its view. The
 from collections.abc import Mapping, Sequence
 from typing import Final
 
+from seampact.codegen.native_docs_file import NATIVE_DOCS_FILE
 from seampact.codegen.placement_lines import (
     add_operation_call,
     credentials_types,
@@ -22,7 +23,8 @@ from seampact.codegen.runtime import RUNTIME_VERSION
 from seampact.codegen.source_lines import with_local_imports
 from seampact.django.emitters.urls_module import PATH_ARGUMENT_PREFIX
 from seampact.ir.model import ContractIR
-from seampact.ninja.runtime.placement import ViewsMode
+from seampact.ninja.options import NinjaOptions
+from seampact.ninja.views_mode import ViewsMode
 
 _RUNTIME: Final = "_runtime"
 _HOOKS: Final = "_hooks"
@@ -45,7 +47,7 @@ def placement_module(
     proof_models: Mapping[str, str],
     routes: Sequence[RouteEntry],
     mount: str,
-    views: ViewsMode,
+    options: NinjaOptions,
 ) -> str:
     """`routes` are named by path, in registration order; `proof_models` names the `<Op>Proofs` class of each operation
     whose body has proofs."""
@@ -53,6 +55,10 @@ def placement_module(
     module.imported("collections.abc", _ABC)
     module.imported("dataclasses", "_dataclasses")
     module.imported("typing", "_typing")
+
+    if options.native_docs:
+        module.imported("pathlib", "_pathlib")
+
     module.imported("django.http", _HTTP)
     module.imported("ninja", _NINJA)
     module.imported("seampact.ninja.runtime", _RUNTIME)
@@ -67,15 +73,15 @@ def placement_module(
     head = [f"GENERATED_BY: _typing.Final = {string_literal(RUNTIME_VERSION)}"]
     local_modules = [_CONTRACT_MODULE, _SCHEMAS_MODULE] if proof_models else [_CONTRACT_MODULE]
     module.add_block(with_local_imports(local_modules, root_names, head))
-    module.add_block(_placement(ir, layout, routes, mount, views))
+    module.add_block(_placement(ir, layout, routes, mount, options))
     module.add_block(_handler_factories(layout))
     module.add_block(unexpected_error_listener(ir.api.id, _HOOKS, layout))
 
     for operation in operations:
-        module.add_block(_handler_call(layout, operation.id, views))
+        module.add_block(_handler_call(layout, operation.id, options.views))
 
     for route in routes:
-        module.add_block(_view(layout, route, views))
+        module.add_block(_view(layout, route, options.views))
 
     module.add_block(_bind(ir, layout, proof_models, routes))
 
@@ -93,7 +99,7 @@ def router_path(route: RouteEntry, mount: str) -> str:
 
 
 def _placement(
-    ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry], mount: str, views: ViewsMode
+    ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry], mount: str, options: NinjaOptions
 ) -> list[str]:
     route_lines: list[str] = []
 
@@ -115,10 +121,21 @@ def _placement(
         *route_lines,
         f"{INDENT}),",
         f"{INDENT}error_base={layout.contract_error},",
-        f"{INDENT}views={_RUNTIME}.ViewsMode.{views.name},",
+        f"{INDENT}views={_RUNTIME}.ViewsMode.{options.views.name},",
         *credentials_types(_RUNTIME, layout),
+        *_native_docs(options),
         ")",
     ]
+
+
+def _native_docs(options: NinjaOptions) -> list[str]:
+    """With `nativeDocs`, seampact's operation objects for Ninja's document, read from the generated file."""
+    if not options.native_docs:
+        return []
+
+    native_docs_path = f"_pathlib.Path(__file__).with_name({string_literal(NATIVE_DOCS_FILE)})"
+
+    return [f"{INDENT}native_docs={_RUNTIME}.read_native_docs({native_docs_path}),"]
 
 
 def _handler_factories(layout: ApiLayout) -> list[str]:

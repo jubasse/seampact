@@ -8,6 +8,7 @@ from typing import Final
 
 from seampact.codegen.contract_module import contract_module
 from seampact.codegen.kept_forms import refuse_kept_forms
+from seampact.codegen.matrix_row import refuse_missing_matrix_row
 from seampact.codegen.names import api_names
 from seampact.codegen.printer import PythonModule
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
@@ -58,6 +59,7 @@ class DrfGenerator:
         options = django_target_options(TARGET, (_RULES,), entry.options, entry.artefacts, refusals)
         rules = OptionReader(entry.options, refusals).choice(_RULES, RulesMode.NATIVE)
         refuse_kept_forms(ir, refusals)
+        refuse_missing_matrix_row(entry, refusals, "Django and DRF")
         names = api_names(ir, refusals)
         layout = api_layout(ir, refusals)
         routes = route_table(ir, entry.mount or "", refusals)

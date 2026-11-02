@@ -20,7 +20,7 @@ from handlers import (
     PreferencesHandlers,
     TasksHandlers,
 )
-from hooks import (
+from hook_doubles import (
     CALLER_SERVICE_RIGHT,
     OVERRIDDEN_RIGHT,
     ChannelResolver,
@@ -29,9 +29,8 @@ from hooks import (
     StripeHook,
     TasksDecider,
     TasksUnexpectedErrors,
-    service_hook,
-    user_hook,
 )
+from hooks import service_hook, user_hook
 from seampact_consumer_suite.boot_variant import BootVariant, current_boot_variant, serves_unlisted_route
 from seampact_consumer_suite.file_idempotency_store import FileIdempotencyStore
 from seampact_consumer_suite.log_lines import SuiteLogHandler

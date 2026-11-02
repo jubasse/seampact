@@ -3,25 +3,19 @@ its views run, the factories `bind_<api>()` takes, and what Ninja runs before a 
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from enum import StrEnum
 
 from django.http import HttpRequest
 from ninja.throttling import BaseThrottle
 
 from seampact.codegen.runtime.access_steps import CredentialsType
+from seampact.codegen.runtime.native_docs import NativeDocs
+from seampact.ninja.views_mode import ViewsMode
 
 type Factory[T] = Callable[[HttpRequest], T]
 """Builds a `T` from the request: an endpoints protocol's handlers, or a hook."""
 
 type NinjaAuth = Callable[[HttpRequest], object]
 """One of Ninja's `auth=` callables, such as an `HttpBearer` instance."""
-
-
-class ViewsMode(StrEnum):
-    """The target option `views`: plain views, or `async def` views Django runs natively under ASGI."""
-
-    SYNC = "sync"
-    ASYNC = "async"
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +47,7 @@ class ApiPlacement:
     error_base: type[Exception]
     views: ViewsMode
     credentials: Mapping[str, CredentialsType]
+    native_docs: NativeDocs | None = None
     _routes_by_operation: dict[str, OperationRoute] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:

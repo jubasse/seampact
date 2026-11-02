@@ -14,17 +14,19 @@ import fastapi
 import pydantic
 import pytest
 
+from seampact.codegen.runtime import handler_reply
 from seampact.codegen.runtime.access_steps import AccessHooks, AccessState
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
+from seampact.codegen.runtime.handler_reply import ReplyContext, result_reply
 from seampact.codegen.runtime.input_decoding import DecodedInput
 from seampact.codegen.runtime.ir_view import IrJson
+from seampact.codegen.runtime.pydantic.contract_input import InputBuilder
 from seampact.codegen.runtime.raw_target import RawTarget
 from seampact.codegen.runtime.replies import Reply
-from seampact.fastapi.runtime import ApiBinding, OperationTypes, handler_reply
+from seampact.fastapi.runtime import ApiBinding, OperationTypes
 from seampact.fastapi.runtime.boot_check import boot_problems
-from seampact.fastapi.runtime.contract_input import InputBuilder
-from seampact.fastapi.runtime.handler_reply import ReplyContext, result_reply
+from seampact.fastapi.runtime.handler_call import call_handler
 from seampact.fastapi.runtime.input_features import featured_input
 from seampact.fastapi.runtime.request_state import RequestState
 from seampact.hooks import RequestView
@@ -184,6 +186,7 @@ def _list_tasks_reply(page: _RenamedFactPage) -> Reply:
     context = ReplyContext(
         access=access,
         hooks=AccessHooks(authenticate={}, deciders={}, scope_resolvers={}),
+        call=call_handler,
         query={"limit": 20},
         raw_query="",
         path="/v1/tasks",

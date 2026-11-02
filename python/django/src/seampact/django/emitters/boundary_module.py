@@ -36,13 +36,15 @@ def boundary_module(
     entry: TargetEntry,
     base: BoundaryBase = DJANGO_BOUNDARY_BASE,
     settings_module: str | None = SETTINGS_MODULE,
+    model_framework: tuple[str, str] | None = None,
 ) -> str:
     """`base` is the target's own boundary class when the target adds settings keys the boot check reads.
     `settings_module` is None for a target that takes the api's handlers and hooks in code rather than from
-    `settings.SEAMPACT`; an empty `handler_resources` is left out likewise."""
+    `settings.SEAMPACT`; an empty `handler_resources` is left out likewise. `model_framework` is the package and major
+    the generated models are written for (Pydantic 2 on Ninja), accepted by that major alone."""
     module = PythonModule(f"The Django boundary of api '{api}': list {api_class}Boundary first in MIDDLEWARE.")
     base_module = module.imported(base.module, base.alias)
-    frameworks = _accepted_frameworks(_DJANGO_RUNTIME, entry)
+    frameworks = _accepted_frameworks(_DJANGO_RUNTIME, entry) + _model_framework(_DJANGO_RUNTIME, model_framework)
     framework_routes = _framework_routes(_DJANGO_RUNTIME, entry.framework_routes)
 
     if frameworks or framework_routes:
@@ -106,6 +108,20 @@ def _accepted_frameworks(runtime: str, entry: TargetEntry) -> list[str]:
         lines += bracketed(INDENT * 2, f"{runtime}.AcceptedFramework", arguments, ",")
 
     return lines
+
+
+def _model_framework(runtime: str, model_framework: tuple[str, str] | None) -> list[str]:
+    if model_framework is None:
+        return []
+
+    package, major = model_framework
+    arguments = [
+        f"package={string_literal(package)}",
+        f"unit={runtime}.VersionUnit.MAJOR",
+        f"accepted={tuple_literal((major,))}",
+    ]
+
+    return bracketed(INDENT * 2, f"{runtime}.AcceptedFramework", arguments, ",")
 
 
 def _framework_routes(runtime: str, routes: Sequence[FrameworkRoute]) -> list[str]:

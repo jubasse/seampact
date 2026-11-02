@@ -2,32 +2,14 @@
 kind: it signs in the caller of a bearer token of the suite's credentials and leaves any other request to the
 `user` hook. The hook then reads the user DRF set, so the suite fails if a contract route skipped the class."""
 
-from dataclasses import dataclass, field
 from typing import Final
 
+from hook_doubles import TokenUser, user_id_of
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.request import Request
-from seampact_consumer_suite.credentials import credential_text
 
 _BEARER_PREFIX: Final = "bearer "
 _BEARER_CHALLENGE: Final = "Bearer"
-
-
-@dataclass(frozen=True, slots=True)
-class TokenUser:
-    user_id: str
-    token: str = field(repr=False)
-    is_authenticated: bool = True
-
-
-def user_id_of(token: str) -> str | None:
-    """The user id the suite's credentials give a token, None for an unknown one."""
-    user_ids = {
-        credential_text("userToken"): credential_text("userId"),
-        credential_text("throttledUserToken"): credential_text("throttledUserId"),
-    }
-
-    return user_ids.get(token)
 
 
 class SuiteTokenAuthentication(BaseAuthentication):

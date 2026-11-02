@@ -13,7 +13,8 @@ from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal, failure_place
 from seampact.codegen.runtime.replies import Reply, error_reply, internal_error_reply, role_params
 from seampact.codegen.runtime.sync_driver import call_without_suspension, run_without_suspension
-from seampact.django.runtime.api_settings import SettingsError, unexpected_error_listener
+from seampact.django.runtime.api_configuration import configuration_of
+from seampact.django.runtime.api_settings import SettingsError
 from seampact.django.runtime.request_state import state_of
 from seampact.hooks import UnexpectedFailure
 
@@ -45,16 +46,24 @@ def refusal_response(
     return django_response(request, contract, error_reply(contract, operation_id, refused.code, refused.params))
 
 
+def role_or_status_code(contract: ApiContract, operation_id: str, role: str, status: int) -> str | None:
+    """The code the operation declares for the role, else its single code of that status; None when it has neither."""
+    code = contract.role_code(operation_id, role)
+
+    if code is not None:
+        return code
+
+    codes = contract.declared_codes(operation_id, status)
+
+    return codes[0] if len(codes) == 1 else None
+
+
 def role_answer(
     contract: ApiContract, operation_id: str, role: str, status: int, slots: Mapping[str, object] | None = None
 ) -> Reply | None:
     """The code of the role the operation declares, else its single code of that status, with the params its role
     binding renders from `slots`; None when it has neither."""
-    code = contract.role_code(operation_id, role)
-
-    if code is None:
-        codes = contract.declared_codes(operation_id, status)
-        code = codes[0] if len(codes) == 1 else None
+    code = role_or_status_code(contract, operation_id, role, status)
 
     if code is None:
         return None
@@ -82,7 +91,7 @@ def report_unexpected(
     api_logger.error("seampact: %s (operation %s)", reason, operation_id, exc_info=cause if settings.DEBUG else None)
 
     try:
-        listener = unexpected_error_listener(contract.api, request)
+        listener = configuration_of(contract.api).unexpected_error_listener(request)
 
         if listener is not None:
             failure = UnexpectedFailure(api=contract.api, operation=operation_id, reason=reason, cause=cause)

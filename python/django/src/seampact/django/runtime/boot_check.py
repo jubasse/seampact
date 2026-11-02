@@ -26,28 +26,30 @@ from seampact.django.runtime.api_settings import (
     DECIDERS_KEY,
     HANDLERS_KEY,
     HOOK_KEYS,
+    IDEMPOTENCY_STORE_KEY,
     ON_UNEXPECTED_ERROR_KEY,
+    OPERATIONS_KEY,
     PUBLIC_ORIGIN_KEY,
+    RESPONSES_KEY,
     SCOPE_RESOLVERS_KEY,
     SETTINGS_NAME,
     SettingsError,
     api_settings,
     dotted_paths,
     factory,
+    store_setting,
 )
 from seampact.django.runtime.error_handlers import unwrapped_error_handlers, wrap_error_handlers
-from seampact.django.runtime.idempotency_records import IDEMPOTENCY_STORE_KEY, store_setting
 
 if TYPE_CHECKING:
     from django.urls.resolvers import ResolverMatch
 
+CONTRACT_MARK: Final = "seampact_contract"
 _SAMPLE_SEGMENT: Final = "seampact-sample"
 _PLACEHOLDER_START: Final = "{"
 # A Django pattern answers every method; an allow-list item names it with no method.
 _ANY_METHOD: Final = ""
 _ROUTE_CONVERTER: Final = re.compile(r"<[^<>]*>")
-_RESPONSES_KEY: Final = "responses"
-_OPERATIONS_KEY: Final = "operations"
 # Settings keys the generated code accepts that no release serves yet: refused by name, never ignored.
 _UNSERVED_SETTINGS: Final = {"body_validation": "turns on the reply body validation"}
 _HOOK_METHODS: Final = {AUTHENTICATE_KEY: "authenticate", DECIDERS_KEY: "decide", SCOPE_RESOLVERS_KEY: "resolve_scope"}
@@ -66,11 +68,35 @@ class BoundaryDeclaration(Protocol):
     body_validation: ClassVar[bool]
     boot_check_hooks: ClassVar[bool]
     boot_check_framework_routes: ClassVar[bool]
+    include_prefix_refused: ClassVar[bool]
 
     @classmethod
     def target_settings_problems(cls, own: Mapping[str, object]) -> list[str]:
         """The problems of the settings keys the target adds (DRF's `access`)."""
         ...
+
+    @classmethod
+    def configuration_problems(cls) -> list[str]: ...
+
+    @classmethod
+    def hook_configuration_problems(cls) -> list[str]: ...
+
+    @classmethod
+    def is_framework_pattern(cls, pattern: URLPattern) -> bool: ...
+
+    @classmethod
+    def unserved_path_fix(cls) -> str: ...
+
+    @classmethod
+    def prepare_urlconf(cls) -> None: ...
+
+
+def contract_of_view(view: object) -> ApiContract | None:
+    """The contract whose generated view `view` is: a DRF view class's `contract`, or the mark a target set on a
+    framework's view function (`seampact_contract`)."""
+    contract = getattr(getattr(view, "view_class", None), "contract", None) or getattr(view, CONTRACT_MARK, None)
+
+    return contract if isinstance(contract, ApiContract) else None
 
 
 def operation_route_name(contract: ApiContract, operation_id: str) -> str:
@@ -93,7 +119,7 @@ def boot_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
 
     problems = [
         *framework_version_problems(boundary.frameworks, boundary.api),
-        *_settings_problems(boundary),
+        *boundary.configuration_problems(),
         *_include_problems(boundary),
         *_route_problems(boundary),
         *_deployment_problems(boundary),
@@ -103,7 +129,7 @@ def boot_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
         problems += _framework_route_problems(boundary)
 
     if boundary.boot_check_hooks:
-        problems += _hook_problems(boundary)
+        problems += boundary.hook_configuration_problems()
 
     return problems
 
@@ -121,6 +147,10 @@ def every_problem() -> list[tuple[str, str]]:
     Django builds it, since a management command builds no request handler."""
     wrap_error_handlers()
     boundaries = middleware_boundaries()
+
+    for boundary in boundaries:
+        boundary.prepare_urlconf()
+
     found = [(boundary.api, problem) for boundary in boundaries for problem in boot_problems(boundary)]
     served = {boundary.api for boundary in boundaries}
 
@@ -136,7 +166,7 @@ def every_problem() -> list[tuple[str, str]]:
     return found
 
 
-def _settings_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
+def settings_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
     try:
         own = api_settings(boundary.api)
     except SettingsError as broken:
@@ -169,7 +199,9 @@ def _settings_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
     if isinstance(listener, str):
         problems += _imported_problems(boundary.api, f"['{ON_UNEXPECTED_ERROR_KEY}']", listener, "on_unexpected_error")
 
-    return problems + _store_problems(boundary.api, boundary.contract)
+    problems += _store_problems(boundary.api, boundary.contract)
+
+    return problems + _public_origin_problems(boundary.api, boundary.contract)
 
 
 def _store_problems(api: str, contract: ApiContract) -> list[str]:
@@ -200,24 +232,24 @@ def _store_problems(api: str, contract: ApiContract) -> list[str]:
 def _run_time_problems(api: str, own: Mapping[str, object], contract: ApiContract) -> list[str]:
     """The `responses` mode of the api and the per-operation settings, each by name with what it accepts."""
     setting = f"settings.{SETTINGS_NAME}['{api}']"
-    problems = _responses_problems(f"{setting}['{_RESPONSES_KEY}']", own.get(_RESPONSES_KEY))
-    operations = own.get(_OPERATIONS_KEY)
+    problems = responses_problems(f"{setting}['{RESPONSES_KEY}']", own.get(RESPONSES_KEY))
+    operations = own.get(OPERATIONS_KEY)
 
     if operations is None:
         return problems
 
     if not isinstance(operations, Mapping):
         kind = type(operations).__name__
-        return [*problems, f"{setting}['{_OPERATIONS_KEY}'] is a {kind}; set a dict keyed by operation id."]
+        return [*problems, f"{setting}['{OPERATIONS_KEY}'] is a {kind}; set a dict keyed by operation id."]
 
     kept = set(contract.operation_ids())
 
     for operation_id, operation in operations.items():
         if operation_id in kept:
-            problems += _operation_problems(f"{setting}['{_OPERATIONS_KEY}']['{operation_id}']", operation)
+            problems += _operation_problems(f"{setting}['{OPERATIONS_KEY}']['{operation_id}']", operation)
         else:
             problems.append(
-                f"{setting}['{_OPERATIONS_KEY}'] names the operation '{operation_id}', which the api does not keep; "
+                f"{setting}['{OPERATIONS_KEY}'] names the operation '{operation_id}', which the api does not keep; "
                 "remove it, or correct its operation id."
             )
 
@@ -229,15 +261,16 @@ def _operation_problems(setting: str, operation: object) -> list[str]:
         return [f"{setting} is a {type(operation).__name__}; set a dict."]
 
     problems = [
-        f"{setting} has the unknown key '{key}'; the keys are {_RESPONSES_KEY}."
+        f"{setting} has the unknown key '{key}'; the keys are {RESPONSES_KEY}."
         for key in operation
-        if key != _RESPONSES_KEY
+        if key != RESPONSES_KEY
     ]
 
-    return problems + _responses_problems(f"{setting}['{_RESPONSES_KEY}']", operation.get(_RESPONSES_KEY))
+    return problems + responses_problems(f"{setting}['{RESPONSES_KEY}']", operation.get(RESPONSES_KEY))
 
 
-def _responses_problems(setting: str, value: object) -> list[str]:
+def responses_problems(setting: str, value: object) -> list[str]:
+    """A `responses` mode other than strict, warn or None, named by `setting`."""
     modes = [mode.value for mode in ResponsesMode]
 
     if value is None or value in modes:
@@ -263,7 +296,7 @@ def _handler_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
     return problems + _registered_problems(boundary.api, HANDLERS_KEY, paths, list(boundary.handler_resources))
 
 
-def _hook_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
+def settings_hook_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
     """The hooks the contract needs and the settings do not name, worded as every Python target words them, then
     the named hooks the contract does not use or that do not import."""
     api, contract = boundary.api, boundary.contract
@@ -336,12 +369,12 @@ def _imported_problems(api: str, setting: str, path: str, hook_method: str | Non
     return [
         f"settings.{SETTINGS_NAME}['{api}']{setting} builds a {built_class.__qualname__} whose method '{method}' is "
         "an async def; DRF views are sync, so write it as a plain def."
-        for built_class in _built_classes(built_by)
-        for method in _async_methods(built_class, hook_method)
+        for built_class in built_classes(built_by)
+        for method in async_methods(built_class, hook_method)
     ]
 
 
-def _built_classes(built_by: object) -> list[type]:
+def built_classes(built_by: object) -> list[type]:
     """The class a factory builds: the factory itself when it is a class, else its declared return type."""
     if isinstance(built_by, type):
         return [built_by]
@@ -354,7 +387,7 @@ def _built_classes(built_by: object) -> list[type]:
     return [returned] if isinstance(returned, type) else []
 
 
-def _async_methods(built_class: type, hook_method: str | None) -> list[str]:
+def async_methods(built_class: type, hook_method: str | None) -> list[str]:
     names = (
         [hook_method] if hook_method is not None else [name for name in dir(built_class) if not name.startswith("_")]
     )
@@ -363,10 +396,17 @@ def _async_methods(built_class: type, hook_method: str | None) -> list[str]:
 
 
 def _route_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
-    """Each operation's sample request must resolve to its own generated view, served by one pattern only."""
+    """Each operation's sample request must resolve to its own generated view, served by one pattern only. Ninja
+    writes one pattern per operation of a path, all with the path's route and name: one route, so one pattern."""
     contract = boundary.contract
     problems: list[str] = []
-    names = [pattern.name for pattern in _patterns(get_resolver().url_patterns)]
+    names = [
+        pattern.name
+        for pattern in {
+            (*prefixes, str(pattern.pattern)): pattern
+            for prefixes, pattern in _prefixed_patterns(get_resolver().url_patterns, ())
+        }.values()
+    ]
 
     for operation_id in contract.operation_ids():
         route_name = operation_route_name(contract, operation_id)
@@ -391,14 +431,9 @@ def _resolved_problems(
     try:
         resolved: ResolverMatch = get_resolver().resolve(sample)
     except Resolver404:
-        return [
-            f"operation '{operation_id}': no URL pattern serves {sample}; include the api's urls module at \"\" "
-            "in the root URLconf, without a prefix."
-        ]
+        return [f"operation '{operation_id}': no URL pattern serves {sample}; {boundary.unserved_path_fix()}."]
 
-    view_class = getattr(resolved.func, "view_class", None)
-
-    if getattr(view_class, "contract", None) is contract and resolved.url_name == route_name:
+    if contract_of_view(resolved.func) is contract and resolved.url_name == route_name:
         return []
 
     if allow_listed(boundary.framework_routes, _route_text(resolved.route), _ANY_METHOD):
@@ -425,7 +460,7 @@ def _include_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
                 f"the patterns of api '{boundary.api}' sit under i18n_patterns(), which serves them under a language "
                 "prefix too; include the api's urls outside i18n_patterns()."
             )
-        elif str(resolver.pattern):
+        elif str(resolver.pattern) and boundary.include_prefix_refused:
             problems.append(
                 f"the patterns of api '{boundary.api}' are included under the prefix '{resolver.pattern}'; include "
                 "the api's urls at \"\" and set the entry's mount instead."
@@ -440,7 +475,7 @@ def _framework_route_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
     problems: list[str] = []
 
     for prefixes, pattern in _prefixed_patterns(get_resolver().url_patterns, ()):
-        if _contract_of(pattern) is not None:
+        if _contract_of(pattern) is not None or boundary.is_framework_pattern(pattern):
             continue
 
         text = _route_text("".join([*prefixes, str(pattern.pattern)]))
@@ -497,8 +532,6 @@ def _deployment_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
         f"the root URLconf's {name} carries no seampact wrapper; set it in the root URLconf before the boundary loads."
         for name in unwrapped_error_handlers()
     ]
-    problems += _public_origin_problems(boundary.api, contract)
-
     return problems
 
 
@@ -541,9 +574,7 @@ def _prefixed_patterns(
 
 
 def _contract_of(pattern: URLPattern) -> ApiContract | None:
-    contract = getattr(getattr(pattern.callback, "view_class", None), "contract", None)
-
-    return contract if isinstance(contract, ApiContract) else None
+    return contract_of_view(pattern.callback)
 
 
 def _contracts_in_urlconf() -> list[ApiContract]:

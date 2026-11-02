@@ -1,10 +1,11 @@
 """`native_docs.json`, which `nativeDocs` adds beside the placement (ADR 0026 "Native docs"): the operation object of
 each kept operation, taken by its `operationId` from the seampact OpenAPI document the runner hands the generator,
 with the path and method it sits under, and the document's components those operations reach. The runtime places each
-object at that path under the entry's `mount` in FastAPI's document."""
+object at that path under the entry's `mount` in the framework's own document (FastAPI's, Django Ninja's)."""
 
 import json
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Final
 
 from seampact.codegen.refusals import IrPlace, Refusals
@@ -18,20 +19,34 @@ _AT: Final = IrPlace("/artefacts/nativeDocs")
 _COMPONENTS: Final = "components"
 _REF: Final = "$ref"
 _COMPONENT_REF_PREFIX: Final = "#/components/"
-_FASTAPI_SCHEMAS: Final = ("ValidationError", "HTTPValidationError")
 _SECURITY: Final = "security"
 _SECURITY_SCHEMES: Final = "securitySchemes"
 
 
+@dataclass(frozen=True, slots=True)
+class FrameworkDocument:
+    """The target whose framework document the operations join, its framework's name, and the schema names that
+    document always holds, which a contract schema could never take."""
+
+    target: str
+    framework: str
+    owned_schemas: tuple[str, ...] = ()
+
+
 def native_docs_file(
-    native_docs: NativeDocsDocument | None, kept_operations: Mapping[str, object], refusals: Refusals
+    native_docs: NativeDocsDocument | None,
+    kept_operations: Mapping[str, object],
+    framework_document: FrameworkDocument,
+    refusals: Refusals,
 ) -> GeneratedFile | None:
     """None, with a refusal, when the runner handed no document or the document lacks a kept operation."""
     if native_docs is None:
         refusals.add(
             "artefacts.nativeDocs.document-missing",
-            "The runner handed the fastapi target no seampact OpenAPI document, which 'nativeDocs: true' needs.",
-            "Update seampact-ir to the release of seampact-fastapi, whose runner hands the document.",
+            f"The runner handed the {framework_document.target} target no seampact OpenAPI document, which "
+            "'nativeDocs: true' needs.",
+            f"Update seampact-ir to the release of seampact-{framework_document.target}, whose runner hands the "
+            "document.",
             _AT,
         )
         return None
@@ -54,7 +69,7 @@ def native_docs_file(
     components = native_docs.document.get(_COMPONENTS)
     reached = reached_components(list(operations.values()), components if isinstance(components, dict) else {})
 
-    if _refuse_fastapi_clashes(reached, refusals):
+    if _refuse_framework_clashes(reached, framework_document, refusals):
         return None
 
     content = {"operations": operations, _COMPONENTS: reached}
@@ -62,17 +77,20 @@ def native_docs_file(
     return GeneratedFile(NATIVE_DOCS_FILE, json.dumps(content, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
 
 
-def _refuse_fastapi_clashes(reached: Mapping[str, object], refusals: Refusals) -> bool:
-    """FastAPI's document owns these schemas, so a contract schema of the same name could never join it."""
+def _refuse_framework_clashes(
+    reached: Mapping[str, object], framework_document: FrameworkDocument, refusals: Refusals
+) -> bool:
+    """The framework's document owns these schemas, so a contract schema of the same name could never join it."""
     schemas = reached.get("schemas")
-    clashing = [name for name in _FASTAPI_SCHEMAS if isinstance(schemas, dict) and name in schemas]
+    framework = framework_document.framework
+    clashing = [name for name in framework_document.owned_schemas if isinstance(schemas, dict) and name in schemas]
 
     for name in clashing:
         refusals.add(
             "artefacts.nativeDocs.component-clash",
-            f"The contract schema '{name}' has the name of a component FastAPI's own document holds, so "
+            f"The contract schema '{name}' has the name of a component {framework}'s own document holds, so "
             "'nativeDocs' cannot add it.",
-            "Switch 'nativeDocs' off for this api, or rename the schema in the contract (FastAPI owns the name "
+            f"Switch 'nativeDocs' off for this api, or rename the schema in the contract ({framework} owns the name "
             f"'{name}', so its model cannot be renamed).",
             _AT,
         )

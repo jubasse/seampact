@@ -12,35 +12,19 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.permissions import BasePermission
 from rest_framework.throttling import BaseThrottle
 
+from seampact.codegen.runtime.access_kinds import ACCESS_KINDS, access_kind
 from seampact.codegen.runtime.contract import ApiContract
-from seampact.codegen.runtime.ir_view import ir_map, ir_string
 from seampact.django.runtime.api_settings import SETTINGS_NAME, SettingsError, api_settings
 
 ACCESS_KEY: Final = "access"
 AUTHENTICATION_CLASSES: Final = "authentication_classes"
 PERMISSION_CLASSES: Final = "permission_classes"
 THROTTLE_CLASSES: Final = "throttle_classes"
-SIGNED_KIND: Final = "signed"
-# The kinds of the PHP targets' native security layers: a signed identity never shares the classes of a signed-in
-# caller's routes.
-ACCESS_KINDS: Final = ("public", "optional", "identity", SIGNED_KIND)
 _BASES: Final[Mapping[str, type]] = {
     AUTHENTICATION_CLASSES: BaseAuthentication,
     PERMISSION_CLASSES: BasePermission,
     THROTTLE_CLASSES: BaseThrottle,
 }
-
-
-def access_kind(contract: ApiContract, operation_id: str) -> str:
-    """`public`, `optional` or `identity` from the operation's access, or `signed` when a signature verifies its
-    identity."""
-    access = ir_map(contract.operation(operation_id), "access")
-    identity = ir_string(access, "identity")
-
-    if identity is not None and ir_string(contract.declaration("identities", identity), "signed") is not None:
-        return SIGNED_KIND
-
-    return ir_string(access, "kind") or ""
 
 
 def access_instances[B](contract: ApiContract, operation_id: str, name: str, base: type[B]) -> list[B]:

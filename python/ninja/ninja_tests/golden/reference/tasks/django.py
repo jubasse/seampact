@@ -1,11 +1,12 @@
 """The Django boundary of api 'tasks': list TasksBoundary first in MIDDLEWARE."""
 
 import seampact.django.runtime as _django_runtime
+import seampact.ninja.runtime as _ninja_runtime
 
 from . import contract as _contract
 
 
-class TasksBoundary(_django_runtime.ContractBoundary):
+class TasksBoundary(_ninja_runtime.NinjaContractBoundary):
     """The boundary middleware of api 'tasks'."""
 
     api = "tasks"
@@ -28,5 +29,6 @@ class TasksBoundary(_django_runtime.ContractBoundary):
         _django_runtime.AcceptedFramework(
             package="django", unit=_django_runtime.VersionUnit.MAJOR, accepted=("5", "6"), tested_minors=("5.2", "6.1")
         ),
+        _django_runtime.AcceptedFramework(package="pydantic", unit=_django_runtime.VersionUnit.MAJOR, accepted=("2",)),
     )
     framework_routes = ()

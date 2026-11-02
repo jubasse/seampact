@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Final
 
-from seampact.codegen.runtime.access_steps import AccessHooks, AccessState
+from seampact.codegen.runtime.access_steps import AccessHooks, AccessState, HookCaller
 from seampact.codegen.runtime.cache_headers import with_cache_headers
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError
@@ -19,7 +19,6 @@ from seampact.codegen.runtime.page_reply import PageParts, page_parts
 from seampact.codegen.runtime.replies import CONTENT_TYPE, JSON_MEDIA, Reply, error_reply, json_bytes, success_body
 from seampact.codegen.runtime.run_settings import OperationTypes
 from seampact.codegen.runtime.wire_codec import WireCodec
-from seampact.fastapi.runtime.handler_call import call_handler
 
 _ITEM_SHAPE: Final = "item"
 _PAGE_SHAPE: Final = "page"
@@ -29,11 +28,12 @@ _ITEMS: Final = "items"
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReplyContext:
     """What a success reads of its request: the access steps' state and hooks (the output field rights ask the
-    deciders), the query the input step read and the raw one page links keep, the request path, `If-None-Match`, and
-    the origin absolute page links start with (None under relative URLs)."""
+    deciders, through `call`), the query the input step read and the raw one page links keep, the request path,
+    `If-None-Match`, and the origin absolute page links start with (None under relative URLs)."""
 
     access: AccessState
     hooks: AccessHooks
+    call: HookCaller
     query: Mapping[str, object]
     raw_query: str
     path: str
@@ -77,7 +77,7 @@ async def result_reply(
         reply = Reply(status, (*media_headers, *page.headers), json_bytes(page.body))
     else:
         payload = WireCodec(contract).body_to_wire(response, result.body)
-        visible = await visible_output(context.access, context.hooks, call_handler, response, payload)
+        visible = await visible_output(context.access, context.hooks, context.call, response, payload)
         body = success_body(contract.format(operation_id), shape, visible, status, context.path)
         reply = Reply(status, media_headers, json_bytes(body))
 
@@ -97,7 +97,7 @@ async def _page(
     attributes = {field.name: getattr(page, field.name) for field in dataclasses.fields(page)}
     facts = page_facts(operation_id, page, attributes)
     items = WireCodec(contract).body_to_wire(response, facts.pop(_ITEMS, []))
-    visible = await visible_output(context.access, context.hooks, call_handler, response, items)
+    visible = await visible_output(context.access, context.hooks, context.call, response, items)
 
     if not isinstance(visible, list):
         raise BoundaryFailureError(

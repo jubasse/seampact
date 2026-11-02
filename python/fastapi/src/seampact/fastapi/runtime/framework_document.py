@@ -4,16 +4,21 @@ seampact's components beside the app's; a component the app's document already h
 naming it. With `frameworkDocs: off`, the app serves none of FastAPI's documentation routes."""
 
 import copy
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from typing import Final
 
 import fastapi
 
+from seampact.codegen.runtime.native_docs import (
+    DocumentJoin,
+    JsonObject,
+    NativeDocs,
+    add_native_docs,
+    require_every_operation,
+)
 from seampact.fastapi.runtime.api_binding import ApiBinding
-from seampact.fastapi.runtime.native_docs import JsonObject, NativeDocs, NativeDocsError, json_object
-from seampact.fastapi.runtime.placement import OperationRoute
 
-_COMPONENTS: Final = "components"
+_FRAMEWORK: Final = "FastAPI"
 
 
 def switch_framework_docs_off(app: fastapi.FastAPI) -> None:
@@ -29,7 +34,8 @@ def switch_framework_docs_off(app: fastapi.FastAPI) -> None:
 def complete_framework_document(binding: ApiBinding, native_docs: NativeDocs) -> None:
     """Wraps `app.openapi()` so the document it builds, then caches, holds the api's contract routes."""
     app = binding.app
-    _require_every_route(binding.placement.routes, native_docs)
+    operation_ids = [route.operation_id for route in binding.placement.routes]
+    require_every_operation(operation_ids, native_docs)
     previous: Callable[[], JsonObject] = app.openapi
 
     def openapi() -> JsonObject:
@@ -37,53 +43,12 @@ def complete_framework_document(binding: ApiBinding, native_docs: NativeDocs) ->
             return app.openapi_schema
 
         document = copy.deepcopy(previous())
-        _add_operations(document, binding.placement.routes, binding.placement.mount, native_docs)
-        _add_components(document, native_docs, binding.api)
+        add_native_docs(
+            document, operation_ids, binding.placement.mount, native_docs, DocumentJoin(_FRAMEWORK, binding.api)
+        )
         app.openapi_schema = document
 
         return document
 
     # FastAPI's documentation routes call `app.openapi()`; an app replaces it this way too.
     setattr(app, "openapi", openapi)  # noqa: B010
-
-
-def _add_operations(
-    document: JsonObject, routes: Sequence[OperationRoute], mount: str, native_docs: NativeDocs
-) -> None:
-    """Each contract route at seampact's path under the entry's `mount`, with the contract's parameter names."""
-    paths = _member(document, "paths")
-
-    for route in routes:
-        native = native_docs.operations[route.operation_id]
-        _member(paths, mount.rstrip("/") + native.path)[native.method] = copy.deepcopy(native.operation)
-
-
-def _require_every_route(routes: Sequence[OperationRoute], native_docs: NativeDocs) -> None:
-    """A route `native_docs.json` lacks means the file is stale or edited: fail at boot, not in the document."""
-    for route in routes:
-        if route.operation_id not in native_docs.operations:
-            raise NativeDocsError(
-                f"seampact: native_docs.json holds no operation '{route.operation_id}', which the api serves; "
-                "run `seampact generate`."
-            )
-
-
-def _add_components(document: JsonObject, native_docs: NativeDocs, api: str) -> None:
-    components = _member(document, _COMPONENTS)
-
-    for kind, named in native_docs.components.items():
-        held = _member(components, kind)
-
-        for name, value in named.items():
-            if name in held and held[name] != value:
-                raise NativeDocsError(
-                    f"seampact: FastAPI's document already holds the component {kind} '{name}', and api '{api}' "
-                    "declares another one under that name. Rename the app's model, or switch `nativeDocs` off."
-                )
-
-            held[name] = copy.deepcopy(value)
-
-
-def _member(document: JsonObject, key: str) -> JsonObject:
-    """The object `document` holds at `key`, added empty when absent."""
-    return json_object(document.setdefault(key, {}), key)

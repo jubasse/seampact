@@ -274,7 +274,7 @@ In pipeline order (ADR 0006 section 1).
 ### `seampact-ninja`
 
 - `python/ninja/src/seampact/ninja`: The Django Ninja target of seampact: the `seampact-ninja` generator and the runtime of the code it generates.
-- `python/ninja/src/seampact/ninja/runtime`: The Ninja placement runtime the generated code imports (ADR 0027 "Ninja"): the declarations of one api's placement, its binding, and the handler calls of its views.
+- `python/ninja/src/seampact/ninja/runtime`: The Ninja placement runtime the generated code imports (ADR 0027 "Ninja"): the declarations of one api's placement, its binding and Router, its boundary middleware, the body of its views and their handler calls.
 
 ### `seampact-signed-webhooks`
 

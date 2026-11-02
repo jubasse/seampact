@@ -1,9 +1,13 @@
 """The ninja target found through its entry point; its options, artefacts and forms refused by name, the shared kept
 forms among them; and the generated placement as Ninja reads it: each declared route registers on a Router without a
-warning and resolves to its URL name, and `bind_<api>()` refuses by name before it changes the app."""
+warning and resolves to its URL name, and `bind_<api>()` takes only a NinjaAPI."""
 
+import dataclasses
 import importlib
 import json
+import os
+import subprocess
+import sys
 from collections.abc import Callable, Mapping
 from importlib import metadata
 from pathlib import Path
@@ -19,7 +23,7 @@ from seampact.ir.read import read_ir
 from seampact.ir.run.discovery import InstalledTarget, discover_target
 from seampact.ir.run.generator import GenerationRefusedError
 from seampact.ninja.generator import NinjaGenerator
-from seampact.ninja.runtime import ApiPlacement, BindingError, PlacementUnavailableError
+from seampact.ninja.runtime import ApiPlacement, BindingError
 
 from .test_golden import reference_entry
 
@@ -66,6 +70,18 @@ def test_the_generator_is_found_through_its_entry_point() -> None:
     assert isinstance(found.generator, NinjaGenerator)
 
 
+def test_the_generator_imports_without_django_settings_or_ninja() -> None:
+    # `seampact generate` runs outside any Django project, where importing Ninja fails on unconfigured settings.
+    environment = {name: value for name, value in os.environ.items() if name != "DJANGO_SETTINGS_MODULE"}
+    probe = "import sys, seampact.ninja.generator; print('ninja' in sys.modules)"
+    finished = subprocess.run(
+        [sys.executable, "-c", probe], capture_output=True, text=True, env=environment, check=False
+    )
+
+    assert finished.returncode == 0, finished.stderr
+    assert finished.stdout.strip() == "False"
+
+
 def test_options_outside_the_target_are_refused_by_name(repository_root: Path) -> None:
     options: dict[str, JsonValue] = {
         "handlers": "perOperation",
@@ -90,14 +106,24 @@ def test_options_outside_the_target_are_refused_by_name(repository_root: Path) -
     }
 
 
-def test_native_docs_and_artefacts_the_target_does_not_take_are_refused_by_name(repository_root: Path) -> None:
-    artefacts: dict[str, JsonValue] = {"nativeDocs": True, "accessHooks": False, "bootCheck": {"hooks": "warn"}}
+def test_artefacts_the_target_does_not_take_are_refused_by_name(repository_root: Path) -> None:
+    artefacts: dict[str, JsonValue] = {"nativeDocs": "yes", "accessHooks": False, "bootCheck": {"hooks": "warn"}}
 
     assert _refusal_codes(_ir_json(repository_root), artefacts=artefacts) == {
         "artefacts.unknown",
         "artefacts.accessHooks.unsupported",
         "artefacts.bootCheck.hooks.warn.unsupported",
     }
+
+
+def test_an_entry_whose_target_has_no_matrix_row_is_refused_by_name(repository_root: Path) -> None:
+    generator = NinjaGenerator()
+    ir = read_ir(json.dumps(_ir_json(repository_root)), generator.ir_support())
+
+    with pytest.raises(GenerationRefusedError) as refused:
+        generator.generate(ir, dataclasses.replace(reference_entry("tasks"), matrix=None))
+
+    assert {problem.code for problem in refused.value.problems} == {"config.matrix.row-missing"}
 
 
 def test_framework_docs_off_names_ninjas_own_switch() -> None:
@@ -147,15 +173,12 @@ def test_each_declared_route_registers_on_a_router_and_resolves_to_its_url_name(
     assert [route.methods for route in placement.routes if route.operation_id == "getTask"] == [("GET", "HEAD")]
 
 
-def test_binding_refuses_by_name_until_the_placement_runtime_serves_it() -> None:
+def test_binding_takes_only_a_ninja_api() -> None:
     golden = _golden_placement()
     bind: Callable[..., None] = golden.bind_tasks
     factories = golden.TasksHandlerFactories(
         tasks=None, drafts=None, channels=None, preferences=None, app=None, hooks=None
     )
-
-    with pytest.raises(PlacementUnavailableError, match=r"ninja\.placement\.unavailable"):
-        bind(NinjaAPI(urls_namespace="seampact-ninja-bind"), prefix="", handlers=factories)
 
     with pytest.raises(BindingError, match="takes the app's NinjaAPI"):
         bind(object(), prefix="", handlers=factories)

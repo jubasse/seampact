@@ -1,8 +1,6 @@
-"""Idempotency on Django (ADR 0012 "Target obligations"): the store the app names in `settings.SEAMPACT`, the claim a
+"""Idempotency on Django (ADR 0012 "Target obligations"): the store the api's configuration builds, the claim a
 generated view takes before its handler runs, and the record the boundary settles with the reply that went out, so
 a reply written by an exception handler or the api's 500 settles it too."""
-
-from typing import Final, TypeGuard
 
 from django.http import HttpRequest, HttpResponse, HttpResponseBase
 
@@ -16,13 +14,9 @@ from seampact.codegen.runtime.idempotency import (
 )
 from seampact.codegen.runtime.replies import Reply
 from seampact.codegen.runtime.sync_driver import call_without_suspension, run_without_suspension
-from seampact.django.runtime.api_settings import SETTINGS_NAME, SettingsError, api_settings, factory
+from seampact.django.runtime.api_configuration import configuration_of
 from seampact.django.runtime.contract_replies import logger, report_unexpected
 from seampact.django.runtime.request_state import BoundaryState, HeldClaim
-from seampact.hooks import IdempotencyStore
-
-IDEMPOTENCY_STORE_KEY: Final = "idempotency_store"
-_STORE_METHODS: Final = ("begin", "complete", "abandon")
 
 
 class ReplayedReplyError(Exception):
@@ -37,26 +31,13 @@ class ReplayedReplyError(Exception):
         return f"{type(self).__qualname__}([redacted])"
 
 
-def store_setting(api: str) -> str | None:
-    """The dotted path of the api's store factory, None when the app set none."""
-    path = api_settings(api).get(IDEMPOTENCY_STORE_KEY)
-
-    if path is None or isinstance(path, str):
-        return path
-
-    raise SettingsError(
-        f"settings.{SETTINGS_NAME}['{api}']['{IDEMPOTENCY_STORE_KEY}'] is a {type(path).__name__}; set the dotted "
-        "path of a factory that takes the HttpRequest."
-    )
-
-
 def claim_idempotency(request: HttpRequest, state: BoundaryState, principal: object | None) -> None:
     """Claims the request's key before the handler runs; the boundary settles the claim with the reply.
 
     Raises `ReplayedReplyError` for a stored reply, `ContractRefusal` for a running or reused key, and
     `BoundaryFailureError` for a missing or broken store."""
     contract = state.contract
-    store = _store(contract.api, request)
+    store = configuration_of(contract.api).idempotency_store(request)
     started = run_without_suspension(
         begin_idempotency(contract, state.operation_id, principal, state.decoded, store, call_without_suspension)
     )
@@ -114,25 +95,3 @@ def _abandoned(held: HeldClaim) -> IdempotencyStoreFailure | None:
 def _report(request: HttpRequest, state: BoundaryState, failure: IdempotencyStoreFailure | None) -> None:
     if failure is not None:
         report_unexpected(request, state.contract, state.operation_id, failure.reason, failure.cause)
-
-
-def _store(api: str, request: HttpRequest) -> IdempotencyStore | None:
-    path = store_setting(api)
-
-    if path is None:
-        return None
-
-    store = factory(api, f"['{IDEMPOTENCY_STORE_KEY}']", path)(request)
-
-    if not _is_store(store):
-        missing = [method for method in _STORE_METHODS if not callable(getattr(store, method, None))]
-        raise SettingsError(
-            f"the factory of settings.{SETTINGS_NAME}['{api}']['{IDEMPOTENCY_STORE_KEY}'] built a "
-            f"{type(store).__qualname__} without {', '.join(missing)}; return an IdempotencyStore."
-        )
-
-    return store
-
-
-def _is_store(value: object) -> TypeGuard[IdempotencyStore]:
-    return all(callable(getattr(value, method, None)) for method in _STORE_METHODS)

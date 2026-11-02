@@ -13,6 +13,7 @@ export const SERVER_TARGETS: readonly string[] = [
   "api-platform",
   "fastapi",
   "drf",
+  "ninja",
 ];
 
 export const CONCRETE_TARGETS: readonly string[] = [

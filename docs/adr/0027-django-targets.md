@@ -79,7 +79,7 @@ SEAMPACT = {
 }
 ```
 
-The keys mirror ADR 0026's `bind_<api>()` arguments: `handlers`, `authenticate`, `deciders`, `scope_resolvers`, `idempotency_store`, `on_unexpected_error`, `responses`, `body_validation`, `operations` and `public_origin`; DRF adds `access` ("DRF"). Unknown keys are refused by the boot check, by name. Ninja passes the same values to `bind_<api>()` instead ("Ninja").
+The keys mirror ADR 0026's `bind_<api>()` arguments: `handlers`, `authenticate`, `deciders`, `scope_resolvers`, `idempotency_store`, `on_unexpected_error`, `responses`, `body_validation`, `operations` and `public_origin`; DRF adds `access` ("DRF"). Unknown keys are refused by the boot check, by name. Ninja passes the same values to `bind_<api>()` instead ("Ninja"), which registers them as the api's values; the boot check then refuses a `settings.SEAMPACT` entry for that api, since nothing reads it.
 
 #### The boundary middleware
 
@@ -115,7 +115,7 @@ Django decodes before routing, so the raw match and the chosen route can differ,
 
 Django's ASGI handler serves `http` scopes only. A websocket router (Channels' `ProtocolTypeRouter`) sits outside Django, before the boundary, and a contract declares no websocket.
 
-`mount` is the prefix the generated patterns write before each contract path. Beside the patterns, the shared route helpers write `<Api>RouteNames` and `<Api>Urls`, as ADR 0026 says; `artefacts.routeHelpers: false` leaves both out.
+`mount` is the prefix the generated patterns write before each contract path. Beside the patterns, the shared route helpers write `<Api>RouteNames` and `<Api>Urls`, as ADR 0026 says; `artefacts.routeHelpers: false` leaves both out. Ninja registers the names under the `NinjaAPI`'s `urls_namespace`, so the app reverses `f"{api.urls_namespace}:{name}"`.
 
 #### The reply path
 
@@ -296,6 +296,8 @@ Each operation is one `api_operation()` call:
 - with `include_in_schema=False`;
 - with a view that takes the request and one `str` parameter per path placeholder, which Ninja cannot refuse, so it answers no 422 (spike). The view ignores them: the input comes from the boundary's raw decoding. A view without them would make Ninja warn at URLconf import for each placeholder, and fail under `python -W error` (review probe).
 
+Each contract path also declares `OPTIONS`, without `auth=` or throttles, with a view of the same parameters that answers the path's `notFound` 404: the boundary leaves a CORS preflight to the app, and when no CORS layer answers it, Ninja would answer 405, as DRF's `options` would answer its metadata.
+
 `bind_<api>()` marks the Django views of the contract paths `login_required = False`, so Django's `LoginRequiredMiddleware` never redirects a contract request; it would answer a bearer caller without a session with a 302 (review probe). A target test fails by name if the mark stops reaching Ninja's views.
 
 `bind_<api>()` takes Ninja's per-access-kind values as `access`, a mapping from each access kind to `AccessSettings(auth=..., throttle=...)`: the `auth=` and `throttle=` Ninja applies to that kind's operations, none when the kind is absent.
@@ -306,7 +308,7 @@ The target option `views` is `sync`, the default, or `async`. Async views run na
 
 #### Exceptions
 
-`bind_<api>()` registers one handler for the api's contract base with `add_exception_handler()`. It also wraps the app's `NinjaAPI.on_exception`, which Ninja calls for every exception it handles, `auth=` failures included (spike). The wrapper records the exception, then calls the app's. `on_exception` is not in Ninja's guide, so a test of the target fails by name if a minor stops calling it, and the boot check refuses an `on_exception` replaced after `bind_<api>()`.
+The generated view answers the api's own exceptions itself (a contract refusal, a raised contract exception, a replayed idempotent reply, a failure of the boundary), so no handler the app adds to its `NinjaAPI` takes them. `bind_<api>()` wraps the app's `NinjaAPI.on_exception`, which Ninja calls for every exception it handles, `auth=` failures included (spike). The wrapper records the exception, then calls the app's. `on_exception` is not in Ninja's guide, so a test of the target fails by name if a minor stops calling it, and the boot check refuses an `on_exception` replaced after `bind_<api>()`.
 
 On a contract route the boundary answers with the role of:
 
@@ -316,15 +318,15 @@ On a contract route the boundary answers with the role of:
 - `Http404`: `notFound`, which Ninja renders itself without calling `handler404` (spike);
 - any other `HttpError`: the role of its status.
 
-Ninja re-raises any other exception to Django outside `DEBUG`, where the shared layer records it (spike).
+Ninja re-raises any other exception to Django outside `DEBUG` (spike), and Django would log its message on `django.request`. On a request a boundary matched, outside `DEBUG` and `DEBUG_PROPAGATE_EXCEPTIONS`, the wrapper answers such an exception with a bare 500 instead, which the boundary replaces with the api's 500, logging the class and the place only, as on DRF. A `BadRequest` or `SuspiciousOperation` still goes to Django.
 
 #### The boot check
 
-Beside the shared list: Ninja's own docs routes, read from the `NinjaAPI`'s `docs_url` and `openapi_url` under its prefix, are framework routes, accepted and listed in the report (ADR 0011).
+Beside the shared list, the check reads the values `bind_<api>()` took: a `responses` mode other than `strict` or `warn`, an `operations` value that is not an `OperationSettings`, and a `body_validation` that is not a bool are refused by name. So are an `auth=` or a throttle on an access kind with an operation that declares no reply for its refusal (`unauthenticated` or a single 401 code, `rateLimited` or a single 429 code), since Ninja's refusal would become the api's 500. A second `bind_<api>()` on the same `NinjaAPI` raises. Ninja's own docs routes, read from the `NinjaAPI`'s `docs_url` and `openapi_url` under its prefix, are framework routes, accepted and listed in the report (ADR 0011).
 
 #### Native docs
 
-Contract operations are always registered with `include_in_schema=False`, so Ninja's `/docs` shows the app's own operations only. The target declares no `nativeDocs` artefact until a consumer needs it: the app config refuses the key by name (`config.artefacts.unknown`). `frameworkDocs: keep` is accepted; `frameworkDocs: off` is refused (`config.frameworkDocs.unsupported`), with the fix `NinjaAPI(docs_url=None, openapi_url=None)`.
+Contract operations are always registered with `include_in_schema=False`, so Ninja builds no schema of its own for them. With the `nativeDocs` artefact, `bind_<api>()` wraps `NinjaAPI.get_openapi_schema()` so each document it builds holds the api's operations with seampact's operation objects at their paths under the entry's `mount`, and seampact's components beside the app's; a component the app's document holds with another value fails the boot, naming it. The generated `native_docs.json` and its reader are the ones FastAPI uses (ADR 0026 "Native docs"). `frameworkDocs: keep` is accepted; `frameworkDocs: off` is refused (`config.frameworkDocs.unsupported`), with the fix `NinjaAPI(docs_url=None, openapi_url=None)`.
 
 ### Redaction
 
@@ -362,7 +364,7 @@ At run time: Python 3.12 or later; Django 5.2 or 6.x; DRF 3.18 for DRF; Ninja 1.
 
 | Waits for | What |
 |---|---|
-| a consumer that needs them | ADR 0026's list; `async def` hooks and handlers on DRF and in Ninja's sync views; `nativeDocs` on Ninja |
+| a consumer that needs them | ADR 0026's list; `async def` hooks and handlers on DRF and in Ninja's sync views |
 | after 1.0 | Django, DRF and Ninja versions below the floor (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)); principal bindings, refused by name as on PHP |
 
 ### The consumer and the proof

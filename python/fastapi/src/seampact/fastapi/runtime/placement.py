@@ -12,8 +12,9 @@ import fastapi
 from seampact.codegen.runtime.access_steps import CredentialsType
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework
+from seampact.codegen.runtime.native_docs import NativeDocs
 from seampact.codegen.runtime.reply_verdict import FrameworkEtagMode, ResponsesMode
-from seampact.fastapi.runtime.native_docs import FrameworkDocs, NativeDocs
+from seampact.fastapi.runtime.native_docs import FrameworkDocs
 from seampact.hooks import AuthenticateHook, DecideHook, IdempotencyStore, ResolveScopeHook, UnexpectedErrorListener
 
 type App = fastapi.FastAPI

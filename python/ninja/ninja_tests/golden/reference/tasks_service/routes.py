@@ -7,7 +7,7 @@ import seampact.codegen.runtime.wire_values as _wire_values
 
 
 class TasksServiceRouteNames:
-    """The route name of each operation, as the target registers it."""
+    """The route name of each operation, under the NinjaAPI's urls_namespace: reverse "<namespace>:<name>"."""
 
     GET_TASK: _typing.Final = "seampact.tasksService.getTask"
 
