@@ -13,7 +13,8 @@ import fastapi
 
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.reply_verdict import ResponsesMode
-from seampact.fastapi.runtime.placement import ApiPlacement, BindTarget, Factory, HookFactories, RunSettings
+from seampact.codegen.runtime.run_settings import RunSettings
+from seampact.fastapi.runtime.placement import ApiPlacement, BindTarget, Factory, HookFactories
 from seampact.hooks import UnexpectedErrorListener, UnexpectedFailure
 
 
