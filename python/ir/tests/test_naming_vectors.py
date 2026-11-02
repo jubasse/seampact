@@ -1,4 +1,5 @@
-"""The shared naming vectors (ADR 0007 section 6) against the Python naming: segments and operation ids."""
+"""The shared naming vectors (ADR 0007 section 6) against the Python naming: segments, operation ids and the
+`python` identifier of each vector; and the reserved words this package ships are `@seampact/spec`'s."""
 
 import json
 from pathlib import Path
@@ -6,7 +7,16 @@ from typing import Any
 
 import pytest
 
-from seampact.ir.naming import IrName, NameSource, NamingRole, OperationIdCase, operation_id, segments_of
+import seampact.ir.naming
+from seampact.ir.naming import (
+    IrName,
+    NameSource,
+    NamingRole,
+    OperationIdCase,
+    operation_id,
+    python_identifier,
+    segments_of,
+)
 
 _NO_SEGMENT = "no-segment"
 _MIN_VECTORS = 100
@@ -42,7 +52,8 @@ def test_vectors(repository_root: Path) -> None:
 
         assert segments is not None, identifier
         assert segments == vector["segments"], identifier
-        IrName(tuple(segments), NamingRole(vector["role"]), vector.get("status"))
+        name = IrName(tuple(segments), NamingRole(vector["role"]), vector.get("status"))
+        assert python_identifier(name) == vector["expected"]["python"], identifier
 
         if "operationId" in vector:
             assert operation_id(segments, OperationIdCase.CAMEL) == vector["operationId"]["camel"], identifier
@@ -88,3 +99,17 @@ def test_a_malformed_name_is_refused(segments: tuple[str, ...], role: NamingRole
 def test_a_malformed_operation_id_is_refused(segments: list[str], case: OperationIdCase) -> None:
     with pytest.raises(ValueError):
         operation_id(segments, case)
+
+
+def test_ships_the_spec_reserved_words(repository_root: Path) -> None:
+    spec = repository_root / "packages/core/spec/vectors/naming/reserved-words.json"
+    copy = Path(seampact.ir.naming.__file__).parent / "reserved-words.json"
+
+    assert copy.read_bytes() == spec.read_bytes(), (
+        "Copy packages/core/spec/vectors/naming/reserved-words.json to python/ir/src/seampact/ir/naming/ again."
+    )
+
+
+def test_a_member_and_a_type_escape_a_leading_digit_differently() -> None:
+    assert python_identifier(IrName(("2fa",), NamingRole.MEMBER)) == "field_2fa"
+    assert python_identifier(IrName(("2fa",), NamingRole.SCHEMA)) == "_2fa"
