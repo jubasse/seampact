@@ -1,0 +1,130 @@
+name: Ninja target
+
+# The Django Ninja target of the uv workspace `python/` (ADR 0027 "Ninja"): the golden packages of the reference
+# contract under ruff, `ruff format --check`, `mypy --strict` with the Django stubs and pyright strict, and the tests of
+# `seampact-ninja`, on two rows: Python 3.12 with the Django 5.2 and Ninja 1.5.3 floor, installed by hash over the
+# lock, and the latest Python with the locked Django 6.x and the latest Ninja. On a pull request or a push they run only
+# when the change touches the Python packages, the files their tests read, or this workflow; `ninja` is the one check
+# to require.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ninja-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ninja: ${{ steps.detect.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - name: Detect a change to the Python packages or the files their tests read
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          watched-paths: |
+            ^python/
+            ^fixtures/golden/
+            ^fixtures/hooks-shape/
+            ^fixtures/reference/
+            ^packages/core/
+            ^\.github/actions/
+            ^\.github/workflows/p7-ninja\.yml$
+  golden:
+    needs: changes
+    if: needs.changes.outputs.ninja == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The floor: Python 3.12, Django 5.2 LTS and Ninja 1.5.3, installed by hash over the lock.
+          - python-version: "3.12"
+            django: "5.2"
+            ninja: "1.5"
+            floor-requirements: ninja/ci/floor-requirements.txt
+          # The latest Python with the locked Django 6.x and the latest Ninja.
+          - python-version: "3.x"
+            django: "6"
+            ninja: "1.7"
+            floor-requirements: ""
+    name: golden (Python ${{ matrix.python-version }}, Django ${{ matrix.django }}, Ninja ${{ matrix.ninja }})
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - name: Install the workspace from the lock file
+        env:
+          UV_PYTHON: ${{ steps.python.outputs.python-path }}
+          UV_PYTHON_DOWNLOADS: never
+        run: uv sync --locked --all-packages
+      - name: Install the Django and Ninja floor by hash
+        if: matrix.floor-requirements != ''
+        env:
+          FLOOR_REQUIREMENTS: ${{ matrix.floor-requirements }}
+        run: uv pip install --require-hashes --no-deps -r "$FLOOR_REQUIREMENTS"
+      # Read from the installed metadata: importing Ninja needs Django settings.
+      - name: Check the row runs the Django and Ninja versions it names
+        env:
+          DJANGO_ROW: ${{ matrix.django }}
+          NINJA_ROW: ${{ matrix.ninja }}
+        run: >-
+          uv run --no-sync python -c "from importlib.metadata import version; import os;
+          assert version('django').startswith(os.environ['DJANGO_ROW']), version('django');
+          assert version('django-ninja').startswith(os.environ['NINJA_ROW']), version('django-ninja')"
+      # `--no-sync` from here: a sync would put the locked Django back over the floor.
+      - name: Lint
+        run: uv run --no-sync ruff check django ninja
+      - name: Check the format
+        run: uv run --no-sync ruff format --check django ninja
+      - name: Type-check the packages and their golden output with the Django stubs
+        run: uv run --no-sync mypy django/src ninja/src ninja/ninja_tests
+      - name: Type-check the golden output as pyright strict reads it
+        run: uv run --no-sync pyright
+      - name: Test on Python ${{ matrix.python-version }}, Django ${{ matrix.django }} and Ninja ${{ matrix.ninja }}
+        run: uv run --no-sync pytest ninja/ninja_tests
+  ninja:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, golden]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.ninja }}
