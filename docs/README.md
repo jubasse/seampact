@@ -31,6 +31,8 @@
 - [Spring Boot](backend/spring-boot.md): the Gradle or Maven plugin, controllers and hooks.
 - [Laravel](backend/laravel.md): Composer, controllers, hooks and Laravel's own auth.
 - [Symfony](backend/symfony.md): the Composer package, bundle, controllers, hooks and SecurityBundle.
+- [FastAPI](backend/fastapi.md): the wheels, `bind_<api>()`, handlers, hooks and FastAPI's own docs.
+- [Django REST Framework](backend/drf.md): the wheels, settings, URLconf, handlers, hooks and DRF's own auth.
 
 ## Frontend
 

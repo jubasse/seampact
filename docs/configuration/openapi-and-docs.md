@@ -16,6 +16,24 @@ openapi:
 
 `openapi: none` writes no document.
 
+## Serve the contract in FastAPI's docs
+
+`nativeDocs` puts the contract's routes in FastAPI's own `/openapi.json` and `/docs`.
+
+```yaml
+    use: pypi:seampact-fastapi
+    artefacts:
+      nativeDocs: true
+```
+
+Run `seampact generate`. It writes `native_docs.json` beside the code, and `bind_<api>()` adds it to `app.openapi()`.
+
+- It needs the compiler binary, since the binary writes the document. The binary is not published yet: set `[tool.seampact.binary]` with a `path` and its `sha256` in your root `pyproject.toml`.
+- Name the document with `document` on the entry when the api declares several. One of them must hold every operation the entry generates (`nativeDocs.document.ambiguous`, `artefacts.nativeDocs.operation-missing`).
+- `frameworkDocs: off` removes FastAPI's own `/openapi.json`, `/docs` and `/redoc`.
+
+Django REST Framework has no `nativeDocs`. See [FastAPI](../backend/fastapi.md#docs).
+
 ## Serve Swagger on NestJS
 
 `nativeDocs` makes the generated routes visible to `@nestjs/swagger`.
