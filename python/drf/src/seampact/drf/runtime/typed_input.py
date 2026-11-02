@@ -72,7 +72,9 @@ def typed_parts(contract: ApiContract, operation_id: str, decoded: DecodedInput)
                 continue
 
             walker = _TypeWalker(contract, issue_in, _IGNORE)
-            part_tree[attribute] = walker.typed(ir_map(declared.get(name), "type"), value, f"/{_escaped(name)}")
+            part_tree[attribute] = walker.typed(
+                ir_map(declared.get(name), "type"), value, _param_pointer(issue_in, name)
+            )
             issues += walker.issues
 
         if members:
@@ -103,7 +105,7 @@ def serializer_issues(contract: ApiContract, operation_id: str, errors: Mapping[
         if isinstance(part_errors, Mapping):
             for attribute, found in part_errors.items():
                 name = wire_names.get(str(attribute), str(attribute))
-                issues += _issues(contract, issue_in, f"/{_escaped(name)}", types.get(name, {}), found)
+                issues += _issues(contract, issue_in, _param_pointer(issue_in, name), types.get(name, {}), found)
 
     body_errors = errors.get(_BODY)
 
@@ -111,6 +113,11 @@ def serializer_issues(contract: ApiContract, operation_id: str, errors: Mapping[
         issues += _issues(contract, _BODY, "", ir_map(ir_map(operation, "input"), "schema"), body_errors)
 
     return issues
+
+
+def _param_pointer(issue_in: str, name: str) -> str:
+    """A parameter's pointer; a header's is lower case, since header names are not case sensitive."""
+    return f"/{_escaped(name.lower() if issue_in == HEADER_PART else name)}"
 
 
 def rendered(issues: Sequence[Issue]) -> list[Issue]:

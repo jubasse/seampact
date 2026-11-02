@@ -1,5 +1,6 @@
 """The operation types, exceptions and handler protocols of api 'tasks'."""
 
+import collections.abc as _abc
 import dataclasses as _dataclasses
 import typing as _typing
 import uuid as _uuid
@@ -139,13 +140,28 @@ class CreateTaskScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class _Redacted:
+    """Stands for a sensitive value in a `repr`."""
+
+    def __repr__(self) -> str:
+        return "[redacted]"
+
+
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
 class CreateTaskRequest:
     """What the handler of operation 'createTask' is called with."""
 
     input: CreateTaskInput
     principal: _schemas.UserPrincipal
     scopes: CreateTaskScopes
+
+    def __repr__(self) -> str:
+        return f"CreateTaskRequest(input={self.input!r}, principal=[redacted], scopes=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
+        yield "scopes", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

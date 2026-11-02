@@ -1,5 +1,5 @@
 """The DRF runtime of generated code: the base of the contract views and serializers, the typed field that keeps a
-value the type layer converted, the value-rule validators, and the contract exception handler. What a later release
+value the type layer converted, the value-rule validators and the contract exception handler. What a later release
 of seampact-drf brings is refused by name when a contract view runs, never served half done."""
 
 from seampact.codegen.runtime.access_steps import CredentialsType

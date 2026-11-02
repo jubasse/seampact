@@ -4,6 +4,7 @@ who is calling) and returns (one class per declared success status, the page of 
 result union; per error code one exception under the api's contract base; per resource the handler protocol."""
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Final
 
 from seampact.codegen.credentials_classes import credentials_class
@@ -11,7 +12,7 @@ from seampact.codegen.names import ApiNames, member_identifier, part_attributes
 from seampact.codegen.printer import INDENT, PythonModule, string_literal
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.drf.api_layout import ApiLayout, OperationNames, handler_headers, principal_schema
-from seampact.drf.dataclass_schemas import DATACLASS_DECORATOR
+from seampact.drf.dataclass_schemas import DATACLASS_DECORATOR, FrozenDataclasses, is_sensitive_use
 from seampact.drf.python_types import PythonTypes
 from seampact.ir.hydration import OMITTED
 from seampact.ir.model import (
@@ -24,12 +25,17 @@ from seampact.ir.model import (
     PublicAccess,
     ResponseShape,
     ResponseShapeUnknown,
+    SignedIdentity,
     TypeUse,
 )
 
 SCHEMAS_MODULE: Final = ".schemas"
 SCHEMAS_ALIAS: Final = "_schemas"
 
+_PRINCIPAL: Final = "principal"
+_SCOPES: Final = "scopes"
+_BODY: Final = "body"
+_INPUT: Final = "input"
 _PAGE_FACT_TYPES: Final = {
     HandlerResultMember.NEXT_CURSOR: "str",
     HandlerResultMember.PREVIOUS_CURSOR: "str",
@@ -39,6 +45,14 @@ _PAGE_FACT_TYPES: Final = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class _HiddenMembers:
+    """Every attribute of a dataclass in order, and those its repr hides."""
+
+    attributes: Sequence[str]
+    redacted: Sequence[str]
+
+
 class _Emission:
     def __init__(self, ir: ContractIR, names: ApiNames, layout: ApiLayout, refusals: Refusals) -> None:
         self.ir = ir
@@ -46,6 +60,7 @@ class _Emission:
         self.refusals = refusals
         self.module = PythonModule(f"The operation types, exceptions and handler protocols of api '{ir.api.id}'.")
         self.types = PythonTypes(ir, names, refusals, schemas=f"{SCHEMAS_ALIAS}.")
+        self.dataclasses = FrozenDataclasses(self.module)
         self.names = names
 
     def _credentials(self) -> None:
@@ -68,10 +83,11 @@ class _Emission:
 
         return self.module.text()
 
-    def dataclass(self, name: str, doc: str, members: Sequence[str]) -> None:
-        dataclasses = self.module.imported("dataclasses", "_dataclasses")
+    def dataclass(self, name: str, doc: str, members: Sequence[str], hidden: _HiddenMembers | None = None) -> None:
+        """A frozen dataclass; its repr prints the `hidden` attributes `[redacted]`."""
         body = [f'{INDENT}"""{doc}"""', *([""] if members else []), *members]
-        self.module.add_block([f"@{dataclasses}.{DATACLASS_DECORATOR}", f"class {name}:", *body])
+        attributes, redacted = (hidden.attributes, hidden.redacted) if hidden is not None else ((), ())
+        self.module.add_block(self.dataclasses.block(name, body, attributes, redacted))
 
     def schemas(self) -> str:
         return self.module.imported(SCHEMAS_MODULE, SCHEMAS_ALIAS)
@@ -136,12 +152,27 @@ class _Emission:
 
         if operation.input is not None:
             body = self.types.annotation(self.module, operation.input.schema, at.below("input", "schema"))
-            input_members.append(f"{INDENT}body: {body}")
+            input_members.append(f"{INDENT}{_BODY}: {body}")
 
-        self.dataclass(names.input, f"The input of operation '{operation.id}', as its handler reads it.", input_members)
-        request_members = [f"{INDENT}input: {names.input}", *self._caller(operation, names, at)]
+        # A signed body and who is calling are redacted (ADR 0026 "Redaction").
+        input_doc = f"The input of operation '{operation.id}', as its handler reads it."
+        input_hidden = None
+
+        if operation.input is not None and self._is_signed(operation):
+            declared = (("path", names.path), ("query", names.query), ("headers", names.headers))
+            parts = [part for part, part_class in declared if part_class is not None]
+            input_hidden = _HiddenMembers([*parts, _BODY], [_BODY])
+
+        self.dataclass(names.input, input_doc, input_members, input_hidden)
+        request_members = [f"{INDENT}{_INPUT}: {names.input}", *self._caller(operation, names, at)]
+        principal = [_PRINCIPAL] if isinstance(operation.access, IdentityAccess | OptionalAccess) else []
+        scopes = [_SCOPES] if names.scopes is not None else []
+        request_hidden = _HiddenMembers([_INPUT, *principal, *scopes], [*principal, *scopes])
         self.dataclass(
-            names.request, f"What the handler of operation '{operation.id}' is called with.", request_members
+            names.request,
+            f"What the handler of operation '{operation.id}' is called with.",
+            request_members,
+            request_hidden if principal or scopes else None,
         )
         self._results(operation, names, at)
 
@@ -152,6 +183,8 @@ class _Emission:
             return []
 
         members = []
+        attributes = []
+        redacted = []
 
         for index, param, attribute in part_attributes(params, at, self.refusals):
             if param.default is not OMITTED:
@@ -162,10 +195,22 @@ class _Emission:
             suffix = "" if param.required else " | None"
             annotation = self.types.annotation(self.module, param.type, at.below(index, "type"), suffix)
             members.append(f"{INDENT}{attribute}: {annotation}{'' if param.required else ' = None'}")
+            attributes.append(attribute)
 
-        self.dataclass(name, f"The {part} parameters of operation '{operation.id}'.", members)
+            if is_sensitive_use(param.type):
+                redacted.append(attribute)
+
+        hidden = _HiddenMembers(attributes, redacted) if redacted else None
+        self.dataclass(name, f"The {part} parameters of operation '{operation.id}'.", members, hidden)
 
         return [f"{INDENT}{part}: {name}"]
+
+    def _is_signed(self, operation: Operation) -> bool:
+        access = operation.access
+
+        return isinstance(access, IdentityAccess | OptionalAccess) and isinstance(
+            self.ir.identities.get(access.identity), SignedIdentity
+        )
 
     def _caller(self, operation: Operation, names: OperationNames, at: IrPlace) -> list[str]:
         """Who is calling: the principal on a route with an identity, the scopes on a scoped route."""
@@ -175,7 +220,7 @@ class _Emission:
         if isinstance(access, IdentityAccess | OptionalAccess):
             principal = self._principal(access.identity, at.below("access"))
             optional = " | None" if isinstance(access, OptionalAccess) else ""
-            members.append(f"{INDENT}principal: {principal}{optional}")
+            members.append(f"{INDENT}{_PRINCIPAL}: {principal}{optional}")
         elif not isinstance(access, PublicAccess):
             self.refusals.unknown_value(access.kind, at.below("access", "kind"))
 
@@ -195,7 +240,7 @@ class _Emission:
                 scopes.append(f"{INDENT}{attribute}: {hooks}.ResolvedScope")
 
             self.dataclass(names.scopes, f"The scopes operation '{operation.id}' runs in, outermost first.", scopes)
-            members.append(f"{INDENT}scopes: {names.scopes}")
+            members.append(f"{INDENT}{_SCOPES}: {names.scopes}")
 
         return members
 

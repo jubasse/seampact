@@ -1,5 +1,6 @@
 """The operation types, exceptions and handler protocols of api 'tasksService'."""
 
+import collections.abc as _abc
 import dataclasses as _dataclasses
 import typing as _typing
 import uuid as _uuid
@@ -83,12 +84,26 @@ class GetTaskInput:
     headers: GetTaskHeaders
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class _Redacted:
+    """Stands for a sensitive value in a `repr`."""
+
+    def __repr__(self) -> str:
+        return "[redacted]"
+
+
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
 class GetTaskRequest:
     """What the handler of operation 'getTask' is called with."""
 
     input: GetTaskInput
     principal: _schemas.ServicePrincipal
+
+    def __repr__(self) -> str:
+        return f"GetTaskRequest(input={self.input!r}, principal=[redacted])"
+
+    def __rich_repr__(self) -> _abc.Iterator[tuple[str, object]]:
+        yield "input", self.input
+        yield "principal", _Redacted()
 
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)

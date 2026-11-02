@@ -1,5 +1,6 @@
-"""The Django settings of the DRF consumer: the `tasks` api's boundary first in MIDDLEWARE, its handlers and hook
-doubles in SEAMPACT, less what the boot variant (`SEAMPACT_SUITE_BOOT_VARIANT`) leaves out."""
+"""The Django settings of the DRF consumer: the `tasks` and `tasksService` apis' boundaries first in MIDDLEWARE, their
+handlers, hook doubles and idempotency store in SEAMPACT, less what the boot variant (`SEAMPACT_SUITE_BOOT_VARIANT`)
+leaves out."""
 
 import logging
 from pathlib import Path
@@ -13,7 +14,15 @@ APP_DIRECTORY: Final = Path(__file__).parent
 CONTROL_STATE_FILE: Final = "suite-control.json"
 CREDENTIALS_FILE: Final = "credentials.json"
 USER_IDENTITY: Final = "user"
+STRIPE_IDENTITY: Final = "stripe"
+SERVICE_IDENTITY: Final = "service"
 CHANNEL_SCOPE: Final = "channel"
+OVERRIDDEN_RIGHT: Final = "tasks.update"
+# The right the `missing-decider` boot variant leaves without a decider, as the suite's case names it.
+MISSING_DECIDER_RIGHT: Final = "roles"
+# Every right and rule of the `tasks` api reaches the generic decider, but the overridden one.
+TASKS_DECIDED: Final = ("tasks.read", "tasks.seeEffort", "recentAuth", "roles", "throttle")
+SERVICE_DECIDED: Final = ("callerService",)
 
 configure_suite_files(SuiteFiles(str(APP_DIRECTORY / CONTROL_STATE_FILE), str(APP_DIRECTORY / CREDENTIALS_FILE)))
 logging.getLogger().addHandler(SuiteLogHandler())
@@ -29,24 +38,47 @@ ROOT_URLCONF = "urls"
 USE_TZ = True
 DATABASES: dict[str, object] = {}
 INSTALLED_APPS = ["django.contrib.contenttypes", "django.contrib.auth", "rest_framework", "seampact.django"]
-MIDDLEWARE = ["generated.tasks.django.TasksBoundary", "django.middleware.common.CommonMiddleware"]
+MIDDLEWARE = [
+    "generated.tasks.django.TasksBoundary",
+    "generated.tasks_service.django.TasksServiceBoundary",
+    "django.middleware.common.CommonMiddleware",
+]
 
 _handlers = {
     "app": "handlers.app_handlers",
     "channels": "handlers.channels_handlers",
     "drafts": "handlers.drafts_handlers",
+    "hooks": "handlers.hooks_handlers",
+    "preferences": "handlers.preferences_handlers",
+    "tasks": "handlers.tasks_handlers",
 }
+_authenticate = {USER_IDENTITY: "hooks.user_hook", STRIPE_IDENTITY: "hooks.stripe_hook"}
+_deciders = {name: "hooks.tasks_decider" for name in TASKS_DECIDED} | {OVERRIDDEN_RIGHT: "hooks.overridden_right_decider"}
 
 if _variant is BootVariant.MISSING_HANDLER:
     del _handlers["app"]
 
+if _variant is BootVariant.MISSING_AUTHENTICATE_HOOK:
+    del _authenticate[USER_IDENTITY]
+
+if _variant is BootVariant.MISSING_DECIDER:
+    del _deciders[MISSING_DECIDER_RIGHT]
+
 SEAMPACT = {
     "tasks": {
         "handlers": _handlers,
-        "authenticate": {} if _variant is BootVariant.MISSING_AUTHENTICATE_HOOK else {USER_IDENTITY: "hooks.user_hook"},
+        "authenticate": _authenticate,
+        "deciders": _deciders,
         "scope_resolvers": (
             {} if _variant is BootVariant.MISSING_SCOPE_RESOLVER else {CHANNEL_SCOPE: "hooks.channel_resolver"}
         ),
+        "idempotency_store": "hooks.idempotency_store",
         "on_unexpected_error": "hooks.unexpected_errors",
-    }
+    },
+    "tasksService": {
+        "handlers": {"internal": "handlers.internal_handlers"},
+        "authenticate": {SERVICE_IDENTITY: "hooks.service_hook"},
+        "deciders": {name: "hooks.service_decider" for name in SERVICE_DECIDED},
+        "on_unexpected_error": "hooks.unexpected_errors",
+    },
 }

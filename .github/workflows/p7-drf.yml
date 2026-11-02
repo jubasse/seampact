@@ -208,6 +208,9 @@ jobs:
           set -euo pipefail
           scripts/consumers/python/install.sh "$WORK/venv" "$WORK/requirements.txt" "$WORK/wheels" \
             'seampact-drf[generate]' ${{ matrix.pins }}
+          # The consumer's stripe hook verifies signatures with seampact-signed-webhooks, as an app installs it.
+          "$WORK/venv/bin/python" -m pip install --no-input --disable-pip-version-check --no-index \
+            --find-links "$WORK/wheels" seampact-signed-webhooks
           "$WORK/venv/bin/python" -c "import django, os, rest_framework; print(django.get_version(), rest_framework.VERSION); assert django.get_version().startswith(os.environ['DJANGO_ROW'])"
           for variant in "" allow-listed; do
             scripts/consumers/targets/drf/assemble.sh "$WORK" "$RUNNER_TEMP/bundles/reference" $variant
@@ -223,7 +226,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Run the default, hand-written and boot profiles
+      - name: Run the default, hand-written and boot profiles on every operation of both apis
         env:
           SEAMPACT_DRF_SERVER: ${{ matrix.server }}
           SEAMPACT_DRF_APP: ${{ env.WORK }}/app

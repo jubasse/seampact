@@ -1,7 +1,7 @@
 """The Django boundary and the DRF steps at run time, through Django's test `Client` against the reference contract's
 generated package: step 1's refusals, steps 2 to 8, the handler's reply, the exception map, the outgoing check, the
-boot check, the system check and `seampact_check`. The package is generated without the features a later release
-serves (idempotency, restricted fields, cache headers, the concurrency check, throttle buckets)."""
+boot check, the system check and `seampact_check`, and the version a header carries. `archiveTask` reads its version
+from `If-Match` here, as a contract with a header version gives it."""
 
 import asyncio
 import gzip
@@ -22,23 +22,30 @@ from django.core.checks import run_checks
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase, StreamingHttpResponse
 from django.test import AsyncClient, Client, override_settings
 from django.urls import include, path, re_path
 
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, VersionUnit
-from seampact.codegen.runtime.ir_view import ir_map, ir_maps, ir_string
+from seampact.codegen.runtime.hook_check import hook_needs
+from seampact.codegen.runtime.ir_view import ir_map, ir_string
 from seampact.django.runtime.boot_check import boot_problems
+from seampact.drf.runtime import admission
 from seampact.hooks import (
     AuthenticateRequest,
     ErrorCodeWithParams,
+    IdempotencyClaim,
     RequirementRequest,
     ResolvedScope,
     ResolveScopeRequest,
+    StoredResponse,
     UnexpectedFailure,
     authenticate_result,
     decision,
+    idempotency_begin,
+    purpose,
     scope_id_source,
     scope_resolution,
 )
@@ -51,12 +58,62 @@ _ROOT_URLCONF: Final = "seampact_drf_boundary_root"
 _TOKEN: Final = "good-token"
 _USER_ID: Final = "8d0f3c3e-6a52-4c0e-9b8e-3f1f2f6f1a11"
 _CHANNEL_ID: Final = "0a2c3b7e-1d4f-4e8a-9c1b-2e3d4f5a6b7c"
-_LATER_FEATURES: Final = ("fieldRights", "cache", "concurrency")
+_ARCHIVE_TASK: Final = "archiveTask"
+_CREATE_TASK: Final = "createTask"
+_GET_TASK: Final = "getTask"
+_DEADLINE_EXCEEDED: Final = "api.deadline_exceeded"
+_PRECONDITION_CODES: Final = (
+    ("api.precondition_failed", 412, "preconditionFailed"),
+    ("api.precondition_required", 428, "preconditionRequired"),
+)
 _SECRET: Final = "secret-token-123"
 
 # What the hooks and handlers of one test answer; each test sets what it needs.
 answers: dict[str, Callable[[object], object]] = {}
 failures: list[UnexpectedFailure] = []
+idempotency_records: dict[str, tuple[str, StoredResponse | None]] = {}
+
+
+class _MemoryStore:
+    """An idempotency store in memory, emptied before each test."""
+
+    def begin(self, claim: IdempotencyClaim, /) -> object:
+        known = idempotency_records.get(claim.key)
+
+        if known is None:
+            idempotency_records[claim.key] = (claim.fingerprint, None)
+            return idempotency_begin.Started()
+
+        fingerprint, stored = known
+
+        if fingerprint != claim.fingerprint:
+            return idempotency_begin.Mismatch()
+
+        return idempotency_begin.Running() if stored is None else idempotency_begin.Replay(response=stored)
+
+    def complete(self, key: str, response: StoredResponse, /) -> None:
+        idempotency_records[key] = (idempotency_records[key][0], response)
+
+    def abandon(self, key: str, /) -> None:
+        idempotency_records.pop(key, None)
+
+
+class _DatabaseStore(_MemoryStore):
+    """A store that reaches the database on every write, as an ORM-backed store does: Django refuses that call on
+    the event loop."""
+
+    def complete(self, key: str, response: StoredResponse, /) -> None:
+        _touch_the_database()
+        super().complete(key, response)
+
+    def abandon(self, key: str, /) -> None:
+        _touch_the_database()
+        super().abandon(key)
+
+
+def _touch_the_database() -> None:
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT 1")
 
 
 class _Hooks:
@@ -115,6 +172,14 @@ def listener(request: HttpRequest) -> _Listener:
     return _Listener()
 
 
+def store(request: HttpRequest) -> _MemoryStore:
+    return _MemoryStore()
+
+
+def database_store(request: HttpRequest) -> _DatabaseStore:
+    return _DatabaseStore()
+
+
 class RaisingMiddleware:
     """An app middleware inside the boundary that raises what the `X-Raise` header names."""
 
@@ -140,6 +205,14 @@ class RaisingMiddleware:
 
         if answer == "none":
             return None
+
+        if answer == "raise-after-view":
+            self.get_response(request)
+            raise ValueError("raised by the app after the view")
+
+        if answer == "stream-after-view":
+            self.get_response(request)
+            return StreamingHttpResponse(iter([b'{"status": "ok"}']), status=200, content_type="application/json")
 
         return self.get_response(request)
 
@@ -172,6 +245,7 @@ def package(repository_root: Path, tmp_path_factory: pytest.TempPathFactory) -> 
 def served(package: ModuleType) -> Iterator[None]:
     answers.clear()
     failures.clear()
+    idempotency_records.clear()
 
     with override_settings(
         ROOT_URLCONF=_ROOT_URLCONF,
@@ -347,11 +421,152 @@ def test_a_reply_the_boundary_did_not_write_is_replaced_by_the_apis_500() -> Non
     assert "outgoing check" in failures[0].reason
 
 
-def test_an_operation_with_a_feature_a_later_release_serves_fails_closed_by_name() -> None:
-    response = Client().get("/v1/channels", headers=_bearer())
+def test_an_operation_the_contract_relays_is_served(monkeypatch: pytest.MonkeyPatch) -> None:
+    contract_view = _module("contract").CONTRACT
+    monkeypatch.setitem(contract_view.operation("health"), "relays", {"api": "tasks", "id": "health"})
+    answers["health"] = lambda _: _module("operations").HealthResponse200(body=_module("schemas").Health(status="ok"))
 
-    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-    assert "paging" in failures[0].reason
+    response = Client().get("/v1/health")
+
+    assert (response.status_code, json.loads(response.content)) == (HTTPStatus.OK, {"status": "ok"})
+    assert failures == []
+
+
+def test_absolute_urls_are_refused_at_boot_by_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    wire = ir_map(_module("contract").CONTRACT.ir_view, "api")
+    assert isinstance(wire, dict)
+    monkeypatch.setitem(wire["wire"], "urls", "absolute")
+    absolute = {**_settings(), "public_origin": "https://api.example.com"}
+
+    with override_settings(SEAMPACT={"tasks": absolute}), pytest.raises(ImproperlyConfigured, match="absolute URLs"):
+        Client().get("/v1/health")
+
+
+def test_a_page_projection_that_is_not_a_list_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def projected_to_a_mapping(*_: object) -> object:
+        return {"items": []}
+
+    monkeypatch.setattr(admission, "visible_output", projected_to_a_mapping)
+    answers["list_tasks"] = lambda _: _module("operations").ListTasksResponse200(
+        body=_module("operations").ListTasksPage(items=[])
+    )
+
+    response = Client().get(f"/v1/channels/{_CHANNEL_ID}/tasks", headers=_bearer())
+
+    assert (response.status_code, _code(response)) == (HTTPStatus.INTERNAL_SERVER_ERROR, "api.internal")
+    assert "not a list" in failures[0].reason
+
+
+def test_the_input_field_rights_are_applied_before_the_deadline() -> None:
+    answers["create_task"] = lambda _: pytest.fail("the handler ran")
+    answers["decide"] = lambda request: (
+        decision.Denied(deny=_denial("api.forbidden"))
+        if isinstance(request.purpose, purpose.Field)  # type: ignore[attr-defined]
+        else decision.Allowed()
+    )
+    passed = {"X-Deadline": "2020-01-01T00:00:00Z"}
+
+    response = Client().post(
+        f"/v1/channels/{_CHANNEL_ID}/tasks",
+        json.dumps({"title": "Write the guide", "effort": 3.0}),
+        content_type="application/json",
+        headers={**_bearer(), "Idempotency-Key": "k-1", **passed},
+    )
+
+    assert _code(response) == "api.forbidden", response.content
+    without_the_field = Client().post(
+        f"/v1/channels/{_CHANNEL_ID}/tasks",
+        json.dumps({"title": "Write the guide"}),
+        content_type="application/json",
+        headers={**_bearer(), "Idempotency-Key": "k-2", **passed},
+    )
+    assert _code(without_the_field) == "api.deadline_exceeded", without_the_field.content
+
+
+def test_an_orm_backed_store_settles_the_record_under_asgi() -> None:
+    created: list[object] = []
+
+    def create_task(request: object) -> object:
+        created.append(request)
+        return _module("operations").CreateTaskResponse201(body=_task())
+
+    answers["create_task"] = create_task
+    url = f"/v1/channels/{_CHANNEL_ID}/tasks"
+    body = json.dumps({"title": "Write the guide"})
+    headers = {**_bearer(), "Idempotency-Key": "k-orm"}
+
+    async def post_twice() -> list[HttpResponseBase]:
+        client = AsyncClient()
+        return [
+            await client.post(url, body, content_type="application/json", headers=headers),
+            await client.post(url, body, content_type="application/json", headers=headers),
+        ]
+
+    with override_settings(
+        MIDDLEWARE=[f"{_PACKAGE}.django.TasksBoundary"],
+        SEAMPACT={"tasks": {**_settings(), "idempotency_store": f"{__name__}.database_store"}},
+    ):
+        first, replayed = asyncio.run(post_twice())
+
+    assert (first.status_code, replayed.status_code) == (HTTPStatus.CREATED, HTTPStatus.CREATED), failures
+    assert (len(created), failures) == (1, [])
+
+
+def test_the_record_is_abandoned_when_the_handler_fails() -> None:
+    def create_task(request: object) -> object:
+        raise RuntimeError("a bug")
+
+    answers["create_task"] = create_task
+
+    response = _post(f"/v1/channels/{_CHANNEL_ID}/tasks", {"title": "Write the guide"})
+
+    assert (response.status_code, idempotency_records) == (HTTPStatus.INTERNAL_SERVER_ERROR, {})
+
+
+def test_the_record_is_abandoned_when_an_exception_propagates_into_the_boundary() -> None:
+    answers["create_task"] = lambda _: _module("operations").CreateTaskResponse201(body=_task())
+
+    with override_settings(DEBUG_PROPAGATE_EXCEPTIONS=True), pytest.raises(ValueError, match="after the view"):
+        Client().post(
+            f"/v1/channels/{_CHANNEL_ID}/tasks",
+            json.dumps({"title": "Write the guide"}),
+            content_type="application/json",
+            headers={**_bearer(), "Idempotency-Key": "k-1", "X-Answer": "raise-after-view"},
+        )
+
+    assert idempotency_records == {}
+
+
+def test_the_record_is_abandoned_when_the_reply_is_a_stream(caplog: pytest.LogCaptureFixture) -> None:
+    answers["create_task"] = lambda _: _module("operations").CreateTaskResponse201(body=_task())
+
+    with override_settings(SEAMPACT={"tasks": {**_settings(), "responses": "warn"}}):
+        response = Client().post(
+            f"/v1/channels/{_CHANNEL_ID}/tasks",
+            json.dumps({"title": "Write the guide"}),
+            content_type="application/json",
+            headers={**_bearer(), "Idempotency-Key": "k-1", "X-Answer": "stream-after-view"},
+        )
+        b"".join(response.streaming_content)  # type: ignore[attr-defined]
+
+    assert idempotency_records == {}
+    assert "answered a stream" in caplog.text
+
+
+def test_a_missing_or_wildcard_if_match_is_precondition_required_before_the_header_check() -> None:
+    answers["archive_task"] = lambda _: pytest.fail("the handler ran")
+    url = f"/v1/channels/{_CHANNEL_ID}/tasks/{_USER_ID}/archive"
+
+    for if_match in ({}, {"If-Match": "*"}):
+        response = Client().post(
+            url,
+            json.dumps({"reason": "done", "expectedVersion": 1}),
+            content_type="application/json",
+            headers={**_bearer(), "Idempotency-Key": "k-archive", **if_match},
+        )
+
+        assert response.status_code == HTTPStatus.PRECONDITION_REQUIRED, response.content
+        assert _code(response) == "api.precondition_required"
 
 
 def test_the_boundary_runs_async_when_every_middleware_inside_it_is_async_capable() -> None:
@@ -465,7 +680,6 @@ def test_seampact_check_and_the_system_check_pass_a_correct_app_in_a_fresh_proce
     [
         ("access", {"authenticated": {"permission_classes": ["rest_framework.permissions.IsAdminUser"]}}),
         ("body_validation", True),
-        ("idempotency_store", f"{__name__}.listener"),
     ],
 )
 def test_a_setting_a_later_release_serves_is_refused_by_name(key: str, value: object) -> None:
@@ -569,35 +783,64 @@ def _fresh_root(name: str) -> ModuleType:
 
 
 def _served_ir(repository_root: Path) -> dict[str, JsonValue]:
+    """The reference contract, `archiveTask` versioned by `If-Match` with the two codes the compiler derives for a
+    header version."""
     ir = reference_ir(repository_root, "tasks")
+    catalogue = ir["errors"]
+    assert isinstance(catalogue, dict)
+    conflict = catalogue["state.conflict"]
+    assert isinstance(conflict, dict)
+    archive = _item(ir["operations"], "id", _ARCHIVE_TASK)
+    concurrency = archive["concurrency"]
+    assert isinstance(concurrency, dict)
+    concurrency["version"] = {"in": "header", "name": "If-Match"}
+    params = archive["params"]
+    assert isinstance(params, dict) and isinstance(params["header"], list) and isinstance(archive["errors"], list)
+    params["header"].append(
+        {"name": "If-Match", "required": True, "type": {"kind": "scalar", "refinements": {}, "type": "string"}}
+    )
 
-    for operation in ir["operations"]:  # type: ignore[union-attr]
-        assert isinstance(operation, dict)
+    for code, status, role in _PRECONDITION_CODES:
+        catalogue[code] = {**conflict, "code": code, "default": role, "http": {"status": status}}
+        archive["errors"].append({"code": code, "derivedFrom": concurrency["derivedFrom"], "roles": [{"role": role}]})
 
-        for feature in _LATER_FEATURES:
-            operation.pop(feature, None)
-
-        operation["fieldRights"] = []
-        operation["requires"] = [item for item in operation["requires"] if "bucket" not in item]  # type: ignore[operator, union-attr]
-
-        if "idempotency" in operation:
-            operation["idempotency"] = {
-                "kind": "exempt",
-                "reason": "Served by a later release.",
-                "origin": operation["origin"],
-            }
+    _with_a_deadline(ir, reference_ir(repository_root, "tasksService"), _CREATE_TASK)
 
     return ir
+
+
+def _with_a_deadline(ir: dict[str, JsonValue], service_ir: dict[str, JsonValue], operation_id: str) -> None:
+    """The operation reads the service api's optional deadline header, with its code: no reference operation has both
+    a deadline and an input field right."""
+    deadline_reader = _item(service_ir["operations"], "id", _GET_TASK)
+    header = deadline_reader["deadlineHeader"]
+    reader_params, catalogue, service_catalogue = deadline_reader["params"], ir["errors"], service_ir["errors"]
+    assert isinstance(header, str) and isinstance(reader_params, dict)
+    assert isinstance(catalogue, dict) and isinstance(service_catalogue, dict)
+    read_by = _item(ir["operations"], "id", operation_id)
+    params, errors = read_by["params"], read_by["errors"]
+    assert isinstance(params, dict) and isinstance(params["header"], list) and isinstance(errors, list)
+
+    read_by["deadlineHeader"] = header
+    params["header"].append({**_item(reader_params["header"], "name", header), "required": False})
+    errors.append(_item(deadline_reader["errors"], "code", _DEADLINE_EXCEEDED))
+    catalogue[_DEADLINE_EXCEEDED] = service_catalogue[_DEADLINE_EXCEEDED]
+
+
+def _item(items: JsonValue, key: str, value: str) -> dict[str, JsonValue]:
+    """The member of a list of IR objects whose `key` is `value`."""
+    assert isinstance(items, list)
+    found = next(item for item in items if isinstance(item, dict) and item.get(key) == value)
+    assert isinstance(found, dict)
+    return found
 
 
 def _settings() -> dict[str, object]:
     contract_view = importlib.import_module(f"{_PACKAGE}.contract").CONTRACT
     operations = [contract_view.operation(operation_id) for operation_id in contract_view.operation_ids()]
-    identities = {ir_string(ir_map(item, "access"), "identity") for item in operations} - {None, "stripe"}
-    deciders = {
-        ir_string(item, ir_string(item, "kind") or "") for item in operations for item in ir_maps(item, "requires")
-    }
-    scopes = {ir_string(item, "scope") for item in operations for item in ir_maps(item, "scopes")}
+    identities = {ir_string(ir_map(item, "access"), "identity") for item in operations} - {None}
+    deciders = hook_needs(contract_view).deciders
+    scopes = hook_needs(contract_view).scopes
     resources = importlib.import_module(f"{_PACKAGE}.django").TasksBoundary.handler_resources
 
     return {
@@ -606,6 +849,7 @@ def _settings() -> dict[str, object]:
         "deciders": {str(name): f"{__name__}.hooks" for name in deciders},
         "scope_resolvers": {str(name): f"{__name__}.hooks" for name in scopes},
         "on_unexpected_error": f"{__name__}.listener",
+        "idempotency_store": f"{__name__}.store",
     }
 
 
