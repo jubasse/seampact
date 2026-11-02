@@ -9,6 +9,7 @@ import logging
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping, Sequence
 from types import MappingProxyType
 from typing import ClassVar, Final
+from urllib.parse import quote
 
 from asgiref.sync import iscoroutinefunction, markcoroutinefunction, sync_to_async
 from django.conf import settings
@@ -24,6 +25,7 @@ from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase, St
 
 from seampact.codegen.runtime.body_reader import PAYLOAD_TOO_LARGE_ROLE
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE, ApiContract
+from seampact.codegen.runtime.cors_preflight import is_cors_preflight
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, framework_version_warnings
@@ -67,6 +69,7 @@ _TECHNICAL_PAGE_STATUSES: Final = frozenset({400, 404})
 _HTML: Final = "text/html"
 _HEAD: Final = "HEAD"
 _WSGI_CHUNK_BYTES: Final = 65536
+_SCRIPT_PREFIX_SAFE: Final = "/"
 
 
 class ContractBoundary:
@@ -91,6 +94,11 @@ class ContractBoundary:
     sync_capable: ClassVar[bool] = True
     async_capable: ClassVar[bool] = True
     _gaps_logged: ClassVar[bool] = False
+
+    @classmethod
+    def target_settings_problems(cls, own: Mapping[str, object]) -> list[str]:
+        """The problems of the settings keys a target adds; a target's own boundary base overrides it."""
+        return []
 
     def __init__(self, get_response: GetResponse) -> None:
         self.get_response = get_response
@@ -185,6 +193,9 @@ class ContractBoundary:
         if not target.raw:
             self._log_gaps_once()
 
+        if is_cors_preflight(request.method or "", request.headers.keys()):
+            return None
+
         matched = self.contract.match(request.method or "", target.path)
 
         if matched is None:
@@ -210,7 +221,8 @@ class ContractBoundary:
         except BoundaryFailureError as failure:
             return unexpected_response(request, self.contract, operation_id, "decoding the input failed", failure)
 
-        attach(request, BoundaryState(self.contract, operation_id, matched.raw_parameters, decoded))
+        request_path = _script_prefix(request) + target.path
+        attach(request, BoundaryState(self.contract, operation_id, matched.raw_parameters, decoded, request_path))
         _route_without_origin(request)
 
         return None
@@ -444,6 +456,15 @@ def _route_without_origin(request: HttpRequest) -> None:
 
     request.path = request.path.removesuffix(request.path_info) + path_info
     request.path_info = path_info
+
+
+def _script_prefix(request: HttpRequest) -> str:
+    """The prefix the raw target lost before the match, as page links name it: the ASGI `root_path` or the WSGI
+    `SCRIPT_NAME`, percent-encoded."""
+    scope = getattr(request, "scope", None)
+    prefix = scope.get("root_path", "") if isinstance(scope, dict) else request.META.get("SCRIPT_NAME", "")
+
+    return quote(str(prefix).rstrip("/"), safe=_SCRIPT_PREFIX_SAFE)
 
 
 def _raw_target(request: HttpRequest) -> RawTarget | None:

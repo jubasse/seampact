@@ -5,9 +5,24 @@ accepted, the entry's `frameworkRoutes`, and the target options the boundary rea
 literal."""
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from typing import Final
 
 from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_literal
 from seampact.ir.run.generator import FrameworkRoute, TargetEntry
+
+
+@dataclass(frozen=True, slots=True)
+class BoundaryBase:
+    """The runtime class a generated boundary extends, and the alias of its module."""
+
+    module: str
+    alias: str
+    name: str
+
+
+_DJANGO_RUNTIME: Final = "_django_runtime"
+DJANGO_BOUNDARY_BASE: Final = BoundaryBase("seampact.django.runtime", _DJANGO_RUNTIME, "ContractBoundary")
 
 
 def boundary_module(
@@ -17,14 +32,21 @@ def boundary_module(
     handler_resources: Mapping[str, Sequence[str]],
     run_time_options: Sequence[tuple[str, str]],
     entry: TargetEntry,
+    base: BoundaryBase = DJANGO_BOUNDARY_BASE,
 ) -> str:
+    """`base` is the target's own boundary class when the target adds settings keys the boot check reads."""
     module = PythonModule(f"The Django boundary of api '{api}': list {api_class}Boundary first in MIDDLEWARE.")
-    runtime = module.imported("seampact.django.runtime", "_django_runtime")
+    base_module = module.imported(base.module, base.alias)
+    frameworks = _accepted_frameworks(_DJANGO_RUNTIME, entry)
+    framework_routes = _framework_routes(_DJANGO_RUNTIME, entry.framework_routes)
+
+    if frameworks or framework_routes:
+        module.imported(DJANGO_BOUNDARY_BASE.module, _DJANGO_RUNTIME)
     contract = module.imported(".contract", "_contract")
     settings = module.imported(".settings", "_settings")
     module.add_block(
         [
-            f"class {api_class}Boundary({runtime}.ContractBoundary):",
+            f"class {api_class}Boundary({base_module}.{base.name}):",
             f'{INDENT}"""The boundary middleware of api \'{api}\'."""',
             "",
             f"{INDENT}api = {string_literal(api)}",
@@ -33,8 +55,8 @@ def boundary_module(
             f"{INDENT}settings_keys = {settings}.SETTINGS_KEYS",
             *_handler_resources(module, handler_resources),
             *(f"{INDENT}{attribute} = {literal}" for attribute, literal in run_time_options),
-            *_tuple_attribute("frameworks", _accepted_frameworks(runtime, entry)),
-            *_tuple_attribute("framework_routes", _framework_routes(runtime, entry.framework_routes)),
+            *_tuple_attribute("frameworks", frameworks),
+            *_tuple_attribute("framework_routes", framework_routes),
         ]
     )
 

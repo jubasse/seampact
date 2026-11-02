@@ -111,7 +111,7 @@ Django decodes before routing, so the raw match and the chosen route can differ,
 
 - **Trailing slash.** A raw path under a base path that no contract route serves exactly is the boundary's 404 before routing. So `CommonMiddleware`'s `APPEND_SLASH` redirect, which runs inside the boundary, never answers a contract request. With `catchAll: false` it may redirect to an app route (spike: `/v1/tasks` to `/v1/tasks/` under a DRF router).
 - **`HEAD`** runs the path's `GET` operation; the boundary drops the body. A Django class-based view answers `HEAD` with its `get` (spike); Ninja needs it listed ("Ninja").
-- **Other methods.** A method the path does not serve answers the path's `notFound` 404 from the boundary, before DRF's 405 or its `OPTIONS` metadata reply (spike). A CORS preflight is left to the app's CORS middleware, which sits after the boundary.
+- **Other methods.** A method the path does not serve answers the path's `notFound` 404 from the boundary, before DRF's 405 or its `OPTIONS` metadata reply (spike). A CORS preflight (an `OPTIONS` with `Origin` and `Access-Control-Request-Method`) is left to the app's CORS middleware, which sits after the boundary; when none answers it, the DRF view answers the path's `notFound` 404, never DRF's metadata.
 
 Django's ASGI handler serves `http` scopes only. A websocket router (Channels' `ProtocolTypeRouter`) sits outside Django, before the boundary, and a contract declares no websocket.
 
@@ -183,7 +183,8 @@ The check lists every problem at once:
 - a root URLconf whose error handlers carry no wrapper;
 - the boundary not first in `MIDDLEWARE`, other seampact boundaries aside;
 - `DATA_UPLOAD_MAX_MEMORY_SIZE` below the api's largest body limit;
-- a `public_origin` set under relative URLs; until drf-4, an api that writes absolute URLs, refused by name (from drf-4, a missing or malformed `public_origin` under absolute URLs);
+- a `public_origin` set under relative URLs, or a missing or malformed one under absolute URLs, with ADR 0026's item; page links write it before the script name and the raw request path;
+- on DRF, an `access` setting the views cannot use: an unknown access kind or DRF name, a kind no operation has, a path that does not import or names no class of DRF's matching base;
 - a Django, DRF or Ninja major outside the matrix that `allowUntested` did not name at `generate`, read with `importlib.metadata`, as Laravel's boot check refuses a major other than 13. The generated code records the majors `generate` accepted.
 
 Beside that list, the boot check logs one warning, without refusing, for a Django, DRF or Ninja minor outside the tested minors the generated code records, as `generate` warns: a minor installed after `generate` serves with a notice.
@@ -227,8 +228,8 @@ The views fix what DRF would otherwise read from the app's defaults:
 
 - `perform_content_negotiation()` returns a fixed pair, so `Accept` never answers 406;
 - `renderer_classes` holds one class and `default_response_headers` is empty, so DRF adds neither `Allow` nor `Vary: Accept` to the reply (review probe);
-- `parser_classes` is empty and `versioning_class` is `None`: the views never read `request.data`;
-- `get_authenticators()`, `get_permissions()` and `get_throttles()` return the classes the app sets for the operation's access kind in `settings.SEAMPACT["<api>"]["access"]`, keyed by DRF's own names (`authentication_classes`, `permission_classes`, `throttle_classes`), and none otherwise. The app's `DEFAULT_PERMISSION_CLASSES` never applies to a contract route, so a global `IsAuthenticated` never refuses a public operation;
+- `parser_classes` holds one parser that hands DRF a copy of the body the boundary decoded, and `versioning_class` is `None`. The views never read `request.data`; an app class may, and DRF's CSRF check reads `request.POST`, which would answer 415 without a parser;
+- `get_authenticators()`, `get_permissions()` and `get_throttles()` return the classes the app sets for the operation's access kind (`public`, `optional`, `identity`, or `signed` for an identity a signature verifies, as the PHP targets key their native layers) in `settings.SEAMPACT["<api>"]["access"]`, keyed by DRF's own names (`authentication_classes`, `permission_classes`, `throttle_classes`), and none otherwise. The app's `DEFAULT_PERMISSION_CLASSES` never applies to a contract route, so a global `IsAuthenticated` never refuses a public operation;
 - `schema = None`, so DRF's schema generator skips them.
 
 DRF 3.18's `as_view()` sets `login_required = False`, so Django's `LoginRequiredMiddleware` never redirects a contract request (review probe). The target relies on it, and a target test fails by name if a DRF minor drops it.
@@ -360,7 +361,7 @@ At run time: Python 3.12 or later; Django 5.2 or 6.x; DRF 3.18 for DRF; Ninja 1.
 | Waits for | What |
 |---|---|
 | a consumer that needs them | ADR 0026's list; `async def` hooks and handlers on DRF and in Ninja's sync views; `nativeDocs` on Ninja |
-| after 1.0 | Django, DRF and Ninja versions below the floor (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)) |
+| after 1.0 | Django, DRF and Ninja versions below the floor (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)); principal bindings, refused by name as on PHP |
 
 ### The consumer and the proof
 
@@ -382,7 +383,7 @@ The proof is the `node`-absent step, a green suite row per row above, each targe
 | drf-1 | `python/django` emitters (URLconf, settings, app config) and `python/drf`: the generator, dataclass inputs, serializers, `APIView` declarations, exceptions; a golden under ruff and `mypy --strict` with the stubs, on Django 5.2 and 6.x |
 | drf-2 | the boundary middleware (sync and async), the `APIView` steps 2 to 8, the exception map and the handler wrappers, the system check, the boot check, `seampact_generate` and `seampact_check`; the sample app, the `default`, `hand-written` and `boot` profiles, the e2e job of `p7-drf.yml` |
 | drf-3 | paging, idempotency, throttle beside DRF's throttles, cache headers, the signed raw body, deadlines, relays, redaction; the suite over every operation of both apis with nothing refused, and `test_redaction.py` |
-| drf-4 | DRF authentication, permission and throttle classes per access kind, the role map of DRF's exceptions, session and CSRF beside the boundary, absolute URLs and principal bindings; the suite's security rows and a token-auth row |
+| drf-4 | DRF authentication, permission and throttle classes per access kind, the role map of DRF's exceptions, session and CSRF beside the boundary, absolute URLs, CORS preflights left to the app; the suite's security rows and a token-auth row in the consumer. Principal bindings stay refused by name, as on PHP, until after 1.0 |
 | ninja-1 | `python/ninja`: the generator on the shared Pydantic emitter, `Router` declarations, views, `bind_<api>()`; a golden under ruff, `mypy --strict` and `pyright` strict |
 | ninja-2 | the Ninja placement on `seampact-django`, the `on_exception` wrapper, sync and async views; the sample app, every profile, `p7-ninja.yml` |
 
