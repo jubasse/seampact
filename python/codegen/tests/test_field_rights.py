@@ -1,0 +1,116 @@
+"""Field rights: a restricted input member sent without its right is refused, and a restricted output member is left
+out for each holder the decider denies, one decision per subject."""
+
+import asyncio
+from dataclasses import dataclass, field
+
+import pytest
+
+from seampact.codegen.runtime.access_steps import AccessHooks, AccessState, HookCaller
+from seampact.codegen.runtime.contract import ApiContract
+from seampact.codegen.runtime.failures import ContractRefusal
+from seampact.codegen.runtime.field_rights import checked_input_fields, visible_output
+from seampact.hooks import (
+    Decision,
+    ErrorCodeWithParams,
+    FieldDirection,
+    RequestView,
+    RequirementRequest,
+    ResolvedScope,
+    decision,
+    purpose,
+)
+
+_CHANNEL = "8a6e0804-2bd0-4672-b79d-d97027f9071a"
+_FORBIDDEN = "api.forbidden"
+
+
+@dataclass
+class _Decider:
+    """Allows the subjects in `allowed`, or every request when `allowed` is None; records each request."""
+
+    allowed: frozenset[object] | None = None
+    asked: list[RequirementRequest] = field(default_factory=list)
+
+    def decide(self, request: RequirementRequest, /) -> Decision:
+        self.asked.append(request)
+        subject = None if request.subject is None else request.subject.id
+
+        if self.allowed is None or subject in self.allowed:
+            return decision.Allowed()
+
+        return decision.Denied(deny=ErrorCodeWithParams(code=_FORBIDDEN))
+
+
+def _state(contract: ApiContract, operation_id: str, body: object) -> AccessState:
+    return AccessState(
+        contract=contract,
+        operation_id=operation_id,
+        credentials_types={},
+        raw_parameters={"channelId": _CHANNEL},
+        request=RequestView(method="GET", path="/v1/channels", headers={}),
+        body=body,
+        principal=None,
+        scopes=[ResolvedScope(scope="channel", id=_CHANNEL)],
+    )
+
+
+def _hooks(name: str, decider: _Decider) -> AccessHooks:
+    return AccessHooks(authenticate={}, deciders={name: decider}, scope_resolvers={})
+
+
+def test_a_denied_output_member_is_left_out_once_per_holder(
+    tasks_contract: ApiContract, hook_caller: HookCaller
+) -> None:
+    decider = _Decider(allowed=frozenset({"t1"}))
+    items = [{"taskId": "t1", "effort": 3}, {"taskId": "t2", "effort": 5}, {"taskId": "t1", "effort": 3}]
+    response = tasks_contract.operation("listTasks")["responses"]
+    assert isinstance(response, list)
+
+    visible = asyncio.run(
+        visible_output(
+            _state(tasks_contract, "listTasks", None),
+            _hooks("tasks.seeEffort", decider),
+            hook_caller,
+            response[0],
+            items,
+        )
+    )
+
+    assert visible == [{"taskId": "t1", "effort": 3}, {"taskId": "t2"}, {"taskId": "t1", "effort": 3}]
+    assert items[1] == {"taskId": "t2", "effort": 5}
+    assert [request.subject.id for request in decider.asked if request.subject is not None] == ["t1", "t2"]
+    assert decider.asked[0].purpose == purpose.Field(pointer="/effort", direction=FieldDirection.OUTPUT)
+
+
+def test_a_denied_input_member_is_refused_with_its_pointer(
+    tasks_contract: ApiContract, hook_caller: HookCaller
+) -> None:
+    decider = _Decider(allowed=frozenset())
+    state = _state(tasks_contract, "createTask", {"title": "Write", "effort": 3})
+
+    with pytest.raises(ContractRefusal) as refused:
+        asyncio.run(checked_input_fields(state, _hooks("roles", decider), hook_caller))
+
+    assert refused.value.code == _FORBIDDEN
+    assert refused.value.params == {"pointer": "/effort"}
+    assert decider.asked[0].subject is not None
+    assert decider.asked[0].subject.id == _CHANNEL
+
+
+def test_an_allowed_or_absent_input_member_keeps_the_body(tasks_contract: ApiContract, hook_caller: HookCaller) -> None:
+    decider = _Decider()
+    sent = {"title": "Write", "effort": 3}
+
+    kept = asyncio.run(
+        checked_input_fields(_state(tasks_contract, "createTask", sent), _hooks("roles", decider), hook_caller)
+    )
+    without = asyncio.run(
+        checked_input_fields(
+            _state(tasks_contract, "createTask", {"title": "Write"}), _hooks("roles", decider), hook_caller
+        )
+    )
+
+    assert kept == sent
+    assert without == {"title": "Write"}
+    assert len(decider.asked) == 1
