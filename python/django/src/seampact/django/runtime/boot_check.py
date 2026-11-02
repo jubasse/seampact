@@ -43,7 +43,6 @@ _SAMPLE_SEGMENT: Final = "seampact-sample"
 _PLACEHOLDER_START: Final = "{"
 _PUBLIC_ORIGIN_KEY: Final = "public_origin"
 _ABSOLUTE_URLS: Final = "absolute"
-_HTTP_ORIGIN_PREFIXES: Final = ("http://", "https://")
 # A Django pattern answers every method; an allow-list item names it with no method.
 _ANY_METHOD: Final = ""
 _ROUTE_CONVERTER: Final = re.compile(r"<[^<>]*>")
@@ -500,16 +499,21 @@ def _deployment_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
     return problems
 
 
+def writes_absolute_urls(contract: ApiContract) -> bool:
+    """Whether the api writes absolute URLs (`conventions.urls: absolute`), which this release does not serve."""
+    return ir_string(ir_map(ir_map(contract.ir_view, "api"), "wire"), "urls") == _ABSOLUTE_URLS
+
+
 def _public_origin_problems(api: str, contract: ApiContract) -> list[str]:
-    origin = api_settings(api).get(_PUBLIC_ORIGIN_KEY)
-    absolute = ir_string(ir_map(ir_map(contract.ir_view, "api"), "wire"), "urls") == _ABSOLUTE_URLS
-    setting = f"settings.{SETTINGS_NAME}['{api}']['{_PUBLIC_ORIGIN_KEY}']"
+    if writes_absolute_urls(contract):
+        return [
+            f"the api '{api}' writes absolute URLs, which this release of seampact-django does not serve yet; set "
+            "`conventions.urls: relative` and generate again."
+        ]
 
-    if not absolute and origin is not None:
+    if api_settings(api).get(_PUBLIC_ORIGIN_KEY) is not None:
+        setting = f"settings.{SETTINGS_NAME}['{api}']['{_PUBLIC_ORIGIN_KEY}']"
         return [f"{setting} is set while the api writes relative URLs; remove it."]
-
-    if absolute and not (isinstance(origin, str) and origin.startswith(_HTTP_ORIGIN_PREFIXES)):
-        return [f"{setting} must be the api's public origin, such as 'https://api.example.com', under absolute URLs."]
 
     return []
 

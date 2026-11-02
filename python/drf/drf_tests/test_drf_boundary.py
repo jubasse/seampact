@@ -30,7 +30,7 @@ from django.urls import include, path, re_path
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, VersionUnit
 from seampact.codegen.runtime.hook_check import hook_needs
-from seampact.codegen.runtime.ir_view import ir_map, ir_maps, ir_string
+from seampact.codegen.runtime.ir_view import ir_map, ir_string
 from seampact.django.runtime.boot_check import boot_problems
 from seampact.drf.runtime import admission
 from seampact.hooks import (
@@ -508,7 +508,7 @@ def test_an_orm_backed_store_settles_the_record_under_asgi() -> None:
     ):
         first, replayed = asyncio.run(post_twice())
 
-    assert (first.status_code, replayed.status_code) == (HTTPStatus.CREATED, HTTPStatus.CREATED), replayed.content
+    assert (first.status_code, replayed.status_code) == (HTTPStatus.CREATED, HTTPStatus.CREATED), failures
     assert (len(created), failures) == (1, [])
 
 
@@ -790,8 +790,7 @@ def _served_ir(repository_root: Path) -> dict[str, JsonValue]:
     assert isinstance(catalogue, dict)
     conflict = catalogue["state.conflict"]
     assert isinstance(conflict, dict)
-    archive = next(item for item in ir["operations"] if isinstance(item, dict) and item["id"] == _ARCHIVE_TASK)  # type: ignore[union-attr]
-    assert isinstance(archive, dict)
+    archive = _item(ir["operations"], "id", _ARCHIVE_TASK)
     concurrency = archive["concurrency"]
     assert isinstance(concurrency, dict)
     concurrency["version"] = {"in": "header", "name": "If-Match"}
@@ -813,25 +812,25 @@ def _served_ir(repository_root: Path) -> dict[str, JsonValue]:
 def _with_a_deadline(ir: dict[str, JsonValue], service_ir: dict[str, JsonValue], operation_id: str) -> None:
     """The operation reads the service api's optional deadline header, with its code: no reference operation has both
     a deadline and an input field right."""
-    deadline_reader = _operation(service_ir, _GET_TASK)
+    deadline_reader = _item(service_ir["operations"], "id", _GET_TASK)
     header = deadline_reader["deadlineHeader"]
-    assert isinstance(header, str)
-    read_by = _operation(ir, operation_id)
-    read_by["deadlineHeader"] = header
+    reader_params, catalogue, service_catalogue = deadline_reader["params"], ir["errors"], service_ir["errors"]
+    assert isinstance(header, str) and isinstance(reader_params, dict)
+    assert isinstance(catalogue, dict) and isinstance(service_catalogue, dict)
+    read_by = _item(ir["operations"], "id", operation_id)
     params, errors = read_by["params"], read_by["errors"]
-    sent = ir_maps(ir_map(deadline_reader, "params"), "header")
-    declared = next(item for item in sent if item.get("name") == header)
     assert isinstance(params, dict) and isinstance(params["header"], list) and isinstance(errors, list)
-    params["header"].append({**declared, "required": False})
-    code = next(item for item in ir_maps(deadline_reader, "errors") if item.get("code") == _DEADLINE_EXCEEDED)
-    errors.append(dict(code))
-    catalogues = (ir["errors"], service_ir["errors"])
-    assert isinstance(catalogues[0], dict) and isinstance(catalogues[1], dict)
-    catalogues[0][_DEADLINE_EXCEEDED] = catalogues[1][_DEADLINE_EXCEEDED]
+
+    read_by["deadlineHeader"] = header
+    params["header"].append({**_item(reader_params["header"], "name", header), "required": False})
+    errors.append(_item(deadline_reader["errors"], "code", _DEADLINE_EXCEEDED))
+    catalogue[_DEADLINE_EXCEEDED] = service_catalogue[_DEADLINE_EXCEEDED]
 
 
-def _operation(ir: dict[str, JsonValue], operation_id: str) -> dict[str, JsonValue]:
-    found = next(item for item in ir["operations"] if isinstance(item, dict) and item["id"] == operation_id)  # type: ignore[union-attr]
+def _item(items: JsonValue, key: str, value: str) -> dict[str, JsonValue]:
+    """The member of a list of IR objects whose `key` is `value`."""
+    assert isinstance(items, list)
+    found = next(item for item in items if isinstance(item, dict) and item.get(key) == value)
     assert isinstance(found, dict)
     return found
 

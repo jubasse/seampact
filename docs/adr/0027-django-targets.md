@@ -183,7 +183,7 @@ The check lists every problem at once:
 - a root URLconf whose error handlers carry no wrapper;
 - the boundary not first in `MIDDLEWARE`, other seampact boundaries aside;
 - `DATA_UPLOAD_MAX_MEMORY_SIZE` below the api's largest body limit;
-- a `public_origin` set under relative URLs, or a missing or malformed one under absolute URLs;
+- a `public_origin` set under relative URLs; until drf-4, an api that writes absolute URLs, refused by name (from drf-4, a missing or malformed `public_origin` under absolute URLs);
 - a Django, DRF or Ninja major outside the matrix that `allowUntested` did not name at `generate`, read with `importlib.metadata`, as Laravel's boot check refuses a major other than 13. The generated code records the majors `generate` accepted.
 
 Beside that list, the boot check logs one warning, without refusing, for a Django, DRF or Ninja minor outside the tested minors the generated code records, as `generate` warns: a minor installed after `generate` serves with a notice.
@@ -235,7 +235,7 @@ DRF 3.18's `as_view()` sets `login_required = False`, so Django's `LoginRequired
 
 DRF copies the user it authenticated to the Django request, so a hook factory reads `request.user` and `request.auth`. On an access kind with no DRF authentication classes, DRF overwrites `request.user` with its `UNAUTHENTICATED_USER` (review probe), so the user Django's `AuthenticationMiddleware` set is lost. The DRF guide tells the app to name `SessionAuthentication`, or its own class, for that kind.
 
-The view claims an idempotency key after step 6, before the handler runs. The boundary middleware settles the claim with the reply that goes out, so a reply the exception handler or the api's 500 writes settles it too: it completes the record, or abandons it after a server error or a streamed reply. A stored reply is raised as `ReplayedReplyError`, which the exception handler answers as it was stored.
+The view claims an idempotency key after step 6, before the handler runs. The boundary middleware settles the claim with the reply that goes out, so a reply the exception handler or the api's 500 writes settles it too: it completes the record, or abandons it after a server error, an exception that propagates into it, or a streamed reply. Under ASGI it settles and abandons the record through `sync_to_async(thread_sensitive=True)`, in the thread the sync views run in, so a store that uses the ORM works as under WSGI. A stored reply is raised as `ReplayedReplyError`, which the exception handler answers as it was stored.
 
 DRF views are sync. An `async def` hook or handler method is refused by the boot check, naming the method and the fix, until a consumer needs it.
 
@@ -359,7 +359,7 @@ At run time: Python 3.12 or later; Django 5.2 or 6.x; DRF 3.18 for DRF; Ninja 1.
 
 | Waits for | What |
 |---|---|
-| a consumer that needs them | ADR 0026's list; `async def` hooks and handlers on DRF and in Ninja's sync views; relays and absolute URLs on DRF; `nativeDocs` on Ninja |
+| a consumer that needs them | ADR 0026's list; `async def` hooks and handlers on DRF and in Ninja's sync views; `nativeDocs` on Ninja |
 | after 1.0 | Django, DRF and Ninja versions below the floor (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)) |
 
 ### The consumer and the proof
@@ -381,8 +381,8 @@ The proof is the `node`-absent step, a green suite row per row above, each targe
 |---|---|
 | drf-1 | `python/django` emitters (URLconf, settings, app config) and `python/drf`: the generator, dataclass inputs, serializers, `APIView` declarations, exceptions; a golden under ruff and `mypy --strict` with the stubs, on Django 5.2 and 6.x |
 | drf-2 | the boundary middleware (sync and async), the `APIView` steps 2 to 8, the exception map and the handler wrappers, the system check, the boot check, `seampact_generate` and `seampact_check`; the sample app, the `default`, `hand-written` and `boot` profiles, the e2e job of `p7-drf.yml` |
-| drf-3 | paging, idempotency, throttle beside DRF's throttles, cache headers, the signed raw body, deadlines, redaction; the suite over every operation of both apis with nothing refused, and `test_redaction.py` |
-| drf-4 | DRF authentication, permission and throttle classes per access kind, the role map of DRF's exceptions, session and CSRF beside the boundary; the suite's security rows and a token-auth row |
+| drf-3 | paging, idempotency, throttle beside DRF's throttles, cache headers, the signed raw body, deadlines, relays, redaction; the suite over every operation of both apis with nothing refused, and `test_redaction.py` |
+| drf-4 | DRF authentication, permission and throttle classes per access kind, the role map of DRF's exceptions, session and CSRF beside the boundary, absolute URLs and principal bindings; the suite's security rows and a token-auth row |
 | ninja-1 | `python/ninja`: the generator on the shared Pydantic emitter, `Router` declarations, views, `bind_<api>()`; a golden under ruff, `mypy --strict` and `pyright` strict |
 | ninja-2 | the Ninja placement on `seampact-django`, the `on_exception` wrapper, sync and async views; the sample app, every profile, `p7-ninja.yml` |
 

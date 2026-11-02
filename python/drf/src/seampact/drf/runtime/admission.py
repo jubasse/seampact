@@ -1,7 +1,7 @@
 """What a generated DRF view does once DRF's `initial()` ran (ADR 0027 "DRF"): it checks the boundary's mark and
-the chosen route, refuses by name an operation whose features this release does not serve, runs steps 2 to 5, then
-reads the input (the version a header carries before the header check, steps 6 to 8, the deadline, the restricted
-input fields and the idempotency claim) and writes the handler's result with the boundary's own encoding: the
+the chosen route, refuses by name an api whose absolute URLs this release does not serve, runs steps 2 to 5, then
+reads the input (the version a header carries before the header check, steps 6 to 8, the restricted input fields,
+the deadline and the idempotency claim) and writes the handler's result with the boundary's own encoding: the
 restricted output fields left out, the page body and links, and the cache headers with their 304."""
 
 import dataclasses
@@ -33,6 +33,7 @@ from seampact.codegen.runtime.sync_driver import call_without_suspension, run_wi
 from seampact.codegen.runtime.version_token import sent_version
 from seampact.codegen.runtime.wire_codec import WireCodec
 from seampact.django.runtime.api_settings import access_hooks
+from seampact.django.runtime.boot_check import writes_absolute_urls
 from seampact.django.runtime.contract_replies import django_response
 from seampact.django.runtime.idempotency_records import claim_idempotency
 from seampact.django.runtime.request_state import BoundaryState, state_of
@@ -42,14 +43,8 @@ from seampact.hooks import RequestView, ResolvedScope
 
 _EMPTY_SHAPE: Final = "empty"
 _PAGE_SHAPE: Final = "page"
-_ABSOLUTE_URLS: Final = "absolute"
 _IF_NONE_MATCH: Final = "If-None-Match"
 _QUERY_STRING: Final = "QUERY_STRING"
-# The operation features a later release of seampact-drf serves; an operation that declares one is refused by name.
-_LATER_FEATURES: Final = (
-    ("bindings", "principal bindings"),
-    ("upstream", "relays"),
-)
 
 
 class ContractAdmission:
@@ -182,11 +177,14 @@ class ContractAdmission:
         return validated
 
     def _restricted_input(self, decoded: DecodedInput) -> object:
-        """The deadline the caller sent, then step 7: the body without the restricted members its caller may not
-        send under `strip`; a denied member under `reject` is refused."""
+        """Step 7, the body without the restricted members its caller may not send under `strip` (a denied member
+        under `reject` is refused), then the deadline the caller sent, in ADR 0026's order."""
+        restricted_body = run_without_suspension(
+            checked_input_fields(self._admitted, self._hooks, call_without_suspension)
+        )
         request_deadline(self._state.contract, self._state.operation_id, decoded, datetime.now(UTC))
 
-        return run_without_suspension(checked_input_fields(self._admitted, self._hooks, call_without_suspension))
+        return restricted_body
 
     def _success(self, status: int, result: object) -> Reply:
         contract, operation_id = self._state.contract, self._state.operation_id
@@ -223,7 +221,13 @@ class ContractAdmission:
         if shape != _PAGE_SHAPE:
             return success_body(contract.format(operation_id), shape, visible, status, path), ()
 
-        items = visible if isinstance(visible, list) else []
+        if not isinstance(visible, list):
+            raise BoundaryFailureError(
+                f"seampact: the items of operation '{operation_id}' encoded to a {type(visible).__qualname__}, not a "
+                "list; return the page's items as a list."
+            )
+
+        items: list[object] = visible
         raw_query = str(self._request.META.get(_QUERY_STRING, ""))
         facts = _page_facts(contract, operation_id, body)
         page = page_parts(contract, operation_id, self._query, raw_query, items, facts, status, path)
@@ -244,7 +248,7 @@ def admit(
             "boundary's mark; list the api's boundary first in MIDDLEWARE, and test through the test Client."
         )
 
-    _refuse_later_features(contract, operation_id)
+    _refuse_absolute_urls(contract, operation_id)
     access = AccessState(
         contract=contract,
         operation_id=operation_id,
@@ -334,15 +338,10 @@ def _params(contract: ApiContract, codec: WireCodec, code: str, params: object) 
     return wire if isinstance(wire, Mapping) else None
 
 
-def _refuse_later_features(contract: ApiContract, operation_id: str) -> None:
-    operation = contract.operation(operation_id)
-    later = [description for key, description in _LATER_FEATURES if operation.get(key)]
-
-    if ir_string(ir_map(ir_map(contract.ir_view, "api"), "wire"), "urls") == _ABSOLUTE_URLS:
-        later.append("absolute URLs")
-
-    if later:
+def _refuse_absolute_urls(contract: ApiContract, operation_id: str) -> None:
+    """The boot check refuses absolute URLs; this holds when the app turned the boot check off."""
+    if writes_absolute_urls(contract):
         raise BoundaryFailureError(
-            f"seampact: operation '{operation_id}' of api '{contract.api}' declares {', '.join(later)}, which this "
-            "release of seampact-drf does not serve yet; the request is refused rather than served unchecked."
+            f"seampact: operation '{operation_id}' of api '{contract.api}' writes absolute URLs, which this release "
+            "of seampact-drf does not serve yet; the request is refused rather than served unchecked."
         )

@@ -10,7 +10,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mappin
 from types import MappingProxyType
 from typing import ClassVar, Final
 
-from asgiref.sync import iscoroutinefunction, markcoroutinefunction
+from asgiref.sync import iscoroutinefunction, markcoroutinefunction, sync_to_async
 from django.conf import settings
 from django.core.exceptions import (
     BadRequest,
@@ -127,6 +127,8 @@ class ContractBoundary:
         return self._settled(request, reply)
 
     async def __acall__(self, request: HttpRequest) -> HttpResponseBase:
+        """The idempotency record is settled or released in the thread the sync views run in, so a store that uses
+        the ORM works as it does under WSGI."""
         early = self._step_one(request)
 
         if early is not None:
@@ -136,10 +138,10 @@ class ContractBoundary:
             reply = self.get_response(request)
             settled: object = await reply if inspect.isawaitable(reply) else reply
         except Exception as propagated:
-            self._report_propagated(request, propagated)
+            await sync_to_async(self._report_propagated, thread_sensitive=True)(request, propagated)
             raise
 
-        return self._settled(request, settled)
+        return await sync_to_async(self._settled, thread_sensitive=True)(request, settled)
 
     def _settled(self, request: HttpRequest, reply: object) -> HttpResponseBase:
         """The reply checked; a middleware inside that answered no response gets the api's 500 on a contract request,
