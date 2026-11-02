@@ -14,6 +14,7 @@ from seampact.codegen.runtime.idempotency import (
     IdempotencyReplayed,
     IdempotencyStoreFailure,
     begin_idempotency,
+    enforces_idempotency,
     idempotency_fingerprint,
     idempotency_partition_key,
     settle_idempotency,
@@ -185,3 +186,8 @@ def test_a_store_failure_after_the_reply_goes_back_to_the_placement(
 
     assert isinstance(failure, IdempotencyStoreFailure)
     assert isinstance(failure.cause, ConnectionError)
+
+
+def test_only_operations_whose_key_the_boundary_enforces_need_the_store(tasks_contract: ApiContract) -> None:
+    assert enforces_idempotency(tasks_contract, "createTask")
+    assert not enforces_idempotency(tasks_contract, "getTask")

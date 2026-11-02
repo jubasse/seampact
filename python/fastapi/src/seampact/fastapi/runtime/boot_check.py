@@ -16,10 +16,10 @@ from starlette.routing import BaseRoute, Host, Match, Mount, Route
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule, allow_listed, base_path_of
 from seampact.codegen.runtime.framework_versions import framework_version_problems
 from seampact.codegen.runtime.hook_check import HookFixes, hook_problems
+from seampact.codegen.runtime.idempotency import enforces_idempotency
 from seampact.codegen.runtime.version import other_version_problem
 from seampact.fastapi.runtime.api_binding import ApiBinding
 from seampact.fastapi.runtime.exception_map import is_wrapped, takes_http_exception
-from seampact.fastapi.runtime.idempotency_need import enforces_idempotency
 from seampact.fastapi.runtime.placement import FrameworkRoutesCheck, HooksCheck
 from seampact.fastapi.runtime.unserved import unserved_features, unserved_problem
 

@@ -1,9 +1,8 @@
 """What the loaded script tells the decide doubles, framework-free: the denial code of a right or rule, by name and,
 when the script names one, by purpose (`route`, `field` or `sortKey`)."""
 
-from seampact_consumer_suite.control_state import loaded_script
-
 from seampact.hooks import Purpose, purpose
+from seampact_consumer_suite.control_state import loaded_script
 
 _PURPOSE_NAMES = ((purpose.Route, "route"), (purpose.Field, "field"), (purpose.SortKey, "sortKey"))
 

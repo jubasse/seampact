@@ -2,7 +2,6 @@
 `stripe` identities, the channel resolver, the deciders of every right and rule, and the listener."""
 
 import logging
-from collections.abc import Sequence
 from typing import Final
 
 from generated.tasks.operations import UserCredentials
@@ -11,7 +10,8 @@ from sample_data import channel
 from seampact_consumer_suite.control_state import record_hook_call
 from seampact_consumer_suite.credentials import credential_number, credential_text
 from seampact_consumer_suite.scripted_answers import scripted_scope_denial
-from suite_decisions import scripted_decision
+from seampact_consumer_suite.scripted_decisions import scripted_decision
+from seampact_consumer_suite.stripe_signature import STRIPE_ACCOUNT, stripe_signature_verified
 
 from seampact.hooks import (
     AuthenticateRequest,
@@ -22,21 +22,17 @@ from seampact.hooks import (
     ResolvedScope,
     ResolveScopeRequest,
     ScopeResolution,
-    SignedTemplateRequest,
     UnexpectedFailure,
     authenticate_result,
     decision,
     scope_id_source,
     scope_resolution,
 )
-from seampact.signed_webhooks import SignatureEncoding, SignatureScheme, SignedMessage, TemplateSignatureVerifier
 
 UNAUTHENTICATED: Final = "api.unauthenticated"
 RATE_LIMITED: Final = "api.rate_limited"
 THROTTLE_RULE: Final = "throttle"
 OVERRIDDEN_RIGHT: Final = "tasks.update"
-STRIPE_ACCOUNT: Final = "acct_seampact"
-_STRIPE_KEY_ID: Final = "stripe"
 _LOGGER: Final = logging.getLogger("consumer.tasks")
 
 
@@ -79,37 +75,14 @@ class ChannelResolver:
 
 
 class StripeHook:
-    """The `stripe` identity: `seampact-signed-webhooks` verifies the signature over the raw body with the suite's
-    `stripeSecret`, the one secret of the key id `stripe`."""
+    """The `stripe` identity: the shared suite check verifies the signature over the raw body."""
 
     def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
         record_hook_call("authenticate:stripe", request.operation.api, request.operation.id)
-        signed = request.signature
-
-        if not isinstance(signed, SignedTemplateRequest) or not _verified(signed):
+        if not stripe_signature_verified(request.signature):
             return authenticate_result.Denied(deny=ErrorCodeWithParams(code=UNAUTHENTICATED))
 
         return authenticate_result.Authenticated(principal=WebhookCaller.model_validate({"account": STRIPE_ACCOUNT}))
-
-
-class _StripeSecrets:
-    def secrets_for(self, key_id: str) -> Sequence[str | bytes]:
-        return [credential_text("stripeSecret")] if key_id == _STRIPE_KEY_ID else []
-
-
-def _verified(signed: SignedTemplateRequest) -> bool:
-    template = signed.template
-    scheme = SignatureScheme(
-        algorithm=template.algorithm,
-        payload=template.payload,
-        encoding=SignatureEncoding(template.encoding.value),
-        tolerance_ms=template.tolerance_ms,
-    )
-    message = SignedMessage(
-        raw_body=signed.raw_body, timestamp=signed.timestamp, candidate_signatures=signed.candidate_signatures
-    )
-
-    return TemplateSignatureVerifier(_StripeSecrets()).verify(message, signed.key_id, scheme).verified
 
 
 class TasksDecider:

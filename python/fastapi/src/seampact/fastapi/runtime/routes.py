@@ -14,11 +14,11 @@ from seampact.codegen.runtime.access_steps import AccessHooks, AccessState, head
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
 from seampact.codegen.runtime.hook_check import hook_needs
+from seampact.codegen.runtime.idempotency import enforces_idempotency
 from seampact.fastapi.runtime.api_binding import ApiBinding, is_unexpected_error_listener
 from seampact.fastapi.runtime.contract_input import InputBuilder
 from seampact.fastapi.runtime.handler_call import call_handler
 from seampact.fastapi.runtime.handler_reply import OperationTypes, ReplyContext, result_reply
-from seampact.fastapi.runtime.idempotency_need import enforces_idempotency
 from seampact.fastapi.runtime.input_features import featured_input
 from seampact.fastapi.runtime.placement import Factory, OperationRoute
 from seampact.fastapi.runtime.request_state import RequestState, state_of

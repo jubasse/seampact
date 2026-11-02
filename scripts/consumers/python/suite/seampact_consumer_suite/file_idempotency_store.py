@@ -1,4 +1,4 @@
-"""The app's idempotency store for the suite: one JSON file beside the suite's control state, read and written under a
+"""The idempotency store of a suite app: one JSON file beside the suite's control state, read and written under a
 lock, since uvicorn may run several workers; entries are kept for their lifetime."""
 
 import base64

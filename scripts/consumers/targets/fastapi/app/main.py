@@ -8,7 +8,6 @@ from typing import Final
 from control import control_router
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from file_idempotency_store import FileIdempotencyStore
 from generated.tasks.fastapi import TasksHandlerFactories, bind_tasks
 from handlers import (
     AppHandlers,
@@ -28,6 +27,7 @@ from hooks import (
     UserHook,
 )
 from seampact_consumer_suite.boot_variant import BootVariant, current_boot_variant, serves_unlisted_route
+from seampact_consumer_suite.file_idempotency_store import FileIdempotencyStore
 from seampact_consumer_suite.log_lines import SuiteLogHandler
 from seampact_consumer_suite.scripted_answers import ScriptedReply
 from seampact_consumer_suite.suite_files import SuiteFiles, configure_suite_files
