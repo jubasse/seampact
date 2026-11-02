@@ -296,6 +296,8 @@ Each operation is one `api_operation()` call:
 - with `include_in_schema=False`;
 - with a view that takes the request and one `str` parameter per path placeholder, which Ninja cannot refuse, so it answers no 422 (spike). The view ignores them: the input comes from the boundary's raw decoding. A view without them would make Ninja warn at URLconf import for each placeholder, and fail under `python -W error` (review probe).
 
+Each contract path also declares `OPTIONS`, without `auth=` or throttles, with a view of the same parameters that answers the path's `notFound` 404: the boundary leaves a CORS preflight to the app, and when no CORS layer answers it, Ninja would answer 405, as DRF's `options` would answer its metadata.
+
 `bind_<api>()` marks the Django views of the contract paths `login_required = False`, so Django's `LoginRequiredMiddleware` never redirects a contract request; it would answer a bearer caller without a session with a 302 (review probe). A target test fails by name if the mark stops reaching Ninja's views.
 
 `bind_<api>()` takes Ninja's per-access-kind values as `access`, a mapping from each access kind to `AccessSettings(auth=..., throttle=...)`: the `auth=` and `throttle=` Ninja applies to that kind's operations, none when the kind is absent.
@@ -324,7 +326,7 @@ Beside the shared list: Ninja's own docs routes, read from the `NinjaAPI`'s `doc
 
 #### Native docs
 
-Contract operations are always registered with `include_in_schema=False`, so Ninja's `/docs` shows the app's own operations only. The target declares no `nativeDocs` artefact until a consumer needs it: the app config refuses the key by name (`config.artefacts.unknown`). `frameworkDocs: keep` is accepted; `frameworkDocs: off` is refused (`config.frameworkDocs.unsupported`), with the fix `NinjaAPI(docs_url=None, openapi_url=None)`.
+Contract operations are always registered with `include_in_schema=False`, so Ninja builds no schema of its own for them. With the `nativeDocs` artefact, `bind_<api>()` wraps `NinjaAPI.get_openapi_schema()` so each document it builds holds the api's operations with seampact's operation objects at their paths under the entry's `mount`, and seampact's components beside the app's; a component the app's document holds with another value fails the boot, naming it. The generated `native_docs.json` and its reader are the ones FastAPI uses (ADR 0026 "Native docs"). `frameworkDocs: keep` is accepted; `frameworkDocs: off` is refused (`config.frameworkDocs.unsupported`), with the fix `NinjaAPI(docs_url=None, openapi_url=None)`.
 
 ### Redaction
 
@@ -362,7 +364,7 @@ At run time: Python 3.12 or later; Django 5.2 or 6.x; DRF 3.18 for DRF; Ninja 1.
 
 | Waits for | What |
 |---|---|
-| a consumer that needs them | ADR 0026's list; `async def` hooks and handlers on DRF and in Ninja's sync views; `nativeDocs` on Ninja |
+| a consumer that needs them | ADR 0026's list; `async def` hooks and handlers on DRF and in Ninja's sync views |
 | after 1.0 | Django, DRF and Ninja versions below the floor (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)); principal bindings, refused by name as on PHP |
 
 ### The consumer and the proof
