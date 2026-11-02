@@ -110,20 +110,3 @@ class HookFactories:
     scope_resolvers: Mapping[str, Factory[ResolveScopeHook]]
     idempotency_store: Factory[IdempotencyStore] | None
     on_unexpected_error: Factory[UnexpectedErrorListener] | None
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class OperationSettings:
-    """The run-time settings of one operation, which win over the api's."""
-
-    responses: ResponsesMode | None = None
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class RunSettings:
-    """The run-time settings `bind_<api>()` takes from the app's own settings; None keeps the target option."""
-
-    responses: ResponsesMode | None
-    body_validation: bool | None
-    operations: Mapping[str, OperationSettings]
-    public_origin: str | None

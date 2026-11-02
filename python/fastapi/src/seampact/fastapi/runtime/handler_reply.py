@@ -14,26 +14,16 @@ from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError
 from seampact.codegen.runtime.field_rights import visible_output
 from seampact.codegen.runtime.ir_view import IrMap, ir_maps, ir_string
+from seampact.codegen.runtime.page_facts import page_facts
 from seampact.codegen.runtime.page_reply import PageParts, page_parts
 from seampact.codegen.runtime.replies import CONTENT_TYPE, JSON_MEDIA, Reply, error_reply, json_bytes, success_body
+from seampact.codegen.runtime.run_settings import OperationTypes
 from seampact.codegen.runtime.wire_codec import WireCodec
 from seampact.fastapi.runtime.handler_call import call_handler
-from seampact.fastapi.runtime.page_facts import page_facts
 
 _ITEM_SHAPE: Final = "item"
 _PAGE_SHAPE: Final = "page"
 _ITEMS: Final = "items"
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class OperationTypes:
-    """The generated types of one operation the runtime builds and reads: its request, its success classes by status,
-    its errors class, and the model of its body's rule proofs when it has some."""
-
-    request: type
-    responses: tuple[tuple[int, type], ...]
-    errors: type
-    proofs: type | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

@@ -1,6 +1,6 @@
 """The parameter parts of each operation's input (ADR 0026 "Types and validation"), as object schemas the shared
 Pydantic emitter writes beside the api's own: `<Op>Path`, `<Op>Query` and `<Op>Headers` hold the parameters the
-handler reads, and `<Op>Proofs` the body's rule proofs, which the handler never reads. The input dependency validates
+handler reads, and `<Op>Proofs` the body's rule proofs, which the handler never reads. The placement runtime validates
 each part of the boundary's decoded tree with its model in strict mode, and the runtime renames members through the
 contract module's per-operation tables. Their ids (`<operationId>.path`) cannot be the id of a declared schema; a
 class name taken twice is refused as `name.collision`."""
@@ -9,7 +9,8 @@ import dataclasses
 from collections.abc import Sequence
 
 from seampact.codegen.kept_forms import handler_headers
-from seampact.fastapi.layout import ApiLayout
+from seampact.codegen.names import ApiNames
+from seampact.codegen.pydantic_layout import ApiLayout
 from seampact.ir.model import (
     ContractIR,
     Direction,
@@ -118,3 +119,12 @@ def _member(name: str, type_use: TypeUse, origin: Origin, *, optional: bool) -> 
         extensions={},
         origin=origin,
     )
+
+
+def proof_models(layout: ApiLayout, names: ApiNames) -> dict[str, str]:
+    """The `<Op>Proofs` class of each kept operation whose body carries rule proofs."""
+    return {
+        operation_id: names.schema_classes[input_schema_id(operation_id, PROOFS_PART)]
+        for operation_id in layout.operations
+        if input_schema_id(operation_id, PROOFS_PART) in names.schema_classes
+    }

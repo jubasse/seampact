@@ -16,9 +16,9 @@ from seampact.codegen.runtime.failures import BoundaryFailureError
 from seampact.codegen.runtime.input_decoding import DecodedInput, Issue, schema_invalid
 from seampact.codegen.runtime.ir_view import ir_map, ir_maps, ir_string
 from seampact.codegen.runtime.pydantic.issues import MAX_RENDERED_ISSUES, body_issues, part_issues, proof_issues
+from seampact.codegen.runtime.run_settings import OperationTypes
 from seampact.codegen.runtime.wire_codec import WireCodec
 from seampact.codegen.runtime.wire_values import raw_query
-from seampact.fastapi.runtime.handler_reply import OperationTypes
 
 _INPUT_FIELD: Final = "input"
 _PRINCIPAL_FIELD: Final = "principal"

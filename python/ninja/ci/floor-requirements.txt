@@ -1,0 +1,9 @@
+# The floor row of p7-ninja.yml: Django 5.2 and Django Ninja 1.5.3, installed over the locked workspace (whose Django
+# and Ninja are the latest) with `--require-hashes --no-deps`; their own dependencies come from the lock. To bump a
+# pin: `uv pip compile --generate-hashes --no-deps` of the two requirements, then replace these lines.
+django==5.2.18 \
+    --hash=sha256:461c5dd06d2ea16bd5ca37d3f46e4def1d6b0fe7588c6f4e2119517bb0af8b2d \
+    --hash=sha256:92ed81d500be6408ecd704d7bd1366c534f30427bffcc63c5fefb129561aec7c
+django-ninja==1.5.3 \
+    --hash=sha256:0a6ead5b4e57ec1050b584eb6f36f105f256b8f4ac70d12e774d8b6dd91e2198 \
+    --hash=sha256:974803944965ad0566071633ffd4999a956f2ad1ecbed815c0de37c1c969592b

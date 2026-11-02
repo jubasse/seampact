@@ -1,8 +1,8 @@
-"""The Python names of one api's FastAPI package (ADR 0026 "Placement"): per operation its request, input parts,
-results, typed errors, page and scopes, and its handler method; the credentials class of each identity an operation
-reads, with one attribute per scheme; the endpoints protocol of each resource (an operation
-without a resource joins its surface's); one exception per error code and the api's contract exception base; and the
-placement's own names. Two classes of one module taking one name are refused as `name.collision`."""
+"""The Python names of one api's package on the Pydantic targets, FastAPI and Ninja (ADR 0026 "Placement"): per
+operation its request, input parts, results, typed errors, page and scopes, and its handler method; the credentials
+class of each identity an operation reads, with one attribute per scheme; the endpoints protocol of each resource (an
+operation without a resource joins its surface's); one exception per error code and the api's contract exception base;
+and the placement's own names. Two classes of one module taking one name are refused as `name.collision`."""
 
 from collections.abc import Mapping
 from dataclasses import dataclass

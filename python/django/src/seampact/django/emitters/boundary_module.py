@@ -8,6 +8,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final
 
+from seampact.codegen.placement_lines import tuple_literal
 from seampact.codegen.printer import INDENT, PythonModule, bracketed, string_literal
 from seampact.ir.run.generator import FrameworkRoute, TargetEntry
 
@@ -22,6 +23,7 @@ class BoundaryBase:
 
 
 _DJANGO_RUNTIME: Final = "_django_runtime"
+SETTINGS_MODULE: Final = ".settings"
 DJANGO_BOUNDARY_BASE: Final = BoundaryBase("seampact.django.runtime", _DJANGO_RUNTIME, "ContractBoundary")
 
 
@@ -33,8 +35,11 @@ def boundary_module(
     run_time_options: Sequence[tuple[str, str]],
     entry: TargetEntry,
     base: BoundaryBase = DJANGO_BOUNDARY_BASE,
+    settings_module: str | None = SETTINGS_MODULE,
 ) -> str:
-    """`base` is the target's own boundary class when the target adds settings keys the boot check reads."""
+    """`base` is the target's own boundary class when the target adds settings keys the boot check reads.
+    `settings_module` is None for a target that takes the api's handlers and hooks in code rather than from
+    `settings.SEAMPACT`; an empty `handler_resources` is left out likewise."""
     module = PythonModule(f"The Django boundary of api '{api}': list {api_class}Boundary first in MIDDLEWARE.")
     base_module = module.imported(base.module, base.alias)
     frameworks = _accepted_frameworks(_DJANGO_RUNTIME, entry)
@@ -43,7 +48,11 @@ def boundary_module(
     if frameworks or framework_routes:
         module.imported(DJANGO_BOUNDARY_BASE.module, _DJANGO_RUNTIME)
     contract = module.imported(".contract", "_contract")
-    settings = module.imported(".settings", "_settings")
+    settings_lines = (
+        [f"{INDENT}settings_keys = {module.imported(settings_module, '_settings')}.SETTINGS_KEYS"]
+        if settings_module is not None
+        else []
+    )
     module.add_block(
         [
             f"class {api_class}Boundary({base_module}.{base.name}):",
@@ -52,8 +61,8 @@ def boundary_module(
             f"{INDENT}api = {string_literal(api)}",
             f"{INDENT}generated_by = {string_literal(generated_by)}",
             f"{INDENT}contract = {contract}.CONTRACT",
-            f"{INDENT}settings_keys = {settings}.SETTINGS_KEYS",
-            *_handler_resources(module, handler_resources),
+            *settings_lines,
+            *(_handler_resources(module, handler_resources) if handler_resources else []),
             *(f"{INDENT}{attribute} = {literal}" for attribute, literal in run_time_options),
             *_tuple_attribute("frameworks", frameworks),
             *_tuple_attribute("framework_routes", framework_routes),
@@ -73,17 +82,11 @@ def _handler_resources(module: PythonModule, handler_resources: Mapping[str, Seq
         head = f"{string_literal(resource)}: "
 
         if len(operation_ids) == 1:
-            lines.append(f"{INDENT * 2}{head}{_string_tuple(operation_ids)},")
+            lines.append(f"{INDENT * 2}{head}{tuple_literal(operation_ids)},")
         else:
             lines += bracketed(INDENT * 2, head, [string_literal(item) for item in operation_ids], ",")
 
     return [*lines, f"{INDENT}}}"]
-
-
-def _string_tuple(texts: Sequence[str]) -> str:
-    literals = [string_literal(text) for text in texts]
-
-    return f"({literals[0]},)" if len(literals) == 1 else f"({', '.join(literals)})"
 
 
 def _accepted_frameworks(runtime: str, entry: TargetEntry) -> list[str]:
@@ -94,11 +97,11 @@ def _accepted_frameworks(runtime: str, entry: TargetEntry) -> list[str]:
         arguments = [
             f"package={string_literal(framework.package)}",
             f"unit={runtime}.VersionUnit.{framework.unit.name}",
-            f"accepted={_string_tuple(framework.accepted_units(entry.allow_untested))}",
+            f"accepted={tuple_literal(framework.accepted_units(entry.allow_untested))}",
         ]
 
         if framework.tested_minors:
-            arguments.append(f"tested_minors={_string_tuple(framework.tested_minors)}")
+            arguments.append(f"tested_minors={tuple_literal(framework.tested_minors)}")
 
         lines += bracketed(INDENT * 2, f"{runtime}.AcceptedFramework", arguments, ",")
 

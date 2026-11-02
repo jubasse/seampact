@@ -1,16 +1,17 @@
-"""The options and artefact switches of a DRF entry (ADR 0026 "Options and registration", ADR 0027 "Options and
-registration"), each unknown key and each value the target does not take refused by name. Run-time defaults
+"""The options and artefact switches every Django target reads (ADR 0026 "Options and registration", ADR 0027 "Options
+and registration"), each unknown key and each value the target does not take refused by name. The run-time defaults
 (`responses`, `bodyValidation`, `frameworkEtag`, `catchAll`, the boot check's parts) go into the boundary's
-declaration; `rules` shapes the serializers; `routeHelpers` decides the `routes` module."""
+declaration; `routeHelpers` decides the `routes` module. A target reads its own keys (`rules`, Ninja's `views`) with
+`OptionReader`."""
 
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
-from seampact.drf.serializer_fields import RulesMode
+from seampact.codegen.runtime.reply_verdict import FrameworkEtagMode, ResponsesMode
 from seampact.ir.config.json_value import JsonValue
 
 _HANDLERS: Final = "handlers"
@@ -19,30 +20,12 @@ _INDENT: Final = "indent"
 _INDENT_SPACES: Final = 4
 _NAMING_KEYS: Final = ("suffixes", "escape", "enumCase")
 _LAYOUT: Final = "layout"
-_KNOWN_OPTIONS: Final = (
-    _HANDLERS,
-    _INDENT,
-    "rules",
-    "responses",
-    "bodyValidation",
-    "frameworkEtag",
-    "catchAll",
-)
+_SHARED_OPTIONS: Final = ("responses", "bodyValidation", "frameworkEtag", "catchAll")
 _ROUTE_HELPERS: Final = "routeHelpers"
 _BOOT_CHECK: Final = "bootCheck"
 _ACCESS_HOOKS: Final = "accessHooks"
 _BOOT_CHECK_PARTS: Final = ("frameworkRoutes", "hooks")
 _HOOKS_OFF: Final = "off"
-
-
-class ResponsesMode(StrEnum):
-    STRICT = "strict"
-    WARN = "warn"
-
-
-class FrameworkEtag(StrEnum):
-    STRIP = "strip"
-    KEEP = "keep"
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,25 +38,44 @@ class BootCheck:
 
 
 @dataclass(frozen=True, slots=True)
-class DrfOptions:
-    rules: RulesMode = RulesMode.NATIVE
+class DjangoTargetOptions:
     responses: ResponsesMode = ResponsesMode.STRICT
     body_validation: bool = False
-    framework_etag: FrameworkEtag = FrameworkEtag.STRIP
+    framework_etag: FrameworkEtagMode = FrameworkEtagMode.STRIP
     catch_all: bool = True
     route_helpers: bool = True
     boot_check: BootCheck = BootCheck()
 
+    def run_time_options(self) -> list[tuple[str, str]]:
+        """Each run-time default as the boundary declaration's attribute and its Python literal."""
+        return [
+            ("responses", json.dumps(self.responses.value)),
+            ("body_validation", repr(self.body_validation)),
+            ("framework_etag", json.dumps(self.framework_etag.value)),
+            ("catch_all", repr(self.catch_all)),
+            ("boot_check", repr(self.boot_check.enabled)),
+            ("boot_check_framework_routes", repr(self.boot_check.framework_routes)),
+            ("boot_check_hooks", repr(self.boot_check.hooks)),
+        ]
 
-def drf_options(options: Mapping[str, JsonValue], artefacts: Mapping[str, JsonValue], refusals: Refusals) -> DrfOptions:
-    reader = _Reader(options, refusals)
+
+def django_target_options(
+    target: str,
+    own_options: Sequence[str],
+    options: Mapping[str, JsonValue],
+    artefacts: Mapping[str, JsonValue],
+    refusals: Refusals,
+) -> DjangoTargetOptions:
+    """The shared options and artefacts of `target`; `own_options` are the keys the target reads itself."""
+    known_options = (_HANDLERS, _INDENT, *own_options, *_SHARED_OPTIONS)
+    reader = OptionReader(options, refusals)
 
     for key in options:
         if key in _NAMING_KEYS:
             reader.refuse(
                 "options.naming.unsupported",
                 key,
-                f"The naming option '{key}' is not taken by the drf target: it names Python with the defaults of "
+                f"The naming option '{key}' is not taken by the {target} target: it names Python with the defaults of "
                 "ADR 0007, which the shared naming vectors test.",
                 f"Remove '{key}' from the target's `options`.",
             )
@@ -81,14 +83,15 @@ def drf_options(options: Mapping[str, JsonValue], artefacts: Mapping[str, JsonVa
             reader.refuse(
                 "options.layout.unsupported",
                 key,
-                "The option 'layout' is set; the drf target writes one package per api, the only layout it takes.",
+                f"The option 'layout' is set; the {target} target writes one package per api, the only layout it "
+                "takes.",
                 "Remove 'layout' from the target's `options`.",
             )
-        elif key not in _KNOWN_OPTIONS:
+        elif key not in known_options:
             reader.refuse(
                 "options.unknown",
                 key,
-                f"The option '{key}' is not one the drf target knows; it takes '{"', '".join(_KNOWN_OPTIONS)}'.",
+                f"The option '{key}' is not one the {target} target knows; it takes '{"', '".join(known_options)}'.",
                 f"Remove '{key}' from the target's `options`.",
             )
 
@@ -105,18 +108,17 @@ def drf_options(options: Mapping[str, JsonValue], artefacts: Mapping[str, JsonVa
             "options.indent", f"The option 'indent: {_shown(options[_INDENT])}'", _at(_INDENT), Delivery.CONSUMER
         )
 
-    return DrfOptions(
-        rules=reader.choice("rules", RulesMode.NATIVE),
+    return DjangoTargetOptions(
         responses=reader.choice("responses", ResponsesMode.STRICT),
         body_validation=reader.flag("bodyValidation", default=False),
-        framework_etag=reader.choice("frameworkEtag", FrameworkEtag.STRIP),
+        framework_etag=reader.choice("frameworkEtag", FrameworkEtagMode.STRIP),
         catch_all=reader.flag("catchAll", default=True),
-        route_helpers=_artefacts(artefacts, refusals),
+        route_helpers=_artefacts(target, artefacts, refusals),
         boot_check=_boot_check(artefacts.get(_BOOT_CHECK, True), refusals),
     )
 
 
-def _artefacts(artefacts: Mapping[str, JsonValue], refusals: Refusals) -> bool:
+def _artefacts(target: str, artefacts: Mapping[str, JsonValue], refusals: Refusals) -> bool:
     """Refuses each switch the target does not take, and returns `routeHelpers`."""
     for key, value in artefacts.items():
         at = IrPlace(f"/artefacts/{key}")
@@ -128,8 +130,8 @@ def _artefacts(artefacts: Mapping[str, JsonValue], refusals: Refusals) -> bool:
         elif key not in (_ROUTE_HELPERS, _BOOT_CHECK, _ACCESS_HOOKS) or not _is_switch(key, value):
             refusals.add(
                 "artefacts.unknown",
-                f"The artefact switch '{key}: {_shown(value)}' is not one the drf target takes.",
-                f"Remove '{key}' from the entry's `artefacts`; the drf target takes '{_ROUTE_HELPERS}', "
+                f"The artefact switch '{key}: {_shown(value)}' is not one the {target} target takes.",
+                f"Remove '{key}' from the entry's `artefacts`; the {target} target takes '{_ROUTE_HELPERS}', "
                 f"'{_BOOT_CHECK}' and '{_ACCESS_HOOKS}: true'.",
                 at,
             )
@@ -161,7 +163,9 @@ def _boot_check(value: JsonValue, refusals: Refusals) -> BootCheck:
     return BootCheck(framework_routes=value.get("frameworkRoutes", True) is not False, hooks=hooks != _HOOKS_OFF)
 
 
-class _Reader:
+class OptionReader:
+    """Reads one option of an entry, refusing by name a value outside its set."""
+
     def __init__(self, options: Mapping[str, JsonValue], refusals: Refusals) -> None:
         self._options = options
         self._refusals = refusals
