@@ -1,6 +1,6 @@
 """The boot check of one api (ADR 0026 "The boot check"), run by the boundary on `lifespan.startup`, else once on the
 first request. It lists every problem at once: the runtime version (G3), a FastAPI minor or a Starlette or Pydantic
-major `generate` did not accept, the hooks, the handler factories, the operation features this release does not serve,
+major `generate` did not accept, the hooks, the handler factories, the public origin,
 a contract request another route would take (Starlette's public `matches()` over `app.routes`, then over an
 `APIRouter` target's routes), an app route or a `frontend()` route under a base path that `frameworkRoutes` does not
 allow-list, the boundary not first in `app.user_middleware`, an `HTTPException` handler added after bind, and a
@@ -17,11 +17,11 @@ from seampact.codegen.runtime.framework_routes import FrameworkRouteRule, allow_
 from seampact.codegen.runtime.framework_versions import framework_version_problems
 from seampact.codegen.runtime.hook_check import HookFixes, hook_problems
 from seampact.codegen.runtime.idempotency import enforces_idempotency
+from seampact.codegen.runtime.public_origin import public_origin_problem
 from seampact.codegen.runtime.version import other_version_problem
 from seampact.fastapi.runtime.api_binding import ApiBinding
 from seampact.fastapi.runtime.exception_map import is_wrapped, takes_http_exception
 from seampact.fastapi.runtime.placement import FrameworkRoutesCheck, HooksCheck
-from seampact.fastapi.runtime.unserved import unserved_features, unserved_problem
 
 _SAMPLE_SEGMENT: Final = "seampact"
 _PLACEHOLDER: Final = re.compile(r"\{[^{}]+\}")
@@ -52,6 +52,7 @@ def boot_problems(binding: ApiBinding) -> list[str]:
         problems += _hook_problems(binding)
 
     problems += _handler_problems(binding)
+    problems += _public_origin_problems(binding)
     problems += _route_problems(binding)
 
     if placement.boot_check.framework_routes is not FrameworkRoutesCheck.OFF:
@@ -116,12 +117,14 @@ def _handler_problems(binding: ApiBinding) -> list[str]:
                 f"operation '{operation_id}' has no handler factory: pass it in the handlers of bind_{binding.api}()"
             )
 
-        features = unserved_features(binding.contract, operation_id)
-
-        if features:
-            problems.append(unserved_problem(binding.api, operation_id, features))
-
     return problems
+
+
+def _public_origin_problems(binding: ApiBinding) -> list[str]:
+    setting = f"the `public_origin` argument of bind_{binding.api}()"
+    problem = public_origin_problem(binding.contract, setting, binding.settings.public_origin)
+
+    return [] if problem is None else [problem]
 
 
 def _route_problems(binding: ApiBinding) -> list[str]:

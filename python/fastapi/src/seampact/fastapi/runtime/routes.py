@@ -15,6 +15,7 @@ from seampact.codegen.runtime.contract import NOT_FOUND_ROLE
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
 from seampact.codegen.runtime.hook_check import hook_needs
 from seampact.codegen.runtime.idempotency import enforces_idempotency
+from seampact.codegen.runtime.public_origin import configured_origin
 from seampact.fastapi.runtime.api_binding import ApiBinding, is_unexpected_error_listener
 from seampact.fastapi.runtime.contract_input import InputBuilder
 from seampact.fastapi.runtime.handler_call import call_handler
@@ -22,7 +23,6 @@ from seampact.fastapi.runtime.handler_reply import OperationTypes, ReplyContext,
 from seampact.fastapi.runtime.input_features import featured_input
 from seampact.fastapi.runtime.placement import Factory, OperationRoute
 from seampact.fastapi.runtime.request_state import RequestState, state_of
-from seampact.fastapi.runtime.unserved import unserved_features, unserved_problem
 from seampact.hooks import (
     AuthenticateHook,
     DecideHook,
@@ -91,11 +91,6 @@ def _access_dependency(binding: ApiBinding, route: OperationRoute) -> Callable[.
 
     async def access(request: fastapi.Request, **resolved: object) -> None:
         state = _contract_state(binding, request, route.operation_id)
-        features = unserved_features(binding.contract, route.operation_id)
-
-        if features:
-            raise BoundaryFailureError(unserved_problem(binding.api, route.operation_id, features))
-
         hooks, listener, store = _resolved_hooks(hook_factories, resolved)
         state.listener = listener
         state.hooks = hooks
@@ -272,6 +267,7 @@ def _endpoint[E, R](
             raw_query=state.target.query,
             path=state.target.path,
             if_none_match=request.headers.get(_IF_NONE_MATCH),
+            public_origin=configured_origin(binding.contract, binding.settings.public_origin),
         )
         reply = state.authored.author(await result_reply(binding.contract, route.operation_id, types, result, context))
 

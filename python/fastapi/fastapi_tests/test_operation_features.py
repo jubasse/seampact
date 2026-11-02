@@ -148,7 +148,6 @@ def test_the_boot_check_names_a_missing_idempotency_store() -> None:
     assert len(store_problems) == 1
     assert "archiveTask" in store_problems[0]
     assert "`idempotency_store=` of bind_tasks()" in store_problems[0]
-    assert not any("fastapi.feature.unavailable" in problem for problem in problems)
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -189,6 +188,7 @@ def _list_tasks_reply(page: _RenamedFactPage) -> Reply:
         raw_query="",
         path="/v1/tasks",
         if_none_match=None,
+        public_origin=None,
     )
     types = OperationTypes(request=object, responses=((200, _ListTasksSuccess),), errors=_ListTasksErrors)
 

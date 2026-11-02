@@ -28,10 +28,8 @@ from seampact.fastapi.runtime.placement import (
     TargetDefaults,
 )
 from seampact.fastapi.runtime.routes import add_operation
-from seampact.fastapi.runtime.unserved import FEATURE_UNAVAILABLE
 
 __all__ = [
-    "FEATURE_UNAVAILABLE",
     "AcceptedFramework",
     "ApiBinding",
     "ApiPlacement",
