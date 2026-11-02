@@ -3,6 +3,7 @@ resource, the dotted path of a callable that builds the resource's handlers from
 code checks what a factory built against the resource's protocol."""
 
 from django.http import HttpRequest
+
 from seampact.django.runtime.unavailable import PlacementUnavailableError
 
 

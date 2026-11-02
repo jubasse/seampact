@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from typing import ClassVar
 
 from django.http import HttpRequest, HttpResponseBase
+
 from seampact.django.runtime.unavailable import PlacementUnavailableError
 
 type GetResponse = Callable[[HttpRequest], HttpResponseBase] | Callable[[HttpRequest], Awaitable[HttpResponseBase]]

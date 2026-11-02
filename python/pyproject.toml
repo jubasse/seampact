@@ -69,10 +69,12 @@ dev = [
 target-version = "py312"
 src = ["codegen/src", "django/src", "drf/src", "fastapi/src", "hooks/src", "ir/src", "signed-webhooks/src"]
 line-length = 120
-# The namespace package `seampact` has no `__init__.py` (PEP 420): without this, ruff would take `seampact/fastapi` for a
-# top-level `fastapi` package and sort the framework's imports as first party.
+# The namespace package `seampact` has no `__init__.py` (PEP 420): without this, ruff would take `seampact/fastapi`
+# or `seampact/django` for a top-level framework package and sort the framework's imports as first party.
 namespace-packages = [
     "codegen/src/seampact",
+    "django/src/seampact",
+    "drf/src/seampact",
     "fastapi/src/seampact",
     "hooks/src/seampact",
     "ir/src/seampact",
