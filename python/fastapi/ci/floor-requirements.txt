@@ -1,8 +1,7 @@
 # The floor row of the fastapi golden and e2e jobs (ADR 0026 "Versions"): FastAPI 0.162 with its own floor Starlette and
 # Pydantic, installed over the locked workspace with `--no-deps`, every file pinned by hash, and tzdata, which
-# Pydantic 2.9.0 requires on every platform, and httpx with httpcore, which Starlette 0.46's TestClient imports
-# (the latest Starlette imports httpx2). Regenerate with `uv pip compile --no-deps --generate-hashes
-# --python-version 3.12 --no-header --no-annotate` of these seven pins.
+# Pydantic 2.9.0 requires on every platform. Regenerate with `uv pip compile --no-deps --generate-hashes
+# --python-version 3.12 --no-header --no-annotate` of these five pins.
 fastapi==0.162.0 \
     --hash=sha256:3785963de305dd09912426cb81f2d230fce98ab3521cdfe97265c8d14983128c \
     --hash=sha256:6a22c1e2e6e32e0633ee7e170f00009a29b8228b16feb219ee42f32fd8d88a8f
@@ -105,9 +104,3 @@ starlette==0.46.0 \
 tzdata==2026.6 \
     --hash=sha256:0a10eec6e13ef16b627fabed9a5f2ba61a62b1c67f327305f4e7e412a70b4aec \
     --hash=sha256:85d2cd9c09f81f0bb29db27759fc83af4f1e620efb814f8c5bf8b4cc4feece6d
-httpcore==1.0.9 \
-    --hash=sha256:2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55 \
-    --hash=sha256:6e34463af53fd2ab5d807f399a9b45ea31c3dfa2276f15a2c3f00afff6e176e8
-httpx==0.28.1 \
-    --hash=sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc \
-    --hash=sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad

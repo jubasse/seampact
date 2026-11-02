@@ -99,7 +99,7 @@ jobs:
         run: uv sync --locked --all-packages
       - name: Install FastAPI 0.162 with its floor Starlette and Pydantic, pinned by hash
         if: matrix.floor
-        run: uv pip install --require-hashes --no-deps -r fastapi/ci/floor-requirements.txt
+        run: uv pip install --require-hashes --no-deps -r fastapi/ci/floor-requirements.txt -r fastapi/ci/floor-test-requirements.txt
       - name: Show the framework versions
         run: uv run --no-sync python -c "import fastapi, pydantic, starlette; print(fastapi.__version__, starlette.__version__, pydantic.VERSION)"
       - name: Lint
