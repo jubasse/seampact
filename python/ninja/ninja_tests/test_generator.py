@@ -96,7 +96,7 @@ def test_native_docs_and_artefacts_the_target_does_not_take_are_refused_by_name(
     assert _refusal_codes(_ir_json(repository_root), artefacts=artefacts) == {
         "artefacts.unknown",
         "artefacts.accessHooks.unsupported",
-        "artefacts.bootCheck.hooks.unsupported",
+        "artefacts.bootCheck.hooks.warn.unsupported",
     }
 
 
