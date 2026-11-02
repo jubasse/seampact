@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
+from seampact.codegen.boot_check_hooks import HOOKS_ERROR, read_boot_check_hooks
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.codegen.runtime.reply_verdict import FrameworkEtagMode, ResponsesMode
 from seampact.ir.config.json_value import JsonValue
@@ -25,7 +26,6 @@ _ROUTE_HELPERS: Final = "routeHelpers"
 _BOOT_CHECK: Final = "bootCheck"
 _ACCESS_HOOKS: Final = "accessHooks"
 _BOOT_CHECK_PARTS: Final = ("frameworkRoutes", "hooks")
-_HOOKS_OFF: Final = "off"
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,17 +150,9 @@ def _boot_check(value: JsonValue, refusals: Refusals) -> BootCheck:
     if not isinstance(value, Mapping):
         return BootCheck(enabled=value is not False)
 
-    hooks = value.get("hooks", "on")
+    hooks = read_boot_check_hooks(value.get("hooks", HOOKS_ERROR), IrPlace("/artefacts/bootCheck/hooks"), refusals)
 
-    if hooks not in ("on", _HOOKS_OFF):
-        refusals.waiting(
-            "artefacts.bootCheck.hooks",
-            f"'bootCheck.hooks: {_shown(hooks)}'",
-            IrPlace("/artefacts/bootCheck/hooks"),
-            Delivery.CONSUMER,
-        )
-
-    return BootCheck(framework_routes=value.get("frameworkRoutes", True) is not False, hooks=hooks != _HOOKS_OFF)
+    return BootCheck(framework_routes=value.get("frameworkRoutes", True) is not False, hooks=hooks)
 
 
 class OptionReader:

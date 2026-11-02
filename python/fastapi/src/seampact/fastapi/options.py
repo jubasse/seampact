@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
+from seampact.codegen.boot_check_hooks import HOOKS_ERROR, read_boot_check_hooks
 from seampact.codegen.pydantic_models import RulesMode
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.codegen.runtime.reply_verdict import FrameworkEtagMode, ResponsesMode
@@ -43,7 +44,6 @@ _ROUTE_HELPERS: Final = "routeHelpers"
 _NATIVE_DOCS: Final = "nativeDocs"
 _ARTEFACTS: Final = (_BOOT_CHECK, _ACCESS_HOOKS, _ROUTE_HELPERS, _NATIVE_DOCS)
 _STRICT_ROUTES: Final = "strict"
-_HOOKS_WARN: Final = "warn"
 _FRAMEWORK_ROUTES: Final = "frameworkRoutes"
 _HOOKS: Final = "hooks"
 _BOOT_CHECK_KEYS: Final = (_FRAMEWORK_ROUTES, _HOOKS)
@@ -192,18 +192,14 @@ def _boot_check(value: JsonValue, refusals: Refusals) -> BootCheckSwitches:
 
     framework_routes = value.get(_FRAMEWORK_ROUTES, True)
     routes_check = _framework_routes_check(framework_routes)
-    hooks = value.get(_HOOKS, HooksCheck.ERROR.value)
-    hooks_check = HooksCheck.OFF if hooks == HooksCheck.OFF.value else HooksCheck.ERROR
+    hooks_error = read_boot_check_hooks(value.get(_HOOKS, HOOKS_ERROR), at.below(_HOOKS), refusals)
+    hooks_check = HooksCheck.ERROR if hooks_error else HooksCheck.OFF
 
     if routes_check is None:
         allowed = f"true, false or '{_STRICT_ROUTES}'"
         _refuse_boot_check_value(
             f"{_BOOT_CHECK}.{_FRAMEWORK_ROUTES}", framework_routes, allowed, at.below(_FRAMEWORK_ROUTES), refusals
         )
-
-    if hooks not in (HooksCheck.ERROR.value, HooksCheck.OFF.value, _HOOKS_WARN):
-        allowed = f"'{HooksCheck.ERROR.value}', '{HooksCheck.OFF.value}' or '{_HOOKS_WARN}'"
-        _refuse_boot_check_value(f"{_BOOT_CHECK}.{_HOOKS}", hooks, allowed, at.below(_HOOKS), refusals)
 
     return BootCheckSwitches(enabled=True, framework_routes=routes_check or FrameworkRoutesCheck.ON, hooks=hooks_check)
 
@@ -241,12 +237,5 @@ def _read_artefacts(artefacts: Mapping[str, JsonValue], refusals: Refusals) -> b
             )
         elif key == _ACCESS_HOOKS and value is False:
             refusals.waiting("artefacts.accessHooks", "The artefact switch 'accessHooks: false'", at, Delivery.CONSUMER)
-        elif key == _BOOT_CHECK and isinstance(value, Mapping) and value.get("hooks") == _HOOKS_WARN:
-            refusals.waiting(
-                "artefacts.bootCheck.hooks.warn",
-                "'bootCheck.hooks: warn' (start with hooks missing)",
-                at.below("hooks"),
-                Delivery.CONSUMER,
-            )
 
     return artefacts.get(_ROUTE_HELPERS, True) is not False
