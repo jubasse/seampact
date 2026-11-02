@@ -20,6 +20,12 @@ _FALSE: Final = "false"
 _PLACEHOLDER: Final = re.compile(r"\{([^{}]+)\}")
 # `encodeURIComponent` keeps the unreserved set and `!*'()`.
 _COMPONENT_SAFE: Final = "-_.!~*'()"
+# RFC 3986's query characters beside the alphanumerics: what a kept query pair may hold unescaped in a `Link` target.
+_QUERY_SAFE: Final = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~!$&'()*+,;=:@/?")
+_HEX_DIGITS: Final = frozenset(b"0123456789abcdefABCDEF")
+_PERCENT: Final = ord("%")
+# The raw query is text read from its bytes one to one (`RawTarget`), so a pair goes back to its bytes the same way.
+_BYTES_AS_TEXT: Final = "latin-1"
 # `Number#toString` writes plain digits while the decimal point sits at most 21 digits right and 6 zeros left.
 _DECIMAL_DIGITS_MAX: Final = 21
 _DECIMAL_ZEROS_MIN: Final = -6
@@ -158,7 +164,38 @@ def path_segment(name: str, value: object) -> str:
             f"The path parameter '{name}' must be one non-empty segment, not '{text}': it would reach another route."
         )
 
+    return component_encoded(text)
+
+
+def component_encoded(text: str) -> str:
+    """`text` as JavaScript's `encodeURIComponent` writes it: every UTF-8 byte outside the unreserved set and `!*'()`
+    percent-encoded."""
     return quote(text, safe=_COMPONENT_SAFE)
+
+
+def kept_query_pairs(raw: str, names: Sequence[str]) -> list[str]:
+    """The raw query's pairs whose form-decoded name is not one of `names`, in order, each made link safe."""
+    return [
+        link_safe(pair) for pair in raw.split("&") if pair != "" and _form_decoded(pair.partition("=")[0]) not in names
+    ]
+
+
+def link_safe(pair: str) -> str:
+    """Bytes outside the RFC 3986 query set, and a `%` that starts no escape, percent-encoded, so a raw `>` or `"` the
+    server accepted cannot break a `Link` target built from the pair."""
+    data = pair.encode(_BYTES_AS_TEXT, errors="strict")
+    safe: list[str] = []
+
+    for index, byte in enumerate(data):
+        starts_escape = byte == _PERCENT and _is_escape(data, index)
+        kept = starts_escape or (byte != _PERCENT and byte in _QUERY_SAFE)
+        safe.append(chr(byte) if kept else f"%{byte:02X}")
+
+    return "".join(safe)
+
+
+def _is_escape(data: bytes, index: int) -> bool:
+    return index + 2 < len(data) and data[index + 1] in _HEX_DIGITS and data[index + 2] in _HEX_DIGITS
 
 
 def _wire_text(name: str, value: object) -> str:
