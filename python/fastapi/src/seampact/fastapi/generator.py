@@ -10,13 +10,13 @@ from collections.abc import Sequence
 from typing import Final
 
 from seampact.codegen.contract_module import contract_module
-from seampact.codegen.input_schemas import PROOFS_PART, input_schema_id, with_input_schemas
+from seampact.codegen.input_schemas import proof_models, with_input_schemas
 from seampact.codegen.kept_forms import refuse_kept_forms
-from seampact.codegen.names import ApiNames, api_names
+from seampact.codegen.names import api_names
 from seampact.codegen.operation_types import operation_types_module
 from seampact.codegen.printer import PythonModule
 from seampact.codegen.pydantic_forms import refuse_unserved_forms
-from seampact.codegen.pydantic_layout import ApiLayout, api_layout
+from seampact.codegen.pydantic_layout import api_layout
 from seampact.codegen.pydantic_models import pydantic_schemas_module
 from seampact.codegen.refusals import IrPlace, Refusals
 from seampact.codegen.route_helpers import route_helpers_module
@@ -70,7 +70,7 @@ class FastApiGenerator:
             GeneratedFile("operations.py", operation_types_module(with_inputs, names, layout, refusals)),
             GeneratedFile("contract.py", contract_module(ir, names, entry.mount or "", refusals)),
             GeneratedFile(
-                "fastapi.py", placement_module(ir, layout, _proof_models(layout, names), routes, options, entry)
+                "fastapi.py", placement_module(ir, layout, proof_models(layout, names), routes, options, entry)
             ),
         ]
 
@@ -84,12 +84,3 @@ class FastApiGenerator:
         refusals.raise_if_any()
 
         return sorted(files, key=lambda generated: generated.path)
-
-
-def _proof_models(layout: ApiLayout, names: ApiNames) -> dict[str, str]:
-    """The `<Op>Proofs` class of each kept operation whose body carries rule proofs."""
-    return {
-        operation_id: names.schema_classes[input_schema_id(operation_id, PROOFS_PART)]
-        for operation_id in layout.operations
-        if input_schema_id(operation_id, PROOFS_PART) in names.schema_classes
-    }

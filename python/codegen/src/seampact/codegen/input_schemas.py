@@ -9,6 +9,7 @@ import dataclasses
 from collections.abc import Sequence
 
 from seampact.codegen.kept_forms import handler_headers
+from seampact.codegen.names import ApiNames
 from seampact.codegen.pydantic_layout import ApiLayout
 from seampact.ir.model import (
     ContractIR,
@@ -118,3 +119,12 @@ def _member(name: str, type_use: TypeUse, origin: Origin, *, optional: bool) -> 
         extensions={},
         origin=origin,
     )
+
+
+def proof_models(layout: ApiLayout, names: ApiNames) -> dict[str, str]:
+    """The `<Op>Proofs` class of each kept operation whose body carries rule proofs."""
+    return {
+        operation_id: names.schema_classes[input_schema_id(operation_id, PROOFS_PART)]
+        for operation_id in layout.operations
+        if input_schema_id(operation_id, PROOFS_PART) in names.schema_classes
+    }

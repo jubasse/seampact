@@ -1,6 +1,6 @@
 """The lines every Pydantic target's placement module writes alike: the credentials types of its placement, the
-api's unexpected-error listener protocol, a tuple of strings, and the generated types `add_operation` hands the
-runtime for one operation."""
+api's unexpected-error listener protocol, a tuple of strings, and each operation's `add_operation` call with the
+generated types it hands the runtime."""
 
 from collections.abc import Sequence
 from typing import Final
@@ -60,3 +60,20 @@ def operation_types_arguments(layout: ApiLayout, operation_id: str, proofs_model
         arguments.append(f"proofs={proofs_model}")
 
     return arguments
+
+
+def add_operation_call(runtime: str, arguments: Sequence[str], types: Sequence[str]) -> list[str]:
+    """One `add_operation` call in `bind_<api>()`, split as ruff splits it: on one line when it fits, else one argument
+    per line, the operation's `OperationTypes` a nested call split the same way."""
+    head = f"{runtime}.add_operation"
+    single = bracketed(INDENT, head, [*arguments, f"{runtime}.OperationTypes({', '.join(types)})"], "")
+
+    if len(single) == 1:
+        return single
+
+    return [
+        f"{INDENT}{head}(",
+        *(f"{INDENT * 2}{argument}," for argument in arguments),
+        *bracketed(INDENT * 2, f"{runtime}.OperationTypes", types, ","),
+        f"{INDENT})",
+    ]

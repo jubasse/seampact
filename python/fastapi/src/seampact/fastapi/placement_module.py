@@ -9,6 +9,7 @@ from collections.abc import Mapping, Sequence
 from typing import Final
 
 from seampact.codegen.placement_lines import (
+    add_operation_call,
     credentials_types,
     operation_types_arguments,
     tuple_literal,
@@ -277,21 +278,11 @@ def _add_operation(layout: ApiLayout, operation_id: str, proof_model: str | None
     names = layout.operations[operation_id]
     proofs = None if proof_model is None else f"_{_SCHEMAS_MODULE}.{proof_model}"
     types = operation_types_arguments(layout, operation_id, proofs)
-    head = f"{_RUNTIME}.add_operation"
     arguments = [
         "binding",
         string_literal(operation_id),
         f"handlers.{names.owner_attribute}",
         f"{_CALL_PREFIX}{names.method}",
     ]
-    single = bracketed(INDENT, head, [*arguments, f"{_RUNTIME}.OperationTypes({', '.join(types)})"], "")
 
-    if len(single) == 1:
-        return single
-
-    return [
-        f"{INDENT}{head}(",
-        *(f"{INDENT * 2}{argument}," for argument in arguments),
-        *bracketed(INDENT * 2, f"{_RUNTIME}.OperationTypes", types, ","),
-        f"{INDENT})",
-    ]
+    return add_operation_call(_RUNTIME, arguments, types)
