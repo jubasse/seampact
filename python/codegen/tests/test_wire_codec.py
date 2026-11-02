@@ -224,3 +224,23 @@ def test_a_value_the_contract_cannot_write_is_the_boundarys_failure(
 ) -> None:
     with pytest.raises(BoundaryFailureError, match=message):
         codec.to_wire(type_use, value)
+
+
+@pytest.mark.parametrize(
+    ("shape", "body", "message"),
+    [
+        ("list", {"a": "x"}, "not a list"),
+        ("page", "x", "not a list"),
+        ("table", ["x"], "not a mapping"),
+    ],
+)
+def test_a_body_that_is_not_its_shape_is_the_boundarys_failure(
+    codec: WireCodec, shape: str, body: object, message: str
+) -> None:
+    with pytest.raises(BoundaryFailureError, match=message):
+        codec.body_to_wire({"shape": shape, "body": _STRING}, body)
+
+
+def test_an_array_value_that_is_not_a_list_is_the_boundarys_failure(codec: WireCodec) -> None:
+    with pytest.raises(BoundaryFailureError, match="not a list"):
+        codec.to_wire({"kind": "array", "items": _STRING}, "ab")

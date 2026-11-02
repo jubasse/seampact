@@ -61,7 +61,7 @@ class WireCodec:
             return self._object_to_wire(ir_string(type_use, "schema") or "", value)
 
         if kind == "array":
-            return [self.to_wire(ir_map(type_use, "items"), item) for item in _items(value)]
+            return [self.to_wire(ir_map(type_use, "items"), item) for item in _items(value, "an array value")]
 
         if kind in ("scalar", "enum", "opaque"):
             return scalar_to_wire(value)
@@ -70,15 +70,18 @@ class WireCodec:
 
     def body_to_wire(self, response: IrMap, body: object) -> object:
         """A response body as the wire writes it: a list's items, or a table's values keyed as the handler keyed
-        them."""
+        them.
+
+        Raises `BoundaryFailureError` for a list or page body that is not a list, or a table body that is not a
+        mapping."""
         body_type = ir_map(response, "body")
         shape = ir_string(response, "shape")
 
         if shape in _LIST_SHAPES:
-            return [self.to_wire(body_type, item) for item in _items(body)]
+            return [self.to_wire(body_type, item) for item in _items(body, f"a {shape} body")]
 
-        if shape == _TABLE_SHAPE and isinstance(body, Mapping):
-            return {str(key): self.to_wire(body_type, item) for key, item in body.items()}
+        if shape == _TABLE_SHAPE:
+            return {str(key): self.to_wire(body_type, item) for key, item in _entries(body).items()}
 
         return self.to_wire(body_type, body)
 
@@ -202,8 +205,23 @@ def _decimal_text(value: Decimal) -> str:
     return format(value, "f")
 
 
-def _items(value: object) -> Sequence[object]:
-    return value if isinstance(value, list | tuple) else ()
+def _items(value: object, held_as: str) -> Sequence[object]:
+    if not isinstance(value, list | tuple):
+        raise BoundaryFailureError(
+            f"seampact: the handler wrote {held_as} as a {type(value).__qualname__}, not a list; return a list."
+        )
+
+    return value
+
+
+def _entries(value: object) -> Mapping[object, object]:
+    if not isinstance(value, Mapping):
+        raise BoundaryFailureError(
+            f"seampact: the handler wrote a table body as a {type(value).__qualname__}, not a mapping; return a "
+            "mapping keyed as the contract keys it."
+        )
+
+    return value
 
 
 def _escaped(key: str) -> str:
