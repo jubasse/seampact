@@ -142,7 +142,8 @@ jobs:
           if-no-files-found: error
 
   # The consumer installed from the built wheels and generated from the bundle with Node removed, then served by
-  # uvicorn to the http suite's default, hand-written and boot profiles; the floor and the latest rows are both PR rows.
+  # uvicorn to the http suite's default, hand-written and boot profiles over every operation of the tasks api; the floor
+  # and the latest rows are both PR rows.
   e2e:
     name: e2e (${{ matrix.row }})
     needs: [changes, contract-bundle]
@@ -201,6 +202,9 @@ jobs:
           set -euo pipefail
           scripts/consumers/python/install.sh "$WORK/venv" "$WORK/requirements.txt" "$WORK/wheels" \
             'seampact-fastapi[generate]' ${{ matrix.pins }}
+          # The app's stripe hook verifies signatures with seampact-signed-webhooks, which depends on nothing.
+          "$WORK/venv/bin/python" -m pip install --no-input --disable-pip-version-check --no-index \
+            --find-links "$WORK/wheels" seampact-signed-webhooks
           "$WORK/venv/bin/python" -c "import fastapi, pydantic, starlette; print(fastapi.__version__, starlette.__version__, pydantic.VERSION)"
           for variant in "" allow-listed; do
             scripts/consumers/targets/fastapi/assemble.sh "$WORK" "$RUNNER_TEMP/bundles/reference" $variant

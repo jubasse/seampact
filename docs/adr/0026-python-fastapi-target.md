@@ -259,6 +259,7 @@ The rules of ADR 0023 "Query and bounded values" hold, with these Python details
 - **Query.** Decoded from the raw `query_string` by the IR's wire form, with form decoding, never from `request.query_params`.
 - **Body limit.** The boundary refuses a declared `Content-Length` above the route's limit before reading. It reads the `http.request` messages, decodes `gzip` and `deflate` with `zlib`, counts the encoded and the decoded bytes, and answers the route's 413 as soon as either passes the limit. Any other content coding answers 415; a corrupt compressed body is the client's 400.
 - **Paging, deadlines, relays, keys, version tokens and absolute URLs** come from the shared runtime, as on the other targets. The public origin is the `public_origin` argument of `bind_<api>()`; the request host and forwarded headers are never read.
+- **Order.** The input dependency reads a versioned write's version before the header check, so a missing `If-Match` answers `preconditionRequired` (428), never `schemaInvalid`; then it fills the paged limit, builds the typed input, applies the input field rights, checks the deadline and claims the idempotency key, a stored reply answering without the handler. The boundary completes the claim with the reply before its last message, and releases it when the request fails.
 - **Several apis.** Each `bind_<api>()` adds its own boundary. Each boundary accepts the other apis' boundaries outside it, unless one claims this api's paths with its `catchAll` on.
 
 ### Redaction
@@ -367,17 +368,17 @@ The generator's code sits in production `site-packages`, its dependencies behind
 |---|---|
 | a consumer that needs them | form, multipart, download and redirect bodies; native access (`artefacts.accessHooks: false`); sort keys restricted by a right; unions (`oneOf`); `handlers: perOperation`; per-access-kind dependency lists |
 | fastapi-4 | `nativeDocs` and `frameworkDocs: off` |
-| fastapi-3 and fastapi-4 | the operation features of later releases (idempotency, paging, cache, field rights, version tokens, budgets, deadline headers, relays, signed requests): until their PR, the boot check refuses an operation that uses one (`fastapi.feature.unavailable`), and with the boot check off it answers the api's 500 by name; the entry's `operations` filter leaves such operations out |
+| fastapi-4 | relays: until then, the boot check refuses an operation that uses one (`fastapi.feature.unavailable`), and with the boot check off it answers the api's 500 by name; the entry's `operations` filter leaves such operations out |
 | after 1.0 | FastAPI minors below the floor and Pydantic 1 (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs, as ADR 0023 lists them |
 
 ### The consumer and the proof
 
-The sample app lives in `scripts/consumers/targets/fastapi/`. It holds the developer's handlers and hook doubles, which answer from the suite script, and three control routes: `/__seampact/script`, `hook-calls` and `log-lines`, the last fed by a `logging.Handler`. uvicorn may run several workers, so the script, the hook calls and the log lines live in one file. It installs `seampact-hooks`, `seampact-codegen`, `seampact-ir` and `seampact-fastapi` from wheels that `uv build` writes (ADR 0011 "Unpublished installs for test consumers"), and the reference contract's bundle.
+The sample app lives in `scripts/consumers/targets/fastapi/`. It holds the developer's handlers and hook doubles, which answer from the suite script, and three control routes: `/__seampact/script`, `hook-calls` and `log-lines`, the last fed by a `logging.Handler`. uvicorn may run several workers, so the script, the hook calls and the log lines live in one file. It installs `seampact-hooks`, `seampact-codegen`, `seampact-ir`, `seampact-fastapi` and `seampact-signed-webhooks` (its stripe hook verifies signatures) from wheels that `uv build` writes (ADR 0011 "Unpublished installs for test consumers"), and the reference contract's bundle.
 
 The workflow `p7-fastapi.yml` has, beside `changes` and the `packages` tests:
 
 - `contract-bundle` (Node), which bundles the reference contract with the compiler binary; the consumer fetches it from a local git repository with its integrity pin;
-- `e2e`, two rows on `ubuntu-24.04` with `actions/setup-python`: {Python 3.12, FastAPI 0.162 with its floor Starlette and Pydantic} and {the latest Python, the latest FastAPI, Starlette and Pydantic}, both on uvicorn. Node is removed first, and the step fails if `node`, `npm` or `npx` is still found. It installs the app with pip only and generates. Node then comes back for the suite alone, which runs the `default`, `hand-written` and `boot` profiles (ADR 0015 "Suite profiles"), and the `full` profile from fastapi-3; a boot is a uvicorn start of a misconfigured variant;
+- `e2e`, two rows on `ubuntu-24.04` with `actions/setup-python`: {Python 3.12, FastAPI 0.162 with its floor Starlette and Pydantic} and {the latest Python, the latest FastAPI, Starlette and Pydantic}, both on uvicorn. Node is removed first, and the step fails if `node`, `npm` or `npx` is still found. It installs the app with pip only and generates. Node then comes back for the suite alone, which runs the `default`, `hand-written` and `boot` profiles (ADR 0015 "Suite profiles"), over every operation of the tasks api from fastapi-3; a boot is a uvicorn start of a misconfigured variant;
 - `fastapi`, the aggregate, failing on any failed or cancelled job, or one skipped although `changes` said run.
 
 The proof is:
@@ -395,8 +396,8 @@ The suite runs every case of the reference contract: the consumer's refusal list
 | py-core-5 | `python/codegen`: the neutral plan, names, layout, refusals, the Pydantic emitter, route table data and route helpers; the shared runtime's step 1 decoding, raw-target match, replies, verdict and version |
 | fastapi-1 | `python/fastapi`: the generator in the entry point group, the options, models, handler protocols, router declarations, exceptions per error, `bind_<api>()`; a golden for the reference contract under `ruff`, `mypy --strict` and `pyright` strict on Python 3.12 and the latest |
 | fastapi-2 | the boundary (steps 1 and 10), the access and input dependencies (steps 2 to 8), the exception map, the lifespan boot check and its first-request fallback, the 500 on a missing hook, scopes in the request scope; the sample app, the `default`, `hand-written` and `boot` profiles, the e2e job of `p7-fastapi.yml` |
-| fastapi-3 | paging, idempotency, throttle, cache headers, the signed raw body, redaction; the `full` profile and `test_redaction.py` |
-| fastapi-4 | absolute URLs, deadline budgets, relays with the tasksService api; authenticate hooks on FastAPI `Security` schemes; CORS and docs routes beside the boundary; `nativeDocs` and `frameworkDocs: off` |
+| fastapi-3 | paging, idempotency, throttle, cache headers, field rights, version tokens, deadline headers, the signed raw body, redaction; the suite over every operation of the tasks api and `test_redaction.py` |
+| fastapi-4 | absolute URLs, relays with the tasksService api; authenticate hooks on FastAPI `Security` schemes; CORS and docs routes beside the boundary; `nativeDocs` and `frameworkDocs: off` |
 
 ## Spike
 

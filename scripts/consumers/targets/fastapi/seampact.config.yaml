@@ -1,5 +1,5 @@
-# The consumer's app config: the reference contract's tasks api through seampact-fastapi, serving the operations this
-# release of the target covers; the suite's control routes sit outside the api's base path.
+# The consumer's app config: the reference contract's tasks api through seampact-fastapi, every operation; the suite's
+# control routes sit outside the api's base path.
 outDir: generated
 openapi: none
 sources:
@@ -9,5 +9,3 @@ targets:
     out: tasks
     use: pypi:seampact-fastapi
     api: tasks
-    operations:
-      include: [health, getChannel, getDraft]

@@ -9,7 +9,5 @@ targets:
     out: tasks
     use: pypi:seampact-fastapi
     api: tasks
-    operations:
-      include: [health, getChannel, getDraft]
     frameworkRoutes:
       - { path: /v1/unlisted, reason: "The boot case's framework route beside the contract (ADR 0015)." }
