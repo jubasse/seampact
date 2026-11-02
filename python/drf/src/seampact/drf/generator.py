@@ -7,6 +7,7 @@ import json
 from collections.abc import Sequence
 from typing import Final
 
+from seampact.codegen.kept_forms import refuse_kept_forms
 from seampact.codegen.names import api_names
 from seampact.codegen.printer import PythonModule
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
@@ -46,6 +47,7 @@ class DrfGenerator:
     def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
         refusals = Refusals(entry.id, TARGET, DISTRIBUTION)
         options = drf_options(entry.options, entry.artefacts, refusals)
+        refuse_kept_forms(ir, refusals)
         names = api_names(ir, refusals)
         layout = api_layout(ir, refusals)
         routes = route_table(ir, entry.mount or "", refusals)
