@@ -60,13 +60,13 @@ targets:
     options: { rules: seampact-consistent }
 ```
 
-Both Python targets take the same options. They impose no wire shape: each switch below turns a check off.
+Both Python targets take these options, except `bodyValidation`, which is FastAPI only (DRF refuses it at boot until it is served). They impose no wire shape.
 
 | Option | Default | Values |
 |---|---|---|
 | `rules` | `native` | `native` (the framework's own value rules) or `seampact-consistent` |
 | `responses` | `strict` | `strict` or `warn` |
-| `bodyValidation` | `false` | `true` or `false` |
+| `bodyValidation` (FastAPI only) | `false` | `true` or `false` |
 | `frameworkEtag` | `strip` | `strip` or `keep` |
 | `catchAll` | `true` | `true` or `false` |
 

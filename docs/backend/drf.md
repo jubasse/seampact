@@ -6,14 +6,14 @@
 
 Python 3.12 or later, Django 5.2 or 6, and DRF 3.18. CI runs the oldest of each and the latest. Pydantic is not needed.
 
-Nothing is on PyPI yet, so you install seampact from your checkout. Replace `~/src/seampact` with the path of your checkout. Build the wheels once, then make the requirements file of the third-party packages. The last word is your server, `gunicorn` or `uvicorn`:
+Nothing is on PyPI yet, so you install seampact from your checkout. Replace `~/src/seampact` with the path of your checkout. Install uv 0.13.6 (the workspace pins it). Build the wheels once, then make the requirements file of the third-party packages. The last word is your server, `gunicorn` or `uvicorn`:
 
 ```sh
 cd ~/src/seampact/python && uv build --all-packages --wheel
 sh ~/src/seampact/scripts/consumers/python/requirements.sh /tmp/requirements.txt seampact-drf generate gunicorn
 ```
 
-In your app, install the third-party packages first, then seampact from the wheels. The second command never asks an index for a `seampact-*` name.
+In your app, install the third-party packages first, then seampact from the wheels. The second command never asks an index for a `seampact-*` name. `requirements.sh` refuses an existing output file: give it a new path on a re-run.
 
 ```sh
 cd ~/src/shop-app
@@ -22,7 +22,7 @@ pip install --require-hashes --no-deps --only-binary :all: -r /tmp/requirements.
 pip install --no-index --find-links ~/src/seampact/python/dist "seampact-drf[generate]"
 ```
 
-`uv pip install` takes the same flags. The `generate` extra holds the generator and its dependencies: keep it in your dev dependencies, and install plain `seampact-drf` in production. Add `seampact-signed-webhooks` if a route is signed by a sender.
+`uv pip install` takes the same flags. The `generate` extra holds the generator and its dependencies: keep it in your dev dependencies, and install plain `seampact-drf` in production. Add `seampact-signed-webhooks` if a route is signed by a sender: `pip install --no-index --find-links ~/src/seampact/python/dist seampact-signed-webhooks`.
 
 In `seampact.config.yaml`, add one entry per api:
 
@@ -65,7 +65,6 @@ Options of the entry (all optional), set under `options:`:
 |---|---|---|
 | `rules` | `native` | `native` uses DRF's own field arguments (`min_length`, `max_length`, `min_value`, `max_value`). `seampact-consistent` gives the contract's exact checks, equal on every target. |
 | `responses` | `strict` | `strict` answers 500 when your reply breaks the contract. `warn` logs it and sends the reply. |
-| `bodyValidation` | `false` | Checks success bodies against the contract. |
 | `frameworkEtag` | `strip` | Drops an ETag or a 304 that the boundary did not write. `keep` leaves them. |
 | `catchAll` | `true` | Unknown paths under the api's base path answer the contract's 404. |
 
@@ -73,7 +72,7 @@ Also on the entry: `mount` (a path prefix), `frameworkRoutes` (see [The boot che
 
 ## Wire it in
 
-Four places in your Django project.
+Two files of your Django project.
 
 ```python
 # settings.py
@@ -111,7 +110,7 @@ urlpatterns = [
 - The boundary goes first in `MIDDLEWARE`. Another seampact boundary may sit before it, for a second api.
 - `handlers` has one entry per resource. `authenticate` has one per identity, `deciders` one per right or rule, `scope_resolvers` one per scope. Keys are the contract's names. Values are dotted paths to a factory.
 - A factory is called once per request with the Django `HttpRequest`. Its return value is your handler class or hook object.
-- Other keys: `idempotency_store`, `public_origin`, `responses`, `body_validation`, and `operations` (per operation, `responses`). A key that is not listed is refused at boot. Add `public_origin` (`https://api.example.com`) when the contract writes absolute URLs.
+- Other keys: `idempotency_store`, `public_origin`, `responses`, and `operations` (per operation, `responses`). A key that is not listed is refused at boot. Add `public_origin` (`https://api.example.com`) when the contract writes absolute URLs.
 - Include the patterns at `""`, outside any `include()` prefix and `i18n_patterns()`. To serve the api under a prefix, set `mount` on the entry.
 - With two apis, add two boundaries, two includes and two keys of `SEAMPACT`.
 
@@ -176,7 +175,7 @@ Neither is part of the input, and the client cannot set them. Both print as `[re
 
 ## Write the hooks
 
-A hook is a class. Its factory takes the `HttpRequest`, so a hook can read `request.user`, which DRF sets.
+A hook is a class. Its factory takes the `HttpRequest`, so a hook can read `request.user`, which DRF sets. Name an authentication class in `access` (see "access" below), or `request.user` is anonymous.
 
 ```python
 from seampact.hooks import AuthenticateRequest, AuthenticateResult, ErrorCodeWithParams, authenticate_result
@@ -200,7 +199,7 @@ def user_hook(request: HttpRequest) -> UserHook:
 - A decider has `decide(request)` and returns `decision.Allowed()` or `decision.Denied(deny=ErrorCodeWithParams(code=...))`. A scope resolver has `resolve_scope(request)` and returns `scope_resolution.Resolved(resolved=ResolvedScope(...))` or `scope_resolution.Denied(deny=...)`. They come from `seampact.hooks`.
 - An idempotency store has `begin`, `complete` and `abandon` (`seampact.hooks.IdempotencyStore`). Name its factory in `idempotency_store`. Use it when an operation is idempotent. With the ORM, it runs in the thread of the sync views, also under ASGI.
 - The unexpected-error listener has `on_unexpected_error(failure)`. It hears each 500 the api answers.
-- To verify a signed webhook, call `seampact-signed-webhooks` in the authenticate hook. The raw body is in `request.signature`.
+- To verify a signed webhook, call `seampact-signed-webhooks` in the authenticate hook. The raw body is `request.signature.raw_body`; `request.signature` is `None` on an unsigned route. `TemplateSignatureVerifier` checks a template signature. A signature your application verifies is refused (`signature.application.unsupported`).
 
 ## DRF's own auth
 
@@ -268,7 +267,7 @@ Allow-list your own routes in the entry, with a reason:
       - { path: "/admin/**", reason: "Django admin, not part of the api." }
 ```
 
-`artefacts: { bootCheck: false }` turns the check off. `{ frameworkRoutes: false }` turns off its route part, and `{ hooks: off }` its hook part.
+`artefacts: { bootCheck: false }` turns the check off. `{ frameworkRoutes: false }` turns off its route part, and `{ hooks: off }` its hook part. `hooks` takes `error` (default) or `off`; `warn` is refused (`artefacts.bootCheck.hooks.warn.unsupported`).
 
 ## Versions
 
@@ -281,5 +280,6 @@ Django 5.2 and 6, and DRF 3.18, are tested. An older version fails with `config.
 - A WSGI or ASGI wrapper around the application object (an error tracker, `WhiteNoise(application)`) runs before the boundary and is not seen.
 - A middleware before the boundary in `MIDDLEWARE` is refused at boot.
 - `generate` refuses by name: form, multipart, file, download and redirect bodies, `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
+- `bodyValidation` (and `body_validation` in `SEAMPACT`) is not served on DRF yet: the boot check refuses it. Use FastAPI for it.
 - Django REST Framework older than 3.18 and Django older than 5.2 are refused.
 - FastAPI is a separate target: see [FastAPI](fastapi.md).

@@ -6,14 +6,14 @@
 
 Python 3.12 or later, FastAPI 0.162 (a later minor is untested, see [Versions](#versions)), and Pydantic 2.9 or later. Pydantic 1 is refused. CI runs the oldest FastAPI (0.162) and the latest.
 
-Nothing is on PyPI yet, so you install seampact from your checkout. Replace `~/src/seampact` with the path of your checkout. Build the wheels once, then make the requirements file of the third-party packages:
+Nothing is on PyPI yet, so you install seampact from your checkout. Replace `~/src/seampact` with the path of your checkout. Install uv 0.13.6 (the workspace pins it). Build the wheels once, then make the requirements file of the third-party packages:
 
 ```sh
 cd ~/src/seampact/python && uv build --all-packages --wheel
 sh ~/src/seampact/scripts/consumers/python/requirements.sh /tmp/requirements.txt seampact-fastapi generate uvicorn
 ```
 
-In your app, install the third-party packages first, then seampact from the wheels. The second command never asks an index for a `seampact-*` name.
+In your app, install the third-party packages first, then seampact from the wheels. The second command never asks an index for a `seampact-*` name. `requirements.sh` refuses an existing output file: give it a new path on a re-run.
 
 ```sh
 cd ~/src/notes-app
@@ -22,7 +22,7 @@ pip install --require-hashes --no-deps --only-binary :all: -r /tmp/requirements.
 pip install --no-index --find-links ~/src/seampact/python/dist "seampact-fastapi[generate]"
 ```
 
-`uv pip install` takes the same flags. The `generate` extra holds the generator and its dependencies: keep it in your dev dependencies, and install plain `seampact-fastapi` in production. Add `seampact-signed-webhooks` if a route is signed by a sender.
+`uv pip install` takes the same flags. The `generate` extra holds the generator and its dependencies: keep it in your dev dependencies, and install plain `seampact-fastapi` in production. Add `seampact-signed-webhooks` if a route is signed by a sender: `pip install --no-index --find-links ~/src/seampact/python/dist seampact-signed-webhooks`.
 
 In `seampact.config.yaml`, add one entry per api:
 
@@ -195,7 +195,7 @@ def user_hook(token: Annotated[str | None, Security(bearer)]) -> UserHook:
 - An idempotency store is a factory for an object with `begin`, `complete` and `abandon` (`seampact.hooks.IdempotencyStore`). Pass it as `idempotency_store=`. Use it when an operation is idempotent.
 - The unexpected-error listener has `on_unexpected_error(failure)`. It hears each 500 the api answers.
 - FastAPI has no CSRF layer. The boundary checks the contract's CSRF header for a caller with a cookie only.
-- To verify a signed webhook, call `seampact-signed-webhooks` in the authenticate hook. The raw body is in `request.signature`.
+- To verify a signed webhook, call `seampact-signed-webhooks` in the authenticate hook. The raw body is `request.signature.raw_body`; `request.signature` is `None` on an unsigned route. `TemplateSignatureVerifier` checks a template signature. A signature your application verifies is refused (`signature.application.unsupported`).
 
 ### FastAPI's own errors
 
@@ -222,7 +222,7 @@ More in [OpenAPI and docs](../configuration/openapi-and-docs.md).
 
 ## Test your routes
 
-Go through the boundary with the `TestClient`. Use it as a context manager, so the startup runs the boot check:
+Go through the boundary with the `TestClient`. It needs `httpx2`, which the dev dependency group holds. Use it as a context manager, so the startup runs the boot check:
 
 ```python
 def test_get_note() -> None:
@@ -236,7 +236,7 @@ def test_get_note() -> None:
 
 - Build the app in a function that takes the hook factories, and pass fakes in the test. Replace a decider, a resolver or a store the same way.
 - Send the credential the contract requires. The boundary asks for it before your hook runs.
-- Never put the generated access or input dependencies in `app.dependency_overrides`: the boot check refuses it, since it would reach your handler without any check.
+- Never put the generated access or input dependencies in `app.dependency_overrides`: the boot check refuses it, since it would reach your handler without any check. Override the handler factory or its own dependencies instead (`app.dependency_overrides[get_notes]` is allowed).
 - Without `with`, the boot check runs on the first request instead.
 - To call a handler directly, build its request class from `generated.notes.operations` yourself. That request skips the boundary, so use it for unit tests only.
 
@@ -261,7 +261,7 @@ Allow-list your own routes in the entry, with a reason. FastAPI's `/docs`, `/red
       - { path: "/admin/**", reason: "Back office, not part of the api." }
 ```
 
-`artefacts: { bootCheck: false }` turns the check off. `{ frameworkRoutes: false }` turns off its route part, and `{ hooks: off }` its hook part.
+`artefacts: { bootCheck: false }` turns the check off. `{ frameworkRoutes: false }` turns off its route part, and `{ hooks: off }` its hook part. `hooks` takes `error` (default) or `off`; `warn` is refused (`artefacts.bootCheck.hooks.warn.unsupported`).
 
 ## Versions
 

@@ -47,6 +47,16 @@ These run with no Node.js installed. The standalone compiler binary (built for l
 | API Platform | `seampact/api-platform` as a development dependency, and `seampact/hooks` unless the target vendors its types |
 
 
+## Python
+
+These are Python packages, installed from wheels built from your checkout while nothing is on PyPI. See [FastAPI](../backend/fastapi.md) and [Django REST Framework](../backend/drf.md).
+
+| Framework | Install |
+|---|---|
+| FastAPI | `seampact-fastapi` (add the `generate` extra in your dev dependencies) |
+| Django REST Framework | `seampact-drf` (add the `generate` extra in your dev dependencies) |
+| signed webhooks | `seampact-signed-webhooks` |
+
 ## Optional packages
 
 | Package | Use it when |

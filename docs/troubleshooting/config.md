@@ -78,5 +78,6 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 | `config.matrix.pnp-unsupported` | Yarn Plug'n'Play hides the versions. Set `nodeLinker: node-modules` in `.yarnrc.yml`, run `yarn install`. |
 | `framework.version.unresolved` | The Gradle or Maven plugin found no Spring Boot on the compile classpath, or a version whose major it cannot read. Depend on a released Spring Boot 4. |
 | `config.own-validators.library-missing` | Install the validator library the message names. |
+| `config.matrix.row-missing` (FastAPI) | Your `seampact-ir` has no compatibility row for the target. Install the same release of `seampact-ir` and `seampact-fastapi`. |
 
 See also [Link errors](link.md), [Monorepo and OpenAPI errors](config-root.md) and the [config reference](../configuration/reference.md).

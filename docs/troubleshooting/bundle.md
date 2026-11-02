@@ -9,8 +9,8 @@ A bundle is a contract packed to share. See [Sharing a contract](../features/sha
 | `bundle.integrity-mismatch`, `bundle.pin-missing`, `bundle.pin-mismatch` | The bundle is not the one you pinned. Pin the `integrity` the publisher printed, or ask the publisher whether the release changed. |
 | `bundle.manifest-*`, `bundle.file-*`, `bundle.too-*`, `bundle.ir-*` | The bundle is damaged or was written by another seampact version. Download it again. If it still fails, rebuild it with `seampact bundle`. |
 | `bundle.cache-invalid` | The cached copy changed after it was saved. Remove the folder the message names, then run again. |
-| `bundle.package-unsupported` | PHP: `package` sources are not read yet. Use the same bundle as a `release` or `git` source. |
-| `bundle.maven-jvm-only` | The npm CLI does not read `maven` sources. Run `generate` and `check` with the Gradle or Maven plugin, or use a `package`, `release` or `git` source. |
+| `bundle.package-unsupported` | PHP and Python: `package` sources are not read yet. Use the same bundle as a `release` or `git` source. |
+| `bundle.maven-jvm-only` | The npm CLI and the Python build do not read `maven` sources. Run `generate` and `check` with the Gradle or Maven plugin, or use a `package`, `release` or `git` source. |
 
 ## Downloading it
 
