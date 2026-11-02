@@ -3,12 +3,11 @@ credentials, and the factories SEAMPACT names, which build them per request."""
 
 import logging
 import uuid
-from dataclasses import dataclass
 from typing import Final
 
 from django.http import HttpRequest
 from generated.tasks.operations import StripeCredentials, UserCredentials
-from generated.tasks.schemas import UserPrincipal
+from generated.tasks.schemas import UserPrincipal, WebhookCaller
 from generated.tasks_service.operations import ServiceCredentials
 from generated.tasks_service.schemas import Service, ServicePrincipal
 from sample_data import channel
@@ -84,13 +83,6 @@ class ChannelResolver:
         return scope_resolution.Resolved(resolved=resolved)
 
 
-@dataclass(frozen=True, slots=True)
-class StripeSender:
-    """The verified sender of a payment event; the contract gives the `stripe` identity no principal schema."""
-
-    account: str
-
-
 class StripeHook:
     """The `stripe` identity: seampact-signed-webhooks verifies the signature over the raw body with the suite's
     `stripeSecret`, the one secret of the key id `stripe`."""
@@ -102,7 +94,7 @@ class StripeHook:
         if signed is None or not isinstance(request.credentials, StripeCredentials) or not _verified(signed):
             return authenticate_result.Denied(deny=ErrorCodeWithParams(code=UNAUTHENTICATED))
 
-        return authenticate_result.Authenticated(principal=StripeSender(account=_STRIPE_ACCOUNT))
+        return authenticate_result.Authenticated(principal=WebhookCaller(account=_STRIPE_ACCOUNT))
 
 
 class _StripeSecrets:
