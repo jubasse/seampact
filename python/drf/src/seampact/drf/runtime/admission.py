@@ -63,12 +63,13 @@ class ContractAdmission:
         self._query: Mapping[str, object] = state.decoded.query
 
     def input[I](self, serializer: type[ContractSerializer], input_type: type[I]) -> I:
-        decoded = self._prepared()
+        decoded = self._checked_version()
         validated = self._validated(serializer, decoded)
-        restricted_body = self._restricted_input(decoded)
+        handed = self._with_page_limit(decoded)
+        restricted_body = self._restricted_input(handed)
 
-        if restricted_body != decoded.body:
-            validated = self._validated(serializer, dataclasses.replace(decoded, body=restricted_body))
+        if handed is not decoded or restricted_body != decoded.body:
+            validated = self._validated(serializer, dataclasses.replace(handed, body=restricted_body))
 
         claim_idempotency(self._request, self._state, self._admitted.principal)
 
@@ -76,7 +77,7 @@ class ContractAdmission:
 
     def empty_input[I](self, input_type: type[I]) -> I:
         contract, operation_id = self._state.contract, self._state.operation_id
-        decoded = self._prepared()
+        decoded = self._checked_version()
         issues = typed_parts(contract, operation_id, decoded).issues
 
         if issues:
@@ -137,13 +138,23 @@ class ContractAdmission:
 
         return django_response(self._request, contract, reply)
 
-    def _prepared(self) -> DecodedInput:
-        """The decoded input with the page limit the handler receives, after the version check of an operation that
-        reads its version from a header, so a missing header is `preconditionRequired`, never `schemaInvalid`."""
+    def _checked_version(self) -> DecodedInput:
+        """The decoded input, after the version check of an operation that reads its version from a header, so a
+        missing header is `preconditionRequired`, never `schemaInvalid`."""
         contract, operation_id, decoded = self._state.contract, self._state.operation_id, self._state.decoded
 
         if ir_map(contract.operation(operation_id), "concurrency"):
             sent_version(contract, operation_id, decoded)
+
+        return decoded
+
+    def _with_page_limit(self, decoded: DecodedInput) -> DecodedInput:
+        """The validated input with the page limit the handler receives: the default for none sent, `maxLimit` for a
+        larger one under `clamp`; the input itself when the operation is no paged list."""
+        contract, operation_id = self._state.contract, self._state.operation_id
+
+        if not ir_map(contract.operation(operation_id), "paging"):
+            return decoded
 
         self._query = filled_page_query(contract, operation_id, decoded.query)
 
@@ -155,7 +166,10 @@ class ContractAdmission:
         parts = typed_parts(contract, operation_id, decoded)
         validating = serializer(data=parts.tree)
         valid = validating.is_valid()
-        issues = parts.issues + ([] if valid else serializer_issues(contract, operation_id, validating.errors))
+        # A value the type layer refused is reported once, by the type layer.
+        typed = {(issue.in_, issue.pointer) for issue in parts.issues}
+        rules = [] if valid else serializer_issues(contract, operation_id, validating.errors)
+        issues = parts.issues + [issue for issue in rules if (issue.in_, issue.pointer) not in typed]
 
         if issues:
             raise schema_invalid(contract, operation_id, rendered(issues))

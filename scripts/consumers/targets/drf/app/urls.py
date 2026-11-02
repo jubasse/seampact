@@ -1,4 +1,4 @@
-"""The root URLconf of the DRF consumer: the `tasks` api's patterns, the suite's control views outside its base path,
+"""The root URLconf of the DRF consumer: the `tasks` and `tasksService` apis' patterns, the suite's control views outside its base path,
 and the framework route of the unlisted and allow-listed boot variants."""
 
 from typing import Final
@@ -18,6 +18,7 @@ def _unlisted(request: HttpRequest) -> JsonResponse:
 
 urlpatterns: list[URLPattern | URLResolver] = [
     path("", include("generated.tasks.urls")),
+    path("", include("generated.tasks_service.urls")),
     path(SCRIPT_PATH.removeprefix("/"), load_script),
     path(HOOK_CALLS_PATH.removeprefix("/"), hook_calls),
     path(LOG_LINES_PATH.removeprefix("/"), log_lines),
