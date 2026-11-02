@@ -521,6 +521,25 @@ def test_page_links_start_with_the_public_origin_under_absolute_urls(monkeypatch
     assert response["Link"].startswith(f"<{_PUBLIC_ORIGIN}/v1/channels/{_CHANNEL_ID}/tasks?"), response["Link"]
 
 
+def test_absolute_page_links_keep_the_script_name_under_wsgi_and_asgi(monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_absolute_urls(monkeypatch)
+    answers["list_tasks"] = lambda _: _module("operations").ListTasksResponse200(
+        body=_module("operations").ListTasksPage(items=[], next_cursor="c-2")
+    )
+    page = f"/v1/channels/{_CHANNEL_ID}/tasks"
+
+    async def under_asgi() -> HttpResponseBase:
+        return await AsyncClient().get(f"/svc{page}", headers=_bearer(), root_path="/svc")
+
+    with override_settings(SEAMPACT={"tasks": {**_settings(), "public_origin": _PUBLIC_ORIGIN}}):
+        wsgi = Client().get(page, headers=_bearer(), SCRIPT_NAME="/svc")
+        asgi = asyncio.run(under_asgi())
+
+    for response in (wsgi, asgi):
+        assert response.status_code == HTTPStatus.OK, _code(response)
+        assert response["Link"].startswith(f"<{_PUBLIC_ORIGIN}/svc{page}?"), response["Link"]
+
+
 @pytest.mark.parametrize(
     ("public_origin", "named"),
     [
