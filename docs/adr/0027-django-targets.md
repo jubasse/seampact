@@ -298,6 +298,8 @@ Each operation is one `api_operation()` call:
 
 `bind_<api>()` marks the Django views of the contract paths `login_required = False`, so Django's `LoginRequiredMiddleware` never redirects a contract request; it would answer a bearer caller without a session with a 302 (review probe). A target test fails by name if the mark stops reaching Ninja's views.
 
+`bind_<api>()` takes Ninja's per-access-kind values as `access`, a mapping from each access kind to `AccessSettings(auth=..., throttle=...)`: the `auth=` and `throttle=` Ninja applies to that kind's operations, none when the kind is absent.
+
 Ninja runs `auth=` and throttles first. The generated view then checks the boundary's mark and the chosen route, runs steps 2 to 5, then validates the decoded tree with the shared Pydantic models of ADR 0026 "Types and validation" (strict mode, the same type layer, the same `rules`).
 
 The target option `views` is `sync`, the default, or `async`. Async views run natively under ASGI and through Django's adapter under WSGI (spike). In sync views an `async def` hook or handler method is refused by the boot check, as on DRF. In async views a `def` method runs through Django's `sync_to_async`.
