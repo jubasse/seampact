@@ -105,6 +105,18 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `seampact: no generated routes for the api '<api>'; list its service provider in bootstrap/providers.php.` | Add the generated `<Api>SeampactServiceProvider` to `bootstrap/providers.php`. |
 | `config('seampact.<api>.middleware.<kind>') is not a list of middleware names` | Set that key in `config/seampact/<api>.php` to a list of strings such as `['auth:sanctum']`, or to `[]`. |
 
+## Django (DRF)
+
+The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. It comes when the server loads the app, and `python manage.py seampact_check` prints the same list.
+
+| You see | Do |
+|---|---|
+| `settings.SEAMPACT['<api>']['public_origin'] is not set` or `... is '<value>', which ...` | The contract writes absolute URLs. Set `public_origin` to a scheme, host and optional port, such as `https://api.example.com`. |
+| `the api '<api>' writes relative URLs ... and settings.SEAMPACT['<api>']['public_origin'] is set` | Remove `public_origin`, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `settings.SEAMPACT['<api>']['access'] has the unknown access kind '<kind>'` | Key `access` by `public`, `optional`, `identity` or `signed`. |
+| `settings.SEAMPACT['<api>']['access'] names the access kind '<kind>', which no operation of the api has` | Remove that kind. |
+| `settings.SEAMPACT['<api>']['access']['<kind>']['<name>'] names '<path>', which ...` | Name DRF classes of the matching base by dotted path: `BaseAuthentication`, `BasePermission` or `BaseThrottle`. |
+
 ## Spring Boot
 
 The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. See [The boot check](../backend/spring-boot.md#the-boot-check).
