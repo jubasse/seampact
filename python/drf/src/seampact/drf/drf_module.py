@@ -11,21 +11,18 @@ from seampact.codegen.names import ApiNames, member_identifier
 from seampact.codegen.printer import INDENT, PythonModule, string_literal
 from seampact.codegen.refusals import IrPlace, Refusals
 from seampact.django.emitters import ContractPath
-from seampact.drf.api_layout import ApiLayout, OperationNames, handler_headers
+from seampact.drf.api_layout import ApiLayout, NameClaims, OperationNames, handler_headers, principal_schema
 from seampact.drf.expressions import Expression, Keyword, call, lines
 from seampact.drf.serializer_fields import RulesMode, SerializerFields
 from seampact.ir.model import (
     ArrayTypeUse,
     ContractIR,
-    CredentialIdentity,
     IdentityAccess,
     ObjectSchema,
     Operation,
     OptionalAccess,
     Param,
     RefTypeUse,
-    SchemaPrincipal,
-    SignedIdentity,
     TypeUse,
 )
 from seampact.ir.naming import IrName, NamingRole, python_identifier
@@ -56,7 +53,9 @@ class _Emission:
         self.fields = SerializerFields(self.module, names, rules, refusals, self._schema_serializer)
         self.runtime = self.module.imported("seampact.drf.runtime", "_drf_runtime")
         self.operations = self.module.imported(".operations", _OPERATIONS)
-        self.claimed: dict[str, IrPlace] = {}
+        self.claims = NameClaims("drf", refusals)
+        self.operations_by_id = {operation.id: operation for operation in ir.operations}
+        self.request_serializers: set[str] = set()
 
     def text(self) -> str:
         for schema_id in sorted(_read_schemas(self.ir)):
@@ -77,20 +76,6 @@ class _Emission:
             self._view(contract_path)
 
         return self.module.text()
-
-    def claim(self, name: str, at: IrPlace) -> str:
-        earlier = self.claimed.setdefault(name, at)
-
-        if earlier is not at:
-            self.refusals.add(
-                "name.collision",
-                f"The names at {earlier.pointer} and at {at.pointer} both give the Python class '{name}' in the drf "
-                "module.",
-                "Rename one of them in the contract, or give one a `codeName`.",
-                at,
-            )
-
-        return name
 
     def _schema_serializer(self, schema_id: str) -> str | None:
         name = self.names.schema_classes.get(schema_id)
@@ -118,7 +103,7 @@ class _Emission:
         serializer = self._schema_serializer(schema_id)
 
         if serializer is not None:
-            self._serializer(self.claim(serializer, at), f"schema '{schema_id}'", fields)
+            self._serializer(self.claims.name(serializer, at), f"schema '{schema_id}'", fields)
 
     def _serializer(self, name: str, subject: str, fields: Sequence[tuple[str, Expression]]) -> None:
         body = [
@@ -144,7 +129,7 @@ class _Emission:
             ("headers", names.headers, handler_headers(operation), "header"),
         ):
             if part_name is not None:
-                serializer = self.claim(part_name + _SERIALIZER_SUFFIX, at)
+                serializer = self.claims.name(part_name + _SERIALIZER_SUFFIX, at)
                 self._serializer(
                     serializer,
                     f"the {part} of operation '{operation.id}'",
@@ -157,8 +142,9 @@ class _Emission:
             parts.append((string_literal("body"), body))
 
         if parts:
-            serializer = self.claim(names.request + _SERIALIZER_SUFFIX, at)
+            serializer = self.claims.name(names.request + _SERIALIZER_SUFFIX, at)
             self._serializer(serializer, f"the input of operation '{operation.id}'", parts)
+            self.request_serializers.add(operation.id)
 
     def _params(self, params: Sequence[Param], at: IrPlace) -> list[tuple[str, Expression]]:
         fields = []
@@ -189,7 +175,7 @@ class _Emission:
                 f"{INDENT}return {self.runtime}.contract_exception_reply({api}, exception, context)",
             ]
         )
-        base_view = self.claim(self.layout.api_class + "View", IrPlace("/api/name"))
+        base_view = self.claims.name(self.layout.api_class + "View", IrPlace("/api/name"))
         self.module.add_block(
             [
                 f"class {base_view}({self.runtime}.ContractView):",
@@ -221,15 +207,15 @@ class _Emission:
         )
 
     def _view(self, contract_path: ContractPath) -> None:
-        first = self.ir_operation(contract_path.first.operation_id)
+        first = self.operations_by_id[contract_path.first.operation_id]
         view = view_class(first)
         block = [
-            f"class {self.claim(view, IrPlace('/operations'))}({self.layout.api_class}View):",
+            f"class {self.claims.name(view, IrPlace('/operations'))}({self.layout.api_class}View):",
             f'{INDENT}"""The contract path `{contract_path.first.contract_path}`."""',
         ]
 
         for entry in contract_path.entries:
-            operation = self.ir_operation(entry.operation_id)
+            operation = self.operations_by_id[entry.operation_id]
             names = self.layout.operations.get(operation.id)
 
             if names is not None:
@@ -237,13 +223,10 @@ class _Emission:
 
         self.module.add_block(block)
 
-    def ir_operation(self, operation_id: str) -> Operation:
-        return next(operation for operation in self.ir.operations if operation.id == operation_id)
-
     def _view_method(self, method: str, operation: Operation, names: OperationNames) -> list[str]:
         http = self.module.imported("django.http", "_http")
         request = self.module.imported("rest_framework.request", "_request")
-        owner = next(owner for owner in self.layout.owners.values() if owner.protocol == names.owner)
+        owner = names.owner
         arguments: list[Expression] = [Keyword("input", self._input(operation, names))]
 
         if isinstance(operation.access, IdentityAccess | OptionalAccess):
@@ -272,15 +255,14 @@ class _Emission:
     def _input(self, operation: Operation, names: OperationNames) -> Expression:
         input_type = f"{self.operations}.{names.input}"
 
-        if self.claimed.get(names.request + _SERIALIZER_SUFFIX) is None:
+        if operation.id not in self.request_serializers:
             return call(input_type)
 
         return call("admission.input", [names.request + _SERIALIZER_SUFFIX, input_type])
 
     def _principal_class(self, identity: str) -> str:
-        declared = self.ir.identities.get(identity)
-        principal = declared.principal if isinstance(declared, CredentialIdentity | SignedIdentity) else None
-        name = self.names.schema_classes.get(principal.schema) if isinstance(principal, SchemaPrincipal) else None
+        schema = principal_schema(self.ir, identity)
+        name = None if schema is None else self.names.schema_classes.get(schema)
 
         return "object" if name is None else f"{self.module.imported('.schemas', _SCHEMAS)}.{name}"
 

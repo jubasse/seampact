@@ -9,12 +9,12 @@ from typing import Final
 from seampact.codegen.names import ApiNames, member_identifier
 from seampact.codegen.printer import INDENT, PythonModule, string_literal
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
-from seampact.drf.api_layout import ApiLayout, OperationNames, handler_headers
+from seampact.drf.api_layout import ApiLayout, OperationNames, handler_headers, principal_schema
 from seampact.drf.dataclass_schemas import DATACLASS_DECORATOR
 from seampact.drf.python_types import PythonTypes
+from seampact.ir.hydration import OMITTED
 from seampact.ir.model import (
     ContractIR,
-    CredentialIdentity,
     HandlerResultMember,
     IdentityAccess,
     Operation,
@@ -23,8 +23,6 @@ from seampact.ir.model import (
     PublicAccess,
     ResponseShape,
     ResponseShapeUnknown,
-    SchemaPrincipal,
-    SignedIdentity,
     TypeUse,
 )
 
@@ -154,6 +152,11 @@ class _Emission:
                 self.refusals.inconsistent("param.no-segment", f"The parameter '{param.name}' has no name segment", at)
                 continue
 
+            if param.default is not OMITTED:
+                self.refusals.waiting(
+                    "param.default", f"The parameter '{param.name}' with a default", at.below(index), Delivery.CONSUMER
+                )
+
             suffix = "" if param.required else " | None"
             annotation = self.types.annotation(self.module, param.type, at.below(index, "type"), suffix)
             members.append(f"{INDENT}{attribute}: {annotation}{'' if param.required else ' = None'}")
@@ -195,19 +198,13 @@ class _Emission:
         return members
 
     def _principal(self, identity: str, at: IrPlace) -> str:
-        declared = self.ir.identities.get(identity)
-        principal = declared.principal if isinstance(declared, CredentialIdentity | SignedIdentity) else None
+        schema = principal_schema(self.ir, identity)
+        name = None if schema is None else self.names.schema_classes.get(schema)
 
-        if not isinstance(principal, SchemaPrincipal):
+        if name is None:
             self.refusals.waiting(
                 "principal.variants", f"The principal of identity '{identity}', not one schema", at, Delivery.CONSUMER
             )
-            return "object"
-
-        name = self.names.schema_classes.get(principal.schema)
-
-        if name is None:
-            self.refusals.inconsistent("principal.schema.missing", f"No object schema '{principal.schema}'", at)
             return "object"
 
         return f"{self.schemas()}.{name}"
@@ -336,7 +333,7 @@ class _Emission:
             for operation in self.ir.operations:
                 names = self.layout.operations.get(operation.id)
 
-                if names is not None and names.owner == owner.protocol:
+                if names is not None and names.owner is owner:
                     lines += ["", f"{INDENT}def {names.method}(self, request: {names.request}) -> {names.result}: ..."]
 
             self.module.add_block(lines)

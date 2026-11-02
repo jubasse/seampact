@@ -21,7 +21,7 @@ from seampact.django.emitters import (
     settings_module,
     urls_module,
 )
-from seampact.drf.api_layout import ApiLayout, api_layout
+from seampact.drf.api_layout import api_layout
 from seampact.drf.dataclass_schemas import dataclass_schemas_module
 from seampact.drf.drf_module import drf_module, view_class
 from seampact.drf.operation_types import operations_module
@@ -99,6 +99,3 @@ def _refuse_input_media(ir: ContractIR, refusals: Refusals) -> None:
             refusals.unknown_value(media.raw, at)
         elif media is not InputMediaType.APPLICATION_JSON:
             refusals.waiting("input.media", f"A '{media.value}' request body", at, Delivery.CONSUMER)
-
-
-__all__ = ["ApiLayout", "DrfGenerator"]

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Final
 
 from seampact.codegen.refusals import IrPlace, Refusals
-from seampact.ir.model import ContractIR, Operation, Param
+from seampact.ir.model import ContractIR, CredentialIdentity, Operation, Param, SchemaPrincipal, SignedIdentity
 from seampact.ir.naming import IrName, NameSource, NamingRole, python_identifier, segments_of
 
 _BOUNDARY_HEADER_DERIVATIONS: Final = frozenset({"identity.authenticate"})
@@ -27,7 +27,7 @@ class OperationNames:
     errors: str
     page: str | None
     method: str
-    owner: str
+    owner: "HandlerOwner"
     responses: Mapping[int, str]
 
 
@@ -50,8 +50,7 @@ class ApiLayout:
 
 def api_layout(ir: ContractIR, refusals: Refusals) -> ApiLayout:
     layout = ApiLayout(python_identifier(IrName(tuple(ir.api.name.segments), NamingRole.SCHEMA)))
-    claimed: dict[str, IrPlace] = {}
-    claim = _Claims(claimed, refusals)
+    claim = NameClaims("operations", refusals)
 
     claim.name(f"{layout.api_class}ContractError", IrPlace("/api/name"))
 
@@ -87,7 +86,7 @@ def api_layout(ir: ContractIR, refusals: Refusals) -> ApiLayout:
     return layout
 
 
-def _operation_names(operation: Operation, owner: HandlerOwner, claim: "_Claims", at: IrPlace) -> OperationNames:
+def _operation_names(operation: Operation, owner: HandlerOwner, claim: "NameClaims", at: IrPlace) -> OperationNames:
     segments = tuple(operation.name.segments)
 
     def type_name(role: NamingRole, *words: str, status: int | None = None) -> str:
@@ -107,7 +106,7 @@ def _operation_names(operation: Operation, owner: HandlerOwner, claim: "_Claims"
         errors=type_name(NamingRole.ERRORS),
         page=part_name(operation.paging is not None, NamingRole.SCHEMA, "page"),
         method=python_identifier(IrName(segments, NamingRole.OPERATION)),
-        owner=owner.protocol,
+        owner=owner,
         responses={
             response.status: type_name(NamingRole.RESPONSE, status=response.status) for response in operation.responses
         },
@@ -141,10 +140,13 @@ def _owner(ir: ContractIR, operation: Operation) -> tuple[str, ...] | None:
     return tuple(segments) if segments else None
 
 
-class _Claims:
-    def __init__(self, claimed: dict[str, IrPlace], refusals: Refusals) -> None:
-        self._claimed = claimed
+class NameClaims:
+    """The class names of one generated module; a name claimed twice is refused, naming both places."""
+
+    def __init__(self, module: str, refusals: Refusals) -> None:
+        self._module = module
         self._refusals = refusals
+        self._claimed: dict[str, IrPlace] = {}
 
     def name(self, name: str, at: IrPlace) -> str:
         earlier = self._claimed.setdefault(name, at)
@@ -153,9 +155,17 @@ class _Claims:
             self._refusals.add(
                 "name.collision",
                 f"The names at {earlier.pointer} and at {at.pointer} both give the Python class '{name}' in the "
-                "operations module.",
+                f"{self._module} module.",
                 "Rename one of them in the contract, or give one a `codeName`.",
                 at,
             )
 
         return name
+
+
+def principal_schema(ir: ContractIR, identity: str) -> str | None:
+    """The object schema of an identity's principal; None for a principal of several variants."""
+    declared = ir.identities.get(identity)
+    principal = declared.principal if isinstance(declared, CredentialIdentity | SignedIdentity) else None
+
+    return principal.schema if isinstance(principal, SchemaPrincipal) else None

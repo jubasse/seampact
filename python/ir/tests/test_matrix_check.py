@@ -98,7 +98,7 @@ def test_an_entry_of_a_target_the_matrix_does_not_record_is_not_checked(tmp_path
 
 
 def test_the_spec_row_names_the_use_the_config_schema_accepts() -> None:
-    assert json.dumps(sorted(python_targets())) == json.dumps([_FASTAPI])
+    assert json.dumps(sorted(python_targets())) == json.dumps(["pypi:seampact-drf", _FASTAPI, "pypi:seampact-ninja"])
 
 
 @pytest.mark.parametrize("item", ["fastapi@0.162", "fastapi@0.0", "starlette@1"])
