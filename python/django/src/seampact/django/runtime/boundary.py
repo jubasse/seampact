@@ -29,7 +29,7 @@ from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, framework_version_warnings
 from seampact.codegen.runtime.input_decoding import IncomingRequest, Issue, decode_input, role_refusal, schema_invalid
 from seampact.codegen.runtime.ir_view import ir_int, ir_map
-from seampact.codegen.runtime.raw_target import RawTarget, asgi_raw_target, wsgi_raw_target
+from seampact.codegen.runtime.raw_target import RawTarget, asgi_raw_target, without_origin, wsgi_raw_target
 from seampact.codegen.runtime.replies import CONTENT_TYPE, role_reply
 from seampact.codegen.runtime.reply_verdict import (
     MAX_CHECKED_ERROR_BODY_BYTES,
@@ -181,6 +181,7 @@ class ContractBoundary:
             return unexpected_response(request, self.contract, operation_id, str(failure), failure)
 
         attach(request, BoundaryState(self.contract, operation_id, matched.raw_parameters, decoded))
+        _route_without_origin(request)
 
         return None
 
@@ -365,6 +366,18 @@ def _log_untested_minors(boundary: type[ContractBoundary]) -> None:
         logging.getLogger(f"seampact.{boundary.api}").warning(
             "seampact: the api '%s' serves untested:\n%s", boundary.api, listed
         )
+
+
+def _route_without_origin(request: HttpRequest) -> None:
+    """uvicorn passes the origin of an absolute-form target in the ASGI `path`, and Django routes `path_info`: the
+    contract request is routed by its path alone, as gunicorn's `PATH_INFO` already is."""
+    path_info = without_origin(request.path_info)
+
+    if path_info == request.path_info:
+        return
+
+    request.path = request.path.removesuffix(request.path_info) + path_info
+    request.path_info = path_info
 
 
 def _raw_target(request: HttpRequest) -> RawTarget | None:
