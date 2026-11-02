@@ -12,7 +12,7 @@ import fastapi
 import pytest
 
 from seampact.fastapi.generator import FastApiGenerator
-from seampact.fastapi.runtime import PLACEMENT_UNAVAILABLE, PlacementUnavailableError
+from seampact.fastapi.runtime import ApiBinding
 from seampact.ir.read import read_ir
 from seampact.ir.run.generator import GenerationRefusedError
 
@@ -69,8 +69,10 @@ def test_an_operation_named_after_a_placement_module_alias_still_binds(
         tasks=object, drafts=object, channels=object, preferences=object, app=object, hooks=object
     )
 
-    with pytest.raises(PlacementUnavailableError, match=PLACEMENT_UNAVAILABLE):
-        bind(fastapi.FastAPI(), handlers=handlers)
+    app = fastapi.FastAPI()
+    bind(app, handlers=handlers)
+
+    assert isinstance(app.user_middleware[0].kwargs.get("binding"), ApiBinding)
 
 
 def test_error_codes_named_like_the_errors_class_fields_keep_their_factories(

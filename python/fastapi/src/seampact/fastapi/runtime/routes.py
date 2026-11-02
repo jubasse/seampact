@@ -1,99 +1,258 @@
-"""The contract routes of one api (ADR 0026 "Routes"): one `add_api_route` per operation on the api's own router, named
-`seampact.<api>.<operationId>`, left out of FastAPI's document, with the access dependency on the route and an
-endpoint that takes only the `Request`, the input dependency and the handler factory, in that order, so FastAPI parses
-no parameter."""
+"""The contract routes of one api (ADR 0026 "Placement" and "Routes"): one `add_api_route` per operation on the api's
+own router, named `seampact.<api>.<operationId>`, left out of FastAPI's document. The access dependency sits in the
+route's `dependencies` and runs steps 2 to 5 after the app's global and router dependencies; the endpoint takes only
+the `Request`, the input dependency (steps 6 to 8, which depends on the access dependency) and the handler factory, in
+that order, so FastAPI parses no parameter and the input is checked before the factory opens a session."""
 
 import inspect
-from collections.abc import Awaitable, Callable
-from typing import Annotated, NoReturn
+from collections.abc import Awaitable, Callable, Mapping
+from typing import Annotated, Final, TypeGuard
 
 import fastapi
-from starlette.concurrency import run_in_threadpool
 
-from seampact.fastapi.runtime.placement import ApiPlacement, Factory, OperationRoute
-from seampact.fastapi.runtime.unavailable import PlacementUnavailableError
+from seampact.codegen.runtime.access_steps import AccessHooks, AccessState, run_access_steps
+from seampact.codegen.runtime.contract import NOT_FOUND_ROLE
+from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
+from seampact.codegen.runtime.hook_check import hook_needs
+from seampact.fastapi.runtime.api_binding import ApiBinding, is_unexpected_error_listener
+from seampact.fastapi.runtime.contract_input import InputBuilder
+from seampact.fastapi.runtime.handler_call import call_handler
+from seampact.fastapi.runtime.handler_reply import OperationTypes, result_reply
+from seampact.fastapi.runtime.placement import Factory, OperationRoute
+from seampact.fastapi.runtime.request_state import RequestState, state_of
+from seampact.fastapi.runtime.unserved import unserved_features, unserved_problem
+from seampact.hooks import AuthenticateHook, DecideHook, RequestView, ResolveScopeHook, UnexpectedErrorListener
 
-_ACCESS_PIECE = "the access dependency (steps 2 to 5)"
-_INPUT_PIECE = "the input dependency (steps 6 to 8)"
-_REPLY_PIECE = "the reply of a handler's result"
-
-
-def contract_router() -> fastapi.APIRouter:
-    """The api's router: no prefix, since `mount` is already in each path. The app's router does the routing, so a
-    trailing slash is the boundary's to answer, not this router's."""
-    return fastapi.APIRouter()
+_AUTHENTICATE: Final = "authenticate"
+_DECIDER: Final = "decider"
+_SCOPE_RESOLVER: Final = "scope_resolver"
+_LISTENER: Final = "on_unexpected_error"
 
 
 def add_operation[E, R](
-    router: fastapi.APIRouter,
-    placement: ApiPlacement,
+    binding: ApiBinding,
     operation_id: str,
-    handlers: Factory[E],
+    handlers: Factory[E] | None,
     invoke: Callable[[E, R], Awaitable[object]],
+    types: OperationTypes,
 ) -> None:
-    """Adds the contract route of `operation_id`, its endpoint calling `invoke` with the handlers `handlers` builds."""
-    route = placement.route(operation_id)
+    """Adds the contract route of `operation_id` to the api's router, its endpoint calling `invoke` with the handlers
+    `handlers` builds; a missing factory answers the api's 500, and the boot check names it."""
+    route = binding.placement.route(operation_id)
+    access = _access_dependency(binding, route)
+    contract_input = _input_dependency(binding, route, access, InputBuilder(binding.contract, operation_id, types))
+    binding.handler_factories[operation_id] = handlers
+    binding.dependencies += [access, contract_input]
 
-    router.add_api_route(
+    binding.router.add_api_route(
         route.path,
-        _endpoint(placement, route, handlers, invoke),
+        _endpoint(binding, route, handlers, invoke, contract_input, types),
         methods=list(route.methods),
         name=route.name,
         include_in_schema=False,
-        dependencies=[fastapi.Depends(_access_dependency(placement, route))],
+        dependencies=[fastapi.Depends(access)],
         response_class=fastapi.Response,
     )
 
 
-async def call_handler[A, T](method: Callable[[A], T | Awaitable[T]], argument: A) -> T:
-    """Calls a handler or hook method: an `async def` on the event loop, a plain `def` in Starlette's threadpool,
-    which carries the caller's context variables, then awaits what a `def` returns when it is awaitable."""
-    if inspect.iscoroutinefunction(method):
-        coroutine: Awaitable[T] = method(argument)
-        return await coroutine
+def _access_dependency(binding: ApiBinding, route: OperationRoute) -> Callable[..., Awaitable[None]]:
+    """Steps 2 to 5. Its hook factories are its sub-dependencies, so they run first, as the app's native layer."""
+    needs = hook_needs(binding.contract, [route.operation_id])
+    hook_factories: dict[str, tuple[str, str, Factory[object]]] = {}
 
-    result: T | Awaitable[T] = await run_in_threadpool(method, argument)
+    def depend(kind: str, name: str, factory: Factory[object] | None) -> None:
+        if factory is not None:
+            hook_factories[f"{kind}_{len(hook_factories)}"] = (kind, name, factory)
 
-    if isinstance(result, Awaitable):
-        # The checkers read `Awaitable[Any]` here, since T might be awaitable itself: a plain `def` returning an
-        # awaitable takes the `Awaitable[T]` arm its protocol declares, so the awaited value is taken as that T.
-        awaited: T = await result
-        return awaited
+    for identity in needs.identities:
+        depend(_AUTHENTICATE, identity, binding.hooks.authenticate.get(identity))
 
-    return result
+    for scope in needs.scopes:
+        depend(_SCOPE_RESOLVER, scope, binding.hooks.scope_resolvers.get(scope))
 
+    for name in needs.deciders:
+        depend(_DECIDER, name, binding.hooks.deciders.get(name))
 
-def _access_dependency(placement: ApiPlacement, route: OperationRoute) -> Callable[[fastapi.Request], NoReturn]:
-    def access(request: fastapi.Request) -> NoReturn:
-        raise PlacementUnavailableError(placement.api, f"{_ACCESS_PIECE} of operation '{route.operation_id}'")
+    depend(_LISTENER, "", binding.hooks.on_unexpected_error)
+
+    async def access(request: fastapi.Request, **resolved: object) -> None:
+        state = _contract_state(binding, request, route.operation_id)
+        features = unserved_features(binding.contract, route.operation_id)
+
+        if features:
+            raise BoundaryFailureError(unserved_problem(binding.api, route.operation_id, features))
+
+        hooks, listener = _resolved_hooks(hook_factories, resolved)
+        state.listener = listener
+        access_state = AccessState(
+            contract=binding.contract,
+            operation_id=route.operation_id,
+            raw_parameters=state.raw_parameters,
+            request=_request_view(request, state),
+            body=state.decoded.body,
+        )
+
+        await run_access_steps(access_state, hooks, call_handler)
+
+        state.access = access_state
+        state.admitted = True
+
+    parameters = [inspect.Parameter("request", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=fastapi.Request)]
+    parameters += [
+        inspect.Parameter(name, inspect.Parameter.KEYWORD_ONLY, default=fastapi.Depends(factory))
+        for name, (_, _, factory) in hook_factories.items()
+    ]
+    # FastAPI reads the dependency's parameters from its signature: one sub-dependency per hook factory it needs.
+    setattr(access, "__signature__", inspect.Signature(parameters))  # noqa: B010
+    access.__name__ = f"seampact_{binding.api}_{route.operation_id}_access"
 
     return access
 
 
-def _input_dependency(placement: ApiPlacement, route: OperationRoute) -> Callable[[fastapi.Request], NoReturn]:
-    def contract_input(request: fastapi.Request) -> NoReturn:
-        raise PlacementUnavailableError(placement.api, f"{_INPUT_PIECE} of operation '{route.operation_id}'")
+def _contract_state(binding: ApiBinding, request: fastapi.Request, operation_id: str) -> RequestState:
+    """The boundary's state of this request: without it the boundary did not run, so the route fails closed; a raw
+    path that matched another operation than the route FastAPI chose answers that path's 404."""
+    state = state_of(request.scope, binding.api)
+
+    if state is None:
+        raise BoundaryFailureError(
+            f"seampact: the contract route of operation '{operation_id}' ran without the '{binding.api}' boundary; "
+            f"call bind_{binding.api}() on the app that serves the route, and add no ASGI layer that drops the scope."
+        )
+
+    if state.operation_id != operation_id:
+        code = binding.contract.role_code(state.operation_id, NOT_FOUND_ROLE)
+
+        if code is None:
+            raise BoundaryFailureError(
+                f"seampact: operation '{state.operation_id}' declares no code for the role '{NOT_FOUND_ROLE}'."
+            )
+
+        raise ContractRefusal(binding.api, code)
+
+    return state
+
+
+def _resolved_hooks(
+    hook_factories: Mapping[str, tuple[str, str, Factory[object]]], resolved: Mapping[str, object]
+) -> tuple[AccessHooks, UnexpectedErrorListener | None]:
+    authenticate: dict[str, AuthenticateHook] = {}
+    deciders: dict[str, DecideHook] = {}
+    scope_resolvers: dict[str, ResolveScopeHook] = {}
+    listener: UnexpectedErrorListener | None = None
+
+    for parameter, (kind, name, _) in hook_factories.items():
+        hook = resolved.get(parameter)
+
+        if kind == _AUTHENTICATE and _is_authenticate_hook(hook):
+            authenticate[name] = hook
+        elif kind == _DECIDER and _is_decide_hook(hook):
+            deciders[name] = hook
+        elif kind == _SCOPE_RESOLVER and _is_scope_resolver(hook):
+            scope_resolvers[name] = hook
+        elif kind == _LISTENER and is_unexpected_error_listener(hook):
+            listener = hook
+        else:
+            raise BoundaryFailureError(
+                f"seampact: the {kind.replace('_', ' ')} factory for '{name}' built a {type(hook).__qualname__}, "
+                "which lacks the hook's method; return an object that implements the hook protocol."
+            )
+
+    return AccessHooks(authenticate=authenticate, deciders=deciders, scope_resolvers=scope_resolvers), listener
+
+
+def _is_authenticate_hook(value: object) -> TypeGuard[AuthenticateHook]:
+    return callable(getattr(value, "authenticate", None))
+
+
+def _is_decide_hook(value: object) -> TypeGuard[DecideHook]:
+    return callable(getattr(value, "decide", None))
+
+
+def _is_scope_resolver(value: object) -> TypeGuard[ResolveScopeHook]:
+    return callable(getattr(value, "resolve_scope", None))
+
+
+def _request_view(request: fastapi.Request, state: RequestState) -> RequestView:
+    headers: dict[str, list[str]] = {}
+
+    for name, value in request.headers.items():
+        headers.setdefault(name, []).append(value)
+
+    client = request.client
+
+    return RequestView(
+        method=state.method,
+        path=state.target.path,
+        headers={name: tuple(values) for name, values in headers.items()},
+        client_address=None if client is None else client.host,
+    )
+
+
+def _input_dependency(
+    binding: ApiBinding, route: OperationRoute, access: Callable[..., Awaitable[None]], builder: InputBuilder
+) -> Callable[..., Awaitable[object]]:
+    """Steps 6 to 8 on the boundary's decoded tree; without the access mark for its own operation it fails closed."""
+
+    async def contract_input(request: fastapi.Request, admitted: Annotated[None, fastapi.Depends(access)]) -> object:
+        state = state_of(request.scope, binding.api)
+
+        if state is None or state.operation_id != route.operation_id or not state.admitted or state.access is None:
+            raise BoundaryFailureError(
+                f"seampact: the input of operation '{route.operation_id}' was asked for before its access steps "
+                "admitted the request; remove any dependency override of the generated dependencies."
+            )
+
+        typed = builder.build(state.decoded, state.access, state.target.query)
+        state.typed_request = typed
+
+        return typed
+
+    contract_input.__name__ = f"seampact_{binding.api}_{route.operation_id}_input"
 
     return contract_input
 
 
 def _endpoint[E, R](
-    placement: ApiPlacement,
+    binding: ApiBinding,
     route: OperationRoute,
-    handlers: Factory[E],
+    handlers: Factory[E] | None,
     invoke: Callable[[E, R], Awaitable[object]],
+    contract_input: Callable[..., Awaitable[object]],
+    types: OperationTypes,
 ) -> Callable[..., Awaitable[fastapi.Response]]:
-    input_dependency = _input_dependency(placement, route)
+    handler_factory: Factory[object] = handlers if handlers is not None else _missing_handler(binding, route)
 
     async def endpoint(
         request: fastapi.Request,
-        contract_request: Annotated[R, fastapi.Depends(input_dependency)],
-        endpoints: Annotated[E, fastapi.Depends(handlers)],
+        contract_request: Annotated[R, fastapi.Depends(contract_input)],
+        endpoints: Annotated[E, fastapi.Depends(handler_factory)],
     ) -> fastapi.Response:
-        await invoke(endpoints, contract_request)
+        state = state_of(request.scope, binding.api)
 
-        raise PlacementUnavailableError(placement.api, f"{_REPLY_PIECE} of operation '{route.operation_id}'")
+        if state is None or state.typed_request is not contract_request:
+            raise BoundaryFailureError(
+                f"seampact: the endpoint of operation '{route.operation_id}' got an input its input dependency did "
+                "not build; remove any dependency override of the generated dependencies."
+            )
 
-    endpoint.__name__ = f"seampact_{placement.api}_{route.operation_id}"
+        result = await invoke(endpoints, contract_request)
+        reply = state.authored.author(
+            result_reply(binding.contract, route.operation_id, types, result, state.target.path)
+        )
+
+        return fastapi.Response(content=reply.body, status_code=reply.status, headers=dict(reply.headers))
+
+    endpoint.__name__ = f"seampact_{binding.api}_{route.operation_id}"
 
     return endpoint
+
+
+def _missing_handler(binding: ApiBinding, route: OperationRoute) -> Callable[[], object]:
+    def missing() -> object:
+        raise BoundaryFailureError(
+            f"seampact: the '{binding.api}' api has no handler factory for operation '{route.operation_id}'; pass one "
+            f"in the handlers of bind_{binding.api}()."
+        )
+
+    return missing

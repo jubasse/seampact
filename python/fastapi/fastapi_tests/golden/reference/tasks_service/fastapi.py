@@ -7,7 +7,15 @@ import typing as _typing
 import seampact.fastapi.runtime as _runtime
 import seampact.hooks as _hooks
 
-from .operations import GetTaskRequest, GetTaskResult, InternalEndpoints, TasksServiceContractError
+from . import contract as _contract
+from .operations import (
+    GetTaskErrors,
+    GetTaskRequest,
+    GetTaskResponse200,
+    GetTaskResult,
+    InternalEndpoints,
+    TasksServiceContractError,
+)
 
 GENERATED_BY: _typing.Final = "0.0.0-dev"
 
@@ -40,9 +48,9 @@ PLACEMENT: _typing.Final = _runtime.ApiPlacement(
 
 @_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class TasksServiceHandlerFactories:
-    """The FastAPI dependency that builds the handlers of each endpoints protocol."""
+    """The FastAPI dependency that builds each endpoints protocol's handlers; None fails the boot."""
 
-    internal: _runtime.Factory[InternalEndpoints]
+    internal: _runtime.Factory[InternalEndpoints] | None
 
 
 async def _call_get_task(endpoints: InternalEndpoints, request: GetTaskRequest) -> GetTaskResult:
@@ -65,14 +73,10 @@ def bind_tasks_service(
     public_origin: str | None = None,
 ) -> None:
     """Places api 'tasksService' in the app; call it last, after its own middleware and exception handlers."""
-    router = _runtime.contract_router()
-
-    _runtime.add_operation(router, PLACEMENT, "getTask", handlers.internal, _call_get_task)
-
-    _runtime.bind_api(
+    binding = _runtime.api_binding(
         PLACEMENT,
+        _contract.CONTRACT,
         target,
-        router,
         app=app,
         hooks=_runtime.HookFactories(
             authenticate=authenticate or {},
@@ -88,3 +92,13 @@ def bind_tasks_service(
             public_origin=public_origin,
         ),
     )
+
+    _runtime.add_operation(
+        binding,
+        "getTask",
+        handlers.internal,
+        _call_get_task,
+        _runtime.OperationTypes(request=GetTaskRequest, responses=((200, GetTaskResponse200),), errors=GetTaskErrors),
+    )
+
+    _runtime.bind_api(binding)

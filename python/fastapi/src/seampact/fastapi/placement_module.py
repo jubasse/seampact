@@ -22,6 +22,7 @@ _HOOKS: Final = "_hooks"
 _ABC: Final = "_abc"
 # Each operation's coroutine: no module alias starts so, whatever the operation's name.
 _CALL_PREFIX: Final = "_call_"
+_CONTRACT_MODULE: Final = "contract"
 _BIND_DOC: Final = "Places api '{api}' in the app; call it last, after its own middleware and exception handlers."
 
 
@@ -39,10 +40,10 @@ def placement_module(
 
     for operation in operations:
         names = layout.operations[operation.id]
-        root_names += [names.endpoints, names.request, names.result]
+        root_names += [names.endpoints, names.request, names.result, names.errors, *names.responses.values()]
 
     head = [f"GENERATED_BY: _typing.Final = {string_literal(RUNTIME_VERSION)}"]
-    module.add_block(with_local_imports([], root_names, head))
+    module.add_block(with_local_imports([_CONTRACT_MODULE], root_names, head))
     module.add_block(_placement(ir, layout, routes, options, entry))
     module.add_block(_handler_factories(layout))
 
@@ -141,11 +142,11 @@ def _handler_factories(layout: ApiLayout) -> list[str]:
     lines = [
         "@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)",
         f"class {layout.handler_factories}:",
-        f'{INDENT}"""The FastAPI dependency that builds the handlers of each endpoints protocol."""',
+        f'{INDENT}"""The FastAPI dependency that builds each endpoints protocol\'s handlers; None fails the boot."""',
         "",
     ]
     lines += [
-        f"{INDENT}{attribute}: {_RUNTIME}.Factory[{endpoints}]"
+        f"{INDENT}{attribute}: {_RUNTIME}.Factory[{endpoints}] | None"
         for endpoints, attribute in layout.endpoints_owners().items()
     ]
 
@@ -171,23 +172,14 @@ def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> li
         f"operations: {_ABC}.Mapping[str, {_RUNTIME}.OperationSettings] | None = None",
         "public_origin: str | None = None",
     ]
-    lines = [
+    head = [
         *bracketed("", f"def {layout.bind_function}", parameters, " -> None:"),
         f'{INDENT}"""{_BIND_DOC.format(api=ir.api.id)}"""',
-        f"{INDENT}router = {_RUNTIME}.contract_router()",
-        "",
     ]
+    lines: list[str] = []
 
     for route in routes:
-        names = layout.operations[route.operation_id]
-        arguments = [
-            "router",
-            "PLACEMENT",
-            string_literal(route.operation_id),
-            f"handlers.{names.owner_attribute}",
-            f"{_CALL_PREFIX}{names.method}",
-        ]
-        lines += bracketed(INDENT, f"{_RUNTIME}.add_operation", arguments, "")
+        lines += _add_operation(layout, route.operation_id)
 
     hooks = [
         "authenticate=authenticate or {}",
@@ -204,14 +196,47 @@ def _bind(ir: ContractIR, layout: ApiLayout, routes: Sequence[RouteEntry]) -> li
     ]
 
     return [
-        *lines,
-        "",
-        f"{INDENT}{_RUNTIME}.bind_api(",
+        *head,
+        f"{INDENT}binding = {_RUNTIME}.api_binding(",
         f"{INDENT * 2}PLACEMENT,",
+        f"{INDENT * 2}_{_CONTRACT_MODULE}.CONTRACT,",
         f"{INDENT * 2}target,",
-        f"{INDENT * 2}router,",
         f"{INDENT * 2}app=app,",
         *bracketed(INDENT * 2, f"hooks={_RUNTIME}.HookFactories", hooks, ","),
         *bracketed(INDENT * 2, f"settings={_RUNTIME}.RunSettings", settings, ","),
+        f"{INDENT})",
+        "",
+        *lines,
+        "",
+        f"{INDENT}{_RUNTIME}.bind_api(binding)",
+    ]
+
+
+def _add_operation(layout: ApiLayout, operation_id: str) -> list[str]:
+    """One `add_operation` call, split as ruff splits it: the call on one line when it fits, else one argument per
+    line, the operation's types a nested call split the same way."""
+    names = layout.operations[operation_id]
+    responses = ", ".join(f"({status}, {name})" for status, name in sorted(names.responses.items()))
+    types = [
+        f"request={names.request}",
+        f"responses=({responses}{',' if len(names.responses) == 1 else ''})",
+        f"errors={names.errors}",
+    ]
+    head = f"{_RUNTIME}.add_operation"
+    arguments = [
+        "binding",
+        string_literal(operation_id),
+        f"handlers.{names.owner_attribute}",
+        f"{_CALL_PREFIX}{names.method}",
+    ]
+    single = bracketed(INDENT, head, [*arguments, f"{_RUNTIME}.OperationTypes({', '.join(types)})"], "")
+
+    if len(single) == 1:
+        return single
+
+    return [
+        f"{INDENT}{head}(",
+        *(f"{INDENT * 2}{argument}," for argument in arguments),
+        *bracketed(INDENT * 2, f"{_RUNTIME}.OperationTypes", types, ","),
         f"{INDENT})",
     ]
