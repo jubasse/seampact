@@ -3,7 +3,8 @@ serializer builds its fields in `get_fields()`, never as class attributes, so a 
 `errors` or `fields` never shadows the serializer's own attribute. The generated type layer runs first and converts
 date-times, dates, UUIDs, decimals and enum members, so their field only checks the converted type and keeps the
 value as it is, with the offset a date-time was sent with. A contract string is a text field that keeps the text as
-sent, NUL and lone surrogates included, and runs every validator, on an empty string too."""
+sent, NUL and lone surrogates included, and runs every validator, on an empty string too. A serializer's repr shows
+none of the request's values, since DRF's own repr prints the data it validates."""
 
 from collections.abc import Callable, Sequence
 from enum import Enum
@@ -21,6 +22,9 @@ _ENUM: Final = "enum"
 
 class ContractSerializer(serializers.Serializer[object]):
     """Validates the decoded tree of one input part or object schema; it never saves or renders an instance."""
+
+    def __repr__(self) -> str:
+        return f"{type(self).__qualname__}([redacted])"
 
 
 class TypedValueField[V](serializers.Field[V, object, V, object]):

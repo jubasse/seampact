@@ -4,6 +4,8 @@ import dataclasses as _dataclasses
 import typing as _typing
 import uuid as _uuid
 
+import seampact.drf.runtime as _drf_runtime
+
 from . import schemas as _schemas
 
 
@@ -83,10 +85,11 @@ class GetTaskInput:
     headers: GetTaskHeaders
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GetTaskRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class GetTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'getTask' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: GetTaskInput
     principal: _schemas.ServicePrincipal
 

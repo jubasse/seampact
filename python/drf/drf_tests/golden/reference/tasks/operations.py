@@ -4,6 +4,7 @@ import dataclasses as _dataclasses
 import typing as _typing
 import uuid as _uuid
 
+import seampact.drf.runtime as _drf_runtime
 import seampact.hooks as _hooks
 
 from . import schemas as _schemas
@@ -140,10 +141,11 @@ class ArchiveTaskScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class ArchiveTaskRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class ArchiveTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'archiveTask' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: ArchiveTaskInput
     principal: _schemas.UserPrincipal
     scopes: ArchiveTaskScopes
@@ -239,10 +241,11 @@ class AssignTaskScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class AssignTaskRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class AssignTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'assignTask' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: AssignTaskInput
     principal: _schemas.UserPrincipal
     scopes: AssignTaskScopes
@@ -337,10 +340,11 @@ class CreateTaskScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class CreateTaskRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class CreateTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'createTask' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: CreateTaskInput
     principal: _schemas.UserPrincipal
     scopes: CreateTaskScopes
@@ -431,10 +435,11 @@ class DeleteDraftInput:
     headers: DeleteDraftHeaders
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class DeleteDraftRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class DeleteDraftRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'deleteDraft' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: DeleteDraftInput
     principal: _schemas.UserPrincipal
 
@@ -507,10 +512,11 @@ class GetChannelScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GetChannelRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class GetChannelRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'getChannel' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: GetChannelInput
     principal: _schemas.UserPrincipal
     scopes: GetChannelScopes
@@ -565,10 +571,11 @@ class GetDraftInput:
     path: GetDraftPath
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GetDraftRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class GetDraftRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'getDraft' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: GetDraftInput
     principal: _schemas.UserPrincipal
 
@@ -622,10 +629,11 @@ class GetPreferencesInput:
     headers: GetPreferencesHeaders
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GetPreferencesRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class GetPreferencesRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'getPreferences' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: GetPreferencesInput
     principal: _schemas.UserPrincipal
 
@@ -694,10 +702,11 @@ class GetTaskScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GetTaskRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class GetTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'getTask' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: GetTaskInput
     principal: _schemas.UserPrincipal
     scopes: GetTaskScopes
@@ -760,10 +769,11 @@ class GetTasksBatchScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class GetTasksBatchRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class GetTasksBatchRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'getTasksBatch' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: GetTasksBatchInput
     principal: _schemas.UserPrincipal
     scopes: GetTasksBatchScopes
@@ -866,10 +876,11 @@ class ListChannelsInput:
     query: ListChannelsQuery
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class ListChannelsRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class ListChannelsRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'listChannels' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: ListChannelsInput
     principal: _schemas.UserPrincipal
 
@@ -944,10 +955,11 @@ class ListTasksScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class ListTasksRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class ListTasksRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'listTasks' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: ListTasksInput
     principal: _schemas.UserPrincipal
     scopes: ListTasksScopes
@@ -1003,10 +1015,11 @@ class PaymentsInput:
     body: _schemas.PaymentEvent
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class PaymentsRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class PaymentsRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'payments' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: PaymentsInput
     principal: _schemas.WebhookCaller
 
@@ -1080,10 +1093,11 @@ class PurgeTaskScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class PurgeTaskRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class PurgeTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'purgeTask' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: PurgeTaskInput
     principal: _schemas.UserPrincipal
     scopes: PurgeTaskScopes
@@ -1169,10 +1183,11 @@ class SearchTasksScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class SearchTasksRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class SearchTasksRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'searchTasks' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: SearchTasksInput
     principal: _schemas.UserPrincipal
     scopes: SearchTasksScopes
@@ -1244,10 +1259,11 @@ class UpdatePreferencesInput:
     body: _schemas.UpdatePreferences
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class UpdatePreferencesRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class UpdatePreferencesRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'updatePreferences' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: UpdatePreferencesInput
     principal: _schemas.UserPrincipal
 
@@ -1338,10 +1354,11 @@ class UpdateTaskScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class UpdateTaskRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class UpdateTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'updateTask' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: UpdateTaskInput
     principal: _schemas.UserPrincipal
     scopes: UpdateTaskScopes

@@ -3,14 +3,46 @@ frozen, slotted, keyword-only dataclass per object schema, which the handler rea
 nullable is a `Field` of `seampact.hooks`, absent by default; an optional member that is not nullable is `None` when
 absent. Value rules are not part of the types: the serializers check them."""
 
+from collections.abc import Sequence
+
 from seampact.codegen.names import ApiNames
 from seampact.codegen.printer import INDENT, PythonModule, string_literal
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.drf.python_types import PythonTypes, use_nullable
 from seampact.ir.hydration import OMITTED
-from seampact.ir.model import ContractIR, MapSchema, ObjectSchema, Property, UnionSchema
+from seampact.ir.model import ContractIR, MapSchema, ObjectSchema, Property, ScalarTypeUse, TypeUse, UnionSchema
 
 DATACLASS_DECORATOR = "dataclass(frozen=True, slots=True, kw_only=True)"
+_REDACTED_DATACLASS_DECORATOR = "dataclass(frozen=True, slots=True, kw_only=True, repr=False)"
+
+
+def dataclass_head(module: PythonModule, class_name: str, redacted: Sequence[str]) -> list[str]:
+    """The decorator and class lines of a generated dataclass; with `redacted` attributes it derives from
+    `RedactedRepr`, so its repr hides them."""
+    dataclasses = module.imported("dataclasses", "_dataclasses")
+
+    if not redacted:
+        return [f"@{dataclasses}.{DATACLASS_DECORATOR}", f"class {class_name}:"]
+
+    runtime = module.imported("seampact.drf.runtime", "_drf_runtime")
+
+    return [f"@{dataclasses}.{_REDACTED_DATACLASS_DECORATOR}", f"class {class_name}({runtime}.RedactedRepr):"]
+
+
+def redacted_fields(module: PythonModule, redacted: Sequence[str]) -> list[str]:
+    """The class body line naming the attributes a `RedactedRepr` hides; none without any."""
+    if not redacted:
+        return []
+
+    typing = module.imported("typing", "_typing")
+    attributes = ", ".join(string_literal(attribute) for attribute in redacted)
+
+    return [f"{INDENT}_REDACTED_FIELDS: {typing}.ClassVar[frozenset[str]] = frozenset({{{attributes}}})"]
+
+
+def is_sensitive_use(type_use: TypeUse) -> bool:
+    """A use of a declared scalar marked sensitive (ADR 0003 section 6)."""
+    return isinstance(type_use, ScalarTypeUse) and type_use.sensitive is True
 
 
 def dataclass_schemas_module(ir: ContractIR, names: ApiNames, refusals: Refusals) -> str:
@@ -53,16 +85,23 @@ def _dataclass(
     at: IrPlace,
     refusals: Refusals,
 ) -> list[str]:
-    dataclasses = module.imported("dataclasses", "_dataclasses")
-    lines = [f"@{dataclasses}.{DATACLASS_DECORATOR}", f"class {names.schema_classes[schema_id]}:"]
     members = names.members.get(schema_id, {})
     body = [
         _member(module, types, attribute, member, at.below("properties", index), refusals)
         for index, member in enumerate(schema.properties)
         if (attribute := members.get(member.name)) is not None
     ]
+    redacted = [
+        attribute
+        for member in schema.properties
+        if (member.sensitive or is_sensitive_use(member.type)) and (attribute := members.get(member.name)) is not None
+    ]
+    lines = dataclass_head(module, names.schema_classes[schema_id], redacted)
 
-    return [*lines, *(body or [f'{INDENT}"""The schema \'{schema_id}\', which has no member."""'])]
+    if not body:
+        return [*lines, f'{INDENT}"""The schema \'{schema_id}\', which has no member."""']
+
+    return [*lines, *redacted_fields(module, redacted), *body]
 
 
 def _member(

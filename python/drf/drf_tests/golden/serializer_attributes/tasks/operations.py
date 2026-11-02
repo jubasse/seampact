@@ -4,6 +4,7 @@ import dataclasses as _dataclasses
 import typing as _typing
 import uuid as _uuid
 
+import seampact.drf.runtime as _drf_runtime
 import seampact.hooks as _hooks
 
 from . import schemas as _schemas
@@ -139,10 +140,11 @@ class CreateTaskScopes:
     channel: _hooks.ResolvedScope
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class CreateTaskRequest:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class CreateTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'createTask' is called with."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
     input: CreateTaskInput
     principal: _schemas.UserPrincipal
     scopes: CreateTaskScopes

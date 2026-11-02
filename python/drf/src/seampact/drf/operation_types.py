@@ -11,7 +11,7 @@ from seampact.codegen.names import ApiNames, member_identifier, part_attributes
 from seampact.codegen.printer import INDENT, PythonModule, string_literal
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.drf.api_layout import ApiLayout, OperationNames, handler_headers, principal_schema
-from seampact.drf.dataclass_schemas import DATACLASS_DECORATOR
+from seampact.drf.dataclass_schemas import DATACLASS_DECORATOR, dataclass_head, is_sensitive_use, redacted_fields
 from seampact.drf.python_types import PythonTypes
 from seampact.ir.hydration import OMITTED
 from seampact.ir.model import (
@@ -30,6 +30,7 @@ from seampact.ir.model import (
 SCHEMAS_MODULE: Final = ".schemas"
 SCHEMAS_ALIAS: Final = "_schemas"
 
+_PRINCIPAL: Final = "principal"
 _PAGE_FACT_TYPES: Final = {
     HandlerResultMember.NEXT_CURSOR: "str",
     HandlerResultMember.PREVIOUS_CURSOR: "str",
@@ -68,10 +69,11 @@ class _Emission:
 
         return self.module.text()
 
-    def dataclass(self, name: str, doc: str, members: Sequence[str]) -> None:
-        dataclasses = self.module.imported("dataclasses", "_dataclasses")
-        body = [f'{INDENT}"""{doc}"""', *([""] if members else []), *members]
-        self.module.add_block([f"@{dataclasses}.{DATACLASS_DECORATOR}", f"class {name}:", *body])
+    def dataclass(self, name: str, doc: str, members: Sequence[str], redacted: Sequence[str] = ()) -> None:
+        """A frozen dataclass; its repr hides the `redacted` attributes."""
+        hidden = redacted_fields(self.module, redacted)
+        body = [f'{INDENT}"""{doc}"""', *([""] if members else []), *hidden, *members]
+        self.module.add_block([*dataclass_head(self.module, name, redacted), *body])
 
     def schemas(self) -> str:
         return self.module.imported(SCHEMAS_MODULE, SCHEMAS_ALIAS)
@@ -140,8 +142,13 @@ class _Emission:
 
         self.dataclass(names.input, f"The input of operation '{operation.id}', as its handler reads it.", input_members)
         request_members = [f"{INDENT}input: {names.input}", *self._caller(operation, names, at)]
+        # Who is calling is redacted (ADR 0026 "Redaction").
+        caller = [_PRINCIPAL] if isinstance(operation.access, IdentityAccess | OptionalAccess) else []
         self.dataclass(
-            names.request, f"What the handler of operation '{operation.id}' is called with.", request_members
+            names.request,
+            f"What the handler of operation '{operation.id}' is called with.",
+            request_members,
+            caller,
         )
         self._results(operation, names, at)
 
@@ -152,6 +159,7 @@ class _Emission:
             return []
 
         members = []
+        redacted = []
 
         for index, param, attribute in part_attributes(params, at, self.refusals):
             if param.default is not OMITTED:
@@ -163,7 +171,10 @@ class _Emission:
             annotation = self.types.annotation(self.module, param.type, at.below(index, "type"), suffix)
             members.append(f"{INDENT}{attribute}: {annotation}{'' if param.required else ' = None'}")
 
-        self.dataclass(name, f"The {part} parameters of operation '{operation.id}'.", members)
+            if is_sensitive_use(param.type):
+                redacted.append(attribute)
+
+        self.dataclass(name, f"The {part} parameters of operation '{operation.id}'.", members, redacted)
 
         return [f"{INDENT}{part}: {name}"]
 
@@ -175,7 +186,7 @@ class _Emission:
         if isinstance(access, IdentityAccess | OptionalAccess):
             principal = self._principal(access.identity, at.below("access"))
             optional = " | None" if isinstance(access, OptionalAccess) else ""
-            members.append(f"{INDENT}principal: {principal}{optional}")
+            members.append(f"{INDENT}{_PRINCIPAL}: {principal}{optional}")
         elif not isinstance(access, PublicAccess):
             self.refusals.unknown_value(access.kind, at.below("access", "kind"))
 
