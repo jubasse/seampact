@@ -72,7 +72,7 @@ SEAMPACT = {
         "scope_resolvers": (
             {} if _variant is BootVariant.MISSING_SCOPE_RESOLVER else {CHANNEL_SCOPE: "hooks.channel_resolver"}
         ),
-        "idempotency_store": "idempotency_store.idempotency_store",
+        "idempotency_store": "hooks.idempotency_store",
         "on_unexpected_error": "hooks.unexpected_errors",
     },
     "tasksService": {

@@ -24,6 +24,7 @@ from seampact.ir.model import (
     PublicAccess,
     ResponseShape,
     ResponseShapeUnknown,
+    SignedIdentity,
     TypeUse,
 )
 
@@ -31,6 +32,8 @@ SCHEMAS_MODULE: Final = ".schemas"
 SCHEMAS_ALIAS: Final = "_schemas"
 
 _PRINCIPAL: Final = "principal"
+_SCOPES: Final = "scopes"
+_BODY: Final = "body"
 _PAGE_FACT_TYPES: Final = {
     HandlerResultMember.NEXT_CURSOR: "str",
     HandlerResultMember.PREVIOUS_CURSOR: "str",
@@ -138,17 +141,20 @@ class _Emission:
 
         if operation.input is not None:
             body = self.types.annotation(self.module, operation.input.schema, at.below("input", "schema"))
-            input_members.append(f"{INDENT}body: {body}")
+            input_members.append(f"{INDENT}{_BODY}: {body}")
 
-        self.dataclass(names.input, f"The input of operation '{operation.id}', as its handler reads it.", input_members)
+        # A signed body and who is calling are redacted (ADR 0026 "Redaction").
+        signed_body = [_BODY] if operation.input is not None and self._is_signed(operation) else []
+        input_doc = f"The input of operation '{operation.id}', as its handler reads it."
+        self.dataclass(names.input, input_doc, input_members, signed_body)
         request_members = [f"{INDENT}input: {names.input}", *self._caller(operation, names, at)]
-        # Who is calling is redacted (ADR 0026 "Redaction").
-        caller = [_PRINCIPAL] if isinstance(operation.access, IdentityAccess | OptionalAccess) else []
+        principal = [_PRINCIPAL] if isinstance(operation.access, IdentityAccess | OptionalAccess) else []
+        scopes = [_SCOPES] if names.scopes is not None else []
         self.dataclass(
             names.request,
             f"What the handler of operation '{operation.id}' is called with.",
             request_members,
-            caller,
+            [*principal, *scopes],
         )
         self._results(operation, names, at)
 
@@ -178,6 +184,13 @@ class _Emission:
 
         return [f"{INDENT}{part}: {name}"]
 
+    def _is_signed(self, operation: Operation) -> bool:
+        access = operation.access
+
+        return isinstance(access, IdentityAccess | OptionalAccess) and isinstance(
+            self.ir.identities.get(access.identity), SignedIdentity
+        )
+
     def _caller(self, operation: Operation, names: OperationNames, at: IrPlace) -> list[str]:
         """Who is calling: the principal on a route with an identity, the scopes on a scoped route."""
         members = []
@@ -206,7 +219,7 @@ class _Emission:
                 scopes.append(f"{INDENT}{attribute}: {hooks}.ResolvedScope")
 
             self.dataclass(names.scopes, f"The scopes operation '{operation.id}' runs in, outermost first.", scopes)
-            members.append(f"{INDENT}scopes: {names.scopes}")
+            members.append(f"{INDENT}{_SCOPES}: {names.scopes}")
 
         return members
 

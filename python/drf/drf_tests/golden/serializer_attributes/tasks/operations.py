@@ -144,7 +144,7 @@ class CreateTaskScopes:
 class CreateTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'createTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: CreateTaskInput
     principal: _schemas.UserPrincipal
     scopes: CreateTaskScopes

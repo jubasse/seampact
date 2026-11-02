@@ -16,6 +16,7 @@ from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule, allow_listed, base_path_of
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, framework_version_problems
 from seampact.codegen.runtime.hook_check import HookFixes, hook_needs, hook_problems
+from seampact.codegen.runtime.idempotency import enforces_idempotency
 from seampact.codegen.runtime.ir_view import ir_int, ir_map, ir_string
 from seampact.codegen.runtime.reply_verdict import ResponsesMode
 from seampact.codegen.runtime.version import other_version_problem
@@ -53,8 +54,6 @@ _UNSERVED_SETTINGS: Final = {
     "access": "names DRF classes per access kind",
     "body_validation": "turns on the reply body validation",
 }
-_DERIVED: Final = "derived"
-_BOUNDARY: Final = "boundary"
 _HOOK_METHODS: Final = {AUTHENTICATE_KEY: "authenticate", DECIDERS_KEY: "decide", SCOPE_RESOLVERS_KEY: "resolve_scope"}
 
 
@@ -174,10 +173,7 @@ def _settings_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
 def _store_problems(api: str, contract: ApiContract) -> list[str]:
     """An api whose operations the boundary keeps idempotent needs a store; a store no operation uses is refused."""
     enforced = [
-        operation_id
-        for operation_id in contract.operation_ids()
-        if ir_string(idempotency := ir_map(contract.operation(operation_id), "idempotency"), "kind") == _DERIVED
-        and ir_string(idempotency, "enforce") == _BOUNDARY
+        operation_id for operation_id in contract.operation_ids() if enforces_idempotency(contract, operation_id)
     ]
     setting = f"settings.{SETTINGS_NAME}['{api}']['{IDEMPOTENCY_STORE_KEY}']"
 

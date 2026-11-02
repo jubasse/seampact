@@ -145,7 +145,7 @@ class ArchiveTaskScopes:
 class ArchiveTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'archiveTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: ArchiveTaskInput
     principal: _schemas.UserPrincipal
     scopes: ArchiveTaskScopes
@@ -245,7 +245,7 @@ class AssignTaskScopes:
 class AssignTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'assignTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: AssignTaskInput
     principal: _schemas.UserPrincipal
     scopes: AssignTaskScopes
@@ -344,7 +344,7 @@ class CreateTaskScopes:
 class CreateTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'createTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: CreateTaskInput
     principal: _schemas.UserPrincipal
     scopes: CreateTaskScopes
@@ -516,7 +516,7 @@ class GetChannelScopes:
 class GetChannelRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'getChannel' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: GetChannelInput
     principal: _schemas.UserPrincipal
     scopes: GetChannelScopes
@@ -706,7 +706,7 @@ class GetTaskScopes:
 class GetTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'getTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: GetTaskInput
     principal: _schemas.UserPrincipal
     scopes: GetTaskScopes
@@ -773,7 +773,7 @@ class GetTasksBatchScopes:
 class GetTasksBatchRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'getTasksBatch' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: GetTasksBatchInput
     principal: _schemas.UserPrincipal
     scopes: GetTasksBatchScopes
@@ -959,7 +959,7 @@ class ListTasksScopes:
 class ListTasksRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'listTasks' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: ListTasksInput
     principal: _schemas.UserPrincipal
     scopes: ListTasksScopes
@@ -1008,10 +1008,11 @@ class ListTasksErrors:
 type ListTasksResult = ListTasksResponse200 | ListTasksErrors
 
 
-@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class PaymentsInput:
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True, repr=False)
+class PaymentsInput(_drf_runtime.RedactedRepr):
     """The input of operation 'payments', as its handler reads it."""
 
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"body"})
     body: _schemas.PaymentEvent
 
 
@@ -1097,7 +1098,7 @@ class PurgeTaskScopes:
 class PurgeTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'purgeTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: PurgeTaskInput
     principal: _schemas.UserPrincipal
     scopes: PurgeTaskScopes
@@ -1187,7 +1188,7 @@ class SearchTasksScopes:
 class SearchTasksRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'searchTasks' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: SearchTasksInput
     principal: _schemas.UserPrincipal
     scopes: SearchTasksScopes
@@ -1358,7 +1359,7 @@ class UpdateTaskScopes:
 class UpdateTaskRequest(_drf_runtime.RedactedRepr):
     """What the handler of operation 'updateTask' is called with."""
 
-    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal"})
+    _REDACTED_FIELDS: _typing.ClassVar[frozenset[str]] = frozenset({"principal", "scopes"})
     input: UpdateTaskInput
     principal: _schemas.UserPrincipal
     scopes: UpdateTaskScopes

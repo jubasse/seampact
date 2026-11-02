@@ -3,6 +3,7 @@ credentials, and the factories SEAMPACT names, which build them per request."""
 
 import logging
 import uuid
+from pathlib import Path
 from typing import Final
 
 from django.http import HttpRequest
@@ -11,9 +12,12 @@ from generated.tasks.schemas import UserPrincipal, WebhookCaller
 from generated.tasks_service.operations import ServiceCredentials
 from generated.tasks_service.schemas import Service, ServicePrincipal
 from sample_data import channel
-from seampact_consumer_suite.control_state import loaded_script, record_hook_call
+from seampact_consumer_suite.control_state import record_hook_call
 from seampact_consumer_suite.credentials import credential_number, credential_text
+from seampact_consumer_suite.file_idempotency_store import FileIdempotencyStore
 from seampact_consumer_suite.scripted_answers import scripted_scope_denial
+from seampact_consumer_suite.scripted_decisions import scripted_decision
+from seampact_consumer_suite.stripe_signature import STRIPE_ACCOUNT, stripe_signature_verified
 
 from seampact.hooks import (
     AuthenticateRequest,
@@ -24,15 +28,12 @@ from seampact.hooks import (
     ResolvedScope,
     ResolveScopeRequest,
     ScopeResolution,
-    SignedTemplateRequest,
     UnexpectedFailure,
     authenticate_result,
     decision,
-    purpose,
     scope_id_source,
     scope_resolution,
 )
-from seampact.signed_webhooks import SignatureScheme, SignedMessage, TemplateSignatureVerifier
 
 UNAUTHENTICATED: Final = "api.unauthenticated"
 _FORBIDDEN: Final = "api.forbidden"
@@ -40,8 +41,7 @@ _RATE_LIMITED: Final = "api.rate_limited"
 _THROTTLE_RULE: Final = "throttle"
 _OVERRIDDEN_RIGHT: Final = "tasks.update"
 _CALLER_SERVICE_RIGHT: Final = "callerService"
-_STRIPE_KEY_ID: Final = "stripe"
-_STRIPE_ACCOUNT: Final = "acct_seampact"
+_IDEMPOTENCY_STORE_FILE: Final = Path(__file__).parent / "suite-idempotency.json"
 _LOGGER: Final = logging.getLogger("consumer.tasks")
 
 
@@ -84,30 +84,15 @@ class ChannelResolver:
 
 
 class StripeHook:
-    """The `stripe` identity: seampact-signed-webhooks verifies the signature over the raw body with the suite's
-    `stripeSecret`, the one secret of the key id `stripe`."""
+    """The `stripe` identity: the shared suite check verifies the signature over the raw body."""
 
     def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
         record_hook_call("authenticate:stripe", request.operation.api, request.operation.id)
-        signed = request.signature
 
-        if signed is None or not isinstance(request.credentials, StripeCredentials) or not _verified(signed):
+        if not isinstance(request.credentials, StripeCredentials) or not stripe_signature_verified(request.signature):
             return authenticate_result.Denied(deny=ErrorCodeWithParams(code=UNAUTHENTICATED))
 
-        return authenticate_result.Authenticated(principal=WebhookCaller(account=_STRIPE_ACCOUNT))
-
-
-class _StripeSecrets:
-    def secrets_for(self, key_id: str) -> list[str]:
-        return [credential_text("stripeSecret")] if key_id == _STRIPE_KEY_ID else []
-
-
-def _verified(signed: SignedTemplateRequest) -> bool:
-    template = signed.template
-    scheme = SignatureScheme(template.algorithm, template.payload, template.encoding.value, template.tolerance_ms)
-    message = SignedMessage(signed.raw_body, signed.timestamp, signed.candidate_signatures)
-
-    return TemplateSignatureVerifier(_StripeSecrets()).verify(message, signed.key_id, scheme).verified
+        return authenticate_result.Authenticated(principal=WebhookCaller(account=STRIPE_ACCOUNT))
 
 
 class TasksDecider:
@@ -116,7 +101,7 @@ class TasksDecider:
 
     def decide(self, request: RequirementRequest) -> Decision:
         record_hook_call(f"decide:{request.name}", request.operation.api, request.operation.id)
-        denied = scripted_decision(request)
+        denied = scripted_decision(request.name, request.purpose)
 
         if denied is None and request.name == _THROTTLE_RULE and request.bucket is not None:
             if _is_throttled_user(request.principal):
@@ -132,7 +117,7 @@ class OverriddenRightDecider:
 
     def decide(self, request: RequirementRequest) -> Decision:
         record_hook_call(f"decide-override:{request.name}", request.operation.api, request.operation.id)
-        denied = scripted_decision(request)
+        denied = scripted_decision(request.name, request.purpose)
 
         return decision.Allowed() if denied is None else decision.Denied(deny=ErrorCodeWithParams(code=denied))
 
@@ -164,7 +149,7 @@ class ServiceDecider:
 
     def decide(self, request: RequirementRequest) -> Decision:
         record_hook_call(f"decide:{request.name}", request.operation.api, request.operation.id)
-        denied = scripted_decision(request)
+        denied = scripted_decision(request.name, request.purpose)
 
         if denied is not None:
             return decision.Denied(deny=ErrorCodeWithParams(code=denied))
@@ -185,42 +170,6 @@ def _caller_listed(request: RequirementRequest) -> bool:
 def _is_throttled_user(principal: object) -> bool:
     """The throttled user's bucket is always spent; every other caller's never is."""
     return isinstance(principal, UserPrincipal) and str(principal.user_id) == credential_text("throttledUserId")
-
-
-def scripted_decision(request: RequirementRequest) -> str | None:
-    """The code the loaded script denies this right or rule with, for its purpose or any."""
-    decisions = loaded_script().get("decisions")
-    purpose_name = _purpose_name(request.purpose)
-
-    for scripted in decisions if isinstance(decisions, list) else []:
-        if not isinstance(scripted, dict) or scripted.get("name") != request.name:
-            continue
-
-        if scripted.get("purpose", purpose_name) != purpose_name:
-            continue
-
-        deny = scripted.get("deny")
-        code = deny.get("code") if isinstance(deny, dict) else None
-
-        if not isinstance(code, str):
-            raise ValueError("the loaded script holds a decision without a denial code")
-
-        return code
-
-    return None
-
-
-def _purpose_name(decided_for: object) -> str:
-    if isinstance(decided_for, purpose.Route):
-        return "route"
-
-    if isinstance(decided_for, purpose.Field):
-        return "field"
-
-    if isinstance(decided_for, purpose.SortKey):
-        return "sortKey"
-
-    raise ValueError(f"the decide request has the unknown purpose {type(decided_for).__qualname__}")
 
 
 class TasksUnexpectedErrors:
@@ -259,3 +208,7 @@ def service_hook(request: HttpRequest) -> ServiceHook:
 
 def service_decider(request: HttpRequest) -> ServiceDecider:
     return ServiceDecider()
+
+
+def idempotency_store(request: HttpRequest) -> FileIdempotencyStore:
+    return FileIdempotencyStore(str(_IDEMPOTENCY_STORE_FILE))
