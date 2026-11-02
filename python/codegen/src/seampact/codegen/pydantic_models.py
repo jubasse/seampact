@@ -318,6 +318,12 @@ def _wrapped_in(prefix: str, annotation: Sequence[str], suffix: str) -> list[str
     if fits(single):
         return [single]
 
+    # ruff parenthesizes the default instead when the annotation then fits on the member's line.
+    annotated, equals, default = suffix.partition(" = ")
+
+    if equals and fits(f"{prefix}{joined}{annotated} = ("):
+        return [f"{prefix}{joined}{annotated} = (", f"{INDENT * 2}{default}", f"{INDENT})"]
+
     if fits(f"{INDENT * 2}{joined}") or len(annotation) == 1:
         return [prefix, f"{INDENT * 2}{joined}", f"{INDENT}{suffix}"]
 

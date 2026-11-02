@@ -175,6 +175,10 @@ def test_the_type_layer_refuses_a_value_outside_its_wire_form(annotation: TypeFo
     assert _accepts(annotation, value) is False
 
 
+# A subscripted generic alias is a type expression; named at module level, the test can pass it as a value.
+_OMITTABLE_INT = type_layer.Omittable[int]
+
+
 @pytest.mark.parametrize(
     ("annotation", "value", "rule"),
     [
@@ -188,7 +192,7 @@ def test_the_type_layer_refuses_a_value_outside_its_wire_form(annotation: TypeFo
         (Annotated[str, type_layer.pattern("^a+$")], "ab", "pattern"),
         (type_layer.WireDate, "x", "format"),
         (type_layer.WholeNumber, 2**53, "type"),
-        (type_layer.Omittable[int], None, "type"),
+        (_OMITTABLE_INT, None, "type"),
     ],
 )
 def test_a_consistent_rule_fails_with_the_contract_rule_name(
