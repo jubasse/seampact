@@ -39,7 +39,8 @@ class OperationTypes:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReplyContext:
     """What a success reads of its request: the access steps' state and hooks (the output field rights ask the
-    deciders), the query the input step read and the raw one page links keep, the request path, and `If-None-Match`."""
+    deciders), the query the input step read and the raw one page links keep, the request path, `If-None-Match`, and
+    the origin absolute page links start with (None under relative URLs)."""
 
     access: AccessState
     hooks: AccessHooks
@@ -47,6 +48,7 @@ class ReplyContext:
     raw_query: str
     path: str
     if_none_match: str | None
+    public_origin: str | None
 
 
 async def result_reply(
@@ -122,6 +124,7 @@ async def _page(
         facts,
         status,
         context.path,
+        public_origin=context.public_origin,
     )
 
 

@@ -99,7 +99,7 @@ jobs:
         run: uv sync --locked --all-packages
       - name: Install FastAPI 0.162 with its floor Starlette and Pydantic, pinned by hash
         if: matrix.floor
-        run: uv pip install --require-hashes --no-deps -r fastapi/ci/floor-requirements.txt
+        run: uv pip install --require-hashes --no-deps -r fastapi/ci/floor-requirements.txt -r fastapi/ci/floor-test-requirements.txt
       - name: Show the framework versions
         run: uv run --no-sync python -c "import fastapi, pydantic, starlette; print(fastapi.__version__, starlette.__version__, pydantic.VERSION)"
       - name: Lint
@@ -110,7 +110,10 @@ jobs:
         run: uv run --no-sync mypy
       - name: Type-check the golden package as Pylance users do
         run: uv run --no-sync pyright
+      # Starlette 0.46's TestClient uses an anyio alias the locked anyio deprecates; only the floor row sees it.
       - name: Test the target and the shared code generation
+        env:
+          PYTEST_ADDOPTS: ${{ matrix.row == 'floor' && '-W "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning"' || '' }}
         run: uv run --no-sync pytest fastapi/fastapi_tests codegen/tests
 
   # The reference contract bundled once by the compiler binary, so the consumer jobs fetch it without Node.
@@ -142,7 +145,7 @@ jobs:
           if-no-files-found: error
 
   # The consumer installed from the built wheels and generated from the bundle with Node removed, then served by
-  # uvicorn to the http suite's default, hand-written and boot profiles over every operation of the tasks api; the floor
+  # uvicorn to the http suite's default, hand-written and boot profiles over every operation of the tasks and tasksService apis; the floor
   # and the latest rows are both PR rows.
   e2e:
     name: e2e (${{ matrix.row }})

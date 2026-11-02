@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from typing import Final
 
 from generated.tasks.schemas import Channel, Draft, Task, TaskState
+from generated.tasks_service import schemas as service
 from seampact_consumer_suite.scripted_answers import text_member
 
 from seampact.hooks import ResolvedScope
@@ -44,6 +45,22 @@ def task_of(body: Mapping[str, object]) -> Task:
         values["effort"] = effort
 
     return Task.model_validate(values)
+
+
+def service_task(task_id: str) -> service.Task:
+    return _service_task_from(task(task_id))
+
+
+def service_task_of(body: Mapping[str, object]) -> service.Task:
+    return _service_task_from(task_of(body))
+
+
+def _service_task_from(task_value: Task) -> service.Task:
+    """The tasksService api's own task: its state is that api's enum, which the strict model requires."""
+    values = task_value.model_dump(exclude_unset=True)
+    values["state"] = service.TaskState(task_value.state.value)
+
+    return service.Task.model_validate(values)
 
 
 def with_next_version(current: Task, title: str, state: TaskState) -> Task:

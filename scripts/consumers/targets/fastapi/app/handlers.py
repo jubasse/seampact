@@ -1,4 +1,7 @@
-"""The developer's handlers of the `tasks` api, each answering the loaded script when it says so."""
+"""The developer's handlers of the `tasks` and `tasksService` apis, each answering the loaded script when it says
+so."""
+
+from datetime import UTC, datetime
 
 from generated.tasks.operations import (
     ArchiveTaskErrors,
@@ -59,6 +62,7 @@ from generated.tasks.operations import (
     UpdateTaskResult,
 )
 from generated.tasks.schemas import Health, Preferences, TaskSearchResult, TaskState
+from generated.tasks_service import operations as service
 from sample_data import (
     FIRST_VERSION,
     GENERAL_CHANNEL_ID,
@@ -67,6 +71,8 @@ from sample_data import (
     channel_of,
     draft,
     loaded_channel,
+    service_task,
+    service_task_of,
     task,
     task_of,
     with_next_version,
@@ -78,6 +84,7 @@ _HEALTHY: str = "ok"
 _NEXT_CURSOR: str = "page-2"
 _DEFAULT_LOCALE: str = "en"
 _NOT_FOUND: str = "api.not_found"
+_SERVICE_API: str = "tasksService"
 
 
 def _health_of(body: dict[str, object]) -> HealthResult:
@@ -90,6 +97,10 @@ def _channel_reply_of(body: dict[str, object]) -> GetChannelResult:
 
 def _task_reply_of(body: dict[str, object]) -> GetTaskResult:
     return GetTaskResponse200(task_of(body))
+
+
+def _service_task_reply_of(body: dict[str, object]) -> service.GetTaskResult:
+    return service.GetTaskResponse200(service_task_of(body))
 
 
 def _page_of(body: dict[str, object]) -> ListTasksResult:
@@ -191,3 +202,18 @@ class TasksHandlers:
 
     def search_tasks(self, request: SearchTasksRequest) -> SearchTasksResult:
         return SearchTasksResponse200(TaskSearchResult(items=[task(NEW_TASK_ID)], total=1))
+
+
+class InternalHandlers:
+    """The `tasksService` api's handlers; the boundary refuses a request whose deadline has passed, and the handler
+    refuses one that passes while it works."""
+
+    def get_task(self, request: service.GetTaskRequest) -> service.GetTaskResult:
+        deadline = request.deadline
+
+        if deadline is not None and deadline.has_passed(datetime.now(UTC)):
+            return service.GetTaskErrors.api_deadline_exceeded()
+
+        reply = scripted_answer("getTask", _OK, _service_task_reply_of, api=_SERVICE_API)
+
+        return reply or service.GetTaskResponse200(service_task(str(request.input.path.task_id)))

@@ -3,15 +3,17 @@ the outermost of `app.user_middleware`. On a contract request it runs step 1 (th
 read and the decoding) and answers its own refusals; it replays the body to the app, holds the reply's start until the
 verdict of step 10, settles the idempotency record with the reply about to go out, maps an `HTTPException` the app's
 handlers rendered to its role, and answers the api's 500 for an exception that crosses it. On `lifespan.startup` it
-runs the boot check, with a first-request fallback."""
+runs the boot check, with a first-request fallback. A CORS preflight passes to the app untouched."""
 
 import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable, MutableMapping
 from typing import Final
 
+from starlette.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from seampact.codegen.runtime.contract import NOT_FOUND_ROLE
+from seampact.codegen.runtime.cors_preflight import is_cors_preflight
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal, failure_place
 from seampact.codegen.runtime.idempotency import abandon_idempotency, settle_idempotency
 from seampact.codegen.runtime.input_decoding import IncomingRequest, decode_input
@@ -44,12 +46,19 @@ class ContractBoundary:
         self._check_lock = asyncio.Lock()
         self._decoded_path_logged = False
 
+    def _app_answers_preflights(self) -> bool:
+        """Without a `CORSMiddleware` a contract-path preflight gets the path's not-found reply, not Starlette's 405."""
+        return any(
+            isinstance(middleware.cls, type) and issubclass(middleware.cls, CORSMiddleware)
+            for middleware in self.binding.app.user_middleware
+        )
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == _LIFESPAN:
             await self.app(scope, receive, self._lifespan_send(send))
             return
 
-        if scope["type"] != _HTTP:
+        if scope["type"] != _HTTP or (_is_preflight(scope) and self._app_answers_preflights()):
             await self.app(scope, receive, send)
             return
 
@@ -438,6 +447,13 @@ async def _send_reply(send: Send, reply: Reply, method: str) -> None:
     headers.append((_CONTENT_LENGTH.encode(_BYTES_AS_TEXT), str(len(reply.body)).encode(_BYTES_AS_TEXT)))
     await send({"type": "http.response.start", "status": reply.status, "headers": headers})
     await send({"type": "http.response.body", "body": b"" if method.upper() == _HEAD else reply.body})
+
+
+def _is_preflight(scope: Scope) -> bool:
+    """A CORS preflight is left to the app's `CORSMiddleware`, which the app adds before `bind_<api>()`."""
+    names = [name.decode(_BYTES_AS_TEXT) for name, _ in scope["headers"]]
+
+    return is_cors_preflight(str(scope["method"]), names)
 
 
 def _status(message: Message) -> int:

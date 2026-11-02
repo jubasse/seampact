@@ -7,6 +7,7 @@ that order, so FastAPI parses no parameter and the input is checked before the f
 import inspect
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Annotated, Final, TypeGuard
+from urllib.parse import quote
 
 import fastapi
 
@@ -15,6 +16,7 @@ from seampact.codegen.runtime.contract import NOT_FOUND_ROLE
 from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
 from seampact.codegen.runtime.hook_check import hook_needs
 from seampact.codegen.runtime.idempotency import enforces_idempotency
+from seampact.codegen.runtime.public_origin import configured_origin
 from seampact.fastapi.runtime.api_binding import ApiBinding, is_unexpected_error_listener
 from seampact.fastapi.runtime.contract_input import InputBuilder
 from seampact.fastapi.runtime.handler_call import call_handler
@@ -22,7 +24,6 @@ from seampact.fastapi.runtime.handler_reply import OperationTypes, ReplyContext,
 from seampact.fastapi.runtime.input_features import featured_input
 from seampact.fastapi.runtime.placement import Factory, OperationRoute
 from seampact.fastapi.runtime.request_state import RequestState, state_of
-from seampact.fastapi.runtime.unserved import unserved_features, unserved_problem
 from seampact.hooks import (
     AuthenticateHook,
     DecideHook,
@@ -32,6 +33,7 @@ from seampact.hooks import (
     UnexpectedErrorListener,
 )
 
+_ROOT_PATH_SAFE: Final = "/"
 _AUTHENTICATE: Final = "authenticate"
 _DECIDER: Final = "decider"
 _SCOPE_RESOLVER: Final = "scope_resolver"
@@ -91,11 +93,6 @@ def _access_dependency(binding: ApiBinding, route: OperationRoute) -> Callable[.
 
     async def access(request: fastapi.Request, **resolved: object) -> None:
         state = _contract_state(binding, request, route.operation_id)
-        features = unserved_features(binding.contract, route.operation_id)
-
-        if features:
-            raise BoundaryFailureError(unserved_problem(binding.api, route.operation_id, features))
-
         hooks, listener, store = _resolved_hooks(hook_factories, resolved)
         state.listener = listener
         state.hooks = hooks
@@ -200,6 +197,11 @@ def _is_idempotency_store(value: object) -> TypeGuard[IdempotencyStore]:
     return all(callable(getattr(value, method, None)) for method in ("begin", "complete", "abandon"))
 
 
+def _link_path(request: fastapi.Request, state: RequestState) -> str:
+    """The path a page link names: the mount prefix the boundary removed, then the contract path."""
+    return quote(str(request.scope.get("root_path", "")), safe=_ROOT_PATH_SAFE) + state.target.path
+
+
 def _request_view(request: fastapi.Request, state: RequestState) -> RequestView:
     client = request.client
 
@@ -270,8 +272,9 @@ def _endpoint[E, R](
             hooks=state.hooks,
             query=state.input_query,
             raw_query=state.target.query,
-            path=state.target.path,
+            path=_link_path(request, state),
             if_none_match=request.headers.get(_IF_NONE_MATCH),
+            public_origin=configured_origin(binding.contract, binding.settings.public_origin),
         )
         reply = state.authored.author(await result_reply(binding.contract, route.operation_id, types, result, context))
 

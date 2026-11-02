@@ -11,3 +11,7 @@ targets:
     api: tasks
     frameworkRoutes:
       - { path: /v1/unlisted, reason: "The boot case's framework route beside the contract (ADR 0015)." }
+  - id: tasksService
+    out: tasks_service
+    use: pypi:seampact-fastapi
+    api: tasksService

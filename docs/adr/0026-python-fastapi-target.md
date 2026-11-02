@@ -176,7 +176,7 @@ Starlette decodes the path before routing, so the raw match and the chosen route
 - `catchAll: false` leaves those paths to the app.
 - The boundary acts on `http` scopes only. A `websocket` or `lifespan` scope passes through untouched, since a contract declares no websocket. An app `WebSocketRoute` under a base path is an app route like any other: the boot check refuses it unless `frameworkRoutes` lists it.
 
-Each `GET` operation is registered with `methods=["GET", "HEAD"]`, since a FastAPI `APIRoute` registered for `GET` answers `HEAD` with 405 (review probe). `HEAD` runs the path's `GET` operation; the boundary drops the body. A method the path does not serve answers the path's `notFound` 404 from the boundary, where Starlette would answer 405. A CORS preflight is left to the app's `CORSMiddleware`. The boot check refuses a `CORSMiddleware` outside the boundary, so the app adds it before `bind_<api>()`.
+Each `GET` operation is registered with `methods=["GET", "HEAD"]`, since a FastAPI `APIRoute` registered for `GET` answers `HEAD` with 405 (review probe). `HEAD` runs the path's `GET` operation; the boundary drops the body. A method the path does not serve answers the path's `notFound` 404 from the boundary, where Starlette would answer 405. A CORS preflight (`OPTIONS` with `Origin` and `Access-Control-Request-Method`) passes the boundary untouched and is left to the app's `CORSMiddleware`, as on the PHP targets. The boot check refuses a `CORSMiddleware` outside the boundary, so the app adds it before `bind_<api>()`.
 
 `mount` is the prefix the generated router writes before each contract path; `bind_<api>()` includes the router with no prefix, and neither the target router nor the routers it joins may add one: the boot check refuses a prefix and points to `mount`. An ASGI `root_path` (an app mounted by another ASGI app, or `--root-path`) stays outside the mount, as a servlet context path does. Servers differ: `TestClient` leaves it out of `path` and `raw_path`, a parent `Mount` and uvicorn's `--root-path` keep it in both (review probe). So when `raw_path` starts with `root_path`, the boundary strips that raw prefix before the match, as ADR 0023 strips the front controller's base path; a `raw_path` that does not start with a non-empty `root_path` is not a contract request.
 
@@ -312,14 +312,14 @@ The check lists every problem at once, with the operation id, the name and the f
 - the boundary not first in `app.user_middleware`: a middleware added after `bind_<api>()` sits outside it (spike); other seampact boundaries are accepted there, as "Several apis" says;
 - an `app.exception_handlers` entry that can take an `HTTPException` ("Exceptions on contract routes") added or replaced after `bind_<api>()`, so it carries no wrapper;
 - an `app.dependency_overrides` entry keyed by a generated dependency (the access dependency, an input dependency), which would reach the handler without steps 2 to 8; the first-request check refuses it too, since a test may set it after start;
-- a `public_origin` set under relative URLs, or a missing or malformed one under absolute URLs; this item comes with absolute URLs in fastapi-4, and until then `public_origin` is not read;
+- a `public_origin` set under relative URLs, or a missing or malformed one under absolute URLs;
 - a FastAPI minor or a Starlette major that `generate` did not accept, or Pydantic 1, read with `importlib.metadata`. The generated code records the FastAPI minors `generate` accepted (the matrix's tested minors and the `allowUntested` ones) and the Starlette majors of the matrix, so a `pip install -U fastapi` after `generate` refuses the boot by name, as Laravel's boot check refuses a major other than 13. A Pydantic major other than 2 is refused alike. `generate` refuses an entry whose compatibility matrix has no FastAPI row (`config.matrix.row-missing`).
 
 `artefacts.bootCheck: false` turns the whole check off; `{ frameworkRoutes: false }` turns the framework-route check off and `{ hooks: off }` the hook check, as on Laravel. The handler check runs whenever the boot check does.
 
 ### Native security layers
 
-FastAPI's security tools stay the app's. An authenticate hook factory depends on the app's `Security` scheme (`OAuth2PasswordBearer`, `HTTPBearer`, `APIKeyHeader`), so FastAPI reads the credential and the hook decides. The `HTTPException` 401 or 403 a scheme raises answers `unauthenticated` or `forbidden` ("Exceptions on contract routes"). FastAPI has no CSRF layer: the boundary checks the contract's CSRF header for a cookie-only caller. Per-access-kind dependency lists, as Laravel's `middleware.<kind>`, wait for an app that needs them.
+FastAPI's security tools stay the app's. An authenticate hook factory depends on the app's `Security` scheme (`OAuth2PasswordBearer`, `HTTPBearer`, `APIKeyHeader`), so FastAPI reads the credential and the hook decides. A scheme built with `auto_error=False` hands `None` to the factory, so a caller presenting another scheme of the identity (a session cookie) still reaches the hook; the consumer's `user` and `service` hooks read their token this way. The `HTTPException` 401 or 403 a scheme raises answers `unauthenticated` or `forbidden` ("Exceptions on contract routes"). FastAPI has no CSRF layer: the boundary checks the contract's CSRF header for a cookie-only caller. Per-access-kind dependency lists, as Laravel's `middleware.<kind>`, wait for an app that needs them.
 
 ### Native access instead of hooks
 
@@ -342,7 +342,7 @@ The target imposes no wire shape ([A36](../decisions.md#a36)):
 
 ### Native docs
 
-`nativeDocs` is off by default, as on every target (ADR 0009). Contract routes are then registered with `include_in_schema=False`, so FastAPI's `/docs` and `/openapi.json` show the app's own routes only (spike). With `artefacts.nativeDocs: true`, the routes join FastAPI's document with seampact's operation objects, so it describes them as seampact's document does (ADR 0011, CHK-165). `frameworkDocs: keep` is accepted, as on every server target. `frameworkDocs: off` comes with `nativeDocs` in fastapi-4; until then it is refused by name (`config.frameworkDocs.unsupported`), with the fix `FastAPI(openapi_url=None)`.
+`nativeDocs` is off by default, as on every target (ADR 0009). Contract routes are then registered with `include_in_schema=False`, so FastAPI's `/docs` and `/openapi.json` show the app's own routes only (spike). With `artefacts.nativeDocs: true`, the routes join FastAPI's document with seampact's operation objects, so it describes them as seampact's document does (ADR 0011, CHK-165). `frameworkDocs: keep` is accepted, as on every server target. `nativeDocs: true` and `frameworkDocs: off` wait for the Python runner to hand a generator seampact's OpenAPI document of the entry and the entry's `frameworkDocs`, as the Node CLI hands its targets: until then `nativeDocs: true` is refused by name (`artefacts.nativeDocs.unsupported`), and so is `frameworkDocs: off` (`config.frameworkDocs.unsupported`), with the fix `FastAPI(openapi_url=None)`.
 
 ### Links and the client
 
@@ -367,8 +367,7 @@ The generator's code sits in production `site-packages`, its dependencies behind
 | Waits for | What |
 |---|---|
 | a consumer that needs them | form, multipart, download and redirect bodies; native access (`artefacts.accessHooks: false`); sort keys restricted by a right; unions (`oneOf`); `handlers: perOperation`; per-access-kind dependency lists |
-| fastapi-4 | `nativeDocs` and `frameworkDocs: off` |
-| fastapi-4 | relays: until then, the boot check refuses an operation that uses one (`fastapi.feature.unavailable`), and with the boot check off it answers the api's 500 by name; the entry's `operations` filter leaves such operations out |
+| the Python runner handing a generator seampact's document and `frameworkDocs` | `nativeDocs` and `frameworkDocs: off` |
 | after 1.0 | FastAPI minors below the floor and Pydantic 1 (refused, not waiting); `hooks: vendored` ([A40](../decisions.md#a40)); every IR form absent from the reference contract's golden IRs, as ADR 0023 lists them |
 
 ### The consumer and the proof
@@ -378,7 +377,7 @@ The sample app lives in `scripts/consumers/targets/fastapi/`. It holds the devel
 The workflow `p7-fastapi.yml` has, beside `changes` and the `packages` tests:
 
 - `contract-bundle` (Node), which bundles the reference contract with the compiler binary; the consumer fetches it from a local git repository with its integrity pin;
-- `e2e`, two rows on `ubuntu-24.04` with `actions/setup-python`: {Python 3.12, FastAPI 0.162 with its floor Starlette and Pydantic} and {the latest Python, the latest FastAPI, Starlette and Pydantic}, both on uvicorn. Node is removed first, and the step fails if `node`, `npm` or `npx` is still found. It installs the app with pip only and generates. Node then comes back for the suite alone, which runs the `default`, `hand-written` and `boot` profiles (ADR 0015 "Suite profiles"), over every operation of the tasks api from fastapi-3; a boot is a uvicorn start of a misconfigured variant;
+- `e2e`, two rows on `ubuntu-24.04` with `actions/setup-python`: {Python 3.12, FastAPI 0.162 with its floor Starlette and Pydantic} and {the latest Python, the latest FastAPI, Starlette and Pydantic}, both on uvicorn. Node is removed first, and the step fails if `node`, `npm` or `npx` is still found. It installs the app with pip only and generates. Node then comes back for the suite alone, which runs the `default`, `hand-written` and `boot` profiles (ADR 0015 "Suite profiles"), over every operation of the tasks and tasksService apis; a boot is a uvicorn start of a misconfigured variant;
 - `fastapi`, the aggregate, failing on any failed or cancelled job, or one skipped although `changes` said run.
 
 The proof is:
@@ -397,7 +396,7 @@ The suite runs every case of the reference contract: the consumer's refusal list
 | fastapi-1 | `python/fastapi`: the generator in the entry point group, the options, models, handler protocols, router declarations, exceptions per error, `bind_<api>()`; a golden for the reference contract under `ruff`, `mypy --strict` and `pyright` strict on Python 3.12 and the latest |
 | fastapi-2 | the boundary (steps 1 and 10), the access and input dependencies (steps 2 to 8), the exception map, the lifespan boot check and its first-request fallback, the 500 on a missing hook, scopes in the request scope; the sample app, the `default`, `hand-written` and `boot` profiles, the e2e job of `p7-fastapi.yml` |
 | fastapi-3 | paging, idempotency, throttle, cache headers, field rights, version tokens, deadline headers, the signed raw body, redaction; the suite over every operation of the tasks api and `test_redaction.py` |
-| fastapi-4 | absolute URLs, relays with the tasksService api; authenticate hooks on FastAPI `Security` schemes; CORS and docs routes beside the boundary; `nativeDocs` and `frameworkDocs: off` |
+| fastapi-4 | absolute URLs, relays with the tasksService api; authenticate hooks on FastAPI `Security` schemes; CORS and docs routes beside the boundary |
 
 ## Spike
 
