@@ -110,7 +110,10 @@ jobs:
         run: uv run --no-sync mypy
       - name: Type-check the golden package as Pylance users do
         run: uv run --no-sync pyright
+      # Starlette 0.46's TestClient uses an anyio alias the locked anyio deprecates; only the floor row sees it.
       - name: Test the target and the shared code generation
+        env:
+          PYTEST_ADDOPTS: ${{ matrix.row == 'floor' && '-W "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning"' || '' }}
         run: uv run --no-sync pytest fastapi/fastapi_tests codegen/tests
 
   # The reference contract bundled once by the compiler binary, so the consumer jobs fetch it without Node.
