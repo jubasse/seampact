@@ -30,23 +30,6 @@ val stagedDirectory = layout.buildDirectory.dir("compiler-binaries")
 
 version = compilerVersion ?: unsetVersion
 
-fun sha256Of(file: File): String = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(file.readBytes()))
-
-// The manifest's hash of each asset; exactly the five assets, each once.
-fun manifestHashes(manifest: File): Map<String, String> {
-    val hashes = linkedMapOf<String, String>()
-    for (line in manifest.readLines().filter { it.isNotEmpty() }) {
-        val asset = line.substringAfter("  ", missingDelimiterValue = "")
-        if (asset !in classifierByAssetName) throw GradleException("$manifest lists '$asset', which is not a release binary.")
-        if (asset in hashes) throw GradleException("$manifest lists '$asset' twice.")
-        hashes[asset] = line.substringBefore("  ")
-    }
-    val missing = classifierByAssetName.keys - hashes.keys
-    if (missing.isNotEmpty()) throw GradleException("$manifest lists no hash for ${missing.joinToString(", ")}.")
-
-    return hashes
-}
-
 val stageCompilerBinaries = tasks.register("stageCompilerBinaries") {
     description = "Checks the release binaries against their SHA256SUMS and stages them for the compiler publication."
     group = PublishingPlugin.PUBLISH_TASK_GROUP
@@ -54,33 +37,59 @@ val stageCompilerBinaries = tasks.register("stageCompilerBinaries") {
     inputs.property("compilerVersion", compilerVersion ?: unsetVersion)
     outputs.dir(stagedDirectory)
 
+    // Local copies: the action must not capture the script, which the configuration cache cannot store.
+    val sourceDirectory = binariesDirectory?.let(::file)
+    val releaseVersion = compilerVersion
+    val assetNames = classifierByAssetName.keys.toList()
+    val manifestName = manifestFileName
+    val stagingDirectory = stagedDirectory
+    val binariesDirectoryFlag = "-P$binariesDirectoryProperty"
+    val compilerVersionFlag = "-P$compilerVersionProperty"
+
+    fun sha256Of(file: File): String = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(file.readBytes()))
+
+    // The manifest's hash of each asset; exactly the five assets, each once.
+    fun manifestHashes(manifest: File): Map<String, String> {
+        val hashes = linkedMapOf<String, String>()
+        for (line in manifest.readLines().filter { it.isNotEmpty() }) {
+            val asset = line.substringAfter("  ", missingDelimiterValue = "")
+            if (asset !in assetNames) throw GradleException("$manifest lists '$asset', which is not a release binary.")
+            if (asset in hashes) throw GradleException("$manifest lists '$asset' twice.")
+            hashes[asset] = line.substringBefore("  ")
+        }
+        val missing = assetNames - hashes.keys
+        if (missing.isNotEmpty()) throw GradleException("$manifest lists no hash for ${missing.joinToString(", ")}.")
+
+        return hashes
+    }
+
     doLast {
-        val source = binariesDirectory?.let(::file) ?: throw GradleException(
-            "The compiler publication needs -P$binariesDirectoryProperty=<dir>, the five release binaries beside their $manifestFileName.",
+        val source = sourceDirectory ?: throw GradleException(
+            "The compiler publication needs $binariesDirectoryFlag=<dir>, the five release binaries beside their $manifestName.",
         )
-        if (compilerVersion == null) {
-            throw GradleException("The compiler publication needs -P$compilerVersionProperty=<version>, the release version.")
+        if (releaseVersion == null) {
+            throw GradleException("The compiler publication needs $compilerVersionFlag=<version>, the release version.")
         }
 
         val present = source.list()?.toSet() ?: throw GradleException("'$source' is not a directory.")
-        val unexpected = present - classifierByAssetName.keys - manifestFileName
+        val unexpected = present - assetNames - manifestName
         if (unexpected.isNotEmpty()) throw GradleException("'$source' holds files that are no release binary: ${unexpected.sorted().joinToString(", ")}.")
 
-        val hashes = manifestHashes(source.resolve(manifestFileName))
-        val target = stagedDirectory.get().asFile
+        val hashes = manifestHashes(source.resolve(manifestName))
+        val target = stagingDirectory.get().asFile
         target.deleteRecursively()
         target.mkdirs()
 
-        for (asset in classifierByAssetName.keys) {
+        for (asset in assetNames) {
             val binary = source.resolve(asset)
-            if (!binary.isFile) throw GradleException("'$binary' is missing; $manifestFileName lists it.")
+            if (!binary.isFile) throw GradleException("'$binary' is missing; $manifestName lists it.")
 
             // The staged copy is hashed, not the source: the published bytes are the ones checked.
             val staged = binary.copyTo(target.resolve(asset))
             val actual = sha256Of(staged)
             val expected = hashes.getValue(asset)
             if (actual != expected) {
-                throw GradleException("'$binary' has the SHA-256 $actual once staged; $manifestFileName lists $expected. It is not published.")
+                throw GradleException("'$binary' has the SHA-256 $actual once staged; $manifestName lists $expected. It is not published.")
             }
         }
     }
