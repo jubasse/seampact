@@ -38,7 +38,7 @@
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@types/express": "5.0.6",
-    "@types/node": "24.19.1",
+    "@types/node": "24.19.2",
     "express": "5.3.0",
     "express4": "npm:express@4.22.3",
     "typescript": "6.0.3",
