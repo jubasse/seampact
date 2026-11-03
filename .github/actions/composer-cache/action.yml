@@ -1,0 +1,34 @@
+# Restores and saves Composer's download cache (the files directory), so installs and updates take their archives from
+# it rather than from the network. Only downloads are cached, never vendor/ or a lock: every resolution, the
+# --prefer-lowest and update rows included, still runs fresh against the registry.
+name: Composer download cache
+description: Caches Composer's downloaded archives per workflow and job, keyed on the dependency files the caller hashes.
+
+inputs:
+  dependency-hash:
+    description: The hashFiles() of the composer.lock (or composer.json where there is no lock) the job resolves from.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Locate the Composer download cache
+      id: composer-files
+      shell: bash
+      env:
+        DEPENDENCY_HASH: ${{ inputs.dependency-hash }}
+      run: |
+        set -euo pipefail
+        if [ -z "$DEPENDENCY_HASH" ]; then
+          echo "The dependency-hash input is empty: the caller's hashFiles() matched no file. Fix its paths."
+          exit 1
+        fi
+        echo "dir=$(composer config --global cache-files-dir)" >> "$GITHUB_OUTPUT"
+    # Rows of one job that share the dependency files share one entry; the first row to finish saves it.
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.composer-files.outputs.dir }}
+        key: composer-files-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-${{ inputs.dependency-hash }}
+        restore-keys: |
+          composer-files-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-
+          composer-files-${{ runner.os }}-
