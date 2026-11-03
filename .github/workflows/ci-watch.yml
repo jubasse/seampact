@@ -3,7 +3,9 @@ name: CI watch
 # Opens one issue per workflow, labelled `ci-watch`, when a run of that workflow fails on a push to develop (a
 # post-merge row) or on the nightly schedule (a drift row), or comments on that issue when it is still open. It names
 # the workflow, the failed jobs and the commit, and never reverts: the next merge fixes or reverts by hand, and the
-# lead checks the open `ci-watch` issues before merging. A cancelled run (superseded by a newer push) opens nothing,
+# lead checks the open `ci-watch` issues before merging. A failed nightly run is first rerun once (its failed jobs,
+# after a pause), since most drift failures are a registry or runner fault; only a failed rerun opens the issue. A
+# cancelled run (superseded by a newer push) opens nothing,
 # and a green run closes nothing: a run whose path filter skipped every job proves nothing. Every workflow that runs
 # on a push or the schedule is listed below; a test keeps the list complete.
 
@@ -41,8 +43,8 @@ on:
     branches: [develop]
 
 permissions:
-  # Lists the failed jobs of the run it reports.
-  actions: read
+  # Lists the failed jobs of the run it reports, and reruns a failed nightly once.
+  actions: write
   issues: write
 
 jobs:
@@ -51,11 +53,31 @@ jobs:
       contains(fromJSON('["failure", "timed_out", "startup_failure"]'), github.event.workflow_run.conclusion)
       && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'schedule')
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
+      - name: Rerun a failed nightly once before reporting it
+        id: rerun
+        if: github.event.workflow_run.event == 'schedule' && github.event.workflow_run.run_attempt == 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RERUN_PAUSE_SECONDS: "300"
+        run: |
+          set -euo pipefail
+          # A registry that rate-limits the shared runner addresses usually recovers within minutes.
+          sleep "$RERUN_PAUSE_SECONDS"
+
+          if gh run rerun "$RUN_ID" --failed; then
+            echo "rerun-started=true" >> "$GITHUB_OUTPUT"
+            echo "Rerunning the failed jobs of run $RUN_ID; its completion is reported if it fails again."
+          else
+            echo "The rerun of run $RUN_ID did not start; reporting the failure now."
+          fi
       # Every value from the run goes through the environment, never into the script: a squash title is the PR title,
       # which an outside author writes.
       - name: Open or update the workflow's ci-watch issue
+        if: steps.rerun.outputs.rerun-started != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
