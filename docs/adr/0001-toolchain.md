@@ -44,6 +44,8 @@ One job named `ci` runs `pnpm install --frozen-lockfile` then `pnpm gate` on pus
 
 Amended 2026-10-12: git flow, see CONTRIBUTING.md. CI now runs on push and pull request to `main` and `develop`.
 
+Amended 2026-11-03: CI is now one workflow per lane, each with its own required check, plus post-merge and nightly rows, a workflow lint, shared caches and Dependabot. See the CI and Dependencies sections of CONTRIBUTING.md.
+
 ## Consequences
 
 - Adding a package needs only a directory under `packages/` with a `typecheck` script; the gate picks it up.
