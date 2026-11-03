@@ -267,6 +267,15 @@ Allow-list your own routes in the entry, with a reason. FastAPI's `/docs`, `/red
 
 FastAPI breaks in minors, so seampact tests them one by one. 0.162 is the floor, and an older minor fails with `config.matrix.incompatible`. A newer minor prints `config.matrix.untested`. Accept it on the entry with `allowUntested: [fastapi@0.163]`, or make it fail with `checks: { matrix: error }`. After `pip install -U fastapi`, run `seampact generate` again: the boot check refuses a minor that `generate` did not accept.
 
+### Starlette
+
+seampact accepts every Starlette that FastAPI accepts, from 0.46, and tests 0.46 and the latest release. Old Starlette releases have known security flaws, fixed in later ones, but seampact does not raise its floor for them, the same choice FastAPI makes:
+
+- `pip install` already picks the latest Starlette. An old one stays only when your project pins it, another package holds it back, or the environment is never updated. A higher floor in seampact changes none of these.
+- A higher floor would refuse projects that cannot move yet, for a flaw that may not touch them.
+
+So keeping Starlette current is your project's job. Run `pip install -U starlette`, and let `pip-audit` (or your security scanner) tell you when an update fixes a flaw. To enforce it, add your own floor, for example `starlette>=1.3.1`, to your project's requirements.
+
 ## Limits
 
 - Run a server that gives the raw request path. uvicorn does. Where the server gives none, the boundary matches the decoded path and logs which rules it cannot apply.

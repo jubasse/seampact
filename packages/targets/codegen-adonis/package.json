@@ -40,7 +40,7 @@
     "@adonisjs/core-6": "npm:@adonisjs/core@6.21.0",
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
-    "@types/node": "24.19.1",
+    "@types/node": "24.19.2",
     "@vinejs/vine": "4.4.0",
     "typescript": "6.0.3",
     "zod": "4.6.7"
