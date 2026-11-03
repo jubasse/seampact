@@ -4,6 +4,8 @@
 // `check` runs the pinned-bundle check and the generated drift. Built here with Gradle (ADR 0010), so `jvm/` keeps one
 // build tool.
 
+import io.github.jubasse.seampact.conventions.PublishedModulePlugin
+
 plugins {
     id("seampact.library-module")
     alias(libs.plugins.kotlin.jvm)
@@ -83,11 +85,16 @@ tasks.test {
     systemProperty("seampact.testMaven", testMaven)
     systemProperty("seampact.testMavenSha256", testMavenSha256)
     inputs.property("testMaven", testMaven)
-    inputs.files(gradlePluginClasspath)
-    jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dseampact.gradlePluginClasspath=${gradlePluginClasspath.asPath}") })
+    // A local copy: the provider must not capture the script, which the configuration cache cannot store.
+    val gradlePluginFiles: FileCollection = gradlePluginClasspath
+    inputs.files(gradlePluginFiles)
+    jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dseampact.gradlePluginClasspath=${gradlePluginFiles.asPath}") })
     inputs.file(repositoryRoot.resolve("packages/core/spec/schemas/config/app.schema.json"))
     inputs.dir(repositoryRoot.resolve("fixtures/golden/reference"))
     inputs.dir(repositoryRoot.resolve("fixtures/reference"))
     inputs.dir(repositoryRoot.resolve("scripts/consumers/targets/spring-boot/maven"))
     inputs.dir(rootProject.file("seampact-spring-boot/src/test/golden"))
+    PublishedModulePlugin.declareTestRepositoryInputs(this, publishedModules)
+    // The bundle a test publishes to its own repository.
+    inputs.file(repositoryRoot.resolve("packages/core/spec/vectors/bundle/vectors.json"))
 }

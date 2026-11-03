@@ -3,15 +3,19 @@ package io.github.jubasse.seampact.conventions;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.file.Directory;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPom;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
 import org.gradle.jvm.toolchain.JavaToolchainService;
+
+import java.util.List;
 
 /**
  * A published seampact JVM module (ADR 0011 "Unpublished installs for test consumers"): the group, the version from
@@ -32,6 +36,7 @@ public final class PublishedModulePlugin implements Plugin<Project> {
     private static final String JAVA_PLUGIN = "java";
     private static final String TEST_REPOSITORY_NAME = "test";
     private static final String TEST_REPOSITORY_DIRECTORY = "test-repository";
+    private static final String GROUP_PATH = GROUP.replace('.', '/');
 
     private static final String PROJECT_URL = "https://github.com/jubasse/seampact";
     private static final String SCM_CONNECTION = "scm:git:https://github.com/jubasse/seampact.git";
@@ -64,12 +69,35 @@ public final class PublishedModulePlugin implements Plugin<Project> {
             test.getJavaLauncher().set(toolchains.launcherFor(spec -> spec.getLanguageVersion().set(testJavaVersion))));
     }
 
+    /**
+     * Declares as inputs of {@code test} the published files, in the test repository, of each module of
+     * {@code modulePaths} its builds resolve, so a changed module reruns the test instead of reusing its cached result.
+     * Archives are reproducible, so an unchanged module keeps its bytes. The modules carry the test's project version.
+     */
+    public static void declareTestRepositoryInputs(Test test, List<String> modulePaths) {
+        Project project = test.getProject();
+        Provider<Directory> testRepository = testRepositoryOf(project);
+        String version = project.getVersion().toString();
+
+        for (String modulePath : modulePaths) {
+            String artifactId = project.project(modulePath).getName();
+            test.getInputs()
+                .dir(testRepository.map(repository -> repository.dir(GROUP_PATH + "/" + artifactId + "/" + version)))
+                .withPropertyName("testRepository." + artifactId)
+                .withPathSensitivity(PathSensitivity.RELATIVE);
+        }
+    }
+
+    private static Provider<Directory> testRepositoryOf(Project project) {
+        return project.getRootProject().getLayout().getBuildDirectory().dir(TEST_REPOSITORY_DIRECTORY);
+    }
+
     private static void configurePublishing(Project project) {
         PublishingExtension publishing = project.getExtensions().getByType(PublishingExtension.class);
 
         publishing.getRepositories().maven(repository -> {
             repository.setName(TEST_REPOSITORY_NAME);
-            repository.setUrl(project.getRootProject().getLayout().getBuildDirectory().dir(TEST_REPOSITORY_DIRECTORY));
+            repository.setUrl(testRepositoryOf(project));
         });
 
         publishing.getPublications().withType(MavenPublication.class).configureEach(publication ->

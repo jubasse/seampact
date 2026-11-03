@@ -68,6 +68,7 @@ tasks.test {
     systemProperty("seampact.optInsGoldenDirectory", optInsGoldenDirectory.asFile.absolutePath)
     systemProperty("seampact.updateGolden", updateGolden.toString())
     inputs.dir(repositoryRoot.resolve("fixtures/golden/reference"))
+    inputs.dir(repositoryRoot.resolve("fixtures/golden/pack-spring"))
     inputs.dir(goldenDirectory)
     inputs.dir(optInsGoldenDirectory)
 }
