@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import { once } from "node:events";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { HOOK_CALLS_ROUTE, readLogLines, SCRIPT_ROUTE } from "./control-routes.js";
 import { parseSuiteCase, type SuiteCase, type SuiteProfile } from "./suite-case.js";
 import { SUITE_REPORT_FORMAT } from "./suite-report.js";
@@ -115,6 +115,9 @@ function signatureAgeSeconds(request: IncomingMessage): number {
 
 const TARGET = "double";
 
+// Just before a whole second, where a running clock would tick between signing and checking.
+const FROZEN_SIGNING_TIME = Date.UTC(2026, 0, 1, 0, 0, 0, 999);
+
 function suiteCase(id: string, value: Record<string, unknown>): SuiteCase {
   return parseSuiteCase({ id, title: id, checks: [], profiles: ["default"], ...value }, id);
 }
@@ -195,6 +198,9 @@ describe("runSuite", () => {
   });
 
   test("sends a body text as written, signed as of `ageSeconds` ago", async () => {
+    // The runner signs and the double measures the age at two moments; a frozen clock keeps a second tick between them
+    // from reading as 601. Only Date is faked, so the sockets keep their real timers.
+    vi.useFakeTimers({ toFake: ["Date"], now: FROZEN_SIGNING_TIME });
     const report = await run([
       suiteCase("raw", {
         steps: [
@@ -214,7 +220,7 @@ describe("runSuite", () => {
           },
         ],
       }),
-    ]);
+    ]).finally(() => vi.useRealTimers());
 
     expect(report.cases[0]?.failures).toEqual([]);
   });
