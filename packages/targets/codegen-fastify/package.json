@@ -38,7 +38,7 @@
     "@fastify/swagger": "9.9.2",
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
-    "@types/node": "24.19.1",
+    "@types/node": "24.19.2",
     "ajv": "8.20.0",
     "fastify": "5.12.7",
     "typescript": "6.0.3",
