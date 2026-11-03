@@ -53,11 +53,14 @@ val writeBinaryPins = tasks.register<JavaExec>("writeBinaryPins") {
     classpath = pins.runtimeClasspath
     mainClass = "io.github.jubasse.seampact.runner.pins.WriteBinaryPinsKt"
     val output = generatedResources.map { it.file("seampact-binaries.properties") }
+    // Local copies: the actions must not capture the script, which the configuration cache cannot store.
+    val sumsFile = binarySums
+    val pinnedVersion = compilerVersion.orEmpty()
     outputs.file(output)
-    if (binarySums != null) inputs.file(binarySums)
-    inputs.property("compilerVersion", compilerVersion ?: "")
-    onlyIf("a release SHA256SUMS is named") { binarySums != null }
-    argumentProviders.add(CommandLineArgumentProvider { listOf(compilerVersion.orEmpty(), binarySums.orEmpty(), output.get().asFile.absolutePath) })
+    if (sumsFile != null) inputs.file(sumsFile)
+    inputs.property("compilerVersion", pinnedVersion)
+    onlyIf("a release SHA256SUMS is named") { sumsFile != null }
+    argumentProviders.add(CommandLineArgumentProvider { listOf(pinnedVersion, sumsFile.orEmpty(), output.get().asFile.absolutePath) })
 }
 
 // The version the generated header names: the run's, the same for both plugins.

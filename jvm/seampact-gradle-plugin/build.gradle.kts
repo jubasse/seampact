@@ -2,6 +2,7 @@
 // from `seampact.config.yaml` or the `seampact { }` DSL, gets each api's IR from a pinned bundle or the pinned
 // compiler binary, and generates the spring-boot target into the main Java sources.
 
+import io.github.jubasse.seampact.conventions.PublishedModulePlugin
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
@@ -71,9 +72,14 @@ tasks.test {
     systemProperty("seampact.testKitDirectory", layout.buildDirectory.dir("testkit").get().asFile.absolutePath)
     systemProperty("seampact.springBootVersion", libs.versions.spring.boot.get())
     if (testGradle != null) systemProperty("seampact.testGradle", testGradle)
-    inputs.files(sampleAppClasspath)
-    jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dseampact.sampleAppClasspath=${sampleAppClasspath.asPath}") })
+    // A local copy: the provider must not capture the script, which the configuration cache cannot store.
+    val sampleAppFiles: FileCollection = sampleAppClasspath
+    inputs.files(sampleAppFiles)
+    jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dseampact.sampleAppClasspath=${sampleAppFiles.asPath}") })
     inputs.file(repositoryRoot.resolve("packages/core/spec/schemas/config/app.schema.json"))
     inputs.dir(repositoryRoot.resolve("fixtures/golden/reference"))
     inputs.dir(repositoryRoot.resolve("fixtures/reference"))
+    PublishedModulePlugin.declareTestRepositoryInputs(this, publishedModules)
+    // The bundle a test publishes to its own repository.
+    inputs.file(repositoryRoot.resolve("packages/core/spec/vectors/bundle/vectors.json"))
 }
