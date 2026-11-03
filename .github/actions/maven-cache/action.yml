@@ -1,0 +1,56 @@
+# The Maven consumer's downloads: the wrapper's Maven distribution and the third-party artifacts in ~/.m2/repository,
+# so a run takes them from the Actions cache instead of Maven Central, which rate-limits the shared runner addresses.
+# seampact's own modules (io/github/jubasse, published to Maven local by each run) are never cached, so a build never
+# picks up a stale one. Only pushes and nightly runs save: an entry saved by a pull request would count against the
+# repository's cache limit for that pull request alone.
+name: Maven consumer cache
+description: Restores or saves the Maven distribution and third-party artifacts of the Spring Boot Maven consumer.
+
+inputs:
+  step:
+    description: "`restore` before the first Maven command, `save` after the last one."
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Compute the cache key
+      id: key
+      shell: bash
+      env:
+        STEP: ${{ inputs.step }}
+        INPUTS_HASH: >-
+          ${{ hashFiles('scripts/consumers/targets/spring-boot/maven/pom.xml',
+          'scripts/consumers/targets/spring-boot/maven/.mvn/wrapper/maven-wrapper.properties', 'jvm/gradle/libs.versions.toml') }}
+      run: |
+        set -euo pipefail
+        if [ "$STEP" != restore ] && [ "$STEP" != save ]; then
+          echo "maven-cache: step is '$STEP'; use restore or save." >&2
+          exit 1
+        fi
+        if [ -z "$INPUTS_HASH" ]; then
+          echo "maven-cache: hashFiles matched no file; check out the repository before this action." >&2
+          exit 1
+        fi
+        echo "key=maven-spring-boot-consumer-${RUNNER_OS}-${INPUTS_HASH}" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the Maven downloads
+      if: inputs.step == 'restore'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.m2/wrapper/dists
+          ~/.m2/repository
+          !~/.m2/repository/io/github/jubasse
+        key: ${{ steps.key.outputs.key }}
+        restore-keys: maven-spring-boot-consumer-${{ runner.os }}-
+
+    - name: Save the Maven downloads
+      if: inputs.step == 'save' && github.event_name != 'pull_request'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.m2/wrapper/dists
+          ~/.m2/repository
+          !~/.m2/repository/io/github/jubasse
+        key: ${{ steps.key.outputs.key }}

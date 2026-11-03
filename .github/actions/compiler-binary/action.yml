@@ -1,0 +1,58 @@
+# The linux-x64 compiler binary for the lanes that run it, restored from the Actions cache or built once and saved.
+# The key hashes every file the build reads, so a binary is reused only for the same sources, lockfile and Node.
+name: Compiler binary
+description: >-
+  Puts the linux-x64 SEA binary at packages/tools/binary/dist/bin/seampact-linux-x64. A cache hit skips the build;
+  a miss installs the workspace, runs the binary build and saves the binary. The calling job checks out first, with
+  no other step before this one, so the hash sees the checkout only (no node_modules, no dist).
+
+runs:
+  using: composite
+  steps:
+    # The key: the workspace packages the binary bundles (the CLI's dependency closure: core, packs and the binary
+    # package with its build script and Node release keys), the lockfile, workspace manifest and .npmrc (third-party
+    # code and esbuild), the TypeScript base config esbuild reads, the Node version and this file (the build command).
+    # Test files are never bundled, so they stay out of the key.
+    - name: Compute the cache key
+      id: key
+      shell: bash
+      env:
+        INPUTS_HASH: ${{ hashFiles('packages/core/**', 'packages/packs/**', 'packages/tools/binary/**', '!**/*.test.ts', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', 'package.json', 'tsconfig.base.json', '.nvmrc', '.github/actions/compiler-binary/action.yml') }}
+      run: |
+        if [ -z "$INPUTS_HASH" ]; then
+          echo "compiler-binary: hashFiles matched no file; check out the repository before this action." >&2
+          exit 1
+        fi
+        echo "key=seampact-binary-linux-x64-${RUNNER_OS}-${RUNNER_ARCH}-${INPUTS_HASH}" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the binary
+      id: restore
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: packages/tools/binary/dist/bin/seampact-linux-x64
+        key: ${{ steps.key.outputs.key }}
+
+    - if: steps.restore.outputs.cache-hit != 'true'
+      uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+    - if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+    - if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile
+    - name: Build the binaries
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: packages/tools/binary
+      run: pnpm build
+
+    # Only pushes and nightly runs save: a pull request's entry would count against the repository's cache limit for
+    # that pull request alone. Parallel lanes of one run may all miss; the first save wins and the others only warn.
+    - name: Save the binary
+      if: steps.restore.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: packages/tools/binary/dist/bin/seampact-linux-x64
+        key: ${{ steps.key.outputs.key }}
