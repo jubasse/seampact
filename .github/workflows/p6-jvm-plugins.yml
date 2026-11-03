@@ -141,6 +141,39 @@ jobs:
             ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
             || endsWith(github.job, '-drift') }}
       - uses: ./.github/actions/gradle-retry
+      # The TestKit builds have their own Gradle user home, which setup-gradle does not cache: this keeps its
+      # third-party downloads (the sample apps' Spring Boot dependencies from Maven Central) only. The per-version
+      # caches, the daemons and the seampact cache stay out, and seampact's modules come from a file repository,
+      # which Gradle does not copy into modules-2. Only pushes and nightly runs save, as in the maven-cache action.
+      - name: Compute the TestKit cache key
+        id: testkit-cache-key
+        shell: bash
+        env:
+          JOB_ID: ${{ github.job }}
+          TEST_GRADLE: ${{ matrix.test-gradle }}
+          # The files that declare the sample apps' plugins and dependencies; another test edit keeps the entry.
+          INPUTS_HASH: >-
+            ${{ hashFiles('jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/SampleApp.kt',
+            'jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/GeneratePluginTest.kt',
+            'jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/MatrixCheckTest.kt',
+            'jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/SpringRuntimeCheckTest.kt',
+            'jvm/gradle/libs.versions.toml', 'jvm/gradle.properties') }}
+        run: |
+          set -euo pipefail
+          if [ -z "$INPUTS_HASH" ]; then
+            echo "testkit-cache: hashFiles matched no file; check out the repository before this step." >&2
+            exit 1
+          fi
+          echo "key=gradle-testkit-${RUNNER_OS}-${JOB_ID}-${TEST_GRADLE}-${INPUTS_HASH}" >> "$GITHUB_OUTPUT"
+          echo "restore-prefix=gradle-testkit-${RUNNER_OS}-${JOB_ID}-${TEST_GRADLE}-" >> "$GITHUB_OUTPUT"
+      - name: Restore the TestKit downloads
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: &testkit-cache-paths |
+            jvm/seampact-gradle-plugin/build/testkit/caches/modules-2/files-2.1
+            jvm/seampact-gradle-plugin/build/testkit/caches/modules-2/metadata-2.*
+          key: ${{ steps.testkit-cache-key.outputs.key }}
+          restore-keys: ${{ steps.testkit-cache-key.outputs.restore-prefix }}
       - name: Check the Gradle plugin on Java ${{ matrix.test-jdk }} and Gradle ${{ matrix.test-gradle }}
         working-directory: jvm
         env:
@@ -151,6 +184,12 @@ jobs:
           gradle_flag=()
           if [ "$TEST_GRADLE" != "wrapper" ]; then gradle_flag=("-PtestGradle=$TEST_GRADLE"); fi
           ./gradlew :seampact-gradle-plugin:check -PtestJdk="$TEST_JDK" "${gradle_flag[@]}"
+      - name: Save the TestKit downloads
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: *testkit-cache-paths
+          key: ${{ steps.testkit-cache-key.outputs.key }}
 
   gradle-plugin-post-merge:
     name: *gradle-plugin-name
