@@ -39,6 +39,7 @@ on:
       - FastAPI target
       - DRF target
       - Ninja target
+      - npm audit
     types: [completed]
     branches: [develop]
 

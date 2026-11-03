@@ -12,3 +12,14 @@ allowBuilds:
   simple-git-hooks: false
   # msw's postinstall only copies its worker script into the app's own `msw.workerDirectory`, which no package sets.
   msw: false
+
+# Advisories `pnpm audit` skips, each with no fix this repo can take:
+auditConfig:
+  ignoreGhsas:
+    # The Adonis 6 floor row (`@adonisjs/core-6`) tests the oldest Adonis seampact supports; the fixes ship only in
+    # Adonis 7, which the main Adonis pin already uses.
+    - GHSA-6qvv-pj99-48qm
+    - GHSA-2m6q-8v3h-jqww
+    - GHSA-524c-h47v-m3h8
+    # minimatch through ESLint, on this repo's own lint globs only; the fix is a major ESLint does not accept yet.
+    - GHSA-g3hv-75wg-m249
