@@ -78,6 +78,9 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: composer:2.10.2
           coverage: none
+      - uses: ./.github/actions/composer-cache
+        with:
+          dependency-hash: ${{ hashFiles('php/symfony/composer.lock') }}
       - name: Validate the Composer manifest
         working-directory: php/symfony
         run: composer validate --strict --no-interaction
@@ -172,6 +175,9 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: composer:2.10.2
           coverage: none
+      - uses: ./.github/actions/composer-cache
+        with:
+          dependency-hash: ${{ hashFiles('php/*/composer.json', 'scripts/consumers/targets/symfony/composer.json') }}
       - name: Remove Node from the runner, so the PHP path is proven to need none
         shell: bash
         run: |
