@@ -253,6 +253,11 @@ jobs:
             ${{ github.event_name != 'schedule' || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
             || endsWith(github.job, '-drift') }}
       - uses: ./.github/actions/gradle-retry
+      - name: Restore the Maven downloads
+        if: matrix.build-tool == 'maven'
+        uses: ./.github/actions/maven-cache
+        with:
+          step: restore
       - name: Publish the JVM modules to Maven local
         if: matrix.build-tool == 'maven'
         working-directory: jvm
@@ -294,6 +299,11 @@ jobs:
         run: >-
           sh scripts/consumers/targets/spring-boot/channel-smoke.sh "$RUNNER_TEMP/served.json" "$BUILD_TOOL"
           "$RUNNER_TEMP/smoke" "$GITHUB_WORKSPACE/jvm"
+      - name: Save the Maven downloads
+        if: matrix.build-tool == 'maven'
+        uses: ./.github/actions/maven-cache
+        with:
+          step: save
 
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   jvm-plugins:
