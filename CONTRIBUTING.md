@@ -40,7 +40,7 @@ It runs typecheck, lint, the format check and the tests, and fails on any error.
 
 ## Conventions
 
-- Git flow: never commit directly on `develop` or `main`; both are protected. The required checks include `ci`, `native-ir`, `hooks-native`, `binary` and `p6-react`.
+- Git flow: never commit directly on `develop` or `main`; both are protected. A pull request to `develop` merges only when it is up to date with `develop` and its required checks pass: `ci`, `checklist`, and one check per lane (for example `native-ir`, `laravel`, `fastapi`).
 - Dependencies are pinned to exact versions; GitHub Actions are pinned by commit SHA with the version in a comment.
 - Add a changeset (`pnpm changeset`) for a change that affects a package's version. Releases are cut from `release/<version>`.
 - Toolchain choices are recorded in `docs/adr/0001-toolchain.md`.
@@ -53,3 +53,17 @@ It runs typecheck, lint, the format check and the tests, and fails on any error.
 - Releases: branch `release/<version>` from `develop`, open a pull request to `main`, merge commit. Then merge `main` back into `develop` (merge commit).
 - Hotfixes: branch `hotfix/<version>` from `main`, open a pull request to `main` (merge commit). Then merge it back into `develop` (merge commit).
 - `develop` is the default branch until 1.0; from 1.0 it is `main`.
+
+## CI
+
+- Each lane has its own workflow. A job first checks what the pull request changed; jobs it does not touch are skipped in seconds. The lane's last job is its required check.
+- Rows that are slow or rarely break run after the merge, on `develop` (post-merge rows), or every night (drift rows, which test against the latest releases). When one of them fails, `ci-watch` opens an issue. A failed nightly is first rerun once, so a registry outage does not open one.
+- `checklist` lints every workflow with actionlint.
+- A new workflow reuses the shared actions in `.github/actions/`: `lane-changes` and `lane-aggregate` for the change filter and the required check, `compiler-binary` for the compiler binary, `gradle-retry`, `composer-cache` and `maven-cache` for downloads.
+- Caches are saved by pushes to `develop`, the nightly and manual runs; pull requests only read them. The repository has a 10 GB cache limit, and an entry a pull request saved would serve only that pull request. To refresh the caches without waiting for the night, run the workflow by hand on `develop`.
+
+## Dependencies
+
+- Dependabot opens one grouped pull request per ecosystem each week (GitHub Actions, npm, uv, Composer), minor and patch releases only. A new major of a framework changes what seampact supports, so it is done by hand.
+- Security updates come as soon as an advisory is published. A floor row tests the oldest version seampact declares, so a security update that would move it above that floor is closed, and its alert dismissed as test-only. The FastAPI guide explains this choice for Starlette.
+- `npm audit` runs nightly and on lockfile changes; Python runs `pip-audit` and PHP `composer audit`. An advisory that cannot be fixed here goes under `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml`, with a comment saying why.

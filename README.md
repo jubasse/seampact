@@ -644,6 +644,7 @@ Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse
 ## Get started
 
 - [Getting started](docs/getting-started/README.md): a notes API on NestJS, in four steps.
+- [Server guides](docs/README.md#backend): one page per framework, from setup to tests, including [FastAPI](docs/backend/fastapi.md), [Django REST Framework](docs/backend/drf.md) and [Django Ninja](docs/backend/ninja.md).
 - [Configuration](docs/configuration/config-file.md): every key of `seampact.config.yaml`.
 - [Troubleshooting](docs/troubleshooting/README.md).
 
