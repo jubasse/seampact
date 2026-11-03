@@ -11,13 +11,14 @@ runs:
   steps:
     # The key: the workspace packages the binary bundles (the CLI's dependency closure: core, packs and the binary
     # package with its build script and Node release keys), the lockfile, workspace manifest and .npmrc (third-party
-    # code and esbuild), the TypeScript base config esbuild reads, the Node version and this file (the build command).
-    # Test files are never bundled, so they stay out of the key.
+    # code and esbuild), the TypeScript configs esbuild reads (a pack has none, so esbuild walks up to the root one),
+    # the Node version and this file (the build command). Test files stay out of the key: the build fails when one
+    # is bundled.
     - name: Compute the cache key
       id: key
       shell: bash
       env:
-        INPUTS_HASH: ${{ hashFiles('packages/core/**', 'packages/packs/**', 'packages/tools/binary/**', '!**/*.test.ts', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', 'package.json', 'tsconfig.base.json', '.nvmrc', '.github/actions/compiler-binary/action.yml') }}
+        INPUTS_HASH: ${{ hashFiles('packages/core/**', 'packages/packs/**', 'packages/tools/binary/**', '!**/*.test.ts', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', 'package.json', 'tsconfig.json', 'tsconfig.base.json', '.nvmrc', '.github/actions/compiler-binary/action.yml') }}
       run: |
         if [ -z "$INPUTS_HASH" ]; then
           echo "compiler-binary: hashFiles matched no file; check out the repository before this action." >&2

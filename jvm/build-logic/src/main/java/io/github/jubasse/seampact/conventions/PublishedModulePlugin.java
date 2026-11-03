@@ -12,7 +12,9 @@ import org.gradle.api.publish.maven.plugins.MavenPublishPlugin;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
+import org.gradle.jvm.toolchain.JavaInstallationMetadata;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
+import org.gradle.jvm.toolchain.JavaLauncher;
 import org.gradle.jvm.toolchain.JavaToolchainService;
 
 import java.util.List;
@@ -53,7 +55,10 @@ public final class PublishedModulePlugin implements Plugin<Project> {
         project.getTasks().withType(JavaCompile.class).configureEach(compile -> compile.getOptions().getRelease().set(BYTECODE_JAVA_VERSION));
         // Kotlin's types load only when the module applies Kotlin, which brings them.
         project.getPluginManager().withPlugin(KOTLIN_JVM_PLUGIN, applied -> KotlinBytecode.configure(project, BYTECODE_JAVA_VERSION));
-        project.getPluginManager().withPlugin(JAVA_PLUGIN, applied -> configureTestJdk(project));
+        project.getPluginManager().withPlugin(JAVA_PLUGIN, applied -> {
+            configureTestJdk(project);
+            trackTestRuntime(project);
+        });
 
         project.getPluginManager().apply(MavenPublishPlugin.class);
         configurePublishing(project);
@@ -67,6 +72,16 @@ public final class PublishedModulePlugin implements Plugin<Project> {
         JavaLanguageVersion testJavaVersion = JavaLanguageVersion.of(testJdk.get());
         project.getTasks().withType(Test.class).configureEach(test ->
             test.getJavaLauncher().set(toolchains.launcherFor(spec -> spec.getLanguageVersion().set(testJavaVersion))));
+    }
+
+    // Gradle keys a test result on the launcher's major version only, so a JDK patch or vendor change would reuse
+    // the result of the JDK that last ran.
+    private static void trackTestRuntime(Project project) {
+        project.getTasks().withType(Test.class).configureEach(test -> {
+            Provider<JavaInstallationMetadata> launcherMetadata = test.getJavaLauncher().map(JavaLauncher::getMetadata);
+            test.getInputs().property("testJavaRuntimeVersion", launcherMetadata.map(JavaInstallationMetadata::getJavaRuntimeVersion));
+            test.getInputs().property("testJavaVendor", launcherMetadata.map(JavaInstallationMetadata::getVendor));
+        });
     }
 
     /**
