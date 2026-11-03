@@ -227,8 +227,6 @@ jobs:
     if: needs.changes.outputs.python-core == 'true' && needs.changes.outputs.binary-row == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    env:
-      WORK: ${{ runner.temp }}/channel-smoke
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -246,6 +244,9 @@ jobs:
         with:
           version: "0.13.6"
           enable-cache: false
+      # The runner context is not available in a job-level env, which makes the whole workflow invalid.
+      - name: Set the work directory
+        run: echo "WORK=$RUNNER_TEMP/channel-smoke" >> "$GITHUB_ENV"
       - name: Install seampact-fastapi from the built wheels
         shell: bash
         env:
