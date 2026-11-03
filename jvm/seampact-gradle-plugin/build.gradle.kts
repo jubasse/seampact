@@ -4,6 +4,7 @@
 
 import io.github.jubasse.seampact.conventions.PublishedModulePlugin
 import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
@@ -66,6 +67,8 @@ val publishedModules = listOf(":seampact-hooks", ":seampact-spring-runtime")
 
 tasks.test {
     useJUnitPlatform()
+    // A failed GradleRunner build throws with the build's whole output in its message, which the full format prints.
+    testLogging.exceptionFormat = TestExceptionFormat.FULL
     dependsOn(publishedModules.map { "$it:publishAllPublicationsToTestRepository" })
     systemProperty("seampact.testRepository", rootProject.layout.buildDirectory.dir("test-repository").get().asFile.absolutePath)
     systemProperty("seampact.repositoryRoot", repositoryRoot.absolutePath)
