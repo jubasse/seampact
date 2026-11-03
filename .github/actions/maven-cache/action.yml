@@ -2,7 +2,8 @@
 # so a run takes them from the Actions cache instead of Maven Central, which rate-limits the shared runner addresses.
 # seampact's own modules (io/github/jubasse, published to Maven local by each run) are never cached, so a build never
 # picks up a stale one. Only pushes and nightly runs save: an entry saved by a pull request would count against the
-# repository's cache limit for that pull request alone.
+# repository's cache limit for that pull request alone. Each workflow keeps its own entry: its builds resolve a
+# different set of artifacts, and a shared key would let the first to save hold the others' downloads back.
 name: Maven consumer cache
 description: Restores or saves the Maven distribution and third-party artifacts of the Spring Boot Maven consumer.
 
@@ -19,11 +20,13 @@ runs:
       shell: bash
       env:
         STEP: ${{ inputs.step }}
+        WORKFLOW_NAME: ${{ github.workflow }}
         INPUTS_HASH: >-
           ${{ hashFiles('scripts/consumers/targets/spring-boot/maven/pom.xml',
           'scripts/consumers/targets/spring-boot/maven/.mvn/wrapper/maven-wrapper.properties', 'jvm/gradle/libs.versions.toml') }}
       run: |
         set -euo pipefail
+        WORKFLOW_SLUG=$(printf '%s' "$WORKFLOW_NAME" | tr -c 'A-Za-z0-9' '-')
         if [ "$STEP" != restore ] && [ "$STEP" != save ]; then
           echo "maven-cache: step is '$STEP'; use restore or save." >&2
           exit 1
@@ -32,7 +35,8 @@ runs:
           echo "maven-cache: hashFiles matched no file; check out the repository before this action." >&2
           exit 1
         fi
-        echo "key=maven-spring-boot-consumer-${RUNNER_OS}-${INPUTS_HASH}" >> "$GITHUB_OUTPUT"
+        echo "key=maven-consumer-${RUNNER_OS}-${WORKFLOW_SLUG}-${INPUTS_HASH}" >> "$GITHUB_OUTPUT"
+        echo "restore-prefix=maven-consumer-${RUNNER_OS}-${WORKFLOW_SLUG}-" >> "$GITHUB_OUTPUT"
 
     - name: Restore the Maven downloads
       if: inputs.step == 'restore'
@@ -43,7 +47,7 @@ runs:
           ~/.m2/repository
           !~/.m2/repository/io/github/jubasse
         key: ${{ steps.key.outputs.key }}
-        restore-keys: maven-spring-boot-consumer-${{ runner.os }}-
+        restore-keys: ${{ steps.key.outputs.restore-prefix }}
 
     - name: Save the Maven downloads
       if: inputs.step == 'save' && github.event_name != 'pull_request'

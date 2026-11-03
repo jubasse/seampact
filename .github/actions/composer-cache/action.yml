@@ -24,8 +24,18 @@ runs:
           exit 1
         fi
         echo "dir=$(composer config --global cache-files-dir)" >> "$GITHUB_OUTPUT"
-    # Rows of one job that share the dependency files share one entry; the first row to finish saves it.
-    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+    # Rows of one job that share the dependency files share one entry; the first row to finish saves it. Pull requests
+    # only restore: an entry they saved would count against the repository's cache limit for that pull request alone.
+    - if: github.event_name == 'pull_request'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.composer-files.outputs.dir }}
+        key: composer-files-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-${{ inputs.dependency-hash }}
+        restore-keys: |
+          composer-files-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-
+          composer-files-${{ runner.os }}-
+    - if: github.event_name != 'pull_request'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.composer-files.outputs.dir }}
         key: composer-files-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-${{ inputs.dependency-hash }}
