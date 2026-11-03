@@ -71,6 +71,10 @@ tasks.test {
     inputs.dir(repositoryRoot.resolve("fixtures/golden/pack-spring"))
     inputs.dir(goldenDirectory)
     inputs.dir(optInsGoldenDirectory)
+    // An update run rewrites the golden tree, so it always runs. A local copy: the spec must not capture the script.
+    val rewritesGolden = updateGolden
+    outputs.cacheIf { !rewritesGolden }
+    outputs.upToDateWhen { !rewritesGolden }
 }
 
 // The golden tree as an app compiles it: the Spring Boot 4 starters the generated code needs, the runtime, and

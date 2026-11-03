@@ -97,4 +97,6 @@ tasks.test {
     PublishedModulePlugin.declareTestRepositoryInputs(this, publishedModules)
     // The bundle a test publishes to its own repository.
     inputs.file(repositoryRoot.resolve("packages/core/spec/vectors/bundle/vectors.json"))
+    // The Maven builds the tests start inherit the environment, MAVEN_ARGS included.
+    inputs.property("mavenArgs", providers.environmentVariable("MAVEN_ARGS").orElse(""))
 }

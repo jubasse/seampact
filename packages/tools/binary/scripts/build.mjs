@@ -146,6 +146,16 @@ for (const input of Object.values(result.metafile.inputs)) {
   }
 }
 
+// The compiler-binary CI cache key leaves test files out, which holds only while none is bundled.
+const bundledTestFiles = Object.keys(result.metafile.inputs).filter((path) =>
+  path.endsWith(".test.ts"),
+);
+
+if (bundledTestFiles.length > 0)
+  fail(
+    `the bundle includes test files, which the CI cache key ignores: ${bundledTestFiles.join(", ")}`,
+  );
+
 const extra = [...used].filter((name) => !isBuiltin(name));
 
 if (extra.length > 0) fail(`imports outside the allowed Node built-ins: ${extra.join(", ")}`);

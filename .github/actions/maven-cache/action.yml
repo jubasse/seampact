@@ -1,8 +1,10 @@
 # The Maven consumer's downloads: the wrapper's Maven distribution and the third-party artifacts in ~/.m2/repository,
 # so a run takes them from the Actions cache instead of Maven Central, which rate-limits the shared runner addresses.
-# seampact's own modules (io/github/jubasse, published to Maven local by each run) are never cached, so a build never
-# picks up a stale one. Only pushes and nightly runs save: an entry saved by a pull request would count against the
-# repository's cache limit for that pull request alone. Each workflow keeps its own entry: its builds resolve a
+# seampact's own modules (io/github/jubasse, published to Maven local by each run) are deleted right after the restore
+# and right before the save, so a build never picks up a stale one: actions/cache archives ~/.m2/repository whole, and
+# a `!` exclusion below it would exclude nothing. Only pushes and nightly runs save: an entry saved by a pull
+# request would count against the repository's cache limit for that pull request alone. Each workflow keeps its own
+# entry: its builds resolve a
 # different set of artifacts, and a shared key would let the first to save hold the others' downloads back.
 name: Maven consumer cache
 description: Restores or saves the Maven distribution and third-party artifacts of the Spring Boot Maven consumer.
@@ -45,9 +47,18 @@ runs:
         path: |
           ~/.m2/wrapper/dists
           ~/.m2/repository
-          !~/.m2/repository/io/github/jubasse
         key: ${{ steps.key.outputs.key }}
         restore-keys: ${{ steps.key.outputs.restore-prefix }}
+
+    - name: Drop seampact's own modules from the restored repository
+      if: inputs.step == 'restore'
+      shell: bash
+      run: rm -rf ~/.m2/repository/io/github/jubasse
+
+    - name: Drop seampact's own modules before the save
+      if: inputs.step == 'save' && github.event_name != 'pull_request'
+      shell: bash
+      run: rm -rf ~/.m2/repository/io/github/jubasse
 
     - name: Save the Maven downloads
       if: inputs.step == 'save' && github.event_name != 'pull_request'
@@ -56,5 +67,4 @@ runs:
         path: |
           ~/.m2/wrapper/dists
           ~/.m2/repository
-          !~/.m2/repository/io/github/jubasse
         key: ${{ steps.key.outputs.key }}

@@ -173,10 +173,11 @@ jobs:
             ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
             || endsWith(github.job, '-drift') }}
       - uses: ./.github/actions/gradle-retry
+      # The tests probe the runner's file system, which no task input sees, so they never come from the cache.
       - name: Run the binary cache tests on Windows
         working-directory: jvm
         shell: bash
-        run: ./gradlew :seampact-ir:test --tests 'io.github.jubasse.seampact.ir.binary.*'
+        run: ./gradlew :seampact-ir:test --rerun --tests 'io.github.jubasse.seampact.ir.binary.*'
 
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   jvm-core:

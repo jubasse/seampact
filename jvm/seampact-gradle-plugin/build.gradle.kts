@@ -3,6 +3,7 @@
 // compiler binary, and generates the spring-boot target into the main Java sources.
 
 import io.github.jubasse.seampact.conventions.PublishedModulePlugin
+import org.gradle.api.tasks.PathSensitivity
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
@@ -82,4 +83,8 @@ tasks.test {
     PublishedModulePlugin.declareTestRepositoryInputs(this, publishedModules)
     // The bundle a test publishes to its own repository.
     inputs.file(repositoryRoot.resolve("packages/core/spec/vectors/bundle/vectors.json"))
+    // The TestKit builds copy its repository retry settings.
+    inputs.file(rootProject.file("gradle.properties")).withPropertyName("jvmGradleProperties").withPathSensitivity(PathSensitivity.NONE)
+    // The TestKit builds inherit the environment, and the Maven builds it starts read MAVEN_ARGS.
+    inputs.property("mavenArgs", providers.environmentVariable("MAVEN_ARGS").orElse(""))
 }
