@@ -33,9 +33,11 @@ val runtimeDependencies: Provider<List<String>> =
 val verifyNoRuntimeDependency by tasks.registering {
     description = "Fails when seampact-signed-webhooks has a runtime dependency, naming its coordinates."
     group = LifecycleBasePlugin.VERIFICATION_GROUP
-    inputs.property("runtimeDependencies", runtimeDependencies)
+    // A local copy: the action must not capture the script, which the configuration cache cannot store.
+    val declaredRuntimeDependencies = runtimeDependencies
+    inputs.property("runtimeDependencies", declaredRuntimeDependencies)
     doLast {
-        val found = runtimeDependencies.get()
+        val found = declaredRuntimeDependencies.get()
         if (found.isNotEmpty()) {
             throw GradleException(
                 "seampact-signed-webhooks must have no runtime dependency (ADR 0009 rule 3); remove: ${found.joinToString()}",
