@@ -58,3 +58,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Run the stub consumer from packed tarballs
         run: node scripts/consumers/cli.ts --target stub --dir "$RUNNER_TEMP/test-seampact-stub"
+
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
+  packed-consumer:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, stub-consumer]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.run }}
