@@ -172,6 +172,10 @@ What the generated code depends on adds `@seampact/server-runtime` as a producti
 
 The boot check runs one step first, before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `adonis.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
 
+### Amendment 2026-11-04: AdonisJS 6 support
+
+AdonisJS 6 is kept under the rule of the [support policy](../supported-versions.md#a-version-its-maintainers-no-longer-maintain) for versions their maintainers no longer maintain: it stays while it costs nothing, and the declared range `^6.0.0 || ^7.0.0` is unchanged.
+
 ## Consequences
 
 - An app keeps its `start/kernel.ts`, its exception handler and its own routes; it calls `registerRoutes` from `start/routes.ts` and the pre-routing helper from its exception handler.

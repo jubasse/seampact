@@ -641,6 +641,8 @@ Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse
 | Angular | 22 | none: a service over `HttpClient`, with NgRx 22 actions and effects or NgRx Signals 22 store features as an option |
 | MSW mocks | 2 | none: handlers for `setupServer` and `setupWorker` |
 
+When a version is supported, and when it is dropped: see [Supported versions](docs/supported-versions.md).
+
 ## Get started
 
 - [Getting started](docs/getting-started/README.md): a notes API on NestJS, in four steps.
