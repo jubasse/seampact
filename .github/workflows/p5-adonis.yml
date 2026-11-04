@@ -10,6 +10,9 @@ on:
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
+  # The nightly run holds the drift row (AdonisJS 6 on yup).
+  schedule:
+    - cron: "30 0 * * *"
 
 permissions:
   contents: read
@@ -25,6 +28,7 @@ jobs:
     outputs:
       run: ${{ steps.detect.outputs.run }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
+      drift: ${{ steps.detect.outputs.drift }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,7 +46,7 @@ jobs:
           watched-paths: |
             .
 
-  # The PR rows: every target and every validator once; the post-merge job below runs the other pairs.
+  # The PR row; the post-merge and drift jobs below run the other pairs.
   adonis-consumer:
     needs: changes
     if: needs.changes.outputs.run == 'true'
@@ -53,7 +57,6 @@ jobs:
       matrix:
         include:
           - { target: adonis, validators: zod }
-          - { target: adonis6, validators: yup }
     steps: &consumer-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -78,4 +81,16 @@ jobs:
         include:
           - { target: adonis, validators: yup }
           - { target: adonis6, validators: zod }
+    steps: *consumer-steps
+
+  adonis-consumer-drift:
+    needs: changes
+    if: needs.changes.outputs.drift == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: adonis6, validators: yup }
     steps: *consumer-steps

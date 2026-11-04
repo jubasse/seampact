@@ -12,6 +12,9 @@ on:
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
+  # The nightly run holds the drift row (VineJS on AdonisJS 6).
+  schedule:
+    - cron: "30 0 * * *"
 
 permissions:
   contents: read
@@ -26,6 +29,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       own-validators: ${{ steps.detect.outputs.run }}
+      drift: ${{ steps.detect.outputs.drift }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -85,9 +89,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [adonis, adonis6]
+        target: [adonis]
         validators: [vinejs]
-    steps:
+    steps: &vinejs-consumer-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -100,11 +104,23 @@ jobs:
       - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} from packed tarballs
         run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
 
+  own-validators-consumer-vinejs-drift:
+    needs: changes
+    if: needs.changes.outputs.drift == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [adonis6]
+        validators: [vinejs]
+    steps: *vinejs-consumer-steps
+
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   # The matrix rows are not required checks: a skipped matrix job reports one unexpanded name, never the row names.
   own-validators:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, own-validators-consumer, own-validators-consumer-vinejs]
+    needs: [changes, own-validators-consumer, own-validators-consumer-vinejs, own-validators-consumer-vinejs-drift]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

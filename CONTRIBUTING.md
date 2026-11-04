@@ -65,5 +65,5 @@ It runs typecheck, lint, the format check and the tests, and fails on any error.
 ## Dependencies
 
 - Dependabot opens one grouped pull request per ecosystem each week (GitHub Actions, npm, uv, Composer), minor and patch releases only. A new major of a framework changes what seampact supports, so it is done by hand.
-- Security updates come as soon as an advisory is published. A floor row tests the oldest version seampact declares, so a security update that would move it above that floor is closed, and its alert dismissed as test-only. The FastAPI guide explains this choice for Starlette.
+- Security updates come as soon as an advisory is published. A floor row tests the oldest version seampact declares, so a security update that would move it above that floor is closed, and its alert dismissed as test-only. The FastAPI guide explains this choice for Starlette, and [Supported versions](docs/supported-versions.md) gives the whole policy.
 - `npm audit` runs nightly and on lockfile changes; Python runs `pip-audit` and PHP `composer audit`. An advisory that cannot be fixed here goes under `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml`, with a comment saying why.

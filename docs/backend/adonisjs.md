@@ -228,6 +228,8 @@ Page links are query-only (`?page=2`), so they stay right behind a proxy that st
 
 Nothing in this page: the same generated code and the same files run on AdonisJS 6. Only the starter you create differs.
 
+AdonisJS 6 works, but AdonisJS no longer ships security fixes for it: move to AdonisJS 7. See [Supported versions](../supported-versions.md) for how long it stays supported.
+
 ## Wiring reference
 
 Every server target takes four options: `bodyValidation` (check the success bodies your code writes outside the handler result, off by default; a handler result is typed already), `frameworkEtag` (`strip` by default removes an ETag the framework adds to a reply your code wrote outside the contract; `keep` leaves it), `catchAll` (`true` by default answers the api's 404 for a path under its base path that no route serves, or a method it does not serve; `false` leaves those requests to your app) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it. When you register the api, `logger: { warn, error }` sends the messages seampact writes (such as that log) to your logger instead of `console`; the logger is shared by the whole generated api, so the last registration wins. AdonisJS also takes `rules` (`native` by default, or `seampact-consistent`), which shapes its own VineJS validators only; [Validators](../configuration/validators.md#vinejs) explains it.

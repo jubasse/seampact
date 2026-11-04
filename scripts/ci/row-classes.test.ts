@@ -94,14 +94,16 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     "split-drift": [{ "php-version": "8.5" }],
   },
   "p5-adonis.yml": {
-    "adonis-consumer": [
-      { target: "adonis", validators: "zod" },
-      { target: "adonis6", validators: "yup" },
-    ],
+    "adonis-consumer": [{ target: "adonis", validators: "zod" }],
     "adonis-consumer-post-merge": [
       { target: "adonis", validators: "yup" },
       { target: "adonis6", validators: "zod" },
     ],
+    "adonis-consumer-drift": [{ target: "adonis6", validators: "yup" }],
+  },
+  "validators-2.yml": {
+    "own-validators-consumer-vinejs": [{ target: "adonis", validators: "vinejs" }],
+    "own-validators-consumer-vinejs-drift": [{ target: "adonis6", validators: "vinejs" }],
   },
   "p5-fastify-express.yml": {
     consumer: [

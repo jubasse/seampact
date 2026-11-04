@@ -87,6 +87,7 @@
 ## Project
 
 - [Roadmap](roadmap.md)
+- [Supported versions](supported-versions.md): which framework versions seampact supports, and when it drops one.
 - [Design decisions](design-decisions.md)
 
 ## Reference
