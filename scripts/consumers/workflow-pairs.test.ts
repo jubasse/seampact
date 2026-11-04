@@ -13,7 +13,14 @@ const CONSUMER_WORKFLOWS = [
 ];
 
 // The jobs of a consumer workflow that run no consumer: the lane's change filter and its required check.
-const LANE_FILTER_AND_CHECK_JOBS: ReadonlySet<string> = new Set(["changes", "own-validators"]);
+const LANE_FILTER_AND_CHECK_JOBS: ReadonlySet<string> = new Set([
+  "changes",
+  "own-validators",
+  "nestjs",
+  "express-fastify",
+  "hono",
+  "adonis",
+]);
 
 // The workflows that run a front consumer: not a server pair, so only the matrix axes are checked.
 const FRONT_CONSUMER_WORKFLOWS = ["p6-react.yml", "p6-vue.yml", "p6-angular.yml", "p4-msw.yml"];
