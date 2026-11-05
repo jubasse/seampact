@@ -36,6 +36,11 @@ final class BinaryDownloadTest extends TestCase
 
     private const OTHER_SHA256 = '0000000000000000000000000000000000000000000000000000000000000000';
 
+    private const TRICKLE_DEADLINE_SECONDS = 1.0;
+
+    // The server trickles the headers for three seconds.
+    private const TRICKLE_STOP_WITHIN_SECONDS = 2.5;
+
     private static TlsServer $server;
 
     private string $project;
@@ -99,7 +104,7 @@ final class BinaryDownloadTest extends TestCase
 
     public function testRefusesAMissingAssetByItsUrlAndStatus(): void
     {
-        $this->writeComposer(['url' => self::$server->url('/missing?token=secret'), 'sha256' => self::hashes(hash('sha256', self::STUB))]);
+        $this->writeComposer(['url' => str_replace('://', '://user:secret@', self::$server->url('/missing')), 'sha256' => self::hashes(hash('sha256', self::STUB))]);
 
         $refused = $this->refusal();
 
@@ -117,6 +122,53 @@ final class BinaryDownloadTest extends TestCase
 
         self::assertSame(BinaryFailureCode::FetchFailed, $refused->code);
         self::assertStringContainsString('not an absolute https: URL', $refused->message);
+    }
+
+    public function testRefusesABodyCutBeforeItsLength(): void
+    {
+        $this->writeComposer(['url' => self::$server->url('/truncated'), 'sha256' => self::hashes(hash('sha256', self::STUB))]);
+
+        $refused = $this->refusal();
+
+        self::assertSame(BinaryFailureCode::FetchFailed, $refused->code);
+        self::assertStringContainsString('ended after 10 of 100 bytes', $refused->message);
+        self::assertSame([], glob("{$this->project}/cache/seampact/*/*") ?: []);
+        self::assertSame([], glob("{$this->project}/cache/seampact/*/.*.tmp") ?: []);
+    }
+
+    public function testRefusesAUrlHoldingANulByteBeforeTheCacheIsTouched(): void
+    {
+        $this->writeComposer(['url' => self::$server->url("/assets\0x"), 'sha256' => self::hashes(hash('sha256', self::STUB))]);
+
+        $refused = $this->refusal();
+
+        self::assertSame(BinaryFailureCode::FetchFailed, $refused->code);
+        self::assertStringContainsString('was not tried: it holds a control character or a space', $refused->message);
+        self::assertDirectoryDoesNotExist("{$this->project}/cache/seampact");
+    }
+
+    public function testRefusesAMirrorBaseWithAQuery(): void
+    {
+        $this->writeComposer(['url' => self::$server->url('/assets?token=secret'), 'sha256' => self::hashes(hash('sha256', self::STUB))]);
+
+        $refused = $this->refusal();
+
+        self::assertSame(BinaryFailureCode::FetchFailed, $refused->code);
+        self::assertStringContainsString('has a query or a fragment', $refused->message);
+        self::assertStringNotContainsString('secret', $refused->message);
+        self::assertDirectoryDoesNotExist("{$this->project}/cache/seampact");
+    }
+
+    public function testStopsAtTheDeadlineWhileTheHeadersTrickleIn(): void
+    {
+        $this->writeComposer(['url' => self::$server->url('/trickle-headers'), 'sha256' => self::hashes(hash('sha256', self::STUB))]);
+        $started = microtime(true);
+
+        $refused = $this->refusal(self::TRICKLE_DEADLINE_SECONDS);
+
+        self::assertSame(BinaryFailureCode::FetchFailed, $refused->code);
+        self::assertStringContainsString('took over 1000 ms', $refused->message);
+        self::assertLessThan(self::TRICKLE_STOP_WITHIN_SECONDS, microtime(true) - $started);
     }
 
     public function testRefusesADevelopmentPinByName(): void
@@ -176,7 +228,7 @@ final class BinaryDownloadTest extends TestCase
         TemporaryDirectory::write($this->project, 'binaries.json', (string) json_encode(['version' => $version, 'sha256' => self::hashes($hostSha256)]));
     }
 
-    private function install(): InstalledBinary
+    private function install(float $deadlineSeconds = 10.0): InstalledBinary
     {
         // The release URL `<base>/v<version>/<asset>` is served from the assets directory by its last segment.
         return CompilerBinary::install(
@@ -184,16 +236,16 @@ final class BinaryDownloadTest extends TestCase
             "{$this->project}/vendor",
             new HostPlatform('Linux', 'x86_64', HostLibc::Glibc),
             ['COMPOSER_CACHE_DIR' => "{$this->project}/cache"],
-            new BinaryDownload(self::$server->url('/assets'), 10.0, self::$server->certificate),
+            new BinaryDownload(self::$server->url('/assets'), $deadlineSeconds, self::$server->certificate),
             "{$this->project}/binaries.json",
             new PosixCacheSafety(new TrustedAncestorFacts($this->project)),
         );
     }
 
-    private function refusal(): BinaryFailure
+    private function refusal(float $deadlineSeconds = 10.0): BinaryFailure
     {
         try {
-            $this->install();
+            $this->install($deadlineSeconds);
         } catch (BinaryRefusedException $refused) {
             return $refused->failure;
         }

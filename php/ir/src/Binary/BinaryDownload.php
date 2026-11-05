@@ -9,9 +9,9 @@ use Seampact\Ir\Https\PrintableUrl;
 
 /**
  * Where the compiler binary is downloaded from, and how (ADR 0010, "Fetch"): a release asset of the seampact GitHub
- * releases, or a mirror base URL to which `/<asset>` is appended. The download is `HttpsDownload`'s, with the
- * system's certificate authorities and no proxy, as the bundle channel's, a deadline sized for a binary of about
- * 100 MB on a slow link, and a cap well above any release asset.
+ * releases, or a mirror base URL to which `/<asset>` is appended, so a base with a query or a fragment is refused.
+ * The download is `HttpsDownload`'s, with the system's certificate authorities and no proxy, as the bundle channel's,
+ * a deadline sized for a binary of about 100 MB on a slow link, and a cap well above any release asset.
  */
 final readonly class BinaryDownload
 {
@@ -23,6 +23,9 @@ final readonly class BinaryDownload
 
     private const FETCH_FIX = 'Check that the URL serves the release asset over HTTPS, or set `extra.seampact.binary` in '
         . 'your root composer.json to a mirror `url` or a `path`, with their hashes.';
+
+    private const MIRROR_QUERY_OR_FRAGMENT = 'was not tried: the mirror base URL has a query or a fragment, so the asset '
+        . 'name cannot be appended to its path';
 
     /** `$caFile` replaces the system's certificate authorities; tests serve the assets themselves. */
     public function __construct(
@@ -38,20 +41,26 @@ final readonly class BinaryDownload
         return "{$this->releaseBaseUrl}/v" . rawurlencode($version) . "/{$asset}";
     }
 
+    /** @throws BinaryRefusedException `binary.fetch-failed` for a base with a query or a fragment, which the asset would land in */
     public static function mirrorUrl(string $baseUrl, string $asset): string
     {
+        if (str_contains($baseUrl, '?') || str_contains($baseUrl, '#')) {
+            throw self::fetchFailed($baseUrl, self::MIRROR_QUERY_OR_FRAGMENT);
+        }
+
         return rtrim($baseUrl, '/') . "/{$asset}";
     }
 
     /**
-     * Refuses a URL that is not `https:` before the cache is touched.
+     * Refuses a URL that is not `https:`, or holds a control character or a space, before the cache is touched.
      *
      * @throws BinaryRefusedException `binary.fetch-failed`
      */
     public static function refuseUnlessHttps(string $url): void
     {
-        if (!HttpsDownload::isHttpsUrl($url)) {
-            throw self::fetchFailed($url, 'was not tried: it is not an absolute https: URL');
+        $untried = HttpsDownload::untriedReason($url);
+        if ($untried !== null) {
+            throw self::fetchFailed($url, "was not tried: {$untried}");
         }
     }
 

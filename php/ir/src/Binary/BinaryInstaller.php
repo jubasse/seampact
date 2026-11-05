@@ -189,7 +189,7 @@ final class BinaryInstaller
         return hash_final($hash);
     }
 
-    // The SHA-256 of the bytes downloaded from `$url` into the new file `$temporary`, which a failed download removes.
+    // The SHA-256 of the bytes downloaded from `$url` into the new file `$temporary`, which any failure removes.
     private static function downloadHashing(string $url, string $temporary, BinaryDownload $download): string
     {
         $output = self::createTemporary($temporary);
@@ -203,10 +203,10 @@ final class BinaryInstaller
 
                 hash_update($hash, $chunk);
             });
-        } catch (BinaryRefusedException $refused) {
+        } catch (\Throwable $failure) {
             fclose($output);
-            unlink($temporary);
-            throw $refused;
+            @unlink($temporary);
+            throw $failure;
         }
 
         fclose($output);

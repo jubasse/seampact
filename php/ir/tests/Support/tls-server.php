@@ -2,7 +2,7 @@
 
 // A one-process HTTPS server for the release channel tests: `php tls-server.php <certificate pem> <tarball>
 // <assets directory>`. It prints its port, then answers each request by path: the tarball, a file of the assets
-// directory, redirects, an error, a slow answer.
+// directory, redirects, an error, a slow answer, a body cut before its length, headers that trickle in.
 
 declare(strict_types=1);
 
@@ -34,6 +34,17 @@ for ($served = 0; $served < 10_000; $served++) {
     }
 
     $path = explode(' ', $requestLine)[1] ?? '/';
+    if (str_starts_with($path, '/truncated/')) {
+        @fwrite($client, "HTTP/1.1 200 OK\r\nContent-Length: 100\r\nConnection: close\r\n\r\n0123456789");
+        @fclose($client);
+        continue;
+    }
+
+    if (str_starts_with($path, '/trickle-headers/')) {
+        trickleHeaders($client);
+        continue;
+    }
+
     $asset = str_starts_with($path, '/assets/') ? $assetsDirectory . '/' . basename($path) : null;
     if ($asset !== null && is_file($asset)) {
         $path = '/asset';
@@ -55,5 +66,21 @@ for ($served = 0; $served < 10_000; $served++) {
 
     $head = "HTTP/1.1 {$status}\r\nContent-Length: " . strlen($body) . "\r\nConnection: close\r\n" . implode('', array_map(static fn (string $header): string => "{$header}\r\n", $headers));
     @fwrite($client, "{$head}\r\n{$body}");
+    @fclose($client);
+}
+
+// A byte of one header every tenth of a second for three seconds, so only a deadline over the whole request stops it.
+function trickleHeaders(mixed $client): void
+{
+    if (!is_resource($client)) {
+        return;
+    }
+
+    $written = @fwrite($client, "HTTP/1.1 200 OK\r\nX-Trickle: ");
+    for ($sent = 0; $sent < 30 && $written !== false; $sent++) {
+        usleep(100_000);
+        $written = @fwrite($client, 'a');
+    }
+
     @fclose($client);
 }
