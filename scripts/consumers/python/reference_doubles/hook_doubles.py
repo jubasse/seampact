@@ -40,7 +40,7 @@ CALLER_SERVICE_RIGHT: Final = "callerService"
 _FORBIDDEN: Final = "api.forbidden"
 _NOT_FOUND: Final = "api.not_found"
 # The sample channel the sample user is not a member of: the resolver denies it, so no handler runs for it.
-_NON_MEMBER_CHANNEL_ID: Final = "10000000-0000-4000-8000-000000000002"
+_NON_MEMBER_CHANNEL_ID: Final = "10000000-0000-4000-8000-0000000000ff"
 _RATE_LIMITED: Final = "api.rate_limited"
 _THROTTLE_RULE: Final = "throttle"
 _LOGGER: Final = logging.getLogger("consumer.tasks")

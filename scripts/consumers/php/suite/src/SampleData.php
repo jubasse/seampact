@@ -20,7 +20,7 @@ final class SampleData
     public const NEW_TASK_ID = '20000000-0000-4000-8000-0000000000ff';
     public const GENERAL_CHANNEL_ID = '10000000-0000-4000-8000-000000000001';
     /** The channel the sample user is not a member of: its scope resolver denies it, so no handler runs for it. */
-    public const NON_MEMBER_CHANNEL_ID = '10000000-0000-4000-8000-000000000002';
+    public const NON_MEMBER_CHANNEL_ID = '10000000-0000-4000-8000-0000000000ff';
 
     private function __construct()
     {

@@ -119,7 +119,7 @@ final class TasksHooks {
     @SkippedUnder("missing-scope-resolver")
     static final class ChannelResolver implements TasksScopeResolver {
         // The sample channel the sample user is not a member of: the resolver denies it, so no handler runs for it.
-        private static final String NON_MEMBER_CHANNEL_ID = "10000000-0000-4000-8000-000000000002";
+        private static final String NON_MEMBER_CHANNEL_ID = "10000000-0000-4000-8000-0000000000ff";
 
         @Override
         public String scope() {

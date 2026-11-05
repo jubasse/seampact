@@ -48,7 +48,7 @@ const CALLER_SERVICE_RIGHT = "callerService";
 const ROLES_RIGHT = "roles";
 const FORBIDDEN: Forbidden = { code: "api.forbidden", params: {} };
 // The sample channel the sample user is not a member of: the resolver denies it, so no handler runs for it.
-const NON_MEMBER_CHANNEL_ID = "10000000-0000-4000-8000-000000000002";
+const NON_MEMBER_CHANNEL_ID = "10000000-0000-4000-8000-0000000000ff";
 
 type Unauthenticated = { readonly code: "api.unauthenticated" };
 type RateLimited = { readonly code: "api.rate_limited"; readonly params: { retryAfterMs: number } };
