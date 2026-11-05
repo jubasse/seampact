@@ -25,6 +25,7 @@ import { ReleaseError, releaseVersion } from "../release-version.ts";
 const VENDOR = "seampact";
 const PINNED_PACKAGE = "ir";
 const PINS_PATH = "resources/binaries.json";
+
 export const LICENSE_PATH = "LICENSE";
 const MIRROR_REF_NAMESPACE = "refs/mirrors";
 const RELEASE_AUTHOR_NAME = "seampact release";
