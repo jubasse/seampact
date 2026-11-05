@@ -2,8 +2,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { LinkSet } from "@seampact/codegen-core";
 import {
+  ACCESS_FORMS_REFUSED_BY_ONE_ZERO,
   GENERATE_TIMEOUT_MILLISECONDS,
   generateReferenceProject,
+  generateWithAccessForm,
   hooksRequirementErrors,
   projectDirectory,
   publicTasksApi,
@@ -357,4 +359,19 @@ describe("an api with only public operations asks for no hooks", () => {
     },
     GENERATE_TIMEOUT_MILLISECONDS + TYPE_CHECK_TIMEOUT_MILLISECONDS,
   );
+});
+
+// The access forms 1.0 refuses by name (CHK-004, 006, 019, 020, 094): generation refuses, it does not warn.
+describe("the access forms 1.0 refuses", () => {
+  test.each(ACCESS_FORMS_REFUSED_BY_ONE_ZERO)("$title is refused by name", async (form) => {
+    const outcome = await generateWithAccessForm(fastifyTarget, form, {
+      links: await referenceLinks(PROJECT, "tasks"),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: expect.arrayContaining([expect.objectContaining({ code: form.code })]),
+    });
+  });
 });

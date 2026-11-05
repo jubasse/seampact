@@ -1,12 +1,11 @@
 import { readFileSync } from "node:fs";
 import {
-  type GenerateRequest,
   operationLocation,
   planOperation,
   type Refusal,
   withoutRepeats,
 } from "@seampact/codegen-core";
-import { readGoldenIr } from "@seampact/codegen-core/node-server/test-support";
+import { readGoldenIr, typesLinks } from "@seampact/codegen-core/node-server/test-support";
 import type { ContractIR, Template, WireFormat } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
 import { target } from "./index.js";
@@ -20,27 +19,6 @@ function packIr(pack: string): ContractIR {
       "utf8",
     ),
   );
-}
-
-function typesLinks(ir: ContractIR): GenerateRequest["links"] {
-  const exportOf = (role: string) => ({ module: "operations", export: role });
-
-  return {
-    types: {
-      descriptor: {
-        kind: "types",
-        style: "typescript",
-        schemas: {},
-        operations: Object.fromEntries(
-          ir.operations.map((operation) => [
-            operation.id,
-            { input: exportOf("Input"), output: exportOf("Output"), errors: exportOf("Errors") },
-          ]),
-        ),
-      },
-      location: { kind: "relative", path: "../types" },
-    },
-  };
 }
 
 function plansOf(ir: ContractIR, refusals: Refusal[]) {

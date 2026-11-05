@@ -1,6 +1,4 @@
-import type { GenerateRequest } from "@seampact/codegen-core";
-import { readGoldenIr } from "@seampact/codegen-core/node-server/test-support";
-import type { ContractIR } from "@seampact/spec/ir";
+import { readGoldenIr, typesLinks } from "@seampact/codegen-core/node-server/test-support";
 import { expect, test } from "vitest";
 import { target as clientTarget } from "./index.js";
 
@@ -36,24 +34,3 @@ test("the rights-version response header of an operator write is refused by name
     ]),
   });
 });
-
-function typesLinks(ir: ContractIR): GenerateRequest["links"] {
-  const exportOf = (role: string) => ({ module: "operations", export: role });
-
-  return {
-    types: {
-      descriptor: {
-        kind: "types",
-        style: "typescript",
-        schemas: {},
-        operations: Object.fromEntries(
-          ir.operations.map((operation) => [
-            operation.id,
-            { input: exportOf("Input"), output: exportOf("Output"), errors: exportOf("Errors") },
-          ]),
-        ),
-      },
-      location: { kind: "relative", path: "../types" },
-    },
-  };
-}
