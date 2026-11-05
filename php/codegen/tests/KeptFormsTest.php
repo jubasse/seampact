@@ -55,8 +55,15 @@ final class KeptFormsTest extends TestCase
             'to' => (object) ['in' => 'principal', 'name' => 'profileId'],
             'origin' => (object) ['layer' => 'api', 'pointer' => '/bindings/0'],
         ]];
-        $operation->scopes[0]->source = (object) ['in' => 'resolver'];
-        $userIdentity = $document->identities->user;
+        $scopes = $operation->scopes;
+        self::assertIsArray($scopes);
+        $firstScope = $scopes[0];
+        self::assertInstanceOf(\stdClass::class, $firstScope);
+        $firstScope->source = (object) ['in' => 'resolver'];
+        $identities = $document->identities;
+        self::assertInstanceOf(\stdClass::class, $identities);
+        $userIdentity = $identities->user;
+        self::assertInstanceOf(\stdClass::class, $userIdentity);
         $userIdentity->principal = (object) ['kind' => 'variants', 'variants' => (object) ['viewer' => 'UserPrincipal']];
 
         $messages = self::refused($document, null);
