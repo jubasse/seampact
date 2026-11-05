@@ -134,16 +134,7 @@ describe("checklist check", () => {
     expect(out).toContain(`${CHECKLIST}: CHK-001: release gate: no test for target nestjs`);
     expect(out).toContain(`${CHECKLIST}: CHK-002: release gate: no fixture`);
 
-    for (const t of [
-      "adonis",
-      "api-platform",
-      "express",
-      "fastify",
-      "laravel",
-      "nestjs",
-      "spring-boot",
-      "symfony",
-    ])
+    for (const t of ["adonis", "express", "fastify", "laravel", "nestjs", "spring-boot", "symfony"])
       expect(out).toContain(`${CHECKLIST}: CHK-002: release gate: no test for target ${t}`);
     expect(out.some((l) => l.includes("CHK-001") && l.includes("no fixture"))).toBe(false);
   });
@@ -191,7 +182,7 @@ describe("checklist release gate with suite reports", () => {
       expect(at("http-suite-broken.json")[0]).toContain("not valid JSON");
       expect(at("http-suite-not-a-report.json")[0]).toContain("not an http-suite report");
       expect(at("http-suite-unknown-target.json")[0]).toContain(
-        'unknown server target "nestjs-cjs"',
+        'unknown server target "nestjs-esm"',
       );
       expect(at("http-suite-entries.json")).toEqual([
         `${join(directory, "http-suite-entries.json")}: CHK-002: ${MALFORMED_ENTRY}`,
@@ -259,6 +250,34 @@ describe("checklist release gate with suite reports", () => {
     expect(out).toContain(noTest("CHK-001", "nestjs"));
   });
 
+  it("reads a report of a target variant as its target", () => {
+    const passed = { outcome: "passed", cases: ["a"] };
+    const out = gateOver({
+      cjs: reportOf("nestjs-cjs", { "CHK-001": passed }),
+      adonis: reportOf("adonis6", { "CHK-002": passed }),
+      express: reportOf("express4", { "CHK-002": passed }),
+    });
+
+    expect(out).not.toContain(noTest("CHK-001", "nestjs"));
+    expect(out).not.toContain(noTest("CHK-002", "adonis"));
+    expect(out).not.toContain(noTest("CHK-002", "express"));
+    expect(out.filter((line) => line.includes("unknown server target"))).toEqual([]);
+  });
+
+  it("still names an unknown target, listing the variants it accepts", () => {
+    const out = gateOver({ other: reportOf("nestjs-esm", {}) });
+
+    expect(out.join("\n")).toContain('unknown server target "nestjs-esm"');
+    expect(out.join("\n")).toContain("nestjs-cjs");
+  });
+
+  it("does not require api-platform, which comes after 1.0", () => {
+    const out = gateOver({});
+
+    expect(out).not.toContain(noTest("CHK-002", "api-platform"));
+    expect(out).toContain(noTest("CHK-002", "express"));
+  });
+
   it("reads only http-suite-*.json files of an artefact", () => {
     const directory = mkdtempSync(join(tmpdir(), "checklist-suite-"));
 
@@ -322,11 +341,12 @@ describe("checklist release gate with suite reports", () => {
 const hasJq = spawnSync("jq", ["--version"]).status === 0;
 
 describe.skipIf(!hasJq)("suite report fetcher filters", () => {
-  const filter = (file: string, input: unknown): string =>
-    execFileSync("jq", ["-r", "--arg", "branch", "develop", "-f", join(HERE, file)], {
-      encoding: "utf8",
-      input: JSON.stringify(input),
-    }).trim();
+  const filter = (file: string, input: unknown, commit = ""): string =>
+    execFileSync(
+      "jq",
+      ["-r", "--arg", "branch", "develop", "--arg", "commit", commit, "-f", join(HERE, file)],
+      { encoding: "utf8", input: JSON.stringify(input) },
+    ).trim();
 
   const artefact = (workflowRun: Record<string, unknown>) => ({
     name: "nestjs-http-suite-default",
@@ -366,6 +386,11 @@ describe.skipIf(!hasJq)("suite report fetcher filters", () => {
     head_repository: { id: 1 },
     repository: { id: 1 },
     ...changes,
+  });
+
+  it("keeps only the runs of the asked commit", () => {
+    expect(filter("suite-run.jq", run({}), "abc123")).toBe("abc123");
+    expect(filter("suite-run.jq", run({}), "def456")).toBe("");
   });
 
   it("trusts a successful push or schedule run of this repository and names its commit", () => {

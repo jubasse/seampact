@@ -1,13 +1,19 @@
 name: Conformance release gate
 
 # The checklist's release gate over every proof: the proof files and the http-suite reports the consumer workflows
-# uploaded on develop (the newest of each artefact from a successful push or scheduled run of this repository). It
-# names each live id that has no fixture, or no test for a target it lists. Report-only until RELEASE_GATE_BLOCKING
+# uploaded on develop. After a nightly (a scheduled consumer run completing) it reads the reports of that one commit;
+# a manual run reads the newest of each artefact from a successful push or scheduled run of this repository. It names
+# each live id that has no fixture, or no test for a target it lists; API Platform pairs are out until after v1. Report-only until RELEASE_GATE_BLOCKING
 # is set to "true" below: then a missing report fails the job; while report-only, a missing report is a warning and
 # the gate does not run.
 
 on:
-  push:
+  # The nightly: the scheduled consumer workflows that upload suite reports. Each completed run reads its own commit.
+  workflow_run:
+    workflows:
+      - AdonisJS consumer
+      - Spring Boot target
+    types: [completed]
     branches: [develop]
   workflow_dispatch:
 
@@ -16,7 +22,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: p8-conformance-${{ github.ref }}
+  group: p8-conformance-${{ github.event.workflow_run.head_sha || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -24,6 +30,8 @@ env:
 
 jobs:
   release-gate:
+    # Only the nightly's scheduled runs, not every push run of those workflows.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.event == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -42,6 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          SUITE_REPORTS_COMMIT: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -o pipefail
           bash scripts/checklist/fetch-suite-reports.sh "$RUNNER_TEMP/suite-reports" 2>&1 |
@@ -72,7 +81,7 @@ jobs:
             echo '```'
           } >>"$GITHUB_STEP_SUMMARY"
 
-  # The lane's check: no change filter, the gate runs on every push to develop and every manual run.
+  # The lane's check: no change filter, the gate runs after every nightly and every manual run.
   p8-conformance:
     # Every job this check stands for is listed here, or its failure would not reach the check.
     needs: [release-gate]
