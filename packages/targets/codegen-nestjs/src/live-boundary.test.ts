@@ -271,6 +271,15 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       }
     });
 
+    test("a boundary reply gets no Express ETag and no 304", async () => {
+      const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+        headers: { ...BEARER, "if-none-match": "*" },
+      });
+
+      expect(reply.status).toBe(200);
+      expect(reply.headers.etag).toBeUndefined();
+    });
+
     test.each(["send", "writeHead"] as const)(
       "an app filter's declared error written with %s carries no foreign ETag",
       async (writer) => {
