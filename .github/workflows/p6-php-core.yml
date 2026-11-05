@@ -110,7 +110,7 @@ jobs:
         run: composer validate --strict --no-interaction
       - name: Install the PHP dev tools from the lock file
         working-directory: php/${{ matrix.package }}
-        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/install-with-retry.sh" --no-interaction --no-progress --no-plugins --no-scripts
+        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" install --no-interaction --no-progress --no-plugins --no-scripts
       - name: Audit the locked dependencies
         working-directory: php/${{ matrix.package }}
         run: composer audit --locked --no-interaction
@@ -206,7 +206,7 @@ jobs:
               ];
               file_put_contents($target, json_encode($project, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n");
             ' "$package" "$work/trees" "$project/composer.json"
-            composer update --working-dir="$project" --no-interaction --no-progress
+            bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --working-dir="$project" --no-interaction --no-progress
             test ! -L "$project/vendor/$package" || { echo "$package was symlinked, not copied."; exit 1; }
             # Every class of the installed copy loads through its own autoloader.
             php -r '
@@ -308,8 +308,6 @@ jobs:
           binary="$GITHUB_WORKSPACE/bin/seampact-linux-x64"
           chmod +x "$binary"
           sha256=$(sha256sum "$binary" | cut -d' ' -f1)
-          # Packagist downloads retry with backoff; the last attempt's failure fails the step.
-          retry() { for delay in 10 30 90; do "$@" && return 0; echo "Retrying in ${delay} s: $*"; sleep "$delay"; done; "$@"; }
           for target in laravel symfony; do
             case "$target" in
               laravel) framework='"laravel/framework": "~13.38.0"' ;;
@@ -347,7 +345,7 @@ jobs:
               api: tasks
               operations: { include: [health, getChannel, getDraft, getTask, getTasksBatch] }
           YAML
-            retry composer update --working-dir="$app" --no-interaction --no-progress
+            bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --working-dir="$app" --no-interaction --no-progress
             (cd "$app" && vendor/bin/seampact generate && vendor/bin/seampact check)
             test -n "$(ls "$app/openapi")" || { echo "$target: the binary wrote no OpenAPI document."; exit 1; }
             find "$app/src/Generated" -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
@@ -400,7 +398,6 @@ jobs:
           binary="$GITHUB_WORKSPACE/bin/seampact-linux-x64"
           chmod +x "$binary"
           sha256=$(sha256sum "$binary" | cut -d' ' -f1)
-          retry() { for delay in 10 30 90; do "$@" && return 0; echo "Retrying in ${delay} s: $*"; sleep "$delay"; done; "$@"; }
           sh scripts/consumers/php/bundle.sh "$binary" "$WORK/bundled"
           integrity=$(cat "$WORK/bundled/integrity")
           contract_repo="$WORK/contract-repo"
@@ -440,7 +437,7 @@ jobs:
           targets:
             - { id: tasks, out: Tasks, use: seampact/laravel, api: tasks, operations: { include: [health, getTask] } }
           YAML
-          retry composer update --working-dir="$app" --no-interaction --no-progress
+          bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --working-dir="$app" --no-interaction --no-progress
           (cd "$app" && vendor/bin/seampact generate && vendor/bin/seampact check)
           test -n "$(ls "$app/openapi")" || { echo "The binary wrote no OpenAPI document."; exit 1; }
           rm -rf "$contract_repo"
@@ -502,7 +499,6 @@ jobs:
           app="$WORK/app"
           cache="$WORK/composer-cache"
           mkdir -p "$app/src" "$cache"
-          retry() { for delay in 10 30 90; do "$@" && return 0; echo "Retrying in ${delay} s: $*"; sleep "$delay"; done; "$@"; }
           repositories=""
           for package in ir codegen hooks laravel; do
             repositories="$repositories{\"type\": \"path\", \"url\": \"$GITHUB_WORKSPACE/php/$package\", \"options\": {\"symlink\": false, \"versions\": {\"seampact/$package\": \"dev-develop\"}}},"
@@ -519,7 +515,7 @@ jobs:
             "config": {"platform": {"php": "8.3.36"}}
           }
           JSON
-          retry composer update --working-dir="$app" --no-interaction --no-progress
+          bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --working-dir="$app" --no-interaction --no-progress
 
           # `pass` expects a generated and checked app, `tampered` the refusal naming the tampered file. The local git
           # channel is a file URL, which `allowLocal` accepts.

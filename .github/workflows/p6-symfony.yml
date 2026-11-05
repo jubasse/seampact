@@ -86,7 +86,7 @@ jobs:
         run: composer validate --strict --no-interaction
       - name: Install from the lock file, the sibling packages through their path repositories
         working-directory: php/symfony
-        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/install-with-retry.sh" --no-interaction --no-progress --no-plugins --no-scripts
+        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" install --no-interaction --no-progress --no-plugins --no-scripts
       # The lock pins Symfony 7.4 on the PHP 8.3 platform; Symfony 8 needs PHP 8.4, so this row moves both.
       - name: Move to Symfony 8
         if: matrix.symfony == '8'
@@ -101,7 +101,7 @@ jobs:
           composer require --dev --no-update --no-interaction \
             symfony/http-kernel:8.1.11 symfony/routing:8.1.11 symfony/validator:8.1.11 symfony/var-dumper:8.1.10 \
             symfony/security-core:8.1.11 symfony/security-http:8.1.11
-          composer update --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies \
+          bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies \
             symfony/console symfony/framework-bundle symfony/http-kernel symfony/routing symfony/validator symfony/var-dumper \
             symfony/security-core symfony/security-http
       - name: Audit the locked dependencies
@@ -197,7 +197,7 @@ jobs:
             app="$WORK/app${variant:+-$variant}"
             (
               cd "$app"
-              composer update --no-interaction --no-progress --no-plugins --no-scripts
+              bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --no-interaction --no-progress --no-plugins --no-scripts
               "$GITHUB_WORKSPACE/scripts/consumers/targets/symfony/check-majors.sh" . "$SYMFONY_MAJOR"
               composer audit --no-interaction
               vendor/bin/seampact generate

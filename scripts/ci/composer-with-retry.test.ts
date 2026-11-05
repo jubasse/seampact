@@ -5,12 +5,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { REPO_ROOT } from "../golden/repo-root.ts";
 
-const INSTALL_SCRIPT = join(REPO_ROOT, ".github/actions/composer-cache/install-with-retry.sh");
+const WRAPPER_SCRIPT = join(REPO_ROOT, ".github/actions/composer-cache/composer-with-retry.sh");
 
 function isNetworkError(composerOutput: string): boolean {
   const run = spawnSync(
     "bash",
-    ["-c", `source "${INSTALL_SCRIPT}"; composer_output_is_network_error`],
+    ["-c", `source "${WRAPPER_SCRIPT}"; composer_output_is_network_error`],
     {
       input: composerOutput,
       encoding: "utf8",
@@ -21,7 +21,10 @@ function isNetworkError(composerOutput: string): boolean {
 }
 
 // A fake composer that fails with the given output on its first call and succeeds on the next.
-function installWithFakeComposer(firstRunOutput: string): {
+function runWithFakeComposer(
+  subcommand: string,
+  firstRunOutput: string,
+): {
   status: number | null;
   output: string;
   calls: number;
@@ -45,7 +48,7 @@ echo installed
   );
   chmodSync(fake, 0o755);
 
-  const run = spawnSync("bash", [INSTALL_SCRIPT, "--no-interaction"], {
+  const run = spawnSync("bash", [WRAPPER_SCRIPT, subcommand, "--no-interaction"], {
     encoding: "utf8",
     env: { ...process.env, PATH: `${directory}:${process.env.PATH ?? ""}` },
   });
@@ -54,9 +57,10 @@ echo installed
   return { status: run.status, output: run.stdout, calls };
 }
 
-describe("the composer install network error classifier", () => {
+describe("the composer network error classifier", () => {
   it.each([
     "curl error 28 while downloading https://packagist.org/api/security-advisories/: Operation timed out after 10000 milliseconds",
+    "Loading composer repositories with package information\ncurl error 28 while downloading https://repo.packagist.org/p2/a/b.json: Operation timed out",
     "curl error 6 while downloading https://repo.packagist.org/packages.json: Could not resolve host",
     "curl error 7 while downloading https://repo.packagist.org/p2/a/b.json: Failed to connect",
     "curl error 35 while downloading https://repo.packagist.org/p2/a/b.json: SSL connect error",
@@ -76,21 +80,22 @@ describe("the composer install network error classifier", () => {
   });
 });
 
-describe("composer install with one retry", () => {
+describe.each(["install", "update"])("composer %s with one retry", (subcommand) => {
   it("reruns once and names the error after a network failure", () => {
-    const result = installWithFakeComposer(
+    const result = runWithFakeComposer(
+      subcommand,
       "curl error 28 while downloading https://packagist.org/x",
     );
 
     expect(result.calls).toBe(2);
     expect(result.status).toBe(0);
     expect(result.output).toContain(
-      "Retrying composer install once after a network error (curl error 28)",
+      `Retrying composer ${subcommand} once after a network error (curl error 28)`,
     );
   });
 
   it("fails at once on any other error", () => {
-    const result = installWithFakeComposer("Your requirements could not be resolved");
+    const result = runWithFakeComposer(subcommand, "Your requirements could not be resolved");
 
     expect(result.calls).toBe(1);
     expect(result.status).toBe(2);
