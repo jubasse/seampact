@@ -3,6 +3,7 @@
 // here, so a new package is either published or kept private on purpose.
 import { PACKED_PACKAGES, PACKED_PACKS } from "../consumers/packed-packages.ts";
 import { packageDirectories } from "../workspace/index.ts";
+import { isJsonRecord } from "./json-record.ts";
 import { ReleaseError } from "./release-version.ts";
 import { readRepositoryFile, type VersionEdit } from "./version-edit.ts";
 
@@ -52,7 +53,8 @@ function manifestEdit(root: string, directory: string, version: string): Version
   const before = readRepositoryFile(root, file);
   const manifest: unknown = JSON.parse(before);
 
-  if (!isRecord(manifest)) throw new ReleaseError(`${file} is not a JSON object: fix the manifest`);
+  if (!isJsonRecord(manifest))
+    throw new ReleaseError(`${file} is not a JSON object: fix the manifest`);
 
   const changes: string[] = [];
 
@@ -67,8 +69,4 @@ function manifestEdit(root: string, directory: string, version: string): Version
   }
 
   return { file, before, after: `${JSON.stringify(manifest, null, 2)}\n`, changes };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

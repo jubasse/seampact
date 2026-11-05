@@ -2,6 +2,7 @@
 // output, no test or fixture, the LICENSE and README present, and a manifest at the release version that npm can
 // publish with provenance.
 import { BUILD_DIRECTORY } from "../consumers/packed-packages.ts";
+import { isJsonRecord } from "./json-record.ts";
 
 export const REPOSITORY_URL = "git+https://github.com/jubasse/seampact.git";
 
@@ -72,7 +73,7 @@ function fileProblems(packed: PackedPackage): string[] {
 }
 
 function manifestProblems(packed: PackedPackage, expected: ExpectedPackage): string[] {
-  const manifest = isRecord(packed.manifest) ? packed.manifest : {};
+  const manifest = isJsonRecord(packed.manifest) ? packed.manifest : {};
   const problems: string[] = [];
 
   if (manifest.name !== expected.name)
@@ -88,7 +89,7 @@ function manifestProblems(packed: PackedPackage, expected: ExpectedPackage): str
   for (const field of DEPENDENCY_FIELDS) {
     const dependencies = manifest[field];
 
-    if (!isRecord(dependencies)) continue;
+    if (!isJsonRecord(dependencies)) continue;
 
     for (const [name, specifier] of Object.entries(dependencies))
       if (typeof specifier === "string" && LOCAL_SPECIFIER.test(specifier))
@@ -107,7 +108,7 @@ function repositoryProblems(repository: unknown, directory: string): string[] {
   const expected = `{ "type": "git", "url": "${REPOSITORY_URL}", "directory": "${directory}" }`;
 
   if (
-    !isRecord(repository) ||
+    !isJsonRecord(repository) ||
     repository.url !== REPOSITORY_URL ||
     repository.directory !== directory
   )
@@ -116,8 +117,4 @@ function repositoryProblems(repository: unknown, directory: string): string[] {
     ];
 
   return [];
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

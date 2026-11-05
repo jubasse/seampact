@@ -6,6 +6,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { isJsonRecord } from "./json-record.ts";
 import { parsedArguments, runReleaseCommand } from "./release-cli.ts";
 import { ReleaseError } from "./release-version.ts";
 
@@ -95,19 +96,15 @@ async function publishedIntegrity(registry: string, tarball: Tarball): Promise<s
 
 // The version's integrity, `undefined` when the version is absent, `null` when it is listed without one.
 function versionIntegrity(packument: unknown, version: string): string | undefined | null {
-  const versions = isRecord(packument) ? packument.versions : undefined;
-  const listed = isRecord(versions) ? versions[version] : undefined;
+  const versions = isJsonRecord(packument) ? packument.versions : undefined;
+  const listed = isJsonRecord(versions) ? versions[version] : undefined;
 
   if (listed === undefined) return undefined;
 
-  const dist = isRecord(listed) ? listed.dist : undefined;
-  const integrity = isRecord(dist) ? dist.integrity : undefined;
+  const dist = isJsonRecord(listed) ? listed.dist : undefined;
+  const integrity = isJsonRecord(dist) ? dist.integrity : undefined;
 
   return typeof integrity === "string" ? integrity : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function publish(registry: string, tarball: Tarball, extraArguments: readonly string[]): void {
