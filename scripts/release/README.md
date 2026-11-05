@@ -1,4 +1,7 @@
-Release scripts of `release.yml`: the version stamp and its check, the npm packing and its content check, the idempotent npm publish, and the check of the binaries against `SHA256SUMS`.
+Release scripts of `release.yml`: the version stamp and its check, the npm packing with its content check, the idempotent npm publish, the local registry of the rehearsal, and the check of the binaries against `SHA256SUMS`.
 
 - `node scripts/release/stamp.ts <version>` writes the version into every `package.json` (dropping `private` from the published packages), `jvm/gradle.properties`, every `python/*/pyproject.toml` (each requirement on another seampact distribution pinned `==<version>`) and `python/uv.lock`. Run it once on the release branch and commit the result.
 - `node scripts/release/check-version.ts <version>` fails, naming each field, when the checkout is not at the version.
+- `node scripts/release/pack-npm.ts <version> --out <dir>` builds and packs the published packages, then checks each tarball: only tracked files and build output, no test or fixture, `LICENSE` and `README.md` present, the manifest at the version with the repository npm provenance checks.
+- `node scripts/release/publish-npm.ts <dir> --registry <url> [--provenance]` publishes the versions the registry lacks, skips the ones it holds with the same bytes, and fails by name, before publishing anything, on one it holds with other bytes.
+- `scripts/release/start-verdaccio.sh <work-dir>` starts the local registry of the rehearsal (`verdaccio.yaml`); `scripts/release/verify-assets.sh <dir> <sums-sha256>` checks the binaries before an upload.
