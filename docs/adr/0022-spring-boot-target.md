@@ -79,6 +79,7 @@ The filter matches the raw request target against the contract templates: `getRe
 
 - `/v1/tasks/%73earch` reaches the `search` method while the raw path matches `{p1}`. The interceptor answers the path's `notFound` 404 before any check, as on Hono.
 - A raw path under one of the api's base paths that no contract route serves exactly answers the api's `notFound` 404 from the filter, before Spring Security, on every Node target's terms (ADR 0016 "Errors raised before routing"). This covers a trailing slash, `//`, a dot segment (`x/../7`, `%2e%2e`), a percent-encoded static segment, and a segment holding a `;` path parameter, which Tomcat strips before routing.
+- When no operation of the api has the `notFound` role, those paths answer a bare 404 with no body, as on the Node targets, never the app.
 - `catchAll: false` leaves those paths to the app. A base path shared with another api of the app is left to the app.
 - `%2F` in a segment, a `\`, and a malformed percent-encoding never reach a filter: Tomcat answers its own 400 page. These are outside the boundary and listed in Consequences. The docs tell users not to loosen the Tomcat connector's `relaxedPathChars` and `encodedSolidusHandling`, which change what reaches the raw-path match.
 

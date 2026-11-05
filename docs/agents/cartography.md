@@ -40,6 +40,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-yup` | `packages/targets/codegen-yup` | target | Generates Standard Schema yup validators per schema and direction, and one input validator per operation. |
 | `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
 | `@seampact/binary` | `packages/tools/binary` | tool | The standalone compiler binary: the CLI as a Node single executable application for five platforms, with the first-party packs embedded. |
+| `@seampact/docs-site` | `packages/tools/docs-site` | tool | The documentation website: Starlight on GitHub Pages, built from the repository's docs/ folder. |
 | `@seampact/http-suite` | `packages/tools/http-suite` | tool | The shared black-box HTTP suite: JSON case scripts, the sample app's control routes, a runner against a base URL and a report keyed by checklist id. |
 
 ## Python packages
@@ -228,6 +229,10 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/binary`
 
 - `packages/tools/binary/src`: The standalone compiler binary: the CLI entry the single executable wraps, the commands it runs on native target entries only, and the reader serving the embedded first-party packs.
+
+### `@seampact/docs-site`
+
+- `packages/tools/docs-site/src/prebuild`: The prebuild of the docs site: copies docs/ into Starlight's content folder, takes each page's title from its first heading, rewrites relative links to site routes or GitHub links, and writes the sidebar from the docs index.
 
 ### `@seampact/http-suite`
 

@@ -1,5 +1,6 @@
 import type { BundleFailure, BundleFailureCode } from "@seampact/spec/bundle";
 import type { BundleSource } from "@seampact/spec/config";
+import { printableUrl } from "./printable-url.js";
 
 // The failures of fetching a bundle source before the pinned-bundle check reads it: the Node runner's channels,
 // its cache and the workspace imports. A native runner fetches its own way, so these codes are not in the vectors.
@@ -30,12 +31,12 @@ export interface BundleSourceFailure extends Omit<BundleFailure, "code"> {
 export function bundleSourceText(source: BundleSource): string {
   if ("package" in source) return `package '${source.package}' version ${source.version}`;
 
-  if ("release" in source) return `release '${source.release.url}'`;
+  if ("release" in source) return `release '${printableUrl(source.release.url)}'`;
 
   if ("maven" in source) return `Maven artefact '${source.maven}'`;
 
   const directory =
     source.git.directory === undefined ? "" : `, directory '${source.git.directory}'`;
 
-  return `git '${source.git.url}' tag '${source.git.tag}'${directory}`;
+  return `git '${printableUrl(source.git.url)}' tag '${source.git.tag}'${directory}`;
 }

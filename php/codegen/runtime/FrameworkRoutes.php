@@ -8,12 +8,16 @@ namespace Seampact\Codegen\Runtime;
  * The entry's `frameworkRoutes` allow-list as the boot check reads it (FR-25): an entry takes a route when its path
  * pattern matches the route's path (`*` one segment, `**` any number, a `*` inside a segment any characters but `/`,
  * an empty segment dropped on both sides) and it names no method, or the route's one method besides HEAD. A route
- * segment that may take a `/` is a catch-all, which only `**` takes.
+ * segment that may take a `/` is a catch-all, which only `**` takes. A route whose trailing placeholders are optional
+ * also serves the path without them, which an entry must take too.
  */
 final class FrameworkRoutes
 {
     private const HEAD = 'HEAD';
     private const PLACEHOLDER = '#\{!?(\w+)(?:<[^>]*>)?(?:\?[^}]*)?\}#';
+    private const TRAILING_PLACEHOLDER = '#\{(\w+)(?:<[^>]*>)?(?:\?[^}]*)?\}$#D';
+    // The characters Symfony's route compiler leaves out with an optional placeholder they precede.
+    private const OPTIONAL_PLACEHOLDER_SEPARATORS = '/,;.:-_~+*=@|';
     private const UNREAD_CATCH_ALL = '{*}';
     // A segment `withCatchAlls` writes as a catch-all: `{name*}` or `{*}`.
     private const CATCH_ALL_SEGMENT = '#^\{\w*\*\}$#D';
@@ -29,17 +33,34 @@ final class FrameworkRoutes
     }
 
     /**
-     * Whether an entry of `$frameworkRoutes` takes the route at `$uri` answering `$methods`. The route is read through
-     * `withCatchAlls` with `$patternOf`, so a segment that may take a `/` is a catch-all only `**` takes.
+     * Whether entries of `$frameworkRoutes` take the route at `$uri` answering `$methods`: every path it serves, the
+     * one without its optional trailing placeholders included. The route is read through `withCatchAlls` with
+     * `$patternOf`, so a segment that may take a `/` is a catch-all only `**` takes.
      *
      * @param list<array{path: string, method: ?string}> $frameworkRoutes
      * @param \Closure(string): ?string $patternOf
      * @param list<string> $methods
+     * @param \Closure(string): bool $isOptional whether the route may be served without the placeholder
      */
-    public static function allows(array $frameworkRoutes, string $uri, \Closure $patternOf, array $methods): bool
+    public static function allows(array $frameworkRoutes, string $uri, \Closure $patternOf, array $methods, \Closure $isOptional): bool
     {
         $methods = array_values(array_diff($methods, [self::HEAD]));
-        $routeSegments = self::segmentsOf(self::withCatchAlls($uri, $patternOf));
+        foreach (self::servedPaths($uri, $isOptional) as $servedPath) {
+            if (!self::anyEntryTakes($frameworkRoutes, self::segmentsOf(self::withCatchAlls($servedPath, $patternOf)), $methods)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param list<array{path: string, method: ?string}> $frameworkRoutes
+     * @param list<string> $routeSegments
+     * @param list<string> $methods
+     */
+    private static function anyEntryTakes(array $frameworkRoutes, array $routeSegments, array $methods): bool
+    {
         foreach ($frameworkRoutes as $allowed) {
             $methodAllowed = $allowed['method'] === null || $methods === [$allowed['method']];
             if ($methodAllowed && self::segmentsMatch(self::segmentsOf($allowed['path']), 0, $routeSegments, 0, $allowed['path'])) {
@@ -48,6 +69,29 @@ final class FrameworkRoutes
         }
 
         return false;
+    }
+
+    /**
+     * The route's path and each shorter one it also serves, as Symfony compiles a route (Laravel's `{id?}` included):
+     * from the end, a placeholder that ends the path, is not important (`{!id}`) and `$isOptional` names may be left
+     * out, with the separator before it, so `/c/{id?}` also serves `/c`.
+     *
+     * @param \Closure(string): bool $isOptional
+     * @return list<string>
+     */
+    private static function servedPaths(string $path, \Closure $isOptional): array
+    {
+        $servedPaths = [$path];
+        $remaining = $path;
+        while (preg_match(self::TRAILING_PLACEHOLDER, $remaining, $placeholder, PREG_OFFSET_CAPTURE) === 1 && $isOptional($placeholder[1][0])) {
+            $remaining = substr($remaining, 0, $placeholder[0][1]);
+            if ($remaining !== '' && str_contains(self::OPTIONAL_PLACEHOLDER_SEPARATORS, substr($remaining, -1))) {
+                $remaining = substr($remaining, 0, -1);
+            }
+            $servedPaths[] = $remaining;
+        }
+
+        return $servedPaths;
     }
 
     /**

@@ -115,6 +115,24 @@ class ConfigReaderTest {
         }
     }
 
+    // The shared `out` vectors (`packages/core/spec/vectors/config/out-directories.json`) the Node, PHP and Python
+    // readers pass too.
+    @Test
+    fun refusesOutDirectoriesThatOverlapByTheirCode() {
+        for (case in outDirectoryVectors.getValue("cases").jsonArray) {
+            val outs = case.jsonObject.getValue("outs").jsonArray.map { it.jsonPrimitive.content }
+            val codes = case.jsonObject.getValue("codes").jsonArray.map { it.jsonPrimitive.content }
+            val entries = outs.withIndex().joinToString("") { (index, out) ->
+                "  - { id: entry$index, use: 'g:a', api: x, out: '$out' }\n"
+            }
+
+            val outcome = AppConfigReader.readFile(write("targets:\n$entries"), "app/seampact.config.yaml")
+            val refusedCodes = (outcome as? AppConfigRead.Refused)?.problems?.map { it.code } ?: emptyList()
+
+            assertEquals(codes, refusedCodes, case.jsonObject.getValue("case").jsonPrimitive.content)
+        }
+    }
+
     @Test
     fun refusesEachBadPypiUseByItsRule() {
         for (case in useFormVectors.getValue("refused").jsonArray) {
@@ -259,6 +277,10 @@ class ConfigReaderTest {
 
     private val useFormVectors: JsonObject = Json.parseToJsonElement(
         Path.of(System.getProperty("seampact.repositoryRoot"), "packages/core/spec/vectors/config/use-forms.json").readText(),
+    ).jsonObject
+
+    private val outDirectoryVectors: JsonObject = Json.parseToJsonElement(
+        Path.of(System.getProperty("seampact.repositoryRoot"), "packages/core/spec/vectors/config/out-directories.json").readText(),
     ).jsonObject
 
     private fun read(text: String): AppConfig {

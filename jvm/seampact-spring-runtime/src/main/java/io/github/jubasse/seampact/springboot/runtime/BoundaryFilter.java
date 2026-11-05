@@ -67,7 +67,7 @@ public final class BoundaryFilter implements Filter {
         }
 
         if (boundary.answersNotFound(match.get().route().id())) {
-            answerUnbound(response, contractPath.get());
+            answerNotFound(response, contractPath.get());
             return;
         }
 
@@ -108,25 +108,20 @@ public final class BoundaryFilter implements Filter {
     }
 
     // A path under a base path that no route serves with this method: the api's 404 under `catchAll`, else the app's.
+    // A base path another api of the app also claims is the app's, so no api answers 404 for another api's routes.
     private void answerUnserved(HttpServletRequest request, HttpServletResponse response, FilterChain chain, String path) throws IOException, ServletException {
         boolean catchAll = boundary.table().settings().path("catchAll").asBoolean(true);
-        if (!catchAll) {
+        if (!catchAll || !boundary.claimsBasePathAlone(path)) {
             chain.doFilter(request, response);
             return;
         }
 
-        Optional<ContractRoute> route = boundary.table().notFoundRoute(path);
-        if (route.isEmpty()) {
-            chain.doFilter(request, response);
-            return;
-        }
-
-        writeNotFound(response, route.get());
+        answerNotFound(response, path);
     }
 
-    // An operation the boot check found without a handler under `unbound-operations=warn`: the api's 404, else a bare
-    // 404 with no body, as no handler of the app can answer it.
-    private void answerUnbound(HttpServletResponse response, String path) throws IOException {
+    // The api's 404, else a bare 404 with no body when no route has the `notFound` role, as no operation fails there:
+    // for a path no route serves under `catchAll` and for an operation left unbound under `unbound-operations=warn`.
+    private void answerNotFound(HttpServletResponse response, String path) throws IOException {
         Optional<ContractRoute> route = boundary.table().notFoundRoute(path);
         if (route.isEmpty()) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
