@@ -2,7 +2,7 @@
 
 // A one-process HTTPS server for the release channel tests: `php tls-server.php <certificate pem> <tarball>
 // <assets directory>`. It prints its port, then answers each request by path: the tarball, a file of the assets
-// directory, redirects, an error, a slow answer, a body cut before its length, headers that trickle in.
+// directory, redirects, an error, a slow answer, a body cut before its length, a bad length, a chunked body, an oversized header, two `Location` headers, headers that trickle in.
 
 declare(strict_types=1);
 
@@ -40,6 +40,18 @@ for ($served = 0; $served < 10_000; $served++) {
         continue;
     }
 
+    if (str_starts_with($path, '/bad-length/')) {
+        @fwrite($client, "HTTP/1.1 200 OK\r\nContent-Length: abc\r\nConnection: close\r\n\r\n0123456789");
+        @fclose($client);
+        continue;
+    }
+
+    if (str_starts_with($path, '/big-header/')) {
+        @fwrite($client, "HTTP/1.1 200 OK\r\nX-Big: " . str_repeat('a', 70_000) . "\r\n\r\n");
+        @fclose($client);
+        continue;
+    }
+
     if (str_starts_with($path, '/trickle-headers/')) {
         trickleHeaders($client);
         continue;
@@ -55,6 +67,9 @@ for ($served = 0; $served < 10_000; $served++) {
         '/bundle.tgz' => ['200 OK', [], $tarball],
         '/hop' => ['302 Found', ['Location: /bundle.tgz'], ''],
         '/to-http' => ['302 Found', ['Location: http://127.0.0.1/bundle.tgz'], ''],
+        '/two-locations' => ['302 Found', ['Location: /bundle.tgz', 'Location: /elsewhere'], ''],
+        '/user-info' => ['302 Found', ['Location: https://user:secret@example.test/bundle.tgz'], ''],
+        '/chunked' => ['200 OK', ['Transfer-Encoding: chunked'], ''],
         '/loop' => ['302 Found', ['Location: /loop'], ''],
         '/slow' => (static function () use ($tarball): array {
             sleep(3);

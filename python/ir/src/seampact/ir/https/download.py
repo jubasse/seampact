@@ -25,6 +25,8 @@ _WATCHDOG_POLL_SECONDS: Final = 0.05
 # What `http.client` refuses in a request target; `urlsplit` drops tab and newline silently, so the raw text is checked.
 _CONTROL_OR_SPACE: Final = re.compile(r"[\x00-\x20\x7f]")
 _HOLDS_CONTROL_OR_SPACE: Final = "holds a control character or a space"
+_HOLDS_USER_INFO: Final = "holds a user name or password"
+_SEVERAL_LOCATIONS: Final = "answered a redirect with more than one Location header"
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,10 +122,15 @@ class HttpsDownload:
             if not isinstance(answer, tuple):
                 return answer
 
-            status, location = answer
+            status, locations = answer
 
-            if status not in _REDIRECT_STATUSES or location is None:
+            if status not in _REDIRECT_STATUSES or not locations:
                 return HttpsFailure(url, f"answered HTTP {status}")
+
+            if len(locations) > 1:
+                return HttpsFailure(url, _SEVERAL_LOCATIONS)
+
+            location = locations[0]
 
             if redirects == _REDIRECTS_MAX:
                 return HttpsFailure(url, f"redirected more than {_REDIRECTS_MAX} times")
@@ -138,14 +145,17 @@ class HttpsDownload:
             if not is_https_url(target):
                 return HttpsFailure(url, f"redirected to {quoted(printable_url(location))}, which is not an https: URL")
 
+            if "@" in urlsplit(target).netloc:
+                return HttpsFailure(url, f"redirected to {quoted(printable_url(location))}, which {_HOLDS_USER_INFO}")
+
             url = target
 
         raise AssertionError("seampact-ir: the redirect loop ends by return.")
 
     def _get(
         self, url: str, deadline: float, bytes_max: int, sink: Callable[[bytes], None]
-    ) -> tuple[int, str | None] | HttpsFailure | None:
-        """None once a 200's body is streamed, else the status and `Location` of the answer, or the failure."""
+    ) -> tuple[int, list[str]] | HttpsFailure | None:
+        """None once a 200's body is streamed, else the status and `Location` headers of the answer, or the failure."""
         remaining = deadline - time.monotonic()
 
         if remaining <= 0:
@@ -163,7 +173,7 @@ class HttpsDownload:
             response = connection.getresponse()
 
             if response.status != _HTTP_OK:
-                return response.status, response.getheader("Location")
+                return response.status, response.msg.get_all("Location", [])
 
             failure = self._capped_body(response, connection, url, deadline, bytes_max, sink)
 

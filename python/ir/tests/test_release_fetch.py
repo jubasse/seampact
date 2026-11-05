@@ -87,6 +87,10 @@ class _TlsServer:
                     self._trickle()
                 elif self.path.startswith(_TRUNCATED_PATH):
                     self._truncated()
+                elif self.path == "/two-locations":
+                    self._redirect("/bundle.tgz", "/elsewhere")
+                elif self.path == "/user-info":
+                    self._redirect("https://user:secret@example.test/bundle.tgz")
                 elif self.path == "/bad-port":
                     self._redirect("https://127.0.0.1:99999/bundle.tgz")
                 else:
@@ -111,9 +115,12 @@ class _TlsServer:
                 self.end_headers()
                 self.wfile.write(b"x" * _TRUNCATED_BYTES_SENT)
 
-            def _redirect(self, location: str) -> None:
+            def _redirect(self, *locations: str) -> None:
                 self.send_response(302)
-                self.send_header("Location", location)
+
+                for location in locations:
+                    self.send_header("Location", location)
+
                 self.send_header("Content-Length", "0")
                 self.end_headers()
 
@@ -564,3 +571,32 @@ def test_a_filled_pin_without_a_compiler_wheel_names_the_wheel_and_the_url_overr
     assert _HOST_ASSET in failure.message
     assert "seampact-ir[compiler]" in failure.fix
     assert "url =" in failure.fix
+
+
+@pytest.mark.parametrize(
+    ("path", "reason"),
+    [
+        ("/two-locations", "answered a redirect with more than one Location header"),
+        ("/user-info", "which holds a user name or password"),
+    ],
+)
+def test_a_redirect_with_several_locations_or_user_info_is_refused_by_name(
+    server: _TlsServer, tmp_path: Path, path: str, reason: str
+) -> None:
+    result = _fetcher(tmp_path / "cache", server).fetch(
+        ReleaseSource(server.url(path), None), str(tmp_path), LocalSourcePolicy.ALLOW
+    )
+
+    assert isinstance(result, list)
+    assert reason in result[0].message
+    assert "secret" not in result[0].message
+
+
+def test_a_certificate_made_for_another_host_name_is_refused(server: _TlsServer, tmp_path: Path) -> None:
+    result = _fetcher(tmp_path / "cache", server).fetch(
+        ReleaseSource(f"https://localhost:{server.port}/bundle.tgz", None), str(tmp_path), LocalSourcePolicy.ALLOW
+    )
+
+    assert isinstance(result, list)
+    assert result[0].code is BundleFailureCode.RELEASE_FAILED
+    assert "Hostname mismatch" in result[0].message

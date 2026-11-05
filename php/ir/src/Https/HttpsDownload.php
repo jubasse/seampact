@@ -22,6 +22,10 @@ final readonly class HttpsDownload
 
     private const CHUNK_BYTES = 64 * 1024;
 
+    private const SEVERAL_LOCATIONS = 'answered a redirect with more than one Location header';
+
+    private const HOLDS_USER_INFO = 'holds a user name or password';
+
     private const HEAD_BYTES_MAX = 64 * 1024;
 
     private const HTTPS_PORT = 443;
@@ -79,20 +83,24 @@ final readonly class HttpsDownload
                 return $answer;
             }
 
-            if (!in_array($answer->status, self::REDIRECT_STATUSES, true) || $answer->location === null) {
+            if (!in_array($answer->status, self::REDIRECT_STATUSES, true) || $answer->locations === []) {
                 return new HttpsFailure($url, "answered HTTP {$answer->status}");
+            }
+
+            if (count($answer->locations) > 1) {
+                return new HttpsFailure($url, self::SEVERAL_LOCATIONS);
             }
 
             if ($redirects === self::REDIRECTS_MAX) {
                 return new HttpsFailure($url, 'redirected more than ' . self::REDIRECTS_MAX . ' times');
             }
 
-            $redirectRefusal = self::redirectRefusal($url, $answer->location);
+            $redirectRefusal = self::redirectRefusal($url, $answer->locations[0]);
             if ($redirectRefusal !== null) {
                 return new HttpsFailure($url, $redirectRefusal);
             }
 
-            $url = (string) self::resolved($url, $answer->location);
+            $url = (string) self::resolved($url, $answer->locations[0]);
         }
     }
 
@@ -163,7 +171,7 @@ final readonly class HttpsDownload
     /** @return resource */
     private function context(string $peerName)
     {
-        $ssl = ['verify_peer' => true, 'verify_peer_name' => true, 'allow_self_signed' => false, 'peer_name' => $peerName, 'SNI_enabled' => true];
+        $ssl = ['verify_peer' => true, 'verify_peer_name' => true, 'allow_self_signed' => false, 'peer_name' => $peerName, 'SNI_enabled' => true, 'crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT];
         if ($this->caFile !== null) {
             $ssl['cafile'] = $this->caFile;
         }
@@ -209,6 +217,10 @@ final readonly class HttpsDownload
             }
 
             $received .= $chunk;
+        }
+
+        if ($end > self::HEAD_BYTES_MAX) {
+            return new HttpsFailure($url, 'sent headers over ' . self::HEAD_BYTES_MAX . ' bytes');
         }
 
         return HttpsHead::parse($url, substr($received, 0, $end), substr($received, $end + 4));
@@ -293,6 +305,10 @@ final readonly class HttpsDownload
         $target = self::resolved($url, $location);
         if ($target === null || !self::isHttpsUrl($target)) {
             return 'redirected to ' . UntrustedText::quoted(PrintableUrl::of($location)) . ', which is not an https: URL';
+        }
+
+        if (array_key_exists('user', (array) parse_url($target))) {
+            return 'redirected to ' . UntrustedText::quoted(PrintableUrl::of($location)) . ', which ' . self::HOLDS_USER_INFO;
         }
 
         return null;
