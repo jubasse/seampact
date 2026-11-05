@@ -1,8 +1,15 @@
-import { type ContractIR, isKnownVariant, type Operation } from "@seampact/spec/ir";
+import {
+  type ContractIR,
+  isKnownVariant,
+  type Operation,
+  type Right,
+  type Rule,
+  type SchemaId,
+} from "@seampact/spec/ir";
 import { deriveName } from "@seampact/spec/naming";
 import type { ExportRef, TypesDescriptor } from "../descriptors.js";
 import { importSpecifier } from "../import-specifier.js";
-import { below, operationLocation } from "../ir-location.js";
+import { below, type IrLocation, operationLocation } from "../ir-location.js";
 import type { Link } from "../links.js";
 import { refuseInconsistentIr } from "../located-refusals.js";
 import { ExportNames, typeScriptIdentifier } from "../planned-names.js";
@@ -233,8 +240,13 @@ export function hookTypesSource(
       return `  readonly ${JSON.stringify(identityId)}: AuthenticateHook<AuthenticateRequest<{ ${credentials} }>, ${principalOf(identityId)}, ${codes}>;`;
     });
 
-  const deciders = requirementNames(ir).map(([name, codes, operations]) => {
-    return `  readonly ${JSON.stringify(name)}: RequirementRequest<${denialOf(codes)}, unknown, ${identitiesOf(operations)}>;`;
+  const deciders = requirementNames(ir).map(([name, codes, operations, params]) => {
+    const paramsType =
+      params === undefined
+        ? "unknown"
+        : requirementParamsType(params, types.descriptor, imports, refusals);
+
+    return `  readonly ${JSON.stringify(name)}: RequirementRequest<${denialOf(codes)}, ${paramsType}, ${identitiesOf(operations)}>;`;
   });
 
   const scopes = Object.entries(ir.scopes)
@@ -324,14 +336,33 @@ function unauthenticatedCodes(ir: ContractIR, identityId: string): string[] {
   return [...new Set(codes)];
 }
 
-// Each right and rule an operation asks, with its denial codes and the operations that ask it.
+interface RequirementParams {
+  readonly schema: SchemaId;
+  readonly location: IrLocation;
+}
+
+// Each right and rule an operation asks, with its denial codes, the operations that ask it and its params schema.
 function requirementNames(
   ir: ContractIR,
-): [name: string, codes: string[], operations: Operation[]][] {
-  const byName = new Map<string, [string[], Operation[]]>();
+): [
+  name: string,
+  codes: string[],
+  operations: Operation[],
+  params: RequirementParams | undefined,
+][] {
+  const byName = new Map<string, [string[], Operation[], RequirementParams | undefined]>();
 
-  const add = (name: string, codes: readonly string[], operation: Operation): void => {
-    const entry = byName.get(name) ?? [[...codes], []];
+  const add = (
+    member: "rights" | "rules",
+    name: string,
+    declaration: Right | Rule | undefined,
+    operation: Operation,
+  ): void => {
+    const params =
+      declaration?.params === undefined
+        ? undefined
+        : { schema: declaration.params, location: below({ member: "" }, member, name, "params") };
+    const entry = byName.get(name) ?? [[...(declaration?.errors ?? [])], [], params];
 
     entry[1].push(operation);
     byName.set(name, entry);
@@ -340,18 +371,49 @@ function requirementNames(
   for (const operation of ir.operations) {
     for (const requirement of operation.requires) {
       if (requirement.kind === "right" && "right" in requirement) {
-        add(requirement.right, ir.rights[requirement.right]?.errors ?? [], operation);
+        add("rights", requirement.right, ir.rights[requirement.right], operation);
       } else if (requirement.kind === "rule" && "rule" in requirement) {
-        add(requirement.rule, ir.rules[requirement.rule]?.errors ?? [], operation);
+        add("rules", requirement.rule, ir.rules[requirement.rule], operation);
       }
     }
 
     for (const fieldRight of operation.fieldRights) {
-      add(fieldRight.right, ir.rights[fieldRight.right]?.errors ?? [], operation);
+      add("rights", fieldRight.right, ir.rights[fieldRight.right], operation);
     }
   }
 
-  return [...byName].map(([name, [codes, operations]]) => [name, codes, operations]);
+  return [...byName].map(([name, [codes, operations, params]]) => [
+    name,
+    codes,
+    operations,
+    params,
+  ]);
+}
+
+// The params type of a right or rule: the input type of its params schema, which types the values a use site declares.
+function requirementParamsType(
+  params: RequirementParams,
+  descriptor: TypesDescriptor,
+  imports: TypeImports,
+  refusals: Refusal[],
+): string {
+  const ref = Object.hasOwn(descriptor.schemas, params.schema)
+    ? descriptor.schemas[params.schema]?.input
+    : undefined;
+
+  if (ref === undefined) {
+    refusals.push(
+      refuseInconsistentIr(
+        "link.types.schema.missing",
+        `The types link has no input type for the params '${params.schema}'`,
+        params.location,
+      ),
+    );
+
+    return "unknown";
+  }
+
+  return imports.reference(ref);
 }
 
 // A code's denial type: the code with its params as an operation's errors type declares them.

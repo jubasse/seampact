@@ -103,6 +103,7 @@ export function routeTableSource(
   const format = errorFormat(ir, refusals);
 
   refusals.push(...encodedSegmentRefusals(ir));
+  refusals.push(...requirementExtensionRefusals(ir));
 
   ir.operations.forEach((operation, index) => {
     warnings.push(...handlerForms(ir, operation, operationLocation(index, operation.id)));
@@ -384,6 +385,51 @@ function handlerForms(
   return forms.flatMap(([form, description, present, member, fix]) =>
     present ? [warnLeftToHandler(form, description, below(location, member), fix)] : [],
   );
+}
+
+// The extension values of a right or rule an operation asks: the decide request does not carry them yet, so each is
+// refused once rather than dropped.
+function requirementExtensionRefusals(ir: ContractIR): Refusal[] {
+  const asked = new Set<string>();
+
+  for (const operation of ir.operations) {
+    for (const requirement of operation.requires) {
+      if (requirement.kind === "right" && "right" in requirement)
+        asked.add(`rights/${requirement.right}`);
+      else if (requirement.kind === "rule" && "rule" in requirement)
+        asked.add(`rules/${requirement.rule}`);
+    }
+
+    for (const fieldRight of operation.fieldRights) asked.add(`rights/${fieldRight.right}`);
+  }
+
+  const declarations = [
+    ...Object.entries(ir.rights).map(([name, right]) => ({
+      kind: "right",
+      member: "rights",
+      name,
+      extensions: right.extensions,
+    })),
+    ...Object.entries(ir.rules).map(([name, rule]) => ({
+      kind: "rule",
+      member: "rules",
+      name,
+      extensions: rule.extensions,
+    })),
+  ];
+
+  return declarations
+    .filter(
+      ({ member, name, extensions }) =>
+        asked.has(`${member}/${name}`) && Object.keys(extensions).length > 0,
+    )
+    .map(({ kind, member, name }) =>
+      refuseNotGeneratedYet(
+        `${kind}.extensions`,
+        `An extension value of the ${kind} '${name}'`,
+        below(API_LOCATION, member, name, "extensions"),
+      ),
+    );
 }
 
 // Forms the reference contract does not hold, refused until a consumer needs them (A47).
