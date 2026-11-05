@@ -65,6 +65,10 @@ describe("the composer network error classifier", () => {
     "curl error 7 while downloading https://repo.packagist.org/p2/a/b.json: Failed to connect",
     "curl error 35 while downloading https://repo.packagist.org/p2/a/b.json: SSL connect error",
     "The following exception is caused by a lack of network: Connection timed out",
+    "curl error 52 while downloading https://repo.packagist.org/p2/a/b.json: Empty reply from server",
+    "curl error 56 while downloading https://codeload.github.com/a/b/zip/c: Recv failure: Connection reset by peer",
+    'The "https://repo.packagist.org/p2/a/b.json" file could not be downloaded (HTTP/2 502 )',
+    'The "https://api.github.com/repos/a/b/zipball/c" file could not be downloaded (HTTP/1.1 503 Service Unavailable)',
   ])("treats %s as a network error", (snippet) => {
     expect(isNetworkError(snippet)).toBe(true);
   });
@@ -75,6 +79,7 @@ describe("the composer network error classifier", () => {
     "Warning: The lock file is not up to date with the latest changes in composer.json.",
     "curl error 280 while downloading https://example.test",
     "curl error 22 while downloading https://example.test: The requested URL returned error: 404",
+    'The "https://repo.packagist.org/p2/a/b.json" file could not be downloaded (HTTP/2 404 )',
   ])("does not treat %s as a network error", (snippet) => {
     expect(isNetworkError(snippet)).toBe(false);
   });

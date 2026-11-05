@@ -2,7 +2,8 @@
 # Runs `composer <install|update> <arguments>`; reruns it once when the first run failed on a network error.
 # Any other failure (resolution, advisory block, lock mismatch) fails at once.
 
-NETWORK_ERROR_PATTERN='curl error (6|7|28|35)\b|Connection timed out'
+# curl: resolve, connect, partial transfer, timeout, TLS connect, empty reply, receive; a 5xx answer from a host.
+NETWORK_ERROR_PATTERN='curl error (6|7|18|28|35|52|56)\b|Connection timed out|could not be downloaded \(HTTP/[0-9.]+ 5[0-9][0-9]'
 
 composer_output_is_network_error() {
   grep -Eq "$NETWORK_ERROR_PATTERN"
