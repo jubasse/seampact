@@ -1,7 +1,19 @@
 import { execFileSync } from "node:child_process";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { releaseVersionEdits } from "../release/version-plan.ts";
+import { packageDirectories } from "../workspace/index.ts";
 import { checkPackageRules, formatViolation } from "./rules.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -18,6 +30,98 @@ function proves(name: string, rule: string, file: string, ...parts: string[]) {
   expect(out[0]).toContain(`${file}: ${rule}: `);
 
   for (const p of parts) expect(out[0]).toContain(p);
+}
+
+const trees: string[] = [];
+
+afterEach(() => {
+  for (const tree of trees.splice(0)) rmSync(tree, { recursive: true, force: true });
+});
+
+function writeTree(files: Record<string, string>): string {
+  const root = mkdtempSync(join(tmpdir(), "package-rules-"));
+
+  trees.push(root);
+
+  for (const [file, text] of Object.entries(files)) {
+    mkdirSync(dirname(join(root, file)), { recursive: true });
+    writeFileSync(join(root, file), text);
+  }
+
+  return root;
+}
+
+const RELEASE = "1.2.3";
+const PUBLISHED = ["packages/spec", "packages/lint"];
+
+// The public metadata the `metadata` rule asks of a published package.
+function publicMetadata(directory: string): Record<string, unknown> {
+  return {
+    repository: { type: "git", url: "git+https://github.com/jubasse/seampact.git", directory },
+    homepage: "https://jubasse.github.io/seampact/",
+    bugs: { url: "https://github.com/jubasse/seampact/issues" },
+  };
+}
+
+function manifest(name: string, extra: Record<string, unknown> = {}): string {
+  return JSON.stringify({ name, seampact: { role: "core" }, ...extra });
+}
+
+// Two published packages and an unpublished one, with the changesets access.
+function releaseTree(
+  published: Record<string, unknown>,
+  binary: Record<string, unknown>,
+  access: string,
+  lint: Record<string, unknown> = published,
+) {
+  return writeTree({
+    "packages/spec/package.json": manifest("@seampact/spec", {
+      ...publicMetadata("packages/spec"),
+      ...published,
+    }),
+    "packages/spec/README.md": "# @seampact/spec\n",
+    "packages/lint/package.json": manifest("@seampact/lint", {
+      ...publicMetadata("packages/lint"),
+      ...lint,
+    }),
+    "packages/lint/README.md": "# @seampact/lint\n",
+    "packages/binary/package.json": manifest("@seampact/binary", binary),
+    ".changeset/config.json": JSON.stringify({ access }),
+  });
+}
+
+// The small trees hold npm packages only: no other version field to stamp.
+const NO_VERSION_FILES = () => [];
+
+const violations = (root: string, published: readonly string[] = PUBLISHED) =>
+  checkPackageRules(root, published, NO_VERSION_FILES).map(formatViolation);
+
+// The repository's manifests, pack entries and changesets config, stamped as the release branch is.
+function stampedRepositoryCopy(): string {
+  const root = writeTree({});
+  const copy = (file: string) => {
+    mkdirSync(dirname(join(root, file)), { recursive: true });
+    copyFileSync(join(REPO, file), join(root, file));
+  };
+
+  copy("package.json");
+
+  // Every file the stamp writes, then the files the package rules read besides them.
+  for (const edit of releaseVersionEdits(REPO, RELEASE)) copy(edit.file);
+
+  for (const directory of packageDirectories(REPO)) {
+    if (existsSync(join(REPO, directory, "README.md"))) copy(`${directory}/README.md`);
+
+    const json = JSON.parse(readFileSync(join(REPO, directory, "package.json"), "utf8"));
+    const packEntry: unknown = json.seampact?.pack;
+
+    if (typeof packEntry === "string") copy(`${directory}/${packEntry}`);
+  }
+
+  for (const edit of releaseVersionEdits(root, RELEASE))
+    writeFileSync(join(root, edit.file), edit.after);
+
+  return root;
 }
 
 describe("package rules", () => {
@@ -143,6 +247,121 @@ describe("package rules", () => {
     expect(fixture("metadata", "empty-readme").join("\n")).toContain(
       "packages/spec/README.md: metadata: a public package",
     );
+  });
+
+  it("checks a tree at 0.0.0 in the development form", () => {
+    const development = releaseTree(
+      { version: "0.0.0", private: true },
+      { private: true },
+      "restricted",
+    );
+
+    expect(violations(development)).toEqual([]);
+
+    const publicPackages = releaseTree({ version: "0.0.0" }, {}, "restricted");
+
+    expect(violations(publicPackages)).toEqual([
+      "packages/binary/package.json: namespaces: manifest must be `private: true` until p8-release (A3, A27)",
+      "packages/lint/package.json: namespaces: manifest must be `private: true` until p8-release (A3, A27)",
+      "packages/spec/package.json: namespaces: manifest must be `private: true` until p8-release (A3, A27)",
+    ]);
+  });
+
+  it("checks a stamped tree in the release form", () => {
+    const stamped = releaseTree(
+      { version: RELEASE },
+      { version: RELEASE, private: true },
+      "public",
+    );
+
+    expect(violations(stamped)).toEqual([]);
+
+    const unstamped = releaseTree({ version: RELEASE, private: true }, {}, "restricted");
+
+    expect(violations(unstamped)).toEqual([
+      "packages/binary/package.json: namespaces: an unpublished package stays `private: true` in a stamped release",
+      "packages/lint/package.json: namespaces: a published package has no `private` field in a stamped release: run scripts/release/stamp.ts",
+      "packages/spec/package.json: namespaces: a published package has no `private` field in a stamped release: run scripts/release/stamp.ts",
+      '.changeset/config.json: namespaces: `access` must be "public" in a stamped release: run scripts/release/stamp.ts',
+      `packages/binary/package.json: namespaces: version is undefined in a release stamped at ${RELEASE}: run scripts/release/stamp.ts`,
+    ]);
+  });
+
+  it("passes on a stamped copy of the repository", () => {
+    expect(checkPackageRules(stampedRepositoryCopy()).map(formatViolation)).toEqual([]);
+  });
+
+  it("refuses a half-stamped copy of the repository, by file", () => {
+    const halfStamped = stampedRepositoryCopy();
+    const restored = [
+      "packages/tools/binary/package.json",
+      "packages/packs/pack-hal/pack.yaml",
+      "packages/runtime/server-runtime/src/version.ts",
+      "jvm/gradle.properties",
+      "python/hooks/pyproject.toml",
+    ];
+
+    for (const file of restored) copyFileSync(join(REPO, file), join(halfStamped, file));
+
+    const found = checkPackageRules(halfStamped).map(formatViolation);
+
+    expect(found).toContain(
+      `packages/tools/binary/package.json: namespaces: version is "0.0.0" in a release stamped at ${RELEASE}: run scripts/release/stamp.ts`,
+    );
+    expect(found).toContain(
+      `packages/packs/pack-hal/pack.yaml: namespaces: pack.version is "0.0.0", not "${RELEASE}" in a stamped release: run scripts/release/stamp.ts`,
+    );
+    expect(found).toContain(
+      `packages/runtime/server-runtime/src/version.ts: namespaces: SERVER_RUNTIME_VERSION is "0.0.0", not "${RELEASE}" in a stamped release: run scripts/release/stamp.ts`,
+    );
+    expect(found.some((v) => v.startsWith("jvm/gradle.properties: namespaces: "))).toBe(true);
+    expect(found.some((v) => v.startsWith("python/hooks/pyproject.toml: namespaces: "))).toBe(true);
+  });
+
+  it("refuses a mixed tree by name", () => {
+    const mixed = releaseTree({ version: RELEASE }, { private: true }, "public", {
+      version: "0.0.0",
+    });
+
+    expect(violations(mixed)).toEqual([
+      "package.json: namespaces: the published packages are not at one version (packages/lint at 0.0.0, packages/spec at 1.2.3): all at 0.0.0, or all stamped by scripts/release/stamp.ts",
+    ]);
+
+    const unreleased = releaseTree({ version: "1.0.0-rc.1" }, { private: true }, "public");
+
+    expect(violations(unreleased)).toEqual([
+      'packages/lint/package.json: namespaces: a published package is at 0.0.0 or at a release version MAJOR.MINOR.PATCH, not "1.0.0-rc.1"',
+      'packages/spec/package.json: namespaces: a published package is at 0.0.0 or at a release version MAJOR.MINOR.PATCH, not "1.0.0-rc.1"',
+    ]);
+  });
+
+  it("the release scripts publish only through the npm publish of publish-npm.ts", () => {
+    const publishScript = join(REPO, "scripts/release/publish-npm.ts");
+    const root = writeTree({});
+
+    mkdirSync(join(root, "scripts/release"), { recursive: true });
+    copyFileSync(publishScript, join(root, "scripts/release/publish-npm.ts"));
+
+    expect(violations(root)).toEqual([]);
+
+    // The same npm publish anywhere else in the release scripts is seen, in its spawned form too.
+    copyFileSync(publishScript, join(root, "scripts/release/publish-again.ts"));
+
+    const elsewhere = violations(root);
+
+    expect(elsewhere).toContainEqual(
+      expect.stringMatching(
+        /^scripts\/release\/publish-again\.ts: namespaces: line \d+: publishes \(a `publish` argument of a spawned command\); only scripts\/release\/publish-npm\.ts publishes/,
+      ),
+    );
+    expect(elsewhere.every((v) => v.startsWith("scripts/release/publish-again.ts: "))).toBe(true);
+
+    // The publish script may run the npm publish only.
+    const gradle = writeTree({ "scripts/release/publish-npm.ts": 'run("./gradlew publish");\n' });
+
+    expect(violations(gradle)).toEqual([
+      "scripts/release/publish-npm.ts: namespaces: line 1: publishes (Gradle publish); only scripts/release/publish-npm.ts publishes, to npm (A3)",
+    ]);
   });
 
   it("cli exits non-zero on a violation", () => {

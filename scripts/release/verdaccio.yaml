@@ -1,0 +1,23 @@
+# The local npm registry of the release rehearsal (`start-verdaccio.sh`). The seampact packages are only ever
+# published here, never fetched from npmjs, so an install proves the packed tarballs; every other package comes from
+# npmjs. Paths are relative to this file's copy in the work directory.
+storage: ./storage
+auth:
+  htpasswd:
+    file: ./htpasswd
+uplinks:
+  npmjs:
+    url: https://registry.npmjs.org/
+packages:
+  "@seampact/*":
+    access: $all
+    publish: $authenticated
+    unpublish: false
+  "**":
+    access: $all
+    publish: false
+    proxy: npmjs
+log:
+  type: stdout
+  format: pretty
+  level: warn

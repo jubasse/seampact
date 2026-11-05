@@ -1,12 +1,20 @@
 // Package roles, the dependency rules of ADR 0009 and the namespaces of A27, checked over
 // the manifests of a repository: npm (packages/*), Gradle (jvm/**) and Composer (php/*).
 //
+// Two forms, read from the tree: with every published package at 0.0.0, the development form, where every npm
+// package is private and the changesets access restricted (A3); with all of them at one release version (a stamped
+// checkout), the release form, where the published packages drop `private` and the access is public.
+//
 // Deferred: package roles and dependency rules for Gradle (jvm/**) and Composer (php/*)
 // manifests. ADR 0009 states them for npm only and no role metadata convention exists for those
 // ecosystems yet; today only their namespaces (A27) are checked. Add the role rules here once
 // the convention is decided.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, posix } from "node:path";
+import { PUBLISHED_PACKAGES } from "../release/npm-versions.ts";
+import { DEVELOPMENT_VERSION, isReleaseVersion, ReleaseError } from "../release/release-version.ts";
+import type { VersionEdit } from "../release/version-edit.ts";
+import { pendingVersionChanges, versionFileEdits } from "../release/version-plan.ts";
 import { packageDirectories } from "../workspace/index.ts";
 
 export interface Violation {
@@ -32,6 +40,22 @@ const DOCS_SITE_URL = "https://jubasse.github.io/seampact/";
 // The two packages that are never published; every other npm package is public.
 const UNPUBLISHED_PACKAGES = ["@seampact/binary", "@seampact/docs-site"];
 const RUNTIME_SETS = ["dependencies", "peerDependencies", "optionalDependencies"] as const;
+
+/** The development form (A3), or the stamped form of a release, with the directories of the published packages. */
+type PackageRulesMode =
+  | { readonly kind: "development" }
+  | {
+      readonly kind: "release";
+      readonly version: string;
+      readonly publishedPackages: readonly string[];
+    };
+
+/** The version fields of a stamped tree outside the npm manifests and the changesets config. */
+export type VersionFileEdits = (root: string, version: string) => VersionEdit[];
+
+const RELEASE_SCRIPTS_DIR = "scripts/release";
+// The one release script that publishes, and what it may run: the idempotent npm publish of release.yml.
+const RELEASE_PUBLISH_SCRIPT = "scripts/release/publish-npm.ts";
 
 type Rec = Record<string, unknown>;
 const isRec = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -251,15 +275,74 @@ function checkPacks(root: string, pkgs: Npm[], out: Violation[]): void {
   }
 }
 
-function checkNpmNamespace(pkgs: Npm[], out: Violation[]): void {
+/**
+ * The form the published packages' versions give: all at 0.0.0, development; all at one release version, release.
+ * Any other tree is a violation, and its form is not checked.
+ */
+function treeMode(
+  pkgs: Npm[],
+  publishedPackages: readonly string[],
+  out: Violation[],
+): PackageRulesMode | undefined {
+  const published = pkgs.filter((p) => publishedPackages.includes(p.dir));
+  const versionOf = (p: Npm) => (typeof p.json.version === "string" ? p.json.version : undefined);
+  let valid = true;
+
+  for (const p of published) {
+    const version = versionOf(p);
+
+    if (version === DEVELOPMENT_VERSION || (version !== undefined && isReleaseVersion(version)))
+      continue;
+
+    valid = false;
+    out.push({
+      file: p.file,
+      rule: "namespaces",
+      message: `a published package is at ${DEVELOPMENT_VERSION} or at a release version MAJOR.MINOR.PATCH, not ${JSON.stringify(p.json.version)}`,
+    });
+  }
+
+  if (!valid) return undefined;
+
+  const versions = [...new Set(published.map(versionOf))];
+
+  if (versions.length > 1) {
+    const listed = published.map((p) => `${p.dir} at ${versionOf(p)}`).join(", ");
+
+    out.push({
+      file: "package.json",
+      rule: "namespaces",
+      message: `the published packages are not at one version (${listed}): all at ${DEVELOPMENT_VERSION}, or all stamped by scripts/release/stamp.ts`,
+    });
+
+    return undefined;
+  }
+
+  return versions[0] === undefined || versions[0] === DEVELOPMENT_VERSION
+    ? { kind: "development" }
+    : { kind: "release", version: versions[0], publishedPackages };
+}
+
+function checkNpmNamespace(pkgs: Npm[], mode: PackageRulesMode, out: Violation[]): void {
   for (const p of pkgs) {
     const add = (message: string) => out.push({ file: p.file, rule: "namespaces", message });
 
-    if (!/^@seampact\/[a-z0-9][a-z0-9-]*$/.test(p.name))
-      add(`npm name "${p.name}" must be @seampact/<name> (A27)`);
+    const message = privateFieldProblem(p, mode);
 
-    if (p.json.private !== true) add("manifest must be `private: true` until p8-release (A3, A27)");
+    if (message) add(message);
   }
+
+  checkNpmNames(pkgs, out);
+}
+
+function checkNpmNames(pkgs: Npm[], out: Violation[]): void {
+  for (const p of pkgs)
+    if (!/^@seampact\/[a-z0-9][a-z0-9-]*$/.test(p.name))
+      out.push({
+        file: p.file,
+        rule: "namespaces",
+        message: `npm name "${p.name}" must be @seampact/<name> (A27)`,
+      });
 }
 
 function checkPublicMetadata(root: string, pkgs: Npm[], out: Violation[]): void {
@@ -290,24 +373,52 @@ function checkPublicMetadata(root: string, pkgs: Npm[], out: Violation[]): void 
   }
 }
 
-function checkChangesets(root: string, out: Violation[]): void {
+function privateFieldProblem(p: Npm, mode: PackageRulesMode): string | undefined {
+  if (mode.kind === "development")
+    return p.json.private === true
+      ? undefined
+      : "manifest must be `private: true` until p8-release (A3, A27)";
+
+  if (!mode.publishedPackages.includes(p.dir))
+    return p.json.private === true
+      ? undefined
+      : "an unpublished package stays `private: true` in a stamped release";
+
+  return "private" in p.json
+    ? "a published package has no `private` field in a stamped release: run scripts/release/stamp.ts"
+    : undefined;
+}
+
+function checkChangesets(root: string, mode: PackageRulesMode, out: Violation[]): void {
   const file = ".changeset/config.json";
 
   if (!existsSync(join(root, file))) return;
   const json = readJson(root, file, out, "namespaces");
+  const expected = mode.kind === "development" ? "restricted" : "public";
 
-  if (json && json.access !== "restricted")
-    out.push({
-      file,
-      rule: "namespaces",
-      message: '`access` must stay "restricted" until p8-release',
-    });
+  if (!json || json.access === expected) return;
+
+  out.push({
+    file,
+    rule: "namespaces",
+    message:
+      mode.kind === "development"
+        ? '`access` must stay "restricted" until p8-release'
+        : '`access` must be "public" in a stamped release: run scripts/release/stamp.ts',
+  });
 }
 
+const NPM_PUBLISH = "npm publish";
+const SPAWNED_PUBLISH = "a `publish` argument of a spawned command";
+const CHANGESETS_ACTION_PUBLISH: [RegExp, string] = [
+  /^\s*publish\s*:/,
+  "a changesets/action `publish:` input",
+];
+
 const PUBLISH: [RegExp, string][] = [
-  [/\b(?:npm|pnpm|yarn)\s+(?:[\w-]+\s+)*publish\b/, "npm publish"],
+  [/\b(?:npm|pnpm|yarn)\s+(?:[\w-]+\s+)*publish\b/, NPM_PUBLISH],
   [/\bchangeset\s+publish\b/, "changeset publish"],
-  [/^\s*publish\s*:/, "a changesets/action `publish:` input"],
+  CHANGESETS_ACTION_PUBLISH,
   // `publishToMavenLocal` only writes the local `~/.m2` cache the consumer builds read; it reaches no registry.
   [/\bgradlew?\s+.*\bpublish(?!ToMavenLocal\b)\w*/, "Gradle publish"],
   [/\bmvnw?\s+.*\bdeploy\b/, "Maven deploy"],
@@ -316,6 +427,36 @@ const PUBLISH: [RegExp, string][] = [
 
 function publishes(code: string): string | undefined {
   return PUBLISH.find(([re]) => re.test(code))?.[1];
+}
+
+// A script spawns a publish as an argument list (`spawnSync(npm, ["publish", ...])`); a `publish:` key there is
+// configuration (the registry's permissions), not the changesets action input of a workflow.
+const RELEASE_SCRIPT_PUBLISH: [RegExp, string][] = [
+  ...PUBLISH.filter((pattern) => pattern !== CHANGESETS_ACTION_PUBLISH),
+  [/["'`]publish["'`]/, SPAWNED_PUBLISH],
+];
+
+/** Every file of `scripts/release`: only the npm publish of the publish script, which release.yml runs, passes. */
+function checkReleaseScripts(root: string, out: Violation[]): void {
+  for (const file of walk(root, RELEASE_SCRIPTS_DIR, () => true)) {
+    const lines = readFileSync(join(root, file), "utf8").split("\n");
+
+    lines.forEach((code, index) => {
+      for (const [re, what] of RELEASE_SCRIPT_PUBLISH) {
+        if (!re.test(code) || isAcceptedReleasePublish(file, what)) continue;
+
+        out.push({
+          file,
+          rule: "namespaces",
+          message: `line ${index + 1}: publishes (${what}); only ${RELEASE_PUBLISH_SCRIPT} publishes, to npm (A3)`,
+        });
+      }
+    });
+  }
+}
+
+function isAcceptedReleasePublish(file: string, what: string): boolean {
+  return file === RELEASE_PUBLISH_SCRIPT && (what === NPM_PUBLISH || what === SPAWNED_PUBLISH);
 }
 
 /** `scripts` of the root and every npm manifest: a publish command there is as bad as in CI. */
@@ -444,17 +585,76 @@ function checkComposer(root: string, out: Violation[]): void {
   }
 }
 
-export function checkPackageRules(root: string): Violation[] {
+/**
+ * A stamped tree is stamped whole: every npm package, published or not, and every other version field the stamp
+ * writes are at the release version.
+ */
+function checkStampedVersions(
+  root: string,
+  pkgs: Npm[],
+  version: string,
+  stampedFileEdits: VersionFileEdits,
+  out: Violation[],
+): void {
+  for (const p of pkgs)
+    if (p.json.version !== version)
+      out.push({
+        file: p.file,
+        rule: "namespaces",
+        message: `version is ${JSON.stringify(p.json.version)} in a release stamped at ${version}: run scripts/release/stamp.ts`,
+      });
+
+  let pending: string[];
+
+  try {
+    pending = pendingVersionChanges(stampedFileEdits(root, version));
+  } catch (error) {
+    if (!(error instanceof ReleaseError)) throw error;
+
+    out.push({ file: "package.json", rule: "namespaces", message: error.message });
+
+    return;
+  }
+
+  for (const change of pending) {
+    const separator = change.indexOf(": ");
+
+    out.push({
+      file: change.slice(0, separator),
+      rule: "namespaces",
+      message: `${change.slice(separator + 2)} in a stamped release: run scripts/release/stamp.ts`,
+    });
+  }
+}
+
+/**
+ * `publishedPackages`: the directories of the npm packages a release publishes; `stampedFileEdits`: the version
+ * fields a stamped tree carries besides the npm manifests.
+ */
+export function checkPackageRules(
+  root: string,
+  publishedPackages: readonly string[] = PUBLISHED_PACKAGES,
+  stampedFileEdits: VersionFileEdits = versionFileEdits,
+): Violation[] {
   const out: Violation[] = [];
   const pkgs = loadNpm(root, out);
+  const mode = treeMode(pkgs, publishedPackages, out);
 
   checkDependencies(pkgs, out);
   checkPacks(root, pkgs, out);
-  checkNpmNamespace(pkgs, out);
   checkPublicMetadata(root, pkgs, out);
-  checkChangesets(root, out);
+
+  if (mode) {
+    checkNpmNamespace(pkgs, mode, out);
+    checkChangesets(root, mode, out);
+  } else checkNpmNames(pkgs, out);
+
+  if (mode?.kind === "release")
+    checkStampedVersions(root, pkgs, mode.version, stampedFileEdits, out);
+
   checkWorkflows(root, out);
   checkScripts(root, pkgs, out);
+  checkReleaseScripts(root, out);
   checkGradle(root, out);
   checkComposer(root, out);
 
