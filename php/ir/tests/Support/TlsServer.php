@@ -6,7 +6,8 @@ namespace Seampact\Ir\Tests\Support;
 
 /**
  * `tls-server.php` started in a child PHP for one test class, with a self-signed certificate for 127.0.0.1 made by
- * ext-openssl, so the release channel is tested over real TLS with its verification on.
+ * ext-openssl, so the release channels are tested over real TLS with its verification on. It serves the bundle
+ * tarball, and each of `$assets` at `/assets/<name>` from `assetsDirectory`, where a test may delete one.
  */
 final class TlsServer
 {
@@ -21,12 +22,17 @@ final class TlsServer
         $this->process = $process;
     }
 
-    public static function start(string $tarball): self
+    /** @param array<string, string> $assets the bytes of each asset, by name */
+    public static function start(string $tarball, array $assets = []): self
     {
         $directory = TemporaryDirectory::create('seampact-tls-');
         $certificate = self::certificate($directory);
         $tarballFile = TemporaryDirectory::write($directory, 'bundle.tgz', $tarball);
-        $process = proc_open([PHP_BINARY, __DIR__ . '/tls-server.php', $certificate, $tarballFile], [1 => ['pipe', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
+        mkdir("{$directory}/assets");
+        foreach ($assets as $name => $bytes) {
+            TemporaryDirectory::write("{$directory}/assets", $name, $bytes);
+        }
+        $process = proc_open([PHP_BINARY, __DIR__ . '/tls-server.php', $certificate, $tarballFile, "{$directory}/assets"], [1 => ['pipe', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
         $port = is_resource($process) ? (int) trim((string) fgets($pipes[1])) : 0;
 
         if ($port === 0) {
@@ -34,6 +40,11 @@ final class TlsServer
         }
 
         return new self($directory, $certificate, $port, $process);
+    }
+
+    public function assetsDirectory(): string
+    {
+        return "{$this->directory}/assets";
     }
 
     public function url(string $path): string

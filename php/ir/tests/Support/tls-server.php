@@ -1,13 +1,15 @@
 <?php
 
-// A one-process HTTPS server for ReleaseFetchTest: `php tls-server.php <certificate pem> <tarball>`. It prints its
-// port, then answers each request by path: the tarball, redirects, an error, a slow answer.
+// A one-process HTTPS server for the release channel tests: `php tls-server.php <certificate pem> <tarball>
+// <assets directory>`. It prints its port, then answers each request by path: the tarball, a file of the assets
+// directory, redirects, an error, a slow answer.
 
 declare(strict_types=1);
 
 $arguments = is_array($_SERVER['argv'] ?? null) ? $_SERVER['argv'] : [];
 $certificate = is_string($arguments[1] ?? null) ? $arguments[1] : '';
 $tarball = is_string($arguments[2] ?? null) ? (string) file_get_contents($arguments[2]) : '';
+$assetsDirectory = is_string($arguments[3] ?? null) ? $arguments[3] : '';
 $context = stream_context_create(['ssl' => ['local_cert' => $certificate, 'allow_self_signed' => true, 'verify_peer' => false]]);
 $server = stream_socket_server('tls://127.0.0.1:0', $errorCode, $errorText, STREAM_SERVER_BIND | STREAM_SERVER_LISTEN, $context);
 
@@ -32,7 +34,13 @@ for ($served = 0; $served < 10_000; $served++) {
     }
 
     $path = explode(' ', $requestLine)[1] ?? '/';
+    $asset = str_starts_with($path, '/assets/') ? $assetsDirectory . '/' . basename($path) : null;
+    if ($asset !== null && is_file($asset)) {
+        $path = '/asset';
+    }
+
     [$status, $headers, $body] = match ($path) {
+        '/asset' => ['200 OK', [], (string) file_get_contents((string) $asset)],
         '/bundle.tgz' => ['200 OK', [], $tarball],
         '/hop' => ['302 Found', ['Location: /bundle.tgz'], ''],
         '/to-http' => ['302 Found', ['Location: http://127.0.0.1/bundle.tgz'], ''],

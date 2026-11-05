@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Binary;
 
+use Seampact\Ir\Bundle\PrintableUrl;
+
 /**
- * Hashes the source first, so a warm cache never hides a source that changed. Creates the cache root and resolves
- * its real path once; only that path is checked and run from then on. Checks the cache before any copy, then copies
+ * Hashes a `path` source first, so a warm cache never hides a source that changed; a download runs only when the cache
+ * holds no intact entry of its pin. Creates the cache root and resolves its real path once; only that path is checked
+ * and run from then on. Checks the cache before any copy, then copies
  * a binary into `<cache root>/<sha256>/`: streamed into a temporary file created exclusively there and
  * hashed as it streams, made executable, then renamed atomically to its name. An entry already there with the
  * right hash counts as success, so concurrent runs and a running `.exe` on Windows are safe. A copy whose hash
@@ -30,6 +33,48 @@ final class BinaryInstaller
             throw self::hashMismatch($source, $sha256, $sourceSha256);
         }
 
+        return self::installInto(
+            $source,
+            $sha256,
+            $cacheRoot,
+            $fileName,
+            $safety,
+            static fn (string $temporary): string => self::copyHashing($source, $temporary),
+        );
+    }
+
+    /**
+     * Downloads `$url` into the cache unless an intact entry of `$sha256` is already there.
+     *
+     * @throws BinaryRefusedException
+     */
+    public static function installDownload(string $url, string $sha256, string $cacheRoot, string $fileName, CacheSafety $safety, BinaryDownload $download): InstalledBinary
+    {
+        BinaryDownload::refuseUnlessHttps($url);
+
+        return self::installInto(
+            PrintableUrl::of($url),
+            $sha256,
+            $cacheRoot,
+            $fileName,
+            $safety,
+            static fn (string $temporary): string => self::downloadHashing($url, $temporary, $download),
+        );
+    }
+
+    /**
+     * @param string $origin the source path or the printable URL, for messages
+     * @param \Closure(string): string $writeHashing writes the binary into the new temporary file and returns its hash
+     * @throws BinaryRefusedException
+     */
+    private static function installInto(
+        string $origin,
+        string $sha256,
+        string $cacheRoot,
+        string $fileName,
+        CacheSafety $safety,
+        \Closure $writeHashing,
+    ): InstalledBinary {
         $safety->createPrivateDirectory($cacheRoot);
         $realCacheRoot = self::realCacheRoot($cacheRoot);
         $directory = $realCacheRoot . DIRECTORY_SEPARATOR . $sha256;
@@ -45,11 +90,11 @@ final class BinaryInstaller
         }
 
         $temporary = $directory . DIRECTORY_SEPARATOR . '.' . $fileName . '.' . bin2hex(random_bytes(8)) . '.tmp';
-        $actual = self::copyHashing($source, $temporary);
+        $actual = $writeHashing($temporary);
 
         if ($actual !== $sha256) {
             unlink($temporary);
-            throw self::hashMismatch($source, $sha256, $actual);
+            throw self::hashMismatch($origin, $sha256, $actual);
         }
 
         if (!chmod($temporary, self::EXECUTABLE_BY_OWNER) || !self::renamed($temporary, $target, $sha256)) {
@@ -118,14 +163,11 @@ final class BinaryInstaller
             throw self::unreadableSource($source);
         }
 
-        $output = @fopen($temporary, 'xb');
-        if ($output === false) {
+        try {
+            $output = self::createTemporary($temporary);
+        } catch (BinaryRefusedException $refused) {
             fclose($input);
-            throw BinaryRefusedException::of(
-                BinaryFailureCode::CacheUnsafe,
-                "The binary copy '{$temporary}' cannot be created.",
-                'Check that your user can write the binary cache directory.',
-            );
+            throw $refused;
         }
 
         $hash = hash_init('sha256');
@@ -135,7 +177,7 @@ final class BinaryInstaller
                 fclose($input);
                 fclose($output);
                 unlink($temporary);
-                throw BinaryRefusedException::of(BinaryFailureCode::CacheUnsafe, "Copying '{$source}' into '{$temporary}' failed.", 'Check the free space and permissions of the binary cache.');
+                throw self::writeFailed("'{$source}'", $temporary);
             }
             hash_update($hash, $chunk);
         }
@@ -144,6 +186,51 @@ final class BinaryInstaller
         fclose($output);
 
         return hash_final($hash);
+    }
+
+    // The SHA-256 of the bytes downloaded from `$url` into the new file `$temporary`, which a failed download removes.
+    private static function downloadHashing(string $url, string $temporary, BinaryDownload $download): string
+    {
+        $output = self::createTemporary($temporary);
+        $hash = hash_init('sha256');
+
+        try {
+            $download->stream($url, static function (string $chunk) use ($output, $hash, $temporary): void {
+                if (fwrite($output, $chunk) !== strlen($chunk)) {
+                    throw self::writeFailed('the download', $temporary);
+                }
+
+                hash_update($hash, $chunk);
+            });
+        } catch (BinaryRefusedException $refused) {
+            fclose($output);
+            unlink($temporary);
+            throw $refused;
+        }
+
+        fclose($output);
+
+        return hash_final($hash);
+    }
+
+    /** @return resource */
+    private static function createTemporary(string $temporary)
+    {
+        $output = @fopen($temporary, 'xb');
+        if ($output === false) {
+            throw BinaryRefusedException::of(
+                BinaryFailureCode::CacheUnsafe,
+                "The binary copy '{$temporary}' cannot be created.",
+                'Check that your user can write the binary cache directory.',
+            );
+        }
+
+        return $output;
+    }
+
+    private static function writeFailed(string $what, string $temporary): BinaryRefusedException
+    {
+        return BinaryRefusedException::of(BinaryFailureCode::CacheUnsafe, "Copying {$what} into '{$temporary}' failed.", 'Check the free space and permissions of the binary cache.');
     }
 
     // A failed rename over an entry another run installed with the right hash counts as success.
