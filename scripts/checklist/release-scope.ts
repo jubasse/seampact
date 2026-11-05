@@ -26,6 +26,11 @@ const SERVERS_FOR_1_0: readonly string[] = SERVER_TARGETS.filter(
   (target) => !TARGETS_AFTER_1_0.includes(target),
 );
 
+const NODE_SERVERS: readonly string[] = ["nestjs", "fastify", "express", "adonis", "hono"];
+
+const VARIANTS_FORM =
+  "a principal with variants (viewer_or_device) and, on the Node servers, optional authentication";
+
 const refusedOnEveryServer = (form: string): ItemAfter1_0 => ({
   targets: SERVERS_FOR_1_0,
   refusedOn: SERVERS_FOR_1_0,
@@ -36,24 +41,14 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
   ["CHK-001", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
   ["CHK-002", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
   ["CHK-003", { targets: ["fetch"], reason: SCALE_CAPACITY }],
-  [
-    "CHK-004",
-    refusedOnEveryServer(
-      "a principal with variants and optional authentication (viewer_or_device)",
-    ),
-  ],
-  [
-    "CHK-006",
-    refusedOnEveryServer(
-      "a principal with variants and optional authentication (viewer_or_device)",
-    ),
-  ],
+  ["CHK-004", refusedOnEveryServer(VARIANTS_FORM)],
+  ["CHK-006", refusedOnEveryServer(VARIANTS_FORM)],
   [
     "CHK-013",
     {
-      refusedOn: ["fetch"],
+      refusedOn: ["fetch", ...NODE_SERVERS],
       reason:
-        "1.0 refuses the rights-version response header by name at generation (the fetch client); the servers leave it to the handler",
+        "1.0 refuses the rights-version response header by name at generation (the fetch client); the Node servers name it in the generation warning identity.headers.handler and leave the comparison and the response header to the handler; the native servers neither refuse nor warn, so they are deferred with no test",
     },
   ],
   ["CHK-019", refusedOnEveryServer("a principal requirement")],

@@ -5,10 +5,12 @@ import {
   ACCESS_FORMS_REFUSED_BY_ONE_ZERO,
   GENERATE_TIMEOUT_MILLISECONDS,
   generateWithAccessForm,
+  generateWithRightsVersionHeader,
   hooksRequirementErrors,
   projectDirectory,
   publicTasksApi,
   REFERENCE_COMPILER_OPTIONS,
+  RIGHTS_VERSION_OPERATION,
   readGoldenIr,
   referenceLinks,
   referenceServerOutput,
@@ -299,6 +301,27 @@ describe("the access forms 1.0 refuses", () => {
     expect(outcome).toMatchObject({
       status: "refused",
       refusals: expect.arrayContaining([expect.objectContaining({ code: form.code })]),
+    });
+  });
+});
+
+// The rights-version header (CHK-013) is the handler's: the boundary names it in a generation warning, it does not
+// compare If-Rights-Version or write X-Rights-Version.
+describe("the rights-version header", () => {
+  test("is left to the handler with a named warning, not refused", async () => {
+    const outcome = await generateWithRightsVersionHeader(adonisTarget, {
+      links: await referenceLinks(INDEX_PROJECT, "tasksService"),
+      outputDirectory: referenceServerOutput(INDEX_PROJECT, "tasksService"),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "generated",
+      warnings: expect.arrayContaining([
+        expect.objectContaining({
+          code: "identity.headers.handler",
+          operation: RIGHTS_VERSION_OPERATION,
+        }),
+      ]),
     });
   });
 });

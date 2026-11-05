@@ -80,3 +80,8 @@ proofs:
   - id: CHK-013
     refusals:
       - 'fetch: packages/targets/codegen-fetch/src/rights-version-header-refused.test.ts#the rights-version response header of an operator write is refused by name'
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#the rights-version header is left to the handler with a named warning, not refused'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#the rights-version header is left to the handler with a named warning, not refused'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#the rights-version header is left to the handler with a named warning, not refused'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#the rights-version header is left to the handler with a named warning, not refused'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#the rights-version header is left to the handler with a named warning, not refused'
