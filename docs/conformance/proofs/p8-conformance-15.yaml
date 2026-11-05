@@ -1,0 +1,162 @@
+# docs/conformance/proofs/p8-conformance-15.yaml
+lane: p8-conformance-15
+proofs:
+  - id: CHK-004
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#each route is called with its own identity: public, user, service and signed webhook'
+  - id: CHK-011
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a service call carries the deadline computed from its budget and relays the trace context'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the deadline header on tasksService'
+  - id: CHK-023
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a DELETE answered 200 with a body gives that body to the caller'
+  - id: CHK-030
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a page with its next cursor, and the listTasks query string'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a page whose facts travel in headers and in Link'
+  - id: CHK-034
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the query is written as the servers decode it: percent-encoded values, a list comma-separated'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a boolean or object query value is refused by name when the client is generated'
+  - id: CHK-035
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a batch read is a POST that carries no idempotency key and no CSRF header'
+  - id: CHK-037
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the derived 304 of an ETag'
+  - id: CHK-038
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the budget aborts a slow call'
+  - id: CHK-043
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#each write call generates its own idempotency key and a read carries none'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the generated idempotency key and the replay flag'
+  - id: CHK-044
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the error of a call is a union on its code: a declared code narrows its params, an undeclared one does not type-check'
+  - id: CHK-047
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a request whose enum member is outside the enum fails to type-check'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#an enum member and a field the client does not know reach the caller as sent'
+      - 'zod: packages/targets/codegen-zod/src/generated-validators.test.ts#a state outside the enum is refused in a request and read back in a response'
+  - id: CHK-048
+    fixtures: [fixtures/golden/extensions]
+    refusals:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#an enum fallback is refused by name by the types the client is generated beside'
+  - id: CHK-049
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#an enum member and a field the client does not know reach the caller as sent'
+  - id: CHK-105
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a bare payload is read as sent and an error comes as problem+json on its code'
+  - id: CHK-106
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a page with its next cursor, and the listTasks query string'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a { data, meta } page joins the style''s meta members'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a page body with flat members beside its items'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a page whose facts travel in headers and in Link'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a paging none list reads a bare array, and an object comes back as unexpected'
+  - id: CHK-109
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#generated types list the properties of every object schema in authored order'
+  - id: CHK-111
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#every operation answers as declared exactly the error codes its IR derives'
+  - id: CHK-116
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a 404 is declared once per operation, and a nested list answers its scope''s code only'
+  - id: CHK-124
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#error codes outside the dotted form reach the caller unchanged'
+  - id: CHK-126
+    fixtures: [fixtures/golden/reference]
+    refusals:
+      - 'fetch: packages/targets/codegen-fetch/src/codeless-error-refused.test.ts#an error format that writes the code only inside a text template is refused by name'
+  - id: CHK-077
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/ir-reading-proofs.test.ts#an irVersion or irRevision outside what the target reads is refused by name'
+      - 'zod: packages/targets/codegen-zod/src/ir-reading-proofs.test.ts#an irVersion or irRevision outside what the target reads is refused by name'
+      - 'yup: packages/targets/codegen-yup/src/ir-reading-proofs.test.ts#an irVersion or irRevision outside what the target reads is refused by name'
+      - 'class-validator: packages/targets/codegen-class-validator/src/ir-reading-proofs.test.ts#an irVersion or irRevision outside what the target reads is refused by name'
+      - 'react: packages/targets/codegen-react/src/ir-reading-proofs.test.ts#an irVersion or irRevision outside what the target reads is refused by name'
+      - 'vue: packages/targets/codegen-vue/src/ir-reading-proofs.test.ts#an irVersion or irRevision outside what the target reads is refused by name'
+      - 'angular: packages/targets/codegen-angular/src/ir-reading-proofs.test.ts#an irVersion or irRevision outside what the target reads is refused by name'
+  - id: CHK-078
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/ir-reading-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+      - 'zod: packages/targets/codegen-zod/src/ir-reading-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+      - 'yup: packages/targets/codegen-yup/src/ir-reading-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+      - 'class-validator: packages/targets/codegen-class-validator/src/ir-reading-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+      - 'react: packages/targets/codegen-react/src/ir-reading-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+      - 'vue: packages/targets/codegen-vue/src/ir-reading-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+      - 'angular: packages/targets/codegen-angular/src/ir-reading-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+  - id: CHK-080
+    fixtures: [fixtures/golden/agreement]
+    tests:
+      - 'zod: scripts/validator-agreement/agreement-runner.test.ts#zod, yup and class-validator accept and reject exactly the same payloads of the table'
+      - 'yup: scripts/validator-agreement/agreement-runner.test.ts#zod, yup and class-validator accept and reject exactly the same payloads of the table'
+      - 'class-validator: scripts/validator-agreement/agreement-runner.test.ts#zod, yup and class-validator accept and reject exactly the same payloads of the table'
+  - id: CHK-118
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'zod: packages/targets/codegen-zod/src/generated-validators.test.ts#a picked schema keeps the refinements and the strictness of the source'
+      - 'zod: packages/targets/codegen-zod/src/generated-validators.test.ts#an omitted schema keeps the refinements and the strictness of the rest'
+  - id: CHK-134
+    fixtures: [fixtures/golden/agreement]
+    refusals:
+      - 'zod: packages/targets/codegen-zod/src/unknown-keys-refused.test.ts#an operation input that ignores or keeps its unknown keys is refused by name'
+      - 'yup: packages/targets/codegen-yup/src/unknown-keys-refused.test.ts#an operation input that ignores or keeps its unknown keys is refused by name'
+      - 'class-validator: packages/targets/codegen-class-validator/src/unknown-keys-refused.test.ts#an operation input that ignores or keeps its unknown keys is refused by name'
+  - id: CHK-135
+    fixtures: [fixtures/golden/agreement]
+    refusals:
+      - 'zod: packages/targets/codegen-zod/src/unknown-keys-refused.test.ts#an operation input that ignores or keeps its unknown keys is refused by name'
+      - 'yup: packages/targets/codegen-yup/src/unknown-keys-refused.test.ts#an operation input that ignores or keeps its unknown keys is refused by name'
+      - 'class-validator: packages/targets/codegen-class-validator/src/unknown-keys-refused.test.ts#an operation input that ignores or keeps its unknown keys is refused by name'
+  - id: CHK-075
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'react: scripts/consumers/targets/react-tanstack/test/front/queries.browser.test.tsx#1: a list renders'
+      - 'react: scripts/consumers/targets/react-tanstack/test/front/queries.browser.test.tsx#2: an infinite cursor list loads three pages and ends'
+      - 'react: scripts/consumers/targets/react-tanstack/test/front/queries.browser.test.tsx#3: a create refreshes the list of its resource'
+      - 'react: scripts/consumers/targets/react-tanstack/test/front/queries.browser.test.tsx#4: a throttled user sees api.rate_limited with its retryAfterMs'
+      - 'react: scripts/consumers/targets/react-tanstack/test/front/queries.browser.test.tsx#5: an unmount aborts the request'
+      - 'react: scripts/consumers/targets/react-tanstack/test/front/queries.browser.test.tsx#6: a dropped first answer and one retry send one idempotency key, the second answer replayed'
+      - 'react: scripts/consumers/targets/react-tanstack/test/front/queries.browser.test.tsx#7: caller options pass through: enabled, select and queryKey'
+      - 'react: scripts/consumers/targets/react-tanstack/test/front/queries.browser.test.tsx#8: errors: data returns declared errors as data, headers as a plain record'
+      - 'vue: scripts/consumers/targets/vue-tanstack/test/front/queries.browser.test.mts#1: a list renders'
+      - 'vue: scripts/consumers/targets/vue-tanstack/test/front/queries.browser.test.mts#2: an infinite cursor list loads three pages and ends'
+      - 'vue: scripts/consumers/targets/vue-tanstack/test/front/queries.browser.test.mts#3: a create refreshes the list of its resource'
+      - 'vue: scripts/consumers/targets/vue-tanstack/test/front/queries.browser.test.mts#4: a throttled user sees api.rate_limited with its retryAfterMs'
+      - 'vue: scripts/consumers/targets/vue-tanstack/test/front/queries.browser.test.mts#5: an unmount aborts the request'
+      - 'vue: scripts/consumers/targets/vue-tanstack/test/front/queries.browser.test.mts#6: a dropped first answer and one retry send one idempotency key, the second answer replayed'
+      - 'vue: scripts/consumers/targets/vue-tanstack/test/front/queries.browser.test.mts#7: caller options pass through: enabled, select and queryKey'
+      - 'vue: scripts/consumers/targets/vue-tanstack/test/front/queries.browser.test.mts#8: errors: data returns declared errors as data, headers as a plain record'
+      - 'angular: scripts/consumers/targets/angular-fetch/test/front/readers.browser.test.mts#1: a list renders, the token sent by an app interceptor'
+      - 'angular: scripts/consumers/targets/angular-fetch/test/front/readers.browser.test.mts#3: a create does not refresh the list by itself; refetch reads it again'
+      - 'angular: scripts/consumers/targets/angular-fetch/test/front/readers.browser.test.mts#4: a throttled user sees api.rate_limited with its retryAfterMs'
+      - 'angular: scripts/consumers/targets/angular-fetch/test/front/readers.browser.test.mts#5: destroying the component aborts the read'
+      - 'angular: scripts/consumers/targets/angular-fetch/test/front/readers.browser.test.mts#6: a dropped first answer and one retry send one idempotency key, the second answer replayed'
+      - 'angular: scripts/consumers/targets/angular-fetch/test/front/readers.browser.test.mts#7: caller options pass through: a null request sends nothing, an equal request reads once, call.signal aborts'
+      - 'angular: scripts/consumers/targets/angular-fetch/test/front/readers.browser.test.mts#8: errors: data returns declared errors as data, headers as a plain record'

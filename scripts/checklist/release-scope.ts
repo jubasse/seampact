@@ -20,6 +20,10 @@ const SCALE_CAPACITY =
   "generated code at scale: no behaviour a fix would change; scripts/golden/scale.test.ts proves the core pair";
 const API_PLATFORM_AFTER_V1 = "API Platform comes after v1";
 
+const VALIDATORS: readonly string[] = ["zod", "yup", "class-validator"];
+const UNKNOWN_KEYS_POLICIES =
+  "1.0 refuses the unknown keys policies ignore and keep of an operation input by name at generation, on the validators targets";
+
 // The servers the gate requires: every generator refuses the access forms below by name, so each of them is deferred
 // with its refusal tested.
 const SERVERS_FOR_1_0: readonly string[] = SERVER_TARGETS.filter(
@@ -54,6 +58,42 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
   ["CHK-019", refusedOnEveryServer("a principal requirement")],
   ["CHK-020", refusedOnEveryServer("a principal binding")],
   ["CHK-094", refusedOnEveryServer("a scope resolved by the application")],
+  [
+    "CHK-048",
+    {
+      targets: ["fetch"],
+      refusedOn: ["fetch"],
+      reason:
+        "1.0 refuses an open enum's fallback by name at generation, in the types the fetch client is generated beside",
+    },
+  ],
+  [
+    "CHK-125",
+    {
+      targets: ["fetch"],
+      reason:
+        "the generated fetch client carries no retry rule taken from the base nature of a code; the front targets retry a rejection and never a declared error, so a rule by nature is additive",
+    },
+  ],
+  [
+    "CHK-126",
+    {
+      targets: ["fetch"],
+      refusedOn: ["fetch"],
+      reason:
+        "1.0 refuses an error format that writes the code only inside a text template by name at generation, so the client does not recover a code from a template",
+    },
+  ],
+  ["CHK-134", { targets: VALIDATORS, refusedOn: VALIDATORS, reason: UNKNOWN_KEYS_POLICIES }],
+  ["CHK-135", { targets: VALIDATORS, refusedOn: VALIDATORS, reason: UNKNOWN_KEYS_POLICIES }],
+  [
+    "CHK-169",
+    {
+      targets: ["angular"],
+      reason:
+        "the generated Angular service does not configure HttpClient's XSRF header; the app sets withXsrfConfiguration to the contract's CSRF header, as the angular guide says, and generating it is additive",
+    },
+  ],
   [
     "CHK-072",
     { reason: "internal installs before publication (A3), gone once the packages are published" },
