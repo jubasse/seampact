@@ -2,6 +2,15 @@
   "name": "@seampact/http-suite",
   "description": "The shared black-box HTTP suite: JSON case scripts, the sample app's control routes, a runner against a base URL and a report keyed by checklist id.",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/tools/http-suite"
+  },
+  "homepage": "https://jubasse.github.io/seampact/concepts/packages/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "type": "module",
   "files": [

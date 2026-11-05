@@ -1,6 +1,15 @@
 {
   "name": "@seampact/pack-jsonapi",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/packs/pack-jsonapi"
+  },
+  "homepage": "https://jubasse.github.io/seampact/features/convention-packs/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "description": "JSON:API resource objects, page[number] paging and the errors array.",
   "seampact": {

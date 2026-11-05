@@ -131,6 +131,17 @@ describe("package rules", () => {
     proves("composer", "namespaces", "php/laravel/composer.json", 'Composer name "acme/laravel"');
   });
 
+  it("a public package has repository, homepage, bugs and a README", () => {
+    const fail = fixture("metadata", "fail");
+
+    expect(fixture("metadata", "pass")).toEqual([]);
+    expect(fail).toHaveLength(4);
+    expect(fail.join("\n")).toContain("needs `repository`");
+    expect(fail.join("\n")).toContain("needs a `homepage`");
+    expect(fail.join("\n")).toContain("needs `bugs`");
+    expect(fail.join("\n")).toContain("packages/spec/README.md: metadata: a public package");
+  });
+
   it("cli exits non-zero on a violation", () => {
     const run = (root: string) =>
       execFileSync("node", [join(HERE, "cli.ts"), root], {
