@@ -10,7 +10,8 @@ import { SERVER_TARGETS } from "./targets.ts";
 const SUITE_REPORT_FORMAT: SuiteReport["format"] = "seampact-http-suite-report/1";
 const CASE_OUTCOMES: readonly CaseOutcome[] = ["passed", "failed", "refused"];
 const CHECK_ID = /^CHK-\d{3,}$/;
-const REPORT_EXTENSION = ".json";
+const REPORT_FILE = /^http-suite-.+\.json$/;
+const SHOWN_VALUE_LENGTH = 40;
 
 /** One checklist id's outcome in one suite report. */
 export interface SuiteProof {
@@ -25,10 +26,24 @@ type Rec = Record<string, unknown>;
 
 const isRec = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
 const isCaseOutcome = (v: unknown): v is CaseOutcome => CASE_OUTCOMES.some((known) => known === v);
+const isStringList = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every((item) => typeof item === "string");
 
 /**
- * Every `*.json` file under `directory`, at any depth, must be an http-suite report of a server target; other files
- * (logs, generated sources an artefact also holds) are out of scope. A directory without any report is a problem.
+ * A report value, or any text taken from a report, as one quoted token that is safe to print in a job log and a
+ * markdown fence: cut short, with line breaks and backticks escaped, so it cannot start a workflow command.
+ */
+function shown(value: unknown): string {
+  const text = String(value);
+  const cut = text.length > SHOWN_VALUE_LENGTH ? `${text.slice(0, SHOWN_VALUE_LENGTH)}...` : text;
+
+  return JSON.stringify(cut).replaceAll("`", "\\u0060");
+}
+
+/**
+ * Every `http-suite-*.json` file under `directory`, at any depth, must be an http-suite report of a server target;
+ * other files (logs, generated sources, other JSON an artefact also holds) are out of scope. A directory without any
+ * report is a problem.
  */
 export function loadSuiteReports(directory: string, problems: Problem[]): SuiteProof[] {
   const files = reportFilesUnder(directory);
@@ -36,7 +51,7 @@ export function loadSuiteReports(directory: string, problems: Problem[]): SuiteP
   if (files.length === 0) {
     problems.push({
       file: directory,
-      message: "no http-suite report (*.json) under the directory",
+      message: "no http-suite report (http-suite-*.json) under the directory",
     });
 
     return [];
@@ -47,7 +62,7 @@ export function loadSuiteReports(directory: string, problems: Problem[]): SuiteP
 
 function reportFilesUnder(directory: string): string[] {
   return readdirSync(directory, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(REPORT_EXTENSION))
+    .filter((entry) => entry.isFile() && REPORT_FILE.test(entry.name))
     .map((entry) => join(entry.parentPath, entry.name))
     .sort((left, right) => relative(directory, left).localeCompare(relative(directory, right)));
 }
@@ -56,7 +71,9 @@ function readReport(file: string, problems: Problem[]): unknown {
   try {
     return JSON.parse(readFileSync(file, "utf8"));
   } catch (error) {
-    problems.push({ file, message: `not valid JSON: ${(error as Error).message}` });
+    const reason = error instanceof Error ? error.message : String(error);
+
+    problems.push({ file, message: `not valid JSON: ${shown(reason)}` });
 
     return undefined;
   }
@@ -79,7 +96,7 @@ function suiteProofsOf(file: string, report: unknown, problems: Problem[]): Suit
   if (typeof target !== "string" || !SERVER_TARGETS.includes(target)) {
     problems.push({
       file,
-      message: `suite report of an unknown server target "${String(target)}" (expected one of ${SERVER_TARGETS.join(", ")})`,
+      message: `suite report of an unknown server target ${shown(target)} (expected one of ${SERVER_TARGETS.join(", ")})`,
     });
 
     return [];
@@ -97,13 +114,14 @@ function suiteProofsOf(file: string, report: unknown, problems: Problem[]): Suit
   const proofs: SuiteProof[] = [];
 
   for (const [id, result] of Object.entries(report.checks)) {
-    const outcome = isRec(result) ? result.outcome : undefined;
+    const outcome = checkOutcomeOf(result);
 
-    if (!CHECK_ID.test(id) || !isCaseOutcome(outcome)) {
+    if (!CHECK_ID.test(id) || outcome === undefined) {
       problems.push({
         file,
-        id,
-        message: "malformed suite report entry: needs a CHK id and an outcome",
+        id: CHECK_ID.test(id) ? id : shown(id),
+        message:
+          "malformed suite report entry: needs a CHK id, an outcome and the case ids (at least one when passed)",
       });
       continue;
     }
@@ -112,4 +130,14 @@ function suiteProofsOf(file: string, report: unknown, problems: Problem[]): Suit
   }
 
   return proofs;
+}
+
+/** The outcome of a `checks` entry, or undefined when its shape is not the http-suite's `CheckResult`. */
+function checkOutcomeOf(result: unknown): CaseOutcome | undefined {
+  if (!isRec(result) || !isCaseOutcome(result.outcome) || !isStringList(result.cases))
+    return undefined;
+
+  if (result.outcome === "passed" && result.cases.length === 0) return undefined;
+
+  return result.outcome;
 }

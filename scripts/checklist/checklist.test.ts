@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -149,6 +149,9 @@ describe("checklist check", () => {
   });
 });
 
+const MALFORMED_ENTRY =
+  "malformed suite report entry: needs a CHK id, an outcome and the case ids (at least one when passed)";
+
 describe("checklist release gate with suite reports", () => {
   const reports = (name: string) => join(fx("suite-reports"), name);
   const gate = (suiteReports: string) =>
@@ -181,21 +184,108 @@ describe("checklist release gate with suite reports", () => {
 
     try {
       cpSync(reports("refused"), directory, { recursive: true });
-      writeFileSync(join(directory, "broken.json"), '{ "format": ');
+      writeFileSync(join(directory, "http-suite-broken.json"), '{ "format": ');
       const out = gate(directory);
       const at = (file: string) => out.filter((l) => l.startsWith(join(directory, file)));
 
-      expect(at("broken.json")[0]).toContain("not valid JSON");
-      expect(at("not-a-report.json")[0]).toContain("not an http-suite report");
-      expect(at("unknown-target.json")[0]).toContain('unknown server target "nestjs-cjs"');
-      expect(at("entries.json")).toEqual([
-        `${join(directory, "entries.json")}: CHK-002: malformed suite report entry: needs a CHK id and an outcome`,
-        `${join(directory, "entries.json")}: CHK-001: suite report of a target the item does not list: express (item lists core, nestjs)`,
-        `${join(directory, "entries.json")}: CHK-009: suite report proves an unknown id (not in the checklist)`,
+      expect(at("http-suite-broken.json")[0]).toContain("not valid JSON");
+      expect(at("http-suite-not-a-report.json")[0]).toContain("not an http-suite report");
+      expect(at("http-suite-unknown-target.json")[0]).toContain(
+        'unknown server target "nestjs-cjs"',
+      );
+      expect(at("http-suite-entries.json")).toEqual([
+        `${join(directory, "http-suite-entries.json")}: CHK-002: ${MALFORMED_ENTRY}`,
+        `${join(directory, "http-suite-entries.json")}: CHK-001: suite report of a target the item does not list: express (item lists core, nestjs)`,
+        `${join(directory, "http-suite-entries.json")}: CHK-009: suite report proves an unknown id (not in the checklist)`,
       ]);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
+  });
+
+  /** Runs the gate over a directory holding the given reports, as `http-suite-<name>.json` files. */
+  function gateOver(files: Record<string, unknown>): string[] {
+    const directory = mkdtempSync(join(tmpdir(), "checklist-suite-"));
+
+    try {
+      for (const [name, content] of Object.entries(files)) {
+        writeFileSync(join(directory, `http-suite-${name}.json`), JSON.stringify(content));
+      }
+
+      return gate(directory).map((line) => line.replaceAll(directory, "<dir>"));
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }
+
+  const reportOf = (target: string, checks: Record<string, unknown>) => ({
+    format: "seampact-http-suite-report/1",
+    target,
+    profile: "default",
+    checks,
+  });
+
+  it("prints no raw report value: a line break cannot start a workflow command", () => {
+    const injected = "x\n::error::injected\n";
+    const out = gateOver({
+      target: reportOf(injected, {}),
+      entry: reportOf("nestjs", { [`${injected}`]: { outcome: "passed", cases: ["a"] } }),
+    });
+    const printed = out.join("\n");
+
+    expect(printed).toContain("unknown server target");
+    expect(printed).toContain(MALFORMED_ENTRY);
+    expect(printed.split("\n").filter((line) => line.startsWith("::"))).toEqual([]);
+    expect(printed).not.toContain("injected\n");
+  });
+
+  it("escapes backticks and cuts a long value", () => {
+    const out = gateOver({ target: reportOf(`\`\`\`${"y".repeat(100)}`, {}) }).join("\n");
+
+    expect(out).not.toContain("`");
+    expect(out).toContain("\\u0060\\u0060\\u0060yyy");
+    expect(out).not.toContain("y".repeat(60));
+  });
+
+  it("counts a checks entry only when its shape is a result with case ids", () => {
+    const out = gateOver({
+      shapes: reportOf("nestjs", {
+        "CHK-001": { outcome: "passed", cases: [] },
+        "CHK-002": { outcome: "passed", cases: "case-a" },
+      }),
+    });
+
+    expect(out.filter((l) => l.includes(MALFORMED_ENTRY))).toHaveLength(2);
+    expect(out).toContain(noTest("CHK-001", "nestjs"));
+  });
+
+  it("reads only http-suite-*.json files of an artefact", () => {
+    const directory = mkdtempSync(join(tmpdir(), "checklist-suite-"));
+
+    try {
+      writeFileSync(join(directory, "package.json"), "{}");
+      writeFileSync(
+        join(directory, "http-suite-default.json"),
+        JSON.stringify(reportOf("nestjs", { "CHK-001": { outcome: "passed", cases: ["a"] } })),
+      );
+
+      expect(gate(directory).filter((l) => l.includes("package.json"))).toEqual([]);
+      expect(gate(directory)).not.toContain(noTest("CHK-001", "nestjs"));
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("a failed report wins over a passed one of the same target", () => {
+    const out = gateOver({
+      a: reportOf("nestjs", { "CHK-001": { outcome: "passed", cases: ["a"] } }),
+      b: reportOf("nestjs", { "CHK-001": { outcome: "failed", cases: ["a"] } }),
+    });
+
+    expect(out).toContain(
+      `<dir>/http-suite-b.json: CHK-001: release gate: failed for target nestjs in this suite report`,
+    );
+    expect(out).not.toContain(noTest("CHK-001", "nestjs"));
   });
 
   it("refuses a directory without any report", () => {
@@ -203,7 +293,7 @@ describe("checklist release gate with suite reports", () => {
 
     try {
       expect(gate(directory)).toContain(
-        `${directory}: -: no http-suite report (*.json) under the directory`,
+        `${directory}: -: no http-suite report (http-suite-*.json) under the directory`,
       );
     } finally {
       rmSync(directory, { recursive: true, force: true });
@@ -226,6 +316,74 @@ describe("checklist release gate with suite reports", () => {
       );
 
     expect(run).toThrow(/--suite-reports reads proofs for the release gate only/);
+  });
+});
+
+const hasJq = spawnSync("jq", ["--version"]).status === 0;
+
+describe.skipIf(!hasJq)("suite report fetcher filters", () => {
+  const filter = (file: string, input: unknown): string =>
+    execFileSync("jq", ["-r", "--arg", "branch", "develop", "-f", join(HERE, file)], {
+      encoding: "utf8",
+      input: JSON.stringify(input),
+    }).trim();
+
+  const artefact = (workflowRun: Record<string, unknown>) => ({
+    name: "nestjs-http-suite-default",
+    expired: false,
+    created_at: "2026-11-05T10:00:00Z",
+    workflow_run: {
+      id: 7,
+      head_branch: "develop",
+      repository_id: 1,
+      head_repository_id: 1,
+      ...workflowRun,
+    },
+  });
+
+  it("keeps an artefact of a develop run of this repository", () => {
+    expect(filter("suite-artefacts.jq", { artifacts: [artefact({})] })).toBe(
+      "nestjs-http-suite-default 7 2026-11-05T10:00:00Z",
+    );
+  });
+
+  it("drops an artefact of a fork's develop branch, another branch or another name", () => {
+    const dropped = [
+      artefact({ head_repository_id: 2 }),
+      artefact({ head_branch: "feat/x" }),
+      { ...artefact({}), name: "nestjs-build" },
+      { ...artefact({}), expired: true },
+    ];
+
+    expect(filter("suite-artefacts.jq", { artifacts: dropped })).toBe("");
+  });
+
+  const run = (changes: Record<string, unknown>) => ({
+    conclusion: "success",
+    event: "push",
+    head_branch: "develop",
+    head_sha: "abc123",
+    head_repository: { id: 1 },
+    repository: { id: 1 },
+    ...changes,
+  });
+
+  it("trusts a successful push or schedule run of this repository and names its commit", () => {
+    expect(filter("suite-run.jq", run({}))).toBe("abc123");
+    expect(filter("suite-run.jq", run({ event: "schedule" }))).toBe("abc123");
+  });
+
+  it("trusts no pull request run, fork run, other branch or unsuccessful run", () => {
+    const untrusted = [
+      run({ event: "pull_request" }),
+      run({ event: "workflow_dispatch" }),
+      run({ head_repository: { id: 2 } }),
+      run({ head_branch: "feat/x" }),
+      run({ conclusion: "failure" }),
+      run({ conclusion: null }),
+    ];
+
+    for (const candidate of untrusted) expect(filter("suite-run.jq", candidate)).toBe("");
   });
 });
 

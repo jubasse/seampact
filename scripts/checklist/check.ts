@@ -109,11 +109,15 @@ function releaseGateProblems(model: Model, suiteProofs: readonly SuiteProof[]): 
       continue;
     }
 
-    if (s.outcome === "failed")
+    if (s.outcome === "failed") {
       at(`release gate: failed for target ${s.target} in this suite report`);
-    const key = suiteKey(s.id, s.target);
+    }
 
-    suiteOutcomes.set(key, new Set([...(suiteOutcomes.get(key) ?? []), s.outcome]));
+    const key = suiteKey(s.id, s.target);
+    const outcomes = suiteOutcomes.get(key) ?? new Set<SuiteProof["outcome"]>();
+
+    outcomes.add(s.outcome);
+    suiteOutcomes.set(key, outcomes);
   }
 
   const suitePassed = (id: string, target: string): boolean => {

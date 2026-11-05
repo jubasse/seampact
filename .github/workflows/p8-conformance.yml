@@ -1,8 +1,10 @@
 name: Conformance release gate
 
 # The checklist's release gate over every proof: the proof files and the http-suite reports the consumer workflows
-# uploaded on develop (the newest of each artefact from a successful run). It names each live id that has no
-# fixture, or no test for a target it lists. Report-only until RELEASE_GATE_BLOCKING is set to "true" below.
+# uploaded on develop (the newest of each artefact from a successful push or scheduled run of this repository). It
+# names each live id that has no fixture, or no test for a target it lists. Report-only until RELEASE_GATE_BLOCKING
+# is set to "true" below: then a missing report fails the job; while report-only, a missing report is a warning and
+# the gate does not run.
 
 on:
   push:
@@ -35,11 +37,17 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Download the consumers' http-suite reports
+        id: download
+        continue-on-error: ${{ env.RELEASE_GATE_BLOCKING != 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: bash scripts/checklist/fetch-suite-reports.sh "$RUNNER_TEMP/suite-reports"
+        run: |
+          set -o pipefail
+          bash scripts/checklist/fetch-suite-reports.sh "$RUNNER_TEMP/suite-reports" 2>&1 |
+            tee "$RUNNER_TEMP/suite-reports.txt"
       - name: Run the release gate
+        if: steps.download.outcome == 'success'
         continue-on-error: ${{ env.RELEASE_GATE_BLOCKING != 'true' }}
         run: |
           set -o pipefail
@@ -52,6 +60,12 @@ jobs:
             echo "## Conformance release gate"
             echo
             echo "Blocking: $RELEASE_GATE_BLOCKING"
+            echo
+            echo "Reports (the run and commit each one comes from):"
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/suite-reports.txt" 2>/dev/null || echo "No report was downloaded."
+            echo '```'
             echo
             echo '```'
             cat "$RUNNER_TEMP/release-gate.txt" 2>/dev/null || echo "The gate did not run: see the download step."
