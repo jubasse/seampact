@@ -21,14 +21,20 @@ export function packVersionEdits(root: string, version: string): VersionEdit[] {
   );
 }
 
-/** The repository-relative path of the pack manifest the package's `seampact.pack` names. */
-export function packManifest(root: string, directory: string): string {
-  const file = `${directory}/package.json`;
-  const manifest: unknown = JSON.parse(readRepositoryFile(root, file));
+/** The pack manifest a package.json names in `seampact.pack`, relative to the package. */
+export function packEntry(manifest: unknown): string | undefined {
   const seampact = isJsonRecord(manifest) ? manifest.seampact : undefined;
   const entry = isJsonRecord(seampact) ? seampact.pack : undefined;
 
-  if (typeof entry !== "string")
+  return typeof entry === "string" ? entry : undefined;
+}
+
+/** The repository-relative path of the pack manifest the package's `seampact.pack` names. */
+function packManifest(root: string, directory: string): string {
+  const file = `${directory}/package.json`;
+  const entry = packEntry(JSON.parse(readRepositoryFile(root, file)));
+
+  if (entry === undefined)
     throw new ReleaseError(
       `${file} names no \`seampact.pack\`: a pack names its YAML manifest there`,
     );

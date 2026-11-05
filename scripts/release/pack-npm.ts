@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 import { buildPackages, packPackages } from "../consumers/build-and-pack.ts";
 import { StepFailure } from "../consumers/run-step.ts";
 import { PUBLISHED_PACKAGES } from "./npm-versions.ts";
+import { packEntry } from "./pack-versions.ts";
 import { parsedArguments, ROOT_OPTION, repositoryRoot, runReleaseCommand } from "./release-cli.ts";
 import { ReleaseError, releaseVersion } from "./release-version.ts";
 import { type PackedPackage, tarballProblems } from "./tarball-contents.ts";
@@ -68,20 +69,27 @@ function packageProblems(run: PackRun, directory: string): string[] {
   if (typeof name !== "string" || tarball === undefined)
     return [`${directory}: pnpm packed no tarball of ${String(name)}`];
 
+  const files = tarballFiles(join(out, tarball));
+  const manifest: unknown = JSON.parse(tarballFile(join(out, tarball), "package.json"));
+  const entry = packEntry(manifest);
   const packed: PackedPackage = {
     directory,
-    files: tarballFiles(join(out, tarball)),
-    manifest: JSON.parse(
-      execFileSync(
-        "tar",
-        ["-xzOf", join(out, tarball), `${TARBALL_PACKAGE_DIRECTORY}package.json`],
-        { encoding: "utf8" },
-      ),
-    ),
+    files,
+    manifest,
     trackedFiles: trackedFiles(root, directory),
+    packManifestText:
+      entry !== undefined && files.includes(entry)
+        ? tarballFile(join(out, tarball), entry)
+        : undefined,
   };
 
   return tarballProblems(packed, { name, version }).map((problem) => `${tarball}: ${problem}`);
+}
+
+function tarballFile(tarball: string, file: string): string {
+  return execFileSync("tar", ["-xzOf", tarball, `${TARBALL_PACKAGE_DIRECTORY}${file}`], {
+    encoding: "utf8",
+  });
 }
 
 function tarballFiles(tarball: string): string[] {

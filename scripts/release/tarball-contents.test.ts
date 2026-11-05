@@ -82,4 +82,38 @@ describe("the npm tarball content check", () => {
       `package.json \`repository\` must be { "type": "git", "url": "${REPOSITORY_URL}", "directory": "${DIRECTORY}" }: npm checks it against the provenance statement`,
     ]);
   });
+
+  it("refuses a seampact dependency at another version than the release", () => {
+    const manifest = {
+      ...PUBLISHABLE_MANIFEST,
+      dependencies: { "@seampact/spec": "^1.2.3", yaml: "^2.9.1" },
+      peerDependencies: { "@seampact/hooks": "1.2.2" },
+    };
+
+    expect(tarballProblems(packed({ manifest }), EXPECTED)).toEqual([
+      'package.json dependencies gives @seampact/spec "^1.2.3", not exactly 1.2.3: depend on it with workspace:*',
+      'package.json peerDependencies gives @seampact/hooks "1.2.2", not exactly 1.2.3: depend on it with workspace:*',
+    ]);
+  });
+
+  it("requires a pack's manifest at the release version", () => {
+    const manifest = { ...PUBLISHABLE_MANIFEST, seampact: { role: "pack", pack: "pack.yaml" } };
+    const files = [...packed().files, "pack.yaml"];
+    const trackedFiles = new Set([...packed().trackedFiles, "pack.yaml"]);
+    const at = (version: string) =>
+      packed({
+        manifest,
+        files,
+        trackedFiles,
+        packManifestText: `pack: { name: '@seampact/cli', version: ${version}, extends: [] }\n`,
+      });
+
+    expect(tarballProblems(at("1.2.3"), EXPECTED)).toEqual([]);
+    expect(tarballProblems(at("0.0.0"), EXPECTED)).toEqual([
+      'pack.yaml gives pack.version "0.0.0", not 1.2.3: run the stamp',
+    ]);
+    expect(tarballProblems(packed({ manifest }), EXPECTED)).toEqual([
+      "pack.yaml is missing: the package.json names it as its `seampact.pack`",
+    ]);
+  });
 });

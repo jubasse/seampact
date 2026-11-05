@@ -1,8 +1,9 @@
 // The content check of an npm tarball before it is published: only the package's own tracked files and its build
-// output, no test or fixture, the LICENSE and README present, and a manifest at the release version that npm can
-// publish with provenance.
+// output, no test or fixture, the LICENSE and README present, a manifest at the release version that npm can
+// publish with provenance, its seampact dependencies at that version, and a pack's manifest at it too.
 import { BUILD_DIRECTORY } from "../consumers/packed-packages.ts";
 import { isJsonRecord } from "./json-record.ts";
+import { PACK_VERSION_LINE, packEntry } from "./pack-versions.ts";
 
 export const REPOSITORY_URL = "git+https://github.com/jubasse/seampact.git";
 
@@ -18,12 +19,9 @@ const TEST_DIRECTORY_NAMES = new Set([
   "__snapshots__",
 ]);
 const TEST_FILE_NAME = /\.(?:test|spec|type-check)\.|test-support\.|\.tsbuildinfo$/;
-const DEPENDENCY_FIELDS = [
-  "dependencies",
-  "peerDependencies",
-  "optionalDependencies",
-  "devDependencies",
-];
+const RUNTIME_DEPENDENCY_FIELDS = ["dependencies", "peerDependencies", "optionalDependencies"];
+const DEPENDENCY_FIELDS = [...RUNTIME_DEPENDENCY_FIELDS, "devDependencies"];
+const SEAMPACT_SCOPE = "@seampact/";
 const LOCAL_SPECIFIER = /^(?:workspace|link|file|portal):/;
 
 export interface PackedPackage {
@@ -35,6 +33,8 @@ export interface PackedPackage {
   readonly manifest: unknown;
   /** The package's files git tracks, relative to the package directory. */
   readonly trackedFiles: ReadonlySet<string>;
+  /** The text of the pack manifest the packed `seampact.pack` names, `undefined` when the tarball has none. */
+  readonly packManifestText?: string | undefined;
 }
 
 export interface ExpectedPackage {
@@ -44,7 +44,11 @@ export interface ExpectedPackage {
 
 /** One line per problem, each naming the file or field; empty when the tarball can be published. */
 export function tarballProblems(packed: PackedPackage, expected: ExpectedPackage): string[] {
-  return [...fileProblems(packed), ...manifestProblems(packed, expected)];
+  return [
+    ...fileProblems(packed),
+    ...manifestProblems(packed, expected),
+    ...packManifestProblems(packed, expected),
+  ];
 }
 
 function fileProblems(packed: PackedPackage): string[] {
@@ -98,9 +102,52 @@ function manifestProblems(packed: PackedPackage, expected: ExpectedPackage): str
         );
   }
 
+  problems.push(...seampactDependencyProblems(manifest, expected.version));
   problems.push(...repositoryProblems(manifest.repository, packed.directory));
 
   return problems;
+}
+
+// A range would let an install mix two releases; a local specifier is reported on its own above.
+function seampactDependencyProblems(manifest: Record<string, unknown>, version: string): string[] {
+  const problems: string[] = [];
+
+  for (const field of RUNTIME_DEPENDENCY_FIELDS) {
+    const dependencies = manifest[field];
+
+    if (!isJsonRecord(dependencies)) continue;
+
+    for (const [name, specifier] of Object.entries(dependencies)) {
+      if (!name.startsWith(SEAMPACT_SCOPE) || specifier === version) continue;
+
+      if (typeof specifier === "string" && LOCAL_SPECIFIER.test(specifier)) continue;
+
+      problems.push(
+        `package.json ${field} gives ${name} ${JSON.stringify(specifier)}, not exactly ${version}: depend on it with workspace:*`,
+      );
+    }
+  }
+
+  return problems;
+}
+
+// The loader refuses a pack whose manifest version differs from its package.json (grammar section 02).
+function packManifestProblems(packed: PackedPackage, expected: ExpectedPackage): string[] {
+  const entry = packEntry(packed.manifest);
+
+  if (entry === undefined) return [];
+
+  if (packed.packManifestText === undefined)
+    return [`${entry} is missing: the package.json names it as its \`seampact.pack\``];
+
+  const written = PACK_VERSION_LINE.exec(packed.packManifestText)?.[2];
+
+  if (written !== expected.version)
+    return [
+      `${entry} gives pack.version ${JSON.stringify(written ?? null)}, not ${expected.version}: run the stamp`,
+    ];
+
+  return [];
 }
 
 // npm refuses a provenance statement whose source repository differs from the manifest's `repository`.
