@@ -167,6 +167,21 @@ describe("the bundle layout check", () => {
     expect(problems.join("\n")).toMatch(/hooks-1\.2\.3\.pom has no scm connection/);
   });
 
+  it("names a POM whose developer has no name", () => {
+    const repository = stagedBundle();
+
+    writeStaged(
+      repository,
+      LIBRARY,
+      `seampact-hooks-${VERSION}.pom`,
+      pom(LIBRARY).replace("<name>Julien Metral</name>", ""),
+    );
+
+    expect(layoutProblems(repository)).toContain(
+      `io/github/jubasse/seampact-hooks/${VERSION}/seampact-hooks-${VERSION}.pom has no developer name, which Central requires`,
+    );
+  });
+
   it("names a compiler binary whose hash differs from SHA256SUMS, and a missing artefact", () => {
     const repository = stagedBundle();
 

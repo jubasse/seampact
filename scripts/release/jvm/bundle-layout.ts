@@ -225,6 +225,7 @@ function pomProblems(
     ["license name", block(license, "name")],
     ["license url", block(license, "url")],
     ["developer id", block(developer, "id")],
+    ["developer name", block(developer, "name")],
     ["scm connection", block(scm, "connection")],
     ["scm url", block(scm, "url")],
   ];
