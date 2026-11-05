@@ -41,9 +41,12 @@ export const RUN_MODES = ["real", "dry-run"] as const;
 
 export type RunMode = (typeof RUN_MODES)[number];
 
-/** The version of a run: any release form for a dry run; a real run refuses the development version by name. */
+/**
+ * The version of a run: any release form for a dry run, `DRY_RUN_VERSION` when it names none; a real run names its
+ * version and refuses the development version by name.
+ */
 export function runVersion(candidate: string | undefined, mode: RunMode): string {
-  const version = releaseVersion(candidate);
+  const version = releaseVersion(mode === "dry-run" ? (candidate ?? DRY_RUN_VERSION) : candidate);
 
   if (mode === "real" && !isReleaseVersion(version))
     throw new ReleaseError(

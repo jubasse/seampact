@@ -82,7 +82,8 @@ jobs:
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
-      # A pull request rehearses the version its commit carries, since the binary call builds from the commit.
+      # A pull request rehearses DRY_RUN_VERSION (0.0.1), a version no real run publishes; every job of the run, the
+      # binary call's included, stamps its checkout with it.
       - name: The mode and the version
         id: mode
         env:
@@ -96,7 +97,7 @@ jobs:
             candidate="$INPUT_VERSION"
           else
             dry_run=true
-            candidate="$(python3 python/compiler/release_version.py .)"
+            candidate=""
           fi
           if [ "$dry_run" != true ] && [ "$REF" != refs/heads/main ]; then
             echo "A real run publishes from main only, and this run is on $REF: start it from main, or as a dry run."
@@ -104,13 +105,8 @@ jobs:
           fi
           # A real run refuses the development version by name.
           mode="$([ "$dry_run" = true ] && echo dry-run || echo real)"
-          version="$(node scripts/release/run-version.ts "$candidate" --mode "$mode")"
+          version="$(node scripts/release/run-version.ts ${candidate:+"$candidate"} --mode "$mode")"
           { echo "version=$version"; echo "dry-run=$dry_run"; } | tee -a "$GITHUB_OUTPUT"
-      # The binary call checks the same on its own checkout; failing here names it before anything is built.
-      - name: The compiler of the commit is at the version
-        env:
-          VERSION: ${{ steps.mode.outputs.version }}
-        run: python3 python/compiler/release_version.py . --release "$VERSION"
       - name: The tag of the version does not exist yet
         env:
           VERSION: ${{ steps.mode.outputs.version }}
@@ -143,6 +139,11 @@ jobs:
         env:
           VERSION: ${{ steps.mode.outputs.version }}
         run: node scripts/release/check-version.ts "$VERSION"
+      # The binary call checks the same on its own checkout; failing here names it before anything is built.
+      - name: The compiler of the checkout is at the version
+        env:
+          VERSION: ${{ steps.mode.outputs.version }}
+        run: python3 python/compiler/release_version.py . --release "$VERSION"
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.13.6"
@@ -208,6 +209,7 @@ jobs:
       version: ${{ needs.prepare.outputs.version }}
       packed-packs-artifact: ${{ needs.pack-npm.outputs.artifact }}
       attest: false
+      stamp: ${{ needs.prepare.outputs.dry-run == 'true' }}
 
   # The reference contract's bundle tarball the release attaches, written on every OS and checked to be one.
   reference-tarball:

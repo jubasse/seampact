@@ -8,7 +8,9 @@ describe("the version of a run", () => {
       "0.0.0 is the development version every package carries between releases",
     );
     expect(runVersion("0.0.0", "dry-run")).toBe("0.0.0");
-    expect(runVersion(DRY_RUN_VERSION, "dry-run")).toBe("0.0.1");
+    expect(runVersion(undefined, "dry-run")).toBe(DRY_RUN_VERSION);
+    expect(DRY_RUN_VERSION).toBe("0.0.1");
+    expect(() => runVersion(undefined, "real")).toThrow("no release version given");
     expect(runVersion("1.0.0", "real")).toBe("1.0.0");
     expect(() => runVersion("1.0.0-rc.1", "dry-run")).toThrow(ReleaseError);
   });

@@ -58,7 +58,8 @@ It runs typecheck, lint, the format check and the tests, and fails on any error.
 
 - Every package of every ecosystem carries one version. On `release/<version>`, run `node scripts/release/stamp.ts <version>` and commit the result; `node scripts/release/check-version.ts <version>` says what is not at the version yet.
 - The `release` workflow does the rest. Run it by hand on the release branch as a dry run first: it builds, checks and installs everything from a local registry, and publishes nothing. A pull request that changes the release path runs the same dry run.
-- Then run it from `main` with `dry-run` off. It drafts the GitHub release, waits for one approval of the `release` environment, publishes to the registries, and publishes the GitHub release last. A failed job can be rerun alone: a version already published with the same files is skipped, and one published with other files fails by name.
+- Then run it from `main` with `dry-run` off. It drafts the GitHub release, waits for one approval of the `release` environment, publishes to the registries, and publishes the GitHub release last. The npm publish takes exactly the tarballs the pack job checked, matched by their SHA-256, and nothing else.
+- A failed job can be rerun alone: a version already published with the same files is skipped. A full rerun packs again; if it packs other bytes than a version already published, it fails by name and publishes nothing. Fix it with a new patch version.
 
 ## CI
 
