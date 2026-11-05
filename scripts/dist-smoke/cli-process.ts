@@ -1,13 +1,15 @@
 import { spawn } from "node:child_process";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { REPO_ROOT } from "../golden/repo-root.ts";
 
 // The seampact CLI from its sources, as a subprocess: its own environment, so a test sets the cache directory, the
 // certificate to trust and `SEAMPACT_ALLOW_LOCAL` as a user would.
 
 const CLI_BIN = join(REPO_ROOT, "packages/core/cli/src/bin.ts");
-// Maps the sources' `.js` imports to their `.ts` files (`scripts/ir-models/register.ts`).
-const SOURCE_IMPORTS_HOOK = join(REPO_ROOT, "scripts/ir-models/register.ts");
+// Maps the sources' `.js` imports to their `.ts` files (`scripts/ir-models/register.ts`). `--import` takes a URL: a
+// Windows absolute path would read as a `d:` scheme.
+const SOURCE_IMPORTS_HOOK = pathToFileURL(join(REPO_ROOT, "scripts/ir-models/register.ts")).href;
 const NODE_ARGUMENTS = [
   "--experimental-transform-types",
   "--no-warnings",
