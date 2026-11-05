@@ -2,6 +2,15 @@
   "name": "@seampact/cli",
   "description": "The seampact command: init, compile, check, lint, diff, generate, bundle and explain.",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/core/cli"
+  },
+  "homepage": "https://jubasse.github.io/seampact/getting-started/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "type": "module",
   "files": [

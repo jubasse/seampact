@@ -2,6 +2,15 @@
   "name": "@seampact/openapi",
   "description": "Writes the OpenAPI 3.1 documents from the IR, with what OpenAPI cannot say as x-seampact-* extensions.",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/core/openapi"
+  },
+  "homepage": "https://jubasse.github.io/seampact/configuration/openapi-and-docs/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "type": "module",
   "main": "./src/index.ts",

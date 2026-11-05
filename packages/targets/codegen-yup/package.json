@@ -2,6 +2,15 @@
   "name": "@seampact/codegen-yup",
   "description": "Generates Standard Schema yup validators per schema and direction, and one input validator per operation.",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/targets/codegen-yup"
+  },
+  "homepage": "https://jubasse.github.io/seampact/configuration/validators/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "type": "module",
   "files": [

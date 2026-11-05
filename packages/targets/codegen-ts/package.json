@@ -2,6 +2,15 @@
   "name": "@seampact/codegen-ts",
   "description": "Generates a named TypeScript type per schema and each operation's input, output and error union.",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/targets/codegen-ts"
+  },
+  "homepage": "https://jubasse.github.io/seampact/configuration/targets-and-links/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "type": "module",
   "files": [
