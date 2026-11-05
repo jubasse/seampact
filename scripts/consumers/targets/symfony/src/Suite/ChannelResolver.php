@@ -14,7 +14,7 @@ use Seampact\Hooks\ScopeIdSource;
 use Seampact\Hooks\ScopeResolution;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
-/** Resolves a declared channel id to itself and loads its sample channel, every channel existing, unless the script denies the scope. */
+/** Resolves a declared channel id to itself and loads its sample channel, the sample user a member of every channel but one, unless the script denies the scope. */
 final class ChannelResolver implements ScopeResolver
 {
     /** The channel whose resolution throws Symfony's `AccessDeniedException`, as a voter called by a resolver would. */
@@ -39,6 +39,10 @@ final class ChannelResolver implements ScopeResolver
         $denied = SuiteControl::scriptedScopeDenial($request->scope());
         if ($denied !== null) {
             return new ScopeResolution\Denied(new Denial($denied));
+        }
+
+        if ((string) $source->id === SampleData::NON_MEMBER_CHANNEL_ID) {
+            return new ScopeResolution\Denied(new Denial('api.not_found'));
         }
 
         return new ScopeResolution\Resolved(new ResolvedScope($request->scope(), $source->id, SampleData::channel((string) $source->id)));

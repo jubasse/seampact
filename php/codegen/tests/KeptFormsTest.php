@@ -45,6 +45,34 @@ final class KeptFormsTest extends TestCase
         self::assertArrayHasKey('principalRequires.unsupported', $messages);
     }
 
+    public function testAccessFormsThatOneZeroRefusesAreRefusedByNameOnEveryTarget(): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document(), ['getTask']);
+        $operation = is_array($document->operations) ? $document->operations[0] : null;
+        self::assertInstanceOf(\stdClass::class, $operation);
+        $operation->bindings = [(object) [
+            'from' => (object) ['in' => 'body', 'name' => 'ownerId'],
+            'to' => (object) ['in' => 'principal', 'name' => 'profileId'],
+            'origin' => (object) ['layer' => 'api', 'pointer' => '/bindings/0'],
+        ]];
+        $scopes = $operation->scopes;
+        self::assertIsArray($scopes);
+        $firstScope = $scopes[0];
+        self::assertInstanceOf(\stdClass::class, $firstScope);
+        $firstScope->source = (object) ['in' => 'resolver'];
+        $identities = $document->identities;
+        self::assertInstanceOf(\stdClass::class, $identities);
+        $userIdentity = $identities->user;
+        self::assertInstanceOf(\stdClass::class, $userIdentity);
+        $userIdentity->principal = (object) ['kind' => 'variants', 'variants' => (object) ['viewer' => 'UserPrincipal']];
+
+        $messages = self::refused($document, null);
+
+        self::assertArrayHasKey('bindings.unsupported', $messages);
+        self::assertArrayHasKey('scope.source.unsupported', $messages);
+        self::assertArrayHasKey('principal.variants.unsupported', $messages);
+    }
+
     public function testTheSchemasEnumsAndErrorsOfTheKeptOperationsAreCollected(): void
     {
         $refusals = new Refusals('server', 'test', 'seampact/test');

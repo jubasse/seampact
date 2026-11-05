@@ -194,6 +194,55 @@ export function loadItems(
   return items;
 }
 
+/** The test references of a proof entry's list; a malformed list or reference is reported and gives none. */
+function testRefsOf(
+  list: unknown,
+  key: string,
+  forms: string,
+  bad: (message: string, id?: string) => void,
+  id: string,
+  options: { allowCi: boolean } = { allowCi: true },
+): TestRef[] {
+  if (!Array.isArray(list) || !list.every(isStr)) {
+    bad(`malformed proof: \`${key}\` must be a list of ${forms}`, id);
+
+    return [];
+  }
+
+  const refs: TestRef[] = [];
+
+  for (const t of list) {
+    const ci = options.allowCi ? CI_REF.exec(t) : null;
+
+    if (ci) {
+      refs.push({
+        raw: t,
+        kind: "ci",
+        target: ci[1] as string,
+        path: ci[2] as string,
+        name: ci[3] as string,
+      });
+      continue;
+    }
+
+    const m = t.includes(": ci: ") ? null : TEST_REF.exec(t);
+
+    if (!m) bad(`malformed test "${t}": expected ${forms}`, id);
+    else if (!isRepoRelative(m[2] as string))
+      bad(`test path "${m[2]}" must be repository-relative`, id);
+    else
+      refs.push({
+        raw: t,
+        kind: "test",
+        target: m[1] as string,
+        path: m[2] as string,
+        name: m[3] as string,
+      });
+  }
+
+  return refs;
+}
+
 export function loadProofs(root: string, problems: Problem[]): Proof[] {
   const out: Proof[] = [];
   const dir = join(root, PROOFS_DIR);
@@ -232,7 +281,7 @@ export function loadProofs(root: string, problems: Problem[]): Proof[] {
       const id = entry.id;
       const before = problems.length;
 
-      for (const extra of unknownKeys(entry, ["id", "fixtures", "tests"]))
+      for (const extra of unknownKeys(entry, ["id", "fixtures", "tests", "refusals"]))
         bad(`malformed proof: unknown key \`${extra}\``, id);
 
       if (seen.has(id)) bad("duplicate proof entry for this id in the file", id);
@@ -245,50 +294,27 @@ export function loadProofs(root: string, problems: Problem[]): Proof[] {
       else
         for (const f of fixtures)
           if (!isRepoRelative(f)) bad(`fixture path "${f}" must be repository-relative`, id);
-      const refs: TestRef[] = [];
-
-      if (!Array.isArray(tests) || !tests.every(isStr))
-        bad(`malformed proof: \`tests\` must be a list of ${TEST_FORMS}`, id);
-      else
-        for (const t of tests) {
-          const ci = CI_REF.exec(t);
-
-          if (ci) {
-            refs.push({
-              raw: t,
-              kind: "ci",
-              target: ci[1] as string,
-              path: ci[2] as string,
-              name: ci[3] as string,
-            });
-            continue;
-          }
-
-          const m = t.includes(": ci: ") ? null : TEST_REF.exec(t);
-
-          if (!m) bad(`malformed test "${t}": expected ${TEST_FORMS}`, id);
-          else if (!isRepoRelative(m[2] as string))
-            bad(`test path "${m[2]}" must be repository-relative`, id);
-          else
-            refs.push({
-              raw: t,
-              kind: "test",
-              target: m[1] as string,
-              path: m[2] as string,
-              name: m[3] as string,
-            });
-        }
+      const refs = testRefsOf(tests, "tests", TEST_FORMS, bad, id);
+      const refusals = testRefsOf(
+        entry.refusals ?? [],
+        "refusals",
+        "'<target>: <path>#<test name>'",
+        bad,
+        id,
+        { allowCi: false },
+      );
 
       if (
         (Array.isArray(fixtures) ? fixtures.length : 0) +
-          (Array.isArray(tests) ? tests.length : 0) ===
+          (Array.isArray(tests) ? tests.length : 0) +
+          refusals.length ===
           0 &&
         problems.length === before
       )
-        bad("empty proof: lists neither a fixture nor a test", id);
+        bad("empty proof: lists no fixture, test or refusal", id);
 
       if (problems.length === before)
-        out.push({ file, lane, id, fixtures: fixtures as string[], tests: refs });
+        out.push({ file, lane, id, fixtures: fixtures as string[], tests: refs, refusals });
     }
   }
 

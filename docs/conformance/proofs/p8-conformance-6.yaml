@@ -1,0 +1,87 @@
+# docs/conformance/proofs/p8-conformance-6.yaml
+# Items deferred because 1.0 refuses their form by name: the tests that generation refuses it, not the item's proof.
+lane: p8-conformance-6
+proofs:
+  - id: CHK-004
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a principal with variants is refused by name'
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#optional authentication is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a principal with variants is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#optional authentication is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a principal with variants is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#optional authentication is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a principal with variants is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#optional authentication is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a principal with variants is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#optional authentication is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootAccessRefusalsTest.kt#refusesAPrincipalWithVariants'
+      - 'laravel: php/codegen/tests/KeptFormsTest.php#testAccessFormsThatOneZeroRefusesAreRefusedByNameOnEveryTarget'
+      - 'symfony: php/codegen/tests/KeptFormsTest.php#testAccessFormsThatOneZeroRefusesAreRefusedByNameOnEveryTarget'
+      - 'fastapi: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+      - 'drf: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+      - 'ninja: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+  - id: CHK-006
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a principal with variants is refused by name'
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#optional authentication is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a principal with variants is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#optional authentication is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a principal with variants is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#optional authentication is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a principal with variants is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#optional authentication is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a principal with variants is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#optional authentication is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootAccessRefusalsTest.kt#refusesAPrincipalWithVariants'
+      - 'laravel: php/codegen/tests/KeptFormsTest.php#testAccessFormsThatOneZeroRefusesAreRefusedByNameOnEveryTarget'
+      - 'symfony: php/codegen/tests/KeptFormsTest.php#testAccessFormsThatOneZeroRefusesAreRefusedByNameOnEveryTarget'
+      - 'fastapi: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+      - 'drf: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+      - 'ninja: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+  - id: CHK-019
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a principal requirement is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a principal requirement is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a principal requirement is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a principal requirement is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a principal requirement is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootAccessRefusalsTest.kt#refusesAPrincipalRequirement'
+      - 'laravel: php/codegen/tests/KeptFormsTest.php#testAFormAbsentFromTheReferenceWaitsForAConsumerAfterOneZeroOnEveryTarget'
+      - 'symfony: php/codegen/tests/KeptFormsTest.php#testAFormAbsentFromTheReferenceWaitsForAConsumerAfterOneZeroOnEveryTarget'
+      - 'fastapi: python/codegen/tests/test_kept_forms.py#test_operation_members_absent_from_the_reference_wait_for_a_consumer_after_1_0'
+      - 'drf: python/codegen/tests/test_kept_forms.py#test_operation_members_absent_from_the_reference_wait_for_a_consumer_after_1_0'
+      - 'ninja: python/codegen/tests/test_kept_forms.py#test_operation_members_absent_from_the_reference_wait_for_a_consumer_after_1_0'
+  - id: CHK-020
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a principal binding is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a principal binding is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a principal binding is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a principal binding is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a principal binding is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootAccessRefusalsTest.kt#refusesAPrincipalBinding'
+      - 'laravel: php/codegen/tests/KeptFormsTest.php#testAccessFormsThatOneZeroRefusesAreRefusedByNameOnEveryTarget'
+      - 'symfony: php/codegen/tests/KeptFormsTest.php#testAccessFormsThatOneZeroRefusesAreRefusedByNameOnEveryTarget'
+      - 'fastapi: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+      - 'drf: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+      - 'ninja: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+  - id: CHK-094
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a scope resolved by the application is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a scope resolved by the application is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a scope resolved by the application is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a scope resolved by the application is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a scope resolved by the application is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootAccessRefusalsTest.kt#refusesAScopeResolvedByTheApplication'
+      - 'laravel: php/codegen/tests/KeptFormsTest.php#testAccessFormsThatOneZeroRefusesAreRefusedByNameOnEveryTarget'
+      - 'symfony: php/codegen/tests/KeptFormsTest.php#testAccessFormsThatOneZeroRefusesAreRefusedByNameOnEveryTarget'
+      - 'fastapi: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+      - 'drf: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+      - 'ninja: python/codegen/tests/test_kept_forms.py#test_access_forms_that_1_0_refuses_are_refused_by_name'
+  - id: CHK-013
+    refusals:
+      - 'fetch: packages/targets/codegen-fetch/src/rights-version-header-refused.test.ts#the rights-version response header of an operator write is refused by name'
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#the rights-version header is left to the handler with a named warning, not refused'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#the rights-version header is left to the handler with a named warning, not refused'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#the rights-version header is left to the handler with a named warning, not refused'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#the rights-version header is left to the handler with a named warning, not refused'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#the rights-version header is left to the handler with a named warning, not refused'

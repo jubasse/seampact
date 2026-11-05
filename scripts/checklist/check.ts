@@ -75,7 +75,7 @@ export function checkModel(
       if (!existsSync(join(o.root, f))) at(`fixture path does not exist: ${f}`);
     const listed = expandTargets(item.targets);
 
-    for (const t of p.tests) {
+    for (const t of [...p.tests, ...p.refusals]) {
       if (!listed.includes(t.target))
         at(
           `test for a target the item does not list: ${t.target} (item lists ${item.targets.join(", ")})`,
@@ -115,6 +115,8 @@ export function checkModel(
       model.items,
       scope.itemsAfter1_0,
       (id, target) => testedByProof(scope, id, target) || suitePassed(scope, id, target),
+      (id, target) =>
+        (scope.proofs.get(id) ?? []).some((p) => p.refusals.some((r) => r.target === target)),
     ),
   );
 
