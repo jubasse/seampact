@@ -128,6 +128,15 @@ describe("the PHP split", () => {
     expect(readFileSync(join(first.out, "trees/hooks/src/Hook.php"), "utf8")).toBe("<?php\n");
     expect(split(root).splits).toBe(first.splits);
   });
+
+  it("refuses an out-dir inside the repository, which it would empty, and leaves it in place", () => {
+    const root = monorepo();
+
+    expect(() => execFileSync(SPLIT_SCRIPT, ["php"], { cwd: root, stdio: "pipe" })).toThrow(
+      /php-split: the out-dir \S+\/php is inside the repository/,
+    );
+    expect(readFileSync(join(root, "php/hooks/composer.json"), "utf8")).toContain("seampact/hooks");
+  });
 });
 
 describe("the mirror commits", () => {
@@ -240,7 +249,15 @@ describe("the mirror push", () => {
       ...IDENTITY,
     });
 
-    git(root, ["push", "--quiet", join(base, "seampact-ir.git"), `${unrelated}:refs/heads/main`]);
+    git(root, ["branch", "hand-edited", unrelated]);
+    git(base, [
+      "--git-dir",
+      "seampact-ir.git",
+      "fetch",
+      "--quiet",
+      root,
+      "refs/heads/hand-edited:refs/heads/main",
+    ]);
 
     expect(() => pushMirrors({ bundles, manifest, version: VERSION, remoteBase: base })).toThrow(
       /git could not push seampact\/ir to [^\n]*seampact-ir\.git/,

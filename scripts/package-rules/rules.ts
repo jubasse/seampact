@@ -433,8 +433,10 @@ const CHANGESETS_ACTION_PUBLISH: [RegExp, string] = [
   "a changesets/action `publish:` input",
 ];
 
+// A lint over text, not a shell parser: a tool counts at a command position (not after `-`, as in a job id like
+// `publish-npm`), and its subcommand only as a whole word (not `publish-pypi` or `push-mirrors`).
 const PUBLISH: [RegExp, string][] = [
-  [/\b(?:npm|pnpm|yarn)\s+(?:[\w-]+\s+)*publish\b/, NPM_PUBLISH],
+  [/(?<![\w-])(?:npm|pnpm|yarn)\s+(?:[\w-]+\s+)*publish(?![\w-])/, NPM_PUBLISH],
   [/\bchangeset\s+publish\b/, "changeset publish"],
   CHANGESETS_ACTION_PUBLISH,
   // `publishToMavenLocal` only writes the local `~/.m2` cache the consumer builds read; it reaches no registry.
@@ -446,8 +448,8 @@ const PUBLISH: [RegExp, string][] = [
   [/\btwine\s+(?:[\w-]+\s+)*upload\b/, "twine upload"],
   [/\buv\s+publish\b/, "uv publish"],
   [/\bpypa\/gh-action-pypi-publish\b/, PYPI_PUBLISH],
-  // `git [-C <dir>] [-c <key=value>] [--option] push`.
-  [/\bgit\s+(?:-[Cc]\s+\S+\s+|-\S+\s+)*push\b/, "git push"],
+  // `git [-C <dir>] [-c <key=value>] [--option] push`, a value possibly quoted with spaces.
+  [/(?<![\w-])git\s+(?:-[Cc]\s+(?:[^\s"']|"[^"]*"|'[^']*')+\s+|-\S+\s+)*push(?![\w-])/, "git push"],
 ];
 
 function publishes(code: string): string | undefined {

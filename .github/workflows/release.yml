@@ -1167,8 +1167,8 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.run }}
-          # A dry run ends with the rehearsals. The npm job comes last: "npm publish-" would read as an npm publish.
+          # A dry run ends with the rehearsals.
           allow-skip: >-
             ${{ needs.prepare.outputs.dry-run != 'false'
-              && 'release-draft publish-maven-central publish-plugin-portal publish-pypi publish-php-mirrors release-publish publish-npm'
+              && 'release-draft publish-npm publish-maven-central publish-plugin-portal publish-pypi publish-php-mirrors release-publish'
               || '' }}

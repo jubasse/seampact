@@ -9,12 +9,22 @@ set -euo pipefail
 out="${1:?usage: scripts/php-split.sh <out-dir> [<commit>]}"
 commit="${2:-HEAD}"
 
-out="$(mkdir -p "$out" && cd "$out" && pwd)"
+root="$(cd "$(git rev-parse --show-toplevel)" && pwd -P)"
+out="$(mkdir -p "$out" && cd "$out" && pwd -P)"
+
+# The out-dir is emptied first: one inside the repository could be part of the checkout.
+case "$out/" in
+  "$root"/*)
+    echo "php-split: the out-dir $out is inside the repository $root; give one outside it (\$RUNNER_TEMP, a temp dir)." >&2
+    exit 1
+    ;;
+esac
+
 rm -rf "$out"
 mkdir -p "$out/trees"
 : > "$out/splits.txt"
 
-cd "$(git rev-parse --show-toplevel)"
+cd "$root"
 
 for manifest in php/*/composer.json; do
   name="$(basename "$(dirname "$manifest")")"

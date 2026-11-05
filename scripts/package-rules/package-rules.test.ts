@@ -423,7 +423,7 @@ describe("package rules", () => {
 
     const elsewhere = writeTree({
       "scripts/release/php/mirror-commits.ts": spawnedPush,
-      ".github/workflows/ci.yml": `${pypiAction}      - run: twine upload dist/*\n      - run: uv publish\n      - run: git -C mirror push origin main\n`,
+      ".github/workflows/ci.yml": `${pypiAction}      - run: twine upload dist/*\n      - run: uv publish\n      - run: git -C mirror push origin main\n      - run: git -c user.name="a b" push origin main\n      - run: echo publish-npm publish-pypi git push-mirrors\n`,
     });
 
     expect(violations(elsewhere)).toEqual([
@@ -431,6 +431,7 @@ describe("package rules", () => {
       ".github/workflows/ci.yml: namespaces: line 3: publishes (twine upload); nothing publishes before 1.0 (A3)",
       ".github/workflows/ci.yml: namespaces: line 4: publishes (uv publish); nothing publishes before 1.0 (A3)",
       ".github/workflows/ci.yml: namespaces: line 5: publishes (git push); nothing publishes before 1.0 (A3)",
+      ".github/workflows/ci.yml: namespaces: line 6: publishes (git push); nothing publishes before 1.0 (A3)",
       "scripts/release/php/mirror-commits.ts: namespaces: line 1: publishes (a `push` argument of a spawned git); only scripts/release/publish-npm.ts (npm publish), scripts/release/jvm/central-portal.ts (Central Portal publish), scripts/release/jvm/publish-plugin.ts (Gradle Plugin Portal publish), scripts/release/php/push-mirrors.ts (a `push` argument of a spawned git) publish (A3)",
     ]);
   });
