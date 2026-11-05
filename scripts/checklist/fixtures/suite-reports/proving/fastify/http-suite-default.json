@@ -1,0 +1,6 @@
+{
+  "format": "seampact-http-suite-report/1",
+  "target": "fastify",
+  "profile": "default",
+  "checks": { "CHK-002": { "outcome": "failed", "cases": ["case-b"] } }
+}

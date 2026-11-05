@@ -5,6 +5,8 @@ import { parse } from "yaml";
 import { loadModel } from "./load.ts";
 import type { Item, Model, Problem, Proof } from "./model.ts";
 import { CHECKLIST_FILE, chkNumber } from "./model.ts";
+import type { SuiteProof } from "./suite-reports.ts";
+import { loadSuiteReports } from "./suite-reports.ts";
 import { expandTargets } from "./targets.ts";
 
 export interface CheckOptions {
@@ -16,6 +18,8 @@ export interface CheckOptions {
   consumers?: string;
   /** From the 1.0 release gate on: every live id needs a fixture and a test per target. */
   releaseGate?: boolean;
+  /** With the release gate: a directory of downloaded http-suite reports, each a proof for its target. */
+  suiteReports?: string;
 }
 
 export const CONSUMER_PREFIX = "test-seampact-";
@@ -29,10 +33,13 @@ export function proofsById(proofs: readonly Proof[]): Map<string, Proof[]> {
   return out;
 }
 
-export function checkModel(model: Model, o: CheckOptions): Problem[] {
+export function checkModel(
+  model: Model,
+  o: CheckOptions,
+  suiteProofs: readonly SuiteProof[] = [],
+): Problem[] {
   const problems: Problem[] = [];
   const byId = new Map<string, Item>(model.items.map((i) => [i.id, i]));
-  const proofs = proofsById(model.proofs);
 
   for (const p of model.proofs) {
     const item = byId.get(p.id);
@@ -65,21 +72,94 @@ export function checkModel(model: Model, o: CheckOptions): Problem[] {
 
   if (o.base !== undefined) problems.push(...checkAgainstBase(model, o.root, o.base));
 
-  if (o.releaseGate) {
-    for (const item of model.items) {
-      if (item.retired !== undefined) continue;
-      const mine = proofs.get(item.id) ?? [];
-      const at = (message: string) => problems.push({ file: CHECKLIST_FILE, id: item.id, message });
+  if (o.releaseGate) problems.push(...releaseGateProblems(model, suiteProofs));
 
-      if (!mine.some((p) => p.fixtures.length > 0)) at("release gate: no fixture");
+  return problems;
+}
 
-      for (const target of expandTargets(item.targets))
-        if (!mine.some((p) => p.tests.some((t) => t.target === target)))
-          at(`release gate: no test for target ${target}`);
+/**
+ * Every live id needs a fixture and, for every target it lists, a test. A proof file's fixture or test counts, and so
+ * does a suite report that passed the id: its cases are the committed fixture and its run the target's test. A suite
+ * report that failed the id, or that proves an id the checklist does not hold live for its target, is a problem.
+ */
+function releaseGateProblems(model: Model, suiteProofs: readonly SuiteProof[]): Problem[] {
+  const problems: Problem[] = [];
+  const byId = new Map<string, Item>(model.items.map((i) => [i.id, i]));
+  const proofs = proofsById(model.proofs);
+  const suiteOutcomes = new Map<string, Set<SuiteProof["outcome"]>>();
+
+  for (const s of suiteProofs) {
+    const item = byId.get(s.id);
+    const at = (message: string) => problems.push({ file: s.file, id: s.id, message });
+
+    if (!item) {
+      if (!model.dropped.has(s.id)) at("suite report proves an unknown id (not in the checklist)");
+      continue;
+    }
+
+    if (item.retired !== undefined) {
+      at(`suite report proves a retired id (retired: ${item.retired})`);
+      continue;
+    }
+
+    if (!expandTargets(item.targets).includes(s.target)) {
+      at(
+        `suite report of a target the item does not list: ${s.target} (item lists ${item.targets.join(", ")})`,
+      );
+      continue;
+    }
+
+    if (s.outcome === "failed") {
+      at(`release gate: failed for target ${s.target} in this suite report`);
+    }
+
+    const key = suiteKey(s.id, s.target);
+    const outcomes = suiteOutcomes.get(key) ?? new Set<SuiteProof["outcome"]>();
+
+    outcomes.add(s.outcome);
+    suiteOutcomes.set(key, outcomes);
+  }
+
+  const suitePassed = (id: string, target: string): boolean => {
+    const outcomes = suiteOutcomes.get(suiteKey(id, target));
+
+    return outcomes?.has("passed") === true && !outcomes.has("failed");
+  };
+
+  for (const item of model.items) {
+    if (item.retired !== undefined) continue;
+    const mine = proofs.get(item.id) ?? [];
+    const targets = expandTargets(item.targets);
+    const at = (message: string) => problems.push({ file: CHECKLIST_FILE, id: item.id, message });
+
+    if (!mine.some((p) => p.fixtures.length > 0) && !targets.some((t) => suitePassed(item.id, t)))
+      at("release gate: no fixture");
+
+    for (const target of targets) {
+      const outcomes = suiteOutcomes.get(suiteKey(item.id, target));
+
+      // A failed suite run is already reported above.
+      if (outcomes?.has("failed")) continue;
+
+      if (
+        mine.some((p) => p.tests.some((t) => t.target === target)) ||
+        suitePassed(item.id, target)
+      )
+        continue;
+
+      at(
+        outcomes?.has("refused")
+          ? `release gate: no test for target ${target} (its suite run refused the id)`
+          : `release gate: no test for target ${target}`,
+      );
     }
   }
 
   return problems;
+}
+
+function suiteKey(id: string, target: string): string {
+  return `${id} ${target}`;
 }
 
 function gitShow(root: string, ref: string, file: string): string | undefined {
@@ -150,8 +230,10 @@ function checkAgainstBase(model: Model, root: string, base: string): Problem[] {
 export function check(o: CheckOptions): Problem[] {
   const problems: Problem[] = [];
   const model = loadModel(o.root, problems);
+  const suiteProofs =
+    o.suiteReports === undefined ? [] : loadSuiteReports(o.suiteReports, problems);
 
-  problems.push(...checkModel(model, o));
+  problems.push(...checkModel(model, o, suiteProofs));
 
   return problems;
 }

@@ -19,17 +19,27 @@ function main(argv: string[]): number {
       consumers: { type: "string" },
       results: { type: "string" },
       "release-gate": { type: "boolean" },
+      "suite-reports": { type: "string" },
     },
   });
   const command = positionals[0] ?? "check";
   const root = resolve(values.root ?? REPO_ROOT);
 
   if (command === "check") {
+    const suiteReports = values["suite-reports"];
+
+    if (suiteReports !== undefined && values["release-gate"] !== true) {
+      console.error("--suite-reports reads proofs for the release gate only: add --release-gate");
+
+      return 2;
+    }
+
     const problems = check({
       root,
       ...(values.base === undefined ? {} : { base: values.base }),
       ...(values.consumers === undefined ? {} : { consumers: resolve(values.consumers) }),
       releaseGate: values["release-gate"] === true,
+      ...(suiteReports === undefined ? {} : { suiteReports: resolve(suiteReports) }),
     });
 
     for (const p of problems) console.error(formatProblem(p));
