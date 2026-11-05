@@ -15,6 +15,10 @@ const PRINTED_FORMS: ReadonlyArray<readonly [string, string]> = [
   ["https:\\\\u:SECRET@h:99999/x", "https:\\\\h:99999/x"],
   ["https:u:SECRET@h:99999/x", "https:h:99999/x"],
   ["https://u:SECRET#?x@h:99999/x?t=S2", "https://h:99999/x"],
+  ["\u0000https://u:SECRET@h:99999/x?t=S2", "https://h:99999/x"],
+  ["\u0001 https://u:SECRET@h:99999/x?t=S2\u001f", "https://h:99999/x"],
+  ["ht\ttps://u:SECRET@h:99999/x?t=S2", "https://h:99999/x"],
+  ["https://u:SE\nCRET@h:99999/x?t=S2", "https://h:99999/x"],
 ];
 
 test.each(PRINTED_FORMS)(
