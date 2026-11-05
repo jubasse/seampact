@@ -8,13 +8,16 @@ import java.util.Optional;
  * A template signature scheme (ADR 0013): the MAC algorithm, the signed payload template with its `{ts}` and
  * `{rawBody}` placeholders, the encoding, and the largest distance allowed between the signed timestamp and now. The
  * application copies it from the hook's signature template, tolerance included.
- *
- * @throws SignaturePayloadInvalidException when the payload does not hold `{rawBody}` exactly once and `{ts}` at
- *     most once
- * @throws TimestampWithoutToleranceException when the payload holds `{ts}` and no tolerance is given
- * @throws SignatureToleranceInvalidException when the tolerance is negative or the payload holds no `{ts}`
  */
 public record SignatureScheme(String algorithm, String payload, SignatureEncoding encoding, Optional<Duration> tolerance) {
+    /**
+     * A scheme checked against its template.
+     *
+     * @throws SignaturePayloadInvalidException when the payload does not hold `{rawBody}` exactly once and `{ts}` at
+     *     most once
+     * @throws TimestampWithoutToleranceException when the payload holds `{ts}` and no tolerance is given
+     * @throws SignatureToleranceInvalidException when the tolerance is negative or the payload holds no `{ts}`
+     */
     public SignatureScheme {
         Objects.requireNonNull(algorithm, "algorithm");
         Objects.requireNonNull(payload, "payload");

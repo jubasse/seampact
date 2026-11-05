@@ -82,8 +82,8 @@ public final class PublishedModulePlugin implements Plugin<Project> {
         configureReleaseRepository(project);
     }
 
-    // Maven Central requires both jars beside each jar. Without a timestamp the javadoc jar keeps its bytes; doclint is
-    // off, since the jar documents the code as it is and the lint belongs to the module's own checks.
+    // Maven Central requires both jars beside each jar. Without a timestamp the javadoc jar keeps its bytes; doclint
+    // stays on, so a broken doc comment fails the jar.
     private static void configureDocumentationJars(Project project) {
         JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
         java.withSourcesJar();
@@ -94,7 +94,6 @@ public final class PublishedModulePlugin implements Plugin<Project> {
             if (!(javadoc.getOptions() instanceof StandardJavadocDocletOptions options)) return;
 
             options.addBooleanOption("notimestamp", true);
-            options.addBooleanOption("Xdoclint:none", true);
             options.quiet();
         });
     }

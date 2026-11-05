@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * The optional `onUnexpectedError` hook: the app's bean implements the `<Api>UnexpectedErrorListener` its api
+ * The optional `onUnexpectedError` hook: the app's bean implements the {@code <Api>UnexpectedErrorListener} its api
  * generates and is called once for each reply that api's boundary replaced with its 500 or could not finish, with
  * the operation when one was matched. It never changes the reply.
  */
