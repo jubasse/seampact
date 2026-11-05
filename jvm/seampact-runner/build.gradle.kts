@@ -48,11 +48,21 @@ kotlin {
 
 val generatedResources = layout.buildDirectory.dir("generated/runner-resources")
 
+val binaryPinsFile = generatedResources.map { it.file("seampact-binaries.properties") }
+
+// An unpinned build after a pinned one: the skipped writer would leave the previous pin in the jar.
+val removeBinaryPins = tasks.register<Delete>("removeBinaryPins") {
+    description = "Deletes the seampact-binaries.properties of a previous pinned build when the build names no SHA256SUMS."
+    val pinnedBuild = binarySums != null
+    onlyIf("no release SHA256SUMS is named") { !pinnedBuild }
+    delete(binaryPinsFile)
+}
+
 val writeBinaryPins = tasks.register<JavaExec>("writeBinaryPins") {
     description = "Writes seampact-binaries.properties from the release SHA256SUMS the build names."
     classpath = pins.runtimeClasspath
     mainClass = "io.github.jubasse.seampact.runner.pins.WriteBinaryPinsKt"
-    val output = generatedResources.map { it.file("seampact-binaries.properties") }
+    val output = binaryPinsFile
     // Local copies: the actions must not capture the script, which the configuration cache cannot store.
     val sumsFile = binarySums
     val pinnedVersion = compilerVersion.orEmpty()
@@ -61,6 +71,7 @@ val writeBinaryPins = tasks.register<JavaExec>("writeBinaryPins") {
     inputs.property("compilerVersion", pinnedVersion)
     onlyIf("a release SHA256SUMS is named") { sumsFile != null }
     argumentProviders.add(CommandLineArgumentProvider { listOf(pinnedVersion, sumsFile.orEmpty(), output.get().asFile.absolutePath) })
+    dependsOn(removeBinaryPins)
 }
 
 // The version the generated header names: the run's, the same for both plugins.
@@ -86,4 +97,5 @@ sourceSets.main {
 
 tasks.test {
     useJUnitPlatform()
+    systemProperty("seampact.binaryPinExpected", (binarySums != null).toString())
 }
