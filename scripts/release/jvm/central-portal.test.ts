@@ -76,12 +76,14 @@ async function failingPortal(failure: "deployment" | "upload"): Promise<CentralP
 
     if (path.startsWith(PUBLISHER_PATHS.published)) {
       response.end(JSON.stringify({ published: false }));
+
       return;
     }
 
     if (path.startsWith(PUBLISHER_PATHS.upload)) {
       response.statusCode = failure === "upload" ? 400 : 201;
       response.end(failure === "upload" ? LONG_PORTAL_TEXT : "deployment-1");
+
       return;
     }
 

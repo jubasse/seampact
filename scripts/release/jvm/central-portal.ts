@@ -35,6 +35,7 @@ const HTTP_NOT_FOUND = 404;
 // A portal or repository that does not answer within this time fails the job instead of holding it to its timeout.
 const REQUEST_TIMEOUT_MILLISECONDS = 60_000;
 const DEPLOYMENT_FAILED = "FAILED";
+
 // The portal's text in an error is cut to this length, so a large answer cannot flood the log.
 export const PORTAL_TEXT_LIMIT = 4_000;
 
