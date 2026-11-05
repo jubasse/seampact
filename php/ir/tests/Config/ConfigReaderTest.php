@@ -82,6 +82,15 @@ final class ConfigReaderTest extends TestCase
         self::assertSame('warning', $config->checks?->generated);
     }
 
+    public function testAnAppWithoutAnOutDirWritesEachTargetUnderGenerated(): void
+    {
+        $config = $this->read("targets:\n  - { id: laravel, use: seampact/laravel, api: tasks }\n");
+
+        self::assertInstanceOf(AppConfig::class, $config);
+        self::assertSame("{$this->project}/app/__generated__", $config->outDir);
+        self::assertSame("{$this->project}/app/__generated__/laravel", $config->entries[0]->root);
+    }
+
     public function testKeepsTheEntriesItReturnsApartFromTheParsedValue(): void
     {
         $config = $this->read(self::VALID);

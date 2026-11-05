@@ -73,6 +73,15 @@ final class InputConstraintTest extends TestCase
         self::assertSame(['/body type'], self::issues(self::object($members), '[]'));
     }
 
+    public function testAnObjectInPlaceOfAListIsATypeIssueAtTheMemberAndAnEmptyListPasses(): void
+    {
+        $body = self::object(['ids' => new Member(JsonType::List, items: new Member(JsonType::String))]);
+
+        self::assertSame(['/body/ids type'], self::issues($body, '{"ids":{}}'));
+        self::assertSame(['/body/ids type'], self::issues($body, '{"ids":{"0":"a"}}'));
+        self::assertSame([], self::issues($body, '{"ids":[]}'));
+    }
+
     public function testAnUnknownQueryParameterIsRefusedOnlyUnderTheRefusingPolicy(): void
     {
         $query = ['limit' => new Member(JsonType::String, presence: Presence::Optional)];

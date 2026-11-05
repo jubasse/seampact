@@ -7,6 +7,18 @@ proofs:
       - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheGoldenTree'
       - 'laravel: php/laravel/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden'
       - 'symfony: php/symfony/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden'
+  - id: CHK-061
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/handlers/HandlerReturnTypeTest.java#aHandlerReturningADeclaredStatusCompiles'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/handlers/HandlerReturnTypeTest.java#aHandlerReturningAnotherTypeThanItsOperationsResultFailsToCompile'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/handlers/HandlerReturnTypeTest.java#aStatusTheOperationDoesNotDeclareFailsToCompile'
+      - 'laravel: php/laravel/tests/HandlerReturnTypeTest.php#testAHandlerReturningItsOperationsResultLoads'
+      - 'laravel: php/laravel/tests/HandlerReturnTypeTest.php#testAHandlerReturningAnotherTypeThanItsOperationsResultIsRefusedWhenTheClassLoads'
+      - 'laravel: php/laravel/tests/HandlerReturnTypeTest.php#testAHandlerReturningAnotherOperationsResultIsRefusedWhenTheClassLoads'
+      - 'symfony: php/symfony/tests/HandlerReturnTypeTest.php#testAHandlerReturningItsOperationsResultLoads'
+      - 'symfony: php/symfony/tests/HandlerReturnTypeTest.php#testAHandlerReturningAnotherTypeThanItsOperationsResultIsRefusedWhenTheClassLoads'
+      - 'symfony: php/symfony/tests/HandlerReturnTypeTest.php#testAHandlerReturningAnotherOperationsResultIsRefusedWhenTheClassLoads'
   - id: CHK-076
     tests:
       - 'spring-boot: ci: p6-spring-boot.yml#build'
@@ -51,6 +63,13 @@ proofs:
       - 'laravel: php/laravel/tests/HooksTest.php#testAListenerBoundToTheWrongTypeIsRefusedByName'
       - 'symfony: php/symfony/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden'
       - 'symfony: php/symfony/tests/HookCheckWarmerTest.php#testAWrongTypedIdempotencyStoreIsListedWithTheOtherProblems'
+  - id: CHK-103
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheSameTreeTwice'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheSameTreeUnderAnotherTimeZoneAndLocale'
+      - 'laravel: php/laravel/tests/GoldenTest.php#testASecondRunUnderAnotherTimeZoneWritesTheSameTree'
+      - 'symfony: php/symfony/tests/GoldenTest.php#testASecondRunUnderAnotherTimeZoneWritesTheSameTree'
   - id: CHK-104
     tests:
       - 'spring-boot: scripts/package-rules/package-rules.test.ts#passes on the repository'
@@ -59,6 +78,27 @@ proofs:
       - 'laravel: scripts/package-rules/package-rules.test.ts#namespaces and no publish'
       - 'symfony: scripts/package-rules/package-rules.test.ts#passes on the repository'
       - 'symfony: scripts/package-rules/package-rules.test.ts#namespaces and no publish'
+  - id: CHK-109
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#listsTheRecordComponentsInTheAuthoredOrder'
+  - id: CHK-146
+    refusals:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootOptionsTest.kt#refusesTheLayoutHandlersAndNamingOptionsItDoesNotServe'
+      - 'laravel: php/codegen/tests/TargetOptionsTest.php#testEachRefusedOptionIsNamed'
+      - 'laravel: php/laravel/tests/LaravelOptionsTest.php#testARefusedOptionIsNamedWithItsCode'
+  - id: CHK-154
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheGoldenTree'
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/config/ConfigReaderTest.kt#readsTheDslTreeAndRefusesAFileBesideIt'
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/write/GeneratedWriterTest.kt#refusesPathsThatLeaveTheOutputDirectory'
+      - 'laravel: php/laravel/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden'
+      - 'laravel: php/ir/tests/Config/ConfigReaderTest.php#testAnAppWithoutAnOutDirWritesEachTargetUnderGenerated'
+      - 'laravel: php/ir/tests/Write/GeneratedWriterTest.php#testRefusesPathsThatLeaveTheOutputDirectory'
+      - 'symfony: php/symfony/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden'
+      - 'symfony: php/ir/tests/Config/ConfigReaderTest.php#testAnAppWithoutAnOutDirWritesEachTargetUnderGenerated'
+      - 'symfony: php/ir/tests/Write/GeneratedWriterTest.php#testRefusesPathsThatLeaveTheOutputDirectory'
   - id: CHK-155
     fixtures: [fixtures/golden/reference]
     tests:
@@ -67,6 +107,22 @@ proofs:
       - 'laravel: php/laravel/tests/ContractRoutesTest.php#testEachRouteNameConstantNamesOneRegisteredRoute'
       - 'symfony: php/symfony/tests/GeneratedPlacementTest.php#testTheLoaderServesItsOwnApiAndRegistersALiteralSegmentBeforeAPlaceholder'
       - 'symfony: php/symfony/tests/GeneratedPlacementTest.php#testTheControllerPassRunsBeforeTheControllerLocatorIsBuilt'
+  - id: CHK-158
+    tests:
+      - 'laravel: php/laravel/tests/FormRequestRulesTest.php#testAnAbsentMemberReachesTheHandlerAsAbsentAndAnExplicitNullAsNull'
+      - 'laravel: php/laravel/tests/FormRequestRulesTest.php#testAMemberBothOptionalAndNullableIsAFieldAndKeepsNullApartFromAbsent'
+      - 'symfony: php/symfony/tests/AbsentVersusNullTest.php#testAnAbsentMemberReachesTheHandlerAsAbsentAndAnExplicitNullAsNull'
+  - id: CHK-159
+    tests:
+      - 'laravel: php/laravel/tests/FormRequestRulesTest.php#testUnknownKeysAndAnObjectInPlaceOfAListAreRefused'
+      - 'laravel: php/laravel/tests/FormRequestRulesTest.php#testANumberIsComparedByValueBehindNumericStrict'
+      - 'laravel: php/codegen/tests/Runtime/WireCodecTest.php#testAnEmptyTableAndAnEmptyObjectAreWrittenAsBracesAndAnEmptyListAsBrackets'
+      - 'laravel: php/laravel/tests/InputMiddlewaresTest.php#testAContractRoutesInputIsNeitherTrimmedNorEmptiedToNull'
+      - 'laravel: php/laravel/tests/InputMiddlewaresTest.php#testAnotherRoutesInputIsStillTrimmedAndEmptiedToNull'
+      - 'symfony: php/symfony/tests/Runtime/InputConstraintTest.php#testAnObjectInPlaceOfAListIsATypeIssueAtTheMemberAndAnEmptyListPasses'
+      - 'symfony: php/symfony/tests/Runtime/InputConstraintTest.php#testAnUnknownKeyIsAnIssueAtItsOwnPointerUnlessTheObjectKeepsIt'
+      - 'symfony: php/symfony/tests/Runtime/InputConstraintTest.php#testAnIntegerTakesAWholeNumberInTheSafeRangeAndRefusesALargerOneAsItsBound'
+      - 'symfony: php/codegen/tests/Runtime/WireCodecTest.php#testAnEmptyTableAndAnEmptyObjectAreWrittenAsBracesAndAnEmptyListAsBrackets'
   - id: CHK-166
     tests:
       - 'spring-boot: jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/FileAndDslConflictTest.kt#theDslGeneratesWhatTheFileDoesAndBothAreRefused'
@@ -89,35 +145,7 @@ proofs:
       - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/optins/api/spring/SpringdocDocumentTest.java#frameworkDocsOffTurnsTheDocumentOff'
       - 'spring-boot: jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/GeneratePluginTest.kt#putsTheFrameworkDocsFileOnTheClasspathAndTurnsSecurityOnFromTheClasspath'
       - 'spring-boot: jvm/seampact-maven-plugin/src/test/kotlin/io/github/jubasse/seampact/maven/GenerateMojoIT.kt#putsTheFrameworkDocsFileOnTheClasspath'
-  - id: CHK-146
-    refusals:
-      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootOptionsTest.kt#refusesTheLayoutHandlersAndNamingOptionsItDoesNotServe'
-      - 'laravel: php/codegen/tests/TargetOptionsTest.php#testEachRefusedOptionIsNamed'
-      - 'laravel: php/laravel/tests/LaravelOptionsTest.php#testARefusedOptionIsNamedWithItsCode'
-  - id: CHK-061
-    fixtures: [fixtures/golden/reference]
+  - id: CHK-174
     tests:
-      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/handlers/HandlerReturnTypeTest.java#aHandlerReturningADeclaredStatusCompiles'
-      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/handlers/HandlerReturnTypeTest.java#aHandlerReturningAnotherTypeThanItsOperationsResultFailsToCompile'
-      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/handlers/HandlerReturnTypeTest.java#aStatusTheOperationDoesNotDeclareFailsToCompile'
-  - id: CHK-103
-    fixtures: [fixtures/golden/reference]
-    tests:
-      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheSameTreeTwice'
-      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheSameTreeUnderAnotherTimeZoneAndLocale'
-      - 'laravel: php/laravel/tests/GoldenTest.php#testASecondRunUnderAnotherTimeZoneWritesTheSameTree'
-      - 'symfony: php/symfony/tests/GoldenTest.php#testASecondRunUnderAnotherTimeZoneWritesTheSameTree'
-  - id: CHK-109
-    fixtures: [fixtures/golden/reference]
-    tests:
-      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#listsTheRecordComponentsInTheAuthoredOrder'
-  - id: CHK-154
-    fixtures: [fixtures/golden/reference]
-    tests:
-      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheGoldenTree'
-      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/config/ConfigReaderTest.kt#readsTheDslTreeAndRefusesAFileBesideIt'
-      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/write/GeneratedWriterTest.kt#refusesPathsThatLeaveTheOutputDirectory'
-  - id: CHK-158
-    tests:
-      - 'laravel: php/laravel/tests/FormRequestRulesTest.php#testAnAbsentMemberReachesTheHandlerAsAbsentAndAnExplicitNullAsNull'
-      - 'laravel: php/laravel/tests/FormRequestRulesTest.php#testAMemberBothOptionalAndNullableIsAFieldAndKeepsNullApartFromAbsent'
+      - 'symfony: php/symfony/tests/BoundaryPlacementTest.php#testARequestTheContractRefusesNeverReachesTheArgumentResolver'
+      - 'symfony: php/symfony/tests/BoundaryPlacementTest.php#testTheValueResolverHandsTheControllerOnlyTheInputTheListenerStored'

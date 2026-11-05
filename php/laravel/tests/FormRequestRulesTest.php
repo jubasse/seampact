@@ -275,14 +275,7 @@ final class FormRequestRulesTest extends TestCase
 
     private static function withAddedMembers(\stdClass $document): \stdClass
     {
-        $schemas = get_object_vars($document)['schemas'] ?? null;
-        $schema = $schemas instanceof \stdClass ? (get_object_vars($schemas)['GetTasksBatchInput'] ?? null) : null;
-        if (!$schema instanceof \stdClass || !is_array($schema->properties) || !$schema->properties[0] instanceof \stdClass) {
-            throw new \LogicException('The reference IR has no GetTasksBatchInput object schema.');
-        }
-
-        $template = $schema->properties[0];
-        $added = [
+        return ReferenceContract::withBatchInputMembers($document, [
             ['note', true, true, ['kind' => 'scalar', 'type' => 'string', 'refinements' => new \stdClass()]],
             ['count', true, false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['minimum' => '1', 'maximum' => '10']]],
             ['ratio', true, false, ['kind' => 'scalar', 'type' => 'number', 'refinements' => new \stdClass()]],
@@ -291,17 +284,6 @@ final class FormRequestRulesTest extends TestCase
             ['halfStep', true, false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['multipleOf' => '2.5']]],
             ['payload', true, false, ['kind' => 'opaque', 'reason' => 'any webhook payload', 'origin' => ['layer' => 'api', 'pointer' => '/schemas/GetTasksBatchInput/properties/payload']]],
             ['nullablePayload', true, true, ['kind' => 'opaque', 'reason' => 'any webhook payload', 'origin' => ['layer' => 'api', 'pointer' => '/schemas/GetTasksBatchInput/properties/nullablePayload']]],
-        ];
-        foreach ($added as [$name, $optional, $nullable, $type]) {
-            $property = clone $template;
-            unset($property->derivedFrom);
-            $property->name = $name;
-            $property->optional = $optional;
-            $property->nullable = $nullable;
-            $property->type = json_decode(json_encode($type, JSON_THROW_ON_ERROR), false, 512, JSON_THROW_ON_ERROR);
-            $schema->properties[] = $property;
-        }
-
-        return $document;
+        ]);
     }
 }
