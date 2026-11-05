@@ -609,7 +609,8 @@ jobs:
         with:
           name: ${{ needs.build-jvm.outputs.artifact }}
           path: ${{ runner.temp }}/jvm-bundles
-      - name: Sign the Central bundle with the release key
+      # Central verifies the signatures against keyserver.ubuntu.com: a key never sent there fails here, first.
+      - name: Sign the Central bundle with the release key, once the keyserver serves its public key
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
@@ -617,7 +618,8 @@ jobs:
         run: |
           printf '%s\n' "$MANIFEST" > "$RUNNER_TEMP/central-manifest.json"
           node scripts/release/jvm/sign-bundle.ts "$RUNNER_TEMP/jvm-bundles/central" \
-            --manifest "$RUNNER_TEMP/central-manifest.json" --signed-manifest "$RUNNER_TEMP/central-signed-manifest.json"
+            --manifest "$RUNNER_TEMP/central-manifest.json" --signed-manifest "$RUNNER_TEMP/central-signed-manifest.json" \
+            --keyserver https://keyserver.ubuntu.com
       - name: Publish the Central bundle
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}

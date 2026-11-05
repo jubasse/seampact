@@ -1,12 +1,17 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { bundleLayoutProblems } from "./bundle-layout.ts";
 import { bundleManifest, checkBundleAgainstManifest, repositoryFiles } from "./bundle-manifest.ts";
-import { bundleSignatureProblems, signBundle } from "./bundle-signatures.ts";
+import {
+  bundleSignatureProblems,
+  checkReleaseKeyOnKeyserver,
+  signBundle,
+} from "./bundle-signatures.ts";
 import {
   COMPILER_MODULE,
   type Coordinate,
@@ -376,5 +381,63 @@ describe("the rebuilt Gradle plugin check", () => {
     expect(rebuiltPluginProblems(root, VERSION, manifest)).toEqual([
       `${join(build, `libs/seampact-gradle-plugin-${VERSION}.jar`)} differs from the ${plugin}.jar build-jvm checked: the build is not reproducible`,
     ]);
+  });
+});
+
+describe("the keyserver check before signing", () => {
+  // A keyserver serving the given armoured key for any lookup, or answering 404 without one.
+  async function keyserver(servedKey: string | undefined): Promise<string> {
+    const server = createServer((_request, response) => {
+      response.statusCode = servedKey === undefined ? 404 : 200;
+      response.end(servedKey ?? "No results found");
+    });
+
+    await new Promise<void>((started) => server.listen(0, "127.0.0.1", started));
+    cleanups.push(() => new Promise<void>((closed) => server.close(() => closed())));
+
+    const address = server.address();
+
+    return typeof address === "object" && address !== null
+      ? `http://127.0.0.1:${address.port}`
+      : "";
+  }
+
+  function throwawayKey(): { secretKey: string; publicKey: string } {
+    const home = temporaryDirectory("jvm-keyserver-key-");
+    const gpg = (...gpgArguments: string[]) =>
+      execFileSync("gpg", ["--homedir", home, "--batch", "--quiet", ...gpgArguments], {
+        encoding: "utf8",
+      });
+
+    gpg(
+      "--passphrase",
+      "",
+      "--quick-gen-key",
+      "seampact test <test@invalid>",
+      "ed25519",
+      "sign",
+      "1d",
+    );
+
+    return {
+      secretKey: gpg("--armor", "--export-secret-keys"),
+      publicKey: gpg("--armor", "--export"),
+    };
+  }
+
+  it("passes when the keyserver serves the public key, and refuses by name when it does not", async () => {
+    const { secretKey, publicKey } = throwawayKey();
+
+    await expect(
+      checkReleaseKeyOnKeyserver(secretKey, await keyserver(publicKey)),
+    ).resolves.toBeUndefined();
+
+    const empty = await keyserver(undefined);
+
+    await expect(checkReleaseKeyOnKeyserver(secretKey, empty)).rejects.toThrow(
+      new RegExp(
+        `^${empty} does not serve the release public key [0-9A-F]{40} \\(it answered 404\\).*--send-keys [0-9A-F]{40}\`, then rerun; nothing was signed$`,
+      ),
+    );
   });
 });
