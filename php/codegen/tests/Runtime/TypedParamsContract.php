@@ -6,7 +6,10 @@ namespace Seampact\Codegen\Tests\Runtime;
 
 use Seampact\Codegen\Runtime\RuntimeVersion;
 
-/** A generated contract class with a right `roles` that declares its params schema, and a right `tasks.read` that declares none. */
+/**
+ * A generated contract class with a right `roles` that declares its params schema, and a right `tasks.read` that declares
+ * none; `getTask` restricts two output members to `roles` with other params.
+ */
 final class TypedParamsContract
 {
     public const API = 'tasks';
@@ -19,7 +22,12 @@ final class TypedParamsContract
         'schemas' => ['RolesParams' => ['properties' => [
             ['name' => 'allowed', 'type' => ['kind' => 'array', 'items' => ['kind' => 'scalar', 'type' => 'string']]],
         ]]],
-        'operations' => [],
+        'operations' => [
+            ['id' => 'getTask', 'fieldRights' => [
+                ['direction' => 'output', 'schema' => 'Task', 'pointer' => '/effort', 'right' => 'roles', 'params' => ['allowed' => ['owner']]],
+                ['direction' => 'output', 'schema' => 'Task', 'pointer' => '/title', 'right' => 'roles', 'params' => ['allowed' => ['owner', 'editor']]],
+            ]],
+        ],
     ];
     public const TYPES = ['schemas' => ['RolesParams' => [
         'class' => TypedParamsRoles::class,

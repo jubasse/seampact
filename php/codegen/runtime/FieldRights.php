@@ -13,7 +13,7 @@ use Seampact\Hooks\SubjectRef;
 /**
  * Field rights (ADR 0012 "Field rights"): step 7 refuses a restricted top-level input member sent without its right,
  * or removes it under `inputPolicy: strip`; before a success is written, each restricted output member whose right
- * the decider denies for its holder is removed, one decision per right and subject.
+ * the decider denies for its holder is removed, one decision per right, use-site params and subject.
  */
 final class FieldRights
 {
@@ -133,7 +133,9 @@ final class FieldRights
             $subject = new SubjectRef(AccessSteps::subjectType(Ir::map($state->contract->declaration('rights', $right), 'subject')), $holderId);
         }
 
-        $key = $right . "\n" . ($subject === null ? '' : (string) (is_object($subject->id) ? spl_object_id($subject->id) : $subject->id));
+        // Two fields of one right with other params are two questions: the params join the key.
+        $useSiteParams = json_encode($fieldRight['params'] ?? null, JSON_THROW_ON_ERROR);
+        $key = $right . "\n" . $useSiteParams . "\n" . ($subject === null ? '' : (string) (is_object($subject->id) ? spl_object_id($subject->id) : $subject->id));
         if (!isset($decisions[$key])) {
             $decision = AccessSteps::decide($state, self::call($state, $fieldRight, $right, $subject, FieldDirection::Output));
             $decisions[$key] = $decision instanceof Decision\Allowed;
