@@ -76,11 +76,10 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # A call builds what the release ships: every row, whatever the change.
     outputs:
-      binary: ${{ inputs.release-call && 'true' || steps.detect.outputs.run }}
-      post-merge: ${{ inputs.release-call && 'true' || steps.detect.outputs.post-merge }}
-      drift: ${{ inputs.release-call && 'true' || steps.detect.outputs.drift }}
+      binary: ${{ steps.detect.outputs.run }}
+      post-merge: ${{ steps.detect.outputs.post-merge }}
+      drift: ${{ steps.detect.outputs.drift }}
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -113,7 +112,7 @@ jobs:
           fi
           echo "version=$version" | tee -a "$GITHUB_OUTPUT"
       - name: Detect a change the binary is built from
-        id: detect
+        id: lane
         uses: ./.github/actions/lane-changes
         with:
           watched-paths: |
@@ -127,6 +126,20 @@ jobs:
             ^pnpm-workspace\.yaml$
             ^package\.json$
             ^\.nvmrc$
+      # A call builds what the release ships: every row, whatever the change.
+      - name: Run every row on a release call
+        id: detect
+        env:
+          RELEASE_CALL: ${{ inputs.release-call == true }}
+          LANE_RUN: ${{ steps.lane.outputs.run }}
+          LANE_POST_MERGE: ${{ steps.lane.outputs.post-merge }}
+          LANE_DRIFT: ${{ steps.lane.outputs.drift }}
+        run: |
+          if [ "$RELEASE_CALL" = true ]; then
+            printf 'run=true\npost-merge=true\ndrift=true\n' >> "$GITHUB_OUTPUT"
+          else
+            printf 'run=%s\npost-merge=%s\ndrift=%s\n' "$LANE_RUN" "$LANE_POST_MERGE" "$LANE_DRIFT" >> "$GITHUB_OUTPUT"
+          fi
 
   build:
     name: build (linux, five binaries)
