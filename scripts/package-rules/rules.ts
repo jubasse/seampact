@@ -58,16 +58,24 @@ const NPM_PUBLISH = "npm publish";
 const SPAWNED_PUBLISH = "a `publish` argument of a spawned command";
 const CENTRAL_PUBLISH = "Central Portal publish";
 const PLUGIN_PORTAL_PUBLISH = "Gradle Plugin Portal publish";
+const PYPI_PUBLISH = "PyPI publish action";
+const MIRROR_PUSH = "a `push` argument of a spawned git";
 
 // The release modules that publish, and what each may run: the idempotent publishes of release.yml, one per registry.
 const ACCEPTED_RELEASE_PUBLISHES: ReadonlyMap<string, readonly string[]> = new Map([
   ["scripts/release/publish-npm.ts", [NPM_PUBLISH, SPAWNED_PUBLISH]],
   ["scripts/release/jvm/central-portal.ts", [CENTRAL_PUBLISH]],
   ["scripts/release/jvm/publish-plugin.ts", [PLUGIN_PORTAL_PUBLISH]],
+  ["scripts/release/php/push-mirrors.ts", [MIRROR_PUSH]],
 ]);
 const ACCEPTED_RELEASE_PUBLISHERS = [...ACCEPTED_RELEASE_PUBLISHES]
   .map(([file, publishes]) => `${file} (${publishes[0]})`)
   .join(", ");
+
+// The workflow that publishes through an action rather than a release script: PyPI's trusted publishing.
+const ACCEPTED_WORKFLOW_PUBLISHES: ReadonlyMap<string, readonly string[]> = new Map([
+  [".github/workflows/release.yml", [PYPI_PUBLISH]],
+]);
 
 type Rec = Record<string, unknown>;
 const isRec = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -435,6 +443,11 @@ const PUBLISH: [RegExp, string][] = [
   [/\bcomposer\s+.*\b(?:publish|deploy)\b/, "Composer publish"],
   // The plugin-publish task, also when a script passes it to Gradle as an argument.
   [/\bpublishPlugins\b/, PLUGIN_PORTAL_PUBLISH],
+  [/\btwine\s+(?:[\w-]+\s+)*upload\b/, "twine upload"],
+  [/\buv\s+publish\b/, "uv publish"],
+  [/\bpypa\/gh-action-pypi-publish\b/, PYPI_PUBLISH],
+  // `git [-C <dir>] [-c <key=value>] [--option] push`.
+  [/\bgit\s+(?:-[Cc]\s+\S+\s+|-\S+\s+)*push\b/, "git push"],
 ];
 
 function publishes(code: string): string | undefined {
@@ -448,6 +461,7 @@ const RELEASE_SCRIPT_PUBLISH: [RegExp, string][] = [
   [/["'`]publish["'`]/, SPAWNED_PUBLISH],
   // The publisher API calls that upload a deployment or publish it.
   [/\/api\/v1\/publisher\/(?:upload|deployment)\b/, CENTRAL_PUBLISH],
+  [/["'`]push["'`]/, MIRROR_PUSH],
 ];
 
 // A comment names a publish without running it: `//`, `#` and the lines of a `/** */` block. A shell `*)` case arm
@@ -518,7 +532,7 @@ function checkWorkflows(root: string, out: Violation[]): void {
 
     for (const { line, code } of workflowCommands(readFileSync(join(root, file), "utf8")))
       for (const [re, what] of PUBLISH)
-        if (re.test(code))
+        if (re.test(code) && ACCEPTED_WORKFLOW_PUBLISHES.get(file)?.includes(what) !== true)
           out.push({
             file,
             rule: "namespaces",

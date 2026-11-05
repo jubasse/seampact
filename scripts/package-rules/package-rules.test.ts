@@ -360,7 +360,7 @@ describe("package rules", () => {
     const gradle = writeTree({ "scripts/release/publish-npm.ts": 'run("./gradlew publish");\n' });
 
     expect(violations(gradle)).toEqual([
-      "scripts/release/publish-npm.ts: namespaces: line 1: publishes (Gradle publish); only scripts/release/publish-npm.ts (npm publish), scripts/release/jvm/central-portal.ts (Central Portal publish), scripts/release/jvm/publish-plugin.ts (Gradle Plugin Portal publish) publish (A3)",
+      "scripts/release/publish-npm.ts: namespaces: line 1: publishes (Gradle publish); only scripts/release/publish-npm.ts (npm publish), scripts/release/jvm/central-portal.ts (Central Portal publish), scripts/release/jvm/publish-plugin.ts (Gradle Plugin Portal publish), scripts/release/php/push-mirrors.ts (a `push` argument of a spawned git) publish (A3)",
     ]);
   });
 
@@ -408,6 +408,30 @@ describe("package rules", () => {
 
     expect(violations(root)).toEqual([
       ".github/workflows/release.yml: namespaces: line 4: publishes (Gradle Plugin Portal publish); nothing publishes before 1.0 (A3)",
+    ]);
+  });
+
+  it("only push-mirrors.ts pushes a mirror, and only release.yml runs the PyPI publish action", () => {
+    const spawnedPush = 'git(work, ["push", "--atomic", remote]);\n';
+    const pypiAction = "    steps:\n      - uses: pypa/gh-action-pypi-publish@0000 # v1\n";
+    const accepted = writeTree({
+      "scripts/release/php/push-mirrors.ts": spawnedPush,
+      ".github/workflows/release.yml": pypiAction,
+    });
+
+    expect(violations(accepted)).toEqual([]);
+
+    const elsewhere = writeTree({
+      "scripts/release/php/mirror-commits.ts": spawnedPush,
+      ".github/workflows/ci.yml": `${pypiAction}      - run: twine upload dist/*\n      - run: uv publish\n      - run: git -C mirror push origin main\n`,
+    });
+
+    expect(violations(elsewhere)).toEqual([
+      ".github/workflows/ci.yml: namespaces: line 2: publishes (PyPI publish action); nothing publishes before 1.0 (A3)",
+      ".github/workflows/ci.yml: namespaces: line 3: publishes (twine upload); nothing publishes before 1.0 (A3)",
+      ".github/workflows/ci.yml: namespaces: line 4: publishes (uv publish); nothing publishes before 1.0 (A3)",
+      ".github/workflows/ci.yml: namespaces: line 5: publishes (git push); nothing publishes before 1.0 (A3)",
+      "scripts/release/php/mirror-commits.ts: namespaces: line 1: publishes (a `push` argument of a spawned git); only scripts/release/publish-npm.ts (npm publish), scripts/release/jvm/central-portal.ts (Central Portal publish), scripts/release/jvm/publish-plugin.ts (Gradle Plugin Portal publish), scripts/release/php/push-mirrors.ts (a `push` argument of a spawned git) publish (A3)",
     ]);
   });
 
