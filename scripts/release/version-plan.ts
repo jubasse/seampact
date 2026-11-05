@@ -1,5 +1,6 @@
-// Every version edit of a release, across npm, changesets, the JVM and Python. Composer needs none: sibling constraints are
-// `self.version`, and the mirror tag gives the version. The stamp writes these edits; the version check fails on any.
+// Every version edit of a release, across npm, changesets, the JVM and Python. Composer needs none: sibling
+// constraints are `self.version`, and the mirror tag gives the version. The stamp writes these edits; the version
+// check fails on any.
 import { changesetAccessEdit } from "./changeset-access.ts";
 import { jvmVersionEdits } from "./jvm-versions.ts";
 import { npmVersionEdits } from "./npm-versions.ts";

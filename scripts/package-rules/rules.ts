@@ -369,7 +369,7 @@ const RELEASE_SCRIPT_PUBLISH: [RegExp, string][] = [
   [/["'`]publish["'`]/, SPAWNED_PUBLISH],
 ];
 
-/** Every file of `scripts/release`: only the npm publish of the publish script is accepted, where release.yml runs it. */
+/** Every file of `scripts/release`: only the npm publish of the publish script, which release.yml runs, passes. */
 function checkReleaseScripts(root: string, out: Violation[]): void {
   for (const file of walk(root, RELEASE_SCRIPTS_DIR, () => true)) {
     const lines = readFileSync(join(root, file), "utf8").split("\n");

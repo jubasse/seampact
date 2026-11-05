@@ -7,6 +7,8 @@ name: Contract bundles
 # `channel-smoke` serves a bundle of the reference contract through a loopback npm registry, a loopback HTTPS
 # server and a local bare git repository, and runs the Node CLI against each (ADR 0011 "Channel smoke tests").
 # `bundle-determinism` and `channel-smoke` are the checks to require.
+# release.yml calls it for the reference tarball the release attaches: a call runs every row, and outputs the Linux
+# tarball's artefact with the one SHA-256 every OS wrote.
 
 on:
   push:
@@ -17,13 +19,30 @@ on:
   # The nightly run holds the drift row (macOS).
   schedule:
     - cron: "30 0 * * *"
+  workflow_call:
+    inputs:
+      # A call is marked by this input, never inferred: on every other trigger it is absent, so it reads false.
+      release-call:
+        description: A release build. Leave it at true; only this workflow's own triggers run without it.
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      reference-tarball-artifact:
+        description: The artefact holding `reference.tgz`, the reference contract's bundle tarball built on Linux.
+        value: ${{ jobs.bundle-determinism.outputs.artifact }}
+      reference-tarball-sha256:
+        description: The SHA-256 of `reference.tgz`, the one value every OS of the call wrote.
+        value: ${{ jobs.bundle-determinism.outputs.sha256 }}
 
 permissions:
   contents: read
 
+# A call takes the caller's event and ref: its own group keeps it from cancelling, or being cancelled by, a run of
+# this workflow on the same pull request.
 concurrency:
-  group: p3-dist-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: p3-dist-${{ inputs.release-call && github.run_id || format('{0}-{1}', github.event_name, github.ref) }}
+  cancel-in-progress: ${{ !inputs.release-call && github.event_name == 'pull_request' }}
 
 jobs:
   changes:
@@ -42,12 +61,25 @@ jobs:
           sparse-checkout: .github/actions
           persist-credentials: false
       - name: Detect a change beyond documentation no test reads
-        id: detect
+        id: lane
         uses: ./.github/actions/lane-changes
         with:
           # Every path: only a change to documentation no test reads skips this lane.
           watched-paths: |
             .
+      # A call checks what the release attaches: every row, whatever the change.
+      - name: Run every row on a release call
+        id: detect
+        env:
+          RELEASE_CALL: ${{ inputs.release-call == true }}
+          LANE_RUN: ${{ steps.lane.outputs.run }}
+          LANE_DRIFT: ${{ steps.lane.outputs.drift }}
+        run: |
+          if [ "$RELEASE_CALL" = true ]; then
+            printf 'run=true\ndrift=true\n' >> "$GITHUB_OUTPUT"
+          else
+            printf 'run=%s\ndrift=%s\n' "$LANE_RUN" "$LANE_DRIFT" >> "$GITHUB_OUTPUT"
+          fi
 
   # The PR rows; the drift job below runs the same steps on macOS.
   tarball:
@@ -73,10 +105,12 @@ jobs:
         with:
           persist-credentials: false
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      # No dependency cache in a release call: the attached tarball comes from the lock file alone.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          cache: ${{ !inputs.release-call && 'pnpm' || '' }}
+          package-manager-cache: ${{ !inputs.release-call }}
       - run: pnpm install --frozen-lockfile
       - name: Write the reference tarball and its SHA-256
         shell: bash
@@ -110,6 +144,9 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      artifact: ${{ steps.determinism.outputs.artifact }}
+      sha256: ${{ steps.determinism.outputs.sha256 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -126,6 +163,7 @@ jobs:
           pattern: tarball-*
           path: tarballs
       - name: One SHA-256 on every OS that ran
+        id: determinism
         if: needs.changes.outputs.run == 'true'
         env:
           # Linux and Windows, and macOS when the drift row ran.
@@ -136,6 +174,10 @@ jobs:
           for file in tarballs/*/reference.tgz; do sha256sum "$file"; done
           test "$(cat tarballs/*/*.sha256 | sort -u | wc -l)" = 1
           test "$(sha256sum tarballs/*/reference.tgz | cut -d ' ' -f 1 | sort -u | wc -l)" = 1
+          {
+            echo "artifact=tarball-Linux"
+            echo "sha256=$(sha256sum tarballs/tarball-Linux/reference.tgz | cut -d ' ' -f 1)"
+          } | tee -a "$GITHUB_OUTPUT"
 
   # A required check that is also the job: a skipped job would pass, so it always starts and the aggregate step turns
   # a failed change filter into a failure; a documentation-only change passes at once.
