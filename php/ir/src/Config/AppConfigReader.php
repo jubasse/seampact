@@ -9,6 +9,7 @@ use Seampact\Ir\Bundle\BundleSource;
 use Seampact\Ir\Bundle\GitSource;
 use Seampact\Ir\Bundle\RegistrySource;
 use Seampact\Ir\Bundle\ReleaseSource;
+use Seampact\Ir\Write\GeneratedPaths;
 
 /**
  * Reads an app config (ADR 0011 "The app config") as the Node CLI's `read-app-config.ts` does, with the same
@@ -191,7 +192,8 @@ final class AppConfigReader
         return $problems;
     }
 
-    // Two entries writing to the same directory, or one inside the other, would remove each other's files.
+    // Two entries writing to the same directory, or one inside the other, would remove each other's files; so would
+    // two whose directories match once case is ignored, on a case-insensitive disk.
     /**
      * @param list<AppConfigEntry> $entries
      * @return list<ConfigProblem>
@@ -202,18 +204,45 @@ final class AppConfigReader
 
         foreach ($entries as $index => $entry) {
             foreach (array_slice($entries, $index + 1) as $other) {
-                if (ConfigPath::isAtOrBelow($entry->root, $other->root) || ConfigPath::isAtOrBelow($other->root, $entry->root)) {
-                    $problems[] = new ConfigProblem(
-                        'config.out.overlap',
-                        "The entries '{$entry->id()}' and '{$other->id()}' write to the same directory, or one inside the other.",
-                        'Give each entry its own `out` directory, side by side under `outDir`.',
-                        $tree->whereOf(['targets', $index]),
-                    );
+                $problem = self::overlappingOutProblem($tree, $index, $entry, $other);
+
+                if ($problem !== null) {
+                    $problems[] = $problem;
                 }
             }
         }
 
         return $problems;
+    }
+
+    private static function overlappingOutProblem(ConfigTree $tree, int $index, AppConfigEntry $entry, AppConfigEntry $other): ?ConfigProblem
+    {
+        $where = $tree->whereOf(['targets', $index]);
+
+        if (self::isNestedOrSame($entry->root, $other->root)) {
+            return new ConfigProblem(
+                'config.out.overlap',
+                "The entries '{$entry->id()}' and '{$other->id()}' write to the same directory, or one inside the other.",
+                'Give each entry its own `out` directory, side by side under `outDir`.',
+                $where,
+            );
+        }
+
+        if (!self::isNestedOrSame(GeneratedPaths::caseFolded($entry->root), GeneratedPaths::caseFolded($other->root))) {
+            return null;
+        }
+
+        return new ConfigProblem(
+            'config.out.case-overlap',
+            "The entries '{$entry->id()}' and '{$other->id()}' write to directories that are one, or one inside the other, once letter case is ignored, as a case-insensitive disk does.",
+            'Give each entry an `out` directory whose name differs by more than letter case, side by side under `outDir`.',
+            $where,
+        );
+    }
+
+    private static function isNestedOrSame(string $first, string $second): bool
+    {
+        return ConfigPath::isAtOrBelow($first, $second) || ConfigPath::isAtOrBelow($second, $first);
     }
 
     // An allow-list of a check switched off would be dropped without a word.

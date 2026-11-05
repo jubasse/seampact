@@ -13,6 +13,7 @@ from seampact.ir.config.target_ecosystem import TargetEcosystem
 from seampact.ir.config.yaml_reader import parse_config_text
 
 _VECTORS = "packages/core/spec/vectors/config/use-forms.json"
+_OUT_DIRECTORY_VECTORS = "packages/core/spec/vectors/config/out-directories.json"
 _ECOSYSTEMS = {
     "npm": TargetEcosystem.NPM,
     "maven": TargetEcosystem.MAVEN,
@@ -165,6 +166,25 @@ def test_an_app_config_is_refused_by_name(tmp_path: Path, body: str, code: str) 
 
     assert isinstance(config, list)
     assert code in [problem.code for problem in config]
+
+
+def test_out_directories_that_overlap_are_refused_by_their_code(repository_root: Path, tmp_path: Path) -> None:
+    """The shared `out` vectors, which the Node, JVM and PHP readers pass too."""
+    vectors = json.loads((repository_root / _OUT_DIRECTORY_VECTORS).read_text(encoding="utf-8"))["cases"]
+    assert vectors
+
+    for index, vector in enumerate(vectors):
+        entries = "".join(
+            f"  - {{ id: entry{position}, use: 'pypi:x', api: t, out: {json.dumps(out)} }}\n"
+            for position, out in enumerate(vector["outs"])
+        )
+        directory = tmp_path / str(index)
+        directory.mkdir()
+
+        config = read_app_config(str(_write_config(directory, f"targets:\n{entries}")))
+        refused_codes = [problem.code for problem in config] if isinstance(config, list) else []
+
+        assert refused_codes == vector["codes"], vector["case"]
 
 
 def test_an_app_listed_by_a_root_config_is_refused(tmp_path: Path) -> None:

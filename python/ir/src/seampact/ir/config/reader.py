@@ -28,6 +28,7 @@ from seampact.ir.config.schema_check import schema_problems
 from seampact.ir.config.target_ecosystem import TargetEcosystem
 from seampact.ir.config.waits import waiting_key_problems
 from seampact.ir.config.yaml_reader import read_config_file
+from seampact.ir.write.paths import case_folded
 
 CONFIG_FILE_NAME: Final = "seampact.config.yaml"
 _ROOT_CONFIG_MARKER_KEY: Final = "apps"
@@ -180,18 +181,47 @@ def _outside_out_dir_problems(tree: ConfigTree, out_dir: str, entries: list[AppC
 
 
 def _overlapping_out_problems(tree: ConfigTree, entries: list[AppConfigEntry]) -> list[ConfigProblem]:
-    """Two entries writing to the same directory, or one inside the other, would remove each other's files."""
-    return [
-        ConfigProblem(
+    """Two entries writing to the same directory, or one inside the other, would remove each other's files; so would
+    two whose directories match once case is ignored, on a case-insensitive disk."""
+    problems: list[ConfigProblem] = []
+
+    for index, entry in enumerate(entries):
+        for other in entries[index + 1 :]:
+            problem = _overlapping_out_problem(tree, index, entry, other)
+
+            if problem is not None:
+                problems.append(problem)
+
+    return problems
+
+
+def _overlapping_out_problem(
+    tree: ConfigTree, index: int, entry: AppConfigEntry, other: AppConfigEntry
+) -> ConfigProblem | None:
+    where = tree.where_of(["targets", index])
+
+    if _is_nested_or_same(entry.root, other.root):
+        return ConfigProblem(
             "config.out.overlap",
             f"The entries '{entry.id}' and '{other.id}' write to the same directory, or one inside the other.",
             "Give each entry its own `out` directory, side by side under `outDir`.",
-            tree.where_of(["targets", index]),
+            where,
         )
-        for index, entry in enumerate(entries)
-        for other in entries[index + 1 :]
-        if is_at_or_below_directory(entry.root, other.root) or is_at_or_below_directory(other.root, entry.root)
-    ]
+
+    if not _is_nested_or_same(case_folded(entry.root), case_folded(other.root)):
+        return None
+
+    return ConfigProblem(
+        "config.out.case-overlap",
+        f"The entries '{entry.id}' and '{other.id}' write to directories that are one, or one inside the other, "
+        "once letter case is ignored, as a case-insensitive disk does.",
+        "Give each entry an `out` directory whose name differs by more than letter case, side by side under `outDir`.",
+        where,
+    )
+
+
+def _is_nested_or_same(first: str, second: str) -> bool:
+    return is_at_or_below_directory(first, second) or is_at_or_below_directory(second, first)
 
 
 def _switched_off_allow_list_problems(tree: ConfigTree, entries: list[AppConfigEntry]) -> list[ConfigProblem]:
