@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    // Astro bundles its config with Vite, and starlight-llms-txt ships TypeScript sources with extensionless imports.
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true
+  },
+  "include": ["astro.config.ts", "scripts", "src/prebuild"]
+}
