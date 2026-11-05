@@ -1,0 +1,6 @@
+{
+  "format": "seampact-http-suite-report/1",
+  "target": "nestjs-cjs",
+  "profile": "default",
+  "checks": { "CHK-001": { "outcome": "passed", "cases": ["case-a"] } }
+}

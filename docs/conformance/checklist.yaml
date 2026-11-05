@@ -36,6 +36,11 @@
 #   --release-gate (of check)  from the 1.0 release gate on, also fails on any live id without a
 #              fixture and, for every listed target, a test, naming the id and the target
 #              (SCN-057). Off until the conformance lane turns it on.
+#              `--suite-reports <dir>` also reads the http-suite reports under <dir> (every *.json at
+#              any depth, as the consumer workflows upload them; scripts/checklist/fetch-suite-reports.sh
+#              downloads develop's): an id a report passed has its fixture (the suite's cases) and a
+#              test for the report's target; an id a report failed, or an unknown, retired or unlisted
+#              one, fails by name.
 schema: 1
 items:
   # ---------- Acceptance: Volume ----------

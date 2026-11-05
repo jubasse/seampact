@@ -149,6 +149,86 @@ describe("checklist check", () => {
   });
 });
 
+describe("checklist release gate with suite reports", () => {
+  const reports = (name: string) => join(fx("suite-reports"), name);
+  const gate = (suiteReports: string) =>
+    lines(check({ root: fx("release-gate"), releaseGate: true, suiteReports }));
+  const noTest = (id: string, target: string) =>
+    `${CHECKLIST}: ${id}: release gate: no test for target ${target}`;
+
+  it("a passed suite report proves its target and the fixture", () => {
+    const out = gate(reports("proving"));
+
+    expect(out).not.toContain(noTest("CHK-001", "nestjs"));
+    expect(out).not.toContain(noTest("CHK-002", "spring-boot"));
+    expect(out).not.toContain(`${CHECKLIST}: CHK-002: release gate: no fixture`);
+    expect(out).toContain(noTest("CHK-002", "express"));
+  });
+
+  it("names a failed and a refused suite run", () => {
+    const out = gate(reports("proving"));
+    const fastifyReport = join(reports("proving"), "fastify/http-suite-default.json");
+
+    expect(out).toContain(
+      `${fastifyReport}: CHK-002: release gate: failed for target fastify in this suite report`,
+    );
+    expect(out).not.toContain(noTest("CHK-002", "fastify"));
+    expect(out).toContain(`${noTest("CHK-002", "nestjs")} (its suite run refused the id)`);
+  });
+
+  it("refuses a file that is not a report of a server target, and each bad entry", () => {
+    const directory = mkdtempSync(join(tmpdir(), "checklist-suite-"));
+
+    try {
+      cpSync(reports("refused"), directory, { recursive: true });
+      writeFileSync(join(directory, "broken.json"), '{ "format": ');
+      const out = gate(directory);
+      const at = (file: string) => out.filter((l) => l.startsWith(join(directory, file)));
+
+      expect(at("broken.json")[0]).toContain("not valid JSON");
+      expect(at("not-a-report.json")[0]).toContain("not an http-suite report");
+      expect(at("unknown-target.json")[0]).toContain('unknown server target "nestjs-cjs"');
+      expect(at("entries.json")).toEqual([
+        `${join(directory, "entries.json")}: CHK-002: malformed suite report entry: needs a CHK id and an outcome`,
+        `${join(directory, "entries.json")}: CHK-001: suite report of a target the item does not list: express (item lists core, nestjs)`,
+        `${join(directory, "entries.json")}: CHK-009: suite report proves an unknown id (not in the checklist)`,
+      ]);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a directory without any report", () => {
+    const directory = mkdtempSync(join(tmpdir(), "checklist-suite-"));
+
+    try {
+      expect(gate(directory)).toContain(
+        `${directory}: -: no http-suite report (*.json) under the directory`,
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("the cli takes suite reports only with the release gate", () => {
+    const run = () =>
+      execFileSync(
+        process.execPath,
+        [
+          join(HERE, "cli.ts"),
+          "check",
+          "--root",
+          fx("release-gate"),
+          "--suite-reports",
+          reports("proving"),
+        ],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+      );
+
+    expect(run).toThrow(/--suite-reports reads proofs for the release gate only/);
+  });
+});
+
 describe("checklist check against a base ref", () => {
   const tmp = mkdtempSync(join(tmpdir(), "seampact-checklist-"));
 
