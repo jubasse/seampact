@@ -2,8 +2,8 @@
 // `io.github.jubasse:seampact-compiler:<version>`, with one artefact of type `exe` per platform classifier. The
 // binaries come from `-PseampactBinariesDir=<dir>`, the release assets beside their `SHA256SUMS`; each is checked
 // against the manifest before it is staged, so a published file always has the hash the release lists.
-// `-PseampactCompilerVersion=<version>` is the release version, the CLI's. Applied by `build.gradle.kts`, and alone
-// by the publication test.
+// The version is the project's, `version` of `jvm/gradle.properties`, which the release stamp writes. Applied by
+// `build.gradle.kts`, and alone by the publication test, which passes `-Pversion`.
 
 import java.security.MessageDigest
 import java.util.HexFormat
@@ -21,20 +21,17 @@ val classifierByAssetName = linkedMapOf(
 )
 val manifestFileName = "SHA256SUMS"
 val binariesDirectoryProperty = "seampactBinariesDir"
-val compilerVersionProperty = "seampactCompilerVersion"
-val unsetVersion = "unspecified"
+val unsetVersion = Project.DEFAULT_VERSION
 
 val binariesDirectory: String? = providers.gradleProperty(binariesDirectoryProperty).orNull
-val compilerVersion: String? = providers.gradleProperty(compilerVersionProperty).orNull
+val compilerVersion: String = version.toString()
 val stagedDirectory = layout.buildDirectory.dir("compiler-binaries")
-
-version = compilerVersion ?: unsetVersion
 
 val stageCompilerBinaries = tasks.register("stageCompilerBinaries") {
     description = "Checks the release binaries against their SHA256SUMS and stages them for the compiler publication."
     group = PublishingPlugin.PUBLISH_TASK_GROUP
     if (binariesDirectory != null) inputs.dir(binariesDirectory)
-    inputs.property("compilerVersion", compilerVersion ?: unsetVersion)
+    inputs.property("compilerVersion", compilerVersion)
     outputs.dir(stagedDirectory)
 
     // Local copies: the action must not capture the script, which the configuration cache cannot store.
@@ -44,7 +41,7 @@ val stageCompilerBinaries = tasks.register("stageCompilerBinaries") {
     val manifestName = manifestFileName
     val stagingDirectory = stagedDirectory
     val binariesDirectoryFlag = "-P$binariesDirectoryProperty"
-    val compilerVersionFlag = "-P$compilerVersionProperty"
+    val unsetReleaseVersion = unsetVersion
 
     fun sha256Of(file: File): String = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(file.readBytes()))
 
@@ -67,8 +64,8 @@ val stageCompilerBinaries = tasks.register("stageCompilerBinaries") {
         val source = sourceDirectory ?: throw GradleException(
             "The compiler publication needs $binariesDirectoryFlag=<dir>, the five release binaries beside their $manifestName.",
         )
-        if (releaseVersion == null) {
-            throw GradleException("The compiler publication needs $compilerVersionFlag=<version>, the release version.")
+        if (releaseVersion == unsetReleaseVersion) {
+            throw GradleException("The compiler publication needs the release version: `version` in gradle.properties or -Pversion=<version>.")
         }
 
         val present = source.list()?.toSet() ?: throw GradleException("'$source' is not a directory.")

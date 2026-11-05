@@ -82,7 +82,7 @@ class CompilerPublicationTest {
                 .withArguments(
                         "publishToMavenLocal",
                         "-PseampactBinariesDir=" + binaries,
-                        "-PseampactCompilerVersion=" + VERSION,
+                        "-Pversion=" + VERSION,
                         "-Dmaven.repo.local=" + repository,
                         "--stacktrace");
     }
