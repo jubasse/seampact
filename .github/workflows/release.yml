@@ -774,4 +774,4 @@ jobs:
           # A dry run ends with the rehearsals.
           allow-skip: >-
             ${{ needs.prepare.outputs.dry-run != 'false'
-            && 'release-draft publish-npm publish-maven-central publish-plugin-portal release-publish' || '' }}
+            && 'release-draft publish-maven-central publish-plugin-portal publish-npm release-publish' || '' }}
