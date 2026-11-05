@@ -69,6 +69,12 @@ const NEGATED_CLASS = "[^";
 const CLASS_CONTENT = /\[([^\]]*)\]/g;
 const ALPHANUMERIC = /^[A-Za-z0-9]$/;
 const RANGE = "-";
+const OPTIONAL_PART = "?";
+const PARAM_START = ":";
+// The `.` Express 4 leaves out with an optional param it precedes (`/file.:ext?` also serves `/file`).
+const OPTIONAL_PARAM_SEPARATOR = ".";
+// A param name right before a `{`, whose braces then hold its pattern (Hono `:id{[0-9]+}`), not an optional group.
+const PARAM_NAME_BEFORE = /:[A-Za-z_$][\w$]*$/;
 
 /**
  * The listed routes in the check's scope the allow-list does not name, each once; none when the check is off. A
@@ -90,7 +96,7 @@ export function unlistedFrameworkRoutes(
 
     if (!isInScope(check.scope, route)) continue;
 
-    if (check.allowed.some((allowance) => isAllowedBy(route, allowance))) continue;
+    if (isAllowListed(route, check.allowed)) continue;
 
     if (route.method === HEAD_METHOD && reported.has(routeKey(GET_METHOD, route.path))) continue;
 
@@ -119,7 +125,7 @@ export function unlistedFrameworkRoutesProblem(
       keys.length === 1
         ? `the framework route ${named} is outside the contract and not allow-listed`
         : `${keys.length} framework routes are outside the contract and not allow-listed: ${named}`,
-    fix: "allow-list each with a reason in the target entry's 'frameworkRoutes' of seampact.config.yaml, or remove the route; after editing frameworkRoutes, run seampact generate again",
+    fix: "allow-list each with a reason in the target entry's 'frameworkRoutes' of seampact.config.yaml, or remove the route (a route with an optional parameter is allowed only by entries that also take its path without it); after editing frameworkRoutes, run seampact generate again",
   };
 }
 
@@ -234,12 +240,126 @@ function classRangesKeepToAlphanumerics(content: string): boolean {
   });
 }
 
-function isAllowedBy(route: ListedRoute, allowance: FrameworkRouteAllowance): boolean {
-  if (allowance.method !== undefined && !methodFollows(route.method, allowance.method)) {
+// Every path the route serves needs an entry: one without its optional parts too (`/c/:id?` also serves `/c`).
+function isAllowListed(route: ListedRoute, allowed: readonly FrameworkRouteAllowance[]): boolean {
+  const servedPaths =
+    route.pathSyntax === REGULAR_EXPRESSION_PATH ? [route.path] : servedPathsOf(route.path);
+
+  return servedPaths.every((servedPath) =>
+    allowed.some((allowance) => isAllowedBy(route.method, servedPath, allowance)),
+  );
+}
+
+function isAllowedBy(method: string, path: string, allowance: FrameworkRouteAllowance): boolean {
+  if (allowance.method !== undefined && !methodFollows(method, allowance.method)) {
     return false;
   }
 
-  return segmentsMatch(segmentsOf(allowance.path), routeSegmentsOf(route.path));
+  return segmentsMatch(segmentsOf(allowance.path), routeSegmentsOf(path));
+}
+
+// The route's path with and without each optional part the Node routers accept: an Express 5 group (`/c{/:id}`)
+// and a param marked `?` (`/c/:id?`, `:id(\d+)?`, `:id{[0-9]+}?`), which Express 4, Fastify, Hono and Adonis serve
+// without its segment.
+function servedPathsOf(path: string): string[] {
+  return withAndWithoutOptionalGroups(path).flatMap((expanded) =>
+    withAndWithoutOptionalParams(segmentsOf(expanded)).map((segments) => `/${segments.join("/")}`),
+  );
+}
+
+function withAndWithoutOptionalGroups(path: string): string[] {
+  const group = firstOptionalGroup(path);
+
+  if (group === undefined) return [path];
+
+  const before = path.slice(0, group.start);
+  const afters = withAndWithoutOptionalGroups(path.slice(group.end + 1));
+  const insides = withAndWithoutOptionalGroups(path.slice(group.start + 1, group.end));
+
+  return [
+    ...insides.flatMap((inside) => afters.map((after) => before + inside + after)),
+    ...afters.map((after) => before + after),
+  ];
+}
+
+// The first `{...}` that is not a param's pattern, skipping escapes and `(...)` patterns; undefined when there is
+// none or a brace is not closed, which leaves the path as written.
+function firstOptionalGroup(path: string): { start: number; end: number } | undefined {
+  let parenthesesDepth = 0;
+
+  for (let index = 0; index < path.length; index += 1) {
+    const character = path[index];
+
+    if (character === ESCAPE) {
+      index += 1;
+    } else if (character === "(") {
+      parenthesesDepth += 1;
+    } else if (character === ")") {
+      parenthesesDepth -= 1;
+    } else if (character === "{" && parenthesesDepth === 0) {
+      const end = closingBraceOf(path, index);
+
+      if (end === undefined) return undefined;
+
+      if (!PARAM_NAME_BEFORE.test(path.slice(0, index))) return { start: index, end };
+
+      index = end;
+    }
+  }
+
+  return undefined;
+}
+
+function closingBraceOf(path: string, start: number): number | undefined {
+  let depth = 0;
+
+  for (let index = start; index < path.length; index += 1) {
+    const character = path[index];
+
+    if (character === ESCAPE) {
+      index += 1;
+    } else if (character === "{") {
+      depth += 1;
+    } else if (character === "}") {
+      depth -= 1;
+
+      if (depth === 0) return index;
+    }
+  }
+
+  return undefined;
+}
+
+function withAndWithoutOptionalParams(segments: readonly string[]): string[][] {
+  const [first, ...rest] = segments;
+
+  if (first === undefined) return [[]];
+
+  const rests = withAndWithoutOptionalParams(rest);
+  const withFirst = rests.map((tail) => [first, ...tail]);
+  const withoutParam = segmentWithoutOptionalParam(first);
+
+  if (withoutParam === undefined) return withFirst;
+
+  const kept = withoutParam === "" ? [] : [withoutParam];
+
+  return [...withFirst, ...rests.map((tail) => [...kept, ...tail])];
+}
+
+// The text a segment keeps when its optional param is left out (`x-:id?` keeps `x-`, `:id?` nothing); undefined
+// when the segment ends with no optional param.
+function segmentWithoutOptionalParam(segment: string): string | undefined {
+  const parts = segmentParts(segment);
+
+  if (parts === undefined || !parts.outside.endsWith(OPTIONAL_PART)) return undefined;
+
+  const paramStart = parts.outside.lastIndexOf(PARAM_START);
+
+  if (paramStart === -1) return undefined;
+
+  const kept = parts.outside.slice(0, paramStart);
+
+  return kept.endsWith(OPTIONAL_PARAM_SEPARATOR) ? kept.slice(0, -1) : kept;
 }
 
 // A listed method follows a named one when it is that method, or `HEAD` beside a `GET`.

@@ -76,6 +76,42 @@ describe("the allow-list patterns", () => {
   });
 });
 
+describe("the allow-list of a route with an optional part", () => {
+  test.each([
+    ["an optional param", "/c/:id?", ["/c/*"], false],
+    ["an optional param, its path listed too", "/c/:id?", ["/c/*", "/c"], true],
+    ["an optional param under '**'", "/c/:id?", ["/c/**"], true],
+    ["an optional param with an Express 4 pattern", "/c/:id(\\d+)?", ["/c/*"], false],
+    ["an optional param with a Hono pattern", "/c/:id{[0-9]+}?", ["/c/*"], false],
+    ["an optional param inside a segment", "/c/x-:id?", ["/c/x-*"], true],
+    ["an optional param after a dot", "/file.:ext?", ["/file.*"], false],
+    [
+      "an optional param after a dot, its path listed too",
+      "/file.:ext?",
+      ["/file.*", "/file"],
+      true,
+    ],
+    ["an optional param in the middle", "/:lang?/docs", ["/*/docs"], false],
+    ["an Express 5 optional group", "/c{/:id}", ["/*/*"], false],
+    ["an Express 5 optional group, both paths listed", "/c{/:id}", ["/c/*", "/c"], true],
+    ["nested Express 5 groups", "/c{/:id{/:page}}", ["/c/*/*", "/c/*"], false],
+    [
+      "nested Express 5 groups, every path listed",
+      "/c{/:id{/:page}}",
+      ["/c/*/*", "/c/*", "/c"],
+      true,
+    ],
+    ["a Hono pattern, which is no optional group", "/c/:id{[0-9]+}", ["/c/*"], true],
+    ["a required param", "/c/:id", ["/c/*"], true],
+  ])("%s", (_, listedPath, allowedPaths, allowed) => {
+    const check = checkAllowing(...allowedPaths.map((path) => ({ path, reason: REASON })));
+
+    expect(refusedKeys(check, [{ method: "GET", path: listedPath }])).toEqual(
+      allowed ? [] : [`GET ${listedPath}`],
+    );
+  });
+});
+
 describe("the allow-list cost", () => {
   // Backtracking over every split of the path took seconds on this case.
   const BOUND_MILLISECONDS = 1_000;
