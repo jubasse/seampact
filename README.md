@@ -620,7 +620,7 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 | NestJS | 12 | zod, yup, class-validator |
 | Express | 4, 5 | zod, yup |
 | Fastify | 5 | zod, yup, Ajv |
-| AdonisJS | 6, 7 | zod, yup, VineJS |
+| AdonisJS | 7 (6 still works but is no longer maintained, see [Supported versions](docs/supported-versions.md)) | zod, yup, VineJS |
 | Hono | 4 | zod, yup |
 | Spring Boot | 4 | generated checks, Jakarta constraints on the records |
 | Symfony | 7.4, 8 | generated checks, Symfony Validator constraints on the inputs |

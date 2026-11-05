@@ -27,7 +27,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 - Edit only the files your task owns. A needed change elsewhere goes under "For the lead" in your report.
 - Shared files change only in lead or seam PRs: root `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `biome.json`, `.github/workflows/ci.yml`, the `exports` of `packages/core/spec`, `packages/core/spec/src/ir/**` and `packages/core/spec/schemas/ir/**`, the derivation table `packages/core/compiler/src/derivations/table.ts`, `docs/conformance/checklist.yaml`, `README.md`, the agent types in `.claude/agents/`, `docs/agents/orchestrator.md`, this file.
-- A lane adds its CI jobs in its own `.github/workflows/<lane-id>.yml`, built on the shared actions of `.github/actions/` (CONTRIBUTING.md, "CI").
+- A lane adds its CI jobs in its own `.github/workflows/<lane-id>.yml`, built on the shared actions of `.github/actions/` and ending with a `lane-aggregate` job that needs every other job, its required check (CONTRIBUTING.md, "CI").
 - The IR is change-controlled (ADR 0005): an IR change is asked of the lead, never worked around.
 - No committed comment, doc or test string points into `.work/` or another git-ignored path, and none cites a lead decision id (`LD-<n>`); `.claude/agents/` and `docs/agents/orchestrator.md` are the exception, since they name the lead's working files.
 
