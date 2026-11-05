@@ -15,6 +15,7 @@ on:
       - CI
       - Repository checks
       - Golden IR determinism
+      - Generation determinism
       - Native IR models
       - p3-binary
       - Contract bundles

@@ -2,7 +2,10 @@
 
 **Declare your API once in YAML. Get typed handlers, validators, OpenAPI and clients for your own framework.**
 
+Read the documentation at **[jubasse.github.io/seampact](https://jubasse.github.io/seampact/)**.
+
 [![CI](https://img.shields.io/github/actions/workflow/status/jubasse/seampact/ci.yml?branch=develop&label=CI)](https://github.com/jubasse/seampact/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-jubasse.github.io%2Fseampact-0a7bbb.svg)](https://jubasse.github.io/seampact/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-339933.svg)](docs/getting-started/01-install.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6.svg?logo=typescript&logoColor=white)](docs/concepts/packages.md)

@@ -171,6 +171,32 @@ test("writes each document of the api a server target serves by default, and non
   expect(existsSync(join(app, "openapi/tasksService.yaml"))).toBe(false);
 });
 
+test("writes the docs of a side file and the inline ones into the document", async () => {
+  const app = makeApp(
+    "sources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks }\n",
+    [{ name: "fake-server", role: "server" }],
+  );
+  const apiFile = join(app, "a/tasks/api.yaml");
+  const inlineSummary = "  summary: Tasks shared inside channels.\n";
+  const apiText = readFileSync(apiFile, "utf8");
+
+  expect(apiText).toContain(inlineSummary);
+  writeFileSync(
+    apiFile,
+    apiText.replace(inlineSummary, `${inlineSummary}  description: { $file: ./docs/api.md }\n`),
+  );
+  mkdirSync(join(app, "a/tasks/docs"));
+  writeFileSync(join(app, "a/tasks/docs/api.md"), "Tasks, read from a side file.\n");
+
+  const { exitCode } = await generateOutput(app);
+  const document = readFileSync(join(app, "openapi/tasks.full.yaml"), "utf8");
+
+  expect(exitCode).toBe(EXIT_SUCCESS);
+  expect(document).toContain("summary: Tasks shared inside channels.");
+  expect(document).toContain("Tasks, read from a side file.");
+  expect(document).toContain("summary: Search the channel's tasks with a structured query.");
+});
+
 test("refuses to replace a document seampact did not write, and writes nothing", async () => {
   const app = makeApp(
     "sources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks }\n",

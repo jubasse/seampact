@@ -1,0 +1,170 @@
+# docs/conformance/proofs/p8-conformance-4.yaml
+lane: p8-conformance-4
+proofs:
+  - id: CHK-010
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'core: packages/core/openapi/src/mapping.test.ts#public and full documents leaves internal routes and the components only they use out of the public document'
+      - 'core: packages/core/openapi/src/mapping.test.ts#public and full documents keeps internal routes in the full document, marked'
+  - id: CHK-026
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'core: packages/core/openapi/src/mapping.test.ts#sensitive fields are password writes a sensitive property and a body proof as format password'
+      - 'core: packages/core/compiler/src/passes/derive/wire/cache.test.ts#sensitive responses are no-store a response carrying a sensitive field, on a read or a write without cache, is no-store at the field'
+      - 'core: packages/core/spec/src/ir/invariants.test.ts#sensitive responses an operation whose response carries a sensitive field sets noStore'
+  - id: CHK-050
+    fixtures: [fixtures/golden/extensions]
+    tests:
+      - 'core: packages/core/openapi/src/mapping.test.ts#consumer extensions under their prefix writes each key at the place it is declared'
+      - 'core: packages/core/openapi/src/mapping.test.ts#consumer extensions under their prefix reaches about twenty keys over every place'
+  - id: CHK-056
+    fixtures: [fixtures/reference]
+    tests:
+      - 'core: packages/core/cli/src/commands/generate-refusals.test.ts#writes the docs of a side file and the inline ones into the document'
+  - id: CHK-059
+    fixtures: [fixtures/reference]
+    tests:
+      - 'core: packages/core/cli/src/config/document-plan.test.ts#writes every document of every api a server target serves when the app has no openapi key'
+      - 'core: packages/core/cli/src/config/document-plan.test.ts#writes no document for an app with client targets only, or with openapi none'
+      - 'core: packages/core/cli/src/commands/check-command.test.ts#check names an edited OpenAPI document and the line it differs at'
+      - 'core: packages/core/cli/src/commands/check-command.test.ts#checks.openapi of the root governs the merged documents'
+      - 'core: packages/core/openapi/src/drift.test.ts#drift names the first differing line names the line of a one-byte change, with both texts'
+  - id: CHK-071
+    fixtures: [fixtures/reference]
+    tests:
+      - 'core: packages/core/cli/src/config/resolve-target.test.ts#names the package and the install command when a target is missing'
+      - 'core: packages/core/cli/src/commands/generate-refusals.test.ts#writes the documents an OpenAPI-only app lists, with no target package installed'
+  - id: CHK-077
+    fixtures: [packages/core/spec/schemas/ir/examples/unknown-kind-and-feature.ir.json]
+    tests:
+      - 'core: packages/core/spec/src/ir/support.test.ts#checkIrSupport checkIrSupport names the mismatch'
+      - 'core: packages/core/spec/src/ir/support.test.ts#checkIrSupport an unsupported irVersion is named alone, whatever shape the rest has'
+  - id: CHK-095
+    fixtures: [fixtures/passes/access-rights/crud-rights]
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/rights/packs.test.ts#pack-derived rights rights and requirements of the CRUD rights pack, each with its derivation, before the written ones'
+      - 'core: packages/core/compiler/src/passes/access/rights/packs.test.ts#pack-derived rights the same contract without the CRUD rights pack derives no right and no requirement'
+  - id: CHK-101
+    fixtures: [fixtures/bundle-channels]
+    tests:
+      - 'core: scripts/dist-smoke/channels.test.ts#npm channel smoke'
+      - 'core: scripts/dist-smoke/channels.test.ts#release channel smoke'
+      - 'core: scripts/dist-smoke/channels.test.ts#git channel smoke'
+      - 'core: scripts/dist-smoke/channels.test.ts#missing pin prints the actual integrity'
+  - id: CHK-107
+    fixtures: [fixtures/golden/pack-hal, fixtures/golden/pack-laravel, fixtures/golden/pack-spring]
+    tests:
+      - 'core: packages/core/compiler/src/finalize/published-packs.test.ts#the reference contract with a published format pack compiles with pack-hal and records it in each IR'
+      - 'core: packages/core/compiler/src/finalize/published-packs.test.ts#the reference contract with a published format pack compiles with pack-laravel and records it in each IR'
+      - 'core: packages/core/compiler/src/finalize/published-packs.test.ts#the reference contract with a published format pack compiles with pack-spring and records it in each IR'
+  - id: CHK-112
+    fixtures: [fixtures/golden/every-default]
+    tests:
+      - 'core: scripts/golden/golden-cases.test.ts#every-default golden case every default is overridable'
+      - 'core: scripts/golden/golden-cases.test.ts#every-default golden case uses no opt-in'
+  - id: CHK-113
+    fixtures: [fixtures/reference]
+    tests:
+      - 'core: packages/core/cli/src/config/read-root-config.test.ts#reads the apps, the shared sources and the merged documents, defaulting a document''s apps to every app'
+      - 'core: packages/core/cli/src/config/read-root-config.test.ts#refuses the keys of one app in a root config, naming the app config as their place'
+      - 'core: packages/core/cli/src/config/read-root-config.test.ts#reads every app of a workspace with the root folded in, and reports every app''s problems'
+  - id: CHK-114
+    fixtures: [fixtures/reference]
+    tests:
+      - 'core: packages/core/cli/src/config/artefact-switches.test.ts#switches nativeDocs on and an artefact nothing needs off'
+      - 'core: packages/core/cli/src/config/artefact-switches.test.ts#refuses a switch the target does not declare, naming the declared artefacts'
+      - 'core: packages/core/cli/src/commands/generate-refusals.test.ts#writes the documents an OpenAPI-only app lists, with no target package installed'
+  - id: CHK-115
+    fixtures: [packages/core/spec/compatibility/matrix.json]
+    tests:
+      - 'core: packages/core/cli/src/config/compatibility-check.test.ts#refuses an incompatible major naming the reason and the tested majors, allowUntested or not (CHK-115)'
+  - id: CHK-120
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'core: packages/core/openapi/src/mapping.test.ts#reference document states every mapped member writes access with its reason, and the cookie write with its CSRF header as one requirement'
+      - 'core: packages/core/openapi/src/mapping.test.ts#reference document states every mapped member writes the signature scheme with its verification'
+      - 'core: packages/core/openapi/src/mapping.test.ts#reference document states every mapped member writes requirements, scopes and field rights'
+      - 'core: packages/core/openapi/src/mapping.test.ts#reference document states every mapped member writes paging with its sort-key rights'
+      - 'core: packages/core/openapi/src/mapping.test.ts#reference document states every mapped member writes concurrency, idempotency and relays'
+      - 'core: packages/core/openapi/src/mapping.test.ts#reference document states every mapped member writes each code of an error response with its derivation or origin'
+      - 'core: packages/core/openapi/src/golden-documents.test.ts#golden documents extension values match their schemas'
+      - 'core: packages/core/openapi/src/golden-documents.test.ts#golden documents every extension schema is exercised'
+  - id: CHK-136
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'core: packages/core/openapi/src/emitter-options.test.ts#emitter options change only what they name gives the committed documents with the defaults, written or left out'
+      - 'core: packages/core/openapi/src/emitter-options.test.ts#emitter options change only what they name keeps every x-seampact extension, none, or those listed'
+      - 'core: packages/core/openapi/src/emitter-options.test.ts#emitter options change only what they name replaces each reason by true, or drops an optional one, under reasons: omit'
+      - 'core: packages/core/openapi/src/emitter-options.test.ts#emitter options change only what they name writes servers and nothing else'
+      - 'core: packages/core/openapi/src/emitter-options.test.ts#emitter options change only what they name points request bodies at strict input components under inputSchemas: strict'
+  - id: CHK-137
+    fixtures: [fixtures/reference]
+    tests:
+      - 'core: packages/core/lint/src/engine.test.ts#severity lint.rules sets the severity'
+      - 'core: packages/core/lint/src/engine.test.ts#severity a disabled rule is not run'
+      - 'core: packages/core/lint/src/engine.test.ts#allows a subtree allow reaches a place below it'
+      - 'core: packages/core/lint/src/engine.test.ts#allows an allow on a catalogue entry silences the finding on it (CHK-137)'
+      - 'core: packages/core/lint/src/core-rules.e2e.test.ts#the core rules over the slice workspace an allow with a reason, a disabled rule and a pack''s severity leave one error'
+      - 'core: packages/core/lint/src/core-table.test.ts#the core rules are the grammar''s table, less the reserved ids'
+  - id: CHK-141
+    fixtures: [packages/core/spec/compatibility/matrix.json]
+    tests:
+      - 'core: packages/core/cli/src/config/compatibility-check.test.ts#warns on an untested major, naming the tested ones (CHK-141)'
+      - 'core: packages/core/cli/src/config/compatibility-check.test.ts#refuses an untested major under checks.matrix: error'
+      - 'core: packages/core/cli/src/config/compatibility-check.test.ts#accepts an untested major allowUntested names, under either level'
+      - 'core: packages/core/cli/src/config/compatibility-check.test.ts#refuses an incompatible major naming the reason and the tested majors, allowUntested or not (CHK-115)'
+  - id: CHK-170
+    fixtures: [fixtures/reference]
+    tests:
+      - 'core: packages/core/cli/src/config/document-plan.test.ts#writes every document of every api a server target serves when the app has no openapi key'
+      - 'core: packages/core/cli/src/config/document-plan.test.ts#writes no document for an app with client targets only, or with openapi none'
+      - 'core: packages/core/cli/src/commands/generate-refusals.test.ts#writes each document of the api a server target serves by default, and none for a client target'
+      - 'core: packages/core/cli/src/commands/native-docs.test.ts#nativeDocs is off by default and needs the boundary'
+      - 'core: packages/core/cli/src/commands/native-docs.test.ts#frameworkDocs off is refused with each target''s fix'
+      - 'core: packages/core/cli/src/commands/native-docs.test.ts#frameworkDocs is refused on a target that is no server'
+  - id: CHK-171
+    fixtures: [fixtures/reference]
+    tests:
+      - 'core: packages/core/openapi/src/merge/merge-documents.test.ts#merged document writes an element two inputs give identically once'
+      - 'core: packages/core/openapi/src/merge/merge-documents.test.ts#merged document refuses two different elements under one name, naming both apis and the prefix fix'
+      - 'core: packages/core/openapi/src/merge/merge-documents.test.ts#merged document applies a prefix to operation ids, component keys and every reference to them'
+      - 'core: packages/core/openapi/src/merge/merge-documents.test.ts#merged document always refuses two apis answering the same method and path'
+      - 'core: packages/core/cli/src/config/document-plan.test.ts#takes a merged document''s contributions from server entries and OpenAPI-only apps, none from client apps'
+      - 'core: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
+  - id: CHK-175
+    fixtures: [fixtures/golden]
+    tests:
+      - 'core: packages/core/diff/src/table/member-rows.test.ts#the member table every IR member has a row'
+      - 'core: packages/core/diff/src/table/member-rows.test.ts#the member table every row names an IR member'
+      - 'core: packages/core/diff/src/table/classification.test.ts#the classification table classifies operation.removed removed at none'
+      - 'core: packages/core/diff/src/diff-contracts.test.ts#positions a schema used in input and output gets both classifications'
+      - 'core: packages/core/diff/src/diff-contracts.test.ts#the gate additive-only fails a removed response field naming clients and the operation'
+  - id: CHK-177
+    fixtures: [fixtures/golden]
+    tests:
+      - 'core: packages/core/diff/src/diff-contracts.test.ts#the gate additive-only fails a removed response field naming clients and the operation'
+  - id: CHK-178
+    fixtures: [fixtures/golden]
+    tests:
+      - 'core: packages/core/diff/src/diff-contracts.test.ts#the gate none reports and passes'
+  - id: CHK-179
+    fixtures: [fixtures/golden]
+    tests:
+      - 'core: packages/core/diff/src/diff-contracts.test.ts#the gate stable is refused on a removed operation'
+      - 'core: packages/core/diff/src/diff-contracts.test.ts#the gate lowering a stable operation to escape the refusal fails too'
+  - id: CHK-180
+    fixtures: [fixtures/golden]
+    tests:
+      - 'core: packages/core/diff/src/diff-contracts.test.ts#the gate provisional additive-only passes an additive diff and fails a breaking one'
+  - id: CHK-181
+    fixtures: [fixtures/golden]
+    tests:
+      - 'core: packages/core/diff/src/diff-contracts.test.ts#whole-diff refusals refuses two irVersion values naming both'
+  - id: CHK-182
+    fixtures: [fixtures/golden]
+    tests:
+      - 'core: packages/core/diff/src/diff-contracts.test.ts#positions reordering properties is info on the wire'
+  - id: CHK-183
+    fixtures: [fixtures/golden]
+    tests:
+      - 'core: packages/core/diff/src/diff-contracts.test.ts#positions a pack upgrade carries its pack as cause'
