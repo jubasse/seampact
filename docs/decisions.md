@@ -78,7 +78,7 @@ The ADRs also cite six design lessons, listed under [Lessons](#lessons) below, a
 **A23.** Tenancy is open: a route may run in zero, one or several nested scopes. Each scope id comes from a declared source (path, query, header, host or subdomain, principal field) or from a resolver interface the app implements. No single resolution scheme is imposed.
 
 <a id="a24"></a>
-**A24.** 1.0 ships the generic rights decider, the opt-in derived CRUD rights pack, and the CASL (NestJS) and spatie (Laravel) adapters, each with its own conformance tests. The adapters are optional packages (A25). The CASL and spatie adapters ship in 1.1, not 1.0 (amended by the 1.0 scope decision).
+**A24.** 1.0 ships the generic rights decider, the opt-in derived CRUD rights pack, and the CASL (NestJS) and spatie (Laravel) adapters, each with its own conformance tests. The adapters are optional packages (A25). Amended 2026-11-06: the CASL and spatie adapters move to 1.1; 1.0 keeps the generic rights decider and the CRUD rights pack.
 
 <a id="a25"></a>
 **A25.** Authentication, rights, roles and tenancy are unopinionated, even at the cost of less generated code: the contract declares what a route requires, and the generated boundary is one neutral, typed hook per concern (authenticate, decide, resolve scope) plus registration and a boot check. Any library or hand-written code plugs in behind it, and library integrations are optional adapter packages that no target requires.

@@ -1576,7 +1576,12 @@ createClient({ baseUrl: "http://localhost" }).searchTasks({
       expect(notFounds.length, operation.id).toBeLessThanOrEqual(1);
     }
 
-    expect(await declaredCodesOf(ir, client, canned, "listTasks")).toContain("api.not_found");
+    const listTasksDeclared = await declaredCodesOf(ir, client, canned, "listTasks");
+    const listTasksNotFounds = listTasksDeclared.filter(
+      (code) => ir.errors[code]?.http.status === 404,
+    );
+
+    expect(listTasksNotFounds).toEqual(["api.not_found"]);
     expect(await declaredCodesOf(ir, client, canned, "listChannels")).not.toContain(
       "api.not_found",
     );
@@ -1603,6 +1608,12 @@ createClient({ baseUrl: "http://localhost" }).searchTasks({
     await expect(
       call(service, "getTask")({ path: taskPath, headers: user() }, { timeoutMs: 2000 }),
     ).resolves.toMatchObject({ ok: false, status: 401, code: "api.unauthenticated" });
+    await expect(
+      call(
+        tasks,
+        "payments",
+      )({ headers: { "stripe-signature": credentials.stripeSignature(event) }, body: event }),
+    ).resolves.toMatchObject({ ok: true, status: 204 });
     await expect(call(tasks, "payments")({ headers: user(), body: event })).resolves.toMatchObject({
       ok: false,
       status: 401,

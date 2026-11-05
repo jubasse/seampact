@@ -120,8 +120,11 @@ proofs:
   - id: CHK-118
     fixtures: [fixtures/golden/reference]
     tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#a derived object compiles to the object its kept properties write out'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#omit keeps the source order, required replaces, an overlay replaces what it sets'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#a field the source lacks, a bad overlay or source is refused at its pointer'
+      - 'zod: packages/targets/codegen-zod/src/generated-validators.test.ts#a picked schema has the picked members and none of the source''s others'
       - 'zod: packages/targets/codegen-zod/src/generated-validators.test.ts#a picked schema keeps the refinements and the strictness of the source'
-      - 'zod: packages/targets/codegen-zod/src/generated-validators.test.ts#an omitted schema keeps the refinements and the strictness of the rest'
   - id: CHK-134
     fixtures: [fixtures/golden/agreement]
     refusals:

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { writeGeneratedFiles } from "@seampact/codegen-core";
 import { type ContractIR, isKnownVariant } from "@seampact/spec/ir";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { z } from "zod";
+import type { z } from "zod";
 import { target } from "./index.js";
 
 const GOLDEN_IR = new URL("../../../../fixtures/golden/reference/tasks.ir.json", import.meta.url);
@@ -236,53 +236,40 @@ describe("enums are strict on input and open on output", () => {
   });
 });
 
-describe("pick and omit of a generated object schema equal its properties written out", () => {
-  const payloads = [
-    { title: "T" },
-    { title: "" },
-    { title: "x".repeat(201) },
-    { title: "T", effort: 3 },
-    { title: "T", effort: -1 },
-    { title: "T", extra: true },
-    { effort: 3 },
-    {},
-  ];
+describe("the schema generated from a compiled pick keeps the kept members and none of the others", () => {
+  function memberNames(exportName: string): string[] {
+    const schema = inputSchemas[exportName];
 
-  function verdicts(schema: SafeParser): boolean[] {
-    return payloads.map((payload) => schema.safeParse(payload).success);
+    if (schema === undefined) throw new Error(`no generated ${exportName}`);
+
+    return Object.keys(schema.shape);
   }
 
-  function createTaskSchema(): ObjectValidator {
-    const schema = inputSchemas.CreateTaskSchema;
+  test("a picked schema has the picked members and none of the source's others", () => {
+    expect(memberNames("CreateTaskSchema")).toEqual(["title", "effort"]);
+    expect(memberNames("UpdateTaskSchema")).toEqual([
+      "title",
+      "state",
+      "effort",
+      "expectedVersion",
+    ]);
 
-    if (schema === undefined) throw new Error("no generated CreateTaskSchema");
-
-    return schema;
-  }
-
-  function property(name: string): z.ZodType {
-    const validator = createTaskSchema().shape[name];
-
-    if (validator === undefined) throw new Error(`no generated CreateTaskSchema.${name}`);
-
-    return validator;
-  }
-
-  test("a picked schema keeps the refinements and the strictness of the source", () => {
-    const picked = createTaskSchema().pick({ title: true });
-    const writtenOut = z.strictObject({ title: property("title") });
-
-    expect(verdicts(picked)).toEqual(verdicts(writtenOut));
-    expect(picked.safeParse({ title: "" }).success).toBe(false);
-    expect(picked.safeParse({ title: "T", effort: 3 }).success).toBe(false);
+    for (const name of ["CreateTaskSchema", "UpdateTaskSchema"]) {
+      for (const dropped of ["taskId", "version", "createdAt"]) {
+        expect(memberNames(name), `${name}.${dropped}`).not.toContain(dropped);
+      }
+    }
   });
 
-  test("an omitted schema keeps the refinements and the strictness of the rest", () => {
-    const omitted = createTaskSchema().omit({ title: true });
-    const writtenOut = z.strictObject({ effort: property("effort") });
+  test("a picked schema keeps the refinements and the strictness of the source", () => {
+    const create = inputSchemas.CreateTaskSchema;
 
-    expect(verdicts(omitted)).toEqual(verdicts(writtenOut));
-    expect(omitted.safeParse({ effort: -1 }).success).toBe(false);
-    expect(omitted.safeParse({ effort: 3, title: "T" }).success).toBe(false);
+    if (create === undefined) throw new Error("no generated CreateTaskSchema");
+
+    expect(create.safeParse({ title: "T" }).success).toBe(true);
+    expect(create.safeParse({ title: "" }).success).toBe(false);
+    expect(create.safeParse({ title: "x".repeat(201) }).success).toBe(false);
+    expect(create.safeParse({ title: "T", taskId: "t1" }).success).toBe(false);
+    expect(create.safeParse({}).success).toBe(false);
   });
 });
