@@ -246,7 +246,7 @@ jobs:
           UV_PYTHON_DOWNLOADS: never
         run: |
           set -euo pipefail
-          (cd python && uv build --all-packages --wheel --out-dir "$WORK/wheels")
+          scripts/consumers/python/build-wheels.sh "$WORK/wheels"
           scripts/consumers/python/requirements.sh "$WORK/requirements.txt" seampact-fastapi generate uvicorn
           scripts/consumers/python/install.sh "$WORK/venv" "$WORK/requirements.txt" "$WORK/wheels" 'seampact-fastapi[generate]'
       - name: Serve the release and git channels
@@ -296,11 +296,10 @@ jobs:
             exit 1
           fi
       - name: Build each package's wheel, its build requirements checked against their hashes
-        working-directory: python
         env:
           UV_PYTHON: ${{ steps.python.outputs.python-path }}
           UV_PYTHON_DOWNLOADS: never
-        run: uv build --all-packages --out-dir "$RUNNER_TEMP/dist"
+        run: scripts/consumers/python/build-wheels.sh "$RUNNER_TEMP/dist"
       - name: Check each wheel carries the repository's LICENSE
         shell: bash
         run: |

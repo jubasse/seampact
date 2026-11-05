@@ -10,7 +10,7 @@ work=~/Dev/test-seampact-fastapi
 mkdir -p "$work" && cd "$work"
 
 # One wheel per package, then the third-party requirements pinned by hash from the lock file.
-(cd "$repo/python" && uv build --all-packages --wheel --out-dir "$work/wheels")
+"$repo/scripts/consumers/python/build-wheels.sh" "$work/wheels"
 "$repo/scripts/consumers/python/requirements.sh" requirements.txt seampact-fastapi generate uvicorn
 
 # A new virtual environment: the requirements from PyPI by hash, then the seampact wheels with no index.

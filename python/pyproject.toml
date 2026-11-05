@@ -42,7 +42,7 @@ require-build-hashes = true
 preview-features = ["build-dependency-hashes"]
 
 [tool.uv.workspace]
-members = ["codegen", "django", "drf", "fastapi", "hooks", "ir", "ninja", "signed-webhooks"]
+members = ["codegen", "compiler", "django", "drf", "fastapi", "hooks", "ir", "ninja", "signed-webhooks"]
 
 [dependency-groups]
 # The vulnerability audit of the lock file, installed only by its CI job.
@@ -66,6 +66,8 @@ dev = [
     "rich==15.0.0",
     "ruff==0.17.3",
     "httpx2==2.16.0",
+    # The build hook of the seampact-compiler wheels, for mypy; the same pin as the build constraints above.
+    "hatchling==1.33.0",
 ]
 # The servers the consumer tests run a generated app under: uvicorn for ASGI, gunicorn for WSGI (and ASGI through
 # uvicorn's worker). Installed by those tests only, never by a workspace sync.
@@ -76,12 +78,13 @@ serve = [
 
 [tool.ruff]
 target-version = "py312"
-src = ["codegen/src", "django/src", "drf/src", "fastapi/src", "hooks/src", "ir/src", "ninja/src", "signed-webhooks/src"]
+src = ["codegen/src", "compiler", "compiler/src", "django/src", "drf/src", "fastapi/src", "hooks/src", "ir/src", "ninja/src", "signed-webhooks/src"]
 line-length = 120
 # The namespace package `seampact` has no `__init__.py` (PEP 420): without this, ruff would take `seampact/fastapi`
 # or `seampact/django` for a top-level framework package and sort the framework's imports as first party.
 namespace-packages = [
     "codegen/src/seampact",
+    "compiler/src/seampact",
     "django/src/seampact",
     "drf/src/seampact",
     "fastapi/src/seampact",
@@ -100,6 +103,9 @@ plugins = ["pydantic.mypy"]
 python_version = "3.12"
 mypy_path = [
     "codegen/src",
+    # The release scripts and the build hook of seampact-compiler, imported by their tests as top-level modules.
+    "compiler",
+    "compiler/src",
     "django/src",
     "drf/src",
     "fastapi/src",
@@ -111,6 +117,11 @@ mypy_path = [
 files = [
     "codegen/src",
     "codegen/tests",
+    "compiler/hatch_build.py",
+    "compiler/release_version.py",
+    "compiler/wheel_smoke.py",
+    "compiler/src",
+    "compiler/tests",
     "django/src",
     "django/django_tests",
     "drf/src",
@@ -144,6 +155,7 @@ pythonVersion = "3.12"
 [tool.pytest.ini_options]
 testpaths = [
     "codegen/tests",
+    "compiler/tests",
     "django/django_tests",
     "drf/drf_tests",
     "fastapi/fastapi_tests",
@@ -152,6 +164,8 @@ testpaths = [
     "ninja/ninja_tests",
     "signed-webhooks/tests",
 ]
+# The tests of seampact-compiler import its release scripts, which live beside the package, not in it.
+pythonpath = ["compiler"]
 addopts = ["--import-mode=importlib", "--strict-markers", "--strict-config", "-ra"]
 xfail_strict = true
 filterwarnings = ["error"]
