@@ -1,7 +1,7 @@
 """A Python target (ADR 0010): a class a distribution names in its `seampact.generators` entry point, built with no
-argument. `seampact` reads each api an entry names with the target's `ir_support()`, then writes the files
-`generate()` returns through the generated-file writer, with the header added. Generating is pure: the same IR and
-entry give the same files, and a target never writes a file itself."""
+argument. `seampact` reads each api an entry names with the target's `ir_support()`, then writes the files `generate()`
+returns through the generated-file writer, with the header added, and prints `handler_warnings()`. Generating is pure:
+the same IR and entry give the same files, and a target never writes a file itself."""
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -85,6 +85,11 @@ class Generator(Protocol):
     def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
         """The files of one api of `entry`, each path relative to `entry.output_directory`. Raises
         `GenerationRefusedError` for a contract or option the target refuses, by name."""
+        ...
+
+    def handler_warnings(self, ir: ContractIR, entry: TargetEntry) -> Sequence[ConfigProblem]:
+        """The forms of one api of `entry` the generated boundary leaves to the handler, each a warning `seampact`
+        prints once the api generates (ADR 0016 "Left to the handler")."""
         ...
 
 

@@ -231,8 +231,9 @@ def _prepare(settings: RunSettings, on_hand_edit: HandEditPolicy) -> _PreparedRu
         return native_docs
 
     plans = [_plan(entry, targets[entry.id], views[entry.id], native_docs, on_hand_edit) for entry in config.entries]
+    handler_warnings = [warning for plan in plans for warning in plan.warnings]
 
-    return _PreparedRun(config, contract_apis, plans, matrix_warnings)
+    return _PreparedRun(config, contract_apis, plans, [*matrix_warnings, *handler_warnings])
 
 
 def _native_docs(
@@ -294,15 +295,17 @@ def _plan(
         return EntryPlan(entry.id, None, [], view.problems)
 
     files: list[GeneratedFile] = []
+    warnings: list[ConfigProblem] = []
     problems: list[ConfigProblem] = []
 
     for api in view.apis:
         generated = _generated_api(entry, target, api, native_docs.get((entry.id, api.api)))
 
-        if isinstance(generated, list) and generated and isinstance(generated[0], ConfigProblem):
-            problems.extend(item for item in generated if isinstance(item, ConfigProblem))
+        if isinstance(generated, _GeneratedApi):
+            files.extend(generated.files)
+            warnings.extend(generated.warnings)
         else:
-            files.extend(item for item in generated if isinstance(item, GeneratedFile))
+            problems.extend(generated)
 
     if problems:
         return EntryPlan(entry.id, None, [], problems)
@@ -310,43 +313,45 @@ def _plan(
     write = plan_write(entry.root, entry.id, files, on_hand_edit)
 
     if isinstance(write, PlannedWrite):
-        return EntryPlan(entry.id, write, [], [])
+        return EntryPlan(entry.id, write, [], [], warnings)
 
-    return EntryPlan(entry.id, None, write, [])
+    return EntryPlan(entry.id, None, write, [], warnings)
+
+
+@dataclass(frozen=True, slots=True)
+class _GeneratedApi:
+    """One api's files, their paths below the entry root, and the forms its target leaves to the handler."""
+
+    files: list[GeneratedFile]
+    warnings: list[ConfigProblem]
 
 
 def _generated_api(
     entry: AppConfigEntry, target: InstalledTarget, api: SourceApi, native_docs: NativeDocsDocument | None
-) -> list[GeneratedFile] | list[ConfigProblem]:
-    """The api's files with their paths below the entry root."""
+) -> _GeneratedApi | list[ConfigProblem]:
     where = f"entry '{entry.id}' api '{api.api}'"
     subdirectory = api.api if entry.names_several_apis else ""
     output_directory = os.path.join(entry.root, subdirectory) if subdirectory else entry.root
 
     try:
         ir = read_document(copy_of(api.ir), target.generator.ir_support())
-        files = _generated_files(
-            target.generator.generate(
-                ir,
-                TargetEntry(
-                    entry.id,
-                    entry.use,
-                    api.api,
-                    entry.document,
-                    entry.options,
-                    entry.artefacts,
-                    output_directory,
-                    _framework_routes(entry),
-                    string_of(entry.entry, "mount"),
-                    python_targets().get(entry.use),
-                    tuple(strings_of(entry.entry, "allowUntested") or []),
-                    FrameworkDocs(string_of(entry.entry, "frameworkDocs") or FrameworkDocs.KEEP),
-                    None
-                    if native_docs is None
-                    else NativeDocsDocument(native_docs.name, object_copy_of(native_docs.document)),
-                ),
-            )
+        target_entry = TargetEntry(
+            entry.id,
+            entry.use,
+            api.api,
+            entry.document,
+            entry.options,
+            entry.artefacts,
+            output_directory,
+            _framework_routes(entry),
+            string_of(entry.entry, "mount"),
+            python_targets().get(entry.use),
+            tuple(strings_of(entry.entry, "allowUntested") or []),
+            FrameworkDocs(string_of(entry.entry, "frameworkDocs") or FrameworkDocs.KEEP),
+            None if native_docs is None else NativeDocsDocument(native_docs.name, object_copy_of(native_docs.document)),
         )
+        files = _generated_files(target.generator.generate(ir, target_entry))
+        warnings = _handler_warnings(target.generator.handler_warnings(ir, target_entry))
     except IrRefusedError as refused:
         return [problem_of_ir(refusal, entry.use, where) for refusal in refused.refusals]
     except IrMalformedError as malformed:
@@ -369,11 +374,13 @@ def _generated_api(
     if headed and isinstance(headed[0], WriterRefusal):
         return [problem_of_writer(refusal, where) for refusal in headed if isinstance(refusal, WriterRefusal)]
 
-    return [
+    placed = [
         GeneratedFile(f"{subdirectory}/{file.path}" if subdirectory else file.path, file.contents)
         for file in headed
         if isinstance(file, GeneratedFile)
     ]
+
+    return _GeneratedApi(placed, warnings)
 
 
 def _generated_files(generated: Iterable[object]) -> list[GeneratedFile]:
@@ -390,6 +397,20 @@ def _generated_files(generated: Iterable[object]) -> list[GeneratedFile]:
         files.append(item)
 
     return files
+
+
+def _handler_warnings(warnings: Iterable[object]) -> list[ConfigProblem]:
+    """The generator's warnings, each a `ConfigProblem`; anything else is the generator's fault and ends as
+    `config.target.generate-failed`."""
+    checked: list[ConfigProblem] = []
+
+    for item in warnings:
+        if not isinstance(item, ConfigProblem):
+            raise TypeError(f"handler_warnings() must return ConfigProblem items, got {type(item).__name__}")
+
+        checked.append(item)
+
+    return checked
 
 
 def _framework_routes(entry: AppConfigEntry) -> list[FrameworkRoute]:

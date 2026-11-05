@@ -14,6 +14,7 @@ use Seampact\Codegen\Delivery;
 use Seampact\Codegen\FrameworkRouteScope;
 use Seampact\Codegen\HandlerAccessPlacement;
 use Seampact\Codegen\HandlerAccessTypes;
+use Seampact\Codegen\HandlerForms;
 use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -50,6 +51,11 @@ final class SymfonyGenerator implements Generator
     public function irSupport(): IrSupport
     {
         return new IrSupport([IrModelVersion::IR_VERSION], IrModelVersion::IR_REVISION, [self::HTTP_OPERATION], []);
+    }
+
+    public function handlerWarnings(ContractIR $ir, TargetEntry $entry): array
+    {
+        return HandlerForms::warnings($ir, $entry->id);
     }
 
     public function generate(ContractIR $ir, TargetEntry $entry): array

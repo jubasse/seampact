@@ -26,6 +26,16 @@ class IrPlace:
         return IrPlace(self.pointer + "".join(f"/{key}" for key in keys), self.operation)
 
 
+def place_in_entry(entry_id: str, at: IrPlace) -> str:
+    """Where a refusal or a warning is, as `seampact` prints it."""
+    where = f"entry '{entry_id}' {at.pointer or '/'}"
+
+    if at.operation is not None:
+        where += f" (operation '{at.operation}')"
+
+    return where
+
+
 class Refusals:
     def __init__(self, entry_id: str, target: str, distribution: str) -> None:
         """`target` is the target's short name in messages (`fastapi`), `distribution` its package
@@ -36,11 +46,7 @@ class Refusals:
         self._problems: dict[tuple[str, str], ConfigProblem] = {}
 
     def add(self, code: str, message: str, fix: str, at: IrPlace) -> None:
-        where = f"entry '{self._entry_id}' {at.pointer or '/'}"
-
-        if at.operation is not None:
-            where += f" (operation '{at.operation}')"
-
+        where = place_in_entry(self._entry_id, at)
         self._problems.setdefault((code, where), ConfigProblem(code, message, fix, where))
 
     def waiting(self, form: str, description: str, at: IrPlace, delivery: Delivery) -> None:

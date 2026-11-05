@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from typing import Final
 
 from seampact.codegen.contract_module import contract_module
+from seampact.codegen.handler_forms import handler_warnings
 from seampact.codegen.kept_forms import refuse_kept_forms
 from seampact.codegen.matrix_row import refuse_missing_matrix_row
 from seampact.codegen.names import api_names
@@ -32,6 +33,7 @@ from seampact.drf.dataclass_schemas import dataclass_schemas_module
 from seampact.drf.drf_module import drf_module, view_class
 from seampact.drf.operation_types import operations_module
 from seampact.drf.serializer_fields import RulesMode
+from seampact.ir.config.problem import ConfigProblem
 from seampact.ir.model import ContractIR, InputMediaType
 from seampact.ir.read import IrSupport
 from seampact.ir.run.generator import TargetEntry
@@ -53,6 +55,9 @@ class DrfGenerator:
 
     def framework_docs_off_fix(self) -> str | None:
         return "Remove `frameworkDocs: off` from the entry and remove the app's own schema view from its URLconf."
+
+    def handler_warnings(self, ir: ContractIR, entry: TargetEntry) -> Sequence[ConfigProblem]:
+        return handler_warnings(ir, entry.id)
 
     def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
         refusals = Refusals(entry.id, TARGET, DISTRIBUTION)

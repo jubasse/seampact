@@ -19,6 +19,11 @@ final class ThrowingGenerator implements Generator
         return IrSupport::ofModel([]);
     }
 
+    public function handlerWarnings(ContractIR $ir, TargetEntry $entry): array
+    {
+        return [];
+    }
+
     public function generate(ContractIR $ir, TargetEntry $entry): array
     {
         throw new \RuntimeException(self::MESSAGE);

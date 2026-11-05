@@ -32,6 +32,7 @@ final class RunnerDiscoveryTest extends TestCase
             ['name' => 'acme/not-a-target', 'version' => '1.0.0'],
             ['name' => 'acme/broken-target', 'version' => '1.0.0', 'extra' => ['seampact' => ['generator' => \stdClass::class]]],
             ['name' => 'acme/throwing-target', 'version' => '1.0.0', 'extra' => ['seampact' => ['generator' => ThrowingGenerator::class]]],
+            ['name' => 'acme/warning-target', 'version' => '1.0.0', 'extra' => ['seampact' => ['generator' => WarningGenerator::class]]],
         ]]));
     }
 
@@ -120,6 +121,18 @@ final class RunnerDiscoveryTest extends TestCase
         self::assertStringContainsString("'acme/throwing-target'", $stderr);
         self::assertStringContainsString(ThrowingGenerator::MESSAGE, $stderr);
         self::assertDirectoryDoesNotExist("{$this->project}/src");
+    }
+
+    public function testPrintsAFormTheTargetLeavesToTheHandlerAsAWarningOnGenerateAndCheck(): void
+    {
+        $this->config('{ id: warner, use: acme/warning-target, api: t }');
+
+        foreach (['generate', 'check'] as $command) {
+            [$exit, , $stderr] = $this->seampact($command);
+
+            self::assertSame(Command::EXIT_PASSED, $exit, $stderr);
+            self::assertStringContainsString('identity.headers.handler (here): Left to the handler.', $stderr);
+        }
     }
 
     public function testReportsAnUnexpectedFailureAsAnInternalErrorOnOneLine(): void

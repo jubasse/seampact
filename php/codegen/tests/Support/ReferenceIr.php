@@ -9,15 +9,15 @@ use Seampact\Ir\Model\IrModelVersion;
 use Seampact\Ir\Read\IrReader;
 use Seampact\Ir\Read\IrSupport;
 
-/** The reference contract's tasks IR, as a JSON document to edit and as the model it reads to. */
+/** A reference contract's IR (`tasks` unless named), as a JSON document to edit and as the model it reads to. */
 final class ReferenceIr
 {
-    public static function document(): \stdClass
+    public static function document(string $api = 'tasks'): \stdClass
     {
-        $text = file_get_contents(dirname(__DIR__, 4) . '/fixtures/golden/reference/tasks.ir.json');
+        $text = file_get_contents(dirname(__DIR__, 4) . "/fixtures/golden/reference/{$api}.ir.json");
         $document = is_string($text) ? json_decode($text, false, 512, JSON_THROW_ON_ERROR) : null;
         if (!$document instanceof \stdClass) {
-            throw new \LogicException('The reference tasks IR is not a readable JSON object.');
+            throw new \LogicException("The reference {$api} IR is not a readable JSON object.");
         }
 
         return $document;
