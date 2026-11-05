@@ -3,8 +3,9 @@
 name: Lane changes
 description: >-
   Says run=true when a changed path matches the lane's watched paths, run=false when none does or when the change
-  only touches documentation no lane test reads. Also says which row classes the run holds: post-merge rows on a
-  push, drift rows on the schedule, a manual run or a release. The calling job checks out the full history first.
+  only touches documentation no lane test reads; a pull request and a merge group compare with their base, a push
+  with its old tip. Also says which row classes the run holds: post-merge rows on a push, drift rows on the
+  schedule, a manual run or a release; a merge group holds the pull-request rows only. The calling job checks out the full history first.
 
 inputs:
   watched-paths:
@@ -34,7 +35,8 @@ runs:
         EVENT: ${{ github.event_name }}
         PR_BASE: ${{ github.base_ref }}
         PUSH_BEFORE: ${{ github.event.before }}
-        PUSH_AFTER: ${{ github.sha }}
+        MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+        HEAD_SHA: ${{ github.sha }}
       run: |
         set -euo pipefail
         watched_pattern=$(grep -v '^[[:space:]]*$' <<< "$WATCHED_PATHS" | paste -sd '|')
@@ -43,15 +45,7 @@ runs:
           exit 1
         fi
 
-        range=""
-        if [ "$EVENT" = "pull_request" ]; then
-          range="origin/$PR_BASE...HEAD"
-        elif [ "$EVENT" = "push" ] && git cat-file -e "${PUSH_BEFORE}^{commit}" 2>/dev/null; then
-          range="$PUSH_BEFORE..$PUSH_AFTER"
-        fi
-
-        # A schedule, a manual run, a new branch (all-zero sha) or a force push whose old tip the server no longer
-        # holds has no base: the lane runs every job.
+        range=$(bash "$GITHUB_ACTION_PATH/change-range.sh")
         if [ -z "$range" ]; then
           echo "No base to compare with on this $EVENT event: the lane runs."
           echo "run=true" >> "$GITHUB_OUTPUT"

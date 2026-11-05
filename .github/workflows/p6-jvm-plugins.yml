@@ -16,6 +16,9 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
   workflow_dispatch:
   # The nightly and manual runs are the only ones that write the Gradle caches, from the first row of each pull request job;
   # every other run and row reads them.

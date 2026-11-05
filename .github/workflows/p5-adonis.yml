@@ -9,6 +9,9 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
   workflow_dispatch:
   # The nightly run holds the drift row (AdonisJS 6 on yup).
   schedule:

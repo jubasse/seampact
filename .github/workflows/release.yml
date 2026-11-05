@@ -6,8 +6,9 @@
 # a draft GitHub release, the npm, Maven Central (signed after the approval), Gradle Plugin Portal, PyPI and PHP
 # mirror publishes and the release itself, published last.
 # A real run starts by hand from main with dry-run off; one approval of the `release` environment covers the publish
-# jobs. A dry run, the default of a manual run and the only mode of a pull request, publishes nothing and needs no
-# secret: it stamps its own throwaway checkout and ends with the rehearsals. `release` is the check to require.
+# jobs. A dry run, the default of a manual run and the only mode of a pull request and a merge group, publishes
+# nothing and needs no secret: it stamps its own throwaway checkout and ends with the rehearsals. `release` is the
+# check to require.
 name: release
 
 on:
@@ -23,6 +24,9 @@ on:
         type: boolean
         default: true
   pull_request:
+    branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
     branches: [main, develop]
 
 permissions: {}
@@ -96,8 +100,8 @@ jobs:
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
-      # A pull request rehearses DRY_RUN_VERSION (0.0.1), a version no real run publishes; every job of the run, the
-      # binary call's included, stamps its checkout with it.
+      # A pull request and a merge group rehearse DRY_RUN_VERSION (0.0.1), a version no real run publishes; every job
+      # of the run, the binary call's included, stamps its checkout with it.
       - name: The mode and the version
         id: mode
         env:
