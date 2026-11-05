@@ -1,6 +1,15 @@
 {
   "name": "@seampact/pack-hal",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/packs/pack-hal"
+  },
+  "homepage": "https://jubasse.github.io/seampact/features/convention-packs/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "description": "HAL items and pages with _links, _embedded and Spring HATEOAS's page object.",
   "seampact": {

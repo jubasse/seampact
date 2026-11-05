@@ -2,6 +2,15 @@
   "name": "@seampact/server-runtime",
   "description": "The request checks and replies every generated Node and Web-standard server boundary imports, with one placement per framework.",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/runtime/server-runtime"
+  },
+  "homepage": "https://jubasse.github.io/seampact/concepts/packages/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "type": "module",
   "files": [

@@ -12,7 +12,7 @@ import { packageDirectories } from "../workspace/index.ts";
 export interface Violation {
   /** Repository-relative path of the manifest or file at fault. */
   file: string;
-  /** "roles", "rule 1" to "rule 7", "dev-dependencies", "pack" or "namespaces". */
+  /** "roles", "rule 1" to "rule 7", "dev-dependencies", "pack", "namespaces" or "metadata". */
   rule: string;
   message: string;
 }
@@ -26,6 +26,11 @@ const GRADLE_PLUGIN_ID = "io.github.jubasse.seampact";
 // An included build of precompiled convention plugins: its plugin ids are never published.
 const GRADLE_INTERNAL_BUILD_PREFIX = "jvm/build-logic/";
 const COMPOSER_VENDOR = "seampact";
+const REPOSITORY_URL = "git+https://github.com/jubasse/seampact.git";
+const ISSUES_URL = "https://github.com/jubasse/seampact/issues";
+const DOCS_SITE_URL = "https://jubasse.github.io/seampact/";
+// The two packages that are never published; every other npm package is public.
+const UNPUBLISHED_PACKAGES = ["@seampact/binary", "@seampact/docs-site"];
 const RUNTIME_SETS = ["dependencies", "peerDependencies", "optionalDependencies"] as const;
 
 type Rec = Record<string, unknown>;
@@ -257,6 +262,34 @@ function checkNpmNamespace(pkgs: Npm[], out: Violation[]): void {
   }
 }
 
+function checkPublicMetadata(root: string, pkgs: Npm[], out: Violation[]): void {
+  for (const p of pkgs) {
+    if (UNPUBLISHED_PACKAGES.includes(p.name)) continue;
+    const add = (message: string) => out.push({ file: p.file, rule: "metadata", message });
+    const { repository, homepage, bugs } = p.json;
+
+    if (
+      !isRec(repository) ||
+      repository.type !== "git" ||
+      repository.url !== REPOSITORY_URL ||
+      repository.directory !== p.dir
+    )
+      add(`needs \`repository\` {type: "git", url: "${REPOSITORY_URL}", directory: "${p.dir}"}`);
+
+    if (typeof homepage !== "string" || !homepage.startsWith(DOCS_SITE_URL))
+      add(`needs a \`homepage\` on the docs site, ${DOCS_SITE_URL}`);
+
+    if (!isRec(bugs) || bugs.url !== ISSUES_URL) add(`needs \`bugs\` {url: "${ISSUES_URL}"}`);
+
+    if (!hasReadme(join(root, p.dir, "README.md")))
+      out.push({
+        file: `${p.dir}/README.md`,
+        rule: "metadata",
+        message: "a public package needs a README.md that is not empty",
+      });
+  }
+}
+
 function checkChangesets(root: string, out: Violation[]): void {
   const file = ".changeset/config.json";
 
@@ -418,6 +451,7 @@ export function checkPackageRules(root: string): Violation[] {
   checkDependencies(pkgs, out);
   checkPacks(root, pkgs, out);
   checkNpmNamespace(pkgs, out);
+  checkPublicMetadata(root, pkgs, out);
   checkChangesets(root, out);
   checkWorkflows(root, out);
   checkScripts(root, pkgs, out);
@@ -429,4 +463,8 @@ export function checkPackageRules(root: string): Violation[] {
 
 export function formatViolation(v: Violation): string {
   return `${v.file}: ${v.rule}: ${v.message}`;
+}
+
+function hasReadme(readmePath: string): boolean {
+  return existsSync(readmePath) && readFileSync(readmePath, "utf8").trim() !== "";
 }

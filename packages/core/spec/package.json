@@ -2,6 +2,15 @@
   "name": "@seampact/spec",
   "description": "The JSON Schemas of the YAML files and of the IR, with their TypeScript types, the naming vectors and the bundle vectors.",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/core/spec"
+  },
+  "homepage": "https://jubasse.github.io/seampact/contract/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "type": "module",
   "files": [

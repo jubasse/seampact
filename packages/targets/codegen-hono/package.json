@@ -2,6 +2,15 @@
   "name": "@seampact/codegen-hono",
   "description": "Generates a registerRoutes function per api that adds each contract route to a Hono 4 app with its access, validation and reply checks around your handler map, validating with zod.",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/targets/codegen-hono"
+  },
+  "homepage": "https://jubasse.github.io/seampact/backend/hono/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "type": "module",
   "files": [

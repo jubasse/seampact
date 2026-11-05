@@ -6,7 +6,7 @@ import { checkPackageRules, formatViolation } from "./rules.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../..");
-const fixture = (name: string, side: "pass" | "fail") =>
+const fixture = (name: string, side: "pass" | "fail" | "empty-readme") =>
   checkPackageRules(join(HERE, "fixtures", name, side)).map(formatViolation);
 
 /** A case passes in `pass` and, in `fail`, yields exactly the expected rule and message parts. */
@@ -129,6 +129,20 @@ describe("package rules", () => {
     expect(g.join("\n")).toContain('Gradle plugin id "com.acme.seampact"');
 
     proves("composer", "namespaces", "php/laravel/composer.json", 'Composer name "acme/laravel"');
+  });
+
+  it("a public package has repository, homepage, bugs and a README", () => {
+    const fail = fixture("metadata", "fail");
+
+    expect(fixture("metadata", "pass")).toEqual([]);
+    expect(fail).toHaveLength(4);
+    expect(fail.join("\n")).toContain("needs `repository`");
+    expect(fail.join("\n")).toContain("needs a `homepage`");
+    expect(fail.join("\n")).toContain("needs `bugs`");
+    expect(fail.join("\n")).toContain("packages/spec/README.md: metadata: a public package");
+    expect(fixture("metadata", "empty-readme").join("\n")).toContain(
+      "packages/spec/README.md: metadata: a public package",
+    );
   });
 
   it("cli exits non-zero on a violation", () => {

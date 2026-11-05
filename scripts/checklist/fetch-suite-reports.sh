@@ -3,7 +3,7 @@
 # for each artefact name, the newest unexpired copy from a develop run of this repository that succeeded on a push or
 # a schedule (never a fork's or a pull request's run). A consumer workflow skips its suite when a push does not touch
 # it, so the newest copy of each name may come from an older run than the others: each line printed names the run and
-# its commit.
+# its commit. With SUITE_REPORTS_COMMIT set (the gate after the nightly), only the runs of that commit count.
 # Needs `gh` signed in (GH_TOKEN in CI) and the repository as the current directory or GH_REPO.
 set -euo pipefail
 
@@ -14,6 +14,7 @@ fi
 
 target_dir="$1"
 branch="${SUITE_REPORTS_BRANCH:-develop}"
+commit="${SUITE_REPORTS_COMMIT:-}"
 mkdir -p "$target_dir"
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,7 +33,7 @@ while read -r name run_id _created_at; do
 
   if [[ -z "${run_commit[$run_id]+set}" ]]; then
     run_commit[$run_id]="$(gh api "repos/{owner}/{repo}/actions/runs/$run_id" |
-      jq -r --arg branch "$branch" -f "$script_dir/suite-run.jq")"
+      jq -r --arg branch "$branch" --arg commit "$commit" -f "$script_dir/suite-run.jq")"
   fi
 
   [[ -n "${run_commit[$run_id]}" ]] || continue

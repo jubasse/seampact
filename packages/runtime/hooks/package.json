@@ -2,6 +2,15 @@
   "name": "@seampact/hooks",
   "description": "The neutral hook interfaces and idempotency store interface every generated Node server boundary types against.",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/runtime/hooks"
+  },
+  "homepage": "https://jubasse.github.io/seampact/concepts/packages/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "type": "module",
   "files": [

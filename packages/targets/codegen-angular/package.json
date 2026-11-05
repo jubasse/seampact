@@ -2,6 +2,15 @@
   "name": "@seampact/codegen-angular",
   "description": "Generates an injectable Angular api service over HttpClient with signal readers built on resource(), over the typed fetch client, with no query library, and opt-in NgRx action groups and effects.",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/targets/codegen-angular"
+  },
+  "homepage": "https://jubasse.github.io/seampact/frontend/angular/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
   "private": true,
   "type": "module",
   "files": [

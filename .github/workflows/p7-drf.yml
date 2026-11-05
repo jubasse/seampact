@@ -240,7 +240,7 @@ jobs:
         with:
           name: drf-http-suite-${{ matrix.row }}
           path: reports
-          retention-days: 7
+          retention-days: 90
           if-no-files-found: warn
 
   # The target generated and checked from the reference contract's local YAML (a `path` source) through the pinned
