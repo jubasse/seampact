@@ -4,6 +4,7 @@
   "commit": false,
   "access": "restricted",
   "baseBranch": "develop",
+  "fixed": [["@seampact/*"]],
   "updateInternalDependencies": "patch",
   "ignore": []
 }
