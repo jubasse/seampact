@@ -32,6 +32,7 @@ const REPRODUCIBLE_TAR_OPTIONS = [
   "--owner=0",
   "--group=0",
   "--numeric-owner",
+  "--mode=u=rwX,go=rX",
 ];
 
 const tarballFileName = (name: string, version: string) =>
