@@ -14,6 +14,7 @@ import type { Link } from "../links.js";
 import { refuseInconsistentIr } from "../located-refusals.js";
 import { ExportNames, typeScriptIdentifier } from "../planned-names.js";
 import type { Refusal } from "../refusal.js";
+import { askedRequirements } from "./asked-requirements.js";
 import { SERVER_RUNTIME_PACKAGE } from "./server-runtime-check.js";
 
 // The framework-neutral types of a Node server boundary, typed from the types link: the handler interface of each
@@ -243,7 +244,7 @@ export function hookTypesSource(
   const deciders = requirementNames(ir).map(([name, codes, operations, params]) => {
     const paramsType =
       params === undefined
-        ? "unknown"
+        ? "never"
         : requirementParamsType(params, types.descriptor, imports, refusals);
 
     return `  readonly ${JSON.stringify(name)}: RequirementRequest<${denialOf(codes)}, ${paramsType}, ${identitiesOf(operations)}>;`;
@@ -369,16 +370,10 @@ function requirementNames(
   };
 
   for (const operation of ir.operations) {
-    for (const requirement of operation.requires) {
-      if (requirement.kind === "right" && "right" in requirement) {
-        add("rights", requirement.right, ir.rights[requirement.right], operation);
-      } else if (requirement.kind === "rule" && "rule" in requirement) {
-        add("rules", requirement.rule, ir.rules[requirement.rule], operation);
-      }
-    }
+    for (const { member, name } of askedRequirements(operation)) {
+      const declaration = member === "rights" ? ir.rights[name] : ir.rules[name];
 
-    for (const fieldRight of operation.fieldRights) {
-      add("rights", fieldRight.right, ir.rights[fieldRight.right], operation);
+      add(member, name, declaration, operation);
     }
   }
 

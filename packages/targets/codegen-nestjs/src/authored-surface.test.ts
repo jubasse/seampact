@@ -15,7 +15,6 @@ import { target as nestjsTarget } from "./index.js";
 const PROJECT = projectDirectory(import.meta.url, "authored-surface");
 const API = "tasks";
 const RIGHT_WITH_METADATA = "tasks.read";
-const METADATA_KEY = "audit";
 
 const rightWithMetadata: ReferenceIrChange = (ir, api) => {
   const right = ir.rights[RIGHT_WITH_METADATA];
@@ -110,17 +109,9 @@ describe("the generated NestJS surface", () => {
     }
   });
 
-  test("a right's custom metadata reaches the generated route table or is refused by name", async () => {
-    const outcome = await generateReferenceProject(
-      PROJECT,
-      nestjsTarget,
-      {},
-      referenceChanges(rightWithMetadata),
-    ).then(
-      () => generatedFile(PROJECT, `server/${API}/routes.ts`),
-      (error: unknown) => String(error),
-    );
-
-    expect(outcome).toMatch(new RegExp(`${METADATA_KEY}|extensions`));
+  test("a right's custom metadata is refused by name, not dropped", async () => {
+    await expect(
+      generateReferenceProject(PROJECT, nestjsTarget, {}, referenceChanges(rightWithMetadata)),
+    ).rejects.toThrow("right.extensions.unsupported");
   });
 });

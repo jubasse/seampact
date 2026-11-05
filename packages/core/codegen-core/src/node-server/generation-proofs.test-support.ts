@@ -33,6 +33,7 @@ export interface GenerationProofSubject {
 
 const API = "tasks";
 const SCOPE_WITH_EXTENSIONS = "channel";
+const RULE_WITH_EXTENSIONS = "throttle";
 const MEMORY_STORE_SOURCE = fileURLToPath(
   new URL("../../../../runtime/idempotency-memory/src/index.js", import.meta.url),
 );
@@ -86,6 +87,21 @@ import type * as Tasks from "./generated/types/tasks/index.js";
 type RolesParams = NonNullable<DeciderRequests["roles"]["params"]>;
 
 export const paramsAreTheRights: [RolesParams] extends [Tasks.schemas.RolesParams] ? true : false = true;
+`,
+  typedRuleParams: `import type { DeciderRequests } from "./generated/server/tasks/index.js";
+import type * as Tasks from "./generated/types/tasks/index.js";
+
+type RecentAuthParams = NonNullable<DeciderRequests["recentAuth"]["params"]>;
+
+export const paramsAreTheRules: [RecentAuthParams] extends [Tasks.schemas.RecentAuthParams] ? true : false = true;
+`,
+  noParams: `import type { DeciderRequests } from "./generated/server/tasks/index.js";
+
+type RightParams = NonNullable<DeciderRequests["tasks.read"]["params"]>;
+type RuleParams = NonNullable<DeciderRequests["throttle"]["params"]>;
+
+export const noRightParams: [RightParams] extends [never] ? true : false = true;
+export const noRuleParams: [RuleParams] extends [never] ? true : false = true;
 `,
 } as const;
 
@@ -175,6 +191,14 @@ export function describeGenerationProofs(subject: GenerationProofSubject): void 
     test("the decide request of a right carries the right's declared params type", () => {
       expect(errorsOfProbe(state(), "typedRightParams")).toEqual([]);
     });
+
+    test("the decide request of a rule carries the rule's declared params type", () => {
+      expect(errorsOfProbe(state(), "typedRuleParams")).toEqual([]);
+    });
+
+    test("the decide request of a right or rule without params admits no params", () => {
+      expect(errorsOfProbe(state(), "noParams")).toEqual([]);
+    });
   });
 
   describe("the IR the target reads", () => {
@@ -213,6 +237,33 @@ export function describeGenerationProofs(subject: GenerationProofSubject): void 
             code: "scope.extensions.unsupported",
             message: expect.stringContaining(`scope '${SCOPE_WITH_EXTENSIONS}'`),
             member: `/scopes/${SCOPE_WITH_EXTENSIONS}/extensions`,
+          },
+        ],
+      });
+    });
+
+    test("a rule's extension value is refused by name, not dropped", async () => {
+      const ir = readGoldenIr(API);
+      const rule = ir.rules[RULE_WITH_EXTENSIONS];
+
+      if (rule === undefined)
+        throw new Error(`the reference holds no rule ${RULE_WITH_EXTENSIONS}`);
+
+      const outcome = await generateFrom(subject, project, {
+        ...ir,
+        rules: {
+          ...ir.rules,
+          [RULE_WITH_EXTENSIONS]: { ...rule, extensions: { acme: { audit: "throttle" } } },
+        },
+      });
+
+      expect(outcome).toMatchObject({
+        status: "refused",
+        refusals: [
+          {
+            code: "rule.extensions.unsupported",
+            message: expect.stringContaining(`rule '${RULE_WITH_EXTENSIONS}'`),
+            member: `/rules/${RULE_WITH_EXTENSIONS}/extensions`,
           },
         ],
       });

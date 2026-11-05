@@ -21,6 +21,7 @@ import {
   refuseUnknownValueAt,
 } from "../located-refusals.js";
 import type { Refusal } from "../refusal.js";
+import { askedRequirements } from "./asked-requirements.js";
 import { fingerprintHeaderNames } from "./fingerprint-headers.js";
 import type { CompressionOption, FrameworkEtagMode } from "./options.js";
 import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
@@ -393,14 +394,7 @@ function accessExtensionRefusals(ir: ContractIR): Refusal[] {
   const asked = new Set<string>();
 
   for (const operation of ir.operations) {
-    for (const requirement of operation.requires) {
-      if (requirement.kind === "right" && "right" in requirement)
-        asked.add(`rights/${requirement.right}`);
-      else if (requirement.kind === "rule" && "rule" in requirement)
-        asked.add(`rules/${requirement.rule}`);
-    }
-
-    for (const fieldRight of operation.fieldRights) asked.add(`rights/${fieldRight.right}`);
+    for (const { member, name } of askedRequirements(operation)) asked.add(`${member}/${name}`);
 
     for (const scope of operation.scopes) asked.add(`scopes/${scope.scope}`);
   }
