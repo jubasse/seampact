@@ -260,8 +260,11 @@ jobs:
     if: needs.prepare.outputs.dry-run == 'false' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # The reference tarball is attested here: the binary call attests the binaries and the wheels it built.
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -289,6 +292,9 @@ jobs:
           mkdir "$RUNNER_TEMP/contract"
           mv "$RUNNER_TEMP/reference/reference.tgz" "$RUNNER_TEMP/contract/reference-contract.tgz"
           echo "$TARBALL_SHA256  $RUNNER_TEMP/contract/reference-contract.tgz" | sha256sum --check --strict
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/contract/reference-contract.tgz
       # A rerun updates its own draft; a published release of the version stops the run.
       - name: Create or update the draft release at this commit
         env:
@@ -343,9 +349,10 @@ jobs:
           node scripts/release/publish-npm.ts "$RUNNER_TEMP/npm-tarballs" --registry https://registry.npmjs.org/
           --provenance
 
-  # Last: publishing the draft creates the tag. The binaries' attestations, made by the binary call, are checked first.
+  # Last: publishing the draft creates the tag. The binaries' attestations, made by the binary call, and the reference
+  # tarball the draft holds, with its attestation, are checked first.
   release-publish:
-    needs: [prepare, binary, publish-npm]
+    needs: [prepare, binary, reference-tarball, publish-npm]
     if: needs.prepare.outputs.dry-run == 'false' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -373,6 +380,16 @@ jobs:
           awk '{ print $2 }' "$RUNNER_TEMP/assets/SHA256SUMS" | while read -r asset; do
             gh attestation verify "$RUNNER_TEMP/assets/$asset" --repo "$GITHUB_REPOSITORY"
           done
+      - name: The draft's reference tarball is the one every OS of the call wrote, and has its attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: v${{ needs.prepare.outputs.version }}
+          TARBALL_SHA256: ${{ needs.reference-tarball.outputs.reference-tarball-sha256 }}
+        run: |
+          gh release download "$TAG" --pattern reference-contract.tgz --dir "$RUNNER_TEMP/contract"
+          echo "$TARBALL_SHA256  $RUNNER_TEMP/contract/reference-contract.tgz" | sha256sum --check --strict
+          gh attestation verify "$RUNNER_TEMP/contract/reference-contract.tgz" --repo "$GITHUB_REPOSITORY"
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
