@@ -50,6 +50,10 @@ describe("the documentation fast path", () => {
     ["a fixture README", ["fixtures/reference/README.md"]],
     ["a move from docs/ into a package", ["docs/a.md", "packages/x.ts"]],
     ["documentation and code together", ["README.md", "scripts/consumers/cli.ts"]],
+    [
+      "the docs site package and code together",
+      ["packages/tools/docs-site/astro.config.mjs", "scripts/consumers/cli.ts"],
+    ],
   ])("runs the lane for %s", (_label, changedPaths) => {
     expect(decideLaneRun(EVERY_PATH, changedPaths)).toBe("true");
   });
