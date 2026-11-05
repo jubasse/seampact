@@ -237,7 +237,7 @@ function pomProblems(
 }
 
 /** The trimmed text inside the first `<tag>` of the text, empty when it has none. */
-function block(text: string, tag: string): string {
+export function block(text: string, tag: string): string {
   return new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(text)?.[1]?.trim() ?? "";
 }
 

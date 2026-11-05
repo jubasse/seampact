@@ -632,12 +632,14 @@ jobs:
   # `publishPlugins` builds and uploads the plugin itself, so the job first rebuilds it and checks it byte for byte
   # against build-jvm's manifest. Gradle and its build plugins run here, with dependency verification on: the job holds
   # the portal key alone, given to the last step only. A rerun while the portal reviews the plugin gets its "already
-  # exists" answer, which counts as published. After Central, which serves the modules the plugin depends on.
+  # exists" answer, which counts as published. It starts beside publish-maven-central, so the one approval of the
+  # release environment covers both, and waits before `publishPlugins` until Central serves the modules the plugin
+  # depends on.
   publish-plugin-portal:
-    needs: [prepare, binary, build-jvm, release-draft, publish-maven-central]
+    needs: [prepare, binary, build-jvm, release-draft]
     if: needs.prepare.outputs.dry-run == 'false' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 150
     environment: release
     permissions:
       contents: read
@@ -673,6 +675,11 @@ jobs:
           scripts/release/jvm/build-plugin.sh "$RUNNER_TEMP/assets"
           node scripts/release/jvm/plugin-portal-plan.ts --manifest "$RUNNER_TEMP/plugin-portal-manifest.json" \
             --version "$VERSION" | tee -a "$GITHUB_OUTPUT"
+      - name: Wait until Central serves the modules the Gradle plugin depends on
+        if: steps.plan.outputs.publish == 'true'
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: node scripts/release/jvm/central-wait.ts --version "$VERSION" --timeout-minutes 120
       - name: Publish the Gradle plugin
         if: steps.plan.outputs.publish == 'true'
         env:
