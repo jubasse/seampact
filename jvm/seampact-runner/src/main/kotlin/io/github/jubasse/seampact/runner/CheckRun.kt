@@ -110,12 +110,15 @@ private fun checkLevel(config: AppConfig): String =
 
 /**
  * The compatibility check's warnings, always printed (`warnings.ignore` scopes to a target's generate warnings, and
- * `allowUntested` silences a framework major), then [ignorable], less the codes `warnings.ignore` lists.
+ * `allowUntested` silences a framework major), then the forms the target leaves to the handler and [ignorable], less
+ * the codes `warnings.ignore` lists.
  */
 internal fun printedWarnings(prepared: PreparedRun.Prepared, ignorable: List<ConfigProblem> = emptyList()): List<String> {
     val ignored = ignoredWarnings(prepared.config)
+    val handlerWarnings = prepared.plans.filterIsInstance<EntryPlan.Planned>().flatMap { it.warnings }
 
-    return (prepared.warnings + ignorable.filter { it.code !in ignored }).map { "seampact warning: ${problemsText(listOf(it))}" }
+    return (prepared.warnings + (handlerWarnings + ignorable).filter { it.code !in ignored })
+        .map { "seampact warning: ${problemsText(listOf(it))}" }
 }
 
 private fun ignoredWarnings(config: AppConfig): Set<String> =

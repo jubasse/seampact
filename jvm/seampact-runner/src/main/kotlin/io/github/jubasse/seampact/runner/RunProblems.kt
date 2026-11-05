@@ -6,6 +6,7 @@ import io.github.jubasse.seampact.ir.config.ConfigProblem
 import io.github.jubasse.seampact.ir.read.IrRefusal
 import io.github.jubasse.seampact.ir.write.WriterRefusal
 import io.github.jubasse.seampact.springboot.SpringBootRefusal
+import io.github.jubasse.seampact.springboot.SpringBootWarning
 
 // Every refusal of a run as one shape, the config problem's (code, message, fix, where), so both builds print them
 // alike and the codes stay those of the Node CLI and the seampact-ir readers.
@@ -26,10 +27,16 @@ internal fun BinaryFailure.toProblem(where: String): ConfigProblem {
 
 internal fun WriterRefusal.toProblem(where: String): ConfigProblem = ConfigProblem(code, message, fix, where)
 
-internal fun SpringBootRefusal.toProblem(entryId: String, api: String): ConfigProblem {
+internal fun SpringBootRefusal.toProblem(entryId: String, api: String): ConfigProblem =
+    ConfigProblem(code, message, fix, irPlaceInEntry(entryId, api, operation, member))
+
+internal fun SpringBootWarning.toProblem(entryId: String, api: String): ConfigProblem =
+    ConfigProblem(code, message, fix, irPlaceInEntry(entryId, api, operation, member))
+
+private fun irPlaceInEntry(entryId: String, api: String, operation: String?, member: String): String {
     val operationPart = operation?.let { " operation '$it'" } ?: ""
 
-    return ConfigProblem(code, message, fix, "entry '$entryId' api '$api'$operationPart $member")
+    return "entry '$entryId' api '$api'$operationPart $member"
 }
 
 internal fun IrRefusal.toProblem(where: String): ConfigProblem = ConfigProblem(

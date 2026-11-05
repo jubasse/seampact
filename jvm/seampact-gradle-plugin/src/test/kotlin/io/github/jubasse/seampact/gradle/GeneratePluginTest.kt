@@ -56,6 +56,27 @@ class GeneratePluginTest {
         assertTrue(security.exists(), "the security beans are generated and compile")
     }
 
+    // The tasksService identity declares the rights-version header, which the handler checks: generation warns and
+    // goes on (ADR 0016 "Left to the handler").
+    @Test
+    fun warnsByNameOnTheIdentityHeadersTheHandlerChecks() {
+        val app = SampleApp(directory)
+        val serviceEntry = listOf(
+            "- id: service",
+            "  use: io.github.jubasse:seampact-spring-boot",
+            "  api: tasksService",
+            "  operations: { include: [getTask] }",
+            "  options: { package: com.example.tasksservice.api }",
+        ).joinToString("") { "\n          $it" }
+        app.write("seampact.config.yaml", SampleApp.REFERENCE_CONFIG.replace(PACKAGE_OPTION, PACKAGE_OPTION + serviceEntry))
+        app.writeBuildScript("seampact {\n${app.stubBinaryBlock()}\n}")
+
+        val generated = app.run("seampactGenerate")
+
+        assertEquals(TaskOutcome.SUCCESS, generated.task(":seampactGenerate")?.outcome)
+        assertTrue("seampact warning: identity.headers.handler (entry 'service' api 'tasksService' operation 'getTask'" in generated.output, generated.output)
+    }
+
     @Test
     fun refusesSpringSecurityOnWithoutSpringSecurityWeb() {
         val app = SampleApp(directory)
