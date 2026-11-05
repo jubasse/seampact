@@ -22,9 +22,9 @@ final readonly class IrPlace
     }
 
     /** Where a refusal or a warning is, as `vendor/bin/seampact` prints it. */
-    public function inEntry(string $entryId): string
+    public function inEntry(string $entryId, ?string $api = null): string
     {
-        return "entry '{$entryId}' " . ($this->member === '' ? '/' : $this->member)
+        return "entry '{$entryId}' " . ($api === null ? '' : "api '{$api}' ") . ($this->member === '' ? '/' : $this->member)
             . ($this->operation === null ? '' : " (operation '{$this->operation}')");
     }
 

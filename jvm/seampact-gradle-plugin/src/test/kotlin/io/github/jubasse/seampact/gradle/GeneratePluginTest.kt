@@ -56,7 +56,7 @@ class GeneratePluginTest {
         assertTrue(security.exists(), "the security beans are generated and compile")
     }
 
-    // The tasksService identity declares the rights-version header, which the handler checks: generation warns and
+    // The tasksService identity declares headers (`actorSurface`, `deadline`, `trace`) the handler checks: generation warns and
     // goes on (ADR 0016 "Left to the handler").
     @Test
     fun warnsByNameOnTheIdentityHeadersTheHandlerChecks() {

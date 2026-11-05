@@ -29,7 +29,7 @@ final class HandlerForms
      *
      * @return list<ConfigProblem>
      */
-    public static function warnings(ContractIR $ir, string $entryId): array
+    public static function warnings(ContractIR $ir, string $entryId, string $api): array
     {
         $warnings = [];
         foreach ($ir->operations as $index => $operation) {
@@ -43,7 +43,7 @@ final class HandlerForms
                 self::IDENTITY_HEADERS_HANDLER,
                 "The headers of the identity '{$identityId}' in operation '{$operation->id}' at {$place->member} is not enforced by the generated boundary.",
                 self::IDENTITY_HEADERS_FIX,
-                $place->inEntry($entryId),
+                $place->inEntry($entryId, $api),
             );
         }
 

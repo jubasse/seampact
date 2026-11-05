@@ -57,7 +57,7 @@ class DrfGenerator:
         return "Remove `frameworkDocs: off` from the entry and remove the app's own schema view from its URLconf."
 
     def handler_warnings(self, ir: ContractIR, entry: TargetEntry) -> Sequence[ConfigProblem]:
-        return handler_warnings(ir, entry.id)
+        return handler_warnings(ir, entry.id, entry.api)
 
     def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
         refusals = Refusals(entry.id, TARGET, DISTRIBUTION)

@@ -118,7 +118,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
 
         for (schemeId in schemeIds) {
             val scheme = ir.schemes[schemeId]
-            if (scheme != null && (scheme is QueryScheme || scheme is BasicScheme)) {
+            if (scheme is QueryScheme || scheme is BasicScheme) {
                 refusals.waiting("scheme.${scheme.kind}", "A '${scheme.kind}' credential scheme", at, Delivery.CONSUMER)
             }
         }

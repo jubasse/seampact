@@ -32,6 +32,8 @@ final class RunnerDiscoveryTest extends TestCase
             ['name' => 'acme/not-a-target', 'version' => '1.0.0'],
             ['name' => 'acme/broken-target', 'version' => '1.0.0', 'extra' => ['seampact' => ['generator' => \stdClass::class]]],
             ['name' => 'acme/throwing-target', 'version' => '1.0.0', 'extra' => ['seampact' => ['generator' => ThrowingGenerator::class]]],
+            ['name' => 'acme/old-target', 'version' => '1.0.0', 'extra' => ['seampact' => ['generator' => OldGenerator::class]]],
+            ['name' => 'acme/bad-warning-target', 'version' => '1.0.0', 'extra' => ['seampact' => ['generator' => BadWarningGenerator::class]]],
             ['name' => 'acme/warning-target', 'version' => '1.0.0', 'extra' => ['seampact' => ['generator' => WarningGenerator::class]]],
         ]]));
     }
@@ -133,6 +135,29 @@ final class RunnerDiscoveryTest extends TestCase
             self::assertSame(Command::EXIT_PASSED, $exit, $stderr);
             self::assertStringContainsString('identity.headers.handler (here): Left to the handler.', $stderr);
         }
+    }
+
+    public function testRefusesByNameATargetWithoutTheHandlerWarningsMethod(): void
+    {
+        $this->config('{ id: old, use: acme/old-target, api: t }');
+
+        [$exit, , $stderr] = $this->seampact('generate');
+
+        self::assertSame(Command::EXIT_REFUSED, $exit);
+        self::assertStringContainsString("config.target.load-failed (entry 'old' use)", $stderr);
+        self::assertStringContainsString('HandlerWarningGenerator', $stderr);
+        self::assertDirectoryDoesNotExist("{$this->project}/src");
+    }
+
+    public function testNamesATargetWhoseHandlerWarningsAreNotProblems(): void
+    {
+        $this->config('{ id: bad, use: acme/bad-warning-target, api: t }');
+
+        [$exit, , $stderr] = $this->seampact('generate');
+
+        self::assertSame(Command::EXIT_REFUSED, $exit);
+        self::assertStringContainsString("config.target.generate-failed (entry 'bad' api 't')", $stderr);
+        self::assertStringContainsString('handlerWarnings() must return ConfigProblem items', $stderr);
     }
 
     public function testReportsAnUnexpectedFailureAsAnInternalErrorOnOneLine(): void

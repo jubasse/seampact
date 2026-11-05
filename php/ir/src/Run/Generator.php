@@ -12,9 +12,9 @@ use Seampact\Ir\Write\GeneratedFile;
 /**
  * A PHP target (ADR 0010): a class a Composer package names in its `extra.seampact.generator`, built with no
  * argument. `vendor/bin/seampact` reads each api an entry names with the target's `irSupport()`, then writes the
- * files `generate()` returns through the generated-file writer, with the header added, and prints
- * `handlerWarnings()`. Generating is pure: the same
- * IR and entry give the same files, and a target never writes a file itself.
+ * files `generate()` returns through the generated-file writer, with the header added. Generating is pure: the same
+ * IR and entry give the same files, and a target never writes a file itself. A target also implements
+ * `HandlerWarningGenerator`.
  */
 interface Generator
 {
@@ -28,12 +28,4 @@ interface Generator
      * @throws GenerationRefusedException a contract or option the target refuses, by name
      */
     public function generate(ContractIR $ir, TargetEntry $entry): array;
-
-    /**
-     * The forms of one api of `$entry` the generated boundary leaves to the handler, each a warning
-     * `vendor/bin/seampact` prints once the api generates (ADR 0016 "Left to the handler").
-     *
-     * @return list<ConfigProblem>
-     */
-    public function handlerWarnings(ContractIR $ir, TargetEntry $entry): array;
 }

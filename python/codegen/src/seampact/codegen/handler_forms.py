@@ -20,7 +20,7 @@ IDENTITY_HEADERS_HANDLER: Final = "identity.headers.handler"
 _IDENTITY_HEADERS_FIX: Final = "Read the identity headers the boundary validated in the handler."
 
 
-def handler_warnings(ir: ContractIR, entry_id: str) -> list[ConfigProblem]:
+def handler_warnings(ir: ContractIR, entry_id: str, api: str) -> list[ConfigProblem]:
     """One warning per operation whose identity declares headers."""
     warnings: list[ConfigProblem] = []
 
@@ -37,7 +37,7 @@ def handler_warnings(ir: ContractIR, entry_id: str) -> list[ConfigProblem]:
                 f"The headers of the identity '{identity_id}' in operation '{operation.id}' at {place.pointer} is not "
                 "enforced by the generated boundary.",
                 _IDENTITY_HEADERS_FIX,
-                place_in_entry(entry_id, place),
+                place_in_entry(entry_id, place, api),
             )
         )
 

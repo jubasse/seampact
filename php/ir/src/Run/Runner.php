@@ -277,7 +277,7 @@ final class Runner
                 JsonValue::string($entry->entry, 'mount'),
             );
             $files = $target->generator->generate($ir, $targetEntry);
-            $warnings = $target->generator->handlerWarnings($ir, $targetEntry);
+            $warnings = self::checkedWarnings($target->generator->handlerWarnings($ir, $targetEntry));
         } catch (IrRefusedException $refused) {
             return array_map(
                 static fn (IrRefusal $refusal): ConfigProblem => RunProblems::ofIr($refusal, $entry->use(), $where),
@@ -312,6 +312,27 @@ final class Runner
         );
 
         return new GeneratedApi($placed, $warnings);
+    }
+
+    /**
+     * The generator's warnings, each a `ConfigProblem`; anything else is the generator's fault and ends as
+     * `config.target.generate-failed`.
+     *
+     * @param array<mixed> $warnings
+     * @return list<ConfigProblem>
+     */
+    private static function checkedWarnings(array $warnings): array
+    {
+        $checked = [];
+        foreach ($warnings as $warning) {
+            if (!$warning instanceof ConfigProblem) {
+                throw new \UnexpectedValueException('handlerWarnings() must return ConfigProblem items, got ' . get_debug_type($warning));
+            }
+
+            $checked[] = $warning;
+        }
+
+        return $checked;
     }
 
     // A hand-edited or foreign file is drift the writer names; any other refusal means the check cannot compare.

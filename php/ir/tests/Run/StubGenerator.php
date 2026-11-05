@@ -7,6 +7,7 @@ namespace Seampact\Ir\Tests\Run;
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Read\IrSupport;
 use Seampact\Ir\Run\Generator;
+use Seampact\Ir\Run\HandlerWarningGenerator;
 use Seampact\Ir\Run\TargetEntry;
 use Seampact\Ir\Write\GeneratedFile;
 
@@ -14,7 +15,7 @@ use Seampact\Ir\Write\GeneratedFile;
  * A target for RunnerDiscoveryTest: one class naming the api and its operation count, in the entry's
  * namespace, and the entry's options and boot-check inputs as JSON.
  */
-final class StubGenerator implements Generator
+final class StubGenerator implements Generator, HandlerWarningGenerator
 {
     public function irSupport(): IrSupport
     {

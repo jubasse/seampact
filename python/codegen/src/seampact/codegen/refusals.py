@@ -26,9 +26,10 @@ class IrPlace:
         return IrPlace(self.pointer + "".join(f"/{key}" for key in keys), self.operation)
 
 
-def place_in_entry(entry_id: str, at: IrPlace) -> str:
+def place_in_entry(entry_id: str, at: IrPlace, api: str | None = None) -> str:
     """Where a refusal or a warning is, as `seampact` prints it."""
-    where = f"entry '{entry_id}' {at.pointer or '/'}"
+    api_part = "" if api is None else f"api '{api}' "
+    where = f"entry '{entry_id}' {api_part}{at.pointer or '/'}"
 
     if at.operation is not None:
         where += f" (operation '{at.operation}')"

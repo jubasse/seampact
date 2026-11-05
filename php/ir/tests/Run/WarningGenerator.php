@@ -8,11 +8,12 @@ use Seampact\Ir\Config\ConfigProblem;
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Read\IrSupport;
 use Seampact\Ir\Run\Generator;
+use Seampact\Ir\Run\HandlerWarningGenerator;
 use Seampact\Ir\Run\TargetEntry;
 use Seampact\Ir\Write\GeneratedFile;
 
 /** A target for RunnerDiscoveryTest that leaves one form to the handler. */
-final class WarningGenerator implements Generator
+final class WarningGenerator implements Generator, HandlerWarningGenerator
 {
     public function irSupport(): IrSupport
     {
