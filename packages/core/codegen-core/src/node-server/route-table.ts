@@ -21,6 +21,7 @@ import {
   refuseUnknownValueAt,
 } from "../located-refusals.js";
 import type { Refusal } from "../refusal.js";
+import { askedRequirements } from "./asked-requirements.js";
 import { fingerprintHeaderNames } from "./fingerprint-headers.js";
 import type { CompressionOption, FrameworkEtagMode } from "./options.js";
 import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
@@ -103,6 +104,7 @@ export function routeTableSource(
   const format = errorFormat(ir, refusals);
 
   refusals.push(...encodedSegmentRefusals(ir));
+  refusals.push(...accessExtensionRefusals(ir));
 
   ir.operations.forEach((operation, index) => {
     warnings.push(...handlerForms(ir, operation, operationLocation(index, operation.id)));
@@ -384,6 +386,52 @@ function handlerForms(
   return forms.flatMap(([form, description, present, member, fix]) =>
     present ? [warnLeftToHandler(form, description, below(location, member), fix)] : [],
   );
+}
+
+// The extension values of a right, rule or scope an operation asks: the decide and resolve requests do not carry them
+// yet, so each is refused once rather than dropped.
+function accessExtensionRefusals(ir: ContractIR): Refusal[] {
+  const asked = new Set<string>();
+
+  for (const operation of ir.operations) {
+    for (const { member, name } of askedRequirements(operation)) asked.add(`${member}/${name}`);
+
+    for (const scope of operation.scopes) asked.add(`scopes/${scope.scope}`);
+  }
+
+  const declarations = [
+    ...Object.entries(ir.rights).map(([name, right]) => ({
+      kind: "right",
+      member: "rights",
+      name,
+      extensions: right.extensions,
+    })),
+    ...Object.entries(ir.rules).map(([name, rule]) => ({
+      kind: "rule",
+      member: "rules",
+      name,
+      extensions: rule.extensions,
+    })),
+    ...Object.entries(ir.scopes).map(([name, scope]) => ({
+      kind: "scope",
+      member: "scopes",
+      name,
+      extensions: scope.extensions,
+    })),
+  ];
+
+  return declarations
+    .filter(
+      ({ member, name, extensions }) =>
+        asked.has(`${member}/${name}`) && Object.keys(extensions).length > 0,
+    )
+    .map(({ kind, member, name }) =>
+      refuseNotGeneratedYet(
+        `${kind}.extensions`,
+        `An extension value of the ${kind} '${name}'`,
+        below(API_LOCATION, member, name, "extensions"),
+      ),
+    );
 }
 
 // Forms the reference contract does not hold, refused until a consumer needs them (A47).

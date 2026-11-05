@@ -2,6 +2,7 @@
 // access forms 1.0 refuses, the rights-version header form and the links of a client target.
 
 export * from "./access-forms-refused.test-support.js";
+export * from "./generation-proofs.test-support.js";
 export * from "./live-debug-exceptions.test-support.js";
 export * from "./live-handler-access.test-support.js";
 export * from "./live-pages.test-support.js";
