@@ -24,6 +24,11 @@ on:
 
 permissions: {}
 
+# `bash -e -o pipefail`: a step whose command fails before a pipe into `tee` fails too.
+defaults:
+  run:
+    shell: bash
+
 # A real run is never cancelled halfway through a publish; a newer push cancels a pull request's dry run.
 concurrency:
   group: release-${{ github.event_name }}-${{ github.ref }}
@@ -88,15 +93,18 @@ jobs:
         run: |
           if [ "$EVENT" = workflow_dispatch ]; then
             dry_run="$INPUT_DRY_RUN"
-            version="$INPUT_VERSION"
+            candidate="$INPUT_VERSION"
           else
             dry_run=true
-            version="$(python3 python/compiler/release_version.py .)"
+            candidate="$(python3 python/compiler/release_version.py .)"
           fi
           if [ "$dry_run" != true ] && [ "$REF" != refs/heads/main ]; then
             echo "A real run publishes from main only, and this run is on $REF: start it from main, or as a dry run."
             exit 1
           fi
+          # A real run refuses the development version by name.
+          mode="$([ "$dry_run" = true ] && echo dry-run || echo real)"
+          version="$(node scripts/release/run-version.ts "$candidate" --mode "$mode")"
           { echo "version=$version"; echo "dry-run=$dry_run"; } | tee -a "$GITHUB_OUTPUT"
       # The binary call checks the same on its own checkout; failing here names it before anything is built.
       - name: The compiler of the commit is at the version
@@ -153,6 +161,8 @@ jobs:
       contents: read
     outputs:
       artifact: npm-tarballs
+      # The file, name, version and SHA-256 of each tarball: the publish jobs take these tarballs and no other.
+      manifest: ${{ steps.pack.outputs.manifest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -170,9 +180,12 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: node scripts/release/stamp.ts "$VERSION"
       - name: Build, pack and check every published package
+        id: pack
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
-        run: node scripts/release/pack-npm.ts "$VERSION" --out "$RUNNER_TEMP/npm-tarballs"
+        run: |
+          node scripts/release/pack-npm.ts "$VERSION" --out "$RUNNER_TEMP/npm-tarballs" --manifest "$RUNNER_TEMP/npm-manifest.json"
+          echo "manifest=$(cat "$RUNNER_TEMP/npm-manifest.json")" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: npm-tarballs
@@ -181,8 +194,9 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-  # The binaries embed the packs from the tarballs npm publishes. The call grants what its attestation needs even in
-  # a dry run, where it does not attest, so both modes run the same workflow with the same permissions.
+  # The binaries embed the packs from the tarballs npm publishes. The call never attests: an attestation is public
+  # once signed, so release-publish attests the draft's binaries after the approval. The call is still granted what
+  # its attestation job declares.
   binary:
     needs: [prepare, pack-npm]
     permissions:
@@ -193,7 +207,7 @@ jobs:
     with:
       version: ${{ needs.prepare.outputs.version }}
       packed-packs-artifact: ${{ needs.pack-npm.outputs.artifact }}
-      attest: ${{ needs.prepare.outputs.dry-run == 'false' }}
+      attest: false
 
   # The reference contract's bundle tarball the release attaches, written on every OS and checked to be one.
   reference-tarball:
@@ -203,7 +217,9 @@ jobs:
     uses: ./.github/workflows/p3-dist.yml
 
   # The last job of a dry run, and the gate of a real run's publish: the binaries are the ones the call hashed, and
-  # the tarballs publish to a local registry, publish again as a no-op, and install from it.
+  # the tarballs publish to a local registry, publish again as a no-op, and install from it. The registry and the
+  # packages installed from npmjs are third-party code: this job holds no secret and no id-token, and nothing it
+  # writes reaches the publish jobs, which check the tarballs against pack-npm's manifest.
   rehearse:
     needs: [prepare, pack-npm, binary]
     runs-on: ubuntu-24.04
@@ -237,34 +253,58 @@ jobs:
         env:
           REGISTRY: ${{ steps.registry.outputs.registry }}
           NPM_CONFIG_USERCONFIG: ${{ steps.registry.outputs.npmrc }}
+          MANIFEST: ${{ needs.pack-npm.outputs.manifest }}
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
-          node scripts/release/publish-npm.ts "$RUNNER_TEMP/npm-tarballs" --registry "$REGISTRY"
-          node scripts/release/publish-npm.ts "$RUNNER_TEMP/npm-tarballs" --registry "$REGISTRY" | tee "$RUNNER_TEMP/republish.txt"
+          printf '%s\n' "$MANIFEST" > "$RUNNER_TEMP/npm-manifest.json"
+          publish=(node scripts/release/publish-npm.ts "$RUNNER_TEMP/npm-tarballs" --manifest "$RUNNER_TEMP/npm-manifest.json" --version "$VERSION" --registry "$REGISTRY")
+          "${publish[@]}"
+          "${publish[@]}" | tee "$RUNNER_TEMP/republish.txt"
           if ! grep -q '^publish-npm: 0 published, ' "$RUNNER_TEMP/republish.txt"; then
             echo "The second publish published again: it must skip every version the registry holds with the same bytes."
             exit 1
           fi
-      - name: Install the CLI from the local registry and run it
+      # What a user runs: a contract that names a published pack compiles (the pack manifest and its package are at
+      # one version), and a Node server target generates (the installed runtime is at the generators' version).
+      - name: Install the CLI, a pack and a Node server target from the local registry, then compile and generate
         env:
           REGISTRY: ${{ steps.registry.outputs.registry }}
           VERSION: ${{ needs.prepare.outputs.version }}
+          REPOSITORY: ${{ github.workspace }}
         working-directory: ${{ runner.temp }}
         run: |
           mkdir install && cd install
           echo '{ "name": "release-rehearsal", "private": true }' > package.json
-          npm install --no-audit --no-fund --registry "$REGISTRY" "@seampact/cli@$VERSION"
+          npm install --ignore-scripts --no-audit --no-fund --registry "$REGISTRY" \
+            "@seampact/cli@$VERSION" "@seampact/pack-spring@$VERSION" "@seampact/codegen-ts@$VERSION" \
+            "@seampact/codegen-zod@$VERSION" "@seampact/codegen-express@$VERSION" "@seampact/server-runtime@$VERSION" \
+            zod@4.6.7 express@5.3.0
           ./node_modules/.bin/seampact --help
+
+          mkdir pack-app && cp -R "$REPOSITORY/fixtures/golden/pack-spring/contract" pack-app/contract
+          # `compile` loads the sources only, never the target, as in the binary's smoke apps.
+          printf '%s\n' 'sources:' '  contract: { path: ./contract }' 'targets:' \
+            '  - { id: server, use: seampact-smoke-target, apis: [tasks, tasksService] }' > pack-app/seampact.config.yaml
+          (cd pack-app && ../node_modules/.bin/seampact compile)
+
+          mkdir server-app && cp -R "$REPOSITORY/fixtures/reference" server-app/contract
+          printf '%s\n' 'outDir: generated' 'sources:' '  reference: { path: ./contract }' 'targets:' \
+            '  - { id: types, use: "@seampact/codegen-ts", apis: [tasks, tasksService] }' \
+            '  - { id: validators, use: "@seampact/codegen-zod", apis: [tasks, tasksService] }' \
+            '  - id: server' \
+            '    use: "@seampact/codegen-express"' \
+            '    apis: [tasks, tasksService]' \
+            '    link: { types: types, validators: validators }' > server-app/seampact.config.yaml
+          (cd server-app && ../node_modules/.bin/seampact generate)
 
   release-draft:
     needs: [prepare, binary, reference-tarball, rehearse]
     if: needs.prepare.outputs.dry-run == 'false' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    # The reference tarball is attested here: the binary call attests the binaries and the wheels it built.
+    # The draft exists before the approval, so the reviewer reads it; it is attested only after, by release-publish.
     permissions:
       contents: write
-      id-token: write
-      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -277,7 +317,7 @@ jobs:
         with:
           name: ${{ needs.binary.outputs.assets-artifact }}
           path: ${{ runner.temp }}/assets
-      - name: The binaries are the ones the call hashed and attested
+      - name: The binaries are the ones the call hashed
         env:
           SUMS_SHA256: ${{ needs.binary.outputs.sums-sha256 }}
         run: scripts/release/verify-assets.sh "$RUNNER_TEMP/assets" "$SUMS_SHA256"
@@ -292,9 +332,6 @@ jobs:
           mkdir "$RUNNER_TEMP/contract"
           mv "$RUNNER_TEMP/reference/reference.tgz" "$RUNNER_TEMP/contract/reference-contract.tgz"
           echo "$TARBALL_SHA256  $RUNNER_TEMP/contract/reference-contract.tgz" | sha256sum --check --strict
-      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-path: ${{ runner.temp }}/contract/reference-contract.tgz
       # A rerun updates its own draft; a published release of the version stops the run.
       - name: Create or update the draft release at this commit
         env:
@@ -304,7 +341,16 @@ jobs:
           TARGET: ${{ github.sha }}
           NOTES: docs/release-notes/${{ needs.prepare.outputs.version }}.md
         run: |
-          is_draft="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || echo absent)"
+          # Only "release not found" means absent; any other failure (auth, network) stops the run with gh's message.
+          if view="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>"$RUNNER_TEMP/view-error.txt")"; then
+            is_draft="$view"
+          elif grep -q '^release not found' "$RUNNER_TEMP/view-error.txt"; then
+            is_draft=absent
+          else
+            cat "$RUNNER_TEMP/view-error.txt"
+            echo "gh release view $TAG failed: the draft step cannot tell whether the release exists."
+            exit 1
+          fi
           case "$is_draft" in
             absent)
               gh release create "$TAG" --draft --target "$TARGET" --title "$TAG" --notes-file "$NOTES" "$RUNNER_TEMP"/assets/* "$RUNNER_TEMP/contract/reference-contract.tgz"
@@ -342,15 +388,20 @@ jobs:
         with:
           name: ${{ needs.pack-npm.outputs.artifact }}
           path: ${{ runner.temp }}/npm-tarballs
+      # The tarballs are checked against pack-npm's manifest, a job output the artefact cannot change.
       - name: Publish the tarballs with provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: >-
-          node scripts/release/publish-npm.ts "$RUNNER_TEMP/npm-tarballs" --registry https://registry.npmjs.org/
-          --provenance
+          MANIFEST: ${{ needs.pack-npm.outputs.manifest }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          printf '%s\n' "$MANIFEST" > "$RUNNER_TEMP/npm-manifest.json"
+          node scripts/release/publish-npm.ts "$RUNNER_TEMP/npm-tarballs" --manifest "$RUNNER_TEMP/npm-manifest.json" \
+            --version "$VERSION" --registry https://registry.npmjs.org/ --provenance
 
-  # Last: publishing the draft creates the tag. The binaries' attestations, made by the binary call, and the reference
-  # tarball the draft holds, with its attestation, are checked first.
+  # Last: publishing the draft creates the tag. The draft stays editable during the approval wait, so its assets are
+  # downloaded and checked against the outputs of the call and of p3-dist, an asset the run did not produce is
+  # refused, and only then are they attested (public once signed) and the release published.
   release-publish:
     needs: [prepare, binary, reference-tarball, publish-npm]
     if: needs.prepare.outputs.dry-run == 'false' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
@@ -358,7 +409,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
-      attestations: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -367,35 +419,47 @@ jobs:
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: ${{ needs.binary.outputs.assets-artifact }}
-          path: ${{ runner.temp }}/assets
-      - name: The binaries are the ones the call hashed, and each has its attestation
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SUMS_SHA256: ${{ needs.binary.outputs.sums-sha256 }}
-        run: |
-          scripts/release/verify-assets.sh "$RUNNER_TEMP/assets" "$SUMS_SHA256"
-          awk '{ print $2 }' "$RUNNER_TEMP/assets/SHA256SUMS" | while read -r asset; do
-            gh attestation verify "$RUNNER_TEMP/assets/$asset" --repo "$GITHUB_REPOSITORY"
-          done
-      - name: The draft's reference tarball is the one every OS of the call wrote, and has its attestation
+      - name: The draft holds exactly the binaries the call hashed, their SHA256SUMS and the reference tarball p3-dist wrote
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: v${{ needs.prepare.outputs.version }}
+          SUMS_SHA256: ${{ needs.binary.outputs.sums-sha256 }}
           TARBALL_SHA256: ${{ needs.reference-tarball.outputs.reference-tarball-sha256 }}
         run: |
+          gh release download "$TAG" --pattern 'seampact-*' --pattern SHA256SUMS --dir "$RUNNER_TEMP/draft"
+          scripts/release/verify-assets.sh "$RUNNER_TEMP/draft" "$SUMS_SHA256"
           gh release download "$TAG" --pattern reference-contract.tgz --dir "$RUNNER_TEMP/contract"
           echo "$TARBALL_SHA256  $RUNNER_TEMP/contract/reference-contract.tgz" | sha256sum --check --strict
-          gh attestation verify "$RUNNER_TEMP/contract/reference-contract.tgz" --repo "$GITHUB_REPOSITORY"
+          gh release view "$TAG" --json assets --jq '.assets[].name' | sort > "$RUNNER_TEMP/draft-assets.txt"
+          { awk '{ print $2 }' "$RUNNER_TEMP/draft/SHA256SUMS"; echo SHA256SUMS; echo reference-contract.tgz; } | sort > "$RUNNER_TEMP/run-assets.txt"
+          if ! diff "$RUNNER_TEMP/run-assets.txt" "$RUNNER_TEMP/draft-assets.txt"; then
+            echo "The draft $TAG holds other assets than this run produced (diff above): remove them, then rerun."
+            exit 1
+          fi
+          { cat "$RUNNER_TEMP/draft/SHA256SUMS"; (cd "$RUNNER_TEMP/contract" && sha256sum reference-contract.tgz); } > "$RUNNER_TEMP/subjects.txt"
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: ${{ runner.temp }}/subjects.txt
+      - name: Each asset has its attestation, signed by this workflow on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          signer="$GITHUB_REPOSITORY/.github/workflows/release.yml"
+          awk '{ print $2 }' "$RUNNER_TEMP/draft/SHA256SUMS" | while read -r asset; do
+            gh attestation verify "$RUNNER_TEMP/draft/$asset" --repo "$GITHUB_REPOSITORY" --signer-workflow "$signer" --source-ref refs/heads/main
+          done
+          gh attestation verify "$RUNNER_TEMP/contract/reference-contract.tgz" --repo "$GITHUB_REPOSITORY" --signer-workflow "$signer" --source-ref refs/heads/main
+      # A hotfix of an older line is published without taking the latest mark.
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: v${{ needs.prepare.outputs.version }}
-        run: gh release edit "$TAG" --draft=false --latest
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          latest="$(gh release list --exclude-drafts --limit 1000 --json tagName --jq '.[].tagName' | node scripts/release/latest-release.ts "$VERSION")"
+          gh release edit "$TAG" --draft=false --latest="$latest"
 
   release:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
