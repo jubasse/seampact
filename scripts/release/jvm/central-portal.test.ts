@@ -1,9 +1,16 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { bundleManifest } from "./bundle-manifest.ts";
-import { type CentralPortal, portalAuthorization, publishToCentral } from "./central-portal.ts";
+import {
+  type CentralPortal,
+  PORTAL_TEXT_LIMIT,
+  PUBLISHER_PATHS,
+  portalAuthorization,
+  publishToCentral,
+} from "./central-portal.ts";
 import { type ExpectedBundle, JVM_GROUP } from "./jvm-release.ts";
 import { startLocalPortal } from "./local-portal.ts";
 
@@ -58,6 +65,48 @@ async function localPortal(): Promise<{ portal: CentralPortal; published: string
   };
 }
 
+const LONG_PORTAL_TEXT = "x".repeat(PORTAL_TEXT_LIMIT * 3);
+
+// A portal that lacks the version, takes the upload, then fails the deployment, or refuses the upload, with a long text.
+async function failingPortal(failure: "deployment" | "upload"): Promise<CentralPortal> {
+  const server = createServer((request, response) => {
+    request.resume();
+
+    const path = request.url ?? "";
+
+    if (path.startsWith(PUBLISHER_PATHS.published)) {
+      response.end(JSON.stringify({ published: false }));
+      return;
+    }
+
+    if (path.startsWith(PUBLISHER_PATHS.upload)) {
+      response.statusCode = failure === "upload" ? 400 : 201;
+      response.end(failure === "upload" ? LONG_PORTAL_TEXT : "deployment-1");
+      return;
+    }
+
+    response.end(
+      JSON.stringify({ deploymentState: "FAILED", errors: { bundle: [LONG_PORTAL_TEXT] } }),
+    );
+  });
+
+  await new Promise<void>((started) => server.listen(0, "127.0.0.1", started));
+  cleanups.push(() => new Promise<void>((closed) => server.close(() => closed())));
+
+  const address = server.address();
+  const url =
+    typeof address === "object" && address !== null ? `http://127.0.0.1:${address.port}` : "";
+
+  return {
+    api: url,
+    repository: `${url}/maven2`,
+    authorization: portalAuthorization("rehearsal", "rehearsal"),
+    pollIntervalMilliseconds: 1,
+    validationTimeoutMilliseconds: 5_000,
+    publicationTimeoutMilliseconds: 5_000,
+  };
+}
+
 describe("the Central publish", () => {
   it("uploads, validates and publishes a version Central lacks, then skips it with the same bytes", async () => {
     const { portal, published } = await localPortal();
@@ -100,5 +149,25 @@ describe("the Central publish", () => {
     await expect(publishToCentral(portal, bundle, manifest, expected)).rejects.toThrow(
       /the bundle is not the one build-jvm checked, so nothing was published/,
     );
+  });
+
+  it("names an earlier deployment still publishing when the portal fails the upload, and bounds its errors", async () => {
+    const portal = await failingPortal("deployment");
+    const bundle = stagedJar("classes");
+    const failure = publishToCentral(portal, bundle, bundleManifest(bundle), expected);
+
+    await expect(failure).rejects.toThrow(
+      "if an earlier deployment of this version is still publishing or validated (a rerun after a timeout or a cancel), wait for it on central.sonatype.com, then rerun; otherwise fix the bundle, then rerun",
+    );
+    await expect(failure).rejects.toThrow(/more characters\)/);
+    await expect(failure).rejects.not.toThrow(LONG_PORTAL_TEXT);
+  });
+
+  it("bounds the text of a refused request", async () => {
+    const portal = await failingPortal("upload");
+    const bundle = stagedJar("classes");
+    const failure = publishToCentral(portal, bundle, bundleManifest(bundle), expected);
+
+    await expect(failure).rejects.toThrow(/answered 400: x+\.\.\. \(8000 more characters\)$/);
   });
 });

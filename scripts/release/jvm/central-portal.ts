@@ -35,6 +35,8 @@ const HTTP_NOT_FOUND = 404;
 // A portal or repository that does not answer within this time fails the job instead of holding it to its timeout.
 const REQUEST_TIMEOUT_MILLISECONDS = 60_000;
 const DEPLOYMENT_FAILED = "FAILED";
+// The portal's text in an error is cut to this length, so a large answer cannot flood the log.
+export const PORTAL_TEXT_LIMIT = 4_000;
 
 export interface CentralPortal {
   /** The portal's base URL, `CENTRAL_PORTAL_URL` in a real run. */
@@ -249,7 +251,8 @@ async function waitForState(
 
     if (state === DEPLOYMENT_FAILED)
       throw new ReleaseError(
-        `the portal failed deployment ${deployment}: ${JSON.stringify(isJsonRecord(status) ? status.errors : status)}; fix the bundle, then rerun`,
+        `the portal failed deployment ${deployment}: ${boundedPortalText(JSON.stringify(isJsonRecord(status) ? status.errors : status))}; ` +
+          "if an earlier deployment of this version is still publishing or validated (a rerun after a timeout or a cancel), wait for it on central.sonatype.com, then rerun; otherwise fix the bundle, then rerun",
       );
 
     if (Date.now() >= deadline)
@@ -274,10 +277,17 @@ async function portalRequest(
 
   if (!response.ok)
     throw new ReleaseError(
-      `${init.method} ${url} answered ${response.status}: ${(await response.text()).trim()}`,
+      `${init.method} ${url} answered ${response.status}: ${boundedPortalText((await response.text()).trim())}`,
     );
 
   return response;
+}
+
+/** The portal's text, cut to `PORTAL_TEXT_LIMIT` characters with the count of those left out. */
+export function boundedPortalText(text: string): string {
+  if (text.length <= PORTAL_TEXT_LIMIT) return text;
+
+  return `${text.slice(0, PORTAL_TEXT_LIMIT)}... (${text.length - PORTAL_TEXT_LIMIT} more characters)`;
 }
 
 async function timedFetch(url: string, init: RequestInit): Promise<Response> {
