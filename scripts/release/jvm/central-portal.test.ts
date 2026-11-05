@@ -1,7 +1,9 @@
+import { randomBytes } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { Worker } from "node:worker_threads";
 import { afterEach, describe, expect, it } from "vitest";
 import { bundleManifest } from "./bundle-manifest.ts";
 import {
@@ -46,6 +48,17 @@ function stagedJar(bytes: string): string {
   return repository;
 }
 
+function portalAt(url: string): CentralPortal {
+  return {
+    api: url,
+    repository: `${url}/maven2`,
+    authorization: portalAuthorization("rehearsal", "rehearsal"),
+    pollIntervalMilliseconds: 1,
+    validationTimeoutMilliseconds: 5_000,
+    publicationTimeoutMilliseconds: 5_000,
+  };
+}
+
 async function localPortal(): Promise<{ portal: CentralPortal; published: string }> {
   const published = temporaryDirectory("central-published-");
   const local = await startLocalPortal(published);
@@ -54,16 +67,60 @@ async function localPortal(): Promise<{ portal: CentralPortal; published: string
 
   return {
     published,
-    portal: {
-      api: local.url,
-      repository: `${local.url}/maven2`,
-      authorization: portalAuthorization("rehearsal", "rehearsal"),
-      pollIntervalMilliseconds: 1,
-      validationTimeoutMilliseconds: 5_000,
-      publicationTimeoutMilliseconds: 5_000,
-    },
+    portal: portalAt(local.url),
   };
 }
+
+// A portal on its own thread, as on its own server, that closes a connection idle for
+// `IDLE_CLOSE_MILLISECONDS` after answering whether a version is published, with no keep-alive hint.
+async function closingIdlePortal(): Promise<CentralPortal> {
+  const worker = new Worker(
+    `const { createServer } = require("node:http");
+    const { parentPort, workerData } = require("node:worker_threads");
+    let state = "VALIDATED";
+    const server = createServer((request, response) => {
+      request.resume();
+      request.on("end", () => {
+        const path = request.url ?? "";
+
+        if (path.startsWith(workerData.paths.published)) {
+          response.end(JSON.stringify({ published: false }));
+          setTimeout(() => request.socket.destroy(), workerData.idleCloseMilliseconds);
+        } else if (path.startsWith(workerData.paths.upload)) {
+          response.writeHead(201).end("deployment-1");
+        } else if (path.startsWith(workerData.paths.status)) {
+          response.end(JSON.stringify({ deploymentState: state }));
+        } else {
+          state = "PUBLISHED";
+          response.writeHead(204).end();
+        }
+      });
+    });
+
+    server.keepAliveTimeout = 0;
+    server.listen(0, "127.0.0.1", () => parentPort.postMessage(server.address().port));`,
+    {
+      eval: true,
+      workerData: { paths: PUBLISHER_PATHS, idleCloseMilliseconds: IDLE_CLOSE_MILLISECONDS },
+    },
+  );
+
+  cleanups.push(async () => {
+    await worker.terminate();
+  });
+
+  const port = await new Promise<number>((started, failed) => {
+    worker.once("message", started);
+    worker.once("error", failed);
+  });
+
+  return portalAt(`http://127.0.0.1:${port}`);
+}
+
+// A jar slow enough to zip, and too large for the socket buffers, that a portal closing idle connections
+// this soon closes them meanwhile, and the upload writes into a closed connection.
+const IDLE_CLOSE_MILLISECONDS = 20;
+const SLOW_TO_ZIP_BYTES = 24 * 1024 * 1024;
 
 const LONG_PORTAL_TEXT = "x".repeat(PORTAL_TEXT_LIMIT * 3);
 
@@ -99,14 +156,7 @@ async function failingPortal(failure: "deployment" | "upload"): Promise<CentralP
   const url =
     typeof address === "object" && address !== null ? `http://127.0.0.1:${address.port}` : "";
 
-  return {
-    api: url,
-    repository: `${url}/maven2`,
-    authorization: portalAuthorization("rehearsal", "rehearsal"),
-    pollIntervalMilliseconds: 1,
-    validationTimeoutMilliseconds: 5_000,
-    publicationTimeoutMilliseconds: 5_000,
-  };
+  return portalAt(url);
 }
 
 describe("the Central publish", () => {
@@ -124,6 +174,31 @@ describe("the Central publish", () => {
     expect(first.published.map((coordinate) => coordinate.artifactId)).toEqual(["seampact-hooks"]);
     expect(second).toEqual({ published: [], alreadyPublished: expected.coordinates });
     expect(bundleManifest(published).map((entry) => entry.path)).toEqual([JAR, `${JAR}.asc`]);
+  });
+
+  // The zip of a real bundle takes longer than a server keeps an idle connection open: the upload must not go out
+  // on a connection the portal closed meanwhile.
+  it("uploads on a live connection after the portal closed the idle ones", async () => {
+    const portal = await closingIdlePortal();
+    const bundle = stagedJar(randomBytes(SLOW_TO_ZIP_BYTES).toString("base64"));
+    const secondJar = JAR.replaceAll("seampact-hooks", "seampact-ir");
+
+    mkdirSync(dirname(join(bundle, secondJar)), { recursive: true });
+    writeFileSync(join(bundle, secondJar), "classes");
+    // Two artefacts, so the portal is asked twice before the upload, as for a real bundle.
+    const twoArtefacts: ExpectedBundle = {
+      ...expected,
+      coordinates: [...expected.coordinates, { group: JVM_GROUP, artifactId: "seampact-ir" }],
+    };
+
+    const publication = await publishToCentral(
+      portal,
+      bundle,
+      bundleManifest(bundle),
+      twoArtefacts,
+    );
+
+    expect(publication.published).toEqual(twoArtefacts.coordinates);
   });
 
   it("fails by name, uploading nothing, on a version Central holds with other bytes", async () => {

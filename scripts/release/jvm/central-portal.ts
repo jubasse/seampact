@@ -4,11 +4,13 @@
 // `PUBLISHED`, so the portal's own checks run before anything is public. A version Central holds with the same bytes
 // is skipped; one it holds with other bytes fails by name before anything is uploaded, since a published version
 // never changes. A failed run can so be rerun as is.
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { execFile } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { promisify } from "node:util";
 import { isJsonRecord } from "../json-record.ts";
 import { ReleaseError } from "../release-version.ts";
 import { isDerivedFile } from "./bundle-layout.ts";
@@ -206,11 +208,13 @@ async function upload(
   try {
     const zip = join(work, `${name}.zip`);
 
-    execFileSync("zip", ["-q", "-X", zip, ...paths], { cwd: directory });
+    // Zipped and read without blocking: a blocked loop misses the portal closing an idle connection, then sends
+    // the upload on that dead connection.
+    await promisify(execFile)("zip", ["-q", "-X", zip, ...paths], { cwd: directory });
 
     const form = new FormData();
 
-    form.append("bundle", new Blob([readFileSync(zip)]), `${name}.zip`);
+    form.append("bundle", new Blob([await readFile(zip)]), `${name}.zip`);
 
     const query = new URLSearchParams({ name, publishingType: "USER_MANAGED" });
     const deployment = (
