@@ -1,0 +1,5 @@
+Release scripts of the PHP mirrors: the mirror commits of the splits, their idempotent push, and the load check of a package installed alone.
+
+- `node scripts/release/php/mirror-commits.ts <splits.txt> --version <version> --pins <binaries.json> --out <dir> --manifest <file>` takes the splits of `scripts/php-split.sh`, tags one release commit per mirror adding the repository's `LICENSE` (and seampact/ir's release `resources/binaries.json`), writes one bundle per mirror and the manifest of its split, release commit and tree.
+- `node scripts/release/php/push-mirrors.ts <bundle-dir> --manifest <file> --version <version> --remote-base <url>` refuses a manifest naming a mirror other than `seampact-<name>` for a `php/<name>` package, pushes each mirror's `main` (never forced) and tag `v<version>` atomically, skips a mirror whose tag is at the release tree, and fails by name, before any push, on one whose tag is at another tree. It reads `PHP_MIRRORS_TOKEN` through a credential helper in the environment.
+- `php scripts/release/php/installed-types-load.php <project-dir> <package>` loads every type of a package installed alone in a Composer project.

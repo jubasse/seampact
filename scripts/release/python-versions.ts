@@ -28,7 +28,7 @@ interface PinContext {
   readonly changes: string[];
 }
 
-interface Project {
+export interface Project {
   readonly file: string;
   readonly text: string;
   readonly name: string;
@@ -44,7 +44,8 @@ export function pythonVersionEdits(root: string, version: string): VersionEdit[]
   ];
 }
 
-function pythonProjects(root: string): Project[] {
+/** Every Python project of the workspace with its distribution name, sorted by directory. */
+export function pythonProjects(root: string): Project[] {
   const directory = join(root, PYTHON_DIRECTORY);
 
   if (!existsSync(directory))
@@ -77,7 +78,7 @@ function projectName(file: string, text: string): string {
 }
 
 // PEP 503: names compare lower-cased, with runs of `-`, `_` and `.` as one `-`.
-function normalizedName(name: string): string {
+export function normalizedName(name: string): string {
   return name.toLowerCase().replace(/[-_.]+/g, "-");
 }
 
