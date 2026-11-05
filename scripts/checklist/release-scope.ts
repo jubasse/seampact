@@ -42,6 +42,10 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
         "covered by the per-platform binary smoke the release workflow runs before publishing",
     },
   ],
+  [
+    "CHK-121",
+    { reason: "compile --strict on this lint rule is additive: a later release can turn it on" },
+  ],
   ["CHK-122", { reason: "editor tooling, no effect on the IR or the wire" }],
   ["CHK-123", { reason: "text for humans, no effect on the IR or the wire" }],
   ["CHK-143", { reason: "tooling, no effect on the IR" }],
@@ -51,6 +55,7 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
   ],
   ["CHK-148", { reason: "opt-in vendored hooks (A40), off by default" }],
   ["CHK-165", { reason: "opt-in nativeDocs artefact (A43), off by default" }],
+  ["CHK-167", { reason: API_PLATFORM_AFTER_V1 }],
   ["CHK-176", { reason: "internal fixture completeness; the classification itself is CHK-175" }],
 ]);
 

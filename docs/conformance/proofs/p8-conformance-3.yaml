@@ -1,0 +1,15 @@
+# docs/conformance/proofs/p8-conformance-3.yaml
+lane: p8-conformance-3
+proofs:
+  - id: CHK-083
+    tests: ['laravel: ci: p6-php-core.yml#local-yaml']
+  - id: CHK-084
+    tests: ['symfony: ci: p6-php-core.yml#local-yaml']
+  - id: CHK-140
+    tests: ['core: ci: p3-binary.yml#smoke']
+  - id: CHK-184
+    tests: ['fastapi: ci: p7-python-core.yml#binary-runner']
+  - id: CHK-185
+    tests: ['drf: ci: p7-python-core.yml#binary-runner']
+  - id: CHK-186
+    tests: ['ninja: ci: p7-python-core.yml#binary-runner']

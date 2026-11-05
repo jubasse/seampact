@@ -392,6 +392,34 @@ describe.skipIf(!hasJq)("suite report fetcher filters", () => {
     expect(filter("suite-artefacts.jq", { artifacts: dropped })).toBe("");
   });
 
+  it("reads a cited job's conclusion, by name or by a matrix name's start, skipped rows aside", () => {
+    const jobs = (...rows: [string, string][]) => ({
+      jobs: rows.map(([name, conclusion]) => ({ name, conclusion })),
+    });
+    const conclusion = (input: unknown, name: string, mode: string) =>
+      execFileSync(
+        "jq",
+        ["-r", "--arg", "name", name, "--arg", "mode", mode, "-f", join(HERE, "ci-job.jq")],
+        { encoding: "utf8", input: JSON.stringify(input) },
+      ).trim();
+    const matrix = jobs(
+      ["smoke (linux)", "success"],
+      ["smoke (mac)", "failure"],
+      ["other", "success"],
+    );
+
+    expect(conclusion(matrix, "smoke (", "prefix")).toBe("failure");
+    expect(
+      conclusion(
+        jobs(["smoke (linux)", "success"], ["smoke (mac)", "skipped"]),
+        "smoke (",
+        "prefix",
+      ),
+    ).toBe("success");
+    expect(conclusion(matrix, "other", "exact")).toBe("success");
+    expect(conclusion(jobs(["other", "skipped"]), "other", "exact")).toBe("");
+  });
+
   const run = (changes: Record<string, unknown>) => ({
     conclusion: "success",
     event: "push",
@@ -558,6 +586,83 @@ describe("checklist release scope", () => {
   });
 });
 
+describe("checklist ci references", () => {
+  const noTest = (id: string, target: string) =>
+    `${CHECKLIST}: ${id}: release gate: no test for target ${target}`;
+
+  /** The release-gate fixture with a proof citing [ref] for CHK-002 on nestjs and a workflow holding job `build`. */
+  function rootCiting(ref: string): string {
+    const root = mkdtempSync(join(tmpdir(), "checklist-ci-"));
+
+    cpSync(fx("release-gate"), root, { recursive: true });
+    mkdirSync(join(root, ".github/workflows"), { recursive: true });
+    writeFileSync(join(root, ".github/workflows/w.yml"), "jobs:\n  build:\n    name: build\n");
+    writeFileSync(
+      join(root, "docs/conformance/proofs/lane-ci.yaml"),
+      `lane: lane-ci\nproofs:\n  - id: CHK-002\n    tests: ['nestjs: ci: ${ref}']\n`,
+    );
+
+    return root;
+  }
+
+  function gateWithCiJobs(jobs: unknown[] | undefined): string[] {
+    const root = rootCiting("w.yml#build");
+    const reports = mkdtempSync(join(tmpdir(), "checklist-ci-reports-"));
+
+    try {
+      writeFileSync(
+        join(reports, "http-suite-default.json"),
+        JSON.stringify({
+          format: "seampact-http-suite-report/1",
+          target: "hono",
+          profile: "default",
+          checks: {},
+        }),
+      );
+
+      if (jobs !== undefined)
+        writeFileSync(
+          join(reports, "ci-jobs.json"),
+          JSON.stringify({ format: "seampact-ci-jobs/1", jobs }),
+        );
+
+      return lines(check({ root, releaseGate: true, suiteReports: reports }));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(reports, { recursive: true, force: true });
+    }
+  }
+
+  it("refuses a ci reference to a missing workflow or job", () => {
+    for (const [ref, message] of [
+      ["gone.yml#build", "CI workflow does not exist: gone.yml"],
+      ["w.yml#deploy", "CI job does not exist: deploy in w.yml"],
+    ] as const) {
+      const root = rootCiting(ref);
+
+      try {
+        expect(lines(check({ root }))).toEqual([
+          `docs/conformance/proofs/lane-ci.yaml: CHK-002: ${message}`,
+        ]);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("counts a ci reference only when its newest develop run passed, and names a failed one", () => {
+    const job = (conclusion: string) => ({ ref: "w.yml#build", conclusion, run: 9, commit: "abc" });
+
+    expect(gateWithCiJobs([job("success")])).not.toContain(noTest("CHK-002", "nestjs"));
+    expect(gateWithCiJobs([job("failure")])).toContain(
+      `${CHECKLIST}: CHK-002: release gate: CI job w.yml#build for target nestjs concluded failure (run 9 at abc)`,
+    );
+    expect(gateWithCiJobs(undefined)).toContain(
+      `${noTest("CHK-002", "nestjs")} (no develop run recorded for the CI job w.yml#build)`,
+    );
+  });
+});
+
 describe("checklist check against a base ref", () => {
   const tmp = mkdtempSync(join(tmpdir(), "seampact-checklist-"));
 
@@ -653,7 +758,13 @@ describe("checklist report", () => {
   });
 
   it("a test passes only with a matching assertion and no failure, in the exact file", () => {
-    const ref = { raw: "", target: "core", path: "src/a.test.ts", name: "works" };
+    const ref = {
+      raw: "",
+      kind: "test",
+      target: "core",
+      path: "src/a.test.ts",
+      name: "works",
+    } as const;
     const run = (name: string, ...statuses: string[]) => ({
       name,
       assertionResults: statuses.map((status) => ({ title: "works", status })),

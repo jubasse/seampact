@@ -2,8 +2,10 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
+import type { CiJobResult } from "./ci-jobs.ts";
+import { ciJobKey, loadCiJobResults, workflowJobs } from "./ci-jobs.ts";
 import { loadModel } from "./load.ts";
-import type { Item, Model, Problem, Proof } from "./model.ts";
+import type { Item, Model, Problem, Proof, TestRef } from "./model.ts";
 import { CHECKLIST_FILE, chkNumber } from "./model.ts";
 import type { ItemAfter1_0 } from "./release-scope.ts";
 import { releaseGateTargets, releaseScopeProblems } from "./release-scope.ts";
@@ -31,6 +33,7 @@ export interface CheckOptions {
 }
 
 export const CONSUMER_PREFIX = "test-seampact-";
+const CI_SUCCESS = "success";
 
 /** Proofs merged per checklist id, in file order. */
 export function proofsById(proofs: readonly Proof[]): Map<string, Proof[]> {
@@ -45,6 +48,7 @@ export function checkModel(
   model: Model,
   o: CheckOptions,
   suiteProofs: readonly SuiteProof[] = [],
+  ciJobResults: ReadonlyMap<string, CiJobResult> = new Map(),
 ): Problem[] {
   const problems: Problem[] = [];
   const byId = new Map<string, Item>(model.items.map((i) => [i.id, i]));
@@ -71,7 +75,12 @@ export function checkModel(
           `test for a target the item does not list: ${t.target} (item lists ${item.targets.join(", ")})`,
         );
 
-      if (t.path.startsWith(CONSUMER_PREFIX)) {
+      if (t.kind === "ci") {
+        const jobs = workflowJobs(o.root, t.path);
+
+        if (jobs === undefined) at(`CI workflow does not exist: ${t.path}`);
+        else if (!jobs.has(t.name)) at(`CI job does not exist: ${t.name} in ${t.path}`);
+      } else if (t.path.startsWith(CONSUMER_PREFIX)) {
         if (o.consumers !== undefined && !existsSync(join(o.consumers, t.path)))
           at(`test-consumer test file does not exist: ${t.path} (under ${o.consumers})`);
       } else if (!existsSync(join(o.root, t.path))) at(`test file does not exist: ${t.path}`);
@@ -85,6 +94,7 @@ export function checkModel(
     variantRowSets: o.variantRowSets ?? new Map(),
     proofs: proofsById(model.proofs),
     suitePairs: o.releaseGate ? suitePairsOf(model, suiteProofs, problems) : new Map(),
+    ...(o.releaseGate ? { ciJobResults } : {}),
   };
 
   problems.push(...variantRowSetProblems(model.items, scope.variantRowSets));
@@ -107,6 +117,8 @@ interface GateScope {
   variantRowSets: ReadonlyMap<string, VariantRowSet>;
   proofs: ReadonlyMap<string, readonly Proof[]>;
   suitePairs: ReadonlyMap<string, readonly SuiteProof[]>;
+  /** With the release gate: the fetched CI job results; a ci reference counts only when its job passed. */
+  ciJobResults?: ReadonlyMap<string, CiJobResult>;
 }
 
 /**
@@ -155,7 +167,18 @@ function suitePairsOf(
 }
 
 function testedByProof(scope: GateScope, id: string, target: string): boolean {
-  return (scope.proofs.get(id) ?? []).some((p) => p.tests.some((t) => t.target === target));
+  return proofTestsOf(scope, id, target).some((t) => t.kind === "test" || ciJobPassed(scope, t));
+}
+
+function proofTestsOf(scope: GateScope, id: string, target: string): TestRef[] {
+  return (scope.proofs.get(id) ?? []).flatMap((p) => p.tests.filter((t) => t.target === target));
+}
+
+/** Outside the release gate a cited job counts as listed; with it, only when its newest develop run passed. */
+function ciJobPassed(scope: GateScope, ref: TestRef): boolean {
+  if (scope.ciJobResults === undefined) return true;
+
+  return scope.ciJobResults.get(ciJobKey(ref))?.conclusion === CI_SUCCESS;
 }
 
 /** A pair passes its suite runs when one passed it and none failed it; a variant row set needs that of every row. */
@@ -199,6 +222,16 @@ function releaseGateProblems(model: Model, scope: GateScope): Problem[] {
 
       if (testedByProof(scope, item.id, target) || suitePassed(scope, item.id, target)) continue;
 
+      const failedJobs = failedCiJobs(scope, item.id, target);
+
+      if (failedJobs.length > 0) {
+        for (const job of failedJobs)
+          at(
+            `release gate: CI job ${job.ref} for target ${target} concluded ${job.conclusion} (run ${job.run} at ${job.commit})`,
+          );
+        continue;
+      }
+
       at(`release gate: no test for target ${target}${noTestReason(scope, item.id, target)}`);
     }
   }
@@ -206,7 +239,22 @@ function releaseGateProblems(model: Model, scope: GateScope): Problem[] {
   return problems;
 }
 
+function failedCiJobs(scope: GateScope, id: string, target: string): CiJobResult[] {
+  return proofTestsOf(scope, id, target).flatMap((t) => {
+    const result = t.kind === "ci" ? scope.ciJobResults?.get(ciJobKey(t)) : undefined;
+
+    return result === undefined ? [] : [result];
+  });
+}
+
 function noTestReason(scope: GateScope, id: string, target: string): string {
+  const unrecorded = proofTestsOf(scope, id, target).filter(
+    (t) => t.kind === "ci" && scope.ciJobResults?.has(ciJobKey(t)) !== true,
+  );
+
+  if (unrecorded.length > 0)
+    return ` (no develop run recorded for the CI job ${unrecorded.map(ciJobKey).join(", ")})`;
+
   const pairProofs = scope.suitePairs.get(suiteKey(id, target)) ?? [];
   const rowSet = scope.variantRowSets.get(id);
 
@@ -290,8 +338,10 @@ export function check(o: CheckOptions): Problem[] {
   const model = loadModel(o.root, problems);
   const suiteProofs =
     o.suiteReports === undefined ? [] : loadSuiteReports(o.suiteReports, problems);
+  const ciJobResults =
+    o.suiteReports === undefined ? new Map() : loadCiJobResults(o.suiteReports, problems);
 
-  problems.push(...checkModel(model, o, suiteProofs));
+  problems.push(...checkModel(model, o, suiteProofs, ciJobResults));
 
   return problems;
 }

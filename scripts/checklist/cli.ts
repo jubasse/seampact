@@ -2,6 +2,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { check } from "./check.ts";
+import { ciJobLine, workflowJobs } from "./ci-jobs.ts";
 import { loadModel } from "./load.ts";
 import type { Problem } from "./model.ts";
 import { formatProblem } from "./model.ts";
@@ -82,9 +83,36 @@ function main(argv: string[]): number {
     return 0;
   }
 
-  console.error(`unknown command "${command}" (check | report)`);
+  if (command === "ci-jobs") return printCiJobs(root);
+
+  console.error(`unknown command "${command}" (check | report | ci-jobs)`);
 
   return 2;
+}
+
+/** One line per CI job the proof files cite, for the fetcher (ci-jobs.ts, `ciJobLine`). */
+function printCiJobs(root: string): number {
+  const problems: Problem[] = [];
+  const model = loadModel(root, problems);
+  const lines = new Set<string>();
+
+  for (const ref of model.proofs.flatMap((p) => p.tests).filter((t) => t.kind === "ci")) {
+    const displayName = workflowJobs(root, ref.path)?.get(ref.name);
+
+    if (displayName === undefined)
+      problems.push({ file: ref.path, message: `CI job does not exist: ${ref.name}` });
+    else lines.add(ciJobLine(ref, displayName));
+  }
+
+  if (problems.length > 0) {
+    for (const p of problems) console.error(formatProblem(p));
+
+    return 1;
+  }
+
+  for (const line of [...lines].sort()) process.stdout.write(`${line}\n`);
+
+  return 0;
 }
 
 process.exitCode = main(process.argv.slice(2));
