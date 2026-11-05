@@ -42,7 +42,7 @@ require-build-hashes = true
 preview-features = ["build-dependency-hashes"]
 
 [tool.uv.workspace]
-members = ["codegen", "django", "drf", "fastapi", "hooks", "ir", "ninja", "signed-webhooks"]
+members = ["codegen", "compiler", "django", "drf", "fastapi", "hooks", "ir", "ninja", "signed-webhooks"]
 
 [dependency-groups]
 # The vulnerability audit of the lock file, installed only by its CI job.

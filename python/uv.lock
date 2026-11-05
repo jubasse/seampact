@@ -9,6 +9,7 @@ resolution-markers = [
 [manifest]
 members = [
     "seampact-codegen",
+    "seampact-compiler",
     "seampact-django",
     "seampact-drf",
     "seampact-fastapi",
@@ -1384,6 +1385,11 @@ requires-dist = [
 provides-extras = ["pydantic", "generate"]
 
 [[package]]
+name = "seampact-compiler"
+version = "0.0.0"
+source = { editable = "compiler" }
+
+[[package]]
 name = "seampact-django"
 version = "0.0.0"
 source = { editable = "django" }
@@ -1467,11 +1473,18 @@ dependencies = [
     { name = "ruamel-yaml" },
 ]
 
+[package.optional-dependencies]
+compiler = [
+    { name = "seampact-compiler" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "jsonschema", specifier = "==4.26.0" },
     { name = "ruamel-yaml", specifier = "==0.19.1" },
+    { name = "seampact-compiler", marker = "extra == 'compiler'", editable = "compiler" },
 ]
+provides-extras = ["compiler"]
 
 [[package]]
 name = "seampact-ninja"
