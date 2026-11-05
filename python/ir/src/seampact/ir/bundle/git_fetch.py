@@ -19,11 +19,11 @@ from seampact.ir.bundle.failure import BundleFailure, BundleFailureCode
 from seampact.ir.bundle.files import BundleFiles
 from seampact.ir.bundle.layout import ENTRIES_MAX, EXTRACTED_BYTES_MAX, MANIFEST_FILE, NOT_A_BUNDLE_FIX
 from seampact.ir.bundle.path import fold, path_problem
-from seampact.ir.https.printable_url import printable_url
 from seampact.ir.bundle.source import GitSource
-from seampact.ir.https.untrusted_text import quoted
 from seampact.ir.config.config_path import resolve_config_path
 from seampact.ir.config.local_source_policy import LocalSourcePolicy
+from seampact.ir.https.printable_url import printable_url
+from seampact.ir.https.untrusted_text import quoted
 
 TIMEOUT_SECONDS: Final = 60.0
 _TEMPORARY_PREFIX: Final = "seampact-git-"

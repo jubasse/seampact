@@ -4,6 +4,7 @@ body stops at a byte cap. A `ca_file` replaces the system's certificate authorit
 
 import contextlib
 import http.client
+import re
 import socket
 import ssl
 import threading
@@ -21,6 +22,9 @@ _HTTP_OK: Final = 200
 _REDIRECT_STATUSES: Final = (301, 302, 303, 307, 308)
 _CHUNK_BYTES: Final = 64 * 1024
 _WATCHDOG_POLL_SECONDS: Final = 0.05
+# What `http.client` refuses in a request target; `urlsplit` drops tab and newline silently, so the raw text is checked.
+_CONTROL_OR_SPACE: Final = re.compile(r"[\x00-\x20\x7f]")
+_HOLDS_CONTROL_OR_SPACE: Final = "holds a control character or a space"
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,6 +35,14 @@ class HttpsFailure:
     url: str
     reason: str
     bytes_received_over_cap: int | None = None
+
+
+class _SinkError(Exception):
+    """What the sink raised, carried past the network `except` so it reaches the caller unchanged."""
+
+    def __init__(self, error: Exception) -> None:
+        super().__init__(error)
+        self.error = error
 
 
 class _WatchedConnection(http.client.HTTPSConnection):
@@ -92,13 +104,18 @@ class HttpsDownload:
     def stream(self, url: str, bytes_max: int, sink: Callable[[bytes], None]) -> HttpsFailure | None:
         """Streams the body `url` answers into `sink`, or says why it stopped; the sink may have received part of it.
         What the sink raises propagates."""
-        if not is_https_url(url):
-            return HttpsFailure(url, "was not tried: it is not an absolute https: URL")
+        untried = untried_reason(url)
+
+        if untried is not None:
+            return HttpsFailure(url, f"was not tried: {untried}")
 
         deadline = time.monotonic() + self._deadline_seconds
 
         for redirects in range(_REDIRECTS_MAX + 1):
-            answer = self._get(url, deadline, bytes_max, sink)
+            try:
+                answer = self._get(url, deadline, bytes_max, sink)
+            except _SinkError as wrapped:
+                raise wrapped.error from None
 
             if not isinstance(answer, tuple):
                 return answer
@@ -112,6 +129,11 @@ class HttpsDownload:
                 return HttpsFailure(url, f"redirected more than {_REDIRECTS_MAX} times")
 
             target = urljoin(url, location)
+
+            if _CONTROL_OR_SPACE.search(location) is not None:
+                return HttpsFailure(
+                    url, f"redirected to {quoted(printable_url(location))}, which {_HOLDS_CONTROL_OR_SPACE}"
+                )
 
             if not is_https_url(target):
                 return HttpsFailure(url, f"redirected to {quoted(printable_url(location))}, which is not an https: URL")
@@ -168,6 +190,8 @@ class HttpsDownload:
         sink: Callable[[bytes], None],
     ) -> HttpsFailure | None:
         received = 0
+        # `read(amt)` returns what came before the connection closed, so a body cut short is told by its length.
+        expected = response.length
 
         while True:
             remaining = deadline - time.monotonic()
@@ -178,10 +202,13 @@ class HttpsDownload:
             if connection.sock is not None:
                 connection.sock.settimeout(remaining)
 
-            chunk = response.read(_CHUNK_BYTES)
+            try:
+                chunk = response.read(_CHUNK_BYTES)
+            except http.client.IncompleteRead as cut:
+                return _ended_early(url, received + len(cut.partial), expected)
 
             if not chunk:
-                return None
+                return _ended_early(url, received, expected) if expected is not None and received < expected else None
 
             received += len(chunk)
 
@@ -190,13 +217,27 @@ class HttpsDownload:
                     url, f"sent more than {bytes_max} bytes ({received} received), over the cap", received
                 )
 
-            sink(chunk)
+            try:
+                sink(chunk)
+            except Exception as error:
+                raise _SinkError(error) from error
 
     def _took_too_long(self, url: str) -> HttpsFailure:
         return HttpsFailure(url, f"took over {round(self._deadline_seconds * 1000)} ms")
 
 
+def untried_reason(url: str) -> str | None:
+    """Why `url` is not requested at all, or `None` when it may be."""
+    if _CONTROL_OR_SPACE.search(url) is not None:
+        return f"it {_HOLDS_CONTROL_OR_SPACE}"
+
+    return None if is_https_url(url) else "it is not an absolute https: URL"
+
+
 def is_https_url(url: str) -> bool:
+    if _CONTROL_OR_SPACE.search(url) is not None:
+        return False
+
     try:
         parts = urlsplit(url)
         # `port` raises for one out of range or not a number.
@@ -205,6 +246,12 @@ def is_https_url(url: str) -> bool:
         return parts.scheme.lower() == "https" and bool(parts.hostname)
     except ValueError:
         return False
+
+
+def _ended_early(url: str, received: int, expected: int | None) -> HttpsFailure:
+    promised = "" if expected is None else f" of {expected}"
+
+    return HttpsFailure(url, f"ended after {received}{promised} bytes")
 
 
 def _without_url(reason: str, url: str) -> str:

@@ -20,6 +20,8 @@ from seampact.ir.https.printable_url import printable_url
 
 _CHUNK_BYTES: Final = 64 * 1024
 _EXECUTABLE_BY_OWNER: Final = 0o700
+# The copy is made executable only once its hash matches the pin.
+_PRIVATE_TO_OWNER: Final = 0o600
 _TEMPORARY_SUFFIX_BYTES: Final = 8
 
 
@@ -139,7 +141,7 @@ def _copy_hashing(source: str, temporary: str) -> str:
 
     try:
         with open(source, "rb") as input_file:
-            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, _EXECUTABLE_BY_OWNER)
+            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, _PRIVATE_TO_OWNER)
 
             with os.fdopen(descriptor, "wb") as output_file:
                 while chunk := input_file.read(_CHUNK_BYTES):
@@ -162,7 +164,7 @@ def _download_hashing(url: str, temporary: str, download: BinaryDownload) -> str
     digest = hashlib.sha256()
 
     try:
-        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, _EXECUTABLE_BY_OWNER)
+        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, _PRIVATE_TO_OWNER)
 
         with os.fdopen(descriptor, "wb") as output_file:
 

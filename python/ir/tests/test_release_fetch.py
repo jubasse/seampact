@@ -1,10 +1,12 @@
 """The release channels over a local TLS server with its certificate verified: the bundle tarball and its
 integrity-keyed cache, and the compiler binary a `version` or `url` override downloads, checks and caches."""
 
+import errno
 import hashlib
 import http.server
 import os
 import ssl
+import stat
 import subprocess
 import threading
 import time
@@ -13,8 +15,16 @@ from pathlib import Path
 
 import pytest
 
-from seampact.ir.binary import BinaryFailureCode, BinaryRefusedError, HostLibc, HostPlatform, install_compiler_binary
+from seampact.ir.binary import (
+    BinaryFailureCode,
+    BinaryRefusedError,
+    HostLibc,
+    HostPlatform,
+    compiler_binary,
+    install_compiler_binary,
+)
 from seampact.ir.binary.download import BinaryDownload
+from seampact.ir.binary.pins import BinaryPins
 from seampact.ir.binary.posix_cache_safety import PosixCacheSafety
 from seampact.ir.bundle import BundleFailure, BundleFailureCode
 from seampact.ir.bundle.fetched import FetchedBundle
@@ -33,6 +43,9 @@ _TRICKLE_STOP_WITHIN_SECONDS = 3.0
 
 
 _ASSETS_PATH = "/assets/"
+_TRUNCATED_PATH = "/truncated/"
+_TRUNCATED_BYTES_SENT = 10
+_TRUNCATED_BYTES_PROMISED = 100
 
 
 class _TlsServer:
@@ -72,6 +85,8 @@ class _TlsServer:
                     self._send(200, server.tarball)
                 elif self.path == "/trickle":
                     self._trickle()
+                elif self.path.startswith(_TRUNCATED_PATH):
+                    self._truncated()
                 elif self.path == "/bad-port":
                     self._redirect("https://127.0.0.1:99999/bundle.tgz")
                 else:
@@ -89,6 +104,12 @@ class _TlsServer:
                         time.sleep(_TRICKLE_PAUSE_SECONDS)
                 except OSError:
                     return
+
+            def _truncated(self) -> None:
+                self.send_response(200)
+                self.send_header("Content-Length", str(_TRUNCATED_BYTES_PROMISED))
+                self.end_headers()
+                self.wfile.write(b"x" * _TRUNCATED_BYTES_SENT)
 
             def _redirect(self, location: str) -> None:
                 self.send_response(302)
@@ -370,7 +391,7 @@ def test_a_downloaded_asset_whose_hash_is_not_the_pin_is_refused_and_nothing_ins
 def test_a_missing_asset_is_refused_by_its_url_and_status(
     server: _TlsServer, tmp_path: Path, trusting_ancestors: Callable[[Path], PosixCacheSafety]
 ) -> None:
-    _binary_override(tmp_path, f"url = '{server.url('/missing?token=secret')}'", _STUB_SHA256)
+    _binary_override(tmp_path, f"url = '{server.url('/missing').replace('://', '://user:secret@')}'", _STUB_SHA256)
 
     failure = _download_refusal(tmp_path, server, trusting_ancestors).failure
 
@@ -406,3 +427,140 @@ def test_a_cached_download_is_reused_without_another_request(
 
     assert second == first
     assert len(server.requests) == 1
+
+
+_REAL_FDOPEN = os.fdopen
+
+
+class _CacheFile:
+    """The file the installer streams a download into: records its mode at each write, and fails each write with
+    `write_error` when one is given, as a full disk does."""
+
+    def __init__(self, descriptor: int, write_error: OSError | None) -> None:
+        self.modes: list[int] = []
+        self._descriptor = descriptor
+        self._file = _REAL_FDOPEN(descriptor, "wb")
+        self._write_error = write_error
+
+    def __enter__(self) -> "_CacheFile":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self._file.close()
+
+    def write(self, chunk: bytes) -> int:
+        self.modes.append(stat.S_IMODE(os.fstat(self._descriptor).st_mode))
+
+        if self._write_error is not None:
+            raise self._write_error
+
+        return self._file.write(chunk)
+
+
+def _watch_cache_files(monkeypatch: pytest.MonkeyPatch, write_error: OSError | None) -> list[_CacheFile]:
+    opened: list[_CacheFile] = []
+
+    def fdopen(descriptor: int, mode: str) -> _CacheFile:
+        opened.append(_CacheFile(descriptor, write_error))
+
+        return opened[-1]
+
+    monkeypatch.setattr(os, "fdopen", fdopen)
+
+    return opened
+
+
+@skip_on_windows
+def test_a_cache_that_cannot_be_written_is_refused_as_unsafe_and_keeps_no_temporary_file(
+    server: _TlsServer,
+    tmp_path: Path,
+    trusting_ancestors: Callable[[Path], PosixCacheSafety],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    server.assets[_HOST_ASSET] = _STUB
+    _binary_override(tmp_path, 'version = "1.2.3"', _STUB_SHA256)
+    _watch_cache_files(monkeypatch, OSError(errno.ENOSPC, "No space left on device"))
+
+    failure = _download_refusal(tmp_path, server, trusting_ancestors).failure
+
+    assert failure.code is BinaryFailureCode.CACHE_UNSAFE
+    assert "No space left on device" in failure.message
+    assert "free space" in failure.fix
+    assert list((tmp_path / "cache" / "seampact" / _STUB_SHA256).iterdir()) == []
+
+
+@skip_on_windows
+def test_the_download_is_not_executable_before_its_hash_matches(
+    server: _TlsServer,
+    tmp_path: Path,
+    trusting_ancestors: Callable[[Path], PosixCacheSafety],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    server.assets[_HOST_ASSET] = _STUB
+    _binary_override(tmp_path, 'version = "1.2.3"', _STUB_SHA256)
+    opened = _watch_cache_files(monkeypatch, None)
+
+    installed = _install_downloaded(tmp_path, server, trusting_ancestors)
+
+    assert [file.modes for file in opened] == [[0o600]]
+    assert stat.S_IMODE(os.stat(installed).st_mode) == 0o700
+
+
+@skip_on_windows
+def test_a_body_cut_before_its_length_is_a_fetch_failure(
+    server: _TlsServer, tmp_path: Path, trusting_ancestors: Callable[[Path], PosixCacheSafety]
+) -> None:
+    _binary_override(tmp_path, f"url = '{server.url(_TRUNCATED_PATH)}'", _STUB_SHA256)
+
+    failure = _download_refusal(tmp_path, server, trusting_ancestors).failure
+
+    assert failure.code is BinaryFailureCode.FETCH_FAILED
+    assert f"ended after {_TRUNCATED_BYTES_SENT} of {_TRUNCATED_BYTES_PROMISED} bytes" in failure.message
+    assert list((tmp_path / "cache" / "seampact" / _STUB_SHA256).iterdir()) == []
+
+
+@skip_on_windows
+@pytest.mark.parametrize("character", ["\\u0000", " ", "\\n"], ids=["nul", "space", "newline"])
+def test_a_url_holding_a_control_character_or_a_space_is_refused_before_the_cache_is_touched(
+    server: _TlsServer, tmp_path: Path, trusting_ancestors: Callable[[Path], PosixCacheSafety], character: str
+) -> None:
+    _binary_override(tmp_path, f'url = "{server.url("/assets")}{character}x"', _STUB_SHA256)
+
+    failure = _download_refusal(tmp_path, server, trusting_ancestors).failure
+
+    assert failure.code is BinaryFailureCode.FETCH_FAILED
+    assert "was not tried: it holds a control character or a space" in failure.message
+    assert not (tmp_path / "cache").exists()
+
+
+@skip_on_windows
+def test_a_mirror_base_with_a_query_is_refused_before_the_cache_is_touched(
+    server: _TlsServer, tmp_path: Path, trusting_ancestors: Callable[[Path], PosixCacheSafety]
+) -> None:
+    _binary_override(tmp_path, f"url = '{server.url('/assets?token=secret')}'", _STUB_SHA256)
+
+    failure = _download_refusal(tmp_path, server, trusting_ancestors).failure
+
+    assert failure.code is BinaryFailureCode.FETCH_FAILED
+    assert "has a query or a fragment" in failure.message
+    assert "secret" not in failure.message
+    assert not (tmp_path / "cache").exists()
+
+
+def test_a_filled_pin_without_a_compiler_wheel_names_the_wheel_and_the_url_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hashes = {asset: _STUB_SHA256 for asset in _RELEASE_ASSETS}
+    monkeypatch.setattr(compiler_binary, "embedded_pins", lambda: BinaryPins("1.2.3", hashes))
+    monkeypatch.setattr(compiler_binary, "wheel_binary_path", lambda _asset: None)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'app'\n", encoding="utf-8")
+
+    with pytest.raises(BinaryRefusedError) as refused:
+        install_compiler_binary(str(tmp_path), _HOST, {"XDG_CACHE_HOME": str(tmp_path / "cache")})
+
+    failure = refused.value.failure
+    assert failure.code is BinaryFailureCode.UNPUBLISHED
+    assert "pins the compiler 1.2.3" in failure.message
+    assert _HOST_ASSET in failure.message
+    assert "seampact-ir[compiler]" in failure.fix
+    assert "url =" in failure.fix

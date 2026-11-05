@@ -5,7 +5,7 @@ from typing import Final
 
 _QUOTE_LIMIT: Final = 80
 # C0, DEL and C1 controls, the bidi controls, and the line and paragraph separators.
-_UNSAFE_CODE_POINTS: Final = re.compile(r"[\x00-\x1f\x7f-\x9f؜‎‏‪-‮⁦-⁩  ]")
+_UNSAFE_CODE_POINTS: Final = re.compile(r"[\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069\u2028\u2029]")
 
 
 def quoted(value: str) -> str:

@@ -6,10 +6,10 @@ from typing import Final
 
 from seampact.ir.bundle.failure import BundleFailure, BundleFailureCode
 from seampact.ir.bundle.layout import ARCHIVE_BYTES_MAX, NOT_A_BUNDLE_FIX
-from seampact.ir.https.printable_url import printable_url
 from seampact.ir.bundle.source import ReleaseSource
-from seampact.ir.https.untrusted_text import quoted
 from seampact.ir.https import HttpsDownload, is_https_url
+from seampact.ir.https.printable_url import printable_url
+from seampact.ir.https.untrusted_text import quoted
 
 DEADLINE_SECONDS: Final = 60.0
 _RELEASE_FIX: Final = "Check the release URL and that the asset is reachable over HTTPS, then run again."

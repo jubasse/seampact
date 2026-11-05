@@ -106,9 +106,10 @@ def _wheel_source(host: HostPlatform) -> tuple[str, str]:
     if installed is None:
         raise BinaryRefusedError(
             BinaryFailureCode.UNPUBLISHED,
-            f"No installed {COMPILER_DISTRIBUTION} wheel holds '{asset}'.",
-            f"Install seampact-ir[compiler] ({COMPILER_DISTRIBUTION} {pins.version}), or point "
-            "[tool.seampact.binary] path at your own build of the compiler, with its sha256.",
+            f"This seampact-ir pins the compiler {pins.version}, but no installed {COMPILER_DISTRIBUTION} wheel holds "
+            f"'{asset}', the binary of this platform.",
+            f"Install seampact-ir[compiler] ({COMPILER_DISTRIBUTION} {pins.version}), or set [tool.seampact.binary] "
+            'in your root pyproject.toml to url = "<a mirror of the release assets>" with the sha256 of each asset.',
         )
 
     return installed, pins.sha256_by_asset[asset]

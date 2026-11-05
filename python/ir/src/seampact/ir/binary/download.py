@@ -1,15 +1,15 @@
 """Where the compiler binary is downloaded from, and how (ADR 0010, "Fetch"): a release asset of the seampact GitHub
-releases, or a mirror base URL to which `/<asset>` is appended. The download is `HttpsDownload`'s, with the system's
-certificate authorities and no proxy, as the bundle channel's, a deadline sized for a binary of about 100 MB on a slow
-link, and a cap well above any release asset."""
+releases, or a mirror base URL to which `/<asset>` is appended, so a base with a query or a fragment is refused. The
+download is `HttpsDownload`'s, with the system's certificate authorities and no proxy, as the bundle channel's, a
+deadline sized for a binary of about 100 MB on a slow link, and a cap well above any release asset."""
 
 from collections.abc import Callable
 from typing import Final
 from urllib.parse import quote
 
 from seampact.ir.binary.failure import BinaryFailureCode, BinaryRefusedError
+from seampact.ir.https import HttpsDownload, untried_reason
 from seampact.ir.https.printable_url import printable_url
-from seampact.ir.https import HttpsDownload, is_https_url
 
 RELEASE_BASE_URL: Final = "https://github.com/jubasse/seampact/releases/download"
 DEADLINE_SECONDS: Final = 600.0
@@ -18,6 +18,10 @@ BYTES_MAX: Final = 512 * 1024 * 1024
 _FETCH_FIX: Final = (
     "Check that the URL serves the release asset over HTTPS, or set [tool.seampact.binary] in your root "
     "pyproject.toml to a mirror `url` or a `path`, with their hashes."
+)
+
+_MIRROR_QUERY_OR_FRAGMENT: Final = (
+    "was not tried: the mirror base URL has a query or a fragment, so the asset name cannot be appended to its path"
 )
 
 
@@ -38,13 +42,20 @@ class BinaryDownload:
 
     @staticmethod
     def mirror_url(base_url: str, asset: str) -> str:
+        """Raises `binary.fetch-failed` for a base with a query or a fragment, which the asset would land in."""
+        if "?" in base_url or "#" in base_url:
+            raise _fetch_failed(base_url, _MIRROR_QUERY_OR_FRAGMENT)
+
         return f"{base_url.rstrip('/')}/{asset}"
 
     @staticmethod
     def refuse_unless_https(url: str) -> None:
-        """Refuses a URL that is not `https:` before the cache is touched. Raises `binary.fetch-failed`."""
-        if not is_https_url(url):
-            raise _fetch_failed(url, "was not tried: it is not an absolute https: URL")
+        """Refuses a URL that is not `https:`, or holds a control character or a space, before the cache is touched.
+        Raises `binary.fetch-failed`."""
+        untried = untried_reason(url)
+
+        if untried is not None:
+            raise _fetch_failed(url, f"was not tried: {untried}")
 
     def stream(self, url: str, sink: Callable[[bytes], None]) -> None:
         """Streams the asset at `url` into `sink`. Raises `binary.fetch-failed`, or what the sink raises."""
