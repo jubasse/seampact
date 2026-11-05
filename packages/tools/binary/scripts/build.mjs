@@ -1,6 +1,7 @@
 // Builds the five SEA binaries from one Linux host (ADR 0010). They are unsigned: the macOS ones are re-signed
-// on a macOS runner, and `manifest.mjs` hashes the final files.
-// Usage: node scripts/build.mjs   (needs Node 24.21.0, gpg, curl, tar, unzip, xz)
+// on a macOS runner, and `manifest.mjs` hashes the final files. A release build takes the directory of the npm
+// tarballs and embeds the packs as packed; a development build embeds the repository's pack files.
+// Usage: node scripts/build.mjs [--packed-packs <tarball-dir>]   (needs Node 24.21.0, gpg, curl, tar, unzip, xz)
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -15,8 +16,10 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 import { gzipSync } from "node:zlib";
 import { build } from "esbuild";
+import { extractPackedPacks } from "./packed-packs.mjs";
 import { securityDirectory, stripSignature } from "./pe.mjs";
 
 const NODE_VERSION = "24.21.0";
@@ -50,6 +53,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = join(root, "dist");
 const cache = join(root, ".cache");
 const started = Date.now();
+const { values: options } = parseArgs({ options: { "packed-packs": { type: "string" } } });
 
 const targets = [
   {
@@ -101,10 +105,39 @@ mkdirSync(cache, { recursive: true });
 // bytes, so the binary's bundle vendors the same file as the Node CLI's.
 const TEXT_IMPORT_SUFFIX = "?text";
 const TEXT_IMPORT_NAMESPACE = "text-import";
+// `@seampact/pack-hal/pack.yaml`, or `@seampact/pack-hal/package.json?text`: the package name, then the file.
+const PACK_FILE_IMPORT = /^(@seampact\/pack-[^/]+)\/([^?]+)(\?text)?$/;
+const packedPackDirectories =
+  options["packed-packs"] === undefined
+    ? undefined
+    : extractPackedPacks(resolve(options["packed-packs"]), join(dist, "packed-packs"), fail);
+
+// Every embedded pack file comes from its npm tarball, so the release binary holds the published bytes.
+function resolvePackedPackFile(args) {
+  const [, packName, file] = PACK_FILE_IMPORT.exec(args.path) ?? [];
+  const packageDirectory = packedPackDirectories?.get(packName);
+
+  if (packageDirectory === undefined) {
+    return { errors: [{ text: `${packName} is imported but no packed tarball was given for it` }] };
+  }
+
+  const packedFile = join(packageDirectory, file);
+
+  if (!existsSync(packedFile)) {
+    return { errors: [{ text: `the npm tarball of ${packName} holds no ${file}` }] };
+  }
+
+  return { path: packedFile, namespace: TEXT_IMPORT_NAMESPACE };
+}
+
 // esbuild takes Go regular expressions: no `u` flag.
 const textImportPlugin = {
   name: TEXT_IMPORT_NAMESPACE,
   setup(pluginBuild) {
+    if (packedPackDirectories !== undefined) {
+      pluginBuild.onResolve({ filter: /^@seampact\/pack-[^/]+\// }, resolvePackedPackFile);
+    }
+
     pluginBuild.onResolve({ filter: /\?text$/ }, async (args) => {
       const resolved = await pluginBuild.resolve(args.path.slice(0, -TEXT_IMPORT_SUFFIX.length), {
         kind: args.kind,
@@ -167,6 +200,11 @@ const required = [...bundleText.matchAll(/require\(\s*["'`]([^"'`]+)["'`]\s*\)/g
 if (required.length > 0)
   fail(`bundle requires beyond the allowed Node built-ins: ${required.join(", ")}`);
 console.log(`build: bundle ok, built-ins used: ${[...used].sort().join(", ")}`);
+console.log(
+  packedPackDirectories === undefined
+    ? "build: packs embedded from the repository (a development build)"
+    : `build: packs embedded from the npm tarballs in ${options["packed-packs"]}`,
+);
 
 // 2. SEA blob: code cache and snapshot off (cross-platform), warning disabled, and `NODE_OPTIONS` ignored so no
 // `--require` of the environment runs inside the pinned binary. The paths are relative to dist/ (cwd of the blob
