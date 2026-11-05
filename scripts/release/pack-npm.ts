@@ -1,8 +1,10 @@
 // Builds and packs every published npm package into one directory, then checks each tarball's contents; the
 // directory is the artefact the binary embeds the packs from and the publish jobs upload.
-//   node scripts/release/pack-npm.ts <version> --out <dir> [--root <dir>]
+//   node scripts/release/pack-npm.ts <version> --out <dir> --manifest <file> [--root <dir>]
+// The manifest (name, version and SHA-256 of each tarball) goes outside the directory: the publish jobs take it from
+// this job's output, not from the artefact.
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { buildPackages, packPackages } from "../consumers/build-and-pack.ts";
 import { StepFailure } from "../consumers/run-step.ts";
@@ -11,19 +13,22 @@ import { packEntry } from "./pack-versions.ts";
 import { parsedArguments, ROOT_OPTION, repositoryRoot, runReleaseCommand } from "./release-cli.ts";
 import { ReleaseError, releaseVersion } from "./release-version.ts";
 import { type PackedPackage, tarballProblems } from "./tarball-contents.ts";
+import { tarballManifest } from "./tarball-manifest.ts";
 
-const USAGE = "node scripts/release/pack-npm.ts <version> --out <dir> [--root <dir>]";
+const USAGE =
+  "node scripts/release/pack-npm.ts <version> --out <dir> --manifest <file> [--root <dir>]";
 const TARBALL_PACKAGE_DIRECTORY = "package/";
 
 await runReleaseCommand("pack-npm", () => {
   const { values, positionals } = parsedArguments(
-    { ...ROOT_OPTION, out: { type: "string" } },
+    { ...ROOT_OPTION, out: { type: "string" }, manifest: { type: "string" } },
     USAGE,
   );
   const root = repositoryRoot(values.root);
   const version = releaseVersion(positionals[0]);
 
-  if (values.out === undefined) throw new ReleaseError(`--out is required; usage: ${USAGE}`);
+  if (values.out === undefined || values.manifest === undefined)
+    throw new ReleaseError(`--out and --manifest are required; usage: ${USAGE}`);
 
   const out = resolve(values.out);
   const tarballByName = buildAndPack(root, out);
@@ -35,8 +40,13 @@ await runReleaseCommand("pack-npm", () => {
       `${problems.length} problem(s) in the tarballs:\n  ${problems.join("\n  ")}`,
     );
 
+  const manifest = tarballManifest(out, [...tarballByName.values()]);
+
+  // One line, so the workflow passes it as a job output as is.
+  writeFileSync(values.manifest, `${JSON.stringify(manifest)}\n`);
+
   console.log(
-    `pack-npm: ${tarballByName.size} tarball(s) at ${version} in ${out}, contents checked`,
+    `pack-npm: ${tarballByName.size} tarball(s) at ${version} in ${out}, contents checked, manifest ${values.manifest}`,
   );
 });
 

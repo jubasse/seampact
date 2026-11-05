@@ -25,6 +25,20 @@ export function npmVersionEdits(root: string, version: string): VersionEdit[] {
   return directories.map((directory) => manifestEdit(root, directory, version));
 }
 
+/** The npm names of the published packages, read from their manifests in the checkout. */
+export function publishedPackageNames(root: string): string[] {
+  return PUBLISHED_PACKAGES.map((directory) => {
+    const file = `${directory}/${MANIFEST}`;
+    const manifest: unknown = JSON.parse(readRepositoryFile(root, file));
+    const name = isJsonRecord(manifest) ? manifest.name : undefined;
+
+    if (typeof name !== "string")
+      throw new ReleaseError(`${file} has no string \`name\`: name the package`);
+
+    return name;
+  });
+}
+
 function checkEveryPackageIsClassified(directories: readonly string[]): void {
   const workspace = new Set(directories);
   const missing = [...PUBLISHED_PACKAGES, ...UNPUBLISHED_PACKAGES].filter(

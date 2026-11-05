@@ -4,7 +4,8 @@ import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { packedTarballs, publishPlan, type Tarball } from "./publish-npm.ts";
+import { publishPlan } from "./publish-npm.ts";
+import { manifestTarballs, type Tarball, tarballManifest } from "./tarball-manifest.ts";
 
 const VERSION = "1.2.3";
 const HTTP_OK = 200;
@@ -17,30 +18,38 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0)) cleanup();
 });
 
-// A directory of `pnpm pack`-shaped tarballs, one per package name.
-function tarballDirectory(names: readonly string[]): Tarball[] {
-  const directory = mkdtempSync(join(tmpdir(), "release-publish-"));
+const temporaryDirectory = (prefix: string) => {
+  const directory = mkdtempSync(join(tmpdir(), prefix));
 
   cleanups.push(() => rmSync(directory, { recursive: true, force: true }));
 
-  for (const name of names) {
-    const tree = join(directory, name.replace("/", "-"));
+  return directory;
+};
 
-    mkdirSync(join(tree, "package"), { recursive: true });
-    writeFileSync(
-      join(tree, "package", "package.json"),
-      JSON.stringify({ name, version: VERSION }),
-    );
-    execFileSync("tar", [
-      "-czf",
-      join(directory, `${name.slice(1).replace("/", "-")}-${VERSION}.tgz`),
-      "-C",
-      tree,
-      "package",
-    ]);
-  }
+const tarballFileName = (name: string, version: string) =>
+  `${name.replace(/^@/, "").replace("/", "-")}-${version}.tgz`;
 
-  return packedTarballs(directory);
+// Writes a `pnpm pack`-shaped tarball of the package into the directory, and returns its file name.
+function writeTarball(directory: string, name: string, version = VERSION): string {
+  const tree = temporaryDirectory("release-package-");
+  const file = tarballFileName(name, version);
+
+  mkdirSync(join(tree, "package"));
+  writeFileSync(join(tree, "package", "package.json"), JSON.stringify({ name, version }));
+  execFileSync("tar", ["-czf", join(directory, file), "-C", tree, "package"]);
+
+  return file;
+}
+
+// A directory of tarballs, one per package name, read through their manifest.
+function tarballDirectory(names: readonly string[]): Tarball[] {
+  const directory = temporaryDirectory("release-publish-");
+  const files = names.map((name) => writeTarball(directory, name));
+
+  return manifestTarballs(directory, tarballManifest(directory, files), {
+    version: VERSION,
+    names,
+  });
 }
 
 // A registry serving the given packuments by URL path, and 404 for every other package.
@@ -102,7 +111,7 @@ describe("the idempotent publish to npm", () => {
 
     await expect(publishPlan(url, tarballs)).rejects.toThrow(
       new RegExp(
-        `^@seampact/spec@${VERSION} is on .* with other bytes .*: a published version never changes, so nothing was published`,
+        `^@seampact/spec@${VERSION} is on .* with other bytes .*: a published version never changes, so nothing was published; stamp and release a new patch version$`,
       ),
     );
   });
@@ -112,5 +121,100 @@ describe("the idempotent publish to npm", () => {
 
     expect(cli).toMatchObject({ name: "@seampact/cli", version: VERSION });
     expect(cli?.integrity).toMatch(/^sha512-[A-Za-z0-9+/]{86}==$/);
+  });
+});
+
+describe("the tarballs a publish takes", () => {
+  const NAMES = ["@seampact/cli", "@seampact/spec"];
+
+  function packedRelease() {
+    const directory = temporaryDirectory("release-artefact-");
+    const files = NAMES.map((name) => writeTarball(directory, name));
+
+    return { directory, manifest: tarballManifest(directory, files) };
+  }
+
+  it("are exactly the manifest's, at the release, with the release's names", () => {
+    const { directory, manifest } = packedRelease();
+
+    expect(
+      manifestTarballs(directory, manifest, { version: VERSION, names: NAMES }).map(
+        (tarball) => `${tarball.name}@${tarball.version}`,
+      ),
+    ).toEqual([`@seampact/cli@${VERSION}`, `@seampact/spec@${VERSION}`]);
+  });
+
+  it("refuse a tarball added to the artefact, and one whose bytes changed", () => {
+    const { directory, manifest } = packedRelease();
+
+    writeTarball(directory, "left-pad", "9.9.9");
+    writeTarball(directory, "@seampact/spec", VERSION);
+    const rewritten = tarballFileName("@seampact/cli", VERSION);
+
+    writeFileSync(join(directory, rewritten), "other bytes");
+
+    expect(() => manifestTarballs(directory, manifest, { version: VERSION, names: NAMES })).toThrow(
+      new RegExp(
+        [
+          "^the tarballs are not the ones pack-npm checked, so nothing was published:",
+          "  left-pad-9\\.9\\.9\\.tgz is in the artefact, but not in the manifest",
+          `  seampact-cli-1\\.2\\.3\\.tgz hashes [0-9a-f]{64}, not the [0-9a-f]{64} pack-npm wrote$`,
+        ].join("\n"),
+      ),
+    );
+  });
+
+  it("refuse a manifest that is not the release: another version, a missing or a foreign package", () => {
+    const directory = temporaryDirectory("release-artefact-");
+    const files = [
+      writeTarball(directory, "@seampact/cli", "0.0.1"),
+      writeTarball(directory, "left-pad", "9.9.9"),
+    ];
+
+    expect(() =>
+      manifestTarballs(directory, tarballManifest(directory, files), {
+        version: VERSION,
+        names: NAMES,
+      }),
+    ).toThrow(
+      [
+        "the tarballs are not the ones pack-npm checked, so nothing was published:",
+        "  left-pad-9.9.9.tgz is left-pad@9.9.9, not at 1.2.3",
+        `  seampact-cli-0.0.1.tgz is @seampact/cli@0.0.1, not at ${VERSION}`,
+        "  no tarball of @seampact/spec, which the release publishes",
+        "  left-pad is not a package the release publishes",
+      ].join("\n"),
+    );
+  });
+
+  it("refuse a tarball whose package.json differs from its manifest entry, or has no name", () => {
+    const { directory, manifest } = packedRelease();
+    const [cli, spec] = manifest;
+
+    if (cli === undefined || spec === undefined) throw new Error("two entries expected");
+
+    expect(() =>
+      manifestTarballs(
+        directory,
+        [
+          { ...cli, name: "@seampact/spec" },
+          { ...spec, name: "@seampact/cli" },
+        ],
+        {
+          version: VERSION,
+          names: NAMES,
+        },
+      ),
+    ).toThrow(`  ${cli.file} packs @seampact/cli@${VERSION}, not @seampact/spec@${VERSION}`);
+
+    const nameless = temporaryDirectory("release-package-");
+
+    mkdirSync(join(nameless, "package"));
+    writeFileSync(join(nameless, "package", "package.json"), JSON.stringify({ version: VERSION }));
+    execFileSync("tar", ["-czf", join(directory, "nameless.tgz"), "-C", nameless, "package"]);
+
+    expect(() => tarballManifest(directory, ["nameless.tgz"])).toThrow(
+      "nameless.tgz: its package/package.json has no string name and version",
+    );
   });
 });

@@ -1,46 +1,26 @@
-// The idempotent npm publish of the packed tarballs: each version the registry lacks is published; one it holds with
-// the same bytes is skipped; one it holds with other bytes fails by name before anything is published, since a
-// published version never changes. A failed run can so be rerun as is.
-//   node scripts/release/publish-npm.ts <tarball-dir> --registry <url> [--provenance]
-import { execFileSync, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+// The idempotent npm publish of the packed tarballs: exactly the ones pack-npm's manifest lists, checked against it
+// and against the packages of the release. Each version the registry lacks is published; one it holds with the same
+// bytes is skipped; one it holds with other bytes fails by name before anything is published, since a published
+// version never changes. A failed run can so be rerun as is.
+//   node scripts/release/publish-npm.ts <tarball-dir> --manifest <file> --version <version> --registry <url>
+//     [--provenance] [--root <dir>]
+import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { isJsonRecord } from "./json-record.ts";
-import { parsedArguments, runReleaseCommand } from "./release-cli.ts";
-import { ReleaseError } from "./release-version.ts";
+import { publishedPackageNames } from "./npm-versions.ts";
+import { parsedArguments, ROOT_OPTION, repositoryRoot, runReleaseCommand } from "./release-cli.ts";
+import { ReleaseError, releaseVersion } from "./release-version.ts";
+import { manifestTarballs, parsedTarballManifest, type Tarball } from "./tarball-manifest.ts";
 
-const TARBALL_SUFFIX = ".tgz";
 const HTTP_NOT_FOUND = 404;
+// A registry that does not answer within this time fails the job instead of holding it to its timeout.
+const REGISTRY_TIMEOUT_MILLISECONDS = 30_000;
 const NPM = process.platform === "win32" ? "npm.cmd" : "npm";
-
-export interface Tarball {
-  readonly file: string;
-  readonly name: string;
-  readonly version: string;
-  /** The Subresource Integrity string npm stores as `dist.integrity`: `sha512-<base64>` of the tarball's bytes. */
-  readonly integrity: string;
-}
 
 export interface PublishPlan {
   readonly toPublish: readonly Tarball[];
   readonly alreadyPublished: readonly Tarball[];
-}
-
-export function packedTarballs(directory: string): Tarball[] {
-  return readdirSync(directory)
-    .filter((file) => file.endsWith(TARBALL_SUFFIX))
-    .sort()
-    .map((file) => tarballOf(join(directory, file)));
-}
-
-function tarballOf(file: string): Tarball {
-  const manifest = JSON.parse(
-    execFileSync("tar", ["-xzOf", file, "package/package.json"], { encoding: "utf8" }),
-  );
-  const integrity = `sha512-${createHash("sha512").update(readFileSync(file)).digest("base64")}`;
-
-  return { file, name: String(manifest.name), version: String(manifest.version), integrity };
 }
 
 /** Asks the registry for each version; throws a `ReleaseError` naming every version held with other bytes. */
@@ -66,7 +46,8 @@ export async function publishPlan(
 
   if (conflicts.length > 0)
     throw new ReleaseError(
-      `${conflicts.join("; ")}: a published version never changes, so nothing was published; release a new version`,
+      `${conflicts.join("; ")}: a published version never changes, so nothing was published; stamp and release a ` +
+        "new patch version",
     );
 
   return { toPublish, alreadyPublished };
@@ -74,7 +55,7 @@ export async function publishPlan(
 
 async function publishedIntegrity(registry: string, tarball: Tarball): Promise<string | undefined> {
   const url = `${registry.replace(/\/+$/, "")}/${tarball.name.replace("/", "%2f")}`;
-  const response = await fetch(url, { headers: { accept: "application/json" } });
+  const response = await fetchPackument(url, tarball.name);
 
   if (response.status === HTTP_NOT_FOUND) return undefined;
 
@@ -92,6 +73,20 @@ async function publishedIntegrity(registry: string, tarball: Tarball): Promise<s
     );
 
   return integrity;
+}
+
+async function fetchPackument(url: string, name: string): Promise<Response> {
+  try {
+    return await fetch(url, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MILLISECONDS),
+    });
+  } catch (error) {
+    throw new ReleaseError(
+      `${url} did not answer (${error instanceof Error ? error.message : String(error)}): the registry cannot say ` +
+        `whether ${name} is published; rerun once it answers`,
+    );
+  }
 }
 
 // The version's integrity, `undefined` when the version is absent, `null` when it is listed without one.
@@ -129,24 +124,35 @@ function publish(registry: string, tarball: Tarball, extraArguments: readonly st
     );
 }
 
+const USAGE =
+  "node scripts/release/publish-npm.ts <tarball-dir> --manifest <file> --version <version> --registry <url> " +
+  "[--provenance] [--root <dir>]";
+
 if (import.meta.main)
   await runReleaseCommand("publish-npm", async () => {
-    const usage =
-      "node scripts/release/publish-npm.ts <tarball-dir> --registry <url> [--provenance]";
     const { values, positionals } = parsedArguments(
-      { registry: { type: "string" }, provenance: { type: "boolean" } },
-      usage,
+      {
+        ...ROOT_OPTION,
+        manifest: { type: "string" },
+        version: { type: "string" },
+        registry: { type: "string" },
+        provenance: { type: "boolean" },
+      },
+      USAGE,
     );
     const directory = positionals[0];
 
-    if (directory === undefined || values.registry === undefined)
-      throw new ReleaseError(`the tarball directory and --registry are required; usage: ${usage}`);
+    if (directory === undefined || values.registry === undefined || values.manifest === undefined)
+      throw new ReleaseError(
+        `the tarball directory, --manifest and --registry are required; usage: ${USAGE}`,
+      );
 
-    const tarballs = packedTarballs(resolve(directory));
-
-    if (tarballs.length === 0)
-      throw new ReleaseError(`${directory} holds no ${TARBALL_SUFFIX} tarball`);
-
+    const version = releaseVersion(values.version);
+    const manifest = parsedTarballManifest(readFileSync(values.manifest, "utf8"), values.manifest);
+    const tarballs = manifestTarballs(resolve(directory), manifest, {
+      version,
+      names: publishedPackageNames(repositoryRoot(values.root)),
+    });
     const plan = await publishPlan(values.registry, tarballs);
 
     for (const tarball of plan.alreadyPublished)
