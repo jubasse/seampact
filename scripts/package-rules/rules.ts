@@ -450,8 +450,9 @@ const RELEASE_SCRIPT_PUBLISH: [RegExp, string][] = [
   [/\/api\/v1\/publisher\/(?:upload|deployment)\b/, CENTRAL_PUBLISH],
 ];
 
-// A comment names a publish without running it: `//`, `#` and the lines of a `/** */` block.
-const WHOLE_LINE_COMMENT = /^\s*(?:\/\/|#|\/?\*)/;
+// A comment names a publish without running it: `//`, `#` and the lines of a `/** */` block. A shell `*)` case arm
+// starts with `*` too and runs its command, so a block line is a `*` followed by a space, `/` or nothing.
+const WHOLE_LINE_COMMENT = /^\s*(?:\/\/|#|\/\*|\*(?:\s|\/|$))/;
 
 /** Every file of `scripts/release`: only the publish each accepted module makes for release.yml passes. */
 function checkReleaseScripts(root: string, out: Violation[]): void {

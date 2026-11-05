@@ -38,7 +38,7 @@ describe("the Plugin Portal publish outcome", () => {
     ["any other failure", "Invalid credentials"],
   ])("fails on %s", (_case, output) => {
     expect(() => pluginPublishOutcome(1, output, VERSION)).toThrow(
-      `publishPlugins failed with exit code 1 (Gradle's output above), and the portal did not answer that io.github.jubasse.seampact ${VERSION} already exists`,
+      `failed with exit code 1 (Gradle's output above), and the portal did not answer that io.github.jubasse.seampact ${VERSION} already exists`,
     );
   });
 

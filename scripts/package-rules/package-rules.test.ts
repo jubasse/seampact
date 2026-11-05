@@ -364,6 +364,17 @@ describe("package rules", () => {
     ]);
   });
 
+  it("a publish in a shell case arm is seen, while comment lines are skipped", () => {
+    const root = writeTree({
+      "scripts/release/sneaky.sh":
+        'case "$1" in\n  *) ./gradlew publish ;;\nesac\n# ./gradlew publish\n/**\n * ./gradlew publish\n */\n',
+    });
+
+    expect(violations(root).map((violation) => violation.replace(/; only .*$/, ""))).toEqual([
+      "scripts/release/sneaky.sh: namespaces: line 2: publishes (Gradle publish)",
+    ]);
+  });
+
   it("the JVM publishes are seen in the release scripts and pass only in their publish module", () => {
     const centralUpload = 'portalRequest(portal, "/api/v1/publisher/upload");\n';
     const centralPublish = 'portalRequest(portal, "/api/v1/publisher/deployment/1");\n';
