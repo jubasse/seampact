@@ -1,9 +1,9 @@
 // The manifest of the Python distributions a release publishes: the file, name, version, kind and SHA-256 of each,
 // written by build-python and passed to the publish job as a job output, outside the artefact. Every workspace
 // distribution ships one pure wheel and one sdist; seampact-compiler ships one platform wheel per release binary and
-// no sdist, each holding its binary as SHA256SUMS lists it, and the five hashing as the binary call's `wheels-sha256`
-// output. A job that publishes takes exactly the files the manifest
-// lists, each checked against its hash, and refuses any other file of the artefact.
+// no sdist, each holding its binary as SHA256SUMS lists it, the five hashing as the binary call's `wheels-sha256`
+// output. Every wheel and sdist carries its LICENSE. A job that publishes takes exactly the files the manifest lists,
+// each checked against its hash, and refuses any other file of the artefact.
 //   node scripts/release/python/dist-manifest.ts write <dist-dir> --version <version> --sums <SHA256SUMS>
 //     --wheels-sha256 <sha256> --manifest <file> [--root <dir>]
 //   node scripts/release/python/dist-manifest.ts verify <dist-dir> --manifest <file> --version <version> [--root <dir>]
@@ -24,6 +24,9 @@ const COMPILER_BINARY_DIRECTORY = "seampact/compiler/bin/";
 const WHEEL_MEMBER_MAX_BYTES = 512 * 1024 * 1024;
 
 const SHA256_HEX = /^[0-9a-f]{64}$/;
+// Where hatchling puts a `license-files` entry (PEP 639): the wheel's metadata, the sdist's project root.
+const WHEEL_LICENSE_MEMBER = /^[^/]+\.dist-info\/licenses\/LICENSE$/;
+const SDIST_LICENSE_MEMBER = /^[^/]+\/LICENSE$/;
 
 const WHEEL_FILE = /^([A-Za-z0-9][A-Za-z0-9._]*)-([^-]+)(?:-\d[^-]*)?-[^-]+-[^-]+-[^-]+\.whl$/;
 const SDIST_FILE = /^([A-Za-z0-9][A-Za-z0-9._-]*)-([^-]+)\.tar\.gz$/;
@@ -204,6 +207,25 @@ export function compilerWheelsListProblems(
       ];
 }
 
+/** Every wheel and sdist carries the LICENSE its pyproject's `license-files` lists. */
+export function licenseProblems(
+  directory: string,
+  manifest: readonly DistributionManifestEntry[],
+): string[] {
+  return manifest
+    .filter((entry) => {
+      const file = join(directory, entry.file);
+
+      return entry.kind === "wheel"
+        ? !wheelMembers(file).some((member) => WHEEL_LICENSE_MEMBER.test(member))
+        : !sdistMembers(file).some((member) => SDIST_LICENSE_MEMBER.test(member));
+    })
+    .map(
+      (entry) =>
+        `${entry.file} has no LICENSE: list it in license-files of ${entry.name}'s pyproject.toml`,
+    );
+}
+
 export function failOnProblems(problems: readonly string[]): void {
   if (problems.length > 0)
     throw new ReleaseError(
@@ -298,6 +320,10 @@ function wheelMembers(wheel: string): string[] {
   return execFileSync("unzip", ["-Z1", wheel], { encoding: "utf8" }).split("\n").filter(Boolean);
 }
 
+function sdistMembers(sdist: string): string[] {
+  return execFileSync("tar", ["-tzf", sdist], { encoding: "utf8" }).split("\n").filter(Boolean);
+}
+
 function wheelMember(wheel: string, member: string): Buffer {
   return execFileSync("unzip", ["-p", wheel, member], { maxBuffer: WHEEL_MEMBER_MAX_BYTES });
 }
@@ -343,6 +369,7 @@ if (import.meta.main)
       failOnProblems([
         ...compilerWheelProblems(directory, manifest, readFileSync(values.sums, "utf8")),
         ...compilerWheelsListProblems(manifest, values["wheels-sha256"]),
+        ...licenseProblems(directory, manifest),
       ]);
       writeFileSync(values.manifest, JSON.stringify(manifest));
       console.log(

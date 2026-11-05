@@ -13,6 +13,7 @@ import {
   type DistributionManifestEntry,
   distributionIdentity,
   distributionManifest,
+  licenseProblems,
   manifestDistributions,
 } from "./dist-manifest.ts";
 import { uploadToLocalIndex } from "./local-index.ts";
@@ -211,6 +212,46 @@ describe("the compiler wheels against the binary call's wheels-sha256", () => {
     ]);
     expect(compilerWheelsListProblems(manifest, "not-a-hash")).toEqual([
       expect.stringMatching(/"not-a-hash" is not a lowercase hex SHA-256/),
+    ]);
+  });
+});
+
+// An sdist as hatchling writes it: every member under `<name>-<version>/`.
+function writeSdist(file: string, members: Readonly<Record<string, string>>): void {
+  const tree = temporaryDirectory("python-release-sdist-");
+  const project = `seampact_ir-${VERSION}`;
+
+  for (const [member, text] of Object.entries(members)) {
+    mkdirSync(join(tree, project, member, ".."), { recursive: true });
+    writeFileSync(join(tree, project, member), text);
+  }
+
+  execFileSync("tar", ["-czf", file, "-C", tree, project]);
+}
+
+describe("the license of each distribution", () => {
+  const wheelFile = `seampact_ir-${VERSION}-py3-none-any.whl`;
+  const sdistFile = `seampact_ir-${VERSION}.tar.gz`;
+
+  it("accepts a wheel and an sdist carrying the LICENSE, and names each one that does not", () => {
+    const licensed = temporaryDirectory("python-release-licensed-");
+
+    writeZip(join(licensed, wheelFile), {
+      "seampact/ir/__init__.py": "",
+      [`seampact_ir-${VERSION}.dist-info/licenses/LICENSE`]: "MIT",
+    });
+    writeSdist(join(licensed, sdistFile), { LICENSE: "MIT", "pyproject.toml": "" });
+
+    expect(licenseProblems(licensed, distributionManifest(licensed))).toEqual([]);
+
+    const unlicensed = temporaryDirectory("python-release-unlicensed-");
+
+    writeZip(join(unlicensed, wheelFile), { "seampact/ir/__init__.py": "" });
+    writeSdist(join(unlicensed, sdistFile), { "pyproject.toml": "", "src/LICENSE": "MIT" });
+
+    expect(licenseProblems(unlicensed, distributionManifest(unlicensed))).toEqual([
+      `${wheelFile} has no LICENSE: list it in license-files of seampact-ir's pyproject.toml`,
+      `${sdistFile} has no LICENSE: list it in license-files of seampact-ir's pyproject.toml`,
     ]);
   });
 });
