@@ -355,6 +355,18 @@ class BinaryPinTest {
     }
 
     @Test
+    fun aDevelopmentPinIsRefusedByName() {
+        val sums = BinaryPlatform.entries.joinToString("\n", postfix = "\n") { "${"a".repeat(64)}  ${it.assetName}" }
+        val development = (BinaryPins.fromSha256Sums("0.0.0", sums) as BinaryPinsRead.Read).pins
+
+        val read = BinaryPins.readProperties(development.toProperties())
+
+        val failure = (read as BinaryPinsRead.Refused).failure
+        assertEquals(BinaryFailureCode.PIN_INVALID, failure.code)
+        assertTrue("pins version 0.0.0, a development pin" in failure.message, failure.message)
+    }
+
+    @Test
     fun aManifestMissingABinaryIsRefused() {
         val sums = "${"a".repeat(64)}  seampact-linux-x64\n"
 
