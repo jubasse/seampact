@@ -79,11 +79,34 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build the site and check its links
         run: pnpm --filter @seampact/docs-site build
+      # Only develop's pushes publish the site; pull requests build and check it.
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: packages/tools/docs-site/dist
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: docs-site-pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   docs-site:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, build]
+    needs: [changes, build, deploy]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -96,3 +119,5 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.run }}
+          # The deploy runs only on develop's pushes.
+          allow-skip: deploy
