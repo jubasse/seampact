@@ -24,6 +24,8 @@ final class ConfigReaderTest extends TestCase
 {
     private const USE_FORM_VECTORS = '/packages/core/spec/vectors/config/use-forms.json';
 
+    private const OUT_DIRECTORY_VECTORS = '/packages/core/spec/vectors/config/out-directories.json';
+
     private const VALID = <<<'YAML'
         sources:
           contract: { path: ../contract }
@@ -238,6 +240,43 @@ final class ConfigReaderTest extends TestCase
     private static function useFormVectors(): \stdClass
     {
         return Json::object(Json::decodeFile(Documents::repositoryRoot() . self::USE_FORM_VECTORS));
+    }
+
+    /**
+     * @param list<string> $outs
+     * @param list<string> $codes
+     */
+    #[DataProvider('outDirectoryCases')]
+    public function testRefusesOutDirectoriesThatOverlapByTheirCode(array $outs, array $codes): void
+    {
+        $entries = '';
+
+        foreach ($outs as $index => $out) {
+            $entries .= "  - { id: entry{$index}, use: x/y, api: t, out: '{$out}' }\n";
+        }
+
+        $outcome = $this->read("targets:\n{$entries}");
+        $refusedCodes = is_array($outcome) ? array_map(static fn (ConfigProblem $problem): string => $problem->code, $outcome) : [];
+
+        self::assertSame($codes, $refusedCodes);
+    }
+
+    /**
+     * The shared `out` vectors (`packages/core/spec/vectors/config/out-directories.json`) the Node, JVM and Python
+     * readers pass too.
+     *
+     * @return array<string, array{list<string>, list<string>}>
+     */
+    public static function outDirectoryCases(): array
+    {
+        $vectors = Json::object(Json::decodeFile(Documents::repositoryRoot() . self::OUT_DIRECTORY_VECTORS));
+        $cases = [];
+
+        foreach (Json::objects($vectors, 'cases') as $vector) {
+            $cases[Json::string($vector, 'case')] = [Json::strings($vector, 'outs'), Json::strings($vector, 'codes')];
+        }
+
+        return $cases;
     }
 
     public function testNamesTheMountRuleAsTheNodeCliDoes(): void
