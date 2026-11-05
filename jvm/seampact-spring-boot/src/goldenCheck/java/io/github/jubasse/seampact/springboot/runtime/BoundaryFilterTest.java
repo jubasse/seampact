@@ -21,7 +21,9 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.MissingNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * The boundary filter of the golden 'tasks' api on mock requests, with chains standing for what Spring and the app
@@ -50,6 +52,15 @@ class BoundaryFilterTest {
         beans.addBean("unexpectedFailures", listener);
 
         return new SeampactBoundary(TasksContractTable.json(), new TasksSeampactBinding(), beans, environment);
+    }
+
+    // The golden table with no error listed on any operation, so no route has the `notFound` role.
+    private static SeampactBoundary boundaryWithoutNotFoundRole() {
+        JsonMapper mapper = JsonMapper.builder().build();
+        ObjectNode table = (ObjectNode) mapper.readTree(TasksContractTable.json());
+        table.path("operations").forEach(operation -> ((ObjectNode) operation).putArray("errors"));
+
+        return new SeampactBoundary(mapper.writeValueAsString(table), new TasksSeampactBinding(), new StaticListableBeanFactory(), new StandardEnvironment());
     }
 
     // The environment Spring Boot devtools leaves when its property defaults are active.
@@ -157,5 +168,18 @@ class BoundaryFilterTest {
             assertTrue(response.getContentAsString().contains("\"code\":\"" + NOT_FOUND_CODE + "\""), response.getContentAsString());
         }
         assertEquals(List.of(), reachedApp);
+    }
+
+    @Test
+    void unservedPathUnderCatchAllWithoutANotFoundRouteIsABare404() throws Exception {
+        List<HttpServletRequest> reachedApp = new ArrayList<>();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        new BoundaryFilter(boundaryWithoutNotFoundRole()).doFilter(new MockHttpServletRequest("GET", "/v1/no-such-route"), response,
+                (request, reply) -> reachedApp.add((HttpServletRequest) request));
+
+        assertEquals(List.of(), reachedApp, "a path no route serves never reaches the app under catchAll");
+        assertEquals(NOT_FOUND, response.getStatus());
+        assertEquals(0, response.getContentAsByteArray().length);
     }
 }
