@@ -40,7 +40,7 @@ One line each, in this order: task and PR or lane; worktree, branch and tip, lan
 - After each merge, the next branch rebases and runs `pnpm vitest run packages/core/compiler/src/passes`: a stricter pass breaks other lanes' test contracts.
 - After each merge, message the agents still working on other branches to rebase before their hand-back.
 - `gh` often hits TLS timeouts: check the state before retrying.
-- develop requires a branch up to date with it: merge PRs one at a time with `.work/tools/merge-seq.sh <pr>...` (update the branch, wait for CI, check no check-run is pending, squash-merge, stop at the first failure).
+- develop requires a branch up to date with it: merge PRs one at a time with `.work/tools/merge-seq.sh <pr>...` (update the branch, wait for CI, check no check-run is pending, squash-merge, stop at the first failure). Chain cleanup (worktree remove, branch delete, required checks) after it with `&&` only, never `;`.
 - A job that fails on a registry refusal (Maven Central 429, 403 or a missing artifact that exists) is rerun once with `gh run rerun <run> --failed` before it is read as a failure.
 - Dependabot: merge a green grouped PR; a security PR on a floor requirement file is merged only while the new version stays inside the floor the compatibility matrix declares, otherwise closed and its alert dismissed as test-only by the user.
 - Actions cache (10 GB repository limit): pull requests only restore; pushes, the nightly and a manual run save. Check the split with `gh api repos/jubasse/seampact/actions/cache/usage` and the caches listing after a CI change.
