@@ -17,7 +17,7 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Restricted output fields (ADR 0012 "Field rights"): before the reply is written, each restricted member whose
- * right the decider denies for its holder is removed. One decision is asked per right, use-site params and subject.
+ * right the decider denies for its holder is removed. One decision is asked per right, use-site params, pointer and subject.
  */
 final class OutputFieldRights {
     private static final String OUTPUT = "output";
@@ -77,8 +77,8 @@ final class OutputFieldRights {
     private static boolean allowed(SeampactBoundary boundary, BoundaryExchange exchange, RequestView view, JsonNode fieldRight, ObjectNode holder, Map<String, Boolean> decisions) {
         String right = fieldRight.path("right").asString();
         Optional<SubjectRef<Object, Object>> subject = subjectOf(boundary, fieldRight, right, holder);
-        // Two fields of one right with other params are two questions: the params join the key.
-        String key = right + "\n" + fieldRight.path("params") + "\n" + subject.map(ref -> String.valueOf(ref.id())).orElse("");
+        // The decider sees the field's params and pointer, so both join the key.
+        String key = right + "\n" + fieldRight.path("params") + "\n" + fieldRight.path("pointer").asString() + "\n" + subject.map(ref -> String.valueOf(ref.id())).orElse("");
 
         return decisions.computeIfAbsent(key, ignored -> {
             RequirementCall call = new RequirementCall(RequirementKind.RIGHT, right, RequirementParams.of(boundary, RequirementKind.RIGHT, right, fieldRight), exchange.principal, subject,

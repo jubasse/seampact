@@ -8,7 +8,7 @@ use Seampact\Codegen\Runtime\RuntimeVersion;
 
 /**
  * A generated contract class with a right `roles` that declares its params schema, and a right `tasks.read` that declares
- * none; `getTask` restricts two output members to `roles` with other params.
+ * none; `getTask` restricts two output members to `roles` with other params, `listTasks` with equal params.
  */
 final class TypedParamsContract
 {
@@ -26,6 +26,10 @@ final class TypedParamsContract
             ['id' => 'getTask', 'fieldRights' => [
                 ['direction' => 'output', 'schema' => 'Task', 'pointer' => '/effort', 'right' => 'roles', 'params' => ['allowed' => ['owner']]],
                 ['direction' => 'output', 'schema' => 'Task', 'pointer' => '/title', 'right' => 'roles', 'params' => ['allowed' => ['owner', 'editor']]],
+            ]],
+            ['id' => 'listTasks', 'fieldRights' => [
+                ['direction' => 'output', 'schema' => 'Task', 'pointer' => '/effort', 'right' => 'roles', 'params' => ['allowed' => ['owner']]],
+                ['direction' => 'output', 'schema' => 'Task', 'pointer' => '/title', 'right' => 'roles', 'params' => ['allowed' => ['owner']]],
             ]],
         ],
     ];

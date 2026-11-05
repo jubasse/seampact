@@ -16,26 +16,35 @@ use Seampact\Codegen\Runtime\HookLookup;
 use Seampact\Codegen\Runtime\UnexpectedErrorListener;
 use Seampact\Hooks\AuthenticateHook;
 use Seampact\Hooks\Decision;
+use Seampact\Hooks\Purpose;
 use Seampact\Hooks\RequestView;
 use Seampact\Hooks\RequirementRequest;
 
-/** Restricted output members: each use site of a right is decided with its own params. */
+/** Restricted output members: each use site of a right is decided with its own params and pointer. */
 final class OutputFieldRightsTest extends TestCase
 {
     public function testTwoMembersOfOneRightWithOtherParamsAreDecidedApart(): void
     {
-        $state = new BoundaryState(ApiContract::of(TypedParamsContract::class), 'getTask', [], new RequestView('GET', '/v1/tasks/1', []), self::editorLookup());
-        $task = (object) ['taskId' => 't1', 'effort' => 3, 'title' => 'Write'];
-
-        $visible = FieldRights::output($state, ['body' => ['schema' => 'Task'], 'shape' => 'object'], $task);
-
-        self::assertEquals((object) ['taskId' => 't1', 'title' => 'Write'], $visible);
+        self::assertEquals((object) ['taskId' => 't1', 'title' => 'Write'], self::visibleTask('getTask', self::editorDecider()));
     }
 
-    // A lookup whose only decider allows `roles` when its params let an editor in.
-    private static function editorLookup(): HookLookup
+    public function testTwoMembersOfOneRightWithEqualParamsAreDecidedByPointer(): void
     {
-        $decider = new class () implements Decider {
+        self::assertEquals((object) ['taskId' => 't1', 'title' => 'Write'], self::visibleTask('listTasks', self::titleDecider()));
+    }
+
+    private static function visibleTask(string $operationId, Decider $decider): mixed
+    {
+        $state = new BoundaryState(ApiContract::of(TypedParamsContract::class), $operationId, [], new RequestView('GET', '/v1/tasks/1', []), self::lookup($decider));
+        $task = (object) ['taskId' => 't1', 'effort' => 3, 'title' => 'Write'];
+
+        return FieldRights::output($state, ['body' => ['schema' => 'Task'], 'shape' => 'object'], $task);
+    }
+
+    // Allows `roles` when its params let an editor in.
+    private static function editorDecider(): Decider
+    {
+        return new class () implements Decider {
             public function names(): array
             {
                 return ['roles'];
@@ -51,7 +60,32 @@ final class OutputFieldRightsTest extends TestCase
                 return new Decision\Denied(new Denial('api.forbidden'));
             }
         };
+    }
 
+    // Allows `roles` for the field `/title` only, whatever the params.
+    private static function titleDecider(): Decider
+    {
+        return new class () implements Decider {
+            public function names(): array
+            {
+                return ['roles'];
+            }
+
+            public function decide(RequirementRequest $request): Decision
+            {
+                $purpose = $request->purpose();
+                if ($purpose instanceof Purpose\Field && $purpose->pointer === '/title') {
+                    return new Decision\Allowed();
+                }
+
+                return new Decision\Denied(new Denial('api.forbidden'));
+            }
+        };
+    }
+
+    // A lookup whose only decider is `$decider`.
+    private static function lookup(Decider $decider): HookLookup
+    {
         return new class ($decider) implements HookLookup {
             public function __construct(private readonly Decider $decider)
             {

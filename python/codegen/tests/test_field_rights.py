@@ -114,8 +114,8 @@ def _with_output_pointer(contract: ApiContract, pointer: str) -> ApiContract:
     return dataclasses.replace(contract, ir_view=ir_view)
 
 
-def _with_two_output_params(contract: ApiContract) -> ApiContract:
-    """`listTasks` with `/effort` and `/title` restricted to its output right, each with other params."""
+def _with_two_output_params(contract: ApiContract, title_allowed: list[IrJson]) -> ApiContract:
+    """`listTasks` with `/effort` (owners) and `/title` (`title_allowed`) restricted to its output right."""
     ir_view: dict[str, IrJson] = copy.deepcopy(dict(contract.ir_view))
     operations = ir_view["operations"]
     assert isinstance(operations, list)
@@ -129,7 +129,7 @@ def _with_two_output_params(contract: ApiContract) -> ApiContract:
     title = copy.deepcopy(effort)
     effort["params"] = {"allowed": ["owner"]}
     title["pointer"] = "/title"
-    title["params"] = {"allowed": ["owner", "editor"]}
+    title["params"] = {"allowed": title_allowed}
     field_rights.append(title)
 
     return dataclasses.replace(contract, ir_view=ir_view)
@@ -154,7 +154,7 @@ class _EditorDecider:
 def test_two_output_members_of_one_right_with_other_params_are_decided_apart(
     tasks_contract: ApiContract, hook_caller: HookCaller
 ) -> None:
-    contract = _with_two_output_params(tasks_contract)
+    contract = _with_two_output_params(tasks_contract, ["owner", "editor"])
     decider = _EditorDecider()
     response = contract.operation("listTasks")["responses"]
     assert isinstance(response, list)
@@ -171,6 +171,37 @@ def test_two_output_members_of_one_right_with_other_params_are_decided_apart(
 
     assert visible == [{"taskId": "t1", "title": "Write"}]
     assert len(decider.asked) == 2
+
+
+@dataclass
+class _TitleDecider:
+    """Allows the field `/title` only, whatever the params."""
+
+    def decide(self, request: RequirementRequest, /) -> Decision:
+        if request.purpose == purpose.Field(pointer="/title", direction=FieldDirection.OUTPUT):
+            return decision.Allowed()
+
+        return decision.Denied(deny=ErrorCodeWithParams(code=_FORBIDDEN))
+
+
+def test_two_output_members_of_one_right_with_equal_params_are_decided_by_pointer(
+    tasks_contract: ApiContract, hook_caller: HookCaller
+) -> None:
+    contract = _with_two_output_params(tasks_contract, ["owner"])
+    response = contract.operation("listTasks")["responses"]
+    assert isinstance(response, list)
+
+    visible = asyncio.run(
+        visible_output(
+            _state(contract, "listTasks", None),
+            AccessHooks(authenticate={}, deciders={"tasks.seeEffort": _TitleDecider()}, scope_resolvers={}),
+            hook_caller,
+            response[0],
+            [{"taskId": "t1", "effort": 3, "title": "Write"}],
+        )
+    )
+
+    assert visible == [{"taskId": "t1", "title": "Write"}]
 
 
 def test_an_output_pointer_names_its_member_unescaped(tasks_contract: ApiContract, hook_caller: HookCaller) -> None:
