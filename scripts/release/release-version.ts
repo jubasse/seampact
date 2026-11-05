@@ -3,6 +3,13 @@
 // `MAJOR.MINOR.PATCH` only: npm, PyPI and Maven spell a pre-release differently, so one string cannot serve all three.
 const RELEASE_VERSION_PATTERN = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/;
 
+/** The version every package carries between releases. */
+export const DEVELOPMENT_VERSION = "0.0.0";
+
+export function isReleaseVersion(candidate: string): boolean {
+  return RELEASE_VERSION_PATTERN.test(candidate) && candidate !== DEVELOPMENT_VERSION;
+}
+
 /** A release input or checkout the release cannot go on with; the message names the file and the fix. */
 export class ReleaseError extends Error {}
 

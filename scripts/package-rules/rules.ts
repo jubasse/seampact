@@ -1,8 +1,9 @@
 // Package roles, the dependency rules of ADR 0009 and the namespaces of A27, checked over
 // the manifests of a repository: npm (packages/*), Gradle (jvm/**) and Composer (php/*).
 //
-// Two modes: development, where every npm package is private and the changesets access restricted (A3), and release,
-// set by release.yml on a stamped checkout only, where the published packages drop `private` and the access is public.
+// Two forms, read from the tree: with every published package at 0.0.0, the development form, where every npm
+// package is private and the changesets access restricted (A3); with all of them at one release version (a stamped
+// checkout), the release form, where the published packages drop `private` and the access is public.
 //
 // Deferred: package roles and dependency rules for Gradle (jvm/**) and Composer (php/*)
 // manifests. ADR 0009 states them for npm only and no role metadata convention exists for those
@@ -10,6 +11,8 @@
 // the convention is decided.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, posix } from "node:path";
+import { PUBLISHED_PACKAGES } from "../release/npm-versions.ts";
+import { DEVELOPMENT_VERSION, isReleaseVersion } from "../release/release-version.ts";
 import { packageDirectories } from "../workspace/index.ts";
 
 export interface Violation {
@@ -37,11 +40,9 @@ const UNPUBLISHED_PACKAGES = ["@seampact/binary", "@seampact/docs-site"];
 const RUNTIME_SETS = ["dependencies", "peerDependencies", "optionalDependencies"] as const;
 
 /** The development form (A3), or the stamped form of a release, with the directories of the published packages. */
-export type PackageRulesMode =
+type PackageRulesMode =
   | { readonly kind: "development" }
   | { readonly kind: "release"; readonly publishedPackages: readonly string[] };
-
-export const DEVELOPMENT_MODE: PackageRulesMode = { kind: "development" };
 
 const RELEASE_SCRIPTS_DIR = "scripts/release";
 // The one release script that publishes, and what it may run: the idempotent npm publish of release.yml.
@@ -265,17 +266,74 @@ function checkPacks(root: string, pkgs: Npm[], out: Violation[]): void {
   }
 }
 
+/**
+ * The form the published packages' versions give: all at 0.0.0, development; all at one release version, release.
+ * Any other tree is a violation, and its form is not checked.
+ */
+function treeMode(
+  pkgs: Npm[],
+  publishedPackages: readonly string[],
+  out: Violation[],
+): PackageRulesMode | undefined {
+  const published = pkgs.filter((p) => publishedPackages.includes(p.dir));
+  const versionOf = (p: Npm) => (typeof p.json.version === "string" ? p.json.version : undefined);
+  let valid = true;
+
+  for (const p of published) {
+    const version = versionOf(p);
+
+    if (version === DEVELOPMENT_VERSION || (version !== undefined && isReleaseVersion(version)))
+      continue;
+
+    valid = false;
+    out.push({
+      file: p.file,
+      rule: "namespaces",
+      message: `a published package is at ${DEVELOPMENT_VERSION} or at a release version MAJOR.MINOR.PATCH, not ${JSON.stringify(p.json.version)}`,
+    });
+  }
+
+  if (!valid) return undefined;
+
+  const versions = [...new Set(published.map(versionOf))];
+
+  if (versions.length > 1) {
+    const listed = published.map((p) => `${p.dir} at ${versionOf(p)}`).join(", ");
+
+    out.push({
+      file: "package.json",
+      rule: "namespaces",
+      message: `the published packages are not at one version (${listed}): all at ${DEVELOPMENT_VERSION}, or all stamped by scripts/release/stamp.ts`,
+    });
+
+    return undefined;
+  }
+
+  return versions[0] === undefined || versions[0] === DEVELOPMENT_VERSION
+    ? { kind: "development" }
+    : { kind: "release", publishedPackages };
+}
+
 function checkNpmNamespace(pkgs: Npm[], mode: PackageRulesMode, out: Violation[]): void {
   for (const p of pkgs) {
     const add = (message: string) => out.push({ file: p.file, rule: "namespaces", message });
-
-    if (!/^@seampact\/[a-z0-9][a-z0-9-]*$/.test(p.name))
-      add(`npm name "${p.name}" must be @seampact/<name> (A27)`);
 
     const message = privateFieldProblem(p, mode);
 
     if (message) add(message);
   }
+
+  checkNpmNames(pkgs, out);
+}
+
+function checkNpmNames(pkgs: Npm[], out: Violation[]): void {
+  for (const p of pkgs)
+    if (!/^@seampact\/[a-z0-9][a-z0-9-]*$/.test(p.name))
+      out.push({
+        file: p.file,
+        rule: "namespaces",
+        message: `npm name "${p.name}" must be @seampact/<name> (A27)`,
+      });
 }
 
 function checkPublicMetadata(root: string, pkgs: Npm[], out: Violation[]): void {
@@ -315,10 +373,10 @@ function privateFieldProblem(p: Npm, mode: PackageRulesMode): string | undefined
   if (!mode.publishedPackages.includes(p.dir))
     return p.json.private === true
       ? undefined
-      : "an unpublished package stays `private: true` in a release";
+      : "an unpublished package stays `private: true` in a stamped release";
 
   return "private" in p.json
-    ? "a published package has no `private` field in a release: run scripts/release/stamp.ts"
+    ? "a published package has no `private` field in a stamped release: run scripts/release/stamp.ts"
     : undefined;
 }
 
@@ -337,7 +395,7 @@ function checkChangesets(root: string, mode: PackageRulesMode, out: Violation[])
     message:
       mode.kind === "development"
         ? '`access` must stay "restricted" until p8-release'
-        : '`access` is "public" in a release: run scripts/release/stamp.ts',
+        : '`access` is "public" in a stamped release: run scripts/release/stamp.ts',
   });
 }
 
@@ -518,18 +576,24 @@ function checkComposer(root: string, out: Violation[]): void {
   }
 }
 
+/** `publishedPackages`: the directories of the npm packages a release publishes. */
 export function checkPackageRules(
   root: string,
-  mode: PackageRulesMode = DEVELOPMENT_MODE,
+  publishedPackages: readonly string[] = PUBLISHED_PACKAGES,
 ): Violation[] {
   const out: Violation[] = [];
   const pkgs = loadNpm(root, out);
+  const mode = treeMode(pkgs, publishedPackages, out);
 
   checkDependencies(pkgs, out);
   checkPacks(root, pkgs, out);
   checkPublicMetadata(root, pkgs, out);
-  checkNpmNamespace(pkgs, mode, out);
-  checkChangesets(root, mode, out);
+
+  if (mode) {
+    checkNpmNamespace(pkgs, mode, out);
+    checkChangesets(root, mode, out);
+  } else checkNpmNames(pkgs, out);
+
   checkWorkflows(root, out);
   checkScripts(root, pkgs, out);
   checkReleaseScripts(root, out);

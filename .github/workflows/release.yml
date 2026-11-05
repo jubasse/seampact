@@ -135,9 +135,6 @@ jobs:
         env:
           VERSION: ${{ steps.mode.outputs.version }}
         run: node scripts/release/check-version.ts "$VERSION"
-      # The release form of the package rules: the published packages public, the unpublished ones still private.
-      - name: The packages are in the release form
-        run: node scripts/package-rules/cli.ts --release
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.13.6"
