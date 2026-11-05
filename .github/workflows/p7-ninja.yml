@@ -260,7 +260,7 @@ jobs:
         with:
           name: ninja-http-suite-${{ matrix.row }}
           path: reports
-          retention-days: 7
+          retention-days: 90
           if-no-files-found: warn
 
 

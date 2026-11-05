@@ -7,7 +7,7 @@ import type { Item, Model, Problem, Proof } from "./model.ts";
 import { CHECKLIST_FILE, chkNumber } from "./model.ts";
 import type { SuiteProof } from "./suite-reports.ts";
 import { loadSuiteReports } from "./suite-reports.ts";
-import { expandTargets } from "./targets.ts";
+import { expandTargets, releaseGateTargets } from "./targets.ts";
 
 export interface CheckOptions {
   /** Repository root (the directory holding docs/conformance). */
@@ -129,7 +129,7 @@ function releaseGateProblems(model: Model, suiteProofs: readonly SuiteProof[]): 
   for (const item of model.items) {
     if (item.retired !== undefined) continue;
     const mine = proofs.get(item.id) ?? [];
-    const targets = expandTargets(item.targets);
+    const targets = releaseGateTargets(item.targets);
     const at = (message: string) => problems.push({ file: CHECKLIST_FILE, id: item.id, message });
 
     if (!mine.some((p) => p.fixtures.length > 0) && !targets.some((t) => suitePassed(item.id, t)))

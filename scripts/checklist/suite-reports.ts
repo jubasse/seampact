@@ -4,7 +4,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { CaseOutcome, SuiteReport } from "../../packages/tools/http-suite/src/suite-report.ts";
 import type { Problem } from "./model.ts";
-import { SERVER_TARGETS } from "./targets.ts";
+import { reportTargetOf, SERVER_TARGETS, TARGET_VARIANTS } from "./targets.ts";
 
 // Typed from the http-suite's own format, so a format change there fails the typecheck here.
 const SUITE_REPORT_FORMAT: SuiteReport["format"] = "seampact-http-suite-report/1";
@@ -91,12 +91,13 @@ function suiteProofsOf(file: string, report: unknown, problems: Problem[]): Suit
     return [];
   }
 
-  const target = report.target;
+  const reportTarget = report.target;
+  const target = typeof reportTarget === "string" ? reportTargetOf(reportTarget) : undefined;
 
-  if (typeof target !== "string" || !SERVER_TARGETS.includes(target)) {
+  if (target === undefined) {
     problems.push({
       file,
-      message: `suite report of an unknown server target ${shown(target)} (expected one of ${SERVER_TARGETS.join(", ")})`,
+      message: `suite report of an unknown server target ${shown(reportTarget)} (expected one of ${[...SERVER_TARGETS, ...TARGET_VARIANTS.keys()].join(", ")})`,
     });
 
     return [];
