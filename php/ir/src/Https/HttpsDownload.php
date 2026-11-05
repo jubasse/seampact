@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Https;
 
-use Seampact\Ir\Bundle\BundleText;
-use Seampact\Ir\Bundle\PrintableUrl;
 
 /**
  * A download over HTTPS, streamed chunk by chunk to a sink. The URL and every redirect must be `https:`, TLS is
@@ -63,7 +61,7 @@ final readonly class HttpsDownload
 
             $target = self::resolved($url, $location);
             if ($target === null || !self::isHttpsUrl($target)) {
-                return new HttpsFailure($url, 'redirected to ' . BundleText::quoted(PrintableUrl::of($location)) . ', which is not an https: URL');
+                return new HttpsFailure($url, 'redirected to ' . UntrustedText::quoted(PrintableUrl::of($location)) . ', which is not an https: URL');
             }
 
             $url = $target;

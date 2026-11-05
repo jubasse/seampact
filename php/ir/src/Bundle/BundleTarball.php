@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Bundle;
 
+use Seampact\Ir\Https\UntrustedText;
+
 /**
  * The bundle tarball reader (`schemas/bundle/README.md`, "Tarball"), with `ext-zlib` only. A tarball comes from
  * the network, so it is inflated in bounded chunks into a private temporary file, the extracted cap checked before
@@ -146,7 +148,7 @@ final class BundleTarball
     {
         $context = inflate_init(ZLIB_ENCODING_GZIP);
         if ($context === false) {
-            return BundleArchiveRead::archiveInvalid('zlib cannot start a gzip stream (' . BundleText::quoted($problem ?? 'no reason given') . ')');
+            return BundleArchiveRead::archiveInvalid('zlib cannot start a gzip stream (' . UntrustedText::quoted($problem ?? 'no reason given') . ')');
         }
 
         $written = 0;
@@ -192,6 +194,6 @@ final class BundleTarball
 
     private static function notGzip(?string $problem): BundleFailure
     {
-        return BundleArchiveRead::archiveInvalid('it is not gzip data (' . BundleText::quoted($problem ?? 'zlib gave no reason') . ')');
+        return BundleArchiveRead::archiveInvalid('it is not gzip data (' . UntrustedText::quoted($problem ?? 'zlib gave no reason') . ')');
     }
 }

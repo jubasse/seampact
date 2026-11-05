@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Bundle;
 
+use Seampact\Ir\Https\UntrustedText;
 use Seampact\Ir\Read\NestingCheck;
 
 /**
@@ -27,7 +28,7 @@ final readonly class UntrustedJson
 
     public static function parse(string $bytes): self
     {
-        if (!BundleText::isUtf8($bytes)) {
+        if (!UntrustedText::isUtf8($bytes)) {
             return self::refused('is not UTF-8 text');
         }
 
@@ -43,12 +44,12 @@ final readonly class UntrustedJson
         try {
             $document = json_decode($bytes, false, self::PARSER_DEPTH, JSON_THROW_ON_ERROR);
         } catch (\JsonException $error) {
-            return self::refused('is not JSON (' . BundleText::quoted($error->getMessage()) . ')');
+            return self::refused('is not JSON (' . UntrustedText::quoted($error->getMessage()) . ')');
         }
 
         $reservedAt = self::reservedKeyPointer($document);
         if ($reservedAt !== null) {
-            return self::refused('holds the reserved key at ' . BundleText::quoted($reservedAt));
+            return self::refused('holds the reserved key at ' . UntrustedText::quoted($reservedAt));
         }
 
         return new self($document, null);

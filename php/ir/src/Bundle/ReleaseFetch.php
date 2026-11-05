@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Seampact\Ir\Bundle;
 
 use Seampact\Ir\Https\HttpsDownload;
+use Seampact\Ir\Https\PrintableUrl;
+use Seampact\Ir\Https\UntrustedText;
 
 /**
  * The release-asset channel, as `fetch-release.ts`: the bundle tarball downloaded over HTTPS by `HttpsDownload`, which
@@ -30,7 +32,7 @@ final readonly class ReleaseFetch
 
         return new BundleFailure(
             BundleFailureCode::ReleaseUrl,
-            'The release URL ' . BundleText::quoted(PrintableUrl::of($source->url)) . ' is not an absolute https: URL.',
+            'The release URL ' . UntrustedText::quoted(PrintableUrl::of($source->url)) . ' is not an absolute https: URL.',
             'Name the bundle tarball by its https: URL.',
         );
     }
@@ -73,7 +75,7 @@ final readonly class ReleaseFetch
     {
         return new BundleFailure(
             BundleFailureCode::ReleaseFailed,
-            'Downloading the bundle from ' . BundleText::quoted(PrintableUrl::of($url)) . " {$what}.",
+            'Downloading the bundle from ' . UntrustedText::quoted(PrintableUrl::of($url)) . " {$what}.",
             self::RELEASE_FIX,
         );
     }

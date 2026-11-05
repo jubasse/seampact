@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Binary;
 
-use Seampact\Ir\Bundle\PrintableUrl;
 use Seampact\Ir\Https\HttpsDownload;
+use Seampact\Ir\Https\PrintableUrl;
 
 /**
  * Where the compiler binary is downloaded from, and how (ADR 0010, "Fetch"): a release asset of the seampact GitHub

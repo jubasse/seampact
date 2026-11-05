@@ -9,7 +9,8 @@ from typing import Final
 from seampact.ir.bundle.failure import BundleFailure, BundleFailureCode
 from seampact.ir.bundle.manifest import BundleApi
 from seampact.ir.bundle.spec_schema import ir_schema
-from seampact.ir.bundle.text import listed_problems, quoted
+from seampact.ir.bundle.text import listed_problems
+from seampact.ir.https.untrusted_text import quoted
 from seampact.ir.bundle.untrusted_json import parse_untrusted_json
 from seampact.ir.hydration import IrModelError
 from seampact.ir.model import ContractIR

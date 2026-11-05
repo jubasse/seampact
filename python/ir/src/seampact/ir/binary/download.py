@@ -8,7 +8,7 @@ from typing import Final
 from urllib.parse import quote
 
 from seampact.ir.binary.failure import BinaryFailureCode, BinaryRefusedError
-from seampact.ir.bundle.printable_url import printable_url
+from seampact.ir.https.printable_url import printable_url
 from seampact.ir.https import HttpsDownload, is_https_url
 
 RELEASE_BASE_URL: Final = "https://github.com/jubasse/seampact/releases/download"

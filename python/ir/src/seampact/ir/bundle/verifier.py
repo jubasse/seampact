@@ -16,7 +16,7 @@ from seampact.ir.bundle.ir_check import check_api_ir
 from seampact.ir.bundle.layout import MANIFEST_BYTES_MAX, MANIFEST_FILE, REFETCH_FIX
 from seampact.ir.bundle.manifest import BundleFile, BundleManifest
 from seampact.ir.bundle.manifest_reader import manifest_too_large, read_manifest
-from seampact.ir.bundle.text import quoted
+from seampact.ir.https.untrusted_text import quoted
 from seampact.ir.bundle.verification import BundleVerification, refused
 
 _NPM_PACKAGE_MANIFEST: Final = "package.json"

@@ -13,8 +13,8 @@ from dataclasses import dataclass
 from typing import Final
 from urllib.parse import urljoin, urlsplit
 
-from seampact.ir.bundle.printable_url import printable_url
-from seampact.ir.bundle.text import quoted
+from seampact.ir.https.printable_url import printable_url
+from seampact.ir.https.untrusted_text import quoted
 
 _REDIRECTS_MAX: Final = 5
 _HTTP_OK: Final = 200

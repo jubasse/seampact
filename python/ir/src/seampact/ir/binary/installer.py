@@ -16,7 +16,7 @@ from seampact.ir.binary.cache_safety import CacheSafety, unsafe_cache_path
 from seampact.ir.binary.download import BinaryDownload
 from seampact.ir.binary.failure import BinaryFailureCode, BinaryRefusedError
 from seampact.ir.binary.installed_binary import InstalledBinary, hash_mismatch
-from seampact.ir.bundle.printable_url import printable_url
+from seampact.ir.https.printable_url import printable_url
 
 _CHUNK_BYTES: Final = 64 * 1024
 _EXECUTABLE_BY_OWNER: Final = 0o700

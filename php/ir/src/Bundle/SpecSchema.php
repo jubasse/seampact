@@ -6,6 +6,7 @@ namespace Seampact\Ir\Bundle;
 
 use Opis\JsonSchema\Errors\ErrorFormatter;
 use Opis\JsonSchema\Validator;
+use Seampact\Ir\Https\UntrustedText;
 
 /**
  * A JSON Schema of `@seampact/spec`, copied into `resources/schemas/` and checked through the pinned JSON Schema
@@ -92,7 +93,7 @@ final class SpecSchema
         foreach ((new ErrorFormatter())->formatKeyed($error) as $pointer => $messages) {
             foreach (is_array($messages) ? $messages : [$messages] as $message) {
                 $shown = is_string($message) ? $message : 'is not valid';
-                $problems[] = 'at ' . BundleText::quoted((string) $pointer) . ' ' . BundleText::quoted($shown);
+                $problems[] = 'at ' . UntrustedText::quoted((string) $pointer) . ' ' . UntrustedText::quoted($shown);
             }
         }
 

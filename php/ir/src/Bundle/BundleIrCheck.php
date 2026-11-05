@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Bundle;
 
+use Seampact\Ir\Https\UntrustedText;
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Model\IrModelException;
 use Seampact\Ir\Read\IrRefusalCode;
@@ -74,7 +75,7 @@ final class BundleIrCheck
         try {
             return ContractIR::fromJson($document);
         } catch (IrModelException $error) {
-            return self::invalid($api, BundleText::quoted($error->getMessage()));
+            return self::invalid($api, UntrustedText::quoted($error->getMessage()));
         }
     }
 
@@ -100,7 +101,7 @@ final class BundleIrCheck
             return 'undefined';
         }
 
-        return is_string($value) ? BundleText::quoted($value) : RefusalText::inMessage(self::plain($value, $present));
+        return is_string($value) ? UntrustedText::quoted($value) : RefusalText::inMessage(self::plain($value, $present));
     }
 
     // A declared value as `String(value)` gives it: a string bare.
@@ -128,7 +129,7 @@ final class BundleIrCheck
 
             return new BundleFailure(
                 $code,
-                "'{$api->file}' holds " . BundleText::quoted($refusal->value) . ' at ' . BundleText::quoted($refusal->member)
+                "'{$api->file}' holds " . UntrustedText::quoted($refusal->value) . ' at ' . UntrustedText::quoted($refusal->member)
                     . "; this reader reads {$expected}.",
                 self::FIX,
                 $api->file,
@@ -144,7 +145,7 @@ final class BundleIrCheck
     private static function mustActProblems(mixed $document): array
     {
         return array_map(
-            static fn ($refusal): string => 'at ' . BundleText::quoted($refusal->member) . ' an unknown ' . BundleText::quoted($refusal->value),
+            static fn ($refusal): string => 'at ' . UntrustedText::quoted($refusal->member) . ' an unknown ' . UntrustedText::quoted($refusal->value),
             MustActCheck::check($document),
         );
     }

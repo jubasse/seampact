@@ -6,6 +6,8 @@ namespace Seampact\Ir\Bundle;
 
 use Seampact\Ir\Config\ConfigPath;
 use Seampact\Ir\Config\LocalSourcePolicy;
+use Seampact\Ir\Https\PrintableUrl;
+use Seampact\Ir\Https\UntrustedText;
 
 /**
  * The git-tag channel, as `fetch-git.ts`: a shallow fetch of the tag with the system `git` into a new bare
@@ -61,7 +63,7 @@ final readonly class GitFetch
     /** Why the source cannot be fetched before any git command runs: its URL, its tag, its directory. */
     public static function sourceProblem(GitSource $source, LocalSourcePolicy $localSources): ?BundleFailure
     {
-        $quotedUrl = BundleText::quoted(PrintableUrl::of($source->url));
+        $quotedUrl = UntrustedText::quoted(PrintableUrl::of($source->url));
         $scheme = self::schemeOf($source->url);
 
         if ($scheme !== null && !in_array($scheme, ['https', 'ssh', self::LOCAL_PROTOCOL], true)) {
@@ -83,7 +85,7 @@ final readonly class GitFetch
         if (self::directoryPrefix($source->directory) === null) {
             return new BundleFailure(
                 BundleFailureCode::GitDirectory,
-                'The git directory ' . BundleText::quoted($source->directory ?? '') . ' is not a relative path inside the repository.',
+                'The git directory ' . UntrustedText::quoted($source->directory ?? '') . ' is not a relative path inside the repository.',
                 "Name the bundle directory relative to the repository root, without '.', '..' or a backslash.",
             );
         }
@@ -91,7 +93,7 @@ final readonly class GitFetch
         if (str_starts_with($source->tag, '-') || str_contains($source->tag, '..')) {
             return new BundleFailure(
                 BundleFailureCode::GitTag,
-                'The git tag ' . BundleText::quoted($source->tag) . ' is not a tag name.',
+                'The git tag ' . UntrustedText::quoted($source->tag) . ' is not a tag name.',
                 'Name the tag the bundle was committed under.',
             );
         }
@@ -130,7 +132,7 @@ final readonly class GitFetch
 
             return new BundleFailure(
                 BundleFailureCode::GitFailed,
-                "Fetching tag '{$source->tag}' of " . BundleText::quoted(PrintableUrl::of($source->url)) . ' with git failed: ' . BundleText::quoted($error->getMessage()) . '.',
+                "Fetching tag '{$source->tag}' of " . UntrustedText::quoted(PrintableUrl::of($source->url)) . ' with git failed: ' . UntrustedText::quoted($error->getMessage()) . '.',
                 'Check the URL, the tag and your access to the repository, and that `git` is on the PATH.',
             );
         }
@@ -287,7 +289,7 @@ final readonly class GitFetch
     /** @param array<string, true> $folded */
     private static function entryFailure(string $path, string $mode, string $type, array $folded): ?BundleFailure
     {
-        $quoted = BundleText::quoted($path);
+        $quoted = UntrustedText::quoted($path);
 
         if ($type !== 'blob' || !in_array($mode, self::REGULAR_FILE_MODES, true)) {
             return new BundleFailure(

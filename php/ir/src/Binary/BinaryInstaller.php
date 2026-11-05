@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Binary;
 
-use Seampact\Ir\Bundle\PrintableUrl;
+use Seampact\Ir\Https\PrintableUrl;
+
 
 /**
  * Hashes a `path` source first, so a warm cache never hides a source that changed; a download runs only when the cache
