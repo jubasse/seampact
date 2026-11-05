@@ -75,7 +75,7 @@ jobs:
         with:
           name: ${{ matrix.target }}-http-suite-${{ matrix.validators }}-${{ matrix.reply }}
           path: ${{ runner.temp }}/test-seampact-${{ matrix.target }}-${{ matrix.validators }}-${{ matrix.reply }}/reports
-          retention-days: 7
+          retention-days: 90
           if-no-files-found: warn
 
   nestjs-consumer-post-merge:

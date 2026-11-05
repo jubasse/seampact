@@ -308,7 +308,7 @@ jobs:
         with:
           name: spring-boot-http-suite-${{ matrix.build-tool }}-jdk${{ matrix.jdk }}-${{ matrix.contract }}
           path: reports
-          retention-days: 7
+          retention-days: 90
           if-no-files-found: warn
 
   http-suite-post-merge:

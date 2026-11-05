@@ -70,7 +70,7 @@ jobs:
         with:
           name: ${{ matrix.target }}-http-suite-${{ matrix.validators }}
           path: ${{ runner.temp }}/test-seampact-${{ matrix.target }}-${{ matrix.validators }}/reports
-          retention-days: 7
+          retention-days: 90
           if-no-files-found: warn
 
   consumer-post-merge:
