@@ -113,7 +113,7 @@ jobs:
         run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" install --no-interaction --no-progress --no-plugins --no-scripts
       - name: Audit the locked dependencies
         working-directory: php/${{ matrix.package }}
-        run: composer audit --locked --no-interaction
+        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" audit --locked --no-interaction
       - name: Test ${{ matrix.package }} on PHP ${{ matrix.php-version }}
         working-directory: php/${{ matrix.package }}
         run: vendor/bin/phpunit

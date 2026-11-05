@@ -106,7 +106,7 @@ jobs:
             symfony/security-core symfony/security-http
       - name: Audit the locked dependencies
         working-directory: php/symfony
-        run: composer audit --locked --no-interaction
+        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" audit --locked --no-interaction
       - name: Lint the golden tree
         working-directory: php/symfony
         shell: bash
@@ -199,7 +199,7 @@ jobs:
               cd "$app"
               bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --no-interaction --no-progress --no-plugins --no-scripts
               "$GITHUB_WORKSPACE/scripts/consumers/targets/symfony/check-majors.sh" . "$SYMFONY_MAJOR"
-              composer audit --no-interaction
+              bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" audit --no-interaction
               vendor/bin/seampact generate
               php bin/console cache:warmup
             )

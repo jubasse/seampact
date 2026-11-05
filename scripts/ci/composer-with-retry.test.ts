@@ -50,7 +50,11 @@ echo installed
 
   const run = spawnSync("bash", [WRAPPER_SCRIPT, subcommand, "--no-interaction"], {
     encoding: "utf8",
-    env: { ...process.env, PATH: `${directory}:${process.env.PATH ?? ""}` },
+    env: {
+      ...process.env,
+      PATH: `${directory}:${process.env.PATH ?? ""}`,
+      COMPOSER_RETRY_DELAY_SECONDS: "0",
+    },
   });
   const calls = Number(spawnSync("cat", [counter], { encoding: "utf8" }).stdout);
 
@@ -85,7 +89,7 @@ describe("the composer network error classifier", () => {
   });
 });
 
-describe.each(["install", "update"])("composer %s with one retry", (subcommand) => {
+describe.each(["install", "update", "audit"])("composer %s with one retry", (subcommand) => {
   it("reruns once and names the error after a network failure", () => {
     const result = runWithFakeComposer(
       subcommand,
@@ -95,7 +99,7 @@ describe.each(["install", "update"])("composer %s with one retry", (subcommand) 
     expect(result.calls).toBe(2);
     expect(result.status).toBe(0);
     expect(result.output).toContain(
-      `Retrying composer ${subcommand} once after a network error (curl error 28)`,
+      `Retrying composer ${subcommand} once in 0s after a network error (curl error 28)`,
     );
   });
 
