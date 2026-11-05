@@ -119,4 +119,23 @@ describe("transformPage", () => {
       },
     ]);
   });
+
+  it("refuses a relative image and a relative raw HTML reference, keeps absolute ones", () => {
+    const page = transformPage(
+      '# T\n\n![a](img/a.png)\n\n<img src="b.png">\n\n![c](https://example.com/c.png)\n\n<a href="#x">x</a>\n',
+      "backend/hono.md",
+      context,
+    );
+
+    expect(page.brokenLinks.map((link) => link.line)).toEqual([3, 5]);
+    expect(page.brokenLinks[0]?.reason).toContain("img/a.png");
+    expect(page.brokenLinks[1]?.reason).toContain("b.png");
+  });
+
+  it("names the page and the link for a malformed percent escape", () => {
+    const page = transformPage("# T\n\n[x](bad%zz.md)\n", "backend/hono.md", context);
+
+    expect(page.brokenLinks).toHaveLength(1);
+    expect(page.brokenLinks[0]?.reason).toContain("bad%zz.md");
+  });
 });

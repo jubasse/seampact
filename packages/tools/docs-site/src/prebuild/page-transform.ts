@@ -1,4 +1,4 @@
-import type { Definition, Link } from "mdast";
+import type { Definition, Link, Nodes } from "mdast";
 import { visit } from "unist-util-visit";
 import { type LinkContext, resolveLinkTarget } from "./link-target.ts";
 import { parseMarkdown, sourceRange } from "./markdown-tree.ts";
@@ -38,6 +38,18 @@ export function transformPage(
     { start: heading.start, end: endOfBlankLines(source, heading.end), replacement: "" },
   ];
   const brokenLinks: BrokenLink[] = [];
+
+  visit(tree, ["image", "html"], (node) => {
+    const line = node.position?.start.line ?? 0;
+
+    for (const path of relativeAssetPaths(node)) {
+      brokenLinks.push({
+        docsPath,
+        line,
+        reason: `"${path}" is a relative image or file reference, which the site does not copy; use an absolute https URL`,
+      });
+    }
+  });
 
   visit(tree, ["link", "definition"], (node) => {
     if (node.type !== "link" && node.type !== "definition") return;
@@ -79,6 +91,27 @@ export function frontmatterFor(fields: Record<string, string | boolean | undefin
     .map(([key, value]) => `${key}: ${JSON.stringify(value)}`);
 
   return `---\n${lines.join("\n")}\n---\n\n`;
+}
+
+const HTML_REFERENCE_PATTERN = /\b(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+
+function isRelativeReference(url: string): boolean {
+  return !(
+    url === "" ||
+    url.startsWith("#") ||
+    url.startsWith("//") ||
+    /^[a-z][a-z0-9+.-]*:/i.test(url)
+  );
+}
+
+function relativeAssetPaths(node: Nodes): string[] {
+  if (node.type === "image") return isRelativeReference(node.url) ? [node.url] : [];
+
+  if (node.type !== "html") return [];
+
+  return [...node.value.matchAll(HTML_REFERENCE_PATTERN)]
+    .map((match) => match[1] ?? match[2] ?? "")
+    .filter(isRelativeReference);
 }
 
 function endOfBlankLines(source: string, offset: number): number {

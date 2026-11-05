@@ -1,7 +1,7 @@
 name: Docs site
 
 # Builds the documentation website from docs/ with Starlight: the prebuild copies the pages and rewrites their links,
-# then the build fails on any link to a missing page, file or anchor. The Pages deploy is the release workflow's.
+# then the build fails on any link to a missing page, file or anchor.
 
 on:
   push:

@@ -42,7 +42,16 @@ export function resolveLinkTarget(
   }
 
   const hashStart = url.indexOf("#");
-  const linkedPath = decodeURIComponent(hashStart === -1 ? url : url.slice(0, hashStart));
+  const rawPath = hashStart === -1 ? url : url.slice(0, hashStart);
+  const linkedPath = decodeLinkedPath(rawPath);
+
+  if (linkedPath === undefined) {
+    return {
+      kind: "broken",
+      reason: `"${url}" has a malformed percent escape; fix or remove the %`,
+    };
+  }
+
   const hash = hashStart === -1 ? "" : url.slice(hashStart);
   const sourceFolder = posix.dirname(`${DOCS_FOLDER_PREFIX}${sourceDocsPath}`);
   const repositoryPath = posix.normalize(posix.join(sourceFolder, linkedPath)).replace(/\/$/, "");
@@ -62,6 +71,16 @@ export function resolveLinkTarget(
   if (siteSlug !== undefined) return { kind: "rewritten", url: `${siteRoute(siteSlug)}${hash}` };
 
   return { kind: "rewritten", url: `${repositoryLink(repositoryPath, isFolder)}${hash}` };
+}
+
+function decodeLinkedPath(rawPath: string): string | undefined {
+  try {
+    return decodeURIComponent(rawPath);
+  } catch (error) {
+    if (error instanceof URIError) return undefined;
+
+    throw error;
+  }
 }
 
 function siteSlugFor(
