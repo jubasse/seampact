@@ -51,6 +51,12 @@ proofs:
       - 'core: scripts/dist-smoke/channels.test.ts#release channel smoke'
       - 'core: scripts/dist-smoke/channels.test.ts#git channel smoke'
       - 'core: scripts/dist-smoke/channels.test.ts#missing pin prints the actual integrity'
+  - id: CHK-107
+    fixtures: [fixtures/golden/pack-hal, fixtures/golden/pack-laravel, fixtures/golden/pack-spring]
+    tests:
+      - 'core: packages/core/compiler/src/finalize/published-packs.test.ts#the reference contract with a published format pack compiles with pack-hal and records it in each IR'
+      - 'core: packages/core/compiler/src/finalize/published-packs.test.ts#the reference contract with a published format pack compiles with pack-laravel and records it in each IR'
+      - 'core: packages/core/compiler/src/finalize/published-packs.test.ts#the reference contract with a published format pack compiles with pack-spring and records it in each IR'
   - id: CHK-112
     fixtures: [fixtures/golden/every-default]
     tests:
