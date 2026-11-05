@@ -19,7 +19,7 @@ from seampact.ir.bundle.layout import (
     SOURCES_DIRECTORY,
 )
 from seampact.ir.bundle.path import fold, path_problem
-from seampact.ir.bundle.text import quoted
+from seampact.ir.https.untrusted_text import quoted
 
 _BLOCK_BYTES: Final = 512
 

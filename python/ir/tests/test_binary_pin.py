@@ -183,25 +183,6 @@ def test_an_override_without_a_valid_pin_is_refused(
     assert not project.marker.exists()
 
 
-def test_a_version_override_has_nothing_to_download_before_publication(project: _Project) -> None:
-    hashes = "".join(
-        f'"{asset}" = "{_WRONG_HASH}"\n'
-        for asset in (
-            "seampact-linux-x64",
-            "seampact-linux-arm64",
-            "seampact-darwin-x64",
-            "seampact-darwin-arm64",
-            "seampact-win32-x64.exe",
-        )
-    )
-    project.pyproject(f'[tool.seampact.binary]\nversion = "1.0.0"\n[tool.seampact.binary.sha256]\n{hashes}')
-
-    failure = _refusal(project.install).failure
-
-    assert failure.code is BinaryFailureCode.UNPUBLISHED
-    assert "path" in failure.fix
-
-
 def test_no_override_and_no_published_pin_names_the_path_override(project: _Project) -> None:
     project.pyproject("")
 

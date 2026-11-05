@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Bundle;
 
+use Seampact\Ir\Https\UntrustedText;
+
 /**
  * The pinned-bundle check (ADR 0011), on a bundle directory, in order: (0) the manifest; (1) every listed file
  * exists with its size and SHA-256, and no file is unlisted; (2) the integrity recomputed from the list equals the
@@ -115,7 +117,7 @@ final class BundleVerifier
         foreach ($unlisted as $path) {
             $failures[] = new BundleFailure(
                 BundleFailureCode::FileUnlisted,
-                BundleText::quoted($path) . ' is in the bundle and not listed in the manifest.',
+                UntrustedText::quoted($path) . ' is in the bundle and not listed in the manifest.',
                 BundleLayout::REFETCH_FIX,
                 $path,
             );
@@ -201,7 +203,7 @@ final class BundleVerifier
         if ($pinnedIntegrity !== $integrity) {
             return new BundleFailure(
                 BundleFailureCode::PinMismatch,
-                'The pinned integrity is ' . BundleText::quoted($pinnedIntegrity) . "; the bundle's is {$integrity}.",
+                'The pinned integrity is ' . UntrustedText::quoted($pinnedIntegrity) . "; the bundle's is {$integrity}.",
                 "Fetch the bundle the pin names, or review this one and pin it: integrity: {$integrity}",
                 expected: $pinnedIntegrity,
                 actual: $integrity,

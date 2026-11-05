@@ -8,7 +8,7 @@ from pathlib import Path
 from seampact.ir.bundle.failure import BundleFailure, BundleFailureCode
 from seampact.ir.bundle.files import BundleFiles
 from seampact.ir.bundle.layout import ENTRIES_MAX, EXTRACTED_BYTES_MAX, NOT_A_BUNDLE_FIX, REFETCH_FIX
-from seampact.ir.bundle.text import quoted
+from seampact.ir.https.untrusted_text import quoted
 
 
 def read_bundle_directory(directory: Path) -> BundleFiles | BundleFailure:

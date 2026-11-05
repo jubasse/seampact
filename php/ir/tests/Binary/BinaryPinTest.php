@@ -71,8 +71,7 @@ final class BinaryPinTest extends TestCase
             'version lacking an asset hash' => [['version' => '1.0.0', 'sha256' => array_slice($everyAsset, 0, 4)], BinaryFailureCode::PinMissing],
             'version with an unknown asset' => [['version' => '1.0.0', 'sha256' => [...$everyAsset, 'seampact-freebsd-x64' => self::OTHER_SHA256]], BinaryFailureCode::PinInvalid],
             'url without hashes' => [['url' => 'https://mirror.example/seampact'], BinaryFailureCode::PinMissing],
-            'version, before publication' => [['version' => '1.0.0', 'sha256' => $everyAsset], BinaryFailureCode::Unpublished],
-            'url, before publication' => [['url' => 'https://mirror.example/seampact', 'sha256' => $everyAsset], BinaryFailureCode::Unpublished],
+            'url that is not https' => [['url' => 'http://mirror.example/seampact', 'sha256' => $everyAsset], BinaryFailureCode::FetchFailed],
         ];
     }
 

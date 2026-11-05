@@ -14,6 +14,7 @@ enum BinaryFailureCode: string
     case PinMissing = 'binary.pin-missing';
     case PinInvalid = 'binary.pin-invalid';
     case HashMismatch = 'binary.hash-mismatch';
+    case FetchFailed = 'binary.fetch-failed';
     case OverrideNotRoot = 'binary.override-not-root';
     case PlatformUnsupported = 'binary.platform-unsupported';
     case CacheUnavailable = 'binary.cache-unavailable';

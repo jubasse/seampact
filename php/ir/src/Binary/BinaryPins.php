@@ -11,7 +11,10 @@ namespace Seampact\Ir\Binary;
  */
 final readonly class BinaryPins
 {
-    private const RESOURCE = __DIR__ . '/../../resources/binaries.json';
+    public const EMBEDDED_FILE = __DIR__ . '/../../resources/binaries.json';
+
+    // The version of every package of the checkout until the release stamps it: a pin at it hashes no released binary.
+    private const DEVELOPMENT_VERSION = '0.0.0';
 
     /** @param array<string, string> $sha256ByAsset */
     public function __construct(public string $version, public array $sha256ByAsset)
@@ -21,9 +24,10 @@ final readonly class BinaryPins
     /**
      * The embedded pins, or null while they are empty (before publication).
      *
-     * @throws BinaryRefusedException `binary.pin-invalid` when the file is not a version with every asset's hash
+     * @throws BinaryRefusedException `binary.pin-invalid` when the file is not a version with every asset's hash, or
+     *         pins the development version
      */
-    public static function embedded(string $resource = self::RESOURCE): ?self
+    public static function embedded(string $resource = self::EMBEDDED_FILE): ?self
     {
         $text = file_get_contents($resource);
         $pins = $text === false ? null : json_decode($text, false);
@@ -38,6 +42,10 @@ final readonly class BinaryPins
 
         if (!is_string($pins->version) || $pins->version === '' || !$pins->sha256 instanceof \stdClass) {
             throw self::invalid("'{$resource}' has no version string or no `sha256` object");
+        }
+
+        if ($pins->version === self::DEVELOPMENT_VERSION) {
+            throw self::invalid("'{$resource}' pins version " . self::DEVELOPMENT_VERSION . ', a development pin of no released binary');
         }
 
         return new self($pins->version, BinaryOverride::hashesOfEveryAsset($pins->sha256, "'{$resource}'"));

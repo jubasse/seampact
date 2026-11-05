@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Bundle;
 
+use Seampact\Ir\Https\UntrustedText;
+
 /**
  * The manifest rules no JSON Schema states (`schemas/bundle/README.md`, "Manifest rules"), checked after the
  * schema: files strictly sorted by path in code-unit order, so no path is listed twice; no two paths equal once
@@ -25,7 +27,7 @@ final class BundleManifestRules
 
     private static function at(string $pointer, string $message): string
     {
-        return 'at ' . BundleText::quoted($pointer) . ' ' . $message;
+        return 'at ' . UntrustedText::quoted($pointer) . ' ' . $message;
     }
 
     /** @return list<string> */

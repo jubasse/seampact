@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Bundle;
 
+use Seampact\Ir\Https\UntrustedText;
+
 /**
  * The manifest as a verifier reads it: at most `BundleLayout::MANIFEST_BYTES_MAX` bytes of UTF-8 JSON with no byte
  * order mark, no reserved key and no key given twice in one object, valid under the manifest schema, then under
@@ -32,7 +34,7 @@ final class BundleManifestReader
 
         $duplicateAt = UntrustedJson::duplicateKeyPointer($bytes);
         if ($duplicateAt !== null) {
-            return self::invalid(['gives the key at ' . BundleText::quoted($duplicateAt) . ' twice in one object']);
+            return self::invalid(['gives the key at ' . UntrustedText::quoted($duplicateAt) . ' twice in one object']);
         }
 
         $schemaProblems = SpecSchema::manifest()->problems($parsed->document);

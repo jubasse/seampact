@@ -6,7 +6,7 @@ so code-point order is code-unit order. Each problem reads `at '<pointer>' <prob
 from seampact.ir.bundle.layout import IR_DIRECTORY
 from seampact.ir.bundle.manifest import BundleManifest
 from seampact.ir.bundle.path import fold, path_problem
-from seampact.ir.bundle.text import quoted
+from seampact.ir.https.untrusted_text import quoted
 
 
 def manifest_rule_problems(manifest: BundleManifest) -> list[str]:

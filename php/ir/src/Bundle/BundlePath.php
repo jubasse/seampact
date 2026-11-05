@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Bundle;
 
+use Seampact\Ir\Https\UntrustedText;
+
 /**
  * The portable-path rule of a bundle file (`schemas/bundle/README.md`, "Paths"): relative to the bundle root,
  * under `sources/` or `ir/`, each segment of `[A-Za-z0-9._@+-]`, not ending in `.` and not a Windows device name
@@ -81,7 +83,7 @@ final class BundlePath
     // The first unportable character as U+XXXX; a byte that is not UTF-8 as itself.
     private static function shownCharacter(string $segment, string $firstByte): string
     {
-        if (!BundleText::isUtf8($segment)) {
+        if (!UntrustedText::isUtf8($segment)) {
             return sprintf('the byte 0x%02X', ord($firstByte));
         }
 

@@ -13,7 +13,7 @@ from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
 from seampact.ir.bundle.discriminator_rewrite import JsonObject, rewrite_discriminators
-from seampact.ir.bundle.text import quoted
+from seampact.ir.https.untrusted_text import quoted
 
 _IR_SCHEMA_ID: Final = "https://seampact.dev/schemas/ir/ir.schema.json"
 _MANIFEST_SCHEMA_ID: Final = "https://seampact.dev/schemas/bundle/manifest.schema.json"
