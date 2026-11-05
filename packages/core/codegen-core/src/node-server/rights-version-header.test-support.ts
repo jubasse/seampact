@@ -1,4 +1,4 @@
-import type { ContractIR } from "@seampact/spec/ir";
+import { type ContractIR, isKnownVariant } from "@seampact/spec/ir";
 import type { GenerateOutcome, GenerateRequest, Target } from "../target.js";
 import { readGoldenIr } from "./reference-project.test-support.js";
 
@@ -18,7 +18,11 @@ export function tasksServiceWithRightsVersionHeader(): ContractIR {
   const ir = readGoldenIr("tasksService");
   const identity = ir.identities[SERVICE_IDENTITY];
 
-  if (identity === undefined || identity.kind !== "credential")
+  if (
+    identity === undefined ||
+    !isKnownVariant("Identity", identity) ||
+    identity.kind !== "credential"
+  )
     throw new Error("the golden tasksService api has no credential identity 'service'");
 
   ir.headers[RIGHTS_VERSION_HEADER] = {
