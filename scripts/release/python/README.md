@@ -1,0 +1,5 @@
+Release scripts of the PyPI publish: the manifest of the Python distributions with the check of the compiler wheels against `SHA256SUMS`, the idempotent upload plan, and the rehearsal's local index.
+
+- `node scripts/release/python/dist-manifest.ts write <dist-dir> --version <version> --sums <SHA256SUMS> --manifest <file>` checks the built distributions (one wheel and one sdist per workspace distribution, one `seampact-compiler` wheel per release binary, each holding it as `SHA256SUMS` lists it) and writes the file, name, version, kind and SHA-256 of each; `verify` checks a directory against that manifest.
+- `node scripts/release/python/pypi-plan.ts <dist-dir> --manifest <file> --version <version> --index <url> --out <upload-dir>` asks the index for each release, skips the files it holds with the same bytes, fails by name, before any upload, on a file held with other bytes or one the run did not build, and copies the rest to the upload directory.
+- `node scripts/release/python/local-index.ts <upload-dir> <index-root>` adds the files to the rehearsal's static index: a PEP 503 simple index and the PyPI JSON API of each release.
