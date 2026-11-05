@@ -74,7 +74,7 @@ Same start check, run by `bin/console cache:warmup` and on the first request. Th
 | `an app route with the path ... is registered before the route of operation '<id>'` | Import the contract routes first. |
 | `the api '<other>' registered before this one answers its catch-all 404` | Set `catchAll: false` on the api whose base path prefixes the other's. |
 | `runtime.worker.unsupported` | Serve the app with php-fpm. Worker runtimes are refused. In a functional test, do not call `disableReboot()`. |
-| `the app route '<name>' (<path>) is not a contract route and the entry's frameworkRoutes does not list it` | List the route under `frameworkRoutes` of the entry, with a reason, then run `generate`. |
+| `the app route '<name>' (<path>) is not a contract route and the entry's frameworkRoutes does not list it` | List the route under `frameworkRoutes` of the entry, with a reason, then run `generate`. A route whose trailing placeholder has a default (`/c/{id?}`) also serves `/c`, so `/c/*` alone does not list it: add `/c` too. |
 | `operation '<id>' has no route`, `operation '<id>' has <n> routes` | Import the api's resource, type `seampact`, once in your routing configuration. |
 
 An invalid `%env()%` value of the bundle configuration does not stop the start: the api answers 500 on its routes and the log names the key.
@@ -90,7 +90,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `no scope resolver for the scope '<scope>': tag a ScopeResolver with ...` | Tag a scope resolver with `seampact.<api>.scope-resolvers`. |
 | `no idempotency store for ...: bind 'seampact.<api>.idempotency-store' ...` | Bind your `IdempotencyStore` implementation under the provider's `IDEMPOTENCY_STORE_KEY`. |
 | `operation '<id>' has no handler: bind <Endpoints> to a controller in the container` | Bind the generated `<Resource>Endpoints` interface to your controller. |
-| `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | List the route under `frameworkRoutes` of the entry, with a reason, then run `seampact generate`. |
+| `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | List the route under `frameworkRoutes` of the entry, with a reason, then run `seampact generate`. A route with an optional parameter (`/c/{id?}`) also serves `/c`, so `/c/*` alone does not list it: add `/c` too. |
 | `operation '<id>' has 0 contract routes: call Route::seampact('<api>') once in the app's routes` | Call `Route::seampact('<api>')` once, from `withRouting(then: ...)` in `bootstrap/app.php`. Call it outside any route group prefix. |
 | `the boundary middleware ... is not the first global middleware` | Remove the global middleware you prepended before it. Two apis whose base paths overlap: set `catch_all: false` on the broader one. |
 | `the access middleware ... is not before SubstituteBindings in the middleware priority` | Do not reorder the middleware priority; put your own entries after the contract's. |
