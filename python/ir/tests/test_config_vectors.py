@@ -144,6 +144,22 @@ def test_an_app_config_resolves_entries_sources_and_leaves_other_ecosystems(tmp_
     assert contract.directory == f"{tmp_path.parent}/contract"
 
 
+@pytest.mark.parametrize("target", ["fastapi", "drf", "ninja"])
+def test_an_app_config_without_an_out_dir_writes_each_target_under_the_generated_directory(
+    tmp_path: Path, target: str
+) -> None:
+    file = _write_config(
+        tmp_path,
+        "sources:\n  contract: { path: contract }\ntargets:\n"
+        f"  - {{ id: main, use: 'pypi:seampact-{target}', api: tasks }}\n",
+    )
+
+    config = read_app_config(str(file))
+
+    assert not isinstance(config, list), config
+    assert [entry.root for entry in config.entries] == [f"{tmp_path}/__generated__/main"]
+
+
 @pytest.mark.parametrize(
     ("body", "code"),
     [

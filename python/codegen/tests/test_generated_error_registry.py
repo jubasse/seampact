@@ -35,6 +35,14 @@ def _imported_operations(target: str, directory: Path) -> ModuleType:
     return importlib.import_module(f"{name}.operations")
 
 
+def _registry_of_the_contract_module(target: str) -> dict[str, dict[str, Any]]:
+    registry: dict[str, dict[str, Any]] = importlib.import_module(
+        f"seampact_registry_proof_{target}.contract"
+    ).CONTRACT.ir_view["errors"]
+
+    return registry
+
+
 def _error_classes(operations: ModuleType) -> list[type]:
     base: Any = getattr(operations, _BASE_CLASS)
 
@@ -64,3 +72,10 @@ def test_each_declared_error_code_is_one_class_with_its_status_and_params(reposi
 
         if status_attribute is not None:
             assert getattr(classes[code], status_attribute) == error["http"]["status"], code
+    registry = _registry_of_the_contract_module(target)
+    examples = {code: error["example"] for code, error in declared.items() if "example" in error}
+
+    assert sorted(examples) == ["api.rate_limited", "api.schema_invalid"]
+    assert {code: error.get("example") for code, error in registry.items()} == {
+        code: error.get("example") for code, error in declared.items()
+    }

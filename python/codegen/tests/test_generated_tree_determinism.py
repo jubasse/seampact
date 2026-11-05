@@ -19,9 +19,11 @@ _ENVIRONMENTS: Final = (
 )
 
 
-def _generated_tree_text(target: str, api: str, repository_root: Path, environment: dict[str, str]) -> str:
+def _generated_tree_text(
+    target: str, api: str, repository_root: Path, environment: dict[str, str], copy: str | None = None
+) -> str:
     run = subprocess.run(
-        [sys.executable, str(_SCRIPT), target, str(repository_root), api],
+        [sys.executable, str(_SCRIPT), target, str(repository_root), api, *([copy] if copy else [])],
         env={**os.environ, **environment},
         capture_output=True,
         text=True,
@@ -42,3 +44,14 @@ def test_a_target_writes_the_same_bytes_under_another_hash_seed_time_zone_and_lo
 
     assert "operations.py" in json.loads(runs[0])
     assert runs[1] == runs[0]
+
+
+@pytest.mark.parametrize("copy", ["crlf", "reordered"])
+@pytest.mark.parametrize("target", _TARGETS)
+def test_a_target_writes_the_same_bytes_from_a_crlf_or_reordered_copy_of_the_contract(
+    repository_root: Path, target: str, copy: str
+) -> None:
+    environment = _ENVIRONMENTS[0]
+    original = _generated_tree_text(target, "tasks", repository_root, environment)
+
+    assert _generated_tree_text(target, "tasks", repository_root, environment, copy) == original
