@@ -41,6 +41,7 @@ on:
       - Ninja target
       - npm audit
       - Docs site
+      - Conformance release gate
     types: [completed]
     branches: [develop]
 
