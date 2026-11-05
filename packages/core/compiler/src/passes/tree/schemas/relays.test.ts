@@ -261,6 +261,39 @@ describe("written values of two copies of one name", () => {
 
     expect(located(run)).toEqual([["relay-declaration", "/surfaces/internal/routes/two/relays"]]);
   });
+
+  test("are copied unchanged when they hold an 'origin' object", () => {
+    const written = `extensions:
+  acme:
+    origin: { at: [schema], schema: { type: object, properties: { layer: { type: string }, pointer: { type: string } } } }
+schemas:
+  Box: { type: object, properties: { owner: Owner } }
+  Owner:
+    type: object
+    examples: [{ name: a, origin: { layer: api, pointer: /north } }]
+    x-acme-origin: { layer: api, pointer: /south }
+    properties:
+      name: { type: string, restrictedTo: { right: notes.read, params: { origin: { layer: api, pointer: /east } } } }
+      origin:
+        type: object
+        properties: { layer: { type: string }, origin: { type: object, properties: { pointer: { type: string } } } }
+        default: { layer: api, origin: { pointer: /west } }
+`;
+    const publicOwner = draftReturning(written, "Box").schemas.Owner;
+    const run = treeSchemasRunApi(RELAY_IT, new Map([["pub", draftReturning(written, "Box")]]));
+    const writtenValues = (schema: IrWriter.Schema | undefined) =>
+      schema?.kind === "object"
+        ? {
+            examples: schema.examples,
+            extensions: schema.extensions,
+            properties: schema.properties.map(({ type, default: value }) => ({ type, value })),
+          }
+        : undefined;
+
+    expect(run.diagnostics).toEqual([]);
+    expect(writtenValues(publicOwner)).toBeDefined();
+    expect(writtenValues(run.draft.schemas.Owner)).toEqual(writtenValues(publicOwner));
+  });
 });
 
 describe("extension values of a copied schema", () => {

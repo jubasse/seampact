@@ -109,13 +109,17 @@ function operationUses(operation: RelayedOperation): TreeSchemasRelayUse[] {
   ];
 }
 
+// The members holding values the contract wrote: compared whole, since an `origin` key there is data.
+const WRITTEN_VALUE_MEMBERS = new Set(["default", "examples", "extensions", "params"]);
+
 function withApiOrigin(origin: unknown, api: string): void {
   if (typeof origin === "object" && origin !== null && !("api" in origin))
     Object.assign(origin, { api });
 }
 
 // Every origin of a copied declaration keeps its pointer and layer and names the public api: each `origin` and
-// each origin of a `derivedFrom.from`, such as the `concurrency` that added a version property.
+// each origin of a `derivedFrom.from`, such as the `concurrency` that added a version property. A value the
+// contract wrote is never entered: an `origin` there is data.
 function withApiOrigins(value: unknown, api: string): void {
   if (Array.isArray(value)) {
     for (const item of value) withApiOrigins(item, api);
@@ -131,14 +135,12 @@ function withApiOrigins(value: unknown, api: string): void {
     if (key === "derivedFrom" && typeof member === "object" && member !== null && "from" in member)
       for (const origin of Array.isArray(member.from) ? member.from : [])
         withApiOrigin(origin, api);
-    withApiOrigins(member, api);
+
+    if (!WRITTEN_VALUE_MEMBERS.has(key)) withApiOrigins(member, api);
   }
 }
 
 const IGNORED_MEMBERS = new Set(["directions", "origin"]);
-
-// The members holding values the contract wrote: compared whole, since an `origin` key there is data.
-const WRITTEN_VALUE_MEMBERS = new Set(["default", "examples", "extensions", "params"]);
 
 function withoutIgnored(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutIgnored);
