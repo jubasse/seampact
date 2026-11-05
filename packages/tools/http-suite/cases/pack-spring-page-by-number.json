@@ -1,7 +1,7 @@
 {
   "id": "pack-spring-page-by-number",
   "title": "A page and the next one are fetched by number with the spring request names",
-  "checks": ["CHK-107"],
+  "checks": ["CHK-031", "CHK-107"],
   "profiles": ["pack:spring"],
   "steps": [
     {

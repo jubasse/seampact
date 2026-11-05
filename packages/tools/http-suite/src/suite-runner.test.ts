@@ -303,6 +303,7 @@ describe("runSuite", () => {
     expect(report.checks).toEqual({
       "CHK-001": { outcome: "passed", cases: ["a"] },
       "CHK-002": { outcome: "refused", cases: ["a", "b"] },
+      "CHK-074": { outcome: "refused", cases: ["a", "b"] },
     });
   });
 
@@ -316,7 +317,27 @@ describe("runSuite", () => {
 
     expect(report.format).toBe(SUITE_REPORT_FORMAT);
     expect(report.target).toBe(TARGET);
-    expect(report.checks).toEqual({ "CHK-003": { outcome: "failed", cases: ["good", "bad"] } });
+    expect(report.checks).toEqual({
+      "CHK-003": { outcome: "failed", cases: ["good", "bad"] },
+      "CHK-074": { outcome: "failed", cases: ["good", "bad"] },
+    });
+  });
+
+  test("a scoped case check counts only in the reports of the targets it names", async () => {
+    const step = { request: { method: "GET", path: "/items" }, expect: { status: 200 } };
+    const report = await run([
+      suiteCase("scoped", {
+        checks: [
+          "CHK-003",
+          { id: "CHK-004", targets: ["nestjs"] },
+          { id: "CHK-005", targets: [TARGET] },
+        ],
+        steps: [step],
+      }),
+    ]);
+
+    expect(report.cases[0]?.checks).toEqual(["CHK-003", "CHK-005"]);
+    expect(Object.keys(report.checks)).toEqual(["CHK-003", "CHK-005", "CHK-074"]);
   });
 
   test("the hand-written profile proves its profile check with every case of the run", async () => {

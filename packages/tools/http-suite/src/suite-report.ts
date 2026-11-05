@@ -2,16 +2,36 @@
 // which the checklist script reads (ADR 0015 "Report").
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { checkIdsForTarget, type ScopedCheck } from "./scoped-check.js";
 import type { SuiteProfile } from "./suite-case.js";
 
 export const SUITE_REPORT_FORMAT = "seampact-http-suite-report/1";
 
 /**
- * The checklist ids a whole profile proves rather than one case: the `hand-written` profile proves that the target
- * passes the suite with hand-written hooks and no adapter (CHK-098), so every case of its run counts for the id.
+ * The checklist ids a whole profile proves rather than one case, so every case of its run counts for the id: the
+ * `default` profile proves that the target passes the shared suite (CHK-074) and the facts of the targets named, the
+ * `boot` profile the boot tests and the boot refusals, the `hand-written` profile that the target passes the suite
+ * with hand-written hooks and no adapter (CHK-098).
  */
-export const PROFILE_CHECKS: Readonly<Partial<Record<SuiteProfile, readonly string[]>>> = {
-  "hand-written": ["CHK-098"],
+export const PROFILE_CHECKS: Readonly<Partial<Record<SuiteProfile, readonly ScopedCheck[]>>> = {
+  default: [
+    { id: "CHK-070", targets: ["nestjs", "fastify"] },
+    { id: "CHK-074" },
+    { id: "CHK-079", targets: ["spring-boot"] },
+    { id: "CHK-081", targets: ["nestjs"] },
+    { id: "CHK-082", targets: ["adonis", "express"] },
+    { id: "CHK-084", targets: ["symfony"] },
+  ],
+  boot: [
+    { id: "CHK-074" },
+    { id: "CHK-082", targets: ["adonis", "express"] },
+    { id: "CHK-083", targets: ["laravel"] },
+    { id: "CHK-084", targets: ["symfony"] },
+    { id: "CHK-184", targets: ["fastapi"] },
+    { id: "CHK-185", targets: ["drf"] },
+    { id: "CHK-186", targets: ["ninja"] },
+  ],
+  "hand-written": [{ id: "CHK-098" }],
 };
 
 /** `refused`: the run did not send the case, for the reason the sample app gave by case id. */
@@ -58,7 +78,7 @@ export function suiteReportOf(run: SuiteRun, cases: readonly CaseResult[]): Suit
       refused: countOutcome(cases, "refused"),
     },
     cases: cases.map((result) => structuredClone(result)),
-    checks: checkResultsOf(run.profile, cases),
+    checks: checkResultsOf(run, cases),
   };
 }
 
@@ -71,10 +91,7 @@ function countOutcome(cases: readonly CaseResult[], outcome: CaseOutcome): numbe
   return cases.filter((result) => result.outcome === outcome).length;
 }
 
-function checkResultsOf(
-  profile: SuiteProfile,
-  cases: readonly CaseResult[],
-): Record<string, CheckResult> {
+function checkResultsOf(run: SuiteRun, cases: readonly CaseResult[]): Record<string, CheckResult> {
   const casesByCheck = new Map<string, CaseResult[]>();
 
   for (const result of cases) {
@@ -83,7 +100,7 @@ function checkResultsOf(
     }
   }
 
-  for (const check of PROFILE_CHECKS[profile] ?? []) {
+  for (const check of checkIdsForTarget(PROFILE_CHECKS[run.profile] ?? [], run.target)) {
     if (cases.length > 0) casesByCheck.set(check, [...cases]);
   }
 
