@@ -82,7 +82,7 @@ final class CompilerBinary
         if ($pins === null) {
             throw BinaryRefusedException::of(
                 BinaryFailureCode::Unpublished,
-                'This seampact/ir is a development build: it embeds no binary pin, so it has no binary to download.',
+                'This seampact/ir is a development build: it embeds no binary pin, so it has no binary to run.',
                 self::UNPUBLISHED_FIX,
             );
         }
