@@ -80,7 +80,7 @@ Optional runtime helpers (ADR 0009) are hand-written, semver-versioned and unit-
 - **Sample app.** Each target's test consumer (ADR 0011) builds a sample app from the suite's contract: the reference contract plus the conformance fixtures. Its handlers return scripted data; its hooks are doubles that answer from a script and record their calls.
 - **Control routes.** The sample app exposes test-only routes to load a script, read the recorded hook calls (for the check order and short-circuit) and read captured log lines (for redaction). They are framework routes outside the contract, so the sample app allow-lists them in its config with a reason, which also exercises the boot check's allow-list (CHK-063). The script format is language-neutral JSON, published with the suite, so a Java or PHP sample app implements the same doubles.
 - **Boot tests.** Misconfigured variants of the sample app (a missing authenticate hook, decider, scope resolver or handler, an unlisted framework route) run as separate processes and must refuse to start with the named diagnostic.
-- **Report.** Every case is tagged with the checklist ids it proves. The suite writes a JSON report keyed by id, which the checklist script reads (FR-18).
+- **Report.** Every case is tagged with the checklist ids it proves; a tag may name the targets it counts for, when the item is scoped to some targets. The suite writes a JSON report keyed by id, which the checklist script reads (FR-18).
 
 Running the suite needs Node.js on the CI machine of the test consumer. The application under test does not: a Java or PHP sample app runs without Node.js, and only the test runner beside it uses Node.
 

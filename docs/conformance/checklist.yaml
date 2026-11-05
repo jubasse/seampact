@@ -40,7 +40,9 @@
 #              any depth, as the consumer workflows upload them; scripts/checklist/fetch-suite-reports.sh
 #              downloads develop's): an id a report passed has its fixture (the suite's cases) and a
 #              test for the report's target; an id a report failed, or an unknown, retired or unlisted
-#              one, fails by name.
+#              one, fails by name. The (id, target) pairs that 1.0 does not require are listed, each with
+#              its reason, in scripts/checklist/release-scope.ts; a listed pair that becomes proven fails
+#              by name, so the list only shrinks.
 schema: 1
 items:
   # ---------- Acceptance: Volume ----------
