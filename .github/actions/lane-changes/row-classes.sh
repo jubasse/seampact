@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-# Says which row classes a run holds, from the event that started it and the lane's run verdict. PR rows run on every
-# run of the lane, a merge group's included; post-merge rows on a push and on the drift events; drift rows (pre-releases, dependency drift,
-# macOS) on the nightly schedule, a manual run and a release only. Prints `post-merge=<bool>` and `drift=<bool>`.
+# Says which row classes a run holds, from the event that started it, the lane's run verdict and, on a pull request,
+# its base branch. PR rows run on every run of the lane but a push, which follows a merge whose pull request or merge
+# group already ran them; queue rows on a merge group, a pull request to main (which has no queue) and the drift
+# events; post-merge rows on a push and on the drift events; drift rows (pre-releases, dependency drift, macOS) on
+# the nightly schedule, a manual run and a release only. Prints `pr-rows`, `queue`, `post-merge` and `drift`, each
+# `=<bool>`.
 set -euo pipefail
 
-if [ "$#" -ne 2 ]; then
-  echo "usage: row-classes.sh <event name> <lane run: true or false>" >&2
+if [ "$#" -ne 3 ]; then
+  echo "usage: row-classes.sh <event name> <lane run: true or false> <pull request base branch, or empty>" >&2
   exit 2
 fi
 event=$1
 lane_run=$2
+pull_request_base=$3
 
 case "$lane_run" in
   true | false) ;;
@@ -19,16 +23,35 @@ case "$lane_run" in
     ;;
 esac
 
+# The fast tier: a pull request to develop runs its PR rows only, and the merge queue runs the rest.
+fast_tier_base=develop
+
 case "$event" in
-  pull_request | merge_group)
+  pull_request)
+    if [ -z "$pull_request_base" ]; then
+      echo "The pull request's base branch is empty: pass github.base_ref, which decides whether queue rows run." >&2
+      exit 1
+    fi
+    pr_rows=true
+    queue_rows=$([ "$pull_request_base" = "$fast_tier_base" ] && echo false || echo true)
+    post_merge_rows=false
+    drift_rows=false
+    ;;
+  merge_group)
+    pr_rows=true
+    queue_rows=true
     post_merge_rows=false
     drift_rows=false
     ;;
   push)
+    pr_rows=false
+    queue_rows=false
     post_merge_rows=true
     drift_rows=false
     ;;
   schedule | workflow_dispatch | release)
+    pr_rows=true
+    queue_rows=true
     post_merge_rows=true
     drift_rows=true
     ;;
@@ -40,9 +63,13 @@ esac
 
 # A lane with nothing to test runs no row of any class.
 if [ "$lane_run" = false ]; then
+  pr_rows=false
+  queue_rows=false
   post_merge_rows=false
   drift_rows=false
 fi
 
+echo "pr-rows=$pr_rows"
+echo "queue=$queue_rows"
 echo "post-merge=$post_merge_rows"
 echo "drift=$drift_rows"

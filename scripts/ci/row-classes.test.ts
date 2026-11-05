@@ -17,7 +17,7 @@ const ROW_CLASSES_SCRIPT = join(REPO_ROOT, ".github/actions/lane-changes/row-cla
 const LANE_AGGREGATE_ACTION = "./.github/actions/lane-aggregate";
 
 // The suffix of a job that holds the rows of a class; a job without one holds the PR rows.
-const ROW_CLASS_SUFFIXES = ["post-merge", "drift"] as const;
+const ROW_CLASS_SUFFIXES = ["queue", "post-merge", "drift"] as const;
 
 // The Spring Boot consumer rows: each build row has its http-suite row.
 const SPRING_CONSUMER_PR_ROWS: readonly MatrixRow[] = [
@@ -156,33 +156,54 @@ function aggregateJobs(document: WorkflowDocument): [string, WorkflowJob][] {
   );
 }
 
-function rowClassesFor(event: string, laneRun: string): { status: number | null; output: string } {
-  const run = spawnSync("bash", [ROW_CLASSES_SCRIPT, event, laneRun], { encoding: "utf8" });
+function rowClassesFor(
+  event: string,
+  laneRun: string,
+  pullRequestBase: string,
+): { status: number | null; output: string } {
+  const run = spawnSync("bash", [ROW_CLASSES_SCRIPT, event, laneRun, pullRequestBase], {
+    encoding: "utf8",
+  });
 
   return { status: run.status, output: `${run.stdout}${run.stderr}`.trim() };
 }
 
+function classLines(prRows: boolean, queue: boolean, postMerge: boolean, drift: boolean): string {
+  return `pr-rows=${prRows}\nqueue=${queue}\npost-merge=${postMerge}\ndrift=${drift}`;
+}
+
 describe("the row classes of an event", () => {
   it.each([
-    ["pull_request", "post-merge=false\ndrift=false"],
-    ["merge_group", "post-merge=false\ndrift=false"],
-    ["push", "post-merge=true\ndrift=false"],
-    ["schedule", "post-merge=true\ndrift=true"],
-    ["workflow_dispatch", "post-merge=true\ndrift=true"],
-    ["release", "post-merge=true\ndrift=true"],
-  ])("on %s", (event, expectedClasses) => {
-    expect(rowClassesFor(event, "true")).toEqual({ status: 0, output: expectedClasses });
-  });
-
-  it("holds no class when the lane has nothing to test", () => {
-    expect(rowClassesFor("schedule", "false")).toEqual({
+    ["pull_request", "develop", classLines(true, false, false, false)],
+    ["pull_request", "main", classLines(true, true, false, false)],
+    ["merge_group", "", classLines(true, true, false, false)],
+    ["push", "", classLines(false, false, true, false)],
+    ["schedule", "", classLines(true, true, true, true)],
+    ["workflow_dispatch", "", classLines(true, true, true, true)],
+    ["release", "", classLines(true, true, true, true)],
+  ])("on %s to '%s'", (event, pullRequestBase, expectedClasses) => {
+    expect(rowClassesFor(event, "true", pullRequestBase)).toEqual({
       status: 0,
-      output: "post-merge=false\ndrift=false",
+      output: expectedClasses,
     });
   });
 
+  it("holds no class when the lane has nothing to test", () => {
+    expect(rowClassesFor("schedule", "false", "")).toEqual({
+      status: 0,
+      output: classLines(false, false, false, false),
+    });
+  });
+
+  it("refuses a pull request without its base branch", () => {
+    const refusal = rowClassesFor("pull_request", "true", "");
+
+    expect(refusal.status).toBe(1);
+    expect(refusal.output).toContain("The pull request's base branch is empty");
+  });
+
   it("refuses an event no class is defined for", () => {
-    const refusal = rowClassesFor("pull_request_target", "true");
+    const refusal = rowClassesFor("pull_request_target", "true", "");
 
     expect(refusal.status).toBe(1);
     expect(refusal.output).toContain("No row class is defined for the 'pull_request_target' event");

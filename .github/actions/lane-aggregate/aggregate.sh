@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # The verdict of a lane's required check. Reads the aggregate job's `needs` context as JSON in NEEDS_JSON, the lane's
 # change filter verdict in SHOULD_RUN, and in ALLOW_SKIP the needed jobs whose skip is expected on this run.
-# A job whose id ends in `-post-merge` or `-drift` holds the rows of that class: its skip is expected when the
-# `changes` job's output of the same name says the run holds no row of that class.
+# A job whose id ends in `-queue`, `-post-merge` or `-drift` holds the rows of that class: its skip is expected when
+# the `changes` job's output of the same name says the run holds no row of that class. Any other job holds PR rows:
+# its skip is expected when the `changes` job's `pr-rows` output is false (a push, after the merge that ran them).
 set -euo pipefail
 
 results=$(jq -r 'to_entries[] | "\(.key)=\(.value.result)"' <<< "$NEEDS_JSON")
@@ -48,9 +49,14 @@ is_skip_expected() {
 
   local class
   case "$job" in
+    *-queue) class=queue ;;
     *-post-merge) class=post-merge ;;
     *-drift) class=drift ;;
-    *) return 1 ;;
+    *)
+      # A lane without the `pr-rows` output runs its PR rows whenever it runs.
+      [ "$(class_rows pr-rows)" = false ]
+      return
+      ;;
   esac
 
   local rows

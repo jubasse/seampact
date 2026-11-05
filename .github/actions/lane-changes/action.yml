@@ -2,21 +2,36 @@
 # A composite action, not a reusable workflow: a reusable workflow would rename the check to `caller / job`.
 name: Lane changes
 description: >-
-  Says run=true when a changed path matches the lane's watched paths, run=false when none does or when the change
-  only touches documentation no lane test reads; a pull request and a merge group compare with their base, a push
-  with its old tip. Also says which row classes the run holds: post-merge rows on a push, drift rows on the
-  schedule, a manual run or a release; a merge group holds the pull-request rows only. The calling job checks out the full history first.
+  Says run=true when a changed path matches the lane's watched paths (its pull-request paths on a pull request to
+  develop, when given), run=false when none does or when the change only touches documentation or package tests no
+  lane runs; a pull request and a merge group compare with their base, a push with its old tip. Also says which row
+  classes the run holds: PR rows on every event but a push, queue rows on a merge group, a pull request to main and
+  the drift events, post-merge rows on a push, drift rows on the schedule, a manual run or a release. The calling job
+  checks out the full history first.
 
 inputs:
   watched-paths:
     description: >-
       Extended regular expressions, one per line, matched against each changed path; the lane runs when one matches.
     required: true
+  pull-request-paths:
+    description: >-
+      Extended regular expressions, one per line, that replace watched-paths on a pull request to develop: the fast
+      tier runs the lane only for its own code, and the merge queue runs it on every watched path. Empty by default,
+      which keeps watched-paths everywhere.
+    required: false
+    default: ""
 
 outputs:
   run:
     description: "`true` when the lane has something to test, `false` when it has nothing."
     value: ${{ steps.decide.outputs.run }}
+  pr-rows:
+    description: "`true` when the lane runs and this event runs its PR rows: every event but a push."
+    value: ${{ steps.classes.outputs.pr-rows }}
+  queue:
+    description: "`true` when the lane runs and this event runs its queue rows."
+    value: ${{ steps.classes.outputs.queue }}
   post-merge:
     description: "`true` when the lane runs and this event runs its post-merge rows."
     value: ${{ steps.classes.outputs.post-merge }}
@@ -32,6 +47,7 @@ runs:
       shell: bash
       env:
         WATCHED_PATHS: ${{ inputs.watched-paths }}
+        PULL_REQUEST_PATHS: ${{ inputs.pull-request-paths }}
         EVENT: ${{ github.event_name }}
         PR_BASE: ${{ github.base_ref }}
         PUSH_BEFORE: ${{ github.event.before }}
@@ -39,11 +55,7 @@ runs:
         HEAD_SHA: ${{ github.sha }}
       run: |
         set -euo pipefail
-        watched_pattern=$(grep -v '^[[:space:]]*$' <<< "$WATCHED_PATHS" | paste -sd '|')
-        if [ -z "$watched_pattern" ]; then
-          echo "watched-paths is empty, so the lane would never run. List the paths its tests read."
-          exit 1
-        fi
+        watched_pattern=$(bash "$GITHUB_ACTION_PATH/lane-paths.sh")
 
         range=$(bash "$GITHUB_ACTION_PATH/change-range.sh")
         if [ -z "$range" ]; then
@@ -64,6 +76,7 @@ runs:
       env:
         EVENT: ${{ github.event_name }}
         LANE_RUN: ${{ steps.decide.outputs.run }}
+        PR_BASE: ${{ github.base_ref }}
       run: |
         set -euo pipefail
-        bash "$GITHUB_ACTION_PATH/row-classes.sh" "$EVENT" "$LANE_RUN" | tee -a "$GITHUB_OUTPUT"
+        bash "$GITHUB_ACTION_PATH/row-classes.sh" "$EVENT" "$LANE_RUN" "$PR_BASE" | tee -a "$GITHUB_OUTPUT"

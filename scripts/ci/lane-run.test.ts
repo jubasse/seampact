@@ -9,6 +9,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../..");
 const LANE_RUN_SCRIPT = join(REPO, ".github/actions/lane-changes/lane-run.sh");
 const CHANGE_RANGE_SCRIPT = join(REPO, ".github/actions/lane-changes/change-range.sh");
+const LANE_PATHS_SCRIPT = join(REPO, ".github/actions/lane-changes/lane-paths.sh");
 
 // The old tip GitHub sends on the push that creates a branch.
 const NEW_BRANCH_BEFORE = "0000000000000000000000000000000000000000";
@@ -71,6 +72,80 @@ describe("the documentation fast path", () => {
     ],
   ])("runs the lane for %s", (_label, changedPaths) => {
     expect(decideLaneRun(EVERY_PATH, changedPaths)).toBe("true");
+  });
+});
+
+describe("the package tests", () => {
+  it.each([
+    ["a package test", ["packages/core/compiler/src/passes/link.test.ts"]],
+    ["a test support file", ["packages/core/spec/src/ir/fixture.test-support.ts"]],
+    ["a test-support module", ["packages/targets/codegen-ts/src/test-support.ts"]],
+  ])("do not wake a lane for %s", (_label, changedPaths) => {
+    expect(decideLaneRun(EVERY_PATH, changedPaths)).toBe("false");
+  });
+
+  it("wake the lane with a package source next to them", () => {
+    expect(
+      decideLaneRun(EVERY_PATH, [
+        "packages/core/compiler/src/passes/link.test.ts",
+        "packages/core/compiler/src/passes/link.ts",
+      ]),
+    ).toBe("true");
+  });
+
+  it("are code outside the packages", () => {
+    expect(decideLaneRun(EVERY_PATH, ["scripts/consumers/cli.test.ts"])).toBe("true");
+  });
+});
+
+describe("the paths a lane matches", () => {
+  const WATCHED_PATHS = "^packages/\n^fixtures/\n";
+  const PULL_REQUEST_PATHS = "^packages/targets/codegen-vue/\n";
+
+  function lanePattern(eventEnvironment: Readonly<Record<string, string>>): string {
+    const run = spawnSync("bash", [LANE_PATHS_SCRIPT], {
+      encoding: "utf8",
+      env: { PATH: process.env.PATH, WATCHED_PATHS, ...eventEnvironment },
+    });
+
+    expect(run.stderr).toBe("");
+    expect(run.status).toBe(0);
+
+    return run.stdout.trim();
+  }
+
+  it("are the pull-request paths on a pull request to develop", () => {
+    expect(
+      lanePattern({
+        EVENT: "pull_request",
+        PR_BASE: "develop",
+        PULL_REQUEST_PATHS,
+      }),
+    ).toBe("^packages/targets/codegen-vue/");
+  });
+
+  it.each([
+    ["a merge group", { EVENT: "merge_group" }],
+    ["a push", { EVENT: "push" }],
+    ["a pull request to main", { EVENT: "pull_request", PR_BASE: "main" }],
+  ])("are the watched paths on %s", (_label, eventEnvironment) => {
+    expect(lanePattern({ ...eventEnvironment, PULL_REQUEST_PATHS })).toBe("^packages/|^fixtures/");
+  });
+
+  it("fall back to the watched paths without pull-request paths", () => {
+    expect(lanePattern({ EVENT: "pull_request", PR_BASE: "develop" })).toBe(
+      "^packages/|^fixtures/",
+    );
+  });
+
+  it("refuse empty watched paths", () => {
+    const run = spawnSync("bash", [LANE_PATHS_SCRIPT], {
+      encoding: "utf8",
+      env: { PATH: process.env.PATH, EVENT: "push", WATCHED_PATHS: "\n" },
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain("watched-paths is empty");
   });
 });
 
