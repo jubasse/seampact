@@ -2,7 +2,7 @@
 
 ## Worked example: the reference tasks api
 
-A workspace of two apis: a product api with a tenant-scoped collection under rights, a single owned by the caller, a signed webhook surface, and a service api whose route relays a public operation. Schemas are kept short; their language is ADR 0003.
+A workspace of six apis: a product api with a tenant-scoped collection under rights, a single owned by the caller, a signed webhook surface, and a service api whose route relays a public operation; then four small apis, one per security form: a service write, a device token, optional auth and absolute URLs. Schemas are kept short; their language is ADR 0003.
 
 ```yaml
 # workspace.yaml
@@ -10,6 +10,10 @@ workspace:
   apis:
     tasks: ./tasks/api.yaml
     tasksService: ./tasks-service/api.yaml
+    tasksServiceWrites: ./tasks-service-writes/api.yaml
+    tasksDevices: ./tasks-devices/api.yaml
+    tasksOptionalAuth: ./tasks-optional-auth/api.yaml
+    tasksAbsoluteUrls: ./tasks-absolute-urls/api.yaml
   shared: ./shared/base.yaml
 ```
 
@@ -304,6 +308,124 @@ surfaces:
       getTask: { relays: tasks.getTask }
 ```
 
+```yaml
+# tasks-service-writes/api.yaml
+api:
+  name: tasksServiceWrites
+  version: 1
+  kind: service
+  caller: { identity: service, right: callerService }
+  maturity: provisional
+
+surfaces:
+  internalWrites:
+    prefix: /internal-writes/v{version}
+    requires: [{ right: callerService, params: { allowed: [catalog] } }]
+    routes:
+      createTask: { relays: tasks.createTask }
+```
+
+```yaml
+# tasks-devices/api.yaml
+api:
+  name: tasksDevices
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: The status a paired wall display reads.
+
+schemes:
+  deviceToken: { kind: header, name: X-Device-Token }
+
+identities:
+  device:
+    schemes: { read: [deviceToken], write: [deviceToken] }
+    principal: DevicePrincipal
+
+schemas:
+  DeviceId: { type: string, format: uuid }
+  DevicePrincipal:
+    type: object
+    required: [deviceId]
+    properties: { deviceId: DeviceId }
+  DeviceStatus:
+    type: object
+    required: [deviceId]
+    properties: { deviceId: DeviceId }
+
+surfaces:
+  devices:
+    prefix: /devices/v{version}
+    identity: device
+    routes:
+      status:
+        method: get
+        output: DeviceStatus
+```
+
+```yaml
+# tasks-optional-auth/api.yaml
+api:
+  name: tasksOptionalAuth
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: A greeting that visitors and signed-in users both read.
+
+schemas:
+  Greeting:
+    type: object
+    required: [signedIn]
+    properties: { signedIn: { type: boolean } }
+
+surfaces:
+  welcome:
+    prefix: /welcome/v{version}
+    identity: user
+    routes:
+      greeting:
+        method: get
+        access: { optionalAuth: "Visitors see the greeting before they sign in." }
+        output: Greeting
+      strictGreeting:
+        method: get
+        access: { optionalAuth: "A bad token must be told, not read as a visitor.", onRefused: reject }
+        output: Greeting
+```
+
+```yaml
+# tasks-absolute-urls/api.yaml
+api:
+  name: tasksAbsoluteUrls
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Notes whose page links are absolute URLs.
+
+conventions:
+  urls: absolute
+
+schemas:
+  NoteId: { type: string, format: uuid }
+  Note:
+    type: object
+    required: [noteId, text]
+    properties:
+      noteId: NoteId
+      text: { type: string, minLength: 1, maxLength: 500 }
+
+surfaces:
+  notes:
+    prefix: /absolute-urls/v{version}
+    identity: user
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops: [list, get]
+```
+
 What the example shows, by route:
 
 - Errors: the base declares only `api.schema_invalid` (its `Issues` carry no `in`, so the role is bound with a params template) and `api.rate_limited` (an example, and a nature left to its status). Every other derived error answers its role's default code (A34), and `api.internal`, `api.not_found` and `api.forbidden` are default codes attached by name.
@@ -317,6 +439,10 @@ What the example shows, by route:
 - `getPreferences` and `updatePreferences`: a single owned by the caller, conditional GET; `deleteDraft` answers 200 with the deleted record.
 - `payments` (`POST /v1/hooks/payments`): the signed `stripe` identity, raw body, no CSRF and no idempotency key, 204.
 - `getTask` in `tasksService` (`GET /internal/v1/channels/{channelId}/tasks/{taskId}`): a relay route, its path, item and `notFound` code (`api.not_found`, from `member.notFound`) copied from `tasks.getTask`; `Task.effort` is sent whole, since a relay route has no field rights and `getTask` projects it; the service identity with its deadline and trace headers (its actor-surface header applies to writes only), `callerService` allowing `catalog`. The `channel` scope and its denial stay with the public operation.
+- `createTask` in `tasksServiceWrites` (`POST /internal-writes/v1/channels/{channelId}/tasks`): a relay of a write, so the service identity's actor-surface header applies, required and typed by the `Surface` enum; a write without it answers 400.
+- `status` in `tasksDevices` (`GET /devices/v1/status`): the `device` identity, declared by the api itself on the header scheme `deviceToken`, which completes the five scheme kinds of the base (session cookie, CSRF token, bearer, device token, internal token).
+- `greeting` and `strictGreeting` in `tasksOptionalAuth`: `optionalAuth` under the `user` identity; a refused credential reads as a visitor on the first, and answers 401 on the second, which sets `onRefused: reject`.
+- `listNotes` and `getNote` in `tasksAbsoluteUrls`: `conventions.urls: absolute` set by the api, so the `next` page link of the base's `cursor` style is an absolute URL starting with the public origin configured on the target.
 
 Short forms not in the reference contract:
 

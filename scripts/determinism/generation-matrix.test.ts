@@ -33,6 +33,10 @@ const REFERENCE_FILES = [
   "shared/base.yaml",
   "tasks/api.yaml",
   "tasks-service/api.yaml",
+  "tasks-service-writes/api.yaml",
+  "tasks-devices/api.yaml",
+  "tasks-optional-auth/api.yaml",
+  "tasks-absolute-urls/api.yaml",
 ];
 const INCLUDED_FORM_SEED = 7;
 const OTHER_ENVIRONMENT = { TZ: "Pacific/Kiritimati", LANG: "tr_TR.UTF-8", LC_ALL: "tr_TR.UTF-8" };
