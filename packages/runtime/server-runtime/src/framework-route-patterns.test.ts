@@ -105,7 +105,12 @@ describe("the allow-list of a route with an optional part", () => {
     ],
     ["nested Express 5 groups under '**'", "/c{/:id{/:page}}", ["/c/**"], true],
     ["an Express 5 group after a param, also read as a pattern", "/:file{.:ext}", ["/*"], false],
-    ["an Express 5 group after a param inside a segment, under '**'", "/:file{.:ext}", ["/**"], true],
+    [
+      "an Express 5 group after a param inside a segment, under '**'",
+      "/:file{.:ext}",
+      ["/**"],
+      true,
+    ],
     ["an Express 4 optional group", "/c(/:id)?", ["/*/*"], false],
     ["an Express 4 optional group under '**'", "/c(/:id)?", ["/**"], true],
     ["a Hono pattern, which is no optional group", "/c/:id{[0-9]+}", ["/c/*"], true],
