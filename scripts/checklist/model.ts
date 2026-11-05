@@ -32,6 +32,8 @@ export interface Proof {
   id: string;
   fixtures: string[];
   tests: TestRef[];
+  /** Tests that generation refuses a form by name: the proof of an item deferred for that refusal, not of the item. */
+  refusals: TestRef[];
 }
 
 export interface Ids {

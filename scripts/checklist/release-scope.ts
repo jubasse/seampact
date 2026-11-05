@@ -1,7 +1,7 @@
 // What the 1.0 release gate does not require: the targets and the checklist items that come after 1.0, each item
 // with its reason. A release policy over the checklist, which stays the list of facts.
 import type { Item, Problem } from "./model.ts";
-import { expandTargets } from "./targets.ts";
+import { expandTargets, SERVER_TARGETS } from "./targets.ts";
 
 export const RELEASE_SCOPE_FILE = "scripts/checklist/release-scope.ts";
 
@@ -12,16 +12,53 @@ export const TARGETS_AFTER_1_0: readonly string[] = ["api-platform"];
 export interface ItemAfter1_0 {
   readonly targets?: readonly string[];
   readonly reason: string;
+  /** Targets on which generation refuses the form by name; each needs a refusal test in a proof file. */
+  readonly refusedOn?: readonly string[];
 }
 
 const SCALE_CAPACITY =
   "generated code at scale: no behaviour a fix would change; scripts/golden/scale.test.ts proves the core pair";
 const API_PLATFORM_AFTER_V1 = "API Platform comes after v1";
 
+// The servers the gate requires: every generator refuses the access forms below by name, so each of them is deferred
+// with its refusal tested.
+const SERVERS_FOR_1_0: readonly string[] = SERVER_TARGETS.filter(
+  (target) => !TARGETS_AFTER_1_0.includes(target),
+);
+
+const refusedOnEveryServer = (form: string): ItemAfter1_0 => ({
+  targets: SERVERS_FOR_1_0,
+  refusedOn: SERVERS_FOR_1_0,
+  reason: `1.0 refuses ${form} by name at generation`,
+});
+
 export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
   ["CHK-001", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
   ["CHK-002", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
   ["CHK-003", { targets: ["fetch"], reason: SCALE_CAPACITY }],
+  [
+    "CHK-004",
+    refusedOnEveryServer(
+      "a principal with variants and optional authentication (viewer_or_device)",
+    ),
+  ],
+  [
+    "CHK-006",
+    refusedOnEveryServer(
+      "a principal with variants and optional authentication (viewer_or_device)",
+    ),
+  ],
+  [
+    "CHK-013",
+    {
+      refusedOn: ["fetch"],
+      reason:
+        "1.0 refuses the rights-version response header by name at generation (the fetch client); the servers leave it to the handler",
+    },
+  ],
+  ["CHK-019", refusedOnEveryServer("a principal requirement")],
+  ["CHK-020", refusedOnEveryServer("a principal binding")],
+  ["CHK-094", refusedOnEveryServer("a scope resolved by the application")],
   [
     "CHK-072",
     { reason: "internal installs before publication (A3), gone once the packages are published" },
@@ -84,12 +121,14 @@ export function releaseGateTargets(
 
 /**
  * Each entry of the after-1.0 list that no longer holds: an unknown or retired id, a target the item does not list,
- * an empty reason, or a pair that [proven] says a proof or a suite report now proves.
+ * an empty reason, a pair that [proven] says a proof or a suite report now proves, or a refusal that [refusalProven]
+ * says no proof file tests.
  */
 export function releaseScopeProblems(
   items: readonly Item[],
   itemsAfter1_0: ReadonlyMap<string, ItemAfter1_0>,
   proven: (id: string, target: string) => boolean,
+  refusalProven: (id: string, target: string) => boolean,
 ): Problem[] {
   const problems: Problem[] = [];
   const byId = new Map(items.map((item) => [item.id, item]));
@@ -121,9 +160,28 @@ export function releaseScopeProblems(
       if (listed.includes(target) && proven(id, target))
         at(`proven for target ${target}: drop it from the after-1.0 list`);
     }
+
+    for (const message of refusalProblems(id, deferred, listed, refusalProven)) at(message);
   }
 
   return problems;
+}
+
+/** The refusal named by [deferred] on a target it does not defer or that no proof file tests. */
+function refusalProblems(
+  id: string,
+  deferred: ItemAfter1_0,
+  listed: readonly string[],
+  refusalProven: (id: string, target: string) => boolean,
+): string[] {
+  return (deferred.refusedOn ?? []).flatMap((target) => {
+    if (!listed.includes(target) || !(deferred.targets ?? listed).includes(target))
+      return [`after-1.0 entry names a refusal on a target it does not defer: ${target}`];
+
+    return refusalProven(id, target)
+      ? []
+      : [`refused on target ${target} with no refusal test in a proof file`];
+  });
 }
 
 /** One line per item after 1.0, for the gate summary. */

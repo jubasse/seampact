@@ -11,7 +11,7 @@ import {
   TYPE_CHECK_TIMEOUT_MILLISECONDS,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
-import type { ContractIR } from "@seampact/spec/ir";
+import { type ContractIR, type IdentityAccess, isKnownVariant } from "@seampact/spec/ir";
 import { beforeAll, describe, expect, test } from "vitest";
 import { target as nestjsTarget } from "./index.js";
 
@@ -115,12 +115,103 @@ describe("the generated reference boundary compiles", () => {
     expect(forms).not.toContainEqual(expect.objectContaining({ code: "valueSource.unsupported" }));
   });
 
+  // The access forms 1.0 refuses by name (CHK-006, 019, 020), so a contract using one fails at generation.
+  test.each([
+    [
+      "a principal requirement",
+      "principalRequires.unsupported",
+      (ir: ContractIR) => {
+        operationOf(ir).principalRequires = [{ field: "verified", origin: ACCESS_ORIGIN }];
+      },
+    ],
+    [
+      "a principal binding",
+      "bindings.unsupported",
+      (ir: ContractIR) => {
+        operationOf(ir).bindings = [
+          {
+            from: { in: "body", name: "ownerId" },
+            to: { in: "principal", name: "profileId" },
+            origin: ACCESS_ORIGIN,
+          },
+        ];
+      },
+    ],
+    [
+      "a scope resolved by the application",
+      "scope.source.unsupported",
+      (ir: ContractIR) => {
+        const [scope] =
+          ir.operations.find((operation) => operation.scopes.length > 0)?.scopes ?? [];
+
+        if (scope === undefined) throw new Error("the golden tasks api has no scoped operation");
+
+        scope.source = { in: "resolver" };
+      },
+    ],
+    [
+      "optional authentication",
+      "access.optional.unsupported",
+      (ir: ContractIR) => {
+        const operation = operationOf(ir);
+        const access = identityAccessOf(operation);
+
+        operation.access = {
+          kind: "optional",
+          identity: access.identity,
+          schemes: access.schemes,
+          reason: "Previews open it.",
+          onRefused: "anonymous",
+          origin: ACCESS_ORIGIN,
+        };
+      },
+    ],
+    [
+      "a principal with variants",
+      "principal.variants.unsupported",
+      (ir: ContractIR) => {
+        const identity = ir.identities[identityAccessOf(operationOf(ir)).identity];
+
+        if (identity === undefined || !("principal" in identity))
+          throw new Error("the operation has no credential identity");
+
+        identity.principal = { kind: "variants", variants: {} };
+      },
+    ],
+  ])("%s is refused by name", async (_form, code, change) => {
+    const ir = readGoldenIr("tasks");
+
+    change(ir);
+
+    expect(await reportedForms("tasks", ir)).toContainEqual(expect.objectContaining({ code }));
+  });
+
   test("the list filter right is the handler's by design, so it is no warning", async () => {
     expect(await reportedForms("tasks")).not.toContainEqual(
       expect.objectContaining({ code: "filteredBy.handler" }),
     );
   });
 });
+
+const ACCESS_ORIGIN = { layer: "api", pointer: "/access" } as const;
+
+// The first guarded operation of the tasks api.
+function operationOf(ir: ContractIR): ContractIR["operations"][number] {
+  const operation = ir.operations.find((candidate) => candidate.access.kind === "identity");
+
+  if (operation === undefined) throw new Error("the golden tasks api has no guarded operation");
+
+  return operation;
+}
+
+function identityAccessOf(operation: ContractIR["operations"][number]): IdentityAccess {
+  const { access } = operation;
+
+  if (!isKnownVariant("Access", access) || access.kind !== "identity")
+    throw new Error("the operation is not guarded");
+
+  return access;
+}
 
 // The warnings of a generated api, or its refusals when it did not generate.
 async function reportedForms(

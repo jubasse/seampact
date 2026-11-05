@@ -63,6 +63,30 @@ def test_operation_members_absent_from_the_reference_wait_for_a_consumer_after_1
     assert "it comes after 1.0" in refused["upstream.unsupported"]
 
 
+def test_access_forms_that_1_0_refuses_are_refused_by_name(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root, "tasks")
+    get_task = _operation(ir_json, "getTask")
+    get_task["bindings"] = [
+        {
+            "from": {"in": "body", "name": "ownerId"},
+            "to": {"in": "principal", "name": "profileId"},
+            "origin": {"layer": "api", "pointer": "/bindings/0"},
+        }
+    ]
+    scopes = get_task["scopes"]
+    assert isinstance(scopes, list)
+    scopes[0]["source"] = {"in": "resolver"}
+    identities = ir_json["identities"]
+    assert isinstance(identities, dict)
+    identities["user"]["principal"] = {"kind": "variants", "variants": {"viewer": "UserPrincipal"}}
+
+    assert set(_refused_codes(ir_json)) == {
+        "bindings.unsupported",
+        "scope.source.unsupported",
+        "principal.variants.unsupported",
+    }
+
+
 def test_an_open_enum_and_a_parameter_default_are_refused_by_name(repository_root: Path) -> None:
     ir_json = _ir_json(repository_root, "tasks")
     enums = ir_json["enums"]
