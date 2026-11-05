@@ -5,9 +5,13 @@ import { parse } from "yaml";
 import { loadModel } from "./load.ts";
 import type { Item, Model, Problem, Proof } from "./model.ts";
 import { CHECKLIST_FILE, chkNumber } from "./model.ts";
+import type { ItemAfter1_0 } from "./release-scope.ts";
+import { releaseGateTargets, releaseScopeProblems } from "./release-scope.ts";
 import type { SuiteProof } from "./suite-reports.ts";
 import { loadSuiteReports } from "./suite-reports.ts";
-import { expandTargets, releaseGateTargets } from "./targets.ts";
+import { expandTargets } from "./targets.ts";
+import type { VariantRowSet } from "./variant-rows.ts";
+import { missingVariantRows, passedWithoutFailure, variantRowSetProblems } from "./variant-rows.ts";
 
 export interface CheckOptions {
   /** Repository root (the directory holding docs/conformance). */
@@ -20,6 +24,10 @@ export interface CheckOptions {
   releaseGate?: boolean;
   /** With the release gate: a directory of downloaded http-suite reports, each a proof for its target. */
   suiteReports?: string;
+  /** The items the 1.0 gate does not require (release-scope.ts); none when absent, as for a fixture checklist. */
+  itemsAfter1_0?: ReadonlyMap<string, ItemAfter1_0>;
+  /** The items a target proves across several CI rows (variant-rows.ts); none when absent. */
+  variantRowSets?: ReadonlyMap<string, VariantRowSet>;
 }
 
 export const CONSUMER_PREFIX = "test-seampact-";
@@ -72,21 +80,46 @@ export function checkModel(
 
   if (o.base !== undefined) problems.push(...checkAgainstBase(model, o.root, o.base));
 
-  if (o.releaseGate) problems.push(...releaseGateProblems(model, suiteProofs));
+  const scope: GateScope = {
+    itemsAfter1_0: o.itemsAfter1_0 ?? new Map(),
+    variantRowSets: o.variantRowSets ?? new Map(),
+    proofs: proofsById(model.proofs),
+    suitePairs: o.releaseGate ? suitePairsOf(model, suiteProofs, problems) : new Map(),
+  };
+
+  problems.push(...variantRowSetProblems(model.items, scope.variantRowSets));
+  problems.push(
+    ...releaseScopeProblems(
+      model.items,
+      scope.itemsAfter1_0,
+      (id, target) => testedByProof(scope, id, target) || suitePassed(scope, id, target),
+    ),
+  );
+
+  if (o.releaseGate) problems.push(...releaseGateProblems(model, scope));
 
   return problems;
 }
 
+/** What the release gate reads besides the items: the policy tables, the proofs and the suite proofs per pair. */
+interface GateScope {
+  itemsAfter1_0: ReadonlyMap<string, ItemAfter1_0>;
+  variantRowSets: ReadonlyMap<string, VariantRowSet>;
+  proofs: ReadonlyMap<string, readonly Proof[]>;
+  suitePairs: ReadonlyMap<string, readonly SuiteProof[]>;
+}
+
 /**
- * Every live id needs a fixture and, for every target it lists, a test. A proof file's fixture or test counts, and so
- * does a suite report that passed the id: its cases are the committed fixture and its run the target's test. A suite
- * report that failed the id, or that proves an id the checklist does not hold live for its target, is a problem.
+ * The suite proofs per pair of id and target. A suite report that failed the id, or that proves an id the checklist
+ * does not hold live for its target, is a problem.
  */
-function releaseGateProblems(model: Model, suiteProofs: readonly SuiteProof[]): Problem[] {
-  const problems: Problem[] = [];
+function suitePairsOf(
+  model: Model,
+  suiteProofs: readonly SuiteProof[],
+  problems: Problem[],
+): Map<string, SuiteProof[]> {
   const byId = new Map<string, Item>(model.items.map((i) => [i.id, i]));
-  const proofs = proofsById(model.proofs);
-  const suiteOutcomes = new Map<string, Set<SuiteProof["outcome"]>>();
+  const suitePairs = new Map<string, SuiteProof[]>();
 
   for (const s of suiteProofs) {
     const item = byId.get(s.id);
@@ -114,48 +147,73 @@ function releaseGateProblems(model: Model, suiteProofs: readonly SuiteProof[]): 
     }
 
     const key = suiteKey(s.id, s.target);
-    const outcomes = suiteOutcomes.get(key) ?? new Set<SuiteProof["outcome"]>();
 
-    outcomes.add(s.outcome);
-    suiteOutcomes.set(key, outcomes);
+    suitePairs.set(key, [...(suitePairs.get(key) ?? []), s]);
   }
 
-  const suitePassed = (id: string, target: string): boolean => {
-    const outcomes = suiteOutcomes.get(suiteKey(id, target));
+  return suitePairs;
+}
 
-    return outcomes?.has("passed") === true && !outcomes.has("failed");
-  };
+function testedByProof(scope: GateScope, id: string, target: string): boolean {
+  return (scope.proofs.get(id) ?? []).some((p) => p.tests.some((t) => t.target === target));
+}
+
+/** A pair passes its suite runs when one passed it and none failed it; a variant row set needs that of every row. */
+function suitePassed(scope: GateScope, id: string, target: string): boolean {
+  const pairProofs = scope.suitePairs.get(suiteKey(id, target)) ?? [];
+  const rowSet = scope.variantRowSets.get(id);
+
+  if (rowSet?.target === target) return missingVariantRows(rowSet, pairProofs).length === 0;
+
+  return passedWithoutFailure(pairProofs);
+}
+
+/**
+ * Every live id needs a fixture and, for every target the gate requires of it, a test. A proof file's fixture or test
+ * counts, and so does a suite report that passed the id: its cases are the committed fixture and its run the
+ * target's test. An id whose every pair comes after 1.0 needs neither.
+ */
+function releaseGateProblems(model: Model, scope: GateScope): Problem[] {
+  const problems: Problem[] = [];
 
   for (const item of model.items) {
     if (item.retired !== undefined) continue;
-    const mine = proofs.get(item.id) ?? [];
-    const targets = releaseGateTargets(item.targets);
+    const targets = releaseGateTargets(item, scope.itemsAfter1_0);
     const at = (message: string) => problems.push({ file: CHECKLIST_FILE, id: item.id, message });
 
-    if (!mine.some((p) => p.fixtures.length > 0) && !targets.some((t) => suitePassed(item.id, t)))
+    if (targets.length === 0) continue;
+
+    const mine = scope.proofs.get(item.id) ?? [];
+
+    if (
+      !mine.some((p) => p.fixtures.length > 0) &&
+      !targets.some((t) => suitePassed(scope, item.id, t))
+    )
       at("release gate: no fixture");
 
     for (const target of targets) {
-      const outcomes = suiteOutcomes.get(suiteKey(item.id, target));
+      const pairProofs = scope.suitePairs.get(suiteKey(item.id, target)) ?? [];
 
-      // A failed suite run is already reported above.
-      if (outcomes?.has("failed")) continue;
+      // A failed suite run is already reported with its report.
+      if (pairProofs.some((s) => s.outcome === "failed")) continue;
 
-      if (
-        mine.some((p) => p.tests.some((t) => t.target === target)) ||
-        suitePassed(item.id, target)
-      )
-        continue;
+      if (testedByProof(scope, item.id, target) || suitePassed(scope, item.id, target)) continue;
 
-      at(
-        outcomes?.has("refused")
-          ? `release gate: no test for target ${target} (its suite run refused the id)`
-          : `release gate: no test for target ${target}`,
-      );
+      at(`release gate: no test for target ${target}${noTestReason(scope, item.id, target)}`);
     }
   }
 
   return problems;
+}
+
+function noTestReason(scope: GateScope, id: string, target: string): string {
+  const pairProofs = scope.suitePairs.get(suiteKey(id, target)) ?? [];
+  const rowSet = scope.variantRowSets.get(id);
+
+  if (rowSet?.target === target && pairProofs.some((s) => s.outcome === "passed"))
+    return ` (no passed suite report from the variant rows: ${missingVariantRows(rowSet, pairProofs).join(", ")})`;
+
+  return pairProofs.some((s) => s.outcome === "refused") ? " (its suite run refused the id)" : "";
 }
 
 function suiteKey(id: string, target: string): string {

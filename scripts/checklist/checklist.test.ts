@@ -1,16 +1,26 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse } from "yaml";
+import { parseSuiteCase } from "../../packages/tools/http-suite/src/suite-case.ts";
+import {
+  type CaseResult,
+  suiteReportOf,
+} from "../../packages/tools/http-suite/src/suite-report.ts";
+import { caseHeader } from "../../packages/tools/http-suite/src/suite-runner.ts";
+import type { CheckOptions } from "./check.ts";
 import { check } from "./check.ts";
 import { buildIds, exportFromDir, privateTerms } from "./export-ids.ts";
 import { loadModel } from "./load.ts";
 import type { Problem } from "./model.ts";
 import { formatProblem } from "./model.ts";
+import { ITEMS_AFTER_1_0, TARGETS_AFTER_1_0 } from "./release-scope.ts";
 import { parseResults, renderReport, shares, testPassed } from "./report.ts";
+import { SERVER_TARGETS } from "./targets.ts";
+import { VARIANT_ROW_SETS } from "./variant-rows.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../..");
@@ -33,7 +43,11 @@ function expectOne(name: string, file: string, id: string | undefined, part: str
 
 describe("checklist check", () => {
   it("checklist check passes on the repository", () => {
-    expect(lines(check({ root: REPO }))).toEqual([]);
+    expect(
+      lines(
+        check({ root: REPO, itemsAfter1_0: ITEMS_AFTER_1_0, variantRowSets: VARIANT_ROW_SETS }),
+      ),
+    ).toEqual([]);
   });
 
   it("passes on the reference fixture, with and without the release gate", () => {
@@ -409,6 +423,138 @@ describe.skipIf(!hasJq)("suite report fetcher filters", () => {
     ];
 
     for (const candidate of untrusted) expect(filter("suite-run.jq", candidate)).toBe("");
+  });
+});
+
+describe("checklist release scope", () => {
+  const noTest = (id: string, target: string) =>
+    `${CHECKLIST}: ${id}: release gate: no test for target ${target}`;
+  const passed = { outcome: "passed", cases: ["a"] };
+
+  /** Writes each report under its artefact directory, as the fetcher lays them out, and returns the directory. */
+  function artefacts(reports: Record<string, { target: string; checks: Record<string, unknown> }>) {
+    const directory = mkdtempSync(join(tmpdir(), "checklist-scope-"));
+
+    for (const [artefact, report] of Object.entries(reports)) {
+      mkdirSync(join(directory, artefact));
+      writeFileSync(
+        join(directory, artefact, "http-suite-default.json"),
+        JSON.stringify({ format: "seampact-http-suite-report/1", profile: "default", ...report }),
+      );
+    }
+
+    return directory;
+  }
+
+  function gateOver(directory: string, options: Partial<CheckOptions>, root = fx("release-gate")) {
+    try {
+      return lines(check({ root, releaseGate: true, suiteReports: directory, ...options }));
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }
+
+  it("a target-scoped check counts only for its targets", () => {
+    const directory = mkdtempSync(join(tmpdir(), "checklist-scope-"));
+    const bodyLimit = parseSuiteCase(
+      JSON.parse(
+        readFileSync(join(REPO, "packages/tools/http-suite/cases/batch-body-limit.json"), "utf8"),
+      ),
+      "batch-body-limit",
+    );
+
+    for (const target of SERVER_TARGETS.filter((t) => !TARGETS_AFTER_1_0.includes(t))) {
+      const result: CaseResult = {
+        ...caseHeader(bodyLimit, target),
+        outcome: "passed",
+        failures: [],
+      };
+
+      mkdirSync(join(directory, target));
+
+      for (const profile of ["default", "boot"] as const) {
+        writeFileSync(
+          join(directory, target, `http-suite-${profile}.json`),
+          JSON.stringify(suiteReportOf({ target, profile }, [result])),
+        );
+      }
+    }
+
+    const out = gateOver(
+      directory,
+      { itemsAfter1_0: ITEMS_AFTER_1_0, variantRowSets: VARIANT_ROW_SETS },
+      REPO,
+    );
+
+    expect(out.filter((line) => line.includes("does not list"))).toEqual([]);
+    expect(out).not.toContain(noTest("CHK-067", "fastify"));
+    expect(out).not.toContain(noTest("CHK-083", "laravel"));
+    expect(out).not.toContain(noTest("CHK-084", "symfony"));
+    expect(out).not.toContain(noTest("CHK-186", "ninja"));
+  });
+
+  it("a variant set passes only with every row passed", () => {
+    const variantRowSets = new Map([
+      [
+        "CHK-002",
+        {
+          target: "nestjs",
+          rows: [
+            { name: "row a", artefactPrefix: "nestjs-http-suite-a-" },
+            { name: "row b", artefactPrefix: "nestjs-http-suite-b-" },
+          ],
+        },
+      ],
+    ]);
+    const rowA = { target: "nestjs", checks: { "CHK-002": passed } };
+    const oneRow = gateOver(artefacts({ "nestjs-http-suite-a-x": rowA }), { variantRowSets });
+    const everyRow = gateOver(
+      artefacts({ "nestjs-http-suite-a-x": rowA, "nestjs-http-suite-b-y": rowA }),
+      { variantRowSets },
+    );
+
+    expect(oneRow).toContain(
+      `${noTest("CHK-002", "nestjs")} (no passed suite report from the variant rows: row b)`,
+    );
+    expect(everyRow).not.toContainEqual(expect.stringContaining(noTest("CHK-002", "nestjs")));
+  });
+
+  it("a deferred pair is not required", () => {
+    const itemsAfter1_0 = new Map([
+      ["CHK-001", { targets: ["nestjs"], reason: "after" }],
+      ["CHK-002", { reason: "after" }],
+    ]);
+    const out = gateOver(artefacts({ other: { target: "hono", checks: {} } }), { itemsAfter1_0 });
+
+    expect(out).toEqual([]);
+  });
+
+  it("a proven deferred id fails by name", () => {
+    const itemsAfter1_0 = new Map([["CHK-001", { targets: ["nestjs"], reason: "after" }]]);
+    const out = gateOver(
+      artefacts({ nestjs: { target: "nestjs", checks: { "CHK-001": passed } } }),
+      {
+        itemsAfter1_0,
+      },
+    );
+
+    expect(out).toContain(
+      "scripts/checklist/release-scope.ts: CHK-001: proven for target nestjs: drop it from the after-1.0 list",
+    );
+  });
+
+  it("refuses an after-1.0 entry of an unknown id, an unlisted target or without a reason", () => {
+    const itemsAfter1_0 = new Map([
+      ["CHK-009", { reason: "after" }],
+      ["CHK-001", { targets: ["express"], reason: " " }],
+    ]);
+    const out = lines(check({ root: fx("release-gate"), itemsAfter1_0 }));
+
+    expect(out).toEqual([
+      "scripts/checklist/release-scope.ts: CHK-009: after-1.0 list names an unknown id (not in the checklist)",
+      "scripts/checklist/release-scope.ts: CHK-001: after-1.0 entry without a reason",
+      "scripts/checklist/release-scope.ts: CHK-001: after-1.0 entry names a target the item does not list: express",
+    ]);
   });
 });
 

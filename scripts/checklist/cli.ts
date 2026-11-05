@@ -5,7 +5,9 @@ import { check } from "./check.ts";
 import { loadModel } from "./load.ts";
 import type { Problem } from "./model.ts";
 import { formatProblem } from "./model.ts";
+import { ITEMS_AFTER_1_0, itemsAfter1_0Lines } from "./release-scope.ts";
 import { loadResults, renderReport } from "./report.ts";
+import { VARIANT_ROW_SETS } from "./variant-rows.ts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -24,6 +26,11 @@ function main(argv: string[]): number {
   });
   const command = positionals[0] ?? "check";
   const root = resolve(values.root ?? REPO_ROOT);
+  // The release policy tables name the repository's own ids: a `--root` fixture checklist goes without them.
+  const releasePolicy =
+    values.root === undefined
+      ? { itemsAfter1_0: ITEMS_AFTER_1_0, variantRowSets: VARIANT_ROW_SETS }
+      : {};
 
   if (command === "check") {
     const suiteReports = values["suite-reports"];
@@ -34,15 +41,23 @@ function main(argv: string[]): number {
       return 2;
     }
 
+    const releaseGate = values["release-gate"] === true;
     const problems = check({
       root,
+      ...releasePolicy,
       ...(values.base === undefined ? {} : { base: values.base }),
       ...(values.consumers === undefined ? {} : { consumers: resolve(values.consumers) }),
-      releaseGate: values["release-gate"] === true,
+      releaseGate,
       ...(suiteReports === undefined ? {} : { suiteReports: resolve(suiteReports) }),
     });
 
     for (const p of problems) console.error(formatProblem(p));
+
+    if (releaseGate) {
+      for (const line of itemsAfter1_0Lines(releasePolicy.itemsAfter1_0 ?? new Map()))
+        console.error(line);
+    }
+
     console.error(
       problems.length === 0 ? "checklist: ok" : `checklist: ${problems.length} problem(s)`,
     );

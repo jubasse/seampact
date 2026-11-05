@@ -1,7 +1,7 @@
 // The http-suite reports of the consumer runs (ADR 0015 "Report"), read as proofs for the release gate: each report
 // names its server target and the outcome of every checklist id its cases prove.
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import type { CaseOutcome, SuiteReport } from "../../packages/tools/http-suite/src/suite-report.ts";
 import type { Problem } from "./model.ts";
 import { reportTargetOf, SERVER_TARGETS, TARGET_VARIANTS } from "./targets.ts";
@@ -17,6 +17,8 @@ const SHOWN_VALUE_LENGTH = 40;
 export interface SuiteProof {
   /** The report file, as the reports directory argument joined with its path under it. */
   file: string;
+  /** The artefact the report came in: the first directory of its path under the reports directory, if any. */
+  artefact?: string;
   target: string;
   id: string;
   outcome: CaseOutcome;
@@ -57,7 +59,17 @@ export function loadSuiteReports(directory: string, problems: Problem[]): SuiteP
     return [];
   }
 
-  return files.flatMap((file) => suiteProofsOf(file, readReport(file, problems), problems));
+  return files.flatMap((file) =>
+    suiteProofsOf(file, readReport(file, problems), problems).map((proof) =>
+      withArtefact(proof, directory),
+    ),
+  );
+}
+
+function withArtefact(proof: SuiteProof, directory: string): SuiteProof {
+  const [artefact, ...rest] = relative(directory, proof.file).split(sep);
+
+  return artefact !== undefined && rest.length > 0 ? { ...proof, artefact } : proof;
 }
 
 function reportFilesUnder(directory: string): string[] {
