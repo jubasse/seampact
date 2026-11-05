@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { PACKED_PACKS } from "../consumers/packed-packages.ts";
 import { PUBLISHED_PACKAGES, UNPUBLISHED_PACKAGES } from "./npm-versions.ts";
 import { ReleaseError, releaseVersion } from "./release-version.ts";
 import type { VersionEdit } from "./version-edit.ts";
@@ -48,7 +49,28 @@ source = { editable = "hooks" }
 
 const GRADLE_PROPERTIES = "org.gradle.caching=true\n";
 
-const CHANGESET_CONFIG = `${JSON.stringify({ access: "restricted", baseBranch: "develop" }, null, 2)}\n`;
+// The layout the formatter gives the file: the `fixed` group on one line.
+const CHANGESET_CONFIG = `{
+  "access": "restricted",
+  "baseBranch": "develop",
+  "fixed": [["@seampact/*"]]
+}
+`;
+
+const PACK_MANIFEST = `# A pack.
+pack: { name: '@seampact/pack-hal', version: 0.0.0, extends: [] }
+conventions: {}
+`;
+
+// Each runtime constant in the form of its source file, at its development version.
+const RUNTIME_SOURCES: Record<string, string> = {
+  "packages/runtime/server-runtime/src/version.ts":
+    '// The version.\nexport const SERVER_RUNTIME_VERSION = "0.0.0";\n',
+  "python/codegen/src/seampact/codegen/runtime/version.py":
+    'from typing import Final\n\nRUNTIME_VERSION: Final = "0.0.0-dev"\nOTHER: Final = "0.0.0-dev"\n',
+  "php/codegen/runtime/RuntimeVersion.php":
+    "<?php\nfinal class RuntimeVersion\n{\n    public const VERSION = '0.0.0-dev';\n}\n",
+};
 
 const trees: string[] = [];
 
@@ -68,14 +90,21 @@ function developmentTree(): string {
   trees.push(root);
 
   for (const directory of [...PUBLISHED_PACKAGES, ...UNPUBLISHED_PACKAGES]) {
+    const pack = PACKED_PACKS.includes(directory) ? { seampact: { pack: "pack.yaml" } } : {};
     const manifest = {
       name: `@seampact/${directory.split("/").at(-1)}`,
       version: DEVELOPMENT_VERSION,
       private: true,
+      ...pack,
     };
 
     writeTreeFile(root, `${directory}/package.json`, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    if (PACKED_PACKS.includes(directory))
+      writeTreeFile(root, `${directory}/pack.yaml`, PACK_MANIFEST);
   }
+
+  for (const [file, text] of Object.entries(RUNTIME_SOURCES)) writeTreeFile(root, file, text);
 
   writeTreeFile(root, ".changeset/config.json", CHANGESET_CONFIG);
   writeTreeFile(root, "jvm/gradle.properties", GRADLE_PROPERTIES);
@@ -118,15 +147,63 @@ describe("the release stamp", () => {
     expect(binary).toEqual({ name: "@seampact/binary", version: RELEASE, private: true });
   });
 
-  it("makes the changesets access public", () => {
+  it("makes the changesets access public and keeps the file's layout", () => {
     const root = developmentTree();
 
     stamp(root, RELEASE);
 
-    expect(JSON.parse(readTreeFile(root, ".changeset/config.json"))).toEqual({
-      access: "public",
-      baseBranch: "develop",
-    });
+    expect(readTreeFile(root, ".changeset/config.json")).toBe(
+      CHANGESET_CONFIG.replace('"restricted"', '"public"'),
+    );
+  });
+
+  it("writes the version of every pack manifest, and keeps the rest of the YAML", () => {
+    const root = developmentTree();
+
+    stamp(root, RELEASE);
+
+    for (const directory of PACKED_PACKS)
+      expect(readTreeFile(root, `${directory}/pack.yaml`)).toBe(
+        PACK_MANIFEST.replace("version: 0.0.0", `version: ${RELEASE}`),
+      );
+  });
+
+  it("writes the version constant of each runtime, and that constant only", () => {
+    const root = developmentTree();
+
+    stamp(root, RELEASE);
+
+    expect(readTreeFile(root, "packages/runtime/server-runtime/src/version.ts")).toContain(
+      `export const SERVER_RUNTIME_VERSION = "${RELEASE}";`,
+    );
+    expect(readTreeFile(root, "python/codegen/src/seampact/codegen/runtime/version.py")).toBe(
+      `from typing import Final\n\nRUNTIME_VERSION: Final = "${RELEASE}"\nOTHER: Final = "0.0.0-dev"\n`,
+    );
+    expect(readTreeFile(root, "php/codegen/runtime/RuntimeVersion.php")).toContain(
+      `    public const VERSION = '${RELEASE}';`,
+    );
+  });
+
+  it("refuses a pack manifest or a runtime constant it cannot read, by file", () => {
+    const blockPack = developmentTree();
+
+    writeTreeFile(
+      blockPack,
+      "packages/packs/pack-hal/pack.yaml",
+      "pack:\n  name: '@seampact/pack-hal'\n  version: 0.0.0\n",
+    );
+
+    expect(() => releaseVersionEdits(blockPack, RELEASE)).toThrow(
+      "packages/packs/pack-hal/pack.yaml has no line the stamp can read pack.version from",
+    );
+
+    const noConstant = developmentTree();
+
+    rmSync(join(noConstant, "php/codegen/runtime/RuntimeVersion.php"));
+
+    expect(() => releaseVersionEdits(noConstant, RELEASE)).toThrow(
+      "php/codegen/runtime/RuntimeVersion.php does not exist: the stamp writes RuntimeVersion::VERSION there",
+    );
   });
 
   it("pins the seampact requirements, keeps the others and the comments, and updates the lock", () => {
@@ -207,6 +284,18 @@ describe("the version check", () => {
       "packages/tools/binary/package.json: a published package is still `private`",
     );
     expect(pending).toContain('.changeset/config.json: access is "restricted", not "public"');
+    expect(pending).toContain(
+      `packages/packs/pack-spring/pack.yaml: pack.version is "0.0.0", not "${RELEASE}"`,
+    );
+    expect(pending).toContain(
+      `packages/runtime/server-runtime/src/version.ts: SERVER_RUNTIME_VERSION is "0.0.0", not "${RELEASE}"`,
+    );
+    expect(pending).toContain(
+      `python/codegen/src/seampact/codegen/runtime/version.py: RUNTIME_VERSION is "0.0.0-dev", not "${RELEASE}"`,
+    );
+    expect(pending).toContain(
+      `php/codegen/runtime/RuntimeVersion.php: RuntimeVersion::VERSION is "0.0.0-dev", not "${RELEASE}"`,
+    );
     expect(pending).toContain("jvm/gradle.properties: has no `version` property");
     expect(pending).toContain(
       `python/codegen/pyproject.toml: requirement "seampact-hooks==0.0.0" does not pin ${RELEASE}`,

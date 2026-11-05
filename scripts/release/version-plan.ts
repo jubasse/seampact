@@ -1,16 +1,27 @@
-// Every version edit of a release, across npm, changesets, the JVM and Python. Composer needs none: sibling
-// constraints are `self.version`, and the mirror tag gives the version. The stamp writes these edits; the version
+// Every version edit of a release, across npm, changesets, the packs, the runtime constants, the JVM and Python.
+// Composer needs none: sibling constraints are `self.version`, and the mirror tag gives the version. The stamp writes these edits; the version
 // check fails on any.
 import { changesetAccessEdit } from "./changeset-access.ts";
 import { jvmVersionEdits } from "./jvm-versions.ts";
 import { npmVersionEdits } from "./npm-versions.ts";
+import { packVersionEdits } from "./pack-versions.ts";
 import { pythonVersionEdits } from "./python-versions.ts";
+import { runtimeVersionEdits } from "./runtime-versions.ts";
 import type { VersionEdit } from "./version-edit.ts";
 
 export function releaseVersionEdits(root: string, version: string): VersionEdit[] {
   return [
     ...npmVersionEdits(root, version),
     changesetAccessEdit(root),
+    ...versionFileEdits(root, version),
+  ];
+}
+
+/** The version fields outside the npm manifests and the changesets config, which the package rules read themselves. */
+export function versionFileEdits(root: string, version: string): VersionEdit[] {
+  return [
+    ...packVersionEdits(root, version),
+    ...runtimeVersionEdits(root, version),
     ...jvmVersionEdits(root, version),
     ...pythonVersionEdits(root, version),
   ];
