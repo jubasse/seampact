@@ -28,6 +28,8 @@ const SERVERS_FOR_1_0: readonly string[] = SERVER_TARGETS.filter(
 
 const NODE_SERVERS: readonly string[] = ["nestjs", "fastify", "express", "adonis", "hono"];
 
+const PYTHON_SERVERS: readonly string[] = ["fastapi", "drf", "ninja"];
+
 const VARIANTS_FORM =
   "a principal with variants (viewer_or_device) and, on the Node servers, optional authentication";
 
@@ -49,6 +51,29 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
       refusedOn: ["fetch", ...NODE_SERVERS],
       reason:
         "1.0 refuses the rights-version response header by name at generation (the fetch client); the Node servers name it in the generation warning identity.headers.handler and leave the comparison and the response header to the handler; the native servers neither refuse nor warn, so they are deferred with no test",
+    },
+  ],
+  [
+    "CHK-060",
+    {
+      targets: PYTHON_SERVERS,
+      reason:
+        "the Python servers generate no test helper: an additive artefact a later release can add",
+    },
+  ],
+  [
+    "CHK-066",
+    {
+      targets: PYTHON_SERVERS,
+      reason:
+        "the Python servers ship the IdempotencyStore protocol but no reference store: an additive package a later release can add",
+    },
+  ],
+  [
+    "CHK-068",
+    {
+      targets: PYTHON_SERVERS,
+      reason: "the Python servers serve no dev docs: an additive artefact a later release can add",
     },
   ],
   ["CHK-019", refusedOnEveryServer("a principal requirement")],

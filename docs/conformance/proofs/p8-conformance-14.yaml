@@ -1,0 +1,100 @@
+# docs/conformance/proofs/p8-conformance-14.yaml
+lane: p8-conformance-14
+proofs:
+  - id: CHK-044
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fastapi: python/codegen/tests/test_generated_error_registry.py#test_each_declared_error_code_is_one_class_with_its_status_and_params'
+      - 'drf: python/codegen/tests/test_generated_error_registry.py#test_each_declared_error_code_is_one_class_with_its_status_and_params'
+      - 'ninja: python/codegen/tests/test_generated_error_registry.py#test_each_declared_error_code_is_one_class_with_its_status_and_params'
+      - 'fastapi: python/fastapi/fastapi_tests/test_golden.py#test_the_reference_contract_matches_its_golden_package'
+      - 'drf: python/drf/drf_tests/test_drf_generator.py#test_the_reference_contract_matches_its_golden_package'
+      - 'ninja: python/ninja/ninja_tests/test_golden.py#test_the_reference_contract_matches_its_golden_package'
+  - id: CHK-061
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fastapi: python/codegen/tests/test_handler_return_type.py#test_a_handler_returning_another_operations_result_is_a_type_error'
+      - 'drf: python/codegen/tests/test_handler_return_type.py#test_a_handler_returning_another_operations_result_is_a_type_error'
+      - 'ninja: python/codegen/tests/test_handler_return_type.py#test_a_handler_returning_another_operations_result_is_a_type_error'
+  - id: CHK-076
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fastapi: ci: p7-fastapi.yml#e2e'
+      - 'drf: ci: p7-drf.yml#e2e'
+      - 'ninja: ci: p7-ninja.yml#e2e'
+      - 'fastapi: ci: p7-fastapi.yml#local-yaml'
+      - 'drf: ci: p7-drf.yml#local-yaml'
+      - 'ninja: ci: p7-ninja.yml#local-yaml'
+      - 'fastapi: python/ir/tests/test_bundle_vectors.py#test_reads_the_archive_as_the_vector_records'
+      - 'drf: python/ir/tests/test_bundle_vectors.py#test_reads_the_archive_as_the_vector_records'
+      - 'ninja: python/ir/tests/test_bundle_vectors.py#test_reads_the_archive_as_the_vector_records'
+      - 'fastapi: python/ir/tests/test_binary_pin.py#test_a_stub_with_the_wrong_hash_never_starts'
+      - 'drf: python/ir/tests/test_binary_pin.py#test_a_stub_with_the_wrong_hash_never_starts'
+      - 'ninja: python/ir/tests/test_binary_pin.py#test_a_stub_with_the_wrong_hash_never_starts'
+      - 'fastapi: python/ir/tests/test_binary_pin.py#test_runs_only_the_private_copy_with_the_contract_environment'
+      - 'drf: python/ir/tests/test_binary_pin.py#test_runs_only_the_private_copy_with_the_contract_environment'
+      - 'ninja: python/ir/tests/test_binary_pin.py#test_runs_only_the_private_copy_with_the_contract_environment'
+  - id: CHK-077
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fastapi: python/ir/tests/test_reader_parity.py#test_matches_the_typescript_verdicts'
+      - 'drf: python/ir/tests/test_reader_parity.py#test_matches_the_typescript_verdicts'
+      - 'ninja: python/ir/tests/test_reader_parity.py#test_matches_the_typescript_verdicts'
+      - 'fastapi: python/ir/tests/test_reader_parity.py#test_the_corpus_is_built_for_this_revision'
+      - 'drf: python/ir/tests/test_reader_parity.py#test_the_corpus_is_built_for_this_revision'
+      - 'ninja: python/ir/tests/test_reader_parity.py#test_the_corpus_is_built_for_this_revision'
+  - id: CHK-078
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fastapi: python/ir/tests/test_reader_parity.py#test_matches_the_typescript_verdicts'
+      - 'drf: python/ir/tests/test_reader_parity.py#test_matches_the_typescript_verdicts'
+      - 'ninja: python/ir/tests/test_reader_parity.py#test_matches_the_typescript_verdicts'
+      - 'fastapi: python/ir/tests/test_model.py#test_an_unknown_member_is_dropped'
+      - 'drf: python/ir/tests/test_model.py#test_an_unknown_member_is_dropped'
+      - 'ninja: python/ir/tests/test_model.py#test_an_unknown_member_is_dropped'
+      - 'fastapi: python/ir/tests/test_model.py#test_an_unknown_union_tag_is_kept_raw_and_written_back'
+      - 'drf: python/ir/tests/test_model.py#test_an_unknown_union_tag_is_kept_raw_and_written_back'
+      - 'ninja: python/ir/tests/test_model.py#test_an_unknown_union_tag_is_kept_raw_and_written_back'
+  - id: CHK-099
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fastapi: python/hooks/tests/test_hooks_shape.py#test_matches_the_shape_manifest'
+      - 'drf: python/hooks/tests/test_hooks_shape.py#test_matches_the_shape_manifest'
+      - 'ninja: python/hooks/tests/test_hooks_shape.py#test_matches_the_shape_manifest'
+      - 'fastapi: python/codegen/tests/test_hook_check.py#test_each_missing_hook_is_named_once_with_its_fix'
+      - 'drf: python/codegen/tests/test_hook_check.py#test_each_missing_hook_is_named_once_with_its_fix'
+      - 'ninja: python/codegen/tests/test_hook_check.py#test_each_missing_hook_is_named_once_with_its_fix'
+      - 'fastapi: python/codegen/tests/test_hook_check.py#test_every_registered_hook_leaves_no_problem'
+      - 'drf: python/codegen/tests/test_hook_check.py#test_every_registered_hook_leaves_no_problem'
+      - 'ninja: python/codegen/tests/test_hook_check.py#test_every_registered_hook_leaves_no_problem'
+      - 'fastapi: python/fastapi/fastapi_tests/test_hook_registration.py#test_the_boot_check_names_each_hook_the_contract_calls_and_the_app_did_not_register'
+      - 'fastapi: python/fastapi/fastapi_tests/test_hook_registration.py#test_a_hook_registered_per_concern_by_name_leaves_no_hook_problem'
+      - 'drf: python/drf/drf_tests/test_drf_boundary.py#test_the_boot_check_names_each_hook_the_contract_calls_and_settings_do_not_register'
+      - 'ninja: python/ninja/ninja_tests/test_runtime.py#test_the_boot_check_names_each_hook_the_contract_calls_and_bind_did_not_register'
+  - id: CHK-103
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fastapi: python/codegen/tests/test_generated_tree_determinism.py#test_a_target_writes_the_same_bytes_under_another_hash_seed_time_zone_and_locale'
+      - 'drf: python/codegen/tests/test_generated_tree_determinism.py#test_a_target_writes_the_same_bytes_under_another_hash_seed_time_zone_and_locale'
+      - 'ninja: python/codegen/tests/test_generated_tree_determinism.py#test_a_target_writes_the_same_bytes_under_another_hash_seed_time_zone_and_locale'
+      - 'fastapi: python/fastapi/fastapi_tests/test_golden.py#test_the_reference_contract_matches_its_golden_package'
+      - 'drf: python/drf/drf_tests/test_drf_generator.py#test_the_reference_contract_matches_its_golden_package'
+      - 'ninja: python/ninja/ninja_tests/test_golden.py#test_the_reference_contract_matches_its_golden_package'
+  - id: CHK-154
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fastapi: python/codegen/tests/test_no_generated_controller.py#test_the_generated_tree_declares_the_handlers_in_protocols_and_implements_none'
+      - 'drf: python/codegen/tests/test_no_generated_controller.py#test_the_generated_tree_declares_the_handlers_in_protocols_and_implements_none'
+      - 'ninja: python/codegen/tests/test_no_generated_controller.py#test_the_generated_tree_declares_the_handlers_in_protocols_and_implements_none'
+      - 'fastapi: python/codegen/tests/test_handler_return_type.py#test_a_handler_returning_another_operations_result_is_a_type_error'
+      - 'drf: python/codegen/tests/test_handler_return_type.py#test_a_handler_returning_another_operations_result_is_a_type_error'
+      - 'ninja: python/codegen/tests/test_handler_return_type.py#test_a_handler_returning_another_operations_result_is_a_type_error'
+      - 'fastapi: python/ir/tests/test_runner_discovery.py#test_generate_writes_the_headed_files_and_check_reports_drift'
+      - 'drf: python/ir/tests/test_runner_discovery.py#test_generate_writes_the_headed_files_and_check_reports_drift'
+      - 'ninja: python/ir/tests/test_runner_discovery.py#test_generate_writes_the_headed_files_and_check_reports_drift'
+      - 'fastapi: python/ir/tests/test_generated_writer.py#test_a_link_leaving_the_output_directory_is_refused'
+      - 'drf: python/ir/tests/test_generated_writer.py#test_a_link_leaving_the_output_directory_is_refused'
+      - 'ninja: python/ir/tests/test_generated_writer.py#test_a_link_leaving_the_output_directory_is_refused'
+      - 'fastapi: python/ir/tests/test_generated_writer.py#test_unsafe_duplicate_and_reserved_paths_are_refused'
+      - 'drf: python/ir/tests/test_generated_writer.py#test_unsafe_duplicate_and_reserved_paths_are_refused'
+      - 'ninja: python/ir/tests/test_generated_writer.py#test_unsafe_duplicate_and_reserved_paths_are_refused'
