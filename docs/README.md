@@ -81,6 +81,7 @@
 - [Contract key errors](troubleshooting/validate.md): `seampact/validate/*`.
 - [Contract content errors](troubleshooting/tree.md): `seampact/tree/*`.
 - [Access and error code errors](troubleshooting/access-and-errors.md): `seampact/access/*`, `seampact/derive/*`.
+- [Signed webhook errors](troubleshooting/signed-webhooks.md): `signature.*`.
 - [Boot errors](troubleshooting/boot.md): the server refuses to start.
 - [CLI errors](troubleshooting/cli.md): `cli.*`, `lint.*`, `diff.*`, `explain.*`, `binary.*`.
 
@@ -95,3 +96,4 @@
 - [Grammar](grammar/): every contract key, section by section ([full example](grammar/example.md)).
 - [IR](ir/): the compiled form of a contract.
 - [ADRs](adr/): design records.
+- [Product decisions](decisions.md): the log of decisions, A1 to A48.

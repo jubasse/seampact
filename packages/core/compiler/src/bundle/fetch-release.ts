@@ -3,7 +3,7 @@ import { BUNDLE_ARCHIVE_BYTES_MAX } from "@seampact/spec/bundle";
 import type { ReleaseBundleSource } from "@seampact/spec/config";
 import { quote } from "../validate/diagnostics.js";
 import type { BundleSourceFailure } from "./fetch-failure.js";
-import { printableUrl } from "./printable-url.js";
+import { printableUrl, withPrintableUrl } from "./printable-url.js";
 
 // The release-asset channel: the bundle tarball downloaded over HTTPS. A bundle comes from the network, so the
 // URL and every redirect must be `https:`, redirects are bounded, the download has a deadline, and it stops at the
@@ -90,7 +90,9 @@ function download(url: URL, redirectsLeft: number, signal: AbortSignal): Promise
         chunks.push(chunk);
       });
       response.on("end", () => settle(new Uint8Array(Buffer.concat(chunks))));
-      response.on("error", (error) => settle(releaseFailed(url, `failed: ${error.message}`)));
+      response.on("error", (error) =>
+        settle(releaseFailed(url, `failed: ${withPrintableUrl(error.message, url.href)}`)),
+      );
     });
 
     request.on("error", (error) =>
@@ -99,7 +101,7 @@ function download(url: URL, redirectsLeft: number, signal: AbortSignal): Promise
           url,
           signal.aborted
             ? `took over ${DOWNLOAD_TIMEOUT_MILLISECONDS} ms`
-            : `failed: ${error.message}`,
+            : `failed: ${withPrintableUrl(error.message, url.href)}`,
         ),
       ),
     );

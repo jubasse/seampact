@@ -186,7 +186,7 @@ def _refuse_constant(name: str) -> object:
 
 
 def _holds_lone_surrogate(tree: object) -> bool:
-    """A string value with a lone surrogate, which is not Unicode text; a key keeps it, for the unknown-key report."""
+    """A string with a lone surrogate, in a value or a key, which is not Unicode text."""
     pending = [tree]
 
     while pending:
@@ -196,6 +196,7 @@ def _holds_lone_surrogate(tree: object) -> bool:
             return True
 
         if isinstance(item, dict):
+            pending.extend(item.keys())
             pending.extend(item.values())
         elif isinstance(item, list):
             pending.extend(item)
