@@ -313,7 +313,7 @@ jobs:
           for target in laravel symfony; do
             case "$target" in
               laravel) framework='"laravel/framework": "~13.38.0"' ;;
-              symfony) framework='"symfony/framework-bundle": "~7.4.21"' ;;
+              symfony) framework='"symfony/framework-bundle": "~7.4.23"' ;;
             esac
             app="$WORK/$target"
             mkdir -p "$app/src"
