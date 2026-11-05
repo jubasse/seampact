@@ -37,6 +37,12 @@ const refusedOnEveryServer = (form: string): ItemAfter1_0 => ({
   reason: `1.0 refuses ${form} by name at generation`,
 });
 
+const refusedOnTheNodeServers = (form: string): ItemAfter1_0 => ({
+  targets: NODE_SERVERS,
+  refusedOn: NODE_SERVERS,
+  reason: `1.0 refuses ${form} by name at generation on the Node servers`,
+});
+
 export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
   ["CHK-001", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
   ["CHK-002", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
@@ -52,6 +58,15 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
     },
   ],
   ["CHK-019", refusedOnEveryServer("a principal requirement")],
+  [
+    "CHK-130",
+    refusedOnTheNodeServers(
+      "absolute URLs; the native servers write them from the configured public origin",
+    ),
+  ],
+  ["CHK-131", refusedOnEveryServer("a signature scheme verified by the application")],
+  ["CHK-132", refusedOnTheNodeServers("query API key and HTTP Basic schemes")],
+  ["CHK-133", refusedOnTheNodeServers("optional authentication; the native servers generate it")],
   ["CHK-020", refusedOnEveryServer("a principal binding")],
   ["CHK-094", refusedOnEveryServer("a scope resolved by the application")],
   [

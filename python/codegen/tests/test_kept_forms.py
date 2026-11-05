@@ -87,6 +87,15 @@ def test_access_forms_that_1_0_refuses_are_refused_by_name(repository_root: Path
     }
 
 
+def test_a_signature_verified_by_the_application_is_refused_by_name(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root, "tasks")
+    schemes = ir_json["schemes"]
+    assert isinstance(schemes, dict)
+    schemes["stripeSignature"]["signature"] = {"verify": "application", "headers": ["Stripe-Signature"]}
+
+    assert "signature.application.unsupported" in _refused_codes(ir_json)
+
+
 def test_an_open_enum_and_a_parameter_default_are_refused_by_name(repository_root: Path) -> None:
     ir_json = _ir_json(repository_root, "tasks")
     enums = ir_json["enums"]

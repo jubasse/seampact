@@ -97,6 +97,20 @@ final class KeptFormsTest extends TestCase
         self::assertStringContainsString("A '{$scheme['kind']}' credential scheme", $messages[$code]);
     }
 
+    public function testASignatureVerifiedByTheApplicationIsRefusedByNameOnEveryTarget(): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document(), ['payments']);
+        $schemes = $document->schemes;
+        self::assertInstanceOf(\stdClass::class, $schemes);
+        $signatureScheme = $schemes->stripeSignature;
+        self::assertInstanceOf(\stdClass::class, $signatureScheme);
+        $signatureScheme->signature = (object) ['verify' => 'application', 'headers' => ['Stripe-Signature']];
+
+        $messages = self::refused($document, null);
+
+        self::assertArrayHasKey('signature.application.unsupported', $messages);
+    }
+
     public function testTheSchemasEnumsAndErrorsOfTheKeptOperationsAreCollected(): void
     {
         $refusals = new Refusals('server', 'test', 'seampact/test');

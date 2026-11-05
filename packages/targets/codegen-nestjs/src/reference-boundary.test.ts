@@ -1,8 +1,8 @@
 import {
-  ACCESS_FORMS_REFUSED_BY_ONE_ZERO,
+  FORMS_REFUSED_BY_ONE_ZERO,
   GENERATE_TIMEOUT_MILLISECONDS,
   generateReferenceProject,
-  generateWithAccessForm,
+  generateWithRefusedForm,
   generateWithRightsVersionHeader,
   hooksRequirementErrors,
   projectDirectory,
@@ -120,8 +120,8 @@ describe("the generated reference boundary compiles", () => {
   });
 
   // The access forms 1.0 refuses by name (CHK-004, 006, 019, 020, 094): generation refuses, it does not warn.
-  test.each(ACCESS_FORMS_REFUSED_BY_ONE_ZERO)("$title is refused by name", async (form) => {
-    const outcome = await generateWithAccessForm(nestjsTarget, form, {
+  test.each(FORMS_REFUSED_BY_ONE_ZERO)("$title is refused by name", async (form) => {
+    const outcome = await generateWithRefusedForm(nestjsTarget, form, {
       links: await referenceLinks(PROJECT, "tasks"),
       outputDirectory: referenceServerOutput(PROJECT, "tasks"),
     });

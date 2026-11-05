@@ -2,8 +2,8 @@ import { type ContractIR, type IdentityAccess, isKnownVariant } from "@seampact/
 import type { GenerateOutcome, GenerateRequest, Target } from "../target.js";
 import { readGoldenIr } from "./reference-project.test-support.js";
 
-/** An access form 1.0 refuses by name: how to put it in the golden tasks api, and the code the refusal carries. */
-export interface RefusedAccessForm {
+/** A form 1.0 refuses by name: how to put it in the golden tasks api, and the code the refusal carries. */
+export interface RefusedForm {
   readonly title: string;
   readonly code: string;
   readonly change: (ir: ContractIR) => void;
@@ -12,6 +12,8 @@ export interface RefusedAccessForm {
 type Operation = ContractIR["operations"][number];
 
 const ACCESS_ORIGIN = { layer: "api", pointer: "/access" } as const;
+const BEARER_SCHEME = "bearer";
+const SIGNATURE_SCHEME = "stripeSignature";
 
 // The first guarded operation of the tasks api.
 function guardedOperationOf(ir: ContractIR): Operation {
@@ -20,6 +22,19 @@ function guardedOperationOf(ir: ContractIR): Operation {
   if (operation === undefined) throw new Error("the golden tasks api has no guarded operation");
 
   return operation;
+}
+
+// The user identity's bearer scheme, replaced by a scheme of another kind.
+function replaceBearerScheme(
+  ir: ContractIR,
+  scheme: { kind: "query"; name: string } | { kind: "basic" },
+): void {
+  const bearer = ir.schemes[BEARER_SCHEME];
+
+  if (bearer === undefined || !isKnownVariant("Scheme", bearer))
+    throw new Error("the golden tasks api has no bearer scheme");
+
+  ir.schemes[BEARER_SCHEME] = { id: BEARER_SCHEME, ...scheme, origin: bearer.origin };
 }
 
 function identityAccessOf(operation: Operation): IdentityAccess {
@@ -31,8 +46,8 @@ function identityAccessOf(operation: Operation): IdentityAccess {
   return access;
 }
 
-/** The forms CHK-004, 006, 019, 020 and 094 wait on: each fails generation on every server target. */
-export const ACCESS_FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedAccessForm[] = [
+/** The forms the Node servers refuse by name: each fails generation of the golden tasks api. */
+export const FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedForm[] = [
   {
     title: "a principal requirement",
     code: "principalRequires.unsupported",
@@ -93,12 +108,41 @@ export const ACCESS_FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedAccessForm[] = [
       identity.principal = { kind: "variants", variants: {} };
     },
   },
+  {
+    title: "a signature verified by the application",
+    code: "signature.application.unsupported",
+    change: (ir) => {
+      const scheme = ir.schemes[SIGNATURE_SCHEME];
+
+      if (scheme === undefined || !isKnownVariant("Scheme", scheme) || scheme.kind !== "signature")
+        throw new Error("the golden tasks api has no signature scheme");
+
+      scheme.signature = { verify: "application", headers: ["Stripe-Signature"] };
+    },
+  },
+  {
+    title: "a query API key scheme",
+    code: "scheme.query.unsupported",
+    change: (ir) => replaceBearerScheme(ir, { kind: "query", name: "api_key" }),
+  },
+  {
+    title: "an HTTP Basic scheme",
+    code: "scheme.basic.unsupported",
+    change: (ir) => replaceBearerScheme(ir, { kind: "basic" }),
+  },
+  {
+    title: "absolute URLs",
+    code: "wire.urls.absolute.unsupported",
+    change: (ir) => {
+      ir.api.wire.urls = "absolute";
+    },
+  },
 ];
 
 /** The outcome of generating the golden tasks api with [form] in it. */
-export async function generateWithAccessForm(
+export async function generateWithRefusedForm(
   serverTarget: Target,
-  form: RefusedAccessForm,
+  form: RefusedForm,
   where: { readonly links: GenerateRequest["links"]; readonly outputDirectory: string },
 ): Promise<GenerateOutcome> {
   const ir = readGoldenIr("tasks");
