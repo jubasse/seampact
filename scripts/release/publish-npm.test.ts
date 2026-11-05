@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -26,6 +26,15 @@ const temporaryDirectory = (prefix: string) => {
   return directory;
 };
 
+const REPRODUCIBLE_TAR_OPTIONS = [
+  "--mtime=@0",
+  "--sort=name",
+  "--owner=0",
+  "--group=0",
+  "--numeric-owner",
+  "--mode=u=rwX,go=rX",
+];
+
 const tarballFileName = (name: string, version: string) =>
   `${name.replace(/^@/, "").replace("/", "-")}-${version}.tgz`;
 
@@ -36,10 +45,28 @@ function writeTarball(directory: string, name: string, version = VERSION): strin
 
   mkdirSync(join(tree, "package"));
   writeFileSync(join(tree, "package", "package.json"), JSON.stringify({ name, version }));
-  execFileSync("tar", ["-czf", join(directory, file), "-C", tree, "package"]);
+  // A fixed time, order and owner, then gzip without its own time stamp: the same package always gives the same
+  // bytes, as `pnpm pack` does, so a test can rewrite a tarball and expect its manifest hash to hold.
+  const archive = join(tree, "package.tar");
+
+  execFileSync("tar", [...REPRODUCIBLE_TAR_OPTIONS, "-cf", archive, "-C", tree, "package"]);
+  writeFileSync(join(directory, file), execFileSync("gzip", ["-n", "-c", archive]));
 
   return file;
 }
+
+describe("the test tarballs", () => {
+  it("are the same bytes when the same package is written twice, a second apart", () => {
+    const first = temporaryDirectory("release-tarball-first-");
+    const second = temporaryDirectory("release-tarball-second-");
+    const file = writeTarball(first, "@seampact/spec");
+
+    execFileSync("sleep", ["1.1"]);
+    writeTarball(second, "@seampact/spec");
+
+    expect(readFileSync(join(second, file)).equals(readFileSync(join(first, file)))).toBe(true);
+  });
+});
 
 // A directory of tarballs, one per package name, read through their manifest.
 function tarballDirectory(names: readonly string[]): Tarball[] {
