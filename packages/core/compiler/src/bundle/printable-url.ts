@@ -2,8 +2,10 @@
 // since a token in them (`https://x-access-token:...@host/`, a presigned redirect) would land in CI logs. Text that
 // is not an absolute URL (an scp-like git address, a path) is printed as written.
 
-const SCHEME_SEPARATOR = "://";
-const SCHEME_PREFIX = /^[A-Za-z][A-Za-z0-9+.-]*:\/\//;
+// The WHATWG parser skips leading spaces and reads `https:/` or `https:\\` as `https://`, so the text fallback does too.
+const SCHEME_PREFIX = /^[\t\n\r ]*[A-Za-z][A-Za-z0-9+.-]*:/;
+const AUTHORITY_SLASHES = /^[/\\]*/;
+const QUERY_OR_FRAGMENT = /[?#]/;
 
 export function printableUrl(text: string): string {
   if (!URL.canParse(text)) return SCHEME_PREFIX.test(text) ? redactedByText(text) : text;
@@ -18,12 +20,20 @@ export function printableUrl(text: string): string {
   return url.href;
 }
 
-// A URL that does not parse (a bad port, a bad bracket) still may hold a token: drop the query, the fragment, and
-// everything from the scheme's `//` to the last `@`, by text.
-function redactedByText(text: string): string {
-  const schemeEnd = text.indexOf(SCHEME_SEPARATOR) + SCHEME_SEPARATOR.length;
-  const withoutQuery = text.slice(schemeEnd).split(/[?#]/, 1)[0] ?? "";
-  const withoutUser = withoutQuery.slice(withoutQuery.lastIndexOf("@") + 1);
+/** A tool's error text may repeat the URL it was given; the printable form takes its place. */
+export function withPrintableUrl(text: string, url: string): string {
+  return text.replaceAll(url, printableUrl(url));
+}
 
-  return text.slice(0, schemeEnd) + withoutUser;
+// A URL that does not parse (a bad port, a bad bracket) still may hold a token. Everything up to the last `@` goes
+// first, since a password may hold a raw `?` or `#`; an `@` in the query then drops more than needed, never less.
+function redactedByText(text: string): string {
+  const schemeEnd = text.indexOf(":") + 1;
+  const afterScheme = text.slice(schemeEnd);
+  const slashes = AUTHORITY_SLASHES.exec(afterScheme)?.[0] ?? "";
+  const authorityAndRest = afterScheme.slice(slashes.length);
+  const withoutUser = authorityAndRest.slice(authorityAndRest.lastIndexOf("@") + 1);
+  const withoutQuery = withoutUser.split(QUERY_OR_FRAGMENT, 1)[0] ?? "";
+
+  return text.slice(0, schemeEnd).trimStart() + slashes + withoutQuery;
 }
