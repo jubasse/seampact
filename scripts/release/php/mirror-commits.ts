@@ -1,7 +1,8 @@
 // The commits the release pushes to the PHP mirrors, from the splits of scripts/php-split.sh: each mirror's `main`
-// is its split, and its tag `v<version>` is the split itself, except seampact/ir's, one mirror commit on the split
-// that writes the release's `resources/binaries.json`. That commit takes the source commit's date and a fixed
-// author, so a rerun on the same commit makes the same one. Each mirror's commits go into `<out>/<mirror>.bundle`,
+// is its split, and its tag `v<version>` is one release commit on the split that adds the repository's LICENSE (no
+// php/<name> holds a copy) and, for seampact/ir, writes the release's `resources/binaries.json`. The commit sits on
+// the tag only, so the next split still extends `main`. It takes the source commit's date and a fixed author, so a
+// rerun on the same commit makes the same one. Each mirror's commits go into `<out>/<mirror>.bundle`,
 // and the manifest lists the split, release commit and tree of each: the publish job pushes exactly these.
 //   node scripts/release/php/mirror-commits.ts <splits.txt> --version <version> --pins <binaries.json> --out <dir>
 //     --manifest <file> [--source <commit>] [--root <dir>]
@@ -24,6 +25,7 @@ import { ReleaseError, releaseVersion } from "../release-version.ts";
 const VENDOR = "seampact";
 const PINNED_PACKAGE = "ir";
 const PINS_PATH = "resources/binaries.json";
+export const LICENSE_PATH = "LICENSE";
 const MIRROR_REF_NAMESPACE = "refs/mirrors";
 const RELEASE_AUTHOR_NAME = "seampact release";
 const RELEASE_AUTHOR_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com";
@@ -80,7 +82,7 @@ export function mirrorCommits(input: MirrorCommitsInput): MirrorManifestEntry[] 
   return splits.map(([name, split]) => {
     const mirror = `${VENDOR}-${name}`;
     const composerName = splitPackageName(input.root, split, name);
-    const release = name === PINNED_PACKAGE ? pinCommit(input, split) : split;
+    const release = releaseCommit(input, name, split);
 
     git(input.root, ["update-ref", mirrorRef(mirror, "main"), split]);
     git(input.root, ["update-ref", mirrorRef(mirror, "release"), release]);
@@ -134,17 +136,14 @@ function splitPackageName(root: string, split: string, name: string): string {
   return expected;
 }
 
-// The split's tree with the release pins in place of the empty ones, committed on the split.
-function pinCommit(input: MirrorCommitsInput, split: string): string {
-  const pinnedPackage = `${VENDOR}/${PINNED_PACKAGE}`;
+// The split's tree with the repository's LICENSE added, and for seampact/ir the release pins in place of the empty
+// ones, committed on the split.
+function releaseCommit(input: MirrorCommitsInput, name: string, split: string): string {
+  const composerName = `${VENDOR}/${name}`;
+  const licenseBlob = sourceLicenseBlob(input);
+  const pinned = name === PINNED_PACKAGE;
 
-  try {
-    git(input.root, ["cat-file", "-e", `${split}:${PINS_PATH}`]);
-  } catch {
-    throw new ReleaseError(
-      `the split of ${pinnedPackage} has no ${PINS_PATH}: php/${PINNED_PACKAGE} must hold the empty pins the release replaces`,
-    );
-  }
+  if (pinned) pinsInSplit(input, split);
 
   const index = mkdtempSync(join(tmpdir(), "mirror-index-"));
 
@@ -152,14 +151,21 @@ function pinCommit(input: MirrorCommitsInput, split: string): string {
     const env = { ...process.env, GIT_INDEX_FILE: join(index, "index") };
 
     git(input.root, ["read-tree", split], env);
+    git(
+      input.root,
+      ["update-index", "--add", "--cacheinfo", `100644,${licenseBlob},${LICENSE_PATH}`],
+      env,
+    );
 
-    const blob = execFileSync("git", ["hash-object", "-w", "--stdin"], {
-      cwd: input.root,
-      input: readFileSync(input.pins),
-      encoding: "utf8",
-    }).trim();
+    if (pinned) {
+      const pinsBlob = execFileSync("git", ["hash-object", "-w", "--stdin"], {
+        cwd: input.root,
+        input: readFileSync(input.pins),
+        encoding: "utf8",
+      }).trim();
 
-    git(input.root, ["update-index", "--cacheinfo", `100644,${blob},${PINS_PATH}`], env);
+      git(input.root, ["update-index", "--cacheinfo", `100644,${pinsBlob},${PINS_PATH}`], env);
+    }
 
     const tree = git(input.root, ["write-tree"], env);
     const date = git(input.root, ["show", "-s", "--format=%cI", input.source]);
@@ -171,25 +177,41 @@ function pinCommit(input: MirrorCommitsInput, split: string): string {
       GIT_COMMITTER_EMAIL: RELEASE_AUTHOR_EMAIL,
       GIT_COMMITTER_DATE: date,
     };
+    const message = pinned
+      ? `Release ${composerName} ${input.version}: add the license and pin the compiler binaries.`
+      : `Release ${composerName} ${input.version}: add the license.`;
 
-    return git(
-      input.root,
-      [
-        "commit-tree",
-        tree,
-        "-p",
-        split,
-        "-m",
-        `Pin the compiler binaries of seampact ${input.version}.`,
-      ],
-      { ...process.env, ...identity },
-    );
+    return git(input.root, ["commit-tree", tree, "-p", split, "-m", message], {
+      ...process.env,
+      ...identity,
+    });
   } catch (error) {
     throw new ReleaseError(
-      `the pin commit of ${pinnedPackage} failed: ${error instanceof Error ? error.message : String(error)}`,
+      `the release commit of ${composerName} failed: ${error instanceof Error ? error.message : String(error)}`,
     );
   } finally {
     rmSync(index, { recursive: true, force: true });
+  }
+}
+
+// The repository's LICENSE at the source commit: every mirror ships it, though no php/<name> holds a copy.
+function sourceLicenseBlob(input: MirrorCommitsInput): string {
+  try {
+    return git(input.root, ["rev-parse", "--verify", "--quiet", `${input.source}:${LICENSE_PATH}`]);
+  } catch {
+    throw new ReleaseError(
+      `the source commit ${input.source} has no ${LICENSE_PATH} at the repository root: every mirror ships it`,
+    );
+  }
+}
+
+function pinsInSplit(input: MirrorCommitsInput, split: string): void {
+  try {
+    git(input.root, ["cat-file", "-e", `${split}:${PINS_PATH}`]);
+  } catch {
+    throw new ReleaseError(
+      `the split of ${VENDOR}/${PINNED_PACKAGE} has no ${PINS_PATH}: php/${PINNED_PACKAGE} must hold the empty pins the release replaces`,
+    );
   }
 }
 

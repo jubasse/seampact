@@ -14,6 +14,7 @@ import { mirrorRemote, pushMirrors } from "./push-mirrors.ts";
 
 const VERSION = "1.2.3";
 const SPLIT_SCRIPT = resolve(import.meta.dirname, "../../php-split.sh");
+const ROOT_LICENSE = "MIT License\n";
 const EMPTY_PINS = '{ "version": null, "sha256": {} }\n';
 const RELEASE_PINS = '{ "version": "1.2.3", "sha256": { "seampact-linux-x64": "aa" } }\n';
 const IDENTITY = {
@@ -56,12 +57,14 @@ function commit(root: string, message: string, date: string): void {
 function monorepo(
   irName = "seampact/ir",
   irFiles: Readonly<Record<string, string>> = { "php/ir/resources/binaries.json": EMPTY_PINS },
+  rootFiles: Readonly<Record<string, string>> = { LICENSE: ROOT_LICENSE },
 ): string {
   const root = temporaryDirectory("php-mirrors-repo-");
 
   git(root, ["init", "--quiet", "--initial-branch=develop"]);
   writeFiles(root, {
     "README.md": "monorepo\n",
+    ...rootFiles,
     "php/ir/composer.json": JSON.stringify({ name: irName }),
     ...irFiles,
     "php/hooks/composer.json": JSON.stringify({ name: "seampact/hooks" }),
@@ -126,6 +129,7 @@ describe("the PHP split", () => {
       "seampact/hooks",
     );
     expect(readFileSync(join(first.out, "trees/hooks/src/Hook.php"), "utf8")).toBe("<?php\n");
+    expect(readFileSync(join(first.out, "trees/hooks/LICENSE"), "utf8")).toBe(ROOT_LICENSE);
     expect(split(root).splits).toBe(first.splits);
   });
 
@@ -140,7 +144,7 @@ describe("the PHP split", () => {
 });
 
 describe("the mirror commits", () => {
-  it("tags each split, except seampact/ir's, one commit on its split that writes the release pins", () => {
+  it("tags one commit on each split adding the root LICENSE, and for seampact/ir writing the release pins", () => {
     const root = monorepo();
     const { manifest } = releaseCommits(root);
     const [hooks, ir] = manifest;
@@ -149,8 +153,13 @@ describe("the mirror commits", () => {
       ["seampact/hooks", "seampact-hooks"],
       ["seampact/ir", "seampact-ir"],
     ]);
-    expect(hooks?.release).toBe(hooks?.split);
-    expect(ir?.release).not.toBe(ir?.split);
+
+    for (const entry of manifest) {
+      expect(git(root, ["rev-parse", `${entry.release}^`])).toBe(entry.split);
+      expect(git(root, ["show", `${entry.release}:LICENSE`])).toBe(ROOT_LICENSE.trim());
+    }
+
+    expect(git(root, ["show", `${hooks?.release}:composer.json`])).toContain("seampact/hooks");
     expect(git(root, ["rev-parse", `${ir?.release}^`])).toBe(ir?.split);
     expect(git(root, ["show", `${ir?.release}:resources/binaries.json`])).toBe(RELEASE_PINS.trim());
     expect(git(root, ["show", `${ir?.split}:resources/binaries.json`])).toBe(EMPTY_PINS.trim());
@@ -162,12 +171,38 @@ describe("the mirror commits", () => {
     expect(releaseCommits(root).manifest).toEqual(releaseCommits(root).manifest);
   });
 
-  it("names the cause of a failed pin commit: no pins in the split, or a pins file it cannot read", () => {
+  it("names the cause of a failed release commit: no pins in the split, or a pins file it cannot read", () => {
     expect(() => releaseCommits(monorepo("seampact/ir", {}))).toThrow(
       "the split of seampact/ir has no resources/binaries.json",
     );
     expect(() => releaseCommits(monorepo(), null)).toThrow(
-      /the pin commit of seampact\/ir failed: ENOENT[^\n]*binaries\.json/,
+      /the release commit of seampact\/ir failed: ENOENT[^\n]*binaries\.json/,
+    );
+  });
+
+  it("refuses a source commit with no LICENSE at the repository root, which every mirror ships", () => {
+    const root = monorepo();
+    const splits = split(root).splits;
+    const pinsFile = join(temporaryDirectory("php-mirrors-pins-"), "binaries.json");
+
+    writeFileSync(pinsFile, RELEASE_PINS);
+    rmSync(join(root, "LICENSE"));
+    commit(root, "Remove the license.", "2026-11-03T10:00:00Z");
+
+    expect(() =>
+      mirrorCommits({
+        root,
+        splits,
+        version: VERSION,
+        pins: pinsFile,
+        source: "HEAD",
+        out: temporaryDirectory("php-mirrors-bundles-"),
+      }),
+    ).toThrow(
+      "the source commit HEAD has no LICENSE at the repository root: every mirror ships it",
+    );
+    expect(() => split(root)).toThrow(
+      /php-split: the commit HEAD has no LICENSE at the repository root/,
     );
   });
 

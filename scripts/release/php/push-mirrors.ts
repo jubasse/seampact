@@ -16,6 +16,7 @@ import { ReleaseError, releaseVersion } from "../release-version.ts";
 import {
   bundleProblems,
   git,
+  LICENSE_PATH,
   type MirrorManifestEntry,
   mirrorBundle,
   mirrorRef,
@@ -92,9 +93,24 @@ function fetchBundles(work: string, input: MirrorPushInput): void {
 
     if (tree !== entry.tree)
       problems.push(`${entry.mirror}'s release commit has the tree ${tree}, not ${entry.tree}`);
+
+    if (!holdsLicense(work, release))
+      problems.push(
+        `${entry.mirror}'s release commit has no ${LICENSE_PATH}, which every mirror ships`,
+      );
   }
 
   if (problems.length > 0) throw notTheManifestCommits(problems);
+}
+
+function holdsLicense(work: string, commit: string): boolean {
+  try {
+    git(work, ["cat-file", "-e", `${commit}:${LICENSE_PATH}`]);
+
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 const notTheManifestCommits = (problems: readonly string[]) =>
