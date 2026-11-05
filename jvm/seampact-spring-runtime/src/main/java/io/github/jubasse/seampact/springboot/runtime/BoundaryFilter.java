@@ -108,9 +108,10 @@ public final class BoundaryFilter implements Filter {
     }
 
     // A path under a base path that no route serves with this method: the api's 404 under `catchAll`, else the app's.
+    // A base path another api of the app also claims is the app's, so no api answers 404 for another api's routes.
     private void answerUnserved(HttpServletRequest request, HttpServletResponse response, FilterChain chain, String path) throws IOException, ServletException {
         boolean catchAll = boundary.table().settings().path("catchAll").asBoolean(true);
-        if (!catchAll) {
+        if (!catchAll || !boundary.claimsBasePathAlone(path)) {
             chain.doFilter(request, response);
             return;
         }

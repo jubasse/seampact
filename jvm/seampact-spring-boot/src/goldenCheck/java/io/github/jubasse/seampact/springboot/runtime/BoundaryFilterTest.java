@@ -56,11 +56,20 @@ class BoundaryFilterTest {
 
     // The golden table with no error listed on any operation, so no route has the `notFound` role.
     private static SeampactBoundary boundaryWithoutNotFoundRole() {
+        return boundaryWithoutNotFoundRole("tasks", new StaticListableBeanFactory());
+    }
+
+    // The same, under the api id [apiId], among the beans of [app].
+    private static SeampactBoundary boundaryWithoutNotFoundRole(String apiId, StaticListableBeanFactory app) {
         JsonMapper mapper = JsonMapper.builder().build();
         ObjectNode table = (ObjectNode) mapper.readTree(TasksContractTable.json());
         table.path("operations").forEach(operation -> ((ObjectNode) operation).putArray("errors"));
+        ((ObjectNode) table.path("api")).put("id", apiId);
 
-        return new SeampactBoundary(mapper.writeValueAsString(table), new TasksSeampactBinding(), new StaticListableBeanFactory(), new StandardEnvironment());
+        SeampactBoundary boundary = new SeampactBoundary(mapper.writeValueAsString(table), new TasksSeampactBinding(), app, new StandardEnvironment());
+        app.addBean(apiId + "SeampactBoundary", boundary);
+
+        return boundary;
     }
 
     // The environment Spring Boot devtools leaves when its property defaults are active.
@@ -181,5 +190,18 @@ class BoundaryFilterTest {
         assertEquals(List.of(), reachedApp, "a path no route serves never reaches the app under catchAll");
         assertEquals(NOT_FOUND, response.getStatus());
         assertEquals(0, response.getContentAsByteArray().length);
+    }
+
+    @Test
+    void unservedPathUnderABasePathAnotherApiClaimsReachesTheApp() throws Exception {
+        StaticListableBeanFactory app = new StaticListableBeanFactory();
+        SeampactBoundary firstApi = boundaryWithoutNotFoundRole("tasks", app);
+        boundaryWithoutNotFoundRole("otherTasks", app);
+        List<HttpServletRequest> reachedApp = new ArrayList<>();
+
+        new BoundaryFilter(firstApi).doFilter(new MockHttpServletRequest("GET", "/v1/no-such-route"), new MockHttpServletResponse(),
+                (request, reply) -> reachedApp.add((HttpServletRequest) request));
+
+        assertEquals(1, reachedApp.size(), "a path under a base path two apis claim is the app's, whichever api's filter runs first");
     }
 }

@@ -60,6 +60,9 @@ public final class SeampactBoundary {
     // The operations the boot check found without a handler under `unbound-operations=warn`.
     private volatile Set<String> notFoundOperations = Set.of();
 
+    // The other apis of the app, read from the context on the first request, once every boundary exists.
+    private volatile List<SeampactBoundary> otherBoundaries;
+
     public SeampactBoundary(String tableJson, ApiBinding binding, ListableBeanFactory beans, Environment environment) {
         // ADR 0025, G3: code another version generated is refused before its table is read.
         GeneratorVersionCheck.problem(binding.apiId(), binding.generatorVersion(), SeampactRuntimeVersion.VERSION).ifPresent(problem -> {
@@ -134,6 +137,28 @@ public final class SeampactBoundary {
 
     Environment environment() {
         return environment;
+    }
+
+    /**
+     * Whether this api alone claims the raw [path] among the apis of the app: it is under one of its base paths and
+     * under none of another api's. A path two apis claim is the app's to answer (ADR 0022 "Routes").
+     */
+    boolean claimsBasePathAlone(String path) {
+        if (!table.isUnderBasePath(path)) return false;
+
+        return otherBoundaries().stream().noneMatch(other -> other.table.isUnderBasePath(path));
+    }
+
+    private List<SeampactBoundary> otherBoundaries() {
+        List<SeampactBoundary> known = otherBoundaries;
+        if (known != null) return known;
+
+        List<SeampactBoundary> found = beans.getBeansOfType(SeampactBoundary.class).values().stream()
+                .filter(other -> !other.apiId().equals(apiId()))
+                .toList();
+        otherBoundaries = found;
+
+        return found;
     }
 
     /** The origin absolute URLs start with; empty under relative URLs. */
