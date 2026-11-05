@@ -109,7 +109,13 @@ function operationUses(operation: RelayedOperation): TreeSchemasRelayUse[] {
   ];
 }
 
-// Every origin of a copied declaration keeps its pointer and layer and names the public api.
+function withApiOrigin(origin: unknown, api: string): void {
+  if (typeof origin === "object" && origin !== null && !("api" in origin))
+    Object.assign(origin, { api });
+}
+
+// Every origin of a copied declaration keeps its pointer and layer and names the public api: each `origin` and
+// each origin of a `derivedFrom.from`, such as the `concurrency` that added a version property.
 function withApiOrigins(value: unknown, api: string): void {
   if (Array.isArray(value)) {
     for (const item of value) withApiOrigins(item, api);
@@ -120,8 +126,11 @@ function withApiOrigins(value: unknown, api: string): void {
   if (typeof value !== "object" || value === null) return;
 
   for (const [key, member] of Object.entries(value)) {
-    if (key === "origin" && typeof member === "object" && member !== null && !("api" in member))
-      Object.assign(member, { api });
+    if (key === "origin") withApiOrigin(member, api);
+
+    if (key === "derivedFrom" && typeof member === "object" && member !== null && "from" in member)
+      for (const origin of Array.isArray(member.from) ? member.from : [])
+        withApiOrigin(origin, api);
     withApiOrigins(member, api);
   }
 }
