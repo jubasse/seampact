@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   COMPILER_DISTRIBUTION,
   compilerWheelProblems,
+  compilerWheelsListProblems,
   type DistributionManifestEntry,
   distributionIdentity,
   distributionManifest,
@@ -172,6 +173,44 @@ describe("the distribution manifest", () => {
           `holds seampact-linux-x64 hashing ${sha256("tampered")}, not the ${sha256("binary seampact-linux-x64")}`,
         ),
       ),
+    ]);
+  });
+});
+
+// The compiler wheels' list hash as the binary call's wheels job prints it.
+const shellWheelsSha256 = (directory: string) =>
+  execFileSync("bash", ["-c", "LC_ALL=C sha256sum -- seampact_compiler-*.whl | sha256sum"], {
+    cwd: directory,
+    encoding: "utf8",
+  }).slice(0, 64);
+
+describe("the compiler wheels against the binary call's wheels-sha256", () => {
+  it("accepts the wheels the call hashed, as its shell step lists them", () => {
+    const { directory } = releaseDirectory();
+
+    expect(
+      compilerWheelsListProblems(distributionManifest(directory), shellWheelsSha256(directory)),
+    ).toEqual([]);
+  });
+
+  it("refuses a wheel whose metadata changed while its binary still matches SHA256SUMS", () => {
+    const { directory, sums } = releaseDirectory();
+    const wheelsSha256 = shellWheelsSha256(directory);
+    const changedWheel = join(directory, `seampact_compiler-${VERSION}-py3-none-platform0.whl`);
+
+    rmSync(changedWheel);
+    writeZip(changedWheel, {
+      [`seampact/compiler/bin/${ASSETS[0]}`]: `binary ${ASSETS[0]}`,
+      "seampact_compiler.dist-info/entry_points.txt": "[console_scripts]\nseampact = other:main\n",
+    });
+    const manifest = distributionManifest(directory);
+
+    expect(compilerWheelProblems(directory, manifest, sums)).toEqual([]);
+    expect(compilerWheelsListProblems(manifest, wheelsSha256)).toEqual([
+      expect.stringMatching(new RegExp(`not the ${wheelsSha256} the binary call output`)),
+    ]);
+    expect(compilerWheelsListProblems(manifest, "not-a-hash")).toEqual([
+      expect.stringMatching(/"not-a-hash" is not a lowercase hex SHA-256/),
     ]);
   });
 });

@@ -1,10 +1,11 @@
 // The manifest of the Python distributions a release publishes: the file, name, version, kind and SHA-256 of each,
 // written by build-python and passed to the publish job as a job output, outside the artefact. Every workspace
 // distribution ships one pure wheel and one sdist; seampact-compiler ships one platform wheel per release binary and
-// no sdist, each holding its binary as SHA256SUMS lists it. A job that publishes takes exactly the files the manifest
+// no sdist, each holding its binary as SHA256SUMS lists it, and the five hashing as the binary call's `wheels-sha256`
+// output. A job that publishes takes exactly the files the manifest
 // lists, each checked against its hash, and refuses any other file of the artefact.
 //   node scripts/release/python/dist-manifest.ts write <dist-dir> --version <version> --sums <SHA256SUMS>
-//     --manifest <file> [--root <dir>]
+//     --wheels-sha256 <sha256> --manifest <file> [--root <dir>]
 //   node scripts/release/python/dist-manifest.ts verify <dist-dir> --manifest <file> --version <version> [--root <dir>]
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -21,6 +22,8 @@ export const COMPILER_WHEEL_COUNT = 5;
 const COMPILER_BINARY_DIRECTORY = "seampact/compiler/bin/";
 // A binary is read whole to hash it; the five are well under this size.
 const WHEEL_MEMBER_MAX_BYTES = 512 * 1024 * 1024;
+
+const SHA256_HEX = /^[0-9a-f]{64}$/;
 
 const WHEEL_FILE = /^([A-Za-z0-9][A-Za-z0-9._]*)-([^-]+)(?:-\d[^-]*)?-[^-]+-[^-]+-[^-]+\.whl$/;
 const SDIST_FILE = /^([A-Za-z0-9][A-Za-z0-9._-]*)-([^-]+)\.tar\.gz$/;
@@ -175,6 +178,32 @@ export function compilerWheelProblems(
   return problems;
 }
 
+/**
+ * The seampact-compiler wheels are the bytes the binary call built: their `<sha256>  <file>` lines, sorted by file as
+ * `sha256sum *.whl` prints them, hash as the call's `wheels-sha256` output.
+ */
+export function compilerWheelsListProblems(
+  manifest: readonly DistributionManifestEntry[],
+  wheelsSha256: string,
+): string[] {
+  if (!SHA256_HEX.test(wheelsSha256))
+    return [`the wheels-sha256 "${wheelsSha256}" is not a lowercase hex SHA-256`];
+
+  const wheelsList = manifest
+    .filter((entry) => entry.name === COMPILER_DISTRIBUTION && entry.kind === "wheel")
+    // Code-unit order, as the C locale sorts the shell's glob.
+    .sort((left, right) => (left.file < right.file ? -1 : left.file > right.file ? 1 : 0))
+    .map((entry) => `${entry.sha256}  ${entry.file}\n`)
+    .join("");
+  const actual = createHash("sha256").update(wheelsList).digest("hex");
+
+  return actual === wheelsSha256
+    ? []
+    : [
+        `the ${COMPILER_DISTRIBUTION} wheels hash ${actual} as a sha256sum list, not the ${wheelsSha256} the binary call output`,
+      ];
+}
+
 export function failOnProblems(problems: readonly string[]): void {
   if (problems.length > 0)
     throw new ReleaseError(
@@ -275,7 +304,7 @@ function wheelMember(wheel: string, member: string): Buffer {
 
 const USAGE =
   "node scripts/release/python/dist-manifest.ts write|verify <dist-dir> --version <version> --manifest <file> " +
-  "[--sums <SHA256SUMS>] [--root <dir>]";
+  "[--sums <SHA256SUMS> --wheels-sha256 <sha256>] [--root <dir>]";
 
 if (import.meta.main)
   await runReleaseCommand("dist-manifest", () => {
@@ -285,6 +314,7 @@ if (import.meta.main)
         version: { type: "string" },
         manifest: { type: "string" },
         sums: { type: "string" },
+        "wheels-sha256": { type: "string" },
       },
       USAGE,
     );
@@ -307,7 +337,13 @@ if (import.meta.main)
       const manifest = distributionManifest(directory);
 
       manifestDistributions(directory, manifest, expected);
-      failOnProblems(compilerWheelProblems(directory, manifest, readFileSync(values.sums, "utf8")));
+      if (values["wheels-sha256"] === undefined)
+        throw new ReleaseError(`write needs --wheels-sha256; usage: ${USAGE}`);
+
+      failOnProblems([
+        ...compilerWheelProblems(directory, manifest, readFileSync(values.sums, "utf8")),
+        ...compilerWheelsListProblems(manifest, values["wheels-sha256"]),
+      ]);
       writeFileSync(values.manifest, JSON.stringify(manifest));
       console.log(
         `dist-manifest: ${manifest.length} distributions checked and listed in ${values.manifest}`,

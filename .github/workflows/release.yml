@@ -553,13 +553,16 @@ jobs:
         with:
           name: ${{ needs.binary.outputs.wheels-artifact }}
           path: ${{ runner.temp }}/python-distributions
+      # Each compiler wheel's binary is checked against SHA256SUMS, and the five wheels whole against wheels-sha256.
       - name: Check the distributions, then write their manifest
         id: manifest
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
+          WHEELS_SHA256: ${{ needs.binary.outputs.wheels-sha256 }}
         run: |
           node scripts/release/python/dist-manifest.ts write "$RUNNER_TEMP/python-distributions" --version "$VERSION" \
-            --sums "$RUNNER_TEMP/assets/SHA256SUMS" --manifest "$RUNNER_TEMP/python-manifest.json"
+            --sums "$RUNNER_TEMP/assets/SHA256SUMS" --wheels-sha256 "$WHEELS_SHA256" \
+            --manifest "$RUNNER_TEMP/python-manifest.json"
           echo "manifest=$(cat "$RUNNER_TEMP/python-manifest.json")" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
