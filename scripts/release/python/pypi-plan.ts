@@ -8,6 +8,7 @@
 // rehearsal's local index.
 import { copyFileSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { boundedText } from "../bounded-text.ts";
 import { isJsonRecord } from "../json-record.ts";
 import { parsedArguments, ROOT_OPTION, repositoryRoot, runReleaseCommand } from "../release-cli.ts";
 import { ReleaseError, releaseVersion } from "../release-version.ts";
@@ -21,6 +22,9 @@ import {
 const HTTP_NOT_FOUND = 404;
 // An index that does not answer within this time fails the job instead of holding it to its timeout.
 const INDEX_TIMEOUT_MILLISECONDS = 30_000;
+// The index's file names reach the error; a real distribution file name is well under this.
+const INDEX_FILE_NAME_MAX_LENGTH = 200;
+const CONFLICTS_MAX_LENGTH = 4_000;
 
 export interface UploadPlan {
   readonly toUpload: readonly DistributionManifestEntry[];
@@ -55,13 +59,13 @@ export async function uploadPlan(
     for (const file of published.keys())
       if (!files.some((entry) => entry.file === file))
         conflicts.push(
-          `${name} ${version} on ${index} holds ${file}, which this run did not build`,
+          `${name} ${version} on ${index} holds ${boundedText(file, INDEX_FILE_NAME_MAX_LENGTH)}, which this run did not build`,
         );
   }
 
   if (conflicts.length > 0)
     throw new ReleaseError(
-      `${conflicts.join("; ")}: a published file never changes, so nothing was uploaded; stamp and release a new ` +
+      `${boundedText(conflicts.join("; "), CONFLICTS_MAX_LENGTH)}: a published file never changes, so nothing was uploaded; stamp and release a new ` +
         "patch version",
     );
 

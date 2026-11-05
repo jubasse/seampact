@@ -4,12 +4,14 @@
 // is pushed, since a published tag never moves. With PHP_MIRRORS_TOKEN set, git reads it through a credential helper
 // given in the environment, so the token is never in an argument or a remote URL.
 //   node scripts/release/php/push-mirrors.ts <bundle-dir> --manifest <file> --version <version> --remote-base <url>
+//     [--root <dir>]
 // `--remote-base` is where the mirrors live: https://github.com/jubasse, or the rehearsal's directory of bare
 // repositories; a mirror's remote is `<remote-base>/<mirror>.git`.
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { parsedArguments, runReleaseCommand } from "../release-cli.ts";
+import { boundedText } from "../bounded-text.ts";
+import { parsedArguments, ROOT_OPTION, repositoryRoot, runReleaseCommand } from "../release-cli.ts";
 import { ReleaseError, releaseVersion } from "../release-version.ts";
 import {
   bundleProblems,
@@ -18,9 +20,12 @@ import {
   mirrorBundle,
   mirrorRef,
   parsedMirrorManifest,
+  phpPackageNames,
 } from "./mirror-commits.ts";
 
 const TOKEN_VARIABLE = "PHP_MIRRORS_TOKEN";
+// A remote's stderr reaches the error; git's own refusals are well under this.
+const REMOTE_STDERR_MAX_LENGTH = 2_000;
 // Reads the token from the environment when git asks; the empty helper first drops any helper of the machine.
 const TOKEN_CREDENTIAL_HELPER = `!f() { test "$1" = get && printf 'username=x-access-token\\npassword=%s\\n' "$${TOKEN_VARIABLE}"; }; f`;
 
@@ -61,7 +66,9 @@ export const mirrorRemote = (remoteBase: string, mirror: string) =>
 function fetchBundles(work: string, input: MirrorPushInput): void {
   const problems = bundleProblems(input.bundles, input.manifest);
 
-  for (const entry of problems.length > 0 ? [] : input.manifest) {
+  if (problems.length > 0) throw notTheManifestCommits(problems);
+
+  for (const entry of input.manifest) {
     const bundle = join(resolve(input.bundles), mirrorBundle(entry.mirror));
 
     git(work, [
@@ -87,11 +94,13 @@ function fetchBundles(work: string, input: MirrorPushInput): void {
       problems.push(`${entry.mirror}'s release commit has the tree ${tree}, not ${entry.tree}`);
   }
 
-  if (problems.length > 0)
-    throw new ReleaseError(
-      `the mirror commits are not the ones split-php wrote, so nothing was pushed:\n  ${problems.join("\n  ")}`,
-    );
+  if (problems.length > 0) throw notTheManifestCommits(problems);
 }
+
+const notTheManifestCommits = (problems: readonly string[]) =>
+  new ReleaseError(
+    `the mirror commits are not the ones split-php wrote, so nothing was pushed:\n  ${problems.join("\n  ")}`,
+  );
 
 function mirrorPushPlan(work: string, input: MirrorPushInput): MirrorPushPlan {
   const toPush: MirrorManifestEntry[] = [];
@@ -175,17 +184,21 @@ function remoteGit(work: string, args: readonly string[], what: string): string 
     const stderr =
       error instanceof Error && "stderr" in error ? String(error.stderr).trim() : String(error);
 
-    throw new ReleaseError(`git could not ${what}: ${stderr}`);
+    throw new ReleaseError(
+      `git could not ${what}: ${boundedText(stderr, REMOTE_STDERR_MAX_LENGTH)}`,
+    );
   }
 }
 
 const USAGE =
-  "node scripts/release/php/push-mirrors.ts <bundle-dir> --manifest <file> --version <version> --remote-base <url>";
+  "node scripts/release/php/push-mirrors.ts <bundle-dir> --manifest <file> --version <version> --remote-base <url> " +
+  "[--root <dir>]";
 
 if (import.meta.main)
   await runReleaseCommand("push-mirrors", () => {
     const { values, positionals } = parsedArguments(
       {
+        ...ROOT_OPTION,
         manifest: { type: "string" },
         version: { type: "string" },
         "remote-base": { type: "string" },
@@ -202,7 +215,11 @@ if (import.meta.main)
 
     const plan = pushMirrors({
       bundles,
-      manifest: parsedMirrorManifest(readFileSync(values.manifest, "utf8"), values.manifest),
+      manifest: parsedMirrorManifest(
+        readFileSync(values.manifest, "utf8"),
+        values.manifest,
+        phpPackageNames(repositoryRoot(values.root)),
+      ),
       version: releaseVersion(values.version),
       remoteBase,
     });

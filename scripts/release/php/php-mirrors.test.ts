@@ -3,7 +3,13 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { git, type MirrorManifestEntry, mirrorCommits } from "./mirror-commits.ts";
+import {
+  git,
+  type MirrorManifestEntry,
+  mirrorCommits,
+  parsedMirrorManifest,
+  phpPackageNames,
+} from "./mirror-commits.ts";
 import { mirrorRemote, pushMirrors } from "./push-mirrors.ts";
 
 const VERSION = "1.2.3";
@@ -45,15 +51,19 @@ function commit(root: string, message: string, date: string): void {
   git(root, ["commit", "--quiet", "-m", message], env);
 }
 
-// A monorepo with seampact/ir (holding the empty pins) and seampact/hooks, each changed in its own commit.
-function monorepo(irName = "seampact/ir"): string {
+// A monorepo with seampact/ir (holding the empty pins unless told otherwise) and seampact/hooks, each changed in
+// its own commit.
+function monorepo(
+  irName = "seampact/ir",
+  irFiles: Readonly<Record<string, string>> = { "php/ir/resources/binaries.json": EMPTY_PINS },
+): string {
   const root = temporaryDirectory("php-mirrors-repo-");
 
   git(root, ["init", "--quiet", "--initial-branch=develop"]);
   writeFiles(root, {
     "README.md": "monorepo\n",
     "php/ir/composer.json": JSON.stringify({ name: irName }),
-    "php/ir/resources/binaries.json": EMPTY_PINS,
+    ...irFiles,
     "php/hooks/composer.json": JSON.stringify({ name: "seampact/hooks" }),
   });
   commit(root, "Add the PHP packages.", "2026-11-01T10:00:00Z");
@@ -73,12 +83,13 @@ function split(root: string): { splits: string; out: string } {
 
 function releaseCommits(
   root: string,
-  pins = RELEASE_PINS,
+  // null leaves the pins file unwritten.
+  pins: string | null = RELEASE_PINS,
 ): { manifest: MirrorManifestEntry[]; bundles: string } {
   const pinsFile = join(temporaryDirectory("php-mirrors-pins-"), "binaries.json");
   const bundles = temporaryDirectory("php-mirrors-bundles-");
 
-  writeFileSync(pinsFile, pins);
+  if (pins !== null) writeFileSync(pinsFile, pins);
 
   const manifest = mirrorCommits({
     root,
@@ -142,6 +153,37 @@ describe("the mirror commits", () => {
     expect(releaseCommits(root).manifest).toEqual(releaseCommits(root).manifest);
   });
 
+  it("names the cause of a failed pin commit: no pins in the split, or a pins file it cannot read", () => {
+    expect(() => releaseCommits(monorepo("seampact/ir", {}))).toThrow(
+      "the split of seampact/ir has no resources/binaries.json",
+    );
+    expect(() => releaseCommits(monorepo(), null)).toThrow(
+      /the pin commit of seampact\/ir failed: ENOENT[^\n]*binaries\.json/,
+    );
+  });
+
+  it("reads back its manifest, and refuses one naming a mirror or a commit the release does not own", () => {
+    const root = monorepo();
+    const { manifest } = releaseCommits(root);
+    const names = phpPackageNames(root);
+    const [hooks, ir] = manifest;
+    const parsed = (entries: readonly unknown[]) =>
+      parsedMirrorManifest(JSON.stringify(entries), "mirrors.json", names);
+
+    expect(names).toEqual(["hooks", "ir"]);
+    expect(parsed(manifest)).toEqual(manifest);
+    expect(() => parsed([hooks, { ...ir, mirror: "attacker-repo" }])).toThrow(
+      /entry 1 names the mirror "attacker-repo", not one of seampact-hooks, seampact-ir/,
+    );
+    expect(() => parsed([hooks, { ...ir, package: "acme/ir" }])).toThrow(
+      /entry 1 puts "acme\/ir" on seampact-ir, which holds seampact\/ir/,
+    );
+    expect(() => parsed([hooks, { ...ir, split: "main" }])).toThrow(
+      /entry 1 has the split "main", not a 40-hex id/,
+    );
+    expect(() => parsed([hooks])).toThrow(/seampact-ir is listed 0 times, not once/);
+  });
+
   it("refuses a package whose composer.json names another package than its mirror's", () => {
     expect(() => releaseCommits(monorepo("acme/ir"))).toThrow(
       'php/ir/composer.json names "acme/ir", not seampact/ir: the mirror seampact-ir holds seampact/ir',
@@ -186,6 +228,26 @@ describe("the mirror push", () => {
     expect(
       pushMirrors({ ...rerun, version: VERSION, remoteBase: base }).alreadyTagged,
     ).toHaveLength(2);
+  });
+
+  it("never forces a mirror's main: one the split does not extend is refused, with nothing written to it", () => {
+    const root = monorepo();
+    const { manifest, bundles } = releaseCommits(root);
+    const base = bareMirrors(mirrors);
+    const irSplit = manifest[1]?.split ?? "";
+    const unrelated = git(root, ["commit-tree", `${irSplit}^{tree}`, "-m", "Edited by hand."], {
+      ...process.env,
+      ...IDENTITY,
+    });
+
+    git(root, ["push", "--quiet", join(base, "seampact-ir.git"), `${unrelated}:refs/heads/main`]);
+
+    expect(() => pushMirrors({ bundles, manifest, version: VERSION, remoteBase: base })).toThrow(
+      /git could not push seampact\/ir to [^\n]*seampact-ir\.git/,
+    );
+    expect(remoteRef(base, "seampact-ir", "refs/heads/main")).toBe(unrelated);
+    expect(() => remoteRef(base, "seampact-ir", `refs/tags/v${VERSION}`)).toThrow();
+    expect(remoteRef(base, "seampact-hooks", `refs/tags/v${VERSION}`)).toBe(manifest[0]?.release);
   });
 
   it("fails by name, before pushing anything, on a tag at another tree", () => {

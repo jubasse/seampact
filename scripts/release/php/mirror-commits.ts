@@ -6,7 +6,15 @@
 //   node scripts/release/php/mirror-commits.ts <splits.txt> --version <version> --pins <binaries.json> --out <dir>
 //     --manifest <file> [--source <commit>] [--root <dir>]
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isJsonRecord } from "../json-record.ts";
@@ -19,6 +27,8 @@ const PINS_PATH = "resources/binaries.json";
 const MIRROR_REF_NAMESPACE = "refs/mirrors";
 const RELEASE_AUTHOR_NAME = "seampact release";
 const RELEASE_AUTHOR_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com";
+const PACKAGE_NAME = /^[a-z0-9-]+$/;
+const GIT_OBJECT_ID = /^[0-9a-f]{40}$/;
 
 export interface MirrorManifestEntry {
   /** The Composer package, `seampact/<name>`. */
@@ -126,12 +136,21 @@ function splitPackageName(root: string, split: string, name: string): string {
 
 // The split's tree with the release pins in place of the empty ones, committed on the split.
 function pinCommit(input: MirrorCommitsInput, split: string): string {
+  const pinnedPackage = `${VENDOR}/${PINNED_PACKAGE}`;
+
+  try {
+    git(input.root, ["cat-file", "-e", `${split}:${PINS_PATH}`]);
+  } catch {
+    throw new ReleaseError(
+      `the split of ${pinnedPackage} has no ${PINS_PATH}: php/${PINNED_PACKAGE} must hold the empty pins the release replaces`,
+    );
+  }
+
   const index = mkdtempSync(join(tmpdir(), "mirror-index-"));
 
   try {
     const env = { ...process.env, GIT_INDEX_FILE: join(index, "index") };
 
-    git(input.root, ["cat-file", "-e", `${split}:${PINS_PATH}`]);
     git(input.root, ["read-tree", split], env);
 
     const blob = execFileSync("git", ["hash-object", "-w", "--stdin"], {
@@ -166,18 +185,67 @@ function pinCommit(input: MirrorCommitsInput, split: string): string {
       { ...process.env, ...identity },
     );
   } catch (error) {
-    if (error instanceof ReleaseError) throw error;
-
     throw new ReleaseError(
-      `the pin commit of ${VENDOR}/${PINNED_PACKAGE} failed (${error instanceof Error ? error.message : String(error)}): ` +
-        `its split must hold ${PINS_PATH}`,
+      `the pin commit of ${pinnedPackage} failed: ${error instanceof Error ? error.message : String(error)}`,
     );
   } finally {
     rmSync(index, { recursive: true, force: true });
   }
 }
 
-export function parsedMirrorManifest(text: string, source: string): MirrorManifestEntry[] {
+/** The PHP packages of the repository, as scripts/php-split.sh splits them: every `php/<name>` with a composer.json. */
+export function phpPackageNames(root: string): string[] {
+  return readdirSync(join(root, "php"), { withFileTypes: true })
+    .filter(
+      (entry) => entry.isDirectory() && existsSync(join(root, "php", entry.name, "composer.json")),
+    )
+    .map((entry) => entry.name)
+    .sort();
+}
+
+/**
+ * The manifest lists each package of the repository once, as `seampact/<name>` on the mirror `seampact-<name>`, with
+ * 40-hex commits and trees; any other mirror is refused, so a manifest never names a remote the release does not own.
+ */
+export function mirrorManifestProblems(
+  manifest: readonly MirrorManifestEntry[],
+  packageNames: readonly string[],
+): string[] {
+  const problems: string[] = [];
+
+  for (const [position, entry] of manifest.entries()) {
+    const name = entry.mirror.startsWith(`${VENDOR}-`) ? entry.mirror.slice(VENDOR.length + 1) : "";
+
+    if (!PACKAGE_NAME.test(name) || !packageNames.includes(name))
+      problems.push(
+        `entry ${position} names the mirror ${JSON.stringify(entry.mirror)}, not one of ${packageNames.map((known) => `${VENDOR}-${known}`).join(", ")}`,
+      );
+    else if (entry.package !== `${VENDOR}/${name}`)
+      problems.push(
+        `entry ${position} puts ${JSON.stringify(entry.package)} on ${entry.mirror}, which holds ${VENDOR}/${name}`,
+      );
+
+    for (const field of ["split", "release", "tree"] as const)
+      if (!GIT_OBJECT_ID.test(entry[field]))
+        problems.push(
+          `entry ${position} has the ${field} ${JSON.stringify(entry[field])}, not a 40-hex id`,
+        );
+  }
+
+  for (const name of packageNames) {
+    const count = manifest.filter((entry) => entry.mirror === `${VENDOR}-${name}`).length;
+
+    if (count !== 1) problems.push(`${VENDOR}-${name} is listed ${count} times, not once`);
+  }
+
+  return problems;
+}
+
+export function parsedMirrorManifest(
+  text: string,
+  source: string,
+  packageNames: readonly string[],
+): MirrorManifestEntry[] {
   const refused = (problem: string) =>
     new ReleaseError(`${source} is not the mirror manifest split-php writes: ${problem}`);
   let parsed: unknown;
@@ -190,7 +258,7 @@ export function parsedMirrorManifest(text: string, source: string): MirrorManife
 
   if (!Array.isArray(parsed) || parsed.length === 0) throw refused("not a non-empty array");
 
-  return parsed.map((entry: unknown, position) => {
+  const manifest = parsed.map((entry: unknown, position): MirrorManifestEntry => {
     const {
       package: composerName,
       mirror,
@@ -210,6 +278,11 @@ export function parsedMirrorManifest(text: string, source: string): MirrorManife
 
     return { package: composerName, mirror, split, release, tree };
   });
+  const problems = mirrorManifestProblems(manifest, packageNames);
+
+  if (problems.length > 0) throw refused(problems.join("; "));
+
+  return manifest;
 }
 
 /** The bundle directory holds exactly one bundle per mirror of the manifest. */
