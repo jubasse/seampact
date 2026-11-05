@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -61,7 +61,7 @@ function portalAt(url: string): CentralPortal {
 
 async function localPortal(): Promise<{ portal: CentralPortal; published: string }> {
   const published = temporaryDirectory("central-published-");
-  const local = await startLocalPortal(published);
+  const local = await startLocalPortal(published, temporaryDirectory("central-portal-work-"));
 
   cleanups.push(local.close);
 
@@ -199,6 +199,40 @@ describe("the Central publish", () => {
     );
 
     expect(publication.published).toEqual(twoArtefacts.coordinates);
+  });
+
+  it("removes the portal's working folder when it stops", async () => {
+    const work = temporaryDirectory("central-portal-work-");
+    const local = await startLocalPortal(temporaryDirectory("central-published-"), work);
+    const bundle = stagedJar("classes");
+
+    await publishToCentral(portalAt(local.url), bundle, bundleManifest(bundle), expected);
+    const duringTheRun = readdirSync(work);
+
+    await local.close();
+
+    expect(duringTheRun).toHaveLength(1);
+    expect(readdirSync(work)).toEqual([]);
+  });
+
+  it("names the network error under a failed request", async () => {
+    const server = createServer();
+
+    await new Promise<void>((started) => server.listen(0, "127.0.0.1", started));
+    const address = server.address();
+    const port = typeof address === "object" && address !== null ? address.port : 0;
+
+    await new Promise<void>((closed) => server.close(() => closed()));
+    const bundle = stagedJar("classes");
+
+    await expect(
+      publishToCentral(
+        portalAt(`http://127.0.0.1:${port}`),
+        bundle,
+        bundleManifest(bundle),
+        expected,
+      ),
+    ).rejects.toThrow(/ failed: fetch failed: connect ECONNREFUSED 127\.0\.0\.1:/);
   });
 
   it("fails by name, uploading nothing, on a version Central holds with other bytes", async () => {

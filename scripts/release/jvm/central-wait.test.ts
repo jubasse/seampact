@@ -47,7 +47,11 @@ async function repository(modules: Record<string, string>): Promise<string> {
     writeFileSync(`${base}.jar`, "classes");
   }
 
-  const portal = await startLocalPortal(directory);
+  const work = mkdtempSync(join(tmpdir(), "central-wait-work-"));
+
+  cleanups.push(() => rmSync(work, { recursive: true, force: true }));
+
+  const portal = await startLocalPortal(directory, work);
 
   cleanups.push(portal.close);
 

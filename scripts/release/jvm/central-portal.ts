@@ -300,7 +300,18 @@ async function timedFetch(url: string, init: RequestInit): Promise<Response> {
     return await fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MILLISECONDS) });
   } catch (error) {
     throw new ReleaseError(
-      `${init.method} ${url} failed: ${error instanceof Error ? error.message : String(error)}`,
+      `${init.method} ${url} failed: ${boundedPortalText(failureText(error))}`,
     );
   }
+}
+
+// fetch fails with only "fetch failed": the network error that explains it is its cause.
+function failureText(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+
+  const cause = error.cause;
+
+  if (cause === undefined) return error.message;
+
+  return `${error.message}: ${cause instanceof Error ? cause.message : String(cause)}`;
 }

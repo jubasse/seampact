@@ -2,12 +2,12 @@
 // calls publish-central makes (upload, status, publish, published) on the loopback, publishes a deployment by
 // unzipping it into a file repository, and serves that repository as repo1 does, so the consumers of the rehearsal
 // resolve the published artefacts from it. A deployment is `PENDING` at its first status call, then `VALIDATED`, so
-// the poll is exercised. It checks only the authorization's form: it holds nothing secret.
-//   node scripts/release/jvm/local-portal.ts <repository-dir> --url-file <file>
+// the poll is exercised. It checks only the authorization's form: it holds nothing secret. Its uploads are unzipped
+// in a working folder under `--work-dir`, else `RUNNER_TEMP`, removed when it stops.
+//   node scripts/release/jvm/local-portal.ts <repository-dir> --url-file <file> [--work-dir <dir>]
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parsedArguments, runReleaseCommand } from "../release-cli.ts";
 import { ReleaseError } from "../release-version.ts";
@@ -23,6 +23,8 @@ const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_NOT_FOUND = 404;
 const MULTIPART_BOUNDARY = /boundary=(?:"([^"]+)"|([^;]+))/;
+const STOP_SIGNALS = ["SIGINT", "SIGTERM"] as const;
+const EXIT_STOPPED = 0;
 
 interface Deployment {
   readonly directory: string;
@@ -35,32 +37,57 @@ export interface LocalPortal {
   readonly close: () => Promise<void>;
 }
 
-export async function startLocalPortal(repository: string): Promise<LocalPortal> {
+/**
+ * Starts the portal on the loopback; its working folder is made under `workParent`, else `RUNNER_TEMP`, and
+ * removed by `close`.
+ */
+export async function startLocalPortal(
+  repository: string,
+  workParent: string | undefined = process.env.RUNNER_TEMP,
+): Promise<LocalPortal> {
+  if (workParent === undefined || workParent === "")
+    throw new ReleaseError(
+      "the local portal has no parent for its working folder: pass --work-dir <dir> or set RUNNER_TEMP",
+    );
+
+  const work = mkdtempSync(join(workParent, "seampact-local-portal-"));
   const deployments = new Map<string, Deployment>();
   const server = createServer((request, response) => {
-    answer(request, response, repository, deployments).catch((error: unknown) =>
+    answer(request, response, repository, work, deployments).catch((error: unknown) =>
       reply(response, HTTP_BAD_REQUEST, error instanceof Error ? error.message : String(error)),
     );
   });
 
-  await new Promise<void>((started) => server.listen(0, LOOPBACK, started));
+  try {
+    await new Promise<void>((started, failed) => {
+      server.once("error", failed);
+      server.listen(0, LOOPBACK, started);
+    });
 
-  const address = server.address();
+    const address = server.address();
 
-  if (address === null || typeof address === "string")
-    throw new ReleaseError("the local portal has no TCP address");
+    if (address === null || typeof address === "string")
+      throw new ReleaseError("the local portal has no TCP address");
 
-  return { url: `http://${LOOPBACK}:${address.port}`, close: () => closed(server) };
+    return { url: `http://${LOOPBACK}:${address.port}`, close: () => closed(server, work) };
+  } catch (error) {
+    await closed(server, work);
+
+    throw error;
+  }
 }
 
-function closed(server: Server): Promise<void> {
-  return new Promise((done) => server.close(() => done()));
+async function closed(server: Server, work: string): Promise<void> {
+  if (server.listening) await new Promise<void>((done) => server.close(() => done()));
+
+  rmSync(work, { recursive: true, force: true });
 }
 
 async function answer(
   request: IncomingMessage,
   response: ServerResponse,
   repository: string,
+  work: string,
   deployments: Map<string, Deployment>,
 ): Promise<void> {
   const url = new URL(request.url ?? "/", `http://${LOOPBACK}`);
@@ -105,7 +132,7 @@ async function answer(
     const id = `local-${deployments.size + 1}`;
 
     deployments.set(id, {
-      directory: unzippedBundle(await multipartFile(request)),
+      directory: unzippedBundle(await multipartFile(request), join(work, id)),
       state: "PENDING",
     });
 
@@ -166,26 +193,47 @@ async function multipartFile(request: IncomingMessage): Promise<Buffer> {
   return body.subarray(start, end);
 }
 
-function unzippedBundle(zip: Buffer): string {
-  const directory = mkdtempSync(join(tmpdir(), "seampact-local-portal-"));
+// A deployment that fails to unzip leaves no folder behind.
+function unzippedBundle(zip: Buffer, directory: string): string {
+  mkdirSync(directory);
 
-  writeFileSync(join(directory, "bundle.zip"), zip);
-  execFileSync("unzip", ["-q", "bundle.zip", "-d", "files"], { cwd: directory });
+  try {
+    writeFileSync(join(directory, "bundle.zip"), zip);
+    execFileSync("unzip", ["-q", "bundle.zip", "-d", "files"], { cwd: directory });
+  } catch (error) {
+    rmSync(directory, { recursive: true, force: true });
+
+    throw error;
+  }
+
+  rmSync(join(directory, "bundle.zip"));
 
   return join(directory, "files");
 }
 
 if (import.meta.main)
   await runReleaseCommand("local-portal", async () => {
-    const usage = "local-portal.ts <repository-dir> --url-file <file>";
-    const { values, positionals } = parsedArguments({ "url-file": { type: "string" } }, usage);
+    const usage = "local-portal.ts <repository-dir> --url-file <file> [--work-dir <dir>]";
+    const { values, positionals } = parsedArguments(
+      { "url-file": { type: "string" }, "work-dir": { type: "string" } },
+      usage,
+    );
     const [repository] = positionals;
     const urlFile = values["url-file"];
 
     if (repository === undefined || urlFile === undefined)
       throw new ReleaseError(`usage: ${usage}`);
 
-    const portal = await startLocalPortal(resolve(repository));
+    const portal = await startLocalPortal(
+      resolve(repository),
+      values["work-dir"] ?? process.env.RUNNER_TEMP,
+    );
+
+    // A stopped portal, the job's end or a cancel, removes its working folder.
+    for (const signal of STOP_SIGNALS)
+      process.once(signal, () => {
+        portal.close().finally(() => process.exit(EXIT_STOPPED));
+      });
 
     writeFileSync(urlFile, `${portal.url}\n`);
     console.log(
