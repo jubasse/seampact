@@ -276,7 +276,7 @@ In pipeline order (ADR 0006 section 1).
 - `python/ir/src/seampact/ir/binary`: The compiler binary of a Python build (ADR 0010): wheel lookup, pin, platform, private cache and runner.
 - `python/ir/src/seampact/ir/bundle`: The bundle reader and verifier (ADR 0011): reads a tarball or a directory, runs the pinned-bundle check.
 - `python/ir/src/seampact/ir/config`: The app config of a Python build (ADR 0011 "The app config"): the YAML read, the schema check, the entry view.
-- `python/ir/src/seampact/ir/https`: The HTTPS download both release channels share: the bundle tarball and the compiler binary.
+- `python/ir/src/seampact/ir/https`: The HTTPS download both release channels share (the bundle tarball and the compiler binary), with the printable URL and the quoting of untrusted text their messages use.
 - `python/ir/src/seampact/ir/naming`: The native naming of ADR 0007: name segments, roles, operation ids and Python identifiers, checked against the shared vectors.
 - `python/ir/src/seampact/ir/read`: The IR reader: the nesting, support and must-act checks of ADR 0005, then the generated model's hydrator.
 - `python/ir/src/seampact/ir/run`: The `seampact` runner of a Python build: `generate` and `check` an app config with the targets installed as `seampact.generators` entry points, and the documents through the compiler binary.
