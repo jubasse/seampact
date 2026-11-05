@@ -63,6 +63,8 @@ jobs:
             ^fixtures/reference/
             ^scripts/dist-smoke/
             ^scripts/consumers/php/bundle\.sh$
+            ^scripts/php-split\.sh$
+            ^scripts/release/php/installed-types-load\.php$
             ^\.github/actions/
             ^\.github/workflows/p6-php-core\.yml$
       - name: Detect a change to what the binary rows prove
@@ -154,16 +156,10 @@ jobs:
         run: |
           set -euo pipefail
           work="$WORK"
-          rm -rf "$work"; mkdir -p "$work/trees" "$work/projects"
           # Every mirror tree first, so that each install proof resolves its seampact siblings from the PR copies.
-          for manifest in php/*/composer.json; do
-            name=$(basename "$(dirname "$manifest")")
-            # The mirror's history: the directory's commits rewritten with php/<name> as the root; never pushed.
-            split=$(git subtree split --quiet --prefix="php/$name" HEAD)
-            mkdir "$work/trees/$name"
-            git archive "$split" | tar -x -C "$work/trees/$name"
-            test -f "$work/trees/$name/composer.json" || { echo "The split tree of php/$name has no composer.json at its root."; exit 1; }
-          done
+          # The mirror's history: each directory's commits rewritten with php/<name> as the root; never pushed.
+          scripts/php-split.sh "$work"
+          mkdir "$work/projects"
           for manifest in php/*/composer.json; do
             name=$(basename "$(dirname "$manifest")")
             package=$(php -r 'echo json_decode(file_get_contents($argv[1]), true, flags: JSON_THROW_ON_ERROR)["name"];' "$work/trees/$name/composer.json")
@@ -209,28 +205,7 @@ jobs:
             bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --working-dir="$project" --no-interaction --no-progress
             test ! -L "$project/vendor/$package" || { echo "$package was symlinked, not copied."; exit 1; }
             # Every class of the installed copy loads through its own autoloader.
-            php -r '
-              [, $project, $package] = $argv;
-              require "$project/vendor/autoload.php";
-              $installed = json_decode(file_get_contents("$project/vendor/$package/composer.json"), true, flags: JSON_THROW_ON_ERROR);
-              $loaded = 0;
-              foreach ($installed["autoload"]["psr-4"] as $prefix => $directory) {
-                $root = "$project/vendor/$package/" . rtrim($directory, "/");
-                foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)) as $file) {
-                  $type = $prefix . str_replace("/", "\\", substr($file->getPathname(), strlen($root) + 1, -4));
-                  if (!class_exists($type) && !interface_exists($type) && !enum_exists($type)) {
-                    fwrite(STDERR, "$package: $type does not load from the installed copy.\n");
-                    exit(1);
-                  }
-                  $loaded++;
-                }
-              }
-              if ($loaded === 0) {
-                fwrite(STDERR, "$package: no type loads from the installed copy; check its psr-4 autoload.\n");
-                exit(1);
-              }
-              echo "$package installs alone from its split tree; $loaded types load.\n";
-            ' "$project" "$package"
+            php scripts/release/php/installed-types-load.php "$project" "$package"
           done
 
   split-drift:

@@ -58,16 +58,24 @@ const NPM_PUBLISH = "npm publish";
 const SPAWNED_PUBLISH = "a `publish` argument of a spawned command";
 const CENTRAL_PUBLISH = "Central Portal publish";
 const PLUGIN_PORTAL_PUBLISH = "Gradle Plugin Portal publish";
+const PYPI_PUBLISH = "PyPI publish action";
+const MIRROR_PUSH = "a `push` argument of a spawned git";
 
 // The release modules that publish, and what each may run: the idempotent publishes of release.yml, one per registry.
 const ACCEPTED_RELEASE_PUBLISHES: ReadonlyMap<string, readonly string[]> = new Map([
   ["scripts/release/publish-npm.ts", [NPM_PUBLISH, SPAWNED_PUBLISH]],
   ["scripts/release/jvm/central-portal.ts", [CENTRAL_PUBLISH]],
   ["scripts/release/jvm/publish-plugin.ts", [PLUGIN_PORTAL_PUBLISH]],
+  ["scripts/release/php/push-mirrors.ts", [MIRROR_PUSH]],
 ]);
 const ACCEPTED_RELEASE_PUBLISHERS = [...ACCEPTED_RELEASE_PUBLISHES]
   .map(([file, publishes]) => `${file} (${publishes[0]})`)
   .join(", ");
+
+// The workflow that publishes through an action rather than a release script: PyPI's trusted publishing.
+const ACCEPTED_WORKFLOW_PUBLISHES: ReadonlyMap<string, readonly string[]> = new Map([
+  [".github/workflows/release.yml", [PYPI_PUBLISH]],
+]);
 
 type Rec = Record<string, unknown>;
 const isRec = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -425,8 +433,10 @@ const CHANGESETS_ACTION_PUBLISH: [RegExp, string] = [
   "a changesets/action `publish:` input",
 ];
 
+// A lint over text, not a shell parser: a tool counts at a command position (not after `-`, as in a job id like
+// `publish-npm`), and its subcommand only as a whole word (not `publish-pypi` or `push-mirrors`).
 const PUBLISH: [RegExp, string][] = [
-  [/\b(?:npm|pnpm|yarn)\s+(?:[\w-]+\s+)*publish\b/, NPM_PUBLISH],
+  [/(?<![\w-])(?:npm|pnpm|yarn)\s+(?:[\w-]+\s+)*publish(?![\w-])/, NPM_PUBLISH],
   [/\bchangeset\s+publish\b/, "changeset publish"],
   CHANGESETS_ACTION_PUBLISH,
   // `publishToMavenLocal` only writes the local `~/.m2` cache the consumer builds read; it reaches no registry.
@@ -435,6 +445,11 @@ const PUBLISH: [RegExp, string][] = [
   [/\bcomposer\s+.*\b(?:publish|deploy)\b/, "Composer publish"],
   // The plugin-publish task, also when a script passes it to Gradle as an argument.
   [/\bpublishPlugins\b/, PLUGIN_PORTAL_PUBLISH],
+  [/\btwine\s+(?:[\w-]+\s+)*upload\b/, "twine upload"],
+  [/\buv\s+publish\b/, "uv publish"],
+  [/\bpypa\/gh-action-pypi-publish\b/, PYPI_PUBLISH],
+  // `git [-C <dir>] [-c <key=value>] [--option] push`, a value possibly quoted with spaces.
+  [/(?<![\w-])git\s+(?:-[Cc]\s+(?:[^\s"']|"[^"]*"|'[^']*')+\s+|-\S+\s+)*push(?![\w-])/, "git push"],
 ];
 
 function publishes(code: string): string | undefined {
@@ -448,6 +463,7 @@ const RELEASE_SCRIPT_PUBLISH: [RegExp, string][] = [
   [/["'`]publish["'`]/, SPAWNED_PUBLISH],
   // The publisher API calls that upload a deployment or publish it.
   [/\/api\/v1\/publisher\/(?:upload|deployment)\b/, CENTRAL_PUBLISH],
+  [/["'`]push["'`]/, MIRROR_PUSH],
 ];
 
 // A comment names a publish without running it: `//`, `#` and the lines of a `/** */` block. A shell `*)` case arm
@@ -518,7 +534,7 @@ function checkWorkflows(root: string, out: Violation[]): void {
 
     for (const { line, code } of workflowCommands(readFileSync(join(root, file), "utf8")))
       for (const [re, what] of PUBLISH)
-        if (re.test(code))
+        if (re.test(code) && ACCEPTED_WORKFLOW_PUBLISHES.get(file)?.includes(what) !== true)
           out.push({
             file,
             rule: "namespaces",

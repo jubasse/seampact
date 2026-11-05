@@ -1,0 +1,7 @@
+# The mirror's Composer dist archive ships the library only: no tests, lock file or dev configs.
+/tests export-ignore
+/composer.lock export-ignore
+/phpstan.neon export-ignore
+/phpunit.xml.dist export-ignore
+/.gitignore export-ignore
+/.gitattributes export-ignore
