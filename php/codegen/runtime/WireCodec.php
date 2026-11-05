@@ -17,6 +17,7 @@ final class WireCodec
     private const DATE_TIME_SECONDS = 'Y-m-d\TH:i:s';
     private const DATE_TIME_MICROSECONDS = 'u';
     private const DATE_TIME_OFFSET = 'P';
+    private const SECONDS_PER_MINUTE = 60;
     private const OPAQUE = 'opaque';
 
     private function __construct()
@@ -70,9 +71,16 @@ final class WireCodec
         return $arguments;
     }
 
-    /** RFC 3339 with the fraction the value holds, without trailing zeros (ADR 0003 section 8). */
+    /**
+     * RFC 3339 with the fraction the value holds, without trailing zeros (ADR 0003 section 8). An offset with seconds
+     * has no RFC 3339 form, so such a value is written in UTC.
+     */
     public static function dateTimeText(\DateTimeInterface $value): string
     {
+        if ($value->getOffset() % self::SECONDS_PER_MINUTE !== 0) {
+            $value = \DateTimeImmutable::createFromInterface($value)->setTimezone(new \DateTimeZone('UTC'));
+        }
+
         $fraction = rtrim($value->format(self::DATE_TIME_MICROSECONDS), '0');
 
         return $value->format(self::DATE_TIME_SECONDS)

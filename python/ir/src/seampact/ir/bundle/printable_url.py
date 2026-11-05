@@ -6,33 +6,41 @@ import re
 from typing import Final
 from urllib.parse import urlsplit
 
-# WHATWG skips leading spaces and reads `https:/` or `https:\\` as `https://`, so the text fallback does too.
-_SCHEME_PREFIX: Final = re.compile(r"[\t\n\r ]*[A-Za-z][A-Za-z0-9+.-]*:")
+# WHATWG strips C0 controls and spaces at both ends, removes tab, CR and LF anywhere, and reads `https:/` or
+# `https:\\` as `https://`, so the text fallback does too.
+_C0_CONTROL_OR_SPACE: Final = "".join(chr(code) for code in range(0x21))
+_TAB_OR_NEWLINE: Final = re.compile(r"[\t\n\r]")
+_SCHEME_PREFIX: Final = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
 _AUTHORITY_SLASHES: Final = re.compile(r"[/\\]*")
 _QUERY_OR_FRAGMENT: Final = re.compile(r"[?#]")
 _ABSOLUTE_URL: Final = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://")
 
+# The special schemes' default ports, which WHATWG drops from a URL.
+_DEFAULT_PORTS: Final = {"http": 80, "https": 443, "ws": 80, "wss": 443, "ftp": 21}
+
 
 def printable_url(text: str) -> str:
-    stripped = text.lstrip("\t\n\r ")
+    cleaned = _TAB_OR_NEWLINE.sub("", text.strip(_C0_CONTROL_OR_SPACE))
 
-    if _ABSOLUTE_URL.match(stripped) is None:
-        return _redacted_by_text(text) if _SCHEME_PREFIX.match(text) else text
+    if _ABSOLUTE_URL.match(cleaned) is None:
+        return _redacted_by_text(cleaned) if _SCHEME_PREFIX.match(cleaned) else text
 
     try:
-        parts = urlsplit(stripped)
+        parts = urlsplit(cleaned)
         host = parts.hostname
         port = parts.port
     except ValueError:
-        return _redacted_by_text(text)
+        return _redacted_by_text(cleaned)
 
     if not parts.scheme or not host:
-        return _redacted_by_text(text)
+        return _redacted_by_text(cleaned)
 
-    shown_port = f":{port}" if port is not None else ""
+    scheme = parts.scheme.lower()
+    shown_host = f"[{host}]" if ":" in host else host.lower()
+    shown_port = "" if port is None or port == _DEFAULT_PORTS.get(scheme) else f":{port}"
     path = parts.path or "/"
 
-    return f"{parts.scheme.lower()}://{host.lower()}{shown_port}{path}"
+    return f"{scheme}://{shown_host}{shown_port}{path}"
 
 
 def _redacted_by_text(text: str) -> str:
@@ -47,4 +55,4 @@ def _redacted_by_text(text: str) -> str:
     without_user = authority_and_rest.rpartition("@")[2]
     without_query = _QUERY_OR_FRAGMENT.split(without_user, maxsplit=1)[0]
 
-    return text[:scheme_end].lstrip("\t\n\r ") + slashes_text + without_query
+    return text[:scheme_end] + slashes_text + without_query

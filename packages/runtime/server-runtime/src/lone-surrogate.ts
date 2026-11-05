@@ -1,7 +1,8 @@
-// A string value holding a lone surrogate is not Unicode text; the request body is refused, as PHP and Python do.
-// A key keeps it, for the unknown-key report.
+// Whether a parsed JSON tree holds a lone surrogate, in a string value or a key, which is not Unicode text.
 
-/** Whether a string value anywhere in a parsed JSON tree holds a lone surrogate. */
+import { isPlainObject } from "./plain-object.js";
+
+/** Whether a string anywhere in a parsed JSON tree, a key included, holds a lone surrogate. */
 export function holdsLoneSurrogate(tree: unknown): boolean {
   const pending: unknown[] = [tree];
 
@@ -10,8 +11,15 @@ export function holdsLoneSurrogate(tree: unknown): boolean {
 
     if (typeof item === "string" && !item.isWellFormed()) return true;
 
-    if (Array.isArray(item)) pending.push(...item);
-    else if (typeof item === "object" && item !== null) pending.push(...Object.values(item));
+    if (Array.isArray(item)) {
+      for (const child of item) pending.push(child);
+    } else if (isPlainObject(item)) {
+      for (const [key, child] of Object.entries(item)) {
+        if (!key.isWellFormed()) return true;
+
+        pending.push(child);
+      }
+    }
   }
 
   return false;
