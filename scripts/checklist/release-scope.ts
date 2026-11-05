@@ -31,6 +31,9 @@ const NODE_SERVERS: readonly string[] = ["nestjs", "fastify", "express", "adonis
 const VARIANTS_FORM =
   "a principal with variants (viewer_or_device) and, on the Node servers, optional authentication";
 
+// The servers whose generators read the IR without Node: the JVM and PHP targets.
+const JVM_AND_PHP_SERVERS: readonly string[] = ["spring-boot", "laravel", "symfony"];
+
 const refusedOnEveryServer = (form: string): ItemAfter1_0 => ({
   targets: SERVERS_FOR_1_0,
   refusedOn: SERVERS_FOR_1_0,
@@ -54,6 +57,39 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
   ["CHK-019", refusedOnEveryServer("a principal requirement")],
   ["CHK-020", refusedOnEveryServer("a principal binding")],
   ["CHK-094", refusedOnEveryServer("a scope resolved by the application")],
+  [
+    "CHK-060",
+    {
+      targets: JVM_AND_PHP_SERVERS,
+      reason:
+        "the JVM and PHP servers generate no test helper: an additive artefact a later release can add",
+    },
+  ],
+  [
+    "CHK-066",
+    {
+      targets: JVM_AND_PHP_SERVERS,
+      reason:
+        "the JVM and PHP servers ship the IdempotencyStore interface but no reference store: an additive package a later release can add",
+    },
+  ],
+  [
+    "CHK-068",
+    {
+      targets: JVM_AND_PHP_SERVERS,
+      reason:
+        "the JVM and PHP servers serve no dev docs: an additive artefact a later release can add",
+    },
+  ],
+  [
+    "CHK-146",
+    {
+      targets: ["spring-boot", "laravel"],
+      refusedOn: ["spring-boot", "laravel"],
+      reason:
+        "1.0 refuses the suffixes option and handlers perOperation by name at generation; codeName is served",
+    },
+  ],
   [
     "CHK-072",
     { reason: "internal installs before publication (A3), gone once the packages are published" },

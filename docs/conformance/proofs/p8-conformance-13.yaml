@@ -1,0 +1,96 @@
+# docs/conformance/proofs/p8-conformance-13.yaml
+lane: p8-conformance-13
+proofs:
+  - id: CHK-044
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheGoldenTree'
+      - 'laravel: php/laravel/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden'
+      - 'symfony: php/symfony/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden'
+  - id: CHK-076
+    tests:
+      - 'spring-boot: ci: p6-spring-boot.yml#build'
+      - 'spring-boot: ci: p6-jvm-core.yml#java'
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/bundle/BundleVectorsTest.kt#theValidArchiveExtractsToAVerifiedBundle'
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/binary/BinaryPinTest.kt#aBinaryWithAnotherHashIsNeverStarted'
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/binary/BinaryPinTest.kt#aBinaryWithItsHashIsStarted'
+      - 'laravel: ci: p6-laravel.yml#e2e'
+      - 'laravel: ci: p6-php-core.yml#local-yaml'
+      - 'laravel: php/ir/tests/Bundle/BundleVectorsTest.php#testExtractsTheValidArchiveIntoAPrivateDirectoryThatVerifies'
+      - 'laravel: php/ir/tests/Binary/BinaryPinTest.php#testAStubWithAWrongHashNeverStarts'
+      - 'laravel: php/ir/tests/Binary/BinaryStubRunTest.php#testRunsTheCopyAndReadsTheIrOfEachApi'
+      - 'symfony: ci: p6-symfony.yml#e2e'
+      - 'symfony: ci: p6-php-core.yml#local-yaml'
+      - 'symfony: php/ir/tests/Bundle/BundleVectorsTest.php#testExtractsTheValidArchiveIntoAPrivateDirectoryThatVerifies'
+      - 'symfony: php/ir/tests/Binary/BinaryPinTest.php#testAStubWithAWrongHashNeverStarts'
+      - 'symfony: php/ir/tests/Binary/BinaryStubRunTest.php#testRunsTheCopyAndReadsTheIrOfEachApi'
+  - id: CHK-077
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/read/IrReaderTest.kt#refusesOtherVersion'
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/read/IrReaderTest.kt#refusesOtherRevision'
+      - 'laravel: php/ir/tests/IrReaderTest.php#testRefusesOtherVersion'
+      - 'laravel: php/ir/tests/IrReaderTest.php#testRefusesOtherRevision'
+      - 'symfony: php/ir/tests/IrReaderTest.php#testRefusesOtherVersion'
+      - 'symfony: php/ir/tests/IrReaderTest.php#testRefusesOtherRevision'
+  - id: CHK-078
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/read/IrReaderTest.kt#dropsUnknownMembersOnly'
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/read/IrReaderTest.kt#refusesUnknownKind'
+      - 'laravel: php/ir/tests/IrReaderTest.php#testDropsUnknownMembersOnly'
+      - 'laravel: php/ir/tests/IrReaderTest.php#testRefusesUnknownKind'
+      - 'symfony: php/ir/tests/IrReaderTest.php#testDropsUnknownMembersOnly'
+      - 'symfony: php/ir/tests/IrReaderTest.php#testRefusesUnknownKind'
+  - id: CHK-099
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheGoldenTree'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/io/github/jubasse/seampact/springboot/runtime/SharedRuntimeTest.java#aHookBeanOfTheRuntimeTypeItselfStopsTheBoot'
+      - 'laravel: php/laravel/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden'
+      - 'laravel: php/laravel/tests/HooksTest.php#testAListenerBoundToTheWrongTypeIsRefusedByName'
+      - 'symfony: php/symfony/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden'
+      - 'symfony: php/symfony/tests/HookCheckWarmerTest.php#testAWrongTypedIdempotencyStoreIsListedWithTheOtherProblems'
+  - id: CHK-104
+    tests:
+      - 'spring-boot: scripts/package-rules/package-rules.test.ts#passes on the repository'
+      - 'spring-boot: scripts/package-rules/package-rules.test.ts#namespaces and no publish'
+      - 'laravel: scripts/package-rules/package-rules.test.ts#passes on the repository'
+      - 'laravel: scripts/package-rules/package-rules.test.ts#namespaces and no publish'
+      - 'symfony: scripts/package-rules/package-rules.test.ts#passes on the repository'
+      - 'symfony: scripts/package-rules/package-rules.test.ts#namespaces and no publish'
+  - id: CHK-155
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheGoldenTree'
+      - 'laravel: php/laravel/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden'
+      - 'laravel: php/laravel/tests/ContractRoutesTest.php#testEachRouteNameConstantNamesOneRegisteredRoute'
+      - 'symfony: php/symfony/tests/GeneratedPlacementTest.php#testTheLoaderServesItsOwnApiAndRegistersALiteralSegmentBeforeAPlaceholder'
+      - 'symfony: php/symfony/tests/GeneratedPlacementTest.php#testTheControllerPassRunsBeforeTheControllerLocatorIsBuilt'
+  - id: CHK-166
+    tests:
+      - 'spring-boot: jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/FileAndDslConflictTest.kt#theDslGeneratesWhatTheFileDoesAndBothAreRefused'
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/config/ConfigReaderTest.kt#readsTheDslTreeAndRefusesAFileBesideIt'
+      - 'spring-boot: jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/GeneratedDriftTest.kt#aFreshCleanCheckAndBuildPassWhenTheOutputIsUnderTheBuildDirectory'
+      - 'spring-boot: jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/GeneratePluginTest.kt#generatesCompilesAndCaches'
+      - 'spring-boot: jvm/seampact-maven-plugin/src/test/kotlin/io/github/jubasse/seampact/maven/GenerateMojoIT.kt#generatesCompilesSkipsOnItsStampAndChecks'
+      - 'laravel: php/laravel/tests/RegenerationTest.php#testTheGenerateCommandRegistersTheApiUnderARuntimeVersionMismatch'
+  - id: CHK-168
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/redaction/GoldenRedactionTest.java#credentialsRecordHidesEveryMember'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#redactsSensitiveScalarsInParamsAndArrayItems'
+      - 'spring-boot: jvm/seampact-hooks/src/test/java/io/github/jubasse/seampact/hooks/RedactedToStringTest.java#requestViewHidesHeaderValues'
+      - 'laravel: php/laravel/tests/RedactionTest.php#testVarDumpShowsNoSecret'
+      - 'laravel: php/laravel/tests/RedactionTest.php#testPrintRShowsNoSecret'
+      - 'symfony: php/symfony/tests/RedactionTest.php#testVarDumpShowsNoSecret'
+      - 'symfony: php/symfony/tests/RedactionTest.php#testPrintRShowsNoSecret'
+  - id: CHK-170
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/optins/api/spring/SpringdocDocumentTest.java#frameworkDocsOffTurnsTheDocumentOff'
+      - 'spring-boot: jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/GeneratePluginTest.kt#putsTheFrameworkDocsFileOnTheClasspathAndTurnsSecurityOnFromTheClasspath'
+      - 'spring-boot: jvm/seampact-maven-plugin/src/test/kotlin/io/github/jubasse/seampact/maven/GenerateMojoIT.kt#putsTheFrameworkDocsFileOnTheClasspath'
+  - id: CHK-146
+    refusals:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootOptionsTest.kt#refusesTheLayoutHandlersAndNamingOptionsItDoesNotServe'
+      - 'laravel: php/codegen/tests/TargetOptionsTest.php#testEachRefusedOptionIsNamed'
+      - 'laravel: php/laravel/tests/LaravelOptionsTest.php#testARefusedOptionIsNamedWithItsCode'
