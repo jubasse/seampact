@@ -86,10 +86,10 @@ jobs:
         run: composer validate --strict --no-interaction
       - name: Install from the lock file, the sibling packages through their path repositories
         working-directory: php/${{ matrix.package }}
-        run: composer install --no-interaction --no-progress --no-plugins --no-scripts
+        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" install --no-interaction --no-progress --no-plugins --no-scripts
       - name: Audit the locked dependencies
         working-directory: php/${{ matrix.package }}
-        run: composer audit --locked --no-interaction
+        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" audit --locked --no-interaction
       - name: Lint the golden tree
         if: matrix.package == 'laravel'
         working-directory: php/laravel
@@ -182,8 +182,8 @@ jobs:
             app="$WORK/app${variant:+-$variant}"
             (
               cd "$app"
-              composer update --no-interaction --no-progress --no-plugins --no-scripts
-              composer audit --no-interaction
+              bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --no-interaction --no-progress --no-plugins --no-scripts
+              bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" audit --no-interaction
               vendor/bin/seampact generate
               php artisan route:cache
               php artisan config:cache

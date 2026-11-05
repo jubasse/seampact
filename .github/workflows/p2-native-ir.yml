@@ -141,7 +141,7 @@ jobs:
           dependency-hash: ${{ hashFiles('php/ir/composer.lock') }}
       - name: Install the PHP dev tools from the lock file
         working-directory: php/ir
-        run: composer install --no-interaction --no-progress --no-plugins --no-scripts
+        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" install --no-interaction --no-progress --no-plugins --no-scripts
       # The lock holds symfony/yaml 7.4 on the PHP 8.3 platform; yaml 8 needs PHP 8.4, so this row moves both.
       - name: Move to symfony/yaml 8
         if: matrix.yaml == '8'
@@ -149,7 +149,7 @@ jobs:
         run: |
           composer config platform.php 8.5.12
           composer require --no-update --no-interaction "symfony/yaml:~8.1.0"
-          composer update --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies symfony/yaml
+          bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --no-interaction --no-progress --no-plugins --no-scripts --with-all-dependencies symfony/yaml
           composer show symfony/yaml | grep -E '^versions : \* v8\.'
       - name: Test the PHP model and reader on PHP ${{ matrix.php-version }}
         working-directory: php/ir
