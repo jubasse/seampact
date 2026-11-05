@@ -73,7 +73,7 @@ const OPTIONAL_PART = "?";
 const PARAM_START = ":";
 // The `.` Express 4 leaves out with an optional param it precedes (`/file.:ext?` also serves `/file`).
 const OPTIONAL_PARAM_SEPARATOR = ".";
-// A param name right before a `{`, whose braces then hold its pattern (Hono `:id{[0-9]+}`), not an optional group.
+// A param name right before a `{`, whose braces may hold its pattern (Hono `:id{[0-9]+}`) as well as a group.
 const PARAM_NAME_BEFORE = /:[A-Za-z_$][\w$]*$/;
 
 /**
@@ -268,10 +268,24 @@ function servedPathsOf(path: string): string[] {
 }
 
 function withAndWithoutOptionalGroups(path: string): string[] {
-  const group = firstOptionalGroup(path);
+  return withAndWithoutOptionalGroupsFrom(path, 0);
+}
 
-  if (group === undefined) return [path];
+// A `{` right after a param name is a Hono pattern (`:id{[0-9]+}`) or an Express 5 group (`:id{/:page}`): the route
+// does not say which framework lists it, so both readings count, the brace kept as written and expanded.
+function withAndWithoutOptionalGroupsFrom(path: string, searchFrom: number): string[] {
+  const brace = nextBrace(path, searchFrom);
 
+  if (brace === undefined) return [path];
+
+  const asGroup = expandedGroup(path, brace);
+
+  if (!brace.followsParamName) return asGroup;
+
+  return [...withAndWithoutOptionalGroupsFrom(path, brace.end + 1), ...asGroup];
+}
+
+function expandedGroup(path: string, group: Brace): string[] {
   const before = path.slice(0, group.start);
   const afters = withAndWithoutOptionalGroups(path.slice(group.end + 1));
   const insides = withAndWithoutOptionalGroups(path.slice(group.start + 1, group.end));
@@ -282,12 +296,18 @@ function withAndWithoutOptionalGroups(path: string): string[] {
   ];
 }
 
-// The first `{...}` that is not a param's pattern, skipping escapes and `(...)` patterns; undefined when there is
-// none or a brace is not closed, which leaves the path as written.
-function firstOptionalGroup(path: string): { start: number; end: number } | undefined {
+interface Brace {
+  readonly start: number;
+  readonly end: number;
+  readonly followsParamName: boolean;
+}
+
+// The first `{...}` from `searchFrom`, skipping escapes and `(...)` patterns; undefined when there is none or a brace
+// is not closed, which leaves the path as written.
+function nextBrace(path: string, searchFrom: number): Brace | undefined {
   let parenthesesDepth = 0;
 
-  for (let index = 0; index < path.length; index += 1) {
+  for (let index = searchFrom; index < path.length; index += 1) {
     const character = path[index];
 
     if (character === ESCAPE) {
@@ -301,9 +321,7 @@ function firstOptionalGroup(path: string): { start: number; end: number } | unde
 
       if (end === undefined) return undefined;
 
-      if (!PARAM_NAME_BEFORE.test(path.slice(0, index))) return { start: index, end };
-
-      index = end;
+      return { start: index, end, followsParamName: PARAM_NAME_BEFORE.test(path.slice(0, index)) };
     }
   }
 
@@ -456,7 +474,10 @@ function segmentsOf(path: string): string[] {
 }
 
 // Each framework writes a catch-all its own way (`*`, `*rest`, `:path*`, a regular expression): a segment with a
-// star is a catch-all, kept apart from a one-segment param (`:id`, `{id}`).
+// star is a catch-all, kept apart from a one-segment param (`:id`, `{id}`). A segment the reader cannot parse, as an
+// Express 4 group split at its `/` (`c(` and `:id)?` of `/c(/:id)?`), is read as a catch-all too.
 function routeSegmentsOf(path: string): string[] {
-  return segmentsOf(path).map((segment) => (segment.includes(STAR) ? CATCH_ALL_SEGMENT : segment));
+  return segmentsOf(path).map((segment) =>
+    segment.includes(STAR) || segmentParts(segment) === undefined ? CATCH_ALL_SEGMENT : segment,
+  );
 }
