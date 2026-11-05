@@ -68,7 +68,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
     /** The params schema of each asked right and rule that declares one: its decide request carries it typed. */
     val rightParams = LinkedHashMap<String, SchemaId>()
     val ruleParams = LinkedHashMap<String, SchemaId>()
-    private val readAccessDeclarations = HashSet<String>()
+    private val readAccessDeclarationKeys = HashSet<String>()
 
     init {
         checkApiForms()
@@ -155,7 +155,6 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
         checkRuntimeForms(operation, at)
     }
 
-    // A throttle rule's bucket: its key reads the request's path, a resolved scope or the principal.
     /**
      * The rights, rules and scopes an operation asks: a declared params schema is generated, and an extension value is
      * refused once, since no hook request carries it yet.
@@ -164,21 +163,21 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
         val askedRights = operation.requires.filterIsInstance<RightRequirement>().map { it.right } + operation.fieldRights.map { it.right }
         for (right in askedRights) {
             val declared = ir.rights[right] ?: continue
-            if (!readAccessDeclarations.add("rights/$right")) continue
+            if (!readAccessDeclarationKeys.add("rights/$right")) continue
             declared.params?.let { schemaId -> readRequirementParams(rightParams, right, schemaId, "rights") }
             refuseExtensions("right", "rights", right, declared.extensions)
         }
 
         for (rule in operation.requires.filterIsInstance<RuleRequirement>().map { it.rule }) {
             val declared = ir.rules[rule] ?: continue
-            if (!readAccessDeclarations.add("rules/$rule")) continue
+            if (!readAccessDeclarationKeys.add("rules/$rule")) continue
             declared.params?.let { schemaId -> readRequirementParams(ruleParams, rule, schemaId, "rules") }
             refuseExtensions("rule", "rules", rule, declared.extensions)
         }
 
         for (scope in operation.scopes.map { it.scope }) {
             val declared = ir.scopes[scope] ?: continue
-            if (readAccessDeclarations.add("scopes/$scope")) refuseExtensions("scope", "scopes", scope, declared.extensions)
+            if (readAccessDeclarationKeys.add("scopes/$scope")) refuseExtensions("scope", "scopes", scope, declared.extensions)
         }
     }
 
@@ -193,6 +192,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
         }
     }
 
+    // A throttle rule's bucket: its key reads the request's path, a resolved scope or the principal.
     private fun checkBucket(bucketId: BucketId, at: IrPlace) {
         val bucket = ir.buckets[bucketId]
         if (bucket == null) {
@@ -363,7 +363,14 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
             null -> refusals.inconsistent("schema.undeclared", "The schema '$schemaId' is not declared", at)
             is ObjectSchema -> {
                 objects[schemaId] = schema
-                schema.properties.forEachIndexed { index, property -> readType(property.type, schemaAt.below("properties", index, "type")) }
+                schema.properties.forEachIndexed { index, property ->
+                    val propertyAt = schemaAt.below("properties", index)
+                    // The boundary fills no default yet, so an optional member with one would reach the handler absent.
+                    if (property.default != null) {
+                        refusals.waiting("property.default", "The default of property '${property.name}'", propertyAt.below("default"), Delivery.AFTER_1_0)
+                    }
+                    readType(property.type, propertyAt.below("type"))
+                }
             }
             is UnionSchema -> refusals.waiting("schema.union", "A union", schemaAt, Delivery.AFTER_1_0)
             is MapSchema -> refusals.waiting("schema.map", "A map", schemaAt, Delivery.AFTER_1_0)
