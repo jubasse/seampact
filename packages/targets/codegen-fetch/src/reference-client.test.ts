@@ -6,8 +6,9 @@ import type { GeneratedFile, Target } from "@seampact/codegen-core";
 import {
   referencePageShape,
   referenceUnpagedList,
+  typesLinks,
 } from "@seampact/codegen-core/node-server/test-support";
-import type { ContractIR, Template } from "@seampact/spec/ir";
+import { type ContractIR, isKnownVariant, type Template } from "@seampact/spec/ir";
 import ts from "typescript";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { target as clientTarget } from "./index.js";
@@ -35,6 +36,13 @@ const HEADER_PAGE_API = "tasksHeaderPage";
 const LARAVEL_API = "laravelTasks";
 const LARAVEL_UNPAGED_API = "laravelTasksUnpaged";
 const SINCE_PAGE_API = "tasksSincePage";
+// The tasks api whose error codes are not in the dotted form.
+const PLAIN_CODES_API = "tasksPlainCodes";
+const PLAIN_CODES = {
+  "api.not_found": "TASK_NOT_FOUND",
+  "state.conflict": "E1042",
+  "api.forbidden": "not-found",
+} as const;
 const RESULT_CLIENT = "client";
 const THROW_CLIENT = "clientThrow";
 const PROBE_FILE = "probe.ts";
@@ -69,6 +77,7 @@ interface CredentialsModule {
 }
 
 interface SentRequest {
+  method: string;
   url: URL;
   headers: Headers;
 }
@@ -83,6 +92,16 @@ let throwing: Record<string, Method>;
 let createResultClient: ClientModule["createClient"];
 let isClientContractError: (error: unknown) => boolean;
 let typesTarget: Target;
+let generatedPaths: string[];
+
+// The tasks contract with three of its error codes renamed outside the dotted form.
+function plainCodesIr(): ContractIR {
+  let text = JSON.stringify(readGoldenIr("tasks"));
+
+  for (const [dotted, plain] of Object.entries(PLAIN_CODES)) text = text.replaceAll(dotted, plain);
+
+  return JSON.parse(text);
+}
 
 function readGoldenIr(name: string, golden = "reference"): ContractIR {
   return JSON.parse(
@@ -371,7 +390,11 @@ function linkWorkspacePackages(): void {
 
 function recordingFetch(): typeof fetch {
   return (input, init) => {
-    sent.push({ url: new URL(String(input)), headers: new Headers(init?.headers) });
+    sent.push({
+      method: init?.method ?? "GET",
+      url: new URL(String(input)),
+      headers: new Headers(init?.headers),
+    });
 
     return fetch(input, init);
   };
@@ -403,7 +426,7 @@ beforeAll(async () => {
     await importProjectModule<{ target: Target }>("node_modules/@seampact/codegen-ts/src/index.ts")
   ).target;
 
-  const paths = (
+  generatedPaths = (
     await Promise.all([
       ...APIS.map((api) => generateApi(api)),
       generateApi(UNPAGED_API, unpagedTasksIr()),
@@ -416,10 +439,11 @@ beforeAll(async () => {
         referenceUnpagedList("listChannels")(readGoldenIr("tasks", "pack-laravel"), "tasks"),
       ),
       generateApi(SINCE_PAGE_API, sincePageIr()),
+      generateApi(PLAIN_CODES_API, plainCodesIr()),
     ])
   ).flat();
 
-  expect(typeErrorsOf(paths)).toEqual([]);
+  expect(typeErrorsOf(generatedPaths)).toEqual([]);
 
   const stubModule = await importProjectModule<StubModule>("test/server.mts");
   const config = { fetch: recordingFetch() };
@@ -837,7 +861,11 @@ describe("the generated reference client answers a stub server", () => {
         baseUrl: "http://api.test",
         idempotencyKey: () => "generated-key",
         fetch: async (input, init) => {
-          sent.push({ url: new URL(String(input)), headers: new Headers(init?.headers) });
+          sent.push({
+            method: init?.method ?? "GET",
+            url: new URL(String(input)),
+            headers: new Headers(init?.headers),
+          });
 
           return new Response(null, { status: 500 });
         },
@@ -911,7 +939,11 @@ describe("the generated reference client answers a stub server", () => {
     const signalsSeen: (AbortSignal | null | undefined)[] = [];
     const hermesFetch: typeof fetch = async (_input, init) => {
       signalsSeen.push(init?.signal);
-      sent.push({ url: new URL(String(_input)), headers: new Headers(init?.headers) });
+      sent.push({
+        method: init?.method ?? "GET",
+        url: new URL(String(_input)),
+        headers: new Headers(init?.headers),
+      });
 
       return new Response("[]", {
         status: 200,
@@ -1283,5 +1315,365 @@ describe("the generated client reads every page shape of its paging style", () =
     const page = await call(client, "listTasks")({ path: { channelId: "c1" } });
 
     expect(page.body).toEqual({ items: tasks, total: 7, more: true, ...facts });
+  });
+});
+
+const TRACE_CONTEXT = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+const PROBLEM_MEDIA = "application/problem+json";
+const UNKNOWN_FIELD = "futureMember";
+const UNKNOWN_STATE = "frozen";
+
+// A request with every path param filled, the shape an operation needs for the canned server to be reached.
+function minimalRequest(ir: ContractIR, operationId: string): { path: Record<string, string> } {
+  const operation = ir.operations.find((candidate) => candidate.id === operationId);
+
+  return {
+    path: Object.fromEntries((operation?.params.path ?? []).map((param) => [param.name, "x"])),
+  };
+}
+
+function problemBody(code: string, status: number): CannedAnswer {
+  return {
+    status,
+    headers: { "content-type": PROBLEM_MEDIA },
+    body: { type: code, title: code, status, code },
+  };
+}
+
+// The error codes of the contract's registry the client answers as declared for one operation.
+async function declaredCodesOf(
+  ir: ContractIR,
+  client: Record<string, Method>,
+  canned: Awaited<ReturnType<typeof startCannedServer>>,
+  operationId: string,
+): Promise<string[]> {
+  const declared: string[] = [];
+
+  for (const [code, declaration] of Object.entries(ir.errors)) {
+    canned.answerNext(problemBody(code, declaration.http.status));
+
+    const answer = await call(client, operationId)(minimalRequest(ir, operationId), {
+      timeoutMs: 5000,
+    });
+
+    if (answer.unexpected === false && answer.code === code) declared.push(code);
+  }
+
+  return declared;
+}
+
+describe("the conformance proofs of the generated client", () => {
+  let canned: Awaited<ReturnType<typeof startCannedServer>>;
+
+  beforeAll(async () => {
+    canned = await startCannedServer();
+  });
+
+  afterAll(async () => {
+    await canned.close();
+  });
+
+  test("a service call carries the deadline computed from its budget and relays the trace context", async () => {
+    const serviceRequest = {
+      path: { channelId: "c1", taskId: "t1" },
+      headers: { authorization: credentials.bearer(credentials.SERVICE_JWT) },
+    };
+
+    await call(service, "getTask")(
+      { ...serviceRequest, headers: { ...serviceRequest.headers, traceparent: TRACE_CONTEXT } },
+      { timeoutMs: 2000 },
+    );
+
+    expect(lastSent().headers.get("traceparent")).toBe(TRACE_CONTEXT);
+    expect(lastSent().headers.get("x-deadline")).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
+    await call(service, "getTask")(serviceRequest, { timeoutMs: 2000 });
+
+    expect(lastSent().headers.get("traceparent")).toBeNull();
+    expect(lastSent().headers.get("x-deadline")).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  test("a DELETE answered 200 with a body gives that body to the caller", async () => {
+    const answer = await call(tasks, "deleteDraft")({ path: { draftId: "d1" }, headers: user() });
+
+    expect(lastSent().method).toBe("DELETE");
+    expect(answer).toMatchObject({
+      ok: true,
+      status: 200,
+      body: { draftId: "d1", body: "Draft text" },
+    });
+  });
+
+  test("the query is written as the servers decode it: percent-encoded values, a list comma-separated", async () => {
+    const client = createResultClient({ baseUrl: canned.baseUrl, fetch: recordingFetch() });
+    const cursor = "a+b&c=d é";
+
+    canned.answerNext({ status: 200, body: { items: [] } });
+    await call(
+      client,
+      "listTasks",
+    )({
+      path: { channelId: "c1" },
+      query: { cursor, limit: 25, sort: ["-createdAt", "createdAt"] },
+    });
+
+    const query = lastSent().url.searchParams;
+
+    expect(lastSent().url.search).toContain("cursor=a%2Bb%26c%3Dd%20%C3%A9");
+    expect(query.get("cursor")).toBe(cursor);
+    expect(query.get("limit")).toBe("25");
+    expect(query.get("sort")).toBe("-createdAt,createdAt");
+  });
+
+  test("a boolean or object query value is refused by name when the client is generated", async () => {
+    const ir = readGoldenIr("tasks");
+    const listTasks = ir.operations.find((operation) => operation.id === "listTasks");
+    const limit = listTasks?.params.query.find((param) => param.name === "limit");
+
+    if (limit?.wire === undefined) throw new Error("listTasks has no limit query wire");
+
+    for (const kind of ["boolean", "object"] as const) {
+      limit.wire = { ...limit.wire, kind };
+
+      const outcome = await clientTarget.generate({
+        ir,
+        options: {},
+        links: typesLinks(ir),
+        artefacts: new Set(["client"]),
+      });
+
+      expect(outcome).toMatchObject({
+        status: "refused",
+        refusals: [{ message: expect.stringContaining(`'${kind}' query value`) }],
+      });
+    }
+  });
+
+  test("a batch read is a POST that carries no idempotency key and no CSRF header", async () => {
+    const answer = await call(
+      tasks,
+      "getTasksBatch",
+    )({
+      path: { channelId: "c1" },
+      headers: user(),
+      body: { ids: ["a", "b"] },
+    });
+    const names = [...lastSent().headers.keys()];
+
+    expect(lastSent().method).toBe("POST");
+    expect(answer).toMatchObject({ ok: true, status: 200, body: { a: { taskId: "a" } } });
+    expect(names).not.toContain("idempotency-key");
+    expect(names.filter((name) => /csrf|xsrf/.test(name))).toEqual([]);
+  });
+
+  test("each write call generates its own idempotency key and a read carries none", async () => {
+    const request = { path: { channelId: "c1" }, headers: user(), body: { title: "Twice" } };
+
+    await call(tasks, "createTask")(request);
+
+    const first = lastSent().headers.get("idempotency-key");
+
+    await call(tasks, "createTask")(request);
+
+    const second = lastSent().headers.get("idempotency-key");
+
+    expect(first).toMatch(UUID);
+    expect(second).toMatch(UUID);
+    expect(second).not.toBe(first);
+
+    await call(tasks, "getTask")({ path: { channelId: "c1", taskId: "t1" }, headers: user() });
+
+    expect(lastSent().headers.has("idempotency-key")).toBe(false);
+  });
+
+  test("a bare payload is read as sent and an error comes as problem+json on its code", async () => {
+    const health = await call(tasks, "health")();
+
+    expect(health.body).toEqual({ status: "ok" });
+    expect((health.headers as Headers).get("content-type")).toMatch(/^application\/json/);
+
+    const failed = await call(tasks, "getTask")({ path: { channelId: "c1", taskId: "t1" } });
+
+    expect(failed).toMatchObject({ ok: false, unexpected: false, code: "api.unauthenticated" });
+    expect((failed.headers as Headers).get("content-type")).toMatch(
+      new RegExp(`^${PROBLEM_MEDIA.replace("+", "\\+")}`),
+    );
+  });
+
+  test("an enum member and a field the client does not know reach the caller as sent", async () => {
+    const task = { taskId: "t1", title: "T", state: UNKNOWN_STATE, [UNKNOWN_FIELD]: { deep: [1] } };
+
+    canned.answerNext({ status: 200, body: task });
+
+    const answer = await call(
+      await cannedClient("tasks", canned),
+      "getTask",
+    )({
+      path: { channelId: "c1", taskId: "t1" },
+    });
+
+    expect(answer).toMatchObject({ ok: true, status: 200 });
+    expect(answer.body).toEqual(task);
+  });
+
+  test("a request whose enum member is outside the enum fails to type-check", () => {
+    const probe = join(PROJECT, "enum-probe.ts");
+
+    writeFileSync(
+      probe,
+      `import { createClient } from "./generated/client/tasks/client.js";
+
+createClient({ baseUrl: "http://localhost" }).searchTasks({
+  path: { channelId: "c" },
+  body: { text: "t", states: ["${UNKNOWN_STATE}"] },
+});
+`,
+    );
+
+    const errors = typeErrorsOf([...generatedPaths, probe]);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain(UNKNOWN_STATE);
+  });
+
+  test("an enum fallback is refused by name by the types the client is generated beside", async () => {
+    const outcome = await typesTarget.generate({
+      ir: readGoldenIr("studio", "extensions"),
+      options: {},
+      links: {},
+      artefacts: new Set(["types"]),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: expect.arrayContaining([
+        expect.objectContaining({ code: expect.stringContaining("enum.fallback") }),
+      ]),
+    });
+  });
+
+  test("every operation answers as declared exactly the error codes its IR derives", async () => {
+    const ir = readGoldenIr("tasks");
+    const client = await cannedClient("tasks", canned);
+
+    for (const operation of ir.operations) {
+      const derived = operation.errors.map((error) => error.code).sort();
+
+      expect(await declaredCodesOf(ir, client, canned, operation.id), operation.id).toEqual(
+        derived,
+      );
+    }
+  });
+
+  test("a 404 is declared once per operation, and a nested list answers its scope's code only", async () => {
+    const ir = readGoldenIr("tasks");
+    const client = await cannedClient("tasks", canned);
+
+    for (const operation of ir.operations) {
+      const declared = await declaredCodesOf(ir, client, canned, operation.id);
+      const notFounds = declared.filter((code) => ir.errors[code]?.http.status === 404);
+
+      expect(notFounds.length, operation.id).toBeLessThanOrEqual(1);
+    }
+
+    expect(await declaredCodesOf(ir, client, canned, "listTasks")).toContain("api.not_found");
+    expect(await declaredCodesOf(ir, client, canned, "listChannels")).not.toContain(
+      "api.not_found",
+    );
+  });
+
+  test("each route is called with its own identity: public, user, service and signed webhook", async () => {
+    const serviceCredentials = { authorization: credentials.bearer(credentials.SERVICE_JWT) };
+    const taskPath = { channelId: "c1", taskId: "t1" };
+    const event = { id: "evt_1", type: "invoice.paid", data: {} };
+
+    await expect(call(tasks, "health")()).resolves.toMatchObject({ ok: true, status: 200 });
+    await expect(
+      call(tasks, "getTask")({ path: taskPath, headers: user() }),
+    ).resolves.toMatchObject({ ok: true, status: 200 });
+    await expect(
+      call(tasks, "getTask")({ path: taskPath, headers: serviceCredentials }),
+    ).resolves.toMatchObject({ ok: false, status: 401, code: "api.unauthenticated" });
+    await expect(
+      call(service, "getTask")(
+        { path: taskPath, headers: serviceCredentials },
+        { timeoutMs: 2000 },
+      ),
+    ).resolves.toMatchObject({ ok: true, status: 200 });
+    await expect(
+      call(service, "getTask")({ path: taskPath, headers: user() }, { timeoutMs: 2000 }),
+    ).resolves.toMatchObject({ ok: false, status: 401, code: "api.unauthenticated" });
+    await expect(call(tasks, "payments")({ headers: user(), body: event })).resolves.toMatchObject({
+      ok: false,
+      status: 401,
+      code: "api.unauthenticated",
+    });
+  });
+
+  test("the error of a call is a union on its code: a declared code narrows its params, an undeclared one does not type-check", () => {
+    const probe = join(PROJECT, "union-probe.ts");
+
+    writeFileSync(
+      probe,
+      `import { createClient } from "./generated/client/tasks/client.js";
+
+const client = createClient({ baseUrl: "http://localhost" });
+const result = await client.createTask({ path: { channelId: "c" }, body: { title: "t" } });
+
+if (!result.ok && !result.unexpected && result.code === "api.rate_limited") {
+  const retryAfterMs: number = result.params.retryAfterMs;
+  void retryAfterMs;
+}
+
+if (!result.ok && !result.unexpected && result.code === "api.nope") void result;
+`,
+    );
+
+    const errors = typeErrorsOf([...generatedPaths, probe]);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("api.nope");
+  });
+
+  test("generated types list the properties of every object schema in authored order", () => {
+    const ir = readGoldenIr("tasks");
+    const types = readFileSync(join(PROJECT, "generated/types/tasks/schemas.ts"), "utf8");
+    const objects = Object.values(ir.schemas).flatMap((schema) =>
+      isKnownVariant("Schema", schema) && schema.kind === "object" && schema.properties.length > 0
+        ? [schema]
+        : [],
+    );
+
+    expect(objects.length).toBeGreaterThan(0);
+
+    for (const schema of objects) {
+      const declaration = types.match(
+        new RegExp(`export interface ${schema.id} \\{([\\s\\S]*?)\\n\\}`),
+      )?.[1];
+      const declared = [...(declaration ?? "").matchAll(/^ {2}(\w+)\??:/gm)].map((m) => m[1]);
+
+      expect(declared, schema.id).toEqual(schema.properties.map((property) => property.name));
+    }
+  });
+
+  test("error codes outside the dotted form reach the caller unchanged", async () => {
+    const client = await cannedClient(PLAIN_CODES_API, canned);
+
+    for (const plain of Object.values(PLAIN_CODES)) {
+      const ir = plainCodesIr();
+      const status = ir.errors[plain]?.http.status ?? 0;
+
+      canned.answerNext(problemBody(plain, status));
+
+      const answer = await call(
+        client,
+        "updateTask",
+      )({
+        path: { channelId: "c1", taskId: "t1" },
+        body: { title: "T" },
+      });
+
+      expect(answer, plain).toMatchObject({ ok: false, unexpected: false, code: plain });
+    }
   });
 });
