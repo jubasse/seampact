@@ -300,6 +300,11 @@ function outsideOutDirProblems(
     }));
 }
 
+// A name written composed or decomposed is one directory on a disk that ignores the difference (macOS).
+function caseFoldedAfterNfc(path: string): string {
+  return caseFolded(path.normalize("NFC"));
+}
+
 // Two entries writing to the same directory, or one inside the other, would remove each other's files; so would
 // two whose directories match once case is ignored, on a case-insensitive disk.
 function overlappingOutProblems(
@@ -321,7 +326,7 @@ function overlappingOutProblems(
         ];
       }
 
-      if (isNestedOrSame(caseFolded(each.root), caseFolded(other.root))) {
+      if (isNestedOrSame(caseFoldedAfterNfc(each.root), caseFoldedAfterNfc(other.root))) {
         return [
           {
             code: "config.out.case-overlap",

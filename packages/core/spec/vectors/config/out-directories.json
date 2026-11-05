@@ -25,6 +25,31 @@
       "codes": ["config.out.case-overlap"]
     },
     {
+      "case": "a trailing slash and a different case",
+      "outs": ["api/", "Api"],
+      "codes": ["config.out.case-overlap"]
+    },
+    {
+      "case": "a deep difference of case under a nested directory",
+      "outs": ["gen/Web", "GEN/web/x"],
+      "codes": ["config.out.case-overlap"]
+    },
+    {
+      "case": "a dotted capital i and a plain i are two names",
+      "outs": ["İ", "i"],
+      "codes": []
+    },
+    {
+      "case": "an accent written composed and decomposed",
+      "outs": ["\u00e9", "e\u0301"],
+      "codes": ["config.out.case-overlap"]
+    },
+    {
+      "case": "two different accented names",
+      "outs": ["\u00e9", "e\u0302"],
+      "codes": []
+    },
+    {
       "case": "a sharp s and its upper case",
       "outs": ["straße", "STRASSE"],
       "codes": ["config.out.case-overlap"]

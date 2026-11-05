@@ -4,6 +4,7 @@ monorepo root config that lists the app is refused by name (`config.root.unsuppo
 against the config's directory."""
 
 import os
+import unicodedata
 from typing import Final
 
 from seampact.ir.binary.absolute_path import resolved
@@ -208,7 +209,7 @@ def _overlapping_out_problem(
             where,
         )
 
-    if not _is_nested_or_same(case_folded(entry.root), case_folded(other.root)):
+    if not _is_nested_or_same(_case_folded_after_nfc(entry.root), _case_folded_after_nfc(other.root)):
         return None
 
     return ConfigProblem(
@@ -218,6 +219,11 @@ def _overlapping_out_problem(
         "Give each entry an `out` directory whose name differs by more than letter case, side by side under `outDir`.",
         where,
     )
+
+
+# A name written composed or decomposed is one directory on a disk that ignores the difference (macOS).
+def _case_folded_after_nfc(path: str) -> str:
+    return case_folded(unicodedata.normalize("NFC", path))
 
 
 def _is_nested_or_same(first: str, second: str) -> bool:

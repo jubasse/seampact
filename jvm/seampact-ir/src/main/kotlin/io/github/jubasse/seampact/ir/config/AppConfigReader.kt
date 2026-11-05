@@ -4,6 +4,7 @@ import io.github.jubasse.seampact.ir.bundle.BundleSource
 import io.github.jubasse.seampact.ir.write.caseFolded
 import java.nio.file.Files
 import java.nio.file.Path
+import java.text.Normalizer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -210,7 +211,7 @@ private fun overlappingOutProblem(tree: ConfigTree, index: Int, each: AppConfigE
         )
     }
 
-    if (!isNestedOrSame(Path.of(caseFolded(each.root.toString())), Path.of(caseFolded(other.root.toString())))) return null
+    if (!isNestedOrSame(Path.of(caseFoldedAfterNfc(each.root)), Path.of(caseFoldedAfterNfc(other.root)))) return null
 
     return ConfigProblem(
         "config.out.case-overlap",
@@ -220,6 +221,9 @@ private fun overlappingOutProblem(tree: ConfigTree, index: Int, each: AppConfigE
         where,
     )
 }
+
+// A name written composed or decomposed is one directory on a disk that ignores the difference (macOS).
+private fun caseFoldedAfterNfc(path: Path): String = caseFolded(Normalizer.normalize(path.toString(), Normalizer.Form.NFC))
 
 private fun isNestedOrSame(first: Path, second: Path): Boolean = first.startsWith(second) || second.startsWith(first)
 

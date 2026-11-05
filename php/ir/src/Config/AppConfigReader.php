@@ -228,7 +228,7 @@ final class AppConfigReader
             );
         }
 
-        if (!self::isNestedOrSame(GeneratedPaths::caseFolded($entry->root), GeneratedPaths::caseFolded($other->root))) {
+        if (!self::isNestedOrSame(self::caseFoldedAfterNfc($entry->root), self::caseFoldedAfterNfc($other->root))) {
             return null;
         }
 
@@ -238,6 +238,14 @@ final class AppConfigReader
             'Give each entry an `out` directory whose name differs by more than letter case, side by side under `outDir`.',
             $where,
         );
+    }
+
+    // A name written composed or decomposed is one directory on a disk that ignores the difference (macOS).
+    private static function caseFoldedAfterNfc(string $path): string
+    {
+        $composed = \Normalizer::normalize($path, \Normalizer::FORM_C);
+
+        return GeneratedPaths::caseFolded($composed === false ? $path : $composed);
     }
 
     private static function isNestedOrSame(string $first, string $second): bool
