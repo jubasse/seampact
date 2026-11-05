@@ -281,11 +281,11 @@ function checkPublicMetadata(root: string, pkgs: Npm[], out: Violation[]): void 
 
     if (!isRec(bugs) || bugs.url !== ISSUES_URL) add(`needs \`bugs\` {url: "${ISSUES_URL}"}`);
 
-    if (!existsSync(join(root, p.dir, "README.md")))
+    if (!hasReadme(join(root, p.dir, "README.md")))
       out.push({
         file: `${p.dir}/README.md`,
         rule: "metadata",
-        message: "a public package needs a README.md",
+        message: "a public package needs a README.md that is not empty",
       });
   }
 }
@@ -463,4 +463,8 @@ export function checkPackageRules(root: string): Violation[] {
 
 export function formatViolation(v: Violation): string {
   return `${v.file}: ${v.rule}: ${v.message}`;
+}
+
+function hasReadme(readmePath: string): boolean {
+  return existsSync(readmePath) && readFileSync(readmePath, "utf8").trim() !== "";
 }
