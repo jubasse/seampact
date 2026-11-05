@@ -72,4 +72,28 @@ final class BootCheckTest extends TestCase
         self::assertStringContainsString('the framework route GET|HEAD /v1/files/{path} is outside the contract', $problems);
         self::assertStringNotContainsString('/v1/docs/{path}', $problems);
     }
+
+    public function testARouteWithAnOptionalParameterIsAllowListedOnlyWhenThePathWithoutItIsListedToo(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $app->instance('config', new Repository([]));
+        $app->singleton(Kernel::class, HttpKernel::class);
+        $app->instance(ExceptionHandler::class, self::createStub(ExceptionHandler::class));
+        $router = $app->make(Router::class);
+        $router->get('/v1/files/{name?}', static fn (): string => '');
+        $router->get('/v1/files/{id}', static fn (): string => '');
+        $router->get('/v1/docs/{name?}', static fn (): string => '');
+
+        $problems = '';
+        try {
+            BootCheck::run($app, ApiContract::of(CatchAllAllowListContract::class), BoundaryMiddleware::class, AccessMiddleware::class, [...self::SWITCHES, BootCheck::FRAMEWORK_ROUTES => true]);
+        } catch (BootCheckFailedException $failure) {
+            $problems = $failure->getMessage();
+        }
+
+        self::assertStringContainsString('the framework route GET|HEAD /v1/files/{name?} is outside the contract', $problems);
+        self::assertStringContainsString('and one with an optional parameter only by entries that also take its path without it', $problems);
+        self::assertStringNotContainsString('/v1/files/{id}', $problems, 'a required parameter stays one segment');
+        self::assertStringNotContainsString('/v1/docs/{name?}', $problems);
+    }
 }

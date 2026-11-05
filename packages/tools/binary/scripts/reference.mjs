@@ -1,12 +1,15 @@
 // Writes the reference output the smoke compares against: the IR, the bundle and the editor schemas of each smoke app,
 // the OpenAPI documents of the native app, and every file each `init` run leaves, made by the Node CLI
-// (the CLI entry bundled for Node, packs resolved from the repository's node_modules).
-// Usage: node scripts/reference.mjs <out-dir>
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+// (the CLI entry bundled for Node, packs resolved from the repository's node_modules). With `--packed-packs`, the
+// packs are installed from their npm tarballs beside the apps, as a release binary embeds them.
+// Usage: node scripts/reference.mjs [<out-dir>] [--packed-packs <tarball-dir>]
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 import { build } from "esbuild";
+import { extractPackedPacks } from "./packed-packs.mjs";
 import {
   INIT_RUNS,
   NATIVE_APP,
@@ -19,7 +22,11 @@ import {
 } from "./smoke-apps.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const out = resolve(process.argv[2] ?? join(root, "dist/reference"));
+const { values: options, positionals } = parseArgs({
+  allowPositionals: true,
+  options: { "packed-packs": { type: "string" } },
+});
+const out = resolve(positionals[0] ?? join(root, "dist/reference"));
 // Inside the repository, so the pack walk reaches its node_modules.
 const appsRoot = join(root, "dist/reference-apps");
 const nodeCli = join(root, "dist/node-cli.mjs");
@@ -39,6 +46,8 @@ await build({
 });
 rmSync(appsRoot, { recursive: true, force: true });
 rmSync(out, { recursive: true, force: true });
+
+if (options["packed-packs"] !== undefined) installPackedPacks(resolve(options["packed-packs"]));
 
 for (const app of SMOKE_APPS) {
   const appDirectory = join(appsRoot, app.name);
@@ -103,6 +112,26 @@ for (const run of INIT_RUNS) {
 }
 
 rmSync(initRoot, { recursive: true, force: true });
+
+// The pack walk meets the apps' own node_modules before the repository's, so the packed files win.
+function installPackedPacks(tarballDirectory) {
+  const extractedRoot = mkdtempSync(join(tmpdir(), "seampact-reference-packs-"));
+  const fail = (message) => {
+    console.error(`reference: ${message}`);
+    process.exit(1);
+  };
+
+  for (const [packName, packageDirectory] of extractPackedPacks(
+    tarballDirectory,
+    extractedRoot,
+    fail,
+  )) {
+    cpSync(packageDirectory, join(appsRoot, "node_modules", packName), { recursive: true });
+  }
+
+  rmSync(extractedRoot, { recursive: true, force: true });
+  console.log(`reference: packs installed from the npm tarballs in ${tarballDirectory}`);
+}
 
 function writeReference(name, steps, writtenFiles) {
   mkdirSync(join(out, name), { recursive: true });

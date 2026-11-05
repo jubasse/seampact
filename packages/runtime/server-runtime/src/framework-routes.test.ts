@@ -28,3 +28,11 @@ test("the fix tells to run generate again after editing frameworkRoutes", () => 
 
   expect(problem?.fix).toContain("run seampact generate again");
 });
+
+test("the fix tells that a route with an optional parameter needs its path without it listed too", () => {
+  const problem = unlistedFrameworkRoutesProblem(CHECK_ON, [{ method: "GET", path: "/c/:id?" }]);
+
+  expect(problem?.fix).toContain(
+    "a route with an optional parameter is allowed only by entries that also take its path without it",
+  );
+});

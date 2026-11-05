@@ -168,7 +168,7 @@ final class FrameworkRoutesTest extends TestCase
 
     public function testANegatedClassExcludingASlashKeepsToOneSegment(): void
     {
-        $allowsWith = static fn (string $pattern): bool => FrameworkRoutes::allows([['path' => '/files/*', 'method' => null]], '/files/{x}', static fn (string $name): ?string => $name === 'x' ? $pattern : null, ['GET']);
+        $allowsWith = static fn (string $pattern): bool => FrameworkRoutes::allows([['path' => '/files/*', 'method' => null]], '/files/{x}', static fn (string $name): ?string => $name === 'x' ? $pattern : null, ['GET'], self::noneOptional(...));
 
         self::assertTrue($allowsWith('[^/]+'), 'a class excluding the slash is not a catch-all');
         self::assertTrue($allowsWith('[^/.]+'));
@@ -178,7 +178,7 @@ final class FrameworkRoutesTest extends TestCase
     public function testACatchAllRouteSegmentIsTakenByTwoStarsOnly(): void
     {
         $patternOf = static fn (string $name): ?string => $name === 'path' ? '.+' : null;
-        $allows = static fn (string $pattern, string $route): bool => FrameworkRoutes::allows([['path' => $pattern, 'method' => null]], $route, $patternOf, ['GET']);
+        $allows = static fn (string $pattern, string $route): bool => FrameworkRoutes::allows([['path' => $pattern, 'method' => null]], $route, $patternOf, ['GET'], self::noneOptional(...));
 
         self::assertFalse($allows('/files/*', '/files/{path}'), 'one star takes one segment, not a path');
         self::assertFalse($allows('/files/{path}', '/files/{path}'), 'a literal segment takes no catch-all');
@@ -189,12 +189,42 @@ final class FrameworkRoutesTest extends TestCase
         self::assertTrue($allows('/files/*', '/files/{page}'), 'the default pattern keeps to one segment');
     }
 
+    public function testARouteWithAnOptionalTrailingPlaceholderIsAllowedOnlyWhenThePathWithoutItIsToo(): void
+    {
+        self::assertFalse(self::allowsWithOptionalIdPageAndFormat(['/c/*'], '/c/{id?}'), 'the route also serves /c, which one star does not take');
+        self::assertTrue(self::allowsWithOptionalIdPageAndFormat(['/c/*', '/c'], '/c/{id?}'));
+        self::assertTrue(self::allowsWithOptionalIdPageAndFormat(['/c/**'], '/c/{id}'), 'two stars take no segment too');
+        self::assertFalse(self::allowsWithOptionalIdPageAndFormat(['/c/*/*', '/c/*'], '/c/{id}/{page}'), 'both trailing placeholders may be left out');
+        self::assertTrue(self::allowsWithOptionalIdPageAndFormat(['/c/*/*', '/c/*', '/c'], '/c/{id}/{page}'));
+        self::assertTrue(self::allowsWithOptionalIdPageAndFormat(['/c/*/*'], '/c/{id}/{other}'), 'a required placeholder after it keeps the optional one');
+        self::assertFalse(self::allowsWithOptionalIdPageAndFormat(['/c.*'], '/c.{_format}'), 'the separator goes with the placeholder, so the route serves /c');
+        self::assertTrue(self::allowsWithOptionalIdPageAndFormat(['/c/*'], '/c/{name}'), 'a required placeholder serves one segment only');
+        self::assertTrue(self::allowsWithOptionalIdPageAndFormat(['/c/*'], '/c/{!id}'), 'Symfony never leaves out an important placeholder, default or not');
+    }
+
     /**
      * @param list<array{path: string, method: ?string}> $frameworkRoutes
      * @param list<string> $methods
      */
     private static function allowsWithDefaultPatterns(array $frameworkRoutes, string $uri, array $methods): bool
     {
-        return FrameworkRoutes::allows($frameworkRoutes, $uri, static fn (string $name): ?string => null, $methods);
+        return FrameworkRoutes::allows($frameworkRoutes, $uri, static fn (string $name): ?string => null, $methods, self::noneOptional(...));
+    }
+
+    /** @param list<string> $patterns */
+    private static function allowsWithOptionalIdPageAndFormat(array $patterns, string $route): bool
+    {
+        return FrameworkRoutes::allows(
+            array_map(static fn (string $pattern): array => ['path' => $pattern, 'method' => null], $patterns),
+            $route,
+            static fn (string $name): ?string => null,
+            ['GET'],
+            static fn (string $name): bool => in_array($name, ['id', 'page', '_format'], true),
+        );
+    }
+
+    private static function noneOptional(string $name): bool
+    {
+        return false;
     }
 }

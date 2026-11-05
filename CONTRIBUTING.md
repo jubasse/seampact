@@ -22,7 +22,7 @@ uv run --locked pyright
 uv run --locked pytest
 ```
 
-`pytest <package>/<tests-dir>` runs one package, for example `pytest fastapi/fastapi_tests` or `pytest ir/tests`. Each Python target also has an end-to-end consumer under `scripts/consumers/targets/<target>/` (`fastapi`, `drf`), run by `.github/workflows/p7-<target>.yml`: it installs the wheels `uv build --all-packages --wheel` writes into a Python without Node, generates, then runs the HTTP suite with `pnpm vitest run --config scripts/consumers/targets/<target>/suite/vitest.config.ts`. Read the workflow for the exact steps.
+`pytest <package>/<tests-dir>` runs one package, for example `pytest fastapi/fastapi_tests` or `pytest ir/tests`. Each Python target also has an end-to-end consumer under `scripts/consumers/targets/<target>/` (`fastapi`, `drf`), run by `.github/workflows/p7-<target>.yml`: it installs the wheels `scripts/consumers/python/build-wheels.sh` writes (every member but `seampact-compiler`) into a Python without Node, generates, then runs the HTTP suite with `pnpm vitest run --config scripts/consumers/targets/<target>/suite/vitest.config.ts`. Read the workflow for the exact steps.
 
 The front consumer tests download Playwright's Chromium headless shell on their first run, into `~/.cache/ms-playwright`.
 
