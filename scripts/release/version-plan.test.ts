@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { PACKED_PACKS } from "../consumers/packed-packages.ts";
 import { PUBLISHED_PACKAGES, UNPUBLISHED_PACKAGES } from "./npm-versions.ts";
 import { ReleaseError, releaseVersion } from "./release-version.ts";
-import type { VersionEdit } from "./version-edit.ts";
+import { type VersionEdit, writeVersionEdit } from "./version-edit.ts";
 import { pendingVersionChanges, releaseVersionEdits } from "./version-plan.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -118,7 +118,7 @@ function developmentTree(): string {
 function stamp(root: string, version: string): VersionEdit[] {
   const edits = releaseVersionEdits(root, version);
 
-  for (const edit of edits) writeFileSync(join(root, edit.file), edit.after);
+  for (const edit of edits) writeVersionEdit(root, edit);
 
   return edits;
 }
@@ -220,6 +220,23 @@ describe("the release stamp", () => {
     expect(readTreeFile(root, "jvm/gradle.properties")).toBe(
       `${GRADLE_PROPERTIES}\n# The release version of every module, written by scripts/release/stamp.ts.\nversion=${RELEASE}\n`,
     );
+  });
+
+  it("reads a CRLF checkout and writes each file back with its own line endings", () => {
+    const lfRoot = developmentTree();
+    const crlfRoot = developmentTree();
+    const files = releaseVersionEdits(lfRoot, RELEASE).map((edit) => edit.file);
+
+    for (const file of files)
+      writeTreeFile(crlfRoot, file, readTreeFile(crlfRoot, file).replaceAll("\n", "\r\n"));
+
+    stamp(crlfRoot, RELEASE);
+    stamp(lfRoot, RELEASE);
+
+    for (const file of files)
+      expect(readTreeFile(crlfRoot, file)).toBe(
+        readTreeFile(lfRoot, file).replaceAll("\n", "\r\n"),
+      );
   });
 
   it("replaces a version property already there", () => {

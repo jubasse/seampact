@@ -1,6 +1,6 @@
 // The edit the stamp makes to one version file: its text before and after, and each change in words, which the
 // version check reports when the checkout is not at the release version.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ReleaseError } from "./release-version.ts";
 
@@ -13,8 +13,19 @@ export interface VersionEdit {
   readonly changes: readonly string[];
 }
 
+const CRLF = "\r\n";
+
+/** The file's text with LF line endings, so the stamp's patterns read a Windows checkout as on Linux. */
 export function readRepositoryFile(root: string, file: string): string {
-  return readFileSync(join(root, file), "utf8");
+  return readFileSync(join(root, file), "utf8").replaceAll(CRLF, "\n");
+}
+
+/** Writes the edit's text in the line endings the file has on disk. */
+export function writeVersionEdit(root: string, edit: VersionEdit): void {
+  const path = join(root, edit.file);
+  const usesCrlf = readFileSync(path, "utf8").includes(CRLF);
+
+  writeFileSync(path, usesCrlf ? edit.after.replaceAll("\n", CRLF) : edit.after);
 }
 
 /**
