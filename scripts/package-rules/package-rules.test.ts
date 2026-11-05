@@ -1,8 +1,15 @@
 import { execFileSync } from "node:child_process";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
-import { checkPackageRules, formatViolation } from "./rules.ts";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  checkPackageRules,
+  DEVELOPMENT_MODE,
+  formatViolation,
+  type PackageRulesMode,
+} from "./rules.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../..");
@@ -19,6 +26,59 @@ function proves(name: string, rule: string, file: string, ...parts: string[]) {
 
   for (const p of parts) expect(out[0]).toContain(p);
 }
+
+const trees: string[] = [];
+
+afterEach(() => {
+  for (const tree of trees.splice(0)) rmSync(tree, { recursive: true, force: true });
+});
+
+function writeTree(files: Record<string, string>): string {
+  const root = mkdtempSync(join(tmpdir(), "package-rules-"));
+
+  trees.push(root);
+
+  for (const [file, text] of Object.entries(files)) {
+    mkdirSync(dirname(join(root, file)), { recursive: true });
+    writeFileSync(join(root, file), text);
+  }
+
+  return root;
+}
+
+const RELEASE_MODE: PackageRulesMode = { kind: "release", publishedPackages: ["packages/spec"] };
+
+// The public metadata the `metadata` rule asks of a published package.
+const PUBLIC_METADATA = {
+  repository: {
+    type: "git",
+    url: "git+https://github.com/jubasse/seampact.git",
+    directory: "packages/spec",
+  },
+  homepage: "https://jubasse.github.io/seampact/",
+  bugs: { url: "https://github.com/jubasse/seampact/issues" },
+};
+
+function manifest(name: string, extra: Record<string, unknown> = {}): string {
+  return JSON.stringify({ name, seampact: { role: "core" }, ...extra });
+}
+
+// A published package and an unpublished one, with the changesets access.
+function releaseTree(
+  spec: Record<string, unknown>,
+  binary: Record<string, unknown>,
+  access: string,
+) {
+  return writeTree({
+    "packages/spec/package.json": manifest("@seampact/spec", { ...PUBLIC_METADATA, ...spec }),
+    "packages/spec/README.md": "# @seampact/spec\n",
+    "packages/binary/package.json": manifest("@seampact/binary", binary),
+    ".changeset/config.json": JSON.stringify({ access }),
+  });
+}
+
+const violations = (root: string, mode: PackageRulesMode) =>
+  checkPackageRules(root, mode).map(formatViolation);
 
 describe("package rules", () => {
   it("passes on the repository", () => {
@@ -145,14 +205,65 @@ describe("package rules", () => {
     );
   });
 
+  it("the release mode expects the stamped form, and the development mode refuses it", () => {
+    const stamped = releaseTree({}, { private: true }, "public");
+
+    expect(violations(stamped, RELEASE_MODE)).toEqual([]);
+    expect(violations(stamped, DEVELOPMENT_MODE)).toEqual([
+      "packages/spec/package.json: namespaces: manifest must be `private: true` until p8-release (A3, A27)",
+      '.changeset/config.json: namespaces: `access` must stay "restricted" until p8-release',
+    ]);
+  });
+
+  it("the release mode refuses an unstamped published package, a public unpublished one and a restricted access", () => {
+    const unstamped = releaseTree({ private: true }, {}, "restricted");
+
+    expect(violations(unstamped, RELEASE_MODE)).toEqual([
+      "packages/binary/package.json: namespaces: an unpublished package stays `private: true` in a release",
+      "packages/spec/package.json: namespaces: a published package has no `private` field in a release: run scripts/release/stamp.ts",
+      '.changeset/config.json: namespaces: `access` is "public" in a release: run scripts/release/stamp.ts',
+    ]);
+  });
+
+  it("the release scripts publish only through the npm publish of publish-npm.ts", () => {
+    const publishScript = join(REPO, "scripts/release/publish-npm.ts");
+    const root = writeTree({});
+
+    mkdirSync(join(root, "scripts/release"), { recursive: true });
+    copyFileSync(publishScript, join(root, "scripts/release/publish-npm.ts"));
+
+    expect(violations(root, DEVELOPMENT_MODE)).toEqual([]);
+
+    // The same npm publish anywhere else in the release scripts is seen, in its spawned form too.
+    copyFileSync(publishScript, join(root, "scripts/release/publish-again.ts"));
+
+    const elsewhere = violations(root, DEVELOPMENT_MODE);
+
+    expect(elsewhere).toContainEqual(
+      expect.stringMatching(
+        /^scripts\/release\/publish-again\.ts: namespaces: line \d+: publishes \(a `publish` argument of a spawned command\); only scripts\/release\/publish-npm\.ts publishes/,
+      ),
+    );
+    expect(elsewhere.every((v) => v.startsWith("scripts/release/publish-again.ts: "))).toBe(true);
+
+    // The publish script may run the npm publish only.
+    const gradle = writeTree({ "scripts/release/publish-npm.ts": 'run("./gradlew publish");\n' });
+
+    expect(violations(gradle, DEVELOPMENT_MODE)).toEqual([
+      "scripts/release/publish-npm.ts: namespaces: line 1: publishes (Gradle publish); only scripts/release/publish-npm.ts publishes, to npm (A3)",
+    ]);
+  });
+
   it("cli exits non-zero on a violation", () => {
-    const run = (root: string) =>
-      execFileSync("node", [join(HERE, "cli.ts"), root], {
+    const run = (root: string, ...flags: string[]) =>
+      execFileSync("node", [join(HERE, "cli.ts"), root, ...flags], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });
 
     expect(() => run(join(HERE, "fixtures/roles/pass"))).not.toThrow();
     expect(() => run(join(HERE, "fixtures/roles/fail"))).toThrow();
+    // The repository, unstamped, is not in the release form.
+    expect(() => run(REPO, "--release")).toThrow();
   });
 });

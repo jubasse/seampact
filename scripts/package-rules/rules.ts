@@ -1,6 +1,9 @@
 // Package roles, the dependency rules of ADR 0009 and the namespaces of A27, checked over
 // the manifests of a repository: npm (packages/*), Gradle (jvm/**) and Composer (php/*).
 //
+// Two modes: development, where every npm package is private and the changesets access restricted (A3), and release,
+// set by release.yml on a stamped checkout only, where the published packages drop `private` and the access is public.
+//
 // Deferred: package roles and dependency rules for Gradle (jvm/**) and Composer (php/*)
 // manifests. ADR 0009 states them for npm only and no role metadata convention exists for those
 // ecosystems yet; today only their namespaces (A27) are checked. Add the role rules here once
@@ -32,6 +35,17 @@ const DOCS_SITE_URL = "https://jubasse.github.io/seampact/";
 // The two packages that are never published; every other npm package is public.
 const UNPUBLISHED_PACKAGES = ["@seampact/binary", "@seampact/docs-site"];
 const RUNTIME_SETS = ["dependencies", "peerDependencies", "optionalDependencies"] as const;
+
+/** The development form (A3), or the stamped form of a release, with the directories of the published packages. */
+export type PackageRulesMode =
+  | { readonly kind: "development" }
+  | { readonly kind: "release"; readonly publishedPackages: readonly string[] };
+
+export const DEVELOPMENT_MODE: PackageRulesMode = { kind: "development" };
+
+const RELEASE_SCRIPTS_DIR = "scripts/release";
+// The one release script that publishes, and what it may run: the idempotent npm publish of release.yml.
+const RELEASE_PUBLISH_SCRIPT = "scripts/release/publish-npm.ts";
 
 type Rec = Record<string, unknown>;
 const isRec = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -251,14 +265,16 @@ function checkPacks(root: string, pkgs: Npm[], out: Violation[]): void {
   }
 }
 
-function checkNpmNamespace(pkgs: Npm[], out: Violation[]): void {
+function checkNpmNamespace(pkgs: Npm[], mode: PackageRulesMode, out: Violation[]): void {
   for (const p of pkgs) {
     const add = (message: string) => out.push({ file: p.file, rule: "namespaces", message });
 
     if (!/^@seampact\/[a-z0-9][a-z0-9-]*$/.test(p.name))
       add(`npm name "${p.name}" must be @seampact/<name> (A27)`);
 
-    if (p.json.private !== true) add("manifest must be `private: true` until p8-release (A3, A27)");
+    const message = privateFieldProblem(p, mode);
+
+    if (message) add(message);
   }
 }
 
@@ -290,24 +306,52 @@ function checkPublicMetadata(root: string, pkgs: Npm[], out: Violation[]): void 
   }
 }
 
-function checkChangesets(root: string, out: Violation[]): void {
+function privateFieldProblem(p: Npm, mode: PackageRulesMode): string | undefined {
+  if (mode.kind === "development")
+    return p.json.private === true
+      ? undefined
+      : "manifest must be `private: true` until p8-release (A3, A27)";
+
+  if (!mode.publishedPackages.includes(p.dir))
+    return p.json.private === true
+      ? undefined
+      : "an unpublished package stays `private: true` in a release";
+
+  return "private" in p.json
+    ? "a published package has no `private` field in a release: run scripts/release/stamp.ts"
+    : undefined;
+}
+
+function checkChangesets(root: string, mode: PackageRulesMode, out: Violation[]): void {
   const file = ".changeset/config.json";
 
   if (!existsSync(join(root, file))) return;
   const json = readJson(root, file, out, "namespaces");
+  const expected = mode.kind === "development" ? "restricted" : "public";
 
-  if (json && json.access !== "restricted")
-    out.push({
-      file,
-      rule: "namespaces",
-      message: '`access` must stay "restricted" until p8-release',
-    });
+  if (!json || json.access === expected) return;
+
+  out.push({
+    file,
+    rule: "namespaces",
+    message:
+      mode.kind === "development"
+        ? '`access` must stay "restricted" until p8-release'
+        : '`access` is "public" in a release: run scripts/release/stamp.ts',
+  });
 }
 
+const NPM_PUBLISH = "npm publish";
+const SPAWNED_PUBLISH = "a `publish` argument of a spawned command";
+const CHANGESETS_ACTION_PUBLISH: [RegExp, string] = [
+  /^\s*publish\s*:/,
+  "a changesets/action `publish:` input",
+];
+
 const PUBLISH: [RegExp, string][] = [
-  [/\b(?:npm|pnpm|yarn)\s+(?:[\w-]+\s+)*publish\b/, "npm publish"],
+  [/\b(?:npm|pnpm|yarn)\s+(?:[\w-]+\s+)*publish\b/, NPM_PUBLISH],
   [/\bchangeset\s+publish\b/, "changeset publish"],
-  [/^\s*publish\s*:/, "a changesets/action `publish:` input"],
+  CHANGESETS_ACTION_PUBLISH,
   // `publishToMavenLocal` only writes the local `~/.m2` cache the consumer builds read; it reaches no registry.
   [/\bgradlew?\s+.*\bpublish(?!ToMavenLocal\b)\w*/, "Gradle publish"],
   [/\bmvnw?\s+.*\bdeploy\b/, "Maven deploy"],
@@ -316,6 +360,36 @@ const PUBLISH: [RegExp, string][] = [
 
 function publishes(code: string): string | undefined {
   return PUBLISH.find(([re]) => re.test(code))?.[1];
+}
+
+// A script spawns a publish as an argument list (`spawnSync(npm, ["publish", ...])`); a `publish:` key there is
+// configuration (the registry's permissions), not the changesets action input of a workflow.
+const RELEASE_SCRIPT_PUBLISH: [RegExp, string][] = [
+  ...PUBLISH.filter((pattern) => pattern !== CHANGESETS_ACTION_PUBLISH),
+  [/["'`]publish["'`]/, SPAWNED_PUBLISH],
+];
+
+/** Every file of `scripts/release`: only the npm publish of the publish script is accepted, where release.yml runs it. */
+function checkReleaseScripts(root: string, out: Violation[]): void {
+  for (const file of walk(root, RELEASE_SCRIPTS_DIR, () => true)) {
+    const lines = readFileSync(join(root, file), "utf8").split("\n");
+
+    lines.forEach((code, index) => {
+      for (const [re, what] of RELEASE_SCRIPT_PUBLISH) {
+        if (!re.test(code) || isAcceptedReleasePublish(file, what)) continue;
+
+        out.push({
+          file,
+          rule: "namespaces",
+          message: `line ${index + 1}: publishes (${what}); only ${RELEASE_PUBLISH_SCRIPT} publishes, to npm (A3)`,
+        });
+      }
+    });
+  }
+}
+
+function isAcceptedReleasePublish(file: string, what: string): boolean {
+  return file === RELEASE_PUBLISH_SCRIPT && (what === NPM_PUBLISH || what === SPAWNED_PUBLISH);
 }
 
 /** `scripts` of the root and every npm manifest: a publish command there is as bad as in CI. */
@@ -444,17 +518,21 @@ function checkComposer(root: string, out: Violation[]): void {
   }
 }
 
-export function checkPackageRules(root: string): Violation[] {
+export function checkPackageRules(
+  root: string,
+  mode: PackageRulesMode = DEVELOPMENT_MODE,
+): Violation[] {
   const out: Violation[] = [];
   const pkgs = loadNpm(root, out);
 
   checkDependencies(pkgs, out);
   checkPacks(root, pkgs, out);
-  checkNpmNamespace(pkgs, out);
   checkPublicMetadata(root, pkgs, out);
-  checkChangesets(root, out);
+  checkNpmNamespace(pkgs, mode, out);
+  checkChangesets(root, mode, out);
   checkWorkflows(root, out);
   checkScripts(root, pkgs, out);
+  checkReleaseScripts(root, out);
   checkGradle(root, out);
   checkComposer(root, out);
 

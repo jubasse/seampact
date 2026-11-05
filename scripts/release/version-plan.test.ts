@@ -48,6 +48,8 @@ source = { editable = "hooks" }
 
 const GRADLE_PROPERTIES = "org.gradle.caching=true\n";
 
+const CHANGESET_CONFIG = `${JSON.stringify({ access: "restricted", baseBranch: "develop" }, null, 2)}\n`;
+
 const trees: string[] = [];
 
 afterEach(() => {
@@ -75,6 +77,7 @@ function developmentTree(): string {
     writeTreeFile(root, `${directory}/package.json`, `${JSON.stringify(manifest, null, 2)}\n`);
   }
 
+  writeTreeFile(root, ".changeset/config.json", CHANGESET_CONFIG);
   writeTreeFile(root, "jvm/gradle.properties", GRADLE_PROPERTIES);
   writeTreeFile(root, "python/hooks/pyproject.toml", HOOKS_PROJECT);
   writeTreeFile(root, "python/codegen/pyproject.toml", CODEGEN_PROJECT);
@@ -113,6 +116,17 @@ describe("the release stamp", () => {
 
     expect(cli).toEqual({ name: "@seampact/cli", version: RELEASE });
     expect(binary).toEqual({ name: "@seampact/binary", version: RELEASE, private: true });
+  });
+
+  it("makes the changesets access public", () => {
+    const root = developmentTree();
+
+    stamp(root, RELEASE);
+
+    expect(JSON.parse(readTreeFile(root, ".changeset/config.json"))).toEqual({
+      access: "public",
+      baseBranch: "develop",
+    });
   });
 
   it("pins the seampact requirements, keeps the others and the comments, and updates the lock", () => {
@@ -192,6 +206,7 @@ describe("the version check", () => {
     expect(pending).not.toContain(
       "packages/tools/binary/package.json: a published package is still `private`",
     );
+    expect(pending).toContain('.changeset/config.json: access is "restricted", not "public"');
     expect(pending).toContain("jvm/gradle.properties: has no `version` property");
     expect(pending).toContain(
       `python/codegen/pyproject.toml: requirement "seampact-hooks==0.0.0" does not pin ${RELEASE}`,

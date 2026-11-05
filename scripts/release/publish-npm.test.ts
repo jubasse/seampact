@@ -67,7 +67,7 @@ async function registry(packumentByPath: ReadonlyMap<string, unknown>): Promise<
 
 const packumentOf = (integrity: string) => ({ versions: { [VERSION]: { dist: { integrity } } } });
 
-describe("the idempotent npm publish", () => {
+describe("the idempotent publish to npm", () => {
   it("publishes a missing version or package and skips a version held with the same bytes", async () => {
     const [cli, hal, spec] = tarballDirectory([
       "@seampact/cli",
