@@ -38,6 +38,9 @@ UNAUTHENTICATED: Final = "api.unauthenticated"
 OVERRIDDEN_RIGHT: Final = "tasks.update"
 CALLER_SERVICE_RIGHT: Final = "callerService"
 _FORBIDDEN: Final = "api.forbidden"
+_NOT_FOUND: Final = "api.not_found"
+# The sample channel the sample user is not a member of: the resolver denies it, so no handler runs for it.
+_NON_MEMBER_CHANNEL_ID: Final = "10000000-0000-4000-8000-000000000002"
 _RATE_LIMITED: Final = "api.rate_limited"
 _THROTTLE_RULE: Final = "throttle"
 _LOGGER: Final = logging.getLogger("consumer.tasks")
@@ -89,7 +92,8 @@ class UserHook:
 
 
 class ChannelResolver:
-    """Resolves a declared channel id to its sample channel, every channel existing, unless the script denies it."""
+    """Resolves a declared channel id to its sample channel, the sample user a member of every channel but one,
+    unless the script denies it."""
 
     def resolve_scope(self, request: ResolveScopeRequest) -> ScopeResolution:
         source = request.source
@@ -101,6 +105,9 @@ class ChannelResolver:
 
         if denied is not None:
             return scope_resolution.Denied(deny=ErrorCodeWithParams(code=denied))
+
+        if str(source.id) == _NON_MEMBER_CHANNEL_ID:
+            return scope_resolution.Denied(deny=ErrorCodeWithParams(code=_NOT_FOUND))
 
         resolved = ResolvedScope(scope=request.scope, id=source.id, value=channel(str(source.id)))
 

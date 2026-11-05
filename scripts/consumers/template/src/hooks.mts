@@ -47,6 +47,8 @@ const THROTTLE_RULE = "throttle";
 const CALLER_SERVICE_RIGHT = "callerService";
 const ROLES_RIGHT = "roles";
 const FORBIDDEN: Forbidden = { code: "api.forbidden", params: {} };
+// The sample channel the sample user is not a member of: the resolver denies it, so no handler runs for it.
+const NON_MEMBER_CHANNEL_ID = "10000000-0000-4000-8000-000000000002";
 
 type Unauthenticated = { readonly code: "api.unauthenticated" };
 type RateLimited = { readonly code: "api.rate_limited"; readonly params: { retryAfterMs: number } };
@@ -167,7 +169,7 @@ export const serviceDeciderHook = {
   },
 };
 
-/** Resolves a declared scope id to itself, every channel existing, unless the script denies the scope. */
+/** Resolves a declared scope id to itself, the sample user a member of every channel but one, unless the script denies the scope. */
 export const scopeResolverHook = {
   resolveScope(request: ResolveScopeRequest): ScopeResolution<ResolvedScope, NotFound> {
     if (request.source.resolver !== "declared") {
@@ -177,6 +179,8 @@ export const scopeResolverHook = {
     const scripted = scriptedScopeDenial(request.scope);
 
     if (scripted !== undefined) return { deny: notFoundDenial(scripted) };
+
+    if (request.source.id === NON_MEMBER_CHANNEL_ID) return { deny: { code: "api.not_found" } };
 
     return { resolved: { scope: request.scope, id: request.source.id } };
   },

@@ -1,8 +1,6 @@
 """The developer's handlers of every operation of the `tasks` and `tasksService` apis, each answering the loaded script
 when it says so, and the factories SEAMPACT names, which build them per request."""
 
-import uuid
-
 from django.http import HttpRequest
 from generated.tasks import operations as tasks
 from generated.tasks.schemas import Health, Preferences, Task, TaskSearchResult, TaskState
@@ -23,7 +21,6 @@ from sample_data import (
 from seampact_consumer_suite.scripted_answers import scripted_answer, text_member
 
 _OK: int = 200
-_NOT_FOUND: str = "api.not_found"
 _HEALTHY: str = "ok"
 _SERVICE_API: str = "tasksService"
 _NEXT_CURSOR: str = "page-2"
@@ -50,18 +47,10 @@ class ChannelsHandlers:
 
 class DraftsHandlers:
     def get_draft(self, request: tasks.GetDraftRequest) -> tasks.GetDraftResult:
-        not_found = {_NOT_FOUND: tasks.GetDraftErrors.api_not_found}
-
-        return scripted_answer("getDraft", _OK, _draft_reply_of, not_found) or tasks.GetDraftResponse200(
-            body=draft(request.input.path.draft_id)
-        )
+        return tasks.GetDraftResponse200(body=draft(request.input.path.draft_id))
 
     def delete_draft(self, request: tasks.DeleteDraftRequest) -> tasks.DeleteDraftResult:
-        not_found = {_NOT_FOUND: tasks.DeleteDraftErrors.api_not_found}
-
-        return scripted_answer("deleteDraft", _OK, _deleted_draft_reply_of, not_found) or tasks.DeleteDraftResponse200(
-            body=draft(request.input.path.draft_id)
-        )
+        return tasks.DeleteDraftResponse200(body=draft(request.input.path.draft_id))
 
 
 class HooksHandlers:
@@ -82,7 +71,7 @@ class PreferencesHandlers:
 
 class TasksHandlers:
     def get_task(self, request: tasks.GetTaskRequest) -> tasks.GetTaskResult:
-        not_found = {_NOT_FOUND: tasks.GetTaskErrors.api_not_found}
+        not_found = {"api.not_found": tasks.GetTaskErrors.api_not_found}
 
         return scripted_answer("getTask", _OK, _task_reply_of, not_found) or tasks.GetTaskResponse200(
             body=task(request.input.path.task_id)
@@ -147,14 +136,6 @@ def _health_of(body: dict[str, object]) -> tasks.HealthResult:
 
 def _channel_reply_of(body: dict[str, object]) -> tasks.GetChannelResult:
     return tasks.GetChannelResponse200(body=channel_of(body))
-
-
-def _draft_reply_of(body: dict[str, object]) -> tasks.GetDraftResult:
-    return tasks.GetDraftResponse200(body=draft(uuid.UUID(text_member(body, "draftId"))))
-
-
-def _deleted_draft_reply_of(body: dict[str, object]) -> tasks.DeleteDraftResult:
-    return tasks.DeleteDraftResponse200(body=draft(uuid.UUID(text_member(body, "draftId"))))
 
 
 def _task_reply_of(body: dict[str, object]) -> tasks.GetTaskResult:

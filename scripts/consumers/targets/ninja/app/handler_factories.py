@@ -2,7 +2,7 @@
 `handlers.py` per request. The drafts handlers answer `getDraft` with a plain `def`, which sync views require."""
 
 from django.http import HttpRequest
-from generated.tasks.operations import GetDraftRequest, GetDraftResult
+from generated.tasks.operations import GetDraftRequest, GetDraftResponse200, GetDraftResult
 from handlers import (
     AppHandlers,
     ChannelsHandlers,
@@ -11,13 +11,13 @@ from handlers import (
     InternalHandlers,
     PreferencesHandlers,
     TasksHandlers,
-    answer_get_draft,
 )
+from sample_data import draft
 
 
 class SyncDraftsHandlers(DraftsHandlers):
     def get_draft(self, request: GetDraftRequest) -> GetDraftResult:
-        return answer_get_draft(request)
+        return GetDraftResponse200(draft(str(request.input.path.draft_id)))
 
 
 def app_handlers(request: HttpRequest) -> AppHandlers:
