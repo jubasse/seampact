@@ -205,7 +205,7 @@ describe("an api with only public operations asks for no hooks", () => {
   );
 });
 
-// The access forms 1.0 refuses by name (CHK-004, 006, 019, 020, 094): generation refuses, it does not warn.
+// The forms 1.0 refuses by name (`FORMS_REFUSED_BY_ONE_ZERO`): generation refuses, it does not warn.
 describe("the forms 1.0 refuses", () => {
   test.each(FORMS_REFUSED_BY_ONE_ZERO)("$title is refused by name", async (form) => {
     const outcome = await generateWithRefusedForm(honoTarget, form, {

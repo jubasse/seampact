@@ -119,7 +119,7 @@ describe("the generated reference boundary compiles", () => {
     expect(forms).not.toContainEqual(expect.objectContaining({ code: "valueSource.unsupported" }));
   });
 
-  // The access forms 1.0 refuses by name (CHK-004, 006, 019, 020, 094): generation refuses, it does not warn.
+  // The forms 1.0 refuses by name (`FORMS_REFUSED_BY_ONE_ZERO`): generation refuses, it does not warn.
   test.each(FORMS_REFUSED_BY_ONE_ZERO)("$title is refused by name", async (form) => {
     const outcome = await generateWithRefusedForm(nestjsTarget, form, {
       links: await referenceLinks(PROJECT, "tasks"),
