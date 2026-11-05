@@ -32,6 +32,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       own-validators: ${{ steps.detect.outputs.run }}
+      pr-rows: ${{ steps.detect.outputs.pr-rows }}
+      queue: ${{ steps.detect.outputs.queue }}
       drift: ${{ steps.detect.outputs.drift }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -46,11 +48,15 @@ jobs:
         id: detect
         uses: ./.github/actions/lane-changes
         with:
-          # The packed packages, the consumer harness, the reference contract, the workspace and toolchain pins and
-          # this workflow.
+          # The packages a Node server consumer installs (core, packs, runtime, the TypeScript, fetch and validator
+          # targets, its own), the http suite, the consumer harness and its overlays, the reference contract and the pins.
           watched-paths: |
-            ^packages/
-            ^scripts/consumers/
+            ^packages/(core|packs|runtime)/
+            ^packages/targets/codegen-(ts|fetch|zod|yup|class-validator|fastify|adonis)/
+            ^packages/tools/http-suite/
+            ^scripts/consumers/(cli|build-and-pack|consumer-project|install-into|ignore-vendor|packed-packages|run-step|served-app|validator-choice)\.ts$
+            ^scripts/consumers/template/
+            ^scripts/consumers/targets/(fastify|adonis|adonis6)/
             ^scripts/golden/
             ^fixtures/reference/
             ^\.github/actions/
@@ -60,10 +66,15 @@ jobs:
             ^package\.json$
             ^tsconfig\.base\.json$
             ^\.nvmrc$
+          # The fast tier: a pull request to develop runs this lane only for its own code.
+          pull-request-paths: |
+            ^packages/targets/codegen-adonis/runtime/vine-support\.ts$
+            ^scripts/consumers/validator-choice\.ts$
+            ^\.github/workflows/validators-2\.yml$
 
   own-validators-consumer:
     needs: changes
-    if: needs.changes.outputs.own-validators == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -86,7 +97,7 @@ jobs:
 
   own-validators-consumer-vinejs:
     needs: changes
-    if: needs.changes.outputs.own-validators == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:

@@ -106,8 +106,8 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     "own-validators-consumer-vinejs-drift": [{ target: "adonis6", validators: "vinejs" }],
   },
   "p5-fastify-express.yml": {
-    consumer: [
-      { target: "express", validators: "zod" },
+    consumer: [{ target: "express", validators: "zod" }],
+    "consumer-queue": [
       { target: "express4", validators: "yup" },
       { target: "fastify", validators: "zod" },
     ],
@@ -122,9 +122,9 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     "consumer-post-merge": [{ target: "hono", validators: "yup" }],
   },
   "p5-nestjs.yml": {
-    "nestjs-consumer": [
+    "nestjs-consumer": [{ target: "nestjs", validators: "zod", reply: "interceptor" }],
+    "nestjs-consumer-queue": [
       { target: "nestjs", validators: "class-validator", reply: "handler" },
-      { target: "nestjs", validators: "zod", reply: "interceptor" },
       { target: "nestjs-cjs", validators: "zod", reply: "handler" },
     ],
     "nestjs-consumer-post-merge": [

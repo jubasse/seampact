@@ -13,6 +13,9 @@ on:
     types: [checks_requested]
     branches: [main, develop]
   workflow_dispatch:
+  # The nightly run has no base, so it runs every row whatever the change: the net under the narrowed paths.
+  schedule:
+    - cron: "30 0 * * *"
 
 permissions:
   contents: read
@@ -27,6 +30,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.detect.outputs.run }}
+      pr-rows: ${{ steps.detect.outputs.pr-rows }}
+      queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,14 +46,30 @@ jobs:
         id: detect
         uses: ./.github/actions/lane-changes
         with:
-          # Every path: only a change to documentation no test reads skips this lane.
+          # The packages a Node server consumer installs (core, packs, runtime, the TypeScript, fetch and validator
+          # targets, its own), the http suite, the consumer harness and its overlays, the reference contract and the pins.
           watched-paths: |
-            .
+            ^packages/(core|packs|runtime)/
+            ^packages/targets/codegen-(ts|fetch|zod|yup|class-validator|express|fastify)/
+            ^packages/tools/http-suite/
+            ^scripts/consumers/(cli|build-and-pack|consumer-project|install-into|ignore-vendor|packed-packages|run-step|served-app|validator-choice)\.ts$
+            ^scripts/consumers/template/
+            ^scripts/consumers/targets/(express|express4|fastify)/
+            ^scripts/golden/
+            ^fixtures/reference/
+            ^\.github/actions/
+            ^\.github/workflows/p5-fastify-express\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^tsconfig\.base\.json$
+            ^\.nvmrc$
 
-  # The PR rows: every target and every validator once; the post-merge job below runs the other pairs.
+  # The PR row, the Node server family's representative; the queue job runs every other target and validator once,
+  # the post-merge job the other pairs.
   consumer:
     needs: changes
-    if: needs.changes.outputs.run == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -56,8 +77,6 @@ jobs:
       matrix:
         include:
           - { target: express, validators: zod }
-          - { target: express4, validators: yup }
-          - { target: fastify, validators: zod }
     steps: &consumer-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -78,6 +97,19 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+  consumer-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: express4, validators: yup }
+          - { target: fastify, validators: zod }
+    steps: *consumer-steps
+
   consumer-post-merge:
     needs: changes
     if: needs.changes.outputs.post-merge == 'true'
@@ -95,7 +127,7 @@ jobs:
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   express-fastify:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, consumer, consumer-post-merge]
+    needs: [changes, consumer, consumer-queue, consumer-post-merge]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

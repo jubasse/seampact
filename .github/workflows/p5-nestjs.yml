@@ -15,6 +15,9 @@ on:
     types: [checks_requested]
     branches: [main, develop]
   workflow_dispatch:
+  # The nightly run has no base, so it runs every row whatever the change: the net under the narrowed paths.
+  schedule:
+    - cron: "30 0 * * *"
 
 permissions:
   contents: read
@@ -29,6 +32,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.detect.outputs.run }}
+      pr-rows: ${{ steps.detect.outputs.pr-rows }}
+      queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,24 +48,42 @@ jobs:
         id: detect
         uses: ./.github/actions/lane-changes
         with:
-          # Every path: only a change to documentation no test reads skips this lane.
+          # The packages a Node server consumer installs (core, packs, runtime, the TypeScript, fetch and validator
+          # targets, its own), the http suite, the consumer harness and its overlays, the reference contract and the pins.
           watched-paths: |
-            .
+            ^packages/(core|packs|runtime)/
+            ^packages/targets/codegen-(ts|fetch|zod|yup|class-validator|nestjs)/
+            ^packages/tools/http-suite/
+            ^scripts/consumers/(cli|build-and-pack|consumer-project|install-into|ignore-vendor|packed-packages|run-step|served-app|validator-choice)\.ts$
+            ^scripts/consumers/template/
+            ^scripts/consumers/targets/(nestjs|nestjs-cjs)/
+            ^scripts/golden/
+            ^fixtures/reference/
+            ^\.github/actions/
+            ^\.github/workflows/p5-nestjs\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^tsconfig\.base\.json$
+            ^\.nvmrc$
+          # The fast tier: a pull request to develop runs this lane only for its own code.
+          pull-request-paths: |
+            ^packages/targets/codegen-(nestjs)/
+            ^scripts/consumers/targets/(nestjs|nestjs-cjs)/
+            ^\.github/workflows/p5-nestjs\.yml$
 
-  # The PR rows: every target and every validator once, and the CommonJS tree; the post-merge job below runs the other pairs.
+  # The PR row; the queue job runs every other target and validator once and the CommonJS tree, the post-merge job
+  # the other pairs.
   nestjs-consumer:
     needs: changes
-    if: needs.changes.outputs.run == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { target: nestjs, validators: class-validator, reply: handler }
           - { target: nestjs, validators: zod, reply: interceptor }
-          # The generated tree on CommonJS, loading the runtime's CommonJS build.
-          - { target: nestjs-cjs, validators: zod, reply: handler }
     steps: &consumer-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -81,6 +104,20 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+  nestjs-consumer-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: nestjs, validators: class-validator, reply: handler }
+          # The generated tree on CommonJS, loading the runtime's CommonJS build.
+          - { target: nestjs-cjs, validators: zod, reply: handler }
+    steps: *consumer-steps
+
   nestjs-consumer-post-merge:
     needs: changes
     if: needs.changes.outputs.post-merge == 'true'
@@ -97,7 +134,7 @@ jobs:
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   nestjs:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, nestjs-consumer, nestjs-consumer-post-merge]
+    needs: [changes, nestjs-consumer, nestjs-consumer-queue, nestjs-consumer-post-merge]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

@@ -30,6 +30,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.detect.outputs.run }}
+      pr-rows: ${{ steps.detect.outputs.pr-rows }}
+      queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
       drift: ${{ steps.detect.outputs.drift }}
     steps:
@@ -45,14 +47,34 @@ jobs:
         id: detect
         uses: ./.github/actions/lane-changes
         with:
-          # Every path: only a change to documentation no test reads skips this lane.
+          # The packages a Node server consumer installs (core, packs, runtime, the TypeScript, fetch and validator
+          # targets, its own), the http suite, the consumer harness and its overlays, the reference contract and the pins.
           watched-paths: |
-            .
+            ^packages/(core|packs|runtime)/
+            ^packages/targets/codegen-(ts|fetch|zod|yup|class-validator|adonis)/
+            ^packages/tools/http-suite/
+            ^scripts/consumers/(cli|build-and-pack|consumer-project|install-into|ignore-vendor|packed-packages|run-step|served-app|validator-choice)\.ts$
+            ^scripts/consumers/template/
+            ^scripts/consumers/targets/(adonis|adonis6)/
+            ^scripts/golden/
+            ^fixtures/reference/
+            ^\.github/actions/
+            ^\.github/workflows/p5-adonis\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^tsconfig\.base\.json$
+            ^\.nvmrc$
+          # The fast tier: a pull request to develop runs this lane only for its own code.
+          pull-request-paths: |
+            ^packages/targets/codegen-(adonis)/
+            ^scripts/consumers/targets/(adonis|adonis6)/
+            ^\.github/workflows/p5-adonis\.yml$
 
   # The PR row; the post-merge and drift jobs below run the other pairs.
   adonis-consumer:
     needs: changes
-    if: needs.changes.outputs.run == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
