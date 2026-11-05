@@ -1,0 +1,18 @@
+# docs/conformance/proofs/p8-determinism.yaml
+lane: p8-determinism
+proofs:
+  - id: CHK-103
+    fixtures: [fixtures/reference]
+    tests:
+      - 'nestjs: scripts/determinism/generation-matrix.test.ts#generation determinism nestjs generates the same bytes on every run, under another TZ and LANG, and from the included form'
+      - 'fastify: scripts/determinism/generation-matrix.test.ts#generation determinism fastify generates the same bytes on every run, under another TZ and LANG, and from the included form'
+      - 'express: scripts/determinism/generation-matrix.test.ts#generation determinism express generates the same bytes on every run, under another TZ and LANG, and from the included form'
+      - 'adonis: scripts/determinism/generation-matrix.test.ts#generation determinism adonis generates the same bytes on every run, under another TZ and LANG, and from the included form'
+      - 'hono: scripts/determinism/generation-matrix.test.ts#generation determinism hono generates the same bytes on every run, under another TZ and LANG, and from the included form'
+      - 'fetch: scripts/determinism/generation-matrix.test.ts#generation determinism fetch generates the same bytes on every run, under another TZ and LANG, and from the included form'
+      - 'zod: scripts/determinism/generation-matrix.test.ts#generation determinism zod generates the same bytes on every run, under another TZ and LANG, and from the included form'
+      - 'yup: scripts/determinism/generation-matrix.test.ts#generation determinism yup generates the same bytes on every run, under another TZ and LANG, and from the included form'
+      - 'class-validator: scripts/determinism/generation-matrix.test.ts#generation determinism class-validator generates the same bytes on every run, under another TZ and LANG, and from the included form'
+      - 'react: scripts/determinism/generation-matrix.test.ts#generation determinism react generates the same bytes on every run, under another TZ and LANG, and from the included form'
+      - 'angular: scripts/determinism/generation-matrix.test.ts#generation determinism angular generates the same bytes on every run, under another TZ and LANG, and from the included form'
+      - 'vue: scripts/determinism/generation-matrix.test.ts#generation determinism vue generates the same bytes on every run, under another TZ and LANG, and from the included form'
