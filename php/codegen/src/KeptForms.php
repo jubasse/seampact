@@ -6,6 +6,7 @@ namespace Seampact\Codegen;
 
 use Seampact\Ir\Model\AccessUnknown;
 use Seampact\Ir\Model\ArrayTypeUse;
+use Seampact\Ir\Model\BasicScheme;
 use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Model\CredentialIdentity;
 use Seampact\Ir\Model\Direction;
@@ -22,6 +23,7 @@ use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Model\OptionalAccess;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\ProofPlacement;
+use Seampact\Ir\Model\QueryScheme;
 use Seampact\Ir\Model\RefTypeUse;
 use Seampact\Ir\Model\RequirementUnknown;
 use Seampact\Ir\Model\RightRequirement;
@@ -245,6 +247,25 @@ final class KeptForms
 
         if ($identityId !== null) {
             $this->readIdentity($identityId, $at->below('access'));
+        }
+
+        if ($access instanceof IdentityAccess || $access instanceof OptionalAccess) {
+            $this->readCredentialSchemes($access->schemes, $at->below('access'));
+        }
+    }
+
+    /**
+     * The query and HTTP Basic schemes no PHP boundary reads a credential from, refused as the Node servers do.
+     *
+     * @param list<string> $schemeIds
+     */
+    private function readCredentialSchemes(array $schemeIds, IrPlace $at): void
+    {
+        foreach ($schemeIds as $schemeId) {
+            $scheme = $this->ir->schemes[$schemeId] ?? null;
+            if ($scheme instanceof QueryScheme || $scheme instanceof BasicScheme) {
+                $this->refusals->waiting("scheme.{$scheme->kind}", "A '{$scheme->kind}' credential scheme", $at, Delivery::Consumer);
+            }
         }
     }
 

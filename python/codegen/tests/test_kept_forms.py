@@ -109,3 +109,24 @@ def test_a_format_meta_member_is_refused_by_name(repository_root: Path) -> None:
     }
 
     assert "format.meta.unsupported" in _refused_codes(ir_json)
+
+
+@pytest.mark.parametrize(
+    ("scheme", "code"),
+    [
+        ({"kind": "query", "name": "api_key"}, "scheme.query.unsupported"),
+        ({"kind": "basic"}, "scheme.basic.unsupported"),
+    ],
+)
+def test_a_query_or_basic_credential_scheme_is_refused_by_name(
+    repository_root: Path, scheme: dict[str, str], code: str
+) -> None:
+    ir_json = _ir_json(repository_root, "tasks")
+    schemes = ir_json["schemes"]
+    assert isinstance(schemes, dict)
+    schemes["bearer"] = {"id": "bearer", **scheme, "origin": schemes["bearer"]["origin"]}
+
+    refused = _refused_codes(ir_json)
+
+    assert set(refused) == {code}
+    assert f"A '{scheme['kind']}' credential scheme" in refused[code]
