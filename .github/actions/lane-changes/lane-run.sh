@@ -9,10 +9,18 @@ if [ "$#" -ne 1 ] || [ -z "$1" ]; then
 fi
 watched_pattern=$1
 
-# Documentation no lane test reads: Markdown outside the packages and fixtures, and anything under docs/ but the
-# grammar, the IR and the conformance checklist. The `ci` workflow, which always runs, also reads docs/adr/.
+# Documentation no lane test reads: Markdown outside the packages and fixtures, anything under docs/ but the
+# grammar, the IR and the conformance checklist, and the docs site package, which only its own lane builds. The `ci`
+# workflow, which always runs, also reads docs/adr/.
 documentation_pattern='^docs/|\.md$'
 read_by_tests_pattern='^(packages|fixtures|docs/grammar|docs/ir|docs/conformance)/'
+docs_site_pattern='^packages/tools/docs-site/'
+
+is_documentation() {
+  [[ "$1" =~ $docs_site_pattern ]] && return 0
+
+  [[ "$1" =~ $documentation_pattern ]] && ! [[ "$1" =~ $read_by_tests_pattern ]]
+}
 
 changed_count=0
 code_change_count=0
@@ -21,7 +29,7 @@ watched_change_count=0
 while IFS= read -r -d '' changed_path || [ -n "$changed_path" ]; do
   changed_count=$((changed_count + 1))
 
-  if ! [[ "$changed_path" =~ $documentation_pattern ]] || [[ "$changed_path" =~ $read_by_tests_pattern ]]; then
+  if ! is_documentation "$changed_path"; then
     code_change_count=$((code_change_count + 1))
   fi
 
