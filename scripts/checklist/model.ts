@@ -18,6 +18,8 @@ export interface Item {
 
 export interface TestRef {
   raw: string;
+  /** `test`: a test file and a test name; `ci`: a workflow file (the path) and a job id (the name). */
+  kind: "test" | "ci";
   target: string;
   path: string;
   name: string;

@@ -106,6 +106,16 @@ describe("parseSuiteCase", () => {
   test.each([
     ["an unknown member", minimalCase({ extra: 1 }), "at '/extra': unknown member"],
     ["a checklist id of another form", minimalCase({ checks: ["CHK-12"] }), "at '/checks/0'"],
+    [
+      "a scoped check without a target",
+      minimalCase({ checks: [{ id: "CHK-012", targets: [] }] }),
+      "at '/checks/0/targets': a scoped check names at least one target",
+    ],
+    [
+      "a scoped check with an unknown member",
+      minimalCase({ checks: [{ id: "CHK-012", targets: ["nestjs"], only: true }] }),
+      "at '/checks/0/only': unknown member",
+    ],
     ["an unknown profile", minimalCase({ profiles: ["fast"] }), "at '/profiles/0'"],
     ["no step", minimalCase({ steps: [] }), "at '/steps': a case has at least one step"],
     [

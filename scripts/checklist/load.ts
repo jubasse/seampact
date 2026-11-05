@@ -15,6 +15,8 @@ const CHK_ID = /^CHK-\d{3,}$/;
 const FR_ID = /^FR-\d+$/;
 const SCN_ID = /^SCN-\d{3,}$/;
 const TEST_REF = /^([a-z][a-z0-9-]*): ([^#\s][^#]*)#(\S.*)$/;
+const CI_REF = /^([a-z][a-z0-9-]*): ci: ([A-Za-z0-9._-]+\.ya?ml)#([A-Za-z_][A-Za-z0-9_-]*)$/;
+const TEST_FORMS = "'<target>: <path>#<test name>' or '<target>: ci: <workflow file>#<job id>'";
 
 function readYaml(root: string, file: string, problems: Problem[]): unknown {
   const abs = join(root, file);
@@ -246,17 +248,31 @@ export function loadProofs(root: string, problems: Problem[]): Proof[] {
       const refs: TestRef[] = [];
 
       if (!Array.isArray(tests) || !tests.every(isStr))
-        bad("malformed proof: `tests` must be a list of '<target>: <path>#<test name>'", id);
+        bad(`malformed proof: \`tests\` must be a list of ${TEST_FORMS}`, id);
       else
         for (const t of tests) {
-          const m = TEST_REF.exec(t);
+          const ci = CI_REF.exec(t);
 
-          if (!m) bad(`malformed test "${t}": expected '<target>: <path>#<test name>'`, id);
+          if (ci) {
+            refs.push({
+              raw: t,
+              kind: "ci",
+              target: ci[1] as string,
+              path: ci[2] as string,
+              name: ci[3] as string,
+            });
+            continue;
+          }
+
+          const m = t.includes(": ci: ") ? null : TEST_REF.exec(t);
+
+          if (!m) bad(`malformed test "${t}": expected ${TEST_FORMS}`, id);
           else if (!isRepoRelative(m[2] as string))
             bad(`test path "${m[2]}" must be repository-relative`, id);
           else
             refs.push({
               raw: t,
+              kind: "test",
               target: m[1] as string,
               path: m[2] as string,
               name: m[3] as string,

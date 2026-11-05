@@ -1,9 +1,10 @@
 // The http-suite reports of the consumer runs (ADR 0015 "Report"), read as proofs for the release gate: each report
 // names its server target and the outcome of every checklist id its cases prove.
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import type { CaseOutcome, SuiteReport } from "../../packages/tools/http-suite/src/suite-report.ts";
 import type { Problem } from "./model.ts";
+import { shown } from "./shown.ts";
 import { reportTargetOf, SERVER_TARGETS, TARGET_VARIANTS } from "./targets.ts";
 
 // Typed from the http-suite's own format, so a format change there fails the typecheck here.
@@ -11,12 +12,13 @@ const SUITE_REPORT_FORMAT: SuiteReport["format"] = "seampact-http-suite-report/1
 const CASE_OUTCOMES: readonly CaseOutcome[] = ["passed", "failed", "refused"];
 const CHECK_ID = /^CHK-\d{3,}$/;
 const REPORT_FILE = /^http-suite-.+\.json$/;
-const SHOWN_VALUE_LENGTH = 40;
 
 /** One checklist id's outcome in one suite report. */
 export interface SuiteProof {
   /** The report file, as the reports directory argument joined with its path under it. */
   file: string;
+  /** The artefact the report came in: the first directory of its path under the reports directory, if any. */
+  artefact?: string;
   target: string;
   id: string;
   outcome: CaseOutcome;
@@ -28,17 +30,6 @@ const isRec = (v: unknown): v is Rec => typeof v === "object" && v !== null && !
 const isCaseOutcome = (v: unknown): v is CaseOutcome => CASE_OUTCOMES.some((known) => known === v);
 const isStringList = (v: unknown): v is string[] =>
   Array.isArray(v) && v.every((item) => typeof item === "string");
-
-/**
- * A report value, or any text taken from a report, as one quoted token that is safe to print in a job log and a
- * markdown fence: cut short, with line breaks and backticks escaped, so it cannot start a workflow command.
- */
-function shown(value: unknown): string {
-  const text = String(value);
-  const cut = text.length > SHOWN_VALUE_LENGTH ? `${text.slice(0, SHOWN_VALUE_LENGTH)}...` : text;
-
-  return JSON.stringify(cut).replaceAll("`", "\\u0060");
-}
 
 /**
  * Every `http-suite-*.json` file under `directory`, at any depth, must be an http-suite report of a server target;
@@ -57,7 +48,17 @@ export function loadSuiteReports(directory: string, problems: Problem[]): SuiteP
     return [];
   }
 
-  return files.flatMap((file) => suiteProofsOf(file, readReport(file, problems), problems));
+  return files.flatMap((file) =>
+    suiteProofsOf(file, readReport(file, problems), problems).map((proof) =>
+      withArtefact(proof, directory),
+    ),
+  );
+}
+
+function withArtefact(proof: SuiteProof, directory: string): SuiteProof {
+  const [artefact, ...rest] = relative(directory, proof.file).split(sep);
+
+  return artefact !== undefined && rest.length > 0 ? { ...proof, artefact } : proof;
 }
 
 function reportFilesUnder(directory: string): string[] {

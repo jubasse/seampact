@@ -56,6 +56,7 @@ export {
   type ScriptedDenial,
   type ScriptedScope,
 } from "./sample-app-script.js";
+export type { ScopedCheck } from "./scoped-check.js";
 export {
   type BootExpectation,
   type CaptureSource,

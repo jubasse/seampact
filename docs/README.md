@@ -1,5 +1,7 @@
 # Documentation
 
+The same pages, with search, are on the [documentation site](https://jubasse.github.io/seampact/).
+
 ## Getting started
 
 - [Getting started](getting-started/README.md): a notes API on NestJS, step by step.

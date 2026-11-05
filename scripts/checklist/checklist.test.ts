@@ -1,16 +1,26 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse } from "yaml";
+import { parseSuiteCase } from "../../packages/tools/http-suite/src/suite-case.ts";
+import {
+  type CaseResult,
+  suiteReportOf,
+} from "../../packages/tools/http-suite/src/suite-report.ts";
+import { caseHeader } from "../../packages/tools/http-suite/src/suite-runner.ts";
+import type { CheckOptions } from "./check.ts";
 import { check } from "./check.ts";
 import { buildIds, exportFromDir, privateTerms } from "./export-ids.ts";
 import { loadModel } from "./load.ts";
 import type { Problem } from "./model.ts";
 import { formatProblem } from "./model.ts";
+import { ITEMS_AFTER_1_0, TARGETS_AFTER_1_0 } from "./release-scope.ts";
 import { parseResults, renderReport, shares, testPassed } from "./report.ts";
+import { SERVER_TARGETS } from "./targets.ts";
+import { VARIANT_ROW_SETS } from "./variant-rows.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../..");
@@ -33,7 +43,11 @@ function expectOne(name: string, file: string, id: string | undefined, part: str
 
 describe("checklist check", () => {
   it("checklist check passes on the repository", () => {
-    expect(lines(check({ root: REPO }))).toEqual([]);
+    expect(
+      lines(
+        check({ root: REPO, itemsAfter1_0: ITEMS_AFTER_1_0, variantRowSets: VARIANT_ROW_SETS }),
+      ),
+    ).toEqual([]);
   });
 
   it("passes on the reference fixture, with and without the release gate", () => {
@@ -378,6 +392,34 @@ describe.skipIf(!hasJq)("suite report fetcher filters", () => {
     expect(filter("suite-artefacts.jq", { artifacts: dropped })).toBe("");
   });
 
+  it("reads a cited job's conclusion, by name or by a matrix name's start, skipped rows aside", () => {
+    const jobs = (...rows: [string, string][]) => ({
+      jobs: rows.map(([name, conclusion]) => ({ name, conclusion })),
+    });
+    const conclusion = (input: unknown, name: string, mode: string) =>
+      execFileSync(
+        "jq",
+        ["-r", "--arg", "name", name, "--arg", "mode", mode, "-f", join(HERE, "ci-job.jq")],
+        { encoding: "utf8", input: JSON.stringify(input) },
+      ).trim();
+    const matrix = jobs(
+      ["smoke (linux)", "success"],
+      ["smoke (mac)", "failure"],
+      ["other", "success"],
+    );
+
+    expect(conclusion(matrix, "smoke (", "prefix")).toBe("failure");
+    expect(
+      conclusion(
+        jobs(["smoke (linux)", "success"], ["smoke (mac)", "skipped"]),
+        "smoke (",
+        "prefix",
+      ),
+    ).toBe("success");
+    expect(conclusion(matrix, "other", "exact")).toBe("success");
+    expect(conclusion(jobs(["other", "skipped"]), "other", "exact")).toBe("");
+  });
+
   const run = (changes: Record<string, unknown>) => ({
     conclusion: "success",
     event: "push",
@@ -409,6 +451,274 @@ describe.skipIf(!hasJq)("suite report fetcher filters", () => {
     ];
 
     for (const candidate of untrusted) expect(filter("suite-run.jq", candidate)).toBe("");
+  });
+});
+
+describe("checklist release scope", () => {
+  const noTest = (id: string, target: string) =>
+    `${CHECKLIST}: ${id}: release gate: no test for target ${target}`;
+  const passed = { outcome: "passed", cases: ["a"] };
+
+  /** Writes each report under its artefact directory, as the fetcher lays them out, and returns the directory. */
+  function artefacts(reports: Record<string, { target: string; checks: Record<string, unknown> }>) {
+    const directory = mkdtempSync(join(tmpdir(), "checklist-scope-"));
+
+    for (const [artefact, report] of Object.entries(reports)) {
+      mkdirSync(join(directory, artefact));
+      writeFileSync(
+        join(directory, artefact, "http-suite-default.json"),
+        JSON.stringify({ format: "seampact-http-suite-report/1", profile: "default", ...report }),
+      );
+    }
+
+    return directory;
+  }
+
+  function gateOver(directory: string, options: Partial<CheckOptions>, root = fx("release-gate")) {
+    try {
+      return lines(check({ root, releaseGate: true, suiteReports: directory, ...options }));
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }
+
+  it("a target-scoped check counts only for its targets", () => {
+    const directory = mkdtempSync(join(tmpdir(), "checklist-scope-"));
+    const bodyLimit = parseSuiteCase(
+      JSON.parse(
+        readFileSync(join(REPO, "packages/tools/http-suite/cases/batch-body-limit.json"), "utf8"),
+      ),
+      "batch-body-limit",
+    );
+
+    for (const target of SERVER_TARGETS.filter((t) => !TARGETS_AFTER_1_0.includes(t))) {
+      const result: CaseResult = {
+        ...caseHeader(bodyLimit, target),
+        outcome: "passed",
+        failures: [],
+      };
+
+      mkdirSync(join(directory, target));
+
+      for (const profile of ["default", "boot"] as const) {
+        writeFileSync(
+          join(directory, target, `http-suite-${profile}.json`),
+          JSON.stringify(suiteReportOf({ target, profile }, [result])),
+        );
+      }
+    }
+
+    const out = gateOver(
+      directory,
+      { itemsAfter1_0: ITEMS_AFTER_1_0, variantRowSets: VARIANT_ROW_SETS },
+      REPO,
+    );
+
+    expect(out.filter((line) => line.includes("does not list"))).toEqual([]);
+    expect(out).not.toContain(noTest("CHK-067", "fastify"));
+    expect(out).not.toContain(noTest("CHK-083", "laravel"));
+    expect(out).not.toContain(noTest("CHK-084", "symfony"));
+    expect(out).not.toContain(noTest("CHK-186", "ninja"));
+  });
+
+  it("a variant set passes only with every row passed", () => {
+    const variantRowSets = new Map([
+      [
+        "CHK-002",
+        {
+          target: "nestjs",
+          rows: [
+            { name: "row a", artefactPrefix: "nestjs-http-suite-a-" },
+            { name: "row b", artefactPrefix: "nestjs-http-suite-b-" },
+          ],
+        },
+      ],
+    ]);
+    const rowA = { target: "nestjs", checks: { "CHK-002": passed } };
+    const oneRow = gateOver(artefacts({ "nestjs-http-suite-a-x": rowA }), { variantRowSets });
+    const everyRow = gateOver(
+      artefacts({ "nestjs-http-suite-a-x": rowA, "nestjs-http-suite-b-y": rowA }),
+      { variantRowSets },
+    );
+
+    expect(oneRow).toContain(
+      `${noTest("CHK-002", "nestjs")} (no passed suite report from the variant rows: row b)`,
+    );
+    expect(everyRow).not.toContainEqual(expect.stringContaining(noTest("CHK-002", "nestjs")));
+  });
+
+  it("a deferred pair is not required", () => {
+    const itemsAfter1_0 = new Map([
+      ["CHK-001", { targets: ["nestjs"], reason: "after" }],
+      ["CHK-002", { reason: "after" }],
+    ]);
+    const out = gateOver(artefacts({ other: { target: "hono", checks: {} } }), { itemsAfter1_0 });
+
+    expect(out).toEqual([]);
+  });
+
+  it("a proven deferred id fails by name", () => {
+    const itemsAfter1_0 = new Map([["CHK-001", { targets: ["nestjs"], reason: "after" }]]);
+    const out = gateOver(
+      artefacts({ nestjs: { target: "nestjs", checks: { "CHK-001": passed } } }),
+      {
+        itemsAfter1_0,
+      },
+    );
+
+    expect(out).toContain(
+      "scripts/checklist/release-scope.ts: CHK-001: proven for target nestjs: drop it from the after-1.0 list",
+    );
+  });
+
+  it("refuses an after-1.0 entry of an unknown id, an unlisted target or without a reason", () => {
+    const itemsAfter1_0 = new Map([
+      ["CHK-009", { reason: "after" }],
+      ["CHK-001", { targets: ["express"], reason: " " }],
+    ]);
+    const out = lines(check({ root: fx("release-gate"), itemsAfter1_0 }));
+
+    expect(out).toEqual([
+      "scripts/checklist/release-scope.ts: CHK-009: after-1.0 list names an unknown id (not in the checklist)",
+      "scripts/checklist/release-scope.ts: CHK-001: after-1.0 entry without a reason",
+      "scripts/checklist/release-scope.ts: CHK-001: after-1.0 entry names a target the item does not list: express",
+    ]);
+  });
+});
+
+describe("checklist ci references", () => {
+  const noTest = (id: string, target: string) =>
+    `${CHECKLIST}: ${id}: release gate: no test for target ${target}`;
+
+  /** The release-gate fixture with a proof citing [ref] for CHK-002 on nestjs and a workflow holding job `build`. */
+  function rootCiting(ref: string): string {
+    const root = mkdtempSync(join(tmpdir(), "checklist-ci-"));
+
+    cpSync(fx("release-gate"), root, { recursive: true });
+    mkdirSync(join(root, ".github/workflows"), { recursive: true });
+    writeFileSync(join(root, ".github/workflows/w.yml"), "jobs:\n  build:\n    name: build\n");
+    writeFileSync(
+      join(root, "docs/conformance/proofs/lane-ci.yaml"),
+      `lane: lane-ci\nproofs:\n  - id: CHK-002\n    tests: ['nestjs: ci: ${ref}']\n`,
+    );
+
+    return root;
+  }
+
+  const COMMIT = "a".repeat(40);
+  const EXPRESSION_NAME = ["$", "{{ matrix.row }}"].join("");
+
+  function gateWithCiJobs(
+    jobs: unknown[] | undefined,
+    otherReports: Record<string, unknown> = {},
+  ): string[] {
+    const root = rootCiting("w.yml#build");
+    const reports = mkdtempSync(join(tmpdir(), "checklist-ci-reports-"));
+
+    try {
+      writeFileSync(
+        join(reports, "http-suite-default.json"),
+        JSON.stringify({
+          format: "seampact-http-suite-report/1",
+          target: "hono",
+          profile: "default",
+          checks: {},
+        }),
+      );
+
+      for (const [name, report] of Object.entries(otherReports))
+        writeFileSync(join(reports, `http-suite-${name}.json`), JSON.stringify(report));
+
+      if (jobs !== undefined)
+        writeFileSync(
+          join(reports, "ci-jobs.json"),
+          JSON.stringify({ format: "seampact-ci-jobs/1", jobs }),
+        );
+
+      return lines(check({ root, releaseGate: true, suiteReports: reports }));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(reports, { recursive: true, force: true });
+    }
+  }
+
+  it("refuses a ci reference to a missing workflow or job", () => {
+    for (const [ref, message] of [
+      ["gone.yml#build", "CI workflow does not exist: gone.yml"],
+      ["w.yml#deploy", "CI job does not exist: deploy in w.yml"],
+    ] as const) {
+      const root = rootCiting(ref);
+
+      try {
+        expect(lines(check({ root }))).toEqual([
+          `docs/conformance/proofs/lane-ci.yaml: CHK-002: ${message}`,
+        ]);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("counts a ci reference only when its newest develop run passed, and names a failed one", () => {
+    const job = (conclusion: string) => ({
+      ref: "w.yml#build",
+      conclusion,
+      run: 9,
+      commit: COMMIT,
+    });
+
+    expect(gateWithCiJobs([job("success")])).not.toContain(noTest("CHK-002", "nestjs"));
+    expect(gateWithCiJobs([job("failure")])).toContain(
+      `${CHECKLIST}: CHK-002: release gate: CI job "w.yml#build" for target nestjs concluded "failure" (run 9 at "${COMMIT}")`,
+    );
+    expect(gateWithCiJobs(undefined)).toContain(
+      `${noTest("CHK-002", "nestjs")} (no develop run recorded for the CI job w.yml#build)`,
+    );
+  });
+
+  it("names a failed ci job even when a suite report passes the pair", () => {
+    const nestjsPasses = {
+      format: "seampact-http-suite-report/1",
+      target: "nestjs",
+      profile: "default",
+      checks: { "CHK-002": { outcome: "passed", cases: ["a"] } },
+    };
+    const failed = { ref: "w.yml#build", conclusion: "failure", run: 9, commit: COMMIT };
+
+    expect(gateWithCiJobs([failed], { nestjs: nestjsPasses })).toContain(
+      `${CHECKLIST}: CHK-002: release gate: CI job "w.yml#build" for target nestjs concluded "failure" (run 9 at "${COMMIT}")`,
+    );
+  });
+
+  it("refuses a malformed or hostile ci job result and never prints it raw", () => {
+    const hostile = "abc\n::error::injected";
+    const good = { ref: "w.yml#build", conclusion: "success", run: 9, commit: COMMIT };
+    const out = gateWithCiJobs([
+      { ...good, commit: hostile },
+      { ...good, conclusion: hostile },
+      { ...good, ref: hostile },
+    ]);
+
+    expect(out.filter((line) => line.includes("malformed CI job result"))).toHaveLength(3);
+    expect(out.join("\n")).not.toContain("\n::error::");
+    expect(out.some((line) => line.startsWith("::"))).toBe(false);
+    expect(gateWithCiJobs([good])).not.toContain(noTest("CHK-002", "nestjs"));
+  });
+
+  it("refuses a ci job whose name starts with an expression", () => {
+    const root = rootCiting("w.yml#build");
+
+    try {
+      writeFileSync(
+        join(root, ".github/workflows/w.yml"),
+        ["jobs:", "  build:", `    name: ${EXPRESSION_NAME}`, ""].join("\n"),
+      );
+      expect(lines(check({ root }))).toEqual([
+        "docs/conformance/proofs/lane-ci.yaml: CHK-002: CI job name starts with an expression: build in w.yml (it would match every job of a run)",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
@@ -507,7 +817,13 @@ describe("checklist report", () => {
   });
 
   it("a test passes only with a matching assertion and no failure, in the exact file", () => {
-    const ref = { raw: "", target: "core", path: "src/a.test.ts", name: "works" };
+    const ref = {
+      raw: "",
+      kind: "test",
+      target: "core",
+      path: "src/a.test.ts",
+      name: "works",
+    } as const;
     const run = (name: string, ...statuses: string[]) => ({
       name,
       assertionResults: statuses.map((status) => ({ title: "works", status })),

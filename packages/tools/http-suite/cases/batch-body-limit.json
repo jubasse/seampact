@@ -1,7 +1,7 @@
 {
   "id": "batch-body-limit",
   "title": "A batch body may pass 1 MiB and answers 413 above its 2 MiB",
-  "checks": ["CHK-039"],
+  "checks": ["CHK-039", { "id": "CHK-067", "targets": ["nestjs", "fastify"] }],
   "profiles": ["default"],
   "steps": [
     {

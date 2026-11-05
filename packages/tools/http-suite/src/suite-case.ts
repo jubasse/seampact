@@ -13,6 +13,7 @@ import {
   stringMapAt,
 } from "./json-reader.js";
 import { readSampleAppScript, type SampleAppScript } from "./sample-app-script.js";
+import type { ScopedCheck } from "./scoped-check.js";
 import { WHOLE_PLACEHOLDER } from "./template.js";
 
 export type JsonValue =
@@ -115,7 +116,8 @@ export type BootExpectation =
     };
 
 /**
- * A case: its id is its file name, `checks` the checklist ids it proves, `profiles` the profiles that run it.
+ * A case: its id is its file name, `checks` the checklist ids it proves (an id alone, or `{ id, targets }` for an id
+ * that counts only in the reports of those targets), `profiles` the profiles that run it.
  * `script` is loaded through the control routes before the first step, an empty script when the case has none, so
  * every case starts from the doubles' own answers and no recorded call; `hookCalls` is then the exact list of hook
  * calls the sample app must have recorded once every step has run. A boot case runs in the `boot` profile only and
@@ -124,7 +126,7 @@ export type BootExpectation =
 export interface SuiteCase {
   readonly id: string;
   readonly title: string;
-  readonly checks: readonly string[];
+  readonly checks: readonly ScopedCheck[];
   readonly profiles: readonly SuiteProfile[];
   readonly script?: SampleAppScript;
   readonly steps: readonly SuiteStep[];
@@ -147,6 +149,7 @@ export function runsInProfile(suiteCase: SuiteCase, profile: SuiteProfile): bool
 
 export const CASE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const CHECK_ID = /^CHK-\d{3}$/;
+const TARGET_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PROFILE = /^(?:default|hand-written|boot|pack:[a-z0-9-]+|adapter:[a-z0-9-]+)$/;
 const HTTP_METHOD = /^[A-Z]+$/;
 const LOWERCASE_HEADER = /^[a-z0-9-]+$/;
@@ -164,6 +167,7 @@ export const CREDENTIAL_VARIABLES = [
 
 const CASE_MEMBERS = ["id", "title", "checks", "profiles", "script", "steps", "hookCalls", "boot"];
 const HTTP_CASE_MEMBERS = ["script", "steps", "hookCalls"];
+const SCOPED_CHECK_MEMBERS = ["id", "targets"];
 const BOOT_MEMBERS = ["variant", "outcome", "diagnostic"];
 const STEP_MEMBERS = ["title", "request", "capture", "expect"];
 const REQUEST_MEMBERS = ["method", "path", "query", "headers", "body", "bodyText", "sign"];
@@ -194,7 +198,7 @@ export function parseSuiteCase(value: unknown, source: string): SuiteCase {
     id: patternAt(reader, object.id, "/id", CASE_ID),
     title: stringAt(reader, object.title, "/title"),
     checks: arrayAt(reader, object.checks, "/checks").map((check, index) =>
-      patternAt(reader, check, `/checks/${index}`, CHECK_ID),
+      readCheck(reader, check, `/checks/${index}`),
     ),
     profiles: readProfiles(reader, object.profiles),
   };
@@ -277,6 +281,24 @@ function readBootExpectation(reader: JsonReader, value: unknown): BootExpectatio
   }
 
   return { variant, outcome, diagnostic };
+}
+
+function readCheck(reader: JsonReader, value: unknown, pointer: string): ScopedCheck {
+  if (typeof value === "string") return { id: patternAt(reader, value, pointer, CHECK_ID) };
+
+  const object = objectAt(reader, value, pointer, SCOPED_CHECK_MEMBERS);
+  const targets = arrayAt(reader, object.targets, `${pointer}/targets`).map((target, index) =>
+    patternAt(reader, target, `${pointer}/targets/${index}`, TARGET_NAME),
+  );
+
+  if (targets.length === 0) {
+    reader.fail(
+      `${pointer}/targets`,
+      "a scoped check names at least one target; write an id alone for every target",
+    );
+  }
+
+  return { id: patternAt(reader, object.id, `${pointer}/id`, CHECK_ID), targets };
 }
 
 function readProfiles(reader: JsonReader, value: unknown): SuiteProfile[] {
