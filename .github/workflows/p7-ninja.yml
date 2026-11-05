@@ -216,7 +216,7 @@ jobs:
           SERVER: ${{ matrix.server }}
         run: |
           set -euo pipefail
-          (cd python && uv build --all-packages --wheel --out-dir "$WORK/wheels")
+          scripts/consumers/python/build-wheels.sh "$WORK/wheels"
           scripts/consumers/python/requirements.sh "$WORK/requirements.txt" seampact-ninja generate "$SERVER"
       - name: Install with pip, then assemble and generate the consumer and its allow-listed variant
         shell: bash
@@ -308,7 +308,7 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x "$RUNNER_TEMP/binary/seampact-linux-x64"
-          (cd python && uv build --all-packages --wheel --out-dir "$WORK/wheels")
+          scripts/consumers/python/build-wheels.sh "$WORK/wheels"
           scripts/consumers/python/requirements.sh "$WORK/requirements.txt" seampact-ninja generate gunicorn
           scripts/consumers/python/install.sh "$WORK/venv" "$WORK/requirements.txt" "$WORK/wheels" 'seampact-ninja[generate]'
           scripts/consumers/python/local-yaml.sh "$WORK/projects" "$WORK/venv" "$RUNNER_TEMP/binary/seampact-linux-x64" seampact-ninja
