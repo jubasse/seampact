@@ -14,12 +14,14 @@ from generated.tasks.operations import (
     CreateTaskRequest,
     CreateTaskResponse201,
     CreateTaskResult,
+    DeleteDraftErrors,
     DeleteDraftRequest,
     DeleteDraftResponse200,
     DeleteDraftResult,
     GetChannelRequest,
     GetChannelResponse200,
     GetChannelResult,
+    GetDraftErrors,
     GetDraftRequest,
     GetDraftResponse200,
     GetDraftResult,
@@ -95,6 +97,21 @@ def _channel_reply_of(body: dict[str, object]) -> GetChannelResult:
     return GetChannelResponse200(channel_of(body))
 
 
+def answer_get_draft(request: GetDraftRequest) -> GetDraftResult:
+    """The `getDraft` answer of the loaded script, else the caller's draft; FastAPI and Ninja handlers share it."""
+    return scripted_answer(
+        "getDraft", _OK, _draft_reply_of, {_NOT_FOUND: GetDraftErrors.api_not_found}
+    ) or GetDraftResponse200(draft(str(request.input.path.draft_id)))
+
+
+def _draft_reply_of(body: dict[str, object]) -> GetDraftResult:
+    return GetDraftResponse200(draft(text_member(body, "draftId")))
+
+
+def _deleted_draft_reply_of(body: dict[str, object]) -> DeleteDraftResult:
+    return DeleteDraftResponse200(draft(text_member(body, "draftId")))
+
+
 def _task_reply_of(body: dict[str, object]) -> GetTaskResult:
     return GetTaskResponse200(task_of(body))
 
@@ -132,10 +149,12 @@ class ChannelsHandlers:
 
 class DraftsHandlers:
     async def get_draft(self, request: GetDraftRequest) -> GetDraftResult:
-        return GetDraftResponse200(draft(str(request.input.path.draft_id)))
+        return answer_get_draft(request)
 
     def delete_draft(self, request: DeleteDraftRequest) -> DeleteDraftResult:
-        return DeleteDraftResponse200(draft(str(request.input.path.draft_id)))
+        return scripted_answer(
+            "deleteDraft", _OK, _deleted_draft_reply_of, {_NOT_FOUND: DeleteDraftErrors.api_not_found}
+        ) or DeleteDraftResponse200(draft(str(request.input.path.draft_id)))
 
 
 class PreferencesHandlers:

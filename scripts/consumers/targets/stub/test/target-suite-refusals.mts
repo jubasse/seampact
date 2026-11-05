@@ -19,6 +19,7 @@ export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "limit-above-max-refused": STUB_REASON,
   "malformed-json-answers-bad-request": STUB_REASON,
   "member-action-version-conflict": STUB_REASON,
+  "owner-caller-other-id-not-found": STUB_REASON,
   "opaque-null-refused-when-not-nullable": STUB_REASON,
   "query-number-decoding": STUB_REASON,
   "recent-auth-denied": STUB_REASON,

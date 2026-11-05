@@ -9,11 +9,13 @@ import com.example.tasks.api.AssignTaskResult;
 import com.example.tasks.api.ChannelsEndpoints;
 import com.example.tasks.api.CreateTaskInput;
 import com.example.tasks.api.CreateTaskResult;
+import com.example.tasks.api.DeleteDraftErrors;
 import com.example.tasks.api.DeleteDraftInput;
 import com.example.tasks.api.DeleteDraftResult;
 import com.example.tasks.api.DraftsEndpoints;
 import com.example.tasks.api.GetChannelInput;
 import com.example.tasks.api.GetChannelResult;
+import com.example.tasks.api.GetDraftErrors;
 import com.example.tasks.api.GetDraftInput;
 import com.example.tasks.api.GetDraftResult;
 import com.example.tasks.api.GetPreferencesInput;
@@ -121,16 +123,28 @@ final class TasksControllers {
 
     @RestController
     static final class Drafts implements DraftsEndpoints {
+        private static final String DRAFT_TEXT = "Draft text";
+
+        private final ScriptedAnswers answers;
+
+        Drafts(ScriptedAnswers answers) {
+            this.answers = answers;
+        }
+
         @Override
         @GetDraft
         public GetDraftResult getDraft(GetDraftInput input) {
-            return new GetDraftResult.Status200(new Draft(input.path().draftId(), "Draft text"));
+            return answers.answer(API, "getDraft", 200, Draft.class, GetDraftResult.Status200::new,
+                            Map.<String, java.util.function.Supplier<GetDraftResult>>of("api.not_found", GetDraftErrors.ApiNotFound::new))
+                    .orElseGet(() -> new GetDraftResult.Status200(new Draft(input.path().draftId(), DRAFT_TEXT)));
         }
 
         @Override
         @DeleteDraft
         public DeleteDraftResult deleteDraft(DeleteDraftInput input) {
-            return new DeleteDraftResult.Status200(new Draft(input.path().draftId(), "Draft text"));
+            return answers.answer(API, "deleteDraft", 200, Draft.class, DeleteDraftResult.Status200::new,
+                            Map.<String, java.util.function.Supplier<DeleteDraftResult>>of("api.not_found", DeleteDraftErrors.ApiNotFound::new))
+                    .orElseGet(() -> new DeleteDraftResult.Status200(new Draft(input.path().draftId(), DRAFT_TEXT)));
         }
     }
 
