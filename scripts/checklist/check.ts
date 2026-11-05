@@ -3,12 +3,19 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
 import type { CiJobResult } from "./ci-jobs.ts";
-import { ciJobKey, loadCiJobResults, workflowJobs } from "./ci-jobs.ts";
+import {
+  CI_SUCCESS,
+  ciJobKey,
+  loadCiJobResults,
+  startsWithExpression,
+  workflowJobs,
+} from "./ci-jobs.ts";
 import { loadModel } from "./load.ts";
 import type { Item, Model, Problem, Proof, TestRef } from "./model.ts";
 import { CHECKLIST_FILE, chkNumber } from "./model.ts";
 import type { ItemAfter1_0 } from "./release-scope.ts";
 import { releaseGateTargets, releaseScopeProblems } from "./release-scope.ts";
+import { shown } from "./shown.ts";
 import type { SuiteProof } from "./suite-reports.ts";
 import { loadSuiteReports } from "./suite-reports.ts";
 import { expandTargets } from "./targets.ts";
@@ -33,7 +40,6 @@ export interface CheckOptions {
 }
 
 export const CONSUMER_PREFIX = "test-seampact-";
-const CI_SUCCESS = "success";
 
 /** Proofs merged per checklist id, in file order. */
 export function proofsById(proofs: readonly Proof[]): Map<string, Proof[]> {
@@ -78,8 +84,14 @@ export function checkModel(
       if (t.kind === "ci") {
         const jobs = workflowJobs(o.root, t.path);
 
+        const displayName = jobs?.get(t.name);
+
         if (jobs === undefined) at(`CI workflow does not exist: ${t.path}`);
-        else if (!jobs.has(t.name)) at(`CI job does not exist: ${t.name} in ${t.path}`);
+        else if (displayName === undefined) at(`CI job does not exist: ${t.name} in ${t.path}`);
+        else if (startsWithExpression(displayName))
+          at(
+            `CI job name starts with an expression: ${t.name} in ${t.path} (it would match every job of a run)`,
+          );
       } else if (t.path.startsWith(CONSUMER_PREFIX)) {
         if (o.consumers !== undefined && !existsSync(join(o.consumers, t.path)))
           at(`test-consumer test file does not exist: ${t.path} (under ${o.consumers})`);
@@ -220,17 +232,17 @@ function releaseGateProblems(model: Model, scope: GateScope): Problem[] {
       // A failed suite run is already reported with its report.
       if (pairProofs.some((s) => s.outcome === "failed")) continue;
 
-      if (testedByProof(scope, item.id, target) || suitePassed(scope, item.id, target)) continue;
-
+      // A recorded failed CI job blocks the pair whatever a suite report or another proof says.
       const failedJobs = failedCiJobs(scope, item.id, target);
 
-      if (failedJobs.length > 0) {
-        for (const job of failedJobs)
-          at(
-            `release gate: CI job ${job.ref} for target ${target} concluded ${job.conclusion} (run ${job.run} at ${job.commit})`,
-          );
-        continue;
-      }
+      for (const job of failedJobs)
+        at(
+          `release gate: CI job ${shown(job.ref)} for target ${target} concluded ${shown(job.conclusion)} (run ${job.run} at ${shown(job.commit)})`,
+        );
+
+      if (failedJobs.length > 0) continue;
+
+      if (testedByProof(scope, item.id, target) || suitePassed(scope, item.id, target)) continue;
 
       at(`release gate: no test for target ${target}${noTestReason(scope, item.id, target)}`);
     }
@@ -239,11 +251,12 @@ function releaseGateProblems(model: Model, scope: GateScope): Problem[] {
   return problems;
 }
 
+/** The cited CI jobs of a pair whose newest develop run is recorded and did not succeed. */
 function failedCiJobs(scope: GateScope, id: string, target: string): CiJobResult[] {
   return proofTestsOf(scope, id, target).flatMap((t) => {
     const result = t.kind === "ci" ? scope.ciJobResults?.get(ciJobKey(t)) : undefined;
 
-    return result === undefined ? [] : [result];
+    return result === undefined || result.conclusion === CI_SUCCESS ? [] : [result];
   });
 }
 

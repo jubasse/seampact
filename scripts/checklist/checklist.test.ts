@@ -605,7 +605,13 @@ describe("checklist ci references", () => {
     return root;
   }
 
-  function gateWithCiJobs(jobs: unknown[] | undefined): string[] {
+  const COMMIT = "a".repeat(40);
+  const EXPRESSION_NAME = ["$", "{{ matrix.row }}"].join("");
+
+  function gateWithCiJobs(
+    jobs: unknown[] | undefined,
+    otherReports: Record<string, unknown> = {},
+  ): string[] {
     const root = rootCiting("w.yml#build");
     const reports = mkdtempSync(join(tmpdir(), "checklist-ci-reports-"));
 
@@ -619,6 +625,9 @@ describe("checklist ci references", () => {
           checks: {},
         }),
       );
+
+      for (const [name, report] of Object.entries(otherReports))
+        writeFileSync(join(reports, `http-suite-${name}.json`), JSON.stringify(report));
 
       if (jobs !== undefined)
         writeFileSync(
@@ -651,15 +660,65 @@ describe("checklist ci references", () => {
   });
 
   it("counts a ci reference only when its newest develop run passed, and names a failed one", () => {
-    const job = (conclusion: string) => ({ ref: "w.yml#build", conclusion, run: 9, commit: "abc" });
+    const job = (conclusion: string) => ({
+      ref: "w.yml#build",
+      conclusion,
+      run: 9,
+      commit: COMMIT,
+    });
 
     expect(gateWithCiJobs([job("success")])).not.toContain(noTest("CHK-002", "nestjs"));
     expect(gateWithCiJobs([job("failure")])).toContain(
-      `${CHECKLIST}: CHK-002: release gate: CI job w.yml#build for target nestjs concluded failure (run 9 at abc)`,
+      `${CHECKLIST}: CHK-002: release gate: CI job "w.yml#build" for target nestjs concluded "failure" (run 9 at "${COMMIT}")`,
     );
     expect(gateWithCiJobs(undefined)).toContain(
       `${noTest("CHK-002", "nestjs")} (no develop run recorded for the CI job w.yml#build)`,
     );
+  });
+
+  it("names a failed ci job even when a suite report passes the pair", () => {
+    const nestjsPasses = {
+      format: "seampact-http-suite-report/1",
+      target: "nestjs",
+      profile: "default",
+      checks: { "CHK-002": { outcome: "passed", cases: ["a"] } },
+    };
+    const failed = { ref: "w.yml#build", conclusion: "failure", run: 9, commit: COMMIT };
+
+    expect(gateWithCiJobs([failed], { nestjs: nestjsPasses })).toContain(
+      `${CHECKLIST}: CHK-002: release gate: CI job "w.yml#build" for target nestjs concluded "failure" (run 9 at "${COMMIT}")`,
+    );
+  });
+
+  it("refuses a malformed or hostile ci job result and never prints it raw", () => {
+    const hostile = "abc\n::error::injected";
+    const good = { ref: "w.yml#build", conclusion: "success", run: 9, commit: COMMIT };
+    const out = gateWithCiJobs([
+      { ...good, commit: hostile },
+      { ...good, conclusion: hostile },
+      { ...good, ref: hostile },
+    ]);
+
+    expect(out.filter((line) => line.includes("malformed CI job result"))).toHaveLength(3);
+    expect(out.join("\n")).not.toContain("\n::error::");
+    expect(out.some((line) => line.startsWith("::"))).toBe(false);
+    expect(gateWithCiJobs([good])).not.toContain(noTest("CHK-002", "nestjs"));
+  });
+
+  it("refuses a ci job whose name starts with an expression", () => {
+    const root = rootCiting("w.yml#build");
+
+    try {
+      writeFileSync(
+        join(root, ".github/workflows/w.yml"),
+        ["jobs:", "  build:", `    name: ${EXPRESSION_NAME}`, ""].join("\n"),
+      );
+      expect(lines(check({ root }))).toEqual([
+        "docs/conformance/proofs/lane-ci.yaml: CHK-002: CI job name starts with an expression: build in w.yml (it would match every job of a run)",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

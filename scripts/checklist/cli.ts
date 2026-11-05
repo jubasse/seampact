@@ -2,7 +2,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { check } from "./check.ts";
-import { ciJobLine, workflowJobs } from "./ci-jobs.ts";
+import { ciJobLine, startsWithExpression, workflowJobs } from "./ci-jobs.ts";
 import { loadModel } from "./load.ts";
 import type { Problem } from "./model.ts";
 import { formatProblem } from "./model.ts";
@@ -101,6 +101,11 @@ function printCiJobs(root: string): number {
 
     if (displayName === undefined)
       problems.push({ file: ref.path, message: `CI job does not exist: ${ref.name}` });
+    else if (startsWithExpression(displayName))
+      problems.push({
+        file: ref.path,
+        message: `CI job name starts with an expression: ${ref.name} (it would match every job of a run)`,
+      });
     else lines.add(ciJobLine(ref, displayName));
   }
 

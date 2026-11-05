@@ -20,6 +20,7 @@
 #     - id: CHK-NNN
 #       fixtures: [<repo-relative path>, ...]          # files or directories that show the item (SM-2)
 #       tests: ['<target>: <path>#<test name>', ...]   # a monorepo test, or test-seampact-<name>/<file> (SM-1)
+#                                                       # or a CI job, '<target>: ci: <workflow file>#<job id>', proven by its newest develop run
 #
 # How CI consumes this file (scripts/checklist, run as `node scripts/checklist/cli.ts <command>`
 # and by `pnpm gate`):
