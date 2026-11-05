@@ -12,8 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { changesetAccessEdit } from "../release/changeset-access.ts";
-import { npmVersionEdits } from "../release/npm-versions.ts";
+import { releaseVersionEdits } from "../release/version-plan.ts";
 import { packageDirectories } from "../workspace/index.ts";
 import { checkPackageRules, formatViolation } from "./rules.ts";
 
@@ -91,8 +90,11 @@ function releaseTree(
   });
 }
 
+// The small trees hold npm packages only: no other version field to stamp.
+const NO_VERSION_FILES = () => [];
+
 const violations = (root: string, published: readonly string[] = PUBLISHED) =>
-  checkPackageRules(root, published).map(formatViolation);
+  checkPackageRules(root, published, NO_VERSION_FILES).map(formatViolation);
 
 // The repository's manifests, pack entries and changesets config, stamped as the release branch is.
 function stampedRepositoryCopy(): string {
@@ -103,11 +105,11 @@ function stampedRepositoryCopy(): string {
   };
 
   copy("package.json");
-  copy(".changeset/config.json");
+
+  // Every file the stamp writes, then the files the package rules read besides them.
+  for (const edit of releaseVersionEdits(REPO, RELEASE)) copy(edit.file);
 
   for (const directory of packageDirectories(REPO)) {
-    copy(`${directory}/package.json`);
-
     if (existsSync(join(REPO, directory, "README.md"))) copy(`${directory}/README.md`);
 
     const json = JSON.parse(readFileSync(join(REPO, directory, "package.json"), "utf8"));
@@ -116,7 +118,7 @@ function stampedRepositoryCopy(): string {
     if (typeof packEntry === "string") copy(`${directory}/${packEntry}`);
   }
 
-  for (const edit of [...npmVersionEdits(root, RELEASE), changesetAccessEdit(root)])
+  for (const edit of releaseVersionEdits(root, RELEASE))
     writeFileSync(join(root, edit.file), edit.after);
 
   return root;
@@ -266,7 +268,11 @@ describe("package rules", () => {
   });
 
   it("checks a stamped tree in the release form", () => {
-    const stamped = releaseTree({ version: RELEASE }, { private: true }, "public");
+    const stamped = releaseTree(
+      { version: RELEASE },
+      { version: RELEASE, private: true },
+      "public",
+    );
 
     expect(violations(stamped)).toEqual([]);
 
@@ -276,12 +282,40 @@ describe("package rules", () => {
       "packages/binary/package.json: namespaces: an unpublished package stays `private: true` in a stamped release",
       "packages/lint/package.json: namespaces: a published package has no `private` field in a stamped release: run scripts/release/stamp.ts",
       "packages/spec/package.json: namespaces: a published package has no `private` field in a stamped release: run scripts/release/stamp.ts",
-      '.changeset/config.json: namespaces: `access` is "public" in a stamped release: run scripts/release/stamp.ts',
+      '.changeset/config.json: namespaces: `access` must be "public" in a stamped release: run scripts/release/stamp.ts',
+      `packages/binary/package.json: namespaces: version is undefined in a release stamped at ${RELEASE}: run scripts/release/stamp.ts`,
     ]);
   });
 
   it("passes on a stamped copy of the repository", () => {
     expect(checkPackageRules(stampedRepositoryCopy()).map(formatViolation)).toEqual([]);
+  });
+
+  it("refuses a half-stamped copy of the repository, by file", () => {
+    const halfStamped = stampedRepositoryCopy();
+    const restored = [
+      "packages/tools/binary/package.json",
+      "packages/packs/pack-hal/pack.yaml",
+      "packages/runtime/server-runtime/src/version.ts",
+      "jvm/gradle.properties",
+      "python/hooks/pyproject.toml",
+    ];
+
+    for (const file of restored) copyFileSync(join(REPO, file), join(halfStamped, file));
+
+    const found = checkPackageRules(halfStamped).map(formatViolation);
+
+    expect(found).toContain(
+      `packages/tools/binary/package.json: namespaces: version is "0.0.0" in a release stamped at ${RELEASE}: run scripts/release/stamp.ts`,
+    );
+    expect(found).toContain(
+      `packages/packs/pack-hal/pack.yaml: namespaces: pack.version is "0.0.0", not "${RELEASE}" in a stamped release: run scripts/release/stamp.ts`,
+    );
+    expect(found).toContain(
+      `packages/runtime/server-runtime/src/version.ts: namespaces: SERVER_RUNTIME_VERSION is "0.0.0", not "${RELEASE}" in a stamped release: run scripts/release/stamp.ts`,
+    );
+    expect(found.some((v) => v.startsWith("jvm/gradle.properties: namespaces: "))).toBe(true);
+    expect(found.some((v) => v.startsWith("python/hooks/pyproject.toml: namespaces: "))).toBe(true);
   });
 
   it("refuses a mixed tree by name", () => {

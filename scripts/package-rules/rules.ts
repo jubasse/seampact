@@ -12,7 +12,9 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, posix } from "node:path";
 import { PUBLISHED_PACKAGES } from "../release/npm-versions.ts";
-import { DEVELOPMENT_VERSION, isReleaseVersion } from "../release/release-version.ts";
+import { DEVELOPMENT_VERSION, isReleaseVersion, ReleaseError } from "../release/release-version.ts";
+import type { VersionEdit } from "../release/version-edit.ts";
+import { pendingVersionChanges, versionFileEdits } from "../release/version-plan.ts";
 import { packageDirectories } from "../workspace/index.ts";
 
 export interface Violation {
@@ -42,7 +44,14 @@ const RUNTIME_SETS = ["dependencies", "peerDependencies", "optionalDependencies"
 /** The development form (A3), or the stamped form of a release, with the directories of the published packages. */
 type PackageRulesMode =
   | { readonly kind: "development" }
-  | { readonly kind: "release"; readonly publishedPackages: readonly string[] };
+  | {
+      readonly kind: "release";
+      readonly version: string;
+      readonly publishedPackages: readonly string[];
+    };
+
+/** The version fields of a stamped tree outside the npm manifests and the changesets config. */
+export type VersionFileEdits = (root: string, version: string) => VersionEdit[];
 
 const RELEASE_SCRIPTS_DIR = "scripts/release";
 // The one release script that publishes, and what it may run: the idempotent npm publish of release.yml.
@@ -311,7 +320,7 @@ function treeMode(
 
   return versions[0] === undefined || versions[0] === DEVELOPMENT_VERSION
     ? { kind: "development" }
-    : { kind: "release", publishedPackages };
+    : { kind: "release", version: versions[0], publishedPackages };
 }
 
 function checkNpmNamespace(pkgs: Npm[], mode: PackageRulesMode, out: Violation[]): void {
@@ -395,7 +404,7 @@ function checkChangesets(root: string, mode: PackageRulesMode, out: Violation[])
     message:
       mode.kind === "development"
         ? '`access` must stay "restricted" until p8-release'
-        : '`access` is "public" in a stamped release: run scripts/release/stamp.ts',
+        : '`access` must be "public" in a stamped release: run scripts/release/stamp.ts',
   });
 }
 
@@ -576,10 +585,56 @@ function checkComposer(root: string, out: Violation[]): void {
   }
 }
 
-/** `publishedPackages`: the directories of the npm packages a release publishes. */
+/**
+ * A stamped tree is stamped whole: every npm package, published or not, and every other version field the stamp
+ * writes are at the release version.
+ */
+function checkStampedVersions(
+  root: string,
+  pkgs: Npm[],
+  version: string,
+  stampedFileEdits: VersionFileEdits,
+  out: Violation[],
+): void {
+  for (const p of pkgs)
+    if (p.json.version !== version)
+      out.push({
+        file: p.file,
+        rule: "namespaces",
+        message: `version is ${JSON.stringify(p.json.version)} in a release stamped at ${version}: run scripts/release/stamp.ts`,
+      });
+
+  let pending: string[];
+
+  try {
+    pending = pendingVersionChanges(stampedFileEdits(root, version));
+  } catch (error) {
+    if (!(error instanceof ReleaseError)) throw error;
+
+    out.push({ file: "package.json", rule: "namespaces", message: error.message });
+
+    return;
+  }
+
+  for (const change of pending) {
+    const separator = change.indexOf(": ");
+
+    out.push({
+      file: change.slice(0, separator),
+      rule: "namespaces",
+      message: `${change.slice(separator + 2)} in a stamped release: run scripts/release/stamp.ts`,
+    });
+  }
+}
+
+/**
+ * `publishedPackages`: the directories of the npm packages a release publishes; `stampedFileEdits`: the version
+ * fields a stamped tree carries besides the npm manifests.
+ */
 export function checkPackageRules(
   root: string,
   publishedPackages: readonly string[] = PUBLISHED_PACKAGES,
+  stampedFileEdits: VersionFileEdits = versionFileEdits,
 ): Violation[] {
   const out: Violation[] = [];
   const pkgs = loadNpm(root, out);
@@ -593,6 +648,9 @@ export function checkPackageRules(
     checkNpmNamespace(pkgs, mode, out);
     checkChangesets(root, mode, out);
   } else checkNpmNames(pkgs, out);
+
+  if (mode?.kind === "release")
+    checkStampedVersions(root, pkgs, mode.version, stampedFileEdits, out);
 
   checkWorkflows(root, out);
   checkScripts(root, pkgs, out);
