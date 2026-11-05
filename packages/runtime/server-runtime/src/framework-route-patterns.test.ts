@@ -104,11 +104,18 @@ describe("the allow-list of a route with an optional part", () => {
       false,
     ],
     ["nested Express 5 groups under '**'", "/c{/:id{/:page}}", ["/c/**"], true],
-    ["an Express 5 group after a param, inside one segment", "/:file{.:ext}", ["/*"], true],
+    ["an Express 5 group after a param, also read as a pattern", "/:file{.:ext}", ["/*"], false],
+    ["an Express 5 group after a param inside a segment, under '**'", "/:file{.:ext}", ["/**"], true],
     ["an Express 4 optional group", "/c(/:id)?", ["/*/*"], false],
     ["an Express 4 optional group under '**'", "/c(/:id)?", ["/**"], true],
     ["a Hono pattern, which is no optional group", "/c/:id{[0-9]+}", ["/c/*"], true],
     ["a required param", "/c/:id", ["/c/*"], true],
+    ["a repeated param", "/c/:rest+", ["/c/*"], false],
+    ["a repeated param under '**'", "/c/:rest+", ["/c/**"], true],
+    ["a Hono pattern that may take a '/'", "/c/:rest{.+}", ["/c/*"], false],
+    ["a Hono pattern that may take a '/', under '**'", "/c/:rest{.+}", ["/c/**"], true],
+    ["an Express 4 pattern that may take a '/'", "/c/:rest(.+)", ["/c/*"], false],
+    ["an Express 4 pattern that keeps to one segment", "/c/:id(\\d+)", ["/c/*"], true],
   ])("%s", (_, listedPath, allowedPaths, allowed) => {
     const check = checkAllowing(...allowedPaths.map((path) => ({ path, reason: REASON })));
 

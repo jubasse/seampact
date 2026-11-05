@@ -75,6 +75,8 @@ const PARAM_START = ":";
 const OPTIONAL_PARAM_SEPARATOR = ".";
 // A param name right before a `{`, whose braces may hold its pattern (Hono `:id{[0-9]+}`) as well as a group.
 const PARAM_NAME_BEFORE = /:[A-Za-z_$][\w$]*$/;
+// The characters Express 5 (path-to-regexp 8) refuses in a path, so a brace holding one is no Express 5 group.
+const EXPRESS_5_RESERVED = /[()[\]?+!]/;
 
 /**
  * The listed routes in the check's scope the allow-list does not name, each once; none when the check is off. A
@@ -272,17 +274,20 @@ function withAndWithoutOptionalGroups(path: string): string[] {
 }
 
 // A `{` right after a param name is a Hono pattern (`:id{[0-9]+}`) or an Express 5 group (`:id{/:page}`): the route
-// does not say which framework lists it, so both readings count, the brace kept as written and expanded.
+// does not say which framework lists it, so both readings count, the brace kept as written and expanded. Braces
+// holding a character Express 5 reserves (`:id{[0-9]+}`) can only be a pattern, since Express 5 refuses that route.
 function withAndWithoutOptionalGroupsFrom(path: string, searchFrom: number): string[] {
   const brace = nextBrace(path, searchFrom);
 
   if (brace === undefined) return [path];
 
-  const asGroup = expandedGroup(path, brace);
+  if (!brace.followsParamName) return expandedGroup(path, brace);
 
-  if (!brace.followsParamName) return asGroup;
+  const asPattern = withAndWithoutOptionalGroupsFrom(path, brace.end + 1);
 
-  return [...withAndWithoutOptionalGroupsFrom(path, brace.end + 1), ...asGroup];
+  if (EXPRESS_5_RESERVED.test(path.slice(brace.start + 1, brace.end))) return asPattern;
+
+  return [...asPattern, ...expandedGroup(path, brace)];
 }
 
 function expandedGroup(path: string, group: Brace): string[] {
@@ -474,10 +479,11 @@ function segmentsOf(path: string): string[] {
 }
 
 // Each framework writes a catch-all its own way (`*`, `*rest`, `:path*`, a regular expression): a segment with a
-// star is a catch-all, kept apart from a one-segment param (`:id`, `{id}`). A segment the reader cannot parse, as an
-// Express 4 group split at its `/` (`c(` and `:id)?` of `/c(/:id)?`), is read as a catch-all too.
+// star is a catch-all, kept apart from a one-segment param (`:id`, `{id}`). A segment the scope reads as a catch-all
+// is one too: a repeated part (`:rest+`), a pattern that may take a `/` (`:rest{.+}`, `:rest(.+)`), or a segment
+// the reader cannot parse, as an Express 4 group split at its `/` (`c(` and `:id)?` of `/c(/:id)?`).
 function routeSegmentsOf(path: string): string[] {
   return segmentsOf(path).map((segment) =>
-    segment.includes(STAR) || segmentParts(segment) === undefined ? CATCH_ALL_SEGMENT : segment,
+    segment.includes(STAR) || scopeSegmentOf(segment) === CATCH_ALL ? CATCH_ALL_SEGMENT : segment,
   );
 }

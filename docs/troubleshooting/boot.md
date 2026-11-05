@@ -11,7 +11,7 @@ Fix every line, then start again.
 
 | You see | Do |
 |---|---|
-| `the framework route 'GET /docs' is outside the contract and not allow-listed` | List the route under `frameworkRoutes` of the server target, with a reason, then run `seampact generate`. A route with an optional parameter (`/c/:id?`, `/c{/:id}`) also serves `/c`, so `/c/*` alone does not list it: add `/c` too. See [OpenAPI and docs](../configuration/openapi-and-docs.md). |
+| `the framework route 'GET /docs' is outside the contract and not allow-listed` | List the route under `frameworkRoutes` of the server target, with a reason, then run `seampact generate`. A route with an optional parameter (`/c/:id?`, `/c{/:id}`) also serves `/c`, so `/c/*` alone does not list it: add `/c` too. A route that may take more than one segment (`/c/:rest+`, `/c/:rest{.+}`, or a brace after a param such as `/c/:id{/:page}`) needs `/c/**`. See [OpenAPI and docs](../configuration/openapi-and-docs.md). |
 | A route of yours outside the api's paths is no longer reported | That is the default: only routes that reach a path of the api are checked. Set `artefacts.bootCheck.frameworkRoutes: strict` to check every route. |
 | `... differs from the entry's mount (write the prefix as the entry's 'mount' ...)` | Remove the prefix from the framework (route group, plugin prefix, `basePath`, mount path) and set `mount` on the target entry instead. |
 | `runtime.generated-for-other-version` | The generated code was written by another seampact version than the installed runtime. Run `seampact generate` again, or install the runtime at the generator's version. On PHP, `seampact:generate` still runs under the skew. See [Generate errors](generate.md). |
