@@ -335,7 +335,7 @@ describe("package rules", () => {
     ]);
   });
 
-  it("the release scripts publish only through the npm publish of publish-npm.ts", () => {
+  it("the release scripts publish npm only through publish-npm.ts", () => {
     const publishScript = join(REPO, "scripts/release/publish-npm.ts");
     const root = writeTree({});
 
@@ -351,7 +351,7 @@ describe("package rules", () => {
 
     expect(elsewhere).toContainEqual(
       expect.stringMatching(
-        /^scripts\/release\/publish-again\.ts: namespaces: line \d+: publishes \(a `publish` argument of a spawned command\); only scripts\/release\/publish-npm\.ts publishes/,
+        /^scripts\/release\/publish-again\.ts: namespaces: line \d+: publishes \(a `publish` argument of a spawned command\); only scripts\/release\/publish-npm\.ts \(npm publish\), /,
       ),
     );
     expect(elsewhere.every((v) => v.startsWith("scripts/release/publish-again.ts: "))).toBe(true);
@@ -360,7 +360,54 @@ describe("package rules", () => {
     const gradle = writeTree({ "scripts/release/publish-npm.ts": 'run("./gradlew publish");\n' });
 
     expect(violations(gradle)).toEqual([
-      "scripts/release/publish-npm.ts: namespaces: line 1: publishes (Gradle publish); only scripts/release/publish-npm.ts publishes, to npm (A3)",
+      "scripts/release/publish-npm.ts: namespaces: line 1: publishes (Gradle publish); only scripts/release/publish-npm.ts (npm publish), scripts/release/jvm/central-portal.ts (Central Portal publish), scripts/release/jvm/publish-plugin.ts (Gradle Plugin Portal publish) publish (A3)",
+    ]);
+  });
+
+  it("a publish in a shell case arm is seen, while comment lines are skipped", () => {
+    const root = writeTree({
+      "scripts/release/sneaky.sh":
+        'case "$1" in\n  *) ./gradlew publish ;;\nesac\n# ./gradlew publish\n/**\n * ./gradlew publish\n */\n',
+    });
+
+    expect(violations(root).map((violation) => violation.replace(/; only .*$/, ""))).toEqual([
+      "scripts/release/sneaky.sh: namespaces: line 2: publishes (Gradle publish)",
+    ]);
+  });
+
+  it("the JVM publishes are seen in the release scripts and pass only in their publish module", () => {
+    const centralUpload = 'portalRequest(portal, "/api/v1/publisher/upload");\n';
+    const centralPublish = 'portalRequest(portal, "/api/v1/publisher/deployment/1");\n';
+    const pluginPublish = 'spawnSync(buildPlugin, [assets, "publishPlugins"]);\n';
+    const accepted = writeTree({
+      "scripts/release/jvm/central-portal.ts": centralUpload + centralPublish,
+      "scripts/release/jvm/publish-plugin.ts": pluginPublish,
+    });
+
+    expect(violations(accepted)).toEqual([]);
+
+    const elsewhere = writeTree({
+      "scripts/release/jvm/local-portal.ts": centralUpload,
+      "scripts/release/jvm/build-plugin.sh": centralPublish + pluginPublish,
+      "scripts/release/jvm/publish-plugin.ts": centralUpload,
+    });
+
+    expect(violations(elsewhere).map((violation) => violation.replace(/; only .*$/, ""))).toEqual([
+      "scripts/release/jvm/build-plugin.sh: namespaces: line 1: publishes (Central Portal publish)",
+      "scripts/release/jvm/build-plugin.sh: namespaces: line 2: publishes (Gradle Plugin Portal publish)",
+      "scripts/release/jvm/local-portal.ts: namespaces: line 1: publishes (Central Portal publish)",
+      "scripts/release/jvm/publish-plugin.ts: namespaces: line 1: publishes (Central Portal publish)",
+    ]);
+  });
+
+  it("a workflow that runs publishPlugins itself is seen", () => {
+    const root = writeTree({
+      ".github/workflows/release.yml":
+        "jobs:\n  a:\n    steps:\n      - run: scripts/release/jvm/build-plugin.sh assets publishPlugins\n",
+    });
+
+    expect(violations(root)).toEqual([
+      ".github/workflows/release.yml: namespaces: line 4: publishes (Gradle Plugin Portal publish); nothing publishes before 1.0 (A3)",
     ]);
   });
 

@@ -11,6 +11,8 @@ plugins {
     id("seampact.published-module")
     `java-gradle-plugin`
     alias(libs.plugins.kotlin.jvm)
+    // The release publishes the plugin to the Gradle Plugin Portal with `publishPlugins`.
+    alias(libs.plugins.gradle.plugin.publish)
 }
 
 description = "Generates the Spring Boot code of a seampact contract from a pinned bundle or the pinned compiler."
@@ -41,12 +43,15 @@ dependencies {
 }
 
 gradlePlugin {
+    website = "https://jubasse.github.io/seampact/"
+    vcsUrl = "https://github.com/jubasse/seampact"
     plugins {
         create("seampact") {
             id = "io.github.jubasse.seampact"
             implementationClass = "io.github.jubasse.seampact.gradle.SeampactPlugin"
             displayName = "seampact"
             description = "Generates the Spring Boot code of a seampact contract from a pinned bundle or the pinned compiler."
+            tags = listOf("seampact", "contract", "codegen", "spring-boot", "openapi")
         }
     }
 }
