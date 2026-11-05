@@ -1,6 +1,7 @@
 import type { ContractIR } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
-import type { ClientDescriptor, GenerateOutcome, GenerateRequest, Target } from "../target.js";
+import type { ClientDescriptor } from "../descriptors.js";
+import type { GenerateOutcome, GenerateRequest, Target } from "../target.js";
 import { readGoldenIr } from "./reference-project.test-support.js";
 
 // The proofs of how a target reads the IR (ADR 0005 sections 2 and 3), shared by the client targets. The test names are

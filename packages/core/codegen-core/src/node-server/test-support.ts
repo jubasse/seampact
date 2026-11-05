@@ -12,3 +12,4 @@ export * from "./native-docs-agreement.test-support.js";
 export * from "./reference-project.test-support.js";
 export * from "./rights-version-header.test-support.js";
 export * from "./types-links.test-support.js";
+export * from "./unknown-keys-refused.test-support.js";
