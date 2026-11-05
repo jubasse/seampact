@@ -245,7 +245,7 @@ final class AppConfigReader
     {
         $composed = \Normalizer::normalize($path, \Normalizer::FORM_C);
 
-        return GeneratedPaths::caseFolded($composed === false ? $path : $composed);
+        return GeneratedPaths::caseFolded(\is_string($composed) ? $composed : $path);
     }
 
     private static function isNestedOrSame(string $first, string $second): bool
