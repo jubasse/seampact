@@ -50,7 +50,7 @@ export async function runBootSuite(options: BootRunOptions): Promise<SuiteReport
     results.push(
       reason === undefined
         ? await runBootCase(suiteCase, options)
-        : refusedResult(suiteCase, reason),
+        : refusedResult(suiteCase, reason, options.target),
     );
   }
 
@@ -68,7 +68,7 @@ async function runBootCase(suiteCase: SuiteCase, options: BootRunOptions): Promi
   const failures = bootFailures(expectation, attempt);
 
   return {
-    ...caseHeader(suiteCase),
+    ...caseHeader(suiteCase, options.target),
     outcome: failures.length === 0 ? "passed" : "failed",
     failures,
   };

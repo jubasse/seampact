@@ -5,6 +5,7 @@ import type { FormatReader } from "./format-reader.js";
 import type { SentRequest } from "./operation-match.js";
 import { signRequestBody } from "./request-signature.js";
 import { checkResponse, type ReceivedResponse, readPointer } from "./response-check.js";
+import { checkIdsForTarget } from "./scoped-check.js";
 import {
   type CaptureSource,
   type JsonValue,
@@ -52,6 +53,7 @@ const JSON_MEDIA = "application/json";
 const RESOLUTION_ORIGIN = "http://target.invalid";
 
 interface RunContext {
+  readonly target: string;
   readonly baseUrl: string;
   readonly variables: Readonly<Record<string, JsonValue>>;
   readonly requestTimeoutMs: number;
@@ -72,6 +74,7 @@ export async function runSuite(options: SuiteRunOptions): Promise<SuiteReport> {
   refuseUnknownRefusals(options.cases, refusals);
 
   const context: RunContext = {
+    target: options.target,
     baseUrl: options.baseUrl.replace(/\/+$/, ""),
     variables: variablesOf(options.credentials),
     requestTimeoutMs: options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
@@ -83,7 +86,9 @@ export async function runSuite(options: SuiteRunOptions): Promise<SuiteReport> {
     const reason = refusals[suiteCase.id];
 
     results.push(
-      reason === undefined ? await runCase(suiteCase, context) : refusedResult(suiteCase, reason),
+      reason === undefined
+        ? await runCase(suiteCase, context)
+        : refusedResult(suiteCase, reason, options.target),
     );
   }
 
@@ -141,12 +146,20 @@ function variablesOf(credentials: SuiteCredentials): Record<string, JsonValue> {
   };
 }
 
-export function refusedResult(suiteCase: SuiteCase, reason: string): CaseResult {
-  return { ...caseHeader(suiteCase), outcome: "refused", failures: [], reason };
+export function refusedResult(suiteCase: SuiteCase, reason: string, target: string): CaseResult {
+  return { ...caseHeader(suiteCase, target), outcome: "refused", failures: [], reason };
 }
 
-export function caseHeader(suiteCase: SuiteCase): Pick<CaseResult, "id" | "title" | "checks"> {
-  return { id: suiteCase.id, title: suiteCase.title, checks: [...suiteCase.checks] };
+/** The case's id, title and the checklist ids it proves in a report of [target]. */
+export function caseHeader(
+  suiteCase: SuiteCase,
+  target: string,
+): Pick<CaseResult, "id" | "title" | "checks"> {
+  return {
+    id: suiteCase.id,
+    title: suiteCase.title,
+    checks: checkIdsForTarget(suiteCase.checks, target),
+  };
 }
 
 async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseResult> {
@@ -176,7 +189,7 @@ async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseR
   }
 
   return {
-    ...caseHeader(suiteCase),
+    ...caseHeader(suiteCase, context.target),
     outcome: failures.length === 0 ? "passed" : "failed",
     failures,
   };
