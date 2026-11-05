@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "seampact-compiler"
+version = "0.0.0"
+description = "The seampact compiler binary for one platform, run by seampact-ir."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+]
+
+# PEP 420: `seampact` is a namespace shared by every seampact distribution, so it has no `__init__.py`.
+# `hatch_build.py` puts one release asset under `seampact/compiler/bin/` and tags the wheel for its platform; the
+# editable install of the workspace carries no binary, and there is no sdist (pip must never build the binary).
+[tool.hatch.build.targets.wheel]
+packages = ["src/seampact"]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+
+[tool.hatch.build.targets.sdist.hooks.custom]

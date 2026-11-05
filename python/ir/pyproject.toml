@@ -17,6 +17,11 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+[project.optional-dependencies]
+# The compiler binary of this platform, for a `path` source or the OpenAPI documents of an app config; a bundle-only
+# app with `openapi: none` never needs it.
+compiler = ["seampact-compiler==0.0.0"]
+
 # PEP 420: `seampact` is a namespace shared by every seampact distribution, so it has no `__init__.py`.
 [project.scripts]
 seampact = "seampact.ir.run.command:main"
@@ -26,3 +31,6 @@ packages = ["src/seampact"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/seampact", "LICENSE"]
+
+[tool.uv.sources]
+seampact-compiler = { workspace = true }

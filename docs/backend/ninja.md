@@ -9,7 +9,7 @@ Python 3.12 or later, Django 5.2 or 6, Django Ninja 1.5.3 or later, and Pydantic
 Nothing is on PyPI yet, so you install seampact from your checkout. Replace `~/src/seampact` with the path of your checkout. Install uv 0.13.6 (the workspace pins it). Build the wheels once, then make the requirements file of the third-party packages. The last word is your server, `gunicorn` or `uvicorn`:
 
 ```sh
-cd ~/src/seampact/python && uv build --all-packages --wheel
+sh ~/src/seampact/scripts/consumers/python/build-wheels.sh ~/src/seampact/python/dist
 sh ~/src/seampact/scripts/consumers/python/requirements.sh /tmp/requirements.txt seampact-ninja generate gunicorn
 ```
 

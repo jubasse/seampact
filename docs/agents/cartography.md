@@ -50,6 +50,7 @@ The uv workspace `python/`. A source directory is a package with an `__init__.py
 | Package | Directory | Description |
 |---|---|---|
 | `seampact-codegen` | `python/codegen` | The neutral code generation of the seampact Python targets and the framework-free runtime of generated code. |
+| `seampact-compiler` | `python/compiler` | The seampact compiler binary for one platform, run by seampact-ir. |
 | `seampact-django` | `python/django` | The Django layer the seampact DRF and Ninja targets share: the URLconf and settings emitters and the Django runtime of generated code. |
 | `seampact-drf` | `python/drf` | The seampact Django REST Framework target: its generator and the runtime of the code it generates. |
 | `seampact-fastapi` | `python/fastapi` | The FastAPI target of seampact: its generator and the placement runtime of the generated code. |
@@ -242,6 +243,10 @@ In pipeline order (ADR 0006 section 1).
 - `python/codegen/src/seampact/codegen`: The neutral code generation of the Python targets: the plan every target shares (names, layout, refusals by name, the route table and the route helpers), the line printer, and the Pydantic emitter FastAPI and Ninja share.
 - `python/codegen/src/seampact/codegen/runtime`: The framework-free runtime of generated Python code: step 1's raw-target match and decoding, the wire codec, replies, the outgoing verdict, the pattern check, the runtime version (G3) and the sync driver of the steps, which are written once as coroutines.
 - `python/codegen/src/seampact/codegen/runtime/pydantic`: The type layer of the generated Pydantic models FastAPI and Ninja share: annotated types whose `BeforeValidator` turns a decoded wire value into the Python object Pydantic's strict mode expects (a whole-number float into an `int`; `date-time`, `date`, `uuid` and decimal strings, and enum values, into their objects), and the validators of `rules: seampact-consistent`, each failing with the contract rule's name as its Pydantic error type.
+
+### `seampact-compiler`
+
+- `python/compiler/src/seampact/compiler`: The seampact compiler binary of this platform, the release asset unchanged, under `bin/`.
 
 ### `seampact-django`
 

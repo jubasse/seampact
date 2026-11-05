@@ -150,7 +150,7 @@ final class BootCheck
             if (isset($contractActions[$controller])) {
                 $problems[] = "the route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " calls a contract handler ({$route->getActionName()}) but no generated registration made it: remove it";
             } elseif ($switches[self::FRAMEWORK_ROUTES] && !self::isLaravelsOwn($route) && !self::isOtherApisRoute($app, $name) && $contract->checksAppRoute(self::scopedUri($route)) && !self::isAllowListed($contract, $route)) {
-                $problems[] = "the framework route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it (a route whose parameter can take a '/' is allowed only by a '**' entry)";
+                $problems[] = "the framework route " . self::methods($route) . " /" . ltrim($route->uri(), '/') . " is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it (a route whose parameter can take a '/' is allowed only by a '**' entry, and one with an optional parameter only by entries that also take its path without it)";
             }
         }
 
@@ -179,12 +179,20 @@ final class BootCheck
         return implode('|', array_filter($route->methods(), is_string(...)));
     }
 
-    // An entry of `frameworkRoutes` takes the route when its path pattern matches the route's URI (`*` one segment,
-    // `**` any number or a catch-all) and it names no method, or the route's one method besides the HEAD Laravel adds
-    // to GET.
+    // Entries of `frameworkRoutes` take the route when their path patterns match the route's URI (`*` one segment,
+    // `**` any number or a catch-all), the URI without its optional `{id?}` placeholders included, and they name no
+    // method, or the route's one method besides the HEAD Laravel adds to GET.
     private static function isAllowListed(ApiContract $contract, Route $route): bool
     {
-        return FrameworkRoutes::allows($contract->frameworkRoutes, '/' . ltrim($route->uri(), '/'), self::wherePatternOf($route), array_values(array_filter($route->methods(), is_string(...))));
+        $optionalNames = $route->getOptionalParameterNames();
+
+        return FrameworkRoutes::allows(
+            $contract->frameworkRoutes,
+            '/' . ltrim($route->uri(), '/'),
+            self::wherePatternOf($route),
+            array_values(array_filter($route->methods(), is_string(...))),
+            static fn (string $name): bool => array_key_exists($name, $optionalNames),
+        );
     }
 
     // The route's URI as the scope of the check reads it: a placeholder whose `where` pattern takes a `/` (the

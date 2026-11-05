@@ -3,7 +3,7 @@
 # <requirements> <wheels> <distribution> [<pins>]` makes the virtual environment <venv>, installs the third-party
 # <requirements> from PyPI by hash (a full closure, so none brings its own dependencies), then the hash-pinned <pins>
 # over them (a floor row's framework versions), then <distribution> (`seampact-fastapi[generate]`) from the wheels
-# that `uv build` wrote to <wheels>, never looking a seampact name up on an index. <venv> is new.
+# that `build-wheels.sh` wrote to <wheels>, never looking a seampact name up on an index. <venv> is new.
 set -eu
 
 venv="$1"
