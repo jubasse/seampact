@@ -33,6 +33,9 @@ class GoodGenerator:
     def framework_docs_off_fix(self):
         return "Switch the framework's document off in the app."
 
+    def handler_warnings(self, ir, entry):
+        return []
+
     def generate(self, ir, entry):
         options = dict(entry.options)
         return [GeneratedFile("models.py", f"API = {ir.api.id!r}\\nOPTIONS = {options!r}\\n")]
@@ -48,6 +51,9 @@ class WrongItemsGenerator:
     def framework_docs_off_fix(self):
         return None
 
+    def handler_warnings(self, ir, entry):
+        return []
+
     def generate(self, ir, entry):
         return ["models.py"]
 """
@@ -62,6 +68,9 @@ class RecordingGenerator:
 
     def framework_docs_off_fix(self):
         return None
+
+    def handler_warnings(self, ir, entry):
+        return []
 
     def generate(self, ir, entry):
         accepted = entry.matrix.frameworks[0].accepted_units(entry.allow_untested)
@@ -81,9 +90,31 @@ class DocsGenerator:
     def framework_docs_off_fix(self):
         return None
 
+    def handler_warnings(self, ir, entry):
+        return []
+
     def generate(self, ir, entry):
         native = None if entry.native_docs is None else [entry.native_docs.name, entry.native_docs.document]
         return [GeneratedFile("docs.py", f"DOCS = {json.dumps([entry.framework_docs.value, native])!r}\\n")]
+"""
+_WARNING_MODULE = """
+from seampact.ir.config.problem import ConfigProblem
+from seampact.ir.read import IrSupport
+from seampact.ir.write import GeneratedFile
+
+
+class WarningGenerator:
+    def ir_support(self):
+        return IrSupport.of_model(kinds=%s)
+
+    def framework_docs_off_fix(self):
+        return None
+
+    def handler_warnings(self, ir, entry):
+        return [ConfigProblem("identity.headers.handler", "Left to the handler.", "Check it in the handler.", "here")]
+
+    def generate(self, ir, entry):
+        return [GeneratedFile("models.py", "API = 1\\n")]
 """
 _NOT_A_GENERATOR_MODULE = "class Plain:\n    pass\n"
 
@@ -115,6 +146,7 @@ def site_packages(
     _install(site, "acme-wrong", "1.0.0", ["wrong = acme_wrong:WrongItemsGenerator"], _WRONG_ITEMS_MODULE % kinds)
     _install(site, "acme-recording", "1.4.0", ["rec = acme_recording:RecordingGenerator"], _RECORDING_MODULE % kinds)
     _install(site, "acme-docs", "1.0.0", ["docs = acme_docs:DocsGenerator"], _DOCS_MODULE % kinds)
+    _install(site, "acme-warning", "1.0.0", ["warn = acme_warning:WarningGenerator"], _WARNING_MODULE % kinds)
     _install(site, "acme-broken", "1.0.0", ["bad = acme_broken:Plain"], _NOT_A_GENERATOR_MODULE)
     _install(site, "acme-twice", "1.0.0", ["a = acme_twice:Plain", "b = acme_twice:Plain"], _NOT_A_GENERATOR_MODULE)
     _install(site, "acme-plain", "1.0.0", [], None)
@@ -271,6 +303,24 @@ def test_a_generator_returning_something_but_generated_files_is_named(
     assert code == EXIT_REFUSED
     assert "config.target.generate-failed" in stderr
     assert "GeneratedFile" in stderr
+
+
+def test_a_form_the_target_leaves_to_the_handler_is_printed_as_a_warning_on_generate_and_check(
+    site_packages: Path,
+    tmp_path: Path,
+    git_repository: GitRepositoryFactory,
+    valid_bundle: tuple[dict[str, bytes], str],
+) -> None:
+    (tmp_path / "git").mkdir()
+    repository, environment = git_repository(tmp_path / "git", valid_bundle[0])
+    project = _project(tmp_path, repository, valid_bundle[1], distribution="acme-warning")
+    environment = {**environment, "XDG_CACHE_HOME": str(tmp_path / "cache")}
+
+    for command in ["generate", "check"]:
+        code, _, stderr = _run(project, environment, command)
+
+        assert code == EXIT_PASSED
+        assert stderr.startswith("seampact warning: identity.headers.handler (here): Left to the handler.")
 
 
 def test_frameworkdocs_off_is_refused_with_the_fix_of_a_target_that_cannot_switch_it(

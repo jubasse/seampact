@@ -21,6 +21,13 @@ final readonly class IrPlace
         return new self("/operations/{$index}", $operationId);
     }
 
+    /** Where a refusal or a warning is, as `vendor/bin/seampact` prints it. */
+    public function inEntry(string $entryId, ?string $api = null): string
+    {
+        return "entry '{$entryId}' " . ($api === null ? '' : "api '{$api}' ") . ($this->member === '' ? '/' : $this->member)
+            . ($this->operation === null ? '' : " (operation '{$this->operation}')");
+    }
+
     public function below(string|int ...$segments): self
     {
         $suffix = implode('', array_map(

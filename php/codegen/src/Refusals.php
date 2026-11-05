@@ -23,8 +23,7 @@ final class Refusals
 
     public function add(string $code, string $message, string $fix, IrPlace $at): void
     {
-        $where = "entry '{$this->entryId}' " . ($at->member === '' ? '/' : $at->member)
-            . ($at->operation === null ? '' : " (operation '{$at->operation}')");
+        $where = $at->inEntry($this->entryId);
 
         $this->problems[$code . "\0" . $where] ??= new ConfigProblem($code, $message, $fix, $where);
     }

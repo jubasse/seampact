@@ -10,6 +10,7 @@ export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "body-above-limit": STUB_REASON,
   "cache-family-headers": STUB_REASON,
   "caller-service-not-listed-forbidden": STUB_REASON,
+  "channel-non-member-not-found": STUB_REASON,
   "deadline-passed-answers-timeout": STUB_REASON,
   "denied-requirement-short-circuits": STUB_REASON,
   "handler-declared-error-answered": STUB_REASON,

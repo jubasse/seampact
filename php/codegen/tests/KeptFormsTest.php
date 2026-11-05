@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\FormArrival;
 use Seampact\Codegen\KeptForms;
@@ -43,6 +44,57 @@ final class KeptFormsTest extends TestCase
 
         self::assertStringContainsString('waits for a consumer after 1.0', $messages['upstream.unsupported'] ?? '');
         self::assertArrayHasKey('principalRequires.unsupported', $messages);
+    }
+
+    public function testAccessFormsThatOneZeroRefusesAreRefusedByNameOnEveryTarget(): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document(), ['getTask']);
+        $operation = is_array($document->operations) ? $document->operations[0] : null;
+        self::assertInstanceOf(\stdClass::class, $operation);
+        $operation->bindings = [(object) [
+            'from' => (object) ['in' => 'body', 'name' => 'ownerId'],
+            'to' => (object) ['in' => 'principal', 'name' => 'profileId'],
+            'origin' => (object) ['layer' => 'api', 'pointer' => '/bindings/0'],
+        ]];
+        $scopes = $operation->scopes;
+        self::assertIsArray($scopes);
+        $firstScope = $scopes[0];
+        self::assertInstanceOf(\stdClass::class, $firstScope);
+        $firstScope->source = (object) ['in' => 'resolver'];
+        $identities = $document->identities;
+        self::assertInstanceOf(\stdClass::class, $identities);
+        $userIdentity = $identities->user;
+        self::assertInstanceOf(\stdClass::class, $userIdentity);
+        $userIdentity->principal = (object) ['kind' => 'variants', 'variants' => (object) ['viewer' => 'UserPrincipal']];
+
+        $messages = self::refused($document, null);
+
+        self::assertArrayHasKey('bindings.unsupported', $messages);
+        self::assertArrayHasKey('scope.source.unsupported', $messages);
+        self::assertArrayHasKey('principal.variants.unsupported', $messages);
+    }
+
+    /** @return iterable<string, array{array<string, string>, string}> */
+    public static function credentialSchemesNoBoundaryReads(): iterable
+    {
+        yield 'query' => [['kind' => 'query', 'name' => 'api_key'], 'scheme.query.unsupported'];
+        yield 'basic' => [['kind' => 'basic'], 'scheme.basic.unsupported'];
+    }
+
+    /** @param array<string, string> $scheme */
+    #[DataProvider('credentialSchemesNoBoundaryReads')]
+    public function testAQueryOrBasicCredentialSchemeIsRefusedByName(array $scheme, string $code): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document(), ['getTask']);
+        $schemes = $document->schemes;
+        self::assertInstanceOf(\stdClass::class, $schemes);
+        self::assertInstanceOf(\stdClass::class, $schemes->bearer);
+        $schemes->bearer = (object) ['id' => 'bearer', ...$scheme, 'origin' => $schemes->bearer->origin];
+
+        $messages = self::refused($document, null);
+
+        self::assertSame([$code], array_keys($messages));
+        self::assertStringContainsString("A '{$scheme['kind']}' credential scheme", $messages[$code]);
     }
 
     public function testTheSchemasEnumsAndErrorsOfTheKeptOperationsAreCollected(): void

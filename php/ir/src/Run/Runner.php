@@ -193,7 +193,9 @@ final class Runner
             $config->entries,
         );
 
-        return new PreparedRun($config, $contractApis, $plans, $matrixWarnings);
+        $handlerWarnings = array_merge(...array_map(static fn (EntryPlan $plan): array => $plan->warnings, $plans));
+
+        return new PreparedRun($config, $contractApis, $plans, [...$matrixWarnings, ...$handlerWarnings]);
     }
 
     /** @return ContractApis|list<ConfigProblem> */
@@ -225,15 +227,17 @@ final class Runner
         }
 
         $files = [];
+        $warnings = [];
         $problems = [];
         foreach ($view->apis as $api) {
             $generated = self::generatedApi($entry, $target, $api, $psr4);
-            if ($generated !== [] && $generated[0] instanceof ConfigProblem) {
-                array_push($problems, ...array_filter($generated, static fn (object $item): bool => $item instanceof ConfigProblem));
+            if (!$generated instanceof GeneratedApi) {
+                array_push($problems, ...$generated);
                 continue;
             }
 
-            array_push($files, ...array_filter($generated, static fn (object $item): bool => $item instanceof GeneratedFile));
+            array_push($files, ...$generated->files);
+            array_push($warnings, ...$generated->warnings);
         }
 
         if ($problems !== []) {
@@ -243,12 +247,12 @@ final class Runner
         $write = GeneratedWriter::plan($entry->root, $entry->id(), $files, $onHandEdit);
 
         return $write instanceof PlannedWrite
-            ? new EntryPlan($entry->id(), $write, [], [])
-            : new EntryPlan($entry->id(), null, $write, []);
+            ? new EntryPlan($entry->id(), $write, [], [], $warnings)
+            : new EntryPlan($entry->id(), null, $write, [], $warnings);
     }
 
-    /** @return list<GeneratedFile>|list<ConfigProblem> the api's files with their paths below the entry root */
-    private static function generatedApi(AppConfigEntry $entry, InstalledTarget $target, SourceApi $api, Psr4Namespaces $psr4): array
+    /** @return GeneratedApi|list<ConfigProblem> */
+    private static function generatedApi(AppConfigEntry $entry, InstalledTarget $target, SourceApi $api, Psr4Namespaces $psr4): GeneratedApi|array
     {
         $where = "entry '{$entry->id()}' api '{$api->api}'";
         $subdirectory = $entry->namesSeveralApis() ? $api->api : '';
@@ -260,7 +264,7 @@ final class Runner
 
         try {
             $ir = IrReader::readDocument(JsonValue::copy($api->ir), $target->generator->irSupport());
-            $files = $target->generator->generate($ir, new TargetEntry(
+            $targetEntry = new TargetEntry(
                 $entry->id(),
                 $entry->use(),
                 $api->api,
@@ -271,7 +275,9 @@ final class Runner
                 $namespace,
                 FrameworkRoute::listOf($entry->entry),
                 JsonValue::string($entry->entry, 'mount'),
-            ));
+            );
+            $files = $target->generator->generate($ir, $targetEntry);
+            $warnings = self::checkedWarnings($target->generator->handlerWarnings($ir, $targetEntry));
         } catch (IrRefusedException $refused) {
             return array_map(
                 static fn (IrRefusal $refusal): ConfigProblem => RunProblems::ofIr($refusal, $entry->use(), $where),
@@ -298,12 +304,35 @@ final class Runner
             );
         }
 
-        return array_map(
+        $placed = array_map(
             static fn (object $file): GeneratedFile => $file instanceof GeneratedFile
                 ? new GeneratedFile($subdirectory === '' ? $file->path : "{$subdirectory}/{$file->path}", $file->contents)
                 : throw new \LogicException('seampact: mixed header outcome.'),
             $headed,
         );
+
+        return new GeneratedApi($placed, $warnings);
+    }
+
+    /**
+     * The generator's warnings, each a `ConfigProblem`; anything else is the generator's fault and ends as
+     * `config.target.generate-failed`.
+     *
+     * @param array<mixed> $warnings
+     * @return list<ConfigProblem>
+     */
+    private static function checkedWarnings(array $warnings): array
+    {
+        $checked = [];
+        foreach ($warnings as $warning) {
+            if (!$warning instanceof ConfigProblem) {
+                throw new \UnexpectedValueException('handlerWarnings() must return ConfigProblem items, got ' . get_debug_type($warning));
+            }
+
+            $checked[] = $warning;
+        }
+
+        return $checked;
     }
 
     // A hand-edited or foreign file is drift the writer names; any other refusal means the check cannot compare.

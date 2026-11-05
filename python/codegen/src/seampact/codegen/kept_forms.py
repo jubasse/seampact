@@ -13,6 +13,7 @@ from seampact.ir.hydration import OMITTED, JsonValue
 from seampact.ir.model import (
     AccessUnknown,
     ArrayTypeUse,
+    BasicScheme,
     ContractIR,
     CredentialIdentity,
     Direction,
@@ -24,6 +25,7 @@ from seampact.ir.model import (
     OptionalAccess,
     Param,
     ProofPlacement,
+    QueryScheme,
     RefTypeUse,
     RequirementUnknown,
     Response,
@@ -131,6 +133,17 @@ class _KeptForms:
             self.refusals.unknown_value(access.kind, at.below("access", "kind"))
         elif isinstance(access, IdentityAccess | OptionalAccess):
             self._identity(access.identity, at.below("access", "identity"))
+            self._credential_schemes(access.schemes, at.below("access"))
+
+    def _credential_schemes(self, scheme_ids: Sequence[str], at: IrPlace) -> None:
+        """The query and HTTP Basic schemes no Python boundary reads a credential from, refused as on Node servers."""
+        for scheme_id in scheme_ids:
+            scheme = self.ir.schemes.get(scheme_id)
+
+            if isinstance(scheme, QueryScheme | BasicScheme):
+                self.refusals.waiting(
+                    f"scheme.{scheme.kind}", f"A '{scheme.kind}' credential scheme", at, Delivery.CONSUMER
+                )
 
     def _identity(self, identity_id: str, at: IrPlace) -> None:
         if not self._first_time(f"identity/{identity_id}"):

@@ -22,6 +22,20 @@ final class LaravelRefusalsTest extends TestCase
 {
     private const AFTER_ONE_ZERO = 'waits for a consumer after 1.0';
 
+    public function testTheGeneratorNamesTheIdentityHeadersItLeavesToTheHandler(): void
+    {
+        $generator = new LaravelGenerator();
+        $ir = ReferenceContract::read($generator, ReferenceContract::document('tasksService.ir.json'));
+
+        $warnings = $generator->handlerWarnings($ir, ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasksService', 'App\\Tasks'));
+
+        self::assertNotSame([], $warnings);
+        foreach ($warnings as $warning) {
+            self::assertSame('identity.headers.handler', $warning->code);
+            self::assertStringContainsString("entry 'server' api 'tasksService'", (string) $warning->where);
+        }
+    }
+
     public function testTwoParametersWithOnePhpNameAreRefusedAsACollision(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {

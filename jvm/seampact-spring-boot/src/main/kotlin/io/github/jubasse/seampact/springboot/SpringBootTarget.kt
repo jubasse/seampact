@@ -54,6 +54,9 @@ public object SpringBootTarget {
             .sortedBy { it.path }
     }
 
+    /** The forms of one api the generated boundary leaves to the handler, each a warning the build prints. */
+    public fun handlerWarnings(ir: ContractIR): List<SpringBootWarning> = handlerFormWarnings(ir)
+
     // `frameworkDocs: off` turns springdoc's own document off in a properties file the app imports (ADR 0022).
     private fun frameworkDocsFiles(ir: ContractIR, entry: SpringBootEntry): List<GeneratedFile> {
         if (entry.frameworkDocs != FRAMEWORK_DOCS_OFF) return emptyList()

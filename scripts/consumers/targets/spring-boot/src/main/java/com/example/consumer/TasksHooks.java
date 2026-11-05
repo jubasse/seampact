@@ -114,10 +114,13 @@ final class TasksHooks {
         }
     }
 
-    /** Resolves a declared channel id to itself, every channel existing, unless the script denies the scope. */
+    /** Resolves a declared channel id to itself, the sample user a member of every channel but one, unless the script denies the scope. */
     @Component
     @SkippedUnder("missing-scope-resolver")
     static final class ChannelResolver implements TasksScopeResolver {
+        // The sample channel the sample user is not a member of: the resolver denies it, so no handler runs for it.
+        private static final String NON_MEMBER_CHANNEL_ID = "10000000-0000-4000-8000-0000000000ff";
+
         @Override
         public String scope() {
             return "channel";
@@ -131,6 +134,10 @@ final class TasksHooks {
 
             Optional<String> denied = SuiteControl.scriptedScopeDenial(request.scope());
             if (denied.isPresent()) return new ScopeResolution.Denied<>(Denial.of(denied.get()));
+
+            if (NON_MEMBER_CHANNEL_ID.equals(String.valueOf(declared.id()))) {
+                return new ScopeResolution.Denied<>(Denial.of("api.not_found"));
+            }
 
             return new ScopeResolution.Resolved<>(new ResolvedScope<>(request.scope(), declared.id(), Optional.empty()));
         }

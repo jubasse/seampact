@@ -14,6 +14,7 @@ use Seampact\Codegen\Delivery;
 use Seampact\Codegen\FrameworkRouteScope;
 use Seampact\Codegen\HandlerAccessPlacement;
 use Seampact\Codegen\HandlerAccessTypes;
+use Seampact\Codegen\HandlerForms;
 use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -30,6 +31,7 @@ use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Model\IrModelVersion;
 use Seampact\Ir\Read\IrSupport;
 use Seampact\Ir\Run\Generator;
+use Seampact\Ir\Run\HandlerWarningGenerator;
 use Seampact\Ir\Run\TargetEntry;
 use Seampact\Ir\Write\GeneratedFile;
 
@@ -40,7 +42,7 @@ use Seampact\Ir\Write\GeneratedFile;
  * names and URL builders, the input resolver, the bundle with its configuration, passes and boundary subscriber, and
  * the api's operation attribute and hook interfaces.
  */
-final class SymfonyGenerator implements Generator
+final class SymfonyGenerator implements Generator, HandlerWarningGenerator
 {
     public const TARGET = 'symfony';
     public const PACKAGE = 'seampact/symfony';
@@ -50,6 +52,11 @@ final class SymfonyGenerator implements Generator
     public function irSupport(): IrSupport
     {
         return new IrSupport([IrModelVersion::IR_VERSION], IrModelVersion::IR_REVISION, [self::HTTP_OPERATION], []);
+    }
+
+    public function handlerWarnings(ContractIR $ir, TargetEntry $entry): array
+    {
+        return HandlerForms::warnings($ir, $entry->id, $entry->api);
     }
 
     public function generate(ContractIR $ir, TargetEntry $entry): array

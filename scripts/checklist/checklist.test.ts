@@ -571,6 +571,54 @@ describe("checklist release scope", () => {
     );
   });
 
+  describe("a deferral for a form generation refuses by name", () => {
+    /** The release-gate fixture with a proof file whose CHK-001 entry lists [refusals]. */
+    function rootRefusing(refusals: string[]): string {
+      const root = mkdtempSync(join(tmpdir(), "checklist-refusal-"));
+
+      cpSync(fx("release-gate"), root, { recursive: true });
+      writeFileSync(
+        join(root, "docs/conformance/proofs/refused.yaml"),
+        `lane: refused\nproofs:\n  - id: CHK-001\n    refusals:\n${refusals.map((r) => `      - '${r}'`).join("\n")}\n`,
+      );
+
+      return root;
+    }
+
+    const refusedOnNestjs = new Map([
+      ["CHK-001", { targets: ["nestjs"], refusedOn: ["nestjs"], reason: "refused" }],
+    ]);
+
+    it("accepts it once a proof file tests the refusal on the target", () => {
+      const root = rootRefusing(["nestjs: src/a.test.txt#refused by name"]);
+
+      expect(lines(check({ root, itemsAfter1_0: refusedOnNestjs }))).toEqual([]);
+    });
+
+    it("refuses it when no proof file tests the refusal", () => {
+      expect(lines(check({ root: fx("release-gate"), itemsAfter1_0: refusedOnNestjs }))).toEqual([
+        "scripts/checklist/release-scope.ts: CHK-001: refused on target nestjs with no refusal test in a proof file",
+      ]);
+    });
+
+    it("refuses a refusal on a target the entry does not defer", () => {
+      const itemsAfter1_0 = new Map([
+        ["CHK-001", { targets: ["nestjs"], refusedOn: ["core"], reason: "refused" }],
+      ]);
+
+      expect(lines(check({ root: fx("release-gate"), itemsAfter1_0 }))).toEqual([
+        "scripts/checklist/release-scope.ts: CHK-001: after-1.0 entry names a refusal on a target it does not defer: core",
+      ]);
+    });
+
+    it("does not count a refusal test as the proof of the item", () => {
+      const root = rootRefusing(["nestjs: src/a.test.txt#refused by name"]);
+      const out = lines(check({ root, releaseGate: true }));
+
+      expect(out).toContain(`${CHECKLIST}: CHK-001: release gate: no test for target nestjs`);
+    });
+  });
+
   it("refuses an after-1.0 entry of an unknown id, an unlisted target or without a reason", () => {
     const itemsAfter1_0 = new Map([
       ["CHK-009", { reason: "after" }],

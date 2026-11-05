@@ -49,7 +49,7 @@ internal fun planEntries(config: AppConfig, apis: List<SourceApi>, settings: Run
             is EntryFiles.Refused -> EntryPlan.Refused(entry.id, generated.problems)
             is EntryFiles.Generated -> {
                 val plan = GeneratedWriter.plan(entry.root, entry.id, generated.files, HandEditPolicy.REFUSE)
-                EntryPlan.Planned(entry.id, withBuildToolFixes(plan, buildTool))
+                EntryPlan.Planned(entry.id, withBuildToolFixes(plan, buildTool), generated.warnings)
             }
         }
     }
@@ -68,17 +68,20 @@ private fun withBuildToolFixes(outcome: PlanOutcome, buildTool: BuildTool): Plan
 private fun handEditFix(buildTool: BuildTool): String =
     "Restore the file or delete it, then run `${buildTool.generateCommand}`; hand-written code goes next to the generated files, not in them."
 
-/** One entry's plan: the writer's plan of its files, or the problems that keep it from generating. */
+/**
+ * One entry's plan: the writer's plan of its files with the forms its target leaves to the handler, which generate
+ * and check print, or the problems that keep it from generating.
+ */
 public sealed interface EntryPlan {
     public val entryId: String
 
-    public data class Planned(override val entryId: String, val plan: PlanOutcome) : EntryPlan
+    public data class Planned(override val entryId: String, val plan: PlanOutcome, val warnings: List<ConfigProblem> = emptyList()) : EntryPlan
 
     public data class Refused(override val entryId: String, val problems: List<ConfigProblem>) : EntryPlan
 }
 
 private sealed interface EntryFiles {
-    data class Generated(val files: List<GeneratedFile>) : EntryFiles
+    data class Generated(val files: List<GeneratedFile>, val warnings: List<ConfigProblem>) : EntryFiles
 
     data class Refused(val problems: List<ConfigProblem>) : EntryFiles
 }
@@ -167,6 +170,7 @@ private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, settings
         mount = entry.mount ?: "",
     )
     val files = mutableListOf<GeneratedFile>()
+    val warnings = mutableListOf<ConfigProblem>()
     val problems = mutableListOf<ConfigProblem>()
 
     for (api in viewed) {
@@ -174,7 +178,10 @@ private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, settings
             val ir = IrReader.read(api.ir, SpringBootTarget.IR_SUPPORT)
             val generated = SpringBootTarget.generate(ir, target).map { GeneratedFile(it.path, it.contents) }
             when (val finished = withGeneratedHeader(generated, HeaderSource(entry.use, runnerVersion, api.api))) {
-                is HeaderOutcome.Finished -> files += finished.files
+                is HeaderOutcome.Finished -> {
+                    files += finished.files
+                    warnings += SpringBootTarget.handlerWarnings(ir).map { it.toProblem(entry.id, api.api) }
+                }
                 is HeaderOutcome.Refused -> problems += finished.refusals.map { it.toProblem("entry '${entry.id}' api '${api.api}'") }
             }
         } catch (refused: IrRefusedException) {
@@ -184,5 +191,5 @@ private fun generateEntry(entry: AppConfigEntry, apis: List<SourceApi>, settings
         }
     }
 
-    return if (problems.isEmpty()) EntryFiles.Generated(files) else EntryFiles.Refused(problems)
+    return if (problems.isEmpty()) EntryFiles.Generated(files, warnings) else EntryFiles.Refused(problems)
 }

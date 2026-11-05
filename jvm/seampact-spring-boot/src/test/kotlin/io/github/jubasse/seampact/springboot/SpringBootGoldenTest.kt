@@ -2,6 +2,8 @@ package io.github.jubasse.seampact.springboot
 
 import io.github.jubasse.seampact.ir.model.Access
 import io.github.jubasse.seampact.ir.model.ArrayTypeUse
+import io.github.jubasse.seampact.ir.model.BasicScheme
+import io.github.jubasse.seampact.ir.model.BearerScheme
 import io.github.jubasse.seampact.ir.model.ContractIR
 import io.github.jubasse.seampact.ir.model.CredentialIdentity
 import io.github.jubasse.seampact.ir.model.EachTemplate
@@ -17,6 +19,7 @@ import io.github.jubasse.seampact.ir.model.Operation
 import io.github.jubasse.seampact.ir.model.OptionalAccess
 import io.github.jubasse.seampact.ir.model.PlainMemberName
 import io.github.jubasse.seampact.ir.model.PublicAccess
+import io.github.jubasse.seampact.ir.model.QueryScheme
 import io.github.jubasse.seampact.ir.model.RefusedCredential
 import io.github.jubasse.seampact.ir.model.Refinements
 import io.github.jubasse.seampact.ir.model.ScalarType
@@ -41,6 +44,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -178,6 +182,24 @@ class SpringBootGoldenTest {
         val collision = refused.refusals.single { it.code == "name.collision" }
         assertTrue(collision.message.contains("com.example.tasks.api.schemas.Task"), collision.message)
         assertTrue(collision.message.contains("schema 'Channel'") && collision.message.contains("schema 'Task'"), collision.message)
+    }
+
+    // The query and HTTP Basic schemes are refused by name, as on the Node servers: no boundary reads them.
+    @Test
+    fun refusesAQueryOrBasicCredentialSchemeByName() {
+        val ir = coreView(apis.first())
+        val bearer = assertIs<BearerScheme>(ir.schemes.getValue("bearer"))
+        val replacements = mapOf(
+            "scheme.query.unsupported" to QueryScheme(id = "bearer", name = "api_key", origin = bearer.origin),
+            "scheme.basic.unsupported" to BasicScheme(id = "bearer", origin = bearer.origin),
+        )
+
+        for ((code, scheme) in replacements) {
+            val refusals = refusalsOf(ir.copy(schemes = ir.schemes + ("bearer" to scheme)))
+
+            assertEquals(setOf(code), refusals.map { it.code }.toSet())
+            assertTrue("A '${scheme.kind}' credential scheme" in refusals.first().message, refusals.first().message)
+        }
     }
 
     // A sort key reaches Spring Data as the Java member of the item it names, since the entity's property is that member.

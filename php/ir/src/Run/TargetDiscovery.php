@@ -75,7 +75,7 @@ final class TargetDiscovery
             return new ConfigProblem(
                 'config.target.load-failed',
                 "The generator '{$class}' of the package '{$use}' cannot be loaded: {$generator}.",
-                "Run `composer dump-autoload`, or update '{$use}' to a release whose generator implements " . Generator::class . '.',
+                "Run `composer dump-autoload`, or update '{$use}' to a release whose generator implements " . Generator::class . ' and ' . HandlerWarningGenerator::class . '.',
                 $where,
             );
         }
@@ -94,8 +94,8 @@ final class TargetDiscovery
         return new InstalledTarget($use, $version, $generator);
     }
 
-    /** @return Generator|string the generator, or why it cannot be built */
-    private static function generatorOf(string $class): Generator|string
+    /** @return (Generator&HandlerWarningGenerator)|string the generator, or why it cannot be built */
+    private static function generatorOf(string $class): (Generator&HandlerWarningGenerator)|string
     {
         if (!class_exists($class)) {
             return 'no class of that name is autoloaded';
@@ -103,6 +103,10 @@ final class TargetDiscovery
 
         if (!is_subclass_of($class, Generator::class)) {
             return 'it does not implement ' . Generator::class;
+        }
+
+        if (!is_subclass_of($class, HandlerWarningGenerator::class)) {
+            return 'it does not implement ' . HandlerWarningGenerator::class . ' (its `handlerWarnings` method)';
         }
 
         $reflection = new \ReflectionClass($class);

@@ -63,6 +63,30 @@ def test_operation_members_absent_from_the_reference_wait_for_a_consumer_after_1
     assert "it comes after 1.0" in refused["upstream.unsupported"]
 
 
+def test_access_forms_that_1_0_refuses_are_refused_by_name(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root, "tasks")
+    get_task = _operation(ir_json, "getTask")
+    get_task["bindings"] = [
+        {
+            "from": {"in": "body", "name": "ownerId"},
+            "to": {"in": "principal", "name": "profileId"},
+            "origin": {"layer": "api", "pointer": "/bindings/0"},
+        }
+    ]
+    scopes = get_task["scopes"]
+    assert isinstance(scopes, list)
+    scopes[0]["source"] = {"in": "resolver"}
+    identities = ir_json["identities"]
+    assert isinstance(identities, dict)
+    identities["user"]["principal"] = {"kind": "variants", "variants": {"viewer": "UserPrincipal"}}
+
+    assert set(_refused_codes(ir_json)) == {
+        "bindings.unsupported",
+        "scope.source.unsupported",
+        "principal.variants.unsupported",
+    }
+
+
 def test_an_open_enum_and_a_parameter_default_are_refused_by_name(repository_root: Path) -> None:
     ir_json = _ir_json(repository_root, "tasks")
     enums = ir_json["enums"]
@@ -85,3 +109,24 @@ def test_a_format_meta_member_is_refused_by_name(repository_root: Path) -> None:
     }
 
     assert "format.meta.unsupported" in _refused_codes(ir_json)
+
+
+@pytest.mark.parametrize(
+    ("scheme", "code"),
+    [
+        ({"kind": "query", "name": "api_key"}, "scheme.query.unsupported"),
+        ({"kind": "basic"}, "scheme.basic.unsupported"),
+    ],
+)
+def test_a_query_or_basic_credential_scheme_is_refused_by_name(
+    repository_root: Path, scheme: dict[str, str], code: str
+) -> None:
+    ir_json = _ir_json(repository_root, "tasks")
+    schemes = ir_json["schemes"]
+    assert isinstance(schemes, dict)
+    schemes["bearer"] = {"id": "bearer", **scheme, "origin": schemes["bearer"]["origin"]}
+
+    refused = _refused_codes(ir_json)
+
+    assert set(refused) == {code}
+    assert f"A '{scheme['kind']}' credential scheme" in refused[code]
