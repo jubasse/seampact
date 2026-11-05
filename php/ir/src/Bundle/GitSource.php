@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Bundle;
 
+use Seampact\Ir\Https\PrintableUrl;
+
 /** A git tag: the bundle directory of the tag's tree, fetched with the system `git`. */
 final readonly class GitSource implements BundleSource
 {

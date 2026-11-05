@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Bundle;
 
+use Seampact\Ir\Https\PrintableUrl;
+
 /** A release asset: the bundle tarball downloaded over HTTPS. */
 final readonly class ReleaseSource implements BundleSource
 {

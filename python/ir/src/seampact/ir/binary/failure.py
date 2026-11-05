@@ -10,6 +10,7 @@ class BinaryFailureCode(StrEnum):
     PIN_MISSING = "binary.pin-missing"
     PIN_INVALID = "binary.pin-invalid"
     HASH_MISMATCH = "binary.hash-mismatch"
+    FETCH_FAILED = "binary.fetch-failed"
     OVERRIDE_NOT_ROOT = "binary.override-not-root"
     PLATFORM_UNSUPPORTED = "binary.platform-unsupported"
     CACHE_UNAVAILABLE = "binary.cache-unavailable"

@@ -2,7 +2,7 @@
 
 import pytest
 
-from seampact.ir.bundle.printable_url import printable_url
+from seampact.ir.https.printable_url import printable_url
 
 
 @pytest.mark.parametrize(

@@ -16,7 +16,10 @@ public data class BinaryPins(val version: String, val sha256ByPlatform: Map<Bina
         private const val VERSION_KEY = "version"
         private const val HASH_KEY_PREFIX = "sha256."
 
-        /** The pins of an embedded [RESOURCE_NAME] text. */
+        // The version of every package of the checkout until the release stamps it: a pin at it hashes no released binary.
+        private const val DEVELOPMENT_VERSION = "0.0.0"
+
+        /** The pins of an embedded [RESOURCE_NAME] text; a pin of the development version is refused. */
         public fun readProperties(text: String): BinaryPinsRead {
             val properties = Properties()
             properties.load(StringReader(text))
@@ -27,10 +30,15 @@ public data class BinaryPins(val version: String, val sha256ByPlatform: Map<Bina
                 return refused(BinaryFailureCode.PIN_INVALID, "$RESOURCE_NAME holds the unknown keys ${unknown.joinToString(", ")}.")
             }
 
+            val version = properties.getProperty(VERSION_KEY)
+            if (version == DEVELOPMENT_VERSION) {
+                return refused(BinaryFailureCode.PIN_INVALID, "$RESOURCE_NAME pins version $DEVELOPMENT_VERSION, a development pin of no released binary.")
+            }
+
             val hashes = keys.filter { it.startsWith(HASH_KEY_PREFIX) }
                 .associate { it.removePrefix(HASH_KEY_PREFIX) to properties.getProperty(it) }
 
-            return pinsOf(properties.getProperty(VERSION_KEY), hashes, RESOURCE_NAME)
+            return pinsOf(version, hashes, RESOURCE_NAME)
         }
 
         /** The pins of [version] from a release `SHA256SUMS` text, `<sha256>  <asset name>` per line. */

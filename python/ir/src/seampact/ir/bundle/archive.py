@@ -8,8 +8,8 @@ from typing import Final
 from seampact.ir.bundle.failure import BundleFailure, BundleFailureCode
 from seampact.ir.bundle.files import BundleFiles
 from seampact.ir.bundle.layout import ARCHIVE_BYTES_MAX, EXTRACTED_BYTES_MAX, NOT_A_BUNDLE_FIX
-from seampact.ir.bundle.text import quoted
 from seampact.ir.bundle.ustar import UstarParser, archive_invalid
+from seampact.ir.https.untrusted_text import quoted
 
 _GZIP_WINDOW_BITS: Final = 16 + zlib.MAX_WBITS
 # Small input chunks bound the output of one inflate call, so the extracted cap is checked as it grows.

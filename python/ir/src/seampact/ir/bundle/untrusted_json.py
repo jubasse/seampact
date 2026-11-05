@@ -5,7 +5,8 @@ refuses the same manifest), before a schema or a reader sees it."""
 from dataclasses import dataclass
 from typing import Final
 
-from seampact.ir.bundle.text import pointer_below, quoted
+from seampact.ir.bundle.text import pointer_below
+from seampact.ir.https.untrusted_text import quoted
 from seampact.ir.read.nesting import check_text_nesting
 from seampact.ir.read.parse import parse_json_value
 

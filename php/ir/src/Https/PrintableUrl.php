@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seampact\Ir\Bundle;
+namespace Seampact\Ir\Https;
 
 /**
  * A source URL as a diagnostic may print it, as `printable-url.ts`: the user name, the password, the query and the

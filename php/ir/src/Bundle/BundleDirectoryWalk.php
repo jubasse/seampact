@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Bundle;
 
+use Seampact\Ir\Https\UntrustedText;
+
 /**
  * Every regular file under a bundle directory with its size, by POSIX path, without following links: a link or a
  * special file, or a bundle over the caps, is the failure.
@@ -45,7 +47,7 @@ final class BundleDirectoryWalk
                 if (is_link($absolute) || !is_file($absolute)) {
                     return new BundleFailure(
                         BundleFailureCode::FileType,
-                        BundleText::quoted($path) . ' is a link or a special file; a bundle holds regular files only.',
+                        UntrustedText::quoted($path) . ' is a link or a special file; a bundle holds regular files only.',
                         BundleLayout::REFETCH_FIX,
                         $path,
                     );

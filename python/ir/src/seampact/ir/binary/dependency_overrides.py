@@ -14,7 +14,7 @@ from urllib.request import url2pathname
 
 from seampact.ir.binary.failure import BinaryFailureCode, BinaryRefusedError
 from seampact.ir.binary.root_project import PYPROJECT_FILE, RootProject, tool_table
-from seampact.ir.bundle.text import quoted
+from seampact.ir.https.untrusted_text import quoted
 
 _FILE_SCHEME: Final = "file"
 _DIRECT_URL_FILE: Final = "direct_url.json"

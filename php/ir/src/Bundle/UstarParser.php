@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Seampact\Ir\Bundle;
 
+use Seampact\Ir\Https\UntrustedText;
+
 /**
  * The ustar entries of a bundle tarball (POSIX.1-1988 with pax extended headers), read block by block from the
  * uncompressed archive in a private temporary file, each checked before the next is read; a file's bytes stay in
@@ -147,7 +149,7 @@ final class UstarParser
 
         return new BundleFailure(
             BundleFailureCode::ArchiveEntryType,
-            'The tarball entry ' . BundleText::quoted($path) . ' is of type ' . BundleText::quoted($type) . '; a bundle holds regular files only.',
+            'The tarball entry ' . UntrustedText::quoted($path) . ' is of type ' . UntrustedText::quoted($type) . '; a bundle holds regular files only.',
             'Rebuild the bundle with `seampact bundle`: it writes no link, device or other special entry.',
             $path,
         );
@@ -204,8 +206,8 @@ final class UstarParser
             return new BundleFailure(
                 BundleFailureCode::ArchiveEntryDuplicate,
                 $seen === $path
-                    ? 'The tarball holds ' . BundleText::quoted($path) . ' twice.'
-                    : 'The tarball holds ' . BundleText::quoted($path) . ' and ' . BundleText::quoted($seen) . ', one file on a case-insensitive file system.',
+                    ? 'The tarball holds ' . UntrustedText::quoted($path) . ' twice.'
+                    : 'The tarball holds ' . UntrustedText::quoted($path) . ' and ' . UntrustedText::quoted($seen) . ', one file on a case-insensitive file system.',
                 'Rebuild the bundle with `seampact bundle`: it writes each file once.',
                 $path,
             );
@@ -316,7 +318,7 @@ final class UstarParser
     {
         return new BundleFailure(
             BundleFailureCode::ArchiveEntryPath,
-            'The tarball entry ' . BundleText::quoted($path) . " {$problem}; a bundle holds its manifest and portable paths under sources/ and ir/ only.",
+            'The tarball entry ' . UntrustedText::quoted($path) . " {$problem}; a bundle holds its manifest and portable paths under sources/ and ir/ only.",
             'Rebuild the bundle with `seampact bundle`: its entries are the manifest and portable paths under the bundle root.',
             $path,
         );
@@ -362,7 +364,7 @@ final class UstarParser
         $isGnu = self::field($header, self::GNU_MAGIC_FIELD, true) === self::GNU_MAGIC_AND_VERSION;
         $prefix = $isGnu ? '' : self::field($header, self::PREFIX, false);
 
-        return BundleText::utf8OrReplaced($prefix === '' ? $name : "{$prefix}/{$name}");
+        return UntrustedText::utf8OrReplaced($prefix === '' ? $name : "{$prefix}/{$name}");
     }
 
     /** @param array{int, int} $field */

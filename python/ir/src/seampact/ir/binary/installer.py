@@ -1,21 +1,27 @@
-"""Hashes the source first, so a warm cache never hides a source that changed. Creates the cache root and resolves its
-real path once; only that path is checked and run from then on. Checks the cache before any copy, then copies a binary
-into `<cache root>/<sha256>/`: streamed into a temporary file created exclusively there and hashed as it streams, made
-executable, then renamed atomically to its name. An entry already there with the right hash counts as success, so
+"""Hashes a `path` source first, so a warm cache never hides a source that changed; a download runs only when the cache
+holds no intact entry of its pin. Creates the cache root and resolves its real path once; only that path is checked
+and run from then on. Checks the cache before any copy, then copies or downloads a binary into `<cache root>/<sha256>/`:
+streamed into a temporary file created exclusively there and hashed as it streams, made executable, then renamed
+atomically to its name. An entry already there with the right hash counts as success, so
 concurrent runs and a running `.exe` on Windows are safe. A copy whose hash differs is deleted and refused. Only the
 copy ever runs, never the file it came from."""
 
 import hashlib
 import os
 import secrets
+from collections.abc import Callable
 from typing import Final
 
 from seampact.ir.binary.cache_safety import CacheSafety, unsafe_cache_path
+from seampact.ir.binary.download import BinaryDownload
 from seampact.ir.binary.failure import BinaryFailureCode, BinaryRefusedError
 from seampact.ir.binary.installed_binary import InstalledBinary, hash_mismatch
+from seampact.ir.https.printable_url import printable_url
 
 _CHUNK_BYTES: Final = 64 * 1024
 _EXECUTABLE_BY_OWNER: Final = 0o700
+# The copy is made executable only once its hash matches the pin.
+_PRIVATE_TO_OWNER: Final = 0o600
 _TEMPORARY_SUFFIX_BYTES: Final = 8
 
 
@@ -26,6 +32,38 @@ def install_binary(source: str, sha256: str, cache_root: str, file_name: str, sa
     if source_sha256 != sha256:
         raise hash_mismatch(source, sha256, source_sha256)
 
+    return _install_into(
+        source, sha256, cache_root, file_name, safety, lambda temporary: _copy_hashing(source, temporary)
+    )
+
+
+def install_downloaded_binary(
+    url: str, sha256: str, cache_root: str, file_name: str, safety: CacheSafety, download: BinaryDownload
+) -> InstalledBinary:
+    """Downloads `url` into the cache unless an intact entry of `sha256` is already there. Raises
+    `BinaryRefusedError`."""
+    download.refuse_unless_https(url)
+
+    return _install_into(
+        printable_url(url),
+        sha256,
+        cache_root,
+        file_name,
+        safety,
+        lambda temporary: _download_hashing(url, temporary, download),
+    )
+
+
+def _install_into(
+    origin: str,
+    sha256: str,
+    cache_root: str,
+    file_name: str,
+    safety: CacheSafety,
+    write_hashing: Callable[[str], str],
+) -> InstalledBinary:
+    """`origin` is the source path or the printable URL, for messages; `write_hashing` writes the binary into the new
+    temporary file it is given and returns its hash."""
     safety.create_private_directory(cache_root)
     real_cache_root = _real_cache_root(cache_root)
     directory = os.path.join(real_cache_root, sha256)
@@ -41,12 +79,12 @@ def install_binary(source: str, sha256: str, cache_root: str, file_name: str, sa
         return installed
 
     temporary = os.path.join(directory, f".{file_name}.{secrets.token_hex(_TEMPORARY_SUFFIX_BYTES)}.tmp")
-    actual = _copy_hashing(source, temporary)
+    actual = write_hashing(temporary)
 
     if actual != sha256:
         os.unlink(temporary)
 
-        raise hash_mismatch(source, sha256, actual)
+        raise hash_mismatch(origin, sha256, actual)
 
     try:
         os.chmod(temporary, _EXECUTABLE_BY_OWNER)
@@ -103,7 +141,7 @@ def _copy_hashing(source: str, temporary: str) -> str:
 
     try:
         with open(source, "rb") as input_file:
-            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, _EXECUTABLE_BY_OWNER)
+            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, _PRIVATE_TO_OWNER)
 
             with os.fdopen(descriptor, "wb") as output_file:
                 while chunk := input_file.read(_CHUNK_BYTES):
@@ -115,6 +153,36 @@ def _copy_hashing(source: str, temporary: str) -> str:
         raise unsafe_cache_path(
             temporary,
             f"cannot be written from '{source}' ({error})",
+            "Check the free space and permissions of the binary cache.",
+        ) from error
+
+    return digest.hexdigest()
+
+
+def _download_hashing(url: str, temporary: str, download: BinaryDownload) -> str:
+    """The SHA-256 of the bytes downloaded from `url` into the new file `temporary`, which a failed download removes."""
+    digest = hashlib.sha256()
+
+    try:
+        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, _PRIVATE_TO_OWNER)
+
+        with os.fdopen(descriptor, "wb") as output_file:
+
+            def write_chunk(chunk: bytes) -> None:
+                output_file.write(chunk)
+                digest.update(chunk)
+
+            download.stream(url, write_chunk)
+    except BinaryRefusedError:
+        _remove_quietly(temporary)
+
+        raise
+    except OSError as error:
+        _remove_quietly(temporary)
+
+        raise unsafe_cache_path(
+            temporary,
+            f"cannot be written from the download ({error})",
             "Check the free space and permissions of the binary cache.",
         ) from error
 
