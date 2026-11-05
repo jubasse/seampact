@@ -13,6 +13,7 @@ export type WorkflowMatrix = Readonly<Record<string, readonly unknown[] | undefi
 
 export interface WorkflowStep {
   readonly name?: string;
+  readonly if?: string;
   readonly run?: string;
   readonly uses?: string;
   readonly with?: Readonly<Record<string, string>>;

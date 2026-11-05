@@ -1,5 +1,16 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { readWorkflow, type WorkflowDocument, workflowFiles } from "./matrix-rows.ts";
+import { parse } from "yaml";
+import { REPO_ROOT } from "../golden/repo-root.ts";
+import {
+  readWorkflow,
+  type WorkflowDocument,
+  type WorkflowStep,
+  workflowFiles,
+} from "./matrix-rows.ts";
+
+const SHARED_ACTIONS_DIRECTORY = join(REPO_ROOT, ".github/actions");
 
 // The checks develop's ruleset requires; the merge queue waits for each of them on every merge group.
 const REQUIRED_CHECKS = [
@@ -60,6 +71,39 @@ function requiredCheckWorkflows(): Map<string, string[]> {
   return workflowsByCheck;
 }
 
+interface CompositeAction {
+  readonly runs: { readonly steps?: readonly WorkflowStep[] };
+}
+
+// Every step of every workflow and shared action, labelled with where it is.
+function everyStep(): [string, WorkflowStep][] {
+  const workflowSteps = workflowFiles().flatMap((file) =>
+    Object.entries(readWorkflow(file).jobs).flatMap(([jobId, job]) =>
+      (job.steps ?? []).map((step): [string, WorkflowStep] => [`${file} job '${jobId}'`, step]),
+    ),
+  );
+  const actionSteps = readdirSync(SHARED_ACTIONS_DIRECTORY).flatMap((action) => {
+    const manifest: CompositeAction = parse(
+      readFileSync(join(SHARED_ACTIONS_DIRECTORY, action, "action.yml"), "utf8"),
+    );
+
+    return (manifest.runs.steps ?? []).map((step): [string, WorkflowStep] => [
+      `action '${action}'`,
+      step,
+    ]);
+  });
+
+  return [...workflowSteps, ...actionSteps];
+}
+
+// A step that may write a cache entry: the save action, or the restore-and-save one.
+function savesCache(step: WorkflowStep): boolean {
+  return (
+    step.uses !== undefined &&
+    (step.uses.startsWith("actions/cache/save@") || step.uses.startsWith("actions/cache@"))
+  );
+}
+
 function workflowsOnMergeGroup(): string[] {
   return workflowFiles().filter((file) => "merge_group" in readWorkflow(file).on);
 }
@@ -91,5 +135,15 @@ describe("the merge queue", () => {
     expect(String(concurrency?.["cancel-in-progress"]), `${file} cancel-in-progress`).not.toContain(
       "merge_group",
     );
+  });
+
+  // A merge group's entry is scoped to its own short-lived ref, like a pull request's: it would only fill the cache.
+  it("saves no cache on a merge group where it saves none on a pull request", () => {
+    const savesSkippingPullRequestsOnly = everyStep()
+      .filter(([, step]) => savesCache(step) && step.if?.includes("'pull_request'") === true)
+      .filter(([, step]) => step.if?.includes("github.event_name != 'merge_group'") !== true)
+      .map(([location, step]) => `${location}: ${step.name ?? step.uses}`);
+
+    expect(savesSkippingPullRequestsOnly).toEqual([]);
   });
 });

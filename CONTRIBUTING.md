@@ -40,7 +40,7 @@ It runs typecheck, lint, the format check and the tests, and fails on any error.
 
 ## Conventions
 
-- Git flow: never commit directly on `develop` or `main`; both are protected. A pull request to `develop` merges only when it is up to date with `develop` and its required checks pass: `ci`, `checklist`, and one check per lane (for example `native-ir`, `laravel`, `fastapi`).
+- Git flow: never commit directly on `develop` or `main`; both are protected. A pull request to `develop` joins the merge queue once its required checks pass: `ci`, `checklist`, and one check per lane (for example `native-ir`, `laravel`, `fastapi`). The queue runs the same checks again on `develop` plus the pull requests ahead of it, and merges it when they pass.
 - Dependencies are pinned to exact versions; GitHub Actions are pinned by commit SHA with the version in a comment.
 - Add a changeset (`pnpm changeset`) for a change that affects a package's version. Releases are cut from `release/<version>`.
 - Toolchain choices are recorded in `docs/adr/0001-toolchain.md`.

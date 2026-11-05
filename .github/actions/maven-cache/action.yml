@@ -3,9 +3,9 @@
 # seampact's own modules (io/github/jubasse, published to Maven local by each run) are deleted right after the restore
 # and right before the save, so a build never picks up a stale one: actions/cache archives ~/.m2/repository whole, and
 # a `!` exclusion below it would exclude nothing. Only pushes and nightly runs save: an entry saved by a pull
-# request would count against the repository's cache limit for that pull request alone. Each workflow keeps its own
-# entry: its builds resolve a
-# different set of artifacts, and a shared key would let the first to save hold the others' downloads back.
+# request or a merge group would count against the repository's cache limit for that ref alone. Each workflow keeps
+# its own entry: its builds resolve a different set of artifacts, and a shared key would let the first to save hold
+# the others' downloads back.
 name: Maven consumer cache
 description: Restores or saves the Maven distribution and third-party artifacts of the Spring Boot Maven consumer.
 
@@ -56,12 +56,12 @@ runs:
       run: rm -rf ~/.m2/repository/io/github/jubasse
 
     - name: Drop seampact's own modules before the save
-      if: inputs.step == 'save' && github.event_name != 'pull_request'
+      if: inputs.step == 'save' && github.event_name != 'pull_request' && github.event_name != 'merge_group'
       shell: bash
       run: rm -rf ~/.m2/repository/io/github/jubasse
 
     - name: Save the Maven downloads
-      if: inputs.step == 'save' && github.event_name != 'pull_request'
+      if: inputs.step == 'save' && github.event_name != 'pull_request' && github.event_name != 'merge_group'
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
