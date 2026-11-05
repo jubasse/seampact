@@ -62,10 +62,11 @@ def test_a_lone_surrogate_in_a_string_value_refuses_the_body(tasks: ApiContract)
     assert _issues(refused.value) == [{"pointer": "", "rule": "type"}]
 
 
-def test_a_lone_surrogate_in_a_key_is_left_for_the_unknown_key_report(tasks: ApiContract) -> None:
-    decoded = _decode(tasks, b'{"\\ud800": 1}')
+def test_a_lone_surrogate_in_a_key_refuses_the_body(tasks: ApiContract) -> None:
+    with pytest.raises(ContractRefusal) as refused:
+        _decode(tasks, b'{"title": "t", "labels": [{"\\ud800": 1}]}')
 
-    assert decoded.body == {"\ud800": 1}
+    assert _issues(refused.value) == [{"pointer": "", "rule": "type"}]
 
 
 def _read(parts: Sequence[bytes], declared_length: str | None, coding: str | None, limit_bytes: int) -> BodyRead:

@@ -103,7 +103,7 @@ final class WireValues
     {
         $text = match (true) {
             $value instanceof \BackedEnum => (string) $value->value,
-            $value instanceof \DateTimeInterface => $value->format(WireCodec::DATE_TIME_WIRE),
+            $value instanceof \DateTimeInterface => WireCodec::dateTimeText($value),
             is_bool($value) => $value ? 'true' : 'false',
             is_float($value) => self::numberText($name, $value),
             default => (string) $value,

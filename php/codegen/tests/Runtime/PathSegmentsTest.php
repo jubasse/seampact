@@ -30,7 +30,8 @@ final class PathSegmentsTest extends TestCase
         yield 'number below the decimal range' => [1.5e-7, '1.5e-7'];
         yield 'boolean' => [false, 'false'];
         yield 'backed enum' => [PathSegmentStatus::InReview, 'in%20review'];
-        yield 'date-time' => [new \DateTimeImmutable('2026-10-27T08:30:00+02:00'), '2026-10-27T08%3A30%3A00.000%2B02%3A00'];
+        yield 'date-time with a fraction' => [new \DateTimeImmutable('2026-10-27T08:30:00.120+02:00'), '2026-10-27T08%3A30%3A00.12%2B02%3A00'];
+        yield 'date-time' => [new \DateTimeImmutable('2026-10-27T08:30:00+02:00'), '2026-10-27T08%3A30%3A00%2B02%3A00'];
     }
 
     #[DataProvider('segments')]
