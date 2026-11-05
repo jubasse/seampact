@@ -10,6 +10,7 @@ import io.github.jubasse.seampact.ir.model.EnumId
 import io.github.jubasse.seampact.ir.model.EnumTypeUse
 import io.github.jubasse.seampact.ir.model.ErrorCode
 import io.github.jubasse.seampact.ir.model.ExemptIdempotency
+import io.github.jubasse.seampact.ir.model.Extensions
 import io.github.jubasse.seampact.ir.model.FileTypeUse
 import io.github.jubasse.seampact.ir.model.HttpMethod
 import io.github.jubasse.seampact.ir.model.IdempotencyEnforcement
@@ -24,6 +25,7 @@ import io.github.jubasse.seampact.ir.model.Principal
 import io.github.jubasse.seampact.ir.model.QueryScheme
 import io.github.jubasse.seampact.ir.model.RefTypeUse
 import io.github.jubasse.seampact.ir.model.ResponseShape
+import io.github.jubasse.seampact.ir.model.RightRequirement
 import io.github.jubasse.seampact.ir.model.RuleRequirement
 import io.github.jubasse.seampact.ir.model.ScalarType
 import io.github.jubasse.seampact.ir.model.ScalarTypeUse
@@ -63,6 +65,10 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
     val enums = LinkedHashSet<EnumId>()
     val errors = LinkedHashSet<ErrorCode>()
     val identities = LinkedHashSet<IdentityId>()
+    /** The params schema of each asked right and rule that declares one: its decide request carries it typed. */
+    val rightParams = LinkedHashMap<String, SchemaId>()
+    val ruleParams = LinkedHashMap<String, SchemaId>()
+    private val readAccessDeclarations = HashSet<String>()
 
     init {
         checkApiForms()
@@ -77,6 +83,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
 
     private fun readOperation(operation: Operation, at: IrPlace) {
         checkOperationForms(operation, at)
+        readAccessDeclarations(operation)
 
         if (operation.method is HttpMethod.Unknown) refusals.unknownValue(at.below("method"), operation.method.value)
 
@@ -149,6 +156,43 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
     }
 
     // A throttle rule's bucket: its key reads the request's path, a resolved scope or the principal.
+    /**
+     * The rights, rules and scopes an operation asks: a declared params schema is generated, and an extension value is
+     * refused once, since no hook request carries it yet.
+     */
+    private fun readAccessDeclarations(operation: Operation) {
+        val askedRights = operation.requires.filterIsInstance<RightRequirement>().map { it.right } + operation.fieldRights.map { it.right }
+        for (right in askedRights) {
+            val declared = ir.rights[right] ?: continue
+            if (!readAccessDeclarations.add("rights/$right")) continue
+            declared.params?.let { schemaId -> readRequirementParams(rightParams, right, schemaId, "rights") }
+            refuseExtensions("right", "rights", right, declared.extensions)
+        }
+
+        for (rule in operation.requires.filterIsInstance<RuleRequirement>().map { it.rule }) {
+            val declared = ir.rules[rule] ?: continue
+            if (!readAccessDeclarations.add("rules/$rule")) continue
+            declared.params?.let { schemaId -> readRequirementParams(ruleParams, rule, schemaId, "rules") }
+            refuseExtensions("rule", "rules", rule, declared.extensions)
+        }
+
+        for (scope in operation.scopes.map { it.scope }) {
+            val declared = ir.scopes[scope] ?: continue
+            if (readAccessDeclarations.add("scopes/$scope")) refuseExtensions("scope", "scopes", scope, declared.extensions)
+        }
+    }
+
+    private fun readRequirementParams(params: MutableMap<String, SchemaId>, name: String, schemaId: SchemaId, member: String) {
+        params[name] = schemaId
+        readSchema(schemaId, IrPlace.ROOT.below(member, name, "params"))
+    }
+
+    private fun refuseExtensions(kind: String, member: String, name: String, extensions: Extensions) {
+        if (extensions.isNotEmpty()) {
+            refusals.waiting("$kind.extensions", "An extension value of the $kind '$name'", IrPlace.ROOT.below(member, name, "extensions"), Delivery.AFTER_1_0)
+        }
+    }
+
     private fun checkBucket(bucketId: BucketId, at: IrPlace) {
         val bucket = ir.buckets[bucketId]
         if (bucket == null) {

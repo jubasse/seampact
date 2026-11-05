@@ -80,8 +80,7 @@ final class OutputFieldRights {
         String key = right + "\n" + subject.map(ref -> String.valueOf(ref.id())).orElse("");
 
         return decisions.computeIfAbsent(key, ignored -> {
-            Optional<JsonNode> params = fieldRight.has("params") ? Optional.of(fieldRight.path("params")) : Optional.empty();
-            RequirementCall call = new RequirementCall(RequirementKind.RIGHT, right, params, exchange.principal, subject,
+            RequirementCall call = new RequirementCall(RequirementKind.RIGHT, right, RequirementParams.of(boundary, RequirementKind.RIGHT, right, fieldRight), exchange.principal, subject,
                     List.copyOf(exchange.scopes), Optional.empty(), Optional.empty(),
                     new Purpose.Field(fieldRight.path("pointer").asString(), FieldDirection.OUTPUT),
                     boundary.operationRef(exchange.route()), view, new RequirementRequest.Extensions<>(Map.of(), Map.of()));

@@ -49,7 +49,7 @@ final class InputFieldRights {
     private static Decision<Denial> decide(SeampactBoundary boundary, BoundaryExchange exchange, RequestView view, JsonNode fieldRight, String pointer) {
         String right = fieldRight.path("right").asString();
         Optional<SubjectRef<Object, Object>> subject = AccessSteps.subjectOf(boundary, exchange, fieldRight.path("subject"), right);
-        Optional<JsonNode> params = fieldRight.has("params") ? Optional.of(fieldRight.path("params")) : Optional.empty();
+        Optional<Object> params = RequirementParams.of(boundary, RequirementKind.RIGHT, right, fieldRight);
 
         return AccessSteps.decide(boundary, right, new RequirementCall(RequirementKind.RIGHT, right, params, exchange.principal,
                 subject, List.copyOf(exchange.scopes), Optional.empty(), Optional.empty(), new Purpose.Field(pointer, FieldDirection.INPUT),

@@ -61,6 +61,8 @@ import com.example.tasks.api.UpdateTaskResult;
 import com.example.tasks.api.UserAuthenticateHook;
 import com.example.tasks.api.UserAuthenticateRequest;
 import com.example.tasks.api.UserCredentials;
+import com.example.tasks.api.schemas.RecentAuthParams;
+import com.example.tasks.api.schemas.RolesParams;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
@@ -269,6 +271,18 @@ public final class TasksSeampactBinding implements ApiBinding {
         return Map.ofEntries(
         Map.entry("user", UserAuthenticateHook.class),
         Map.entry("stripe", StripeAuthenticateHook.class));
+    }
+
+    @Override
+    public Map<String, Class<?>> rightParamsTypes() {
+        return Map.ofEntries(
+        Map.entry("roles", RolesParams.class));
+    }
+
+    @Override
+    public Map<String, Class<?>> ruleParamsTypes() {
+        return Map.ofEntries(
+        Map.entry("recentAuth", RecentAuthParams.class));
     }
 
     @Override

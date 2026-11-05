@@ -10,6 +10,7 @@ import com.example.tasksservice.api.TasksServiceContractException;
 import com.example.tasksservice.api.TasksServiceDecider;
 import com.example.tasksservice.api.TasksServiceScopeResolver;
 import com.example.tasksservice.api.TasksServiceUnexpectedErrorListener;
+import com.example.tasksservice.api.schemas.CallerServiceParams;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.RequestView;
@@ -63,6 +64,17 @@ public final class TasksServiceSeampactBinding implements ApiBinding {
     public Map<String, Class<?>> authenticateHooks() {
         return Map.ofEntries(
         Map.entry("service", ServiceAuthenticateHook.class));
+    }
+
+    @Override
+    public Map<String, Class<?>> rightParamsTypes() {
+        return Map.ofEntries(
+        Map.entry("callerService", CallerServiceParams.class));
+    }
+
+    @Override
+    public Map<String, Class<?>> ruleParamsTypes() {
+        return Map.of();
     }
 
     @Override

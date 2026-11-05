@@ -14,6 +14,7 @@ import io.github.jubasse.seampact.ir.read.IrReader
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
 import kotlinx.serialization.json.JsonObject
@@ -36,6 +37,12 @@ class SpringBootAccessRefusalsTest {
         val entry = SpringBootEntry(id = "server", options = JsonObject(mapOf("package" to JsonPrimitive("com.acme.tasks"))))
 
         return assertFailsWith<SpringBootRefusedException> { SpringBootTarget.generate(ir, entry) }.refusals.map { it.code }
+    }
+
+    private fun referenceIr(vararg operationIds: String): ContractIR {
+        val ir = IrReader.read(Files.readString(repositoryRoot.resolve("fixtures/golden/reference/tasks.ir.json")), SpringBootTarget.IR_SUPPORT)
+
+        return ir.copy(operations = ir.operations.filter { it.id in operationIds })
     }
 
     private fun ContractIR.withGetTask(change: (Operation) -> Operation): ContractIR = copy(operations = operations.map(change))
@@ -73,5 +80,30 @@ class SpringBootAccessRefusalsTest {
         val ir = base.copy(identities = base.identities + (identityId to variants))
 
         assertTrue("principal.variants.unsupported" in refusedCodes(ir))
+    }
+
+    @Test
+    fun refusesOnceTheExtensionValuesOfAnAskedRightRuleOrScope() {
+        val base = referenceIr("assignTask", "createTask")
+        val extensions = JsonObject(mapOf("acme" to JsonObject(mapOf("audit" to JsonPrimitive("on")))))
+        val ir = base.copy(
+            rights = base.rights + ("roles" to base.rights.getValue("roles").copy(extensions = extensions)),
+            rules = base.rules + ("throttle" to base.rules.getValue("throttle").copy(extensions = extensions)),
+            scopes = base.scopes + ("channel" to base.scopes.getValue("channel").copy(extensions = extensions)),
+        )
+
+        val extensionCodes = refusedCodes(ir).filter { it.endsWith(".extensions.unsupported") }
+
+        assertEquals(listOf("right.extensions.unsupported", "rule.extensions.unsupported", "scope.extensions.unsupported"), extensionCodes.sorted())
+    }
+
+    @Test
+    fun bindsTheParamsRecordOfEachAskedRightThatDeclaresParams() {
+        val entry = SpringBootEntry(id = "server", options = JsonObject(mapOf("package" to JsonPrimitive("com.acme.tasks"))))
+        val files = SpringBootTarget.generate(referenceIr("assignTask", "searchTasks"), entry)
+
+        val binding = files.single { it.path.endsWith("SeampactBinding.java") }.contents
+        assertTrue(files.any { it.path.endsWith("/RolesParams.java") }, "the params record of 'roles' is generated")
+        assertTrue(Regex("""rightParamsTypes\(\) \{\s+return Map\.ofEntries\(\s+Map\.entry\("roles", RolesParams\.class\)\);""") in binding, binding)
     }
 }
