@@ -34,7 +34,5 @@ try {
 } catch (error) {
   if (!(error instanceof ReleasePinsError)) throw error;
 
-  fail(
-    `${error.message}; write the pins from the SHA256SUMS that manifest.mjs wrote after signing.`,
-  );
+  fail(`${error.message}. ${error.fix}`);
 }

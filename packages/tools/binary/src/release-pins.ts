@@ -7,8 +7,17 @@ export interface ReleasePins {
   readonly sha256: Readonly<Record<string, string>>;
 }
 
+const MANIFEST_FIX = "Write the pins from the SHA256SUMS that manifest.mjs wrote after signing.";
+
+// A refusal of the pin writer, with the fix it prints. No parameter property: Node strips types only.
 export class ReleasePinsError extends Error {
   override readonly name = "ReleasePinsError";
+  readonly fix: string;
+
+  constructor(message: string, fix: string = MANIFEST_FIX) {
+    super(message);
+    this.fix = fix;
+  }
 }
 
 // A release version: semver, a pre-release and build metadata allowed.
@@ -27,6 +36,7 @@ export function releasePinsFromSha256Sums(
   if (!RELEASE_VERSION_PATTERN.test(version)) {
     throw new ReleasePinsError(
       `'${version}' is no release version (semver, such as 1.0.0 or 1.0.0-rc.1)`,
+      "Pass the version every package of the release carries.",
     );
   }
 
