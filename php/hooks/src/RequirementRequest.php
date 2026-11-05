@@ -15,7 +15,7 @@ interface RequirementRequest
     /** The right's or rule's name. */
     public function name(): string;
 
-    /** The params declared at the use site. */
+    /** The params declared at the use site, an instance of the right's or rule's generated params class; null when it declares none. */
     public function params(): ?object;
 
     /** Null for an anonymous caller on a public or optional-auth route. */

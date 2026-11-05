@@ -145,12 +145,10 @@ final class FieldRights
     /** @param array<array-key, mixed> $fieldRight */
     private static function call(BoundaryState $state, array $fieldRight, string $right, ?SubjectRef $subject, FieldDirection $direction): RequirementCall
     {
-        $params = $fieldRight['params'] ?? null;
-
         return new RequirementCall(
             RequirementKind::Right,
             $right,
-            is_array($params) ? AccessSteps::asObject($params) : null,
+            RequirementParams::of($state->contract, RequirementKind::Right, $right, $fieldRight['params'] ?? null),
             $state->principal,
             $subject,
             $state->scopes,
