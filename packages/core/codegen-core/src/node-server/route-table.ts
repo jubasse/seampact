@@ -103,7 +103,7 @@ export function routeTableSource(
   const format = errorFormat(ir, refusals);
 
   refusals.push(...encodedSegmentRefusals(ir));
-  refusals.push(...requirementExtensionRefusals(ir));
+  refusals.push(...accessExtensionRefusals(ir));
 
   ir.operations.forEach((operation, index) => {
     warnings.push(...handlerForms(ir, operation, operationLocation(index, operation.id)));
@@ -387,9 +387,9 @@ function handlerForms(
   );
 }
 
-// The extension values of a right or rule an operation asks: the decide request does not carry them yet, so each is
-// refused once rather than dropped.
-function requirementExtensionRefusals(ir: ContractIR): Refusal[] {
+// The extension values of a right, rule or scope an operation asks: the decide and resolve requests do not carry them
+// yet, so each is refused once rather than dropped.
+function accessExtensionRefusals(ir: ContractIR): Refusal[] {
   const asked = new Set<string>();
 
   for (const operation of ir.operations) {
@@ -401,6 +401,8 @@ function requirementExtensionRefusals(ir: ContractIR): Refusal[] {
     }
 
     for (const fieldRight of operation.fieldRights) asked.add(`rights/${fieldRight.right}`);
+
+    for (const scope of operation.scopes) asked.add(`scopes/${scope.scope}`);
   }
 
   const declarations = [
@@ -415,6 +417,12 @@ function requirementExtensionRefusals(ir: ContractIR): Refusal[] {
       member: "rules",
       name,
       extensions: rule.extensions,
+    })),
+    ...Object.entries(ir.scopes).map(([name, scope]) => ({
+      kind: "scope",
+      member: "scopes",
+      name,
+      extensions: scope.extensions,
     })),
   ];
 

@@ -32,6 +32,7 @@ export interface GenerationProofSubject {
 }
 
 const API = "tasks";
+const SCOPE_WITH_EXTENSIONS = "channel";
 const MEMORY_STORE_SOURCE = fileURLToPath(
   new URL("../../../../runtime/idempotency-memory/src/index.js", import.meta.url),
 );
@@ -187,6 +188,33 @@ export function describeGenerationProofs(subject: GenerationProofSubject): void 
       expect(outcome).toMatchObject({
         status: "refused",
         refusals: [{ code: "ir.version.unsupported", message: expect.stringContaining("99") }],
+      });
+    });
+
+    test("a scope's extension value is refused by name, not dropped", async () => {
+      const ir = readGoldenIr(API);
+      const scope = ir.scopes[SCOPE_WITH_EXTENSIONS];
+
+      if (scope === undefined)
+        throw new Error(`the reference holds no scope ${SCOPE_WITH_EXTENSIONS}`);
+
+      const outcome = await generateFrom(subject, project, {
+        ...ir,
+        scopes: {
+          ...ir.scopes,
+          [SCOPE_WITH_EXTENSIONS]: { ...scope, extensions: { acme: { audit: "channel" } } },
+        },
+      });
+
+      expect(outcome).toMatchObject({
+        status: "refused",
+        refusals: [
+          {
+            code: "scope.extensions.unsupported",
+            message: expect.stringContaining(`scope '${SCOPE_WITH_EXTENSIONS}'`),
+            member: `/scopes/${SCOPE_WITH_EXTENSIONS}/extensions`,
+          },
+        ],
       });
     });
 
