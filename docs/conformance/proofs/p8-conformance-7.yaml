@@ -34,6 +34,12 @@ proofs:
       - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#an HTTP Basic scheme is refused by name'
       - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#an HTTP Basic scheme is refused by name'
       - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#an HTTP Basic scheme is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#refusesAQueryOrBasicCredentialSchemeByName'
+      - 'laravel: php/codegen/tests/KeptFormsTest.php#testAQueryOrBasicCredentialSchemeIsRefusedByName'
+      - 'symfony: php/codegen/tests/KeptFormsTest.php#testAQueryOrBasicCredentialSchemeIsRefusedByName'
+      - 'fastapi: python/codegen/tests/test_kept_forms.py#test_a_query_or_basic_credential_scheme_is_refused_by_name'
+      - 'drf: python/codegen/tests/test_kept_forms.py#test_a_query_or_basic_credential_scheme_is_refused_by_name'
+      - 'ninja: python/codegen/tests/test_kept_forms.py#test_a_query_or_basic_credential_scheme_is_refused_by_name'
   - id: CHK-133
     refusals:
       - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#optional authentication is refused by name'

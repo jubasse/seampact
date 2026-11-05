@@ -65,7 +65,7 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
     ),
   ],
   ["CHK-131", refusedOnEveryServer("a signature scheme verified by the application")],
-  ["CHK-132", refusedOnTheNodeServers("query API key and HTTP Basic schemes")],
+  ["CHK-132", refusedOnEveryServer("query API key and HTTP Basic schemes")],
   ["CHK-133", refusedOnTheNodeServers("optional authentication; the native servers generate it")],
   ["CHK-020", refusedOnEveryServer("a principal binding")],
   ["CHK-094", refusedOnEveryServer("a scope resolved by the application")],
