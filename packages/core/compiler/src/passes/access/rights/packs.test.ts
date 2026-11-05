@@ -132,6 +132,29 @@ describe("pack-derived rights", () => {
     ).toEqual(expected("operations"));
   });
 
+  test("the same contract without the CRUD rights pack derives no right and no requirement", () => {
+    const fixtureFile = (file: string) =>
+      readFileSync(`${ACCESS_RIGHTS_FIXTURES}crud-rights/${file}`, "utf8");
+    const apiWithPack = fixtureFile("api.yaml");
+    const apiWithoutPack = apiWithPack.replace("packs: [./pack.yaml]\n", "");
+
+    expect(apiWithoutPack).not.toBe(apiWithPack);
+
+    const { draft } = accessRightsRunContract(
+      accessRightsLoadFiles({ "api.yaml": apiWithoutPack, "pack.yaml": fixtureFile("pack.yaml") }),
+    );
+    const derivedRights = Object.values(draft.rights).filter(
+      (right) => right.origin.layer !== "api",
+    );
+    const derivedRequirements = draft.operations.flatMap((operation) =>
+      (operation.requires ?? []).filter((requirement) => requirement.derivedFrom !== undefined),
+    );
+
+    expect(Object.keys(draft.rights).length).toBeGreaterThan(0);
+    expect(derivedRights).toEqual([]);
+    expect(derivedRequirements).toEqual([]);
+  });
+
   test("a collection or single route with no scope above it derives a right with no subject", () => {
     const { draft, diagnostics } = accessRightsRunContract(
       accessRightsLoadFixture("crud-rights-unscoped"),
