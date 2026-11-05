@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parsedArguments, ROOT_OPTION, repositoryRoot, runReleaseCommand } from "../release-cli.ts";
 import { ReleaseError, releaseVersion } from "../release-version.ts";
+import { isDerivedFile } from "./bundle-layout.ts";
 import { type BundleManifestEntry, parsedBundleManifest, sha256Of } from "./bundle-manifest.ts";
 import { expectedBundle, GRADLE_PLUGIN_MODULE, versionDirectory } from "./jvm-release.ts";
 
@@ -16,7 +17,6 @@ export const PLUGIN_PORTAL_REPOSITORY_URL = "https://plugins.gradle.org/m2";
 
 const HTTP_NOT_FOUND = 404;
 const REQUEST_TIMEOUT_MILLISECONDS = 60_000;
-const DERIVED_SUFFIXES = [".asc", ".md5", ".sha1", ".sha256", ".sha512"];
 const PLUGIN_BUILD_DIRECTORY = `jvm/${GRADLE_PLUGIN_MODULE}/build`;
 const PLUGIN_PUBLICATION = "publications/pluginMaven";
 const MARKER_PUBLICATION = "publications/seampactPluginMarkerMaven";
@@ -52,9 +52,7 @@ export function rebuiltPluginProblems(
   manifest: readonly BundleManifestEntry[],
 ): string[] {
   const outputs = pluginBuildOutputs(root, version);
-  const primaries = manifest.filter(
-    (entry) => !DERIVED_SUFFIXES.some((suffix) => entry.path.endsWith(suffix)),
-  );
+  const primaries = manifest.filter((entry) => !isDerivedFile(entry.path));
   const problems = [...outputs.keys()]
     .filter((path) => !primaries.some((entry) => entry.path === path))
     .map((path) => `${path} is not in the manifest`);

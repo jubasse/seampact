@@ -1,8 +1,9 @@
 # The release: every package of every ecosystem at one version, the npm tarballs packed and checked, the five
 # binaries built and smoked by p3-binary, the reference contract's bundle tarball checked by p3-dist, the JVM bundles
-# staged, signed and checked, rehearsals that publish the tarballs to a local registry and the JVM bundles to a local
-# Central Portal and install from them, then, in a real run only, a draft GitHub release, the npm, Maven Central and
-# Gradle Plugin Portal publishes and the release itself, published last.
+# staged and checked unsigned, rehearsals that publish the tarballs to a local registry and the JVM bundles, signed
+# with a throwaway key, to a local Central Portal and install from them, then, in a real run only, a draft GitHub
+# release, the npm, Maven Central (signed after the approval) and Gradle Plugin Portal publishes and the release
+# itself, published last.
 # A real run starts by hand from main with dry-run off; one approval of the `release` environment covers the publish
 # jobs. A dry run, the default of a manual run and the only mode of a pull request, publishes nothing and needs no
 # secret: it stamps its own throwaway checkout and ends with the rehearsal. `release` is the check to require.
@@ -306,15 +307,14 @@ jobs:
             '    link: { types: types, validators: validators }' > server-app/seampact.config.yaml
           (cd server-app && ../node_modules/.bin/seampact generate)
 
-  # The JVM bundles: every module staged by Gradle into a Maven repository directory, signed, and checked as Central
-  # validates them, the compiler's binaries against SHA256SUMS among them. A real run signs with the release key, an
-  # environment secret, so the job runs in the `release` environment; a dry run signs with a throwaway key made here.
+  # The JVM bundles: every module staged by Gradle into a Maven repository directory, unsigned, and checked as Central
+  # validates them, the compiler's binaries against SHA256SUMS among them. The job holds no secret: the Central bundle
+  # is signed after the approval, in publish-maven-central, and by the rehearsal with a throwaway key.
   # The manifests (path and SHA-256 of each file) are job outputs: the publish jobs take those files and no other.
   build-jvm:
     needs: [prepare, binary]
     runs-on: ubuntu-24.04
     timeout-minutes: 40
-    environment: ${{ needs.prepare.outputs.dry-run == 'false' && 'release' || '' }}
     permissions:
       contents: read
     outputs:
@@ -349,47 +349,16 @@ jobs:
         env:
           SUMS_SHA256: ${{ needs.binary.outputs.sums-sha256 }}
         run: scripts/release/verify-assets.sh "$RUNNER_TEMP/assets" "$SUMS_SHA256"
-      # The secret key stays in a throwaway gpg home; only its public part is written for the signature check.
-      - name: The signing key, the release one or a throwaway one (dry run)
-        env:
-          DRY_RUN: ${{ needs.prepare.outputs.dry-run }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-        run: |
-          export GNUPGHOME="$RUNNER_TEMP/gnupg"
-          mkdir -m 700 "$GNUPGHOME"
-          if [ "$DRY_RUN" = true ]; then
-            gpg --batch --passphrase '' --quick-gen-key 'seampact dry run <dry-run@invalid>' rsa3072 sign 1d
-            gpg --batch --armor --export-secret-keys > "$RUNNER_TEMP/dry-run-key.asc"
-          elif [ -z "$SIGNING_KEY" ]; then
-            echo "SIGNING_KEY is not set in the release environment: a real run signs the JVM bundles with it."
-            exit 1
-          else
-            gpg --batch --import <<< "$SIGNING_KEY"
-          fi
-          gpg --batch --armor --export > "$RUNNER_TEMP/signing-public-key.asc"
-          rm -rf "$GNUPGHOME"
-      - name: Stage and sign the JVM bundles
-        env:
-          DRY_RUN: ${{ needs.prepare.outputs.dry-run }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_seampactSigningPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        run: |
-          if [ "$DRY_RUN" = true ]; then
-            ORG_GRADLE_PROJECT_seampactSigningKey="$(cat "$RUNNER_TEMP/dry-run-key.asc")"
-          else
-            ORG_GRADLE_PROJECT_seampactSigningKey="$SIGNING_KEY"
-          fi
-          export ORG_GRADLE_PROJECT_seampactSigningKey
-          scripts/release/jvm/stage.sh "$RUNNER_TEMP/assets" "$RUNNER_TEMP/jvm-bundles"
-      - name: Check the bundles as Central does, then write their manifests
+      - name: Stage the JVM bundles
+        run: scripts/release/jvm/stage.sh "$RUNNER_TEMP/assets" "$RUNNER_TEMP/jvm-bundles"
+      - name: Check the unsigned bundles as Central does, then write their manifests
         id: check
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           for channel in central plugin-portal; do
             node scripts/release/jvm/bundle.ts check "$RUNNER_TEMP/jvm-bundles/$channel" --channel "$channel" \
-              --version "$VERSION" --key "$RUNNER_TEMP/signing-public-key.asc" --sums "$RUNNER_TEMP/assets/SHA256SUMS" \
-              --manifest "$RUNNER_TEMP/$channel-manifest.json"
+              --version "$VERSION" --sums "$RUNNER_TEMP/assets/SHA256SUMS" --manifest "$RUNNER_TEMP/$channel-manifest.json"
             echo "$channel-manifest=$(cat "$RUNNER_TEMP/$channel-manifest.json")" >> "$GITHUB_OUTPUT"
           done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -400,7 +369,8 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-  # The JVM side of the rehearsal, with no secret: the Central publish against a local portal, then again as a no-op;
+  # The JVM side of the rehearsal, with no secret: the Central bundle signed by the script of a real run with a
+  # throwaway key and checked as Central does, its publish against a local portal, then again as a no-op;
   # the Gradle plugin rebuilt from a fresh checkout is byte for byte the one build-jvm checked, as publish-plugin-portal
   # requires; and the Spring Boot consumer, built by the Gradle and by the Maven plugin, resolves seampact from the
   # file repository the local portal published to.
@@ -441,6 +411,28 @@ jobs:
         with:
           name: ${{ needs.build-jvm.outputs.artifact }}
           path: ${{ runner.temp }}/jvm-bundles
+      # The throwaway key has a passphrase, as the release key has.
+      - name: Sign the Central bundle with a throwaway key, then check it signed as Central does
+        env:
+          MANIFEST: ${{ needs.build-jvm.outputs.central-manifest }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          SIGNING_KEY_PASSWORD: rehearsal
+        run: |
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          gpg --batch --pinentry-mode loopback --passphrase "$SIGNING_KEY_PASSWORD" \
+            --quick-gen-key 'seampact dry run <dry-run@invalid>' rsa3072 sign 1d
+          gpg --batch --armor --export > "$RUNNER_TEMP/signing-public-key.asc"
+          SIGNING_KEY="$(gpg --batch --pinentry-mode loopback --passphrase "$SIGNING_KEY_PASSWORD" --armor --export-secret-keys)"
+          export SIGNING_KEY
+          rm -rf "$GNUPGHOME"
+          printf '%s\n' "$MANIFEST" > "$RUNNER_TEMP/central-manifest.json"
+          node scripts/release/jvm/sign-bundle.ts "$RUNNER_TEMP/jvm-bundles/central" \
+            --manifest "$RUNNER_TEMP/central-manifest.json" --signed-manifest "$RUNNER_TEMP/central-signed-manifest.json"
+          node scripts/release/jvm/bundle.ts check "$RUNNER_TEMP/jvm-bundles/central" --channel central \
+            --version "$VERSION" --key "$RUNNER_TEMP/signing-public-key.asc" --sums "$RUNNER_TEMP/assets/SHA256SUMS" \
+            --manifest "$RUNNER_TEMP/central-checked-manifest.json"
+          cmp "$RUNNER_TEMP/central-signed-manifest.json" "$RUNNER_TEMP/central-checked-manifest.json"
       - name: Start the local Central Portal
         id: portal
         run: |
@@ -451,18 +443,16 @@ jobs:
             exit 1
           fi
           echo "url=$(cat "$RUNNER_TEMP/portal-url")" | tee -a "$GITHUB_OUTPUT"
-      - name: Publish the Central bundle to the local portal, then again as a no-op
+      - name: Publish the signed Central bundle to the local portal, then again as a no-op
         env:
           PORTAL: ${{ steps.portal.outputs.url }}
-          MANIFEST: ${{ needs.build-jvm.outputs.central-manifest }}
           VERSION: ${{ needs.prepare.outputs.version }}
           # The local portal checks only the token's form.
           MAVEN_CENTRAL_USERNAME: rehearsal
           MAVEN_CENTRAL_PASSWORD: rehearsal
         run: |
-          printf '%s\n' "$MANIFEST" > "$RUNNER_TEMP/central-manifest.json"
           publish=(node scripts/release/jvm/publish-central.ts "$RUNNER_TEMP/jvm-bundles/central" \
-            --manifest "$RUNNER_TEMP/central-manifest.json" --version "$VERSION" --portal "$PORTAL" --repository "$PORTAL/maven2")
+            --manifest "$RUNNER_TEMP/central-signed-manifest.json" --version "$VERSION" --portal "$PORTAL" --repository "$PORTAL/maven2")
           "${publish[@]}"
           "${publish[@]}" | tee "$RUNNER_TEMP/republish.txt"
           if ! grep -q '^publish-central: 0 published, ' "$RUNNER_TEMP/republish.txt"; then
@@ -596,8 +586,9 @@ jobs:
           node scripts/release/publish-npm.ts "$RUNNER_TEMP/npm-tarballs" --manifest "$RUNNER_TEMP/npm-manifest.json" \
             --version "$VERSION" --registry https://registry.npmjs.org/ --provenance
 
-  # Exactly the files of build-jvm's Central manifest, checked against it, uploaded to the Central Portal as
-  # USER_MANAGED, published once the portal has validated them. Node and zip only: no build runs here.
+  # Exactly the files of build-jvm's Central manifest, checked against it and signed here with the release key by gpg,
+  # uploaded to the Central Portal as USER_MANAGED, published once the portal has validated them. Node, gpg and zip
+  # only: no build runs here.
   publish-maven-central:
     needs: [prepare, build-jvm, release-draft]
     if: needs.prepare.outputs.dry-run == 'false' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
@@ -618,20 +609,28 @@ jobs:
         with:
           name: ${{ needs.build-jvm.outputs.artifact }}
           path: ${{ runner.temp }}/jvm-bundles
+      - name: Sign the Central bundle with the release key
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          MANIFEST: ${{ needs.build-jvm.outputs.central-manifest }}
+        run: |
+          printf '%s\n' "$MANIFEST" > "$RUNNER_TEMP/central-manifest.json"
+          node scripts/release/jvm/sign-bundle.ts "$RUNNER_TEMP/jvm-bundles/central" \
+            --manifest "$RUNNER_TEMP/central-manifest.json" --signed-manifest "$RUNNER_TEMP/central-signed-manifest.json"
       - name: Publish the Central bundle
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          MANIFEST: ${{ needs.build-jvm.outputs.central-manifest }}
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
-          printf '%s\n' "$MANIFEST" > "$RUNNER_TEMP/central-manifest.json"
           node scripts/release/jvm/publish-central.ts "$RUNNER_TEMP/jvm-bundles/central" \
-            --manifest "$RUNNER_TEMP/central-manifest.json" --version "$VERSION"
+            --manifest "$RUNNER_TEMP/central-signed-manifest.json" --version "$VERSION"
 
   # `publishPlugins` builds and uploads the plugin itself, so the job first rebuilds it and checks it byte for byte
-  # against build-jvm's manifest. Gradle and its build plugins run here: the job holds the portal key alone, given to
-  # the last step only. After Central, which serves the modules the plugin depends on.
+  # against build-jvm's manifest. Gradle and its build plugins run here, with dependency verification on: the job holds
+  # the portal key alone, given to the last step only. A rerun while the portal reviews the plugin gets its "already
+  # exists" answer, which counts as published. After Central, which serves the modules the plugin depends on.
   publish-plugin-portal:
     needs: [prepare, binary, build-jvm, release-draft, publish-maven-central]
     if: needs.prepare.outputs.dry-run == 'false' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
@@ -677,7 +676,8 @@ jobs:
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
-        run: scripts/release/jvm/build-plugin.sh "$RUNNER_TEMP/assets" publishPlugins
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: node scripts/release/jvm/publish-plugin.ts "$RUNNER_TEMP/assets" --version "$VERSION"
 
   # Last: publishing the draft creates the tag. The draft stays editable during the approval wait, so its assets are
   # downloaded and checked against the outputs of the call and of p3-dist, an asset the run did not produce is

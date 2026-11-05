@@ -19,8 +19,6 @@ import org.gradle.jvm.toolchain.JavaInstallationMetadata;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
 import org.gradle.jvm.toolchain.JavaLauncher;
 import org.gradle.jvm.toolchain.JavaToolchainService;
-import org.gradle.plugins.signing.SigningExtension;
-import org.gradle.plugins.signing.SigningPlugin;
 
 import java.util.List;
 
@@ -30,10 +28,9 @@ import java.util.List;
  * and Kotlin, the `-PtestJdk=<major>` switch that runs the tests on that JDK, sources and javadoc jars, and
  * `maven-publish` with the POM metadata on every Maven publication. Each module publishes to `publishToMavenLocal`
  * and to the root build's file repository `build/test-repository`, which the Maven plugin's tests read. A release
- * names its staging directory with `-PseampactReleaseRepository=<dir>`: every publication is then signed with the
- * ASCII-armoured key of the `seampactSigningKey` property and the passphrase of `seampactSigningPassword`, which the
- * release passes as `ORG_GRADLE_PROJECT_` environment variables. The module states its POM description in
- * `description`.
+ * names its staging directory with `-PseampactReleaseRepository=<dir>`, the `release` repository, staged unsigned:
+ * the release signs the staged files with `gpg` once approved, outside Gradle. The module states its POM description
+ * in `description`.
  */
 public final class PublishedModulePlugin implements Plugin<Project> {
     /** The lowest Java version A13 supports: the bytecode every consumer runs. */
@@ -51,8 +48,6 @@ public final class PublishedModulePlugin implements Plugin<Project> {
     private static final String GROUP_PATH = GROUP.replace('.', '/');
     private static final String RELEASE_REPOSITORY_NAME = "release";
     private static final String RELEASE_REPOSITORY_PROPERTY = "seampactReleaseRepository";
-    private static final String SIGNING_KEY_PROPERTY = "seampactSigningKey";
-    private static final String SIGNING_PASSWORD_PROPERTY = "seampactSigningPassword";
 
     private static final String DOCS_URL = "https://jubasse.github.io/seampact/";
     private static final String REPOSITORY_URL = "https://github.com/jubasse/seampact";
@@ -173,27 +168,15 @@ public final class PublishedModulePlugin implements Plugin<Project> {
         });
     }
 
-    // A release bundle is always signed: a release repository without the signing key fails the build by name.
     private static void configureReleaseRepository(Project project) {
         Provider<String> releaseRepository = project.getProviders().gradleProperty(RELEASE_REPOSITORY_PROPERTY);
         if (!releaseRepository.isPresent()) return;
-
-        Provider<String> signingKey = project.getProviders().gradleProperty(SIGNING_KEY_PROPERTY);
-        if (!signingKey.isPresent()) {
-            throw new GradleException("-P" + RELEASE_REPOSITORY_PROPERTY + " stages a release, which is signed: set "
-                + SIGNING_KEY_PROPERTY + " (ORG_GRADLE_PROJECT_" + SIGNING_KEY_PROPERTY + ") to the ASCII-armoured secret key.");
-        }
 
         PublishingExtension publishing = project.getExtensions().getByType(PublishingExtension.class);
         publishing.getRepositories().maven(repository -> {
             repository.setName(RELEASE_REPOSITORY_NAME);
             repository.setUrl(project.file(releaseRepository.get()));
         });
-
-        project.getPluginManager().apply(SigningPlugin.class);
-        SigningExtension signing = project.getExtensions().getByType(SigningExtension.class);
-        signing.useInMemoryPgpKeys(signingKey.get(), project.getProviders().gradleProperty(SIGNING_PASSWORD_PROPERTY).getOrElse(""));
-        signing.sign(publishing.getPublications());
     }
 
     private static String descriptionOf(Project project) {

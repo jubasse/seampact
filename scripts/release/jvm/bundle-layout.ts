@@ -1,7 +1,8 @@
 // The local check of a JVM staging bundle against what Maven Central validates, run before the manifest is written:
 // exactly the expected coordinates at the version and nothing else, a POM with the fields Central requires on each,
-// sources and javadoc jars beside each jar, a signature, an MD5 and a SHA-1 beside each file with the right digests,
-// and the compiler's five binaries each with the hash `SHA256SUMS` lists for its asset.
+// sources and javadoc jars beside each jar, an MD5 and a SHA-1 beside each file with the right digests, a signature
+// beside each file of a signed bundle and none in an unsigned one, and the compiler's five binaries each with the hash
+// `SHA256SUMS` lists for its asset. build-jvm stages unsigned bundles; publish-maven-central signs them once approved.
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,13 +15,21 @@ import {
   versionDirectory,
 } from "./jvm-release.ts";
 
-const SIGNATURE_SUFFIX = ".asc";
+export const SIGNATURE_SUFFIX = ".asc";
 // The digests Central requires beside each file, and the ones it accepts besides.
 const REQUIRED_CHECKSUMS = ["md5", "sha1"] as const;
 const CHECKSUMS = ["md5", "sha1", "sha256", "sha512"] as const;
 const DERIVED_SUFFIXES = [SIGNATURE_SUFFIX, ...CHECKSUMS.map((algorithm) => `.${algorithm}`)];
 const COMPILER_EXTENSION = ".exe";
 const SUMS_LINE = /^([0-9a-f]{64}) {2}(\S+)$/;
+
+/** Whether each file of the bundle has its signature beside it, or none has one yet. */
+export type BundleSignatures = "signed" | "unsigned";
+
+/** A signature or a digest of the file beside it, which is not signed itself. */
+export function isDerivedFile(path: string): boolean {
+  return DERIVED_SUFFIXES.some((suffix) => path.endsWith(suffix));
+}
 
 /** The SHA-256 per release asset of a `SHA256SUMS` text. */
 export function parsedReleaseSums(text: string): Map<string, string> {
@@ -41,6 +50,7 @@ export function bundleLayoutProblems(
   files: readonly string[],
   expected: ExpectedBundle,
   releaseSums: ReadonlyMap<string, string>,
+  signatures: BundleSignatures,
 ): string[] {
   const problems: string[] = [];
   const filesByCoordinate = new Map(
@@ -70,7 +80,7 @@ export function bundleLayoutProblems(
       fileNames,
     };
 
-    problems.push(...artefactProblems(artefact, expected));
+    problems.push(...artefactProblems(artefact, expected, signatures));
   }
 
   if (expected.compilerClassifiers.size > 0)
@@ -86,7 +96,11 @@ interface StagedArtefact {
   readonly fileNames: readonly string[];
 }
 
-function artefactProblems(artefact: StagedArtefact, expected: ExpectedBundle): string[] {
+function artefactProblems(
+  artefact: StagedArtefact,
+  expected: ExpectedBundle,
+  signatures: BundleSignatures,
+): string[] {
   const { coordinate, fileNames, versionPath } = artefact;
   const baseName = `${coordinate.artifactId}-${expected.version}`;
 
@@ -95,9 +109,7 @@ function artefactProblems(artefact: StagedArtefact, expected: ExpectedBundle): s
       `${coordinate.group}:${coordinate.artifactId}:${expected.version} has no file in the bundle`,
     ];
 
-  const primaries = fileNames.filter(
-    (name) => !DERIVED_SUFFIXES.some((suffix) => name.endsWith(suffix)),
-  );
+  const primaries = fileNames.filter((name) => !isDerivedFile(name));
   const problems = fileNames
     .filter((name) => !name.startsWith(`${baseName}.`) && !name.startsWith(`${baseName}-`))
     .map((name) => `${versionPath}/${name} is not named after ${baseName}`);
@@ -110,7 +122,8 @@ function artefactProblems(artefact: StagedArtefact, expected: ExpectedBundle): s
     )
       problems.push(`${versionPath}/${name} signs or digests no file of the bundle`);
 
-  for (const primary of primaries) problems.push(...derivedFileProblems(artefact, primary));
+  for (const primary of primaries)
+    problems.push(...derivedFileProblems(artefact, primary, signatures));
 
   const pom = `${baseName}.pom`;
 
@@ -135,12 +148,22 @@ function artefactProblems(artefact: StagedArtefact, expected: ExpectedBundle): s
   return problems;
 }
 
-function derivedFileProblems(artefact: StagedArtefact, primary: string): string[] {
+function derivedFileProblems(
+  artefact: StagedArtefact,
+  primary: string,
+  signatures: BundleSignatures,
+): string[] {
   const problems: string[] = [];
   const path = `${artefact.versionPath}/${primary}`;
+  const signed = artefact.fileNames.includes(`${primary}${SIGNATURE_SUFFIX}`);
 
-  if (!artefact.fileNames.includes(`${primary}${SIGNATURE_SUFFIX}`))
+  if (signatures === "signed" && !signed)
     problems.push(`${path} has no signature ${primary}${SIGNATURE_SUFFIX}`);
+
+  if (signatures === "unsigned" && signed)
+    problems.push(
+      `${path} is signed already: build-jvm stages unsigned bundles, which publish-maven-central signs`,
+    );
 
   const bytes = readFileSync(join(artefact.directory, primary));
 

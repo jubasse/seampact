@@ -54,8 +54,20 @@ type PackageRulesMode =
 export type VersionFileEdits = (root: string, version: string) => VersionEdit[];
 
 const RELEASE_SCRIPTS_DIR = "scripts/release";
-// The one release script that publishes, and what it may run: the idempotent npm publish of release.yml.
-const RELEASE_PUBLISH_SCRIPT = "scripts/release/publish-npm.ts";
+const NPM_PUBLISH = "npm publish";
+const SPAWNED_PUBLISH = "a `publish` argument of a spawned command";
+const CENTRAL_PUBLISH = "Central Portal publish";
+const PLUGIN_PORTAL_PUBLISH = "Gradle Plugin Portal publish";
+
+// The release modules that publish, and what each may run: the idempotent publishes of release.yml, one per registry.
+const ACCEPTED_RELEASE_PUBLISHES: ReadonlyMap<string, readonly string[]> = new Map([
+  ["scripts/release/publish-npm.ts", [NPM_PUBLISH, SPAWNED_PUBLISH]],
+  ["scripts/release/jvm/central-portal.ts", [CENTRAL_PUBLISH]],
+  ["scripts/release/jvm/publish-plugin.ts", [PLUGIN_PORTAL_PUBLISH]],
+]);
+const ACCEPTED_RELEASE_PUBLISHERS = [...ACCEPTED_RELEASE_PUBLISHES]
+  .map(([file, publishes]) => `${file} (${publishes[0]})`)
+  .join(", ");
 
 type Rec = Record<string, unknown>;
 const isRec = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -408,8 +420,6 @@ function checkChangesets(root: string, mode: PackageRulesMode, out: Violation[])
   });
 }
 
-const NPM_PUBLISH = "npm publish";
-const SPAWNED_PUBLISH = "a `publish` argument of a spawned command";
 const CHANGESETS_ACTION_PUBLISH: [RegExp, string] = [
   /^\s*publish\s*:/,
   "a changesets/action `publish:` input",
@@ -423,6 +433,8 @@ const PUBLISH: [RegExp, string][] = [
   [/\bgradlew?\s+.*\bpublish(?!ToMavenLocal\b)\w*/, "Gradle publish"],
   [/\bmvnw?\s+.*\bdeploy\b/, "Maven deploy"],
   [/\bcomposer\s+.*\b(?:publish|deploy)\b/, "Composer publish"],
+  // The plugin-publish task, also when a script passes it to Gradle as an argument.
+  [/\bpublishPlugins\b/, PLUGIN_PORTAL_PUBLISH],
 ];
 
 function publishes(code: string): string | undefined {
@@ -434,21 +446,28 @@ function publishes(code: string): string | undefined {
 const RELEASE_SCRIPT_PUBLISH: [RegExp, string][] = [
   ...PUBLISH.filter((pattern) => pattern !== CHANGESETS_ACTION_PUBLISH),
   [/["'`]publish["'`]/, SPAWNED_PUBLISH],
+  // The publisher API calls that upload a deployment or publish it.
+  [/\/api\/v1\/publisher\/(?:upload|deployment)\b/, CENTRAL_PUBLISH],
 ];
 
-/** Every file of `scripts/release`: only the npm publish of the publish script, which release.yml runs, passes. */
+// A comment names a publish without running it: `//`, `#` and the lines of a `/** */` block.
+const WHOLE_LINE_COMMENT = /^\s*(?:\/\/|#|\/?\*)/;
+
+/** Every file of `scripts/release`: only the publish each accepted module makes for release.yml passes. */
 function checkReleaseScripts(root: string, out: Violation[]): void {
   for (const file of walk(root, RELEASE_SCRIPTS_DIR, () => true)) {
     const lines = readFileSync(join(root, file), "utf8").split("\n");
 
     lines.forEach((code, index) => {
+      if (WHOLE_LINE_COMMENT.test(code)) return;
+
       for (const [re, what] of RELEASE_SCRIPT_PUBLISH) {
         if (!re.test(code) || isAcceptedReleasePublish(file, what)) continue;
 
         out.push({
           file,
           rule: "namespaces",
-          message: `line ${index + 1}: publishes (${what}); only ${RELEASE_PUBLISH_SCRIPT} publishes, to npm (A3)`,
+          message: `line ${index + 1}: publishes (${what}); only ${ACCEPTED_RELEASE_PUBLISHERS} publish (A3)`,
         });
       }
     });
@@ -456,7 +475,7 @@ function checkReleaseScripts(root: string, out: Violation[]): void {
 }
 
 function isAcceptedReleasePublish(file: string, what: string): boolean {
-  return file === RELEASE_PUBLISH_SCRIPT && (what === NPM_PUBLISH || what === SPAWNED_PUBLISH);
+  return ACCEPTED_RELEASE_PUBLISHES.get(file)?.includes(what) === true;
 }
 
 /** `scripts` of the root and every npm manifest: a publish command there is as bad as in CI. */

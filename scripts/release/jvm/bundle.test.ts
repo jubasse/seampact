@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { bundleLayoutProblems } from "./bundle-layout.ts";
 import { bundleManifest, checkBundleAgainstManifest, repositoryFiles } from "./bundle-manifest.ts";
-import { bundleSignatureProblems } from "./bundle-signatures.ts";
+import { bundleSignatureProblems, signBundle } from "./bundle-signatures.ts";
 import {
   COMPILER_MODULE,
   type Coordinate,
@@ -99,8 +99,17 @@ const expected: ExpectedBundle = {
   compilerClassifiers: new Map([[ASSET, CLASSIFIER]]),
 };
 const releaseSums = new Map([[ASSET, digest("sha256", "binary")]]);
-const layoutProblems = (repository: string) =>
-  bundleLayoutProblems(repository, repositoryFiles(repository), expected, releaseSums);
+const layoutProblems = (repository: string, signatures: "signed" | "unsigned" = "signed") =>
+  bundleLayoutProblems(repository, repositoryFiles(repository), expected, releaseSums, signatures);
+const unsignedBundle = () => {
+  const repository = stagedBundle();
+
+  for (const path of repositoryFiles(repository).filter((file) => file.endsWith(".asc")))
+    rmSync(join(repository, path));
+
+  return repository;
+};
+
 const libraryFile = (repository: string, fileName: string) =>
   join(repository, versionDirectory(LIBRARY, VERSION), fileName);
 
@@ -182,6 +191,20 @@ describe("the bundle layout check", () => {
   });
 });
 
+describe("the unsigned bundle build-jvm stages", () => {
+  it("passes without signatures and names a file signed already", () => {
+    const repository = unsignedBundle();
+
+    expect(layoutProblems(repository, "unsigned")).toEqual([]);
+
+    writeFile(libraryFile(repository, `seampact-hooks-${VERSION}.jar.asc`), "signature");
+
+    expect(layoutProblems(repository, "unsigned")).toEqual([
+      `io/github/jubasse/seampact-hooks/${VERSION}/seampact-hooks-${VERSION}.jar is signed already: build-jvm stages unsigned bundles, which publish-maven-central signs`,
+    ]);
+  });
+});
+
 describe("the expected JVM release", () => {
   it("publishes every module but the Gradle plugin to Central, with the compiler's five classifiers", () => {
     const central = expectedBundle(REPOSITORY_ROOT, "central", VERSION);
@@ -234,6 +257,73 @@ describe("the bundle signature check", () => {
     expect(bundleSignatureProblems(repository, files, keyFile)).toEqual([
       `io/github/jubasse/seampact-hooks/${VERSION}/seampact-hooks-${VERSION}.jar.asc is no good signature of its file by the release key`,
     ]);
+  });
+});
+
+describe("the bundle signing", () => {
+  const passphrase = "release passphrase";
+
+  // A throwaway key with a passphrase, as the release key has; returns its secret and its public part.
+  function releaseKey(): { secretKey: string; publicKeyFile: string } {
+    const home = temporaryDirectory("jvm-key-");
+    const gpg = (...gpgArguments: string[]) =>
+      execFileSync(
+        "gpg",
+        ["--homedir", home, "--batch", "--quiet", "--pinentry-mode", "loopback", ...gpgArguments],
+        { encoding: "utf8" },
+      );
+    const publicKeyFile = join(home, "public.asc");
+
+    gpg(
+      "--passphrase",
+      passphrase,
+      "--quick-gen-key",
+      "seampact test <test@invalid>",
+      "ed25519",
+      "sign",
+      "1d",
+    );
+    writeFileSync(publicKeyFile, gpg("--armor", "--export"));
+
+    return {
+      secretKey: gpg("--passphrase", passphrase, "--armor", "--export-secret-keys"),
+      publicKeyFile,
+    };
+  }
+
+  it("signs every file but the digests, so the bundle passes the signed check, and lists the signatures", () => {
+    const { secretKey, publicKeyFile } = releaseKey();
+    const repository = unsignedBundle();
+    const manifest = bundleManifest(repository);
+    const signedManifest = signBundle(repository, manifest, { secretKey, passphrase });
+    const files = repositoryFiles(repository);
+
+    expect(layoutProblems(repository, "signed")).toEqual([]);
+    expect(bundleSignatureProblems(repository, files, publicKeyFile)).toEqual([]);
+    expect(files.filter((file) => file.endsWith(".md5.asc") || file.endsWith(".sha1.asc"))).toEqual(
+      [],
+    );
+    expect(signedManifest).toEqual(bundleManifest(repository));
+    expect(signedManifest.length - manifest.length).toBe(6);
+  });
+
+  it("refuses a bundle whose bytes differ from the manifest, and a wrong passphrase, signing nothing", () => {
+    const { secretKey } = releaseKey();
+    const repository = unsignedBundle();
+    const manifest = bundleManifest(repository);
+
+    writeFileSync(libraryFile(repository, `seampact-hooks-${VERSION}.jar`), "replaced");
+
+    expect(() => signBundle(repository, manifest, { secretKey, passphrase })).toThrow(
+      /hooks-1\.2\.3\.jar hashes [0-9a-f]{64}, not the [0-9a-f]{64} build-jvm wrote/,
+    );
+
+    writeFileSync(libraryFile(repository, `seampact-hooks-${VERSION}.jar`), "classes");
+
+    expect(() => signBundle(repository, manifest, { secretKey, passphrase: "wrong" })).toThrow(
+      /could not be signed/,
+    );
+    expect(repositoryFiles(repository).filter((file) => file.endsWith(".asc"))).toEqual([]);
   });
 });
 

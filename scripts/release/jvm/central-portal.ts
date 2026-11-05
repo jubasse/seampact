@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { isJsonRecord } from "../json-record.ts";
 import { ReleaseError } from "../release-version.ts";
+import { isDerivedFile } from "./bundle-layout.ts";
 import {
   type BundleManifestEntry,
   checkBundleAgainstManifest,
@@ -21,10 +22,18 @@ import { type Coordinate, type ExpectedBundle, versionDirectory } from "./jvm-re
 export const CENTRAL_PORTAL_URL = "https://central.sonatype.com";
 export const CENTRAL_REPOSITORY_URL = "https://repo1.maven.org/maven2";
 
+/** The publisher API paths publish-central calls, which the local portal of the rehearsal serves. */
+export const PUBLISHER_PATHS = {
+  published: "/api/v1/publisher/published",
+  upload: "/api/v1/publisher/upload",
+  status: "/api/v1/publisher/status",
+  /** Followed by the deployment id: publishes a validated deployment. */
+  deployment: "/api/v1/publisher/deployment/",
+} as const;
+
 const HTTP_NOT_FOUND = 404;
 // A portal or repository that does not answer within this time fails the job instead of holding it to its timeout.
 const REQUEST_TIMEOUT_MILLISECONDS = 60_000;
-const DERIVED_SUFFIXES = [".asc", ".md5", ".sha1", ".sha256", ".sha512"];
 const DEPLOYMENT_FAILED = "FAILED";
 
 export interface CentralPortal {
@@ -89,7 +98,7 @@ export async function publishToCentral(
     const deployment = await upload(portal, directory, paths, `seampact-${expected.version}`);
 
     await waitForState(portal, deployment, "VALIDATED", portal.validationTimeoutMilliseconds);
-    await portalRequest(portal, `/api/v1/publisher/deployment/${encodeURIComponent(deployment)}`, {
+    await portalRequest(portal, `${PUBLISHER_PATHS.deployment}${encodeURIComponent(deployment)}`, {
       method: "POST",
     });
     await waitForState(portal, deployment, "PUBLISHED", portal.publicationTimeoutMilliseconds);
@@ -143,7 +152,7 @@ async function isPublished(
     version,
   });
   const answer: unknown = await (
-    await portalRequest(portal, `/api/v1/publisher/published?${query}`, { method: "GET" })
+    await portalRequest(portal, `${PUBLISHER_PATHS.published}?${query}`, { method: "GET" })
   ).json();
   const published = isJsonRecord(answer) ? answer.published : undefined;
 
@@ -162,9 +171,7 @@ async function differingFiles(
 ): Promise<string[]> {
   const differing: string[] = [];
 
-  for (const entry of entries.filter(
-    (candidate) => !DERIVED_SUFFIXES.some((suffix) => candidate.path.endsWith(suffix)),
-  )) {
+  for (const entry of entries.filter((candidate) => !isDerivedFile(candidate.path))) {
     const url = `${portal.repository.replace(/\/+$/, "")}/${entry.path}`;
     const response = await timedFetch(url, { method: "GET" });
 
@@ -205,7 +212,7 @@ async function upload(
     const query = new URLSearchParams({ name, publishingType: "USER_MANAGED" });
     const deployment = (
       await (
-        await portalRequest(portal, `/api/v1/publisher/upload?${query}`, {
+        await portalRequest(portal, `${PUBLISHER_PATHS.upload}?${query}`, {
           method: "POST",
           body: form,
         })
@@ -234,7 +241,7 @@ async function waitForState(
 
   for (;;) {
     const status: unknown = await (
-      await portalRequest(portal, `/api/v1/publisher/status?${query}`, { method: "POST" })
+      await portalRequest(portal, `${PUBLISHER_PATHS.status}?${query}`, { method: "POST" })
     ).json();
     const state = isJsonRecord(status) ? status.deploymentState : undefined;
 

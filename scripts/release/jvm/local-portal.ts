@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parsedArguments, runReleaseCommand } from "../release-cli.ts";
 import { ReleaseError } from "../release-version.ts";
+import { PUBLISHER_PATHS } from "./central-portal.ts";
 
 const LOOPBACK = "127.0.0.1";
 const REPOSITORY_PREFIX = "/maven2/";
@@ -83,7 +84,7 @@ async function answer(
   if (!AUTHORIZATION.test(request.headers.authorization ?? ""))
     return reply(response, HTTP_UNAUTHORIZED, "no bearer token");
 
-  if (request.method === "GET" && url.pathname === "/api/v1/publisher/published") {
+  if (request.method === "GET" && url.pathname === PUBLISHER_PATHS.published) {
     const group = (url.searchParams.get("namespace") ?? "").split(".");
     const published = existsSync(
       join(
@@ -97,7 +98,7 @@ async function answer(
     return reply(response, HTTP_OK, JSON.stringify({ published }));
   }
 
-  if (request.method === "POST" && url.pathname === "/api/v1/publisher/upload") {
+  if (request.method === "POST" && url.pathname === PUBLISHER_PATHS.upload) {
     if (url.searchParams.get("publishingType") !== "USER_MANAGED")
       return reply(response, HTTP_BAD_REQUEST, "the rehearsal expects publishingType USER_MANAGED");
 
@@ -117,7 +118,7 @@ async function answer(
 
   if (deployment === undefined) return reply(response, HTTP_NOT_FOUND, "no such deployment");
 
-  if (request.method === "POST" && url.pathname === "/api/v1/publisher/status") {
+  if (request.method === "POST" && url.pathname === PUBLISHER_PATHS.status) {
     const deploymentState = deployment.state;
 
     if (deployment.state === "PENDING") deployment.state = "VALIDATED";
@@ -125,7 +126,7 @@ async function answer(
     return reply(response, HTTP_OK, JSON.stringify({ deploymentState }));
   }
 
-  if (request.method === "POST" && url.pathname.startsWith("/api/v1/publisher/deployment/")) {
+  if (request.method === "POST" && url.pathname.startsWith(PUBLISHER_PATHS.deployment)) {
     if (deployment.state !== "VALIDATED")
       return reply(response, HTTP_BAD_REQUEST, `the deployment is ${deployment.state}`);
 

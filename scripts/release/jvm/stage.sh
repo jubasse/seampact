@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The JVM staging bundles of a release, signed with the key of ORG_GRADLE_PROJECT_seampactSigningKey (and its
-# passphrase ORG_GRADLE_PROJECT_seampactSigningPassword): <out-dir>/central holds every module but the Gradle plugin,
+# The JVM staging bundles of a release, unsigned (publish-maven-central signs them with sign-bundle.ts once the release
+# is approved, so this build holds no secret): <out-dir>/central holds every module but the Gradle plugin,
 # the compiler's five binaries from <assets-dir> checked against its SHA256SUMS among them, and <out-dir>/plugin-portal
 # the Gradle plugin and its marker, after `validatePlugins`. Each plugin jar embeds the pin of that SHA256SUMS. The
 # version is the stamped one of jvm/gradle.properties, which the caller has checked. maven-metadata.xml is left out:
@@ -24,14 +24,9 @@ if [ -z "$version" ]; then
   exit 1
 fi
 
-if [ -z "${ORG_GRADLE_PROJECT_seampactSigningKey:-}" ]; then
-  echo "stage: ORG_GRADLE_PROJECT_seampactSigningKey is not set: a release bundle is signed." >&2
-  exit 1
-fi
-
 rm -rf "$out/central" "$out/plugin-portal"
 
-# No configuration cache: it would store the signing key on disk.
+# No configuration cache and no build cache: the staged bytes come from this build alone.
 gradle=("$jvm/gradlew" -p "$jvm" --no-configuration-cache --no-build-cache
   "-PseampactBinarySums=$assets/SHA256SUMS" "-PseampactCompilerVersion=$version")
 

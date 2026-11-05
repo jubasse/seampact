@@ -1,7 +1,8 @@
-// The command line of the JVM staging bundles. `check` runs the local Central checks on a bundle build-jvm staged
-// (coordinates, POM fields, checksums, the compiler binaries against SHA256SUMS, the signatures by the release key),
-// then writes its manifest as one JSON line; `verify` checks a downloaded bundle against that manifest.
-//   node scripts/release/jvm/bundle.ts check <dir> --channel central|plugin-portal --version <version> --key <file>
+// The command line of the JVM staging bundles. `check` runs the local Central checks on a bundle (coordinates, POM
+// fields, checksums, the compiler binaries against SHA256SUMS), then writes its manifest as one JSON line: without
+// `--key` the bundle is the unsigned one build-jvm stages, with it every file is signed by that key, as sign-bundle.ts
+// signs them. `verify` checks a downloaded bundle against a manifest.
+//   node scripts/release/jvm/bundle.ts check <dir> --channel central|plugin-portal --version <version> [--key <file>]
 //     [--sums <SHA256SUMS>] --manifest <out-file> [--root <dir>]
 //   node scripts/release/jvm/bundle.ts verify <dir> --manifest <file>
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -19,7 +20,7 @@ import { bundleSignatureProblems } from "./bundle-signatures.ts";
 import { CHANNELS, type Channel, expectedBundle, isChannel } from "./jvm-release.ts";
 
 const USAGE =
-  "bundle.ts check <dir> --channel central|plugin-portal --version <version> --key <file> [--sums <file>] " +
+  "bundle.ts check <dir> --channel central|plugin-portal --version <version> [--key <file>] [--sums <file>] " +
   "--manifest <out-file> | bundle.ts verify <dir> --manifest <file>";
 
 const OPTIONS = {
@@ -36,7 +37,8 @@ export interface BundleCheck {
   readonly directory: string;
   readonly channel: Channel;
   readonly version: string;
-  readonly keyFile: string;
+  /** The release public key a signed bundle is checked against; undefined for an unsigned bundle. */
+  readonly keyFile: string | undefined;
   /** The release `SHA256SUMS`, which the channel that publishes the compiler needs. */
   readonly sumsFile: string | undefined;
 }
@@ -55,8 +57,11 @@ export function bundleProblems(check: BundleCheck): string[] {
     check.sumsFile === undefined ? "" : readFileSync(check.sumsFile, "utf8"),
   );
 
+  if (check.keyFile === undefined)
+    return bundleLayoutProblems(check.directory, files, expected, releaseSums, "unsigned");
+
   return [
-    ...bundleLayoutProblems(check.directory, files, expected, releaseSums),
+    ...bundleLayoutProblems(check.directory, files, expected, releaseSums, "signed"),
     ...bundleSignatureProblems(check.directory, files, check.keyFile),
   ];
 }
@@ -87,7 +92,7 @@ function runCheck(values: Record<string, string | undefined>, directory: string)
     directory,
     channel,
     version: releaseVersion(values.version),
-    keyFile: required(values.key, "key"),
+    keyFile: values.key,
     sumsFile: values.sums,
   };
   const manifestFile = required(values.manifest, "manifest");
@@ -102,7 +107,7 @@ function runCheck(values: Record<string, string | undefined>, directory: string)
 
   writeFileSync(manifestFile, `${JSON.stringify(manifest)}\n`);
   console.log(
-    `bundle: ${channel} ${check.version} checked, ${manifest.length} files in ${manifestFile}`,
+    `bundle: ${channel} ${check.version} checked ${check.keyFile === undefined ? "unsigned" : "signed"}, ${manifest.length} files in ${manifestFile}`,
   );
 }
 
