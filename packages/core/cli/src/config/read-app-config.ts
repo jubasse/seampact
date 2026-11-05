@@ -1,4 +1,5 @@
 import { dirname, resolve } from "node:path";
+import { caseFolded } from "@seampact/codegen-core";
 import {
   APP_CONFIG_SCHEMA,
   type AppChecks,
@@ -299,22 +300,48 @@ function outsideOutDirProblems(
     }));
 }
 
-// Two entries writing to the same directory, or one inside the other, would remove each other's files.
+// A name written composed or decomposed is one directory on a disk that ignores the difference (macOS).
+function caseFoldedAfterNfc(path: string): string {
+  return caseFolded(path.normalize("NFC"));
+}
+
+// Two entries writing to the same directory, or one inside the other, would remove each other's files; so would
+// two whose directories match once case is ignored, on a case-insensitive disk.
 function overlappingOutProblems(
   parsed: ParsedConfig,
   entries: readonly AppConfigEntry[],
 ): CliProblem[] {
   return entries.flatMap((each, index) =>
-    entries
-      .slice(index + 1)
-      .filter(
-        (other) => isInsideOrEqual(each.root, other.root) || isInsideOrEqual(other.root, each.root),
-      )
-      .map((other) => ({
-        code: "config.out.overlap",
-        message: `The entries '${each.entry.id}' and '${other.entry.id}' write to the same directory, or one inside the other.`,
-        fix: "Give each entry its own `out` directory, side by side under `outDir`.",
-        where: whereOf(parsed, ["targets", index]),
-      })),
+    entries.slice(index + 1).flatMap((other) => {
+      const where = whereOf(parsed, ["targets", index]);
+
+      if (isNestedOrSame(each.root, other.root)) {
+        return [
+          {
+            code: "config.out.overlap",
+            message: `The entries '${each.entry.id}' and '${other.entry.id}' write to the same directory, or one inside the other.`,
+            fix: "Give each entry its own `out` directory, side by side under `outDir`.",
+            where,
+          },
+        ];
+      }
+
+      if (isNestedOrSame(caseFoldedAfterNfc(each.root), caseFoldedAfterNfc(other.root))) {
+        return [
+          {
+            code: "config.out.case-overlap",
+            message: `The entries '${each.entry.id}' and '${other.entry.id}' write to directories that are one, or one inside the other, once letter case is ignored, as a case-insensitive disk does.`,
+            fix: "Give each entry an `out` directory whose name differs by more than letter case, side by side under `outDir`.",
+            where,
+          },
+        ];
+      }
+
+      return [];
+    }),
   );
+}
+
+function isNestedOrSame(first: string, second: string): boolean {
+  return isInsideOrEqual(first, second) || isInsideOrEqual(second, first);
 }

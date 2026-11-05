@@ -15,7 +15,7 @@ import type { GitBundleSource } from "@seampact/spec/config";
 import { quote } from "../validate/diagnostics.js";
 import type { BundleSourceFailure } from "./fetch-failure.js";
 import type { LocalSourcePolicy } from "./local-sources.js";
-import { printableUrl } from "./printable-url.js";
+import { printableUrl, withPrintableUrl } from "./printable-url.js";
 
 // The git-tag channel: a shallow fetch of the tag with the system `git` into a new bare repository, then the files
 // of the tag's tree read with `git ls-tree` and `git cat-file`, never through a work tree, so `autocrlf`,
@@ -312,7 +312,7 @@ function badTag(tag: string): BundleSourceFailure {
 function gitFailed(source: GitBundleSource, error: unknown): BundleSourceFailure {
   return {
     code: "bundle.git-failed",
-    message: `Fetching tag '${source.git.tag}' of ${quote(printableUrl(source.git.url))} with git failed: ${quote(gitFailureReason(error))}.`,
+    message: `Fetching tag '${source.git.tag}' of ${quote(printableUrl(source.git.url))} with git failed: ${quote(withPrintableUrl(gitFailureReason(error), source.git.url))}.`,
     fix: "Check the URL, the tag and your access to the repository, and that `git` is on the PATH.",
   };
 }

@@ -9,6 +9,8 @@
     "ext-json": "*",
     "ext-zlib": "*",
     "opis/json-schema": "~2.6.0",
+    "symfony/polyfill-intl-normalizer": "^1.31",
+    "symfony/polyfill-mbstring": "^1.31",
     "symfony/yaml": "~7.4.0 || ^8.0"
   },
   "require-dev": {

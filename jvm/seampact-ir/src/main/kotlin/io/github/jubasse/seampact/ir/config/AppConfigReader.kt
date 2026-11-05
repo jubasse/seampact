@@ -1,8 +1,10 @@
 package io.github.jubasse.seampact.ir.config
 
 import io.github.jubasse.seampact.ir.bundle.BundleSource
+import io.github.jubasse.seampact.ir.write.caseFolded
 import java.nio.file.Files
 import java.nio.file.Path
+import java.text.Normalizer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -190,20 +192,40 @@ private fun outsideOutDirProblems(tree: ConfigTree, outDir: Path, entries: List<
             )
         }
 
-// Two entries writing to the same directory, or one inside the other, would remove each other's files.
+// Two entries writing to the same directory, or one inside the other, would remove each other's files; so would
+// two whose directories match once case is ignored, on a case-insensitive disk.
 private fun overlappingOutProblems(tree: ConfigTree, entries: List<AppConfigEntry>): List<ConfigProblem> =
     entries.withIndex().flatMap { (index, each) ->
-        entries.drop(index + 1)
-            .filter { other -> each.root.startsWith(other.root) || other.root.startsWith(each.root) }
-            .map { other ->
-                ConfigProblem(
-                    "config.out.overlap",
-                    "The entries '${each.id}' and '${other.id}' write to the same directory, or one inside the other.",
-                    "Give each entry its own `out` directory, side by side under `outDir`.",
-                    tree.whereOf(listOf("targets", index)),
-                )
-            }
+        entries.drop(index + 1).mapNotNull { other -> overlappingOutProblem(tree, index, each, other) }
     }
+
+private fun overlappingOutProblem(tree: ConfigTree, index: Int, each: AppConfigEntry, other: AppConfigEntry): ConfigProblem? {
+    val where = tree.whereOf(listOf("targets", index))
+
+    if (isNestedOrSame(each.root, other.root)) {
+        return ConfigProblem(
+            "config.out.overlap",
+            "The entries '${each.id}' and '${other.id}' write to the same directory, or one inside the other.",
+            "Give each entry its own `out` directory, side by side under `outDir`.",
+            where,
+        )
+    }
+
+    if (!isNestedOrSame(Path.of(caseFoldedAfterNfc(each.root)), Path.of(caseFoldedAfterNfc(other.root)))) return null
+
+    return ConfigProblem(
+        "config.out.case-overlap",
+        "The entries '${each.id}' and '${other.id}' write to directories that are one, or one inside the other, " +
+            "once letter case is ignored, as a case-insensitive disk does.",
+        "Give each entry an `out` directory whose name differs by more than letter case, side by side under `outDir`.",
+        where,
+    )
+}
+
+// A name written composed or decomposed is one directory on a disk that ignores the difference (macOS).
+private fun caseFoldedAfterNfc(path: Path): String = caseFolded(Normalizer.normalize(path.toString(), Normalizer.Form.NFC))
+
+private fun isNestedOrSame(first: Path, second: Path): Boolean = first.startsWith(second) || second.startsWith(first)
 
 private fun isStrictlyInside(directory: Path, path: Path): Boolean = path != directory && path.startsWith(directory)
 

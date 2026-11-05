@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Tests\Runtime;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\BoundaryFailure;
@@ -13,6 +14,24 @@ use Seampact\Codegen\Runtime\WireCodec;
 final class WireCodecTest extends TestCase
 {
     private const OPAQUE = ['kind' => 'opaque', 'reason' => 'any webhook payload'];
+
+    /** @return iterable<string, array{string, string}> */
+    public static function dateTimes(): iterable
+    {
+        yield 'no fraction' => ['2026-10-27T08:30:00+02:00', '2026-10-27T08:30:00+02:00'];
+        yield 'trailing zeros dropped' => ['2026-10-27T08:30:00.120+02:00', '2026-10-27T08:30:00.12+02:00'];
+        yield 'one digit' => ['2026-10-27T08:30:00.500+00:00', '2026-10-27T08:30:00.5+00:00'];
+        yield 'microseconds kept' => ['2026-10-27T08:30:00.000001+00:00', '2026-10-27T08:30:00.000001+00:00'];
+        yield 'offset with seconds in UTC' => ['2026-10-27T08:30:00.5+02:00:30', '2026-10-27T06:29:30.5+00:00'];
+    }
+
+    #[DataProvider('dateTimes')]
+    public function testADateTimeIsWrittenWithoutTrailingZerosInItsFraction(string $held, string $written): void
+    {
+        $type = ['kind' => 'scalar', 'type' => 'string', 'format' => 'date-time'];
+
+        self::assertSame($written, WireCodec::encode(ApiContract::of(ThrottledContract::class), $type, new \DateTimeImmutable($held)));
+    }
 
     public function testANullOpaqueValueThatIsNotNullableIsABoundaryFailure(): void
     {

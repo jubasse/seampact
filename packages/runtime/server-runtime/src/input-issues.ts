@@ -10,10 +10,12 @@ import {
   type StandardIssue,
 } from "./contract-route.js";
 import { beforeParamSentWithAfter } from "./cursor-exclusion.js";
+import { holdsLoneSurrogate } from "./lone-surrogate.js";
 import { isPlainObject } from "./plain-object.js";
 
 const SCHEMA_INVALID_ROLE = "schemaInvalid";
 const FALLBACK_RULE = "invalid";
+const TYPE_RULE = "type";
 const ENUM_RULE = "enum";
 const EXCLUSIVE_CURSORS_RULE = "exclusiveCursors";
 
@@ -57,6 +59,11 @@ export async function validateRequest(state: CheckState): Promise<RequestValidat
   const params = decodeRequestParams(route, request, state.pathParams);
   const candidate: RequestCandidate =
     route.input === undefined ? params : { ...params, body: request.body };
+
+  if (route.input !== undefined && holdsLoneSurrogate(request.body)) {
+    return { candidate, issues: [{ in: ISSUE_PARTS.body, pointer: "", rule: TYPE_RULE }] };
+  }
+
   const result = await route.validator["~standard"].validate(candidate);
   const exclusiveIssues = bothCursorsIssues(route.paging, candidate.query);
 

@@ -1,0 +1,32 @@
+{
+  "name": "@seampact/docs-site",
+  "description": "The documentation website: Starlight on GitHub Pages, built from the repository's docs/ folder.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "seampact": {
+    "role": "tool"
+  },
+  "engines": {
+    "node": "24.21.0"
+  },
+  "scripts": {
+    "build": "node scripts/prebuild.ts && astro build",
+    "dev": "node scripts/prebuild.ts && astro dev",
+    "preview": "astro preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.42.8",
+    "astro": "7.4.5",
+    "mdast-util-from-markdown": "2.1.0",
+    "mdast-util-gfm": "3.1.0",
+    "micromark-extension-gfm": "3.0.0",
+    "starlight-links-validator": "0.27.0",
+    "starlight-llms-txt": "0.12.0",
+    "unist-util-visit": "5.2.0"
+  },
+  "devDependencies": {
+    "@types/mdast": "4.0.4"
+  }
+}

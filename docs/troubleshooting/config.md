@@ -54,6 +54,7 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 |---|---|
 | `config.out.outside` | `out` must stay inside `outDir`. |
 | `config.out.overlap` | Two entries write to the same folder. Give each its own `out`. |
+| `config.out.case-overlap` | Two entries write to folders that differ only by letter case (`Api` and `api`) or by how an accent is written, or one folder is inside the other once those differences are ignored. A Windows or macOS disk sees one folder. Rename one `out`. |
 | `config.artefacts.unknown` | The target has no such artefact. The message lists the ones it has. |
 | `config.artefacts.needed` | An artefact needs one you switched off. Switch it on, or switch both off. |
 | `config.php.autoload-missing` | PHP: no PSR-4 entry of `composer.json` holds `outDir`. Add one, such as `"App\\Generated\\": "src/Generated/"`, then run `composer dump-autoload`. |
