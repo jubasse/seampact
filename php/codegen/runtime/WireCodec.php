@@ -14,7 +14,9 @@ use Seampact\Hooks\Field;
 final class WireCodec
 {
     private const DATE_TIME = 'date-time';
-    public const DATE_TIME_WIRE = 'Y-m-d\TH:i:s.vP';
+    private const DATE_TIME_SECONDS = 'Y-m-d\TH:i:s';
+    private const DATE_TIME_MICROSECONDS = 'u';
+    private const DATE_TIME_OFFSET = 'P';
     private const OPAQUE = 'opaque';
 
     private function __construct()
@@ -68,6 +70,16 @@ final class WireCodec
         return $arguments;
     }
 
+    /** RFC 3339 with the fraction the value holds, without trailing zeros (ADR 0003 section 8). */
+    public static function dateTimeText(\DateTimeInterface $value): string
+    {
+        $fraction = rtrim($value->format(self::DATE_TIME_MICROSECONDS), '0');
+
+        return $value->format(self::DATE_TIME_SECONDS)
+            . ($fraction === '' ? '' : '.' . $fraction)
+            . $value->format(self::DATE_TIME_OFFSET);
+    }
+
     /**
      * A generated PHP value as the wire writes it: objects as `stdClass`, lists as arrays. An opaque value is typed
      * `mixed`, so its `null` is checked here: it is written only where the contract makes the value nullable.
@@ -83,7 +95,7 @@ final class WireCodec
         }
 
         return match (Ir::string($type, 'kind')) {
-            'scalar' => $value instanceof \DateTimeInterface ? $value->format(self::DATE_TIME_WIRE) : $value,
+            'scalar' => $value instanceof \DateTimeInterface ? self::dateTimeText($value) : $value,
             'enum' => $value instanceof \BackedEnum ? $value->value : $value,
             'ref' => is_object($value) ? self::encodeObject($contract, Ir::string($type, 'schema') ?? '', $value) : $value,
             'array' => array_map(static fn (mixed $item): mixed => self::encode($contract, Ir::map($type, 'items'), $item), is_array($value) ? array_values($value) : []),

@@ -16,6 +16,12 @@ from seampact.ir.bundle.printable_url import printable_url
         ("gopher://u:SECRET@h:99999/r", "gopher://h:99999/r"),
         ("https://u:SECRET@[::1/x#f", "https://[::1/x"),
         ("https://h:abc/x?t=S2", "https://h:abc/x"),
+        (" \thttps://u:SECRET@h:99999/x", "https://h:99999/x"),
+        ("https:/u:SECRET@h:99999/x", "https:/h:99999/x"),
+        ("https:\\\\u:SECRET@h:99999/x", "https:\\\\h:99999/x"),
+        ("https:u:SECRET@h:99999/x", "https:h:99999/x"),
+        ("https://u:SECRET#?x@h:99999/x?t=S2", "https://h:99999/x"),
+        ("https://u:SECRET@", "https://"),
     ],
 )
 def test_a_url_is_printed_without_its_credentials_query_and_fragment(written: str, printed: str) -> None:
