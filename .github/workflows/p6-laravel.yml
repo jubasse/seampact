@@ -86,7 +86,7 @@ jobs:
         run: composer validate --strict --no-interaction
       - name: Install from the lock file, the sibling packages through their path repositories
         working-directory: php/${{ matrix.package }}
-        run: composer install --no-interaction --no-progress --no-plugins --no-scripts
+        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/install-with-retry.sh" --no-interaction --no-progress --no-plugins --no-scripts
       - name: Audit the locked dependencies
         working-directory: php/${{ matrix.package }}
         run: composer audit --locked --no-interaction

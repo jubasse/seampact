@@ -86,7 +86,7 @@ jobs:
         run: composer validate --strict --no-interaction
       - name: Install from the lock file, the sibling packages through their path repositories
         working-directory: php/symfony
-        run: composer install --no-interaction --no-progress --no-plugins --no-scripts
+        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/install-with-retry.sh" --no-interaction --no-progress --no-plugins --no-scripts
       # The lock pins Symfony 7.4 on the PHP 8.3 platform; Symfony 8 needs PHP 8.4, so this row moves both.
       - name: Move to Symfony 8
         if: matrix.symfony == '8'

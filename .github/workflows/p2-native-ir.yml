@@ -141,7 +141,7 @@ jobs:
           dependency-hash: ${{ hashFiles('php/ir/composer.lock') }}
       - name: Install the PHP dev tools from the lock file
         working-directory: php/ir
-        run: composer install --no-interaction --no-progress --no-plugins --no-scripts
+        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/install-with-retry.sh" --no-interaction --no-progress --no-plugins --no-scripts
       # The lock holds symfony/yaml 7.4 on the PHP 8.3 platform; yaml 8 needs PHP 8.4, so this row moves both.
       - name: Move to symfony/yaml 8
         if: matrix.yaml == '8'
