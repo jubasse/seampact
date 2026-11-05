@@ -78,7 +78,7 @@ public final class PublishedModulePlugin implements Plugin<Project> {
     }
 
     // Maven Central requires both jars beside each jar. Without a timestamp the javadoc jar keeps its bytes; doclint
-    // stays on, so a broken doc comment fails the jar.
+    // stays on, so a broken doc comment fails the jar, but leaves out the warnings for members without a comment.
     private static void configureDocumentationJars(Project project) {
         JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
         java.withSourcesJar();
@@ -89,6 +89,7 @@ public final class PublishedModulePlugin implements Plugin<Project> {
             if (!(javadoc.getOptions() instanceof StandardJavadocDocletOptions options)) return;
 
             options.addBooleanOption("notimestamp", true);
+            options.addBooleanOption("Xdoclint:all,-missing", true);
             options.quiet();
         });
     }
