@@ -199,6 +199,7 @@ final class FrameworkRoutesTest extends TestCase
         self::assertTrue(self::allowsWithOptionalIdPageAndFormat(['/c/*/*'], '/c/{id}/{other}'), 'a required placeholder after it keeps the optional one');
         self::assertFalse(self::allowsWithOptionalIdPageAndFormat(['/c.*'], '/c.{_format}'), 'the separator goes with the placeholder, so the route serves /c');
         self::assertTrue(self::allowsWithOptionalIdPageAndFormat(['/c/*'], '/c/{name}'), 'a required placeholder serves one segment only');
+        self::assertTrue(self::allowsWithOptionalIdPageAndFormat(['/c/*'], '/c/{!id}'), 'Symfony never leaves out an important placeholder, default or not');
     }
 
     /**

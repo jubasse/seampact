@@ -15,7 +15,7 @@ final class FrameworkRoutes
 {
     private const HEAD = 'HEAD';
     private const PLACEHOLDER = '#\{!?(\w+)(?:<[^>]*>)?(?:\?[^}]*)?\}#';
-    private const TRAILING_PLACEHOLDER = '#\{!?(\w+)(?:<[^>]*>)?(?:\?[^}]*)?\}$#D';
+    private const TRAILING_PLACEHOLDER = '#\{(\w+)(?:<[^>]*>)?(?:\?[^}]*)?\}$#D';
     // The characters Symfony's route compiler leaves out with an optional placeholder they precede.
     private const OPTIONAL_PLACEHOLDER_SEPARATORS = '/,;.:-_~+*=@|';
     private const UNREAD_CATCH_ALL = '{*}';
@@ -73,8 +73,8 @@ final class FrameworkRoutes
 
     /**
      * The route's path and each shorter one it also serves, as Symfony compiles a route (Laravel's `{id?}` included):
-     * from the end, a placeholder that ends the path and `$isOptional` names may be left out, with the separator
-     * before it, so `/c/{id?}` also serves `/c`.
+     * from the end, a placeholder that ends the path, is not important (`{!id}`) and `$isOptional` names may be left
+     * out, with the separator before it, so `/c/{id?}` also serves `/c`.
      *
      * @param \Closure(string): bool $isOptional
      * @return list<string>
