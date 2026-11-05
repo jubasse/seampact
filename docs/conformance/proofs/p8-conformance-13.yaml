@@ -94,3 +94,30 @@ proofs:
       - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootOptionsTest.kt#refusesTheLayoutHandlersAndNamingOptionsItDoesNotServe'
       - 'laravel: php/codegen/tests/TargetOptionsTest.php#testEachRefusedOptionIsNamed'
       - 'laravel: php/laravel/tests/LaravelOptionsTest.php#testARefusedOptionIsNamedWithItsCode'
+  - id: CHK-061
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/handlers/HandlerReturnTypeTest.java#aHandlerReturningADeclaredStatusCompiles'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/handlers/HandlerReturnTypeTest.java#aHandlerReturningAnotherTypeThanItsOperationsResultFailsToCompile'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/handlers/HandlerReturnTypeTest.java#aStatusTheOperationDoesNotDeclareFailsToCompile'
+  - id: CHK-103
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheSameTreeTwice'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheSameTreeUnderAnotherTimeZoneAndLocale'
+      - 'laravel: php/laravel/tests/GoldenTest.php#testASecondRunUnderAnotherTimeZoneWritesTheSameTree'
+      - 'symfony: php/symfony/tests/GoldenTest.php#testASecondRunUnderAnotherTimeZoneWritesTheSameTree'
+  - id: CHK-109
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#listsTheRecordComponentsInTheAuthoredOrder'
+  - id: CHK-154
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#generatesTheGoldenTree'
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/config/ConfigReaderTest.kt#readsTheDslTreeAndRefusesAFileBesideIt'
+      - 'spring-boot: jvm/seampact-ir/src/test/kotlin/io/github/jubasse/seampact/ir/write/GeneratedWriterTest.kt#refusesPathsThatLeaveTheOutputDirectory'
+  - id: CHK-158
+    tests:
+      - 'laravel: php/laravel/tests/FormRequestRulesTest.php#testAnAbsentMemberReachesTheHandlerAsAbsentAndAnExplicitNullAsNull'
+      - 'laravel: php/laravel/tests/FormRequestRulesTest.php#testAMemberBothOptionalAndNullableIsAFieldAndKeepsNullApartFromAbsent'

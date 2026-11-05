@@ -8,7 +8,10 @@ use Illuminate\Translation\ArrayLoader;
 use Illuminate\Translation\Translator;
 use Illuminate\Validation\Factory;
 use PHPUnit\Framework\TestCase;
+use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\WireCodec;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
+use Seampact\Hooks\Field;
 use Seampact\Laravel\LaravelGenerator;
 use Seampact\Laravel\Runtime\ContractIssue;
 use Seampact\Laravel\Runtime\InputTree;
@@ -73,6 +76,21 @@ final class FormRequestRulesTest extends TestCase
         self::assertSame([], $this->issues(['ids' => []]));
         self::assertSame([['body', '/count', 'type']], $this->issues(['ids' => [], 'count' => null]));
         self::assertSame([['body', '/ids', 'required']], $this->issues(['note' => 'x']));
+    }
+
+    public function testAnAbsentMemberReachesTheHandlerAsAbsentAndAnExplicitNullAsNull(): void
+    {
+        $contract = ApiContract::of(self::NATIVE_NAMESPACE . '\\Laravel\\TasksContract');
+        $note = static function (string $json) use ($contract): mixed {
+            $body = WireCodec::decode($contract, ['kind' => 'ref', 'schema' => 'GetTasksBatchInput'], json_decode($json, false, 512, JSON_THROW_ON_ERROR));
+            self::assertIsObject($body);
+
+            return get_object_vars($body)['note'] ?? null;
+        };
+
+        self::assertEquals(Field::absent(), $note('{"ids":[]}'));
+        self::assertEquals(Field::ofNull(), $note('{"ids":[],"note":null}'));
+        self::assertEquals(Field::of('x'), $note('{"ids":[],"note":"x"}'));
     }
 
     public function testANumberIsComparedByValueBehindNumericStrict(): void
