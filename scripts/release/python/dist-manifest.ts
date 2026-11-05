@@ -334,12 +334,12 @@ if (import.meta.main)
     if (command === "write") {
       if (values.sums === undefined) throw new ReleaseError(`write needs --sums; usage: ${USAGE}`);
 
-      const manifest = distributionManifest(directory);
-
-      manifestDistributions(directory, manifest, expected);
       if (values["wheels-sha256"] === undefined)
         throw new ReleaseError(`write needs --wheels-sha256; usage: ${USAGE}`);
 
+      const manifest = distributionManifest(directory);
+
+      manifestDistributions(directory, manifest, expected);
       failOnProblems([
         ...compilerWheelProblems(directory, manifest, readFileSync(values.sums, "utf8")),
         ...compilerWheelsListProblems(manifest, values["wheels-sha256"]),
