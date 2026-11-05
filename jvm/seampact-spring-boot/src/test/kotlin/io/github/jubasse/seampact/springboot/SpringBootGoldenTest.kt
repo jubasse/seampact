@@ -34,6 +34,8 @@ import io.github.jubasse.seampact.ir.model.TypeUse
 import io.github.jubasse.seampact.ir.read.IrReader
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteExisting
 import kotlin.io.path.isRegularFile
@@ -167,6 +169,34 @@ class SpringBootGoldenTest {
     fun generatesTheSameTreeTwice() {
         assertEquals(generatedTree(), generatedTree())
         assertEquals(optInsTree(), optInsTree())
+    }
+
+    // A time zone ahead of UTC and the Turkish locale, whose dotted and dotless i break a locale-bound case mapping.
+    @Test
+    fun generatesTheSameTreeUnderAnotherTimeZoneAndLocale() {
+        val firstRun = generatedTree()
+        val defaultZone = TimeZone.getDefault()
+        val defaultLocale = Locale.getDefault()
+
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("Pacific/Kiritimati"))
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"))
+
+            assertEquals(firstRun, generatedTree())
+        } finally {
+            TimeZone.setDefault(defaultZone)
+            Locale.setDefault(defaultLocale)
+        }
+    }
+
+    @Test
+    fun listsTheRecordComponentsInTheAuthoredOrder() {
+        val reversedTask = taskWith { it.copy(properties = it.properties.reversed()) }
+
+        val header = generatedType(reversedTask, "Task").substringAfter("public record Task(").substringBefore(") {\n")
+        val components = Regex("""(\w+)(?:,|$)""").findAll(header).map { it.groupValues[1] }.toList()
+
+        assertEquals(listOf("createdAt", "version", "effort", "state", "title", "taskId"), components)
     }
 
     @Test
