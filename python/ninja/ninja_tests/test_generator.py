@@ -186,3 +186,15 @@ def test_binding_takes_only_a_ninja_api() -> None:
 
 def _snake(operation_id: str) -> str:
     return "".join(f"_{letter.lower()}" if letter.isupper() else letter for letter in operation_id)
+
+
+def test_the_generator_names_the_identity_headers_it_leaves_to_the_handler(repository_root: Path) -> None:
+    generator = NinjaGenerator()
+    text = (repository_root / "fixtures/golden/reference/tasksService.ir.json").read_text(encoding="utf-8")
+
+    warnings = generator.handler_warnings(read_ir(text, generator.ir_support()), reference_entry("tasksService"))
+
+    assert {warning.code for warning in warnings} == {"identity.headers.handler"}
+    assert all(
+        warning.where is not None and "entry 'reference' api 'tasksService'" in warning.where for warning in warnings
+    )

@@ -1,6 +1,7 @@
 package io.github.jubasse.seampact.springboot
 
 import io.github.jubasse.seampact.ir.model.ArrayTypeUse
+import io.github.jubasse.seampact.ir.model.BasicScheme
 import io.github.jubasse.seampact.ir.model.BucketId
 import io.github.jubasse.seampact.ir.model.ContractIR
 import io.github.jubasse.seampact.ir.model.CredentialIdentity
@@ -12,12 +13,15 @@ import io.github.jubasse.seampact.ir.model.ExemptIdempotency
 import io.github.jubasse.seampact.ir.model.FileTypeUse
 import io.github.jubasse.seampact.ir.model.HttpMethod
 import io.github.jubasse.seampact.ir.model.IdempotencyEnforcement
+import io.github.jubasse.seampact.ir.model.IdentityAccess
 import io.github.jubasse.seampact.ir.model.IdentityId
 import io.github.jubasse.seampact.ir.model.MapSchema
 import io.github.jubasse.seampact.ir.model.ObjectSchema
 import io.github.jubasse.seampact.ir.model.OpaqueTypeUse
 import io.github.jubasse.seampact.ir.model.Operation
+import io.github.jubasse.seampact.ir.model.OptionalAccess
 import io.github.jubasse.seampact.ir.model.Principal
+import io.github.jubasse.seampact.ir.model.QueryScheme
 import io.github.jubasse.seampact.ir.model.RefTypeUse
 import io.github.jubasse.seampact.ir.model.ResponseShape
 import io.github.jubasse.seampact.ir.model.RuleRequirement
@@ -101,6 +105,23 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
         operation.errors.forEachIndexed { index, error -> readError(error.code, at.below("errors", index, "code")) }
 
         identityOf(operation)?.let { identityId -> readIdentity(identityId, at.below("access", "identity")) }
+        readCredentialSchemes(operation, at.below("access"))
+    }
+
+    // The query and HTTP Basic schemes no Spring boundary reads a credential from, refused as the Node servers do.
+    private fun readCredentialSchemes(operation: Operation, at: IrPlace) {
+        val schemeIds = when (val access = operation.access) {
+            is IdentityAccess -> access.schemes
+            is OptionalAccess -> access.schemes
+            else -> return
+        }
+
+        for (schemeId in schemeIds) {
+            val scheme = ir.schemes[schemeId]
+            if (scheme is QueryScheme || scheme is BasicScheme) {
+                refusals.waiting("scheme.${scheme.kind}", "A '${scheme.kind}' credential scheme", at, Delivery.CONSUMER)
+            }
+        }
     }
 
     private fun checkOperationForms(operation: Operation, at: IrPlace) {

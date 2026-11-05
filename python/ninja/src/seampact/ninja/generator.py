@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from typing import Final
 
 from seampact.codegen.contract_module import contract_module
+from seampact.codegen.handler_forms import handler_warnings
 from seampact.codegen.input_schemas import proof_models, with_input_schemas
 from seampact.codegen.kept_forms import refuse_kept_forms
 from seampact.codegen.matrix_row import refuse_missing_matrix_row
@@ -25,6 +26,7 @@ from seampact.codegen.route_helpers import route_helpers_module
 from seampact.codegen.routes import route_table
 from seampact.codegen.runtime.version import RUNTIME_VERSION
 from seampact.django.emitters import BoundaryBase, boundary_module, contract_paths, routes_named_by_path
+from seampact.ir.config.problem import ConfigProblem
 from seampact.ir.model import ContractIR
 from seampact.ir.naming import IrName, NamingRole, python_identifier
 from seampact.ir.read import IrSupport
@@ -52,6 +54,9 @@ class NinjaGenerator:
             "Remove `frameworkDocs: off` from the entry and switch Ninja's own docs off in the app: "
             "`NinjaAPI(docs_url=None, openapi_url=None)`."
         )
+
+    def handler_warnings(self, ir: ContractIR, entry: TargetEntry) -> Sequence[ConfigProblem]:
+        return handler_warnings(ir, entry.id, entry.api)
 
     def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
         refusals = Refusals(entry.id, TARGET, DISTRIBUTION)

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\FormArrival;
 use Seampact\Codegen\KeptForms;
@@ -71,6 +72,29 @@ final class KeptFormsTest extends TestCase
         self::assertArrayHasKey('bindings.unsupported', $messages);
         self::assertArrayHasKey('scope.source.unsupported', $messages);
         self::assertArrayHasKey('principal.variants.unsupported', $messages);
+    }
+
+    /** @return iterable<string, array{array<string, string>, string}> */
+    public static function credentialSchemesNoBoundaryReads(): iterable
+    {
+        yield 'query' => [['kind' => 'query', 'name' => 'api_key'], 'scheme.query.unsupported'];
+        yield 'basic' => [['kind' => 'basic'], 'scheme.basic.unsupported'];
+    }
+
+    /** @param array<string, string> $scheme */
+    #[DataProvider('credentialSchemesNoBoundaryReads')]
+    public function testAQueryOrBasicCredentialSchemeIsRefusedByName(array $scheme, string $code): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document(), ['getTask']);
+        $schemes = $document->schemes;
+        self::assertInstanceOf(\stdClass::class, $schemes);
+        self::assertInstanceOf(\stdClass::class, $schemes->bearer);
+        $schemes->bearer = (object) ['id' => 'bearer', ...$scheme, 'origin' => $schemes->bearer->origin];
+
+        $messages = self::refused($document, null);
+
+        self::assertSame([$code], array_keys($messages));
+        self::assertStringContainsString("A '{$scheme['kind']}' credential scheme", $messages[$code]);
     }
 
     public function testTheSchemasEnumsAndErrorsOfTheKeptOperationsAreCollected(): void

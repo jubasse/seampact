@@ -13,6 +13,7 @@ use Seampact\Codegen\Delivery;
 use Seampact\Codegen\FrameworkRouteScope;
 use Seampact\Codegen\HandlerAccessPlacement;
 use Seampact\Codegen\HandlerAccessTypes;
+use Seampact\Codegen\HandlerForms;
 use Seampact\Codegen\IdentityTypes;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -27,6 +28,7 @@ use Seampact\Ir\Model\ContractIR;
 use Seampact\Ir\Model\IrModelVersion;
 use Seampact\Ir\Read\IrSupport;
 use Seampact\Ir\Run\Generator;
+use Seampact\Ir\Run\HandlerWarningGenerator;
 use Seampact\Ir\Run\TargetEntry;
 use Seampact\Ir\Write\GeneratedFile;
 
@@ -36,7 +38,7 @@ use Seampact\Ir\Write\GeneratedFile;
  * with their rules, the route table (and `routes.php` under `routes: file`), the route names and URL builders, the
  * contract class, the identity hooks, the middleware, the service provider and the unexpected-error listener interface.
  */
-final class LaravelGenerator implements Generator
+final class LaravelGenerator implements Generator, HandlerWarningGenerator
 {
     public const TARGET = 'laravel';
     public const PACKAGE = 'seampact/laravel';
@@ -54,6 +56,11 @@ final class LaravelGenerator implements Generator
     public function irSupport(): IrSupport
     {
         return new IrSupport([IrModelVersion::IR_VERSION], IrModelVersion::IR_REVISION, [self::HTTP_OPERATION], []);
+    }
+
+    public function handlerWarnings(ContractIR $ir, TargetEntry $entry): array
+    {
+        return HandlerForms::warnings($ir, $entry->id, $entry->api);
     }
 
     public function generate(ContractIR $ir, TargetEntry $entry): array

@@ -133,3 +133,15 @@ def test_binding_a_router_without_the_app_is_refused_with_its_fix() -> None:
 
     with pytest.raises(BindingError, match="app="):
         bind(fastapi.APIRouter(), handlers=handlers)
+
+
+def test_the_generator_names_the_identity_headers_it_leaves_to_the_handler(repository_root: Path) -> None:
+    generator = FastApiGenerator()
+    text = (repository_root / "fixtures/golden/reference/tasksService.ir.json").read_text(encoding="utf-8")
+
+    warnings = generator.handler_warnings(read_ir(text, generator.ir_support()), reference_entry("tasksService"))
+
+    assert {warning.code for warning in warnings} == {"identity.headers.handler"}
+    assert all(
+        warning.where is not None and "entry 'reference' api 'tasksService'" in warning.where for warning in warnings
+    )

@@ -501,3 +501,15 @@ def test_an_entry_whose_target_has_no_matrix_row_is_refused_by_name(repository_r
         DrfGenerator().generate(ir, entry)
 
     assert {problem.code for problem in refused.value.problems} == {"config.matrix.row-missing"}
+
+
+def test_the_generator_names_the_identity_headers_it_leaves_to_the_handler(repository_root: Path) -> None:
+    ir = contract(reference_ir(repository_root, "tasksService"))
+    entry = TargetEntry("reference", "pypi:seampact-drf", ir.api.id, None, {}, {}, "/out", (), None, None, ())
+
+    warnings = DrfGenerator().handler_warnings(ir, entry)
+
+    assert {warning.code for warning in warnings} == {"identity.headers.handler"}
+    assert all(
+        warning.where is not None and "entry 'reference' api 'tasksService'" in warning.where for warning in warnings
+    )

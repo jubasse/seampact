@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from typing import Final
 
 from seampact.codegen.contract_module import contract_module
+from seampact.codegen.handler_forms import handler_warnings
 from seampact.codegen.input_schemas import proof_models, with_input_schemas
 from seampact.codegen.kept_forms import refuse_kept_forms
 from seampact.codegen.matrix_row import refuse_missing_matrix_row
@@ -25,6 +26,7 @@ from seampact.codegen.route_helpers import route_helpers_module
 from seampact.codegen.routes import route_table
 from seampact.fastapi.options import read_options
 from seampact.fastapi.placement_module import placement_module
+from seampact.ir.config.problem import ConfigProblem
 from seampact.ir.model import ContractIR
 from seampact.ir.read import IrSupport
 from seampact.ir.run.generator import TargetEntry
@@ -42,6 +44,9 @@ class FastApiGenerator:
 
     def framework_docs_off_fix(self) -> str | None:
         return None
+
+    def handler_warnings(self, ir: ContractIR, entry: TargetEntry) -> Sequence[ConfigProblem]:
+        return handler_warnings(ir, entry.id, entry.api)
 
     def generate(self, ir: ContractIR, entry: TargetEntry) -> Sequence[GeneratedFile]:
         refusals = Refusals(entry.id, TARGET, DISTRIBUTION)
