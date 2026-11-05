@@ -2,7 +2,7 @@
 // the pack's files, so a release build embeds the packed files: the binary then vendors the same bytes as the npm
 // CLI on installed packs.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -42,6 +42,8 @@ export function extractPackedPacks(tarballDirectory, outDirectory, fail) {
   for (const packName of EMBEDDED_PACK_NAMES) {
     const extracted = join(outDirectory, tarballPrefix(packName).slice(0, -1));
 
+    // A rerun must not keep a file the newer tarball dropped.
+    rmSync(extracted, { recursive: true, force: true });
     mkdirSync(extracted, { recursive: true });
     execFileSync("tar", ["-xzf", tarballOf(packName, tarballDirectory, fail), "-C", extracted]);
 

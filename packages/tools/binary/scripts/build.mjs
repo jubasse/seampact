@@ -114,7 +114,17 @@ const packedPackDirectories =
 
 // Every embedded pack file comes from its npm tarball, so the release binary holds the published bytes.
 function resolvePackedPackFile(args) {
-  const [, packName, file] = PACK_FILE_IMPORT.exec(args.path) ?? [];
+  const packFileImport = PACK_FILE_IMPORT.exec(args.path);
+
+  if (packFileImport === null) {
+    return {
+      errors: [
+        { text: `${args.path} names no file of a first-party pack (@seampact/pack-<name>/<file>)` },
+      ],
+    };
+  }
+
+  const [, packName, file] = packFileImport;
   const packageDirectory = packedPackDirectories?.get(packName);
 
   if (packageDirectory === undefined) {

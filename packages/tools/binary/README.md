@@ -18,13 +18,13 @@ The workflow `p3-binary` runs all of this, one smoke job per OS.
 
 ## Release
 
-The release workflow calls `p3-binary` with the release version, the artefact of its `pnpm pack` tarballs, and whether to attest. A call runs every platform, signs the macOS binaries, and produces, without uploading anything:
+The release workflow calls `p3-binary` with the release version, the artefact of its `pnpm pack` tarballs, and whether to attest. A call fails by name when the version or the artefact name is empty, or when `python/compiler/release_version.py` finds `seampact-compiler` or the `compiler` extra of `seampact-ir` at another version. It runs every platform, signs the macOS binaries, and produces, without uploading anything, artefacts kept 30 days:
 
 - `binary-assets`: the five binaries `seampact-{linux-x64,linux-arm64,darwin-x64,darwin-arm64,win32-x64.exe}` and `SHA256SUMS`, hashed after signing. `pnpm pack` rewrites a `package.json`, so `node scripts/build.mjs --packed-packs <dir>` embeds each pack's files from its tarball, and `node scripts/reference.mjs --packed-packs <dir>` installs the same tarballs for the reference: the binary vendors the bytes npm publishes.
-- `binary-pins`: the `binaries.json` of `seampact/ir` and `seampact-ir`, written by `node scripts/pins.mjs <version> <SHA256SUMS> <out-file>`. The repository keeps the empty pin, so a development build still refuses by `binary.unpublished`; only release artefacts carry a filled one.
+- `binary-pins`: the `binaries.json` of `seampact/ir` and `seampact-ir`, written by `node scripts/pins.mjs <version> <SHA256SUMS> <out-file>`. The repository keeps the empty pin, so a development build still refuses by `binary.unpublished`; only release artefacts carry a filled one, and `seampact-ir` refuses a pin at `0.0.0` as a development pin.
 - `compiler-wheels`: one `seampact-compiler` wheel per binary, holding it unchanged at `seampact/compiler/bin/<asset>` (`python/compiler`). Each smoke row installs its wheel in a clean venv and runs the binary's `--help`.
 
-The attestation (`actions/attest-build-provenance` over `SHA256SUMS`) runs only when the caller asks.
+The call outputs the SHA-256 of `SHA256SUMS` (`sums-sha256`), which the caller checks before uploading. The attestation (`actions/attest-build-provenance` over the binaries of `SHA256SUMS` and the wheels) runs only when the caller asks.
 
 ## macOS: unsigned
 

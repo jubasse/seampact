@@ -20,7 +20,10 @@ BINARY_DIRECTORY: Final = "seampact/compiler/bin"
 EDITABLE_VERSION: Final = "editable"
 
 # Node.js 24 needs glibc 2.28 on Linux and macOS 13.5. pip tags a macOS from 11 on by its major only, so
-# `macosx_13_0` is the closest floor; Node itself refuses macOS 13.0 to 13.4.
+# `macosx_13_0` is the closest floor; Node itself refuses macOS 13.0 to 13.4. The build isolation keeps this table
+# apart from the other lists of the five asset names, which a rename changes with it:
+# `packages/tools/binary/scripts/binary-names.mjs`, `python/ir/src/seampact/ir/binary/release_assets.py` and the
+# platform table of `python/ir/src/seampact/ir/binary/host_platform.py`.
 WHEEL_TAG_BY_ASSET: Final = {
     "seampact-linux-x64": "py3-none-manylinux_2_28_x86_64",
     "seampact-linux-arm64": "py3-none-manylinux_2_28_aarch64",
