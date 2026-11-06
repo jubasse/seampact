@@ -4,6 +4,7 @@ import { Module } from "@nestjs/common";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksDevicesNest from "../generated/server/tasksDevices/index.js";
 import * as TasksResponsesNest from "../generated/server/tasksResponses/index.js";
+import * as TasksPagingNest from "../generated/server/tasksPaging/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesNest from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -30,6 +31,13 @@ import {
 import { NotesController, ResponsesController } from "./responses-controllers.mjs";
 import { tasksResponsesHooks } from "./responses-handlers.mjs";
 import {
+  CappedController,
+  ChangesController,
+  EventsController,
+  NotesController,
+} from "./paging-controllers.mjs";
+import { tasksPagingHooks } from "./paging-handlers.mjs";
+import {
   PatternedRouteController,
   SuiteControlController,
   UnlistedRouteController,
@@ -48,6 +56,7 @@ const healthControllers = leavesOutHealthHandler()
     TasksServiceWritesNest.SeampactModule.forRoot(tasksServiceWritesHooks()),
     TasksDevicesNest.SeampactModule.forRoot(tasksDevicesHooks()),
     TasksResponsesNest.SeampactModule.forRoot(tasksResponsesHooks()),
+    TasksPagingNest.SeampactModule.forRoot(tasksPagingHooks()),
   ],
   controllers: [
     ...healthControllers,
@@ -61,6 +70,10 @@ const healthControllers = leavesOutHealthHandler()
     DevicesController,
     ResponsesController,
     NotesController,
+    NotesController,
+    ChangesController,
+    CappedController,
+    EventsController,
     SuiteControlController,
     // The framework-route boot variants serve a route outside the contract.
     ...(servesUnlistedRoute() ? [UnlistedRouteController] : []),

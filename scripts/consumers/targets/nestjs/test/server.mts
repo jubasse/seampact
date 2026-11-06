@@ -8,6 +8,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksDevicesNest from "../generated/server/tasksDevices/index.js";
 import * as TasksResponsesNest from "../generated/server/tasksResponses/index.js";
+import * as TasksPagingNest from "../generated/server/tasksPaging/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesNest from "../generated/server/tasksServiceWrites/index.js";
 import { useBenchAppInterceptor } from "../src/bench-app-interceptor.mjs";
@@ -35,6 +36,8 @@ class PreRoutingFilter extends BaseExceptionFilter {
 
     if (TasksResponsesNest.renderPreRoutingError(exception, host)) return;
 
+    if (TasksPagingNest.renderPreRoutingError(exception, host)) return;
+
     super.catch(exception, host);
   }
 }
@@ -53,6 +56,7 @@ export async function startServer(): Promise<RunningServer> {
       TasksServiceWritesNest.LARGEST_BODY_LIMIT,
       TasksDevicesNest.LARGEST_BODY_LIMIT,
       TasksResponsesNest.LARGEST_BODY_LIMIT,
+      TasksPagingNest.LARGEST_BODY_LIMIT,
     ),
   });
   app.useGlobalFilters(new PreRoutingFilter(app.getHttpAdapter()));

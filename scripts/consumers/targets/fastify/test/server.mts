@@ -8,6 +8,7 @@ import Fastify, { type FastifyError, type FastifyReply, type FastifyRequest } fr
 import * as TasksFastify from "../generated/server/tasks/index.js";
 import * as TasksDevicesFastify from "../generated/server/tasksDevices/index.js";
 import * as TasksResponsesFastify from "../generated/server/tasksResponses/index.js";
+import * as TasksPagingFastify from "../generated/server/tasksPaging/index.js";
 import * as TasksServiceFastify from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesFastify from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -32,6 +33,7 @@ import {
   tasksServiceWritesHooks,
 } from "../src/hooks.mjs";
 import { tasksResponsesHandlers, tasksResponsesHooks } from "../src/responses-handlers.mjs";
+import { tasksPagingHandlers, tasksPagingHooks } from "../src/paging-handlers.mjs";
 import {
   type ControlReply,
   hookCallsReply,
@@ -57,7 +59,8 @@ function renderedByAnApi(request: FastifyRequest, reply: FastifyReply, error?: E
     TasksServiceFastify.renderPreRoutingError(request, reply, error) ||
     TasksServiceWritesFastify.renderPreRoutingError(request, reply, error) ||
     TasksDevicesFastify.renderPreRoutingError(request, reply, error) ||
-    TasksResponsesFastify.renderPreRoutingError(request, reply, error)
+    TasksResponsesFastify.renderPreRoutingError(request, reply, error) ||
+    TasksPagingFastify.renderPreRoutingError(request, reply, error)
   );
 }
 
@@ -128,6 +131,15 @@ export async function startServer(): Promise<RunningServer> {
       NotesEndpoints: tasksResponsesHandlers,
     },
     hooks: tasksResponsesHooks(),
+  });
+  await app.register(TasksPagingFastify.plugin, {
+    handlers: {
+      NotesEndpoints: tasksPagingHandlers,
+      ChangesEndpoints: tasksPagingHandlers,
+      CappedEndpoints: tasksPagingHandlers,
+      EventsEndpoints: tasksPagingHandlers,
+    },
+    hooks: tasksPagingHooks(),
   });
   await app.listen({ port: 0, host: HOST });
 

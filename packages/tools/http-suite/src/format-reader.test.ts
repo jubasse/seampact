@@ -271,6 +271,9 @@ describe("a pack profile", () => {
     expect(profile.refusals["device-token-authenticates-device"]).toBe(
       "the case reaches tasksDevices, which the pack's app does not serve",
     );
+    expect(profile.refusals["changes-since-feed-and-stale-token"]).toBe(
+      "the case reaches tasksPaging, which the pack's app does not serve",
+    );
     expect(profile.refusals).not.toHaveProperty("every-operation-succeeds");
   });
 });

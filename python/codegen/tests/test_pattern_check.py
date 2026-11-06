@@ -59,9 +59,15 @@ def test_the_reference_patterns_compile_and_keep_their_verdicts(repository_root:
         }
     )
 
-    assert patterns == ["^(?:createdAt|-createdAt)$"]
+    assert patterns == ["^(?:asc|desc)$", "^(?:created)$", "^(?:createdAt|-createdAt)$"]
 
-    sort = contract_pattern(patterns[0])
+    direction = contract_pattern(patterns[0])
+
+    assert direction.matches("asc")
+    assert direction.matches("desc")
+    assert not direction.matches("ascending")
+
+    sort = contract_pattern(patterns[2])
 
     assert sort.matches("createdAt")
     assert sort.matches("-createdAt")

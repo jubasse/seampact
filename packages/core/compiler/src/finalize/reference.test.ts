@@ -256,6 +256,42 @@ const EXPECTED_DECLARATIONS: Record<string, Record<Catalogue, readonly string[]>
     ],
     scopes: [],
   },
+  tasksPaging: {
+    ...SHARED_DECLARATIONS,
+    buckets: [],
+    enums: ["Service", "Surface"],
+    errors: ["api.cursor_too_old", "api.internal", "api.schema_invalid", "api.unauthenticated"],
+    pagings: ["cappedPages", "changes", "stripeList"],
+    rights: [],
+    rules: [],
+    schemas: [
+      "ApiSchemaInvalidParams",
+      "IssuesItem",
+      "Note",
+      "ServicePrincipal",
+      "UserPrincipal",
+      "WebhookCaller",
+    ],
+    scopes: [],
+  },
+  tasksSplitSort: {
+    ...SHARED_DECLARATIONS,
+    buckets: [],
+    enums: ["Service", "Surface"],
+    errors: ["api.internal", "api.schema_invalid", "api.unauthenticated"],
+    pagings: ["githubPages"],
+    rights: [],
+    rules: [],
+    schemas: [
+      "ApiSchemaInvalidParams",
+      "IssuesItem",
+      "Note",
+      "ServicePrincipal",
+      "UserPrincipal",
+      "WebhookCaller",
+    ],
+    scopes: [],
+  },
 };
 
 function declarationsOf(ir: ContractIR): Record<string, string[]> {

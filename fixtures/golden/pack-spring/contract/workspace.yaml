@@ -8,4 +8,6 @@ workspace:
     tasksOptionalAuth: ./tasks-optional-auth/api.yaml
     tasksAbsoluteUrls: ./tasks-absolute-urls/api.yaml
     tasksResponses: ./tasks-responses/api.yaml
+    tasksPaging: ./tasks-paging/api.yaml
+    tasksSplitSort: ./tasks-split-sort/api.yaml
   shared: ./shared/base.yaml

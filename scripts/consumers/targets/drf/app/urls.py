@@ -32,6 +32,8 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("", include("generated.tasks_optional_auth.urls")),
     path("", include("generated.tasks_absolute_urls.urls")),
     path("", include("generated.tasks_responses.urls")),
+    path("", include("generated.tasks_paging.urls")),
+    path("", include("generated.tasks_split_sort.urls")),
     path(SCRIPT_PATH.removeprefix("/"), load_script),
     path(HOOK_CALLS_PATH.removeprefix("/"), hook_calls),
     path(LOG_LINES_PATH.removeprefix("/"), log_lines),

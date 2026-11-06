@@ -333,7 +333,7 @@ class _Emission:
 
             if fact_type is None or attribute is None:
                 self.refusals.waiting(
-                    "paging.handlerResult", f"The page fact '{fact}'", at.below("paging"), Delivery.AFTER_V1
+                    "paging.handlerResult", f"The page fact '{fact}'", at.below("paging"), Delivery.LATER_THAN_V1
                 )
                 continue
 

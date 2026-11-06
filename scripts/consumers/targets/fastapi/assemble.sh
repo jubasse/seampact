@@ -13,8 +13,8 @@ case "${3:-}" in
   *) app="$1/app-$3" ;;
 esac
 
-cp "$here/../../python/reference_doubles/hook_doubles.py" "$app/"
 
 if [ "${3:-}" = "hook-check-off" ]; then
   rm "$app/health_handlers.py"
 fi
+cp "$here/../../python/reference_doubles/hook_doubles.py" "$here/../../python/reference_doubles/paging_doubles.py" "$app/"

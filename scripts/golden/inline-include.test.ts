@@ -25,6 +25,8 @@ const REFERENCE_FILES = [
   "tasks-optional-auth/api.yaml",
   "tasks-absolute-urls/api.yaml",
   "tasks-responses/api.yaml",
+  "tasks-paging/api.yaml",
+  "tasks-split-sort/api.yaml",
 ];
 const GOLDEN_APIS = [
   "tasks",
@@ -34,6 +36,8 @@ const GOLDEN_APIS = [
   "tasksOptionalAuth",
   "tasksAbsoluteUrls",
   "tasksResponses",
+  "tasksPaging",
+  "tasksSplitSort",
 ];
 const VARIANT_COUNT = 60;
 const MINIMUM_MOVING_VARIANTS = 50;

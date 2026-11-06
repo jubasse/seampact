@@ -38,6 +38,9 @@ const LARAVEL_UNPAGED_API = "laravelTasksUnpaged";
 const SINCE_PAGE_API = "tasksSincePage";
 // The service api whose relayed write carries the service identity's actor-surface header.
 const SERVICE_WRITES_API = "tasksServiceWrites";
+// The reference apis of the changes-since and Stripe styles, and of GitHub-style pages with the split sort.
+const PAGING_API = "tasksPaging";
+const SPLIT_SORT_API = "tasksSplitSort";
 // The tasks api whose error codes are not in the dotted form.
 const PLAIN_CODES_API = "tasksPlainCodes";
 // The tasks api whose createTask also declares a 200 beside its 201.
@@ -475,6 +478,8 @@ beforeAll(async () => {
       generateApi(SERVICE_WRITES_API),
       generateApi(PLAIN_CODES_API, plainCodesIr()),
       generateApi(TWO_SUCCESSES_API, twoSuccessesIr()),
+      generateApi(PAGING_API),
+      generateApi(SPLIT_SORT_API),
     ])
   ).flat();
 
@@ -1836,5 +1841,105 @@ if (!result.ok && !result.unexpected && result.code === "api.nope") void result;
 
       expect(answer, plain).toMatchObject({ ok: false, unexpected: false, code: plain });
     }
+  });
+});
+
+// CHK-032 and CHK-128 on the client: the changes-since, Stripe and GitHub styles of the reference contract.
+describe("the generated client of the reference paging styles", () => {
+  const notes = [{ noteId: "30000000-0000-4000-8000-000000000001", text: "First note" }];
+  let canned: Awaited<ReturnType<typeof startCannedServer>>;
+
+  beforeAll(async () => {
+    canned = await startCannedServer();
+  });
+
+  afterAll(async () => {
+    await canned?.close();
+  });
+
+  async function recordedCannedClient(api: string) {
+    const module = await importProjectModule<ClientModule>(`generated/client/${api}/client.ts`);
+
+    return module.createClient({ baseUrl: canned.baseUrl, fetch: recordingFetch() });
+  }
+
+  test("a changes feed sends its token, reads the next one and completeness, and a stale token as its 410", async () => {
+    const client = await recordedCannedClient(PAGING_API);
+
+    canned.answerNext({
+      status: 200,
+      body: { items: notes, next: "changes-2", complete: false, limit: 10 },
+    });
+
+    await expect(
+      call(client, "listChanges")({ query: { since: "changes-1" } }),
+    ).resolves.toMatchObject({
+      ok: true,
+      body: { items: notes, nextSince: "changes-2", complete: false },
+    });
+    expect(lastSent().url.searchParams.get("since")).toBe("changes-1");
+
+    canned.answerNext({ status: 410, body: { code: "api.cursor_too_old" } });
+
+    await expect(
+      call(client, "listChanges")({ query: { since: "changes-0" } }),
+    ).resolves.toMatchObject({
+      ok: false,
+      status: 410,
+      code: "api.cursor_too_old",
+    });
+  });
+
+  test("a Stripe list sends the cursor it pages after and reads its more flag", async () => {
+    const client = await recordedCannedClient(PAGING_API);
+
+    canned.answerNext({
+      status: 200,
+      body: { object: "list", data: notes, has_more: true, url: "/paging/v1/notes" },
+    });
+
+    await expect(
+      call(
+        client,
+        "listNotes",
+      )({ query: { starting_after: "30000000-0000-4000-8000-000000000000" } }),
+    ).resolves.toMatchObject({ ok: true, body: { items: notes, more: true } });
+    expect(lastSent().url.searchParams.get("starting_after")).toBe(
+      "30000000-0000-4000-8000-000000000000",
+    );
+    expect(lastSent().url.searchParams.has("ending_before")).toBe(false);
+  });
+
+  test("GitHub pages send one sort key and its direction, and read the page links", async () => {
+    const client = await recordedCannedClient(SPLIT_SORT_API);
+    const created = { ...notes[0], created: "2026-10-18T09:00:00Z" };
+
+    canned.answerNext({
+      status: 200,
+      body: [created],
+      headers: {
+        link: '</split-sort/v1/notes?page=2>; rel="next", </split-sort/v1/notes?page=3>; rel="last"',
+      },
+    });
+
+    await expect(
+      call(
+        client,
+        "listNotes",
+      )({ query: { page: 1, per_page: 100, sort: "created", direction: "desc" } }),
+    ).resolves.toMatchObject({
+      ok: true,
+      body: {
+        items: [created],
+        next: "/split-sort/v1/notes?page=2",
+        last: "/split-sort/v1/notes?page=3",
+      },
+    });
+    expect(Object.fromEntries(lastSent().url.searchParams)).toEqual({
+      page: "1",
+      per_page: "100",
+      sort: "created",
+      direction: "desc",
+    });
   });
 });

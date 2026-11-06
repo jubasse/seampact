@@ -55,3 +55,19 @@ targets:
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
       - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksPaging
+    out: TasksPaging
+    use: seampact/laravel
+    api: tasksPaging
+    # The changes-since feed carries the complete page fact, which this target refuses by name in 1.0.
+    operations: { exclude: [listChanges, listEvents] }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksSplitSort
+    out: TasksSplitSort
+    use: seampact/laravel
+    api: tasksSplitSort
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }

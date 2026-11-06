@@ -42,6 +42,7 @@ from hook_doubles import (
 from responses_handlers import NotesHandlers as ResponsesNotesHandlers
 from responses_handlers import ResponsesHandlers
 from hooks import service_hook, user_hook
+from paging_apis import bind_paging_apis
 from seampact_consumer_suite.boot_variant import (
     MISMATCHED_MOUNT,
     PATTERNED_ROUTE,
@@ -162,6 +163,7 @@ def create_app() -> FastAPI:
         idempotency_store=_idempotency_store,
         on_unexpected_error=TasksUnexpectedErrors,
     )
+    bind_paging_apis(app)
 
     return app
 
