@@ -6,7 +6,7 @@ import { ReleaseError } from "./release-version.ts";
 import { lineVersionEdit, readRepositoryFile, type VersionEdit } from "./version-edit.ts";
 
 export const GRADLE_PROPERTIES = "jvm/gradle.properties";
-export const CONSUMER_MAVEN_BUILD = "scripts/consumers/targets/spring-boot/maven/pom.xml";
+const CONSUMER_MAVEN_BUILD = "scripts/consumers/targets/spring-boot/maven/pom.xml";
 
 const VERSION_LINE = /^version=(.*)$/m;
 const CONSUMER_SEAMPACT_VERSION = /^( *<seampact\.version>)([^<]*)(<\/seampact\.version>)$/m;
