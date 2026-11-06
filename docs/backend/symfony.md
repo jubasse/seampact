@@ -4,14 +4,13 @@
 
 ## Set up
 
-Nothing is published to Packagist yet, so Composer installs seampact from your checkout. Replace `~/src/seampact` with the path of your checkout.
+Install seampact from Packagist.
 
-```bash
-composer config minimum-stability dev
-composer config prefer-stable true
-composer config repositories.seampact path "$HOME/src/seampact/php/*"
+```sh
 composer require seampact/symfony
 ```
+
+Working from a checkout of the repository instead? See [Install](../getting-started/01-install.md#from-a-checkout).
 
 The boundary checks every input with `symfony/validator`, which `seampact/symfony` installs.
 

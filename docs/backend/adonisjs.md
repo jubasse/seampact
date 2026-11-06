@@ -12,28 +12,15 @@ npm init adonisjs@latest notes-app -- --kit=api --pkg=pnpm
 cd notes-app
 ```
 
-Install seampact from your checkout, as in [Install](../getting-started/01-install.md). Replace `~/src/seampact` with the path of your checkout.
+Install seampact from npm, as in [Install](../getting-started/01-install.md).
 
 ```sh
-cd ~/src/seampact && pnpm install --frozen-lockfile
-node ~/src/seampact/scripts/consumers/install-into.ts ~/src/notes-app
 cd ~/src/notes-app
+pnpm add @seampact/server-runtime @seampact/hooks
+pnpm add -D @seampact/cli @seampact/codegen-ts @seampact/codegen-adonis
 ```
 
-You see `install-into: 32 packages and packs in .../vendor/seampact, listed in package.json. Run pnpm install.`
-
-`install-into` rewrites `pnpm-workspace.yaml` and drops the starter's `allowBuilds`. Open the file and add these two lines under `allowBuilds:`, then install.
-
-```yaml
-  '@swc/core': true
-  better-sqlite3: true
-```
-
-```sh
-pnpm install
-```
-
-The generated server imports `@seampact/server-runtime`, which `install-into` put in `dependencies`; keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`.
+The generated server imports `@seampact/server-runtime`, which you installed in `dependencies`; keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`.
 
 The starter already depends on `@vinejs/vine`. The generated server validates with it, so you need no validators entry. It uses VineJS's own rules; set `rules: seampact-consistent` in the server's `options` to get the contract's exact checks, as [Validators](../configuration/validators.md#vinejs) explains.
 

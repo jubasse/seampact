@@ -6,7 +6,7 @@ A pack is a set of conventions you reuse: a response format, a paging style, or 
 packs: ["@seampact/pack-hal"]
 ```
 
-Write it at the top level of `api.yaml`, or of the shared file to give it to every api. `install-into.ts` installs the packs with the other seampact packages: see [Install](../getting-started/01-install.md). A pack is data, not code.
+Write it at the top level of `api.yaml`, or of the shared file to give it to every api. The packs are npm packages: install them with the other seampact packages. A pack is data, not code.
 
 ## What each pack brings
 

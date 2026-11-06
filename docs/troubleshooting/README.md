@@ -25,6 +25,6 @@ Errors with no code:
 
 | You see | Do |
 |---|---|
-| `ERR_PNPM_FETCH_404 @seampact/...` | The package is missing from `pnpm-workspace.yaml` `overrides`: rerun `install-into.ts` from [Install](../getting-started/01-install.md). |
+| `ERR_PNPM_FETCH_404 @seampact/...` | The package or its version is not on the registry: check the name and the version, and keep every `@seampact/*` package at the same version ([Install](../getting-started/01-install.md)). |
 
 Each message ends with `Fix:`. Read it first.

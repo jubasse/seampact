@@ -49,7 +49,7 @@ These run with no Node.js installed. The standalone compiler binary (built for l
 
 ## Python
 
-These are Python packages, installed from wheels built from your checkout while nothing is on PyPI. See [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md) and [Django Ninja](../backend/ninja.md).
+These are Python packages, installed from PyPI. See [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md) and [Django Ninja](../backend/ninja.md).
 
 | Framework | Install |
 |---|---|

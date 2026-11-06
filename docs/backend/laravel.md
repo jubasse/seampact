@@ -6,14 +6,13 @@
 
 Laravel 13 on PHP 8.3, 8.4 or 8.5 (the CI runs 8.3 and 8.5, on Laravel 13.38). The extensions `json`, `mbstring` and `zlib` must be loaded. Octane is refused at start.
 
-Nothing is published to Packagist yet, so Composer installs seampact from your checkout. Replace `~/src/seampact` with the path of your checkout.
+Install seampact from Packagist.
 
 ```sh
-composer config minimum-stability dev
-composer config prefer-stable true
-composer config repositories.seampact path "$HOME/src/seampact/php/*"
 composer require seampact/laravel seampact/hooks
 ```
+
+Working from a checkout of the repository instead? See [Install](../getting-started/01-install.md#from-a-checkout).
 
 In `seampact.config.yaml`, add one entry per api:
 
@@ -161,7 +160,7 @@ The same holds for an API Resource: build the generated type from it.
 
 ## Paging
 
-With `@seampact/pack-laravel`, installed from your checkout as [Get started](../getting-started/01-install.md) installs the npm packages (it is not on npm yet), a paged list answers Laravel's paginator, and the boundary writes `{ data, links, meta }` for you.
+With `@seampact/pack-laravel`, installed from npm as [Install](../getting-started/01-install.md) shows, a paged list answers Laravel's paginator, and the boundary writes `{ data, links, meta }` for you.
 
 The boundary validates `page` and `per_page` first. Use the validated values from `contractInput()`. Laravel's own page resolver falls back to page 1 on a bad value, so do not rely on it.
 

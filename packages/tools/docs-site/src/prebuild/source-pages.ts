@@ -54,7 +54,14 @@ export function sourcePageFor(docsPath: string): SourcePage {
     return { docsPath, slug: folder, contentPath: posix.join(folder, "index.md") };
   }
 
-  return { docsPath, slug: docsPath.slice(0, -MARKDOWN_EXTENSION.length), contentPath: docsPath };
+  // A dot in a file name (`1.0.0.md`) would be dropped from the route by the content loader, so the page is written with dashes.
+  const dashedPath = docsPath.replaceAll(".", "-").replace(/-md$/, MARKDOWN_EXTENSION);
+
+  return {
+    docsPath,
+    slug: dashedPath.slice(0, -MARKDOWN_EXTENSION.length),
+    contentPath: dashedPath,
+  };
 }
 
 /** The docs path of a folder's index page, whether docs/ has it or the prebuild writes it. */

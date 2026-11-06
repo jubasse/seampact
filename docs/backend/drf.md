@@ -6,23 +6,16 @@
 
 Python 3.12 or later, Django 5.2 or 6, and DRF 3.18. CI runs the oldest of each and the latest. Pydantic is not needed.
 
-Nothing is on PyPI yet, so you install seampact from your checkout. Replace `~/src/seampact` with the path of your checkout. Install uv 0.13.6 (the workspace pins it). Build the wheels once, then make the requirements file of the third-party packages. The last word is your server, `gunicorn` or `uvicorn`:
+Install seampact from PyPI. Put the generator in your dev dependencies and the runtime in production:
 
 ```sh
-sh ~/src/seampact/scripts/consumers/python/build-wheels.sh ~/src/seampact/python/dist
-sh ~/src/seampact/scripts/consumers/python/requirements.sh /tmp/requirements.txt seampact-drf generate gunicorn
-```
-
-In your app, install the third-party packages first, then seampact from the wheels. The second command never asks an index for a `seampact-*` name. `requirements.sh` refuses an existing output file: give it a new path on a re-run.
-
-```sh
-cd ~/src/shop-app
 python3 -m venv .venv && . .venv/bin/activate
-pip install --require-hashes --no-deps --only-binary :all: -r /tmp/requirements.txt
-pip install --no-index --find-links ~/src/seampact/python/dist "seampact-drf[generate]"
+pip install "seampact-drf[generate]"
 ```
 
-`uv pip install` takes the same flags. The `generate` extra holds the generator and its dependencies: keep it in your dev dependencies, and install plain `seampact-drf` in production. Add `seampact-signed-webhooks` if a route is signed by a sender: `pip install --no-index --find-links ~/src/seampact/python/dist seampact-signed-webhooks`.
+`uv pip install` and `uv add --dev` take the same requirement. In production, install plain `seampact-drf`. Add `seampact-signed-webhooks` if a route is signed by a sender: `pip install seampact-signed-webhooks`.
+
+Working from a checkout of the repository instead? See [Install](../getting-started/01-install.md#from-a-checkout).
 
 In `seampact.config.yaml`, add one entry per api:
 
@@ -41,13 +34,7 @@ targets:
     options: { rules: seampact-consistent }
 ```
 
-The compiler binary is not published yet. A `path` source and the OpenAPI documents need it, and `generate` stops with `binary.unpublished` without it. Until 1.0, either read a pinned bundle (a `git` or `release` source, as above) and set `openapi: none`, or point your root `pyproject.toml` at your own build of the compiler:
-
-```toml
-[tool.seampact.binary]
-path = "tools/seampact"
-sha256 = "<the SHA-256 of that file>"
-```
+A `path` source and the OpenAPI documents need the compiler binary. Install it with the extra `seampact-ir[compiler]`, which adds the `seampact-compiler` wheel for your platform. A bundle-only app with `openapi: none` does not need it.
 
 Then generate:
 
