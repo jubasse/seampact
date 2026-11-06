@@ -42,12 +42,15 @@ export interface MirrorPushInput {
   readonly remoteBase: string;
 }
 
+const WORK_REMOVAL_RETRIES = 3;
+
 /** Pushes what the mirrors lack; returns the plan it followed. Throws a `ReleaseError` naming each problem. */
 export function pushMirrors(input: MirrorPushInput): MirrorPushPlan {
   const work = mkdtempSync(join(tmpdir(), "push-mirrors-"));
 
   try {
     git(work, ["init", "--quiet", "--bare"]);
+    keepGitInTheForeground(work);
     fetchBundles(work, input);
 
     const plan = mirrorPushPlan(work, input);
@@ -56,8 +59,14 @@ export function pushMirrors(input: MirrorPushInput): MirrorPushPlan {
 
     return plan;
   } finally {
-    rmSync(work, { recursive: true, force: true });
+    rmSync(work, { recursive: true, force: true, maxRetries: WORK_REMOVAL_RETRIES });
   }
+}
+
+// A fetch may start a detached auto gc that still writes into the work repository while it is removed.
+function keepGitInTheForeground(work: string): void {
+  git(work, ["config", "gc.auto", "0"]);
+  git(work, ["config", "maintenance.auto", "false"]);
 }
 
 export const mirrorRemote = (remoteBase: string, mirror: string) =>
