@@ -228,7 +228,7 @@ const EXPECTED_DECLARATIONS: Record<string, Record<Catalogue, readonly string[]>
     buckets: [],
     enums: ["Service", "Surface"],
     errors: ["api.cursor_too_old", "api.internal", "api.schema_invalid", "api.unauthenticated"],
-    pagings: ["changes", "stripeList"],
+    pagings: ["cappedPages", "changes", "stripeList"],
     rights: [],
     rules: [],
     schemas: [
