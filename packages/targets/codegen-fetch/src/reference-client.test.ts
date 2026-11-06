@@ -1540,7 +1540,7 @@ describe("the conformance proofs of the generated client", () => {
     });
   });
 
-  test("the query is written as the servers decode it: percent-encoded values, a list comma-separated", async () => {
+  test("the query is written as the servers decode it: percent-encoded values, a list comma-separated or repeated", async () => {
     const client = createResultClient({ baseUrl: canned.baseUrl, fetch: recordingFetch() });
     const cursor = "a+b&c=d é";
 
@@ -1550,7 +1550,7 @@ describe("the conformance proofs of the generated client", () => {
       "listTasks",
     )({
       path: { channelId: "c1" },
-      query: { cursor, limit: 25, sort: ["-createdAt", "createdAt"] },
+      query: { state: ["open", "done"], cursor, limit: 25, sort: ["-createdAt", "createdAt"] },
     });
 
     const query = lastSent().url.searchParams;
@@ -1559,6 +1559,8 @@ describe("the conformance proofs of the generated client", () => {
     expect(query.get("cursor")).toBe(cursor);
     expect(query.get("limit")).toBe("25");
     expect(query.get("sort")).toBe("-createdAt,createdAt");
+    expect(lastSent().url.search).toContain("state=open&state=done");
+    expect(query.getAll("state")).toEqual(["open", "done"]);
   });
 
   test("a boolean or object query value is refused by name when the client is generated", async () => {
@@ -1585,12 +1587,9 @@ describe("the conformance proofs of the generated client", () => {
     }
   });
 
-  // HAL's success body merges the payload; Spring's pair sort sends one `sort` member per key.
-  test.each([
-    { pack: "pack-hal", code: "format.template.unsupported" },
-    { pack: "pack-spring", code: "query.list.explode.unsupported" },
-  ])("the $pack client is refused by name", async ({ pack, code }) => {
-    const ir = readGoldenIr("tasks", pack);
+  // HAL's success body merges the payload.
+  test("the pack-hal client is refused by name", async () => {
+    const ir = readGoldenIr("tasks", "pack-hal");
     const outcome = await clientTarget.generate({
       ir,
       options: {},
@@ -1600,8 +1599,23 @@ describe("the conformance proofs of the generated client", () => {
 
     expect(outcome).toMatchObject({
       status: "refused",
-      refusals: expect.arrayContaining([expect.objectContaining({ code })]),
+      refusals: expect.arrayContaining([
+        expect.objectContaining({ code: "format.template.unsupported" }),
+      ]),
     });
+  });
+
+  // Spring's pair sort sends one `sort` member per key, as repeated keys.
+  test("the pack-spring client is generated", async () => {
+    const ir = readGoldenIr("tasks", "pack-spring");
+    const outcome = await clientTarget.generate({
+      ir,
+      options: {},
+      links: typesLinks(ir),
+      artefacts: new Set(["client"]),
+    });
+
+    expect(outcome).toMatchObject({ status: "generated" });
   });
 
   test("a batch read is a POST that carries no idempotency key and no CSRF header", async () => {
