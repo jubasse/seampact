@@ -12,6 +12,7 @@ use App\Generated\Tasks\ListChannelsResult;
 use App\Generated\Tasks\ListTasksPage;
 use App\Generated\Tasks\ListTasksResponse200;
 use App\Generated\Tasks\ListTasksResult;
+use App\Generated\Tasks\Schemas\Task;
 use App\Generated\TasksAbsoluteUrls\ListNotesInput;
 use App\Generated\TasksAbsoluteUrls\ListNotesPage;
 use App\Generated\TasksAbsoluteUrls\ListNotesResponse200;
@@ -48,7 +49,17 @@ final class PagedLists
 
                 return new ListTasksResponse200(new ListTasksPage($items, is_int($body['total'] ?? null) ? $body['total'] : count($items)));
             },
-        ) ?? new ListTasksResponse200(new ListTasksPage([SampleData::task(SampleData::NEW_TASK_ID)], self::SAMPLE_TOTAL));
+        ) ?? new ListTasksResponse200(self::sampleTasksPage(SampleData::listedTasks($input->query->state)));
+    }
+
+    /**
+     * The sample page: the one new task out of the sample total, or the tasks in the states the client filters on.
+     *
+     * @param list<Task> $tasks
+     */
+    private static function sampleTasksPage(array $tasks): ListTasksPage
+    {
+        return new ListTasksPage($tasks, max(count($tasks), self::SAMPLE_TOTAL));
     }
 
     public static function listNotes(ListNotesInput $input): ListNotesResult

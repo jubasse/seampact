@@ -164,6 +164,18 @@
       ]
     },
     {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/query/state?",
+      "direction": "input",
+      "use": {
+        "kind": "array",
+        "items": {
+          "kind": "enum",
+          "enum": "TaskState"
+        }
+      },
+      "at": ["/operations/3/params/query/0/type"]
+    },
+    {
       "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/input",
       "direction": "input",
       "use": {
@@ -332,6 +344,15 @@
       "pointer": "/rules/recentAuth/proof/schema",
       "wire": {
         "kind": "text",
+        "style": "form",
+        "explode": true,
+        "brackets": false
+      }
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/query/state?",
+      "wire": {
+        "kind": "list",
         "style": "form",
         "explode": true,
         "brackets": false

@@ -34,6 +34,8 @@ export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "missing-scope-resolver-fails-boot": STUB_REASON,
   "opaque-null-refused-when-not-nullable": STUB_REASON,
   "overridden-right-reaches-its-own-hook": STUB_REASON,
+  "query-list-bad-item-refused": STUB_REASON,
+  "query-list-repeat-filters": STUB_REASON,
   "query-number-decoding": STUB_REASON,
   "recent-auth-denied": STUB_REASON,
   "recent-auth-proof-required": STUB_REASON,

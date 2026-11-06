@@ -25,6 +25,7 @@ use Seampact\Ir\Model\PagingPosition;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\ProofPlacement;
 use Seampact\Ir\Model\QueryScheme;
+use Seampact\Ir\Model\QueryStyle;
 use Seampact\Ir\Model\QueryWireKind;
 use Seampact\Ir\Model\RefTypeUse;
 use Seampact\Ir\Model\RequirementUnknown;
@@ -60,6 +61,7 @@ final class KeptForms
     private const WIDE_FORMATS = ['int64', 'decimal'];
     private const JSON_MEDIA = 'application/json';
     private const PAGING_PARAMS_DERIVATION = 'paging.params';
+    private const QUERY_PART = 'query';
     private const TOP_LEVEL_POINTER = '/^\/[^\/]+$/D';
     // The slots an item, table or list envelope may write that the boundary fills.
     private const PAYLOAD_SLOT = 'payload';
@@ -781,12 +783,34 @@ final class KeptForms
             return;
         }
 
-        $description = "A {$part} parameter that is not a scalar or an enum";
+        // Only a query parameter may be a list, so only its text names lists.
+        $description = $part === self::QUERY_PART
+            ? 'A query parameter that is not a scalar, an enum or a list of them in the form style'
+            : "A {$part} parameter that is not a scalar or an enum";
         if (($param->derivedFrom->derivation ?? null) === self::PAGING_PARAMS_DERIVATION) {
             $this->pending(PendingForm::PagingParam, "param.{$part}.structured", "{$description}, which paging reads,", $at->below('type'));
-        } else {
-            $this->refusals->waiting("param.{$part}.structured", $description, $at->below('type'), Delivery::Consumer);
+
+            return;
         }
+
+        // A query list of scalars or enums is decoded item by item, in its repeat or comma form.
+        if ($part === self::QUERY_PART && self::isFormScalarList($param)) {
+            $this->readType($param->type, $at->below('type'));
+
+            return;
+        }
+
+        $this->refusals->waiting("param.{$part}.structured", $description, $at->below('type'), Delivery::Consumer);
+    }
+
+    private static function isFormScalarList(Param $param): bool
+    {
+        $wire = $param->wire;
+        if ($wire === null || $wire->kind->value !== QueryWireKind::List || $wire->style->value !== QueryStyle::Form) {
+            return false;
+        }
+
+        return $param->type instanceof ArrayTypeUse && ($param->type->items instanceof ScalarTypeUse || $param->type->items instanceof EnumTypeUse);
     }
 
     private function readResponse(Response $response, IrPlace $at): void

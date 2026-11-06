@@ -23,6 +23,7 @@ from sample_data import (
     channel,
     channel_of,
     draft,
+    listed_tasks,
     loaded_channel,
     note,
     relayed_task,
@@ -123,7 +124,7 @@ class TasksHandlers:
         return tasks.PurgeTaskResponse204()
 
     def list_tasks(self, request: tasks.ListTasksRequest) -> tasks.ListTasksResult:
-        page = sample_task_page([task(NEW_TASK_ID)], request.input)
+        page = sample_task_page(listed_tasks(request.input.query.state), request.input)
 
         return scripted_answer("listTasks", _OK, _task_page_of) or tasks.ListTasksResponse200(body=page)
 

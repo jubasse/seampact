@@ -44,7 +44,7 @@ final class PagedLists
                 array_map(SampleData::taskOf(...), is_array($body['items'] ?? null) ? array_values(array_filter($body['items'], is_array(...))) : []),
                 is_string($body['nextCursor'] ?? null) ? $body['nextCursor'] : null,
             )),
-        ) ?? new ListTasksResponse200(new ListTasksPage([SampleData::task(SampleData::NEW_TASK_ID)], $nextCursor));
+        ) ?? new ListTasksResponse200(new ListTasksPage(SampleData::listedTasks($request->contractInput()->query->state), $nextCursor));
     }
 
     public static function listNotes(ListNotesRequest $request): ListNotesResult

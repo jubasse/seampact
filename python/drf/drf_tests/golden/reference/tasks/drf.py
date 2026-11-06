@@ -350,6 +350,7 @@ class ListTasksQuerySerializer(_drf_runtime.ContractSerializer):
 
     def get_fields(self) -> _drf_runtime.SerializerFields:
         return {
+            "state": _serializers.ListField(child=_drf_runtime.TypedValueField(_schemas.TaskState), required=False),
             "cursor": _drf_runtime.ContractTextField(required=False),
             "limit": _serializers.IntegerField(required=False, min_value=1, max_value=50),
             "sort": _serializers.ListField(

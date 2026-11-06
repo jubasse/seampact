@@ -5531,6 +5531,27 @@
         ],
         "query": [
           {
+            "name": "state",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/query/state?"
+            },
+            "required": false,
+            "type": {
+              "items": {
+                "enum": "TaskState",
+                "kind": "enum"
+              },
+              "kind": "array"
+            },
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "list",
+              "style": "form"
+            }
+          },
+          {
             "derivedFrom": {
               "derivation": "paging.params",
               "from": [

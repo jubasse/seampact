@@ -22,6 +22,7 @@ import {
   refuseUnknownValueAt,
 } from "../located-refusals.js";
 import { refuseBracketsQueryList } from "../not-generated-forms.js";
+import { queryListWireOf } from "../query-list-wire.js";
 import type { Refusal } from "../refusal.js";
 import { askedRequirements } from "./asked-requirements.js";
 import { fingerprintHeaderNames } from "./fingerprint-headers.js";
@@ -955,14 +956,9 @@ function listRule(param: Param, wire: QueryWire): SourceValue {
       ? scalarDecoding(param.type.items)
       : "text";
 
-  if (items === "text") return { name: param.name, decoding: listDecoding(wire) };
+  if (items === "text") return { name: param.name, decoding: queryListWireOf(wire) };
 
-  return { name: param.name, decoding: listDecoding(wire), items };
-}
-
-// An exploded list is the default `repeat` form (`tag=a&tag=b`); an unexploded one is the `comma` form (`tag=a,b`).
-function listDecoding(wire: QueryWire): "repeatedList" | "list" {
-  return wire.explode ? "repeatedList" : "list";
+  return { name: param.name, decoding: queryListWireOf(wire), items };
 }
 
 function inputEntry(operation: Operation, location: IrLocation, refusals: Refusal[]): SourceValue {

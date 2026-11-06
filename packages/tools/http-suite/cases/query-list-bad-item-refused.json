@@ -1,0 +1,29 @@
+{
+  "id": "query-list-bad-item-refused",
+  "title": "A list query item outside its enum is refused with one issue at the item's pointer",
+  "checks": ["CHK-034"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks?state=open&state=bogus",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/state/1",
+              "rule": "enum"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

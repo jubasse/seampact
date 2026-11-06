@@ -30,7 +30,7 @@ final class PagedLists {
         Optional<String> nextCursor = input.query().cursor().isPresent() ? Optional.empty() : Optional.of(NEXT_CURSOR);
 
         return answers.answer(API, "listTasks", 200, ListTasksPage.class, ListTasksResult.Status200::new, Map.<String, Supplier<ListTasksResult>>of())
-                .orElseGet(() -> new ListTasksResult.Status200(new ListTasksPage(List.of(SampleData.task(SampleData.NEW_TASK_ID)), nextCursor)));
+                .orElseGet(() -> new ListTasksResult.Status200(new ListTasksPage(SampleData.listedTasks(input.query().state()), nextCursor)));
     }
 
     static ListNotesResult listNotes(ListNotesInput input) {

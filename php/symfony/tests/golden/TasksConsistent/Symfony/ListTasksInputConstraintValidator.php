@@ -28,6 +28,14 @@ final class ListTasksInputConstraintValidator extends InputConstraintValidator
         ),
       ],
       query: [
+        'state' => new Member(
+          JsonType::List,
+          presence: Presence::Optional,
+          items: new Member(
+            JsonType::String,
+            checks: new Checks(enumValues: ['open', 'done', 'archived']),
+          ),
+        ),
         'cursor' => new Member(
           JsonType::String,
           presence: Presence::Optional,

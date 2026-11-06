@@ -15,6 +15,7 @@ import {
   refuseUnknownValueAt,
 } from "../located-refusals.js";
 import { refuseBracketsQueryList, refuseResponseShape } from "../not-generated-forms.js";
+import { queryListWireOf } from "../query-list-wire.js";
 import type { Refusal } from "../refusal.js";
 import { type PageFact, pageReaderOf, payloadPathOf } from "./success-reader.js";
 
@@ -23,7 +24,7 @@ import { type PageFact, pageReaderOf, payloadPathOf } from "./success-reader.js"
 export interface OperationPlan {
   method: string;
   path: string;
-  query: { name: string; wire: QueryWireKind }[];
+  query: QueryParamPlan[];
   headers: [key: string, wireName: string][];
   hasJsonBody: boolean;
   idempotency?: { header: string; replayHeader: string };
@@ -37,6 +38,13 @@ export interface OperationPlan {
 const PLANNED_QUERY_WIRES = ["text", "number", "list"] as const;
 
 type QueryWireKind = (typeof PLANNED_QUERY_WIRES)[number];
+
+// `list` is one comma-separated value (`tag=a,b`), `repeatedList` a list sent as repeated keys (`tag=a&tag=b`),
+// as the server runtime names them.
+interface QueryParamPlan {
+  name: string;
+  wire: QueryWireKind | "repeatedList";
+}
 
 const PAYLOAD_SHAPES = ["item", "table", "list"] as const;
 
@@ -155,7 +163,8 @@ function refuseNonSimpleType(
   );
 }
 
-// `text` and `number` in `style: form`; a `list` in `style: form`, comma-separated, without brackets.
+// `text` and `number` in `style: form`; a `list` in `style: form` without brackets, as repeated keys when it
+// explodes, else comma-separated.
 function queryPlan(
   param: Param,
   location: IrLocation,
@@ -200,21 +209,11 @@ function queryPlan(
     );
   }
 
-  if (wire.kind === "list" && wire.explode) {
-    refusals.push(
-      refuseNotGeneratedYet(
-        "query.list.explode",
-        "A list sent as repeated keys",
-        below(wireLocation, "explode"),
-      ),
-    );
-  }
-
   if (wire.kind === "list" && wire.brackets) refusals.push(refuseBracketsQueryList(wireLocation));
 
   if (refusals.length > before) return [];
 
-  return [{ name: param.name, wire: wire.kind }];
+  return [{ name: param.name, wire: wire.kind === "list" ? queryListWireOf(wire) : wire.kind }];
 }
 
 function isPlannedQueryWire(kind: string): kind is QueryWireKind {

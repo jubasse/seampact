@@ -28,6 +28,7 @@ from seampact.ir.model import (
     Param,
     ProofPlacement,
     QueryScheme,
+    QueryStyle,
     QueryWireKind,
     RefTypeUse,
     RequirementUnknown,
@@ -48,6 +49,7 @@ from seampact.ir.model import (
 
 _JSON_MEDIA: Final = "application/json"
 _PAGING_PARAMS_DERIVATION: Final = "paging.params"
+_QUERY_PART: Final = "query"
 _PAYLOAD_SLOT: Final = "payload"
 # The slots a success envelope may write beside the payload, which the boundary fills.
 _ENVELOPE_SLOTS: Final = frozenset({_PAYLOAD_SLOT, "status", "path", "meta"})
@@ -375,12 +377,22 @@ class _KeptForms:
             self._type(param.type, at.below("type"))
             return
 
+        if part == _QUERY_PART and _is_form_scalar_list(param):
+            self._type(param.type, at.below("type"))
+            return
+
         if param.derived_from is not None and param.derived_from.derivation == _PAGING_PARAMS_DERIVATION:
             return
 
+        # Only a query parameter may be a list, so only its text names lists.
+        description = (
+            "A query parameter that is not a scalar, an enum or a list of them in the form style"
+            if part == _QUERY_PART
+            else f"A {part} parameter that is not a scalar or an enum"
+        )
         self.refusals.waiting(
             f"param.{part}.structured",
-            f"A {part} parameter that is not a scalar or an enum",
+            description,
             at.below("type"),
             Delivery.CONSUMER,
         )
@@ -495,3 +507,14 @@ def _template_slots(template: JsonValue) -> list[str]:
     slots = [own] if template.get("kind") == "slot" and isinstance(own, str) else []
 
     return slots + [slot for value in template.values() for slot in _template_slots(value)]
+
+
+def _is_form_scalar_list(param: Param) -> bool:
+    """A query list every target decodes: a `list` wire in `form` style (repeated keys or one comma-separated value),
+    each item a scalar or an enum."""
+    wire = param.wire
+
+    if wire is None or wire.kind is not QueryWireKind.LIST or wire.style is not QueryStyle.FORM:
+        return False
+
+    return isinstance(param.type, ArrayTypeUse) and isinstance(param.type.items, ScalarTypeUse | EnumTypeUse)

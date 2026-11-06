@@ -73,6 +73,7 @@ from sample_data import (
     channel,
     channel_of,
     draft,
+    listed_tasks,
     loaded_channel,
     note,
     relayed_task,
@@ -185,7 +186,7 @@ class TasksHandlers:
 
     def list_tasks(self, request: ListTasksRequest) -> ListTasksResult:
         return scripted_answer("listTasks", _OK, _page_of) or ListTasksResponse200(
-            sample_task_page([task(NEW_TASK_ID)], request.input)
+            sample_task_page(listed_tasks(request.input.query.state), request.input)
         )
 
     def search_tasks(self, request: SearchTasksRequest) -> SearchTasksResult:

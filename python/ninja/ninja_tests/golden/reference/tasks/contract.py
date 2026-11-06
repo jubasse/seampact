@@ -6691,6 +6691,27 @@ CONTRACT: _typing.Final = _contract.ApiContract(
                     ],
                     "query": [
                         {
+                            "name": "state",
+                            "type": {
+                                "kind": "array",
+                                "items": {
+                                    "kind": "enum",
+                                    "enum": "TaskState",
+                                },
+                            },
+                            "required": False,
+                            "wire": {
+                                "kind": "list",
+                                "style": "form",
+                                "explode": True,
+                                "brackets": False,
+                            },
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/query/state?",
+                            },
+                        },
+                        {
                             "name": "cursor",
                             "type": {
                                 "kind": "scalar",
@@ -9670,6 +9691,7 @@ CONTRACT: _typing.Final = _contract.ApiContract(
                 "channelId": "channel_id",
             },
             "query": {
+                "state": "state",
                 "cursor": "cursor",
                 "limit": "limit",
                 "sort": "sort",

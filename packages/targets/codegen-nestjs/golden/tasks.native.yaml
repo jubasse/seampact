@@ -499,6 +499,15 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: state
+          required: false
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/TaskState"
         - name: cursor
           required: false
           in: query

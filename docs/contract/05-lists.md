@@ -106,7 +106,7 @@ conventions:
   query: { lists: comma }
 ```
 
-- `repeat` (default): `?state=open&state=done`. Node servers and Spring Boot read it.
+- `repeat` (default): `?state=open&state=done`. Every server and client reads it.
 - `comma`: `?state=open,done`. Every server and client reads it.
 - `brackets`: `?state[]=open&state[]=done`. No target reads it yet.
 
