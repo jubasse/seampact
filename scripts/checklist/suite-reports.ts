@@ -12,6 +12,9 @@ const SUITE_REPORT_FORMAT: SuiteReport["format"] = "seampact-http-suite-report/1
 const CASE_OUTCOMES: readonly CaseOutcome[] = ["passed", "failed", "refused"];
 const CHECK_ID = /^CHK-\d{3,}$/;
 const REPORT_FILE = /^http-suite-.+\.json$/;
+// The reason the http-suite gives a case outside the run's target (`outsideTargetsReason`); a test pins the two.
+const OUTSIDE_TARGETS_REASON = /^the case applies only to (.+)$/;
+const TARGET_LIST_SEPARATOR = ", ";
 
 /** One checklist id's outcome in one suite report. */
 export interface SuiteProof {
@@ -22,6 +25,20 @@ export interface SuiteProof {
   target: string;
   id: string;
   outcome: CaseOutcome;
+  /** On a refused id, when the report lists each of its cases: how many passed and every refused one. */
+  refusedIdCases?: RefusedIdCases;
+}
+
+/** The cases behind a refused id in one report. */
+export interface RefusedIdCases {
+  passedCount: number;
+  refused: readonly RefusedCase[];
+}
+
+/** A refused case: the checklist ids it cites for the report's target, and whether it applies to that target. */
+export interface RefusedCase {
+  checks: readonly string[];
+  appliesToTarget: boolean;
 }
 
 /**
@@ -104,6 +121,15 @@ interface ValidReport {
   /** The server target it proves, a variant mapped to its target. */
   target: string;
   checks: Rec;
+  /** The well-formed entries of the report's `cases`, by case id. */
+  cases: ReadonlyMap<string, ReportedCase>;
+}
+
+/** One entry of a report's `cases`, as the gate reads it. */
+interface ReportedCase {
+  outcome: CaseOutcome;
+  checks: readonly string[];
+  reason?: string;
 }
 
 function validReportOf(
@@ -143,7 +169,26 @@ function validReportOf(
     return undefined;
   }
 
-  return { reportTarget, target, checks: report.checks };
+  return { reportTarget, target, checks: report.checks, cases: reportedCasesOf(report.cases) };
+}
+
+/** The entries of `cases` with an id, an outcome and the ids they cite; others leave the ids they back refused. */
+function reportedCasesOf(cases: unknown): Map<string, ReportedCase> {
+  const reported = new Map<string, ReportedCase>();
+
+  if (!Array.isArray(cases)) return reported;
+
+  for (const entry of cases) {
+    if (!isRec(entry) || typeof entry.id !== "string") continue;
+
+    if (!isCaseOutcome(entry.outcome) || !isStringList(entry.checks)) continue;
+
+    const reason = typeof entry.reason === "string" ? { reason: entry.reason } : {};
+
+    reported.set(entry.id, { outcome: entry.outcome, checks: [...entry.checks], ...reason });
+  }
+
+  return reported;
 }
 
 function suiteProofsOf(file: string, report: ValidReport, problems: Problem[]): SuiteProof[] {
@@ -162,10 +207,70 @@ function suiteProofsOf(file: string, report: ValidReport, problems: Problem[]): 
       continue;
     }
 
-    proofs.push({ file, target: report.target, id, outcome });
+    const refusedIdCases = outcome === "refused" ? refusedIdCasesOf(report, result) : undefined;
+
+    proofs.push({
+      file,
+      target: report.target,
+      id,
+      outcome,
+      ...(refusedIdCases === undefined ? {} : { refusedIdCases }),
+    });
   }
 
   return proofs;
+}
+
+/** The cases of a refused id, or undefined when the report does not list one of them. */
+function refusedIdCasesOf(report: ValidReport, result: unknown): RefusedIdCases | undefined {
+  const caseIds = isRec(result) && isStringList(result.cases) ? result.cases : [];
+  const reportedCases = caseIds.map((caseId) => report.cases.get(caseId));
+
+  if (reportedCases.length === 0) return undefined;
+
+  if (!reportedCases.every((reported): reported is ReportedCase => reported !== undefined))
+    return undefined;
+
+  return {
+    passedCount: reportedCases.filter((reported) => reported.outcome === "passed").length,
+    refused: reportedCases
+      .filter((reported) => reported.outcome === "refused")
+      .map((reported) => ({
+        checks: reported.checks,
+        appliesToTarget: caseAppliesTo(reported, report.target),
+      })),
+  };
+}
+
+/** A refused case applies to [target] unless the http-suite refused it as outside the targets it names. */
+function caseAppliesTo(reported: ReportedCase, target: string): boolean {
+  const outsideTargets = OUTSIDE_TARGETS_REASON.exec(reported.reason ?? "");
+
+  if (outsideTargets?.[1] === undefined) return true;
+
+  return outsideTargets[1].split(TARGET_LIST_SEPARATOR).includes(target);
+}
+
+/**
+ * The outcome a suite report gives an id in the release gate. A refused id passes when the run passed one of its
+ * cases and refused each other case only because the case does not apply to the target, or because the case cites
+ * other ids that [isDeferredPair] leaves for after 1.0 on that target. A case citing the id itself keeps it refused.
+ */
+export function gateOutcomeOf(
+  proof: SuiteProof,
+  isDeferredPair: (id: string, target: string) => boolean,
+): CaseOutcome {
+  const cases = proof.refusedIdCases;
+
+  if (proof.outcome !== "refused" || cases === undefined || cases.passedCount === 0)
+    return proof.outcome;
+
+  const excused = (refusedCase: RefusedCase) =>
+    !refusedCase.appliesToTarget ||
+    (refusedCase.checks.length > 0 &&
+      refusedCase.checks.every((id) => id !== proof.id && isDeferredPair(id, proof.target)));
+
+  return cases.refused.every(excused) ? "passed" : "refused";
 }
 
 /** The outcome of a `checks` entry, or undefined when its shape is not the http-suite's `CheckResult`. */

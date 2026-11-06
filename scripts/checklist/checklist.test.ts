@@ -5,12 +5,15 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse } from "yaml";
-import { parseSuiteCase } from "../../packages/tools/http-suite/src/suite-case.ts";
+import {
+  outsideTargetsReason,
+  parseSuiteCase,
+} from "../../packages/tools/http-suite/src/suite-case.ts";
 import {
   type CaseResult,
   suiteReportOf,
 } from "../../packages/tools/http-suite/src/suite-report.ts";
-import { caseHeader } from "../../packages/tools/http-suite/src/suite-runner.ts";
+import { caseHeader, refusedResult } from "../../packages/tools/http-suite/src/suite-runner.ts";
 import type { CheckOptions } from "./check.ts";
 import { check } from "./check.ts";
 import { buildIds, exportFromDir, privateTerms } from "./export-ids.ts";
@@ -610,6 +613,76 @@ describe("checklist release scope", () => {
     expect(out).toContain(
       "scripts/checklist/release-scope.ts: CHK-001: proven for target nestjs: drop it from the after-1.0 list",
     );
+  });
+
+  describe("a whole-suite id with refused cases", () => {
+    const target = "fastify";
+    const caseOf = (id: string) =>
+      parseSuiteCase(
+        JSON.parse(readFileSync(join(REPO, `packages/tools/http-suite/cases/${id}.json`), "utf8")),
+        id,
+      );
+    const passedCase = (id: string, checks: string[]): CaseResult => ({
+      id,
+      title: id,
+      checks,
+      outcome: "passed",
+      failures: [],
+    });
+
+    /** The gate over the repository with one hand-written run of fastify (CHK-098 covers every case) of [cases]. */
+    function handWrittenRun(cases: CaseResult[]): string[] {
+      const directory = mkdtempSync(join(tmpdir(), "checklist-whole-suite-"));
+
+      mkdirSync(join(directory, target));
+      writeFileSync(
+        join(directory, target, "http-suite-hand-written.json"),
+        JSON.stringify(suiteReportOf({ target, profile: "hand-written" }, cases)),
+      );
+
+      return gateOver(directory, { itemsAfter1_0: ITEMS_AFTER_1_0 }, REPO);
+    }
+
+    it("passes when each refused case cites only ids deferred for the target", () => {
+      const absoluteUrls = caseOf("absolute-urls-from-public-origin");
+      const out = handWrittenRun([
+        passedCase("plain-case", ["CHK-130"]),
+        refusedResult(absoluteUrls, "the Node servers refuse this form, after 1.0", target),
+      ]);
+
+      expect(out).not.toContainEqual(expect.stringContaining(noTest("CHK-098", target)));
+      // The refused case cites CHK-130 itself, so its passed sibling does not prove the deferred pair.
+      expect(out).not.toContainEqual(
+        expect.stringContaining(`CHK-130: proven for target ${target}`),
+      );
+    });
+
+    it("passes when a refused case does not apply to the target", () => {
+      const mountMismatch = caseOf("mount-mismatch-refused-at-first-request");
+      const reason = outsideTargetsReason(mountMismatch, target);
+
+      expect(reason).toBeDefined();
+
+      const out = handWrittenRun([
+        passedCase("plain-case", []),
+        refusedResult(mountMismatch, reason ?? "", target),
+      ]);
+
+      expect(out).not.toContainEqual(expect.stringContaining(noTest("CHK-098", target)));
+    });
+
+    it("stays refused when a refused case cites an id the release scope does not defer", () => {
+      const out = handWrittenRun([
+        passedCase("plain-case", []),
+        refusedResult(
+          caseOf("mount-mismatch-fails-boot"),
+          "the sample app does not serve it",
+          target,
+        ),
+      ]);
+
+      expect(out).toContain(`${noTest("CHK-098", target)} (its suite run refused the id)`);
+    });
   });
 
   it("an expected consumer without a report fails", () => {

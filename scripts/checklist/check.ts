@@ -14,11 +14,11 @@ import { loadModel } from "./load.ts";
 import type { Item, Model, Problem, Proof, TestRef } from "./model.ts";
 import { CHECKLIST_FILE, chkNumber } from "./model.ts";
 import type { ItemAfter1_0 } from "./release-scope.ts";
-import { releaseGateTargets, releaseScopeProblems } from "./release-scope.ts";
+import { isDeferredPair, releaseGateTargets, releaseScopeProblems } from "./release-scope.ts";
 import { shown } from "./shown.ts";
 import { missingReportProblems, suiteConsumerProblems } from "./suite-consumers.ts";
 import type { SuiteProof } from "./suite-reports.ts";
-import { loadSuiteReports } from "./suite-reports.ts";
+import { gateOutcomeOf, loadSuiteReports } from "./suite-reports.ts";
 import { expandTargets } from "./targets.ts";
 import type { VariantRowSet } from "./variant-rows.ts";
 import { missingVariantRows, passedWithoutFailure, variantRowSetProblems } from "./variant-rows.ts";
@@ -114,7 +114,9 @@ export function checkModel(
     itemsAfter1_0: o.itemsAfter1_0 ?? new Map(),
     variantRowSets: o.variantRowSets ?? new Map(),
     proofs: proofsById(model.proofs),
-    suitePairs: o.releaseGate ? suitePairsOf(model, suiteProofs, problems) : new Map(),
+    suitePairs: o.releaseGate
+      ? suitePairsOf(model, suiteProofs, o.itemsAfter1_0 ?? new Map(), problems)
+      : new Map(),
     ...(o.releaseGate ? { ciJobResults } : {}),
   };
 
@@ -145,12 +147,13 @@ interface GateScope {
 }
 
 /**
- * The suite proofs per pair of id and target. A suite report that failed the id, or that proves an id the checklist
- * does not hold live for its target, is a problem.
+ * The suite proofs per pair of id and target, each with its outcome in the gate (`gateOutcomeOf`). A suite report that
+ * failed the id, or that proves an id the checklist does not hold live for its target, is a problem.
  */
 function suitePairsOf(
   model: Model,
   suiteProofs: readonly SuiteProof[],
+  itemsAfter1_0: ReadonlyMap<string, ItemAfter1_0>,
   problems: Problem[],
 ): Map<string, SuiteProof[]> {
   const byId = new Map<string, Item>(model.items.map((i) => [i.id, i]));
@@ -182,8 +185,12 @@ function suitePairsOf(
     }
 
     const key = suiteKey(s.id, s.target);
+    const gated: SuiteProof = {
+      ...s,
+      outcome: gateOutcomeOf(s, (id, target) => isDeferredPair(itemsAfter1_0, id, target)),
+    };
 
-    suitePairs.set(key, [...(suitePairs.get(key) ?? []), s]);
+    suitePairs.set(key, [...(suitePairs.get(key) ?? []), gated]);
   }
 
   return suitePairs;
