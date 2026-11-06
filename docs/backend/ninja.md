@@ -306,7 +306,7 @@ Django 5.2 and 6, and Django Ninja 1.5 and 1.7, are tested. An older version fai
 - Under ASGI, Django reads the whole body before the first middleware. Bound it at your proxy or server.
 - A WSGI or ASGI wrapper around the application object (an error tracker, `WhiteNoise(application)`) runs before the boundary and is not seen.
 - A middleware before the boundary in `MIDDLEWARE` is refused at boot.
-- `generate` refuses by name: form, multipart, file, download and redirect bodies, query lists in `brackets` form (`tag[]=a`) and lists of lists, `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
+- `generate` refuses by name: form, multipart, file, download and redirect bodies, query lists in `brackets` form (`tag[]=a`), lists of lists and object query params, `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
 - `bodyValidation` (and `body_validation` in `bind_shop()`) is not served on Ninja yet: the boot check refuses it. Use FastAPI for it.
 - Django Ninja older than 1.5.3 and Django older than 5.2 are refused.
 - DRF and FastAPI are separate targets: see [Django REST Framework](drf.md) and [FastAPI](fastapi.md).

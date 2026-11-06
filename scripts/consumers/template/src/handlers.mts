@@ -12,14 +12,15 @@ import { scriptedAnswer } from "./suite-control.mjs";
 const CREATED_AT = "2026-10-18T09:00:00.000Z";
 const NEW_TASK_ID = "20000000-0000-4000-8000-0000000000ff";
 
+const GENERAL_CHANNEL_ID = "10000000-0000-4000-8000-000000000001";
+const FIRST_VERSION = 1;
+
 // The sample task a `state` filter on listTasks answers for each state it lists, in the order it lists them.
 const SAMPLE_TASK_ID_BY_STATE: Readonly<Record<Tasks.schemas.TaskState, string>> = {
   open: NEW_TASK_ID,
   done: "20000000-0000-4000-8000-0000000000fe",
   archived: "20000000-0000-4000-8000-0000000000fd",
 };
-const GENERAL_CHANNEL_ID = "10000000-0000-4000-8000-000000000001";
-const FIRST_VERSION = 1;
 
 // The caller a Node server hands the getChannel handler beside its input; written here, not imported from a
 // server tree, since the stub consumer generates none.

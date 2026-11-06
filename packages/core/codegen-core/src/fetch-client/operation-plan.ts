@@ -15,6 +15,7 @@ import {
   refuseUnknownValueAt,
 } from "../located-refusals.js";
 import { refuseBracketsQueryList, refuseResponseShape } from "../not-generated-forms.js";
+import { queryListWireOf } from "../query-list-wire.js";
 import type { Refusal } from "../refusal.js";
 import { type PageFact, pageReaderOf, payloadPathOf } from "./success-reader.js";
 
@@ -212,9 +213,7 @@ function queryPlan(
 
   if (refusals.length > before) return [];
 
-  if (wire.kind === "list" && wire.explode) return [{ name: param.name, wire: "repeatedList" }];
-
-  return [{ name: param.name, wire: wire.kind }];
+  return [{ name: param.name, wire: wire.kind === "list" ? queryListWireOf(wire) : wire.kind }];
 }
 
 function isPlannedQueryWire(kind: string): kind is QueryWireKind {

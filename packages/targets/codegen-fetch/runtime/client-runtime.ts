@@ -337,6 +337,8 @@ function queryPairs(param: QueryPlan, value: unknown): string[] {
     return [`${encodedName}=${encodeURIComponent(String(value))}`];
   }
 
+  if (value.length === 0) return [];
+
   const encodedItems = value.map((item) => encodeURIComponent(String(item)));
 
   if (param.wire === "repeatedList") return encodedItems.map((item) => `${encodedName}=${item}`);

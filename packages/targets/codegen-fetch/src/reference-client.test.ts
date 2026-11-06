@@ -627,6 +627,19 @@ describe("the generated reference client answers a stub server", () => {
     expect(last.body).not.toHaveProperty("nextCursor");
   });
 
+  test("an empty list query param is left out, in the comma and the repeat form", async () => {
+    await call(
+      tasks,
+      "listTasks",
+    )({
+      path: { channelId: "c1" },
+      query: { limit: 2, sort: [], state: [] },
+      headers: user(),
+    });
+
+    expect(lastSent().url.search).toBe("?limit=2");
+  });
+
   test("the derived 304 of an ETag", async () => {
     const fresh = await call(tasks, "getPreferences")({ headers: user() });
     const etag = (fresh.headers as Headers).get("etag");
