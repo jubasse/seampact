@@ -15,7 +15,7 @@ node ~/src/seampact/scripts/consumers/install-into.ts .
 pnpm install
 ```
 
-You see `install-into: 21 packages in .../vendor/seampact`. `package.json`, `pnpm-workspace.yaml` and `.gitignore` changed: check the diff.
+You see a line `install-into: <n> packages in .../vendor/seampact`. `package.json`, `pnpm-workspace.yaml` and `.gitignore` changed: check the diff.
 
 ## Describe the routes you move
 

@@ -48,7 +48,7 @@ Lint is the contract's to tune (A36, FR-12, SCN-018). `lint.rules` on the api, i
 | `seampact/subtree-exception` | warning | a safety exception written above a route or surface root (section 8) | the node |
 | `seampact/cookie-without-csrf` | warning | a cookie scheme without `csrf` (section 9) | the scheme |
 | `seampact/redundant-maturity` | warning | a stated maturity equal to the derived one (section 10) | the node |
-| `seampact/field-right-unresolved` | warning | an output field always absent on a route, its subject not found (ADR 0003 section 6) | the property, or the node |
+| `seampact/field-right-unresolved` | warning | reserved: no rule implements it yet, since the compiler refuses an unresolved output subject; a setting naming it is accepted and has no effect (ADR 0003 section 6) | the property, or the node |
 | `seampact/credential-name` | warning | a property named like a credential and not `sensitive` (ADR 0003 section 6) | the property or schema |
 | `seampact/unused-declaration` | warning | a declaration no operation, identity or convention reaches (ADR 0004 section 2) | the catalogue entry |
 | `seampact/not-found-role` | warning | a declared 404 code beside the derived notFound code on a route (section 11) | the catalogue entry |
