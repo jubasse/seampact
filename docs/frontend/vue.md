@@ -102,7 +102,7 @@ const add = async () => {
 - There is no infinite composable: a paged list gets its plain one. Change the request to read the next page.
 - `staleTime`, `invalidate`, `infinite`, `keys.root` and the `itemsOf` artefact need a query library: `generate` refuses them with `query: fetch`.
 
-`errors: data` needs a client with `errorStyle: result`, which is the client's default.
+The composables need a client with `errorStyle: result`, the client's default: `generate` refuses a client with `errorStyle: throw`.
 
 `artefacts: { composables: false }` keeps the options factories only. `artefacts: { itemsOf: true }` adds `itemsOf`.
 
