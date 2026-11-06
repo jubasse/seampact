@@ -213,10 +213,10 @@ final class AccessSteps {
             boolean isRule = requirement.has("rule");
             String name = (isRule ? requirement.path("rule") : requirement.path("right")).asString();
             Optional<SubjectRef<Object, Object>> subject = subjectOf(boundary, exchange, requirement.path("subject"), name);
-            Optional<JsonNode> params = requirement.has("params") ? Optional.of(requirement.path("params")) : Optional.empty();
+            RequirementKind kind = isRule ? RequirementKind.RULE : RequirementKind.RIGHT;
 
-            Decision<Denial> decision = decide(boundary, name, new RequirementCall(isRule ? RequirementKind.RULE : RequirementKind.RIGHT,
-                    name, params, exchange.principal, subject, List.copyOf(exchange.scopes), isRule ? proofOf(boundary, exchange, name) : Optional.empty(),
+            Decision<Denial> decision = decide(boundary, name, new RequirementCall(kind,
+                    name, RequirementParams.of(boundary, kind, name, requirement), exchange.principal, subject, List.copyOf(exchange.scopes), isRule ? proofOf(boundary, exchange, name) : Optional.empty(),
                     throttleBucket(boundary, exchange, requirement.path("bucket")),
                     new Purpose.Route(), boundary.operationRef(exchange.route()), view,
                     new RequirementRequest.Extensions<>(Map.of(), Map.of())));

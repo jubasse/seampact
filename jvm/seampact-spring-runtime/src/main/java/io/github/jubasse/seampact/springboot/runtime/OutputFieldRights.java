@@ -17,7 +17,7 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Restricted output fields (ADR 0012 "Field rights"): before the reply is written, each restricted member whose
- * right the decider denies for its holder is removed. One decision is asked per right and subject.
+ * right the decider denies for its holder is removed. One decision is asked per right, use-site params, pointer and subject.
  */
 final class OutputFieldRights {
     private static final String OUTPUT = "output";
@@ -77,11 +77,11 @@ final class OutputFieldRights {
     private static boolean allowed(SeampactBoundary boundary, BoundaryExchange exchange, RequestView view, JsonNode fieldRight, ObjectNode holder, Map<String, Boolean> decisions) {
         String right = fieldRight.path("right").asString();
         Optional<SubjectRef<Object, Object>> subject = subjectOf(boundary, fieldRight, right, holder);
-        String key = right + "\n" + subject.map(ref -> String.valueOf(ref.id())).orElse("");
+        // The decider sees the field's params and pointer, so both join the key.
+        String key = right + "\n" + fieldRight.path("params") + "\n" + fieldRight.path("pointer").asString() + "\n" + subject.map(ref -> String.valueOf(ref.id())).orElse("");
 
         return decisions.computeIfAbsent(key, ignored -> {
-            Optional<JsonNode> params = fieldRight.has("params") ? Optional.of(fieldRight.path("params")) : Optional.empty();
-            RequirementCall call = new RequirementCall(RequirementKind.RIGHT, right, params, exchange.principal, subject,
+            RequirementCall call = new RequirementCall(RequirementKind.RIGHT, right, RequirementParams.of(boundary, RequirementKind.RIGHT, right, fieldRight), exchange.principal, subject,
                     List.copyOf(exchange.scopes), Optional.empty(), Optional.empty(),
                     new Purpose.Field(fieldRight.path("pointer").asString(), FieldDirection.OUTPUT),
                     boundary.operationRef(exchange.route()), view, new RequirementRequest.Extensions<>(Map.of(), Map.of()));

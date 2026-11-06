@@ -9,6 +9,7 @@ import com.palantir.javapoet.ParameterizedTypeName
 import com.palantir.javapoet.TypeName
 import com.palantir.javapoet.TypeSpec
 import com.palantir.javapoet.WildcardTypeName
+import io.github.jubasse.seampact.ir.model.SchemaId
 import io.github.jubasse.seampact.ir.model.SignedIdentity
 import javax.lang.model.element.Modifier
 
@@ -88,6 +89,8 @@ internal fun bindingType(layout: JavaLayout): TypeSpec {
     })
     val identities = layout.kept.identities.mapNotNull { identityId -> layout.identity(identityId)?.let { identityId to it } }
     val hooks = mapEntries(identities.map { (identityId, names) -> CodeBlock.of("\$S, \$T.class", identityId, names.hook) })
+    val rightParams = requirementParamsEntries(layout, layout.kept.rightParams)
+    val ruleParams = requirementParamsEntries(layout, layout.kept.ruleParams)
 
     val binding = TypeSpec.classBuilder(layout.binding)
         .addJavadoc("The Java types of the api '\$L' its boundary runtime reads.\n", layout.ir.api.id)
@@ -98,6 +101,8 @@ internal fun bindingType(layout: JavaLayout): TypeSpec {
         .addMethod(mapMethod("successArms", ANY_CLASS, INTEGER, successArms))
         .addMethod(mapMethod("errorArms", ANY_CLASS, JavaTypes.STRING, errorArms))
         .addMethod(mapMethod("authenticateHooks", JavaTypes.STRING, ANY_CLASS, hooks))
+        .addMethod(mapMethod("rightParamsTypes", JavaTypes.STRING, ANY_CLASS, rightParams))
+        .addMethod(mapMethod("ruleParamsTypes", JavaTypes.STRING, ANY_CLASS, ruleParams))
         .addMethod(hookTypeMethod("deciderType", layout.runtime("Decider"), layout.decider))
         .addMethod(hookTypeMethod("scopeResolverType", layout.runtime("ScopeResolver"), layout.scopeResolver))
         .addMethod(hookTypeMethod("unexpectedErrorListenerType", layout.runtime("UnexpectedErrorListener"), layout.unexpectedErrorListener))
@@ -177,6 +182,10 @@ private fun mapExpression(entries: List<CodeBlock>): CodeBlock {
 
     return code.add(")").build()
 }
+
+// A params schema the layout names no record for was refused while the layout was built.
+private fun requirementParamsEntries(layout: JavaLayout, params: Map<String, SchemaId>): CodeBlock =
+    mapEntries(params.mapNotNull { (name, schemaId) -> layout.schemaClass(schemaId)?.let { CodeBlock.of("\$S, \$T.class", name, it) } })
 
 private fun mapMethod(name: String, key: TypeName, value: TypeName, body: CodeBlock): MethodSpec = MethodSpec.methodBuilder(name)
     .addAnnotation(Override::class.java)

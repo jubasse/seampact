@@ -280,6 +280,16 @@ class SpringBootGoldenTest {
     }
 
     @Test
+    fun refusesAPropertyDefaultTheBoundaryWouldNotFill() {
+        val ir = taskWith { task ->
+            task.copy(properties = task.properties.map { if (it.name == "effort") it.copy(default = JsonPrimitive(1)) else it })
+        }
+        val effortIndex = (ir.schemas.getValue("Task") as ObjectSchema).properties.indexOfFirst { it.name == "effort" }
+
+        assertTrue(refusalsOf(ir).any { it.code == "property.default.unsupported" && it.member == "/schemas/Task/properties/$effortIndex/default" })
+    }
+
+    @Test
     fun refusesAnIdentityWithNoNameSegment() {
         val ir = coreView(apis.first())
         val renamed = "_"

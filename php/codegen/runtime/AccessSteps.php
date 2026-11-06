@@ -301,12 +301,12 @@ final class AccessSteps
     {
         foreach (Ir::maps($state->contract->operation($state->operationId), 'requires') as $requirement) {
             $isRule = Ir::string($requirement, 'kind') === 'rule';
+            $kind = $isRule ? RequirementKind::Rule : RequirementKind::Right;
             $name = Ir::string($requirement, $isRule ? 'rule' : 'right') ?? '';
-            $params = $requirement['params'] ?? null;
             $call = new RequirementCall(
-                $isRule ? RequirementKind::Rule : RequirementKind::Right,
+                $kind,
                 $name,
-                is_array($params) ? self::asObject($params) : null,
+                RequirementParams::of($state->contract, $kind, $name, $requirement['params'] ?? null),
                 $state->principal,
                 self::subjectOf($state, Ir::map($requirement, 'subject'), $name),
                 $state->scopes,

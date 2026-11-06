@@ -108,6 +108,46 @@ final class KeptFormsTest extends TestCase
         self::assertSame(array_keys($kept->objects()), array_values(array_unique(array_keys($kept->objects()))));
     }
 
+    public function testTheParamsSchemaOfEveryAskedRightAndRuleIsCollected(): void
+    {
+        $refusals = new Refusals('server', 'test', 'seampact/test');
+        $kept = new KeptForms(ReferenceIr::read(ReferenceIr::keeping(ReferenceIr::document(), ['assignTask', 'purgeTask'])), $refusals, new FixedReleases(null));
+
+        self::assertArrayHasKey('RolesParams', $kept->objects());
+        self::assertArrayHasKey('RecentAuthParams', $kept->objects());
+    }
+
+    public function testTheExtensionValuesOfAnAskedRightRuleOrScopeAreRefusedOnceByName(): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document(), ['assignTask', 'createTask']);
+        foreach ([['rights', 'roles'], ['rules', 'throttle'], ['scopes', 'channel']] as [$member, $name]) {
+            $declarations = $document->{$member};
+            self::assertInstanceOf(\stdClass::class, $declarations);
+            self::assertInstanceOf(\stdClass::class, $declarations->{$name});
+            $declarations->{$name}->extensions = (object) ['acme' => (object) ['audit' => $name]];
+        }
+
+        $refusals = new Refusals('server', 'test', 'seampact/test');
+        new KeptForms(ReferenceIr::read($document), $refusals, new FixedReleases(null));
+
+        $extensionRefusals = [];
+        try {
+            $refusals->throwIfAny();
+        } catch (GenerationRefusedException $refused) {
+            foreach ($refused->problems as $problem) {
+                if (str_ends_with($problem->code, '.extensions.unsupported')) {
+                    $extensionRefusals[] = [$problem->code, $problem->message];
+                }
+            }
+        }
+        usort($extensionRefusals, static fn (array $left, array $right): int => strcmp($left[0], $right[0]));
+
+        self::assertSame(['right.extensions.unsupported', 'rule.extensions.unsupported', 'scope.extensions.unsupported'], array_column($extensionRefusals, 0));
+        self::assertStringContainsString("An extension value of the right 'roles'", $extensionRefusals[0][1] ?? '');
+        self::assertStringContainsString("An extension value of the rule 'throttle'", $extensionRefusals[1][1] ?? '');
+        self::assertStringContainsString("An extension value of the scope 'channel'", $extensionRefusals[2][1] ?? '');
+    }
+
     public function testTheCredentialHeadersNeverReachTheHandler(): void
     {
         $ir = ReferenceIr::read(ReferenceIr::keeping(ReferenceIr::document(), ['getTasksBatch']));

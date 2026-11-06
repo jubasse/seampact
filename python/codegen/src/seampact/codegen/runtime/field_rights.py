@@ -1,10 +1,11 @@
 """Field rights (ADR 0012 "Field rights"): step 7 refuses a restricted top-level input member sent without its right,
 or leaves it out under `inputPolicy: strip`; before a success is written, each restricted output member whose right
-the decider denies for its holder is left out, one decision per right and subject, and a member the contract never
-sends on the operation (`always: absent`) is left out without a decision. Each returns a copy; the tree it reads is
-never changed."""
+the decider denies for its holder is left out, one decision per right, use-site params, pointer and subject, and a
+member the contract never sends on the operation (`always: absent`) is left out without a decision. Each returns a
+copy; the tree it reads is never changed."""
 
 import copy
+import json
 from collections.abc import Mapping
 from typing import Final
 
@@ -75,7 +76,7 @@ async def visible_output(
 ) -> object:
     """The success body as the wire writes it, without each restricted member its holder may not see."""
     body = copy.deepcopy(wire_body)
-    decisions: dict[tuple[str, str], bool] = {}
+    decisions: dict[tuple[str, str, str, str], bool] = {}
     body_schema = ir_string(ir_map(response, "body"), "schema")
 
     for field_right in ir_maps(state.contract.operation(state.operation_id), "fieldRights"):
@@ -99,7 +100,7 @@ async def _allowed(
     call: HookCaller,
     field_right: IrMap,
     holder: Mapping[str, object],
-    decisions: dict[tuple[str, str], bool],
+    decisions: dict[tuple[str, str, str, str], bool],
 ) -> bool:
     if ir_string(field_right, "always") == _ABSENT:
         return False
@@ -117,7 +118,10 @@ async def _allowed(
     elif source:
         subject = subject_of(state, ir_map(field_right, "subject"), right)
 
-    key = (right, "" if subject is None else repr(subject.id))
+    # The decider sees the field's params and pointer, so both join the key.
+    use_site_params = json.dumps(field_right.get("params"), sort_keys=True)
+    pointer = ir_string(field_right, "pointer") or ""
+    key = (right, use_site_params, pointer, "" if subject is None else repr(subject.id))
 
     if key not in decisions:
         answer = await decided(hooks, call, _request(state, field_right, subject, FieldDirection.OUTPUT))

@@ -21,7 +21,7 @@ public interface RequirementRequest<
     /** The right's or rule's name. */
     String name();
 
-    /** The params declared at the use site. */
+    /** The params declared at the use site, an instance of the right's or rule's generated params class; empty when it declares none. */
     Optional<Params> params();
 
     /** Null for an anonymous caller on a public or optional-auth route. */

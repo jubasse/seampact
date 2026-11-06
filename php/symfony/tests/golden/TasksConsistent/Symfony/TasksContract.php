@@ -4460,6 +4460,14 @@ final class TasksContract
         'class' => 'Seampact\Golden\TasksConsistent\Schemas\Preferences',
         'members' => ['locale' => 'locale', 'digest' => 'digest'],
       ],
+      'RecentAuthParams' => [
+        'class' => 'Seampact\Golden\TasksConsistent\Schemas\RecentAuthParams',
+        'members' => ['intent' => 'intent'],
+      ],
+      'RolesParams' => [
+        'class' => 'Seampact\Golden\TasksConsistent\Schemas\RolesParams',
+        'members' => ['allowed' => 'allowed'],
+      ],
       'Task' => [
         'class' => 'Seampact\Golden\TasksConsistent\Schemas\Task',
         'members' => [
@@ -4489,7 +4497,11 @@ final class TasksContract
         ],
       ],
     ],
-    'enums' => ['TaskState' => 'Seampact\Golden\TasksConsistent\Schemas\TaskState'],
+    'enums' => [
+      'ReauthIntent' => 'Seampact\Golden\TasksConsistent\Schemas\ReauthIntent',
+      'Role' => 'Seampact\Golden\TasksConsistent\Schemas\Role',
+      'TaskState' => 'Seampact\Golden\TasksConsistent\Schemas\TaskState',
+    ],
     'operations' => [
       'createTask' => [
         'input' => 'Seampact\Golden\TasksConsistent\CreateTaskInput',
