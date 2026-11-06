@@ -6,7 +6,7 @@
   "apis": ["tasksResponses"],
   "steps": [
     {
-      "title": "the current tag is read from the item",
+      "title": "the current tag is read from the item, weak once a compression layer encodes the body",
       "request": {
         "method": "GET",
         "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001",
@@ -18,7 +18,7 @@
         "status": 200,
         "headers": {
           "etag": {
-            "equals": "\"1\""
+            "contains": ["\"1\""]
           }
         }
       }
@@ -103,7 +103,7 @@
         "status": 200,
         "headers": {
           "etag": {
-            "equals": "\"2\""
+            "contains": ["\"2\""]
           }
         },
         "body": {
@@ -130,7 +130,7 @@
         "status": 200,
         "headers": {
           "etag": {
-            "equals": "\"2\""
+            "contains": ["\"2\""]
           }
         },
         "body": {
