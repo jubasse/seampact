@@ -55,8 +55,6 @@ _NON_MEMBER_CHANNEL_ID: Final = "10000000-0000-4000-8000-0000000000ff"
 _RATE_LIMITED: Final = "api.rate_limited"
 _THROTTLE_RULE: Final = "throttle"
 _LOGGER: Final = logging.getLogger("consumer.tasks")
-# The user credentials of every api the `user` identity guards.
-_USER_CREDENTIALS: Final = (UserCredentials, ResponsesUserCredentials)
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,7 +76,13 @@ def user_id_of(token: str) -> str | None:
     return user_ids.get(token)
 
 
-_USER_CREDENTIALS: Final = (UserCredentials, OptionalAuthUserCredentials, AbsoluteUrlsUserCredentials)
+# The user credentials of every api the `user` identity guards.
+_USER_CREDENTIALS: Final = (
+    UserCredentials,
+    OptionalAuthUserCredentials,
+    AbsoluteUrlsUserCredentials,
+    ResponsesUserCredentials,
+)
 _SERVICE_CREDENTIALS: Final = (ServiceCredentials, WritesServiceCredentials)
 
 
