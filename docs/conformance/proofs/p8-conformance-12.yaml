@@ -47,6 +47,32 @@ proofs:
       - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
       - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
       - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+  - id: CHK-086
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#the decide request is typed per right and rule of the contract'
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#the decide request of a right carries the right''s declared params type'
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#the decide request of a rule carries the rule''s declared params type'
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#the decide request of a right or rule without params admits no params'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#the decide request is typed per right and rule of the contract'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#the decide request of a right carries the right''s declared params type'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#the decide request of a rule carries the rule''s declared params type'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#the decide request of a right or rule without params admits no params'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#the decide request is typed per right and rule of the contract'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#the decide request of a right carries the right''s declared params type'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#the decide request of a rule carries the rule''s declared params type'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#the decide request of a right or rule without params admits no params'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#the decide request is typed per right and rule of the contract'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#the decide request of a right carries the right''s declared params type'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#the decide request of a rule carries the rule''s declared params type'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#the decide request of a right or rule without params admits no params'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#the decide request is typed per right and rule of the contract'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#the decide request of a right carries the right''s declared params type'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#the decide request of a rule carries the rule''s declared params type'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#the decide request of a right or rule without params admits no params'
+  - id: CHK-090
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/authored-surface.test.ts#a right''s custom metadata is refused by name, not dropped'
   - id: CHK-099
     fixtures: [fixtures/golden/reference]
     tests:
@@ -59,9 +85,17 @@ proofs:
     fixtures: [fixtures/golden/reference]
     tests:
       - 'nestjs: packages/targets/codegen-nestjs/src/authored-surface.test.ts#generated types list the properties of every object schema in authored order'
+  - id: CHK-146
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/authored-surface.test.ts#a codeName on a property is refused by name, as the options codeName, suffixes and perOperation are'
   - id: CHK-154
     fixtures: [fixtures/golden/reference]
     tests:
+      - 'nestjs: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
+      - 'fastify: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
+      - 'express: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
+      - 'adonis: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
+      - 'hono: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
       - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#no framework controller is generated: the developer implements the generated handler interface'
       - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#every generated path stays below the output directory'
       - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#no framework controller is generated: the developer implements the generated handler interface'
