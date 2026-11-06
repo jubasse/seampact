@@ -15,6 +15,7 @@ import {
   type TreeNode,
 } from "../../../pipeline/seam.js";
 import { quote } from "../../../validate/diagnostics.js";
+import { treeNodesRelayOrigin } from "../nodes/relays.js";
 import type { TreeSchemasCompiler } from "./compile.js";
 import { type TreeSchemasReporter, treeSchemasPointer } from "./raw.js";
 
@@ -109,7 +110,25 @@ function operationUses(operation: RelayedOperation): TreeSchemasRelayUse[] {
   ];
 }
 
-// Every origin of a copied declaration keeps its pointer and layer and names the public api.
+// The members holding values the contract wrote: compared whole, since an `origin` key there is data.
+const WRITTEN_VALUE_MEMBERS = new Set(["default", "examples", "extensions", "params"]);
+
+// A copied declaration passed the IR's closed check, so an `origin` or `derivedFrom.from` member there is an origin.
+const isCopiedOrigin = (value: unknown): value is IrWriter.Origin =>
+  typeof value === "object" &&
+  value !== null &&
+  "layer" in value &&
+  typeof value.layer === "string" &&
+  "pointer" in value &&
+  typeof value.pointer === "string";
+
+function withApiOrigin(origin: unknown, api: string): void {
+  if (isCopiedOrigin(origin)) Object.assign(origin, treeNodesRelayOrigin(origin, api));
+}
+
+// Every origin of a copied declaration keeps its pointer and layer and names the public api: each `origin` and
+// each origin of a `derivedFrom.from`, such as the `concurrency` that added a version property. A value the
+// contract wrote is never entered: an `origin` there is data.
 function withApiOrigins(value: unknown, api: string): void {
   if (Array.isArray(value)) {
     for (const item of value) withApiOrigins(item, api);
@@ -120,16 +139,17 @@ function withApiOrigins(value: unknown, api: string): void {
   if (typeof value !== "object" || value === null) return;
 
   for (const [key, member] of Object.entries(value)) {
-    if (key === "origin" && typeof member === "object" && member !== null && !("api" in member))
-      Object.assign(member, { api });
-    withApiOrigins(member, api);
+    if (key === "origin") withApiOrigin(member, api);
+
+    if (key === "derivedFrom" && typeof member === "object" && member !== null && "from" in member)
+      for (const origin of Array.isArray(member.from) ? member.from : [])
+        withApiOrigin(origin, api);
+
+    if (!WRITTEN_VALUE_MEMBERS.has(key)) withApiOrigins(member, api);
   }
 }
 
 const IGNORED_MEMBERS = new Set(["directions", "origin"]);
-
-// The members holding values the contract wrote: compared whole, since an `origin` key there is data.
-const WRITTEN_VALUE_MEMBERS = new Set(["default", "examples", "extensions", "params"]);
 
 function withoutIgnored(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutIgnored);
@@ -139,15 +159,30 @@ function withoutIgnored(value: unknown): unknown {
   return Object.fromEntries(
     Object.entries(value)
       .filter(([key]) => !IGNORED_MEMBERS.has(key))
-      .map(([key, member]) => [
-        key,
-        WRITTEN_VALUE_MEMBERS.has(key) ? member : withoutIgnored(member),
-      ]),
+      .map(([key, member]) => [key, comparedMember(key, member)]),
   );
 }
 
+// A `derivedFrom.from` origin is compared without the api a copy marked on it, as an `origin` is not compared.
+function comparedMember(key: string, member: unknown): unknown {
+  if (WRITTEN_VALUE_MEMBERS.has(key)) return member;
+
+  if (key !== "derivedFrom" || typeof member !== "object" || member === null || !("from" in member))
+    return withoutIgnored(member);
+  const from = Array.isArray(member.from) ? member.from : [];
+
+  return withoutIgnored({ ...member, from: from.map(withoutOriginApi) });
+}
+
+function withoutOriginApi(origin: unknown): unknown {
+  if (!isCopiedOrigin(origin)) return origin;
+  const { api: _copiedFrom, ...located } = origin;
+
+  return located;
+}
+
 // What two declarations of one name must agree on: everything but the directions, which each api takes from its
-// own uses, and the origins, which name the file each api read it from.
+// own uses, and the origins, which name the file and the api each copy was read from.
 const contentOf = (declaration: Declaration): string =>
   pipelineCanonical(withoutIgnored(declaration));
 

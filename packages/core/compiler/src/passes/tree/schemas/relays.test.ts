@@ -192,6 +192,39 @@ describe("a declaration two relayed apis both use", () => {
     expect(run.draft.schemas.Owner?.origin.api).toBe("pa");
   });
 
+  test("is copied once when both derive it from the same route pointer", () => {
+    const VERSION_FROM: IrWriter.Origin = {
+      layer: "api",
+      pointer: "/surfaces/app/routes/notes/concurrency/version",
+    };
+    const versioned = () => {
+      const draft = draftReturning(
+        `schemas:\n  Box: { type: object, properties: { owner: Owner } }\n  ${OWNER_NAME}\n`,
+        "Box",
+      );
+      const [name] = draft.schemas.Owner?.kind === "object" ? draft.schemas.Owner.properties : [];
+
+      if (name === undefined) throw new Error("the public Owner has no property");
+      name.derivedFrom = { derivation: "concurrency.version", from: [{ ...VERSION_FROM }] };
+
+      return draft;
+    };
+
+    const run = treeSchemasRunApi(
+      TWO_RELAYS,
+      new Map([
+        ["pa", versioned()],
+        ["pb", versioned()],
+      ]),
+    );
+    const owner = run.draft.schemas.Owner;
+
+    expect(run.diagnostics).toEqual([]);
+    expect(owner?.kind === "object" ? owner.properties[0]?.derivedFrom?.from : undefined).toEqual([
+      { api: "pa", ...VERSION_FROM },
+    ]);
+  });
+
   test("is refused when they declare it differently, naming both routes", () => {
     const relayed = new Map([
       [
@@ -260,6 +293,43 @@ describe("written values of two copies of one name", () => {
     );
 
     expect(located(run)).toEqual([["relay-declaration", "/surfaces/internal/routes/two/relays"]]);
+  });
+
+  test("are copied unchanged when they hold an 'origin' object", () => {
+    const written = `extensions:
+  acme:
+    origin: { at: [schema], schema: { type: object, properties: { layer: { type: string }, pointer: { type: string } } } }
+schemas:
+  Box: { type: object, properties: { owner: Owner } }
+  Owner:
+    type: object
+    examples: [{ name: a, origin: { layer: api, pointer: /north } }]
+    x-acme-origin: { layer: api, pointer: /south }
+    properties:
+      name: { type: string, restrictedTo: { right: notes.read, params: { origin: { layer: api, pointer: /east } } } }
+      origin:
+        type: object
+        properties: { layer: { type: string }, origin: { type: object, properties: { pointer: { type: string } } } }
+        default: { layer: api, origin: { pointer: /west } }
+`;
+    const publicOwner = draftReturning(written, "Box").schemas.Owner;
+    const run = treeSchemasRunApi(RELAY_IT, new Map([["pub", draftReturning(written, "Box")]]));
+    const writtenValues = (schema: IrWriter.Schema | undefined) =>
+      schema?.kind === "object"
+        ? {
+            examples: schema.examples,
+            extensions: schema.extensions,
+            properties: schema.properties.map(({ type, default: value, restrictedTo }) => ({
+              type,
+              value,
+              params: restrictedTo?.params,
+            })),
+          }
+        : undefined;
+
+    expect(run.diagnostics).toEqual([]);
+    expect(writtenValues(publicOwner)).toBeDefined();
+    expect(writtenValues(run.draft.schemas.Owner)).toEqual(writtenValues(publicOwner));
   });
 });
 

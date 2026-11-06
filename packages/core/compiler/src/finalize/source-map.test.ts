@@ -1,4 +1,4 @@
-import { type ContractIR, IR_REVISION, walkIrInstance } from "@seampact/spec/ir";
+import { type ContractIR, IR_REVISION, isKnownVariant, walkIrInstance } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { PACK_CONTRACT } from "../bundle/bundle.test-support.js";
 import { diagnosticLocationKey } from "../diagnostics/print.js";
@@ -78,6 +78,59 @@ describe("side table covers every origin", () => {
     expect(Object.keys(sourceMap.locations).some((key) => key.endsWith("#/not/in/this/api"))).toBe(
       false,
     );
+  });
+
+  const RELAYED_VERSIONED_WRITE = {
+    "workspace.yaml":
+      "workspace:\n  apis:\n    notes: ./notes.yaml\n    notesService: ./service.yaml\n",
+    "notes.yaml": `api: { name: notes, version: 1 }
+schemas:
+  Note:
+    type: object
+    required: [noteId, version, text]
+    properties: { noteId: { type: string }, version: { type: integer }, text: { type: string } }
+  UpdateNote: { type: object, properties: { text: { type: string } } }
+surfaces:
+  app:
+    prefix: /notes
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: { type: string } }
+        item: Note
+        concurrency: { version: body.expectedVersion, field: version }
+        ops:
+          update: { input: UpdateNote, access: { public: "Anyone edits a note." } }
+`,
+    "service.yaml": `api: { name: notesService, version: 1 }
+surfaces:
+  internal:
+    prefix: /internal
+    access: { public: "The gateway checks the caller." }
+    routes:
+      updateNote: { relays: notes.updateNote }
+`,
+  };
+
+  test("a relayed write's copied version property names the public api's concurrency", () => {
+    const result = compileWorkspace({
+      reader: loadMemoryReader(RELAYED_VERSIONED_WRITE),
+      entry: "workspace.yaml",
+      guard: true,
+    });
+    const service = result.apis.find((api) => api.api === "notesService");
+    const updateNote = service?.ir?.schemas.UpdateNote;
+    const version =
+      updateNote !== undefined &&
+      isKnownVariant("Schema", updateNote) &&
+      updateNote.kind === "object"
+        ? updateNote.properties.find((property) => property.name === "expectedVersion")
+        : undefined;
+
+    expect(result.apis.flatMap((api) => api.diagnostics)).toEqual([]);
+    expect(version?.derivedFrom?.from).toEqual([
+      { api: "notes", layer: "api", pointer: "/surfaces/app/routes/notes/concurrency/version" },
+    ]);
   });
 
   test("an origin in no table is an internal error naming it", () => {
