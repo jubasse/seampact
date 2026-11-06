@@ -15,7 +15,7 @@ For the lead session only: subagents never read this file. The lead reads it onc
 - `general-purpose` only when a task needs a tool the types lack (WebFetch, an MCP server other than context7, the Agent tool); its prompt starts with "Read `.claude/agents/seampact-<role>.md` first"; note the case in the handoff.
 - Prefer a fresh agent over resuming one for more than a few calls.
 - Target PR size (A47): one deliverable, about 3,000 to 4,000 hand-written lines; seams stay small and land first. Past an agent's call cap, a fresh agent continues on the same branch from the report's resume state; the PR opens once the deliverable is done.
-- At most 4-5 agents at once; run them in the background; new or edited agent files load only after a session restart.
+- Agent count follows the remaining work, at most 10 at once, never raised back when fewer lanes are open; run them in the background; new or edited agent files load only after a session restart.
 
 ## Prompt
 
@@ -40,7 +40,7 @@ One line each, in this order: task and PR or lane; worktree, branch and tip, lan
 - After each merge, the next branch rebases and runs `pnpm vitest run packages/core/compiler/src/passes`: a stricter pass breaks other lanes' test contracts.
 - After each merge, message the agents still working on other branches to rebase before their hand-back.
 - `gh` often hits TLS timeouts: check the state before retrying.
-- develop requires a branch up to date with it: merge PRs one at a time with `.work/tools/merge-seq.sh <pr>...` (update the branch, wait for CI, check no check-run is pending, squash-merge, stop at the first failure). Chain cleanup (worktree remove, branch delete, required checks) after it with `&&` only, never `;`.
+- develop requires a branch up to date with it (strict required checks; GitHub offers no merge queue on a user-owned repository): a lone PR merges with `.work/tools/merge-seq.sh <pr>...` (update the branch, wait for the fast tier, check no check-run is pending, squash-merge, stop at the first failure). Ready PRs land together as an integration batch: one integration branch from develop, one commit per PR ("<title> (#n)"), CI once, a merge commit, the batched PRs closed with a pointer; run at least one consumer per family before the push. The full tier runs on each push to develop; a failure there is fixed forward (`ci-watch` opens an issue). Chain cleanup (worktree remove, branch delete, required checks) after it with `&&` only, never `;`.
 - A job that fails on a registry refusal (Maven Central 429, 403 or a missing artifact that exists) is rerun once with `gh run rerun <run> --failed` before it is read as a failure.
 - Dependabot: merge a green grouped PR; a security PR on a floor requirement file is merged only while the new version stays inside the floor the compatibility matrix declares, otherwise closed and its alert dismissed as test-only by the user.
 - Actions cache (10 GB repository limit): pull requests only restore; pushes, the nightly and a manual run save. Check the split with `gh api repos/jubasse/seampact/actions/cache/usage` and the caches listing after a CI change.
