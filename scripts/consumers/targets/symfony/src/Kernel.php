@@ -21,6 +21,10 @@ use App\Generated\TasksService\Symfony\TasksServiceRouteLoader;
 use App\Generated\TasksService\Symfony\TasksServiceSeampactBundle;
 use App\Generated\TasksServiceWrites\Symfony\TasksServiceWritesRouteLoader;
 use App\Generated\TasksServiceWrites\Symfony\TasksServiceWritesSeampactBundle;
+use App\Generated\TasksPaging\Symfony\TasksPagingRouteLoader;
+use App\Generated\TasksPaging\Symfony\TasksPagingSeampactBundle;
+use App\Generated\TasksSplitSort\Symfony\TasksSplitSortRouteLoader;
+use App\Generated\TasksSplitSort\Symfony\TasksSplitSortSeampactBundle;
 use App\Suite\ChannelResolver;
 use App\Suite\ForbiddenProbeMatcher;
 use App\Suite\SuiteLogger;
@@ -91,6 +95,8 @@ final class Kernel extends BaseKernel
         yield new TasksDevicesSeampactBundle();
         yield new TasksOptionalAuthSeampactBundle();
         yield new TasksAbsoluteUrlsSeampactBundle();
+        yield new TasksPagingSeampactBundle();
+        yield new TasksSplitSortSeampactBundle();
     }
 
     public function boot(): void
@@ -172,6 +178,8 @@ final class Kernel extends BaseKernel
         $routes->import(TasksDevicesRouteLoader::RESOURCE, TasksDevicesRouteLoader::TYPE);
         $routes->import(TasksOptionalAuthRouteLoader::RESOURCE, TasksOptionalAuthRouteLoader::TYPE);
         $routes->import(TasksAbsoluteUrlsRouteLoader::RESOURCE, TasksAbsoluteUrlsRouteLoader::TYPE);
+        $routes->import(TasksPagingRouteLoader::RESOURCE, TasksPagingRouteLoader::TYPE);
+        $routes->import(TasksSplitSortRouteLoader::RESOURCE, TasksSplitSortRouteLoader::TYPE);
 
         // The suite's control routes (ADR 0015 "Control routes"), allow-listed in seampact.config.yaml.
         $routes->add('suite_script', '/__seampact/script')->methods(['PUT'])->controller([SuiteControlController::class, 'loadScript']);

@@ -50,6 +50,7 @@ from seampact_consumer_suite.boot_variant import (
     serves_patterned_route,
     serves_unlisted_route,
 )
+from paging_apis import bind_paging_apis
 from seampact_consumer_suite.file_idempotency_store import FileIdempotencyStore
 from seampact_consumer_suite.log_lines import SuiteLogHandler
 from seampact_consumer_suite.scripted_answers import ScriptedReply
@@ -152,6 +153,7 @@ def create_app() -> FastAPI:
         on_unexpected_error=TasksUnexpectedErrors,
     )
     _bind_security_apis(app)
+    bind_paging_apis(app)
 
     return app
 

@@ -1,0 +1,84 @@
+{
+  "id": "stripe-list-more-and-exclusive-cursors",
+  "title": "A Stripe-style list writes its more flag, pages after a cursor, and refuses both cursors at once",
+  "checks": ["CHK-128"],
+  "profiles": ["default"],
+  "apis": ["tasksPaging"],
+  "steps": [
+    {
+      "title": "the first page, more to come",
+      "request": {
+        "method": "GET",
+        "path": "/paging/v1/notes",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "object": "list",
+          "data": [
+            {
+              "noteId": "30000000-0000-4000-8000-000000000001",
+              "text": "First note"
+            }
+          ],
+          "has_more": true,
+          "url": "/paging/v1/notes"
+        }
+      }
+    },
+    {
+      "title": "the page after the first note, the last one",
+      "request": {
+        "method": "GET",
+        "path": "/paging/v1/notes",
+        "query": {
+          "starting_after": "30000000-0000-4000-8000-000000000001"
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "data": [
+            {
+              "noteId": "30000000-0000-4000-8000-000000000002",
+              "text": "Second note"
+            }
+          ],
+          "has_more": false
+        }
+      }
+    },
+    {
+      "title": "both cursors",
+      "request": {
+        "method": "GET",
+        "path": "/paging/v1/notes",
+        "query": {
+          "starting_after": "30000000-0000-4000-8000-000000000001",
+          "ending_before": "30000000-0000-4000-8000-000000000002"
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/ending_before",
+              "rule": "exclusiveCursors"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

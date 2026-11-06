@@ -1,0 +1,38 @@
+{
+  "id": "limit-above-max-clamped",
+  "title": "Under overLimit clamp, a limit above maxLimit is served as maxLimit and the page reports it",
+  "checks": [
+    {
+      "id": "CHK-128",
+      "targets": ["spring-boot", "nestjs", "fastify", "express", "adonis", "hono"]
+    }
+  ],
+  "profiles": ["default"],
+  "apis": ["tasksPaging"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/paging/v1/changes",
+        "query": {
+          "limit": "500"
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "items": [
+            {
+              "noteId": "30000000-0000-4000-8000-000000000001",
+              "text": "limit 10"
+            }
+          ],
+          "limit": 10
+        }
+      }
+    }
+  ]
+}

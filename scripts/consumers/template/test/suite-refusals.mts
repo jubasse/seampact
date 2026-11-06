@@ -7,8 +7,18 @@ import { TARGET_SUITE_REFUSALS } from "./target-suite-refusals.mjs";
 const NODE_REFUSED_FORM =
   "the Node servers refuse this form by name at generation (deferred after 1.0), so the consumer does not serve its api";
 
+// The Node servers refuse the split sort style by name at generation, so they serve no tasksSplitSort api.
+const SPLIT_SORT_REFUSED =
+  "the Node servers refuse the split sort style by name at generation (paging.sort.style), after 1.0";
+
+// A known bug of the Node servers, which leaves this list with its fix.
+const OVER_LIMIT_CLAMP_DROPPED =
+  "the Node servers drop overLimit clamp: the handler receives and the page reports the limit as sent, above maxLimit";
+
 export const SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "absolute-urls-from-public-origin": NODE_REFUSED_FORM,
   "optional-auth-refused-credential": NODE_REFUSED_FORM,
+  "limit-above-max-clamped": OVER_LIMIT_CLAMP_DROPPED,
+  "split-sort-github-pages": SPLIT_SORT_REFUSED,
   ...TARGET_SUITE_REFUSALS,
 };

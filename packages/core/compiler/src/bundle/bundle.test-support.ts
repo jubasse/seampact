@@ -25,8 +25,10 @@ export const REFERENCE_BUNDLE_APIS = [
   "tasksAbsoluteUrls",
   "tasksDevices",
   "tasksOptionalAuth",
+  "tasksPaging",
   "tasksService",
   "tasksServiceWrites",
+  "tasksSplitSort",
 ];
 
 const temporaryDirectories: string[] = [];

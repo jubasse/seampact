@@ -4,6 +4,7 @@ import type { HttpContext, Router } from "@adonisjs/core/http";
 import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
 import * as TasksAdonis from "../generated/server/tasks/index.js";
 import * as TasksDevicesAdonis from "../generated/server/tasksDevices/index.js";
+import * as TasksPagingAdonis from "../generated/server/tasksPaging/index.js";
 import * as TasksServiceAdonis from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesAdonis from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -21,6 +22,7 @@ import {
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "./hooks.mjs";
+import { tasksPagingHooks } from "./paging-handlers.mjs";
 import {
   type ControlReply,
   hookCallsReply,
@@ -29,6 +31,7 @@ import {
 } from "./suite-control.mjs";
 
 const controllers = () => import("./controllers.mjs");
+const pagingControllers = () => import("./paging-controllers.mjs");
 
 export function registerContractRoutes(router: Router): void {
   router.put(SCRIPT_ROUTE, ({ request, response }) =>
@@ -69,6 +72,15 @@ export function registerContractRoutes(router: Router): void {
     },
     hooks: tasksDevicesHooks(),
   });
+
+  TasksPagingAdonis.registerRoutes(router, {
+    controllers: {
+      NotesEndpoints: async () => ({ default: (await pagingControllers()).NotesController }),
+      ChangesEndpoints: async () => ({ default: (await pagingControllers()).ChangesController }),
+      EventsEndpoints: async () => ({ default: (await pagingControllers()).EventsController }),
+    },
+    hooks: tasksPagingHooks(),
+  });
 }
 
 function registerTasksRoutes(router: Router): void {
@@ -83,6 +95,7 @@ function registerTasksRoutes(router: Router): void {
     }),
     hooks: tasksHooks(),
   });
+
 }
 
 function sendControlReply(response: HttpContext["response"], reply: ControlReply): void {

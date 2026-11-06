@@ -58,6 +58,8 @@ MIDDLEWARE = [
     "generated.tasks_devices.django.TasksDevicesBoundary",
     "generated.tasks_optional_auth.django.TasksOptionalAuthBoundary",
     "generated.tasks_absolute_urls.django.TasksAbsoluteUrlsBoundary",
+    "generated.tasks_paging.django.TasksPagingBoundary",
+    "generated.tasks_split_sort.django.TasksSplitSortBoundary",
     "django.middleware.common.CommonMiddleware",
 ]
 
@@ -130,5 +132,15 @@ SEAMPACT = {
         "on_unexpected_error": "hooks.unexpected_errors",
         "public_origin": PUBLIC_ORIGIN,
         "access": {"identity": _SUITE_TOKEN_AUTHENTICATION},
+    },
+    "tasksPaging": {
+        "handlers": {"notes": "paging_factories.paging_notes_handlers"},
+        "authenticate": {USER_IDENTITY: "paging_factories.paging_user_hook"},
+        "on_unexpected_error": "paging_factories.paging_unexpected_errors",
+    },
+    "tasksSplitSort": {
+        "handlers": {"notes": "paging_factories.split_sort_notes_handlers"},
+        "authenticate": {USER_IDENTITY: "paging_factories.paging_user_hook"},
+        "on_unexpected_error": "paging_factories.paging_unexpected_errors",
     },
 }

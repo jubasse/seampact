@@ -3,6 +3,7 @@
 import { Module } from "@nestjs/common";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksDevicesNest from "../generated/server/tasksDevices/index.js";
+import * as TasksPagingNest from "../generated/server/tasksPaging/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesNest from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -36,6 +37,8 @@ import {
 const healthControllers = leavesOutHealthHandler()
   ? []
   : [(await import("./app-controller.mjs")).AppController];
+import { ChangesController, EventsController, NotesController } from "./paging-controllers.mjs";
+import { tasksPagingHooks } from "./paging-handlers.mjs";
 
 @Module({
   imports: [
@@ -44,6 +47,7 @@ const healthControllers = leavesOutHealthHandler()
     TasksServiceNest.SeampactModule.forRootAsync({ useFactory: () => tasksServiceHooks() }),
     TasksServiceWritesNest.SeampactModule.forRoot(tasksServiceWritesHooks()),
     TasksDevicesNest.SeampactModule.forRoot(tasksDevicesHooks()),
+    TasksPagingNest.SeampactModule.forRoot(tasksPagingHooks()),
   ],
   controllers: [
     ...healthControllers,
@@ -55,6 +59,9 @@ const healthControllers = leavesOutHealthHandler()
     InternalController,
     InternalWritesController,
     DevicesController,
+    NotesController,
+    ChangesController,
+    EventsController,
     SuiteControlController,
     // The framework-route boot variants serve a route outside the contract.
     ...(servesUnlistedRoute() ? [UnlistedRouteController] : []),

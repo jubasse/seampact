@@ -113,6 +113,16 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ["CHK-131", refusedOnEveryServer("a signature scheme verified by the application")],
   ["CHK-132", refusedOnEveryServer("query API key and HTTP Basic schemes")],
   ["CHK-133", refusedOnTheNodeServers("optional authentication; the native servers generate it")],
+  ["CHK-128", refusedOnTheNodeServers("the split sort style")],
+  [
+    "CHK-032",
+    {
+      targets: ["laravel", "symfony", ...PYTHON_SERVERS],
+      refusedOn: ["laravel", "symfony", ...PYTHON_SERVERS],
+      reason:
+        "1.0 refuses the complete page fact of a changes-since style by name at generation on the PHP and Python servers",
+    },
+  ],
   ["CHK-020", refusedOnEveryServer("a principal binding")],
   ["CHK-094", refusedOnEveryServer("a scope resolved by the application")],
   ["CHK-150", refusedForm("a form body", BODY_AND_QUERY_FORMS_REFUSED_ON)],

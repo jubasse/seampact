@@ -1,0 +1,63 @@
+{
+  "id": "split-sort-github-pages",
+  "title": "GitHub-style pages read one sort key and its direction, clamp per_page and link every page",
+  "checks": ["CHK-128"],
+  "profiles": ["default"],
+  "apis": ["tasksSplitSort"],
+  "steps": [
+    {
+      "title": "the first page, per_page above its maximum",
+      "request": {
+        "method": "GET",
+        "path": "/split-sort/v1/notes",
+        "query": {
+          "per_page": "500",
+          "sort": "created",
+          "direction": "desc"
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "link": {
+            "contains": ["rel=\"next\"", "rel=\"first\"", "rel=\"last\"", "page=3"]
+          }
+        },
+        "body": [
+          {
+            "noteId": "30000000-0000-4000-8000-000000000001",
+            "text": "created desc, 100 per page"
+          }
+        ]
+      }
+    },
+    {
+      "title": "a direction outside asc and desc",
+      "request": {
+        "method": "GET",
+        "path": "/split-sort/v1/notes",
+        "query": {
+          "sort": "created",
+          "direction": "sideways"
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/direction"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

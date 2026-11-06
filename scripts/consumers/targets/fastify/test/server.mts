@@ -7,6 +7,7 @@ import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-
 import Fastify, { type FastifyError, type FastifyReply, type FastifyRequest } from "fastify";
 import * as TasksFastify from "../generated/server/tasks/index.js";
 import * as TasksDevicesFastify from "../generated/server/tasksDevices/index.js";
+import * as TasksPagingFastify from "../generated/server/tasksPaging/index.js";
 import * as TasksServiceFastify from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesFastify from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -30,6 +31,7 @@ import {
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "../src/hooks.mjs";
+import { tasksPagingHandlers, tasksPagingHooks } from "../src/paging-handlers.mjs";
 import {
   type ControlReply,
   hookCallsReply,
@@ -54,7 +56,8 @@ function renderedByAnApi(request: FastifyRequest, reply: FastifyReply, error?: E
     TasksFastify.renderPreRoutingError(request, reply, error) ||
     TasksServiceFastify.renderPreRoutingError(request, reply, error) ||
     TasksServiceWritesFastify.renderPreRoutingError(request, reply, error) ||
-    TasksDevicesFastify.renderPreRoutingError(request, reply, error)
+    TasksDevicesFastify.renderPreRoutingError(request, reply, error) ||
+    TasksPagingFastify.renderPreRoutingError(request, reply, error)
   );
 }
 
@@ -118,6 +121,14 @@ export async function startServer(): Promise<RunningServer> {
   await app.register(TasksDevicesFastify.plugin, {
     handlers: { DevicesEndpoints: tasksDevicesHandlers },
     hooks: tasksDevicesHooks(),
+  });
+  await app.register(TasksPagingFastify.plugin, {
+    handlers: {
+      NotesEndpoints: tasksPagingHandlers,
+      ChangesEndpoints: tasksPagingHandlers,
+      EventsEndpoints: tasksPagingHandlers,
+    },
+    hooks: tasksPagingHooks(),
   });
   await app.listen({ port: 0, host: HOST });
 

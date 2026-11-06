@@ -18,6 +18,8 @@ Route::seampact('tasksServiceWrites');
 Route::seampact('tasksDevices');
 Route::seampact('tasksOptionalAuth');
 Route::seampact('tasksAbsoluteUrls');
+Route::seampact('tasksPaging');
+Route::seampact('tasksSplitSort');
 
 // The suite's control routes (ADR 0015 "Control routes"), allow-listed in seampact.config.yaml.
 Route::put('/__seampact/script', [SuiteControlController::class, 'loadScript']);

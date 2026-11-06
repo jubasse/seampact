@@ -332,6 +332,8 @@ describe("stop rule", () => {
         ["tasksDevices", [], IR_REVISION],
         ["tasksOptionalAuth", [], IR_REVISION],
         ["tasksAbsoluteUrls", [], IR_REVISION],
+        ["tasksPaging", [], IR_REVISION],
+        ["tasksSplitSort", [], IR_REVISION],
       ]);
       expect(Object.keys(result.locations).length).toBeGreaterThan(0);
       expect(result.files).toContain("workspace.yaml");
