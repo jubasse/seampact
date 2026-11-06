@@ -4,6 +4,8 @@ import typing as _typing
 
 import seampact.codegen.runtime.contract as _contract
 
+from . import schemas as _schemas
+
 CONTRACT: _typing.Final = _contract.ApiContract(
     api="tasks",
     generated_by="0.0.0-dev",
@@ -3227,5 +3229,9 @@ CONTRACT: _typing.Final = _contract.ApiContract(
                 "Idempotency-Key": "idempotency_key",
             },
         },
+    },
+    params_models={
+        "RecentAuthParams": _schemas.RecentAuthParams,
+        "RolesParams": _schemas.RolesParams,
     },
 )

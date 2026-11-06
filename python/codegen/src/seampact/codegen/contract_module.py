@@ -9,7 +9,7 @@ from typing import Final
 
 from seampact.codegen.kept_forms import handler_headers
 from seampact.codegen.names import ApiNames, member_identifier, part_attributes
-from seampact.codegen.printer import INDENT, PythonModule, literal_lines
+from seampact.codegen.printer import INDENT, PythonModule, literal_lines, string_literal
 from seampact.codegen.refusals import IrPlace, Refusals
 from seampact.codegen.runtime.contract import HEADER_PART, PATH_PART, PROOFS_PART, QUERY_PART
 from seampact.codegen.runtime.version import RUNTIME_VERSION
@@ -31,6 +31,8 @@ IR_VIEW_MEMBERS: Final = (
     "enums",
 )
 CONTRACT_NAME: Final = "CONTRACT"
+_SCHEMAS_MODULE: Final = ".schemas"
+_SCHEMAS_ALIAS: Final = "_schemas"
 
 
 def contract_module(ir: ContractIR, names: ApiNames, mount: str, refusals: Refusals) -> str:
@@ -51,6 +53,7 @@ def contract_module(ir: ContractIR, names: ApiNames, mount: str, refusals: Refus
     for name, value in arguments:
         lines += literal_lines(INDENT, f"{name}=", value, ",")
 
+    lines += _params_models(module, _params_classes(ir, names, refusals))
     module.add_block([*lines, ")"])
 
     return module.text()
@@ -63,6 +66,40 @@ def ir_view(ir: ContractIR) -> dict[str, object]:
     view["operations"] = document["operations"]
 
     return view
+
+
+def _params_classes(ir: ContractIR, names: ApiNames, refusals: Refusals) -> dict[str, str]:
+    """The generated class of each params schema a right or rule declares, by schema id."""
+    declared = [(f"/rights/{name}/params", right.params) for name, right in sorted(ir.rights.items())]
+    declared += [(f"/rules/{name}/params", rule.params) for name, rule in sorted(ir.rules.items())]
+    classes: dict[str, str] = {}
+
+    for pointer, schema_id in declared:
+        if schema_id is None:
+            continue
+
+        class_name = names.schema_classes.get(schema_id)
+
+        if class_name is None:
+            refusals.inconsistent(
+                "params.class.missing", f"The params '{schema_id}' have no generated class", IrPlace(pointer)
+            )
+            continue
+
+        classes[schema_id] = class_name
+
+    return dict(sorted(classes.items()))
+
+
+def _params_models(module: PythonModule, classes: Mapping[str, str]) -> list[str]:
+    """The `params_models=` argument; none when no right or rule declares params."""
+    if not classes:
+        return []
+
+    schemas = module.imported(_SCHEMAS_MODULE, _SCHEMAS_ALIAS)
+    entries = [f"{INDENT * 2}{string_literal(schema_id)}: {schemas}.{name}," for schema_id, name in classes.items()]
+
+    return [f"{INDENT}params_models={{", *entries, f"{INDENT}}},"]
 
 
 def _operation_members(ir: ContractIR, refusals: Refusals) -> dict[str, dict[str, Mapping[str, str]]]:

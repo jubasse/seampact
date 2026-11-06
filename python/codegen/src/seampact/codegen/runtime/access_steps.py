@@ -16,6 +16,7 @@ from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefu
 from seampact.codegen.runtime.input_decoding import Issue, role_refusal, schema_invalid
 from seampact.codegen.runtime.ir_view import IrMap, ir_int, ir_map, ir_maps, ir_string, ir_strings
 from seampact.codegen.runtime.principal_members import principal_members
+from seampact.codegen.runtime.requirement_params import requirement_params
 from seampact.codegen.runtime.signature_header import parsed_signature_header
 from seampact.codegen.runtime.wire_values import decoded_segment, path_value, scalar_issue
 from seampact.hooks import (
@@ -346,11 +347,11 @@ async def _decide_requirements(state: AccessState, hooks: AccessHooks, call: Hoo
     for requirement in ir_maps(operation, "requires"):
         is_rule = ir_string(requirement, "kind") == _RULE
         name = ir_string(requirement, _RULE if is_rule else "right") or ""
-        params = requirement.get("params")
+        kind = RequirementKind.RULE if is_rule else RequirementKind.RIGHT
         request = RequirementRequest(
-            kind=RequirementKind.RULE if is_rule else RequirementKind.RIGHT,
+            kind=kind,
             name=name,
-            params=copy.deepcopy(dict(params)) if isinstance(params, Mapping) else None,
+            params=requirement_params(state.contract, kind, name, requirement),
             principal=state.principal,
             subject=subject_of(state, ir_map(requirement, "subject"), name),
             scopes=tuple(state.scopes),

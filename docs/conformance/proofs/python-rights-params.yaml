@@ -1,0 +1,9 @@
+# docs/conformance/proofs/python-rights-params.yaml
+lane: python-rights-params
+proofs:
+  - id: CHK-086
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fastapi: python/codegen/tests/test_decide_request_params.py#test_the_decide_request_of_a_right_carries_its_params_as_the_generated_params_model'
+      - 'ninja: python/codegen/tests/test_decide_request_params.py#test_the_decide_request_of_a_right_carries_its_params_as_the_generated_params_model'
+      - 'drf: python/drf/drf_tests/test_drf_boundary.py#test_the_decider_gets_the_use_site_params_as_the_rights_generated_params_class'

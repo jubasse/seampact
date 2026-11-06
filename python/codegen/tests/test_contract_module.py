@@ -3,6 +3,8 @@ view as the IR's JSON writes it, and the Python attribute of each member's wire 
 packages pin its text."""
 
 import json
+import sys
+import types
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Final
@@ -12,6 +14,7 @@ import pytest
 from seampact.codegen.contract_module import CONTRACT_NAME, IR_VIEW_MEMBERS, contract_module
 from seampact.codegen.names import api_names
 from seampact.codegen.printer import literal_lines
+from seampact.codegen.pydantic_models import RulesMode, pydantic_schemas_module
 from seampact.codegen.refusals import Refusals
 from seampact.codegen.runtime.contract import HEADER_PART, PATH_PART, PROOFS_PART, QUERY_PART, ApiContract
 from seampact.codegen.runtime.ir_view import IrJson
@@ -45,8 +48,10 @@ def _ir_json(repository_root: Path, api: str) -> dict[str, object]:
 def _imported_contract(repository_root: Path, api: str) -> ApiContract:
     ir = read_ir(json.dumps(_ir_json(repository_root, api)), IrSupport.of_model(kinds=["httpOperation"]))
     refusals = Refusals("reference", "python", "seampact-codegen")
-    text = contract_module(ir, api_names(ir, refusals), "", refusals)
-    namespace: dict[str, object] = {}
+    names = api_names(ir, refusals)
+    text = contract_module(ir, names, "", refusals)
+    package = _api_package(api, pydantic_schemas_module(ir, names, RulesMode.NATIVE, refusals))
+    namespace: dict[str, object] = {"__package__": package}
 
     assert refusals.is_empty()
     exec(compile(text, f"<contract of {api}>", "exec"), namespace)
@@ -54,6 +59,20 @@ def _imported_contract(repository_root: Path, api: str) -> ApiContract:
     assert isinstance(contract, ApiContract)
 
     return contract
+
+
+def _api_package(api: str, schemas_text: str) -> str:
+    """An api package in `sys.modules` holding the `schemas` module the contract module imports; its name."""
+    package_name = f"contract_module_test_{api}"
+    package = types.ModuleType(package_name)
+    package.__path__ = []
+    schemas = types.ModuleType(f"{package_name}.schemas")
+    sys.modules[package_name] = package
+    sys.modules[schemas.__name__] = schemas
+    exec(compile(schemas_text, f"<schemas of {api}>", "exec"), schemas.__dict__)
+    package.__dict__["schemas"] = schemas
+
+    return package_name
 
 
 def _map(node: object, key: str) -> Mapping[str, object]:
