@@ -1,7 +1,8 @@
 // Runs the shared http suite's `default`, `hand-written`, `boot` and `pack:laravel` profiles against an assembled Python
 // consumer (ADR 0015 "Suite profiles") and writes one report per profile. The app directories, the virtual environment
 // they run in and the report directory come from the environment, `<prefix>_APP`, `<prefix>_ALLOW_LISTED_APP`,
-// `<prefix>_PACK_APP`, `<prefix>_VENV` and `<prefix>_REPORTS`; the target gives how its app is served and booted.
+// `<prefix>_ROUTE_CHECK_OFF_APP`, `<prefix>_HOOK_CHECK_OFF_APP`, `<prefix>_PACK_APP`, `<prefix>_VENV` and
+// `<prefix>_REPORTS`; the target gives how its app is served and booted.
 import { mkdirSync, readFileSync } from "node:fs";
 import { connect } from "node:net";
 import { join } from "node:path";
@@ -16,10 +17,10 @@ import {
   type SuiteCredentials,
   type SuiteProfile,
   type SuiteReport,
-  suiteReportOf,
   testEachCase,
   writeSuiteReport,
 } from "../../../packages/tools/http-suite/src/index.ts";
+import { type ConsumerBootApp, runBootProfileOnApps } from "../boot-apps.ts";
 import { goldenPackProfile } from "../golden-pack-profile.ts";
 import { type PythonApp, pythonOf, type RunningApp } from "./python-app.ts";
 
@@ -35,8 +36,6 @@ export interface PythonSuiteTarget {
   readonly refusals: Readonly<Record<string, string>>;
 }
 
-const ALLOW_LISTED_CASE = "allow-listed-framework-route-boots";
-const ALLOW_LISTED_ELSEWHERE = "Runs on the app built with the route allow-listed.";
 const SUITE_TIMEOUT_MS = 600_000;
 const BOOT_TIMEOUT_MS = 120_000;
 const TARGET_PROFILES: readonly SuiteProfile[] = [
@@ -100,10 +99,12 @@ export function describePythonHttpSuite(suiteTarget: PythonSuiteTarget): void {
   const { target, environmentPrefix, refusals } = suiteTarget;
   const venv = requiredEnvironment(`${environmentPrefix}_VENV`);
   const app = suiteTarget.appOf(requiredEnvironment(`${environmentPrefix}_APP`), venv);
-  const allowListedApp = suiteTarget.appOf(
-    requiredEnvironment(`${environmentPrefix}_ALLOW_LISTED_APP`),
-    venv,
-  );
+  const bootAppDirectoryOf: Readonly<Record<ConsumerBootApp, string>> = {
+    main: app.appDirectory,
+    "allow-listed": requiredEnvironment(`${environmentPrefix}_ALLOW_LISTED_APP`),
+    "route-check-off": requiredEnvironment(`${environmentPrefix}_ROUTE_CHECK_OFF_APP`),
+    "hook-check-off": requiredEnvironment(`${environmentPrefix}_HOOK_CHECK_OFF_APP`),
+  };
   const packApp = suiteTarget.appOf(requiredEnvironment(`${environmentPrefix}_PACK_APP`), venv);
   const reportDirectory = requiredEnvironment(`${environmentPrefix}_REPORTS`);
   const credentials = readCredentials();
@@ -141,7 +142,7 @@ export function describePythonHttpSuite(suiteTarget: PythonSuiteTarget): void {
   function bootRun(
     cases: readonly SuiteCase[],
     appDirectory: string,
-    caseRefusals: Record<string, string>,
+    caseRefusals: Readonly<Record<string, string>>,
   ) {
     return runBootSuite({
       target,
@@ -154,23 +155,11 @@ export function describePythonHttpSuite(suiteTarget: PythonSuiteTarget): void {
     });
   }
 
-  // The allow-listed variant needs the route in the config, so it boots the second app; the other cases boot the first.
-  async function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport> {
-    const onMainApp = await bootRun(cases, app.appDirectory, {
-      ...refusalsOf(cases, refusals),
-      [ALLOW_LISTED_CASE]: ALLOW_LISTED_ELSEWHERE,
-    });
-    const allowListedCases = cases.filter((suiteCase) => suiteCase.id === ALLOW_LISTED_CASE);
-    const onAllowListedApp = await bootRun(
-      allowListedCases,
-      allowListedApp.appDirectory,
-      refusalsOf(allowListedCases, refusals),
+  // A variant built from another app config boots that config's app (`boot-apps.ts`); the other cases boot the first.
+  function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport> {
+    return runBootProfileOnApps(target, cases, refusals, (bootApp, appCases, caseRefusals) =>
+      bootRun(appCases, bootAppDirectoryOf[bootApp], caseRefusals),
     );
-    const merged = onMainApp.cases.map(
-      (result) => onAllowListedApp.cases.find((other) => other.id === result.id) ?? result,
-    );
-
-    return suiteReportOf({ target, profile: "boot" }, merged);
   }
 
   // What the shared cases do not reach: a request target in absolute form, which the server passes with its origin.

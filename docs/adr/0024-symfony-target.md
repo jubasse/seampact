@@ -295,7 +295,7 @@ Under absolute URLs, the pass also requires a `public_origin` key (its value is 
 - a route that the loader did not make whose controller is a contract interface's method or a method of the service implementing one, whatever `frameworkRoutes` allow-lists and whether that check is on; at run time the listener refuses such a request anyway (spike);
 - a contract route whose path differs from `mount` followed by the contract path, `mount` being the one the generator receives through the target entry, or that carries a host, a scheme or a condition the loader did not set.
 
-`artefacts.bootCheck: { handlers, frameworkRoutes }` switches those two checks apart (ADR 0011). Once both parts pass, neither runs per request, so a php-fpm serve pays nothing for them. While the route part fails, no router cache exists, so the loader and the check run again on every request until it passes. Production apps run `cache:warmup` at deploy or container start.
+`artefacts.bootCheck: { frameworkRoutes, hooks }` switches the framework-route check and the hook check apart (ADR 0011); the handler check runs whenever the boot check does. Once both parts pass, neither runs per request, so a php-fpm serve pays nothing for them. While the route part fails, no router cache exists, so the loader and the check run again on every request until it passes. Production apps run `cache:warmup` at deploy or container start.
 
 ### Native security layers
 
@@ -333,7 +333,7 @@ The target imposes no wire shape ([A36](../decisions.md#a36)). Each feature that
 | the base-path 404 of unserved paths | on | `catchAll: false` |
 | Symfony's own value constraints | native | `rules: seampact-consistent` |
 | access hooks | on | `artefacts.accessHooks: false` with `access.native` |
-| the boot check | on | `artefacts.bootCheck`, or `{ handlers, frameworkRoutes }` |
+| the boot check | on | `artefacts.bootCheck`, or `{ frameworkRoutes, hooks }` |
 
 The error format is the api's declared format. Symfony ships no OpenAPI generator of its own, and NelmioApiDocBundle annotations wait for a consumer that needs them ([A47](../decisions.md#a47)), so the target declares no `nativeDocs` artefact and reads no `frameworkDocs`: the app config refuses both keys by name (`config.artefacts.unknown`), as for Laravel.
 

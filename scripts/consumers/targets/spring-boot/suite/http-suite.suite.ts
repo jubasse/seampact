@@ -1,6 +1,7 @@
 // Runs the shared http suite's `default`, `hand-written`, `boot`, `pack:spring` and `pack:laravel` profiles against the
 // Spring Boot consumer's jars (ADR 0015 "Suite profiles") and writes one report per profile. The jars and the report
-// directory come from the environment: SEAMPACT_SPRING_JAR, SEAMPACT_SPRING_ALLOW_LISTED_JAR, SEAMPACT_SPRING_PACK_JAR,
+// directory come from the environment: SEAMPACT_SPRING_JAR, SEAMPACT_SPRING_ALLOW_LISTED_JAR,
+// SEAMPACT_SPRING_ROUTE_CHECK_OFF_JAR, SEAMPACT_SPRING_HOOK_CHECK_OFF_JAR, SEAMPACT_SPRING_PACK_JAR,
 // SEAMPACT_SPRING_PACK_LARAVEL_JAR and SEAMPACT_SPRING_REPORTS.
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -17,16 +18,14 @@ import {
   type SuiteCredentials,
   type SuiteProfile,
   type SuiteReport,
-  suiteReportOf,
   testEachCase,
   writeSuiteReport,
 } from "../../../../../packages/tools/http-suite/src/index.ts";
+import { type ConsumerBootApp, runBootProfileOnApps } from "../../../boot-apps.ts";
 import { type RunningApp, startSpringApp } from "./spring-app.ts";
 import { SPRING_SUITE_REFUSALS } from "./suite-refusals.ts";
 
 const TARGET = "spring-boot";
-const ALLOW_LISTED_CASE = "allow-listed-framework-route-boots";
-const ALLOW_LISTED_ELSEWHERE = "Runs on the jar built with the route allow-listed.";
 const SUITE_TIMEOUT_MS = 600_000;
 const BOOT_TIMEOUT_MS = 120_000;
 const TARGET_PROFILES: readonly SuiteProfile[] = ["default", "hand-written", "boot"];
@@ -34,7 +33,12 @@ const GOLDEN_DIRECTORY = join(import.meta.dirname, "../../../../../fixtures/gold
 const LIST_TASKS_PATH = "/v1/channels/10000000-0000-4000-8000-000000000001/tasks";
 
 const jar = requiredEnvironment("SEAMPACT_SPRING_JAR");
-const allowListedJar = requiredEnvironment("SEAMPACT_SPRING_ALLOW_LISTED_JAR");
+const bootJarOf: Readonly<Record<ConsumerBootApp, string>> = {
+  main: jar,
+  "allow-listed": requiredEnvironment("SEAMPACT_SPRING_ALLOW_LISTED_JAR"),
+  "route-check-off": requiredEnvironment("SEAMPACT_SPRING_ROUTE_CHECK_OFF_JAR"),
+  "hook-check-off": requiredEnvironment("SEAMPACT_SPRING_HOOK_CHECK_OFF_JAR"),
+};
 const packJar = requiredEnvironment("SEAMPACT_SPRING_PACK_JAR");
 const packLaravelJar = requiredEnvironment("SEAMPACT_SPRING_PACK_LARAVEL_JAR");
 const reportDirectory = requiredEnvironment("SEAMPACT_SPRING_REPORTS");
@@ -186,33 +190,19 @@ describe("under responses: warn, a handler's null page", () => {
   testEachCase([nullPageCase], () => report, {}, test);
 });
 
-// The allow-listed variant needs the route in the config, so it boots the second jar; the other cases boot the first.
-async function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport> {
-  const refusals = refusalsOf(cases, SPRING_SUITE_REFUSALS);
-  const onMainJar = await runBootSuite({
-    target: TARGET,
-    cases,
-    refusals: { ...refusals, [ALLOW_LISTED_CASE]: ALLOW_LISTED_ELSEWHERE },
-    command: "java",
-    args: ["-jar", jar],
-    cwd: reportDirectory,
-    bootTimeoutMs: BOOT_TIMEOUT_MS,
-  });
-  const allowListedCases = cases.filter((suiteCase) => suiteCase.id === ALLOW_LISTED_CASE);
-  const onAllowListedJar = await runBootSuite({
-    target: TARGET,
-    cases: allowListedCases,
-    refusals: refusalsOf(allowListedCases, SPRING_SUITE_REFUSALS),
-    command: "java",
-    args: ["-jar", allowListedJar],
-    cwd: reportDirectory,
-    bootTimeoutMs: BOOT_TIMEOUT_MS,
-  });
-  const merged = onMainJar.cases.map(
-    (result) => onAllowListedJar.cases.find((other) => other.id === result.id) ?? result,
+// A variant built from another app config boots that config's jar (`boot-apps.ts`); the other cases boot the first.
+function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport> {
+  return runBootProfileOnApps(TARGET, cases, SPRING_SUITE_REFUSALS, (app, appCases, refusals) =>
+    runBootSuite({
+      target: TARGET,
+      cases: appCases,
+      refusals,
+      command: "java",
+      args: ["-jar", bootJarOf[app]],
+      cwd: reportDirectory,
+      bootTimeoutMs: BOOT_TIMEOUT_MS,
+    }),
   );
-
-  return suiteReportOf({ target: TARGET, profile: "boot" }, merged);
 }
 
 // Behind a prefix-stripping proxy the app sets the forwarded-headers strategy; the boundary strips the request's own

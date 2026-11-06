@@ -14,6 +14,7 @@ import {
 } from "./json-reader.js";
 import { readSampleAppScript, type SampleAppScript } from "./sample-app-script.js";
 import type { ScopedCheck } from "./scoped-check.js";
+import { baseTargetOf } from "./target-variant.js";
 import { WHOLE_PLACEHOLDER } from "./template.js";
 
 export type JsonValue =
@@ -124,6 +125,8 @@ export type BootExpectation =
  * beyond `tasks` and `tasksService` the case reaches, so a profile whose app serves fewer refuses it by name. A boot
  * case runs in the `boot` profile only and holds `boot` in place of `steps`, `script` and `hookCalls`; its `steps` are
  * empty.
+ * `targets`, when present, names the only server targets the case applies to (a behaviour other servers prove by
+ * another case); the run of any other target refuses it with `outsideTargetsReason`.
  */
 export interface SuiteCase {
   readonly id: string;
@@ -131,6 +134,7 @@ export interface SuiteCase {
   readonly checks: readonly ScopedCheck[];
   readonly profiles: readonly SuiteProfile[];
   readonly apis?: readonly string[];
+  readonly targets?: readonly string[];
   readonly script?: SampleAppScript;
   readonly steps: readonly SuiteStep[];
   readonly hookCalls?: readonly RecordedHookCall[];
@@ -148,6 +152,18 @@ export function runsInProfile(suiteCase: SuiteCase, profile: SuiteProfile): bool
   if (suiteCase.profiles.includes(profile)) return true;
 
   return profile.startsWith("pack:") && suiteCase.profiles.includes("default");
+}
+
+/** The reason a run of [reportTarget] refuses [suiteCase], or `undefined` when the case applies to that target. */
+export function outsideTargetsReason(
+  suiteCase: SuiteCase,
+  reportTarget: string,
+): string | undefined {
+  if (suiteCase.targets === undefined || suiteCase.targets.includes(baseTargetOf(reportTarget))) {
+    return undefined;
+  }
+
+  return `the case applies only to ${suiteCase.targets.join(", ")}`;
 }
 
 export const CASE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -176,6 +192,7 @@ const CASE_MEMBERS = [
   "checks",
   "profiles",
   "apis",
+  "targets",
   "script",
   "steps",
   "hookCalls",
@@ -216,6 +233,7 @@ export function parseSuiteCase(value: unknown, source: string): SuiteCase {
       readCheck(reader, check, `/checks/${index}`),
     ),
     profiles: readProfiles(reader, object.profiles),
+    ...(object.targets === undefined ? {} : { targets: readCaseTargets(reader, object.targets) }),
   };
 
   if (header.profiles.includes(BOOT_PROFILE)) return readBootCase(reader, object, header);
@@ -243,7 +261,22 @@ export function parseSuiteCase(value: unknown, source: string): SuiteCase {
   };
 }
 
-type CaseHeader = Pick<SuiteCase, "id" | "title" | "checks" | "profiles">;
+type CaseHeader = Pick<SuiteCase, "id" | "title" | "checks" | "profiles" | "targets">;
+
+function readCaseTargets(reader: JsonReader, value: unknown): string[] {
+  const targets = arrayAt(reader, value, "/targets").map((target, index) =>
+    patternAt(reader, target, `/targets/${index}`, TARGET_NAME),
+  );
+
+  if (targets.length === 0) {
+    reader.fail(
+      "/targets",
+      "a case names at least one target; leave `targets` out for every target",
+    );
+  }
+
+  return targets;
+}
 
 // The boot profile starts the sample app and sends no request, so a boot case is in no other profile.
 function readBootCase(

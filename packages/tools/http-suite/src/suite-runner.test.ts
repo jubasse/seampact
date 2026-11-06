@@ -349,6 +349,23 @@ describe("runSuite", () => {
     expect(Object.keys(report.checks)).toEqual(["CHK-003", "CHK-005", "CHK-074"]);
   });
 
+  test("a case scoped to other targets is refused without a request, and runs on its own", async () => {
+    const step = { request: { method: "GET", path: "/items" }, expect: { status: 200 } };
+    const report = await run([
+      suiteCase("elsewhere", { targets: ["express", "adonis"], steps: [step] }),
+      suiteCase("here", { targets: [TARGET], steps: [step] }),
+    ]);
+
+    expect(report.cases.map(({ id, outcome, reason }) => ({ id, outcome, reason }))).toEqual([
+      {
+        id: "elsewhere",
+        outcome: "refused",
+        reason: "the case applies only to express, adonis",
+      },
+      { id: "here", outcome: "passed", reason: undefined },
+    ]);
+  });
+
   test("the hand-written profile proves its profile check with every case of the run", async () => {
     const step = { request: { method: "GET", path: "/items" }, expect: { status: 200 } };
     const handWritten = (id: string, checks: string[]) =>

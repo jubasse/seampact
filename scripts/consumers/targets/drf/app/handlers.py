@@ -3,7 +3,7 @@ when it says so, and the factories SEAMPACT names, which build them per request.
 
 from django.http import HttpRequest
 from generated.tasks import operations as tasks
-from generated.tasks.schemas import Health, Preferences, Task, TaskSearchResult, TaskState
+from generated.tasks.schemas import Preferences, Task, TaskSearchResult, TaskState
 from generated.tasks_absolute_urls import operations as absolute_urls
 from generated.tasks_devices import operations as devices
 from generated.tasks_devices.schemas import DeviceStatus
@@ -28,18 +28,12 @@ from sample_data import (
     task_of,
     with_next_version,
 )
-from seampact_consumer_suite.scripted_answers import scripted_answer, text_member
+from seampact_consumer_suite.scripted_answers import scripted_answer
 
 _OK: int = 200
-_HEALTHY: str = "ok"
 _SERVICE_API: str = "tasksService"
 _DEFAULT_LOCALE: str = "en"
 _DEFAULT_DIGEST: bool = False
-
-
-class AppHandlers:
-    def health(self, request: tasks.HealthRequest) -> tasks.HealthResult:
-        return scripted_answer("health", _OK, _health_of) or tasks.HealthResponse200(body=Health(status=_HEALTHY))
 
 
 class ChannelsHandlers:
@@ -173,10 +167,6 @@ class NotesHandlers:
         return absolute_urls.GetNoteResponse200(body=note(request.input.path.note_id))
 
 
-def _health_of(body: dict[str, object]) -> tasks.HealthResult:
-    return tasks.HealthResponse200(body=Health(status=text_member(body, "status")))
-
-
 def _channel_reply_of(body: dict[str, object]) -> tasks.GetChannelResult:
     return tasks.GetChannelResponse200(body=channel_of(body))
 
@@ -205,10 +195,6 @@ def _retitled(created: Task, title: str) -> Task:
         version=created.version,
         created_at=created.created_at,
     )
-
-
-def app_handlers(request: HttpRequest) -> AppHandlers:
-    return AppHandlers()
 
 
 def channels_handlers(request: HttpRequest) -> ChannelsHandlers:

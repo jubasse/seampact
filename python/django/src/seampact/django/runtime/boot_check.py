@@ -431,7 +431,10 @@ def _resolved_problems(
     try:
         resolved: ResolverMatch = get_resolver().resolve(sample)
     except Resolver404:
-        return [f"operation '{operation_id}': no URL pattern serves {sample}; {boundary.unserved_path_fix()}."]
+        served_route = _served_route(route_name)
+        served = "" if served_route is None else f" (its pattern sits at {served_route})"
+
+        return [f"operation '{operation_id}': no URL pattern serves {sample}{served}; {boundary.unserved_path_fix()}."]
 
     if contract_of_view(resolved.func) is contract and resolved.url_name == route_name:
         return []
@@ -490,6 +493,16 @@ def _framework_route_problems(boundary: type[BoundaryDeclaration]) -> list[str]:
         )
 
     return problems
+
+
+def _served_route(route_name: str) -> str | None:
+    """The full route the URLconf serves the operation's generated pattern at, the prefixes it sits under included: a
+    prefix the entry's mount does not state. The pattern is found by its name, which names the api."""
+    for prefixes, pattern in _prefixed_patterns(get_resolver().url_patterns, ()):
+        if pattern.name == route_name:
+            return _route_text("".join([*prefixes, str(pattern.pattern)]))
+
+    return None
 
 
 def _route_text(route: str) -> str:

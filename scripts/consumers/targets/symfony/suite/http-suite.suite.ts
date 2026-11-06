@@ -1,7 +1,8 @@
 // Runs the shared http suite's `default`, `hand-written`, `boot` and `pack:laravel` profiles against the assembled
 // Symfony consumer (ADR 0015 "Suite profiles") served by PHP's built-in server, and writes one report per profile.
 // The app directories and the report directory come from the environment: SEAMPACT_SYMFONY_APP,
-// SEAMPACT_SYMFONY_ALLOW_LISTED_APP, SEAMPACT_SYMFONY_PACK_APP and SEAMPACT_SYMFONY_REPORTS.
+// SEAMPACT_SYMFONY_ALLOW_LISTED_APP, SEAMPACT_SYMFONY_ROUTE_CHECK_OFF_APP, SEAMPACT_SYMFONY_HOOK_CHECK_OFF_APP,
+// SEAMPACT_SYMFONY_PACK_APP and SEAMPACT_SYMFONY_REPORTS.
 import { randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,17 +18,15 @@ import {
   type SuiteCredentials,
   type SuiteProfile,
   type SuiteReport,
-  suiteReportOf,
   testEachCase,
   writeSuiteReport,
 } from "../../../../../packages/tools/http-suite/src/index.ts";
+import { type ConsumerBootApp, runBootProfileOnApps } from "../../../boot-apps.ts";
 import { goldenPackProfile } from "../../../golden-pack-profile.ts";
 import { SYMFONY_SUITE_REFUSALS } from "./suite-refusals.ts";
 import { type RunningApp, startSymfonyApp } from "./symfony-app.ts";
 
 const TARGET = "symfony";
-const ALLOW_LISTED_CASE = "allow-listed-framework-route-boots";
-const ALLOW_LISTED_ELSEWHERE = "Runs on the app built with the route allow-listed.";
 const SUITE_TIMEOUT_MS = 600_000;
 const BOOT_TIMEOUT_MS = 120_000;
 const TARGET_PROFILES: readonly SuiteProfile[] = [
@@ -38,7 +37,12 @@ const TARGET_PROFILES: readonly SuiteProfile[] = [
 ];
 
 const app = requiredEnvironment("SEAMPACT_SYMFONY_APP");
-const allowListedApp = requiredEnvironment("SEAMPACT_SYMFONY_ALLOW_LISTED_APP");
+const bootAppDirectoryOf: Readonly<Record<ConsumerBootApp, string>> = {
+  main: app,
+  "allow-listed": requiredEnvironment("SEAMPACT_SYMFONY_ALLOW_LISTED_APP"),
+  "route-check-off": requiredEnvironment("SEAMPACT_SYMFONY_ROUTE_CHECK_OFF_APP"),
+  "hook-check-off": requiredEnvironment("SEAMPACT_SYMFONY_HOOK_CHECK_OFF_APP"),
+};
 const packApp = requiredEnvironment("SEAMPACT_SYMFONY_PACK_APP");
 const reportDirectory = requiredEnvironment("SEAMPACT_SYMFONY_REPORTS");
 const credentials = readCredentials();
@@ -108,7 +112,7 @@ let bootRuns = 0;
 function bootRun(
   cases: readonly SuiteCase[],
   appDirectory: string,
-  refusals: Record<string, string>,
+  refusals: Readonly<Record<string, string>>,
 ) {
   bootRuns += 1;
 
@@ -128,24 +132,14 @@ function bootRun(
   });
 }
 
-// The allow-listed variant needs the route in the config, so it boots the second app; the other cases boot the first.
-async function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport> {
-  const refusals = refusalsOf(cases, SYMFONY_SUITE_REFUSALS);
-  const onMainApp = await bootRun(cases, app, {
-    ...refusals,
-    [ALLOW_LISTED_CASE]: ALLOW_LISTED_ELSEWHERE,
-  });
-  const allowListedCases = cases.filter((suiteCase) => suiteCase.id === ALLOW_LISTED_CASE);
-  const onAllowListedApp = await bootRun(
-    allowListedCases,
-    allowListedApp,
-    refusalsOf(allowListedCases, SYMFONY_SUITE_REFUSALS),
+// A variant built from another app config boots that config's app (`boot-apps.ts`); the other cases boot the first.
+function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport> {
+  return runBootProfileOnApps(
+    TARGET,
+    cases,
+    SYMFONY_SUITE_REFUSALS,
+    (bootApp, appCases, refusals) => bootRun(appCases, bootAppDirectoryOf[bootApp], refusals),
   );
-  const merged = onMainApp.cases.map(
-    (result) => onAllowListedApp.cases.find((other) => other.id === result.id) ?? result,
-  );
-
-  return suiteReportOf({ target: TARGET, profile: "boot" }, merged);
 }
 
 const GENERAL_CHANNEL = "/v1/channels/10000000-0000-4000-8000-000000000001";

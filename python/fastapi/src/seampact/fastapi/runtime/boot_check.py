@@ -171,10 +171,13 @@ class _ContractRequest:
 
 def _router_target_problems(binding: ApiBinding, request: _ContractRequest, app_winner: BaseRoute | None) -> list[str]:
     if app_winner is None:
+        served_path = _served_path(binding, request.operation_id)
+        served = "" if served_path is None else f" (its route sits at '{served_path}')"
+
         return [
-            f"operation '{request.operation_id}': no route of the app takes '{request.method} {request.path}'; "
-            f"include the router passed to bind_{binding.api}() in the app with no prefix on it or on a router it "
-            "joins, and set the entry's `mount` for a prefix"
+            f"operation '{request.operation_id}': no route of the app takes '{request.method} {request.path}'"
+            f"{served}; include the router passed to bind_{binding.api}() in the app with no prefix on it or on a "
+            "router it joins, and set the entry's `mount` for a prefix"
         ]
 
     if isinstance(app_winner, Route | Mount | Host):
@@ -183,6 +186,20 @@ def _router_target_problems(binding: ApiBinding, request: _ContractRequest, app_
     target_winner = _first_full_match(binding.target.routes, request.method, request.path)
 
     return [] if target_winner is binding.route_entry else [request.taken_by(target_winner)]
+
+
+def _served_path(binding: ApiBinding, operation_id: str) -> str | None:
+    """The full path the app serves the operation's contract route at, a prefix it gained included: the mismatch the
+    entry's `mount` does not state."""
+    name = binding.placement.route(operation_id).name
+
+    for route in _app_routes(binding.app.routes):
+        path = getattr(route, "path", None)
+
+        if getattr(route, "name", None) == name and isinstance(path, str):
+            return path
+
+    return None
 
 
 def _first_full_match(routes: Iterable[BaseRoute], method: str, path: str) -> BaseRoute | None:

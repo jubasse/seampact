@@ -33,9 +33,6 @@ from generated.tasks.operations import (
     GetTasksBatchRequest,
     GetTasksBatchResponse200,
     GetTasksBatchResult,
-    HealthRequest,
-    HealthResponse200,
-    HealthResult,
     ListChannelsRequest,
     ListChannelsResponse200,
     ListChannelsResult,
@@ -59,7 +56,7 @@ from generated.tasks.operations import (
     UpdateTaskResponse200,
     UpdateTaskResult,
 )
-from generated.tasks.schemas import Health, Preferences, TaskSearchResult, TaskState
+from generated.tasks.schemas import Preferences, TaskSearchResult, TaskState
 from generated.tasks_absolute_urls import operations as absolute_urls
 from generated.tasks_devices import operations as devices
 from generated.tasks_devices.schemas import DeviceStatus
@@ -85,17 +82,12 @@ from sample_data import (
     task_of,
     with_next_version,
 )
-from seampact_consumer_suite.scripted_answers import scripted_answer, text_member
+from seampact_consumer_suite.scripted_answers import scripted_answer
 
 _OK: int = 200
-_HEALTHY: str = "ok"
 _DEFAULT_LOCALE: str = "en"
 _NOT_FOUND: str = "api.not_found"
 _SERVICE_API: str = "tasksService"
-
-
-def _health_of(body: dict[str, object]) -> HealthResult:
-    return HealthResponse200(Health(status=text_member(body, "status")))
 
 
 def _channel_reply_of(body: dict[str, object]) -> GetChannelResult:
@@ -115,11 +107,6 @@ def _page_of(body: dict[str, object]) -> ListTasksResult:
     tasks = [task_of(item) for item in items if isinstance(item, dict)] if isinstance(items, list) else []
 
     return ListTasksResponse200(scripted_task_page(tasks, body))
-
-
-class AppHandlers:
-    def health(self, request: HealthRequest) -> HealthResult:
-        return scripted_answer("health", _OK, _health_of) or HealthResponse200(Health(status=_HEALTHY))
 
 
 class ChannelsHandlers:

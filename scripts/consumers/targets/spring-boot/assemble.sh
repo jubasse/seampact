@@ -1,7 +1,9 @@
 #!/bin/sh
 # Copies the Spring Boot consumer into a directory of its own (ADR 0011, A12): the app sources, its build root (Gradle
 # with the repository's Gradle wrapper, or Maven with its `mvnw`) and the reference contract. `allow-listed` takes the
-# config of the `allow-listed-framework-route` boot variant; `pack-spring` takes the reference contract with
+# config of the `allow-listed-framework-route` boot variant; `route-check-off` the config with the framework-route
+# check off; `hook-check-off` the config with the hook check off and `health` filtered out, without the `health`
+# controller and the tests, which need `health`; `pack-spring` takes the reference contract with
 # `@seampact/pack-spring` applied, its paged lists answered with Spring Data's `Page` (the `pack:spring` suite profile);
 # `pack-laravel` the reference contract with `@seampact/pack-laravel` applied, whose format wraps every success body
 # (the `pack:laravel` suite profile).
@@ -58,8 +60,16 @@ else
   cp -R "$repository/fixtures/reference" "$destination/contract"
 fi
 
-if [ "$variant" = "allow-listed" ]; then
-  cp "$here/seampact.allow-listed.config.yaml" "$destination/seampact.config.yaml"
-else
-  cp "$here/seampact.config.yaml" "$destination/seampact.config.yaml"
+case "$variant" in
+  allow-listed | route-check-off | hook-check-off)
+    cp "$here/seampact.$variant.config.yaml" "$destination/seampact.config.yaml"
+    ;;
+  *)
+    cp "$here/seampact.config.yaml" "$destination/seampact.config.yaml"
+    ;;
+esac
+
+if [ "$variant" = "hook-check-off" ]; then
+  rm "$destination/src/main/java/com/example/consumer/TasksAppController.java"
+  rm -R "$destination/src/test"
 fi

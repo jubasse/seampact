@@ -1,10 +1,11 @@
 #!/bin/sh
-# Assembles a Python consumer in <work>: `assemble.sh <target> <work> <bundled> [allow-listed|pack-laravel]` copies the
-# app of the consumer directory <target>, the shared suite doubles and the variant's paged lists (`paged-lists/`) into
-# <work>/app (or <work>/app-allow-listed, built from the target's `seampact.allow-listed.config.yaml`, or
-# <work>/app-pack-laravel), and points its contract at the bundle that `bundle.sh` wrote to <bundled> (for
-# pack-laravel, the bundle of fixtures/golden/pack-laravel/contract), committed into the local git repository
-# <work>/contract-repo (<work>/contract-repo-pack-laravel) with the tag v1.0.0. The app directory is new.
+# Assembles a Python consumer in <work>: `assemble.sh <target> <work> <bundled>
+# [allow-listed|route-check-off|hook-check-off|pack-laravel]` copies the app of the consumer directory <target>, the
+# shared suite doubles and the variant's paged lists (`paged-lists/`) into <work>/app (or <work>/app-<variant> for a
+# boot variant's app, built from the target's `seampact.<variant>.config.yaml`, or <work>/app-pack-laravel), and points
+# its contract at the bundle that `bundle.sh` wrote to <bundled> (for pack-laravel, the bundle of
+# fixtures/golden/pack-laravel/contract), committed into the local git repository <work>/contract-repo
+# (<work>/contract-repo-pack-laravel) with the tag v1.0.0. The app directory is new.
 # With SEAMPACT_CONSUMER_BINARY set to a compiler binary, the app's pyproject.toml pins it as `[tool.seampact.binary]`,
 # which the runner needs for `nativeDocs` until the binary is published.
 set -eu
@@ -23,12 +24,12 @@ paged_lists="$here/paged-lists/reference_paged_lists.py"
 
 case "$variant" in
   "") app="$work/app"; config="seampact.config.yaml" ;;
-  allow-listed) app="$work/app-allow-listed"; config="seampact.allow-listed.config.yaml" ;;
+  allow-listed | route-check-off | hook-check-off) app="$work/app-$variant"; config="seampact.$variant.config.yaml" ;;
   pack-laravel)
     app="$work/app-pack-laravel"; config="seampact.config.yaml"; contract_repo="$work/contract-repo-pack-laravel"
     paged_lists="$here/paged-lists/pack_laravel_paged_lists.py"
     ;;
-  *) echo "usage: assemble.sh <work> <bundled> [allow-listed|pack-laravel]" >&2; exit 1 ;;
+  *) echo "usage: assemble.sh <target> <work> <bundled> [allow-listed|route-check-off|hook-check-off|pack-laravel]" >&2; exit 1 ;;
 esac
 
 if [ -e "$app" ]; then

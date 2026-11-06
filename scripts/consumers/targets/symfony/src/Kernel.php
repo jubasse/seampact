@@ -67,7 +67,6 @@ final class Kernel extends BaseKernel
     // The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
     private const PUBLIC_ORIGIN = 'https://api.seampact.test';
     private const LEFT_OUT_BY_VARIANT = [
-        'missing-authenticate-hook' => UserHook::class,
         'missing-decider' => TasksDecider::class,
         'missing-scope-resolver' => ChannelResolver::class,
         'missing-handler' => AppController::class,
@@ -134,10 +133,9 @@ final class Kernel extends BaseKernel
         $container->extension('seampact_tasks_absolute_urls', ['public_origin' => self::PUBLIC_ORIGIN]);
 
         $services = $container->services()->defaults()->autowire()->autoconfigure();
-        $leftOut = self::LEFT_OUT_BY_VARIANT[BootVariant::current() ?? ''] ?? null;
         // The generated tree is loaded with the app's classes, as the skeleton's services.yaml loads it.
         $services->load('App\\', __DIR__ . '/')
-            ->exclude([__DIR__ . '/Kernel.php', ...($leftOut === null ? [] : [self::sourceFileOf($leftOut)])]);
+            ->exclude([__DIR__ . '/Kernel.php', ...array_map(self::sourceFileOf(...), self::leftOutClasses())]);
         $services->set('logger', SuiteLogger::class);
         $services->set(TasksSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
         $services->set(TasksServiceWritesSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
@@ -150,7 +148,13 @@ final class Kernel extends BaseKernel
 
     private function configureRoutes(RoutingConfigurator $routes): void
     {
-        $routes->import(TasksRouteLoader::RESOURCE, TasksRouteLoader::TYPE);
+        // The mount-mismatch boot variant imports the tasks api's routes under a prefix its entry's mount does not state.
+        // An import is added to the routes when its configurator is released, so neither is kept in a variable.
+        if (BootVariant::mountsUnderMismatchedPrefix()) {
+            $routes->import(TasksRouteLoader::RESOURCE, TasksRouteLoader::TYPE)->prefix(BootVariant::MISMATCHED_MOUNT);
+        } else {
+            $routes->import(TasksRouteLoader::RESOURCE, TasksRouteLoader::TYPE);
+        }
         $routes->import(TasksServiceRouteLoader::RESOURCE, TasksServiceRouteLoader::TYPE);
         $routes->import(TasksServiceWritesRouteLoader::RESOURCE, TasksServiceWritesRouteLoader::TYPE);
         $routes->import(TasksDevicesRouteLoader::RESOURCE, TasksDevicesRouteLoader::TYPE);
@@ -165,6 +169,23 @@ final class Kernel extends BaseKernel
         if (BootVariant::servesUnlistedRoute()) {
             $routes->add('suite_unlisted', '/v1/unlisted')->methods(['GET'])->controller(UnlistedRouteController::class);
         }
+        if (BootVariant::servesPatternedRoute()) {
+            $routes->add('suite_patterned', BootVariant::PATTERNED_ROUTE)->methods(['GET'])->controller(UnlistedRouteController::class);
+        }
+    }
+
+    /**
+     * The classes the boot variant leaves out of the container. The app built with `health` filtered out has no
+     * `AppController` source at all (`assemble.sh`), since its generated code has no `AppEndpoints`.
+     *
+     * @return list<class-string>
+     */
+    private static function leftOutClasses(): array
+    {
+        $leftOut = BootVariant::leavesOutAuthenticateHook() ? [UserHook::class] : [];
+        $byVariant = self::LEFT_OUT_BY_VARIANT[BootVariant::current() ?? ''] ?? null;
+
+        return $byVariant === null ? $leftOut : [...$leftOut, $byVariant];
     }
 
     /** @param class-string $class */

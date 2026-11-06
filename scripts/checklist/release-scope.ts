@@ -119,6 +119,7 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ["CHK-151", refusedForm("a multipart body", BODY_AND_QUERY_FORMS_REFUSED_ON)],
   ["CHK-152", refusedForm("a file download", BODY_AND_QUERY_FORMS_REFUSED_ON)],
   ["CHK-160", refusedForm("a query list in brackets form", BODY_AND_QUERY_FORMS_REFUSED_ON)],
+  ["CHK-163", refusedOnEveryServer("native access (accessHooks: false)")],
   ...["CHK-074", "CHK-077", "CHK-078", "CHK-103"].map((id): [string, ItemAfter1_0] => [
     id,
     { targets: ADAPTERS, reason: ADAPTERS_IN_1_1 },

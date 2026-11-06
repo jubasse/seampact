@@ -1,7 +1,7 @@
 // What a consumer's profile run shares across targets: the refusals of the cases a run holds, the report file of a
 // profile, and one test per case of a report, registered through the consumer's own test function.
 import { join } from "node:path";
-import type { SuiteCase, SuiteProfile } from "./suite-case.js";
+import { outsideTargetsReason, type SuiteCase, type SuiteProfile } from "./suite-case.js";
 import type { SuiteReport } from "./suite-report.js";
 
 /** The consumer's test registration, such as vitest's `test`: a name and a body that throws to fail. */
@@ -32,17 +32,25 @@ export function reportFileOf(directory: string, profile: SuiteProfile): string {
   return join(directory, `http-suite-${fileProfile}.json`);
 }
 
-/** Each way the case [id] of [report] differs from passing, or from refused when [refusals] names it. */
+/**
+ * Each way the case [id] of [report] differs from passing, or from refused when [refusals] names it or the case
+ * [suiteCase] applies to other targets than the report's.
+ */
 export function caseProblems(
   report: SuiteReport | undefined,
   id: string,
   refusals: Readonly<Record<string, string>>,
+  suiteCase?: SuiteCase,
 ): string[] {
   const result = report?.cases.find((caseResult) => caseResult.id === id);
 
-  if (result === undefined) return [`the report holds no result for the case '${id}'`];
+  if (result === undefined || report === undefined) {
+    return [`the report holds no result for the case '${id}'`];
+  }
 
-  const expected = Object.hasOwn(refusals, id) ? "refused" : "passed";
+  const outsideTargets =
+    suiteCase !== undefined && outsideTargetsReason(suiteCase, report.target) !== undefined;
+  const expected = Object.hasOwn(refusals, id) || outsideTargets ? "refused" : "passed";
   const outcomeProblem =
     result.outcome === expected
       ? []
@@ -60,7 +68,7 @@ export function testEachCase(
 ): void {
   for (const suiteCase of cases) {
     defineTest(`${suiteCase.id}: ${suiteCase.title}`, () => {
-      const problems = caseProblems(report(), suiteCase.id, refusals);
+      const problems = caseProblems(report(), suiteCase.id, refusals, suiteCase);
 
       if (problems.length > 0) throw new Error(problems.join("\n"));
     });

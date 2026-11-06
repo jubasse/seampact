@@ -89,7 +89,7 @@ final class SuiteServiceProvider extends ServiceProvider
             $this->app->make('config')->set('app.debug', true);
         }
 
-        if (!BootVariant::is('missing-handler')) {
+        if (!BootVariant::leavesOutHealthHandler()) {
             $this->app->bind(AppEndpoints::class, AppController::class);
         }
         $this->app->bind(ChannelsEndpoints::class, ChannelsController::class);
@@ -98,7 +98,7 @@ final class SuiteServiceProvider extends ServiceProvider
         $this->app->bind(PreferencesEndpoints::class, PreferencesController::class);
         $this->app->bind(TasksEndpoints::class, TasksController::class);
 
-        if (!BootVariant::is('missing-authenticate-hook')) {
+        if (!BootVariant::leavesOutAuthenticateHook()) {
             $this->app->bind(UserAuthenticateHook::class, UserHook::class);
         }
         $this->app->bind(StripeAuthenticateHook::class, StripeHook::class);

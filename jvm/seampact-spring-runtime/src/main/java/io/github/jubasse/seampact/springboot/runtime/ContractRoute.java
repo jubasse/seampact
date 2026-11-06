@@ -73,6 +73,29 @@ public final class ContractRoute {
         return Optional.of(params);
     }
 
+    /** The entry's mount followed by the contract path, as `/api/v1/tasks/{id}`. */
+    String mountedPath() {
+        return String.join("/", templateSegments);
+    }
+
+    /**
+     * Whether a Spring MVC mapping [pattern] serves exactly the mounted contract path: the same literal segments and a
+     * variable wherever the template has one, whatever its name (the generated annotations name them by position).
+     */
+    boolean isMappedAt(String pattern) {
+        String[] segments = pattern.split("/", -1);
+        if (segments.length != templateSegments.length) return false;
+
+        for (int index = 0; index < segments.length; index++) {
+            String segment = segments[index];
+            boolean variable = segment.startsWith(PLACEHOLDER_START) && segment.endsWith(PLACEHOLDER_END);
+            if (variable != isPlaceholder(index)) return false;
+            if (!variable && !segment.equals(templateSegments[index])) return false;
+        }
+
+        return true;
+    }
+
     private boolean isPlaceholder(int index) {
         String template = templateSegments[index];
 

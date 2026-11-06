@@ -31,6 +31,9 @@ import { target as nestjsTarget } from "./index.js";
 
 const REPLY_MODES = ["handler", "interceptor"] as const;
 const APP_SOURCE = new URL("../test-app/reference-app.js", import.meta.url);
+// The metadata keys NestJS's route and version decorators write.
+const NEST_PATH_METADATA = "path";
+const NEST_VERSION_METADATA = "__version__";
 // Generating and compiling both apis outruns vitest's default 10 s hook limit on a loaded machine.
 const SETUP_TIMEOUT_MILLISECONDS = 60_000;
 
@@ -1109,6 +1112,17 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
   });
 
   describe("the operation composite", () => {
+    test("the operation composite routes the full contract path, version-neutral", () => {
+      const getTask = app.TasksController.prototype.getTask;
+
+      expect(Reflect.getMetadata(NEST_PATH_METADATA, getTask)).toBe(
+        "/v1/channels/:channelId/tasks/:taskId",
+      );
+      expect(String(Reflect.getMetadata(NEST_VERSION_METADATA, getTask))).toBe(
+        "Symbol(VERSION_NEUTRAL)",
+      );
+    });
+
     test("the operation composite registers no interceptor", () => {
       expect(Reflect.getMetadata("__interceptors__", app.TasksController.prototype.health)).toBe(
         undefined,

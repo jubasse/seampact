@@ -1,5 +1,6 @@
 // What the http suite's profile tests share: the target the consumer was built for, the report file of a profile,
-// the refusals of the cases a run holds, and the run of an HTTP profile against the server the overlay starts.
+// the refusals of the cases a run holds, and the run of an HTTP profile against the server the overlay starts and the
+// variant apps some of its cases run on.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -8,11 +9,13 @@ import {
   packProfileOf,
   runSuite,
   type SuiteCase,
+  type SuiteCredentials,
   type SuiteProfile,
   type SuiteReport,
   refusalsOf as sharedRefusalsOf,
   reportFileOf as sharedReportFileOf,
   testEachCase as sharedTestEachCase,
+  suiteReportOf,
   writeSuiteReport,
 } from "@seampact/http-suite";
 import { afterAll, beforeAll, describe, test } from "vitest";
@@ -27,6 +30,7 @@ import {
 } from "./credentials.mjs";
 import { startServer } from "./server.mjs";
 import { SUITE_REFUSALS } from "./suite-refusals.mjs";
+import { runOnVariantApps, variantAppRefusals } from "./variant-app-cases.mjs";
 
 export const CONSUMER_ROOT = join(import.meta.dirname, "..");
 
@@ -48,7 +52,7 @@ export const PACK_IR_DIRECTORY = "pack-ir";
 // The apis every server consumer serves; a pack profile reads their IRs.
 const SERVED_APIS = ["tasks", "tasksService"] as const;
 
-const SUITE_CREDENTIALS = {
+const SUITE_CREDENTIALS: SuiteCredentials = {
   userToken: USER_TOKEN,
   throttledUserToken: THROTTLED_USER_TOKEN,
   serviceJwt: SERVICE_JWT,
@@ -63,8 +67,11 @@ export function reportFileOf(profile: SuiteProfile): string {
 }
 
 /** The refusals of the cases a run holds; a refusal no profile's case takes fails the default profile's test. */
-export function refusalsOf(cases: readonly SuiteCase[]): Record<string, string> {
-  return sharedRefusalsOf(cases, SUITE_REFUSALS);
+export function refusalsOf(
+  cases: readonly SuiteCase[],
+  refusals: Readonly<Record<string, string>> = SUITE_REFUSALS,
+): Record<string, string> {
+  return sharedRefusalsOf(cases, refusals);
 }
 
 /** One test per case of the report: passed, or refused by name for a known target bug. */
@@ -113,16 +120,33 @@ function describeSuiteRun({ profile, cases, refusals, reader }: SuiteRun): void 
   let report: SuiteReport | undefined;
 
   beforeAll(async () => {
+    const runOn = (baseUrl: string, runCases: readonly SuiteCase[], runRefusals = refusals) =>
+      runSuite({
+        baseUrl,
+        target: SUITE_TARGET,
+        profile,
+        credentials: SUITE_CREDENTIALS,
+        cases: runCases,
+        refusals: refusalsOf(runCases, runRefusals),
+        ...(reader === undefined ? {} : { reader }),
+      });
+
     server = await startServer();
-    report = await runSuite({
-      baseUrl: server.baseUrl,
-      target: SUITE_TARGET,
-      profile,
-      credentials: SUITE_CREDENTIALS,
-      cases,
-      refusals,
-      ...(reader === undefined ? {} : { reader }),
+
+    const onMainServer = await runOn(server.baseUrl, cases, {
+      ...refusals,
+      ...variantAppRefusals(cases, SUITE_TARGET),
     });
+    const onVariantApps = (
+      await runOnVariantApps(cases, SUITE_TARGET, refusals, CONSUMER_ROOT, runOn)
+    ).flatMap((variantReport) => variantReport.cases);
+
+    report = suiteReportOf(
+      { target: SUITE_TARGET, profile },
+      onMainServer.cases.map(
+        (result) => onVariantApps.find((other) => other.id === result.id) ?? result,
+      ),
+    );
     writeSuiteReport(report, reportFileOf(profile));
   }, SUITE_TIMEOUT_MS);
 

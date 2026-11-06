@@ -12,6 +12,10 @@ import * as TasksDevicesHono from "../generated/server/tasksDevices/index.js";
 import * as TasksServiceHono from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesHono from "../generated/server/tasksServiceWrites/index.js";
 import {
+  MISMATCHED_MOUNT,
+  mountsUnderMismatchedPrefix,
+  PATTERNED_ROUTE,
+  servesPatternedRoute,
   servesUnlistedRoute,
   UNLISTED_ROUTE,
   withoutMissingHandler,
@@ -72,7 +76,9 @@ export async function startServer(): Promise<RunningServer> {
 
   if (servesUnlistedRoute()) app.get(UNLISTED_ROUTE, (c) => c.body(null, 204));
 
-  TasksHono.registerRoutes(app, {
+  if (servesPatternedRoute()) app.get(PATTERNED_ROUTE, (c) => c.body(null, 204));
+
+  TasksHono.registerRoutes(mountsUnderMismatchedPrefix() ? app.basePath(MISMATCHED_MOUNT) : app, {
     handlers: withoutMissingHandler({
       AppEndpoints: tasksHandlers,
       ChannelsEndpoints: tasksHandlers,

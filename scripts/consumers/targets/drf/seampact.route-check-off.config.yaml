@@ -1,0 +1,43 @@
+# The consumer's app config for the `framework-route-check-off` boot cases: the app config with the framework-route
+# check switched off on every api and no frameworkRoutes.
+outDir: generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: tasks
+    use: pypi:seampact-drf
+    api: tasks
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksService
+    out: tasks_service
+    use: pypi:seampact-drf
+    api: tasksService
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksServiceWrites
+    out: tasks_service_writes
+    use: pypi:seampact-drf
+    api: tasksServiceWrites
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksDevices
+    out: tasks_devices
+    use: pypi:seampact-drf
+    api: tasksDevices
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksOptionalAuth
+    out: tasks_optional_auth
+    use: pypi:seampact-drf
+    api: tasksOptionalAuth
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksAbsoluteUrls
+    out: tasks_absolute_urls
+    use: pypi:seampact-drf
+    api: tasksAbsoluteUrls
+    artefacts:
+      bootCheck: { frameworkRoutes: false }

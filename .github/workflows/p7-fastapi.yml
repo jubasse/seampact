@@ -229,7 +229,7 @@ jobs:
           set -euo pipefail
           scripts/consumers/python/build-wheels.sh "$WORK/wheels"
           scripts/consumers/python/requirements.sh "$WORK/requirements.txt" seampact-fastapi generate uvicorn
-      - name: Install with pip, then assemble and generate the consumer and its allow-listed and pack-laravel variants
+      - name: Install with pip, then assemble and generate the consumer and its boot-variant and pack-laravel apps
         shell: bash
         env:
           SEAMPACT_CONSUMER_BINARY: ${{ runner.temp }}/binary/seampact-linux-x64
@@ -242,7 +242,7 @@ jobs:
           "$WORK/venv/bin/python" -m pip install --no-input --disable-pip-version-check --no-index \
             --find-links "$WORK/wheels" seampact-signed-webhooks
           "$WORK/venv/bin/python" -c "import fastapi, pydantic, starlette; print(fastapi.__version__, starlette.__version__, pydantic.VERSION)"
-          for variant in "" allow-listed pack-laravel; do
+          for variant in "" allow-listed route-check-off hook-check-off pack-laravel; do
             bundled="$RUNNER_TEMP/bundles/reference"
             if [ "$variant" = "pack-laravel" ]; then bundled="$RUNNER_TEMP/bundles/pack-laravel"; fi
             scripts/consumers/targets/fastapi/assemble.sh "$WORK" "$bundled" $variant
@@ -262,6 +262,8 @@ jobs:
         env:
           SEAMPACT_FASTAPI_APP: ${{ env.WORK }}/app
           SEAMPACT_FASTAPI_ALLOW_LISTED_APP: ${{ env.WORK }}/app-allow-listed
+          SEAMPACT_FASTAPI_ROUTE_CHECK_OFF_APP: ${{ env.WORK }}/app-route-check-off
+          SEAMPACT_FASTAPI_HOOK_CHECK_OFF_APP: ${{ env.WORK }}/app-hook-check-off
           SEAMPACT_FASTAPI_PACK_APP: ${{ env.WORK }}/app-pack-laravel
           SEAMPACT_FASTAPI_VENV: ${{ env.WORK }}/venv
           SEAMPACT_FASTAPI_REPORTS: ${{ github.workspace }}/reports

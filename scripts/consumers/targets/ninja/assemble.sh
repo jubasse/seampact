@@ -22,6 +22,12 @@ case "${3:-}" in
 esac
 
 cp "$consumers/targets/fastapi/app/handlers.py" "$consumers/targets/fastapi/app/sample_data.py" "$app/"
+# The hook-check-off app's generated code has no `health` types, so it goes without the `health` handlers.
+if [ "${3:-}" = "hook-check-off" ]; then
+  rm "$app/health_handler_factories.py"
+else
+  cp "$consumers/targets/fastapi/app/health_handlers.py" "$app/"
+fi
 cp "$consumers/targets/drf/app/control.py" "$app/"
 cp "$consumers/python/reference_doubles/hook_doubles.py" "$app/"
 sed -i "s/views: sync/views: $views/" "$app/seampact.config.yaml"

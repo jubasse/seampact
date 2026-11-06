@@ -1,5 +1,6 @@
 // The consumer's NestJS controllers: each implements a generated endpoints interface, marks its methods with the
-// generated operation decorators and delegates to the shared handlers.
+// generated operation decorators and delegates to the shared handlers. The `health` operation's is in
+// `app-controller.mts`.
 import { Controller } from "@nestjs/common";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksDevicesNest from "../generated/server/tasksDevices/index.js";
@@ -15,14 +16,6 @@ import {
   tasksServiceHandlers,
   tasksServiceWritesHandlers,
 } from "./handlers.mjs";
-
-@Controller()
-export class AppController implements TasksNest.AppEndpoints {
-  @TasksNest.health()
-  health(@TasksNest.health.input() _input: Tasks.HealthInput) {
-    return tasksHandlers.health();
-  }
-}
 
 @Controller()
 export class ChannelsController implements TasksNest.ChannelsEndpoints {

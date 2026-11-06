@@ -28,7 +28,7 @@ final class TasksHooks {
 
     /** The `user` identity: a bearer token of the credentials, or the same token as the session cookie. */
     @Component
-    @SkippedUnder("missing-authenticate-hook")
+    @SkippedUnder({"missing-authenticate-hook", "framework-route-check-off-missing-hook", "hook-check-off"})
     static final class UserHook implements UserAuthenticateHook {
         @Override
         public AuthenticateResult<UserPrincipal, Denial> authenticate(UserAuthenticateRequest request) {

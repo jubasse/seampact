@@ -12,3 +12,8 @@ case "${3:-}" in
 esac
 
 cp "$here/../../python/reference_doubles/hook_doubles.py" "$app/"
+
+# The hook-check-off app's generated code has no `health` types, so it goes without the `health` handlers.
+if [ "${3:-}" = "hook-check-off" ]; then
+  rm "$app/health_handlers.py"
+fi

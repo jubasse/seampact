@@ -1,8 +1,8 @@
 // The http suite's control routes as a NestJS controller outside the contract, answering from the template's
-// framework-neutral control state, and the route the framework-route boot variants serve.
+// framework-neutral control state, and the routes the framework-route boot variants serve.
 import { Body, Controller, Get, HttpCode, Put, Res } from "@nestjs/common";
 import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
-import { UNLISTED_ROUTE } from "./boot-variant.mjs";
+import { PATTERNED_ROUTE, UNLISTED_ROUTE } from "./boot-variant.mjs";
 import {
   type ControlReply,
   hookCallsReply,
@@ -44,4 +44,12 @@ export class UnlistedRouteController {
   @Get(UNLISTED_ROUTE)
   @HttpCode(204)
   unlisted(): void {}
+}
+
+/** The route the `pattern-allow-listed-framework-route` boot variant serves. */
+@Controller()
+export class PatternedRouteController {
+  @Get(PATTERNED_ROUTE)
+  @HttpCode(204)
+  patterned(): void {}
 }

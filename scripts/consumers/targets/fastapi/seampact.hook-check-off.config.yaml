@@ -1,0 +1,34 @@
+# The consumer's app config for the `hook-check-off` and `filtered-out-handler` boot cases: the app config with the
+# hook check switched off and the `health` operation filtered out on the tasks api.
+outDir: generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: tasks
+    use: pypi:seampact-fastapi
+    api: tasks
+    operations: { exclude: [health] }
+    artefacts:
+      bootCheck: { hooks: "off" }
+  - id: tasksService
+    out: tasks_service
+    use: pypi:seampact-fastapi
+    api: tasksService
+  - id: tasksServiceWrites
+    out: tasks_service_writes
+    use: pypi:seampact-fastapi
+    api: tasksServiceWrites
+  - id: tasksDevices
+    out: tasks_devices
+    use: pypi:seampact-fastapi
+    api: tasksDevices
+  - id: tasksOptionalAuth
+    out: tasks_optional_auth
+    use: pypi:seampact-fastapi
+    api: tasksOptionalAuth
+  - id: tasksAbsoluteUrls
+    out: tasks_absolute_urls
+    use: pypi:seampact-fastapi
+    api: tasksAbsoluteUrls

@@ -1,0 +1,11 @@
+{
+  "id": "framework-route-check-off-keeps-hook-check",
+  "title": "With the framework-route check switched off, the app without an authenticate hook still refuses to start",
+  "checks": ["CHK-147"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "framework-route-check-off-missing-hook",
+    "outcome": "refuses",
+    "diagnostic": ["the api 'tasks' cannot start", "no authenticate hook for the identity 'user'"]
+  }
+}

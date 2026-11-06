@@ -1,0 +1,43 @@
+# The config of the framework-route-check-off boot variants: the consumer config with the framework-route check off on
+# every api and no frameworkRoutes.
+outDir: src/Generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: Tasks
+    use: seampact/symfony
+    api: tasks
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksService
+    out: TasksService
+    use: seampact/symfony
+    api: tasksService
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksServiceWrites
+    out: TasksServiceWrites
+    use: seampact/symfony
+    api: tasksServiceWrites
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksDevices
+    out: TasksDevices
+    use: seampact/symfony
+    api: tasksDevices
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksOptionalAuth
+    out: TasksOptionalAuth
+    use: seampact/symfony
+    api: tasksOptionalAuth
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksAbsoluteUrls
+    out: TasksAbsoluteUrls
+    use: seampact/symfony
+    api: tasksAbsoluteUrls
+    artefacts:
+      bootCheck: { frameworkRoutes: false }

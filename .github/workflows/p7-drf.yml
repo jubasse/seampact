@@ -230,7 +230,7 @@ jobs:
           set -euo pipefail
           scripts/consumers/python/build-wheels.sh "$WORK/wheels"
           scripts/consumers/python/requirements.sh "$WORK/requirements.txt" seampact-drf generate "$SERVER"
-      - name: Install with pip, then assemble and generate the consumer and its allow-listed and pack-laravel variants
+      - name: Install with pip, then assemble and generate the consumer and its boot-variant and pack-laravel apps
         shell: bash
         env:
           DJANGO_ROW: ${{ matrix.django }}
@@ -242,7 +242,7 @@ jobs:
           "$WORK/venv/bin/python" -m pip install --no-input --disable-pip-version-check --no-index \
             --find-links "$WORK/wheels" seampact-signed-webhooks
           "$WORK/venv/bin/python" -c "import django, os, rest_framework; print(django.get_version(), rest_framework.VERSION); assert django.get_version().startswith(os.environ['DJANGO_ROW'])"
-          for variant in "" allow-listed pack-laravel; do
+          for variant in "" allow-listed route-check-off hook-check-off pack-laravel; do
             bundled="$RUNNER_TEMP/bundles/reference"
             if [ "$variant" = "pack-laravel" ]; then bundled="$RUNNER_TEMP/bundles/pack-laravel"; fi
             scripts/consumers/targets/drf/assemble.sh "$WORK" "$bundled" $variant
@@ -263,6 +263,8 @@ jobs:
           SEAMPACT_DRF_SERVER: ${{ matrix.server }}
           SEAMPACT_DRF_APP: ${{ env.WORK }}/app
           SEAMPACT_DRF_ALLOW_LISTED_APP: ${{ env.WORK }}/app-allow-listed
+          SEAMPACT_DRF_ROUTE_CHECK_OFF_APP: ${{ env.WORK }}/app-route-check-off
+          SEAMPACT_DRF_HOOK_CHECK_OFF_APP: ${{ env.WORK }}/app-hook-check-off
           SEAMPACT_DRF_PACK_APP: ${{ env.WORK }}/app-pack-laravel
           SEAMPACT_DRF_VENV: ${{ env.WORK }}/venv
           SEAMPACT_DRF_REPORTS: ${{ github.workspace }}/reports

@@ -47,4 +47,6 @@ export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "missing-scope-resolver-fails-boot": STUB_REASON,
   "missing-handler-fails-boot": STUB_REASON,
   "unlisted-framework-route-fails-boot": STUB_REASON,
+  "framework-route-check-off-keeps-hook-check": STUB_REASON,
+  "hook-check-off-keeps-framework-route-check": STUB_REASON,
 };

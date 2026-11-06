@@ -901,6 +901,22 @@ def test_the_boot_check_refuses_the_urlconf_versions_and_async_methods_the_views
     assert not any("/v1/channels/feed" in problem for problem in allow_listed)
 
 
+def test_the_boot_check_names_the_prefixed_path_of_urls_included_off_the_mount() -> None:
+    root = ModuleType("seampact_drf_boundary_off_the_mount")
+    root.__dict__["urlpatterns"] = [path("mounted/", include(f"{_PACKAGE}.urls"))]
+    sys.modules[root.__name__] = root
+
+    with override_settings(ROOT_URLCONF=root.__name__, SEAMPACT={"tasks": _settings()}):
+        problems = boot_problems(_module("django").TasksBoundary)
+
+    assert any(
+        problem.startswith(
+            "operation 'health': no URL pattern serves /v1/health (its pattern sits at /mounted/v1/health)"
+        )
+        for problem in problems
+    ), problems
+
+
 def test_the_system_check_warns_and_seampact_check_fails_on_a_problem() -> None:
     with override_settings(MIDDLEWARE=["django.middleware.common.CommonMiddleware", *_middleware()]):
         warnings = [message for message in run_checks() if message.id == "seampact.tasks"]
