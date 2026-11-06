@@ -228,6 +228,22 @@ final class KeptFormsTest extends TestCase
         self::assertSame(['param.query.structured.unsupported'], array_keys(self::refused($document, null)));
     }
 
+    public function testTheRefusalNamesListsForAQueryParameterOnly(): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document(), ['getTask']);
+        $operation = is_array($document->operations) ? $document->operations[0] : null;
+        self::assertInstanceOf(\stdClass::class, $operation);
+        self::assertInstanceOf(\stdClass::class, $operation->params);
+        $items = ['kind' => 'scalar', 'type' => 'integer', 'refinements' => new \stdClass()];
+        $operation->params->query = [self::queryParam('archives', ['kind' => 'ref', 'schema' => 'ArchiveTask'], ['kind' => 'list', 'style' => 'form', 'explode' => true, 'brackets' => false])];
+        $operation->params->header = [self::queryParam('X-Scores', $items, ['kind' => 'list', 'style' => 'simple', 'explode' => false, 'brackets' => false])];
+
+        $messages = self::refused($document, null);
+
+        self::assertStringStartsWith('A query parameter that is not a scalar, an enum or a list of them in the form style', $messages['param.query.structured.unsupported']);
+        self::assertStringStartsWith('A header parameter that is not a scalar or an enum is not', $messages['param.header.structured.unsupported']);
+    }
+
     /**
      * @param array<string, mixed> $items
      * @param array<string, mixed> $wire

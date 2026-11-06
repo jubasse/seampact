@@ -783,7 +783,10 @@ final class KeptForms
             return;
         }
 
-        $description = "A {$part} parameter that is not a scalar, an enum or a list of them in the form style";
+        // Only a query parameter may be a list, so only its text names lists.
+        $description = $part === self::QUERY_PART
+            ? 'A query parameter that is not a scalar, an enum or a list of them in the form style'
+            : "A {$part} parameter that is not a scalar or an enum";
         if (($param->derivedFrom->derivation ?? null) === self::PAGING_PARAMS_DERIVATION) {
             $this->pending(PendingForm::PagingParam, "param.{$part}.structured", "{$description}, which paging reads,", $at->below('type'));
 
