@@ -115,6 +115,8 @@ When an operation takes a version, the boundary checks its format only. Compare 
 if (input.body().expectedVersion() != task.version()) return new UpdateTaskErrors.StateConflict();
 ```
 
+With `If-Match`, the handler gets the version unquoted and answers `PreconditionFailed` on a mismatch.
+
 With `@seampact/pack-spring`, a list in the `springPage` style gets a `Pageable` in its input and returns Spring Data's `Page`. Add `org.springframework.data:spring-data-commons`; the Spring Boot BOM gives its version.
 
 - A sort key reaches the `Pageable` as the item's Java member name: `sort=created_at,desc` sorts by `createdAt`. Name your entity's properties like the generated record's members.
