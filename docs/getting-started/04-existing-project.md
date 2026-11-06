@@ -8,14 +8,12 @@ The examples use a `shop` app with `GET /health`, `POST /auth/login` and a produ
 
 ## Install
 
-Run this in the app folder. Replace `~/src/seampact` with the path of your checkout.
+Run this in the app folder.
 
 ```sh
-node ~/src/seampact/scripts/consumers/install-into.ts .
-pnpm install
+npm install @seampact/server-runtime @seampact/hooks
+npm install --save-dev @seampact/cli @seampact/codegen-ts @seampact/codegen-zod @seampact/codegen-nestjs
 ```
-
-You see a line `install-into: <n> packages in .../vendor/seampact`. `package.json`, `pnpm-workspace.yaml` and `.gitignore` changed: check the diff.
 
 ## Describe the routes you move
 

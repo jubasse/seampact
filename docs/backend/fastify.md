@@ -4,7 +4,7 @@ This page replaces the NestJS page. The generated `NotesEndpoints` interface lis
 
 ## Dependencies and config
 
-Do this in [Install](../getting-started/01-install.md), before `install-into`. In `package.json`, use these `dependencies` and keep the `devDependencies`.
+Do this in [Install](../getting-started/01-install.md), before you install seampact. In `package.json`, use these `dependencies` and keep the `devDependencies`.
 
 ```json
 {
@@ -15,7 +15,7 @@ Do this in [Install](../getting-started/01-install.md), before `install-into`. I
 }
 ```
 
-Keep `@seampact/server-runtime`, which `install-into` adds to `dependencies`: the generated server imports it. Keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`.
+Keep `@seampact/server-runtime`, which you install in `dependencies`: the generated server imports it. Keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`.
 
 In `tsconfig.json`, leave out `experimentalDecorators`: Fastify has no decorators.
 

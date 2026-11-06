@@ -4,6 +4,17 @@ The Gradle plugin generates the contract's Java code when you build. You write t
 
 ## Set up the build
 
+The runtime, the hooks and the Maven plugin are on Maven Central. The Gradle plugin is on the Gradle Plugin Portal; while the Portal reviews a new release, add Maven Central to the plugin repositories in `settings.gradle.kts`:
+
+```kotlin
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+```
+
 ```kotlin
 plugins {
     java

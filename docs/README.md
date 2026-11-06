@@ -5,7 +5,7 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 ## Getting started
 
 - [Getting started](getting-started/README.md): a notes API on NestJS, step by step.
-- [Install](getting-started/01-install.md): install seampact from your checkout.
+- [Install](getting-started/01-install.md): install seampact from npm, Maven Central, Packagist, PyPI or the binary.
 - [Write the contract](getting-started/02-first-contract.md): a notes contract.
 - [Generate the code and run it](getting-started/03-generate-and-run.md): generate, pick a server, run.
 - [Add seampact to an existing NestJS app](getting-started/04-existing-project.md): move routes one at a time.
@@ -99,3 +99,8 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 - [IR](ir/): the compiled form of a contract.
 - [ADRs](adr/): design records.
 - [Product decisions](decisions.md): the log of decisions, A1 to A48.
+
+## Release notes
+
+- [Release notes](release-notes/README.md): what each release ships and its known limits.
+- [1.0.0](release-notes/1.0.0.md): the first release.

@@ -2,7 +2,7 @@
 
 You write a contract in YAML. seampact generates the types, the zod validators and the NestJS routes. You write the handlers. At the end, a notes API runs on port 3000.
 
-You need Node.js 24 or later, pnpm, and a checkout of this repository. Nothing is published to npm yet, so [Install](01-install.md) installs seampact from your checkout.
+You need Node.js 24 or later and npm, pnpm or Yarn. [Install](01-install.md) installs seampact from npm; it also shows Maven Central, Packagist, PyPI and the compiler binary.
 
 1. [Install](01-install.md)
 2. [Write the contract](02-first-contract.md)
