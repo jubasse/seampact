@@ -2,7 +2,8 @@
 the chosen route, runs steps 2 to 5, then reads the input (the version a header carries before the header check,
 steps 6 to 8, the restricted input fields, the deadline and the idempotency claim) and writes the handler's result
 with the boundary's own encoding: the restricted output fields left out, the page body and links, absolute from the
-api's `public_origin` under absolute URLs, and the cache headers with their 304."""
+api's `public_origin` under absolute URLs, the cache headers with their 304, and the headers the response derives:
+the deprecation dates, the successor link and the version's entity tag."""
 
 import dataclasses
 import inspect
@@ -30,6 +31,7 @@ from seampact.codegen.runtime.ir_view import ir_int, ir_map, ir_maps, ir_string,
 from seampact.codegen.runtime.page_reply import cursor_issues, filled_page_query, page_parts
 from seampact.codegen.runtime.public_origin import configured_origin
 from seampact.codegen.runtime.replies import CONTENT_TYPE, JSON_MEDIA, Reply, error_reply, json_bytes, success_body
+from seampact.codegen.runtime.response_headers import derived_response_headers, with_entity_tag, with_success_headers
 from seampact.codegen.runtime.sync_driver import call_without_suspension, run_without_suspension
 from seampact.codegen.runtime.version_token import with_sent_version
 from seampact.codegen.runtime.wire_codec import WireCodec
@@ -194,21 +196,27 @@ class ContractAdmission:
             raise BoundaryFailureError(f"seampact: operation '{operation_id}' declares no {status} reply.")
 
         shape = ir_string(response, "shape") or ""
+        raw_parameters = self._admitted.raw_parameters
 
         if shape == _EMPTY_SHAPE:
-            return Reply(status, (), b"")
+            derived = derived_response_headers(contract, operation_id, response, None, raw_parameters)
+
+            return with_success_headers(Reply(status, (), b""), derived, status)
 
         body = getattr(result, "body", None)
         wire = WireCodec(contract).body_to_wire(response, _page_items(body) if shape == _PAGE_SHAPE else body)
+        item = None if shape == _PAGE_SHAPE else wire
+        derived = derived_response_headers(contract, operation_id, response, item, raw_parameters)
         visible = run_without_suspension(
             visible_output(self._admitted, self._hooks, call_without_suspension, response, wire)
         )
         media = ir_string(ir_map(contract.format(operation_id), "success"), "media") or JSON_MEDIA
         written, headers = self._written_body(shape, body, visible, status)
-        reply = Reply(status, ((CONTENT_TYPE, media), *headers), json_bytes(written))
+        reply = Reply(status, with_entity_tag(((CONTENT_TYPE, media), *headers), derived), json_bytes(written))
         if_none_match = self._request.headers.get(_IF_NONE_MATCH)
+        cached = with_cache_headers(contract, operation_id, reply, self._admitted.principal, if_none_match)
 
-        return with_cache_headers(contract, operation_id, reply, self._admitted.principal, if_none_match)
+        return with_success_headers(cached, derived, status)
 
     def _written_body(
         self, shape: str, body: object, visible: object, status: int

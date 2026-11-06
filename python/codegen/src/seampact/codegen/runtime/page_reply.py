@@ -13,7 +13,7 @@ from seampact.codegen.runtime.input_decoding import Issue
 from seampact.codegen.runtime.ir_view import IrMap, ir_int, ir_map, ir_maps, ir_string, ir_strings
 from seampact.codegen.runtime.public_origin import writes_absolute_urls
 from seampact.codegen.runtime.templates import render
-from seampact.codegen.runtime.wire_values import component_encoded, kept_query_pairs, path_link_safe
+from seampact.codegen.runtime.wire_values import component_encoded, kept_query_pairs, path_link_safe, scalar_text
 
 LINK: Final = "link"
 
@@ -144,7 +144,7 @@ def page_parts(
 
     body = render(_page_body(contract, operation_id, style), slots, write_nulls)
 
-    return PageParts(body.value if body.present else {}, _headers(style, slots))
+    return PageParts(body.value if body.present else {}, _headers(operation_id, style, slots))
 
 
 def _style(contract: ApiContract, operation_id: str) -> IrMap:
@@ -179,15 +179,29 @@ def _rendered_meta(style: IrMap, slots: Mapping[str, object], write_nulls: bool)
     return meta or None
 
 
-def _headers(style: IrMap, slots: Mapping[str, object]) -> tuple[tuple[str, str], ...]:
+def _headers(operation_id: str, style: IrMap, slots: Mapping[str, object]) -> tuple[tuple[str, str], ...]:
+    """The style's headers, each its value's text; an absent or null value writes none. Raises
+    `BoundaryFailureError` for a value with no text (an object, an array), which the generator refuses in a
+    template."""
     response = ir_map(style, "response")
     headers: list[tuple[str, str]] = []
 
     for header in ir_maps(response, "headers"):
         value = render(header.get("value"), slots, write_nulls=False)
+        name = ir_string(header, "name") or ""
 
-        if value.present and (isinstance(value.value, str) or _is_int(value.value)):
-            headers.append(((ir_string(header, "name") or "").lower(), str(value.value)))
+        if not value.present or value.value is None:
+            continue
+
+        text = scalar_text(value.value)
+
+        if text is None:
+            raise BoundaryFailureError(
+                f"seampact: the page header '{name}' of '{operation_id}' renders a {type(value.value).__qualname__}, "
+                "not a text value; write it from a scalar slot."
+            )
+
+        headers.append((name.lower(), text))
 
     relations = [
         f'<{url}>; rel="{ir_string(link, "rel") or ""}"'

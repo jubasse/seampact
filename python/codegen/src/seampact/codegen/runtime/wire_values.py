@@ -209,26 +209,35 @@ def _is_escape(data: bytes, index: int) -> bool:
     return index + 2 < len(data) and data[index + 1] in _HEX_DIGITS and data[index + 2] in _HEX_DIGITS
 
 
-def _wire_text(name: str, value: object) -> str:
+def scalar_text(value: object) -> str | None:
+    """A scalar's wire text as JavaScript's `String(value)` writes it, so every target writes the same text; None for
+    an object, an array or a number that is not finite."""
     if isinstance(value, bool):
         return _TRUE if value else _FALSE
 
     if isinstance(value, float):
-        return _javascript_number(name, value)
+        return _javascript_number(value) if math.isfinite(value) else None
 
     wire = scalar_to_wire(value)
 
-    if not isinstance(wire, str | int):
-        raise ValueError(f"The path parameter '{name}' has no wire text: {type(value).__qualname__}.")
-
-    return str(wire)
+    return str(wire) if isinstance(wire, str | int) else None
 
 
-def _javascript_number(name: str, value: float) -> str:
-    """The text JavaScript's `String(value)` writes: plain digits from 1e-7 up to 1e21, an exponent outside."""
-    if not math.isfinite(value):
+def _wire_text(name: str, value: object) -> str:
+    if isinstance(value, float) and not math.isfinite(value):
         raise ValueError(f"The path parameter '{name}' must be a finite number, not {value}.")
 
+    text = scalar_text(value)
+
+    if text is None:
+        raise ValueError(f"The path parameter '{name}' has no wire text: {type(value).__qualname__}.")
+
+    return text
+
+
+def _javascript_number(value: float) -> str:
+    """The text JavaScript's `String(value)` writes of a finite number: plain digits from 1e-7 up to 1e21, an exponent
+    outside."""
     if value == 0:
         return "0"
 

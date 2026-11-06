@@ -4,6 +4,7 @@ boot check, the system check and `seampact_check`, and the version a header carr
 from `If-Match` here, as a contract with a header version gives it."""
 
 import asyncio
+import dataclasses
 import gzip
 import importlib
 import json
@@ -752,6 +753,53 @@ def test_a_strong_or_weak_if_match_tag_reaches_the_handler(if_match: str) -> Non
     assert response.status_code == HTTPStatus.OK, response.content
 
 
+def test_a_versioned_deprecated_write_hands_the_version_unquoted_and_writes_its_derived_headers() -> None:
+    seen: list[object] = []
+
+    def archive_task(request: object) -> object:
+        seen.append(request)
+        return _module("operations").ArchiveTaskResponse200(body=_task())
+
+    answers["archive_task"] = archive_task
+    url = f"/v1/channels/{_CHANNEL_ID}/tasks/{_USER_ID}/archive"
+
+    response = Client().post(
+        url,
+        json.dumps({"reason": "done", "expectedVersion": 1}),
+        content_type="application/json",
+        headers={**_bearer(), "Idempotency-Key": "k-archive-headers", "If-Match": '"7"'},
+    )
+
+    assert response.status_code == HTTPStatus.OK, response.content
+    assert seen[0].input.headers.if_match == "7"  # type: ignore[attr-defined]
+    assert response.headers["ETag"] == '"1"'
+    assert response.headers["Deprecation"] == "@1798761600"
+    assert response.headers["Sunset"] == "Wed, 30 Jun 2027 00:00:00 GMT"
+    assert response.headers["Link"] == f'</v1/channels/{_CHANNEL_ID}/tasks/{_USER_ID}>; rel="successor-version"'
+
+
+def test_a_read_of_an_item_versioned_by_if_match_writes_its_version_tag() -> None:
+    answers["get_task"] = lambda _: _module("operations").GetTaskResponse200(body=_task())
+
+    response = Client().get(f"/v1/channels/{_CHANNEL_ID}/tasks/{_USER_ID}", headers=_bearer())
+
+    assert response.status_code == HTTPStatus.OK, response.content
+    assert response.headers["ETag"] == '"1"'
+    assert "Deprecation" not in response.headers
+
+
+@pytest.mark.parametrize("version", [2**63, -(2**53)])
+def test_a_version_outside_the_safe_integers_is_the_apis_500_not_an_etag(version: int) -> None:
+    task = dataclasses.replace(_task(), version=version)  # type: ignore[type-var]
+    answers["get_task"] = lambda _: _module("operations").GetTaskResponse200(body=task)
+
+    response = Client().get(f"/v1/channels/{_CHANNEL_ID}/tasks/{_USER_ID}", headers=_bearer())
+
+    assert (response.status_code, _code(response)) == (HTTPStatus.INTERNAL_SERVER_ERROR, "api.internal")
+    assert "ETag" not in response.headers
+    assert [failure.operation for failure in failures] == [_GET_TASK]
+
+
 def test_the_boundary_runs_async_when_every_middleware_inside_it_is_async_capable() -> None:
     answers["health"] = lambda _: _module("operations").HealthResponse200(body=_module("schemas").Health(status="ok"))
 
@@ -1192,8 +1240,44 @@ def _served_ir(repository_root: Path) -> dict[str, JsonValue]:
         archive["errors"].append({"code": code, "derivedFrom": concurrency["derivedFrom"], "roles": [{"role": role}]})
 
     _with_a_deadline(ir, reference_ir(repository_root, "tasksService"), _CREATE_TASK)
+    _with_response_headers(ir, archive, concurrency)
 
     return ir
+
+
+def _with_response_headers(
+    ir: dict[str, JsonValue], archive: dict[str, JsonValue], concurrency: dict[str, JsonValue]
+) -> None:
+    """`archiveTask` deprecated for `getTask`, with the headers the compiler derives: its Deprecation, Sunset and
+    successor Link, and the version's ETag on both, the read's derived from the write's `concurrency`."""
+    derived_from = concurrency["derivedFrom"]
+    assert isinstance(derived_from, dict)
+    origin: JsonValue = {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/archive/deprecated",
+    }
+    archive["deprecated"] = {
+        "since": "2027-01-01",
+        "sunset": "2027-06-30",
+        "successor": {"api": "tasks", "id": _GET_TASK, "kind": "httpOperation"},
+        "successorRel": "successor-version",
+        "origin": origin,
+    }
+    text: JsonValue = {"kind": "scalar", "refinements": {}, "type": "string"}
+    deprecation: JsonValue = {"derivation": "deprecation.headers", "from": [origin]}
+    entity_tag: JsonValue = {"name": "ETag", "type": text, "required": True, "derivedFrom": derived_from}
+    deprecation_headers: list[JsonValue] = [
+        {"name": name, "type": text, "required": True, "semantic": semantic, "derivedFrom": deprecation}
+        for name, semantic in (("Deprecation", "deprecation"), ("Sunset", "sunset"), ("Link", "successorLink"))
+    ]
+
+    for operation, headers in (
+        (archive, [entity_tag, *deprecation_headers]),
+        (_item(ir["operations"], "id", _GET_TASK), [entity_tag]),
+    ):
+        responses = operation["responses"]
+        assert isinstance(responses, list) and isinstance(responses[0], dict)
+        responses[0]["headers"] = headers
 
 
 def _with_a_deadline(ir: dict[str, JsonValue], service_ir: dict[str, JsonValue], operation_id: str) -> None:

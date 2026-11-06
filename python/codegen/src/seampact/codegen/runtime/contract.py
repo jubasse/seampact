@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Final
 
 from seampact.codegen.runtime.ir_view import IrJson, IrMap, ir_int, ir_map, ir_maps, ir_string
+from seampact.codegen.runtime.response_header_entries import HeaderEntry, HeaderProblem, response_header_entry
 from seampact.codegen.runtime.route_match import ContractRoute, RouteMatch, most_specific_first
 
 NOT_FOUND_ROLE: Final = "notFound"
@@ -56,6 +57,7 @@ class ApiContract:
     _operations: dict[str, IrMap] = field(init=False, repr=False)
     _routes: tuple[ContractRoute, ...] = field(init=False, repr=False)
     _base_paths: tuple[str, ...] = field(init=False, repr=False)
+    _header_entries: dict[tuple[str, int], tuple[HeaderEntry | HeaderProblem, ...]] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         operations: dict[str, IrMap] = {}
@@ -78,6 +80,30 @@ class ApiContract:
         object.__setattr__(self, "_operations", operations)
         object.__setattr__(self, "_routes", tuple(most_specific_first(routes)))
         object.__setattr__(self, "_base_paths", tuple(base_paths))
+        object.__setattr__(self, "_header_entries", self._resolved_header_entries())
+
+    def _resolved_header_entries(self) -> dict[tuple[str, int], tuple[HeaderEntry | HeaderProblem, ...]]:
+        """The derived header entries of each response, by operation and status, resolved once: a read's ETag looks
+        through every operation for its `If-Match` writes."""
+        operations = list(self._operations.values())
+        resolved: dict[tuple[str, int], tuple[HeaderEntry | HeaderProblem, ...]] = {}
+
+        for operation_id, operation in self._operations.items():
+            for response in ir_maps(operation, "responses"):
+                entries = (
+                    response_header_entry(self.api, self.mount, operations, operation, header)
+                    for header in ir_maps(response, "headers")
+                )
+                resolved[(operation_id, ir_int(response, "status") or 0)] = tuple(
+                    entry for entry in entries if entry is not None
+                )
+
+        return resolved
+
+    def response_header_entries(self, operation_id: str, status: int) -> tuple[HeaderEntry | HeaderProblem, ...]:
+        """The entries the boundary writes the derived headers of the operation's `status` response from, or why it
+        cannot; empty for a response that derives none."""
+        return self._header_entries.get((operation_id, status), ())
 
     def operation(self, operation_id: str) -> IrMap:
         """Raises `LookupError` for an operation the api does not keep."""

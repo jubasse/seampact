@@ -22,9 +22,9 @@ def _member(name: str, slot: str) -> IrJson:
     return {"name": {"kind": "text", "text": name}, "value": _slot(slot)}
 
 
-def _pages_contract(urls: str = "relative") -> ApiContract:
-    """One list on a page style that counts its pages and links the last one, and one on a Stripe-style pair of
-    cursors."""
+def _pages_contract(urls: str = "relative", page_headers: tuple[IrJson, ...] = ()) -> ApiContract:
+    """One list on a page style that counts its pages, links the last one and writes `page_headers`, and one on a
+    Stripe-style pair of cursors."""
     ir_view: dict[str, IrJson] = {
         "api": {"id": "tasks", "wire": {"urls": urls}},
         "operations": [
@@ -58,7 +58,7 @@ def _pages_contract(urls: str = "relative") -> ApiContract:
                         ],
                     },
                     "meta": [],
-                    "headers": [],
+                    "headers": list(page_headers),
                     "links": [],
                 },
                 "handlerResult": ["total"],
@@ -85,6 +85,27 @@ def _pages_contract(urls: str = "relative") -> ApiContract:
 
 def _pages(query: dict[str, object], raw_query: str, items: list[object], total: int) -> PageParts:
     return page_parts(_pages_contract(), _LIST_CHANNELS, query, raw_query, items, {"total": total}, 200, "/v1/channels")
+
+
+def _page_headers(*headers: tuple[str, IrJson]) -> tuple[tuple[str, str], ...]:
+    contract = _pages_contract(page_headers=tuple({"name": name, "value": value} for name, value in headers))
+
+    return page_parts(contract, _LIST_CHANNELS, {}, "", [], {"total": 0}, 200, "/v1/channels").headers
+
+
+def test_a_page_header_writes_the_text_of_a_scalar_and_none_for_a_null() -> None:
+    headers = _page_headers(
+        ("X-Total", _slot("total")),
+        ("X-Complete", {"kind": "literal", "value": True}),
+        ("X-None", {"kind": "literal", "value": None}),
+    )
+
+    assert headers == (("x-total", "0"), ("x-complete", "true"))
+
+
+def test_a_page_header_rendering_an_object_is_the_boundarys_failure_naming_the_header() -> None:
+    with pytest.raises(BoundaryFailureError, match="X-Window"):
+        _page_headers(("X-Window", {"kind": "literal", "value": {"from": 1}}))
 
 
 def test_an_empty_list_counts_no_page_and_its_last_link_is_the_first_page() -> None:
