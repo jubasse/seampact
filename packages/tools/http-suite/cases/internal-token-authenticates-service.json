@@ -1,0 +1,58 @@
+{
+  "id": "internal-token-authenticates-service",
+  "title": "A service route reads its internal token and refuses a request without it or with a user's token",
+  "checks": ["CHK-005"],
+  "profiles": ["default", "hand-written"],
+  "steps": [
+    {
+      "title": "a service's internal token",
+      "request": {
+        "method": "GET",
+        "path": "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{serviceJwt}}",
+          "x-deadline": "{{deadline:5000}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "taskId": "20000000-0000-4000-8000-000000000001"
+        }
+      }
+    },
+    {
+      "title": "no credential",
+      "request": {
+        "method": "GET",
+        "path": "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "x-deadline": "{{deadline:5000}}"
+        }
+      },
+      "expect": {
+        "status": 401,
+        "body": {
+          "code": "api.unauthenticated"
+        }
+      }
+    },
+    {
+      "title": "a user's bearer token, which is no internal token",
+      "request": {
+        "method": "GET",
+        "path": "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "x-deadline": "{{deadline:5000}}"
+        }
+      },
+      "expect": {
+        "status": 401,
+        "body": {
+          "code": "api.unauthenticated"
+        }
+      }
+    }
+  ]
+}

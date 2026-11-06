@@ -7,7 +7,9 @@ from datetime import datetime
 from typing import Final
 
 from generated.tasks.schemas import Channel, Draft, Task, TaskState
+from generated.tasks_absolute_urls.schemas import Note
 from generated.tasks_service import schemas as service
+from generated.tasks_service_writes import schemas as service_writes
 from seampact_consumer_suite.scripted_answers import text_member
 
 from seampact.hooks import ResolvedScope
@@ -16,6 +18,8 @@ GENERAL_CHANNEL_ID: Final = "10000000-0000-4000-8000-000000000001"
 GENERAL_CHANNEL_NAME: Final = "General"
 DRAFT_TEXT: Final = "Draft text"
 NEW_TASK_ID: Final = uuid.UUID("20000000-0000-4000-8000-0000000000ff")
+FIRST_NOTE_ID: Final = uuid.UUID("40000000-0000-4000-8000-000000000001")
+_NOTE_TEXT: Final = "Read the slice notes"
 FIRST_VERSION: Final = 1
 _TASK_TITLE: Final = "Write the slice test"
 _CREATED_AT: Final = datetime.fromisoformat("2026-10-18T09:00:00.000+00:00")
@@ -46,9 +50,7 @@ def draft(draft_id: uuid.UUID) -> Draft:
 
 
 def task(task_id: uuid.UUID) -> Task:
-    return Task(
-        task_id=task_id, title=_TASK_TITLE, state=TaskState.OPEN, version=FIRST_VERSION, created_at=_CREATED_AT
-    )
+    return Task(task_id=task_id, title=_TASK_TITLE, state=TaskState.OPEN, version=FIRST_VERSION, created_at=_CREATED_AT)
 
 
 def task_of(body: Mapping[str, object]) -> Task:
@@ -86,3 +88,19 @@ def _service_task_from(task_value: Task) -> service.Task:
         version=task_value.version,
         created_at=task_value.created_at,
     )
+
+
+def relayed_task(title: str, effort: int | None) -> service_writes.Task:
+    """The task a service's relayed write creates, as the `tasksServiceWrites` api types it."""
+    return service_writes.Task(
+        task_id=NEW_TASK_ID,
+        title=title,
+        state=service_writes.TaskState.OPEN,
+        effort=effort,
+        version=FIRST_VERSION,
+        created_at=_CREATED_AT,
+    )
+
+
+def note(note_id: uuid.UUID) -> Note:
+    return Note(note_id=note_id, text=_NOTE_TEXT)

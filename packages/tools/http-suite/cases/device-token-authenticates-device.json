@@ -1,0 +1,54 @@
+{
+  "id": "device-token-authenticates-device",
+  "title": "A device route reads its device token header and refuses a request without it, even with a user's bearer",
+  "checks": ["CHK-005"],
+  "profiles": ["default", "hand-written"],
+  "apis": ["tasksDevices"],
+  "steps": [
+    {
+      "title": "the paired device's token",
+      "request": {
+        "method": "GET",
+        "path": "/devices/v1/status",
+        "headers": {
+          "x-device-token": "{{deviceToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "deviceId": "30000000-0000-4000-8000-000000000001"
+        }
+      }
+    },
+    {
+      "title": "no credential",
+      "request": {
+        "method": "GET",
+        "path": "/devices/v1/status"
+      },
+      "expect": {
+        "status": 401,
+        "body": {
+          "code": "api.unauthenticated"
+        }
+      }
+    },
+    {
+      "title": "a user's bearer token, which the device identity does not read",
+      "request": {
+        "method": "GET",
+        "path": "/devices/v1/status",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 401,
+        "body": {
+          "code": "api.unauthenticated"
+        }
+      }
+    }
+  ]
+}

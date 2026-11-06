@@ -72,9 +72,10 @@ export function packProfileOf(
     ),
     contracts,
   );
+  const servedApis = new Set(contracts.map((contract) => contract.api.id));
   const refusals: Record<string, string> = {};
   const defaultCases = loadSuiteCases("default", directory).map((suiteCase) => {
-    const refusal = refusalOf(suiteCase, paging);
+    const refusal = refusalOf(suiteCase, paging, servedApis);
 
     if (refusal !== undefined) refusals[suiteCase.id] = refusal;
 
@@ -161,8 +162,19 @@ function limitParameterOf(paging: PagingStyle | undefined): string {
   return roleOf(paging, "limit")?.name ?? REFERENCE_LIMIT;
 }
 
-// A case that writes the reference's cursor or signed sort cannot run against a pack that names them otherwise.
-function refusalOf(suiteCase: SuiteCase, paging: PagingStyle | undefined): string | undefined {
+// A case that reaches an api the pack's app does not serve, or writes the reference's cursor or signed sort, cannot run
+// against a pack that names them otherwise.
+function refusalOf(
+  suiteCase: SuiteCase,
+  paging: PagingStyle | undefined,
+  servedApis: ReadonlySet<string>,
+): string | undefined {
+  const unserved = (suiteCase.apis ?? []).filter((api) => !servedApis.has(api));
+
+  if (unserved.length > 0) {
+    return `the case reaches ${unserved.join(", ")}, which the pack's app does not serve`;
+  }
+
   if (namesParameter(suiteCase, REFERENCE_CURSOR)) {
     return "the case follows the reference's cursor paging style";
   }

@@ -1,0 +1,7 @@
+# docs/conformance/proofs/p8-conformance-17.yaml
+lane: p8-conformance-17
+proofs:
+  - id: CHK-012
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#sends the actor-surface header it is given beside the service token'

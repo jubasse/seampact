@@ -22,6 +22,7 @@ from seampact.codegen.runtime.access_steps import (
 from seampact.codegen.runtime.failures import ContractRefusal
 from seampact.codegen.runtime.ir_view import IrMap, ir_map, ir_maps, ir_string
 from seampact.codegen.runtime.replies import role_params
+from seampact.codegen.runtime.requirement_params import requirement_params
 from seampact.hooks import FieldDirection, RequirementKind, RequirementRequest, SubjectRef, decision, purpose
 
 _INPUT: Final = "input"
@@ -167,13 +168,13 @@ def _holders(instance: object, segments: list[str]) -> list[dict[str, object]]:
 def _request(
     state: AccessState, field_right: IrMap, subject: SubjectRef | None, direction: FieldDirection
 ) -> RequirementRequest:
-    params = field_right.get("params")
+    name = ir_string(field_right, "right") or ""
     operation = state.contract.operation(state.operation_id)
 
     return RequirementRequest(
         kind=RequirementKind.RIGHT,
-        name=ir_string(field_right, "right") or "",
-        params=copy.deepcopy(dict(params)) if isinstance(params, Mapping) else None,
+        name=name,
+        params=requirement_params(state.contract, RequirementKind.RIGHT, name, field_right),
         principal=state.principal,
         subject=subject,
         scopes=tuple(state.scopes),

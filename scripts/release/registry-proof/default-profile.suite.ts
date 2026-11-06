@@ -98,6 +98,7 @@ function readCredentials(): SuiteCredentials {
     stripeSecret: credentialField(shared, "stripeSecret"),
     throttleRetryAfterMs,
     foreignServiceJwt: credentialField(shared, "foreignServiceJwt"),
+    deviceToken: credentialField(shared, "deviceToken"),
   };
 }
 

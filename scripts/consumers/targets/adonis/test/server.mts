@@ -31,6 +31,8 @@ export async function startServer(): Promise<RunningServer> {
   // The generated modules read the app service, so they load once the app exists.
   const TasksAdonis = await import("../generated/server/tasks/index.js");
   const TasksServiceAdonis = await import("../generated/server/tasksService/index.js");
+  const TasksServiceWritesAdonis = await import("../generated/server/tasksServiceWrites/index.js");
+  const TasksDevicesAdonis = await import("../generated/server/tasksDevices/index.js");
   const { registerContractRoutes } = await import("../src/routes.mjs");
 
   app.rcContents({ providers: [() => import("@adonisjs/core/providers/app_provider")] });
@@ -43,7 +45,12 @@ export async function startServer(): Promise<RunningServer> {
     bodyparser: defineBodyparserConfig({
       allowedMethods: ["POST", "PUT", "PATCH", "DELETE"],
       json: {
-        limit: Math.max(TasksAdonis.LARGEST_BODY_LIMIT, TasksServiceAdonis.LARGEST_BODY_LIMIT),
+        limit: Math.max(
+          TasksAdonis.LARGEST_BODY_LIMIT,
+          TasksServiceAdonis.LARGEST_BODY_LIMIT,
+          TasksServiceWritesAdonis.LARGEST_BODY_LIMIT,
+          TasksDevicesAdonis.LARGEST_BODY_LIMIT,
+        ),
       },
     }),
     ...(await encryptionConfig()),

@@ -1,0 +1,57 @@
+{
+  "id": "absolute-urls-from-public-origin",
+  "title": "An absolute page link starts with the configured public origin, never a forged Host or forwarded header",
+  "checks": ["CHK-130"],
+  "profiles": ["default", "hand-written"],
+  "apis": ["tasksAbsoluteUrls"],
+  "steps": [
+    {
+      "title": "a forged Host and X-Forwarded-Host",
+      "request": {
+        "method": "GET",
+        "path": "/absolute-urls/v1/notes",
+        "query": {
+          "limit": 1
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "host": "attacker.example",
+          "x-forwarded-host": "attacker.example",
+          "x-forwarded-proto": "http"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "link": {
+            "contains": ["<https://api.seampact.test/absolute-urls/v1/notes", "rel=\"next\""]
+          }
+        }
+      }
+    },
+    {
+      "title": "the same forged request writes no relation from the forged host",
+      "request": {
+        "method": "GET",
+        "path": "/absolute-urls/v1/notes",
+        "query": {
+          "limit": 1
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "host": "attacker.example",
+          "x-forwarded-host": "attacker.example",
+          "x-forwarded-proto": "http"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "link": {
+            "excludes": "attacker.example"
+          }
+        }
+      }
+    }
+  ]
+}

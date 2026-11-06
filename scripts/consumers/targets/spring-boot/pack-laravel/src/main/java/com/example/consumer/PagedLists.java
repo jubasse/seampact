@@ -5,6 +5,9 @@ import com.example.tasks.api.ListChannelsPage;
 import com.example.tasks.api.ListChannelsResult;
 import com.example.tasks.api.ListTasksInput;
 import com.example.tasks.api.ListTasksPage;
+import com.example.tasksabsoluteurls.api.ListNotesInput;
+import com.example.tasksabsoluteurls.api.ListNotesPage;
+import com.example.tasksabsoluteurls.api.ListNotesResult;
 import com.example.tasks.api.ListTasksResult;
 import com.example.tasks.api.schemas.Task;
 import java.util.List;
@@ -33,6 +36,10 @@ final class PagedLists {
     static ListTasksResult listTasks(ScriptedAnswers answers, ListTasksInput input) {
         return answers.answer(API, "listTasks", 200, ScriptedPage.class, scripted -> new ListTasksResult.Status200(pageOf(scripted)), Map.<String, Supplier<ListTasksResult>>of())
                 .orElseGet(() -> new ListTasksResult.Status200(new ListTasksPage(List.of(SampleData.task(SampleData.NEW_TASK_ID)), SAMPLE_TOTAL)));
+    }
+
+    static ListNotesResult listNotes(ListNotesInput input) {
+        return new ListNotesResult.Status200(new ListNotesPage(List.of(SampleData.note(SampleData.FIRST_NOTE_ID)), SAMPLE_TOTAL));
     }
 
     private static ListTasksPage pageOf(ScriptedPage scripted) {

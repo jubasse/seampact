@@ -36,6 +36,8 @@ const HEADER_PAGE_API = "tasksHeaderPage";
 const LARAVEL_API = "laravelTasks";
 const LARAVEL_UNPAGED_API = "laravelTasksUnpaged";
 const SINCE_PAGE_API = "tasksSincePage";
+// The service api whose relayed write carries the service identity's actor-surface header.
+const SERVICE_WRITES_API = "tasksServiceWrites";
 // The tasks api whose error codes are not in the dotted form.
 const PLAIN_CODES_API = "tasksPlainCodes";
 const PLAIN_CODES = {
@@ -266,6 +268,7 @@ function copyConsumerFile(from: string, to: string): void {
 const PROBE = `
 import { createClient } from "./generated/client/tasks/client.js";
 import { createClient as createServiceClient } from "./generated/client/tasksService/client.js";
+import { createClient as createServiceWritesClient } from "./generated/client/tasksServiceWrites/client.js";
 import { createClient as createThrowingClient, isClientContractError } from "./generated/clientThrow/tasks/client.js";
 import { createClient as createUnpagedClient } from "./generated/client/tasksUnpaged/client.js";
 import { createClient as createHeaderPageClient } from "./generated/client/tasksHeaderPage/client.js";
@@ -291,6 +294,7 @@ export const indexedCreateClient: typeof createClient = TasksIndex.createClient;
 
 const client = createClient({ baseUrl: "http://localhost" });
 const serviceClient = createServiceClient({ baseUrl: "http://localhost" });
+const serviceWritesClient = createServiceWritesClient({ baseUrl: "http://localhost" });
 const throwingClient = createThrowingClient({ baseUrl: "http://localhost" });
 
 export async function probe(): Promise<void> {
@@ -355,6 +359,20 @@ export async function probe(): Promise<void> {
 
   // @ts-expect-error the body is checked by the type
   await client.createTask({ path: { channelId: "c" }, body: { title: 1 } });
+
+  await serviceWritesClient.createTask(
+    { path: { channelId: "c" }, headers: { authorization: "a", "x-actor-surface": "studio" }, body: { title: "t" } },
+    { timeoutMs: 1 },
+  );
+
+  // @ts-expect-error a service write carries the actor-surface header
+  await serviceWritesClient.createTask({ path: { channelId: "c" }, headers: { authorization: "a" }, body: { title: "t" } }, { timeoutMs: 1 });
+
+  await serviceWritesClient.createTask(
+    // @ts-expect-error the actor surface is one of the Surface enum's values
+    { path: { channelId: "c" }, headers: { authorization: "a", "x-actor-surface": "kiosk" }, body: { title: "t" } },
+    { timeoutMs: 1 },
+  );
 
   try {
     const task = await throwingClient.getTask({ path: { channelId: "c", taskId: "t" } });
@@ -439,6 +457,7 @@ beforeAll(async () => {
         referenceUnpagedList("listChannels")(readGoldenIr("tasks", "pack-laravel"), "tasks"),
       ),
       generateApi(SINCE_PAGE_API, sincePageIr()),
+      generateApi(SERVICE_WRITES_API),
       generateApi(PLAIN_CODES_API, plainCodesIr()),
     ])
   ).flat();
@@ -1053,6 +1072,43 @@ describe("the generated reference client answers a stub server", () => {
       operation: "getTask",
       failure: { ok: false, unexpected: false, status: 401, code: "api.unauthenticated" },
     });
+  });
+});
+
+describe("a relayed service write", () => {
+  let canned: Awaited<ReturnType<typeof startCannedServer>>;
+
+  beforeAll(async () => {
+    canned = await startCannedServer();
+  });
+
+  afterAll(async () => {
+    await canned?.close();
+  });
+
+  test("sends the actor-surface header it is given beside the service token", async () => {
+    const module = await importProjectModule<ClientModule>(
+      `generated/client/${SERVICE_WRITES_API}/client.ts`,
+    );
+    const client = module.createClient({ baseUrl: canned.baseUrl, fetch: recordingFetch() });
+
+    canned.answerNext({ status: 201, body: { taskId: "t1", title: "Relayed" } });
+
+    const answer = await call(client, "createTask")(
+      {
+        path: { channelId: "c1" },
+        headers: {
+          authorization: credentials.bearer(credentials.SERVICE_JWT),
+          "x-actor-surface": "studio",
+        },
+        body: { title: "Relayed" },
+      },
+      { timeoutMs: 2000 },
+    );
+
+    expect(answer).toMatchObject({ ok: true, status: 201 });
+    expect(lastSent().headers.get("x-actor-surface")).toBe("studio");
+    expect(lastSent().headers.get("idempotency-key")).toMatch(UUID);
   });
 });
 

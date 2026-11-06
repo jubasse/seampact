@@ -44,6 +44,7 @@ const CREDENTIALS: SuiteCredentials = {
   stripeSecret: "w",
   throttleRetryAfterMs: 1000,
   foreignServiceJwt: "f",
+  deviceToken: "d",
 };
 
 function required<T>(value: T | undefined): T {
@@ -260,6 +261,17 @@ describe.each([HAL, API_PLATFORM])("the default cases under %s", (packageName) =
 
     expect(profile.refusals).not.toHaveProperty("head-runs-get-without-body");
     expect(head?.steps[0]?.expect.headers?.["content-type"]?.contains).toEqual([media]);
+  });
+});
+
+describe("a pack profile", () => {
+  test("refuses a default case that reaches an api its app does not serve", () => {
+    const profile = packProfileOf(contractsOf("hal"), HAL);
+
+    expect(profile.refusals["device-token-authenticates-device"]).toBe(
+      "the case reaches tasksDevices, which the pack's app does not serve",
+    );
+    expect(profile.refusals).not.toHaveProperty("every-operation-succeeds");
   });
 });
 

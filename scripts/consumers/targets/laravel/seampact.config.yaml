@@ -17,3 +17,27 @@ targets:
     api: tasksService
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksServiceWrites
+    out: TasksServiceWrites
+    use: seampact/laravel
+    api: tasksServiceWrites
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksDevices
+    out: TasksDevices
+    use: seampact/laravel
+    api: tasksDevices
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksOptionalAuth
+    out: TasksOptionalAuth
+    use: seampact/laravel
+    api: tasksOptionalAuth
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksAbsoluteUrls
+    out: TasksAbsoluteUrls
+    use: seampact/laravel
+    api: tasksAbsoluteUrls
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }

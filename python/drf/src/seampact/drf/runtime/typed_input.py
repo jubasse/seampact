@@ -4,14 +4,14 @@ type; the generated serializer then runs the value rules; each issue keeps its `
 bounded by `MAX_RENDERED_ISSUES`; the handler gets the input as frozen dataclasses."""
 
 import dataclasses
-import typing
 from collections.abc import Mapping, Sequence
-from typing import Final, TypeAliasType, get_args, get_origin, get_type_hints
+from typing import Final
 
 from rest_framework.exceptions import ErrorDetail
 
 from seampact.codegen.runtime.contract import HEADER_PART, PATH_PART, QUERY_PART, ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError
+from seampact.codegen.runtime.hinted_values import built_dataclass
 from seampact.codegen.runtime.input_decoding import DecodedInput, Issue
 from seampact.codegen.runtime.ir_view import IrMap, ir_map, ir_maps, ir_string, ir_true
 from seampact.codegen.runtime.value_rules import TYPE_RULE, ValueRuleError, scalar_from_wire
@@ -132,7 +132,7 @@ def rendered(issues: Sequence[Issue]) -> list[Issue]:
 
 def built_input[I](input_type: type[I], validated: Mapping[str, object]) -> I:
     """The input dataclass from the serializer's validated data, nested dataclasses built from their hints."""
-    built = _built_dataclass(input_type, validated)
+    built = built_dataclass(input_type, validated)
 
     if not isinstance(built, input_type):
         raise BoundaryFailureError(f"seampact: the input type {input_type.__qualname__} is not a generated dataclass.")
@@ -250,42 +250,6 @@ class _TypeWalker:
         self.issues.append(Issue(self.issue_in, pointer, rule))
 
         return value
-
-
-def _built_dataclass(cls: type, data: Mapping[str, object]) -> object:
-    hints = get_type_hints(cls)
-    values = {
-        field.name: _converted(hints[field.name], data[field.name])
-        for field in dataclasses.fields(cls)
-        if field.name in data
-    }
-
-    return cls(**values)
-
-
-def _converted(hint: object, value: object) -> object:
-    if value is None:
-        return None
-
-    origin = get_origin(hint)
-
-    if isinstance(origin, TypeAliasType) or isinstance(hint, TypeAliasType):
-        arguments = get_args(hint)
-        return _converted(arguments[0] if arguments else typing.Any, value)
-
-    if origin in (list, Sequence) and isinstance(value, list):
-        item = get_args(hint)[0]
-        return [_converted(item, element) for element in value]
-
-    if origin in (dict, Mapping) and isinstance(value, Mapping):
-        item = get_args(hint)[1]
-        return {key: _converted(item, element) for key, element in value.items()}
-
-    for arm in get_args(hint) if origin in (typing.Union, type(int | None)) else (hint,):
-        if isinstance(arm, type) and dataclasses.is_dataclass(arm) and isinstance(value, Mapping):
-            return _built_dataclass(arm, value)
-
-    return value
 
 
 def _escaped(name: str) -> str:

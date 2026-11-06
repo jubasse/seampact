@@ -29,6 +29,12 @@ export const FOREIGN_SERVICE_JWT =
 /** The service the foreign service token stands for. */
 export const FOREIGN_SERVICE_NAME = "ticketing";
 
+/** The paired wall display's `X-Device-Token`, which the device identity's hook accepts. */
+export const DEVICE_TOKEN = "seampact-device-token";
+
+/** The device id the device token authenticates. */
+export const DEVICE_ID = "30000000-0000-4000-8000-000000000001";
+
 /** The Stripe signature scheme's key id and its one valid secret. */
 export const STRIPE_KEY_ID = "stripe";
 

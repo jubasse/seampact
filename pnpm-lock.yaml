@@ -793,6 +793,10 @@ importers:
       '@seampact/spec':
         specifier: workspace:*
         version: link:../../core/spec
+    devDependencies:
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
 packages:
 

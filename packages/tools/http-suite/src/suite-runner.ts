@@ -1,4 +1,6 @@
 // Runs cases against a sample app at a base URL, one step after another, and answers the suite report.
+import { request as httpRequest, type IncomingMessage } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { BOOT_PROFILE } from "./boot-variant.js";
 import { loadScript, readHookCalls } from "./control-routes.js";
 import type { FormatReader } from "./format-reader.js";
@@ -19,8 +21,8 @@ import { TemplateError, TemplateScope, WHOLE_PLACEHOLDER } from "./template.js";
 
 /**
  * The credentials the sample app's hooks honour, read by the cases as `{{userToken}}`, `{{throttledUserToken}}`,
- * `{{serviceJwt}}`, `{{foreignServiceJwt}}`, `{{stripeSecret}}`, `{{throttleRetryAfterMs}}` and the derived
- * `{{throttleRetryAfterSeconds}}`.
+ * `{{serviceJwt}}`, `{{foreignServiceJwt}}`, `{{deviceToken}}`, `{{stripeSecret}}`, `{{throttleRetryAfterMs}}` and the
+ * derived `{{throttleRetryAfterSeconds}}`.
  */
 export interface SuiteCredentials {
   readonly userToken: string;
@@ -30,6 +32,8 @@ export interface SuiteCredentials {
   readonly throttleRetryAfterMs: number;
   /** The bearer token of a service the service api's `callerService` requirement does not allow. */
   readonly foreignServiceJwt: string;
+  /** The `X-Device-Token` value of the paired device the device identity's hook accepts. */
+  readonly deviceToken: string;
 }
 
 export interface SuiteRunOptions {
@@ -49,6 +53,7 @@ export interface SuiteRunOptions {
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const MILLISECONDS_PER_SECOND = 1000;
 const JSON_MEDIA = "application/json";
+const HOST_HEADER = "host";
 // The origin a captured link is resolved under; only the resolved path and query are sent to the target.
 const RESOLUTION_ORIGIN = "http://target.invalid";
 
@@ -349,7 +354,12 @@ async function send(
     );
   }
 
-  const answer = await fetch(`${context.baseUrl}${target}`, {
+  const url = `${context.baseUrl}${target}`;
+
+  if (headers.has(HOST_HEADER))
+    return sendWithForgedHost(url, request.method, headers, body, context);
+
+  const answer = await fetch(url, {
     method: request.method,
     headers,
     ...(body === undefined ? {} : { body }),
@@ -359,6 +369,55 @@ async function send(
   const text = await answer.text();
 
   return { status: answer.status, headers: answer.headers, text, json: parseJson(text) };
+}
+
+// `fetch` drops a `Host` header it is given and sends the URL's own, so a case that forges one would pass without
+// sending it: such a step goes through `node:http`, which sends the header as written.
+async function sendWithForgedHost(
+  url: string,
+  method: string,
+  headers: Headers,
+  body: string | undefined,
+  context: RunContext,
+): Promise<ReceivedResponse> {
+  const send = new URL(url).protocol === "https:" ? httpsRequest : httpRequest;
+  const response = await new Promise<IncomingMessage>((resolve, reject) => {
+    const outgoing = send(url, {
+      method,
+      headers: Object.fromEntries(headers),
+      signal: timeoutSignal(context),
+    });
+
+    outgoing.on("response", resolve);
+    outgoing.on("error", reject);
+    outgoing.end(body);
+  });
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of response) chunks.push(Buffer.from(chunk));
+
+  const text = Buffer.concat(chunks).toString("utf8");
+
+  if (response.statusCode === undefined) throw new Error(`http-suite: ${url} answered no status`);
+
+  return {
+    status: response.statusCode,
+    headers: receivedHeaders(response),
+    text,
+    json: parseJson(text),
+  };
+}
+
+function receivedHeaders(response: IncomingMessage): Headers {
+  const headers = new Headers();
+
+  for (const [name, value] of Object.entries(response.headers)) {
+    if (value === undefined) continue;
+
+    for (const each of Array.isArray(value) ? value : [value]) headers.append(name, each);
+  }
+
+  return headers;
 }
 
 function bodyOf(request: SuiteStep["request"], scope: TemplateScope): string | undefined {

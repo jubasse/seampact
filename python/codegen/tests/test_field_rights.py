@@ -6,6 +6,7 @@ import copy
 import dataclasses
 from dataclasses import dataclass, field
 
+import pydantic
 import pytest
 
 from seampact.codegen.runtime.access_steps import AccessHooks, AccessState, HookCaller
@@ -115,8 +116,14 @@ def _with_output_pointer(contract: ApiContract, pointer: str) -> ApiContract:
 
 
 def _with_two_output_params(contract: ApiContract, title_allowed: list[IrJson]) -> ApiContract:
-    """`listTasks` with `/effort` (owners) and `/title` (`title_allowed`) restricted to its output right."""
+    """`listTasks` with `/effort` (owners) and `/title` (`title_allowed`) restricted to its output right, which takes
+    the `roles` params."""
     ir_view: dict[str, IrJson] = copy.deepcopy(dict(contract.ir_view))
+    rights = ir_view["rights"]
+    assert isinstance(rights, dict)
+    see_effort = rights["tasks.seeEffort"]
+    assert isinstance(see_effort, dict)
+    see_effort["params"] = "RolesParams"
     operations = ir_view["operations"]
     assert isinstance(operations, list)
     list_tasks = next(op for op in operations if isinstance(op, dict) and op["id"] == "listTasks")
@@ -143,7 +150,8 @@ class _EditorDecider:
 
     def decide(self, request: RequirementRequest, /) -> Decision:
         self.asked.append(request)
-        allowed = (request.params or {}).get("allowed")
+        params = request.params
+        allowed = params.model_dump(mode="json").get("allowed") if isinstance(params, pydantic.BaseModel) else None
 
         if isinstance(allowed, list) and "editor" in allowed:
             return decision.Allowed()

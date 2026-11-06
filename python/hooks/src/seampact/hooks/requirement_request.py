@@ -16,8 +16,9 @@ from seampact.hooks.throttle_bucket import ThrottleBucket
 
 @dataclass(frozen=True, slots=True, kw_only=True, repr=False)
 class RequirementRequest(RedactedRepr):
-    """`scopes` are the resolved scopes, outermost first; `principal` is None for an anonymous request. The rule
-    proof is sensitive by construction, so it renders redacted."""
+    """`params` holds the use site's params as an instance of the right's or rule's generated params class, None when
+    it declares none; `scopes` are the resolved scopes, outermost first; `principal` is None for an anonymous request.
+    The rule proof is sensitive by construction, so it renders redacted."""
 
     _REDACTED_FIELDS: ClassVar[frozenset[str]] = frozenset({"proof"})
 
@@ -30,7 +31,7 @@ class RequirementRequest(RedactedRepr):
 
     kind: RequirementKind
     name: str
-    params: Mapping[str, object] | None = None
+    params: object | None = None
     principal: object | None
     subject: SubjectRef | None = None
     scopes: tuple[ResolvedScope, ...]

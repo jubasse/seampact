@@ -1,4 +1,4 @@
-// Registers both apis' generated plugins on a Fastify app with `@fastify/compress`, the tasks plugin under its base
+// Registers each api's generated plugins on a Fastify app with `@fastify/compress`, the tasks plugin under its base
 // path as prefix, beside the http suite's control routes, with the not-found handler and `frameworkErrors` that
 // answer the requests the plugins never see in each api's format, on a free local port. The app collects its routes
 // first, for the plugins' framework-route check at ready.
@@ -6,14 +6,26 @@ import compress from "@fastify/compress";
 import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
 import Fastify, { type FastifyError, type FastifyReply, type FastifyRequest } from "fastify";
 import * as TasksFastify from "../generated/server/tasks/index.js";
+import * as TasksDevicesFastify from "../generated/server/tasksDevices/index.js";
 import * as TasksServiceFastify from "../generated/server/tasksService/index.js";
+import * as TasksServiceWritesFastify from "../generated/server/tasksServiceWrites/index.js";
 import {
   servesUnlistedRoute,
   UNLISTED_ROUTE,
   withoutMissingHandler,
 } from "../src/boot-variant.mjs";
-import { tasksHandlers, tasksServiceHandlers } from "../src/handlers.mjs";
-import { tasksHooks, tasksServiceHooks } from "../src/hooks.mjs";
+import {
+  tasksDevicesHandlers,
+  tasksHandlers,
+  tasksServiceHandlers,
+  tasksServiceWritesHandlers,
+} from "../src/handlers.mjs";
+import {
+  tasksDevicesHooks,
+  tasksHooks,
+  tasksServiceHooks,
+  tasksServiceWritesHooks,
+} from "../src/hooks.mjs";
 import {
   type ControlReply,
   hookCallsReply,
@@ -36,7 +48,9 @@ const TASKS_BASE_PATH = "/v1";
 function renderedByAnApi(request: FastifyRequest, reply: FastifyReply, error?: Error): boolean {
   return (
     TasksFastify.renderPreRoutingError(request, reply, error) ||
-    TasksServiceFastify.renderPreRoutingError(request, reply, error)
+    TasksServiceFastify.renderPreRoutingError(request, reply, error) ||
+    TasksServiceWritesFastify.renderPreRoutingError(request, reply, error) ||
+    TasksDevicesFastify.renderPreRoutingError(request, reply, error)
   );
 }
 
@@ -85,6 +99,14 @@ export async function startServer(): Promise<RunningServer> {
   await app.register(TasksServiceFastify.plugin, {
     handlers: { InternalEndpoints: tasksServiceHandlers },
     hooks: tasksServiceHooks(),
+  });
+  await app.register(TasksServiceWritesFastify.plugin, {
+    handlers: { InternalWritesEndpoints: tasksServiceWritesHandlers },
+    hooks: tasksServiceWritesHooks(),
+  });
+  await app.register(TasksDevicesFastify.plugin, {
+    handlers: { DevicesEndpoints: tasksDevicesHandlers },
+    hooks: tasksDevicesHooks(),
   });
   await app.listen({ port: 0, host: HOST });
 

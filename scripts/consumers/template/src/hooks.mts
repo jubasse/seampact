@@ -21,6 +21,8 @@ import {
 import { createMemoryIdempotencyStore } from "@seampact/idempotency-memory";
 import { verifyTemplateSignature } from "@seampact/signed-webhooks";
 import {
+  DEVICE_ID,
+  DEVICE_TOKEN,
   FOREIGN_SERVICE_JWT,
   FOREIGN_SERVICE_NAME,
   SERVICE_JWT,
@@ -95,6 +97,19 @@ export const serviceAuthenticateHook = {
     const service = SERVICES_BY_TOKEN.get(request.credentials.internalToken ?? "");
 
     return service === undefined ? UNAUTHENTICATED : { principal: { service, userId: USER_ID } };
+  },
+};
+
+/** The `device` identity: the paired device's token, accepted as is. */
+export const deviceAuthenticateHook = {
+  authenticate(
+    request: AuthenticateRequest<{ readonly deviceToken?: string }>,
+  ): AuthenticateResult<{ deviceId: string }, Unauthenticated> {
+    recordHookCall(authenticateHookName("device"), request.operation);
+
+    return request.credentials.deviceToken === DEVICE_TOKEN
+      ? { principal: { deviceId: DEVICE_ID } }
+      : UNAUTHENTICATED;
   },
 };
 
@@ -308,6 +323,24 @@ export function tasksServiceHooks() {
   return {
     authenticate: { service: serviceAuthenticateHook },
     deciders: [{ names: "all" as const, decider: serviceDeciderHook }],
+    scopeResolvers: {},
+    onUnexpectedError: logUnexpectedError,
+  };
+}
+
+/** The `tasksServiceWrites` api's hooks: the service identity and decider, and an idempotency store for its writes. */
+export function tasksServiceWritesHooks() {
+  return {
+    ...tasksServiceHooks(),
+    idempotencyStore: createIdempotencyStore(),
+  };
+}
+
+/** The `tasksDevices` api's hooks: the device identity alone. */
+export function tasksDevicesHooks() {
+  return {
+    authenticate: { device: deviceAuthenticateHook },
+    deciders: [],
     scopeResolvers: {},
     onUnexpectedError: logUnexpectedError,
   };

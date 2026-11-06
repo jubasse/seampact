@@ -9,8 +9,16 @@ use App\Controller\SuiteControlController;
 use App\Controller\UnlistedRouteController;
 use App\Generated\Tasks\Symfony\TasksRouteLoader;
 use App\Generated\Tasks\Symfony\TasksSeampactBundle;
+use App\Generated\TasksAbsoluteUrls\Symfony\TasksAbsoluteUrlsRouteLoader;
+use App\Generated\TasksAbsoluteUrls\Symfony\TasksAbsoluteUrlsSeampactBundle;
+use App\Generated\TasksDevices\Symfony\TasksDevicesRouteLoader;
+use App\Generated\TasksDevices\Symfony\TasksDevicesSeampactBundle;
+use App\Generated\TasksOptionalAuth\Symfony\TasksOptionalAuthRouteLoader;
+use App\Generated\TasksOptionalAuth\Symfony\TasksOptionalAuthSeampactBundle;
 use App\Generated\TasksService\Symfony\TasksServiceRouteLoader;
 use App\Generated\TasksService\Symfony\TasksServiceSeampactBundle;
+use App\Generated\TasksServiceWrites\Symfony\TasksServiceWritesRouteLoader;
+use App\Generated\TasksServiceWrites\Symfony\TasksServiceWritesSeampactBundle;
 use App\Suite\ChannelResolver;
 use App\Suite\ForbiddenProbeMatcher;
 use App\Suite\SuiteLogger;
@@ -35,8 +43,8 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 /**
  * The consumer app: FrameworkBundle, SecurityBundle with one lazy `http_basic` firewall on the tasks api's paths, its
  * `login_throttling` and two `access_control` rules keyed on suite headers, the second on the generated identity
- * request matcher, the RateLimiter the throttle decider counts in, the file idempotency store, and the bundles of the
- * `tasks` and `tasksService` apis. The boot variant leaves out the service it names and gets a cache directory of its
+ * request matcher, the RateLimiter the throttle decider counts in, the file idempotency store, and the bundles of every
+ * api, the `tasksAbsoluteUrls` one with its public origin. The boot variant leaves out the service it names and gets a cache directory of its
  * own; `SEAMPACT_SUITE_CACHE_DIR` moves the cache for a boot run.
  */
 final class Kernel extends BaseKernel
@@ -56,6 +64,8 @@ final class Kernel extends BaseKernel
     private const CREDENTIALS_FILE = '/credentials.json';
     private const CACHE_VARIABLE = 'SEAMPACT_SUITE_CACHE_DIR';
     private const RESPONSES_VARIABLE = 'SEAMPACT_SUITE_RESPONSES';
+    // The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
+    private const PUBLIC_ORIGIN = 'https://api.seampact.test';
     private const LEFT_OUT_BY_VARIANT = [
         'missing-authenticate-hook' => UserHook::class,
         'missing-decider' => TasksDecider::class,
@@ -69,6 +79,10 @@ final class Kernel extends BaseKernel
         yield new SecurityBundle();
         yield new TasksSeampactBundle();
         yield new TasksServiceSeampactBundle();
+        yield new TasksServiceWritesSeampactBundle();
+        yield new TasksDevicesSeampactBundle();
+        yield new TasksOptionalAuthSeampactBundle();
+        yield new TasksAbsoluteUrlsSeampactBundle();
     }
 
     public function boot(): void
@@ -117,6 +131,7 @@ final class Kernel extends BaseKernel
         ]);
         // Read at run time, so one container serves every responses mode.
         $container->extension('seampact_tasks', ['responses' => '%env(default:seampact_suite.responses:' . self::RESPONSES_VARIABLE . ')%']);
+        $container->extension('seampact_tasks_absolute_urls', ['public_origin' => self::PUBLIC_ORIGIN]);
 
         $services = $container->services()->defaults()->autowire()->autoconfigure();
         $leftOut = self::LEFT_OUT_BY_VARIANT[BootVariant::current() ?? ''] ?? null;
@@ -125,6 +140,7 @@ final class Kernel extends BaseKernel
             ->exclude([__DIR__ . '/Kernel.php', ...($leftOut === null ? [] : [self::sourceFileOf($leftOut)])]);
         $services->set('logger', SuiteLogger::class);
         $services->set(TasksSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
+        $services->set(TasksServiceWritesSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
         // The generated request matcher of the tasks api's identity routes, narrowed to the suite's probe header.
         $services->set(self::IDENTITY_PROBE_MATCHER, ChainRequestMatcher::class)->args([[
             service('seampact.tasks.matcher.identity'),
@@ -136,6 +152,10 @@ final class Kernel extends BaseKernel
     {
         $routes->import(TasksRouteLoader::RESOURCE, TasksRouteLoader::TYPE);
         $routes->import(TasksServiceRouteLoader::RESOURCE, TasksServiceRouteLoader::TYPE);
+        $routes->import(TasksServiceWritesRouteLoader::RESOURCE, TasksServiceWritesRouteLoader::TYPE);
+        $routes->import(TasksDevicesRouteLoader::RESOURCE, TasksDevicesRouteLoader::TYPE);
+        $routes->import(TasksOptionalAuthRouteLoader::RESOURCE, TasksOptionalAuthRouteLoader::TYPE);
+        $routes->import(TasksAbsoluteUrlsRouteLoader::RESOURCE, TasksAbsoluteUrlsRouteLoader::TYPE);
 
         // The suite's control routes (ADR 0015 "Control routes"), allow-listed in seampact.config.yaml.
         $routes->add('suite_script', '/__seampact/script')->methods(['PUT'])->controller([SuiteControlController::class, 'loadScript']);

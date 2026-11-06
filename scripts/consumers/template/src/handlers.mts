@@ -2,7 +2,10 @@
 // operation types: one declared success per operation, as the http suite expects, unless the script a case loaded
 // answers for the operation.
 import type * as Tasks from "../generated/types/tasks/index.js";
+import type * as TasksDevices from "../generated/types/tasksDevices/index.js";
 import type * as TasksService from "../generated/types/tasksService/index.js";
+import type * as TasksServiceWrites from "../generated/types/tasksServiceWrites/index.js";
+import { DEVICE_ID } from "../test/credentials.mjs";
 import { scriptedAnswer } from "./suite-control.mjs";
 
 const CREATED_AT = "2026-10-18T09:00:00.000Z";
@@ -154,5 +157,19 @@ export const tasksServiceHandlers = scripted("tasksService", {
     if (Date.parse(input.headers["x-deadline"]) <= Date.now()) return DEADLINE_EXCEEDED;
 
     return { status: 200, body: task(input.path.taskId) };
+  },
+});
+
+/** The `tasksServiceWrites` api's handlers, by operation. */
+export const tasksServiceWritesHandlers = scripted("tasksServiceWrites", {
+  createTask(input: TasksServiceWrites.CreateTaskInput): TasksServiceWrites.CreateTaskOutput {
+    return { status: 201, body: task(crypto.randomUUID(), input.body.title) };
+  },
+});
+
+/** The `tasksDevices` api's handlers, by operation. */
+export const tasksDevicesHandlers = scripted("tasksDevices", {
+  status(_input: TasksDevices.StatusInput): TasksDevices.StatusOutput {
+    return { status: 200, body: { deviceId: DEVICE_ID } };
   },
 });

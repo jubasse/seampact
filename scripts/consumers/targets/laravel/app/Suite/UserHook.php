@@ -7,20 +7,27 @@ namespace App\Suite;
 use App\Generated\Tasks\Laravel\UserAuthenticateHook;
 use App\Generated\Tasks\Laravel\UserCredentials;
 use App\Generated\Tasks\Laravel\UserPrincipal;
+use App\Generated\TasksAbsoluteUrls\Laravel\UserAuthenticateHook as AbsoluteUrlsUserAuthenticateHook;
+use App\Generated\TasksAbsoluteUrls\Laravel\UserCredentials as AbsoluteUrlsUserCredentials;
+use App\Generated\TasksAbsoluteUrls\Laravel\UserPrincipal as AbsoluteUrlsUserPrincipal;
+use App\Generated\TasksOptionalAuth\Laravel\UserAuthenticateHook as OptionalAuthUserAuthenticateHook;
+use App\Generated\TasksOptionalAuth\Laravel\UserCredentials as OptionalAuthUserCredentials;
+use App\Generated\TasksOptionalAuth\Laravel\UserPrincipal as OptionalAuthUserPrincipal;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Seampact\Codegen\Runtime\Denial;
-use Seampact\ConsumerSuite\Credentials;
 use Seampact\ConsumerSuite\SuiteControl;
+use Seampact\ConsumerSuite\UserTokens;
 use Seampact\Hooks\AuthenticateRequest;
 use Seampact\Hooks\AuthenticateResult;
 
 /**
- * The `user` identity's hook double: a bearer token of the credentials, or the same token as the session cookie. The
- * token `GATE_DENIED_TOKEN` throws Laravel's `AuthorizationException`, as a `Gate::authorize()` in a hook would, and
- * `GUARD_DENIED_TOKEN` its `AuthenticationException`, as a guard's `authenticate()` would.
+ * The `user` identity's hook double of the `tasks`, `tasksOptionalAuth` and `tasksAbsoluteUrls` apis: a bearer token of
+ * the credentials, or the same token as the session cookie. The token `GATE_DENIED_TOKEN` throws Laravel's
+ * `AuthorizationException`, as a `Gate::authorize()` in a hook would, and `GUARD_DENIED_TOKEN` its
+ * `AuthenticationException`, as a guard's `authenticate()` would.
  */
-final class UserHook implements UserAuthenticateHook
+final class UserHook implements UserAuthenticateHook, OptionalAuthUserAuthenticateHook, AbsoluteUrlsUserAuthenticateHook
 {
     public const GATE_DENIED_TOKEN = 'seampact-gate-denied';
     public const GUARD_DENIED_TOKEN = 'seampact-guard-denied';
@@ -30,7 +37,7 @@ final class UserHook implements UserAuthenticateHook
         SuiteControl::recordHookCall('authenticate:user', $request->operation()->api, $request->operation()->id);
 
         $credentials = $request->credentials();
-        $token = $credentials instanceof UserCredentials ? ($credentials->bearer ?? $credentials->sessionCookie) : null;
+        $token = self::tokenOf($credentials);
         if ($token === self::GATE_DENIED_TOKEN) {
             throw new AuthorizationException('the gate denies this caller');
         }
@@ -38,14 +45,29 @@ final class UserHook implements UserAuthenticateHook
             throw new AuthenticationException('the guard knows no such caller');
         }
 
-        $userIds = [
-            Credentials::text('userToken') => Credentials::text('userId'),
-            Credentials::text('throttledUserToken') => Credentials::text('throttledUserId'),
-        ];
-        $userId = $token === null ? null : ($userIds[$token] ?? null);
+        $userId = UserTokens::userIdOf($token);
 
         return $userId === null
             ? new AuthenticateResult\Denied(new Denial('api.unauthenticated'))
-            : new AuthenticateResult\Authenticated(new UserPrincipal($userId));
+            : new AuthenticateResult\Authenticated(self::principalOf($credentials, $userId));
+    }
+
+    private static function tokenOf(object $credentials): ?string
+    {
+        $isUserCredentials = $credentials instanceof UserCredentials
+            || $credentials instanceof OptionalAuthUserCredentials
+            || $credentials instanceof AbsoluteUrlsUserCredentials;
+
+        return $isUserCredentials ? ($credentials->bearer ?? $credentials->sessionCookie) : null;
+    }
+
+    /** The principal of the api whose credentials the request presents. */
+    private static function principalOf(object $credentials, string $userId): object
+    {
+        return match (true) {
+            $credentials instanceof OptionalAuthUserCredentials => new OptionalAuthUserPrincipal($userId),
+            $credentials instanceof AbsoluteUrlsUserCredentials => new AbsoluteUrlsUserPrincipal($userId),
+            default => new UserPrincipal($userId),
+        };
     }
 }

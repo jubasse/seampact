@@ -21,6 +21,7 @@ use Seampact\Symfony\Runtime\VoterDecider;
 use Seampact\Symfony\Tests\Support\GrantedChannelsController;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\ResolveClassPass;
+use Symfony\Component\DependencyInjection\Compiler\ResolveNamedArgumentsPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -151,7 +152,10 @@ final class BootCheckPassTest extends TestCase
         return new BootCheckPass(RelativeContract::class, RelativeOperation::class, FirstBundle::BOUNDARY_SERVICE, FirstBundle::INPUT_RESOLVER_SERVICE, FirstBundle::SETTINGS_SERVICE, RelativeSettings::class, false);
     }
 
-    /** The boot check's problems on a container built as a Kernel builds it, the bundle configuration merged first. */
+    /**
+     * The boot check's problems on a container built as a Kernel builds it: the bundle configuration merged first, then
+     * Symfony's passes of the earlier types in their order, the named arguments of the services turned into positions.
+     */
     private static function compiledProblems(Bundle $bundle, ?string $publicOrigin, CompilerPassInterface $bootCheck): string
     {
         $container = new ContainerBuilder();
@@ -164,6 +168,7 @@ final class BootCheckPassTest extends TestCase
         $container->loadFromExtension($extension->getAlias(), $publicOrigin === null ? [] : ['public_origin' => $publicOrigin]);
         (new MergeExtensionConfigurationPass([$extension->getAlias()]))->process($container);
         (new ResolveClassPass())->process($container);
+        (new ResolveNamedArgumentsPass())->process($container);
         (new RegisterListenersPass())->process($container);
 
         try {

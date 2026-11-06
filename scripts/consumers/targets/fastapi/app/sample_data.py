@@ -4,7 +4,9 @@ from collections.abc import Mapping
 from typing import Final
 
 from generated.tasks.schemas import Channel, Draft, Task, TaskState
+from generated.tasks_absolute_urls.schemas import Note
 from generated.tasks_service import schemas as service
+from generated.tasks_service_writes import schemas as service_writes
 from seampact_consumer_suite.scripted_answers import text_member
 
 from seampact.hooks import ResolvedScope
@@ -16,6 +18,8 @@ TASK_TITLE: Final = "Write the slice test"
 CREATED_AT: Final = "2026-10-18T09:00:00.000Z"
 FIRST_VERSION: Final = 1
 NEW_TASK_ID: Final = "20000000-0000-4000-8000-0000000000ff"
+FIRST_NOTE_ID: Final = "40000000-0000-4000-8000-000000000001"
+NOTE_TEXT: Final = "Read the slice notes"
 
 
 def task(task_id: str) -> Task:
@@ -61,6 +65,26 @@ def _service_task_from(task_value: Task) -> service.Task:
     values["state"] = service.TaskState(task_value.state.value)
 
     return service.Task.model_validate(values)
+
+
+def relayed_task(title: str, effort: int | None) -> service_writes.Task:
+    """The task a service's relayed write creates, as the `tasksServiceWrites` api types it."""
+    values: dict[str, object] = {
+        "task_id": NEW_TASK_ID,
+        "title": title,
+        "state": service_writes.TaskState.OPEN,
+        "version": FIRST_VERSION,
+        "created_at": CREATED_AT,
+    }
+
+    if effort is not None:
+        values["effort"] = effort
+
+    return service_writes.Task.model_validate(values)
+
+
+def note(note_id: str) -> Note:
+    return Note.model_validate({"note_id": note_id, "text": NOTE_TEXT})
 
 
 def with_next_version(current: Task, title: str, state: TaskState) -> Task:

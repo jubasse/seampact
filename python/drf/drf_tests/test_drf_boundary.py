@@ -36,16 +36,19 @@ from rest_framework.request import Request
 from rest_framework.throttling import BaseThrottle
 from rest_framework.views import APIView
 
+from seampact.codegen.runtime.failures import BoundaryFailureError
 from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import AcceptedFramework, VersionUnit
 from seampact.codegen.runtime.hook_check import hook_needs
 from seampact.codegen.runtime.ir_view import ir_map, ir_string
+from seampact.codegen.runtime.requirement_params import requirement_params
 from seampact.django.runtime.boot_check import boot_problems
 from seampact.drf.runtime import admission
 from seampact.hooks import (
     AuthenticateRequest,
     ErrorCodeWithParams,
     IdempotencyClaim,
+    RequirementKind,
     RequirementRequest,
     ResolvedScope,
     ResolveScopeRequest,
@@ -588,6 +591,39 @@ def test_a_page_projection_that_is_not_a_list_fails_closed(monkeypatch: pytest.M
 
     assert (response.status_code, _code(response)) == (HTTPStatus.INTERNAL_SERVER_ERROR, "api.internal")
     assert "not a list" in failures[0].reason
+
+
+def test_the_decider_gets_the_use_site_params_as_the_rights_generated_params_class() -> None:
+    asked: list[RequirementRequest] = []
+
+    def denied_after_roles(request: object) -> object:
+        assert isinstance(request, RequirementRequest)
+        asked.append(request)
+
+        return decision.Denied(deny=_denial("api.forbidden")) if request.name == "roles" else decision.Allowed()
+
+    answers["create_task"] = lambda _: pytest.fail("the handler ran")
+    answers["decide"] = denied_after_roles
+
+    response = Client().post(
+        f"/v1/channels/{_CHANNEL_ID}/tasks",
+        json.dumps({"title": "Write the guide"}),
+        content_type="application/json",
+        headers={**_bearer(), "Idempotency-Key": "k-1"},
+    )
+
+    assert _code(response) == "api.forbidden", response.content
+    roles = next(request for request in asked if request.name == "roles")
+    schemas = _module("schemas")
+    assert roles.params == schemas.RolesParams(allowed=[schemas.Role.OWNER, schemas.Role.EDITOR])
+
+
+@pytest.mark.parametrize("allowed", [[], "owner", ["admin"]])
+def test_use_site_params_the_dataclass_does_not_hold_fail_the_boundary(allowed: object) -> None:
+    contract = _module("contract").CONTRACT
+
+    with pytest.raises(BoundaryFailureError, match="roles"):
+        requirement_params(contract, RequirementKind.RIGHT, "roles", {"params": {"allowed": allowed}})
 
 
 def test_the_input_field_rights_are_applied_before_the_deadline() -> None:

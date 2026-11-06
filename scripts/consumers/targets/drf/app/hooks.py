@@ -7,6 +7,7 @@ from typing import Final
 from django.http import HttpRequest
 from hook_doubles import (
     ChannelResolver,
+    DeviceHook,
     OverriddenRightDecider,
     ServiceDecider,
     ServiceHook,
@@ -22,6 +23,10 @@ _IDEMPOTENCY_STORE_FILE: Final = Path(__file__).parent / "suite-idempotency.json
 
 def user_hook(request: HttpRequest) -> UserHook:
     return UserHook(getattr(request, "user", None))
+
+
+def device_hook(request: HttpRequest) -> DeviceHook:
+    return DeviceHook()
 
 
 def channel_resolver(request: HttpRequest) -> ChannelResolver:

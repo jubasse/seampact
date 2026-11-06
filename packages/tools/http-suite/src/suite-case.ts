@@ -120,14 +120,17 @@ export type BootExpectation =
  * that counts only in the reports of those targets), `profiles` the profiles that run it.
  * `script` is loaded through the control routes before the first step, an empty script when the case has none, so
  * every case starts from the doubles' own answers and no recorded call; `hookCalls` is then the exact list of hook
- * calls the sample app must have recorded once every step has run. A boot case runs in the `boot` profile only and
- * holds `boot` in place of `steps`, `script` and `hookCalls`; its `steps` are empty.
+ * calls the sample app must have recorded once every step has run. `apis` names the apis of the reference workspace
+ * beyond `tasks` and `tasksService` the case reaches, so a profile whose app serves fewer refuses it by name. A boot
+ * case runs in the `boot` profile only and holds `boot` in place of `steps`, `script` and `hookCalls`; its `steps` are
+ * empty.
  */
 export interface SuiteCase {
   readonly id: string;
   readonly title: string;
   readonly checks: readonly ScopedCheck[];
   readonly profiles: readonly SuiteProfile[];
+  readonly apis?: readonly string[];
   readonly script?: SampleAppScript;
   readonly steps: readonly SuiteStep[];
   readonly hookCalls?: readonly RecordedHookCall[];
@@ -150,6 +153,7 @@ export function runsInProfile(suiteCase: SuiteCase, profile: SuiteProfile): bool
 export const CASE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const CHECK_ID = /^CHK-\d{3}$/;
 const TARGET_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const API_NAME = /^[a-z][A-Za-z0-9]*$/;
 const PROFILE = /^(?:default|hand-written|boot|pack:[a-z0-9-]+|adapter:[a-z0-9-]+)$/;
 const HTTP_METHOD = /^[A-Z]+$/;
 const LOWERCASE_HEADER = /^[a-z0-9-]+$/;
@@ -163,10 +167,21 @@ export const CREDENTIAL_VARIABLES = [
   "throttleRetryAfterMs",
   "throttleRetryAfterSeconds",
   "foreignServiceJwt",
+  "deviceToken",
 ];
 
-const CASE_MEMBERS = ["id", "title", "checks", "profiles", "script", "steps", "hookCalls", "boot"];
-const HTTP_CASE_MEMBERS = ["script", "steps", "hookCalls"];
+const CASE_MEMBERS = [
+  "id",
+  "title",
+  "checks",
+  "profiles",
+  "apis",
+  "script",
+  "steps",
+  "hookCalls",
+  "boot",
+];
+const HTTP_CASE_MEMBERS = ["apis", "script", "steps", "hookCalls"];
 const SCOPED_CHECK_MEMBERS = ["id", "targets"];
 const BOOT_MEMBERS = ["variant", "outcome", "diagnostic"];
 const STEP_MEMBERS = ["title", "request", "capture", "expect"];
@@ -217,6 +232,7 @@ export function parseSuiteCase(value: unknown, source: string): SuiteCase {
 
   return {
     ...header,
+    ...(object.apis === undefined ? {} : { apis: readApis(reader, object.apis) }),
     ...(object.script === undefined
       ? {}
       : { script: readSampleAppScript(reader, object.script, "/script") }),
@@ -313,6 +329,17 @@ function readProfiles(reader: JsonReader, value: unknown): SuiteProfile[] {
 
 function isSuiteProfile(profile: string): profile is SuiteProfile {
   return PROFILE.test(profile);
+}
+
+function readApis(reader: JsonReader, value: unknown): string[] {
+  const apis = arrayAt(reader, value, "/apis").map((api, index) =>
+    patternAt(reader, api, `/apis/${index}`, API_NAME),
+  );
+
+  if (apis.length === 0)
+    reader.fail("/apis", "`apis` names at least one api; leave it out otherwise");
+
+  return apis;
 }
 
 function readHookCalls(reader: JsonReader, value: unknown): RecordedHookCall[] {

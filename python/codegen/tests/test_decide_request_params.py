@@ -1,5 +1,5 @@
-"""The decide request of a right carries the right's params typed with its params schema, the same on fastapi, drf and
-ninja, which share this access step."""
+"""The decide request of a right or rule carries the use site's params as the generated params class, the same on
+fastapi, drf and ninja, which share this access step; params the class refuses fail the boundary."""
 
 import asyncio
 from dataclasses import dataclass, field
@@ -15,11 +15,15 @@ from seampact.codegen.runtime.access_steps import (
     run_access_steps,
 )
 from seampact.codegen.runtime.contract import ApiContract
+from seampact.codegen.runtime.failures import BoundaryFailureError
+from seampact.codegen.runtime.ir_view import IrMap, ir_maps
+from seampact.codegen.runtime.requirement_params import requirement_params
 from seampact.hooks import (
     AuthenticateRequest,
     AuthenticateResult,
     Decision,
     RequestView,
+    RequirementKind,
     RequirementRequest,
     ResolvedScope,
     ResolveScopeRequest,
@@ -90,16 +94,42 @@ def test_the_decide_request_of_a_right_names_the_right_and_its_use_site_params(
     assert roles[0].params is not None
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="the decide request types params as Mapping[str, object] for every right, not the right's params schema",
-)
-def test_the_decide_request_of_a_right_carries_the_rights_declared_params_type(
+def test_the_decide_request_of_a_right_carries_its_params_as_the_generated_params_model(
     tasks_contract: ApiContract, hook_caller: HookCaller
 ) -> None:
     roles = next(request for request in _asked_requests(tasks_contract, hook_caller) if request.name == _ROLES_RIGHT)
-    # Read through `object`: the declared Mapping type is the defect this test names.
-    params: object = roles.params
+
+    assert isinstance(roles.params, pydantic.BaseModel)
+    assert type(roles.params).__name__ == "RolesParams"
+    assert roles.params.model_dump(mode="json") == {"allowed": ["owner", "editor"]}
+
+
+def _use_site(contract: ApiContract, operation_id: str) -> IrMap:
+    return ir_maps(contract.operation(operation_id), "requires")[0]
+
+
+def test_the_decide_request_of_a_rule_carries_its_params_as_the_generated_params_model(
+    tasks_contract: ApiContract,
+) -> None:
+    params = requirement_params(
+        tasks_contract, RequirementKind.RULE, "recentAuth", _use_site(tasks_contract, "purgeTask")
+    )
 
     assert isinstance(params, pydantic.BaseModel)
-    assert type(params).__name__ == "RolesParams"
+    assert type(params).__name__ == "RecentAuthParams"
+    assert params.model_dump(mode="json") == {"intent": "purge_task"}
+
+
+@pytest.mark.parametrize(
+    ("use_site", "named"),
+    [
+        ({"params": {"allowed": ["owner"], "quorum": 2}}, "/quorum"),
+        ({"params": {"allowed": []}}, "roles"),
+        ({"params": {"allowed": "owner"}}, "roles"),
+    ],
+)
+def test_use_site_params_the_params_class_refuses_fail_the_boundary(
+    tasks_contract: ApiContract, use_site: IrMap, named: str
+) -> None:
+    with pytest.raises(BoundaryFailureError, match=named):
+        requirement_params(tasks_contract, RequirementKind.RIGHT, _ROLES_RIGHT, use_site)

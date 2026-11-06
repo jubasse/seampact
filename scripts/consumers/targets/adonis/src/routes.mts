@@ -1,11 +1,18 @@
-// The consumer's start/routes: the http suite's control routes, the framework-route boot variants' route, and both
-// apis' routes with the shared hooks, each controller imported lazily.
+// The consumer's start/routes: the http suite's control routes, the framework-route boot variants' route, and each
+// api's routes with the shared hooks, each controller imported lazily.
 import type { HttpContext, Router } from "@adonisjs/core/http";
 import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
 import * as TasksAdonis from "../generated/server/tasks/index.js";
+import * as TasksDevicesAdonis from "../generated/server/tasksDevices/index.js";
 import * as TasksServiceAdonis from "../generated/server/tasksService/index.js";
+import * as TasksServiceWritesAdonis from "../generated/server/tasksServiceWrites/index.js";
 import { servesUnlistedRoute, UNLISTED_ROUTE, withoutMissingHandler } from "./boot-variant.mjs";
-import { tasksHooks, tasksServiceHooks } from "./hooks.mjs";
+import {
+  tasksDevicesHooks,
+  tasksHooks,
+  tasksServiceHooks,
+  tasksServiceWritesHooks,
+} from "./hooks.mjs";
 import {
   type ControlReply,
   hookCallsReply,
@@ -42,6 +49,22 @@ export function registerContractRoutes(router: Router): void {
       InternalEndpoints: async () => ({ default: (await controllers()).InternalController }),
     },
     hooks: tasksServiceHooks(),
+  });
+
+  TasksServiceWritesAdonis.registerRoutes(router, {
+    controllers: {
+      InternalWritesEndpoints: async () => ({
+        default: (await controllers()).InternalWritesController,
+      }),
+    },
+    hooks: tasksServiceWritesHooks(),
+  });
+
+  TasksDevicesAdonis.registerRoutes(router, {
+    controllers: {
+      DevicesEndpoints: async () => ({ default: (await controllers()).DevicesController }),
+    },
+    hooks: tasksDevicesHooks(),
   });
 }
 

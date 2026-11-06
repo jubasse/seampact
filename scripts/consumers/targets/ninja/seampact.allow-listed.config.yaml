@@ -17,3 +17,23 @@ targets:
     use: pypi:seampact-ninja
     api: tasksService
     options: { views: sync }
+  - id: tasksServiceWrites
+    out: tasks_service_writes
+    use: pypi:seampact-ninja
+    api: tasksServiceWrites
+    options: { views: sync }
+  - id: tasksDevices
+    out: tasks_devices
+    use: pypi:seampact-ninja
+    api: tasksDevices
+    options: { views: sync }
+  - id: tasksOptionalAuth
+    out: tasks_optional_auth
+    use: pypi:seampact-ninja
+    api: tasksOptionalAuth
+    options: { views: sync }
+  - id: tasksAbsoluteUrls
+    out: tasks_absolute_urls
+    use: pypi:seampact-ninja
+    api: tasksAbsoluteUrls
+    options: { views: sync }

@@ -42,8 +42,9 @@ class ApiContract:
     """`ir_view` is the IR's JSON subset the generator wrote (`api`, `formats`, `errors`, `schemas`, `enums`,
     `operations`, and the access declarations `identities`, `schemes`, `scopes`, `rights`, `rules`, `buckets` and
     `pagings`); `members` maps each schema id to its members' wire names and Python attribute names;
-    `operation_members` maps each operation id, then each part of its input, to the same; `mount` is the entry's prefix
-    of every contract path, empty for none."""
+    `operation_members` maps each operation id, then each part of its input, to the same; `params_models` maps the
+    params schema id of each right and rule to its generated class; `mount` is the entry's prefix of every contract
+    path, empty for none."""
 
     api: str
     generated_by: str
@@ -51,6 +52,7 @@ class ApiContract:
     ir_view: Mapping[str, IrJson]
     members: Mapping[str, Mapping[str, str]]
     operation_members: Mapping[str, Mapping[str, Mapping[str, str]]]
+    params_models: Mapping[str, type] = field(default_factory=dict[str, type])
     _operations: dict[str, IrMap] = field(init=False, repr=False)
     _routes: tuple[ContractRoute, ...] = field(init=False, repr=False)
     _base_paths: tuple[str, ...] = field(init=False, repr=False)

@@ -1,4 +1,4 @@
-"""The developer's handlers of the `tasks` and `tasksService` apis, each answering the loaded script when it says
+"""The developer's handlers of every api of the reference contract, each answering the loaded script when it says
 so."""
 
 from datetime import UTC, datetime
@@ -62,8 +62,15 @@ from generated.tasks.operations import (
     UpdateTaskResult,
 )
 from generated.tasks.schemas import Health, Preferences, TaskSearchResult, TaskState
+from generated.tasks_absolute_urls import operations as absolute_urls
+from generated.tasks_devices import operations as devices
+from generated.tasks_devices.schemas import DeviceStatus
+from generated.tasks_optional_auth import operations as optional_auth
+from generated.tasks_optional_auth.schemas import Greeting
 from generated.tasks_service import operations as service
+from generated.tasks_service_writes import operations as service_writes
 from sample_data import (
+    FIRST_NOTE_ID,
     FIRST_VERSION,
     GENERAL_CHANNEL_ID,
     NEW_TASK_ID,
@@ -71,6 +78,8 @@ from sample_data import (
     channel_of,
     draft,
     loaded_channel,
+    note,
+    relayed_task,
     service_task,
     service_task_of,
     task,
@@ -217,3 +226,43 @@ class InternalHandlers:
         reply = scripted_answer("getTask", _OK, _service_task_reply_of, api=_SERVICE_API)
 
         return reply or service.GetTaskResponse200(service_task(str(request.input.path.task_id)))
+
+
+class InternalWritesHandlers:
+    """The `tasksServiceWrites` api's handlers: the relayed write creates the task it is given."""
+
+    def create_task(self, request: service_writes.CreateTaskRequest) -> service_writes.CreateTaskResult:
+        body = request.input.body
+
+        return service_writes.CreateTaskResponse201(relayed_task(body.title, body.effort))
+
+
+class DevicesHandlers:
+    """The `tasksDevices` api's handlers: the status of the device the boundary authenticated."""
+
+    def status(self, request: devices.StatusRequest) -> devices.StatusResult:
+        return devices.StatusResponse200(DeviceStatus(device_id=request.principal.device_id))
+
+
+class WelcomeHandlers:
+    """The `tasksOptionalAuth` api's handlers: a caller is signed in when the boundary hands it a principal."""
+
+    def greeting(self, request: optional_auth.GreetingRequest) -> optional_auth.GreetingResult:
+        return optional_auth.GreetingResponse200(Greeting(signed_in=request.principal is not None))
+
+    def strict_greeting(self, request: optional_auth.StrictGreetingRequest) -> optional_auth.StrictGreetingResult:
+        return optional_auth.StrictGreetingResponse200(Greeting(signed_in=request.principal is not None))
+
+
+class NotesHandlers:
+    """The `tasksAbsoluteUrls` api's handlers; the boundary writes their page links from the public origin."""
+
+    def list_notes(self, request: absolute_urls.ListNotesRequest) -> absolute_urls.ListNotesResult:
+        next_cursor = _NEXT_CURSOR if request.input.query.cursor is None else None
+
+        return absolute_urls.ListNotesResponse200(
+            absolute_urls.ListNotesPage(items=[note(FIRST_NOTE_ID)], next_cursor=next_cursor)
+        )
+
+    def get_note(self, request: absolute_urls.GetNoteRequest) -> absolute_urls.GetNoteResult:
+        return absolute_urls.GetNoteResponse200(note(str(request.input.path.note_id)))
