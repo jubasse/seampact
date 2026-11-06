@@ -23,6 +23,7 @@ from ninja.security import HttpBearer
 from ninja.throttling import AnonRateThrottle, AuthRateThrottle
 
 from seampact.codegen.runtime.framework_versions import framework_version_problems
+from seampact.codegen.runtime.hook_check import hook_needs
 from seampact.django.runtime.boot_check import boot_problems
 from seampact.ninja.runtime import AccessSettings, BindingError, OperationSettings
 from seampact.ninja.runtime import binding as binding_module
@@ -92,6 +93,28 @@ def test_the_boot_check_reads_the_handlers_and_hooks_from_the_binding(bound_api:
     assert (
         "no authenticate hook for the identity 'user': pass its factory in bind_tasks(authenticate={...})" in problems
     )
+
+
+def test_the_boot_check_names_each_hook_the_contract_calls_and_bind_did_not_register(bound_api: NinjaAPI) -> None:
+    boundary = _golden("django").TasksBoundary
+    needs = hook_needs(boundary.contract)
+    problems = boundary.hook_configuration_problems()
+
+    assert needs.identities
+    assert needs.scopes
+    assert needs.deciders
+    for identity in needs.identities:
+        assert (
+            f"no authenticate hook for the identity '{identity}': pass its factory in bind_tasks(authenticate={{...}})"
+            in problems
+        )
+    for scope in needs.scopes:
+        assert (
+            f"no scope resolver for the scope '{scope}': pass its factory in bind_tasks(scope_resolvers={{...}})"
+            in problems
+        )
+    for decider in needs.deciders:
+        assert f"no decider for '{decider}': pass its factory in bind_tasks(deciders={{...}})" in problems
 
 
 def test_an_api_never_bound_is_refused_by_name(monkeypatch: pytest.MonkeyPatch) -> None:

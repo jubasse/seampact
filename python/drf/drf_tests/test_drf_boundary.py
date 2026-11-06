@@ -749,6 +749,28 @@ def async_hooks(request: HttpRequest) -> _AsyncHooks:
     return _AsyncHooks()
 
 
+def test_the_boot_check_names_each_hook_the_contract_calls_and_settings_do_not_register() -> None:
+    needs = hook_needs(_module("contract").CONTRACT)
+    unregistered = {**_settings(), "authenticate": {}, "deciders": {}, "scope_resolvers": {}}
+
+    with (
+        override_settings(SEAMPACT={"tasks": unregistered}),
+        pytest.raises(ImproperlyConfigured) as refused,
+    ):
+        Client().get("/v1/health")
+
+    message = str(refused.value)
+    assert needs.identities
+    assert needs.scopes
+    assert needs.deciders
+    for identity in needs.identities:
+        assert f"no authenticate hook for the identity '{identity}': " in message
+    for scope in needs.scopes:
+        assert f"no scope resolver for the scope '{scope}': " in message
+    for decider in needs.deciders:
+        assert f"no decider for '{decider}': " in message
+
+
 def test_the_boot_check_refuses_the_urlconf_versions_and_async_methods_the_views_cannot_serve(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

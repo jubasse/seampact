@@ -28,6 +28,8 @@ const SERVERS_FOR_1_0: readonly string[] = SERVER_TARGETS.filter(
 
 const NODE_SERVERS: readonly string[] = ["nestjs", "fastify", "express", "adonis", "hono"];
 
+const PYTHON_SERVERS: readonly string[] = ["fastapi", "drf", "ninja"];
+
 const VARIANTS_FORM =
   "a principal with variants (viewer_or_device) and, on the Node servers, optional authentication";
 
@@ -75,25 +77,25 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
   [
     "CHK-060",
     {
-      targets: JVM_AND_PHP_SERVERS,
+      targets: [...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
       reason:
-        "the JVM and PHP servers generate no test helper: an additive artefact a later release can add",
+        "the JVM, PHP and Python servers generate no test helper: an additive artefact a later release can add",
     },
   ],
   [
     "CHK-066",
     {
-      targets: JVM_AND_PHP_SERVERS,
+      targets: [...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
       reason:
-        "the JVM and PHP servers ship the IdempotencyStore interface but no reference store: an additive package a later release can add",
+        "the JVM and PHP servers ship the IdempotencyStore interface and the Python servers the IdempotencyStore protocol, but no reference store: an additive package a later release can add",
     },
   ],
   [
     "CHK-068",
     {
-      targets: JVM_AND_PHP_SERVERS,
+      targets: [...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
       reason:
-        "the JVM and PHP servers serve no dev docs: an additive artefact a later release can add",
+        "the JVM, PHP and Python servers serve no dev docs: an additive artefact a later release can add",
     },
   ],
   [
