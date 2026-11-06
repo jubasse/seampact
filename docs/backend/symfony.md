@@ -319,7 +319,7 @@ Find each message in [Troubleshooting](../troubleshooting/boot.md).
 
 ## What is not served yet
 
-`generate` refuses these by name, until an app needs them: multipart and file values, form bodies, download and redirect responses, query lists in every form (`tag=a&tag=b`, `tag=a,b` or `tag[]=a`), and `artefacts: { accessHooks: false }`. Remove the operation from the entry's `operations` filter to generate the rest. See [Troubleshooting](../troubleshooting/generate.md).
+`generate` refuses these by name, until an app needs them: multipart and file values, form bodies, download and redirect responses, query lists in `brackets` form (`tag[]=a`) and lists of lists, and `artefacts: { accessHooks: false }`. Remove the operation from the entry's `operations` filter to generate the rest. See [Troubleshooting](../troubleshooting/generate.md).
 
 Serve the app with php-fpm. A worker runtime (FrankenPHP worker, RoadRunner, Swoole) is refused with `runtime.worker.unsupported`.
 
@@ -331,6 +331,6 @@ Symfony 7.4 and 8 are tested. The CI runs Symfony 7.4 on PHP 8.3 and 8.5, and Sy
 
 A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
 
-A query list is refused by `generate` for now, in the `repeat` and `comma` forms alike (`param.query.structured.unsupported`). Use a scalar param, or leave the operation out of the entry's `operations` filter.
+A query list of scalars or enums is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`. The `brackets` form and a list of lists are refused by `generate`.
 
 The `params` of a right or rule in a decider request are an instance of the generated class, not an array.

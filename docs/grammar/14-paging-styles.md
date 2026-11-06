@@ -54,7 +54,7 @@ Request roles. A style has exactly one position role (`cursor`, `page`, `offset`
 | `page` | a page number, counted from `base` |
 | `offset` | the number of records to skip |
 | `since` | a changes-since token: opaque, or a `date-time` with `token: instant` (SCN-082) |
-| `limit` | the page size, from 1 to the route's `maxLimit`. A larger value answers 400 (SCN-012), or, with `overLimit: clamp`, is served as `maxLimit`, which the `limit` response role then reports, as Spring Data, GitHub and API Platform do. A style without it serves `defaultLimit` records per page. Under `clamp` the handler receives the clamped limit |
+| `limit` | the page size, from 1 to the route's `maxLimit`. A larger value answers 400 (SCN-012), or, with `overLimit: clamp`, is served as `maxLimit`, which the `limit` response role then reports, as Spring Data, GitHub and API Platform do. A style without it serves `defaultLimit` records per page. Under `clamp` the handler receives the clamped limit. The limit is a query number, so an exponent form is read as its value: `per_page=1e3` is 1000 |
 | `sort` | the sort keys of `sortable`; `style` is `signed` (`sort=-createdAt,title`), `pair` (`sort=createdAt,desc`, repeated), `keyed` (the name holds `{key}`: `order[createdAt]=desc`) or `split` (one key, its direction `asc` or `desc` in the parameter `direction` names: `sort=created&direction=desc`) |
 
 A `pair` item takes a direction in every item: `sort=createdAt` alone is refused with a 400, never read as ascending. A `signed` list splits on `,` and reads a leading `-` as descending, so a sort key whose name holds a `,` or starts with `-` is a compile error naming the key and the style, under the `signed` style only.
