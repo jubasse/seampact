@@ -783,7 +783,7 @@ final class KeptForms
             return;
         }
 
-        $description = "A {$part} parameter that is not a scalar or an enum";
+        $description = "A {$part} parameter that is not a scalar, an enum or a list of them in the form style";
         if (($param->derivedFrom->derivation ?? null) === self::PAGING_PARAMS_DERIVATION) {
             $this->pending(PendingForm::PagingParam, "param.{$part}.structured", "{$description}, which paging reads,", $at->below('type'));
 
