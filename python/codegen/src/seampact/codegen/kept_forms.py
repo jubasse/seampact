@@ -8,6 +8,7 @@ import re
 from collections.abc import Sequence
 from typing import Final
 
+from seampact.codegen.handler_forms import refuse_identity_response_headers
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
 from seampact.codegen.response_header_forms import refuse_response_header_forms
 from seampact.ir.hydration import OMITTED, JsonValue
@@ -75,6 +76,7 @@ def refuse_kept_forms(ir: ContractIR, refusals: Refusals) -> None:
     """Refuses by name each form of the kept operations that no Python target serves."""
     _KeptForms(ir, refusals).read()
     refuse_response_header_forms(ir, refusals)
+    refuse_identity_response_headers(ir, refusals)
 
 
 def handler_headers(operation: Operation) -> list[Param]:

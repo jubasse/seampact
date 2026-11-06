@@ -46,11 +46,15 @@ export function operationIdentityHeaders(
 
   for (const use of identity.headers) {
     const declaration = ir.headers[use.header];
-    const responseName =
-      declaration === undefined ? undefined : responseHeaderName(declaration, use, operation);
 
-    if (responseName === undefined) requestSideUses += 1;
-    else responseSide.push({ headerId: use.header, name: responseName });
+    if (declaration === undefined || !isResponseSide(declaration)) {
+      requestSideUses += 1;
+      continue;
+    }
+
+    const responseName = responseHeaderName(declaration, use, operation);
+
+    if (responseName !== undefined) responseSide.push({ headerId: use.header, name: responseName });
   }
 
   return { identityId: access.identity, requestSideUses, responseSide };
@@ -71,16 +75,17 @@ export function identityResponseHeaderRefusals(ir: ContractIR, operation: Operat
   );
 }
 
-// A versionToken answers on every success of the identity; another semantic on the response only where its `for`
-// applies. An unknown `for` is taken to apply, so nothing is dropped unnamed.
+const isResponseSide = (declaration: HeaderDecl): boolean =>
+  declaration.semantic === VERSION_TOKEN_SEMANTIC || declaration.in === RESPONSE_SIDE;
+
+// A versionToken answers on every success of the identity; another semantic only where its `for` applies. An
+// unknown `for` is taken to apply, so nothing is dropped unnamed.
 function responseHeaderName(
   declaration: HeaderDecl,
   use: IdentityHeaderUse,
   operation: Operation,
 ): string | undefined {
   if (declaration.semantic === VERSION_TOKEN_SEMANTIC) return declaration.response;
-
-  if (declaration.in !== RESPONSE_SIDE) return undefined;
 
   const applies =
     (use.for !== "reads" && use.for !== "writes") || (use.for === "reads") === operation.safe;
