@@ -103,7 +103,7 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
     {
       refusedOn: ["fetch", ...NODE_SERVERS],
       reason:
-        "1.0 refuses the rights-version response header by name at generation (the fetch client); the Node servers name it in the generation warning identity.headers.handler and leave the comparison and the response header to the handler; the native servers neither refuse nor warn, so they are deferred with no test",
+        "1.0 refuses the rights-version response header by name at generation: the fetch client as a response header it does not read, and every server as identity.response.header.unsupported, since no handler can write a response header; writing and comparing it at the boundary comes after 1.0",
     },
   ],
   ["CHK-019", refusedOnEveryServer("a principal requirement")],
