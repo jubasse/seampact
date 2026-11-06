@@ -45,8 +45,7 @@ jobs:
     outputs:
       php-core: ${{ steps.detect.outputs.run }}
       queue: ${{ steps.detect.outputs.queue }}
-      # A release gate run holds no drift row.
-      drift: ${{ inputs.release-gate != true && steps.detect.outputs.drift || 'false' }}
+      drift: ${{ steps.detect.outputs.drift }}
       # The binary rows build the compiler and install Laravel: on a pull request they run only when what they prove changes.
       # Queue rows, which run only when the binary path changes, and which a push and the drift events always run.
       binary-rows: >-
@@ -65,6 +64,8 @@ jobs:
         id: detect
         uses: ./.github/actions/lane-changes
         with:
+          # A release gate run holds no drift row.
+          release-gate: ${{ inputs.release-gate == true }}
           watched-paths: |
             ^php/
             ^fixtures/hooks-shape/

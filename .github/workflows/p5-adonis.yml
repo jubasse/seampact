@@ -38,8 +38,7 @@ jobs:
       run: ${{ steps.detect.outputs.run }}
       queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
-      # A release gate run holds no drift row.
-      drift: ${{ inputs.release-gate != true && steps.detect.outputs.drift || 'false' }}
+      drift: ${{ steps.detect.outputs.drift }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -53,6 +52,8 @@ jobs:
         id: detect
         uses: ./.github/actions/lane-changes
         with:
+          # A release gate run holds no drift row.
+          release-gate: ${{ inputs.release-gate == true }}
           # The packages a Node server consumer installs (core, packs, runtime, the TypeScript, fetch and validator
           # targets, its own), the http suite, the consumer harness and its overlays, the reference contract and the pins.
           watched-paths: |
