@@ -23,13 +23,13 @@ A format or paging pack sets it as the default for the api. You can still choose
 
 ## What generates today
 
-All six packs load. Types, validators and a NestJS server were tried with each one.
+All six packs load. Each of the first three generates on the targets named below.
 
 | Pack | Generates today |
 |---|---|
-| `@seampact/pack-spring` | Yes. A Node server refuses its `pair` sort on a list with `sortable`: `paging.sort.style.unsupported`. |
+| `@seampact/pack-spring` | Yes, on Spring Boot, where a list gets Spring Data's `Page`. A Node server refuses its `pair` sort on a list with `sortable`: `paging.sort.style.unsupported`. |
 | `@seampact/pack-crud-rights` | Yes, on routes with an identity. |
-| `@seampact/pack-laravel` | Yes: types, validators, Node servers and the fetch client. |
+| `@seampact/pack-laravel` | Yes: types, validators, the fetch client, Node servers, Laravel and the Python servers. |
 | `@seampact/pack-hal` | Loads; code generation planned. `format.success.envelope.unsupported`, `response.media.unsupported`, `paging.response.slot.unsupported`. |
 | `@seampact/pack-jsonapi` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`. |
 | `@seampact/pack-api-platform` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`, `paging.response.slot.unsupported`. |

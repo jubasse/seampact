@@ -35,9 +35,9 @@ Every generator renders the default format and every format and paging style you
 | `codegen-adonis` | server boundary for AdonisJS 6 and 7 | `validators`: zod or yup, or VineJS without a link | middleware and exception handler |
 | `codegen-hono` | server boundary for Hono 4 on Web-standard `Request` and `Response` | `validators`: zod or yup | middleware |
 | `codegen-react` | React hooks: TanStack Query (`query: tanstack`), SWR (`query: swr`) or RTK Query (`query: rtk`), or no library (`query: fetch`) | `client`: fetch | through the fetch client |
-| `codegen-vue` (planned) | plain composables, or with `query: tanstack` or `query: pinia-colada` | `client`: fetch | through the fetch client |
-| `codegen-angular` (planned) | injectable services over `HttpClient`, and with `state: ngrx` or `state: ngrx-signals` typed actions and effects, or a Signal Store feature | nothing | its own response readers |
-| `codegen-msw` (planned) | mock handlers for Mock Service Worker | `types` | not applicable: mocks the contract's own responses |
+| `codegen-vue` | plain composables, or with `query: tanstack` or `query: pinia-colada` | `client`: fetch | through the fetch client |
+| `codegen-angular` | injectable services over `HttpClient`, and with `state: ngrx` or `state: ngrx-signals` typed actions and effects, or a Signal Store feature | nothing | its own response readers |
+| `codegen-msw` | mock handlers for Mock Service Worker | `types` | not applicable: mocks the contract's own responses |
 | Spring Boot plugin | composed annotations, interceptor and argument resolver around your controllers, with Bean Validation | nothing | `ProblemDetail`, Spring Data `Page` |
 | `seampact/laravel` | routes, middleware and Form Requests around your controllers | nothing | API Resources and paginators |
 | `seampact/symfony` | route loader, attributes, a listener, a value resolver and Validator constraints around your controllers | nothing | normalizers |

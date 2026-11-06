@@ -57,7 +57,7 @@ concurrency: { version: header.If-Match, field: version }
 ```
 
 - A write without the header, or with an empty one, answers `428`.
-- A stale tag answers `412`. The handler returns `PreconditionFailed`.
+- A stale tag answers `412`: the handler returns the `preconditionFailed` error.
 - The tag can be strong (`"7"`) or weak (`W/"7"`). The handler receives the version unquoted: `7`.
 
 ## Cache a read

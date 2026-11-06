@@ -2,7 +2,7 @@
 
 You install the core, then only the generators your project uses. Installing the CLI pulls no code generator.
 
-Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codegen-yup`, `codegen-class-validator`, `codegen-fetch`, `codegen-react` (TanStack Query, SWR, RTK Query, or no library), `codegen-nestjs`, `codegen-express`, `codegen-fastify`, `codegen-adonis` and `codegen-hono`, with the signed-webhook and in-memory idempotency helpers. Every other package below is planned for 1.0 unless a row says it comes later.
+Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codegen-yup`, `codegen-class-validator`, `codegen-fetch`, `codegen-react` (TanStack Query, SWR, RTK Query, or no library), `codegen-vue`, `codegen-angular`, `codegen-msw`, `codegen-nestjs`, `codegen-express`, `codegen-fastify`, `codegen-adonis` and `codegen-hono`, with the signed-webhook and in-memory idempotency helpers.
 
 ## Core (npm)
 
@@ -25,9 +25,9 @@ Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codege
 | a typed `fetch` client | `@seampact/codegen-fetch` |
 | a server boundary | `@seampact/codegen-nestjs`, `@seampact/codegen-fastify`, `@seampact/codegen-express` or `@seampact/codegen-adonis`, plus `@seampact/server-runtime` as a production dependency, at the same version as the generators, and `@seampact/hooks` unless the target vendors its types |
 | React hooks (TanStack Query, SWR, RTK Query or no library) | `@seampact/codegen-react` |
-| an Angular or Vue client (planned) | `@seampact/codegen-angular` or `@seampact/codegen-vue` |
+| an Angular or Vue client | `@seampact/codegen-angular` or `@seampact/codegen-vue` |
 | a Web-standard server boundary (Hono 4) | `@seampact/codegen-hono` |
-| mock handlers for tests and local work (planned) | `@seampact/codegen-msw` |
+| mock handlers for tests and local work | `@seampact/codegen-msw` |
 
 A server generator does not install a validator generator. You choose one and link the two in your app's `seampact.config.yaml`, where you also turn each generated artefact on or off. The CLI checks the combination against a published compatibility matrix and, when it does not work, names the ones that do.
 
