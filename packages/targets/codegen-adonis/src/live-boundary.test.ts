@@ -52,6 +52,7 @@ interface ReferenceAppModule {
     authenticate: (request: unknown) => unknown;
     resolvedScopeName: string;
     trustsProxy: boolean;
+    decide: (request: { name: string }) => unknown;
   };
   readonly AppReply: new (
     status: number,
@@ -449,6 +450,44 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
   });
 
   describe("body checks", () => {
+    test("steps 6 to 8 run in the route middleware before the controller: a refusal at any of them never reaches it", async () => {
+      const decided: string[] = [];
+      const purge = () =>
+        send("POST", `/v1/channels/${CHANNEL}/tasks/${TASK}/purge`, {
+          headers: writeHeaders(),
+          body: JSON.stringify({ reauthToken: "token" }),
+        });
+
+      app.scenario.answers.purgeTask = () => ({ status: 204 });
+      app.scenario.decide = (request) => {
+        decided.push(request.name);
+
+        return { allow: true };
+      };
+
+      const invalid = await send("POST", `/v1/channels/${CHANNEL}/tasks/${TASK}/purge`, {
+        headers: writeHeaders(),
+        body: JSON.stringify({ reauthToken: 5 }),
+      });
+
+      expect(invalid.status).toBe(400);
+      expect(decided).toEqual([]);
+      expect(app.calls.handled).toEqual([]);
+
+      app.scenario.decide = () => ({ deny: { code: "api.reauthentication_required" } });
+
+      const denied = await purge();
+
+      expect(denied.status).toBe(401);
+      expect(JSON.parse(denied.text)).toMatchObject({ code: "api.reauthentication_required" });
+      expect(app.calls.handled).toEqual([]);
+
+      app.scenario.decide = () => ({ allow: true });
+
+      expect((await purge()).status).toBe(204);
+      expect(app.calls.handled).toEqual(["purgeTask"]);
+    });
+
     test("a form body on a JSON route answers the route's 415 before it is decoded", async () => {
       const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
         headers: { ...writeHeaders(), "content-type": "application/x-www-form-urlencoded" },

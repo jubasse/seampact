@@ -140,9 +140,9 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   [
     "CHK-060",
     {
-      targets: [...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
+      targets: [...NODE_SERVERS, ...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
       reason:
-        "the JVM, PHP and Python servers generate no test helper: an additive artefact a later release can add",
+        "the Node, JVM, PHP and Python servers generate no test helper: an additive artefact a later release can add",
     },
   ],
   [
@@ -156,18 +156,26 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   [
     "CHK-068",
     {
-      targets: [...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
+      targets: [...NODE_SERVERS, ...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
       reason:
-        "the JVM, PHP and Python servers serve no dev docs: an additive artefact a later release can add",
+        "the Node, JVM, PHP and Python servers serve no dev docs: an additive artefact a later release can add",
+    },
+  ],
+  [
+    "CHK-090",
+    {
+      targets: ["nestjs"],
+      refusedOn: ["nestjs"],
+      reason: "1.0 refuses a right's custom metadata by name at generation on NestJS",
     },
   ],
   [
     "CHK-146",
     {
-      targets: ["spring-boot", "laravel"],
-      refusedOn: ["spring-boot", "laravel"],
+      targets: ["spring-boot", "laravel", "nestjs"],
+      refusedOn: ["spring-boot", "laravel", "nestjs"],
       reason:
-        "1.0 refuses the suffixes option and handlers perOperation by name at generation; codeName is served",
+        "1.0 refuses the suffixes option and handlers perOperation by name at generation, and NestJS also refuses codeName; Spring Boot and Laravel serve codeName",
     },
   ],
   [

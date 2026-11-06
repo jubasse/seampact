@@ -1,0 +1,122 @@
+# docs/conformance/proofs/p8-conformance-12.yaml
+lane: p8-conformance-12
+proofs:
+  - id: CHK-044
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#an error is a union on its code: a declared code type-checks, an undeclared one does not'
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#each error code of the registry is defined once, as a constant of the api'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#an error is a union on its code: a declared code type-checks, an undeclared one does not'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#each error code of the registry is defined once, as a constant of the api'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#an error is a union on its code: a declared code type-checks, an undeclared one does not'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#each error code of the registry is defined once, as a constant of the api'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#an error is a union on its code: a declared code type-checks, an undeclared one does not'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#each error code of the registry is defined once, as a constant of the api'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#an error is a union on its code: a declared code type-checks, an undeclared one does not'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#each error code of the registry is defined once, as a constant of the api'
+  - id: CHK-061
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#a handler whose status, error code or body the operation does not declare fails to type-check'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#a handler whose status, error code or body the operation does not declare fails to type-check'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#a handler whose status, error code or body the operation does not declare fails to type-check'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#a handler whose status, error code or body the operation does not declare fails to type-check'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#a handler whose status, error code or body the operation does not declare fails to type-check'
+      - 'nestjs: packages/targets/codegen-nestjs/src/status-constants.test.ts#a status of the api that the operation does not declare fails to type-check'
+  - id: CHK-066
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#the idempotency store is the documented IdempotencyStore interface and the reference store implements it'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#the idempotency store is the documented IdempotencyStore interface and the reference store implements it'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#the idempotency store is the documented IdempotencyStore interface and the reference store implements it'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#the idempotency store is the documented IdempotencyStore interface and the reference store implements it'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#the idempotency store is the documented IdempotencyStore interface and the reference store implements it'
+  - id: CHK-077
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#an irVersion outside the range the target reads is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#an irVersion outside the range the target reads is refused by name'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#an irVersion outside the range the target reads is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#an irVersion outside the range the target reads is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#an irVersion outside the range the target reads is refused by name'
+  - id: CHK-078
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name'
+  - id: CHK-086
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#the decide request is typed per right and rule of the contract'
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#the decide request of a right carries the right''s declared params type'
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#the decide request of a rule carries the rule''s declared params type'
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#the decide request of a right or rule without params admits no params'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#the decide request is typed per right and rule of the contract'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#the decide request of a right carries the right''s declared params type'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#the decide request of a rule carries the rule''s declared params type'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#the decide request of a right or rule without params admits no params'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#the decide request is typed per right and rule of the contract'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#the decide request of a right carries the right''s declared params type'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#the decide request of a rule carries the rule''s declared params type'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#the decide request of a right or rule without params admits no params'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#the decide request is typed per right and rule of the contract'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#the decide request of a right carries the right''s declared params type'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#the decide request of a rule carries the rule''s declared params type'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#the decide request of a right or rule without params admits no params'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#the decide request is typed per right and rule of the contract'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#the decide request of a right carries the right''s declared params type'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#the decide request of a rule carries the rule''s declared params type'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#the decide request of a right or rule without params admits no params'
+  - id: CHK-090
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/authored-surface.test.ts#a right''s custom metadata is refused by name, not dropped'
+  - id: CHK-099
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#one neutral hook per concern, a registration export and the boot check'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#one neutral hook per concern, a registration export and the boot check'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#one neutral hook per concern, a registration export and the boot check'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#one neutral hook per concern, a registration export and the boot check'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#one neutral hook per concern, a registration export and the boot check'
+  - id: CHK-109
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/authored-surface.test.ts#generated types list the properties of every object schema in authored order'
+  - id: CHK-146
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/authored-surface.test.ts#a codeName on a property is refused by name, as the options codeName, suffixes and perOperation are'
+  - id: CHK-154
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
+      - 'fastify: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
+      - 'express: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
+      - 'adonis: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
+      - 'hono: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#no framework controller is generated: the developer implements the generated handler interface'
+      - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#every generated path stays below the output directory'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#no framework controller is generated: the developer implements the generated handler interface'
+      - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#every generated path stays below the output directory'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#no framework controller is generated: the developer implements the generated handler interface'
+      - 'express: packages/targets/codegen-express/src/generation-proofs.test.ts#every generated path stays below the output directory'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#no framework controller is generated: the developer implements the generated handler interface'
+      - 'adonis: packages/targets/codegen-adonis/src/generation-proofs.test.ts#every generated path stays below the output directory'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#no framework controller is generated: the developer implements the generated handler interface'
+      - 'hono: packages/targets/codegen-hono/src/generation-proofs.test.ts#every generated path stays below the output directory'
+  - id: CHK-155
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/authored-surface.test.ts#one composite method decorator per operation, each with its input param decorators'
+  - id: CHK-164
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/live-boundary.test.ts#a boundary reply gets no Express ETag and no 304'
+      - 'express: packages/targets/codegen-express/src/live-boundary.test.ts#a boundary reply gets no Express ETag and no 304'
+  - id: CHK-174
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'adonis: packages/targets/codegen-adonis/src/live-boundary.test.ts#steps 6 to 8 run in the route middleware before the controller: a refusal at any of them never reaches it'
+      - 'fastify: packages/targets/codegen-fastify/src/own-validators-proof.test.ts#without a validators link one Ajv validator checks the whole request and reports every issue'
