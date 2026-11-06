@@ -1,0 +1,28 @@
+{
+  "id": "query-list-repeat-filters",
+  "title": "A list query sent as repeated keys reaches the handler as a list of its items",
+  "checks": ["CHK-034"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks?state=open&state=done",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": [
+          {
+            "state": "open"
+          },
+          {
+            "state": "done"
+          }
+        ]
+      }
+    }
+  ]
+}
