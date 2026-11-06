@@ -7,9 +7,10 @@ name: JVM plugins
 # serves a bundle of the reference contract and a tampered copy as a release asset and from a git tag
 # (`scripts/dist-smoke`, which needs Node); each plugin generates and checks the consumer from each channel and refuses
 # the tampered copy. On a pull request or a push they run only when the change touches a watched path; `jvm-plugins` is the one
-# check to require. A pull request runs the Gradle floor and the latest Java, Maven 3.9 on both Java versions, and the
-# channel smoke only when the runner, a plugin, the bundle fetcher or the smoke changes; a push to develop adds the
-# other Gradle row and the channel smoke; Maven 4 release candidates run nightly.
+# check to require. A pull request to develop runs the Gradle floor and Maven 3.9 on Java 21; the merge queue adds the
+# latest Gradle and Maven 3.9 on Java 25, and the channel smoke only when the runner, a plugin, the bundle fetcher or
+# the smoke changes; a push to develop runs the other Gradle row and the channel smoke; Maven 4 release candidates run
+# nightly.
 
 on:
   push:
@@ -46,10 +47,15 @@ jobs:
     timeout-minutes: 5
     outputs:
       jvm-plugins: ${{ steps.detect.outputs.run }}
+      pr-rows: ${{ steps.detect.outputs.pr-rows }}
+      queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
       drift: ${{ steps.detect.outputs.drift }}
-      # The channel smoke fetches from Maven Central: on a pull request it runs only when what it proves changes.
-      channel-smoke: ${{ steps.detect.outputs.post-merge == 'true' || steps.channel-smoke.outputs.run == 'true' }}
+      # The channel smoke fetches from Maven Central: a queue row, which runs only when what it proves changes, and a
+      # push and the drift events always run.
+      channel-smoke: >-
+        ${{ steps.detect.outputs.post-merge == 'true'
+        || (steps.detect.outputs.queue == 'true' && steps.channel-smoke.outputs.run == 'true') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -98,7 +104,7 @@ jobs:
   gradle-plugin:
     name: &gradle-plugin-name gradle plugin (Java ${{ matrix.test-jdk }}, Gradle ${{ matrix.test-gradle }})
     needs: changes
-    if: needs.changes.outputs.jvm-plugins == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
@@ -108,8 +114,6 @@ jobs:
           # Gradle 8.14, the floor (Spring Boot 4's), runs on Java 24 at most.
           - test-jdk: 21
             test-gradle: "8.14"
-          - test-jdk: 25
-            test-gradle: wrapper
     steps: &gradle-plugin-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -194,6 +198,20 @@ jobs:
           path: *testkit-cache-paths
           key: ${{ steps.testkit-cache-key.outputs.key }}
 
+  gradle-plugin-queue:
+    name: *gradle-plugin-name
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - test-jdk: 25
+            test-gradle: wrapper
+    steps: *gradle-plugin-steps
+
   gradle-plugin-post-merge:
     name: *gradle-plugin-name
     needs: changes
@@ -212,13 +230,13 @@ jobs:
   maven-plugin:
     name: &maven-plugin-name maven plugin (Java ${{ matrix.test-jdk }}, Maven ${{ matrix.test-maven }})
     needs: changes
-    if: needs.changes.outputs.jvm-plugins == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        test-jdk: [21, 25]
+        test-jdk: [21]
         test-maven: ["3.9.16"]
     steps: &maven-plugin-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -248,6 +266,19 @@ jobs:
           TEST_JDK: ${{ matrix.test-jdk }}
           TEST_MAVEN: ${{ matrix.test-maven }}
         run: ./gradlew :seampact-maven-plugin:check -PtestJdk="$TEST_JDK" -PtestMaven="$TEST_MAVEN"
+
+  maven-plugin-queue:
+    name: *maven-plugin-name
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [25]
+        test-maven: ["3.9.16"]
+    steps: *maven-plugin-steps
 
   maven-plugin-drift:
     name: *maven-plugin-name
@@ -350,7 +381,15 @@ jobs:
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   jvm-plugins:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, gradle-plugin, gradle-plugin-post-merge, maven-plugin, maven-plugin-drift, channel-smoke]
+    needs:
+      - changes
+      - gradle-plugin
+      - gradle-plugin-queue
+      - gradle-plugin-post-merge
+      - maven-plugin
+      - maven-plugin-queue
+      - maven-plugin-drift
+      - channel-smoke
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

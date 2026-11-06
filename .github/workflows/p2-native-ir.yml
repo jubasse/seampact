@@ -32,6 +32,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       native-ir: ${{ steps.detect.outputs.run }}
+      pr-rows: ${{ steps.detect.outputs.pr-rows }}
+      queue: ${{ steps.detect.outputs.queue }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -63,7 +65,7 @@ jobs:
 
   regenerate:
     needs: changes
-    if: needs.changes.outputs.native-ir == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -81,14 +83,14 @@ jobs:
 
   kotlin:
     needs: changes
-    if: needs.changes.outputs.native-ir == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        test-jdk: [21, 25]
-    steps:
+        test-jdk: [21]
+    steps: &kotlin-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -113,24 +115,31 @@ jobs:
         working-directory: jvm
         run: ./gradlew check -PtestJdk=${{ matrix.test-jdk }}
 
+  kotlin-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [25]
+    steps: *kotlin-steps
+
   php:
     needs: changes
-    if: needs.changes.outputs.native-ir == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         include:
-          - php-version: "8.3"
-            yaml: "7.4"
-          - php-version: "8.5"
-            yaml: "7.4"
           # seampact/ir admits symfony/yaml 8, which Symfony 8 apps hold; the reader is proven on it too.
           - php-version: "8.5"
             yaml: "8"
     name: php (PHP ${{ matrix.php-version }}, symfony/yaml ${{ matrix.yaml }})
-    steps:
+    steps: &php-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -161,10 +170,26 @@ jobs:
         working-directory: php/ir
         run: vendor/bin/phpstan analyse --no-progress
 
+  php-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php-version: "8.3"
+            yaml: "7.4"
+          - php-version: "8.5"
+            yaml: "7.4"
+    name: php (PHP ${{ matrix.php-version }}, symfony/yaml ${{ matrix.yaml }})
+    steps: *php-steps
+
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   native-ir:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, regenerate, kotlin, php]
+    needs: [changes, regenerate, kotlin, kotlin-queue, php, php-queue]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

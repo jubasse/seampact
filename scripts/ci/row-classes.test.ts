@@ -67,15 +67,11 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     ],
   },
   "p6-jvm-plugins.yml": {
-    "gradle-plugin": [
-      { "test-jdk": 21, "test-gradle": "8.14" },
-      { "test-jdk": 25, "test-gradle": "wrapper" },
-    ],
+    "gradle-plugin": [{ "test-jdk": 21, "test-gradle": "8.14" }],
+    "gradle-plugin-queue": [{ "test-jdk": 25, "test-gradle": "wrapper" }],
     "gradle-plugin-post-merge": [{ "test-jdk": 21, "test-gradle": "wrapper" }],
-    "maven-plugin": [
-      { "test-jdk": 21, "test-maven": "3.9.16" },
-      { "test-jdk": 25, "test-maven": "3.9.16" },
-    ],
+    "maven-plugin": [{ "test-jdk": 21, "test-maven": "3.9.16" }],
+    "maven-plugin-queue": [{ "test-jdk": 25, "test-maven": "3.9.16" }],
     "maven-plugin-drift": [
       { "test-jdk": 21, "test-maven": "4.0.0-rc-7" },
       { "test-jdk": 25, "test-maven": "4.0.0-rc-7" },
