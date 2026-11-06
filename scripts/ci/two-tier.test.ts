@@ -140,10 +140,11 @@ describe("the fast tier", () => {
     }
   });
 
-  it("runs no release job on a pull request to develop", () => {
+  it("runs the release dry run on a push to develop, not on a pull request to it", () => {
     const release = readWorkflow("release.yml");
 
     expect(release.jobs.changes?.outputs?.run).toBe(`\${{ steps.detect.outputs.queue }}`);
+    expect(release.on.push).toEqual({ branches: ["develop"] });
   });
 
   it.each(Object.entries(FAMILIES))(

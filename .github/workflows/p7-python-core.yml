@@ -36,7 +36,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       python-core: ${{ steps.detect.outputs.run }}
-      pr-rows: ${{ steps.detect.outputs.pr-rows }}
       queue: ${{ steps.detect.outputs.queue }}
       # The binary row builds the compiler: on a pull request it runs only when what it proves changes.
       # Queue rows, which run only when the binary path changes, and which a push and the drift events always run.
@@ -94,7 +93,7 @@ jobs:
 
   regenerate:
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.python-core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -112,7 +111,7 @@ jobs:
 
   packages:
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.python-core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -295,7 +294,7 @@ jobs:
 
   wheels:
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.python-core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -375,7 +374,7 @@ jobs:
 
   audit:
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.python-core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:

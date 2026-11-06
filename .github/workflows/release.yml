@@ -6,12 +6,15 @@
 # a draft GitHub release, the npm, Maven Central (signed after the approval), Gradle Plugin Portal, PyPI and PHP
 # mirror publishes and the release itself, published last.
 # A real run starts by hand from main with dry-run off; one approval of the `release` environment covers the publish
-# jobs. A pull request to develop runs nothing: the merge queue runs the dry run. A dry run, the default of a manual
-# run and the only mode of a pull request and a merge group, publishes nothing and needs no secret: it stamps its own
-# throwaway checkout and ends with the rehearsals. `release` is the check to require.
+# jobs. A pull request to develop runs nothing: the push to develop runs the dry run. A dry run, the default of a
+# manual run and the only mode of a push, a pull request and a merge group, publishes nothing and needs no secret: it
+# stamps its own throwaway checkout and ends with the rehearsals. `release` is the check to require.
 name: release
 
 on:
+  # The push to develop runs the full tier, the dry run included, after the pull request's fast tier.
+  push:
+    branches: [develop]
   workflow_dispatch:
     inputs:
       version:
@@ -48,7 +51,7 @@ jobs:
     permissions:
       contents: read
     outputs:
-      # The whole dry run is a queue row: a pull request to develop runs none of it, and the merge queue, a pull
+      # The whole dry run is a queue row: a pull request to develop runs none of it, and the push to develop, a pull
       # request to main and a manual run ("Run workflow" on a branch, before review) run all of it.
       run: ${{ steps.detect.outputs.queue }}
     steps:
@@ -102,7 +105,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
-      # A pull request and a merge group rehearse DRY_RUN_VERSION (0.0.1), a version no real run publishes; every job
+      # A push, a pull request and a merge group rehearse DRY_RUN_VERSION (0.0.1), a version no real run publishes; every job
       # of the run, the binary call's included, stamps its checkout with it.
       - name: The mode and the version
         id: mode

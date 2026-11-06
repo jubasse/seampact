@@ -5,7 +5,7 @@ name: Generation determinism
 # the output trees compared byte for byte (CHK-103). The matrix runs it on Linux, macOS and Windows with the rows of
 # the golden IR job, and Windows converts the reference sources to CRLF first. Its own workflow, not a job of the
 # golden one: it needs the target packages and runs the CLI, so a failure here must not hide the golden verdict.
-# A pull request runs one Linux row, the merge queue one Windows row, a push to develop the other two, and the nightly
+# A pull request runs one Linux row, a push to develop one Windows row and the other two, and the nightly
 # the macOS rows.
 # `generation-determinism` is the check to require.
 
@@ -35,7 +35,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.detect.outputs.run }}
-      pr-rows: ${{ steps.detect.outputs.pr-rows }}
       queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
       drift: ${{ steps.detect.outputs.drift }}
@@ -70,7 +69,7 @@ jobs:
   determinism:
     name: &determinism-name determinism (${{ matrix.os }}, ${{ matrix.tz }}, ${{ matrix.lang }})
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.run == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:

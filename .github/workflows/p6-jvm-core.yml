@@ -7,8 +7,8 @@ name: JVM core
 # reference contract with that binary, whose IR must equal the golden IR byte for byte. A Windows job runs the binary
 # cache checks on a real NTFS ACL: the profile, the ACEs, the junctions and the SIDs. On a pull request or a push they run
 # only when the change touches a watched path; `jvm-core` is the one check to require. A pull request to develop
-# runs Java 21 and the merge queue Java 25; the Windows job runs in the merge queue only when the binary cache code or
-# this workflow changes, and a push to develop always runs it.
+# runs Java 21; a push to develop adds Java 25 and the Windows job, which a pull request to main runs only when the
+# binary cache code or this workflow changes.
 
 on:
   push:
@@ -37,7 +37,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       jvm-core: ${{ steps.detect.outputs.run }}
-      pr-rows: ${{ steps.detect.outputs.pr-rows }}
       queue: ${{ steps.detect.outputs.queue }}
       # A queue row, which a push and the drift events also run.
       windows-cache: >-
@@ -86,7 +85,7 @@ jobs:
   binary:
     name: binary (linux x64)
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.jvm-core == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -104,7 +103,7 @@ jobs:
 
   java:
     needs: [changes, binary]
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.jvm-core == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:

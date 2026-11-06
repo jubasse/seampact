@@ -4,7 +4,7 @@ name: Golden IR determinism
 # byte with the committed files. The matrix runs it on Linux, macOS and Windows, with two time zones and two locales
 # (one of them Turkish, for case mapping), and Windows converts every case source to CRLF before the check. ICU takes its
 # default locale from the OS on Windows, so the Windows `lang` cells vary the time zone only. A pull request runs one
-# Linux row, the merge queue one Windows row, a push to develop the other two, and the nightly the macOS rows (they
+# Linux row, a push to develop one Windows row and the other two, and the nightly the macOS rows (they
 # only ever failed by timing out). `golden-determinism` is the check to require.
 
 on:
@@ -33,7 +33,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.detect.outputs.run }}
-      pr-rows: ${{ steps.detect.outputs.pr-rows }}
       queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
       drift: ${{ steps.detect.outputs.drift }}
@@ -67,7 +66,7 @@ jobs:
   determinism:
     name: &determinism-name determinism (${{ matrix.os }}, ${{ matrix.tz }}, ${{ matrix.lang }})
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.run == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:

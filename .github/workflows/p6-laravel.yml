@@ -35,7 +35,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       laravel: ${{ steps.detect.outputs.run }}
-      pr-rows: ${{ steps.detect.outputs.pr-rows }}
       queue: ${{ steps.detect.outputs.queue }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -69,7 +68,7 @@ jobs:
 
   packages:
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.laravel == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -128,7 +127,7 @@ jobs:
   # them without Node.
   contract-bundle:
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.laravel == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -155,7 +154,7 @@ jobs:
   e2e:
     name: e2e (PHP ${{ matrix.php-version }})
     needs: [changes, contract-bundle]
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.laravel == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:

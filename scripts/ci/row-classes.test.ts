@@ -166,19 +166,19 @@ function rowClassesFor(
   return { status: run.status, output: `${run.stdout}${run.stderr}`.trim() };
 }
 
-function classLines(prRows: boolean, queue: boolean, postMerge: boolean, drift: boolean): string {
-  return `pr-rows=${prRows}\nqueue=${queue}\npost-merge=${postMerge}\ndrift=${drift}`;
+function classLines(queue: boolean, postMerge: boolean, drift: boolean): string {
+  return `queue=${queue}\npost-merge=${postMerge}\ndrift=${drift}`;
 }
 
 describe("the row classes of an event", () => {
   it.each([
-    ["pull_request", "develop", classLines(true, false, false, false)],
-    ["pull_request", "main", classLines(true, true, false, false)],
-    ["merge_group", "", classLines(true, true, false, false)],
-    ["push", "", classLines(false, false, true, false)],
-    ["schedule", "", classLines(true, true, true, true)],
-    ["workflow_dispatch", "", classLines(true, true, true, true)],
-    ["release", "", classLines(true, true, true, true)],
+    ["pull_request", "develop", classLines(false, false, false)],
+    ["pull_request", "main", classLines(true, false, false)],
+    ["merge_group", "", classLines(true, false, false)],
+    ["push", "", classLines(true, true, false)],
+    ["schedule", "", classLines(true, true, true)],
+    ["workflow_dispatch", "", classLines(true, true, true)],
+    ["release", "", classLines(true, true, true)],
   ])("on %s to '%s'", (event, pullRequestBase, expectedClasses) => {
     expect(rowClassesFor(event, "true", pullRequestBase)).toEqual({
       status: 0,
@@ -189,7 +189,7 @@ describe("the row classes of an event", () => {
   it("holds no class when the lane has nothing to test", () => {
     expect(rowClassesFor("schedule", "false", "")).toEqual({
       status: 0,
-      output: classLines(false, false, false, false),
+      output: classLines(false, false, false),
     });
   });
 

@@ -38,7 +38,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       php-core: ${{ steps.detect.outputs.run }}
-      pr-rows: ${{ steps.detect.outputs.pr-rows }}
       queue: ${{ steps.detect.outputs.queue }}
       drift: ${{ steps.detect.outputs.drift }}
       # The binary rows build the compiler and install Laravel: on a pull request they run only when what they prove changes.
@@ -95,7 +94,7 @@ jobs:
 
   packages:
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.php-core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -147,7 +146,7 @@ jobs:
   split:
     name: &split-name split (${{ matrix.php-version }})
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.php-core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:

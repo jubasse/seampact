@@ -7,9 +7,9 @@ name: JVM plugins
 # serves a bundle of the reference contract and a tampered copy as a release asset and from a git tag
 # (`scripts/dist-smoke`, which needs Node); each plugin generates and checks the consumer from each channel and refuses
 # the tampered copy. On a pull request or a push they run only when the change touches a watched path; `jvm-plugins` is the one
-# check to require. A pull request to develop runs the Gradle floor and Maven 3.9 on Java 21; the merge queue adds the
-# latest Gradle and Maven 3.9 on Java 25, and the channel smoke only when the runner, a plugin, the bundle fetcher or
-# the smoke changes; a push to develop runs the other Gradle row and the channel smoke; Maven 4 release candidates run
+# check to require. A pull request to develop runs the Gradle floor and Maven 3.9 on Java 21; a push to develop adds the
+# latest Gradle and Maven 3.9 on Java 25, the other Gradle row and the channel smoke; a pull request to main runs the
+# channel smoke only when the runner, a plugin, the bundle fetcher or the smoke changes; Maven 4 release candidates run
 # nightly.
 
 on:
@@ -47,7 +47,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       jvm-plugins: ${{ steps.detect.outputs.run }}
-      pr-rows: ${{ steps.detect.outputs.pr-rows }}
       queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
       drift: ${{ steps.detect.outputs.drift }}
@@ -104,7 +103,7 @@ jobs:
   gradle-plugin:
     name: &gradle-plugin-name gradle plugin (Java ${{ matrix.test-jdk }}, Gradle ${{ matrix.test-gradle }})
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.jvm-plugins == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
@@ -230,7 +229,7 @@ jobs:
   maven-plugin:
     name: &maven-plugin-name maven plugin (Java ${{ matrix.test-jdk }}, Maven ${{ matrix.test-maven }})
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.jvm-plugins == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:

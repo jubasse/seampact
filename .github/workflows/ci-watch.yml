@@ -7,8 +7,8 @@ name: CI watch
 # after a pause), since most drift failures are a registry or runner fault; only a failed rerun opens the issue. A
 # cancelled run (superseded by a newer push) opens nothing,
 # and a green run closes nothing: a run whose path filter skipped every job proves nothing. Every workflow that runs
-# on a push or the schedule is listed below; a test keeps the list complete. A failed merge group opens no issue: it
-# comments on the pull request it ejected from develop's merge queue, which its author fixes and queues again.
+# on a push or the schedule is listed below; a test keeps the list complete. A failed merge group (inert while the
+# repository has no merge queue) opens no issue: it comments on the pull request the group ejected.
 
 on:
   workflow_run:
@@ -44,6 +44,7 @@ on:
       - npm audit
       - Docs site
       - Conformance release gate
+      - release
     types: [completed]
     # A merge group runs on the queue's own branch.
     branches: [develop, "gh-readonly-queue/develop/**"]

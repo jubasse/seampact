@@ -5,8 +5,8 @@ name: Spring Boot target
 # and by the Maven plugin with Node removed from the runner, from the reference contract's bundle served over HTTPS
 # on Java 21 and 25 and from the local YAML on Java 25, and the shared http suite runs against each jar ("The consumer
 # and the proof"). A pull request to develop runs the golden tests on Java 21 and builds and suites the consumer on
-# (Gradle, Java 21) from the bundle; the merge queue adds Java 25 and (Maven, Java 25), a push to develop the other
-# four rows.
+# (Gradle, Java 21) from the bundle; a push to develop adds Java 25, (Maven, Java 25) and
+# the other four rows.
 # On a pull request or a push it runs only when the change touches the JVM modules, the reference contract, the consumer, the
 # binary, the http suite or this workflow; `spring-boot` is the one check to require.
 
@@ -45,7 +45,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       spring-boot: ${{ steps.detect.outputs.run }}
-      pr-rows: ${{ steps.detect.outputs.pr-rows }}
       queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
     steps:
@@ -82,7 +81,7 @@ jobs:
 
   golden:
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.spring-boot == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -153,7 +152,7 @@ jobs:
   build:
     name: &build-name build (${{ matrix.build-tool }}, Java ${{ matrix.jdk }}, ${{ matrix.contract }})
     needs: [changes, binary]
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.spring-boot == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy: &consumer-pr-rows
@@ -303,7 +302,7 @@ jobs:
   http-suite:
     name: &http-suite-name http-suite (${{ matrix.build-tool }}, Java ${{ matrix.jdk }}, ${{ matrix.contract }})
     needs: [changes, build]
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.spring-boot == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy: *consumer-pr-rows

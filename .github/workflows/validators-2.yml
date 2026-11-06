@@ -32,7 +32,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       own-validators: ${{ steps.detect.outputs.run }}
-      pr-rows: ${{ steps.detect.outputs.pr-rows }}
       queue: ${{ steps.detect.outputs.queue }}
       drift: ${{ steps.detect.outputs.drift }}
     steps:
@@ -74,7 +73,7 @@ jobs:
 
   own-validators-consumer:
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.own-validators == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -97,7 +96,7 @@ jobs:
 
   own-validators-consumer-vinejs:
     needs: changes
-    if: needs.changes.outputs.pr-rows == 'true'
+    if: needs.changes.outputs.own-validators == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:

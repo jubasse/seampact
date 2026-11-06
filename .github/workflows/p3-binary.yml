@@ -2,8 +2,8 @@
 # on macOS runners, a SHA-256 manifest of the final files, the pins written from it, one `seampact-compiler` wheel
 # per binary, and a smoke on each platform's own runner (the binary, then its wheel in a clean venv). On a pull
 # request or a push the jobs run only when the change touches a watched path. A pull request to develop builds the
-# five binaries; the merge queue adds the manifest, the pins, the wheels and the linux-x64 and win32-x64 smokes on
-# unsigned binaries, a push to develop the linux-arm64 smoke, and the nightly and a manual run sign the macOS
+# five binaries; a push to develop adds the manifest, the pins, the wheels and the linux-x64, win32-x64 and
+# linux-arm64 smokes on unsigned binaries, and the nightly and a manual run sign the macOS
 # binaries and smoke them too (an unsigned binary does not run on Apple Silicon); `binary` is the one check to require.
 # The release workflow calls this one: a call runs every row, embeds the packs as npm packed them, and attests the
 # binaries and the wheels only when it asks. Nothing here uploads to a release or a registry.
@@ -93,7 +93,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       binary: ${{ steps.detect.outputs.run }}
-      pr-rows: ${{ steps.detect.outputs.pr-rows }}
       queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
       drift: ${{ steps.detect.outputs.drift }}
@@ -163,16 +162,15 @@ jobs:
         env:
           RELEASE_CALL: ${{ inputs.release-call == true }}
           LANE_RUN: ${{ steps.lane.outputs.run }}
-          LANE_PR_ROWS: ${{ steps.lane.outputs.pr-rows }}
           LANE_QUEUE: ${{ steps.lane.outputs.queue }}
           LANE_POST_MERGE: ${{ steps.lane.outputs.post-merge }}
           LANE_DRIFT: ${{ steps.lane.outputs.drift }}
         run: |
           if [ "$RELEASE_CALL" = true ]; then
-            printf 'run=true\npr-rows=true\nqueue=true\npost-merge=true\ndrift=true\n' >> "$GITHUB_OUTPUT"
+            printf 'run=true\nqueue=true\npost-merge=true\ndrift=true\n' >> "$GITHUB_OUTPUT"
           else
-            printf 'run=%s\npr-rows=%s\nqueue=%s\npost-merge=%s\ndrift=%s\n' \
-              "$LANE_RUN" "$LANE_PR_ROWS" "$LANE_QUEUE" "$LANE_POST_MERGE" "$LANE_DRIFT" >> "$GITHUB_OUTPUT"
+            printf 'run=%s\nqueue=%s\npost-merge=%s\ndrift=%s\n' \
+              "$LANE_RUN" "$LANE_QUEUE" "$LANE_POST_MERGE" "$LANE_DRIFT" >> "$GITHUB_OUTPUT"
           fi
 
   build:
@@ -278,7 +276,7 @@ jobs:
     name: manifest (hash after signing)
     # Runs on the build alone when signing does not run, so the smoke still tests the unsigned binaries; a failed
     # or cancelled signing stops it, and in a call signing must have succeeded; the aggregate fails on that job.
-    # A queue row, which a push also runs for its arm64 smoke.
+    # A queue row, which the arm64 post-merge smoke also needs.
     needs: [changes, build, sign-macos]
     if: >-
       ${{ !cancelled() && needs.build.result == 'success'
