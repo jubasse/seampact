@@ -6,8 +6,10 @@ import {
   CLIENT_ADDRESS_CASES,
   clientAddressesTheHookSees,
   copyTestApp,
+  describeCompressedVersionTag,
   describeDebugExceptions,
   describeHandlerAccess,
+  describeResponseHeaders,
   describeTwoApiHandlerAccess,
   emitProject,
   generateReferenceProject,
@@ -15,6 +17,7 @@ import {
   projectDirectory,
   type RawReply,
   type ReferenceIrChange,
+  referenceResponseHeaders,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -67,6 +70,7 @@ interface ReferenceAppModule {
   collectAfterOwnRoute(): Promise<void>;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startPrefixedApp(prefix: string): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startCompressingApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
 }
 
@@ -86,7 +90,12 @@ function writeHeaders(): Record<string, string> {
 }
 
 beforeAll(async () => {
-  const files = await generateReferenceProject(PROJECT, fastifyTarget, { bodyValidation: true });
+  const files = await generateReferenceProject(
+    PROJECT,
+    fastifyTarget,
+    { bodyValidation: true },
+    referenceResponseHeaders,
+  );
 
   expect(emitProject(PROJECT, files, BUILD)).toEqual([]);
   app = await import(copyTestApp(BUILD, APP_SOURCE));
@@ -113,6 +122,27 @@ describe("what a handler reads of its caller", () => {
     app,
     send: (method, path, headers) => send(method, path, { headers }),
   }));
+});
+
+describe("the derived response headers and the If-Match version", () => {
+  describeResponseHeaders(() => ({ app, send }));
+
+  describe("on an app that registers @fastify/compress", () => {
+    let compressing: Awaited<ReturnType<ReferenceAppModule["startCompressingApp"]>>;
+
+    beforeAll(async () => {
+      compressing = await app.startCompressingApp();
+    });
+
+    afterAll(async () => {
+      await compressing?.close();
+    });
+
+    describeCompressedVersionTag(() => ({
+      app,
+      send: (method, path, options) => sendRawRequest(compressing, method, path, options),
+    }));
+  });
 });
 
 describe("replies on contract routes", () => {

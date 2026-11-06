@@ -31,7 +31,7 @@ from seampact.codegen.runtime.page_reply import filled_page_query, page_parts
 from seampact.codegen.runtime.public_origin import configured_origin
 from seampact.codegen.runtime.replies import CONTENT_TYPE, JSON_MEDIA, Reply, error_reply, json_bytes, success_body
 from seampact.codegen.runtime.sync_driver import call_without_suspension, run_without_suspension
-from seampact.codegen.runtime.version_token import sent_version
+from seampact.codegen.runtime.version_token import with_sent_version
 from seampact.codegen.runtime.wire_codec import WireCodec
 from seampact.django.runtime.api_configuration import configuration_of
 from seampact.django.runtime.contract_replies import django_response
@@ -135,13 +135,11 @@ class ContractAdmission:
 
     def _checked_version(self) -> DecodedInput:
         """The decoded input, after the version check of an operation that reads its version from a header, so a
-        missing header is `preconditionRequired`, never `schemaInvalid`."""
-        contract, operation_id, decoded = self._state.contract, self._state.operation_id, self._state.decoded
+        missing header is `preconditionRequired`, never `schemaInvalid`; an `If-Match` version reaches the handler
+        unquoted."""
+        state = self._state
 
-        if ir_map(contract.operation(operation_id), "concurrency"):
-            sent_version(contract, operation_id, decoded)
-
-        return decoded
+        return with_sent_version(state.contract, state.operation_id, state.decoded)
 
     def _with_page_limit(self, decoded: DecodedInput) -> DecodedInput:
         """The validated input with the page limit the handler receives: the default for none sent, `maxLimit` for a

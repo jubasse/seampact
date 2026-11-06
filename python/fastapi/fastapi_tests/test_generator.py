@@ -109,6 +109,40 @@ def test_contract_forms_the_target_does_not_serve_are_refused_by_name(repository
     assert _refusal_codes(ir_json) == {"input.media.unsupported", "response.binary.unsupported"}
 
 
+def test_a_form_body_is_refused_by_name(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root)
+    operations = ir_json["operations"]
+    assert isinstance(operations, list)
+    create_task = next(operation for operation in operations if operation["id"] == "createTask")
+    create_task["input"]["media"] = "application/x-www-form-urlencoded"
+
+    assert _refusal_codes(ir_json) == {"input.media.unsupported"}
+
+
+def test_a_file_download_is_refused_by_name(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root)
+    operations = ir_json["operations"]
+    assert isinstance(operations, list)
+    download = next(operation for operation in operations if operation["id"] == "getTask")["responses"][0]
+    download["shape"] = "binary"
+    download["body"] = {"kind": "file", "media": ["application/pdf"]}
+    del download["media"]
+
+    assert "response.binary.unsupported" in _refusal_codes(ir_json)
+
+
+def test_a_query_list_in_brackets_form_is_refused_by_name(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root)
+    operations = ir_json["operations"]
+    assert isinstance(operations, list)
+    list_tasks = next(operation for operation in operations if operation["id"] == "listTasks")
+    list_wire = next(param["wire"] for param in list_tasks["params"]["query"] if param["name"] == "sort")
+    list_wire["explode"] = True
+    list_wire["brackets"] = True
+
+    assert _refusal_codes(ir_json) == {"query.list.brackets.unsupported"}
+
+
 def test_binding_includes_the_contract_routes_and_adds_the_boundary_outermost() -> None:
     placement = importlib.import_module(_GOLDEN_PLACEMENT)
     bind: Callable[..., None] = placement.bind_tasks

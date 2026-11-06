@@ -6,19 +6,15 @@ then the deadline. The idempotency claim comes next, in the placement, which hol
 import dataclasses
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Final
 
 from seampact.codegen.runtime.access_steps import AccessHooks, AccessState, HookCaller
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.deadline import request_deadline
 from seampact.codegen.runtime.field_rights import checked_input_fields
 from seampact.codegen.runtime.input_decoding import DecodedInput
-from seampact.codegen.runtime.ir_view import ir_map, ir_string
 from seampact.codegen.runtime.page_reply import filled_page_query
 from seampact.codegen.runtime.pydantic.contract_input import InputBuilder
-from seampact.codegen.runtime.version_token import sent_version
-
-_HEADER_SOURCE: Final = "header"
+from seampact.codegen.runtime.version_token import with_sent_version
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,7 +37,7 @@ async def checked_input(
     call: HookCaller,
 ) -> CheckedInput:
     """Raises `ContractRefusal` for a refused input and `BoundaryFailureError` for a hook's undeclared answer."""
-    sent = _with_sent_version(contract, operation_id, decoded)
+    sent = with_sent_version(contract, operation_id, decoded)
     typed = builder.build(sent, access, raw_query)
     filled_query = filled_page_query(contract, operation_id, sent.query)
     checked_body = await checked_input_fields(access, hooks, call)
@@ -54,21 +50,3 @@ async def checked_input(
     request_deadline(contract, operation_id, handed, datetime.now(UTC))
 
     return CheckedInput(typed, handed)
-
-
-def _with_sent_version(contract: ApiContract, operation_id: str, decoded: DecodedInput) -> DecodedInput:
-    """The decoded input with a header version unquoted (`If-Match: "7"` reads `7`), as the handler compares it."""
-    concurrency = ir_map(contract.operation(operation_id), "concurrency")
-
-    if not concurrency:
-        return decoded
-
-    version = sent_version(contract, operation_id, decoded)
-    source = ir_map(concurrency, "version")
-
-    if ir_string(source, "in") != _HEADER_SOURCE:
-        return decoded
-
-    headers = {**decoded.headers, ir_string(source, "name") or "": version}
-
-    return dataclasses.replace(decoded, headers=headers)

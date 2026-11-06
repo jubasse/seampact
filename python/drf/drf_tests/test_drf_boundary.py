@@ -722,11 +722,11 @@ def test_the_record_is_abandoned_when_the_reply_is_a_stream(caplog: pytest.LogCa
     assert "answered a stream" in caplog.text
 
 
-def test_a_missing_or_wildcard_if_match_is_precondition_required_before_the_header_check() -> None:
+def test_a_missing_empty_or_wildcard_if_match_is_precondition_required_before_the_header_check() -> None:
     answers["archive_task"] = lambda _: pytest.fail("the handler ran")
     url = f"/v1/channels/{_CHANNEL_ID}/tasks/{_USER_ID}/archive"
 
-    for if_match in ({}, {"If-Match": "*"}):
+    for if_match in ({}, {"If-Match": ""}, {"If-Match": "*"}):
         response = Client().post(
             url,
             json.dumps({"reason": "done", "expectedVersion": 1}),
@@ -736,6 +736,20 @@ def test_a_missing_or_wildcard_if_match_is_precondition_required_before_the_head
 
         assert response.status_code == HTTPStatus.PRECONDITION_REQUIRED, response.content
         assert _code(response) == "api.precondition_required"
+
+
+@pytest.mark.parametrize("if_match", ['"7"', 'W/"7"'])
+def test_a_strong_or_weak_if_match_tag_reaches_the_handler(if_match: str) -> None:
+    answers["archive_task"] = lambda _: _module("operations").ArchiveTaskResponse200(body=_task())
+
+    response = Client().post(
+        f"/v1/channels/{_CHANNEL_ID}/tasks/{_USER_ID}/archive",
+        json.dumps({"reason": "done", "expectedVersion": 1}),
+        content_type="application/json",
+        headers={**_bearer(), "Idempotency-Key": f"k-archive-{if_match}", "If-Match": if_match},
+    )
+
+    assert response.status_code == HTTPStatus.OK, response.content
 
 
 def test_the_boundary_runs_async_when_every_middleware_inside_it_is_async_capable() -> None:

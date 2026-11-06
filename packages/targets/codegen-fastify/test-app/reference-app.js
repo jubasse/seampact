@@ -96,6 +96,26 @@ export async function startPrefixedApp(prefix) {
   return { host: "127.0.0.1", port, close: () => app.close() };
 }
 
+/**
+ * Builds an app that registers the `tasks` plugin after a stand-in of `@fastify/compress`'s reply decorator, which
+ * is all the boundary reads to compress its own replies; listens on a free port.
+ */
+export async function startCompressingApp() {
+  resetScenario();
+
+  const app = Fastify();
+
+  app.decorateReply("compress", () => {
+    throw new Error("the boundary compresses its replies itself, never through reply.compress");
+  });
+  await app.register(TasksFastify.plugin, { handlers, hooks });
+  await app.listen({ port: 0, host: "127.0.0.1" });
+
+  const { port } = app.server.address();
+
+  return { host: "127.0.0.1", port, close: () => app.close() };
+}
+
 /** Builds the app and listens on a free port. */
 export async function startReferenceApp() {
   resetScenario();

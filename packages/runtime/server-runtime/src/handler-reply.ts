@@ -17,6 +17,7 @@ import {
 import { handlerPage, renderedPage } from "./page-reply.js";
 import { isPlainObject } from "./plain-object.js";
 import { CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE, WEAK_ETAG_PREFIX } from "./reply-headers.js";
+import { derivedResponseHeaders } from "./response-headers.js";
 import { sha256Base64Url } from "./sha256.js";
 
 const JSON_MEDIA = "application/json";
@@ -77,8 +78,11 @@ async function successReply(
 ): Promise<ContractReply> {
   const { route } = state;
   const headers: [string, string][] = [];
+  const derived = derivedResponseHeaders(state, response, handlerBody);
 
   if (response.shape === "empty" || response.body === undefined) {
+    headers.push(...derived.successHeaders);
+
     return { status: response.status, headers, body: new Uint8Array() };
   }
 
@@ -90,11 +94,15 @@ async function successReply(
   headers.unshift(["content-type", JSON_MEDIA]);
   appendCacheHeaders(route, grant, headers);
 
+  if (derived.entityTag !== undefined) headers.push([...derived.entityTag]);
+
   if (route.cache?.etag === true) {
-    const etag = `"${await sha256Base64Url(body)}"`;
+    // `cache.etag` on a route versioned by `If-Match` uses the version's tag (grammar section 6).
+    const etag = derived.entityTag?.[1] ?? `"${await sha256Base64Url(body)}"`;
 
-    headers.push(["etag", etag]);
+    if (derived.entityTag === undefined) headers.push(["etag", etag]);
 
+    // A 304 is no success: it carries no deprecation header (ADR 0004 section 7).
     if (ifNoneMatchHolds(headerValue(state.request.headers, "if-none-match"), etag)) {
       return {
         status: NOT_MODIFIED,
@@ -104,6 +112,8 @@ async function successReply(
       };
     }
   }
+
+  headers.push(...derived.successHeaders);
 
   return { status: response.status, headers, body };
 }

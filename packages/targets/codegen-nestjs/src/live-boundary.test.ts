@@ -9,6 +9,7 @@ import {
   clientAddressesTheHookSees,
   describeDebugExceptions,
   describeHandlerAccess,
+  describeResponseHeaders,
   describeTwoApiHandlerAccess,
   emitProject,
   generateReferenceProject,
@@ -16,6 +17,8 @@ import {
   projectDirectory,
   type RawReply,
   type ReferenceIrChange,
+  referenceChanges,
+  referenceResponseHeaders,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -35,6 +38,8 @@ const TASK = "44444444-4444-4444-8444-444444444444";
 const USER = "55555555-5555-4555-8555-555555555555";
 const BEARER = { authorization: `Bearer user-${USER}` };
 const PROBLEM_MEDIA = "application/problem+json";
+// The route metadata key under which the composite of an operation sets its id and access kind (ADR 0012).
+const OPERATION_METADATA_KEY = "seampact:operation";
 const THROTTLED_CODE = "api.throttled";
 const TOO_MANY_REQUESTS = 429;
 const BAD_REQUEST = 400;
@@ -187,7 +192,7 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       PROJECT,
       nestjsTarget,
       { bodyValidation: true, reply },
-      throttledGetTask,
+      referenceChanges(throttledGetTask, referenceResponseHeaders),
     );
 
     expect(emitProject(PROJECT, files, BUILD)).toEqual([]);
@@ -218,6 +223,8 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       send: (method, path, headers) => send(method, path, { headers }),
     }));
 
+    describeResponseHeaders(() => ({ app, send }));
+
     test("the principal and scopes decorators hand over the caller the input carries, past the app's pipe", async () => {
       const decorated: unknown[] = [];
 
@@ -233,6 +240,24 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       expect(decorated).toEqual([
         { principal: { userId: USER }, scopes: { channel: { scope: "channel", id: CHANNEL } } },
       ]);
+    });
+  });
+
+  describe("the access each operation exports in NestJS's own form", () => {
+    test("each contract handler carries its operation and access kind as route metadata a guard reads", () => {
+      const handlerOf = (operationId: string): object =>
+        Reflect.get(app.TasksController.prototype, operationId);
+
+      expect(Reflect.getMetadata(OPERATION_METADATA_KEY, handlerOf("health"))).toEqual({
+        api: "tasks",
+        id: "health",
+        access: "public",
+      });
+      expect(Reflect.getMetadata(OPERATION_METADATA_KEY, handlerOf("getPreferences"))).toEqual({
+        api: "tasks",
+        id: "getPreferences",
+        access: "identity",
+      });
     });
   });
 
@@ -271,8 +296,9 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       }
     });
 
+    // `getChannel` writes no ETag of its own: the reference task item carries its version's.
     test("a boundary reply gets no Express ETag and no 304", async () => {
-      const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+      const reply = await send("GET", `/v1/channels/${CHANNEL}`, {
         headers: { ...BEARER, "if-none-match": "*" },
       });
 

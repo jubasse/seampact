@@ -110,7 +110,7 @@ def _archive(headers: dict[str, object]) -> object:
     return asyncio.run(featured_input(state, access, hooks, builder))
 
 
-@pytest.mark.parametrize("headers", [{}, {_IF_MATCH: "*"}])
+@pytest.mark.parametrize("headers", [{}, {_IF_MATCH: ""}, {_IF_MATCH: "*"}])
 def test_a_write_without_its_if_match_version_answers_precondition_required(headers: dict[str, object]) -> None:
     with pytest.raises(ContractRefusal) as refused:
         _archive(headers)
@@ -118,15 +118,16 @@ def test_a_write_without_its_if_match_version_answers_precondition_required(head
     assert refused.value.code == _PRECONDITION_REQUIRED
 
 
-def test_a_weak_if_match_tag_answers_precondition_failed() -> None:
+def test_a_listed_if_match_tag_answers_precondition_failed() -> None:
     with pytest.raises(ContractRefusal) as refused:
-        _archive({_IF_MATCH: 'W/"1"'})
+        _archive({_IF_MATCH: '"1", "2"'})
 
     assert refused.value.code == _PRECONDITION_FAILED
 
 
-def test_the_handler_reads_the_if_match_version_unquoted() -> None:
-    typed = _archive({_IF_MATCH: '"7"'})
+@pytest.mark.parametrize("sent", ['"7"', 'W/"7"'])
+def test_the_handler_reads_the_if_match_version_unquoted(sent: str) -> None:
+    typed = _archive({_IF_MATCH: sent})
 
     assert isinstance(typed, _ArchiveRequest)
     assert typed.input.headers.if_match == "7"

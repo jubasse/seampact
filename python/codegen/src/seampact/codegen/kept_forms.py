@@ -26,6 +26,7 @@ from seampact.ir.model import (
     Param,
     ProofPlacement,
     QueryScheme,
+    QueryWireKind,
     RefTypeUse,
     RequirementUnknown,
     Response,
@@ -305,6 +306,9 @@ class _KeptForms:
     def _param(self, part: str, param: Param, at: IrPlace) -> None:
         if param.default is not OMITTED:
             self._after_v1("param.default", "A parameter default", at.below("default"))
+
+        if param.wire is not None and param.wire.kind is QueryWireKind.LIST and param.wire.brackets:
+            self._after_v1("query.list.brackets", "A query list in brackets form", at.below("wire", "brackets"))
 
         if isinstance(param.type, ScalarTypeUse | EnumTypeUse):
             self._type(param.type, at.below("type"))

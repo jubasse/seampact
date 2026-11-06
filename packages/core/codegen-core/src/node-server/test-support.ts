@@ -9,6 +9,7 @@ export * from "./live-debug-exceptions.test-support.js";
 export * from "./live-handler-access.test-support.js";
 export * from "./live-pages.test-support.js";
 export * from "./live-request.test-support.js";
+export * from "./live-response-headers.test-support.js";
 export * from "./native-docs-agreement.test-support.js";
 export * from "./reference-project.test-support.js";
 export * from "./rights-version-header.test-support.js";

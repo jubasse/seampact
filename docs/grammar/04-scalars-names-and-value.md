@@ -35,7 +35,7 @@
 | requirement `subject` | path, query, header, principal, scope (never body: rights are decided before body validation, FR-5) |
 | scope id (`scopes` on a node) | path, query, header, host, subdomain, principal, resolver ([A23](../decisions.md#a23)) |
 | `bindings` key / value | path, query, body / principal |
-| `concurrency.version` | body, query, header (`header.If-Match` reads a strong entity tag) |
+| `concurrency.version` | body, query, header (`header.If-Match` reads an entity tag, strong or weak) |
 | bucket `key` | address, address prefix, principal, body |
 | signature `key` | path, query, header |
 | union `discriminator.from` | header (a route's whole input, ADR 0003 section 3) |

@@ -176,7 +176,24 @@ export interface ResponseEntry {
   readonly envelope?: { readonly body: FormatTemplate; readonly absent: AbsentRendering };
   /** The members leading from the body to its payload, or a page's items; empty when the body is the payload. */
   readonly payloadPath: readonly string[];
+  /** The headers the boundary writes on this response beside those of idempotency, cache and paging. */
+  readonly headers: readonly ResponseHeaderEntry[];
 }
+
+/**
+ * A response header the table derives: a fixed text (a deprecation date), the successor link built from the
+ * request's path params, or the strong entity tag of the item's version field.
+ */
+export type ResponseHeaderEntry =
+  | { readonly kind: "text"; readonly name: string; readonly value: string }
+  | {
+      readonly kind: "successorLink";
+      readonly name: string;
+      /** The successor's contract path with `{name}` params, each the deprecated request's param of that name. */
+      readonly path: string;
+      readonly rel: string;
+    }
+  | { readonly kind: "entityTag"; readonly name: string; readonly field: string };
 
 /** A template the page writes under a name: a `meta` member or a response header. */
 export interface NamedPageTemplate {
@@ -236,6 +253,8 @@ export interface ContractRoute {
     /** The author-declared header params and a union tag, lower case: the only headers the fingerprint digests. */
     readonly fingerprintHeaders: readonly string[];
   };
+  /** The request header the client sends its version in, lower case; `entityTag` when it is `If-Match`. */
+  readonly versionHeader?: { readonly name: string; readonly entityTag: boolean };
   readonly responses: readonly ResponseEntry[];
   readonly errors: Readonly<Record<string, ErrorEntry>>;
   readonly paging?: PagingEntry;

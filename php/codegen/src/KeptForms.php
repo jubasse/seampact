@@ -24,6 +24,7 @@ use Seampact\Ir\Model\OptionalAccess;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\ProofPlacement;
 use Seampact\Ir\Model\QueryScheme;
+use Seampact\Ir\Model\QueryWireKind;
 use Seampact\Ir\Model\RefTypeUse;
 use Seampact\Ir\Model\RequirementUnknown;
 use Seampact\Ir\Model\RightRequirement;
@@ -645,6 +646,11 @@ final class KeptForms
     {
         if ($param->default !== null) {
             $this->refusals->waiting('param.default', 'A parameter default', $at->below('default'), Delivery::AfterOneZero);
+        }
+
+        // The runtime reads a query value under its declared name, never `name[]`.
+        if ($param->wire !== null && $param->wire->kind->value === QueryWireKind::List && $param->wire->brackets) {
+            $this->refusals->waiting('query.list.brackets', 'A query list in brackets form', $at->below('wire', 'brackets'), Delivery::AfterOneZero);
         }
 
         if ($param->type instanceof ScalarTypeUse || $param->type instanceof EnumTypeUse) {

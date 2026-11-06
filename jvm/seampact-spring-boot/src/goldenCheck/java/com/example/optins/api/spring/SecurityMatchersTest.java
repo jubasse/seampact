@@ -1,12 +1,15 @@
 package com.example.optins.api.spring;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.example.optins.api.TasksServiceUnexpectedErrorListener;
 import io.github.jubasse.seampact.springboot.runtime.BoundaryFilter;
 import io.github.jubasse.seampact.springboot.runtime.SeampactBoundary;
+import io.github.jubasse.seampact.springboot.runtime.SecurityRefusals;
 import jakarta.servlet.FilterChain;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -17,16 +20,20 @@ import org.springframework.core.env.StandardEnvironment;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockServletContext;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 
 /**
  * The generated Spring Security beans of the opt-ins api in a real Spring Security chain, behind the boundary filter:
  * the customizer permits the public, optional-auth and signed routes, and the app's own rules (a role on the identity
- * routes, then any request authenticated) hold on every other route, whichever route template also covers it.
+ * routes, then any request authenticated) hold on every other route, whichever route template also covers it; the
+ * generated refusals, wired in the app's chain, answer Spring Security's refusals on the api's routes in its format.
  */
 class SecurityMatchersTest {
     private static final String IDENTITY_LITERAL_PATH = "/internal/v1/channels/c1/tasks/t1";
@@ -34,6 +41,8 @@ class SecurityMatchersTest {
     private static final String OPTIONAL_PATH = "/internal/v1/channels/c1/peeks/t1";
     private static final String SIGNED_PATH = "/internal/v1/channels/c1/signed/t1";
     private static final String APP_PATH = "/actuator/info";
+    private static final String UNAUTHENTICATED_CODE = "\"api.unauthenticated\"";
+    private static final String FORBIDDEN_CODE = "\"api.forbidden\"";
 
     private final SeampactBoundary boundary = boundary();
     private final AnnotationConfigWebApplicationContext context = securityContext(boundary);
@@ -42,11 +51,13 @@ class SecurityMatchersTest {
     @EnableWebSecurity
     static class AppSecurity {
         @Bean
-        SecurityFilterChain appChain(HttpSecurity http, TasksServiceSecurityMatchers matchers) throws Exception {
+        SecurityFilterChain appChain(HttpSecurity http, TasksServiceSecurityMatchers matchers, SecurityRefusals refusals)
+                throws Exception {
             return http
                     .authorizeHttpRequests(authorize -> authorize
                             .requestMatchers(matchers.identityRoutes()).hasRole("OPERATOR")
                             .anyRequest().authenticated())
+                    .exceptionHandling(refusing -> refusing.authenticationEntryPoint(refusals).accessDeniedHandler(refusals))
                     .build();
         }
     }
@@ -74,17 +85,31 @@ class SecurityMatchersTest {
         context.close();
     }
 
-    // Whether an anonymous request reaches the handler through the boundary filter and Spring Security's chain.
-    private boolean reachesTheHandler(String method, String path) throws Exception {
+    private record Exchange(boolean served, MockHttpServletResponse response) { }
+
+    // A request sent by `caller` through the boundary filter and Spring Security's chain.
+    private Exchange send(String method, String path, Caller caller) throws Exception {
         AtomicBoolean served = new AtomicBoolean();
         FilterChain handler = (request, response) -> served.set(true);
         FilterChainProxy securityChain = context.getBean(FilterChainProxy.class);
         FilterChain throughSecurity = (request, response) -> securityChain.doFilter(request, response, handler);
 
         MockHttpServletRequest request = new MockHttpServletRequest(context.getServletContext(), method, path);
-        new BoundaryFilter(boundary).doFilter(request, new MockHttpServletResponse(), throughSecurity);
+        if (caller == Caller.SIGNED_IN_WITHOUT_ROLE) {
+            SecurityContextImpl signedIn = new SecurityContextImpl(UsernamePasswordAuthenticationToken.authenticated("ops", null, List.of()));
+            request.getSession(true).setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, signedIn);
+        }
 
-        return served.get();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        new BoundaryFilter(boundary).doFilter(request, response, throughSecurity);
+
+        return new Exchange(served.get(), response);
+    }
+
+    private enum Caller { ANONYMOUS, SIGNED_IN_WITHOUT_ROLE }
+
+    private boolean reachesTheHandler(String method, String path) throws Exception {
+        return send(method, path, Caller.ANONYMOUS).served();
     }
 
     @Test
@@ -111,5 +136,29 @@ class SecurityMatchersTest {
     @Test
     void anAppRouteKeepsTheAppsRules() throws Exception {
         assertFalse(reachesTheHandler("GET", APP_PATH));
+    }
+
+    @Test
+    void theEntryPointAnswersAnAnonymousCallerWithTheOperationsUnauthenticatedCode() throws Exception {
+        MockHttpServletResponse response = send("GET", IDENTITY_LITERAL_PATH, Caller.ANONYMOUS).response();
+
+        assertEquals(401, response.getStatus());
+        assertTrue(response.getContentAsString().contains(UNAUTHENTICATED_CODE), response.getContentAsString());
+    }
+
+    @Test
+    void theAccessDeniedHandlerAnswersACallerWithoutTheRoleWithTheOperationsForbiddenCode() throws Exception {
+        MockHttpServletResponse response = send("GET", IDENTITY_LITERAL_PATH, Caller.SIGNED_IN_WITHOUT_ROLE).response();
+
+        assertEquals(403, response.getStatus());
+        assertTrue(response.getContentAsString().contains(FORBIDDEN_CODE), response.getContentAsString());
+    }
+
+    @Test
+    void aRefusalOutsideTheApisRoutesKeepsSpringSecuritysDefault() throws Exception {
+        MockHttpServletResponse response = send("GET", APP_PATH, Caller.ANONYMOUS).response();
+
+        assertEquals(401, response.getStatus());
+        assertEquals("", response.getContentAsString());
     }
 }

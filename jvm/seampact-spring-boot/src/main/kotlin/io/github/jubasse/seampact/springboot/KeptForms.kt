@@ -23,6 +23,7 @@ import io.github.jubasse.seampact.ir.model.Operation
 import io.github.jubasse.seampact.ir.model.OptionalAccess
 import io.github.jubasse.seampact.ir.model.Principal
 import io.github.jubasse.seampact.ir.model.QueryScheme
+import io.github.jubasse.seampact.ir.model.QueryWireKind
 import io.github.jubasse.seampact.ir.model.RefTypeUse
 import io.github.jubasse.seampact.ir.model.ResponseShape
 import io.github.jubasse.seampact.ir.model.RightRequirement
@@ -91,6 +92,11 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
             params.forEachIndexed { index, param ->
                 val paramAt = at.below("params", location, index)
                 if (param.default != null) refusals.waiting("param.default", "A parameter default", paramAt.below("default"), Delivery.AFTER_1_0)
+                // The runtime reads a query value under its declared name, never `name[]`.
+                val wire = param.wire
+                if (wire?.kind == QueryWireKind.LIST && wire.brackets) {
+                    refusals.waiting("query.list.brackets", "A query list in brackets form", paramAt.below("wire", "brackets"), Delivery.AFTER_1_0)
+                }
                 readType(param.type, paramAt.below("type"))
             }
         }
