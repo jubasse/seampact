@@ -10,6 +10,7 @@ use App\Generated\Tasks\ListChannelsResponse200;
 use App\Generated\Tasks\ListChannelsResult;
 use App\Generated\Tasks\ListTasksResponse200;
 use App\Generated\Tasks\ListTasksResult;
+use App\Generated\Tasks\Schemas\Task;
 use App\Generated\TasksAbsoluteUrls\ListNotesRequest;
 use App\Generated\TasksAbsoluteUrls\ListNotesResponse200;
 use App\Generated\TasksAbsoluteUrls\ListNotesResult;
@@ -52,7 +53,18 @@ final class PagedLists
 
                 return new ListTasksResponse200(new LengthAwarePaginator($items, is_int($body['total'] ?? null) ? $body['total'] : count($items), $perPage, $page));
             },
-        ) ?? new ListTasksResponse200(new LengthAwarePaginator([SampleData::task(SampleData::NEW_TASK_ID)], self::SAMPLE_TOTAL, $perPage, $page));
+        ) ?? new ListTasksResponse200(self::sampleTasksPage(SampleData::listedTasks($query->state), $perPage, $page));
+    }
+
+    /**
+     * The sample page: the one new task out of the sample total, or the tasks in the states the client filters on.
+     *
+     * @param list<Task> $tasks
+     * @return LengthAwarePaginator<int, Task>
+     */
+    private static function sampleTasksPage(array $tasks, int $perPage, int $page): LengthAwarePaginator
+    {
+        return new LengthAwarePaginator($tasks, max(count($tasks), self::SAMPLE_TOTAL), $perPage, $page);
     }
 
     public static function listNotes(ListNotesRequest $request): ListNotesResult

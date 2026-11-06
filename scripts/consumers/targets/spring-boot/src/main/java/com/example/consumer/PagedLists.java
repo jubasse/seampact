@@ -6,7 +6,6 @@ import com.example.tasks.api.ListChannelsResult;
 import com.example.tasks.api.ListTasksInput;
 import com.example.tasks.api.ListTasksPage;
 import com.example.tasks.api.ListTasksResult;
-import com.example.tasks.api.schemas.Task;
 import com.example.tasksabsoluteurls.api.ListNotesInput;
 import com.example.tasksabsoluteurls.api.ListNotesPage;
 import com.example.tasksabsoluteurls.api.ListNotesResult;
@@ -31,13 +30,7 @@ final class PagedLists {
         Optional<String> nextCursor = input.query().cursor().isPresent() ? Optional.empty() : Optional.of(NEXT_CURSOR);
 
         return answers.answer(API, "listTasks", 200, ListTasksPage.class, ListTasksResult.Status200::new, Map.<String, Supplier<ListTasksResult>>of())
-                .orElseGet(() -> new ListTasksResult.Status200(new ListTasksPage(sampleTasks(input), nextCursor)));
-    }
-
-    private static List<Task> sampleTasks(ListTasksInput input) {
-        return input.query().state()
-                .map(states -> states.stream().map(SampleData::taskInState).toList())
-                .orElseGet(() -> List.of(SampleData.task(SampleData.NEW_TASK_ID)));
+                .orElseGet(() -> new ListTasksResult.Status200(new ListTasksPage(SampleData.listedTasks(input.query().state()), nextCursor)));
     }
 
     static ListNotesResult listNotes(ListNotesInput input) {

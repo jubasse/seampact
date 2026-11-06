@@ -12,8 +12,6 @@ use App\Generated\Tasks\ListChannelsResult;
 use App\Generated\Tasks\ListTasksPage;
 use App\Generated\Tasks\ListTasksResponse200;
 use App\Generated\Tasks\ListTasksResult;
-use App\Generated\Tasks\Schemas\Task;
-use App\Generated\Tasks\Schemas\TaskState;
 use App\Generated\TasksAbsoluteUrls\ListNotesInput;
 use App\Generated\TasksAbsoluteUrls\ListNotesPage;
 use App\Generated\TasksAbsoluteUrls\ListNotesResponse200;
@@ -46,18 +44,7 @@ final class PagedLists
                 array_map(SampleData::taskOf(...), is_array($body['items'] ?? null) ? array_values(array_filter($body['items'], is_array(...))) : []),
                 is_string($body['nextCursor'] ?? null) ? $body['nextCursor'] : null,
             )),
-        ) ?? new ListTasksResponse200(new ListTasksPage(self::sampleTasks($input->query->state), $nextCursor));
-    }
-
-    /**
-     * The sample tasks in the states the client filters on, else the one new task.
-     *
-     * @param list<TaskState>|null $states
-     * @return list<Task>
-     */
-    private static function sampleTasks(?array $states): array
-    {
-        return $states === null ? [SampleData::task(SampleData::NEW_TASK_ID)] : SampleData::tasksInStates($states);
+        ) ?? new ListTasksResponse200(new ListTasksPage(SampleData::listedTasks($input->query->state), $nextCursor));
     }
 
     public static function listNotes(ListNotesInput $input): ListNotesResult

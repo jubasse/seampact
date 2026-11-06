@@ -37,13 +37,18 @@ final class SampleData
     }
 
     /**
-     * The sample tasks whose state is one of `$states`, in seed order: the channel holds one task in each state.
+     * The tasks a listTasks call answers: with no state filter the one new task; else the sample tasks whose state is
+     * one of `$states`, in seed order, since the channel holds one task in each state.
      *
-     * @param list<TaskState> $states
+     * @param list<TaskState>|null $states
      * @return list<Task>
      */
-    public static function tasksInStates(array $states): array
+    public static function listedTasks(?array $states): array
     {
+        if ($states === null) {
+            return [self::task(self::NEW_TASK_ID)];
+        }
+
         $seeded = [];
         foreach (TaskState::cases() as $index => $state) {
             $seeded[] = new Task(sprintf(self::SEEDED_TASK_ID, $index + 1), 'Write the slice test', $state, null, self::FIRST_VERSION, new \DateTimeImmutable(self::CREATED_AT));

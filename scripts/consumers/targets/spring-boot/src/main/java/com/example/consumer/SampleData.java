@@ -5,6 +5,7 @@ import com.example.tasks.api.schemas.Task;
 import com.example.tasks.api.schemas.TaskState;
 import com.example.tasksabsoluteurls.api.schemas.Note;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +28,11 @@ final class SampleData {
 
     static Task task(UUID taskId) {
         return new Task(taskId, "Write the slice test", TaskState.OPEN, Optional.empty(), FIRST_VERSION, CREATED_AT);
+    }
+
+    /** The tasks listTasks answers: the one new task with no state filter, else one sample task per listed state. */
+    static List<Task> listedTasks(Optional<List<TaskState>> states) {
+        return states.map(listed -> listed.stream().map(SampleData::taskInState).toList()).orElseGet(() -> List.of(task(NEW_TASK_ID)));
     }
 
     static Task taskInState(TaskState state) {

@@ -35,11 +35,16 @@ final class PagedLists {
 
     static ListTasksResult listTasks(ScriptedAnswers answers, ListTasksInput input) {
         return answers.answer(API, "listTasks", 200, ScriptedPage.class, scripted -> new ListTasksResult.Status200(pageOf(scripted)), Map.<String, Supplier<ListTasksResult>>of())
-                .orElseGet(() -> new ListTasksResult.Status200(new ListTasksPage(List.of(SampleData.task(SampleData.NEW_TASK_ID)), SAMPLE_TOTAL)));
+                .orElseGet(() -> new ListTasksResult.Status200(samplePage(SampleData.listedTasks(input.query().state()))));
     }
 
     static ListNotesResult listNotes(ListNotesInput input) {
         return new ListNotesResult.Status200(new ListNotesPage(List.of(SampleData.note(SampleData.FIRST_NOTE_ID)), SAMPLE_TOTAL));
+    }
+
+    // The sample total holds at least the tasks the page lists.
+    private static ListTasksPage samplePage(List<Task> tasks) {
+        return new ListTasksPage(tasks, Math.max(tasks.size(), SAMPLE_TOTAL));
     }
 
     private static ListTasksPage pageOf(ScriptedPage scripted) {
