@@ -1008,6 +1008,7 @@ class ListTasksPath:
 class ListTasksQuery:
     """The query parameters of operation 'listTasks'."""
 
+    state: list[_schemas.TaskState] | None = None
     cursor: str | None = None
     limit: int | None = None
     sort: list[str] | None = None
