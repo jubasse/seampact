@@ -9,6 +9,7 @@ import {
   clientAddressesTheHookSees,
   describeDebugExceptions,
   describeHandlerAccess,
+  describeResponseHeaders,
   describeTwoApiHandlerAccess,
   emitProject,
   generateReferenceProject,
@@ -16,6 +17,8 @@ import {
   projectDirectory,
   type RawReply,
   type ReferenceIrChange,
+  referenceChanges,
+  referenceResponseHeaders,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -189,7 +192,7 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       PROJECT,
       nestjsTarget,
       { bodyValidation: true, reply },
-      throttledGetTask,
+      referenceChanges(throttledGetTask, referenceResponseHeaders),
     );
 
     expect(emitProject(PROJECT, files, BUILD)).toEqual([]);
@@ -219,6 +222,8 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       app,
       send: (method, path, headers) => send(method, path, { headers }),
     }));
+
+    describeResponseHeaders(() => ({ app, send }));
 
     test("the principal and scopes decorators hand over the caller the input carries, past the app's pipe", async () => {
       const decorated: unknown[] = [];
@@ -291,8 +296,9 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       }
     });
 
+    // `getChannel` writes no ETag of its own: the reference task item carries its version's.
     test("a boundary reply gets no Express ETag and no 304", async () => {
-      const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+      const reply = await send("GET", `/v1/channels/${CHANNEL}`, {
         headers: { ...BEARER, "if-none-match": "*" },
       });
 

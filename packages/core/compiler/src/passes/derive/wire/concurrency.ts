@@ -18,9 +18,11 @@ import { type DeriveWireRoute, type DeriveWireScope, deriveWireOriginAt } from "
 // The version a write compares (`concurrency.version`, A33, ADR 0006 section 5). tree.nodes wrote `version` and
 // `field`, a body source on a DELETE without input already read from the query. A body source is the version
 // property tree.schemas added to the input, so only `derivedFrom` is written here; a query or header source is a
-// required parameter typed like `field` on the resource's item. `header.If-Match` sends a strong entity tag instead:
-// the `If-Match` parameter and the `ETag` header of every success response carrying the item, on every operation of
-// the resource, are strings (RFC 9110 section 8.8.3), the tag computed from `field`. `from` names the resource's `concurrency`, then the route's `concurrency: inherit`.
+// required parameter typed like `field` on the resource's item. `header.If-Match` carries an entity tag instead,
+// which the server sends strong and accepts strong or weak (`"7"` or `W/"7"`): the `If-Match` parameter and the
+// `ETag` header of every success response carrying the item, on every operation of the resource, are strings
+// (RFC 9110 section 8.8.3), the tag computed from `field`. `from` names the resource's `concurrency`, then the
+// route's `concurrency: inherit`.
 // A relay route has no resource of its own: its version parameter and `ETag` headers are those the public
 // operation derived, with that operation's `from`.
 

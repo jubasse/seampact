@@ -8,9 +8,11 @@ import {
   clientAddressesTheHookSees,
   describeDebugExceptions,
   describeHandlerAccess,
+  describeResponseHeaders,
   emitProject,
   problemBody,
   projectDirectory,
+  referenceResponseHeaders,
 } from "@seampact/codegen-core/node-server/test-support";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { type AdonisMajor, generateAdonisProject } from "./adonis-major.test-support.js";
@@ -149,7 +151,12 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
   }
 
   beforeAll(async () => {
-    const files = await generateAdonisProject(project, major, { bodyValidation: true });
+    const files = await generateAdonisProject(
+      project,
+      major,
+      { bodyValidation: true },
+      referenceResponseHeaders,
+    );
 
     expect(emitProject(project, files, build)).toEqual([]);
 
@@ -181,6 +188,10 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
       app,
       send: (method, path, headers) => send(method, path, { headers }),
     }));
+  });
+
+  describe("the derived response headers and the If-Match version", () => {
+    describeResponseHeaders(() => ({ app, send }));
   });
 
   describe("replies on contract routes", () => {

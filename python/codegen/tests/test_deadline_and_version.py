@@ -92,10 +92,11 @@ def _with_if_match(value: str | None) -> DecodedInput:
     return DecodedInput({}, {}, {} if value is None else {"If-Match": value}, {"reason": "done"}, None)
 
 
-def test_an_if_match_version_is_the_unquoted_strong_tag(tasks_contract: ApiContract) -> None:
+@pytest.mark.parametrize("sent", ['"7"', 'W/"7"'])
+def test_an_if_match_version_is_the_unquoted_strong_or_weak_tag(tasks_contract: ApiContract, sent: str) -> None:
     contract = _if_match_contract(tasks_contract)
 
-    assert sent_version(contract, _ARCHIVE_TASK, _with_if_match('"7"')) == "7"
+    assert sent_version(contract, _ARCHIVE_TASK, _with_if_match(sent)) == "7"
 
 
 def test_a_stale_if_match_version_answers_precondition_failed(tasks_contract: ApiContract) -> None:
@@ -104,8 +105,8 @@ def test_a_stale_if_match_version_answers_precondition_failed(tasks_contract: Ap
     assert stale_version(contract, _ARCHIVE_TASK).code == _PRECONDITION_FAILED
 
 
-@pytest.mark.parametrize("sent", ['W/"7"', "7"])
-def test_an_if_match_value_that_is_no_strong_tag_answers_precondition_failed(
+@pytest.mark.parametrize("sent", ['"7", "8"', "7", "W/7"])
+def test_an_if_match_value_that_is_no_single_tag_answers_precondition_failed(
     tasks_contract: ApiContract, sent: str
 ) -> None:
     with pytest.raises(ContractRefusal) as refused:
@@ -114,7 +115,7 @@ def test_an_if_match_value_that_is_no_strong_tag_answers_precondition_failed(
     assert refused.value.code == _PRECONDITION_FAILED
 
 
-@pytest.mark.parametrize("sent", [None, "*"])
+@pytest.mark.parametrize("sent", [None, "", " ", "*"])
 def test_a_write_without_an_if_match_version_answers_precondition_required(
     tasks_contract: ApiContract, sent: str | None
 ) -> None:

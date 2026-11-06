@@ -4,8 +4,10 @@ import { gzipSync } from "node:zlib";
 import {
   besideTasksOnSharedBasePaths,
   copyTestApp,
+  describeCompressedVersionTag,
   describeDebugExceptions,
   describeHandlerAccess,
+  describeResponseHeaders,
   describeTwoApiHandlerAccess,
   emitProject,
   generateReferenceProject,
@@ -15,6 +17,7 @@ import {
   referenceChanges,
   referenceNoStoreCode,
   referenceNoStoreOperation,
+  referenceResponseHeaders,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
 import type { Hono } from "hono";
@@ -112,6 +115,7 @@ beforeAll(async () => {
     referenceChanges(
       referenceNoStoreCode(NO_STORE_CODE),
       referenceNoStoreOperation("getPreferences"),
+      referenceResponseHeaders,
     ),
   );
 
@@ -140,6 +144,11 @@ describe("what a handler reads of its caller", () => {
     app,
     send: (method, path, headers) => send(method, path, { headers }),
   }));
+});
+
+describe("the derived response headers and the If-Match version", () => {
+  describeResponseHeaders(() => ({ app, send }));
+  describeCompressedVersionTag(() => ({ app, send }));
 });
 
 describe("replies on contract routes", () => {

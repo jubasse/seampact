@@ -9,6 +9,7 @@ import {
   copyTestApp,
   describeDebugExceptions,
   describeHandlerAccess,
+  describeResponseHeaders,
   describeTwoApiHandlerAccess,
   emitProject,
   generateReferenceProject,
@@ -20,6 +21,7 @@ import {
   referenceErrorTitle,
   referenceNoStoreCode,
   referenceNoStoreOperation,
+  referenceResponseHeaders,
   referenceUnpagedList,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
@@ -139,6 +141,7 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
         referenceErrorTitle(TITLED_CODE, WRITTEN_TITLE),
         referenceNoStoreOperation("getPreferences"),
         referenceUnpagedList("listChannels"),
+        referenceResponseHeaders,
       ),
     );
 
@@ -166,6 +169,8 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     app,
     send: (method, path, headers) => send(method, path, { headers }),
   }));
+
+  describeResponseHeaders(() => ({ app, send }));
 
   test("every operation's handler is called on its object, so `this` is kept", async () => {
     const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });

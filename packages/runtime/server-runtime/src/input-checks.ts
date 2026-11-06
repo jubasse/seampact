@@ -5,23 +5,42 @@ import { ContractError, roleParams } from "./contract-error.js";
 import type { ContractRoute } from "./contract-route.js";
 import { schemaInvalidError, validateRequest } from "./input-issues.js";
 import { isPlainObject } from "./plain-object.js";
+import { sentVersion } from "./version-header.js";
 
 const FORBIDDEN_ROLE = "forbidden";
 
 /**
- * Step 6: the validated input `{ path, query, headers, body }`, or a 400 with every issue. The validation steps 4
- * and 5 recorded on the grant is reused, never run twice; without a grant (a refusal before the access steps) the
+ * Step 6: the validated input `{ path, query, headers, body }`, or a 400 with every issue. A version header is read
+ * first, so its absence answers 428, and an `If-Match` tag reaches the handler unquoted. The validation steps 4 and
+ * 5 recorded on the grant is reused, never run twice; without a grant (a refusal before the access steps) the
  * request is validated here.
  */
 export async function validateRequestInput(
   state: CheckState,
   grant?: AccessGrant,
 ): Promise<unknown> {
+  const version = sentVersion(state.route, state.request);
   const validation = grant?.validation ?? (await validateRequest(state));
 
-  if (validation.issues.length === 0) return withDefaultLimit(state.route, validation.value);
+  if (validation.issues.length > 0) throw schemaInvalidError(state.route, validation.issues);
 
-  throw schemaInvalidError(state.route, validation.issues);
+  return withSentVersion(state.route, version, withDefaultLimit(state.route, validation.value));
+}
+
+// The version header as the handler compares it: `"7"` and `W/"7"` both hand over `7`.
+function withSentVersion(
+  route: ContractRoute,
+  version: string | undefined,
+  input: unknown,
+): unknown {
+  const header = route.versionHeader?.name;
+
+  if (version === undefined || header === undefined) return input;
+
+  if (!isPlainObject(input) || !isPlainObject(input.headers))
+    throw new Error(`the validated input of '${route.id}' has no headers to hand its version in`);
+
+  return { ...input, headers: { ...input.headers, [header]: version } };
 }
 
 // The paging limit the client did not send is the contract's default, as the handler receives it.

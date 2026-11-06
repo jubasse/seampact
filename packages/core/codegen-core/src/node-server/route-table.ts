@@ -27,6 +27,7 @@ import { fingerprintHeaderNames } from "./fingerprint-headers.js";
 import type { CompressionOption, FrameworkEtagMode } from "./options.js";
 import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
 import { encodedSegmentRefusals } from "./path-segment-refusals.js";
+import { responseHeaderEntries } from "./response-headers.js";
 import { servedResponseShape } from "./response-shape.js";
 import { compareRouteSpecificity } from "./route-order.js";
 import {
@@ -64,6 +65,8 @@ export interface RouteTableOptions {
 const API_LOCATION: IrLocation = { member: "" };
 const JSON_MEDIA = "application/json";
 const BOUNDARY_ENFORCEMENT = "boundary";
+const VERSION_HEADER_SOURCE = "header";
+const IF_MATCH_HEADER = "if-match";
 
 // The validators link's descriptor and the module's imports of its validators.
 interface ValidatorLink {
@@ -287,6 +290,7 @@ function routeEntry(
         ? null
         : imports.expression(validatorRef.module, validatorRef.export),
     idempotency: idempotencyEntry(operation, location, refusals),
+    versionHeader: versionHeaderEntry(operation, location, refusals),
     responses: operation.responses.map((response, index) => ({
       status: response.status,
       shape: servedResponseShape(
@@ -309,6 +313,14 @@ function routeEntry(
         response.shape === "table"
           ? tableKeyProperty(operation, below(location, "resource", "idProperty"), refusals)
           : undefined,
+      headers: responseHeaderEntries(
+        ir,
+        operation,
+        response,
+        below(location, "responses", String(index)),
+        options.mount,
+        refusals,
+      ),
       ...successEnvelope(ir, operation, response, pageBodyTemplate(ir, operation), refusals),
     })),
     errors: Object.fromEntries(
@@ -359,7 +371,7 @@ function handlerForms(
       "The version check",
       operation.concurrency !== undefined,
       "concurrency",
-      "Compare the version in the input with the stored one and answer the stateConflict code when they differ.",
+      concurrencyFix(operation),
     ],
     [
       "owner",
@@ -394,6 +406,20 @@ function handlerForms(
   return forms.flatMap(([form, description, present, member, fix]) =>
     present ? [warnLeftToHandler(form, description, below(location, member), fix)] : [],
   );
+}
+
+// A header version answers a stale tag with 412 (grammar section 6); `If-Match` reaches the handler unquoted, and
+// the item's ETag carries the version as text.
+function concurrencyFix(operation: Operation): string {
+  const version = operation.concurrency?.version;
+
+  if (version?.in !== VERSION_HEADER_SOURCE)
+    return "Compare the version in the input with the stored one and answer the stateConflict code when they differ.";
+
+  if (version.name?.toLowerCase() !== IF_MATCH_HEADER)
+    return "Compare the version header in the input with the stored one and answer the preconditionFailed code when they differ.";
+
+  return 'Compare the If-Match version in the input (unquoted, `7` for `"7"` or `W/"7"`) with the stored one and answer the preconditionFailed code when they differ; keep the stored version an integer or visible ASCII text without `"`, which the item\'s ETag can carry.';
 }
 
 // The extension values of a right, rule or scope an operation asks: the decide and resolve requests do not carry them
@@ -942,6 +968,33 @@ function inputEntry(operation: Operation, location: IrLocation, refusals: Refusa
   }
 
   return { media: input.media, limitBytes: input.bodyLimitBytes, rawBody: input.rawBody };
+}
+
+// A version sent in a header is read by the boundary first: a missing one answers 428, never 400 (grammar section 6).
+function versionHeaderEntry(
+  operation: Operation,
+  location: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  const version = operation.concurrency?.version;
+
+  if (version?.in !== VERSION_HEADER_SOURCE) return undefined;
+
+  const name = version.name?.toLowerCase();
+
+  if (name === undefined) {
+    refusals.push(
+      refuseInconsistentIr(
+        "ir.concurrency.version.name",
+        "A header version without its header name",
+        below(location, "concurrency", "version"),
+      ),
+    );
+
+    return undefined;
+  }
+
+  return { name, entityTag: name === IF_MATCH_HEADER };
 }
 
 function idempotencyEntry(
