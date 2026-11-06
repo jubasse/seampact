@@ -6,9 +6,9 @@
 # a draft GitHub release, the npm, Maven Central (signed after the approval), Gradle Plugin Portal, PyPI and PHP
 # mirror publishes and the release itself, published last.
 # A real run starts by hand from main with dry-run off; one approval of the `release` environment covers the publish
-# jobs. A dry run, the default of a manual run and the only mode of a pull request and a merge group, publishes
-# nothing and needs no secret: it stamps its own throwaway checkout and ends with the rehearsals. `release` is the
-# check to require.
+# jobs. A pull request to develop runs nothing: the merge queue runs the dry run. A dry run, the default of a manual
+# run and the only mode of a pull request and a merge group, publishes nothing and needs no secret: it stamps its own
+# throwaway checkout and ends with the rehearsals. `release` is the check to require.
 name: release
 
 on:
@@ -48,7 +48,9 @@ jobs:
     permissions:
       contents: read
     outputs:
-      run: ${{ steps.detect.outputs.run }}
+      # The whole dry run is a queue row: a pull request to develop runs none of it, and the merge queue, a pull
+      # request to main and a manual run ("Run workflow" on a branch, before review) run all of it.
+      run: ${{ steps.detect.outputs.queue }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
