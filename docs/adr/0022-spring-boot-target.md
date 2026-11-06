@@ -252,7 +252,7 @@ The boot check runs in a `SmartInitializingSingleton`, before the server starts 
 - a servlet container other than Tomcat ("Refused by name or waiting") or a reactive application;
 - a Spring Boot major other than 4, read from `SpringBootVersion`; `generate` already refuses 3.x from the build's resolved version.
 
-`artefacts.bootCheck: { frameworkRoutes, hooks }` switches the framework-route check and the hook check apart (ADR 0011); the handler check runs whenever the boot check does.
+`artefacts.bootCheck: { frameworkRoutes, hooks }` switches the framework-route check and the hook check apart (ADR 0011); the handler check runs whenever the boot check does. `{ hooks: warn }` waits for an app that needs it: the generator refuses it by name (`artefacts.bootCheck.hooks.warn.unsupported`).
 
 The property `seampact.<api>.unbound-operations` takes `error` (the default, an operation without a handler is a problem) or `warn`, as NestJS's `unboundOperations` (ADR 0016): a `@WebMvcTest` slice that loads some controllers starts, the unbound operations are logged once, and the boundary filter answers their routes with the api's `notFound` reply in its format, or a bare 404 with no body when no route of the api declares one (as Node's servers). `warn` reads the unbound operations even when `artefacts.bootCheck` switches the handler check off, so their routes never reach Spring Security or Spring MVC. Any other value is a boot problem. The hook problems still cover every operation.
 
