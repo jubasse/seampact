@@ -17,7 +17,7 @@ import { buildIds, exportFromDir, privateTerms } from "./export-ids.ts";
 import { loadModel } from "./load.ts";
 import type { Problem } from "./model.ts";
 import { formatProblem } from "./model.ts";
-import { ITEMS_AFTER_1_0, TARGETS_AFTER_1_0 } from "./release-scope.ts";
+import { ITEMS_AFTER_1_0, indexItemsAfter1_0, TARGETS_AFTER_1_0 } from "./release-scope.ts";
 import { parseResults, renderReport, shares, testPassed } from "./report.ts";
 import { SERVER_TARGETS } from "./targets.ts";
 import { VARIANT_ROW_SETS } from "./variant-rows.ts";
@@ -555,6 +555,17 @@ describe("checklist release scope", () => {
     const out = gateOver(artefacts({ other: { target: "hono", checks: {} } }), { itemsAfter1_0 });
 
     expect(out).toEqual([]);
+  });
+
+  it("an id listed twice in the after-1.0 list is refused by name", () => {
+    const entry = { reason: "after" };
+
+    expect(() =>
+      indexItemsAfter1_0([
+        ["CHK-001", entry],
+        ["CHK-001", entry],
+      ]),
+    ).toThrow("CHK-001 twice");
   });
 
   it("a proven deferred id fails by name", () => {
