@@ -11,6 +11,7 @@ import {
 } from "../../packages/tools/http-suite/src/suite-case.ts";
 import {
   type CaseResult,
+  type SuiteReport,
   suiteReportOf,
 } from "../../packages/tools/http-suite/src/suite-report.ts";
 import { caseHeader, refusedResult } from "../../packages/tools/http-suite/src/suite-runner.ts";
@@ -630,14 +631,21 @@ describe("checklist release scope", () => {
       failures: [],
     });
 
-    /** The gate over the repository with one hand-written run of fastify (CHK-098 covers every case) of [cases]. */
-    function handWrittenRun(cases: CaseResult[]): string[] {
+    /**
+     * The gate over the repository with one hand-written run of [runTarget] (CHK-098 covers every case) of [cases];
+     * [edit] may rewrite the report before it is written.
+     */
+    function handWrittenRun(
+      cases: CaseResult[],
+      runTarget = target,
+      edit: (report: SuiteReport) => unknown = (report) => report,
+    ): string[] {
       const directory = mkdtempSync(join(tmpdir(), "checklist-whole-suite-"));
 
-      mkdirSync(join(directory, target));
+      mkdirSync(join(directory, runTarget));
       writeFileSync(
-        join(directory, target, "http-suite-hand-written.json"),
-        JSON.stringify(suiteReportOf({ target, profile: "hand-written" }, cases)),
+        join(directory, runTarget, "http-suite-hand-written.json"),
+        JSON.stringify(edit(suiteReportOf({ target: runTarget, profile: "hand-written" }, cases))),
       );
 
       return gateOver(directory, { itemsAfter1_0: ITEMS_AFTER_1_0 }, REPO);
@@ -661,11 +669,12 @@ describe("checklist release scope", () => {
       const mountMismatch = caseOf("mount-mismatch-refused-at-first-request");
       const reason = outsideTargetsReason(mountMismatch, target);
 
-      expect(reason).toBeDefined();
+      if (reason === undefined)
+        throw new Error("mount-mismatch-refused-at-first-request applies to every target");
 
       const out = handWrittenRun([
         passedCase("plain-case", []),
-        refusedResult(mountMismatch, reason ?? "", target),
+        refusedResult(mountMismatch, reason, target),
       ]);
 
       expect(out).not.toContainEqual(expect.stringContaining(noTest("CHK-098", target)));
@@ -682,6 +691,85 @@ describe("checklist release scope", () => {
       ]);
 
       expect(out).toContain(`${noTest("CHK-098", target)} (its suite run refused the id)`);
+    });
+
+    it("stays refused when a case of the id failed, whatever its checks entry says", () => {
+      const absoluteUrls = caseOf("absolute-urls-from-public-origin");
+      const failedCase: CaseResult = {
+        ...passedCase("failing-case", ["CHK-098"]),
+        outcome: "failed",
+        failures: ["step 1"],
+      };
+      const out = handWrittenRun(
+        [
+          passedCase("plain-case", []),
+          failedCase,
+          refusedResult(absoluteUrls, "the Node servers refuse this form, after 1.0", target),
+        ],
+        target,
+        (report) => ({
+          ...report,
+          checks: {
+            ...report.checks,
+            "CHK-098": {
+              outcome: "refused",
+              cases: ["plain-case", "absolute-urls-from-public-origin"],
+            },
+          },
+        }),
+      );
+
+      expect(out).toContain(`${noTest("CHK-098", target)} (its suite run refused the id)`);
+    });
+
+    it("stays refused when the cited id is deferred only on another target", () => {
+      const out = handWrittenRun(
+        [
+          passedCase("plain-case", []),
+          refusedResult(
+            caseOf("absolute-urls-from-public-origin"),
+            "the native servers write them",
+            "laravel",
+          ),
+        ],
+        "laravel",
+      );
+
+      expect(out).toContain(`${noTest("CHK-098", "laravel")} (its suite run refused the id)`);
+    });
+
+    it("stays refused when the run passed no case", () => {
+      const out = handWrittenRun([
+        refusedResult(
+          caseOf("mount-mismatch-fails-boot"),
+          "the sample app does not serve it",
+          target,
+        ),
+      ]);
+
+      expect(out).toContain(`${noTest("CHK-098", target)} (its suite run refused the id)`);
+    });
+
+    describe("the not-applicable reason", () => {
+      const refusedWith = (reason: string) =>
+        handWrittenRun([
+          passedCase("plain-case", []),
+          refusedResult(caseOf("mount-mismatch-fails-boot"), reason, target),
+        ]);
+      const refusedId = `${noTest("CHK-098", target)} (its suite run refused the id)`;
+
+      it("is accepted for known target names", () => {
+        expect(refusedWith("the case applies only to express, adonis")).not.toContain(refusedId);
+      });
+
+      it.each([
+        ["a trailing space", "the case applies only to express, adonis "],
+        ["an unknown name", "the case applies only to express, nowhere"],
+        ["free text", "the case applies only to express because it must"],
+        ["the report's own target", `the case applies only to express, ${target}`],
+      ])("is refused with %s", (_name, reason) => {
+        expect(refusedWith(reason)).toContain(refusedId);
+      });
     });
   });
 
