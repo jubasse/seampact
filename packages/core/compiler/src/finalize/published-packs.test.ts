@@ -16,6 +16,7 @@ const REFERENCE_APIS = [
   "tasksDevices",
   "tasksOptionalAuth",
   "tasksAbsoluteUrls",
+  "tasksResponses",
 ];
 
 describe("the reference contract with a published format pack", () => {

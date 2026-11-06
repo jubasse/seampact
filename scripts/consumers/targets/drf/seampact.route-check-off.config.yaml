@@ -41,3 +41,9 @@ targets:
     api: tasksAbsoluteUrls
     artefacts:
       bootCheck: { frameworkRoutes: false }
+  - id: tasksResponses
+    out: tasks_responses
+    use: pypi:seampact-drf
+    api: tasksResponses
+    artefacts:
+      bootCheck: { frameworkRoutes: false }

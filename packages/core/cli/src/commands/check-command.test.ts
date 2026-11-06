@@ -273,7 +273,7 @@ test("compile reads only the source holding an api named alone", async () => {
   const compiled = await run(app, ["compile"]);
 
   expect(compiled.exitCode).toBe(EXIT_SUCCESS);
-  expect(compiled.out).toContain("Compiled 6 api(s)");
+  expect(compiled.out).toContain("Compiled 7 api(s)");
 });
 
 test("lint runs the core rules over each path source", async () => {
@@ -281,7 +281,7 @@ test("lint runs the core rules over each path source", async () => {
   const linted = await run(app, ["lint"]);
 
   expect(linted.err).not.toContain("error");
-  expect(linted.out).toContain("Linted 6 api(s)");
+  expect(linted.out).toContain("Linted 7 api(s)");
   expect(linted.exitCode).toBe(EXIT_SUCCESS);
 });
 

@@ -1,0 +1,37 @@
+{
+  "id": "deprecated-route-headers",
+  "title": "A deprecated route answers its Deprecation, Sunset and successor Link headers",
+  "checks": ["CHK-058"],
+  "profiles": ["default"],
+  "apis": ["tasksResponses"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001/legacy",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "deprecation": {
+            "equals": "@1798675200"
+          },
+          "sunset": {
+            "equals": "Wed, 30 Jun 2027 00:00:00 GMT"
+          },
+          "link": {
+            "contains": [
+              "</responses/v1/notes/30000000-0000-4000-8000-000000000001>; rel=\"successor-version\""
+            ]
+          }
+        },
+        "body": {
+          "noteId": "30000000-0000-4000-8000-000000000001"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "id": "if-match-precondition",
+  "title": "With an If-Match version, a stale tag answers 412, a missing or empty header 428, and the current tag, strong or weak, writes",
+  "checks": ["CHK-127"],
+  "profiles": ["default"],
+  "apis": ["tasksResponses"],
+  "steps": [
+    {
+      "title": "the current tag is read from the item, weak once a compression layer encodes the body",
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "etag": {
+            "contains": ["\"1\""]
+          }
+        }
+      }
+    },
+    {
+      "title": "stale",
+      "request": {
+        "method": "PATCH",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:stale}}",
+          "if-match": "\"7\""
+        },
+        "body": {
+          "text": "Late"
+        }
+      },
+      "expect": {
+        "status": 412,
+        "body": {
+          "code": "api.precondition_failed"
+        }
+      }
+    },
+    {
+      "title": "missing",
+      "request": {
+        "method": "PATCH",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:missing}}"
+        },
+        "body": {
+          "text": "Blind"
+        }
+      },
+      "expect": {
+        "status": 428,
+        "body": {
+          "code": "api.precondition_required"
+        }
+      }
+    },
+    {
+      "title": "empty",
+      "request": {
+        "method": "PATCH",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:empty}}",
+          "if-match": ""
+        },
+        "body": {
+          "text": "Blank"
+        }
+      },
+      "expect": {
+        "status": 428,
+        "body": {
+          "code": "api.precondition_required"
+        }
+      }
+    },
+    {
+      "title": "current",
+      "request": {
+        "method": "PATCH",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:current}}",
+          "if-match": "\"1\""
+        },
+        "body": {
+          "text": "On time"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "etag": {
+            "contains": ["\"2\""]
+          }
+        },
+        "body": {
+          "text": "On time",
+          "revision": 2
+        }
+      }
+    },
+    {
+      "title": "current, weak",
+      "request": {
+        "method": "PATCH",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:weak}}",
+          "if-match": "W/\"1\""
+        },
+        "body": {
+          "text": "Weakly on time"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "etag": {
+            "contains": ["\"2\""]
+          }
+        },
+        "body": {
+          "text": "Weakly on time",
+          "revision": 2
+        }
+      }
+    }
+  ]
+}

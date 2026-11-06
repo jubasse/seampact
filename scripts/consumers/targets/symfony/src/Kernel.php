@@ -17,6 +17,8 @@ use App\Generated\TasksDevices\Symfony\TasksDevicesSeampactBundle;
 use App\Generated\TasksOptionalAuth\Symfony\TasksOptionalAuthRouteLoader;
 use App\Generated\TasksOptionalAuth\Symfony\TasksOptionalAuthSeampactBundle;
 use App\Generated\TasksOptionalAuth\Symfony\UserAuthenticateHook as OptionalAuthUserAuthenticateHook;
+use App\Generated\TasksResponses\Symfony\TasksResponsesRouteLoader;
+use App\Generated\TasksResponses\Symfony\TasksResponsesSeampactBundle;
 use App\Generated\TasksService\Symfony\TasksServiceRouteLoader;
 use App\Generated\TasksService\Symfony\TasksServiceSeampactBundle;
 use App\Generated\TasksServiceWrites\Symfony\TasksServiceWritesRouteLoader;
@@ -91,6 +93,7 @@ final class Kernel extends BaseKernel
         yield new TasksDevicesSeampactBundle();
         yield new TasksOptionalAuthSeampactBundle();
         yield new TasksAbsoluteUrlsSeampactBundle();
+        yield new TasksResponsesSeampactBundle();
     }
 
     public function boot(): void
@@ -151,6 +154,7 @@ final class Kernel extends BaseKernel
         $services->set('logger', SuiteLogger::class);
         $services->set(TasksSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
         $services->set(TasksServiceWritesSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
+        $services->set(TasksResponsesSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
         // The generated request matcher of the tasks api's identity routes, narrowed to the suite's probe header.
         $services->set(self::IDENTITY_PROBE_MATCHER, ChainRequestMatcher::class)->args([[
             service('seampact.tasks.matcher.identity'),
@@ -172,6 +176,7 @@ final class Kernel extends BaseKernel
         $routes->import(TasksDevicesRouteLoader::RESOURCE, TasksDevicesRouteLoader::TYPE);
         $routes->import(TasksOptionalAuthRouteLoader::RESOURCE, TasksOptionalAuthRouteLoader::TYPE);
         $routes->import(TasksAbsoluteUrlsRouteLoader::RESOURCE, TasksAbsoluteUrlsRouteLoader::TYPE);
+        $routes->import(TasksResponsesRouteLoader::RESOURCE, TasksResponsesRouteLoader::TYPE);
 
         // The suite's control routes (ADR 0015 "Control routes"), allow-listed in seampact.config.yaml.
         $routes->add('suite_script', '/__seampact/script')->methods(['PUT'])->controller([SuiteControlController::class, 'loadScript']);

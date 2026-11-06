@@ -1,0 +1,80 @@
+{
+  "id": "every-cache-directive",
+  "title": "A cache family writes every Cache-Control directive, s-maxage on public responses only",
+  "checks": ["CHK-138"],
+  "profiles": ["default"],
+  "apis": ["tasksResponses"],
+  "steps": [
+    {
+      "title": "an anonymous caller of a public route",
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/digest"
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "cache-control": {
+            "contains": [
+              "public",
+              "max-age=60",
+              "s-maxage=120",
+              "stale-while-revalidate=30",
+              "stale-if-error=3600",
+              "immutable",
+              "no-cache",
+              "must-revalidate"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "an identified caller",
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "cache-control": {
+            "contains": [
+              "private",
+              "max-age=60",
+              "stale-while-revalidate=30",
+              "stale-if-error=3600",
+              "immutable",
+              "no-cache",
+              "must-revalidate"
+            ]
+          },
+          "vary": {
+            "contains": ["Authorization"]
+          }
+        }
+      }
+    },
+    {
+      "title": "no s-maxage for an identified caller",
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "cache-control": {
+            "excludes": "s-maxage"
+          }
+        }
+      }
+    }
+  ]
+}

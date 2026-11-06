@@ -1,0 +1,67 @@
+# docs/conformance/proofs/p8-conformance-19.yaml
+# The response cases of the shared http suite, the fetch client's proofs, and the response forms 1.0 refuses by name.
+lane: p8-conformance-19
+proofs:
+  - id: CHK-021
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#each 2xx a route declares reaches the caller with its status, and another one is unexpected'
+  - id: CHK-022
+    refusals:
+      - 'nestjs: packages/targets/codegen-ts/src/generated-types.test.ts#a response header the route writes itself is refused by name'
+      - 'fastify: packages/targets/codegen-ts/src/generated-types.test.ts#a response header the route writes itself is refused by name'
+      - 'express: packages/targets/codegen-ts/src/generated-types.test.ts#a response header the route writes itself is refused by name'
+      - 'adonis: packages/targets/codegen-ts/src/generated-types.test.ts#a response header the route writes itself is refused by name'
+      - 'hono: packages/targets/codegen-ts/src/generated-types.test.ts#a response header the route writes itself is refused by name'
+      - 'fetch: packages/targets/codegen-fetch/src/response-forms-refused.test.ts#a response header the route writes itself is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootResponseFormsRefusalsTest.kt#refusesAResponseHeaderTheRouteWrites'
+      - 'laravel: php/laravel/tests/LaravelRefusalsTest.php#testAResponseHeaderTheRouteWritesIsRefusedByName'
+      - 'symfony: php/symfony/tests/SymfonyRefusalsTest.php#testAResponseHeaderTheRouteWritesIsRefusedByName'
+      - 'fastapi: python/codegen/tests/test_kept_forms.py#test_a_response_header_the_route_writes_and_a_degradable_operation_are_refused_by_name'
+      - 'drf: python/codegen/tests/test_kept_forms.py#test_a_response_header_the_route_writes_and_a_degradable_operation_are_refused_by_name'
+      - 'ninja: python/codegen/tests/test_kept_forms.py#test_a_response_header_the_route_writes_and_a_degradable_operation_are_refused_by_name'
+  - id: CHK-024
+    refusals:
+      - 'nestjs: packages/targets/codegen-ts/src/response-forms-refused.test.ts#a tagged union is refused by name'
+      - 'fastify: packages/targets/codegen-ts/src/response-forms-refused.test.ts#a tagged union is refused by name'
+      - 'express: packages/targets/codegen-ts/src/response-forms-refused.test.ts#a tagged union is refused by name'
+      - 'adonis: packages/targets/codegen-ts/src/response-forms-refused.test.ts#a tagged union is refused by name'
+      - 'hono: packages/targets/codegen-ts/src/response-forms-refused.test.ts#a tagged union is refused by name'
+      - 'zod: packages/targets/codegen-zod/src/union-refused.test.ts#a tagged union is refused by name'
+      - 'fetch: packages/targets/codegen-ts/src/response-forms-refused.test.ts#a tagged union is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootResponseFormsRefusalsTest.kt#refusesAUnion'
+      - 'laravel: php/laravel/tests/LaravelRefusalsTest.php#testAUnionIsRefusedByName'
+      - 'symfony: php/symfony/tests/SymfonyRefusalsTest.php#testAUnionIsRefusedByName'
+      - 'fastapi: python/fastapi/fastapi_tests/test_generator.py#test_a_union_and_a_redirect_response_are_refused_by_name'
+      - 'drf: python/drf/drf_tests/test_drf_generator.py#test_a_union_schema_is_refused_by_name_and_no_file_is_written'
+      - 'ninja: python/ninja/ninja_tests/test_generator.py#test_a_union_and_a_redirect_response_are_refused_by_name'
+  - id: CHK-027
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a degradable operation is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a degradable operation is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a degradable operation is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a degradable operation is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a degradable operation is refused by name'
+      - 'fetch: packages/targets/codegen-fetch/src/response-forms-refused.test.ts#a degraded-parts header is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootResponseFormsRefusalsTest.kt#refusesADegradableOperation'
+      - 'laravel: php/laravel/tests/LaravelRefusalsTest.php#testADegradableOperationWaitsForAConsumerAfterOneZero'
+      - 'symfony: php/symfony/tests/SymfonyRefusalsTest.php#testADegradableOperationIsRefusedByName'
+      - 'fastapi: python/codegen/tests/test_kept_forms.py#test_a_response_header_the_route_writes_and_a_degradable_operation_are_refused_by_name'
+      - 'drf: python/codegen/tests/test_kept_forms.py#test_a_response_header_the_route_writes_and_a_degradable_operation_are_refused_by_name'
+      - 'ninja: python/codegen/tests/test_kept_forms.py#test_a_response_header_the_route_writes_and_a_degradable_operation_are_refused_by_name'
+  - id: CHK-058
+    refusals:
+      - 'fetch: packages/targets/codegen-fetch/src/response-forms-refused.test.ts#a deprecated operation is refused by name'
+  - id: CHK-153
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a redirect response is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a redirect response is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a redirect response is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a redirect response is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a redirect response is refused by name'
+      - 'fetch: packages/targets/codegen-ts/src/response-forms-refused.test.ts#a redirect response is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootResponseFormsRefusalsTest.kt#refusesARedirectResponse'
+      - 'laravel: php/laravel/tests/LaravelRefusalsTest.php#testARedirectResponseIsRefusedByName'
+      - 'symfony: php/symfony/tests/SymfonyRefusalsTest.php#testARedirectResponseIsRefusedByName'
+      - 'fastapi: python/fastapi/fastapi_tests/test_generator.py#test_a_union_and_a_redirect_response_are_refused_by_name'
+      - 'drf: python/drf/drf_tests/test_drf_generator.py#test_a_redirect_response_is_refused_by_name'
+      - 'ninja: python/ninja/ninja_tests/test_generator.py#test_a_union_and_a_redirect_response_are_refused_by_name'

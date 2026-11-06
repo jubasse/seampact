@@ -143,6 +143,29 @@ def test_a_query_list_in_brackets_form_is_refused_by_name(repository_root: Path)
     assert _refusal_codes(ir_json) == {"query.list.brackets.unsupported"}
 
 
+def test_a_union_and_a_redirect_response_are_refused_by_name(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root)
+    schemas = ir_json["schemas"]
+    operations = ir_json["operations"]
+    assert isinstance(schemas, dict) and isinstance(operations, list)
+    schemas["Choice"] = {
+        "kind": "union",
+        "tag": {"in": "body", "property": "kind"},
+        "id": "Choice",
+        "name": {"role": "schema", "segments": ["choice"]},
+        "variants": [],
+        "directions": [],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {"layer": "api", "pointer": "/schemas/Choice"},
+    }
+    get_task = next(operation for operation in operations if operation["id"] == "getTask")
+    get_task["responses"][0]["shape"] = "redirect"
+
+    assert _refusal_codes(ir_json) == {"schema.union.unsupported", "response.redirect.unsupported"}
+
+
 def test_binding_includes_the_contract_routes_and_adds_the_boundary_outermost() -> None:
     placement = importlib.import_module(_GOLDEN_PLACEMENT)
     bind: Callable[..., None] = placement.bind_tasks

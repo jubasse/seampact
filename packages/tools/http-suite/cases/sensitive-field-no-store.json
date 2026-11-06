@@ -1,0 +1,29 @@
+{
+  "id": "sensitive-field-no-store",
+  "title": "A response that carries a sensitive field is never stored",
+  "checks": ["CHK-026"],
+  "profiles": ["default"],
+  "apis": ["tasksResponses"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001/key",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "cache-control": {
+            "contains": ["no-store"]
+          }
+        },
+        "body": {
+          "noteId": "30000000-0000-4000-8000-000000000001"
+        }
+      }
+    }
+  ]
+}

@@ -27,6 +27,11 @@ use App\Generated\TasksDevices\Laravel\UnexpectedErrorListener as DevicesUnexpec
 use App\Generated\TasksOptionalAuth\Laravel\UnexpectedErrorListener as OptionalAuthUnexpectedErrorListener;
 use App\Generated\TasksOptionalAuth\Laravel\UserAuthenticateHook as OptionalAuthUserAuthenticateHook;
 use App\Generated\TasksOptionalAuth\WelcomeEndpoints;
+use App\Generated\TasksResponses\Laravel\TasksResponsesSeampactServiceProvider;
+use App\Generated\TasksResponses\Laravel\UnexpectedErrorListener as ResponsesUnexpectedErrorListener;
+use App\Generated\TasksResponses\Laravel\UserAuthenticateHook as ResponsesUserAuthenticateHook;
+use App\Generated\TasksResponses\NotesEndpoints as ResponsesNotesEndpoints;
+use App\Generated\TasksResponses\ResponsesEndpoints;
 use App\Generated\TasksServiceWrites\InternalWritesEndpoints;
 use App\Generated\TasksServiceWrites\Laravel\ServiceAuthenticateHook as WritesServiceAuthenticateHook;
 use App\Generated\TasksServiceWrites\Laravel\TasksServiceWritesSeampactServiceProvider;
@@ -40,6 +45,8 @@ use App\Http\Controllers\InternalController;
 use App\Http\Controllers\InternalWritesController;
 use App\Http\Controllers\NotesController;
 use App\Http\Controllers\PreferencesController;
+use App\Http\Controllers\ResponsesController;
+use App\Http\Controllers\ResponsesNotesController;
 use App\Http\Controllers\TasksController;
 use App\Http\Controllers\WelcomeController;
 use App\Suite\ChannelResolver;
@@ -133,6 +140,12 @@ final class SuiteServiceProvider extends ServiceProvider
         $this->app->bind(NotesEndpoints::class, NotesController::class);
         $this->app->bind(AbsoluteUrlsUserAuthenticateHook::class, UserHook::class);
         $this->app->bind(AbsoluteUrlsUnexpectedErrorListener::class, TasksUnexpectedErrors::class);
+
+        $this->app->bind(ResponsesEndpoints::class, ResponsesController::class);
+        $this->app->bind(ResponsesNotesEndpoints::class, ResponsesNotesController::class);
+        $this->app->bind(ResponsesUserAuthenticateHook::class, UserHook::class);
+        $this->app->bind(TasksResponsesSeampactServiceProvider::IDEMPOTENCY_STORE_KEY, FileIdempotencyStore::class);
+        $this->app->bind(ResponsesUnexpectedErrorListener::class, TasksUnexpectedErrors::class);
     }
 
     public function boot(): void

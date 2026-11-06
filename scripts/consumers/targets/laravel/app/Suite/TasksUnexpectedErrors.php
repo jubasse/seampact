@@ -8,6 +8,7 @@ use App\Generated\Tasks\Laravel\UnexpectedErrorListener;
 use App\Generated\TasksAbsoluteUrls\Laravel\UnexpectedErrorListener as AbsoluteUrlsUnexpectedErrorListener;
 use App\Generated\TasksDevices\Laravel\UnexpectedErrorListener as DevicesUnexpectedErrorListener;
 use App\Generated\TasksOptionalAuth\Laravel\UnexpectedErrorListener as OptionalAuthUnexpectedErrorListener;
+use App\Generated\TasksResponses\Laravel\UnexpectedErrorListener as ResponsesUnexpectedErrorListener;
 use App\Generated\TasksService\Laravel\UnexpectedErrorListener as ServiceUnexpectedErrorListener;
 use App\Generated\TasksServiceWrites\Laravel\UnexpectedErrorListener as ServiceWritesUnexpectedErrorListener;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +21,8 @@ final class TasksUnexpectedErrors implements
     ServiceWritesUnexpectedErrorListener,
     DevicesUnexpectedErrorListener,
     OptionalAuthUnexpectedErrorListener,
-    AbsoluteUrlsUnexpectedErrorListener
+    AbsoluteUrlsUnexpectedErrorListener,
+    ResponsesUnexpectedErrorListener
 {
     public function onUnexpectedError(UnexpectedFailure $failure): void
     {

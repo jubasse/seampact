@@ -13,6 +13,7 @@ from generated.tasks.fastapi import TasksHandlerFactories, bind_tasks
 from generated.tasks_absolute_urls.fastapi import TasksAbsoluteUrlsHandlerFactories, bind_tasks_absolute_urls
 from generated.tasks_devices.fastapi import TasksDevicesHandlerFactories, bind_tasks_devices
 from generated.tasks_optional_auth.fastapi import TasksOptionalAuthHandlerFactories, bind_tasks_optional_auth
+from generated.tasks_responses.fastapi import TasksResponsesHandlerFactories, bind_tasks_responses
 from generated.tasks_service.fastapi import TasksServiceHandlerFactories, bind_tasks_service
 from generated.tasks_service_writes.fastapi import TasksServiceWritesHandlerFactories, bind_tasks_service_writes
 from handlers import (
@@ -38,6 +39,8 @@ from hook_doubles import (
     TasksDecider,
     TasksUnexpectedErrors,
 )
+from responses_handlers import NotesHandlers as ResponsesNotesHandlers
+from responses_handlers import ResponsesHandlers
 from hooks import service_hook, user_hook
 from seampact_consumer_suite.boot_variant import (
     MISMATCHED_MOUNT,
@@ -152,6 +155,13 @@ def create_app() -> FastAPI:
         on_unexpected_error=TasksUnexpectedErrors,
     )
     _bind_security_apis(app)
+    bind_tasks_responses(
+        app,
+        handlers=TasksResponsesHandlerFactories(responses=ResponsesHandlers, notes=ResponsesNotesHandlers),
+        authenticate={USER_IDENTITY: user_hook},
+        idempotency_store=_idempotency_store,
+        on_unexpected_error=TasksUnexpectedErrors,
+    )
 
     return app
 

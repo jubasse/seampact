@@ -37,3 +37,8 @@ targets:
     use: pypi:seampact-ninja
     api: tasksAbsoluteUrls
     options: { views: sync }
+  - id: tasksResponses
+    out: tasks_responses
+    use: pypi:seampact-ninja
+    api: tasksResponses
+    options: { views: sync }

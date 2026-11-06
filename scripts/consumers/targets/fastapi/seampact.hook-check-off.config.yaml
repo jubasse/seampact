@@ -32,3 +32,7 @@ targets:
     out: tasks_absolute_urls
     use: pypi:seampact-fastapi
     api: tasksAbsoluteUrls
+  - id: tasksResponses
+    out: tasks_responses
+    use: pypi:seampact-fastapi
+    api: tasksResponses

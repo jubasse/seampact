@@ -2,8 +2,9 @@
 import { request as httpRequest, type IncomingMessage } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { BOOT_PROFILE } from "./boot-variant.js";
-import { loadScript, readHookCalls } from "./control-routes.js";
+import { loadScript, readHookCalls, readLogLines } from "./control-routes.js";
 import type { FormatReader } from "./format-reader.js";
+import { checkLogLines } from "./log-lines-check.js";
 import type { SentRequest } from "./operation-match.js";
 import { signRequestBody } from "./request-signature.js";
 import { checkResponse, type ReceivedResponse, readPointer } from "./response-check.js";
@@ -219,12 +220,16 @@ async function runStep(
 ): Promise<string[]> {
   const path = filledPath(step.request.path, scope, captureTargets);
   const target = `${path}${queryOf(step.request.query, path, scope)}`;
+  const linesBefore = await logLineCountBefore(step, context);
   const { response, readFailures } = readThroughFormat(
     await send(step, target, scope, context),
     { method: step.request.method, path },
     reader,
   );
-  const failures: string[] = [...readFailures];
+  const failures: string[] = [
+    ...readFailures,
+    ...(await logLinesFailures(step, scope, linesBefore, context)),
+  ];
 
   for (const [name, source] of Object.entries(step.capture ?? {})) {
     const value = capturedValue(source, response);
@@ -245,6 +250,38 @@ async function runStep(
 
     return [...failures, error.message];
   }
+}
+
+// The lines logged since the last script load, counted before a step that checks its own log lines.
+async function logLineCountBefore(step: SuiteStep, context: RunContext): Promise<number> {
+  if (step.expect.logLines === undefined) return 0;
+
+  return (await readLogLines(context.baseUrl, timeoutSignal(context))).length;
+}
+
+async function logLinesFailures(
+  step: SuiteStep,
+  scope: TemplateScope,
+  linesBefore: number,
+  context: RunContext,
+): Promise<string[]> {
+  const expectation = step.expect.logLines;
+
+  if (expectation === undefined) return [];
+
+  const stepLines = (await readLogLines(context.baseUrl, timeoutSignal(context))).slice(
+    linesBefore,
+  );
+  const filled = {
+    ...(expectation.contains === undefined
+      ? {}
+      : { contains: expectation.contains.map((text) => scope.fillText(text)) }),
+    ...(expectation.excludes === undefined
+      ? {}
+      : { excludes: expectation.excludes.map((text) => scope.fillText(text)) }),
+  };
+
+  return checkLogLines(filled, stepLines);
 }
 
 // A case written in bare terms sees a pack's response as the bare format would have written it.

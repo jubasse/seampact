@@ -275,7 +275,7 @@ describe("reference contract validates", () => {
 
   test("every file of the reference contract has a kind", () => {
     expect(yamlFiles.filter((f) => kindOf(f) === undefined)).toEqual([]);
-    expect(yamlFiles.length).toBe(11);
+    expect(yamlFiles.length).toBe(12);
   });
 
   test.each(yamlFiles.map((f) => [relative(dir, f), f]))("%s", (_, path) => {
@@ -777,6 +777,7 @@ describe("load then validate", () => {
         { api: "tasksDevices", diagnostics: [] },
         { api: "tasksOptionalAuth", diagnostics: [] },
         { api: "tasksAbsoluteUrls", diagnostics: [] },
+        { api: "tasksResponses", diagnostics: [] },
       ],
     });
   });

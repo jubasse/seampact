@@ -73,9 +73,18 @@ export interface StepRequest {
 }
 
 /**
+ * What the lines the app logged while a step ran must show (ADR 0015 "Control routes"): some line `contains` each
+ * text, and no line holds any text of `excludes`, such as a sensitive value the step sent through the boundary.
+ */
+export interface LogLinesExpectation {
+  readonly contains?: readonly string[];
+  readonly excludes?: readonly string[];
+}
+
+/**
  * What a response must show. `body` is a subset match: objects match member by member, arrays element by element
  * with the same length, other values by equality. `bodyText` is the exact text. `absent` lists JSON pointers the
- * body must hold nothing at.
+ * body must hold nothing at. `logLines` checks the lines the app logged while the step ran.
  */
 export interface StepExpectation {
   readonly status: number;
@@ -83,6 +92,7 @@ export interface StepExpectation {
   readonly body?: JsonValue;
   readonly bodyText?: string;
   readonly absent?: readonly string[];
+  readonly logLines?: LogLinesExpectation;
 }
 
 /**
@@ -204,10 +214,11 @@ const BOOT_MEMBERS = ["variant", "outcome", "diagnostic"];
 const STEP_MEMBERS = ["title", "request", "capture", "expect"];
 const REQUEST_MEMBERS = ["method", "path", "query", "headers", "body", "bodyText", "sign"];
 const SIGN_MEMBERS = ["scheme", "header", "secret", "ageSeconds"];
-const EXPECT_MEMBERS = ["status", "headers", "body", "bodyText", "absent"];
+const EXPECT_MEMBERS = ["status", "headers", "body", "bodyText", "absent", "logLines"];
 const BODY_CAPTURE_MEMBERS = ["body"];
 const HEADER_CAPTURE_MEMBERS = ["header", "pattern"];
 const HEADER_EXPECTATION_MEMBERS = ["equals", "contains", "excludes", "absent"];
+const LOG_LINES_MEMBERS = ["contains", "excludes"];
 const HOOK_CALL_MEMBERS = ["hook", "operation"];
 
 /** A case file that does not follow the format, named by its source and the JSON pointer of the fault. */
@@ -541,7 +552,45 @@ function readExpectation(reader: JsonReader, value: unknown, pointer: string): S
     ...(object.absent === undefined
       ? {}
       : { absent: readAbsentPointers(reader, object.absent, `${pointer}/absent`) }),
+    ...(object.logLines === undefined
+      ? {}
+      : { logLines: readLogLinesExpectation(reader, object.logLines, `${pointer}/logLines`) }),
   };
+}
+
+function readLogLinesExpectation(
+  reader: JsonReader,
+  value: unknown,
+  pointer: string,
+): LogLinesExpectation {
+  const object = objectAt(reader, value, pointer, LOG_LINES_MEMBERS);
+
+  if (object.contains === undefined && object.excludes === undefined) {
+    reader.fail(pointer, "a log lines expectation holds `contains`, `excludes` or both");
+  }
+
+  return {
+    ...(object.contains === undefined
+      ? {}
+      : { contains: readTexts(reader, object.contains, `${pointer}/contains`) }),
+    ...(object.excludes === undefined
+      ? {}
+      : { excludes: readTexts(reader, object.excludes, `${pointer}/excludes`) }),
+  };
+}
+
+function readTexts(reader: JsonReader, value: unknown, pointer: string): string[] {
+  const texts = arrayAt(reader, value, pointer);
+
+  if (texts.length === 0) reader.fail(pointer, "the list holds at least one text");
+
+  return texts.map((text, index) => {
+    const read = stringAt(reader, text, `${pointer}/${index}`);
+
+    if (read === "") reader.fail(`${pointer}/${index}`, "a text is not empty");
+
+    return read;
+  });
 }
 
 function readAbsentPointers(reader: JsonReader, value: unknown, pointer: string): string[] {

@@ -7,4 +7,5 @@ workspace:
     tasksDevices: ./tasks-devices/api.yaml
     tasksOptionalAuth: ./tasks-optional-auth/api.yaml
     tasksAbsoluteUrls: ./tasks-absolute-urls/api.yaml
+    tasksResponses: ./tasks-responses/api.yaml
   shared: ./shared/base.yaml

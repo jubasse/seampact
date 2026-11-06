@@ -1,0 +1,39 @@
+{
+  "id": "sensitive-field-never-logged",
+  "title": "A sensitive field the handler answers on a refused reply never reaches the app's log lines",
+  "checks": ["CHK-026"],
+  "profiles": ["default"],
+  "apis": ["tasksResponses"],
+  "script": {
+    "answers": {
+      "tasksResponses.keyNote": {
+        "status": 202,
+        "body": {
+          "noteId": "30000000-0000-4000-8000-000000000001",
+          "secret": "never-log-this-secret"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001/key",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 500,
+        "body": {
+          "code": "api.internal"
+        },
+        "logLines": {
+          "contains": ["tasksResponses.keyNote"],
+          "excludes": ["never-log-this-secret"]
+        }
+      }
+    }
+  ]
+}

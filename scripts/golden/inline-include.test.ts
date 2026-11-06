@@ -13,7 +13,7 @@ import { type ContractVariant, contractVariant, readContractTrees } from "./vari
 const compiler = await loadGoldenCompiler();
 const REFERENCE_ROOT = join(REPO_ROOT, "fixtures/reference");
 // Compiling every variant takes over 30 s on a loaded machine.
-const VARIANTS_TIMEOUT_MILLISECONDS = 60_000;
+const VARIANTS_TIMEOUT_MILLISECONDS = 120_000;
 const REFERENCE_FILES = [
   "workspace.yaml",
   "shared/base.yaml",
@@ -24,6 +24,7 @@ const REFERENCE_FILES = [
   "tasks-devices/api.yaml",
   "tasks-optional-auth/api.yaml",
   "tasks-absolute-urls/api.yaml",
+  "tasks-responses/api.yaml",
 ];
 const GOLDEN_APIS = [
   "tasks",
@@ -32,6 +33,7 @@ const GOLDEN_APIS = [
   "tasksDevices",
   "tasksOptionalAuth",
   "tasksAbsoluteUrls",
+  "tasksResponses",
 ];
 const VARIANT_COUNT = 60;
 const MINIMUM_MOVING_VARIANTS = 50;

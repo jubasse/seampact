@@ -180,6 +180,29 @@ def test_a_query_list_in_brackets_form_is_refused_by_name(repository_root: Path)
     assert _refusal_codes(ir_json) == {"query.list.brackets.unsupported"}
 
 
+def test_a_union_and_a_redirect_response_are_refused_by_name(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root)
+    schemas = ir_json["schemas"]
+    assert isinstance(schemas, dict)
+    schemas["Choice"] = {
+        "kind": "union",
+        "tag": {"in": "body", "property": "kind"},
+        "id": "Choice",
+        "name": {"role": "schema", "segments": ["choice"]},
+        "variants": [],
+        "directions": [],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {"layer": "api", "pointer": "/schemas/Choice"},
+    }
+    responses = _operation(ir_json, "getTask")["responses"]
+    assert isinstance(responses, list) and isinstance(responses[0], dict)
+    responses[0]["shape"] = "redirect"
+
+    assert _refusal_codes(ir_json) == {"schema.union.unsupported", "response.redirect.unsupported"}
+
+
 def test_the_forms_no_python_target_serves_are_refused_by_name(repository_root: Path) -> None:
     ir_json = _ir_json(repository_root)
     _operation(ir_json, "getTask")["upstream"] = ["billing"]

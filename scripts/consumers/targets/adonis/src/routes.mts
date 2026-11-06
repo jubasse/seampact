@@ -4,6 +4,7 @@ import type { HttpContext, Router } from "@adonisjs/core/http";
 import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
 import * as TasksAdonis from "../generated/server/tasks/index.js";
 import * as TasksDevicesAdonis from "../generated/server/tasksDevices/index.js";
+import * as TasksResponsesAdonis from "../generated/server/tasksResponses/index.js";
 import * as TasksServiceAdonis from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesAdonis from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -21,6 +22,7 @@ import {
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "./hooks.mjs";
+import { tasksResponsesHooks } from "./responses-handlers.mjs";
 import {
   type ControlReply,
   hookCallsReply,
@@ -29,6 +31,7 @@ import {
 } from "./suite-control.mjs";
 
 const controllers = () => import("./controllers.mjs");
+const responsesControllers = () => import("./responses-controllers.mjs");
 
 export function registerContractRoutes(router: Router): void {
   router.put(SCRIPT_ROUTE, ({ request, response }) =>
@@ -68,6 +71,16 @@ export function registerContractRoutes(router: Router): void {
       DevicesEndpoints: async () => ({ default: (await controllers()).DevicesController }),
     },
     hooks: tasksDevicesHooks(),
+  });
+
+  TasksResponsesAdonis.registerRoutes(router, {
+    controllers: {
+      ResponsesEndpoints: async () => ({
+        default: (await responsesControllers()).ResponsesController,
+      }),
+      NotesEndpoints: async () => ({ default: (await responsesControllers()).NotesController }),
+    },
+    hooks: tasksResponsesHooks(),
   });
 }
 
