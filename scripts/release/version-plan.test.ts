@@ -72,6 +72,34 @@ const RUNTIME_SOURCES: Record<string, string> = {
     "<?php\nfinal class RuntimeVersion\n{\n    public const VERSION = '0.0.0-dev';\n}\n",
 };
 
+const CONSUMER_POM = `<project>
+  <properties>
+    <seampact.version>0.0.0</seampact.version>
+  </properties>
+</project>
+`;
+
+// One generated file per golden tree, in the form its generator writes the generator version.
+const PYTHON_CONTRACT = 'API = Api(\n    api="tasks",\n    generated_by="0.0.0-dev",\n)\n';
+const PYTHON_PLACEMENT = 'GENERATED_BY: _typing.Final = "0.0.0-dev"\n';
+const PHP_CONTRACT =
+  "<?php\nfinal class TasksContract\n{\n    public const GENERATED_BY = '0.0.0-dev';\n}\n";
+const JAVA_BINDING =
+  'final class TasksSeampactBinding {\n    @Override\n    public String generatorVersion() {\n        return "0.0.0";\n    }\n}\n';
+
+const GOLDEN_SOURCES: Record<string, string> = {
+  "python/drf/drf_tests/golden/reference/tasks/contract.py": PYTHON_CONTRACT,
+  "python/drf/drf_tests/golden/reference/tasks/__init__.py": "",
+  "python/fastapi/fastapi_tests/golden/reference/tasks/fastapi.py": PYTHON_PLACEMENT,
+  "python/ninja/ninja_tests/golden/reference/tasks/contract.py": PYTHON_CONTRACT,
+  "php/laravel/tests/golden/Tasks/Laravel/TasksContract.php": PHP_CONTRACT,
+  "php/symfony/tests/golden/Tasks/Symfony/TasksContract.php": PHP_CONTRACT,
+  "jvm/seampact-spring-boot/src/test/golden/com/example/tasks/TasksSeampactBinding.java":
+    JAVA_BINDING,
+  "jvm/seampact-spring-boot/src/test/golden-opt-ins/com/example/optins/TasksSeampactBinding.java":
+    JAVA_BINDING,
+};
+
 const trees: string[] = [];
 
 afterEach(() => {
@@ -106,8 +134,11 @@ function developmentTree(): string {
 
   for (const [file, text] of Object.entries(RUNTIME_SOURCES)) writeTreeFile(root, file, text);
 
+  for (const [file, text] of Object.entries(GOLDEN_SOURCES)) writeTreeFile(root, file, text);
+
   writeTreeFile(root, ".changeset/config.json", CHANGESET_CONFIG);
   writeTreeFile(root, "jvm/gradle.properties", GRADLE_PROPERTIES);
+  writeTreeFile(root, "scripts/consumers/targets/spring-boot/maven/pom.xml", CONSUMER_POM);
   writeTreeFile(root, "python/hooks/pyproject.toml", HOOKS_PROJECT);
   writeTreeFile(root, "python/codegen/pyproject.toml", CODEGEN_PROJECT);
   writeTreeFile(root, "python/uv.lock", UV_LOCK);
@@ -181,6 +212,45 @@ describe("the release stamp", () => {
     );
     expect(readTreeFile(root, "php/codegen/runtime/RuntimeVersion.php")).toContain(
       `    public const VERSION = '${RELEASE}';`,
+    );
+  });
+
+  it("writes the generator version of every golden file, and that version only", () => {
+    const root = developmentTree();
+
+    stamp(root, RELEASE);
+
+    expect(readTreeFile(root, "python/drf/drf_tests/golden/reference/tasks/contract.py")).toBe(
+      PYTHON_CONTRACT.replace("0.0.0-dev", RELEASE),
+    );
+    expect(
+      readTreeFile(root, "python/fastapi/fastapi_tests/golden/reference/tasks/fastapi.py"),
+    ).toBe(PYTHON_PLACEMENT.replace("0.0.0-dev", RELEASE));
+    expect(readTreeFile(root, "php/laravel/tests/golden/Tasks/Laravel/TasksContract.php")).toBe(
+      PHP_CONTRACT.replace("0.0.0-dev", RELEASE),
+    );
+    expect(
+      readTreeFile(
+        root,
+        "jvm/seampact-spring-boot/src/test/golden/com/example/tasks/TasksSeampactBinding.java",
+      ),
+    ).toBe(JAVA_BINDING.replace('"0.0.0"', `"${RELEASE}"`));
+    expect(readTreeFile(root, "scripts/consumers/targets/spring-boot/maven/pom.xml")).toBe(
+      CONSUMER_POM.replace("0.0.0", RELEASE),
+    );
+  });
+
+  it("refuses a golden tree with no generator version it can read, by directory", () => {
+    const root = developmentTree();
+
+    writeTreeFile(
+      root,
+      "php/symfony/tests/golden/Tasks/Symfony/TasksContract.php",
+      '<?php\nfinal class TasksContract\n{\n    public const GENERATED_BY = "0.0.0-dev";\n}\n',
+    );
+
+    expect(() => releaseVersionEdits(root, RELEASE)).toThrow(
+      "php/symfony/tests/golden has no file the stamp can read GENERATED_BY from",
     );
   });
 
@@ -314,6 +384,15 @@ describe("the version check", () => {
       `php/codegen/runtime/RuntimeVersion.php: RuntimeVersion::VERSION is "0.0.0-dev", not "${RELEASE}"`,
     );
     expect(pending).toContain("jvm/gradle.properties: has no `version` property");
+    expect(pending).toContain(
+      `scripts/consumers/targets/spring-boot/maven/pom.xml: seampact.version is "0.0.0", not "${RELEASE}"`,
+    );
+    expect(pending).toContain(
+      `python/ninja/ninja_tests/golden/reference/tasks/contract.py: the generator version is "0.0.0-dev", not "${RELEASE}"`,
+    );
+    expect(pending).toContain(
+      `jvm/seampact-spring-boot/src/test/golden-opt-ins/com/example/optins/TasksSeampactBinding.java: generatorVersion() is "0.0.0", not "${RELEASE}"`,
+    );
     expect(pending).toContain(
       `python/codegen/pyproject.toml: requirement "seampact-hooks==0.0.0" does not pin ${RELEASE}`,
     );

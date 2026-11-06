@@ -18,6 +18,7 @@ import { checkPackageRules, formatViolation } from "./rules.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../..");
+const DEVELOPMENT_VERSION = "0.0.0";
 const fixture = (name: string, side: "pass" | "fail" | "empty-readme") =>
   checkPackageRules(join(HERE, "fixtures", name, side)).map(formatViolation);
 
@@ -301,7 +302,9 @@ describe("package rules", () => {
       "python/hooks/pyproject.toml",
     ];
 
-    for (const file of restored) copyFileSync(join(REPO, file), join(halfStamped, file));
+    // Each restored file at the development version, whatever version this checkout carries.
+    for (const edit of releaseVersionEdits(halfStamped, DEVELOPMENT_VERSION))
+      if (restored.includes(edit.file)) writeFileSync(join(halfStamped, edit.file), edit.after);
 
     const found = checkPackageRules(halfStamped).map(formatViolation);
 
