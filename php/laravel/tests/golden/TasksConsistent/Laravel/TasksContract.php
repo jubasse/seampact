@@ -2892,6 +2892,16 @@ final class TasksContract
                     ],
                     'query' => [
                         [
+                            'name' => 'state',
+                            'type' => ['kind' => 'array', 'items' => ['kind' => 'enum', 'enum' => 'TaskState']],
+                            'required' => false,
+                            'wire' => ['kind' => 'list', 'style' => 'form', 'explode' => true, 'brackets' => false],
+                            'origin' => [
+                                'layer' => 'api',
+                                'pointer' => '/surfaces/app/routes/channels/member/routes/tasks/ops/list/query/state?',
+                            ],
+                        ],
+                        [
                             'name' => 'cursor',
                             'type' => ['kind' => 'scalar', 'type' => 'string', 'refinements' => []],
                             'required' => false,
@@ -4598,7 +4608,7 @@ final class TasksContract
                     ],
                     'query' => [
                         'class' => 'Seampact\Golden\TasksConsistent\ListTasksQuery',
-                        'members' => ['cursor' => 'cursor', 'limit' => 'limit', 'sort' => 'sort'],
+                        'members' => ['state' => 'state', 'cursor' => 'cursor', 'limit' => 'limit', 'sort' => 'sort'],
                     ],
                 ],
                 'responses' => [200 => 'Seampact\Golden\TasksConsistent\ListTasksResponse200'],

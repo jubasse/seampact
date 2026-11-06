@@ -14,6 +14,7 @@ use Seampact\Golden\TasksConsistent\Laravel\TasksContract;
 use Seampact\Golden\TasksConsistent\Laravel\UserPrincipal;
 use Seampact\Laravel\Runtime\BlankStrings;
 use Seampact\Laravel\Runtime\BoundaryMark;
+use Seampact\Laravel\Runtime\EnumRule;
 use Seampact\Laravel\Runtime\FormSteps;
 use Seampact\Laravel\Runtime\FormatRule;
 use Seampact\Laravel\Runtime\HandlerTestRequest;
@@ -114,6 +115,15 @@ final class ListTasksRequest extends FormRequest
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
                 new FormatRule($input, Position::Member, FormatRule::UUID, BlankStrings::Every),
             ],
+            'query.state' => [
+                'bail',
+                new TypeRule($input, Position::Member, TypeRule::ARRAY, Presence::Optional, Nullability::NotNull),
+            ],
+            'query.state.*' => [
+                'bail',
+                new TypeRule($input, Position::Item, TypeRule::STRING, Presence::Required, Nullability::NotNull),
+                new EnumRule($input, Position::Item, ['open', 'done', 'archived']),
+            ],
             'query.cursor' => [
                 'bail',
                 new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Optional, Nullability::NotNull),
@@ -133,7 +143,7 @@ final class ListTasksRequest extends FormRequest
                 new StringRule($input, Position::Item, BlankStrings::Every, pattern: '/^(?:createdAt|-createdAt)$/uD'),
             ],
             'query' => [
-                new UnknownKeysRule($input, Position::Member, ['cursor', 'limit', 'sort']),
+                new UnknownKeysRule($input, Position::Member, ['state', 'cursor', 'limit', 'sort']),
             ],
         ];
     }
