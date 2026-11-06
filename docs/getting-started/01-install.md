@@ -43,6 +43,13 @@ npm install --save-dev @seampact/cli @seampact/codegen-ts @seampact/codegen-zod 
 
 pnpm and Yarn take the same names. Keep every `@seampact/*` package at the same version. Yarn Plug'n'Play is not supported.
 
+pnpm can hold back a package published in the last day (`minimumReleaseAge`). If a new release is not found, wait, or let pnpm take seampact at once in `pnpm-workspace.yaml`:
+
+```yaml
+minimumReleaseAgeExclude:
+  - "@seampact/*"
+```
+
 Start the project.
 
 ```sh
