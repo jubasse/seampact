@@ -195,6 +195,39 @@ final class KeptFormsTest extends TestCase
         self::assertSame([], KeptForms::handlerHeaders($ir->operations[0]));
     }
 
+    public function testAQueryListOfScalarsOrEnumsIsKeptInEitherFormAndAListOfObjectsIsRefusedByName(): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document(), ['getTask']);
+        $operation = is_array($document->operations) ? $document->operations[0] : null;
+        self::assertInstanceOf(\stdClass::class, $operation);
+        self::assertInstanceOf(\stdClass::class, $operation->params);
+        $repeat = ['kind' => 'list', 'style' => 'form', 'explode' => true, 'brackets' => false];
+        $comma = ['kind' => 'list', 'style' => 'form', 'explode' => false, 'brackets' => false];
+        $operation->params->query = [
+            self::queryParam('score', ['kind' => 'scalar', 'type' => 'integer', 'refinements' => new \stdClass()], $repeat),
+            self::queryParam('state', ['kind' => 'enum', 'enum' => 'TaskState'], $comma),
+        ];
+
+        $refusals = new Refusals('server', 'test', 'seampact/test');
+        new KeptForms(ReferenceIr::read($document), $refusals, new FixedReleases(null));
+        self::assertTrue($refusals->isEmpty());
+
+        $operation->params->query[] = self::queryParam('archives', ['kind' => 'ref', 'schema' => 'ArchiveTask'], $repeat);
+        self::assertSame(['param.query.structured.unsupported'], array_keys(self::refused($document, null)));
+    }
+
+    /**
+     * @param array<string, mixed> $items
+     * @param array<string, mixed> $wire
+     */
+    private static function queryParam(string $name, array $items, array $wire): \stdClass
+    {
+        $param = json_decode(json_encode(['name' => $name, 'required' => false, 'type' => ['kind' => 'array', 'items' => $items], 'wire' => $wire], JSON_THROW_ON_ERROR), false, 512, JSON_THROW_ON_ERROR);
+        self::assertInstanceOf(\stdClass::class, $param);
+
+        return $param;
+    }
+
     private static function member(\stdClass $object, string $name): \stdClass
     {
         $member = $object->{$name} ?? null;

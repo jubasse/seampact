@@ -60,6 +60,7 @@ final class KeptForms
     private const WIDE_FORMATS = ['int64', 'decimal'];
     private const JSON_MEDIA = 'application/json';
     private const PAGING_PARAMS_DERIVATION = 'paging.params';
+    private const QUERY_PART = 'query';
     private const TOP_LEVEL_POINTER = '/^\/[^\/]+$/D';
     // The slots an item, table or list envelope may write that the boundary fills.
     private const PAYLOAD_SLOT = 'payload';
@@ -784,9 +785,23 @@ final class KeptForms
         $description = "A {$part} parameter that is not a scalar or an enum";
         if (($param->derivedFrom->derivation ?? null) === self::PAGING_PARAMS_DERIVATION) {
             $this->pending(PendingForm::PagingParam, "param.{$part}.structured", "{$description}, which paging reads,", $at->below('type'));
-        } else {
-            $this->refusals->waiting("param.{$part}.structured", $description, $at->below('type'), Delivery::Consumer);
+
+            return;
         }
+
+        // A query list of scalars or enums is decoded item by item, in its repeat or comma form.
+        if ($part === self::QUERY_PART && self::isScalarList($param->type)) {
+            $this->readType($param->type, $at->below('type'));
+
+            return;
+        }
+
+        $this->refusals->waiting("param.{$part}.structured", $description, $at->below('type'), Delivery::Consumer);
+    }
+
+    private static function isScalarList(TypeUse $type): bool
+    {
+        return $type instanceof ArrayTypeUse && ($type->items instanceof ScalarTypeUse || $type->items instanceof EnumTypeUse);
     }
 
     private function readResponse(Response $response, IrPlace $at): void

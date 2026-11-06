@@ -74,4 +74,16 @@ final class QueryLinksTest extends TestCase
         self::assertSame(['a', 'b c'], WireValues::listItems(['a,b%20c'], $unexploded));
         self::assertSame(['a,b'], WireValues::listItems(['a%2Cb'], null));
     }
+
+    public function testEachItemOfAListIsReadByItsTypeInTheRepeatAndCommaForms(): void
+    {
+        $integers = ['kind' => 'array', 'items' => ['kind' => 'scalar', 'type' => 'integer']];
+        $repeat = ['kind' => 'list', 'explode' => true];
+        $comma = ['kind' => 'list', 'explode' => false];
+
+        self::assertSame([1, 20, 'ten'], WireValues::queryValue(WireValues::listItems(['1', '20', 'ten'], $repeat), $integers));
+        self::assertSame([1, 20, 'ten'], WireValues::queryValue(WireValues::listItems(['1,20,ten'], $comma), $integers));
+        self::assertSame([7], WireValues::queryValue(WireValues::listItems(['7'], $repeat), $integers));
+        self::assertSame(['open', 'done'], WireValues::queryValue(WireValues::listItems(['open', 'done'], $repeat), ['kind' => 'array', 'items' => ['kind' => 'enum', 'enum' => 'TaskState']]));
+    }
 }
