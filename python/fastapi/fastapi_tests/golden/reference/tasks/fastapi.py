@@ -90,7 +90,7 @@ from .operations import (
     UserCredentials,
 )
 
-GENERATED_BY: _typing.Final = "0.0.0-dev"
+GENERATED_BY: _typing.Final = "1.0.0"
 
 
 PLACEMENT: _typing.Final = _runtime.ApiPlacement(

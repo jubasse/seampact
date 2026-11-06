@@ -10,7 +10,7 @@ class TasksServiceBoundary(_ninja_runtime.NinjaContractBoundary):
     """The boundary middleware of api 'tasksService'."""
 
     api = "tasksService"
-    generated_by = "0.0.0-dev"
+    generated_by = "1.0.0"
     contract = _contract.CONTRACT
     responses = "strict"
     body_validation = False

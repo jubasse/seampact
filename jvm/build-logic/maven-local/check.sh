@@ -15,7 +15,10 @@ fi
 jvm_directory=$(cd "$(dirname "$0")/../.." && pwd)
 local_repository=$(mkdir -p "$1" && cd "$1" && pwd)
 group=io.github.jubasse
-version=0.0.0
+# The version the modules publish at: the `version` the release stamp writes to gradle.properties, 0.0.0 without it
+# (PublishedModulePlugin).
+version=$(sed -n 's/^version=//p' "$jvm_directory/gradle.properties")
+version=${version:-0.0.0}
 gradle_plugin_id=io.github.jubasse.seampact
 
 modules=$(sed -n 's/^include("\(seampact-[a-z-]*\)")$/\1/p' "$jvm_directory/settings.gradle.kts" | grep -vx seampact-compiler)
