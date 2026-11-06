@@ -50,6 +50,16 @@ pagings:
 
 The body is `{ "items": [...], "page": 2, "totalPages": 3 }`.
 
+A style can take its cursor in two parameters, as Stripe does:
+
+```yaml
+    request:
+      after: { query: starting_after }
+      before: { query: ending_before }
+```
+
+A request sends one of the two. Both answer `400`.
+
 ## Use it on a list
 
 ```yaml
@@ -63,7 +73,7 @@ notes:
       sortable: [createdAt, title]
 ```
 
-- `maxLimit` is required for a style with a `limit`. A larger `limit` answers `400`.
+- `maxLimit` is required for a style with a `limit`. A larger `limit` answers `400`. With `overLimit: clamp` it is served as `maxLimit` instead.
 - `defaultLimit` is the page size when the client sends none.
 - `sortable` lists the fields a client may sort by: `?sort=-createdAt,title`. It needs a `sort` in the style.
 

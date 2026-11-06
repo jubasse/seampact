@@ -191,7 +191,7 @@ def user_hook(token: Annotated[str | None, Security(bearer)]) -> UserHook:
 
 - `auto_error=False` hands `None` to the factory, so a caller with another credential of the identity (a session cookie) still reaches the hook. The credentials the contract declares are in `request.credentials`.
 - A scheme that raises `HTTPException` 401 or 403 answers the contract's `unauthenticated` or `forbidden` error.
-- A decider has `decide(request)` and returns `decision.Allowed()` or `decision.Denied(deny=ErrorCodeWithParams(code=...))`. A scope resolver has `resolve_scope(request)` and returns `scope_resolution.Resolved(resolved=ResolvedScope(...))` or `scope_resolution.Denied(deny=...)`. They come from `seampact.hooks`.
+- A decider has `decide(request)` and returns `decision.Allowed()` or `decision.Denied(deny=ErrorCodeWithParams(code=...))`. A scope resolver has `resolve_scope(request)` and returns `scope_resolution.Resolved(resolved=ResolvedScope(...))` or `scope_resolution.Denied(deny=...)`. They come from `seampact.hooks`. The `params` of a right or rule in the request is an instance of its generated params class (a Pydantic model), not a dict: read `request.params.allowed`.
 - An idempotency store is a factory for an object with `begin`, `complete` and `abandon` (`seampact.hooks.IdempotencyStore`). Pass it as `idempotency_store=`. Use it when an operation is idempotent.
 - The unexpected-error listener has `on_unexpected_error(failure)`. It hears each 500 the api answers.
 - FastAPI has no CSRF layer. The boundary checks the contract's CSRF header for a caller with a cookie only.

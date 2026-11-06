@@ -206,7 +206,7 @@ def user_hook(request: HttpRequest) -> UserHook:
     return UserHook(getattr(request, "auth", None))
 ```
 
-- A decider has `decide(request)` and returns `decision.Allowed()` or `decision.Denied(deny=ErrorCodeWithParams(code=...))`. A scope resolver has `resolve_scope(request)` and returns `scope_resolution.Resolved(resolved=ResolvedScope(...))` or `scope_resolution.Denied(deny=...)`. They come from `seampact.hooks`.
+- A decider has `decide(request)` and returns `decision.Allowed()` or `decision.Denied(deny=ErrorCodeWithParams(code=...))`. A scope resolver has `resolve_scope(request)` and returns `scope_resolution.Resolved(resolved=ResolvedScope(...))` or `scope_resolution.Denied(deny=...)`. They come from `seampact.hooks`. The `params` of a right or rule in the request is an instance of its generated params class (a Pydantic model), not a dict: read `request.params.allowed`.
 - An idempotency store has `begin`, `complete` and `abandon` (`seampact.hooks.IdempotencyStore`). Pass its factory as `idempotency_store`. Use it when an operation is idempotent.
 - The unexpected-error listener has `on_unexpected_error(failure)`. It hears each 500 the api answers.
 - To verify a signed webhook, call `seampact-signed-webhooks` in the authenticate hook. The raw body is `request.signature.raw_body`; `request.signature` is `None` on an unsigned route. `TemplateSignatureVerifier` checks a template signature. A signature your application verifies is refused (`signature.application.unsupported`).

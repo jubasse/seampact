@@ -48,6 +48,18 @@ notes:
 
 `field` is the property of `Note` the version is compared with. Seampact adds `expectedVersion` to the input: do not declare it in `UpdateNote`.
 
+Every response that carries a note writes its `ETag` from `field`.
+
+To send the version in the `If-Match` header instead, write `version: header.If-Match`:
+
+```yaml
+concurrency: { version: header.If-Match, field: version }
+```
+
+- A write without the header, or with an empty one, answers `428`.
+- A stale tag answers `412`. The handler returns `PreconditionFailed`.
+- The tag can be strong (`"7"`) or weak (`W/"7"`). The handler receives the version unquoted: `7`.
+
 ## Cache a read
 
 ```yaml
