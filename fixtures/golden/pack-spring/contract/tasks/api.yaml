@@ -44,6 +44,7 @@ surfaces:
                   paging: { springPage: { maxLimit: 50 } }
                   sortable: [createdAt]
                   filteredBy: tasks.read
+                  query: { state?: { type: array, items: { enum: TaskState } } }
                 get: {}
                 create:
                   input: CreateTask
