@@ -47,3 +47,15 @@ targets:
     options: { package: com.example.tasksresponses.api, springSecurity: false }
     artefacts:
       bootCheck: { frameworkRoutes: false }
+  - id: tasksPaging
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksPaging
+    options: { package: com.example.taskspaging.api, springSecurity: false }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksSplitSort
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksSplitSort
+    options: { package: com.example.taskssplitsort.api, springSecurity: false }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }

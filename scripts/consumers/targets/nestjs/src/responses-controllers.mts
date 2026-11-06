@@ -14,7 +14,7 @@ export class ResponsesController implements TasksResponsesNest.ResponsesEndpoint
 }
 
 @Controller()
-export class NotesController implements TasksResponsesNest.NotesEndpoints {
+export class ResponsesNotesController implements TasksResponsesNest.NotesEndpoints {
   @TasksResponsesNest.getNote()
   getNote(@TasksResponsesNest.getNote.input() input: TasksResponses.GetNoteInput) {
     return tasksResponsesHandlers.getNote(input);

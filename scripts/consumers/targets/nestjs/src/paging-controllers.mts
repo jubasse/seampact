@@ -6,7 +6,7 @@ import type * as TasksPaging from "../generated/types/tasksPaging/index.js";
 import { tasksPagingHandlers } from "./paging-handlers.mjs";
 
 @Controller()
-export class NotesController implements TasksPagingNest.NotesEndpoints {
+export class PagingNotesController implements TasksPagingNest.NotesEndpoints {
   @TasksPagingNest.listNotes()
   listNotes(@TasksPagingNest.listNotes.input() input: TasksPaging.ListNotesInput) {
     return tasksPagingHandlers.listNotes(input);

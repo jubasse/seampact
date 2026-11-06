@@ -7,8 +7,8 @@ import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-
 import Fastify, { type FastifyError, type FastifyReply, type FastifyRequest } from "fastify";
 import * as TasksFastify from "../generated/server/tasks/index.js";
 import * as TasksDevicesFastify from "../generated/server/tasksDevices/index.js";
-import * as TasksResponsesFastify from "../generated/server/tasksResponses/index.js";
 import * as TasksPagingFastify from "../generated/server/tasksPaging/index.js";
+import * as TasksResponsesFastify from "../generated/server/tasksResponses/index.js";
 import * as TasksServiceFastify from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesFastify from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -32,8 +32,8 @@ import {
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "../src/hooks.mjs";
-import { tasksResponsesHandlers, tasksResponsesHooks } from "../src/responses-handlers.mjs";
 import { tasksPagingHandlers, tasksPagingHooks } from "../src/paging-handlers.mjs";
+import { tasksResponsesHandlers, tasksResponsesHooks } from "../src/responses-handlers.mjs";
 import {
   type ControlReply,
   hookCallsReply,

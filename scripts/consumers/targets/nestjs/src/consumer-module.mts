@@ -3,8 +3,8 @@
 import { Module } from "@nestjs/common";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksDevicesNest from "../generated/server/tasksDevices/index.js";
-import * as TasksResponsesNest from "../generated/server/tasksResponses/index.js";
 import * as TasksPagingNest from "../generated/server/tasksPaging/index.js";
+import * as TasksResponsesNest from "../generated/server/tasksResponses/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesNest from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -28,15 +28,15 @@ import {
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "./hooks.mjs";
-import { NotesController, ResponsesController } from "./responses-controllers.mjs";
-import { tasksResponsesHooks } from "./responses-handlers.mjs";
 import {
   CappedController,
   ChangesController,
   EventsController,
-  NotesController,
+  PagingNotesController,
 } from "./paging-controllers.mjs";
 import { tasksPagingHooks } from "./paging-handlers.mjs";
+import { ResponsesController, ResponsesNotesController } from "./responses-controllers.mjs";
+import { tasksResponsesHooks } from "./responses-handlers.mjs";
 import {
   PatternedRouteController,
   SuiteControlController,
@@ -69,8 +69,8 @@ const healthControllers = leavesOutHealthHandler()
     InternalWritesController,
     DevicesController,
     ResponsesController,
-    NotesController,
-    NotesController,
+    ResponsesNotesController,
+    PagingNotesController,
     ChangesController,
     CappedController,
     EventsController,

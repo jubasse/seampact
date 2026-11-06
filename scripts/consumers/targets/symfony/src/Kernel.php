@@ -21,6 +21,7 @@ use App\Generated\TasksPaging\Symfony\TasksPagingRouteLoader;
 use App\Generated\TasksPaging\Symfony\TasksPagingSeampactBundle;
 use App\Generated\TasksResponses\Symfony\TasksResponsesRouteLoader;
 use App\Generated\TasksResponses\Symfony\TasksResponsesSeampactBundle;
+use App\Generated\TasksResponses\Symfony\UserAuthenticateHook as ResponsesUserAuthenticateHook;
 use App\Generated\TasksService\Symfony\TasksServiceRouteLoader;
 use App\Generated\TasksService\Symfony\TasksServiceSeampactBundle;
 use App\Generated\TasksServiceWrites\Symfony\TasksServiceWritesRouteLoader;
@@ -85,6 +86,7 @@ final class Kernel extends BaseKernel
     private const USER_HOOKS_OUTSIDE_TASKS = [
         'tasksOptionalAuth' => OptionalAuthUserAuthenticateHook::class,
         'tasksAbsoluteUrls' => AbsoluteUrlsUserAuthenticateHook::class,
+        'tasksResponses' => ResponsesUserAuthenticateHook::class,
     ];
 
     public function registerBundles(): iterable

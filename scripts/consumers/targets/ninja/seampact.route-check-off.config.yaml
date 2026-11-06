@@ -54,3 +54,19 @@ targets:
     options: { views: sync }
     artefacts:
       bootCheck: { frameworkRoutes: false }
+  - id: tasksPaging
+    out: tasks_paging
+    use: pypi:seampact-ninja
+    api: tasksPaging
+    # The changes-since feed carries the complete page fact, which this target refuses by name in 1.0.
+    operations: { exclude: [listChanges, listEvents] }
+    options: { views: sync }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksSplitSort
+    out: tasks_split_sort
+    use: pypi:seampact-ninja
+    api: tasksSplitSort
+    options: { views: sync }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }

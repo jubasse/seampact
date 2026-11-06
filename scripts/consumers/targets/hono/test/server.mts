@@ -9,8 +9,8 @@ import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import * as TasksHono from "../generated/server/tasks/index.js";
 import * as TasksDevicesHono from "../generated/server/tasksDevices/index.js";
-import * as TasksResponsesHono from "../generated/server/tasksResponses/index.js";
 import * as TasksPagingHono from "../generated/server/tasksPaging/index.js";
+import * as TasksResponsesHono from "../generated/server/tasksResponses/index.js";
 import * as TasksServiceHono from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesHono from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -34,8 +34,8 @@ import {
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "../src/hooks.mjs";
-import { tasksResponsesHandlers, tasksResponsesHooks } from "../src/responses-handlers.mjs";
 import { tasksPagingHandlers, tasksPagingHooks } from "../src/paging-handlers.mjs";
+import { tasksResponsesHandlers, tasksResponsesHooks } from "../src/responses-handlers.mjs";
 import {
   type ControlReply,
   hookCallsReply,
