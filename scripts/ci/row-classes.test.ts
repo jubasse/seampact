@@ -35,10 +35,8 @@ const SPRING_CONSUMER_POST_MERGE_ROWS: readonly MatrixRow[] = [
 // only on its failure history: it fails here until the table moves with it.
 const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly MatrixRow[]>>>> = {
   "p2-golden.yml": {
-    determinism: [
-      { os: "ubuntu-latest", tz: "Pacific/Kiritimati", lang: "tr_TR.UTF-8" },
-      { os: "windows-latest", tz: "Pacific/Auckland", lang: "tr_TR.UTF-8" },
-    ],
+    determinism: [{ os: "ubuntu-latest", tz: "Pacific/Kiritimati", lang: "tr_TR.UTF-8" }],
+    "determinism-queue": [{ os: "windows-latest", tz: "Pacific/Auckland", lang: "tr_TR.UTF-8" }],
     "determinism-post-merge": [
       { os: "ubuntu-latest", tz: "UTC", lang: "en_US.UTF-8" },
       { os: "windows-latest", tz: "UTC", lang: "en_US.UTF-8" },
@@ -49,10 +47,8 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     ],
   },
   "p3-dist.yml": {
-    tarball: [
-      { os: "ubuntu-latest", tz: "UTC", lang: "en_US.UTF-8" },
-      { os: "windows-latest", tz: "Pacific/Auckland", lang: "en_US.UTF-8" },
-    ],
+    tarball: [{ os: "ubuntu-latest", tz: "UTC", lang: "en_US.UTF-8" }],
+    "tarball-queue": [{ os: "windows-latest", tz: "Pacific/Auckland", lang: "en_US.UTF-8" }],
     "tarball-drift": [{ os: "macos-latest", tz: "Asia/Kolkata", lang: "tr_TR.UTF-8" }],
   },
   "p3-binary.yml": {

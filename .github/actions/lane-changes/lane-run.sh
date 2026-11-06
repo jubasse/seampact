@@ -18,10 +18,12 @@ docs_site_pattern='^packages/tools/docs-site/'
 # Package tests and their support files: only the `ci` workflow, which always runs, runs them; no package build
 # includes them.
 package_test_pattern='^packages/.*(\.test\.ts|\.test-support\.ts|/test-support\.ts)$'
+# Package tests a lane runs itself: the hooks tests (p4-hooks-native) and the reference tarball writer (p3-dist).
+lane_test_pattern='^packages/runtime/hooks/|^packages/core/compiler/src/bundle/reference-tarball\.test-support\.ts$'
 
 is_documentation() {
   [[ "$1" =~ $docs_site_pattern ]] && return 0
-  [[ "$1" =~ $package_test_pattern ]] && return 0
+  [[ "$1" =~ $package_test_pattern ]] && ! [[ "$1" =~ $lane_test_pattern ]] && return 0
 
   [[ "$1" =~ $documentation_pattern ]] && ! [[ "$1" =~ $read_by_tests_pattern ]]
 }

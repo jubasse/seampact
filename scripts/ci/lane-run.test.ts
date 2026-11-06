@@ -93,6 +93,16 @@ describe("the package tests", () => {
     ).toBe("true");
   });
 
+  it.each([
+    ["the hooks tests", ["packages/runtime/hooks/src/hooks.test.ts"]],
+    [
+      "the reference tarball writer",
+      ["packages/core/compiler/src/bundle/reference-tarball.test-support.ts"],
+    ],
+  ])("wake the lane that runs %s itself", (_label, changedPaths) => {
+    expect(decideLaneRun(EVERY_PATH, changedPaths)).toBe("true");
+  });
+
   it("are code outside the packages", () => {
     expect(decideLaneRun(EVERY_PATH, ["scripts/consumers/cli.test.ts"])).toBe("true");
   });
