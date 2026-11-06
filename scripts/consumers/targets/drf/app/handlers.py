@@ -1,6 +1,8 @@
 """The developer's handlers of every operation of the reference contract's apis, each answering the loaded script
 when it says so, and the factories SEAMPACT names, which build them per request."""
 
+import uuid
+
 from django.http import HttpRequest
 from generated.tasks import operations as tasks
 from generated.tasks.schemas import Preferences, Task, TaskSearchResult, TaskState
@@ -30,7 +32,7 @@ from sample_data import (
     task_of,
     with_next_version,
 )
-from seampact_consumer_suite.scripted_answers import scripted_answer
+from seampact_consumer_suite.scripted_answers import scripted_answer, text_member
 
 _OK: int = 200
 _SERVICE_API: str = "tasksService"
