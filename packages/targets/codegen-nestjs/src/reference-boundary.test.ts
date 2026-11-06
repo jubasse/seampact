@@ -175,20 +175,21 @@ describe("an api with only public operations asks for no hooks", () => {
   );
 });
 
-// The rights-version header (CHK-013) is the handler's: the boundary names it in a generation warning, it does not
-// compare If-Rights-Version or write X-Rights-Version.
+// The rights-version header (CHK-013) answers on the response, which no handler can write: generation refuses it by
+// name at its declaration rather than drop it.
 describe("the rights-version header", () => {
-  test("is left to the handler with a named warning, not refused", async () => {
+  test("is refused by name at generation", async () => {
     const outcome = await generateWithRightsVersionHeader(nestjsTarget, {
       links: await referenceLinks(PROJECT, "tasksService"),
       outputDirectory: referenceServerOutput(PROJECT, "tasksService"),
     });
 
     expect(outcome).toMatchObject({
-      status: "generated",
-      warnings: expect.arrayContaining([
+      status: "refused",
+      refusals: expect.arrayContaining([
         expect.objectContaining({
-          code: "identity.headers.handler",
+          code: "identity.response.header.unsupported",
+          member: "/headers/rightsVersion",
           operation: RIGHTS_VERSION_OPERATION,
         }),
       ]),
