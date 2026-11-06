@@ -1,0 +1,67 @@
+# tasks-paging/api.yaml
+api:
+  name: tasksPaging
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Notes read through a changes feed, a Stripe-style list and a clamped list that reports its limit.
+
+pagings:
+  changes:
+    request:
+      since: { query: since }
+      limit: { query: limit }
+    response:
+      body: { items: $items, next: $nextSince, complete: $complete, limit: $limit }
+  stripeList:
+    request:
+      after: { query: starting_after }
+      before: { query: ending_before }
+      limit: { query: limit }
+    response:
+      body: { object: list, data: $items, has_more: $more, url: $path }
+  cappedPages:
+    request:
+      page: { query: page }
+      limit: { query: limit }
+    response:
+      body: { data: $items, has_more: $more, limit: $limit }
+
+schemas:
+  NoteId: { type: string, format: uuid }
+  Note:
+    type: object
+    required: [noteId, text]
+    properties:
+      noteId: NoteId
+      text: { type: string, minLength: 1, maxLength: 500 }
+
+surfaces:
+  notes:
+    prefix: /paging/v{version}
+    identity: user
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list: { paging: { stripeList: { maxLimit: 10 } } }
+      capped:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list: { paging: { cappedPages: { maxLimit: 10, overLimit: clamp } } }
+      changes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list: { paging: { changes: { maxLimit: 10, overLimit: clamp } } }
+      events:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list: { paging: { changes: { maxLimit: 10, token: instant } } }

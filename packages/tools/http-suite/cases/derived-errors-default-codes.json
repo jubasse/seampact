@@ -1,0 +1,176 @@
+{
+  "id": "derived-errors-default-codes",
+  "title": "Each derived error of an api without a pack or a renamed role answers its role's default code",
+  "checks": ["CHK-110"],
+  "profiles": ["default"],
+  "apis": ["tasksResponses"],
+  "script": {
+    "answers": {
+      "tasksResponses.keyNote": {
+        "status": 299,
+        "body": {
+          "noteId": "30000000-0000-4000-8000-000000000001"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "title": "schemaInvalid",
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/notes/not-a-uuid",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid"
+        }
+      }
+    },
+    {
+      "title": "unauthenticated",
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001"
+      },
+      "expect": {
+        "status": 401,
+        "body": {
+          "code": "api.unauthenticated"
+        }
+      }
+    },
+    {
+      "title": "csrfInvalid",
+      "request": {
+        "method": "POST",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001/save",
+        "headers": {
+          "cookie": "__Host-session=session-1",
+          "idempotency-key": "{{uuid:csrf}}"
+        },
+        "body": {
+          "text": "Cookie write"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "body": {
+          "code": "api.csrf_invalid"
+        }
+      }
+    },
+    {
+      "title": "notFound",
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/unknown",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 404,
+        "body": {
+          "code": "api.not_found"
+        }
+      }
+    },
+    {
+      "title": "payloadTooLarge",
+      "request": {
+        "method": "POST",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001/save",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:large}}"
+        },
+        "body": {
+          "text": "{{filler:1100000}}"
+        }
+      },
+      "expect": {
+        "status": 413,
+        "body": {
+          "code": "api.payload_too_large"
+        }
+      }
+    },
+    {
+      "title": "unsupportedMediaType",
+      "request": {
+        "method": "POST",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001/save",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:media}}",
+          "content-type": "text/plain"
+        },
+        "bodyText": "text"
+      },
+      "expect": {
+        "status": 415,
+        "body": {
+          "code": "api.unsupported_media_type"
+        }
+      }
+    },
+    {
+      "title": "a first write with the reused key",
+      "request": {
+        "method": "POST",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001/save",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:reused}}"
+        },
+        "body": {
+          "text": "First body"
+        }
+      },
+      "expect": {
+        "status": 200
+      }
+    },
+    {
+      "title": "idempotencyKeyReused",
+      "request": {
+        "method": "POST",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001/save",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:reused}}"
+        },
+        "body": {
+          "text": "Other body"
+        }
+      },
+      "expect": {
+        "status": 422,
+        "body": {
+          "code": "api.idempotency_key_reused"
+        }
+      }
+    },
+    {
+      "title": "undeclaredStatus",
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001/key",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 500,
+        "body": {
+          "code": "api.internal"
+        }
+      }
+    }
+  ]
+}

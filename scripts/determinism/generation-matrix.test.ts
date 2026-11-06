@@ -37,6 +37,9 @@ const REFERENCE_FILES = [
   "tasks-devices/api.yaml",
   "tasks-optional-auth/api.yaml",
   "tasks-absolute-urls/api.yaml",
+  "tasks-responses/api.yaml",
+  "tasks-paging/api.yaml",
+  "tasks-split-sort/api.yaml",
 ];
 const INCLUDED_FORM_SEED = 7;
 const OTHER_ENVIRONMENT = { TZ: "Pacific/Kiritimati", LANG: "tr_TR.UTF-8", LC_ALL: "tr_TR.UTF-8" };

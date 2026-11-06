@@ -9,6 +9,8 @@ import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import * as TasksHono from "../generated/server/tasks/index.js";
 import * as TasksDevicesHono from "../generated/server/tasksDevices/index.js";
+import * as TasksPagingHono from "../generated/server/tasksPaging/index.js";
+import * as TasksResponsesHono from "../generated/server/tasksResponses/index.js";
 import * as TasksServiceHono from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesHono from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -32,6 +34,8 @@ import {
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "../src/hooks.mjs";
+import { tasksPagingHandlers, tasksPagingHooks } from "../src/paging-handlers.mjs";
+import { tasksResponsesHandlers, tasksResponsesHooks } from "../src/responses-handlers.mjs";
 import {
   type ControlReply,
   hookCallsReply,
@@ -57,7 +61,9 @@ async function renderedByAnApi(c: Context, error: Error): Promise<Response | und
     (await TasksHono.renderPreRoutingError(c, error)) ??
     (await TasksServiceHono.renderPreRoutingError(c, error)) ??
     (await TasksServiceWritesHono.renderPreRoutingError(c, error)) ??
-    (await TasksDevicesHono.renderPreRoutingError(c, error))
+    (await TasksDevicesHono.renderPreRoutingError(c, error)) ??
+    (await TasksResponsesHono.renderPreRoutingError(c, error)) ??
+    (await TasksPagingHono.renderPreRoutingError(c, error))
   );
 }
 
@@ -105,10 +111,30 @@ export async function startServer(): Promise<RunningServer> {
     hooks: tasksDevicesHooks(),
     clientAddress,
   });
+  TasksResponsesHono.registerRoutes(app, {
+    handlers: {
+      ResponsesEndpoints: tasksResponsesHandlers,
+      NotesEndpoints: tasksResponsesHandlers,
+    },
+    hooks: tasksResponsesHooks(),
+    clientAddress,
+  });
+  TasksPagingHono.registerRoutes(app, {
+    handlers: {
+      NotesEndpoints: tasksPagingHandlers,
+      ChangesEndpoints: tasksPagingHandlers,
+      CappedEndpoints: tasksPagingHandlers,
+      EventsEndpoints: tasksPagingHandlers,
+    },
+    hooks: tasksPagingHooks(),
+    clientAddress,
+  });
   TasksHono.checkFrameworkRoutes(app);
   TasksServiceHono.checkFrameworkRoutes(app);
   TasksServiceWritesHono.checkFrameworkRoutes(app);
   TasksDevicesHono.checkFrameworkRoutes(app);
+  TasksResponsesHono.checkFrameworkRoutes(app);
+  TasksPagingHono.checkFrameworkRoutes(app);
 
   const { server, port } = await listening(app);
 

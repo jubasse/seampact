@@ -31,6 +31,9 @@ test("reference contract loads and validates", () => {
     ["tasksDevices", []],
     ["tasksOptionalAuth", []],
     ["tasksAbsoluteUrls", []],
+    ["tasksResponses", []],
+    ["tasksPaging", []],
+    ["tasksSplitSort", []],
   ]);
 });
 

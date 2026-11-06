@@ -2,7 +2,7 @@
 
 ## Worked example: the reference tasks api
 
-A workspace of six apis: a product api with a tenant-scoped collection under rights, a single owned by the caller, a signed webhook surface, and a service api whose route relays a public operation; then four small apis, one per security form: a service write, a device token, optional auth and absolute URLs. Schemas are kept short; their language is ADR 0003.
+A workspace of nine apis: a product api with a tenant-scoped collection under rights, a single owned by the caller, a signed webhook surface, and a service api whose route relays a public operation; then four small apis, one per security form: a service write, a device token, optional auth and absolute URLs; one api of response forms: several successes on one route, every cache directive, a sensitive field, a deprecated route and an If-Match version; and two paging apis, a changes feed beside a Stripe-style list, and GitHub-style pages. Schemas are kept short; their language is ADR 0003.
 
 ```yaml
 # workspace.yaml
@@ -14,6 +14,9 @@ workspace:
     tasksDevices: ./tasks-devices/api.yaml
     tasksOptionalAuth: ./tasks-optional-auth/api.yaml
     tasksAbsoluteUrls: ./tasks-absolute-urls/api.yaml
+    tasksResponses: ./tasks-responses/api.yaml
+    tasksPaging: ./tasks-paging/api.yaml
+    tasksSplitSort: ./tasks-split-sort/api.yaml
   shared: ./shared/base.yaml
 ```
 
@@ -426,6 +429,197 @@ surfaces:
         ops: [list, get]
 ```
 
+```yaml
+# tasks-responses/api.yaml
+api:
+  name: tasksResponses
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Notes whose routes answer several successes, cache directives, a sensitive field, a deprecation and If-Match.
+
+conventions:
+  cache:
+    families:
+      everyDirective:
+        maxAge: 60s
+        sharedMaxAge: 120s
+        staleWhileRevalidate: 30s
+        staleIfError: 1h
+        immutable: true
+        noCache: true
+        mustRevalidate: true
+
+schemas:
+  NoteId: { type: string, format: uuid }
+  Note:
+    type: object
+    required: [noteId, text, revision]
+    properties:
+      noteId: NoteId
+      text: { type: string, minLength: 1, maxLength: 500 }
+      revision: { type: integer, minimum: 0 }
+  EditNote:
+    type: object
+    required: [text]
+    properties:
+      text: { type: string, minLength: 1, maxLength: 500 }
+  NoteKey:
+    type: object
+    required: [noteId, secret]
+    properties:
+      noteId: NoteId
+      secret: { type: string, sensitive: true }
+
+surfaces:
+  responses:
+    prefix: /responses/v{version}
+    identity: user
+    routes:
+      digest:
+        method: get
+        access: { public: "The digest is the same for every reader." }
+        cache: { freshness: everyDirective, anonymous: public }
+        output: Note
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        concurrency: { version: header.If-Match, field: revision }
+        ops:
+          get: { cache: { freshness: everyDirective } }
+          update: { input: EditNote }
+        member:
+          routes:
+            save:
+              method: post
+              input: EditNote
+              responses:
+                200: { body: Note }
+                201: { body: Note }
+            key:
+              method: get
+              output: NoteKey
+            legacy:
+              method: get
+              output: Note
+              deprecated: { since: '2026-12-31', sunset: '2027-06-30', successor: getNote }
+```
+
+```yaml
+# tasks-paging/api.yaml
+api:
+  name: tasksPaging
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Notes read through a changes feed, a Stripe-style list and a clamped list that reports its limit.
+
+pagings:
+  changes:
+    request:
+      since: { query: since }
+      limit: { query: limit }
+    response:
+      body: { items: $items, next: $nextSince, complete: $complete, limit: $limit }
+  stripeList:
+    request:
+      after: { query: starting_after }
+      before: { query: ending_before }
+      limit: { query: limit }
+    response:
+      body: { object: list, data: $items, has_more: $more, url: $path }
+  cappedPages:
+    request:
+      page: { query: page }
+      limit: { query: limit }
+    response:
+      body: { data: $items, has_more: $more, limit: $limit }
+
+schemas:
+  NoteId: { type: string, format: uuid }
+  Note:
+    type: object
+    required: [noteId, text]
+    properties:
+      noteId: NoteId
+      text: { type: string, minLength: 1, maxLength: 500 }
+
+surfaces:
+  notes:
+    prefix: /paging/v{version}
+    identity: user
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list: { paging: { stripeList: { maxLimit: 10 } } }
+      capped:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list: { paging: { cappedPages: { maxLimit: 10, overLimit: clamp } } }
+      changes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list: { paging: { changes: { maxLimit: 10, overLimit: clamp } } }
+      events:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list: { paging: { changes: { maxLimit: 10, token: instant } } }
+```
+
+```yaml
+# tasks-split-sort/api.yaml
+api:
+  name: tasksSplitSort
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Notes listed by GitHub-style pages, sorted by one key and its direction.
+
+pagings:
+  githubPages:
+    request:
+      page: { query: page }
+      limit: { query: per_page }
+      sort: { query: sort, style: split, direction: direction }
+    response:
+      body: $items
+      links: { next: $next, prev: $previous, first: $first, last: $last }
+
+schemas:
+  NoteId: { type: string, format: uuid }
+  Note:
+    type: object
+    required: [noteId, text, created]
+    properties:
+      noteId: NoteId
+      text: { type: string, minLength: 1, maxLength: 500 }
+      created: { type: string, format: date-time }
+
+surfaces:
+  notes:
+    prefix: /split-sort/v{version}
+    identity: user
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list:
+            paging: { githubPages: { maxLimit: 100, defaultLimit: 30, overLimit: clamp } }
+            sortable: [created]
+```
+
 What the example shows, by route:
 
 - Errors: the base declares only `api.schema_invalid` (its `Issues` carry no `in`, so the role is bound with a params template) and `api.rate_limited` (an example, and a nature left to its status). Every other derived error answers its role's default code (A34), and `api.internal`, `api.not_found` and `api.forbidden` are default codes attached by name.
@@ -443,6 +637,9 @@ What the example shows, by route:
 - `status` in `tasksDevices` (`GET /devices/v1/status`): the `device` identity, declared by the api itself on the header scheme `deviceToken`, which completes the five schemes of the base (session cookie, CSRF token, bearer, device token, internal token).
 - `greeting` and `strictGreeting` in `tasksOptionalAuth`: `optionalAuth` under the `user` identity; a refused credential reads as a visitor on the first, and answers 401 on the second, which sets `onRefused: reject`.
 - `listNotes` and `getNote` in `tasksAbsoluteUrls`: `conventions.urls: absolute` set by the api, so the `next` page link of the base's `cursor` style is an absolute URL starting with the public origin configured on the target.
+- `listChanges` and `listEvents` in `tasksPaging`: the api's `changes` style, a changes-since feed whose page writes the next token and whether the feed is complete; a stale token answers 410 `api.cursor_too_old`, from the `gone` role. `listChanges` takes an opaque token and serves a `limit` above 10 as 10 (`overLimit: clamp`), which the page reports; `listEvents` takes a `date-time` (`token: instant`).
+- `listNotes` in `tasksPaging`: Stripe's list object, with the `after` and `before` cursors in `starting_after` and `ending_before` and the `more` flag in `has_more`; a request that sends both cursors answers 400.
+- `listNotes` in `tasksSplitSort`: GitHub's pages, a page number and `per_page` clamped to 100, the four page links in `Link`, and the `split` sort style: one key in `sort`, its direction in `direction`.
 
 Short forms not in the reference contract:
 

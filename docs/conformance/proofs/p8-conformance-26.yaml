@@ -1,0 +1,29 @@
+# docs/conformance/proofs/p8-conformance-26.yaml
+# The paging styles of the reference contract's tasksPaging and tasksSplitSort apis: the servers prove them by the
+# shared http suite cases, the fetch client by its generated client against a canned server. CHK-128 is deferred on
+# the Node servers, which refuse the split sort style by name; CHK-032 on the PHP and Python servers, which refuse the
+# complete page fact by name.
+lane: p8-conformance-26
+proofs:
+  - id: CHK-032
+    fixtures: [fixtures/reference/tasks-paging/api.yaml]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a changes feed sends its token, reads the next one and completeness, and a stale token as its 410'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a since page reads its next start and whether the feed is complete'
+    refusals:
+      - 'laravel: php/laravel/tests/PageFactRefusalTest.php#testTheCompletePageFactOfAChangesFeedIsRefusedByName'
+      - 'symfony: php/symfony/tests/PageFactRefusalTest.php#testTheCompletePageFactOfAChangesFeedIsRefusedByName'
+      - 'fastapi: python/fastapi/fastapi_tests/test_page_fact_refusal.py#test_the_complete_page_fact_of_a_changes_feed_is_refused_by_name'
+      - 'drf: python/drf/drf_tests/test_page_fact_refusal.py#test_the_complete_page_fact_of_a_changes_feed_is_refused_by_name'
+      - 'ninja: python/ninja/ninja_tests/test_page_fact_refusal.py#test_the_complete_page_fact_of_a_changes_feed_is_refused_by_name'
+  - id: CHK-128
+    fixtures: [fixtures/reference/tasks-paging/api.yaml, fixtures/reference/tasks-split-sort/api.yaml]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a Stripe list sends the cursor it pages after and reads its more flag'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#GitHub pages send one sort key and its direction, and read the page links'
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a split sort style is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a split sort style is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a split sort style is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a split sort style is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a split sort style is refused by name'

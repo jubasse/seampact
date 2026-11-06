@@ -1,6 +1,8 @@
 """The developer's handlers of every operation of the reference contract's apis, each answering the loaded script
 when it says so, and the factories SEAMPACT names, which build them per request."""
 
+import uuid
+
 from django.http import HttpRequest
 from generated.tasks import operations as tasks
 from generated.tasks.schemas import Preferences, Task, TaskSearchResult, TaskState
@@ -9,6 +11,8 @@ from generated.tasks_devices import operations as devices
 from generated.tasks_devices.schemas import DeviceStatus
 from generated.tasks_optional_auth import operations as optional_auth
 from generated.tasks_optional_auth.schemas import Greeting
+from generated.tasks_responses import operations as notes
+from generated.tasks_responses.schemas import Note, NoteKey
 from generated.tasks_service import operations as service
 from generated.tasks_service_writes import operations as service_writes
 from paged_lists import channel_page, note_page, sample_task_page, scripted_task_page
@@ -28,12 +32,17 @@ from sample_data import (
     task_of,
     with_next_version,
 )
-from seampact_consumer_suite.scripted_answers import scripted_answer
+from seampact_consumer_suite.scripted_answers import scripted_answer, text_member
 
 _OK: int = 200
 _SERVICE_API: str = "tasksService"
 _DEFAULT_LOCALE: str = "en"
 _DEFAULT_DIGEST: bool = False
+_RESPONSES_API: str = "tasksResponses"
+_NOTE_ID: uuid.UUID = uuid.UUID("30000000-0000-4000-8000-000000000001")
+_FIRST_REVISION: int = 1
+_FIRST_NOTE_TEXT: str = "The first note"
+_NOTE_SECRET: str = "note-secret"
 
 
 class ChannelsHandlers:
@@ -197,6 +206,54 @@ def _retitled(created: Task, title: str) -> Task:
     )
 
 
+def _first_note(note_id: uuid.UUID, text: str = _FIRST_NOTE_TEXT) -> Note:
+    return Note(note_id=note_id, text=text, revision=_FIRST_REVISION)
+
+
+def _note_key_reply_of(body: dict[str, object]) -> notes.KeyNoteResult:
+    return notes.KeyNoteResponse200(
+        body=NoteKey(note_id=uuid.UUID(text_member(body, "noteId")), secret=text_member(body, "secret"))
+    )
+
+
+class ResponsesHandlers:
+    """The `tasksResponses` api's public digest."""
+
+    def digest(self, request: notes.DigestRequest) -> notes.DigestResult:
+        return notes.DigestResponse200(body=_first_note(_NOTE_ID, "Today's digest"))
+
+
+class ResponsesNotesHandlers:
+    """The `tasksResponses` api's notes: one note at its first revision, saved as 200 when it exists and 201
+    otherwise, and the If-Match comparison the boundary leaves to the handler."""
+
+    def get_note(self, request: notes.GetNoteRequest) -> notes.GetNoteResult:
+        return notes.GetNoteResponse200(body=_first_note(request.input.path.note_id))
+
+    def update_note(self, request: notes.UpdateNoteRequest) -> notes.UpdateNoteResult:
+        # The boundary hands the If-Match version unquoted.
+        if request.input.headers.if_match != str(_FIRST_REVISION):
+            return notes.UpdateNoteErrors.api_precondition_failed()
+
+        path = request.input.path
+
+        return notes.UpdateNoteResponse200(
+            body=Note(note_id=path.note_id, text=request.input.body.text, revision=_FIRST_REVISION + 1)
+        )
+
+    def save_note(self, request: notes.SaveNoteRequest) -> notes.SaveNoteResult:
+        note_id = request.input.path.note_id
+        saved = _first_note(note_id, request.input.body.text)
+
+        return notes.SaveNoteResponse200(body=saved) if note_id == _NOTE_ID else notes.SaveNoteResponse201(body=saved)
+
+    def key_note(self, request: notes.KeyNoteRequest) -> notes.KeyNoteResult:
+        reply = scripted_answer("keyNote", _OK, _note_key_reply_of, api=_RESPONSES_API)
+
+        return reply or notes.KeyNoteResponse200(body=NoteKey(note_id=request.input.path.note_id, secret=_NOTE_SECRET))
+
+    def legacy_note(self, request: notes.LegacyNoteRequest) -> notes.LegacyNoteResult:
+        return notes.LegacyNoteResponse200(body=_first_note(request.input.path.note_id))
 def channels_handlers(request: HttpRequest) -> ChannelsHandlers:
     return ChannelsHandlers()
 
@@ -235,3 +292,11 @@ def welcome_handlers(request: HttpRequest) -> WelcomeHandlers:
 
 def notes_handlers(request: HttpRequest) -> NotesHandlers:
     return NotesHandlers()
+
+
+def responses_handlers(request: HttpRequest) -> ResponsesHandlers:
+    return ResponsesHandlers()
+
+
+def responses_notes_handlers(request: HttpRequest) -> ResponsesNotesHandlers:
+    return ResponsesNotesHandlers()

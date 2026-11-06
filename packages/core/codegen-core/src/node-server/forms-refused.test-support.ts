@@ -13,8 +13,12 @@ export interface RefusedForm {
 type Operation = ContractIR["operations"][number];
 
 const ACCESS_ORIGIN = { layer: "api", pointer: "/access" } as const;
+const DEGRADABLE_ORIGIN = { layer: "api", pointer: "/degradable" } as const;
 const BEARER_SCHEME = "bearer";
 const SIGNATURE_SCHEME = "stripeSignature";
+const CURSOR_STYLE = "cursor";
+const SORT_ROLE = "sort";
+const SPLIT_SORT_DIRECTION = "direction";
 
 // The first guarded operation of the tasks api.
 function guardedOperationOf(ir: ContractIR): Operation {
@@ -217,6 +221,30 @@ export const FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedForm[] = [
     title: "a redirect response",
     code: "response.shape.unsupported",
     change: (ir) => answerGetTaskWith(ir, "redirect", undefined),
+  },
+  {
+    title: "a degradable operation",
+    code: "degradable.unsupported",
+    change: (ir) => {
+      guardedOperationOf(ir).degradable = {
+        paths: ["name"],
+        header: "X-Degraded",
+        origin: DEGRADABLE_ORIGIN,
+      };
+    },
+  },
+  {
+    title: "a split sort style",
+    code: "paging.sort.style.unsupported",
+    change: (ir) => {
+      const sort = ir.pagings[CURSOR_STYLE]?.request.find((role) => role.role === SORT_ROLE);
+
+      if (sort === undefined)
+        throw new Error("the golden tasks api's cursor style has no sort role");
+
+      sort.style = "split";
+      sort.direction = SPLIT_SORT_DIRECTION;
+    },
   },
 ];
 

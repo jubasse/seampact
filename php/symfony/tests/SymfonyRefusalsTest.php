@@ -6,6 +6,7 @@ namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
+use Seampact\Codegen\Tests\Support\ResponseForms;
 use Seampact\Ir\Run\GenerationRefusedException;
 use Seampact\Symfony\SymfonyGenerator;
 
@@ -92,6 +93,26 @@ final class SymfonyRefusalsTest extends TestCase
 
         self::assertArrayNotHasKey('ir.value.unknown', $refused);
         self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused['response.shape.unsupported'] ?? '');
+    }
+
+    public function testAResponseHeaderTheRouteWritesIsRefusedByName(): void
+    {
+        self::assertStringContainsString(self::AFTER_ONE_ZERO, self::refused(ResponseForms::withRouteWrittenHeader())['response.header.unsupported'] ?? '');
+    }
+
+    public function testAUnionIsRefusedByName(): void
+    {
+        self::assertArrayHasKey('schema.union.unsupported', self::refused(ResponseForms::withUnionAnswer()));
+    }
+
+    public function testARedirectResponseIsRefusedByName(): void
+    {
+        self::assertStringContainsString("'redirect' response", self::refused(ResponseForms::withRedirectAnswer())['response.shape.unsupported'] ?? '');
+    }
+
+    public function testADegradableOperationIsRefusedByName(): void
+    {
+        self::assertArrayHasKey('degradable.unsupported', self::refused(ResponseForms::withDegradableOperation()));
     }
 
     public function testARightAndAPlainRuleAreServedByTheAccessListener(): void

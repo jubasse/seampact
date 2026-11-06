@@ -1,0 +1,280 @@
+openapi: 3.1.0
+info:
+  title: tasksSplitSort
+  version: "1"
+  summary: Notes listed by GitHub-style pages, sorted by one key and its direction.
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /split-sort/v1/notes:
+    get:
+      operationId: listNotes
+      parameters:
+        - name: page
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: per_page
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 30
+        - name: sort
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: string
+            pattern: ^(?:created)$
+        - name: direction
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: string
+            pattern: ^(?:asc|desc)$
+      responses:
+        "200":
+          description: Success.
+          headers:
+            Link:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Note"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.forbidden"
+          x-seampact-errors:
+            - code: api.forbidden
+              derivedFrom: requirement.errors
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+        - sessionCookie: []
+      x-seampact-access:
+        identity: user
+      x-seampact-requires:
+        - right: notes.list
+      x-seampact-paging:
+        style: githubPages
+        position: page
+        roles:
+          page: query.page
+          limit: query.per_page
+          sort: query.sort
+        maxLimit: 100
+        defaultLimit: 30
+        overLimit: clamp
+        sortKeys:
+          - key: created
+      x-seampact-maturity:
+        level: provisional
+        source: api
+components:
+  schemas:
+    ApiForbiddenParams:
+      type: object
+      properties:
+        pointer:
+          type: string
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssuesItem"
+      required:
+        - issues
+    IssuesItem:
+      type: object
+      properties:
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - pointer
+        - rule
+    Note:
+      type: object
+      properties:
+        noteId:
+          type: string
+          format: uuid
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        created:
+          type: string
+          format: date-time
+      required:
+        - noteId
+        - text
+        - created
+    api.forbidden:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.forbidden
+            status:
+              type: integer
+              const: 403
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.forbidden
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiForbiddenParams"
+      x-seampact-nature:
+        base: refused
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    api.unauthenticated:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unauthenticated
+        status:
+          type: integer
+          const: 401
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unauthenticated
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session

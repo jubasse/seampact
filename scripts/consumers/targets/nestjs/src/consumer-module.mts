@@ -3,6 +3,8 @@
 import { Module } from "@nestjs/common";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksDevicesNest from "../generated/server/tasksDevices/index.js";
+import * as TasksPagingNest from "../generated/server/tasksPaging/index.js";
+import * as TasksResponsesNest from "../generated/server/tasksResponses/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesNest from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -27,6 +29,15 @@ import {
   tasksServiceWritesHooks,
 } from "./hooks.mjs";
 import {
+  CappedController,
+  ChangesController,
+  EventsController,
+  PagingNotesController,
+} from "./paging-controllers.mjs";
+import { tasksPagingHooks } from "./paging-handlers.mjs";
+import { ResponsesController, ResponsesNotesController } from "./responses-controllers.mjs";
+import { tasksResponsesHooks } from "./responses-handlers.mjs";
+import {
   PatternedRouteController,
   SuiteControlController,
   UnlistedRouteController,
@@ -44,6 +55,8 @@ const healthControllers = leavesOutHealthHandler()
     TasksServiceNest.SeampactModule.forRootAsync({ useFactory: () => tasksServiceHooks() }),
     TasksServiceWritesNest.SeampactModule.forRoot(tasksServiceWritesHooks()),
     TasksDevicesNest.SeampactModule.forRoot(tasksDevicesHooks()),
+    TasksResponsesNest.SeampactModule.forRoot(tasksResponsesHooks()),
+    TasksPagingNest.SeampactModule.forRoot(tasksPagingHooks()),
   ],
   controllers: [
     ...healthControllers,
@@ -55,6 +68,12 @@ const healthControllers = leavesOutHealthHandler()
     InternalController,
     InternalWritesController,
     DevicesController,
+    ResponsesController,
+    ResponsesNotesController,
+    PagingNotesController,
+    ChangesController,
+    CappedController,
+    EventsController,
     SuiteControlController,
     // The framework-route boot variants serve a route outside the contract.
     ...(servesUnlistedRoute() ? [UnlistedRouteController] : []),

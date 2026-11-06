@@ -8,6 +8,8 @@ import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-
 import express, { type Response } from "express";
 import * as TasksExpress from "../generated/server/tasks/index.js";
 import * as TasksDevicesExpress from "../generated/server/tasksDevices/index.js";
+import * as TasksPagingExpress from "../generated/server/tasksPaging/index.js";
+import * as TasksResponsesExpress from "../generated/server/tasksResponses/index.js";
 import * as TasksServiceExpress from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesExpress from "../generated/server/tasksServiceWrites/index.js";
 import {
@@ -31,6 +33,8 @@ import {
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "../src/hooks.mjs";
+import { tasksPagingHandlers, tasksPagingHooks } from "../src/paging-handlers.mjs";
+import { tasksResponsesHandlers, tasksResponsesHooks } from "../src/responses-handlers.mjs";
 import {
   type ControlReply,
   hookCallsReply,
@@ -92,14 +96,38 @@ export async function startServer(): Promise<RunningServer> {
       hooks: tasksDevicesHooks(),
     }),
   );
+  app.use(
+    TasksResponsesExpress.router({
+      handlers: {
+        ResponsesEndpoints: tasksResponsesHandlers,
+        NotesEndpoints: tasksResponsesHandlers,
+      },
+      hooks: tasksResponsesHooks(),
+    }),
+  );
+  app.use(
+    TasksPagingExpress.router({
+      handlers: {
+        NotesEndpoints: tasksPagingHandlers,
+        ChangesEndpoints: tasksPagingHandlers,
+        CappedEndpoints: tasksPagingHandlers,
+        EventsEndpoints: tasksPagingHandlers,
+      },
+      hooks: tasksPagingHooks(),
+    }),
+  );
   app.use(TasksExpress.preRoutingErrorHandler);
   app.use(TasksServiceExpress.preRoutingErrorHandler);
   app.use(TasksServiceWritesExpress.preRoutingErrorHandler);
   app.use(TasksDevicesExpress.preRoutingErrorHandler);
+  app.use(TasksResponsesExpress.preRoutingErrorHandler);
+  app.use(TasksPagingExpress.preRoutingErrorHandler);
   TasksExpress.checkFrameworkRoutes(app);
   TasksServiceExpress.checkFrameworkRoutes(app);
   TasksServiceWritesExpress.checkFrameworkRoutes(app);
   TasksDevicesExpress.checkFrameworkRoutes(app);
+  TasksResponsesExpress.checkFrameworkRoutes(app);
+  TasksPagingExpress.checkFrameworkRoutes(app);
 
   const server = app.listen(0, HOST);
 

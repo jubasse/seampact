@@ -1,5 +1,5 @@
 """The handler factories the `bind_*()` functions take: each builds the shared handlers of
-`handlers.py` per request. The drafts handlers answer `getDraft` with a plain `def`, which sync views require."""
+`handlers.py` or `responses_handlers.py` per request. The drafts handlers answer `getDraft` with a plain `def`, which sync views require."""
 
 from django.http import HttpRequest
 from generated.tasks.operations import GetDraftRequest, GetDraftResponse200, GetDraftResult
@@ -15,6 +15,8 @@ from handlers import (
     TasksHandlers,
     WelcomeHandlers,
 )
+from responses_handlers import NotesHandlers as ResponsesNotesHandlers
+from responses_handlers import ResponsesHandlers
 from sample_data import draft
 
 
@@ -61,3 +63,11 @@ def welcome_handlers(request: HttpRequest) -> WelcomeHandlers:
 
 def notes_handlers(request: HttpRequest) -> NotesHandlers:
     return NotesHandlers()
+
+
+def responses_handlers(request: HttpRequest) -> ResponsesHandlers:
+    return ResponsesHandlers()
+
+
+def responses_notes_handlers(request: HttpRequest) -> ResponsesNotesHandlers:
+    return ResponsesNotesHandlers()

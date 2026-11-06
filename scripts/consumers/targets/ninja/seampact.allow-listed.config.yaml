@@ -37,3 +37,20 @@ targets:
     use: pypi:seampact-ninja
     api: tasksAbsoluteUrls
     options: { views: sync }
+  - id: tasksResponses
+    out: tasks_responses
+    use: pypi:seampact-ninja
+    api: tasksResponses
+    options: { views: sync }
+  - id: tasksPaging
+    out: tasks_paging
+    use: pypi:seampact-ninja
+    api: tasksPaging
+    # The changes-since feed carries the complete page fact, which this target refuses by name in 1.0.
+    operations: { exclude: [listChanges, listEvents] }
+    options: { views: sync }
+  - id: tasksSplitSort
+    out: tasks_split_sort
+    use: pypi:seampact-ninja
+    api: tasksSplitSort
+    options: { views: sync }

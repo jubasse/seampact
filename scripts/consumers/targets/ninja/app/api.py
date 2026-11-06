@@ -12,8 +12,11 @@ from generated.tasks.ninja import TasksHandlerFactories, bind_tasks
 from generated.tasks_absolute_urls.ninja import TasksAbsoluteUrlsHandlerFactories, bind_tasks_absolute_urls
 from generated.tasks_devices.ninja import TasksDevicesHandlerFactories, bind_tasks_devices
 from generated.tasks_optional_auth.ninja import TasksOptionalAuthHandlerFactories, bind_tasks_optional_auth
+from generated.tasks_responses.ninja import TasksResponsesHandlerFactories, bind_tasks_responses
+from generated.tasks_paging.ninja import TasksPagingHandlerFactories, bind_tasks_paging
 from generated.tasks_service.ninja import TasksServiceHandlerFactories, bind_tasks_service
 from generated.tasks_service_writes.ninja import TasksServiceWritesHandlerFactories, bind_tasks_service_writes
+from generated.tasks_split_sort.ninja import TasksSplitSortHandlerFactories, bind_tasks_split_sort
 from handler_factories import (
     channels_handlers,
     devices_handlers,
@@ -23,11 +26,20 @@ from handler_factories import (
     internal_writes_handlers,
     notes_handlers,
     preferences_handlers,
+    responses_handlers,
+    responses_notes_handlers,
     tasks_handlers,
     welcome_handlers,
 )
 from hook_doubles import CALLER_SERVICE_RIGHT, OVERRIDDEN_RIGHT
 from ninja import NinjaAPI
+from paging_factories import (
+    paging_capped_handlers,
+    paging_notes_handlers,
+    paging_unexpected_errors,
+    paging_user_hook,
+    split_sort_notes_handlers,
+)
 from seampact_consumer_suite.boot_variant import (
     MISMATCHED_MOUNT,
     BootVariant,
@@ -122,6 +134,29 @@ def create_api() -> NinjaAPI:
         on_unexpected_error=hooks.unexpected_errors,
     )
     _bind_security_apis(api)
+    bind_tasks_responses(
+        api,
+        prefix="",
+        handlers=TasksResponsesHandlerFactories(responses=responses_handlers, notes=responses_notes_handlers),
+        authenticate={USER_IDENTITY: hooks.user_hook},
+        idempotency_store=hooks.idempotency_store,
+        on_unexpected_error=hooks.unexpected_errors,
+        access={IDENTITY_ACCESS: seampact_ninja.AccessSettings(auth=suite_token_auth)},
+    )
+    bind_tasks_paging(
+        api,
+        prefix="",
+        handlers=TasksPagingHandlerFactories(notes=paging_notes_handlers, capped=paging_capped_handlers),
+        authenticate={USER_IDENTITY: paging_user_hook},
+        on_unexpected_error=paging_unexpected_errors,
+    )
+    bind_tasks_split_sort(
+        api,
+        prefix="",
+        handlers=TasksSplitSortHandlerFactories(notes=split_sort_notes_handlers),
+        authenticate={USER_IDENTITY: paging_user_hook},
+        on_unexpected_error=paging_unexpected_errors,
+    )
 
     return api
 

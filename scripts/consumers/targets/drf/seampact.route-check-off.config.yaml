@@ -41,3 +41,23 @@ targets:
     api: tasksAbsoluteUrls
     artefacts:
       bootCheck: { frameworkRoutes: false }
+  - id: tasksResponses
+    out: tasks_responses
+    use: pypi:seampact-drf
+    api: tasksResponses
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksPaging
+    out: tasks_paging
+    use: pypi:seampact-drf
+    api: tasksPaging
+    # The changes-since feed carries the complete page fact, which this target refuses by name in 1.0.
+    operations: { exclude: [listChanges, listEvents] }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksSplitSort
+    out: tasks_split_sort
+    use: pypi:seampact-drf
+    api: tasksSplitSort
+    artefacts:
+      bootCheck: { frameworkRoutes: false }

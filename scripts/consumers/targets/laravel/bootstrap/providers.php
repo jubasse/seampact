@@ -9,5 +9,9 @@ return [
     App\Generated\TasksDevices\Laravel\TasksDevicesSeampactServiceProvider::class,
     App\Generated\TasksOptionalAuth\Laravel\TasksOptionalAuthSeampactServiceProvider::class,
     App\Generated\TasksAbsoluteUrls\Laravel\TasksAbsoluteUrlsSeampactServiceProvider::class,
+    App\Generated\TasksResponses\Laravel\TasksResponsesSeampactServiceProvider::class,
+    App\Generated\TasksPaging\Laravel\TasksPagingSeampactServiceProvider::class,
+    App\Generated\TasksSplitSort\Laravel\TasksSplitSortSeampactServiceProvider::class,
     App\Providers\SuiteServiceProvider::class,
+    App\Providers\PagingServiceProvider::class,
 ];
