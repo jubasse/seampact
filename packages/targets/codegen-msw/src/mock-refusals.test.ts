@@ -5,7 +5,12 @@ import {
   type Refusal,
   withoutRepeats,
 } from "@seampact/codegen-core";
-import { readGoldenIr, typesLinks } from "@seampact/codegen-core/node-server/test-support";
+import {
+  RIGHTS_VERSION_OPERATION,
+  readGoldenIr,
+  tasksServiceWithRightsVersionHeader,
+  typesLinks,
+} from "@seampact/codegen-core/node-server/test-support";
 import type { ContractIR, Template, WireFormat } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
 import { target } from "./index.js";
@@ -128,4 +133,25 @@ test("a template route lets through the same-method sibling routes that match it
     "/v1/channels/:channelId/tasks/batch",
     "/v1/channels/:channelId/tasks/search",
   ]);
+});
+
+test("an identity header written on a response is refused by name at its declaration", async () => {
+  const ir = tasksServiceWithRightsVersionHeader();
+  const outcome = await target.generate({
+    ir,
+    options: {},
+    links: typesLinks(ir),
+    artefacts: new Set(["handlers"]),
+  });
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    refusals: [
+      {
+        code: "identity.response.header.unsupported",
+        member: "/headers/rightsVersion",
+        operation: RIGHTS_VERSION_OPERATION,
+      },
+    ],
+  });
 });

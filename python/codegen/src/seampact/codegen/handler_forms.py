@@ -38,7 +38,7 @@ class _ResponseHeader:
 class _IdentityHeaders:
     identity_id: str
     request_side_uses: int
-    response_side: list[_ResponseHeader]
+    response_side: tuple[_ResponseHeader, ...]
 
 
 def handler_warnings(ir: ContractIR, entry_id: str, api: str) -> list[ConfigProblem]:
@@ -110,7 +110,7 @@ def _identity_headers(ir: ContractIR, operation: Operation) -> _IdentityHeaders 
         if name is not None:
             response_side.append(_ResponseHeader(use.header, name))
 
-    return _IdentityHeaders(access.identity, request_side_uses, response_side)
+    return _IdentityHeaders(access.identity, request_side_uses, tuple(response_side))
 
 
 def _is_response_side(declaration: HeaderDecl) -> bool:

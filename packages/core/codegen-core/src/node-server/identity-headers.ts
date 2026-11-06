@@ -19,10 +19,15 @@ export const IDENTITY_RESPONSE_HEADER_FORM = "identity.response.header";
 const VERSION_TOKEN_SEMANTIC = "versionToken";
 const RESPONSE_SIDE = "response";
 
+export interface ResponseSideHeader {
+  readonly headerId: string;
+  readonly name: string;
+}
+
 export interface OperationIdentityHeaders {
   readonly identityId: string;
   readonly requestSideUses: number;
-  readonly responseSide: readonly { readonly headerId: string; readonly name: string }[];
+  readonly responseSide: readonly ResponseSideHeader[];
 }
 
 /** The identity headers of the operation, or undefined when its access names no identity with headers. */
@@ -41,7 +46,7 @@ export function operationIdentityHeaders(
 
   if (identity.headers.length === 0) return undefined;
 
-  const responseSide: { headerId: string; name: string }[] = [];
+  const responseSide: ResponseSideHeader[] = [];
   let requestSideUses = 0;
 
   for (const use of identity.headers) {

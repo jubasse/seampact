@@ -17,6 +17,7 @@ export {
   type OwnValidators,
 } from "./boundary-files.js";
 export { handlerMapDeclarations, largestBodyLimit } from "./handler-map-module.js";
+export { identityResponseHeaderRefusals } from "./identity-headers.js";
 export {
   type DocumentedOperation,
   type NativeDocsContract,

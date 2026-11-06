@@ -64,6 +64,26 @@ final class HandlerFormsTest extends TestCase
         }
     }
 
+    public function testAResponseHeaderWhoseForExcludesAnOperationIsNotRefusedOnIt(): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document('tasksService'), ['getTask']);
+        self::object(self::object($document->headers)->trace)->in = 'response';
+        $service = self::object(self::object($document->identities)->service);
+        self::assertIsArray($service->headers);
+        foreach ($service->headers as $use) {
+            $traceUse = self::object($use);
+            if ($traceUse->header === 'trace') {
+                $traceUse->for = 'writes';
+            }
+        }
+        $refusals = new Refusals('server', 'test', 'seampact/test');
+
+        new KeptForms(ReferenceIr::read($document), $refusals, new FixedReleases(null));
+
+        $refusals->throwIfAny();
+        $this->addToAssertionCount(1);
+    }
+
     public function testAnIdentityWithOnlyResponseHeadersDoesNotWarn(): void
     {
         $document = ReferenceIr::document('tasksService');

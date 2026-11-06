@@ -68,4 +68,21 @@ class HandlerFormsTest {
         assertEquals(emptyList(), SpringBootTarget.handlerWarnings(changed))
         assertTrue(SpringBootTarget.handlerWarnings(ir).all { it.code == IDENTITY_HEADERS_HANDLER })
     }
+
+    @Test
+    fun aResponseHeaderWhoseForExcludesAnOperationIsNotRefusedOnIt() {
+        val ir = tasksServiceIr()
+        val service = ir.identities.getValue("service") as CredentialIdentity
+        val traceOnWrites = service.headers.map { if (it.header == "trace") it.copy(for_ = HeaderUseFor.WRITES) else it }
+        val changed = ir.copy(
+            operations = ir.operations.filter { it.id == "getTask" },
+            headers = ir.headers + ("trace" to ir.headers.getValue("trace").copy(in_ = HeaderSide.RESPONSE)),
+            identities = ir.identities + ("service" to service.copy(headers = traceOnWrites)),
+        )
+        val refusals = Refusals()
+
+        refuseIdentityResponseHeaders(changed, refusals)
+
+        assertTrue(refusals.isEmpty)
+    }
 }

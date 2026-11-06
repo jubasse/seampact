@@ -101,9 +101,9 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   [
     "CHK-013",
     {
-      refusedOn: ["fetch", ...NODE_SERVERS],
+      refusedOn: ["fetch", ...NODE_SERVERS, ...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
       reason:
-        "1.0 refuses the rights-version response header by name at generation: the fetch client as a response header it does not read, and every server as identity.response.header.unsupported, since no handler can write a response header; writing and comparing it at the boundary comes after 1.0",
+        "1.0 refuses the rights-version response header by name at generation: the fetch client as a response header it does not read, and every server (the Node servers, Spring, Laravel, Symfony, FastAPI, DRF, Ninja) as identity.response.header.unsupported, since no handler can write a response header; writing and comparing it at the boundary comes after 1.0",
     },
   ],
   ["CHK-019", refusedOnEveryServer("a principal requirement")],

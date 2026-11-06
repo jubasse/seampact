@@ -75,6 +75,21 @@ def test_an_identity_header_written_on_a_response_is_refused_by_name_at_its_decl
     )
 
 
+def test_a_response_header_whose_for_excludes_an_operation_is_not_refused_on_it(repository_root: Path) -> None:
+    ir_json = json.loads(_reference_ir_text(repository_root, "tasksService"))
+    ir_json["headers"]["trace"]["in"] = "response"
+
+    for use in ir_json["identities"]["service"]["headers"]:
+        if use["header"] == "trace":
+            use["for"] = "writes"
+
+    refusals = Refusals("server", "test", "seampact-test")
+
+    refuse_kept_forms(read_ir(json.dumps(ir_json), _SUPPORT), refusals)
+
+    refusals.raise_if_any()
+
+
 def test_an_identity_with_only_response_headers_does_not_warn(repository_root: Path) -> None:
     ir_json = json.loads(_reference_ir_text(repository_root, "tasksService"))
 

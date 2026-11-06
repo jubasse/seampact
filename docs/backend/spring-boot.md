@@ -234,6 +234,7 @@ By default a reply that breaks the contract becomes the api's 500. With `seampac
 - An opaque value takes `null` only when it is `nullable`.
 - A number past the range of a double inside an opaque value is a `type` issue (400).
 - A format with meta members, success headers or envelope slots the boundary cannot write is refused at generate time: see [Generate errors](../troubleshooting/generate.md).
+- An identity header written on a response (a `versionToken` header, or one declared `in: response`) is refused at generate time (`identity.response.header.unsupported`): no handler can write it yet.
 
 ## Test your routes
 
