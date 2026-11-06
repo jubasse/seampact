@@ -34,7 +34,7 @@ targets:
     options: { views: sync }
 ```
 
-A `path` source and the OpenAPI documents need the compiler binary. It comes with `seampact-ir`, as the `seampact-compiler` wheel for your platform. Nothing else to install.
+A `path` source and the OpenAPI documents need the compiler binary. Install it with the extra `seampact-ir[compiler]`, which adds the `seampact-compiler` wheel for your platform. A bundle-only app with `openapi: none` does not need it.
 
 Then generate:
 

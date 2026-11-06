@@ -120,7 +120,7 @@ Maven, in `pom.xml`:
 <plugin>
   <groupId>io.github.jubasse</groupId>
   <artifactId>seampact-maven-plugin</artifactId>
-  <version>${seampact.version}</version>
+  <version>1.0.0</version>
 </plugin>
 ```
 
@@ -141,7 +141,7 @@ Take the first line for Laravel, the second for Symfony. The packages are read-o
 pip install "seampact-fastapi[generate]"
 ```
 
-Use `seampact-drf` or `seampact-ninja` for Django REST Framework or Django Ninja. The compiler binary comes with `seampact-ir`.
+Use `seampact-drf` or `seampact-ninja` for Django REST Framework or Django Ninja. A `path` source or the OpenAPI documents need the compiler binary: install `seampact-ir[compiler]`.
 
 ### The compiler binary
 
