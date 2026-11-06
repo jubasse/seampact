@@ -1,0 +1,45 @@
+# docs/conformance/proofs/p8-conformance-23.yaml
+lane: p8-conformance-23
+proofs:
+  - id: CHK-086
+    fixtures:
+      - fixtures/golden/reference
+      - jvm/seampact-spring-boot/src/test/golden
+      - php/laravel/tests/golden/TasksConsistent
+      - php/symfony/tests/golden/TasksConsistent
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/io/github/jubasse/seampact/springboot/runtime/TypedRequirementParamsTest.java#theDecideRequestOfARightCarriesItsGeneratedParamsRecord'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/io/github/jubasse/seampact/springboot/runtime/TypedRequirementParamsTest.java#theDecideRequestOfARuleCarriesItsGeneratedParamsRecord'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/io/github/jubasse/seampact/springboot/runtime/TypedRequirementParamsTest.java#theDecideRequestOfARightWithoutParamsCarriesNone'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootAccessRefusalsTest.kt#bindsTheParamsRecordOfEachAskedRightThatDeclaresParams'
+      - 'laravel: php/laravel/tests/TypedRequirementParamsTest.php#testTheDecideRequestOfARightCarriesItsGeneratedParamsClass'
+      - 'laravel: php/laravel/tests/TypedRequirementParamsTest.php#testTheDecideRequestOfARuleCarriesItsGeneratedParamsClass'
+      - 'laravel: php/laravel/tests/TypedRequirementParamsTest.php#testTheDecideRequestOfARightWithoutParamsCarriesNone'
+      - 'laravel: php/codegen/tests/KeptFormsTest.php#testTheParamsSchemaOfEveryAskedRightAndRuleIsCollected'
+      - 'symfony: php/symfony/tests/TypedRequirementParamsTest.php#testTheDecideRequestOfARightCarriesItsGeneratedParamsClass'
+      - 'symfony: php/symfony/tests/TypedRequirementParamsTest.php#testTheDecideRequestOfARuleCarriesItsGeneratedParamsClass'
+      - 'symfony: php/symfony/tests/TypedRequirementParamsTest.php#testTheDecideRequestOfARightWithoutParamsCarriesNone'
+      - 'symfony: php/codegen/tests/KeptFormsTest.php#testTheParamsSchemaOfEveryAskedRightAndRuleIsCollected'
+  - id: CHK-090
+    refusals:
+      - 'laravel: php/laravel/tests/LaravelRefusalsTest.php#testARightsCustomMetadataIsRefusedByNameNotDropped'
+      - 'laravel: php/codegen/tests/KeptFormsTest.php#testTheExtensionValuesOfAnAskedRightRuleOrScopeAreRefusedOnceByName'
+  - id: CHK-158
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/AbsentVersusNullTest.kt#anOptionalAndNullableMemberIsAFieldOfItsValueType'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/AbsentVersusNullTest.kt#anOptionalMemberThatIsNotNullableStaysAnOptional'
+      - 'spring-boot: jvm/seampact-spring-runtime/src/test/java/io/github/jubasse/seampact/springboot/runtime/BoundaryMapperTest.java#readsAbsentNullAndAValueAsThreeStates'
+      - 'spring-boot: jvm/seampact-spring-runtime/src/test/java/io/github/jubasse/seampact/springboot/runtime/BoundaryMapperTest.java#readsTheValueWithItsDeclaredType'
+  - id: CHK-159
+    fixtures:
+      - fixtures/golden/reference
+      - php/laravel/tests/golden/TasksConsistent
+      - php/symfony/tests/golden/TasksConsistent
+  - id: CHK-166
+    fixtures: [fixtures/reference, fixtures/golden/reference]
+  - id: CHK-168
+    fixtures:
+      - fixtures/golden/reference
+      - jvm/seampact-spring-boot/src/test/golden
+      - php/symfony/tests/golden/TasksConsistent
