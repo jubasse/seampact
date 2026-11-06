@@ -213,6 +213,8 @@ export interface PagingEntry {
   /** The limit query member and the value the handler receives when the client sends none. */
   readonly limitParam?: string;
   readonly defaultLimit?: number;
+  /** Under `overLimit: clamp`, the `maxLimit` a larger limit is served as; a larger one under `reject` is a 400. */
+  readonly clampedLimit?: number;
   /** The members the handler returns beside the items: `total`, `more`, `nextCursor`, ... */
   readonly handlerResult: readonly string[];
   readonly absent: AbsentRendering;

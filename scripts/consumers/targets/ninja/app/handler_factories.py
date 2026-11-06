@@ -4,7 +4,6 @@
 from django.http import HttpRequest
 from generated.tasks.operations import GetDraftRequest, GetDraftResponse200, GetDraftResult
 from handlers import (
-    AppHandlers,
     ChannelsHandlers,
     DevicesHandlers,
     DraftsHandlers,
@@ -22,10 +21,6 @@ from sample_data import draft
 class SyncDraftsHandlers(DraftsHandlers):
     def get_draft(self, request: GetDraftRequest) -> GetDraftResult:
         return GetDraftResponse200(draft(str(request.input.path.draft_id)))
-
-
-def app_handlers(request: HttpRequest) -> AppHandlers:
-    return AppHandlers()
 
 
 def channels_handlers(request: HttpRequest) -> ChannelsHandlers:

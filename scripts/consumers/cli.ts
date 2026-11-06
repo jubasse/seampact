@@ -7,6 +7,7 @@ import { REPO_ROOT as REPOSITORY_ROOT } from "../golden/repo-root.ts";
 import { buildPackages, packPackages } from "./build-and-pack.ts";
 import {
   assembleConsumer,
+  PACK_NAME,
   parseTargetOptions,
   prepareConsumerDirectory,
   TARGET_ID,
@@ -25,21 +26,24 @@ import {
 // Builds and packs the seampact packages, assembles a test consumer from the template and a target overlay, and
 // installs (with the Playwright browser when an overlay adds a browser project), generates, typechecks and tests it as
 // a user would (ADR 0011 "Unpublished installs for test consumers"). The first failing step ends the run with its exit code.
-// node scripts/consumers/cli.ts --target <id> [--validators <id>] [--target-option <key>=<value>]... [--dir <path>]
+// node scripts/consumers/cli.ts --target <id> [--validators <id>] [--target-option <key>=<value>]... [--pack <name>] [--dir <path>]
 // A target option is written into the target's config entries; one the target does not know fails `generate`, named.
+// `--pack hal` builds a server consumer from the reference contract with `@seampact/pack-hal` applied and runs that
+// pack's suite profile in place of the target's own profiles.
 
 const EXIT_OK = 0;
 const EXIT_FAILED = 1;
 const EXIT_USAGE = 2;
 
 const USAGE =
-  "usage: node scripts/consumers/cli.ts --target <id> [--validators <id>] [--target-option <key>=<value>]... [--dir <path>]";
+  "usage: node scripts/consumers/cli.ts --target <id> [--validators <id>] [--target-option <key>=<value>]... [--pack <name>] [--dir <path>]";
 const CONSUMERS_ROOT = join(REPOSITORY_ROOT, "scripts/consumers");
 
 interface RunOptions {
   readonly target: string;
   readonly validators: string;
   readonly targetOptions: readonly TargetOption[];
+  readonly pack: string | undefined;
   readonly directory: string;
 }
 
@@ -51,6 +55,7 @@ function parseOptions(argv: string[]): RunOptions | string {
         target: { type: "string" },
         validators: { type: "string", default: DEFAULT_VALIDATOR_CHOICE },
         "target-option": { type: "string", multiple: true, default: [] },
+        pack: { type: "string" },
         dir: { type: "string" },
       },
     });
@@ -69,12 +74,18 @@ function parseOptions(argv: string[]): RunOptions | string {
 
     if (typeof targetOptions === "string") return targetOptions;
 
+    if (values.pack !== undefined && !PACK_NAME.test(values.pack)) {
+      return `--pack '${values.pack}' is not a pack name: write the <name> of @seampact/pack-<name>, as hal.`;
+    }
+
     return {
       target: values.target,
       validators: values.validators,
       targetOptions,
+      pack: values.pack,
       directory: resolve(
-        values.dir ?? defaultDirectory(values.target, values.validators, targetOptions),
+        values.dir ??
+          defaultDirectory(values.target, values.validators, targetOptions, values.pack),
       ),
     };
   } catch (error) {
@@ -87,16 +98,18 @@ function defaultDirectory(
   target: string,
   validators: string,
   targetOptions: readonly TargetOption[],
+  pack: string | undefined,
 ): string {
   const suffixes = [
     ...(validators === DEFAULT_VALIDATOR_CHOICE ? [] : [validators]),
     ...targetOptions.map(({ key, value }) => `${key}-${value}`),
+    ...(pack === undefined ? [] : [`pack-${pack}`]),
   ];
 
   return join(homedir(), "Dev", ["test-seampact", target, ...suffixes].join("-"));
 }
 
-function runConsumer({ target, validators, targetOptions, directory }: RunOptions): void {
+function runConsumer({ target, validators, targetOptions, pack, directory }: RunOptions): void {
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: REPOSITORY_ROOT })
     .toString()
     .trim();
@@ -112,6 +125,7 @@ function runConsumer({ target, validators, targetOptions, directory }: RunOption
       directory,
       commit,
       targetOptions,
+      ...(pack === undefined ? {} : { pack }),
     });
   });
 

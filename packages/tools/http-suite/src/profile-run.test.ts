@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { caseProblems, reportFileOf } from "./profile-run.js";
+import type { SuiteCase } from "./suite-case.js";
 import { suiteReportOf } from "./suite-report.js";
 
 const report = suiteReportOf({ target: "express", profile: "default" }, [
@@ -19,6 +20,22 @@ test("a refused case without a refusal, or a missing case, is a problem", () => 
   ]);
   expect(caseProblems(report, "absent", {})).toEqual([
     "the report holds no result for the case 'absent'",
+  ]);
+});
+
+test("a case scoped to other targets is expected refused, and passed on its own targets", () => {
+  const scopedCase = (targets: string[]): SuiteCase => ({
+    id: "refused-case",
+    title: "t",
+    checks: [],
+    profiles: ["default"],
+    targets,
+    steps: [],
+  });
+
+  expect(caseProblems(report, "refused-case", {}, scopedCase(["adonis"]))).toEqual([]);
+  expect(caseProblems(report, "refused-case", {}, scopedCase(["express"]))).toEqual([
+    "the case 'refused-case' is refused, expected passed",
   ]);
 });
 

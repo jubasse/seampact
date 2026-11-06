@@ -14,6 +14,8 @@ final class PageReply
     private const BEFORE_ROLE = 'before';
     private const AFTER_ROLE = 'after';
     private const CLAMP = 'clamp';
+    private const QUERY_PART = 'query';
+    private const EXCLUSIVE_CURSORS_RULE = 'exclusiveCursors';
     private const NULL_ABSENT = 'null';
     private const PAGE = 'page';
     private const OFFSET = 'offset';
@@ -46,6 +48,28 @@ final class PageReply
         }
 
         return $filled;
+    }
+
+    /**
+     * A style whose cursors travel in an `after` and a `before` parameter takes one of them: both sent is one
+     * `exclusiveCursors` issue at the `before` parameter, reported with the other input issues.
+     *
+     * @return list<array{in: string, pointer: string, rule: string}>
+     */
+    public static function cursorIssues(BoundaryState $state, \stdClass $query): array
+    {
+        $style = self::style($state);
+        $afterParam = self::roleName($style, self::AFTER_ROLE);
+        $beforeParam = self::roleName($style, self::BEFORE_ROLE);
+        if ($afterParam === null || $beforeParam === null) {
+            return [];
+        }
+
+        if (!property_exists($query, $afterParam) || !property_exists($query, $beforeParam)) {
+            return [];
+        }
+
+        return [['in' => self::QUERY_PART, 'pointer' => '/' . $beforeParam, 'rule' => self::EXCLUSIVE_CURSORS_RULE]];
     }
 
     /**
@@ -93,7 +117,7 @@ final class PageReply
 
         $body = Templates::render(self::pageBody($state, $style), $slots, $writeNulls);
 
-        return [$body->present ? $body->value : new \stdClass(), self::headers($style, $slots)];
+        return [$body->present ? $body->value : new \stdClass(), self::headers($state, $style, $slots)];
     }
 
     /** @return array<array-key, mixed> the paging style of the operation */
@@ -142,18 +166,28 @@ final class PageReply
     }
 
     /**
+     * The style's headers, each a rendered scalar as text; one that renders an object or a list is a 500, as generation
+     * refuses such a template (`paging.response.header`).
+     *
      * @param array<array-key, mixed> $style
      * @param array<string, mixed> $slots
      * @return array<string, string>
      */
-    private static function headers(array $style, array $slots): array
+    private static function headers(BoundaryState $state, array $style, array $slots): array
     {
         $headers = [];
         foreach (Ir::maps(Ir::map($style, 'response'), 'headers') as $header) {
             $value = Templates::render($header['value'] ?? null, $slots, false);
-            if ($value->present && (is_string($value->value) || is_int($value->value))) {
-                $headers[Ir::string($header, 'name') ?? ''] = (string) $value->value;
+            if (!$value->present || $value->value === null) {
+                continue;
             }
+
+            $name = Ir::string($header, 'name') ?? '';
+            $headers[$name] = match (true) {
+                is_bool($value->value) => $value->value ? 'true' : 'false',
+                is_string($value->value), is_int($value->value), is_float($value->value) => (string) $value->value,
+                default => throw new BoundaryFailure(new \LogicException("seampact: the page header '{$name}' of operation '{$state->operationId}' is not a text value; regenerate the code, whose generation refuses a header template that renders an object or a list.")),
+            };
         }
 
         $relations = [];

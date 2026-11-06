@@ -10,6 +10,7 @@ enum Delivery
     case ContractNeed;
     case Consumer;
     case AfterOneZero;
+    case LaterThanOneZero;
 
     public function description(): string
     {
@@ -17,6 +18,7 @@ enum Delivery
             self::ContractNeed => 'it waits for a contract that needs it',
             self::Consumer => 'it waits for an app that needs it',
             self::AfterOneZero => 'no reference contract carries it, so it waits for a consumer after 1.0',
+            self::LaterThanOneZero => 'the 1.0 PHP targets do not serve it, so it comes after 1.0',
         };
     }
 }

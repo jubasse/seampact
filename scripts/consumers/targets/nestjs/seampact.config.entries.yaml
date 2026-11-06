@@ -8,6 +8,7 @@
       validators: validators
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
   # The same server with the route of the 'allow-listed-framework-route' boot variant allow-listed, which that
   # variant loads in place of the one above.
   - id: server-allow-listed
@@ -21,3 +22,30 @@
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
       - { method: GET, path: /v1/unlisted, reason: "The boot variant's framework route outside the contract." }
+  # The same server with the framework-route check switched off, which the 'framework-route-check-off' boot
+  # variants load in place of the first one.
+  - id: server-route-check-off
+    use: "@seampact/codegen-nestjs"
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices]
+    options:
+      bodyValidation: true
+    link:
+      types: types
+      validators: validators
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  # The tasks api's server with the hook check switched off and the 'health' operation filtered out, which the
+  # 'hook-check-off' and 'filtered-out-handler' boot variants load in place of the first one's.
+  - id: server-hook-check-off
+    use: "@seampact/codegen-nestjs"
+    apis: [tasks]
+    options:
+      bodyValidation: true
+    link:
+      types: types
+      validators: validators
+    operations: { exclude: [health] }
+    artefacts:
+      bootCheck: { hooks: "off" }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }

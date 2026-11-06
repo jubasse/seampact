@@ -1,0 +1,10 @@
+{
+  "id": "filtered-out-operation-needs-no-handler",
+  "title": "The app whose entry filters an operation out starts without that operation's handler",
+  "checks": ["CHK-147"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "filtered-out-handler",
+    "outcome": "starts"
+  }
+}

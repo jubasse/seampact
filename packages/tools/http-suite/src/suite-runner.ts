@@ -11,6 +11,7 @@ import { checkIdsForTarget } from "./scoped-check.js";
 import {
   type CaptureSource,
   type JsonValue,
+  outsideTargetsReason,
   runsInProfile,
   type SuiteCase,
   type SuiteProfile,
@@ -88,7 +89,7 @@ export async function runSuite(options: SuiteRunOptions): Promise<SuiteReport> {
   const results: CaseResult[] = [];
 
   for (const suiteCase of options.cases) {
-    const reason = refusals[suiteCase.id];
+    const reason = refusals[suiteCase.id] ?? outsideTargetsReason(suiteCase, options.target);
 
     results.push(
       reason === undefined

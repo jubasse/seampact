@@ -10,6 +10,7 @@ import * as TasksDevicesNest from "../generated/server/tasksDevices/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesNest from "../generated/server/tasksServiceWrites/index.js";
 import { useBenchAppInterceptor } from "../src/bench-app-interceptor.mjs";
+import { MISMATCHED_MOUNT, mountsUnderMismatchedPrefix } from "../src/boot-variant.mjs";
 import { ConsumerModule } from "../src/consumer-module.mjs";
 
 export interface RunningServer {
@@ -51,6 +52,9 @@ export async function startServer(): Promise<RunningServer> {
     ),
   });
   app.useGlobalFilters(new PreRoutingFilter(app.getHttpAdapter()));
+
+  if (mountsUnderMismatchedPrefix()) app.setGlobalPrefix(MISMATCHED_MOUNT);
+
   useBenchAppInterceptor(app);
   await app.listen(0, HOST);
 

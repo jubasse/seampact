@@ -62,6 +62,7 @@ jobs:
             ^scripts/consumers/php/
             ^scripts/consumers/targets/spring-boot/(contract-source\.sh|credentials\.json)$
             ^scripts/consumers/served-app\.ts$
+            ^scripts/consumers/golden-pack-profile\.ts$
             ^pnpm-lock\.yaml$
             ^\.github/actions/
             ^\.github/workflows/p6-laravel\.yml$
@@ -190,11 +191,11 @@ jobs:
         with:
           name: laravel-contract-bundle
           path: ${{ runner.temp }}/bundles
-      - name: Assemble, install and generate the consumer and its allow-listed and pack-laravel variants
+      - name: Assemble, install and generate the consumer, its boot-variant apps and its pack-laravel variant
         shell: bash
         run: |
           set -euo pipefail
-          for variant in "" allow-listed pack-laravel; do
+          for variant in "" allow-listed route-check-off hook-check-off pack-laravel; do
             bundled="$RUNNER_TEMP/bundles/reference"
             if [ "$variant" = "pack-laravel" ]; then bundled="$RUNNER_TEMP/bundles/pack-laravel"; fi
             scripts/consumers/targets/laravel/assemble.sh "$WORK" "$bundled" $variant
@@ -218,6 +219,8 @@ jobs:
         env:
           SEAMPACT_LARAVEL_APP: ${{ env.WORK }}/app
           SEAMPACT_LARAVEL_ALLOW_LISTED_APP: ${{ env.WORK }}/app-allow-listed
+          SEAMPACT_LARAVEL_ROUTE_CHECK_OFF_APP: ${{ env.WORK }}/app-route-check-off
+          SEAMPACT_LARAVEL_HOOK_CHECK_OFF_APP: ${{ env.WORK }}/app-hook-check-off
           SEAMPACT_LARAVEL_PACK_APP: ${{ env.WORK }}/app-pack-laravel
           SEAMPACT_LARAVEL_REPORTS: ${{ github.workspace }}/reports
         run: pnpm vitest run --config scripts/consumers/targets/laravel/suite/vitest.config.ts

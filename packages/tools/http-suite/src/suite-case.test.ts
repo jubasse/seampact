@@ -124,6 +124,11 @@ describe("parseSuiteCase", () => {
       "at '/checks/0/only': unknown member",
     ],
     ["an unknown profile", minimalCase({ profiles: ["fast"] }), "at '/profiles/0'"],
+    [
+      "a case scoped to no target",
+      minimalCase({ targets: [] }),
+      "at '/targets': a case names at least one target",
+    ],
     ["no step", minimalCase({ steps: [] }), "at '/steps': a case has at least one step"],
     ["an empty api list", minimalCase({ apis: [] }), "at '/apis': `apis` names at least one api"],
     ["an api of another form", minimalCase({ apis: ["tasks-devices"] }), "at '/apis/0'"],

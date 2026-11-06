@@ -1,8 +1,9 @@
 #!/bin/sh
-# Assembles the Laravel consumer in <work>: `assemble.sh <work> <bundled> [allow-listed|pack-laravel]` copies the app
-# into <work>/app (or <work>/app-allow-listed, built from `seampact.allow-listed.config.yaml`, or
-# <work>/app-pack-laravel, whose paged lists answer Laravel's paginators from `pack-laravel/app`), points its path
-# repositories at the repository's php/ packages, and points its contract at the bundle that `bundle.sh` wrote to
+# Assembles the Laravel consumer in <work>: `assemble.sh <work> <bundled>
+# [allow-listed|route-check-off|hook-check-off|pack-laravel]` copies the app into <work>/app (or <work>/app-<variant>
+# for a boot variant's app, built from `seampact.<variant>.config.yaml`, or <work>/app-pack-laravel, whose paged
+# lists answer Laravel's paginators from `pack-laravel/app`), points its path repositories at the repository's php/
+# packages, and points its contract at the bundle that `bundle.sh` wrote to
 # <bundled> (for pack-laravel, the bundle of fixtures/golden/pack-laravel/contract), committed into the local git
 # repository <work>/contract-repo (<work>/contract-repo-pack-laravel) with the tag v1.0.0. The app directory is new.
 set -eu
@@ -17,9 +18,9 @@ contract_repo="$work/contract-repo"
 
 case "$variant" in
   "") app="$work/app"; config="seampact.config.yaml" ;;
-  allow-listed) app="$work/app-allow-listed"; config="seampact.allow-listed.config.yaml" ;;
+  allow-listed | route-check-off | hook-check-off) app="$work/app-$variant"; config="seampact.$variant.config.yaml" ;;
   pack-laravel) app="$work/app-pack-laravel"; config="seampact.config.yaml"; contract_repo="$work/contract-repo-pack-laravel" ;;
-  *) echo "usage: assemble.sh <work> <bundled> [allow-listed|pack-laravel]" >&2; exit 1 ;;
+  *) echo "usage: assemble.sh <work> <bundled> [allow-listed|route-check-off|hook-check-off|pack-laravel]" >&2; exit 1 ;;
 esac
 
 if [ -e "$app" ]; then

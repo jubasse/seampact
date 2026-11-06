@@ -2,7 +2,10 @@ import {
   answerPage,
   type BootedPages,
   bootPages,
+  CLAMPED_MAX_LIMIT,
+  laravelClampedChannels,
   laravelOffsetChannels,
+  PAGE_CHANNEL,
   PAGE_CHANNELS,
 } from "@seampact/codegen-core/node-server/test-support";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
@@ -66,5 +69,53 @@ describe("an offset page under Express", () => {
     expect(new URL(nextTarget ?? "", PUBLIC_PAGE_URL).href).toBe(
       "https://public.example/api/v1/channels?limit=10&offset=15",
     );
+  });
+});
+
+describe("a limit above the maximum under Express", () => {
+  let clamped: BootedPages;
+
+  beforeAll(async () => {
+    clamped = await bootPages(
+      {
+        testFileUrl: import.meta.url,
+        name: "live-pages-clamp",
+        target: expressTarget,
+        appSource: APP_SOURCE,
+      },
+      laravelClampedChannels,
+    );
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await clamped?.close();
+  });
+
+  test("reaches the handler as the maximum under overLimit clamp, which the page reports", async () => {
+    const receivedInputs: unknown[] = [];
+
+    clamped.app.scenario.answers.listChannels = (input) => {
+      receivedInputs.push(input);
+
+      return { status: 200, body: { items: PAGE_CHANNELS, total: 30 } };
+    };
+
+    const reply = await clamped.send("/v1/channels?per_page=500");
+
+    expect(reply.status).toBe(200);
+    expect(receivedInputs).toEqual([
+      expect.objectContaining({ query: expect.objectContaining({ per_page: CLAMPED_MAX_LIMIT }) }),
+    ]);
+    expect(JSON.parse(reply.text).meta).toMatchObject({
+      per_page: CLAMPED_MAX_LIMIT,
+      last_page: 3,
+    });
+  });
+
+  test("is refused under the default overLimit", async () => {
+    const reply = await clamped.send(`/v1/channels/${PAGE_CHANNEL}/tasks?per_page=500`);
+
+    expect(reply.status).toBe(400);
+    expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "/per_page", rule: "maximum" }]);
   });
 });

@@ -3,6 +3,7 @@ and each form absent from it is refused with its code."""
 
 import json
 from pathlib import Path
+from typing import Final
 
 import pytest
 
@@ -139,3 +140,92 @@ def test_a_query_or_basic_credential_scheme_is_refused_by_name(
 
     assert set(refused) == {code}
     assert f"A '{scheme['kind']}' credential scheme" in refused[code]
+
+
+_TEXT: Final = {"kind": "scalar", "refinements": {}, "type": "string"}
+_ORIGIN: Final = {"layer": "api", "pointer": "/surfaces/app/routes/channels/member/routes/tasks"}
+
+
+def test_an_etag_whose_if_match_writes_the_api_does_not_serve_waits_after_1_0(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root, "tasks")
+    responses = _operation(ir_json, "getTask")["responses"]
+    assert isinstance(responses, list)
+    responses[0]["headers"] = [
+        {
+            "name": "ETag",
+            "type": _TEXT,
+            "required": True,
+            "derivedFrom": {"derivation": "concurrency.version", "from": [_ORIGIN]},
+        }
+    ]
+
+    assert set(_refused_codes(ir_json)) == {"concurrency.etag.withoutWrite.unsupported"}
+
+
+def test_a_successor_link_to_another_api_waits_after_1_0(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root, "tasks")
+    get_task = _operation(ir_json, "getTask")
+    get_task["deprecated"] = {
+        "since": "2027-01-01",
+        "sunset": "2027-06-30",
+        "successor": {"api": "billing", "id": "getInvoice", "kind": "httpOperation"},
+        "successorRel": "successor-version",
+        "origin": _ORIGIN,
+    }
+    responses = get_task["responses"]
+    assert isinstance(responses, list)
+    responses[0]["headers"] = [
+        {
+            "name": "Link",
+            "type": _TEXT,
+            "required": True,
+            "semantic": "successorLink",
+            "derivedFrom": {"derivation": "deprecation.headers", "from": [_ORIGIN]},
+        }
+    ]
+
+    assert set(_refused_codes(ir_json)) == {"deprecated.successor.otherApi.unsupported"}
+
+
+def test_a_page_header_written_from_an_object_waits_after_1_0(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root, "tasks")
+    pagings = ir_json["pagings"]
+    assert isinstance(pagings, dict)
+    pagings["cursor"]["response"]["headers"] = [
+        {"name": "X-Items", "value": {"kind": "slot", "slot": "items", "path": []}},
+        {"name": "X-Next", "value": {"kind": "slot", "slot": "nextCursor", "path": []}},
+    ]
+
+    refused = _refused_codes(ir_json)
+
+    assert set(refused) == {"paging.response.header.unsupported"}
+    assert "'X-Items'" in refused["paging.response.header.unsupported"]
+
+
+def test_a_page_body_writing_slots_the_page_reply_does_not_fill_is_refused_by_name(repository_root: Path) -> None:
+    # HAL's page names its `_embedded` member by `$collection` and links each item by `$itemSelf`, which the page reply
+    # does not fill: the boundary would drop them, so the style is refused by name.
+    ir_json = _ir_json(repository_root, "tasks")
+    hal_json = json.loads((repository_root / "fixtures/golden/pack-hal/tasks.ir.json").read_text("utf-8"))
+    pagings = ir_json["pagings"]
+    assert isinstance(pagings, dict)
+    pagings["cursor"]["response"]["body"] = hal_json["pagings"]["halPages"]["response"]["body"]
+
+    refused = _refused_codes(ir_json)
+
+    assert (
+        "The page slots '$collection', '$itemSelf' of the paging style 'cursor'"
+        in refused["paging.response.slot.unsupported"]
+    )
+
+
+def test_a_page_number_slot_under_an_offset_style_is_refused_by_name(repository_root: Path) -> None:
+    # The page reply fills `$page` for a page-number style only: an offset style's page number has no declared base.
+    ir_json = json.loads((repository_root / "fixtures/golden/pack-laravel/tasks.ir.json").read_text("utf-8"))
+    pagings = ir_json["pagings"]
+    assert isinstance(pagings, dict)
+    pagings["laravelPages"]["position"] = "offset"
+
+    refused = _refused_codes(ir_json)
+
+    assert "The page slots '$page' of the paging style 'laravelPages'" in refused["paging.response.slot.unsupported"]

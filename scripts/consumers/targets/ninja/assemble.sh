@@ -1,8 +1,8 @@
 #!/bin/sh
-# Assembles the Django Ninja consumer in <work>: `assemble.sh <work> <bundled> [allow-listed]`, as the shared Python
-# `assemble.sh` does for this directory, with the views SEAMPACT_NINJA_VIEWS names (`sync` or `async`) in both entries'
-# options. The app takes the FastAPI consumer's handlers and sample data, which read the same Pydantic operations, the
-# DRF consumer's Django control views and the shared reference hook doubles.
+# Assembles the Django Ninja consumer in <work>: `assemble.sh <work> <bundled> [allow-listed|pack-laravel]`, as the
+# shared Python `assemble.sh` does for this directory, with the views SEAMPACT_NINJA_VIEWS names (`sync` or `async`) in
+# both entries' options. The app takes the FastAPI consumer's handlers and sample data, which read the same Pydantic
+# operations, the DRF consumer's Django control views and the shared reference hook doubles.
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -22,6 +22,12 @@ case "${3:-}" in
 esac
 
 cp "$consumers/targets/fastapi/app/handlers.py" "$consumers/targets/fastapi/app/sample_data.py" "$app/"
+# The hook-check-off app's generated code has no `health` types, so it goes without the `health` handlers.
+if [ "${3:-}" = "hook-check-off" ]; then
+  rm "$app/health_handler_factories.py"
+else
+  cp "$consumers/targets/fastapi/app/health_handlers.py" "$app/"
+fi
 cp "$consumers/targets/drf/app/control.py" "$app/"
 cp "$consumers/python/reference_doubles/hook_doubles.py" "$app/"
 sed -i "s/views: sync/views: $views/" "$app/seampact.config.yaml"

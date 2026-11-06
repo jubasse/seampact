@@ -121,7 +121,7 @@ By default the framework-route check looks only at the app routes that can serve
 
 In PHP, where an application boots per request, the check runs when the container or route cache is built and at boot when no cache exists; the generated dispatcher also answers 500 rather than call a missing hook.
 
-The app config may switch off the handler check and the framework-route check apart (`artefacts.bootCheck: { handlers: false, frameworkRoutes: false }`), for an app that serves part of an api or registers many routes of its own; while the target generates hooks, a missing hook is always refused, since nothing may fall back to allow.
+The app config may switch off the framework-route check and the hook check apart (`artefacts.bootCheck: { frameworkRoutes: false, hooks: off }`), for an app that registers many routes of its own, or that sets the hook level above; an app that serves part of an api filters its entry's operations instead, since the handler check runs whenever the boot check does. While the target generates hooks, a route whose hook is missing still answers 500, since nothing may fall back to allow.
 
 ### The check order
 

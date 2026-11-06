@@ -13,6 +13,7 @@ class Delivery(StrEnum):
 
     CONSUMER = "it comes when a consumer needs it"
     AFTER_V1 = "it comes after 1.0"
+    LATER_THAN_V1 = "the 1.0 Python targets do not serve it, so it comes after 1.0"
 
 
 @dataclass(frozen=True, slots=True)

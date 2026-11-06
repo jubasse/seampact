@@ -1,14 +1,13 @@
 // Runs the shared http suite's `default`, `hand-written`, `boot` and `pack:laravel` profiles against the assembled
 // Laravel consumer (ADR 0015 "Suite profiles") served by PHP's built-in server, and writes one report per profile. The
 // app directories and the report directory come from the environment: SEAMPACT_LARAVEL_APP,
-// SEAMPACT_LARAVEL_ALLOW_LISTED_APP, SEAMPACT_LARAVEL_PACK_APP and SEAMPACT_LARAVEL_REPORTS.
+// SEAMPACT_LARAVEL_ALLOW_LISTED_APP, SEAMPACT_LARAVEL_ROUTE_CHECK_OFF_APP, SEAMPACT_LARAVEL_HOOK_CHECK_OFF_APP,
+// SEAMPACT_LARAVEL_PACK_APP and SEAMPACT_LARAVEL_REPORTS.
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import type { ContractIR } from "../../../../../packages/core/spec/src/ir/index.ts";
 import {
   loadSuiteCases,
-  packProfileOf,
   refusalsOf,
   reportFileOf,
   runBootSuite,
@@ -17,16 +16,15 @@ import {
   type SuiteCredentials,
   type SuiteProfile,
   type SuiteReport,
-  suiteReportOf,
   testEachCase,
   writeSuiteReport,
 } from "../../../../../packages/tools/http-suite/src/index.ts";
+import { type ConsumerBootApp, runBootProfileOnApps } from "../../../boot-apps.ts";
+import { goldenPackProfile } from "../../../golden-pack-profile.ts";
 import { type RunningApp, startLaravelApp } from "./laravel-app.ts";
 import { LARAVEL_SUITE_REFUSALS } from "./suite-refusals.ts";
 
 const TARGET = "laravel";
-const ALLOW_LISTED_CASE = "allow-listed-framework-route-boots";
-const ALLOW_LISTED_ELSEWHERE = "Runs on the app built with the route allow-listed.";
 const SUITE_TIMEOUT_MS = 600_000;
 const BOOT_TIMEOUT_MS = 120_000;
 const TARGET_PROFILES: readonly SuiteProfile[] = [
@@ -36,14 +34,14 @@ const TARGET_PROFILES: readonly SuiteProfile[] = [
   "pack:laravel",
 ];
 const BOOT_ROUTES_CACHE = "boot-routes.php";
-const LARAVEL_PACK = "@seampact/pack-laravel";
-const PACK_LARAVEL_GOLDEN = join(
-  import.meta.dirname,
-  "../../../../../fixtures/golden/pack-laravel",
-);
 
 const app = requiredEnvironment("SEAMPACT_LARAVEL_APP");
-const allowListedApp = requiredEnvironment("SEAMPACT_LARAVEL_ALLOW_LISTED_APP");
+const bootAppDirectoryOf: Readonly<Record<ConsumerBootApp, string>> = {
+  main: app,
+  "allow-listed": requiredEnvironment("SEAMPACT_LARAVEL_ALLOW_LISTED_APP"),
+  "route-check-off": requiredEnvironment("SEAMPACT_LARAVEL_ROUTE_CHECK_OFF_APP"),
+  "hook-check-off": requiredEnvironment("SEAMPACT_LARAVEL_HOOK_CHECK_OFF_APP"),
+};
 const packApp = requiredEnvironment("SEAMPACT_LARAVEL_PACK_APP");
 const reportDirectory = requiredEnvironment("SEAMPACT_LARAVEL_REPORTS");
 const credentials = readCredentials();
@@ -110,7 +108,7 @@ function describeHttpProfile(profile: SuiteProfile): void {
 function bootRun(
   cases: readonly SuiteCase[],
   appDirectory: string,
-  refusals: Record<string, string>,
+  refusals: Readonly<Record<string, string>>,
 ) {
   return runBootSuite({
     target: TARGET,
@@ -128,24 +126,14 @@ function bootRun(
   });
 }
 
-// The allow-listed variant needs the route in the config, so it boots the second app; the other cases boot the first.
-async function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport> {
-  const refusals = refusalsOf(cases, LARAVEL_SUITE_REFUSALS);
-  const onMainApp = await bootRun(cases, app, {
-    ...refusals,
-    [ALLOW_LISTED_CASE]: ALLOW_LISTED_ELSEWHERE,
-  });
-  const allowListedCases = cases.filter((suiteCase) => suiteCase.id === ALLOW_LISTED_CASE);
-  const onAllowListedApp = await bootRun(
-    allowListedCases,
-    allowListedApp,
-    refusalsOf(allowListedCases, LARAVEL_SUITE_REFUSALS),
+// A variant built from another app config boots that config's app (`boot-apps.ts`); the other cases boot the first.
+function runBootProfile(cases: readonly SuiteCase[]): Promise<SuiteReport> {
+  return runBootProfileOnApps(
+    TARGET,
+    cases,
+    LARAVEL_SUITE_REFUSALS,
+    (bootApp, appCases, refusals) => bootRun(appCases, bootAppDirectoryOf[bootApp], refusals),
   );
-  const merged = onMainApp.cases.map(
-    (result) => onAllowListedApp.cases.find((other) => other.id === result.id) ?? result,
-  );
-
-  return suiteReportOf({ target: TARGET, profile: "boot" }, merged);
 }
 
 const GENERAL_CHANNEL = "/v1/channels/10000000-0000-4000-8000-000000000001";
@@ -413,15 +401,11 @@ describe("a handler exception under responses: warn with APP_DEBUG on", () => {
 describeHttpProfile("default");
 describeHttpProfile("hand-written");
 
-function packLaravelIr(contract: string): ContractIR {
-  return JSON.parse(readFileSync(join(PACK_LARAVEL_GOLDEN, `${contract}.ir.json`), "utf8"));
-}
-
 // The pack-laravel app serves the reference contract with `@seampact/pack-laravel` applied, its paged lists answering
 // Laravel's paginators; its profile reads the default cases through the pack's format and paging style, then runs the
 // pack's own cases.
 describe("http suite, pack:laravel profile", () => {
-  const pack = packProfileOf([packLaravelIr("tasks"), packLaravelIr("tasksService")], LARAVEL_PACK);
+  const pack = goldenPackProfile("pack-laravel");
   const refusals = {
     ...pack.refusals,
     ...refusalsOf(pack.cases, LARAVEL_SUITE_REFUSALS),

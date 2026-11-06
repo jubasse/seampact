@@ -6,10 +6,12 @@ import pytest
 
 from seampact.codegen.runtime.contract import ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError
+from seampact.codegen.runtime.input_decoding import Issue
 from seampact.codegen.runtime.ir_view import IrJson
-from seampact.codegen.runtime.page_reply import PageParts, filled_page_query, page_parts
+from seampact.codegen.runtime.page_reply import PageParts, cursor_issues, filled_page_query, page_parts
 
 _LIST_CHANNELS: Final = "listChannels"
+_LIST_CHARGES: Final = "listCharges"
 
 
 def _slot(name: str) -> IrJson:
@@ -20,15 +22,20 @@ def _member(name: str, slot: str) -> IrJson:
     return {"name": {"kind": "text", "text": name}, "value": _slot(slot)}
 
 
-def _pages_contract(urls: str = "relative") -> ApiContract:
-    """One list on a page style that counts its pages and links the last one."""
+def _pages_contract(urls: str = "relative", page_headers: tuple[IrJson, ...] = ()) -> ApiContract:
+    """One list on a page style that counts its pages, links the last one and writes `page_headers`, and one on a
+    Stripe-style pair of cursors."""
     ir_view: dict[str, IrJson] = {
         "api": {"id": "tasks", "wire": {"urls": urls}},
         "operations": [
             {
                 "id": _LIST_CHANNELS,
                 "paging": {"style": "pages", "defaultLimit": 2, "maxLimit": 100, "overLimit": "clamp"},
-            }
+            },
+            {
+                "id": _LIST_CHARGES,
+                "paging": {"style": "stripe", "defaultLimit": 10, "maxLimit": 100, "overLimit": "reject"},
+            },
         ],
         "pagings": {
             "pages": {
@@ -51,11 +58,23 @@ def _pages_contract(urls: str = "relative") -> ApiContract:
                         ],
                     },
                     "meta": [],
-                    "headers": [],
+                    "headers": list(page_headers),
                     "links": [],
                 },
                 "handlerResult": ["total"],
-            }
+            },
+            "stripe": {
+                "id": "stripe",
+                "position": "cursor",
+                "absent": "omit",
+                "request": [
+                    {"role": "after", "in": "query", "name": "starting_after"},
+                    {"role": "before", "in": "query", "name": "ending_before"},
+                    {"role": "limit", "in": "query", "name": "limit"},
+                ],
+                "response": {"meta": [], "headers": [], "links": []},
+                "handlerResult": ["more"],
+            },
         },
     }
 
@@ -66,6 +85,27 @@ def _pages_contract(urls: str = "relative") -> ApiContract:
 
 def _pages(query: dict[str, object], raw_query: str, items: list[object], total: int) -> PageParts:
     return page_parts(_pages_contract(), _LIST_CHANNELS, query, raw_query, items, {"total": total}, 200, "/v1/channels")
+
+
+def _page_headers(*headers: tuple[str, IrJson]) -> tuple[tuple[str, str], ...]:
+    contract = _pages_contract(page_headers=tuple({"name": name, "value": value} for name, value in headers))
+
+    return page_parts(contract, _LIST_CHANNELS, {}, "", [], {"total": 0}, 200, "/v1/channels").headers
+
+
+def test_a_page_header_writes_the_text_of_a_scalar_and_none_for_a_null() -> None:
+    headers = _page_headers(
+        ("X-Total", _slot("total")),
+        ("X-Complete", {"kind": "literal", "value": True}),
+        ("X-None", {"kind": "literal", "value": None}),
+    )
+
+    assert headers == (("x-total", "0"), ("x-complete", "true"))
+
+
+def test_a_page_header_rendering_an_object_is_the_boundarys_failure_naming_the_header() -> None:
+    with pytest.raises(BoundaryFailureError, match="X-Window"):
+        _page_headers(("X-Window", {"kind": "literal", "value": {"from": 1}}))
 
 
 def test_an_empty_list_counts_no_page_and_its_last_link_is_the_first_page() -> None:
@@ -99,6 +139,20 @@ def test_the_handler_gets_the_default_limit_and_a_clamped_one() -> None:
 
     assert filled_page_query(contract, _LIST_CHANNELS, {}) == {"per_page": 2}
     assert filled_page_query(contract, _LIST_CHANNELS, {"per_page": 500}) == {"per_page": 100}
+
+
+def test_both_stripe_cursors_are_one_exclusive_cursors_issue_at_the_before_parameter() -> None:
+    issues = cursor_issues(_pages_contract(), _LIST_CHARGES, {"starting_after": "ch_1", "ending_before": "ch_9"})
+
+    assert issues == [Issue("query", "/ending_before", "exclusiveCursors")]
+
+
+def test_one_stripe_cursor_or_a_style_without_the_pair_has_no_cursor_issue() -> None:
+    contract = _pages_contract()
+
+    assert cursor_issues(contract, _LIST_CHARGES, {"starting_after": "ch_1"}) == []
+    assert cursor_issues(contract, _LIST_CHARGES, {"ending_before": "ch_9"}) == []
+    assert cursor_issues(contract, _LIST_CHANNELS, {"page": 2}) == []
 
 
 def test_a_cursor_page_links_the_next_token_and_keeps_the_other_query_pairs(tasks_contract: ApiContract) -> None:

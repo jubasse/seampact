@@ -34,8 +34,9 @@ private const val HOOKS_OFF = "off"
 /**
  * The api's contract table (ADR 0022 "Placement"): the IR view of the kept operations, the declarations they read
  * and the entry's settings, as JSON text the runtime reads with its own mapper. It is the IR itself, with the
- * members only tooling reads removed, so no third format exists between the IR and the boundary. The one fact read
- * from a removed member, which header params count for an idempotency fingerprint, is in the settings (`fingerprintHeaders`).
+ * members only tooling reads removed, so no third format exists between the IR and the boundary. The facts read from
+ * removed members are in the settings: which header params count for an idempotency fingerprint (`fingerprintHeaders`)
+ * and the response headers the boundary writes from a response's own IR headers (`responseHeaders`).
  */
 internal fun contractTableType(layout: JavaLayout, options: SpringBootOptions, entry: SpringBootEntry): TypeSpec {
     val text = contractTable(layout, options, entry).toString()
@@ -71,7 +72,7 @@ private fun contractTable(layout: JavaLayout, options: SpringBootOptions, entry:
         put("operations", JsonArray(operations))
         put("schemas", JsonObject((ir["schemas"] as JsonObject).filterKeys { it in keptSchemas }))
         put("enums", JsonObject((ir["enums"] as JsonObject).filterKeys { it in keptEnums }))
-        put("settings", settings(options, entry, operations))
+        put("settings", settings(options, entry, operations, layout.kept.responseHeaders))
     }
 
     return withoutToolingMembers(view) as JsonObject
@@ -81,7 +82,7 @@ private fun contractTable(layout: JavaLayout, options: SpringBootOptions, entry:
 private const val STRICT_SCOPE = "strict"
 private const val CONTRACT_SCOPE = "contract"
 
-private fun settings(options: SpringBootOptions, entry: SpringBootEntry, operations: List<JsonElement>): JsonObject {
+private fun settings(options: SpringBootOptions, entry: SpringBootEntry, operations: List<JsonElement>, responseHeaders: ResponseHeaderEntries): JsonObject {
     val bootCheck = entry.artefacts[BOOT_CHECK]
     val everyCheck = bootCheck != JsonPrimitive(false)
     val checks = bootCheck as? JsonObject
@@ -104,6 +105,7 @@ private fun settings(options: SpringBootOptions, entry: SpringBootEntry, operati
             },
         )
         put("fingerprintHeaders", fingerprintHeaders(operations))
+        put("responseHeaders", responseHeaders.toJson())
     }
 }
 

@@ -1,6 +1,5 @@
 package com.example.consumer;
 
-import com.example.tasks.api.AppEndpoints;
 import com.example.tasks.api.ArchiveTaskErrors;
 import com.example.tasks.api.ArchiveTaskInput;
 import com.example.tasks.api.ArchiveTaskResult;
@@ -23,8 +22,6 @@ import com.example.tasks.api.GetTaskInput;
 import com.example.tasks.api.GetTaskResult;
 import com.example.tasks.api.GetTasksBatchInput;
 import com.example.tasks.api.GetTasksBatchResult;
-import com.example.tasks.api.HealthInput;
-import com.example.tasks.api.HealthResult;
 import com.example.tasks.api.HooksEndpoints;
 import com.example.tasks.api.PaymentsInput;
 import com.example.tasks.api.PaymentsResult;
@@ -45,7 +42,6 @@ import com.example.tasks.api.UpdateTaskResult;
 import com.example.tasks.api.UpdatePreferencesResult;
 import com.example.tasks.api.schemas.Channel;
 import com.example.tasks.api.schemas.Draft;
-import com.example.tasks.api.schemas.Health;
 import com.example.tasks.api.schemas.Preferences;
 import com.example.tasks.api.schemas.Task;
 import com.example.tasks.api.schemas.TaskState;
@@ -70,23 +66,6 @@ final class TasksControllers {
     private static final String API = "tasks";
 
     private TasksControllers() {}
-
-    @RestController
-    @SkippedUnder("missing-handler")
-    static final class App implements AppEndpoints {
-        private final ScriptedAnswers answers;
-
-        App(ScriptedAnswers answers) {
-            this.answers = answers;
-        }
-
-        @Override
-        @com.example.tasks.api.spring.Health
-        public HealthResult health(HealthInput input) {
-            return answers.answer(API, "health", 200, Health.class, HealthResult.Status200::new, Map.<String, java.util.function.Supplier<HealthResult>>of())
-                    .orElseGet(() -> new HealthResult.Status200(new Health("ok")));
-        }
-    }
 
     @RestController
     static final class Hooks implements HooksEndpoints {

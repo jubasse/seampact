@@ -6,7 +6,15 @@ import * as TasksAdonis from "../generated/server/tasks/index.js";
 import * as TasksDevicesAdonis from "../generated/server/tasksDevices/index.js";
 import * as TasksServiceAdonis from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesAdonis from "../generated/server/tasksServiceWrites/index.js";
-import { servesUnlistedRoute, UNLISTED_ROUTE, withoutMissingHandler } from "./boot-variant.mjs";
+import {
+  MISMATCHED_MOUNT,
+  mountsUnderMismatchedPrefix,
+  PATTERNED_ROUTE,
+  servesPatternedRoute,
+  servesUnlistedRoute,
+  UNLISTED_ROUTE,
+  withoutMissingHandler,
+} from "./boot-variant.mjs";
 import {
   tasksDevicesHooks,
   tasksHooks,
@@ -32,17 +40,12 @@ export function registerContractRoutes(router: Router): void {
   if (servesUnlistedRoute())
     router.get(UNLISTED_ROUTE, ({ response }) => response.status(204).send(""));
 
-  TasksAdonis.registerRoutes(router, {
-    controllers: withoutMissingHandler({
-      AppEndpoints: async () => ({ default: (await controllers()).AppController }),
-      ChannelsEndpoints: async () => ({ default: (await controllers()).ChannelsController }),
-      TasksEndpoints: async () => ({ default: (await controllers()).TasksController }),
-      DraftsEndpoints: async () => ({ default: (await controllers()).DraftsController }),
-      PreferencesEndpoints: async () => ({ default: (await controllers()).PreferencesController }),
-      HooksEndpoints: async () => ({ default: (await controllers()).HooksController }),
-    }),
-    hooks: tasksHooks(),
-  });
+  if (servesPatternedRoute())
+    router.get(PATTERNED_ROUTE, ({ response }) => response.status(204).send(""));
+
+  if (mountsUnderMismatchedPrefix())
+    router.group(() => registerTasksRoutes(router)).prefix(MISMATCHED_MOUNT);
+  else registerTasksRoutes(router);
 
   TasksServiceAdonis.registerRoutes(router, {
     controllers: {
@@ -65,6 +68,20 @@ export function registerContractRoutes(router: Router): void {
       DevicesEndpoints: async () => ({ default: (await controllers()).DevicesController }),
     },
     hooks: tasksDevicesHooks(),
+  });
+}
+
+function registerTasksRoutes(router: Router): void {
+  TasksAdonis.registerRoutes(router, {
+    controllers: withoutMissingHandler({
+      AppEndpoints: async () => ({ default: (await controllers()).AppController }),
+      ChannelsEndpoints: async () => ({ default: (await controllers()).ChannelsController }),
+      TasksEndpoints: async () => ({ default: (await controllers()).TasksController }),
+      DraftsEndpoints: async () => ({ default: (await controllers()).DraftsController }),
+      PreferencesEndpoints: async () => ({ default: (await controllers()).PreferencesController }),
+      HooksEndpoints: async () => ({ default: (await controllers()).HooksController }),
+    }),
+    hooks: tasksHooks(),
   });
 }
 

@@ -7,7 +7,12 @@ use App\Http\Controllers\UnlistedRouteController;
 use Illuminate\Support\Facades\Route;
 use Seampact\ConsumerSuite\BootVariant;
 
-Route::seampact('tasks');
+// The mount-mismatch boot variant serves the tasks api under a route group prefix its entry's mount does not state.
+if (BootVariant::mountsUnderMismatchedPrefix()) {
+    Route::prefix(BootVariant::MISMATCHED_MOUNT)->group(static fn () => Route::seampact('tasks'));
+} else {
+    Route::seampact('tasks');
+}
 Route::seampact('tasksService');
 Route::seampact('tasksServiceWrites');
 Route::seampact('tasksDevices');
@@ -22,4 +27,8 @@ Route::get('/__seampact/dumped-credential', [SuiteControlController::class, 'dum
 
 if (BootVariant::servesUnlistedRoute()) {
     Route::get('/v1/unlisted', UnlistedRouteController::class);
+}
+
+if (BootVariant::servesPatternedRoute()) {
+    Route::get(BootVariant::PATTERNED_ROUTE, UnlistedRouteController::class);
 }

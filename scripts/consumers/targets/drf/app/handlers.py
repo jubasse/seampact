@@ -3,7 +3,7 @@ when it says so, and the factories SEAMPACT names, which build them per request.
 
 from django.http import HttpRequest
 from generated.tasks import operations as tasks
-from generated.tasks.schemas import Health, Preferences, Task, TaskSearchResult, TaskState
+from generated.tasks.schemas import Preferences, Task, TaskSearchResult, TaskState
 from generated.tasks_absolute_urls import operations as absolute_urls
 from generated.tasks_devices import operations as devices
 from generated.tasks_devices.schemas import DeviceStatus
@@ -11,6 +11,7 @@ from generated.tasks_optional_auth import operations as optional_auth
 from generated.tasks_optional_auth.schemas import Greeting
 from generated.tasks_service import operations as service
 from generated.tasks_service_writes import operations as service_writes
+from paged_lists import channel_page, note_page, sample_task_page, scripted_task_page
 from sample_data import (
     FIRST_NOTE_ID,
     FIRST_VERSION,
@@ -27,19 +28,12 @@ from sample_data import (
     task_of,
     with_next_version,
 )
-from seampact_consumer_suite.scripted_answers import scripted_answer, text_member
+from seampact_consumer_suite.scripted_answers import scripted_answer
 
 _OK: int = 200
-_HEALTHY: str = "ok"
 _SERVICE_API: str = "tasksService"
-_NEXT_CURSOR: str = "page-2"
 _DEFAULT_LOCALE: str = "en"
 _DEFAULT_DIGEST: bool = False
-
-
-class AppHandlers:
-    def health(self, request: tasks.HealthRequest) -> tasks.HealthResult:
-        return scripted_answer("health", _OK, _health_of) or tasks.HealthResponse200(body=Health(status=_HEALTHY))
 
 
 class ChannelsHandlers:
@@ -51,7 +45,7 @@ class ChannelsHandlers:
         )
 
     def list_channels(self, request: tasks.ListChannelsRequest) -> tasks.ListChannelsResult:
-        return tasks.ListChannelsResponse200(body=tasks.ListChannelsPage(items=[channel()]))
+        return tasks.ListChannelsResponse200(body=channel_page([channel()]))
 
 
 class DraftsHandlers:
@@ -120,9 +114,7 @@ class TasksHandlers:
         return tasks.PurgeTaskResponse204()
 
     def list_tasks(self, request: tasks.ListTasksRequest) -> tasks.ListTasksResult:
-        """The first page links a second one; the second is the last."""
-        next_cursor = _NEXT_CURSOR if request.input.query.cursor is None else None
-        page = tasks.ListTasksPage(items=[task(NEW_TASK_ID)], next_cursor=next_cursor)
+        page = sample_task_page([task(NEW_TASK_ID)], request.input)
 
         return scripted_answer("listTasks", _OK, _task_page_of) or tasks.ListTasksResponse200(body=page)
 
@@ -169,18 +161,10 @@ class NotesHandlers:
     """The `tasksAbsoluteUrls` api's handlers; the boundary writes their page links from the public origin."""
 
     def list_notes(self, request: absolute_urls.ListNotesRequest) -> absolute_urls.ListNotesResult:
-        next_cursor = _NEXT_CURSOR if request.input.query.cursor is None else None
-
-        return absolute_urls.ListNotesResponse200(
-            body=absolute_urls.ListNotesPage(items=[note(FIRST_NOTE_ID)], next_cursor=next_cursor)
-        )
+        return absolute_urls.ListNotesResponse200(body=note_page([note(FIRST_NOTE_ID)], request.input))
 
     def get_note(self, request: absolute_urls.GetNoteRequest) -> absolute_urls.GetNoteResult:
         return absolute_urls.GetNoteResponse200(body=note(request.input.path.note_id))
-
-
-def _health_of(body: dict[str, object]) -> tasks.HealthResult:
-    return tasks.HealthResponse200(body=Health(status=text_member(body, "status")))
 
 
 def _channel_reply_of(body: dict[str, object]) -> tasks.GetChannelResult:
@@ -197,13 +181,9 @@ def _service_task_reply_of(body: dict[str, object]) -> service.GetTaskResult:
 
 def _task_page_of(body: dict[str, object]) -> tasks.ListTasksResult:
     items = body.get("items")
-    next_cursor = body.get("nextCursor")
-    page = tasks.ListTasksPage(
-        items=[task_of(item) for item in items if isinstance(item, dict)] if isinstance(items, list) else [],
-        next_cursor=next_cursor if isinstance(next_cursor, str) else None,
-    )
+    scripted_tasks = [task_of(item) for item in items if isinstance(item, dict)] if isinstance(items, list) else []
 
-    return tasks.ListTasksResponse200(body=page)
+    return tasks.ListTasksResponse200(body=scripted_task_page(scripted_tasks, body))
 
 
 def _retitled(created: Task, title: str) -> Task:
@@ -215,10 +195,6 @@ def _retitled(created: Task, title: str) -> Task:
         version=created.version,
         created_at=created.created_at,
     )
-
-
-def app_handlers(request: HttpRequest) -> AppHandlers:
-    return AppHandlers()
 
 
 def channels_handlers(request: HttpRequest) -> ChannelsHandlers:

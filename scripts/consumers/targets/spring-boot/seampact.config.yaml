@@ -12,33 +12,39 @@ targets:
     options: { package: com.example.tasks.api, springSecurity: { matchers: true } }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
   - id: tasksService
     use: io.github.jubasse:seampact-spring-boot
     api: tasksService
     options: { package: com.example.tasksservice.api, springSecurity: false }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
   - id: tasksServiceWrites
     use: io.github.jubasse:seampact-spring-boot
     api: tasksServiceWrites
     options: { package: com.example.tasksservicewrites.api, springSecurity: false }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
   - id: tasksDevices
     use: io.github.jubasse:seampact-spring-boot
     api: tasksDevices
     options: { package: com.example.tasksdevices.api, springSecurity: false }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
   - id: tasksOptionalAuth
     use: io.github.jubasse:seampact-spring-boot
     api: tasksOptionalAuth
     options: { package: com.example.tasksoptionalauth.api, springSecurity: false }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
   - id: tasksAbsoluteUrls
     use: io.github.jubasse:seampact-spring-boot
     api: tasksAbsoluteUrls
     options: { package: com.example.tasksabsoluteurls.api, springSecurity: false }
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }

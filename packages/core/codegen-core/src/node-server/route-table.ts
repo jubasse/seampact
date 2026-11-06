@@ -4,6 +4,7 @@ import {
   type Operation,
   type Param,
   type Principal,
+  type QueryWire,
   type SchemaId,
   type Template,
   type TypeUse,
@@ -930,7 +931,7 @@ function queryRule(
 
   if (wire.kind === "list" && wire.brackets) {
     refusals.push(refuseBracketsQueryList(wireLocation));
-  } else if (wire.style !== "form" || (wire.kind === "list" && wire.explode)) {
+  } else if (wire.style !== "form") {
     refusals.push(
       refuseNotGeneratedYet(
         "query.wire",
@@ -940,16 +941,28 @@ function queryRule(
     );
   }
 
-  const decoding =
-    wire.kind === "list"
-      ? "list"
-      : wire.kind === "number"
-        ? "number"
-        : wire.kind === "boolean"
-          ? "boolean"
-          : "text";
+  if (wire.kind === "list") return listRule(param, wire);
+
+  const decoding = wire.kind === "number" ? "number" : wire.kind === "boolean" ? "boolean" : "text";
 
   return { name: param.name, decoding };
+}
+
+// Text items keep the rule as it was before item decoding, so a text list's generated rule names no `items`.
+function listRule(param: Param, wire: QueryWire): SourceValue {
+  const items =
+    isKnownVariant("TypeUse", param.type) && param.type.kind === "array"
+      ? scalarDecoding(param.type.items)
+      : "text";
+
+  if (items === "text") return { name: param.name, decoding: listDecoding(wire) };
+
+  return { name: param.name, decoding: listDecoding(wire), items };
+}
+
+// An exploded list is the default `repeat` form (`tag=a&tag=b`); an unexploded one is the `comma` form (`tag=a,b`).
+function listDecoding(wire: QueryWire): "repeatedList" | "list" {
+  return wire.explode ? "repeatedList" : "list";
 }
 
 function inputEntry(operation: Operation, location: IrLocation, refusals: Refusal[]): SourceValue {

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Final
 
 from control import control_router
-from fastapi import FastAPI, Request
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
 from generated.tasks.fastapi import TasksHandlerFactories, bind_tasks
 from generated.tasks_absolute_urls.fastapi import TasksAbsoluteUrlsHandlerFactories, bind_tasks_absolute_urls
@@ -16,7 +16,6 @@ from generated.tasks_optional_auth.fastapi import TasksOptionalAuthHandlerFactor
 from generated.tasks_service.fastapi import TasksServiceHandlerFactories, bind_tasks_service
 from generated.tasks_service_writes.fastapi import TasksServiceWritesHandlerFactories, bind_tasks_service_writes
 from handlers import (
-    AppHandlers,
     ChannelsHandlers,
     DevicesHandlers,
     DraftsHandlers,
@@ -40,7 +39,17 @@ from hook_doubles import (
     TasksUnexpectedErrors,
 )
 from hooks import service_hook, user_hook
-from seampact_consumer_suite.boot_variant import BootVariant, current_boot_variant, serves_unlisted_route
+from seampact_consumer_suite.boot_variant import (
+    MISMATCHED_MOUNT,
+    PATTERNED_ROUTE,
+    BootVariant,
+    current_boot_variant,
+    leaves_out_authenticate_hook,
+    leaves_out_health_handler,
+    mounts_under_mismatched_prefix,
+    serves_patterned_route,
+    serves_unlisted_route,
+)
 from seampact_consumer_suite.file_idempotency_store import FileIdempotencyStore
 from seampact_consumer_suite.log_lines import SuiteLogHandler
 from seampact_consumer_suite.scripted_answers import ScriptedReply
@@ -81,6 +90,26 @@ def _deciders() -> dict[str, type[TasksDecider] | type[OverriddenRightDecider]]:
     return {name: OverriddenRightDecider if name == OVERRIDDEN_RIGHT else TasksDecider for name in DECIDED_NAMES}
 
 
+def _handler_factories(variant: BootVariant | None) -> TasksHandlerFactories:
+    groups: dict[str, object] = {
+        "channels": ChannelsHandlers,
+        "drafts": DraftsHandlers,
+        "hooks": HooksHandlers,
+        "preferences": PreferencesHandlers,
+        "tasks": TasksHandlers,
+    }
+
+    # The app built with `health` filtered out generates no `app` group and has no `health_handlers` module.
+    if variant is BootVariant.MISSING_HANDLER:
+        groups["app"] = None
+    elif not leaves_out_health_handler():
+        from health_handlers import AppHandlers
+
+        groups["app"] = AppHandlers
+
+    return TasksHandlerFactories(**groups)
+
+
 def create_app() -> FastAPI:
     configure_suite_files(SuiteFiles(str(APP_DIRECTORY / CONTROL_STATE_FILE), str(APP_DIRECTORY / CREDENTIALS_FILE)))
     logging.getLogger().addHandler(SuiteLogHandler())
@@ -94,24 +123,27 @@ def create_app() -> FastAPI:
     if serves_unlisted_route():
         app.add_api_route(UNLISTED_PATH, _unlisted, methods=["GET"])
 
+    if serves_patterned_route():
+        app.add_api_route(PATTERNED_ROUTE, _unlisted, methods=["GET"])
+
+    # The mount-mismatch variant serves the tasks api under a router prefix its entry's mount does not state.
+    tasks_router = APIRouter() if mounts_under_mismatched_prefix() else None
+
     bind_tasks(
-        app,
-        handlers=TasksHandlerFactories(
-            app=None if variant is BootVariant.MISSING_HANDLER else AppHandlers,
-            channels=ChannelsHandlers,
-            drafts=DraftsHandlers,
-            hooks=HooksHandlers,
-            preferences=PreferencesHandlers,
-            tasks=TasksHandlers,
-        ),
+        app if tasks_router is None else tasks_router,
+        app=None if tasks_router is None else app,
+        handlers=_handler_factories(variant),
         authenticate={STRIPE_IDENTITY: StripeHook}
-        if variant is BootVariant.MISSING_AUTHENTICATE_HOOK
+        if leaves_out_authenticate_hook()
         else {USER_IDENTITY: user_hook, STRIPE_IDENTITY: StripeHook},
         deciders={} if variant is BootVariant.MISSING_DECIDER else _deciders(),
         scope_resolvers={} if variant is BootVariant.MISSING_SCOPE_RESOLVER else {CHANNEL_SCOPE: ChannelResolver},
         idempotency_store=_idempotency_store,
         on_unexpected_error=TasksUnexpectedErrors,
     )
+    if tasks_router is not None:
+        app.include_router(tasks_router, prefix=MISMATCHED_MOUNT)
+
     bind_tasks_service(
         app,
         handlers=TasksServiceHandlerFactories(internal=InternalHandlers),

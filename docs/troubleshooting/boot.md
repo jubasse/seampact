@@ -116,6 +116,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `settings.SEAMPACT['<api>']['access'] has the unknown access kind '<kind>'` | Key `access` by `public`, `optional`, `identity` or `signed`. |
 | `settings.SEAMPACT['<api>']['access'] names the access kind '<kind>', which no operation of the api has` | Remove that kind. |
 | `settings.SEAMPACT['<api>']['access']['<kind>']['<name>'] names '<path>', which ...` | Name DRF classes of the matching base by dotted path: `BaseAuthentication`, `BasePermission` or `BaseThrottle`. |
+| `operation '<id>': no URL pattern serves <path> (its pattern sits at <served path>)` | Include the api's urls at `""` and set the entry's `mount` to the prefix you removed. |
 
 ## Django Ninja
 
@@ -135,7 +136,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `bind_<api>(body_validation=...) is '<value>'; set True or False.` | Pass a bool, or leave the argument out. |
 | `bind_<api>(access=...) gives the access kind '<kind>' an auth=, and its operation '<id>' declares no code for the role 'unauthenticated' ...` | Declare an `unauthenticated` error on that operation, or remove the `auth=` from the kind. |
 | `bind_<api>(access=...) gives the access kind '<kind>' a throttle, and its operation '<id>' declares no code for the role 'rateLimited' ...` | Declare a `rateLimited` error on that operation, or remove the throttle from the kind. |
-| `operation '<id>': no URL pattern serves <path>; include the NinjaAPI's urls at a prefix that, followed by bind_<api>(prefix=...), equals the entry's mount.` | Make the include prefix of `api.urls` plus `prefix` equal the entry's `mount`. |
+| `operation '<id>': no URL pattern serves <path> (its pattern sits at <served path>); include the NinjaAPI's urls at a prefix that, followed by bind_<api>(prefix=...), equals the entry's mount.` | Make the include prefix of `api.urls` plus `prefix` equal the entry's `mount`. |
 | `seampact: bind_<api>() was already called on this NinjaAPI` (a `BindingError` at import) | Call `bind_<api>()` once per `NinjaAPI`. |
 | `the NinjaAPI's on_exception was replaced after bind_<api>()` | Replace `api.on_exception` before calling `bind_<api>()`. |
 | `bind_<api>() gets ..., which builds a <Class> whose method '<name>' is an async def` | Write the method as a plain `def`, or generate with `views: async`. |
@@ -148,6 +149,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 |---|---|
 | `operation '<id>': no handler is bound` | Implement the operation in a `@RestController` method with its annotation. In a `@WebMvcTest` slice that loads some controllers, set `seampact.<api>.unbound-operations=warn`. |
 | `'seampact.<api>.unbound-operations' is '<value>', not 'error' or 'warn'` | Set it to `warn` in a test slice, or remove it. |
+| `operation '<id>': Spring MVC maps its handler <method> at <path>, not at the entry's mount followed by the contract path, <path>` | Remove the prefix the app adds (`addPathPrefix`, a class-level `@RequestMapping`) and set the entry's `mount` to it: the generated annotations already hold the mount. |
 
 ## FastAPI
 
@@ -158,3 +160,4 @@ Same start check, run on startup by uvicorn (`Application startup failed. Exitin
 | `` the api '<api>' writes absolute URLs ... and the `public_origin` argument of bind_<api>() is not set `` | Pass `public_origin="https://api.example.com"` (the origin clients call: a scheme, a host, an optional port, no path) to `bind_<api>()`. |
 | `` the `public_origin` argument of bind_<api>() is '<value>', which ... `` | Fix the value as the message says: a scheme (`http` or `https`), a host and an optional port. |
 | `` the api '<api>' writes relative URLs ... and the `public_origin` argument of bind_<api>() is set `` | Drop `public_origin` from the call, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `operation '<id>': no route of the app takes '<method> <path>' (its route sits at '<served path>')` | Include the router passed to `bind_<api>()` with no prefix, and set the entry's `mount` to the prefix you removed. |

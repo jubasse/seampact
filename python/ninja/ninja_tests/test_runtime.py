@@ -247,8 +247,8 @@ def test_an_include_prefix_off_the_mount_gets_ninjas_own_fix(monkeypatch: pytest
         problems = boot_problems(boundary)
 
     assert (
-        "operation 'health': no URL pattern serves /v1/health; include the NinjaAPI's urls at a prefix that, followed "
-        "by bind_tasks(prefix=...), equals the entry's mount."
+        "operation 'health': no URL pattern serves /v1/health (its pattern sits at /api/v1/health); include the "
+        "NinjaAPI's urls at a prefix that, followed by bind_tasks(prefix=...), equals the entry's mount."
     ) in problems
 
 

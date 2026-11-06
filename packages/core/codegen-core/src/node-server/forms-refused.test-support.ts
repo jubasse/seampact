@@ -1,5 +1,6 @@
 import { type ContractIR, type IdentityAccess, isKnownVariant } from "@seampact/spec/ir";
 import type { GenerateOutcome, GenerateRequest, Target } from "../target.js";
+import { packIr } from "./live-pages.test-support.js";
 import { readGoldenIr } from "./reference-project.test-support.js";
 
 /** A form 1.0 refuses by name: how to put it in the golden tasks api, and the code the refusal carries. */
@@ -160,6 +161,21 @@ export const FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedForm[] = [
     title: "an HTTP Basic scheme",
     code: "scheme.basic.unsupported",
     change: (ir) => replaceBearerScheme(ir, { kind: "basic" }),
+  },
+  {
+    // `$collection` names its `_embedded` member and `$itemSelf` links each item: page slots not rendered yet.
+    title: "the HAL pack's pages",
+    code: "paging.response.slot.unsupported",
+    change: (ir) => {
+      Object.assign(ir, packIr("pack-hal", "tasks"));
+    },
+  },
+  {
+    title: "the Spring pack's pair sort",
+    code: "paging.sort.style.unsupported",
+    change: (ir) => {
+      Object.assign(ir, packIr("pack-spring", "tasks"));
+    },
   },
   {
     title: "absolute URLs",

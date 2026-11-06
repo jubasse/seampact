@@ -15,7 +15,6 @@ from generated.tasks_optional_auth.ninja import TasksOptionalAuthHandlerFactorie
 from generated.tasks_service.ninja import TasksServiceHandlerFactories, bind_tasks_service
 from generated.tasks_service_writes.ninja import TasksServiceWritesHandlerFactories, bind_tasks_service_writes
 from handler_factories import (
-    app_handlers,
     channels_handlers,
     devices_handlers,
     drafts_handlers,
@@ -29,7 +28,14 @@ from handler_factories import (
 )
 from hook_doubles import CALLER_SERVICE_RIGHT, OVERRIDDEN_RIGHT
 from ninja import NinjaAPI
-from seampact_consumer_suite.boot_variant import BootVariant, current_boot_variant
+from seampact_consumer_suite.boot_variant import (
+    MISMATCHED_MOUNT,
+    BootVariant,
+    current_boot_variant,
+    leaves_out_authenticate_hook,
+    leaves_out_health_handler,
+    mounts_under_mismatched_prefix,
+)
 
 import seampact.ninja.runtime as seampact_ninja
 
@@ -67,25 +73,39 @@ def _scope_resolvers(variant: BootVariant | None) -> dict[str, seampact_ninja.Fa
     return {} if variant is BootVariant.MISSING_SCOPE_RESOLVER else {CHANNEL_SCOPE: hooks.channel_resolver}
 
 
+def _handler_factories(variant: BootVariant | None) -> TasksHandlerFactories:
+    groups: dict[str, object] = {
+        "channels": channels_handlers,
+        "drafts": drafts_handlers,
+        "hooks": hooks_handlers,
+        "preferences": preferences_handlers,
+        "tasks": tasks_handlers,
+    }
+
+    # The app built with `health` filtered out generates no `app` group and has no `health_handler_factories` module.
+    if variant is BootVariant.MISSING_HANDLER:
+        groups["app"] = None
+    elif not leaves_out_health_handler():
+        from health_handler_factories import app_handlers
+
+        groups["app"] = app_handlers
+
+    return TasksHandlerFactories(**groups)
+
+
 def create_api() -> NinjaAPI:
     variant = current_boot_variant()
     api = NinjaAPI(urls_namespace="consumer", auth=_refuse_everyone)
     authenticate: dict[str, seampact_ninja.Factory[object]] = {STRIPE_IDENTITY: hooks.stripe_hook}
 
-    if variant is not BootVariant.MISSING_AUTHENTICATE_HOOK:
+    if not leaves_out_authenticate_hook():
         authenticate[USER_IDENTITY] = hooks.user_hook
 
+    # The mount-mismatch variant serves the tasks api under a router prefix its entry's mount does not state.
     bind_tasks(
         api,
-        prefix="",
-        handlers=TasksHandlerFactories(
-            app=None if variant is BootVariant.MISSING_HANDLER else app_handlers,
-            channels=channels_handlers,
-            drafts=drafts_handlers,
-            hooks=hooks_handlers,
-            preferences=preferences_handlers,
-            tasks=tasks_handlers,
-        ),
+        prefix=MISMATCHED_MOUNT if mounts_under_mismatched_prefix() else "",
+        handlers=_handler_factories(variant),
         authenticate=authenticate,
         deciders=_deciders(variant),
         scope_resolvers=_scope_resolvers(variant),

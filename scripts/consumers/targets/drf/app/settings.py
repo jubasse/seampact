@@ -6,7 +6,12 @@ import logging
 from pathlib import Path
 from typing import Final
 
-from seampact_consumer_suite.boot_variant import BootVariant, current_boot_variant
+from seampact_consumer_suite.boot_variant import (
+    BootVariant,
+    current_boot_variant,
+    leaves_out_authenticate_hook,
+    leaves_out_health_handler,
+)
 from seampact_consumer_suite.log_lines import SuiteLogHandler
 from seampact_consumer_suite.suite_files import SuiteFiles, configure_suite_files
 
@@ -64,7 +69,7 @@ REST_FRAMEWORK = {
 }
 
 _handlers = {
-    "app": "handlers.app_handlers",
+    "app": "health_handlers.app_handlers",
     "channels": "handlers.channels_handlers",
     "drafts": "handlers.drafts_handlers",
     "hooks": "handlers.hooks_handlers",
@@ -74,10 +79,10 @@ _handlers = {
 _authenticate = {USER_IDENTITY: "hooks.user_hook", STRIPE_IDENTITY: "hooks.stripe_hook"}
 _deciders = {name: "hooks.tasks_decider" for name in TASKS_DECIDED} | {OVERRIDDEN_RIGHT: "hooks.overridden_right_decider"}
 
-if _variant is BootVariant.MISSING_HANDLER:
+if leaves_out_health_handler():
     del _handlers["app"]
 
-if _variant is BootVariant.MISSING_AUTHENTICATE_HOOK:
+if leaves_out_authenticate_hook():
     del _authenticate[USER_IDENTITY]
 
 if _variant is BootVariant.MISSING_DECIDER:

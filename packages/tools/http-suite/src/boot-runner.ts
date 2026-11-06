@@ -2,7 +2,7 @@
 // and checks that it starts or refuses to start with the named diagnostic (ADR 0015 "Boot tests").
 import { spawn } from "node:child_process";
 import { BOOT_PROFILE, BOOT_STARTED_LINE, BOOT_VARIANT_ENV } from "./boot-variant.js";
-import type { BootExpectation, SuiteCase } from "./suite-case.js";
+import { type BootExpectation, outsideTargetsReason, type SuiteCase } from "./suite-case.js";
 import { type CaseResult, type SuiteReport, suiteReportOf } from "./suite-report.js";
 import {
   caseHeader,
@@ -45,7 +45,7 @@ export async function runBootSuite(options: BootRunOptions): Promise<SuiteReport
   const results: CaseResult[] = [];
 
   for (const suiteCase of options.cases) {
-    const reason = refusals[suiteCase.id];
+    const reason = refusals[suiteCase.id] ?? outsideTargetsReason(suiteCase, options.target);
 
     results.push(
       reason === undefined

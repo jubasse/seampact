@@ -30,9 +30,9 @@ All six packs load. Types, validators and a NestJS server were tried with each o
 | `@seampact/pack-spring` | Yes. A Node server refuses its `pair` sort on a list with `sortable`: `paging.sort.style.unsupported`. |
 | `@seampact/pack-crud-rights` | Yes, on routes with an identity. |
 | `@seampact/pack-laravel` | Yes: types, validators, Node servers and the fetch client. |
-| `@seampact/pack-hal` | Loads; code generation planned. `format.success.envelope.unsupported`, `response.media.unsupported`. |
+| `@seampact/pack-hal` | Loads; code generation planned. `format.success.envelope.unsupported`, `response.media.unsupported`, `paging.response.slot.unsupported`. |
 | `@seampact/pack-jsonapi` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`. |
-| `@seampact/pack-api-platform` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`. |
+| `@seampact/pack-api-platform` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`, `paging.response.slot.unsupported`. |
 
 The refusal names the form and how to fix it. Nothing is generated half way.
 

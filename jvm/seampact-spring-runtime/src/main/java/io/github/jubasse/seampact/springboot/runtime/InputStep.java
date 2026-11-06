@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.InjectableValues;
 import tools.jackson.databind.JsonNode;
@@ -18,7 +19,8 @@ import tools.jackson.databind.node.ObjectNode;
 /**
  * Step 6 (ADR 0022 "Types and validation"): path, query, headers and the held body decoded to a tree by the boundary's
  * own mapper, the structural pass reporting every issue at once, then the binding of the tree to the operation's
- * input record, which cannot fail once the pass found nothing.
+ * input record, which cannot fail once the pass found nothing. A version header is read first, so its absence answers
+ * 428, and an `If-Match` tag reaches the handler unquoted.
  */
 final class InputStep {
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
@@ -36,6 +38,7 @@ final class InputStep {
 
     static void run(SeampactBoundary boundary, BoundaryExchange exchange, HttpServletRequest request) {
         JsonNode operation = exchange.route().operation();
+        Optional<String> sentVersion = VersionHeader.sentVersion(exchange.route(), request);
         List<InputIssue> issues = new ArrayList<>();
         ObjectNode tree = NODES.objectNode();
 
@@ -44,11 +47,13 @@ final class InputStep {
         tree.set("query", query);
         PageReply.checkOnePosition(boundary.table(), exchange.route(), query, issues);
         if (takesPageable(boundary.binding().inputTypes().get(exchange.route().id()))) PageReply.checkPageableRange(boundary.table(), exchange.route(), query, issues);
-        tree.set("headers", headerParams(boundary, operation.path("params").path("header"), request, issues));
+        ObjectNode headers = headerParams(boundary, operation.path("params").path("header"), request, issues);
+        tree.set("headers", headers);
         if (operation.has("input")) tree.set("body", body(boundary, exchange, operation.path("input"), issues));
 
         if (!issues.isEmpty()) throw schemaInvalid(exchange.route(), issues);
 
+        sentVersion.ifPresent(version -> VersionHeader.handOver(exchange.route(), headers, version));
         PageReply.fillLimit(boundary.table(), exchange.route(), query);
         InputFieldRights.apply(boundary, exchange, boundary.requestView(request, exchange), tree.path("body"));
         exchange.query = query;
@@ -86,20 +91,20 @@ final class InputStep {
     }
 
     private static ObjectNode queryParams(SeampactBoundary boundary, JsonNode operation, String rawQuery, List<InputIssue> issues) {
-        Map<String, List<String>> members = WireDecoding.queryMembers(rawQuery);
+        Map<String, List<String>> members = WireDecoding.rawQueryMembers(rawQuery);
         ObjectNode values = NODES.objectNode();
 
         for (JsonNode param : operation.path("params").path("query")) {
             String name = param.path("name").asString();
-            List<String> sent = members.remove(name);
+            List<String> rawValues = members.remove(name);
             String pointer = InputIssue.below("", name);
 
-            if (sent == null) {
+            if (rawValues == null) {
                 if (param.path("required").asBoolean(false)) issues.add(new InputIssue("query", pointer, "required"));
                 continue;
             }
 
-            JsonNode value = queryValue(sent, param.path("type"));
+            JsonNode value = queryValue(WireDecoding.queryItems(rawValues, param.path("wire")), param.path("type"));
             boundary.validator().check(value, param.path("type"), "query", pointer, issues);
             values.set(name, value);
         }

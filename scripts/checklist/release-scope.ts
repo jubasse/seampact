@@ -104,6 +104,12 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
       "absolute URLs; the native servers write them from the configured public origin",
     ),
   ],
+  [
+    "CHK-129",
+    refusedOnEveryServer(
+      "a page or an item that writes the `$collection`, `$resource` or item id slots (JSON:API, HAL, JSON-LD)",
+    ),
+  ],
   ["CHK-131", refusedOnEveryServer("a signature scheme verified by the application")],
   ["CHK-132", refusedOnEveryServer("query API key and HTTP Basic schemes")],
   ["CHK-133", refusedOnTheNodeServers("optional authentication; the native servers generate it")],
@@ -113,6 +119,7 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ["CHK-151", refusedForm("a multipart body", BODY_AND_QUERY_FORMS_REFUSED_ON)],
   ["CHK-152", refusedForm("a file download", BODY_AND_QUERY_FORMS_REFUSED_ON)],
   ["CHK-160", refusedForm("a query list in brackets form", BODY_AND_QUERY_FORMS_REFUSED_ON)],
+  ["CHK-163", refusedOnEveryServer("native access (accessHooks: false)")],
   ...["CHK-074", "CHK-077", "CHK-078", "CHK-103"].map((id): [string, ItemAfter1_0] => [
     id,
     { targets: ADAPTERS, reason: ADAPTERS_IN_1_1 },

@@ -69,6 +69,8 @@ tasks.test {
     systemProperty("seampact.updateGolden", updateGolden.toString())
     inputs.dir(repositoryRoot.resolve("fixtures/golden/reference"))
     inputs.dir(repositoryRoot.resolve("fixtures/golden/pack-spring"))
+    inputs.dir(repositoryRoot.resolve("fixtures/golden/pack-hal"))
+    inputs.dir(repositoryRoot.resolve("fixtures/golden/pack-api-platform"))
     inputs.dir(goldenDirectory)
     inputs.dir(optInsGoldenDirectory)
     // An update run rewrites the golden tree, so it always runs. A local copy: the spec must not capture the script.

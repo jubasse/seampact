@@ -1,0 +1,10 @@
+{
+  "id": "pattern-allow-listed-framework-route-boots",
+  "title": "The app serving a framework route its config allow-lists by a path pattern starts",
+  "checks": ["CHK-147"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "pattern-allow-listed-framework-route",
+    "outcome": "starts"
+  }
+}

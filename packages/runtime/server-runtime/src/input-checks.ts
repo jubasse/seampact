@@ -2,7 +2,7 @@
 // then restricted input fields.
 import { type AccessGrant, type CheckState, decide } from "./access-checks.js";
 import { ContractError, roleParams } from "./contract-error.js";
-import type { ContractRoute } from "./contract-route.js";
+import type { ContractRoute, PagingEntry } from "./contract-route.js";
 import { schemaInvalidError, validateRequest } from "./input-issues.js";
 import { isPlainObject } from "./plain-object.js";
 import { sentVersion } from "./version-header.js";
@@ -24,7 +24,7 @@ export async function validateRequestInput(
 
   if (validation.issues.length > 0) throw schemaInvalidError(state.route, validation.issues);
 
-  return withSentVersion(state.route, version, withDefaultLimit(state.route, validation.value));
+  return withSentVersion(state.route, version, withServedLimit(state.route, validation.value));
 }
 
 // The version header as the handler compares it: `"7"` and `W/"7"` both hand over `7`.
@@ -43,17 +43,29 @@ function withSentVersion(
   return { ...input, headers: { ...input.headers, [header]: version } };
 }
 
-// The paging limit the client did not send is the contract's default, as the handler receives it.
-function withDefaultLimit(route: ContractRoute, input: unknown): unknown {
+// The paging limit the handler receives: the contract's default when the client sent none, and the clamped limit
+// for a larger one under `overLimit: clamp`.
+function withServedLimit(route: ContractRoute, input: unknown): unknown {
   const paging = route.paging;
 
-  if (paging?.limitParam === undefined || paging.defaultLimit === undefined) return input;
+  if (paging?.limitParam === undefined) return input;
 
   if (!isPlainObject(input) || !isPlainObject(input.query)) return input;
 
-  if (input.query[paging.limitParam] !== undefined) return input;
+  const servedLimit = servedLimitOf(paging, input.query[paging.limitParam]);
 
-  return { ...input, query: { ...input.query, [paging.limitParam]: paging.defaultLimit } };
+  if (servedLimit === undefined) return input;
+
+  return { ...input, query: { ...input.query, [paging.limitParam]: servedLimit } };
+}
+
+// The limit to hand over in place of the sent one, or undefined to keep the sent one.
+function servedLimitOf(paging: PagingEntry, sentLimit: unknown): number | undefined {
+  if (sentLimit === undefined) return paging.defaultLimit;
+
+  if (paging.clampedLimit === undefined || typeof sentLimit !== "number") return undefined;
+
+  return sentLimit > paging.clampedLimit ? paging.clampedLimit : undefined;
 }
 
 /** Step 7: a restricted input field sent without its right is refused with its pointer, or stripped. */

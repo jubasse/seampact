@@ -1,7 +1,8 @@
 """The operation features around the input steps of the FastAPI placement: a write versioned by `If-Match` answers
 `preconditionRequired` (428) for a missing header before the header check could call it `schemaInvalid`, the header
-version reaches the handler unquoted, the boot check names a missing idempotency store, and a page reads its facts
-through its generated fact table and fails closed on a projection that is not a list."""
+version reaches the handler unquoted, a deprecated versioned success writes its deprecation headers and its version's
+ETag, the boot check names a missing idempotency store, and a page reads its facts through its generated fact table
+and fails closed on a projection that is not a list."""
 
 import asyncio
 import copy
@@ -38,6 +39,9 @@ _PRECONDITION_FAILED: Final = "api.precondition_failed"
 _PRECONDITION_REQUIRED: Final = "api.precondition_required"
 _LIST_TASKS: Final = "listTasks"
 _NEXT_CURSOR: Final = "cursor-of-the-next-page"
+_CHANNEL_ID: Final = "0a2c3b7e-1d4f-4e8a-9c1b-2e3d4f5a6b7c"
+_TASK_ID: Final = "8d0f3c3e-6a52-4c0e-9b8e-3f1f2f6f1a11"
+_TASK_VERSION: Final = 7
 
 
 class _ArchiveHeaders(pydantic.BaseModel):
@@ -213,3 +217,96 @@ def test_a_page_projection_that_is_not_a_list_fails_closed(monkeypatch: pytest.M
 
     with pytest.raises(BoundaryFailureError, match=_LIST_TASKS):
         _list_tasks_reply(_RenamedFactPage(items=[]))
+
+
+def _deprecated_archive_contract() -> ApiContract:
+    """`archiveTask` versioned by `If-Match`, deprecated for `getTask`, with the headers the compiler derives for its
+    200: Deprecation, Sunset, the successor Link and the version's ETag; its cache writes an ETag too."""
+    contract = _if_match_contract()
+    ir_view: dict[str, IrJson] = copy.deepcopy(dict(contract.ir_view))
+    operations = ir_view["operations"]
+    assert isinstance(operations, list)
+    archive = next(op for op in operations if isinstance(op, dict) and op["id"] == _ARCHIVE_TASK)
+    assert isinstance(archive, dict) and isinstance(archive["concurrency"], dict)
+    concurrency_origin: IrJson = {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency",
+    }
+    archive["concurrency"]["derivedFrom"] = {"derivation": "concurrency.version", "from": [concurrency_origin]}
+    deprecated_origin: IrJson = {"layer": "api", "pointer": "/surfaces/app/routes/channels/member/routes/tasks/archive"}
+    archive["deprecated"] = {
+        "since": "2027-01-01",
+        "sunset": "2027-06-30",
+        "successor": {"api": contract.api, "id": "getTask", "kind": "httpOperation"},
+        "successorRel": "successor-version",
+        "origin": deprecated_origin,
+    }
+    archive["cache"] = {"etag": True, "perCallerKind": [], "vary": []}
+    text: IrJson = {"kind": "scalar", "refinements": {}, "type": "string"}
+    deprecation: IrJson = {"derivation": "deprecation.headers", "from": [deprecated_origin]}
+    headers: list[IrJson] = [
+        {"name": "ETag", "type": text, "required": True, "derivedFrom": archive["concurrency"]["derivedFrom"]},
+        *(
+            {"name": name, "type": text, "required": True, "semantic": semantic, "derivedFrom": deprecation}
+            for name, semantic in (("Deprecation", "deprecation"), ("Sunset", "sunset"), ("Link", "successorLink"))
+        ),
+    ]
+    responses = archive["responses"]
+    assert isinstance(responses, list) and isinstance(responses[0], dict)
+    responses[0]["headers"] = headers
+
+    return dataclasses.replace(contract, ir_view=ir_view)
+
+
+def _archive_reply(if_none_match: str | None) -> Reply:
+    contract = _deprecated_archive_contract()
+    golden = importlib.import_module(f"{_GOLDEN_API}.operations")
+    schemas = importlib.import_module(f"{_GOLDEN_API}.schemas")
+    task = schemas.Task(
+        task_id=_TASK_ID,
+        title="Write the guide",
+        state="open",
+        version=_TASK_VERSION,
+        created_at="2026-01-01T00:00:00Z",
+    )
+    path = f"/v1/channels/{_CHANNEL_ID}/tasks/{_TASK_ID}/archive"
+    access = AccessState(
+        contract=contract,
+        operation_id=_ARCHIVE_TASK,
+        credentials_types={},
+        raw_parameters={"channelId": _CHANNEL_ID, "taskId": _TASK_ID},
+        request=RequestView(method="POST", path=path, headers={}, client_address=None),
+        body=None,
+    )
+    context = ReplyContext(
+        access=access,
+        hooks=AccessHooks(authenticate={}, deciders={}, scope_resolvers={}),
+        call=call_handler,
+        query={},
+        raw_query="",
+        path=path,
+        if_none_match=if_none_match,
+        public_origin=None,
+    )
+    success = golden.ArchiveTaskResponse200
+    types = OperationTypes(request=object, responses=((200, success),), errors=golden.ArchiveTaskErrors)
+
+    return asyncio.run(result_reply(contract, _ARCHIVE_TASK, types, success(body=task), context))
+
+
+def test_a_deprecated_versioned_success_writes_its_deprecation_headers_and_its_version_tag() -> None:
+    reply = _archive_reply(None)
+
+    assert reply.status == 200
+    assert reply.header("etag") == f'"{_TASK_VERSION}"'
+    assert reply.header("deprecation") == "@1798761600"
+    assert reply.header("sunset") == "Wed, 30 Jun 2027 00:00:00 GMT"
+    assert reply.header("link") == f'</v1/channels/{_CHANNEL_ID}/tasks/{_TASK_ID}>; rel="successor-version"'
+
+
+def test_the_cache_etag_of_a_versioned_item_is_its_version_tag_and_its_304_has_no_deprecation_header() -> None:
+    reply = _archive_reply(f'W/"{_TASK_VERSION}"')
+
+    assert reply.status == 304
+    assert [value for name, value in reply.headers if name == "etag"] == [f'"{_TASK_VERSION}"']
+    assert reply.header("deprecation") is None

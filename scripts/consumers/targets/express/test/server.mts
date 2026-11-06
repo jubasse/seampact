@@ -11,6 +11,10 @@ import * as TasksDevicesExpress from "../generated/server/tasksDevices/index.js"
 import * as TasksServiceExpress from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesExpress from "../generated/server/tasksServiceWrites/index.js";
 import {
+  MISMATCHED_MOUNT,
+  mountsUnderMismatchedPrefix,
+  PATTERNED_ROUTE,
+  servesPatternedRoute,
   servesUnlistedRoute,
   UNLISTED_ROUTE,
   withoutMissingHandler,
@@ -53,7 +57,11 @@ export async function startServer(): Promise<RunningServer> {
   if (servesUnlistedRoute())
     app.get(UNLISTED_ROUTE, (_request, response) => response.status(204).end());
 
+  if (servesPatternedRoute())
+    app.get(PATTERNED_ROUTE, (_request, response) => response.status(204).end());
+
   app.use(
+    mountsUnderMismatchedPrefix() ? MISMATCHED_MOUNT : "/",
     TasksExpress.router({
       handlers: withoutMissingHandler({
         AppEndpoints: tasksHandlers,

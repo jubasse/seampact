@@ -15,6 +15,8 @@ targets:
     api: tasks
     options: { views: sync }
     artefacts: { nativeDocs: true }
+    frameworkRoutes:
+      - { path: "/v1/patterned/**", reason: "The pattern-allow-listed-framework-route boot case's routes (ADR 0015)." }
   - id: tasksService
     out: tasks_service
     use: pypi:seampact-ninja

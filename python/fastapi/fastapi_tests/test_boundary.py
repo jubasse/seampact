@@ -115,7 +115,7 @@ def test_an_unauthored_error_reply_over_the_checked_size_sent_at_once_completes_
     assert bodies[-1].get("more_body", False) is False
 
 
-def test_a_router_target_included_under_a_prefix_fails_the_boot_check_pointing_to_mount() -> None:
+def test_a_router_target_included_under_a_prefix_fails_the_boot_check_naming_the_prefixed_path() -> None:
     app = fastapi.FastAPI()
     router = fastapi.APIRouter()
     binding = _bind(router, app)
@@ -123,7 +123,9 @@ def test_a_router_target_included_under_a_prefix_fails_the_boot_check_pointing_t
 
     problems = boot_problems(binding)
 
-    assert any("'GET /v1/health'" in problem and "mount" in problem for problem in problems)
+    assert any(
+        "'GET /v1/health' (its route sits at '/x/v1/health')" in problem and "mount" in problem for problem in problems
+    )
 
 
 def test_a_router_target_under_an_app_route_that_takes_the_path_fails_the_boot_check() -> None:

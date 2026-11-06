@@ -9,6 +9,7 @@ import {
   copyTestApp,
   describeDebugExceptions,
   describeHandlerAccess,
+  describeRepeatedQueryList,
   describeResponseHeaders,
   describeTwoApiHandlerAccess,
   emitProject,
@@ -21,6 +22,7 @@ import {
   referenceErrorTitle,
   referenceNoStoreCode,
   referenceNoStoreOperation,
+  referenceRepeatedQueryList,
   referenceResponseHeaders,
   referenceUnpagedList,
   sendRawRequest,
@@ -142,6 +144,7 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
         referenceNoStoreOperation("getPreferences"),
         referenceUnpagedList("listChannels"),
         referenceResponseHeaders,
+        referenceRepeatedQueryList,
       ),
     );
 
@@ -171,6 +174,11 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
   }));
 
   describeResponseHeaders(() => ({ app, send }));
+
+  describeRepeatedQueryList(() => ({
+    app,
+    send: (method, path, headers) => send(method, path, { headers }),
+  }));
 
   test("every operation's handler is called on its object, so `this` is kept", async () => {
     const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });

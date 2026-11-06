@@ -4,6 +4,7 @@ import type { ContractIR, PagingRequestRole, PagingStyle, WireFormat } from "@se
 import { type FormatReader, FormatReaderError, formatReaderOf } from "./format-reader.js";
 import { CASES_DIRECTORY, loadSuiteCases } from "./load-cases.js";
 import { isJsonObject } from "./response-check.js";
+import type { SampleAppScript, ScriptedAnswer } from "./sample-app-script.js";
 import type {
   HeaderExpectation,
   JsonValue,
@@ -74,12 +75,13 @@ export function packProfileOf(
   );
   const servedApis = new Set(contracts.map((contract) => contract.api.id));
   const refusals: Record<string, string> = {};
+  const totalAskingOperations = operationsAskingTotal(contracts);
   const defaultCases = loadSuiteCases("default", directory).map((suiteCase) => {
     const refusal = refusalOf(suiteCase, paging, servedApis);
 
     if (refusal !== undefined) refusals[suiteCase.id] = refusal;
 
-    return adaptCase(suiteCase, limitParameterOf(paging), reader);
+    return adaptCase(suiteCase, limitParameterOf(paging), reader, totalAskingOperations);
   });
 
   return {
@@ -197,11 +199,64 @@ function namesParameter(suiteCase: SuiteCase, name: string): boolean {
   );
 }
 
-function adaptCase(suiteCase: SuiteCase, limitParameter: string, reader: FormatReader): SuiteCase {
+function adaptCase(
+  suiteCase: SuiteCase,
+  limitParameter: string,
+  reader: FormatReader,
+  totalAskingOperations: ReadonlySet<string>,
+): SuiteCase {
   return {
     ...suiteCase,
+    ...(suiteCase.script === undefined
+      ? {}
+      : { script: withPageTotals(suiteCase.script, totalAskingOperations) }),
     steps: suiteCase.steps.map((step) => adaptStep(step, limitParameter, reader)),
   };
+}
+
+/** The paged operations, as `<api>.<operationId>`, whose paging style asks the handler for the total. */
+function operationsAskingTotal(contracts: readonly ContractIR[]): Set<string> {
+  return new Set(
+    contracts.flatMap((contract) =>
+      contract.operations
+        .filter((operation) => {
+          const style = operation.paging?.style;
+
+          return style !== undefined && contract.pagings[style]?.handlerResult.includes("total");
+        })
+        .map((operation) => `${contract.api.id}.${operation.id}`),
+    ),
+  );
+}
+
+// A default case scripts a page in the reference's handler shape, its items without a total; under a style that asks
+// the handler for the total, the page answers its items' count, as a handler of that style would.
+function withPageTotals(
+  script: SampleAppScript,
+  totalAskingOperations: ReadonlySet<string>,
+): SampleAppScript {
+  if (script.answers === undefined) return script;
+
+  const answers = Object.fromEntries(
+    Object.entries(script.answers).map(([operation, answer]) => [
+      operation,
+      totalAskingOperations.has(operation) ? withPageTotal(answer) : answer,
+    ]),
+  );
+
+  return { ...script, answers };
+}
+
+function withPageTotal(answer: ScriptedAnswer): ScriptedAnswer {
+  if (!("status" in answer) || answer.body === undefined || !isJsonObject(answer.body)) {
+    return answer;
+  }
+
+  const { items } = answer.body;
+
+  if (!Array.isArray(items) || "total" in answer.body) return answer;
+
+  return { ...answer, body: { ...answer.body, total: items.length } };
 }
 
 function adaptStep(step: SuiteStep, limitParameter: string, reader: FormatReader): SuiteStep {

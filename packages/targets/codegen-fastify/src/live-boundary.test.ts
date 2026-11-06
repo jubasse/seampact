@@ -9,6 +9,7 @@ import {
   describeCompressedVersionTag,
   describeDebugExceptions,
   describeHandlerAccess,
+  describeRepeatedQueryList,
   describeResponseHeaders,
   describeTwoApiHandlerAccess,
   emitProject,
@@ -17,6 +18,8 @@ import {
   projectDirectory,
   type RawReply,
   type ReferenceIrChange,
+  referenceChanges,
+  referenceRepeatedQueryList,
   referenceResponseHeaders,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
@@ -94,7 +97,7 @@ beforeAll(async () => {
     PROJECT,
     fastifyTarget,
     { bodyValidation: true },
-    referenceResponseHeaders,
+    referenceChanges(referenceResponseHeaders, referenceRepeatedQueryList),
   );
 
   expect(emitProject(PROJECT, files, BUILD)).toEqual([]);
@@ -110,6 +113,13 @@ afterAll(async () => {
 beforeEach(() => {
   app.resetScenario();
   vi.restoreAllMocks();
+});
+
+describe("a list query param in the default form", () => {
+  describeRepeatedQueryList(() => ({
+    app,
+    send: (method, path, headers) => send(method, path, { headers }),
+  }));
 });
 
 describe("what a handler reads of its caller", () => {

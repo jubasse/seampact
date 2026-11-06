@@ -505,7 +505,9 @@ interface CannedAnswer {
 // A booted server answering the next canned response, for the page shapes the stub server does not serve.
 async function startCannedServer() {
   let next: CannedAnswer = { status: 500, body: null };
-  const server = createServer((_request, response) => {
+  let lastRequestUrl: string | undefined;
+  const server = createServer((request, response) => {
+    lastRequestUrl = request.url;
     response.writeHead(next.status, { "content-type": "application/json", ...next.headers });
     response.end(JSON.stringify(next.body));
   });
@@ -522,6 +524,8 @@ async function startCannedServer() {
     answerNext(answer: CannedAnswer): void {
       next = answer;
     },
+    /** The path and query of the last request the server received. */
+    lastRequestUrl: () => lastRequestUrl,
     close: () => new Promise<void>((resolve) => server.close(() => resolve())),
   };
 }
@@ -1243,6 +1247,32 @@ describe("the generated client reads every page shape of its paging style", () =
     });
   });
 
+  test("pack-laravel: a page-number request writes the style's page and limit names", async () => {
+    const client = await cannedClient(LARAVEL_API, canned);
+
+    canned.answerNext({
+      status: 200,
+      body: {
+        data: tasks,
+        links: { first: "?page=1", last: "?page=1", prev: null, next: null },
+        meta: { current_page: 1, from: 1, last_page: 1, path: "/v1", per_page: 2, to: 2, total: 2 },
+      },
+    });
+
+    const page = await call(
+      client,
+      "listTasks",
+    )({
+      path: { channelId: "c1" },
+      query: { page: 1, per_page: 2 },
+    });
+
+    expect(page).toMatchObject({ ok: true, body: { items: tasks, page: 1, limit: 2, total: 2 } });
+    expect(new URL(canned.lastRequestUrl() ?? "", canned.baseUrl).searchParams.toString()).toBe(
+      "page=1&per_page=2",
+    );
+  });
+
   test("pack-laravel: data-wrapped list and table payloads", async () => {
     const tableClient = await cannedClient(LARAVEL_API, canned);
     const batch = { a: { taskId: "a" }, b: { taskId: "b" } };
@@ -1503,6 +1533,25 @@ describe("the conformance proofs of the generated client", () => {
         refusals: [{ message: expect.stringContaining(`'${kind}' query value`) }],
       });
     }
+  });
+
+  // HAL's success body merges the payload; Spring's pair sort sends one `sort` member per key.
+  test.each([
+    { pack: "pack-hal", code: "format.template.unsupported" },
+    { pack: "pack-spring", code: "query.list.explode.unsupported" },
+  ])("the $pack client is refused by name", async ({ pack, code }) => {
+    const ir = readGoldenIr("tasks", pack);
+    const outcome = await clientTarget.generate({
+      ir,
+      options: {},
+      links: typesLinks(ir),
+      artefacts: new Set(["client"]),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: expect.arrayContaining([expect.objectContaining({ code })]),
+    });
   });
 
   test("a batch read is a POST that carries no idempotency key and no CSRF header", async () => {

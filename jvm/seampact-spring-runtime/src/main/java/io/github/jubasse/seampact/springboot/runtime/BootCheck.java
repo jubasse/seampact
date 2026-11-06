@@ -74,6 +74,7 @@ public final class BootCheck implements SmartInitializingSingleton {
             if (!warnsOnUnbound) unboundProblems(problems, unbound);
         }
         if (bootCheck.path("frameworkRoutes").asBoolean(true)) frameworkRouteProblems(problems);
+        mountProblems(problems);
         filterProblems(problems);
         earlierMappingProblems(problems);
         platformProblems(problems);
@@ -209,6 +210,26 @@ public final class BootCheck implements SmartInitializingSingleton {
             String annotation = boundary.binding().annotations().get(route.id()).getSimpleName();
             problems.add("operation '" + route.id() + "': no handler is bound; fix: implement it in a @RestController with @" + annotation
                     + ", or set " + property + "=warn in a test slice that loads some controllers.");
+        }
+    }
+
+    // A contract handler Spring MVC maps at another path than the entry's mount followed by the contract path, as
+    // under a framework path prefix (`addPathPrefix`) the mount does not state: the boundary filter, which matches the
+    // mounted contract paths, would never reach it.
+    private void mountProblems(List<String> problems) {
+        Map<String, ContractRoute> routes = new LinkedHashMap<>();
+        boundary.table().routes().forEach(route -> routes.put(route.id(), route));
+
+        for (Map.Entry<RequestMappingInfo, HandlerMethod> mapping : handlerMethods().entrySet()) {
+            Optional<ContractRoute> route = boundary.operationOf(mapping.getValue().getMethod()).map(routes::get);
+            if (route.isEmpty()) continue;
+
+            for (String pattern : mapping.getKey().getPatternValues()) {
+                if (route.get().isMappedAt(pattern)) continue;
+                problems.add("operation '" + route.get().id() + "': Spring MVC maps its handler " + mapping.getValue() + " at " + pattern
+                        + ", not at the entry's mount followed by the contract path, " + route.get().mountedPath()
+                        + "; fix: remove the path prefix the app adds (addPathPrefix, a class-level @RequestMapping) and set the entry's mount to it.");
+            }
         }
     }
 

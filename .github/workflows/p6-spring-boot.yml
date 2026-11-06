@@ -143,7 +143,8 @@ jobs:
           retention-days: 3
           if-no-files-found: error
 
-  # The consumer built by one plugin four times: as configured, with the boot variant's route allow-listed, from the
+  # The consumer built by one plugin six times: as configured, with the boot variant's route allow-listed, with the
+  # framework-route check off, with the hook check off and `health` filtered out, from the
   # contract with @seampact/pack-spring applied (the pack:spring profile) and from the contract with
   # @seampact/pack-laravel applied, whose format wraps every success body (the pack:laravel profile). A `bundle` row fetches each contract as
   # a release asset from a loopback HTTPS server; a `local-yaml` row compiles the `path` source.
@@ -225,7 +226,7 @@ jobs:
             sleep "$delay"
           done
           ./mvnw -B --version
-      - name: Build the consumer and its allow-listed, pack-spring and pack-laravel variants
+      - name: Build the consumer, its boot-variant jars and its pack-spring and pack-laravel variants
         shell: bash
         env:
           BUILD_TOOL: ${{ matrix.build-tool }}
@@ -240,7 +241,7 @@ jobs:
           fi
           # Maven runs on the row's JDK; Gradle on the last one, compiling and testing with the row's toolchain.
           java_home_variable="JAVA_HOME_${JDK}_X64"
-          for variant in configured allow-listed pack-spring pack-laravel; do
+          for variant in configured allow-listed route-check-off hook-check-off pack-spring pack-laravel; do
             app="$RUNNER_TEMP/$variant"
             sh scripts/consumers/targets/spring-boot/assemble.sh "$app" "${variant/configured/}" "$BUILD_TOOL"
             if [ "$CONTRACT" = "bundle" ]; then
@@ -328,6 +329,8 @@ jobs:
         env:
           SEAMPACT_SPRING_JAR: ${{ github.workspace }}/jars/configured.jar
           SEAMPACT_SPRING_ALLOW_LISTED_JAR: ${{ github.workspace }}/jars/allow-listed.jar
+          SEAMPACT_SPRING_ROUTE_CHECK_OFF_JAR: ${{ github.workspace }}/jars/route-check-off.jar
+          SEAMPACT_SPRING_HOOK_CHECK_OFF_JAR: ${{ github.workspace }}/jars/hook-check-off.jar
           SEAMPACT_SPRING_PACK_JAR: ${{ github.workspace }}/jars/pack-spring.jar
           SEAMPACT_SPRING_PACK_LARAVEL_JAR: ${{ github.workspace }}/jars/pack-laravel.jar
           SEAMPACT_SPRING_REPORTS: ${{ github.workspace }}/reports

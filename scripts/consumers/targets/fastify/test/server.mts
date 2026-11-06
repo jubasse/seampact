@@ -10,6 +10,10 @@ import * as TasksDevicesFastify from "../generated/server/tasksDevices/index.js"
 import * as TasksServiceFastify from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesFastify from "../generated/server/tasksServiceWrites/index.js";
 import {
+  MISMATCHED_MOUNT,
+  mountsUnderMismatchedPrefix,
+  PATTERNED_ROUTE,
+  servesPatternedRoute,
   servesUnlistedRoute,
   UNLISTED_ROUTE,
   withoutMissingHandler,
@@ -90,12 +94,19 @@ export async function startServer(): Promise<RunningServer> {
 
   if (servesUnlistedRoute()) app.get(UNLISTED_ROUTE, (_request, reply) => reply.code(204).send());
 
+  if (servesPatternedRoute()) app.get(PATTERNED_ROUTE, (_request, reply) => reply.code(204).send());
+
   app.setNotFoundHandler((request, reply) => {
     if (renderedByAnApi(request, reply)) return;
 
     reply.code(NOT_FOUND_STATUS).send({ message: "not found" });
   });
-  await app.register(TasksFastify.plugin, { prefix: TASKS_BASE_PATH, ...tasksRegistration() });
+  await app.register(TasksFastify.plugin, {
+    prefix: mountsUnderMismatchedPrefix()
+      ? `${MISMATCHED_MOUNT}${TASKS_BASE_PATH}`
+      : TASKS_BASE_PATH,
+    ...tasksRegistration(),
+  });
   await app.register(TasksServiceFastify.plugin, {
     handlers: { InternalEndpoints: tasksServiceHandlers },
     hooks: tasksServiceHooks(),

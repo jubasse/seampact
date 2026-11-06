@@ -15,6 +15,7 @@ from seampact.codegen.runtime.contract import HEADER_PART, PATH_PART, PROOFS_PAR
 from seampact.codegen.runtime.failures import BoundaryFailureError
 from seampact.codegen.runtime.input_decoding import DecodedInput, Issue, schema_invalid
 from seampact.codegen.runtime.ir_view import ir_map, ir_maps, ir_string
+from seampact.codegen.runtime.page_reply import cursor_issues
 from seampact.codegen.runtime.pydantic.issues import MAX_RENDERED_ISSUES, body_issues, part_issues, proof_issues
 from seampact.codegen.runtime.run_settings import OperationTypes
 from seampact.codegen.runtime.wire_codec import WireCodec
@@ -81,6 +82,8 @@ class InputBuilder:
 
         if self._body is not None:
             issues += self._validate_body(decoded.body, values)
+
+        issues += cursor_issues(self._contract, self._operation_id, decoded.query)
 
         if issues:
             raise schema_invalid(self._contract, self._operation_id, issues[:MAX_RENDERED_ISSUES])

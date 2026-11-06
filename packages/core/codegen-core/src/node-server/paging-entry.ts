@@ -27,6 +27,8 @@ const BEFORE_ROLE = "before";
 const SIGNED_SORT_STYLE = "signed";
 const QUERY_PLACEMENT = "query";
 const DEFAULT_PAGE_BASE = 1;
+const CLAMP_POLICY = "clamp";
+const OVER_LIMIT_POLICIES: readonly string[] = ["reject", CLAMP_POLICY];
 const ITEMS_SLOT = "items";
 const PAGE_SLOT = "page";
 
@@ -123,6 +125,9 @@ export function pagingEntry(
     );
   }
 
+  if (!OVER_LIMIT_POLICIES.includes(paging.overLimit))
+    refusals.push(refuseUnknownValueAt(below(location, "paging", "overLimit"), paging.overLimit));
+
   const body = pageBody(ir, operation, style, refusals);
   const responseLocation = below(styleLocation, "response");
 
@@ -133,6 +138,7 @@ export function pagingEntry(
     base: positionRole.base ?? DEFAULT_PAGE_BASE,
     limitParam: limit?.name,
     defaultLimit: paging.defaultLimit,
+    clampedLimit: paging.overLimit === CLAMP_POLICY ? paging.maxLimit : undefined,
     handlerResult: [...style.handlerResult],
     absent: absentRendering(style.absent, below(styleLocation, "absent"), refusals),
     body,

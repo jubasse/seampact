@@ -20,6 +20,7 @@ final class WireDecoding {
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final String COMPONENT_SAFE = ALPHANUMERIC + "-_.!~*'()";
+    private static final String UNRESERVED = ALPHANUMERIC + "-._~";
     private static final String QUERY_SAFE = ALPHANUMERIC + "-._~!$&'()*+,;=:@/?";
 
     private WireDecoding() {}
@@ -47,8 +48,11 @@ final class WireDecoding {
         return NODES.numberNode(new BigDecimal(text));
     }
 
-    /** The members of a raw query string, form-decoded (`+` is a space), each name with its values in order. */
-    static Map<String, List<String>> queryMembers(String rawQuery) {
+    /**
+     * The members of a raw query string, each form-decoded name (`+` is a space) with its values in order, kept as sent:
+     * {@link #queryItems} decodes them once it knows the wire form.
+     */
+    static Map<String, List<String>> rawQueryMembers(String rawQuery) {
         Map<String, List<String>> members = new LinkedHashMap<>();
         if (rawQuery == null || rawQuery.isEmpty()) return members;
 
@@ -56,11 +60,27 @@ final class WireDecoding {
             if (pair.isEmpty()) continue;
             int equals = pair.indexOf('=');
             String name = formDecoded(equals < 0 ? pair : pair.substring(0, equals));
-            String value = equals < 0 ? "" : formDecoded(pair.substring(equals + 1));
-            members.computeIfAbsent(name, key -> new ArrayList<>()).add(value);
+            String rawValue = equals < 0 ? "" : pair.substring(equals + 1);
+            members.computeIfAbsent(name, key -> new ArrayList<>()).add(rawValue);
         }
 
         return members;
+    }
+
+    /**
+     * A parameter's raw values, form-decoded: a list written with `explode: false` is one comma-separated value
+     * (`sort=a,-b`), split on its raw commas only, so an encoded `%2C` is data within one item.
+     */
+    static List<String> queryItems(List<String> rawValues, JsonNode wire) {
+        boolean unexploded = "list".equals(wire.path("kind").asString()) && !wire.path("explode").asBoolean(true);
+        List<String> items = new ArrayList<>();
+
+        for (String rawValue : rawValues) {
+            List<String> rawItems = unexploded ? List.of(rawValue.split(",", -1)) : List.of(rawValue);
+            rawItems.forEach(rawItem -> items.add(formDecoded(rawItem)));
+        }
+
+        return items;
     }
 
     /** The raw query with the member [name] set to [value], every other pair kept as received, made link-safe. */
@@ -107,10 +127,19 @@ final class WireDecoding {
 
     // `encodeURIComponent`: every byte outside the unreserved set and `!*'()` is percent-encoded.
     static String componentEncoded(String text) {
+        return percentEncoded(text, COMPONENT_SAFE);
+    }
+
+    /** One path segment: every byte outside RFC 3986 `unreserved` percent-encoded, as the Node servers encode it. */
+    static String segmentEncoded(String text) {
+        return percentEncoded(text, UNRESERVED);
+    }
+
+    private static String percentEncoded(String text, String safeCharacters) {
         StringBuilder encoded = new StringBuilder();
         for (byte value : text.getBytes(StandardCharsets.UTF_8)) {
             char character = (char) (value & 0xFF);
-            if (COMPONENT_SAFE.indexOf(character) >= 0) encoded.append(character);
+            if (safeCharacters.indexOf(character) >= 0) encoded.append(character);
             else encoded.append(String.format("%%%02X", value & 0xFF));
         }
 

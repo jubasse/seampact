@@ -8,9 +8,12 @@ export {
   runBootSuite,
 } from "./boot-runner.js";
 export {
+  BOOT_APP_OF_VARIANT,
+  BOOT_APPS,
   BOOT_STARTED_LINE,
   BOOT_VARIANT_ENV,
   BOOT_VARIANTS,
+  type BootApp,
   type BootVariant,
   bootVariantOf,
   isBootVariant,
@@ -62,6 +65,7 @@ export {
   type CaptureSource,
   type HeaderExpectation,
   type JsonValue,
+  outsideTargetsReason,
   parseSuiteCase,
   type RecordedHookCall,
   type RequestSignature,

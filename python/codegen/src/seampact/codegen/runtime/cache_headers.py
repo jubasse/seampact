@@ -1,6 +1,7 @@
 """The cache headers of a success the boundary writes (ADR 0012 step 10): `Cache-Control` by caller kind, `Vary`, and
 the strong ETag over the body bytes, with its 304 when `If-None-Match` names it. The ETag is the SHA-256 base64url of
-the body as every target writes it, so a client's tag stays valid across them."""
+the body as every target writes it, so a client's tag stays valid across them; an item versioned by `If-Match` keeps
+the version's tag instead."""
 
 import base64
 import hashlib
@@ -49,7 +50,8 @@ def with_cache_headers(
     if vary:
         added.append((VARY, ", ".join(vary)))
 
-    etag = strong_etag(reply.body) if ir_true(cache, "etag") else None
+    # On a route versioned by `If-Match`, `cache.etag` uses the version's tag the reply already carries.
+    etag = (reply.header(ETAG) or strong_etag(reply.body)) if ir_true(cache, "etag") else None
 
     if etag is not None:
         added.append((ETAG, etag))

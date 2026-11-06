@@ -9,6 +9,8 @@ targets:
     out: tasks
     use: pypi:seampact-drf
     api: tasks
+    frameworkRoutes:
+      - { path: "/v1/patterned/**", reason: "The pattern-allow-listed-framework-route boot case's routes (ADR 0015)." }
   - id: tasksService
     out: tasks_service
     use: pypi:seampact-drf

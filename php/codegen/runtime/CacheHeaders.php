@@ -29,9 +29,10 @@ final class CacheHeaders
 
     /**
      * Writes the operation's cache headers on `$reply`, whose content is the body's bytes; answers the ETag's 304,
-     * with the same headers and no body, when `If-None-Match` names it.
+     * with the same headers and no body, when `If-None-Match` names it. On a route versioned by `If-Match`, the ETag is
+     * the item's version tag (grammar section 6), `$versionTag`.
      */
-    public static function written(Request $request, BoundaryState $state, Response $reply): Response
+    public static function written(Request $request, BoundaryState $state, Response $reply, ?string $versionTag = null): Response
     {
         $cache = Ir::map($state->contract->operation($state->operationId), 'cache');
         if ($cache === []) {
@@ -55,7 +56,7 @@ final class CacheHeaders
         }
 
         $content = $reply->getContent();
-        $etag = '"' . Digests::base64UrlOfBytes($content === false ? '' : $content) . '"';
+        $etag = $versionTag ?? '"' . Digests::base64UrlOfBytes($content === false ? '' : $content) . '"';
         $reply->headers->set(self::ETAG_HEADER, $etag);
         if (!self::ifNoneMatchHolds($request->headers->get(self::IF_NONE_MATCH_HEADER), $etag)) {
             return $reply;

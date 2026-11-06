@@ -243,6 +243,20 @@ class SpringBootGoldenTest {
         assertTrue("Map.entry(\"created_at\", \"createdAt\")" in binding, binding)
     }
 
+    // HAL names its `_embedded` member by `$collection` and links each item by `$itemSelf`; API Platform's Hydra page
+    // writes `$resource`: slots the page body does not fill yet, so each pack is refused by name.
+    @Test
+    fun refusesThePackPagesWhoseResourceSlotsItDoesNotRender() {
+        for (pack in listOf("pack-hal", "pack-api-platform")) {
+            val packText = repositoryRoot.resolve("fixtures/golden/$pack/tasks.ir.json").readText()
+            val refusals = assertFailsWith<SpringBootRefusedException> {
+                SpringBootTarget.generate(IrReader.read(packText, SpringBootTarget.IR_SUPPORT), entry("com.example.tasks.api"))
+            }.refusals
+
+            assertTrue(refusals.any { it.code == "paging.response.slot.unsupported" }, "$pack: ${refusals.map { it.code }}")
+        }
+    }
+
     @Test
     fun generatesTheWholeReferenceContract() {
         for (api in apis) {

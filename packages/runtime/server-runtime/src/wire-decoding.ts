@@ -1,38 +1,53 @@
 // The wire decoding of path, query and header strings before the validator (ADR 0002 section 7).
 
-/** How a path, query or header string is decoded by the IR's wire form before the validator (ADR 0002 section 7). */
-export type WireDecoding = "text" | "number" | "boolean" | "list";
+/**
+ * How a path, query or header string is decoded by the IR's wire form before the validator (ADR 0002 section 7):
+ * `list` is one comma-separated value (`tag=a,b`), `repeatedList` a query list sent as repeated keys (`tag=a&tag=b`).
+ */
+export type WireDecoding = "text" | "number" | "boolean" | "list" | "repeatedList";
+
+/** How each item of a query list is decoded: by the item type, as a single value is. */
+export type ListItemDecoding = "text" | "number" | "boolean";
 
 export interface ParamRule {
   /** The name as the validator's input object keys it: as declared for path and query, lower case for headers. */
   readonly name: string;
   readonly decoding: WireDecoding;
+  /** On a query list whose items are numbers or booleans: their decoding; text when absent. */
+  readonly items?: ListItemDecoding;
   /** On a path param with a `maxLength`: the longest percent-encoded form of a valid value. */
   readonly encodedMaxLength?: number;
 }
 
 /**
  * The query members the validator receives, from the raw query string decoded as a form (ADR 0002 section 7).
- * A comma list is split before percent-decoding, so an encoded comma (`%2C`) stays inside its item.
+ * A comma list is split before percent-decoding, so an encoded comma (`%2C`) stays inside its item; a repeated list
+ * is the list of its values, one item each, even when its key is sent once.
  */
 export function decodeQueryMembers(
   rules: readonly ParamRule[],
   rawQuery: string,
 ): Record<string, unknown> {
   const queryValues = new Map<string, unknown[]>();
+  const repeatedLists = new Set<string>();
 
   for (const [rawName, rawValue] of rawQueryPairs(rawQuery)) {
     const name = formDecoded(rawName);
     const rule = rules.find((candidate) => candidate.name === name);
     const value = decodeQueryValue(rawValue, rule);
 
+    if (rule?.decoding === "repeatedList") repeatedLists.add(name);
+
     queryValues.set(name, [...(queryValues.get(name) ?? []), value]);
   }
 
-  // A repeated member reaches the validator as the list of its values, so it reports it rather than one value
-  // winning: a proxy reading the first and the boundary the last would disagree.
+  // Any other repeated member reaches the validator as the list of its values, so it reports it rather than one
+  // value winning: a proxy reading the first and the boundary the last would disagree.
   return Object.fromEntries(
-    [...queryValues].map(([name, values]) => [name, values.length === 1 ? values[0] : values]),
+    [...queryValues].map(([name, values]) => [
+      name,
+      values.length === 1 && !repeatedLists.has(name) ? values[0] : values,
+    ]),
   );
 }
 
@@ -40,7 +55,15 @@ export function decodeQueryMembers(
 function decodeQueryValue(rawValue: string, rule: ParamRule | undefined): unknown {
   if (rule === undefined) return formDecoded(rawValue);
 
-  if (rule.decoding === "list") return rawValue === "" ? [] : rawValue.split(",").map(formDecoded);
+  const items = rule.items ?? "text";
+
+  if (rule.decoding === "list") {
+    return rawValue === ""
+      ? []
+      : rawValue.split(",").map((item) => decodeWireString(formDecoded(item), items));
+  }
+
+  if (rule.decoding === "repeatedList") return decodeWireString(formDecoded(rawValue), items);
 
   return decodeWireString(formDecoded(rawValue), rule.decoding);
 }
@@ -83,6 +106,8 @@ export function decodeWireString(raw: string, decoding: WireDecoding): unknown {
       return raw === "true" ? true : raw === "false" ? false : raw;
     case "list":
       return raw === "" ? [] : raw.split(",");
+    case "repeatedList":
+      return [raw];
   }
 }
 

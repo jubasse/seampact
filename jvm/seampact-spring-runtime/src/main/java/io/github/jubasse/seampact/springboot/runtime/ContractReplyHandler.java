@@ -73,62 +73,91 @@ public final class ContractReplyHandler implements HandlerMethodReturnValueHandl
         JsonNode response = exchange.route().response(status);
         CheckingResponse checking = exchange.response;
 
-        // A null item is the format's null: its schema decides whether it may be null; PHP refuses a non-nullable opaque null on write, whatever the body check says.
-        if (hasBody(response, status)) {
-            String shape = response.path("shape").asString();
-            if (bodyValue == null && !ITEM_SHAPE.equals(shape)) {
-                handlerFailed(exchange, "the handler returned a null " + shape);
-                return;
-            }
+        if (!hasBody(response, status)) {
+            Optional<ResponseHeaders.Derived> derived = derivedHeaders(exchange, status, MissingNode.getInstance());
+            if (derived.isEmpty()) return;
 
-            boolean isPage = PAGE_SHAPE.equals(shape);
-            JsonNode handlerBody = bodyValue == null
-                    ? NullNode.getInstance()
-                    : boundary.mapper().valueToTree(isPage ? boundary.binding().pageFacts(bodyValue) : bodyValue);
-            JsonNode payload = isPage ? handlerBody.path(ITEMS) : handlerBody;
-            if (isPage && !payload.isArray()) {
-                handlerFailed(exchange, "the handler returned a page without items");
-                return;
-            }
-            if (isPage && handlerBody.path(TOTAL).asLong(0) < 0) {
-                handlerFailed(exchange, "the handler returned a page whose total is negative");
-                return;
-            }
-
-            RequestView view = boundary.requestView(request, exchange);
-            OutputFieldRights.apply(boundary, exchange, view, response, payload);
-
-            Optional<String> broken = brokenSchema(response, payload);
-            if (broken.isPresent() && boundary.isStrict(exchange.route().id())) {
-                exchange.violation = broken;
-                return;
-            }
-            // Under `warn` the body goes out as written and the violation is logged.
-            broken.ifPresent(reason -> boundary.warnViolation(exchange, reason));
-
-            JsonNode body;
-            if (isPage) {
-                PageReply.RenderedPage page = PageReply.render(boundary.table(), exchange, request.getQueryString(), request.getRequestURI(), boundary.publicOrigin(), handlerBody, payload, status);
-                page.headers().forEach(header -> checking.addHeader(header.getKey(), header.getValue()));
-                body = page.body();
-            } else {
-                body = SuccessEnvelope.body(boundary.table().format(exchange.route()), response.path("shape").asString(), payload, status, request.getRequestURI());
-            }
-
-            byte[] bodyBytes = boundary.mapper().writeValueAsBytes(body);
-            if (CacheHeaders.write(exchange, request, checking, bodyBytes)) {
-                checking.setStatus(CacheHeaders.NOT_MODIFIED);
-                exchange.markBoundaryWrote();
-                return;
-            }
-
-            checking.setContentType(response.path("media").asString());
-            checking.setCharacterEncoding(StandardCharsets.UTF_8.name());
-            checking.getOutputStream().write(bodyBytes);
+            writeHeaders(checking, derived.get().successHeaders());
+            checking.setStatus(status);
+            exchange.markBoundaryWrote();
+            return;
         }
 
+        // A null item is the format's null: its schema decides whether it may be null; PHP refuses a non-nullable opaque null on write, whatever the body check says.
+        String shape = response.path("shape").asString();
+        if (bodyValue == null && !ITEM_SHAPE.equals(shape)) {
+            handlerFailed(exchange, "the handler returned a null " + shape);
+            return;
+        }
+
+        boolean isPage = PAGE_SHAPE.equals(shape);
+        JsonNode handlerBody = bodyValue == null
+                ? NullNode.getInstance()
+                : boundary.mapper().valueToTree(isPage ? boundary.binding().pageFacts(bodyValue) : bodyValue);
+        JsonNode payload = isPage ? handlerBody.path(ITEMS) : handlerBody;
+        if (isPage && !payload.isArray()) {
+            handlerFailed(exchange, "the handler returned a page without items");
+            return;
+        }
+        if (isPage && handlerBody.path(TOTAL).asLong(0) < 0) {
+            handlerFailed(exchange, "the handler returned a page whose total is negative");
+            return;
+        }
+
+        Optional<ResponseHeaders.Derived> derived = derivedHeaders(exchange, status, handlerBody);
+        if (derived.isEmpty()) return;
+
+        RequestView view = boundary.requestView(request, exchange);
+        OutputFieldRights.apply(boundary, exchange, view, response, payload);
+
+        Optional<String> broken = brokenSchema(response, payload);
+        if (broken.isPresent() && boundary.isStrict(exchange.route().id())) {
+            exchange.violation = broken;
+            return;
+        }
+        // Under `warn` the body goes out as written and the violation is logged.
+        broken.ifPresent(reason -> boundary.warnViolation(exchange, reason));
+
+        JsonNode body;
+        if (isPage) {
+            PageReply.RenderedPage page = PageReply.render(boundary.table(), exchange, request.getQueryString(), request.getRequestURI(), boundary.publicOrigin(), handlerBody, payload, status);
+            page.headers().forEach(header -> checking.addHeader(header.getKey(), header.getValue()));
+            body = page.body();
+        } else {
+            body = SuccessEnvelope.body(boundary.table().format(exchange.route()), shape, payload, status, request.getRequestURI());
+        }
+
+        byte[] bodyBytes = boundary.mapper().writeValueAsBytes(body);
+        Optional<ResponseHeaders.Header> entityTag = derived.get().entityTag();
+        entityTag.ifPresent(header -> checking.setBoundaryHeader(header.name(), header.value()));
+
+        // A 304 is no success: it keeps the entity tag and carries no deprecation header (ADR 0004 section 7).
+        if (CacheHeaders.write(exchange, request, checking, bodyBytes, entityTag.map(ResponseHeaders.Header::value))) {
+            checking.setStatus(CacheHeaders.NOT_MODIFIED);
+            exchange.markBoundaryWrote();
+            return;
+        }
+
+        writeHeaders(checking, derived.get().successHeaders());
+        checking.setContentType(response.path("media").asString());
+        checking.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        checking.getOutputStream().write(bodyBytes);
         checking.setStatus(status);
         exchange.markBoundaryWrote();
+    }
+
+    // The headers the contract table derives for this reply; empty once a header it cannot write answered the 500.
+    private Optional<ResponseHeaders.Derived> derivedHeaders(BoundaryExchange exchange, int status, JsonNode handlerBody) {
+        try {
+            return Optional.of(ResponseHeaders.of(boundary.table(), exchange, status, handlerBody));
+        } catch (ResponseHeaders.UnwritableHeader unwritable) {
+            handlerFailed(exchange, unwritable.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private static void writeHeaders(CheckingResponse checking, List<ResponseHeaders.Header> headers) {
+        headers.forEach(header -> checking.addHeader(header.name(), header.value()));
     }
 
     // A result that breaks its own type is the handler's failure, the api's 500 under `responses: warn` too, as on Node;

@@ -870,7 +870,7 @@ items:
     targets: [core, nestjs, spring-boot, laravel]
   - id: CHK-147
     source: "A36"
-    fact: frameworkRoutes accepts path patterns with one reason, the boot check's handler and framework-route checks switch off apart, and a target entry's operations filter limits the operations an app serves and the boot check expects.
+    fact: frameworkRoutes accepts path patterns with one reason, the boot check's framework-route and hook checks switch off apart while its handler check runs whenever the boot check does, and a target entry's operations filter limits the operations an app serves and the boot check expects.
     frs: [FR-25]
     scenario: SCN-072
     targets: [server]
@@ -954,7 +954,7 @@ items:
     targets: [core, server, fetch]
   - id: CHK-161
     source: "A41"
-    fact: A server target entry's mount states the framework's own path prefix, the boot check refuses a mismatch, and nestjs routes are version-neutral with the full contract path.
+    fact: A server target entry's mount states the framework's own path prefix, the boot check, or on Express and AdonisJS the first contract request, refuses a mismatch, and nestjs routes are version-neutral with the full contract path.
     frs: [FR-25, FR-16]
     scenario: SCN-072
     targets: [server]

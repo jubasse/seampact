@@ -1,0 +1,22 @@
+{
+  "id": "mount-mismatch-fails-boot",
+  "title": "The app serving the api under a framework prefix its entry's mount does not state refuses to start",
+  "checks": ["CHK-161"],
+  "profiles": ["boot"],
+  "targets": [
+    "fastify",
+    "hono",
+    "nestjs",
+    "spring-boot",
+    "laravel",
+    "symfony",
+    "fastapi",
+    "drf",
+    "ninja"
+  ],
+  "boot": {
+    "variant": "mount-mismatch",
+    "outcome": "refuses",
+    "diagnostic": ["cannot start", "/mounted"]
+  }
+}

@@ -21,6 +21,7 @@ use Seampact\Ir\Model\ObjectSchema;
 use Seampact\Ir\Model\OpaqueTypeUse;
 use Seampact\Ir\Model\Operation;
 use Seampact\Ir\Model\OptionalAccess;
+use Seampact\Ir\Model\PagingPosition;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\ProofPlacement;
 use Seampact\Ir\Model\QueryScheme;
@@ -63,6 +64,17 @@ final class KeptForms
     // The slots an item, table or list envelope may write that the boundary fills.
     private const PAYLOAD_SLOT = 'payload';
     private const ENVELOPE_SLOTS = [self::PAYLOAD_SLOT, 'status', 'path', 'meta'];
+    // The page slots that hold an object or a list, which no header can carry.
+    private const STRUCTURED_PAGE_SLOTS = ['items', 'meta'];
+    // The slots a page template may write that the page reply fills: the response roles, the request path and status,
+    // and the format's `$meta` (ADR 0002 section 14). `$resource`, `$collection` and the item id slots are not yet.
+    private const PAGE_SLOT = 'page';
+    private const RENDERED_PAGE_SLOTS = [
+        'items', 'nextCursor', 'previousCursor', 'more', self::PAGE_SLOT, 'offset', 'limit', 'from', 'to', 'total', 'totalPages',
+        'self', 'first', 'previous', 'next', 'last', 'nextSince', 'complete', 'path', 'status', 'meta',
+    ];
+    // The slot `$each` binds to each item inside its `$as` (ADR 0002 section 13): the renderer fills it.
+    private const EACH_ITEM_SLOT = 'item';
     private const BUCKET_KEY_SOURCES = [ValueSourceIn::Path, ValueSourceIn::Scope, ValueSourceIn::Principal];
 
     // Header params the boundary consumes itself: the credentials and the CSRF token never reach the handler.
@@ -88,17 +100,27 @@ final class KeptForms
     /** @var array<string, true> */
     private array $identities = [];
 
+    /** @var array<string, array<int, list<array<string, string>>>> the headers each response writes, by operation and status */
+    private array $responseHeaders = [];
+
+    private readonly ResponseHeaderEntries $responseHeaderEntries;
+
     /** @var array<string, true> the formats already read */
     private array $formats = [];
 
     /** @var array<string, true> the success shapes already read, by format and shape */
     private array $formatShapes = [];
 
+    /** @var array<string, true> the page templates already read, by paging style and by format */
+    private array $pageTemplates = [];
+
     /** @var array<string, true> the rights, rules and scopes already read, by member and name */
     private array $accessDeclarations = [];
 
     public function __construct(private readonly ContractIR $ir, private readonly Refusals $refusals, private readonly FormReleases $releases)
     {
+        $this->responseHeaderEntries = new ResponseHeaderEntries($ir, $refusals);
+
         if ($ir->api->wire->urls->value === UrlForm::Absolute) {
             $this->pending(PendingForm::AbsoluteUrls, 'urls.absolute', 'Absolute URLs (`api.wire.urls: absolute`)', IrPlace::root()->below('api', 'wire', 'urls'));
         }
@@ -121,6 +143,16 @@ final class KeptForms
     public function operations(): array
     {
         return $this->operations;
+    }
+
+    /**
+     * The headers each response of the operation writes from its own IR headers, by status (`ResponseHeaderEntries`).
+     *
+     * @return array<int, list<array<string, string>>>
+     */
+    public function responseHeaders(string $operationId): array
+    {
+        return $this->responseHeaders[$operationId] ?? [];
     }
 
     /** @return array<string, ObjectSchema> */
@@ -182,6 +214,7 @@ final class KeptForms
         $this->readPath($operation, $at);
         $this->readAccess($operation, $at);
         $this->readFormat($operation->format);
+        $this->readPageTemplates($operation);
         $this->readWaitingMembers($operation, $at);
         $this->readRequirements($operation, $at);
         $this->readAccessDeclarations($operation);
@@ -199,6 +232,13 @@ final class KeptForms
 
         foreach ($operation->responses as $responseIndex => $response) {
             $this->readResponse($response, $at->below('responses', $responseIndex));
+            $headers = $this->responseHeaderEntries->of($operation, $response, $at->below('responses', $responseIndex));
+            if ($headers !== []) {
+                $this->responseHeaders[$operation->id][$response->status] = $headers;
+            }
+            if ($response->shape->value === ResponseShape::Page) {
+                $this->readPageHeaders($operation);
+            }
             if ($response->body !== null) {
                 $this->readSuccessShape($operation->format, $response->shape->value);
             }
@@ -386,6 +426,56 @@ final class KeptForms
         }
     }
 
+    // The page body (the style's own, or the format's page), the style's meta and headers, each read once: a slot the
+    // page reply does not fill would be dropped from the body, so it is refused by name.
+    private function readPageTemplates(Operation $operation): void
+    {
+        $styleId = $operation->paging?->style;
+        $style = $styleId === null ? null : ($this->ir->pagings[$styleId] ?? null);
+        if ($styleId === null || $style === null) {
+            return;
+        }
+
+        $templates = [];
+        if (!isset($this->pageTemplates["paging/{$styleId}"])) {
+            $this->pageTemplates["paging/{$styleId}"] = true;
+            $responseAt = IrPlace::root()->below('pagings', $styleId, 'response');
+            if ($style->response->body !== null) {
+                $templates[] = [$style->response->body, $responseAt->below('body')];
+            }
+            foreach ($style->response->meta as $index => $member) {
+                $templates[] = [$member->value, $responseAt->below('meta', $index, 'value')];
+            }
+            foreach ($style->response->headers as $index => $header) {
+                $templates[] = [$header->value, $responseAt->below('headers', $index, 'value')];
+            }
+        }
+
+        $pageFormat = $this->ir->formats[$operation->format] ?? null;
+        // The format's page is read once per style too: whether `$page` is filled depends on the style's position.
+        $formatPageKey = "format/{$operation->format}/{$styleId}";
+        if ($style->response->body === null && $pageFormat !== null && !isset($this->pageTemplates[$formatPageKey])) {
+            $this->pageTemplates[$formatPageKey] = true;
+            $templates[] = [$pageFormat->success->page->body, IrPlace::root()->below('formats', $operation->format, 'success', 'page', 'body')];
+        }
+
+        // An offset style has no page number of its own: its base is not declared, so the page reply leaves `$page` out.
+        $renderedSlots = $style->position->value === PagingPosition::Offset
+            ? array_diff(self::RENDERED_PAGE_SLOTS, [self::PAGE_SLOT])
+            : self::RENDERED_PAGE_SLOTS;
+
+        foreach ($templates as [$template, $templateAt]) {
+            $unrendered = array_values(array_unique(array_diff(self::templateSlots($template->toJson()), $renderedSlots)));
+            if ($unrendered === []) {
+                continue;
+            }
+
+            sort($unrendered);
+            $named = implode(', ', array_map(static fn (string $slot): string => "'\${$slot}'", $unrendered));
+            $this->refusals->waiting('paging.response.slot', "The page slots {$named} of the paging style '{$styleId}'", $templateAt, Delivery::AfterOneZero);
+        }
+    }
+
     /** @return list<string>|null the member names down to the slot, reached through named object members only */
     private static function slotPath(mixed $template, string $slot): ?array
     {
@@ -413,9 +503,41 @@ final class KeptForms
         return null;
     }
 
-    /** @return list<string> the slot names a template writes, at any depth */
+    // A page header is written as text: a template that renders an object or an array has no header value.
+    private function readPageHeaders(Operation $operation): void
+    {
+        $styleId = $operation->paging?->style;
+        $style = $styleId === null ? null : ($this->ir->pagings[$styleId] ?? null);
+        if ($styleId === null || $style === null) {
+            return;
+        }
+
+        foreach ($style->response->headers as $index => $header) {
+            if (!self::isScalarTemplate($header->value->toJson())) {
+                $this->refusals->waiting('paging.response.header', "The header '{$header->name}' of the paging style '{$styleId}', written from an object or an array,", IrPlace::root()->below('pagings', $styleId, 'response', 'headers', $index, 'value'), Delivery::AfterOneZero);
+            }
+        }
+    }
+
+    private static function isScalarTemplate(\stdClass $template): bool
+    {
+        return match ($template->kind ?? null) {
+            'text' => true,
+            'literal' => !is_array($template->value ?? null) && !(($template->value ?? null) instanceof \stdClass),
+            'slot' => ($template->path ?? []) !== [] || !in_array($template->slot ?? null, self::STRUCTURED_PAGE_SLOTS, true),
+            default => false,
+        };
+    }
+
+    /** @return list<string> the slot names a template writes, at any depth, without the item each `$each` binds */
     private static function templateSlots(mixed $template): array
     {
+        if ($template instanceof \stdClass && ($template->kind ?? null) === 'each') {
+            $source = is_string($template->of ?? null) ? [$template->of] : [];
+            $bound = array_filter(self::templateSlots($template->as ?? null), static fn (string $slot): bool => $slot !== self::EACH_ITEM_SLOT);
+
+            return [...$source, ...array_values($bound)];
+        }
         if ($template instanceof \stdClass) {
             $slot = ($template->kind ?? null) === 'slot' && is_string($template->slot ?? null) ? [$template->slot] : [];
 

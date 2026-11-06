@@ -5,9 +5,12 @@ import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksDevicesNest from "../generated/server/tasksDevices/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
 import * as TasksServiceWritesNest from "../generated/server/tasksServiceWrites/index.js";
-import { bootVariantIs, servesUnlistedRoute } from "./boot-variant.mjs";
 import {
-  AppController,
+  leavesOutHealthHandler,
+  servesPatternedRoute,
+  servesUnlistedRoute,
+} from "./boot-variant.mjs";
+import {
   ChannelsController,
   DevicesController,
   DraftsController,
@@ -23,7 +26,16 @@ import {
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "./hooks.mjs";
-import { SuiteControlController, UnlistedRouteController } from "./suite-control-controller.mjs";
+import {
+  PatternedRouteController,
+  SuiteControlController,
+  UnlistedRouteController,
+} from "./suite-control-controller.mjs";
+
+// A boot variant that misses the `health` operation's handler, or filters it out, leaves out its controller.
+const healthControllers = leavesOutHealthHandler()
+  ? []
+  : [(await import("./app-controller.mjs")).AppController];
 
 @Module({
   imports: [
@@ -34,8 +46,7 @@ import { SuiteControlController, UnlistedRouteController } from "./suite-control
     TasksDevicesNest.SeampactModule.forRoot(tasksDevicesHooks()),
   ],
   controllers: [
-    // The `missing-handler` boot variant leaves out the controller of the `health` operation.
-    ...(bootVariantIs("missing-handler") ? [] : [AppController]),
+    ...healthControllers,
     ChannelsController,
     TasksController,
     DraftsController,
@@ -47,6 +58,7 @@ import { SuiteControlController, UnlistedRouteController } from "./suite-control
     SuiteControlController,
     // The framework-route boot variants serve a route outside the contract.
     ...(servesUnlistedRoute() ? [UnlistedRouteController] : []),
+    ...(servesPatternedRoute() ? [PatternedRouteController] : []),
   ],
 })
 export class ConsumerModule {}

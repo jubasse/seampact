@@ -1,7 +1,8 @@
 """The reply of a handler's result or of a raised contract exception (ADR 0026 "The reply path"): a declared success
 written in its format's envelope with the boundary's own JSON encoding, less the restricted output members the caller
-may not see, with its page parts and cache headers; or a declared error code with its params in wire names. A result
-the operation does not declare is a failure of the boundary, answered with the api's 500."""
+may not see, with its page parts, its cache headers and the headers its response derives (deprecation, version tag);
+or a declared error code with its params in wire names. A result the operation does not declare is a failure of the
+boundary, answered with the api's 500."""
 
 import dataclasses
 from collections.abc import Mapping
@@ -17,6 +18,7 @@ from seampact.codegen.runtime.ir_view import IrMap, ir_maps, ir_string
 from seampact.codegen.runtime.page_facts import page_facts
 from seampact.codegen.runtime.page_reply import PageParts, page_parts
 from seampact.codegen.runtime.replies import CONTENT_TYPE, JSON_MEDIA, Reply, error_reply, json_bytes, success_body
+from seampact.codegen.runtime.response_headers import derived_response_headers, with_entity_tag, with_success_headers
 from seampact.codegen.runtime.run_settings import OperationTypes
 from seampact.codegen.runtime.wire_codec import WireCodec
 
@@ -66,22 +68,33 @@ async def result_reply(
         None,
     )
 
-    if response is None or not hasattr(result, "body"):
+    if response is None:
         return Reply(status, (), b"")
+
+    raw_parameters = context.access.raw_parameters
+
+    if not hasattr(result, "body"):
+        derived = derived_response_headers(contract, operation_id, response, None, raw_parameters)
+
+        return with_success_headers(Reply(status, (), b""), derived, status)
 
     shape = ir_string(response, "shape") or _ITEM_SHAPE
     media_headers = ((CONTENT_TYPE, ir_string(response, "media") or JSON_MEDIA),)
 
     if shape == _PAGE_SHAPE:
+        derived = derived_response_headers(contract, operation_id, response, None, raw_parameters)
         page = await _page(contract, operation_id, response, result.body, status, context)
         reply = Reply(status, (*media_headers, *page.headers), json_bytes(page.body))
     else:
         payload = WireCodec(contract).body_to_wire(response, result.body)
+        derived = derived_response_headers(contract, operation_id, response, payload, raw_parameters)
         visible = await visible_output(context.access, context.hooks, context.call, response, payload)
         body = success_body(contract.format(operation_id), shape, visible, status, context.path)
-        reply = Reply(status, media_headers, json_bytes(body))
+        reply = Reply(status, with_entity_tag(media_headers, derived), json_bytes(body))
 
-    return with_cache_headers(contract, operation_id, reply, context.access.principal, context.if_none_match)
+    cached = with_cache_headers(contract, operation_id, reply, context.access.principal, context.if_none_match)
+
+    return with_success_headers(cached, derived, status)
 
 
 async def _page(
