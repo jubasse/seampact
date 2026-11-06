@@ -133,8 +133,11 @@ export interface OperationPlan {
 export interface QueryPlan {
   readonly name: string;
 
-  /** `text` and `number` write one value; `list` writes the items comma-separated (`style: form`, `explode: false`). */
-  readonly wire: "text" | "number" | "list";
+  /**
+   * `text` and `number` write one value; `list` writes the items comma-separated (`style: form`, `explode: false`),
+   * `repeatedList` one `name=item` pair per item (`explode: true`).
+   */
+  readonly wire: "text" | "number" | "list" | "repeatedList";
 }
 
 export type SuccessPlan =
@@ -303,7 +306,7 @@ function requestUrl(config: ClientConfig, plan: OperationPlan, request: RequestV
   const path = plan.path.replace(/\{([^}]+)\}/g, (_placeholder, name: string) =>
     pathSegment(name, request.path?.[name]),
   );
-  const query = plan.query.flatMap((param) => queryPair(param, request.query?.[param.name]));
+  const query = plan.query.flatMap((param) => queryPairs(param, request.query?.[param.name]));
   const search = query.length === 0 ? "" : `?${query.join("&")}`;
 
   return `${config.baseUrl.replace(/\/+$/, "")}${path}${search}`;
@@ -325,15 +328,22 @@ function pathSegment(name: string, value: unknown): string {
 
 // `encodeURIComponent` writes `+` as `%2B`: servers decode a query string as a form, where `+` is a space
 // (ADR 0002 section 7).
-function queryPair(param: QueryPlan, value: unknown): string[] {
+function queryPairs(param: QueryPlan, value: unknown): string[] {
   if (value === undefined) return [];
 
-  const encodedValue =
-    param.wire === "list" && Array.isArray(value)
-      ? value.map((item) => encodeURIComponent(String(item))).join(",")
-      : encodeURIComponent(String(value));
+  const encodedName = encodeURIComponent(param.name);
 
-  return [`${encodeURIComponent(param.name)}=${encodedValue}`];
+  if (param.wire === "text" || param.wire === "number" || !Array.isArray(value)) {
+    return [`${encodedName}=${encodeURIComponent(String(value))}`];
+  }
+
+  if (value.length === 0) return [];
+
+  const encodedItems = value.map((item) => encodeURIComponent(String(item)));
+
+  if (param.wire === "repeatedList") return encodedItems.map((item) => `${encodedName}=${item}`);
+
+  return [`${encodedName}=${encodedItems.join(",")}`];
 }
 
 function requestHeaders(

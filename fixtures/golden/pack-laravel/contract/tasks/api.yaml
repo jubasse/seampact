@@ -43,6 +43,7 @@ surfaces:
                 list:
                   paging: { laravelPages: { maxLimit: 50 } }
                   filteredBy: tasks.read
+                  query: { state?: { type: array, items: { enum: TaskState } } }
                 get: {}
                 create:
                   input: CreateTask

@@ -124,6 +124,7 @@ export const ListTasksInputSchema = z.object({
     channelId: z.uuid({ error: "Expected a UUID: 8-4-4-4-12 hex digits." }),
   }),
   query: z.strictObject({
+    state: z.array(z.enum(["open", "done", "archived"])).optional(),
     cursor: z.string().optional(),
     limit: z.int().gte(1).lte(50).optional(),
     sort: z

@@ -344,13 +344,13 @@ Octane is not supported yet.
 - Run the app with php-fpm. Octane fails with `runtime.octane.unsupported`.
 - The web server's body limit and `post_max_size` must be at least the largest route limit of the contract.
 - Run `php artisan route:cache` and `config:cache` in production. The boot check then runs once, at build time.
-- Form, multipart, file, download and redirect bodies, query lists in every form (`tag=a&tag=b`, `tag=a,b` or `tag[]=a`), and `accessHooks: false`, are refused by `generate` by name: they wait for an app that needs them. See [Target option errors](../troubleshooting/generate.md).
+- Form, multipart, file, download and redirect bodies, query lists in `brackets` form (`tag[]=a`), lists of lists and object query params, and `accessHooks: false`, are refused by `generate` by name: they wait for an app that needs them. See [Target option errors](../troubleshooting/generate.md).
 - Laravel 12 and older are refused. Symfony is a separate target.
 
 ## Versioned writes and query lists
 
 A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
 
-A query list is refused by `generate` for now, in the `repeat` and `comma` forms alike (`param.query.structured.unsupported`). Use a scalar param, or leave the operation out of the entry's `operations` filter.
+A query list of scalars or enums is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`. The `brackets` form and a list of lists are refused by `generate`.
 
 The `params` of a right or rule in a decider request are an instance of the generated class, not an array.

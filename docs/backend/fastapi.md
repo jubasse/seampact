@@ -281,7 +281,7 @@ So keeping Starlette current is your project's job. Run `pip install -U starlett
 - Run a server that gives the raw request path. uvicorn does. Where the server gives none, the boundary matches the decoded path and logs which rules it cannot apply.
 - An ASGI wrapper around the app object (`app = CORSMiddleware(FastAPI())`, an error tracker) runs before the boundary and is not seen. Add middleware with `app.add_middleware()`.
 - The outgoing check cannot read a `br` error body: it is a violation.
-- `generate` refuses by name: form, multipart, file, download and redirect bodies, query lists in every form (`tag=a&tag=b`, `tag=a,b` or `tag[]=a`), `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
+- `generate` refuses by name: form, multipart, file, download and redirect bodies, query lists in `brackets` form (`tag[]=a`), lists of lists and object query params, `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
 - FastAPI older than 0.162 is refused.
 - DRF and Ninja are separate targets: see [Django REST Framework](drf.md).
 
@@ -289,4 +289,4 @@ So keeping Starlette current is your project's job. Run `pip install -U starlett
 
 A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
 
-A query list is refused by `generate` for now, in the `repeat` and `comma` forms alike (`param.query.structured.unsupported`). Use a scalar param, or leave the operation out of the entry's `operations` filter.
+A query list of scalars or enums is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`. The `brackets` form and a list of lists are refused by `generate`.

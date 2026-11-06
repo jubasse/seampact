@@ -31,20 +31,20 @@ test("explain prints the reference updateTask with the derivation and the file a
   const lines = explained.out.split("\n");
 
   expect(lines).toContain(
-    "operationId: updateTask                          # ops.update, tasks/api.yaml:51",
+    "operationId: updateTask                          # ops.update, tasks/api.yaml:52",
   );
   expect(lines).toContain("identity: user                                   # tasks/api.yaml:23");
   expect(lines).toContain(
     "csrf: X-Csrf-Token                               # csrf.cookieWrite, shared/base.yaml:23, shared/base.yaml:3",
   );
   expect(lines).toContain(
-    "  - { right: tasks.update, subject: path.taskId }  # tasks/api.yaml:53; the subject defaults to the member id",
+    "  - { right: tasks.update, subject: path.taskId }  # tasks/api.yaml:54; the subject defaults to the member id",
   );
   expect(lines).toContain(
     "  - { status: 409, code: state.conflict }        # concurrency.version, tasks/api.yaml:41",
   );
   expect(lines).toContain(
-    "  - { status: 500, code: api.internal }          # response.undeclared, shared/base.yaml:98, tasks/api.yaml:51",
+    "  - { status: 500, code: api.internal }          # response.undeclared, shared/base.yaml:98, tasks/api.yaml:52",
   );
 });
 

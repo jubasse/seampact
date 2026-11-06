@@ -468,6 +468,11 @@ export class ListTasksRequestPathDto {
 
 export class ListTasksRequestQueryDto {
   @contract.ValidateIfPresent()
+  @IsArray()
+  @contract.ArrayItems([contract.enumCheck(["open", "done", "archived"])])
+  state?: Array<"open" | "done" | "archived">;
+
+  @contract.ValidateIfPresent()
   @IsString()
   cursor?: string;
 
