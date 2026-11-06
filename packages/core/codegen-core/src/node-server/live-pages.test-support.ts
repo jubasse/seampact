@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type {
-  ContractIR,
-  Operation,
-  PagingRequestRole,
-  PagingStyle,
-  Param,
-  Template,
+import {
+  type ContractIR,
+  isKnownVariant,
+  type Operation,
+  type PagingRequestRole,
+  type PagingStyle,
+  type Param,
+  type Template,
 } from "@seampact/spec/ir";
 import type { Target } from "../target.js";
 import { type RawReply, sendRawRequest } from "./live-request.test-support.js";
@@ -224,4 +225,48 @@ export function laravelOffsetChannels(api: string): ContractIR {
   if (api !== "tasks") return ir;
 
   return withRequestStyle(ir, "listChannels", offsetPages(requirePaging(ir, "laravelPages")));
+}
+
+/** The `maxLimit` of the channel list that clamps a larger limit. */
+export const CLAMPED_MAX_LIMIT = 10;
+
+/** The Laravel tasks api, its channel list serving a `per_page` above its `maxLimit` as the `maxLimit`. */
+export function laravelClampedChannels(api: string): ContractIR {
+  const ir = packIr("pack-laravel", api);
+
+  if (api !== "tasks") return ir;
+
+  return {
+    ...ir,
+    operations: ir.operations.map((operation): Operation => {
+      if (operation.id !== "listChannels" || operation.paging === undefined) return operation;
+
+      return {
+        ...operation,
+        paging: {
+          ...operation.paging,
+          maxLimit: CLAMPED_MAX_LIMIT,
+          defaultLimit: CLAMPED_MAX_LIMIT,
+          overLimit: "clamp",
+        },
+        params: {
+          ...operation.params,
+          query: operation.params.query.map(withoutPagingMaximum),
+        },
+      };
+    }),
+  };
+}
+
+// Under `clamp` the compiler writes no maximum on the limit param, so a larger limit passes the input check.
+function withoutPagingMaximum(param: Param): Param {
+  const type = param.type;
+
+  if (param.derivedFrom?.derivation !== PAGING_PARAMS_DERIVATION) return param;
+
+  if (!isKnownVariant("TypeUse", type) || type.kind !== "scalar") return param;
+
+  const { maximum: _maximum, ...refinements } = type.refinements;
+
+  return { ...param, type: { ...type, refinements } };
 }

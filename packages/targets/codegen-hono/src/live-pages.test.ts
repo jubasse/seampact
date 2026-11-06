@@ -4,6 +4,8 @@ import {
   bootPages,
   PAGE_CHANNEL as CHANNEL,
   PAGE_CHANNELS as CHANNELS,
+  CLAMPED_MAX_LIMIT,
+  laravelClampedChannels,
   laravelOffsetChannels,
   objectOf,
   packIr,
@@ -367,5 +369,49 @@ describe("pages under the Spring pack", () => {
     expect(JSON.parse(reply.text)).toEqual({ data: CHANNELS, meta: { total: 5, lastPage: 3 } });
     expect(reply.headers["x-total-count"]).toBe("5");
     expect(reply.headers.link).toBe('<?size=2&page=2>; rel="next", <?size=2&page=0>; rel="prev"');
+  });
+});
+
+describe("a limit above the maximum", () => {
+  let clamped: BootedPages;
+
+  beforeAll(async () => {
+    clamped = await bootPages(pagesProject("live-pages-clamp"), laravelClampedChannels);
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await clamped?.close();
+  });
+
+  beforeEach(() => {
+    clamped.app.resetScenario();
+  });
+
+  test("reaches the handler as the maximum under overLimit clamp, which the page reports", async () => {
+    const receivedInputs: unknown[] = [];
+
+    clamped.app.scenario.answers.listChannels = (input) => {
+      receivedInputs.push(input);
+
+      return { status: 200, body: { items: CHANNELS, total: 30 } };
+    };
+
+    const reply = await clamped.send("/v1/channels?per_page=500");
+
+    expect(reply.status).toBe(200);
+    expect(receivedInputs).toEqual([
+      expect.objectContaining({ query: expect.objectContaining({ per_page: CLAMPED_MAX_LIMIT }) }),
+    ]);
+    expect(JSON.parse(reply.text).meta).toMatchObject({
+      per_page: CLAMPED_MAX_LIMIT,
+      last_page: 3,
+    });
+  });
+
+  test("is refused under the default overLimit", async () => {
+    const reply = await clamped.send(`/v1/channels/${CHANNEL}/tasks?per_page=500`);
+
+    expect(reply.status).toBe(400);
+    expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "/per_page", rule: "maximum" }]);
   });
 });
