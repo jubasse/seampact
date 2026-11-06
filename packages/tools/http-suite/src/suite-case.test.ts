@@ -168,6 +168,25 @@ describe("parseSuiteCase", () => {
       "at '/steps/0/capture/cursor/pattern': the pattern holds a capturing group",
     ],
     [
+      "a log lines expectation with no list",
+      minimalCase({
+        steps: [{ request: { method: "GET", path: "/" }, expect: { status: 200, logLines: {} } }],
+      }),
+      "at '/steps/0/expect/logLines': a log lines expectation holds `contains`, `excludes` or both",
+    ],
+    [
+      "an empty excluded log text",
+      minimalCase({
+        steps: [
+          {
+            request: { method: "GET", path: "/" },
+            expect: { status: 200, logLines: { excludes: [""] } },
+          },
+        ],
+      }),
+      "at '/steps/0/expect/logLines/excludes/0': a text is not empty",
+    ],
+    [
       "two checks in one header expectation",
       minimalCase({
         steps: [

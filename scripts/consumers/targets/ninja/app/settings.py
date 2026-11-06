@@ -35,5 +35,6 @@ MIDDLEWARE = [
     "generated.tasks_devices.django.TasksDevicesBoundary",
     "generated.tasks_optional_auth.django.TasksOptionalAuthBoundary",
     "generated.tasks_absolute_urls.django.TasksAbsoluteUrlsBoundary",
+    "generated.tasks_responses.django.TasksResponsesBoundary",
     "django.middleware.common.CommonMiddleware",
 ]

@@ -12,6 +12,7 @@ from generated.tasks.ninja import TasksHandlerFactories, bind_tasks
 from generated.tasks_absolute_urls.ninja import TasksAbsoluteUrlsHandlerFactories, bind_tasks_absolute_urls
 from generated.tasks_devices.ninja import TasksDevicesHandlerFactories, bind_tasks_devices
 from generated.tasks_optional_auth.ninja import TasksOptionalAuthHandlerFactories, bind_tasks_optional_auth
+from generated.tasks_responses.ninja import TasksResponsesHandlerFactories, bind_tasks_responses
 from generated.tasks_service.ninja import TasksServiceHandlerFactories, bind_tasks_service
 from generated.tasks_service_writes.ninja import TasksServiceWritesHandlerFactories, bind_tasks_service_writes
 from handler_factories import (
@@ -23,6 +24,8 @@ from handler_factories import (
     internal_writes_handlers,
     notes_handlers,
     preferences_handlers,
+    responses_handlers,
+    responses_notes_handlers,
     tasks_handlers,
     welcome_handlers,
 )
@@ -122,6 +125,15 @@ def create_api() -> NinjaAPI:
         on_unexpected_error=hooks.unexpected_errors,
     )
     _bind_security_apis(api)
+    bind_tasks_responses(
+        api,
+        prefix="",
+        handlers=TasksResponsesHandlerFactories(responses=responses_handlers, notes=responses_notes_handlers),
+        authenticate={USER_IDENTITY: hooks.user_hook},
+        idempotency_store=hooks.idempotency_store,
+        on_unexpected_error=hooks.unexpected_errors,
+        access={IDENTITY_ACCESS: seampact_ninja.AccessSettings(auth=suite_token_auth)},
+    )
 
     return api
 

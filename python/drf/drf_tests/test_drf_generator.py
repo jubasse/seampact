@@ -282,6 +282,23 @@ def test_a_union_schema_is_refused_by_name_and_no_file_is_written(repository_roo
         generated_files(contract(ir))
 
 
+def test_a_redirect_response_is_refused_by_name(repository_root: Path) -> None:
+    ir = reference_ir(repository_root, "tasks")
+    operations = ir["operations"]
+    assert isinstance(operations, list)
+    get_task = next(
+        operation for operation in operations if isinstance(operation, dict) and operation["id"] == "getTask"
+    )
+    responses = get_task["responses"]
+    assert isinstance(responses, list) and isinstance(responses[0], dict)
+    responses[0]["shape"] = "redirect"
+
+    with pytest.raises(GenerationRefusedError) as refused:
+        generated_files(contract(ir))
+
+    assert "response.redirect.unsupported" in {problem.code for problem in refused.value.problems}
+
+
 def test_the_target_is_found_through_its_entry_point() -> None:
     found = discover_target("pypi:seampact-drf", "main", metadata.distributions())
 

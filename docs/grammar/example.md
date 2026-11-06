@@ -2,7 +2,7 @@
 
 ## Worked example: the reference tasks api
 
-A workspace of six apis: a product api with a tenant-scoped collection under rights, a single owned by the caller, a signed webhook surface, and a service api whose route relays a public operation; then four small apis, one per security form: a service write, a device token, optional auth and absolute URLs. Schemas are kept short; their language is ADR 0003.
+A workspace of seven apis: a product api with a tenant-scoped collection under rights, a single owned by the caller, a signed webhook surface, and a service api whose route relays a public operation; then four small apis, one per security form: a service write, a device token, optional auth and absolute URLs; and one api of response forms: several successes on one route, every cache directive, a sensitive field, a deprecated route and an If-Match version. Schemas are kept short; their language is ADR 0003.
 
 ```yaml
 # workspace.yaml
@@ -14,6 +14,7 @@ workspace:
     tasksDevices: ./tasks-devices/api.yaml
     tasksOptionalAuth: ./tasks-optional-auth/api.yaml
     tasksAbsoluteUrls: ./tasks-absolute-urls/api.yaml
+    tasksResponses: ./tasks-responses/api.yaml
   shared: ./shared/base.yaml
 ```
 
@@ -424,6 +425,83 @@ surfaces:
         id: { noteId: NoteId }
         item: Note
         ops: [list, get]
+```
+
+```yaml
+# tasks-responses/api.yaml
+api:
+  name: tasksResponses
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Notes whose routes answer several successes, cache directives, a sensitive field, a deprecation and If-Match.
+
+conventions:
+  cache:
+    families:
+      everyDirective:
+        maxAge: 60s
+        sharedMaxAge: 120s
+        staleWhileRevalidate: 30s
+        staleIfError: 1h
+        immutable: true
+        noCache: true
+        mustRevalidate: true
+
+schemas:
+  NoteId: { type: string, format: uuid }
+  Note:
+    type: object
+    required: [noteId, text, revision]
+    properties:
+      noteId: NoteId
+      text: { type: string, minLength: 1, maxLength: 500 }
+      revision: { type: integer, minimum: 0 }
+  EditNote:
+    type: object
+    required: [text]
+    properties:
+      text: { type: string, minLength: 1, maxLength: 500 }
+  NoteKey:
+    type: object
+    required: [noteId, secret]
+    properties:
+      noteId: NoteId
+      secret: { type: string, sensitive: true }
+
+surfaces:
+  responses:
+    prefix: /responses/v{version}
+    identity: user
+    routes:
+      digest:
+        method: get
+        access: { public: "The digest is the same for every reader." }
+        cache: { freshness: everyDirective, anonymous: public }
+        output: Note
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        concurrency: { version: header.If-Match, field: revision }
+        ops:
+          get: { cache: { freshness: everyDirective } }
+          update: { input: EditNote }
+        member:
+          routes:
+            save:
+              method: post
+              input: EditNote
+              responses:
+                200: { body: Note }
+                201: { body: Note }
+            key:
+              method: get
+              output: NoteKey
+            legacy:
+              method: get
+              output: Note
+              deprecated: { since: '2026-12-31', sunset: '2027-06-30', successor: getNote }
 ```
 
 What the example shows, by route:

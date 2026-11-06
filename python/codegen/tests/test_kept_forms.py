@@ -64,6 +64,28 @@ def test_operation_members_absent_from_the_reference_wait_for_a_consumer_after_1
     assert "it comes after 1.0" in refused["upstream.unsupported"]
 
 
+def test_a_response_header_the_route_writes_and_a_degradable_operation_are_refused_by_name(
+    repository_root: Path,
+) -> None:
+    ir_json = _ir_json(repository_root, "tasks")
+    get_task = _operation(ir_json, "getTask")
+    responses = get_task["responses"]
+    assert isinstance(responses, list) and isinstance(responses[0], dict)
+    responses[0]["headers"] = [
+        {"name": "X-Route-Note", "type": {"kind": "scalar", "type": "string", "refinements": {}}, "required": True}
+    ]
+    _operation(ir_json, "searchTasks")["degradable"] = {
+        "paths": ["/items"],
+        "header": "X-Degraded",
+        "origin": {"layer": "api", "pointer": "/degradable"},
+    }
+
+    refused = _refused_codes(ir_json)
+
+    assert set(refused) == {"response.header.unsupported", "degradable.unsupported"}
+    assert "it comes after 1.0" in refused["response.header.unsupported"]
+
+
 def test_access_forms_that_1_0_refuses_are_refused_by_name(repository_root: Path) -> None:
     ir_json = _ir_json(repository_root, "tasks")
     get_task = _operation(ir_json, "getTask")

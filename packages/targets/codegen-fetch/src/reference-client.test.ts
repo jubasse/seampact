@@ -40,6 +40,8 @@ const SINCE_PAGE_API = "tasksSincePage";
 const SERVICE_WRITES_API = "tasksServiceWrites";
 // The tasks api whose error codes are not in the dotted form.
 const PLAIN_CODES_API = "tasksPlainCodes";
+// The tasks api whose createTask also declares a 200 beside its 201.
+const TWO_SUCCESSES_API = "tasksTwoSuccesses";
 const PLAIN_CODES = {
   "api.not_found": "TASK_NOT_FOUND",
   "state.conflict": "E1042",
@@ -103,6 +105,19 @@ function plainCodesIr(): ContractIR {
   for (const [dotted, plain] of Object.entries(PLAIN_CODES)) text = text.replaceAll(dotted, plain);
 
   return JSON.parse(text);
+}
+
+function twoSuccessesIr(): ContractIR {
+  const ir = readGoldenIr("tasks");
+  const createTask = ir.operations.find((operation) => operation.id === "createTask");
+  const created = createTask?.responses.find((response) => response.status === 201);
+
+  if (createTask === undefined || created === undefined)
+    throw new Error("the golden createTask has no 201 response");
+
+  createTask.responses.unshift({ ...structuredClone(created), status: 200 });
+
+  return ir;
 }
 
 function readGoldenIr(name: string, golden = "reference"): ContractIR {
@@ -459,6 +474,7 @@ beforeAll(async () => {
       generateApi(SINCE_PAGE_API, sincePageIr()),
       generateApi(SERVICE_WRITES_API),
       generateApi(PLAIN_CODES_API, plainCodesIr()),
+      generateApi(TWO_SUCCESSES_API, twoSuccessesIr()),
     ])
   ).flat();
 
@@ -1477,6 +1493,35 @@ describe("the conformance proofs of the generated client", () => {
 
     expect(lastSent().headers.get("traceparent")).toBeNull();
     expect(lastSent().headers.get("x-deadline")).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  test("each 2xx a route declares reaches the caller with its status, and another one is unexpected", async () => {
+    const client = await cannedClient(TWO_SUCCESSES_API, canned);
+    const request = { path: { channelId: "c1" }, body: { title: "Twice" } };
+    const created = {
+      taskId: "t1",
+      title: "Twice",
+      state: "open",
+      version: 1,
+      createdAt: "2026-10-18T09:00:00.000Z",
+    };
+
+    for (const status of [200, 201]) {
+      canned.answerNext({ status, body: created });
+
+      expect(await call(client, "createTask")(request), String(status)).toMatchObject({
+        ok: true,
+        status,
+        body: created,
+      });
+    }
+
+    canned.answerNext({ status: 202, body: created });
+
+    expect(await call(client, "createTask")(request)).toMatchObject({
+      ok: false,
+      unexpected: true,
+    });
   });
 
   test("a DELETE answered 200 with a body gives that body to the caller", async () => {

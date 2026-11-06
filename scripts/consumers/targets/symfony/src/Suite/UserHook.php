@@ -13,6 +13,9 @@ use App\Generated\TasksAbsoluteUrls\Symfony\UserPrincipal as AbsoluteUrlsUserPri
 use App\Generated\TasksOptionalAuth\Symfony\UserAuthenticateHook as OptionalAuthUserAuthenticateHook;
 use App\Generated\TasksOptionalAuth\Symfony\UserCredentials as OptionalAuthUserCredentials;
 use App\Generated\TasksOptionalAuth\Symfony\UserPrincipal as OptionalAuthUserPrincipal;
+use App\Generated\TasksResponses\Symfony\UserAuthenticateHook as ResponsesUserAuthenticateHook;
+use App\Generated\TasksResponses\Symfony\UserCredentials as ResponsesUserCredentials;
+use App\Generated\TasksResponses\Symfony\UserPrincipal as ResponsesUserPrincipal;
 use App\Kernel;
 use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\Credentials;
@@ -25,13 +28,17 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 
 /**
- * The `user` identity's hook double of the `tasks`, `tasksOptionalAuth` and `tasksAbsoluteUrls` apis: a bearer token of
- * the credentials, or the same token as the session cookie. The token `GATE_DENIED_TOKEN` throws Symfony's
- * `AccessDeniedException`, as a `denyAccessUnlessGranted()` in a hook would, and `GUARD_DENIED_TOKEN` its
+ * The `user` identity's hook double of the `tasks`, `tasksOptionalAuth`, `tasksAbsoluteUrls` and `tasksResponses` apis:
+ * a bearer token of the credentials, or the same token as the session cookie. The token `GATE_DENIED_TOKEN` throws
+ * Symfony's `AccessDeniedException`, as a `denyAccessUnlessGranted()` in a hook would, and `GUARD_DENIED_TOKEN` its
  * `AuthenticationException`, as an authenticator would. The token `FIREWALL_USER_TOKEN` reads the user the firewall
  * authenticated from the token storage, which the boundary's access steps run after.
  */
-final class UserHook implements UserAuthenticateHook, OptionalAuthUserAuthenticateHook, AbsoluteUrlsUserAuthenticateHook
+final class UserHook implements
+    UserAuthenticateHook,
+    OptionalAuthUserAuthenticateHook,
+    AbsoluteUrlsUserAuthenticateHook,
+    ResponsesUserAuthenticateHook
 {
     public const FIREWALL_USER_TOKEN = 'seampact-firewall-user';
     public const GATE_DENIED_TOKEN = 'seampact-gate-denied';
@@ -71,7 +78,8 @@ final class UserHook implements UserAuthenticateHook, OptionalAuthUserAuthentica
     {
         $isUserCredentials = $credentials instanceof UserCredentials
             || $credentials instanceof OptionalAuthUserCredentials
-            || $credentials instanceof AbsoluteUrlsUserCredentials;
+            || $credentials instanceof AbsoluteUrlsUserCredentials
+            || $credentials instanceof ResponsesUserCredentials;
 
         return $isUserCredentials ? ($credentials->bearer ?? $credentials->sessionCookie) : null;
     }
@@ -82,6 +90,7 @@ final class UserHook implements UserAuthenticateHook, OptionalAuthUserAuthentica
         return match (true) {
             $credentials instanceof OptionalAuthUserCredentials => new OptionalAuthUserPrincipal($userId),
             $credentials instanceof AbsoluteUrlsUserCredentials => new AbsoluteUrlsUserPrincipal($userId),
+            $credentials instanceof ResponsesUserCredentials => new ResponsesUserPrincipal($userId),
             default => new UserPrincipal($userId),
         };
     }

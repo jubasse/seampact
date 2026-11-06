@@ -1,6 +1,6 @@
   - id: server
     use: "@seampact/codegen-adonis"
-    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices]
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices, tasksResponses]
     options:
       bodyValidation: true
     link:
@@ -13,7 +13,7 @@
   # variant loads in place of the one above.
   - id: server-allow-listed
     use: "@seampact/codegen-adonis"
-    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices]
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices, tasksResponses]
     options:
       bodyValidation: true
     link:

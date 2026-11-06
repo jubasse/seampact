@@ -58,6 +58,7 @@ MIDDLEWARE = [
     "generated.tasks_devices.django.TasksDevicesBoundary",
     "generated.tasks_optional_auth.django.TasksOptionalAuthBoundary",
     "generated.tasks_absolute_urls.django.TasksAbsoluteUrlsBoundary",
+    "generated.tasks_responses.django.TasksResponsesBoundary",
     "django.middleware.common.CommonMiddleware",
 ]
 
@@ -129,6 +130,13 @@ SEAMPACT = {
         "authenticate": {USER_IDENTITY: "hooks.user_hook"},
         "on_unexpected_error": "hooks.unexpected_errors",
         "public_origin": PUBLIC_ORIGIN,
+        "access": {"identity": _SUITE_TOKEN_AUTHENTICATION},
+    },
+    "tasksResponses": {
+        "handlers": {"responses": "handlers.responses_handlers", "notes": "handlers.responses_notes_handlers"},
+        "authenticate": {USER_IDENTITY: "hooks.user_hook"},
+        "idempotency_store": "hooks.idempotency_store",
+        "on_unexpected_error": "hooks.unexpected_errors",
         "access": {"identity": _SUITE_TOKEN_AUTHENTICATION},
     },
 }

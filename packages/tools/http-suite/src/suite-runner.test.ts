@@ -3,7 +3,7 @@ import { once } from "node:events";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
-import { HOOK_CALLS_ROUTE, readLogLines, SCRIPT_ROUTE } from "./control-routes.js";
+import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "./control-routes.js";
 import { parseSuiteCase, type SuiteCase, type SuiteProfile } from "./suite-case.js";
 import { SUITE_REPORT_FORMAT } from "./suite-report.js";
 import { runSuite, type SuiteCredentials } from "./suite-runner.js";
@@ -20,10 +20,11 @@ const CREDENTIALS: SuiteCredentials = {
 const NEXT_CURSOR = "c%2B2";
 const HOOK_CALLS = [{ hook: "authenticate", operation: "getTask" }];
 
-// A sample app double: pages, echoes, a signed route, and the control routes.
+// A sample app double: pages, echoes, a signed route, a route that logs its body, and the control routes.
 let server: Server;
 let baseUrl: string;
 let loadedScripts: unknown[];
+const logLines: string[] = [];
 
 beforeAll(async () => {
   loadedScripts = [];
@@ -59,9 +60,15 @@ async function answer(request: IncomingMessage, response: ServerResponse): Promi
 
   if (url.pathname === SCRIPT_ROUTE) {
     loadedScripts.push(JSON.parse(body));
+    logLines.length = 0;
     response.writeHead(204).end();
   } else if (url.pathname === HOOK_CALLS_ROUTE) {
     json(200, { calls: HOOK_CALLS });
+  } else if (url.pathname === LOG_LINES_ROUTE) {
+    json(200, { lines: logLines });
+  } else if (url.pathname === "/log") {
+    logLines.push(`received ${body}`);
+    json(202, {});
   } else if (url.pathname === "/items" && url.searchParams.get("cursor") === null) {
     json(200, [1], { link: `</items?cursor=${NEXT_CURSOR}>; rel="next"` });
   } else if (url.pathname === "/items") {
@@ -281,7 +288,38 @@ describe("runSuite", () => {
       {},
     ]);
     expect(report.cases.map((result) => result.outcome)).toEqual(["passed", "failed"]);
-    await expect(readLogLines(baseUrl, AbortSignal.timeout(1000))).rejects.toThrow("answered 404");
+  });
+
+  test("checks only the lines the app logged while the step ran", async () => {
+    const logged = (text: string) => ({
+      request: { method: "POST", path: "/log", body: { text } },
+      expect: { status: 202 },
+    });
+    const checked = (text: string) => ({
+      ...logged(text),
+      expect: { status: 202, logLines: { contains: ["received"], excludes: ["s3cret"] } },
+    });
+
+    const report = await run([
+      suiteCase("leaks", { steps: [checked("s3cret")] }),
+      suiteCase("earlier-step-leaks", { steps: [logged("s3cret"), checked("plain")] }),
+      suiteCase("logs-nothing", {
+        steps: [
+          {
+            request: { method: "GET", path: "/missing" },
+            expect: { status: 404, logLines: { contains: ["received"] } },
+          },
+        ],
+      }),
+    ]);
+
+    expect(report.cases.map((result) => result.outcome)).toEqual(["failed", "passed", "failed"]);
+    expect(report.cases[0]?.failures).toEqual([
+      'step 0 (POST /log): a log line holds "s3cret": ["received {\\"text\\":\\"s3cret\\"}"]',
+    ]);
+    expect(report.cases[2]?.failures).toEqual([
+      'step 0 (GET /missing): no log line holds "received"; lines: []',
+    ]);
   });
 
   test("reports refused cases and the outcome of each checklist id", async () => {

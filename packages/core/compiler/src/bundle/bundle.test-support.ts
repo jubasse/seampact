@@ -25,6 +25,7 @@ export const REFERENCE_BUNDLE_APIS = [
   "tasksAbsoluteUrls",
   "tasksDevices",
   "tasksOptionalAuth",
+  "tasksResponses",
   "tasksService",
   "tasksServiceWrites",
 ];

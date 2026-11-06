@@ -21,6 +21,7 @@ class BinaryRunnerTest {
         "tasksDevices",
         "tasksOptionalAuth",
         "tasksAbsoluteUrls",
+        "tasksResponses",
     )
 
     // The app config of the binary smoke (`packages/tools/binary/scripts/smoke-apps.mjs`): `compile` reads the

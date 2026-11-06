@@ -68,6 +68,13 @@ const refusedOnTheNodeServers = (form: string): ItemAfter1_0 => ({
   reason: `1.0 refuses ${form} by name at generation on the Node servers`,
 });
 
+// A response form every server and the clients named refuse by name.
+const refusedOnEveryServerAndClient = (form: string, clients: readonly string[]): ItemAfter1_0 => ({
+  targets: [...SERVERS_FOR_1_0, ...clients],
+  refusedOn: [...SERVERS_FOR_1_0, ...clients],
+  reason: `1.0 refuses ${form} by name at generation on every server and in ${clients.join(" and ")}`,
+});
+
 /** The after-1.0 list from its entries; an id listed twice is refused by name, as a Map would keep the last one. */
 export function indexItemsAfter1_0(
   entries: readonly (readonly [string, ItemAfter1_0])[],
@@ -246,6 +253,21 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ["CHK-165", { reason: "opt-in nativeDocs artefact (A43), off by default" }],
   ["CHK-167", { reason: API_PLATFORM_AFTER_V1 }],
   ["CHK-176", { reason: "internal fixture completeness; the classification itself is CHK-175" }],
+  [
+    "CHK-022",
+    refusedOnEveryServerAndClient("a response header the route writes itself", ["fetch"]),
+  ],
+  ["CHK-024", refusedOnEveryServerAndClient("a tagged union", ["zod", "fetch"])],
+  ["CHK-027", refusedOnEveryServerAndClient("a degradable operation", ["fetch"])],
+  [
+    "CHK-058",
+    {
+      targets: ["fetch"],
+      refusedOn: ["fetch"],
+      reason: "1.0 refuses a deprecated operation by name at generation in the fetch client",
+    },
+  ],
+  ["CHK-153", refusedOnEveryServerAndClient("a redirect response", ["fetch"])],
 ]);
 
 /** Whether the 1.0 gate leaves the pair of [id] and [target] for after 1.0. */

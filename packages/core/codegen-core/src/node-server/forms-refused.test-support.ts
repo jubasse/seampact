@@ -13,6 +13,7 @@ export interface RefusedForm {
 type Operation = ContractIR["operations"][number];
 
 const ACCESS_ORIGIN = { layer: "api", pointer: "/access" } as const;
+const DEGRADABLE_ORIGIN = { layer: "api", pointer: "/degradable" } as const;
 const BEARER_SCHEME = "bearer";
 const SIGNATURE_SCHEME = "stripeSignature";
 
@@ -217,6 +218,17 @@ export const FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedForm[] = [
     title: "a redirect response",
     code: "response.shape.unsupported",
     change: (ir) => answerGetTaskWith(ir, "redirect", undefined),
+  },
+  {
+    title: "a degradable operation",
+    code: "degradable.unsupported",
+    change: (ir) => {
+      guardedOperationOf(ir).degradable = {
+        paths: ["name"],
+        header: "X-Degraded",
+        origin: DEGRADABLE_ORIGIN,
+      };
+    },
   },
 ];
 

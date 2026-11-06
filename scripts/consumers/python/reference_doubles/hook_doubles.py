@@ -15,6 +15,8 @@ from generated.tasks_devices.operations import DeviceCredentials
 from generated.tasks_devices.schemas import DevicePrincipal
 from generated.tasks_optional_auth.operations import UserCredentials as OptionalAuthUserCredentials
 from generated.tasks_optional_auth.schemas import UserPrincipal as OptionalAuthUserPrincipal
+from generated.tasks_responses.operations import UserCredentials as ResponsesUserCredentials
+from generated.tasks_responses.schemas import UserPrincipal as ResponsesUserPrincipal
 from generated.tasks_service.operations import ServiceCredentials
 from generated.tasks_service.schemas import Service, ServicePrincipal
 from generated.tasks_service_writes.operations import ServiceCredentials as WritesServiceCredentials
@@ -53,6 +55,8 @@ _NON_MEMBER_CHANNEL_ID: Final = "10000000-0000-4000-8000-0000000000ff"
 _RATE_LIMITED: Final = "api.rate_limited"
 _THROTTLE_RULE: Final = "throttle"
 _LOGGER: Final = logging.getLogger("consumer.tasks")
+# The user credentials of every api the `user` identity guards.
+_USER_CREDENTIALS: Final = (UserCredentials, ResponsesUserCredentials)
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,8 +83,8 @@ _SERVICE_CREDENTIALS: Final = (ServiceCredentials, WritesServiceCredentials)
 
 
 class UserHook:
-    """The `user` identity of the `tasks`, `tasksOptionalAuth` and `tasksAbsoluteUrls` apis: a bearer token the
-    framework's authentication signed in, or a token of the credentials as the session cookie."""
+    """The `user` identity of the `tasks`, `tasksOptionalAuth`, `tasksAbsoluteUrls` and `tasksResponses` apis: a bearer
+    token the framework's authentication signed in, or a token of the credentials as the session cookie."""
 
     def __init__(self, signed_in: object) -> None:
         self._signed_in = signed_in
@@ -114,6 +118,9 @@ def _user_principal(credentials: object, user_id: uuid.UUID) -> object:
 
     if isinstance(credentials, AbsoluteUrlsUserCredentials):
         return AbsoluteUrlsUserPrincipal(user_id=user_id)
+
+    if isinstance(credentials, ResponsesUserCredentials):
+        return ResponsesUserPrincipal(user_id=user_id)
 
     return UserPrincipal(user_id=user_id)
 

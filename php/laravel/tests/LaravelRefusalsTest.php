@@ -6,6 +6,7 @@ namespace Seampact\Laravel\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
+use Seampact\Codegen\Tests\Support\ResponseForms;
 use Seampact\Ir\Run\GenerationRefusedException;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -187,11 +188,22 @@ final class LaravelRefusalsTest extends TestCase
 
     public function testADegradableOperationWaitsForAConsumerAfterOneZero(): void
     {
-        $document = ReferenceContract::withOperation('searchTasks', static function (\stdClass $operation): void {
-            $operation->degradable = (object) ['paths' => ['/items'], 'header' => 'X-Degraded', 'origin' => (object) ['layer' => 'api', 'pointer' => '/degradable']];
-        });
+        self::assertStringContainsString(self::AFTER_ONE_ZERO, self::refused(ResponseForms::withDegradableOperation())['degradable.unsupported'] ?? '');
+    }
 
-        self::assertStringContainsString('no reference contract carries it', self::refused($document)['degradable.unsupported'] ?? '');
+    public function testAResponseHeaderTheRouteWritesIsRefusedByName(): void
+    {
+        self::assertStringContainsString(self::AFTER_ONE_ZERO, self::refused(ResponseForms::withRouteWrittenHeader())['response.header.unsupported'] ?? '');
+    }
+
+    public function testAUnionIsRefusedByName(): void
+    {
+        self::assertArrayHasKey('schema.union.unsupported', self::refused(ResponseForms::withUnionAnswer()));
+    }
+
+    public function testARedirectResponseIsRefusedByName(): void
+    {
+        self::assertStringContainsString("'redirect' response", self::refused(ResponseForms::withRedirectAnswer())['response.shape.unsupported'] ?? '');
     }
 
     public function testARightsCustomMetadataIsRefusedByNameNotDropped(): void

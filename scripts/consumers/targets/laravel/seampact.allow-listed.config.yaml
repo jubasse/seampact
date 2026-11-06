@@ -48,3 +48,10 @@ targets:
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
       - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksResponses
+    out: TasksResponses
+    use: seampact/laravel
+    api: tasksResponses
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }

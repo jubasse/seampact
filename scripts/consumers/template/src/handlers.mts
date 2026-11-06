@@ -39,7 +39,7 @@ const DEADLINE_EXCEEDED = { status: 504, code: "api.deadline_exceeded" } as cons
  * The handlers of one api, each answering what the loaded script gives its operation, as is, in place of its own
  * result: the script tests the boundary with results the handler types do not allow.
  */
-function scripted<Handlers extends object>(api: string, handlers: Handlers): Handlers {
+export function scripted<Handlers extends object>(api: string, handlers: Handlers): Handlers {
   return new Proxy(handlers, {
     get(target, property, receiver) {
       const handler: unknown = Reflect.get(target, property, receiver);

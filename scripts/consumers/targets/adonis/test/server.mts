@@ -33,6 +33,7 @@ export async function startServer(): Promise<RunningServer> {
   const TasksServiceAdonis = await import("../generated/server/tasksService/index.js");
   const TasksServiceWritesAdonis = await import("../generated/server/tasksServiceWrites/index.js");
   const TasksDevicesAdonis = await import("../generated/server/tasksDevices/index.js");
+  const TasksResponsesAdonis = await import("../generated/server/tasksResponses/index.js");
   const { registerContractRoutes } = await import("../src/routes.mjs");
 
   app.rcContents({ providers: [() => import("@adonisjs/core/providers/app_provider")] });
@@ -50,6 +51,7 @@ export async function startServer(): Promise<RunningServer> {
           TasksServiceAdonis.LARGEST_BODY_LIMIT,
           TasksServiceWritesAdonis.LARGEST_BODY_LIMIT,
           TasksDevicesAdonis.LARGEST_BODY_LIMIT,
+          TasksResponsesAdonis.LARGEST_BODY_LIMIT,
         ),
       },
     }),

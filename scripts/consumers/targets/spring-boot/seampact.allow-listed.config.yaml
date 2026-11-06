@@ -47,3 +47,10 @@ targets:
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
       - { method: GET, path: /v1/unlisted, reason: "The boot variant's framework route outside the contract." }
+  - id: tasksResponses
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksResponses
+    options: { package: com.example.tasksresponses.api, springSecurity: false }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { method: GET, path: /v1/unlisted, reason: "The boot variant's framework route outside the contract." }

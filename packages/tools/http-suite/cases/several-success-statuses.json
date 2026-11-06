@@ -1,0 +1,51 @@
+{
+  "id": "several-success-statuses",
+  "title": "One route answers each of its declared 2xx statuses, as its handler chooses",
+  "checks": ["CHK-021"],
+  "profiles": ["default"],
+  "apis": ["tasksResponses"],
+  "steps": [
+    {
+      "title": "a note that exists is saved",
+      "request": {
+        "method": "POST",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000001/save",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:existing}}"
+        },
+        "body": {
+          "text": "Saved again"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "noteId": "30000000-0000-4000-8000-000000000001",
+          "text": "Saved again"
+        }
+      }
+    },
+    {
+      "title": "a new note is created",
+      "request": {
+        "method": "POST",
+        "path": "/responses/v1/notes/30000000-0000-4000-8000-000000000002/save",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:new}}"
+        },
+        "body": {
+          "text": "First save"
+        }
+      },
+      "expect": {
+        "status": 201,
+        "body": {
+          "noteId": "30000000-0000-4000-8000-000000000002",
+          "text": "First save"
+        }
+      }
+    }
+  ]
+}

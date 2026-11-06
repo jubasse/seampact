@@ -11,10 +11,10 @@ sources:
 targets:
   - id: types
     use: "@seampact/codegen-ts"
-    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices]
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices, tasksResponses]
   - id: validators
     use: "{{validators}}"
-    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices]
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices, tasksResponses]
   - id: client
     use: "@seampact/codegen-fetch"
     apis: [tasks, tasksService]

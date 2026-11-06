@@ -8,6 +8,7 @@ use App\Generated\Tasks\Symfony\UnexpectedErrorListener;
 use App\Generated\TasksAbsoluteUrls\Symfony\UnexpectedErrorListener as AbsoluteUrlsUnexpectedErrorListener;
 use App\Generated\TasksDevices\Symfony\UnexpectedErrorListener as DevicesUnexpectedErrorListener;
 use App\Generated\TasksOptionalAuth\Symfony\UnexpectedErrorListener as OptionalAuthUnexpectedErrorListener;
+use App\Generated\TasksResponses\Symfony\UnexpectedErrorListener as ResponsesUnexpectedErrorListener;
 use App\Generated\TasksService\Symfony\UnexpectedErrorListener as ServiceUnexpectedErrorListener;
 use App\Generated\TasksServiceWrites\Symfony\UnexpectedErrorListener as ServiceWritesUnexpectedErrorListener;
 use Psr\Log\LoggerInterface;
@@ -20,7 +21,8 @@ final class TasksUnexpectedErrors implements
     ServiceWritesUnexpectedErrorListener,
     DevicesUnexpectedErrorListener,
     OptionalAuthUnexpectedErrorListener,
-    AbsoluteUrlsUnexpectedErrorListener
+    AbsoluteUrlsUnexpectedErrorListener,
+    ResponsesUnexpectedErrorListener
 {
     public function __construct(private readonly LoggerInterface $logger)
     {

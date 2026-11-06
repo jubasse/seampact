@@ -66,6 +66,7 @@ export {
   type HeaderExpectation,
   type JsonValue,
   outsideTargetsReason,
+  type LogLinesExpectation,
   parseSuiteCase,
   type RecordedHookCall,
   type RequestSignature,

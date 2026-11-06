@@ -21,7 +21,8 @@ case "${3:-}" in
   *) app="$1/app-$3" ;;
 esac
 
-cp "$consumers/targets/fastapi/app/handlers.py" "$consumers/targets/fastapi/app/sample_data.py" "$app/"
+cp "$consumers/targets/fastapi/app/handlers.py" "$consumers/targets/fastapi/app/responses_handlers.py" \
+  "$consumers/targets/fastapi/app/sample_data.py" "$app/"
 # The hook-check-off app's generated code has no `health` types, so it goes without the `health` handlers.
 if [ "${3:-}" = "hook-check-off" ]; then
   rm "$app/health_handler_factories.py"
