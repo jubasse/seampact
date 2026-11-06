@@ -84,6 +84,7 @@ function outOfFastTierOutputs(document: WorkflowDocument): string[] {
 
 function runsOnPullRequest(document: WorkflowDocument, jobId: string, job: WorkflowJob): boolean {
   if (jobId === "changes" || isAggregate(job)) return false;
+
   if (CLASS_SUFFIXES.some((suffix) => jobId.endsWith(suffix))) return false;
 
   const condition = job.if ?? "";
