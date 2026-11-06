@@ -18,6 +18,7 @@ GENERAL_CHANNEL_ID: Final = "10000000-0000-4000-8000-000000000001"
 GENERAL_CHANNEL_NAME: Final = "General"
 DRAFT_TEXT: Final = "Draft text"
 NEW_TASK_ID: Final = uuid.UUID("20000000-0000-4000-8000-0000000000ff")
+_DONE_TASK_ID: Final = uuid.UUID("20000000-0000-4000-8000-0000000000fe")
 FIRST_NOTE_ID: Final = uuid.UUID("40000000-0000-4000-8000-000000000001")
 _NOTE_TEXT: Final = "Read the slice notes"
 FIRST_VERSION: Final = 1
@@ -51,6 +52,17 @@ def draft(draft_id: uuid.UUID) -> Draft:
 
 def task(task_id: uuid.UUID) -> Task:
     return Task(task_id=task_id, title=_TASK_TITLE, state=TaskState.OPEN, version=FIRST_VERSION, created_at=_CREATED_AT)
+
+
+def listed_tasks(states: list[TaskState] | None) -> list[Task]:
+    """The tasks `listTasks` answers: the new open task without a state filter, else the seeded tasks in the states
+    the filter names, in the filter's order."""
+    if states is None:
+        return [task(NEW_TASK_ID)]
+
+    seeded = [task(NEW_TASK_ID), replace(task(_DONE_TASK_ID), state=TaskState.DONE)]
+
+    return [listed for state in states for listed in seeded if listed.state is state]
 
 
 def task_of(body: Mapping[str, object]) -> Task:

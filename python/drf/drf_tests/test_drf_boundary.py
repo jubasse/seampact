@@ -579,6 +579,26 @@ def test_a_public_origin_under_relative_urls_is_refused_at_boot() -> None:
         Client().get("/v1/health")
 
 
+def test_a_query_list_reaches_the_handler_as_typed_items_in_its_repeat_and_comma_forms() -> None:
+    seen: list[object] = []
+
+    def keep_query(request: object) -> object:
+        seen.append(request.input.query)  # type: ignore[attr-defined]
+
+        return _module("operations").ListTasksResponse200(body=_module("operations").ListTasksPage(items=[]))
+
+    answers["list_tasks"] = keep_query
+
+    repeated = Client().get(f"/v1/channels/{_CHANNEL_ID}/tasks?state=open&state=done", headers=_bearer())
+    comma = Client().get(f"/v1/channels/{_CHANNEL_ID}/tasks?sort=createdAt,-createdAt", headers=_bearer())
+
+    assert repeated.status_code == HTTPStatus.OK, repeated.content
+    assert comma.status_code == HTTPStatus.OK, comma.content
+    task_state = _module("schemas").TaskState
+    assert [query.state for query in seen[:1]] == [[task_state.OPEN, task_state.DONE]]  # type: ignore[attr-defined]
+    assert [query.sort for query in seen[1:]] == [["createdAt", "-createdAt"]]  # type: ignore[attr-defined]
+
+
 def test_a_page_projection_that_is_not_a_list_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     async def projected_to_a_mapping(*_: object) -> object:
         return {"items": []}

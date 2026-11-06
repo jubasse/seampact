@@ -318,6 +318,7 @@ class ListTasksPath(_pydantic.BaseModel):
 class ListTasksQuery(_pydantic.BaseModel):
     model_config = _MODEL_CONFIG
 
+    state: _seampact.Omittable[list[_typing.Annotated[TaskState, _seampact.enum_from_wire(TaskState)]]] = None
     cursor: _seampact.Omittable[str] = None
     limit: _seampact.Omittable[_typing.Annotated[_seampact.WholeNumber, _pydantic.Field(ge=1, le=50)]] = None
     sort: _seampact.Omittable[list[_typing.Annotated[str, _pydantic.Field(pattern="^(?:createdAt|-createdAt)$")]]] = (

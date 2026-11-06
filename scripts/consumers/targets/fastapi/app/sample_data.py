@@ -18,6 +18,7 @@ TASK_TITLE: Final = "Write the slice test"
 CREATED_AT: Final = "2026-10-18T09:00:00.000Z"
 FIRST_VERSION: Final = 1
 NEW_TASK_ID: Final = "20000000-0000-4000-8000-0000000000ff"
+DONE_TASK_ID: Final = "20000000-0000-4000-8000-0000000000fe"
 FIRST_NOTE_ID: Final = "40000000-0000-4000-8000-000000000001"
 NOTE_TEXT: Final = "Read the slice notes"
 
@@ -32,6 +33,17 @@ def task(task_id: str) -> Task:
             "created_at": CREATED_AT,
         }
     )
+
+
+def listed_tasks(states: list[TaskState] | None) -> list[Task]:
+    """The tasks `listTasks` answers: the new open task without a state filter, else the seeded tasks in the states
+    the filter names, in the filter's order."""
+    if states is None:
+        return [task(NEW_TASK_ID)]
+
+    seeded = [task(NEW_TASK_ID), task(DONE_TASK_ID).model_copy(update={"state": TaskState.DONE})]
+
+    return [listed for state in states for listed in seeded if listed.state is state]
 
 
 def task_of(body: Mapping[str, object]) -> Task:
