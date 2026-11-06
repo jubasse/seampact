@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: python-core-${{ github.event_name }}-${{ github.ref }}
+  group: python-core-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

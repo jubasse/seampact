@@ -6,8 +6,8 @@ set -euo pipefail
 
 : "${EVENT:?EVENT is unset: pass the event name of the run.}"
 
-# The base branch whose pull requests run the fast tier.
-fast_tier_base=develop
+# shellcheck source=fast-tier-base.sh
+source "$(dirname "${BASH_SOURCE[0]}")/fast-tier-base.sh"
 
 joined_pattern() {
   grep -v '^[[:space:]]*$' <<< "$1" | paste -sd '|' || true

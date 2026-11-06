@@ -44,7 +44,7 @@ permissions:
 # A call takes the caller's event and ref: its own group keeps it from cancelling, or being cancelled by, a run of
 # this workflow on the same pull request.
 concurrency:
-  group: p3-dist-${{ inputs.release-call && github.run_id || format('{0}-{1}', github.event_name, github.ref) }}
+  group: p3-dist-${{ inputs.release-call && github.run_id || format('{0}-{1}', github.event_name, github.event_name == 'push' && github.sha || github.ref) }}
   cancel-in-progress: ${{ !inputs.release-call && github.event_name == 'pull_request' }}
 
 jobs:
@@ -68,11 +68,13 @@ jobs:
         id: lane
         uses: ./.github/actions/lane-changes
         with:
-          # The packages the reference tarball is built from, the reference contract, the tarball, channel and release
-          # scripts and the pins.
+          # The packages the reference tarball is built from and the channel smoke installs, the reference contract,
+          # the channel imports and the reference IR, the tarball, channel and release scripts and the pins.
           watched-paths: |
             ^packages/(core|packs)/
+            ^packages/targets/codegen-ts/
             ^fixtures/reference/
+            ^fixtures/(bundle-channels|golden/reference)/
             ^scripts/(golden|ir-models|dist-smoke|release)/
             ^\.github/actions/
             ^\.github/workflows/p3-dist\.yml$

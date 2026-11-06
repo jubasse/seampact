@@ -41,7 +41,7 @@ defaults:
 
 # A real run is never cancelled halfway through a publish; a newer push cancels a pull request's dry run.
 concurrency:
-  group: release-${{ github.event_name }}-${{ github.ref }}
+  group: release-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

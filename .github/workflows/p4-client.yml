@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: packed-consumer-${{ github.event_name }}-${{ github.ref }}
+  group: packed-consumer-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -44,12 +44,14 @@ jobs:
         id: detect
         uses: ./.github/actions/lane-changes
         with:
-          # Every package, since the stub consumer installs them all, the consumer harness, the stub overlay and the pins.
+          # Every package, since the stub consumer installs them all, the consumer harness, the stub overlay, the reference
+          # contract every consumer copies and the pins.
           watched-paths: |
             ^packages/
             ^scripts/consumers/(cli|build-and-pack|consumer-project|install-into|ignore-vendor|packed-packages|run-step|served-app|validator-choice)\.ts$
             ^scripts/consumers/template/
             ^scripts/consumers/targets/stub/
+            ^fixtures/reference/
             ^scripts/golden/
             ^\.github/actions/
             ^\.github/workflows/p4-client\.yml$

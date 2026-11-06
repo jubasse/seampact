@@ -22,8 +22,8 @@ case "$lane_run" in
     ;;
 esac
 
-# The fast tier: a pull request to develop runs its PR rows only, and the push after its merge runs the rest.
-fast_tier_base=develop
+# shellcheck source=fast-tier-base.sh
+source "$(dirname "${BASH_SOURCE[0]}")/fast-tier-base.sh"
 
 case "$event" in
   pull_request)

@@ -9,9 +9,9 @@ if [ "$#" -ne 1 ] || [ -z "$1" ]; then
 fi
 watched_pattern=$1
 
-# Documentation no lane test reads, and package tests: Markdown outside the packages and fixtures, anything under docs/ but the
-# grammar, the IR and the conformance checklist, and the docs site package, which only its own lane builds. The `ci`
-# workflow, which always runs, also reads docs/adr/.
+# Documentation no lane test reads, and package tests: Markdown outside the packages and fixtures, anything under
+# docs/ but the grammar, the IR and the conformance checklist, and the docs site package, which only its own lane
+# builds. The `ci` workflow, which always runs, also reads docs/adr/.
 documentation_pattern='^docs/|\.md$'
 read_by_tests_pattern='^(packages|fixtures|docs/grammar|docs/ir|docs/conformance)/'
 docs_site_pattern='^packages/tools/docs-site/'

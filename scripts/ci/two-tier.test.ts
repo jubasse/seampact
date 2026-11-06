@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -15,6 +16,7 @@ import {
 const LANE_CHANGES_ACTION = "./.github/actions/lane-changes";
 const LANE_AGGREGATE_ACTION = "./.github/actions/lane-aggregate";
 const COMPILER_BINARY_ACTION = join(REPO_ROOT, ".github/actions/compiler-binary/action.yml");
+const LANE_RUN_SCRIPT = join(REPO_ROOT, ".github/actions/lane-changes/lane-run.sh");
 
 // The suffixes of the jobs that hold the rows of a class other than the PR rows.
 const CLASS_SUFFIXES = ["-queue", "-post-merge", "-drift"] as const;
@@ -40,7 +42,48 @@ const FAMILIES: Readonly<Record<string, readonly string[]>> = {
 // The fixtures the binary smoke apps read, on top of the compiler binary cache key's roots.
 const BINARY_SMOKE_FIXTURES = ["^fixtures/reference/", "^fixtures/golden/pack-[^/]+/contract/"];
 
-// Lanes whose paths were not narrowed run no nightly: the release's full run is the merge queue's or a manual one,
+// The docs site builds and deploys the latest develop: a newer push covers the pending one, and its deploys keep
+// their order.
+const LANES_WITH_LATEST_PUSH_ONLY = new Set(["docs-site.yml"]);
+
+// A path each lane's jobs read, one per input: a change to it alone must run the lane.
+const LANE_INPUTS: Readonly<Record<string, readonly string[]>> = {
+  // `vitest run scripts/dist-smoke` reads the channel imports and the reference IR and installs codegen-ts.
+  "p3-dist.yml": [
+    "packages/core/compiler/src/bundle/build.ts",
+    "packages/packs/pack-hal/src/index.ts",
+    "packages/targets/codegen-ts/src/index.ts",
+    "fixtures/reference/tasks.yaml",
+    "fixtures/bundle-channels/imports/a.yaml",
+    "fixtures/golden/reference/tasksService.ir.json",
+    "scripts/dist-smoke/channels.test.ts",
+    "scripts/ir-models/register.ts",
+  ],
+  // Every consumer copies the reference contract; the stub installs every package.
+  "p4-client.yml": [
+    "fixtures/reference/tasks.yaml",
+    "packages/targets/codegen-vue/src/index.ts",
+    "scripts/consumers/consumer-project.ts",
+    "scripts/consumers/template/seampact.config.yaml",
+    "scripts/consumers/targets/stub/test/server.mts",
+  ],
+  "p5-fastify-express.yml": [
+    "fixtures/reference/tasks.yaml",
+    "packages/runtime/server-runtime/src/index.ts",
+    "packages/targets/codegen-fetch/src/index.ts",
+    "packages/tools/http-suite/src/index.ts",
+    "scripts/consumers/targets/express4/overlay.base",
+  ],
+  "p6-react.yml": [
+    "fixtures/reference/tasks.yaml",
+    "packages/targets/codegen-hono/src/index.ts",
+    "scripts/consumers/targets/vite/index.html",
+    "scripts/consumers/targets/hono/package.entries.json",
+    "scripts/consumers/targets/react-tanstack/overlay.base",
+  ],
+};
+
+// Lanes whose paths were not narrowed run no nightly: the release's full run is the push to develop's or a manual one,
 // and the docs site builds on every pull request it touches.
 const LANES_WITHOUT_NIGHTLY = new Set(["docs-site.yml", "release.yml"]);
 
@@ -147,6 +190,16 @@ describe("the fast tier", () => {
     expect(release.on.push).toEqual({ branches: ["develop"] });
   });
 
+  it.each(
+    laneWorkflows().filter(
+      (file) => "push" in readWorkflow(file).on && !LANES_WITH_LATEST_PUSH_ONLY.has(file),
+    ),
+  )("in %s gives each push its own concurrency group, so no push run is replaced", (file) => {
+    expect(readWorkflow(file).concurrency?.group).toContain(
+      "github.event_name == 'push' && github.sha",
+    );
+  });
+
   it.each(Object.entries(FAMILIES))(
     "names one representative of the %s, whose pull-request paths are its watched paths",
     (_family, files) => {
@@ -189,6 +242,21 @@ describe("the watched paths", () => {
         keySamples.some((sample) => pattern.test(sample)),
         `${line} is a cache key root`,
       ).toBe(true);
+    }
+  });
+
+  it.each(Object.entries(LANE_INPUTS))("of %s cover every input its jobs read", (file, inputs) => {
+    const watchedPattern = pathLines(laneStep(file).with?.["watched-paths"])
+      .map((line) => line.trim())
+      .join("|");
+
+    for (const input of inputs) {
+      const run = spawnSync("bash", [LANE_RUN_SCRIPT, watchedPattern], {
+        input: `${input}\0`,
+        encoding: "utf8",
+      });
+
+      expect(run.stdout.trim(), `${file} runs for ${input}`).toBe("true");
     }
   });
 
