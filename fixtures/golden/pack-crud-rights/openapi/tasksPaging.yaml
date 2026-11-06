@@ -2,11 +2,108 @@ openapi: 3.1.0
 info:
   title: tasksPaging
   version: "1"
-  summary: Notes read through a changes feed and a Stripe-style list.
+  summary: Notes read through a changes feed, a Stripe-style list and a clamped list that reports its limit.
 x-seampact-api:
   kind: product
 x-seampact-format: bare
 paths:
+  /paging/v1/capped:
+    get:
+      operationId: listCapped
+      parameters:
+        - name: page
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Note"
+                  has_more:
+                    type: boolean
+                  limit:
+                    type: integer
+                required:
+                  - data
+                  - has_more
+                  - limit
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.forbidden"
+          x-seampact-errors:
+            - code: api.forbidden
+              derivedFrom: requirement.errors
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+        - sessionCookie: []
+      x-seampact-access:
+        identity: user
+      x-seampact-requires:
+        - right: capped.list
+      x-seampact-paging:
+        style: cappedPages
+        position: page
+        roles:
+          page: query.page
+          limit: query.limit
+        maxLimit: 10
+        defaultLimit: 10
+        overLimit: clamp
+        sortKeys: []
+      x-seampact-maturity:
+        level: provisional
+        source: api
   /paging/v1/changes:
     get:
       operationId: listChanges

@@ -435,7 +435,7 @@ api:
   version: 1
   kind: product
   maturity: provisional
-  summary: Notes read through a changes feed and a Stripe-style list.
+  summary: Notes read through a changes feed, a Stripe-style list and a clamped list that reports its limit.
 
 pagings:
   changes:
@@ -451,6 +451,12 @@ pagings:
       limit: { query: limit }
     response:
       body: { object: list, data: $items, has_more: $more, url: $path }
+  cappedPages:
+    request:
+      page: { query: page }
+      limit: { query: limit }
+    response:
+      body: { data: $items, has_more: $more, limit: $limit }
 
 schemas:
   NoteId: { type: string, format: uuid }
@@ -472,6 +478,12 @@ surfaces:
         item: Note
         ops:
           list: { paging: { stripeList: { maxLimit: 10 } } }
+      capped:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list: { paging: { cappedPages: { maxLimit: 10, overLimit: clamp } } }
       changes:
         kind: collection
         id: { noteId: NoteId }

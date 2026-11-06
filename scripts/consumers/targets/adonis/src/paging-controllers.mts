@@ -21,3 +21,9 @@ export class EventsController implements TasksPagingAdonis.EventsEndpoints {
     return tasksPagingHandlers.listEvents(input);
   }
 }
+
+export class CappedController implements TasksPagingAdonis.CappedEndpoints {
+  listCapped(input: TasksPaging.ListCappedInput) {
+    return tasksPagingHandlers.listCapped(input);
+  }
+}

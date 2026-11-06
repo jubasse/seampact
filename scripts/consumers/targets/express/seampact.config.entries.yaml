@@ -26,7 +26,7 @@
   # variants load in place of the first one.
   - id: server-route-check-off
     use: "@seampact/codegen-express"
-    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices]
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices, tasksPaging]
     options:
       bodyValidation: true
     link:

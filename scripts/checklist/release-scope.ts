@@ -36,6 +36,8 @@ const NODE_SERVERS: readonly string[] = ["nestjs", "fastify", "express", "adonis
 
 const PYTHON_SERVERS: readonly string[] = ["fastapi", "drf", "ninja"];
 
+const PHP_AND_PYTHON_SERVERS: readonly string[] = ["laravel", "symfony", ...PYTHON_SERVERS];
+
 const VARIANTS_FORM =
   "a principal with variants (viewer_or_device) and, on the Node servers, optional authentication";
 
@@ -116,12 +118,7 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ["CHK-128", refusedOnTheNodeServers("the split sort style")],
   [
     "CHK-032",
-    {
-      targets: ["laravel", "symfony", ...PYTHON_SERVERS],
-      refusedOn: ["laravel", "symfony", ...PYTHON_SERVERS],
-      reason:
-        "1.0 refuses the complete page fact of a changes-since style by name at generation on the PHP and Python servers",
-    },
+    refusedForm("the complete page fact of a changes-since style", PHP_AND_PYTHON_SERVERS),
   ],
   ["CHK-020", refusedOnEveryServer("a principal binding")],
   ["CHK-094", refusedOnEveryServer("a scope resolved by the application")],

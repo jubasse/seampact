@@ -78,6 +78,7 @@ export function registerContractRoutes(router: Router): void {
       NotesEndpoints: async () => ({ default: (await pagingControllers()).NotesController }),
       ChangesEndpoints: async () => ({ default: (await pagingControllers()).ChangesController }),
       EventsEndpoints: async () => ({ default: (await pagingControllers()).EventsController }),
+      CappedEndpoints: async () => ({ default: (await pagingControllers()).CappedController }),
     },
     hooks: tasksPagingHooks(),
   });
@@ -95,7 +96,6 @@ function registerTasksRoutes(router: Router): void {
     }),
     hooks: tasksHooks(),
   });
-
 }
 
 function sendControlReply(response: HttpContext["response"], reply: ControlReply): void {

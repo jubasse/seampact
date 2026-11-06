@@ -134,7 +134,10 @@ SEAMPACT = {
         "access": {"identity": _SUITE_TOKEN_AUTHENTICATION},
     },
     "tasksPaging": {
-        "handlers": {"notes": "paging_factories.paging_notes_handlers"},
+        "handlers": {
+            "notes": "paging_factories.paging_notes_handlers",
+            "capped": "paging_factories.paging_capped_handlers",
+        },
         "authenticate": {USER_IDENTITY: "paging_factories.paging_user_hook"},
         "on_unexpected_error": "paging_factories.paging_unexpected_errors",
     },

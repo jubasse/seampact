@@ -39,6 +39,7 @@ from seampact_consumer_suite.boot_variant import (
     mounts_under_mismatched_prefix,
 )
 from paging_factories import (
+    paging_capped_handlers,
     paging_notes_handlers,
     paging_unexpected_errors,
     paging_user_hook,
@@ -133,7 +134,7 @@ def create_api() -> NinjaAPI:
     bind_tasks_paging(
         api,
         prefix="",
-        handlers=TasksPagingHandlerFactories(notes=paging_notes_handlers),
+        handlers=TasksPagingHandlerFactories(notes=paging_notes_handlers, capped=paging_capped_handlers),
         authenticate={USER_IDENTITY: paging_user_hook},
         on_unexpected_error=paging_unexpected_errors,
     )

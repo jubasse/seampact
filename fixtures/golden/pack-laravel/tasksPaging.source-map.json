@@ -22,6 +22,13 @@
       "file": "tasks-paging/api.yaml",
       "line": 4
     },
+    "api#/pagings/cappedPages": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 29,
+      "file": "tasks-paging/api.yaml",
+      "line": 23
+    },
     "api#/pagings/changes": {
       "column": 3,
       "endColumn": 1,
@@ -39,100 +46,121 @@
     "api#/schemas/Note": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 32,
+      "endLine": 38,
       "file": "tasks-paging/api.yaml",
-      "line": 26
+      "line": 32
     },
     "api#/schemas/Note/properties/noteId": {
       "column": 7,
       "endColumn": 21,
-      "endLine": 30,
-      "file": "tasks-paging/api.yaml",
-      "line": 30
-    },
-    "api#/schemas/Note/properties/text": {
-      "column": 7,
-      "endColumn": 59,
-      "endLine": 31,
-      "file": "tasks-paging/api.yaml",
-      "line": 31
-    },
-    "api#/surfaces/notes": {
-      "column": 3,
-      "endColumn": 1,
-      "endLine": 56,
-      "file": "tasks-paging/api.yaml",
-      "line": 34
-    },
-    "api#/surfaces/notes/identity": {
-      "column": 5,
-      "endColumn": 19,
       "endLine": 36,
       "file": "tasks-paging/api.yaml",
       "line": 36
     },
-    "api#/surfaces/notes/routes/changes/item": {
-      "column": 9,
+    "api#/schemas/Note/properties/text": {
+      "column": 7,
+      "endColumn": 59,
+      "endLine": 37,
+      "file": "tasks-paging/api.yaml",
+      "line": 37
+    },
+    "api#/surfaces/notes": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 68,
+      "file": "tasks-paging/api.yaml",
+      "line": 40
+    },
+    "api#/surfaces/notes/identity": {
+      "column": 5,
       "endColumn": 19,
-      "endLine": 47,
+      "endLine": 42,
       "file": "tasks-paging/api.yaml",
-      "line": 47
+      "line": 42
     },
-    "api#/surfaces/notes/routes/changes/ops/list": {
-      "column": 11,
-      "endColumn": 76,
-      "endLine": 49,
-      "file": "tasks-paging/api.yaml",
-      "line": 49
-    },
-    "api#/surfaces/notes/routes/changes/ops/list/paging": {
-      "column": 19,
-      "endColumn": 74,
-      "endLine": 49,
-      "file": "tasks-paging/api.yaml",
-      "line": 49
-    },
-    "api#/surfaces/notes/routes/events/item": {
+    "api#/surfaces/notes/routes/capped/item": {
       "column": 9,
       "endColumn": 19,
       "endLine": 53,
       "file": "tasks-paging/api.yaml",
       "line": 53
     },
-    "api#/surfaces/notes/routes/events/ops/list": {
+    "api#/surfaces/notes/routes/capped/ops/list": {
       "column": 11,
-      "endColumn": 74,
+      "endColumn": 80,
       "endLine": 55,
       "file": "tasks-paging/api.yaml",
       "line": 55
+    },
+    "api#/surfaces/notes/routes/capped/ops/list/paging": {
+      "column": 19,
+      "endColumn": 78,
+      "endLine": 55,
+      "file": "tasks-paging/api.yaml",
+      "line": 55
+    },
+    "api#/surfaces/notes/routes/changes/item": {
+      "column": 9,
+      "endColumn": 19,
+      "endLine": 59,
+      "file": "tasks-paging/api.yaml",
+      "line": 59
+    },
+    "api#/surfaces/notes/routes/changes/ops/list": {
+      "column": 11,
+      "endColumn": 76,
+      "endLine": 61,
+      "file": "tasks-paging/api.yaml",
+      "line": 61
+    },
+    "api#/surfaces/notes/routes/changes/ops/list/paging": {
+      "column": 19,
+      "endColumn": 74,
+      "endLine": 61,
+      "file": "tasks-paging/api.yaml",
+      "line": 61
+    },
+    "api#/surfaces/notes/routes/events/item": {
+      "column": 9,
+      "endColumn": 19,
+      "endLine": 65,
+      "file": "tasks-paging/api.yaml",
+      "line": 65
+    },
+    "api#/surfaces/notes/routes/events/ops/list": {
+      "column": 11,
+      "endColumn": 74,
+      "endLine": 67,
+      "file": "tasks-paging/api.yaml",
+      "line": 67
     },
     "api#/surfaces/notes/routes/events/ops/list/paging": {
       "column": 19,
       "endColumn": 72,
-      "endLine": 55,
+      "endLine": 67,
       "file": "tasks-paging/api.yaml",
-      "line": 55
+      "line": 67
     },
     "api#/surfaces/notes/routes/notes/item": {
       "column": 9,
       "endColumn": 19,
-      "endLine": 41,
+      "endLine": 47,
       "file": "tasks-paging/api.yaml",
-      "line": 41
+      "line": 47
     },
     "api#/surfaces/notes/routes/notes/ops/list": {
       "column": 11,
       "endColumn": 61,
-      "endLine": 43,
+      "endLine": 49,
       "file": "tasks-paging/api.yaml",
-      "line": 43
+      "line": 49
     },
     "api#/surfaces/notes/routes/notes/ops/list/paging": {
       "column": 19,
       "endColumn": 59,
-      "endLine": 43,
+      "endLine": 49,
       "file": "tasks-paging/api.yaml",
-      "line": 43
+      "line": 49
     },
     "pack:@seampact/pack-laravel#/conventions/format": {
       "column": 3,

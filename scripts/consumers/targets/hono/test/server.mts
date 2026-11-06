@@ -112,6 +112,7 @@ export async function startServer(): Promise<RunningServer> {
     handlers: {
       NotesEndpoints: tasksPagingHandlers,
       ChangesEndpoints: tasksPagingHandlers,
+      CappedEndpoints: tasksPagingHandlers,
       EventsEndpoints: tasksPagingHandlers,
     },
     hooks: tasksPagingHooks(),

@@ -28,3 +28,11 @@ export class EventsController implements TasksPagingNest.EventsEndpoints {
     return tasksPagingHandlers.listEvents(input);
   }
 }
+
+@Controller()
+export class CappedController implements TasksPagingNest.CappedEndpoints {
+  @TasksPagingNest.listCapped()
+  listCapped(@TasksPagingNest.listCapped.input() input: TasksPaging.ListCappedInput) {
+    return tasksPagingHandlers.listCapped(input);
+  }
+}

@@ -11,14 +11,9 @@ const NODE_REFUSED_FORM =
 const SPLIT_SORT_REFUSED =
   "the Node servers refuse the split sort style by name at generation (paging.sort.style), after 1.0";
 
-// A known bug of the Node servers, which leaves this list with its fix.
-const OVER_LIMIT_CLAMP_DROPPED =
-  "the Node servers drop overLimit clamp: the handler receives and the page reports the limit as sent, above maxLimit";
-
 export const SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "absolute-urls-from-public-origin": NODE_REFUSED_FORM,
   "optional-auth-refused-credential": NODE_REFUSED_FORM,
-  "limit-above-max-clamped": OVER_LIMIT_CLAMP_DROPPED,
   "split-sort-github-pages": SPLIT_SORT_REFUSED,
   ...TARGET_SUITE_REFUSALS,
 };

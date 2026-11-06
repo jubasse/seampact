@@ -135,7 +135,6 @@ export interface SuiteCase {
   readonly profiles: readonly SuiteProfile[];
   readonly apis?: readonly string[];
   readonly targets?: readonly string[];
-  readonly apis?: readonly string[];
   readonly script?: SampleAppScript;
   readonly steps: readonly SuiteStep[];
   readonly hookCalls?: readonly RecordedHookCall[];

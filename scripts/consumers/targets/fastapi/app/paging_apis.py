@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from generated.tasks_paging.fastapi import TasksPagingHandlerFactories, bind_tasks_paging
 from generated.tasks_split_sort.fastapi import TasksSplitSortHandlerFactories, bind_tasks_split_sort
 from hook_doubles import TasksUnexpectedErrors
-from paging_doubles import PagingNotesHandlers, PagingUserHook, SplitSortNotesHandlers
+from paging_doubles import PagingCappedHandlers, PagingNotesHandlers, PagingUserHook, SplitSortNotesHandlers
 
 USER_IDENTITY: Final = "user"
 
@@ -15,7 +15,7 @@ USER_IDENTITY: Final = "user"
 def bind_paging_apis(app: FastAPI) -> None:
     bind_tasks_paging(
         app,
-        handlers=TasksPagingHandlerFactories(notes=PagingNotesHandlers),
+        handlers=TasksPagingHandlerFactories(notes=PagingNotesHandlers, capped=PagingCappedHandlers),
         authenticate={USER_IDENTITY: PagingUserHook},
         on_unexpected_error=TasksUnexpectedErrors,
     )

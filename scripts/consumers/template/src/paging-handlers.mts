@@ -1,5 +1,6 @@
 // The `tasksPaging` api's handlers and hooks, which every Node server consumer registers beside the main apis: a
-// changes feed with its next token, a stale token and an instant one, and a Stripe-style list with its more flag.
+// changes feed with its next token, a stale token and an instant one, a Stripe-style list with its more flag, and a
+// clamped list that reports its limit.
 // Each note's text tells what the handler received, so a case reads it on the wire.
 import type * as TasksPaging from "../generated/types/tasksPaging/index.js";
 import { logUnexpectedError, userAuthenticateHook } from "./hooks.mjs";
@@ -49,11 +50,21 @@ export const tasksPagingHandlers = {
     };
   },
 
-  listEvents(_input: TasksPaging.ListEventsInput): TasksPaging.ListEventsOutput {
+  listCapped(input: TasksPaging.ListCappedInput): TasksPaging.ListCappedOutput {
     return {
       status: 200,
       body: {
-        items: [{ noteId: FIRST_NOTE_ID, text: "Changed since the token" }],
+        items: [{ noteId: FIRST_NOTE_ID, text: `limit ${String(input.query.limit)}` }],
+        more: false,
+      },
+    };
+  },
+
+  listEvents(input: TasksPaging.ListEventsInput): TasksPaging.ListEventsOutput {
+    return {
+      status: 200,
+      body: {
+        items: [{ noteId: FIRST_NOTE_ID, text: `since ${input.query.since ?? "none"}` }],
         nextSince: NEXT_EVENTS_INSTANT,
         complete: true,
       },

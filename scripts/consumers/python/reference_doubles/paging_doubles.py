@@ -1,6 +1,7 @@
 """The framework-free handlers and `user` hook double of the reference contract's `tasksPaging` and `tasksSplitSort`
-apis, which the Python consumers bind beside the main two: a Stripe-style list with its more flag, and GitHub-style
-pages whose note's text tells the sort and the page size the handler received, so a case reads them on the wire."""
+apis, which the Python consumers bind beside the main two: a Stripe-style list with its more flag, a clamped list whose
+note's text tells the limit the handler received, and GitHub-style pages whose note's text tells the sort and the page
+size the handler received, so a case reads them on the wire."""
 
 import uuid
 from datetime import datetime
@@ -38,6 +39,18 @@ class PagingNotesHandlers:
 
         return paging.ListNotesResponse200(
             body=paging.ListNotesPage(items=[_paging_note(FIRST_NOTE_ID, "First note")], more=True)
+        )
+
+
+class PagingCappedHandlers:
+    """The `tasksPaging` api's clamped list: one note whose text tells the limit the handler received."""
+
+    def list_capped(self, request: paging.ListCappedRequest) -> paging.ListCappedResult:
+        limit = request.input.query.limit
+        text = f"limit {ABSENT if limit is None else limit}"
+
+        return paging.ListCappedResponse200(
+            body=paging.ListCappedPage(items=[_paging_note(FIRST_NOTE_ID, text)], more=False)
         )
 
 

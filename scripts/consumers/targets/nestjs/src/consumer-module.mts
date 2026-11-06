@@ -28,6 +28,13 @@ import {
   tasksServiceWritesHooks,
 } from "./hooks.mjs";
 import {
+  CappedController,
+  ChangesController,
+  EventsController,
+  NotesController,
+} from "./paging-controllers.mjs";
+import { tasksPagingHooks } from "./paging-handlers.mjs";
+import {
   PatternedRouteController,
   SuiteControlController,
   UnlistedRouteController,
@@ -37,8 +44,6 @@ import {
 const healthControllers = leavesOutHealthHandler()
   ? []
   : [(await import("./app-controller.mjs")).AppController];
-import { ChangesController, EventsController, NotesController } from "./paging-controllers.mjs";
-import { tasksPagingHooks } from "./paging-handlers.mjs";
 
 @Module({
   imports: [
@@ -61,6 +66,7 @@ import { tasksPagingHooks } from "./paging-handlers.mjs";
     DevicesController,
     NotesController,
     ChangesController,
+    CappedController,
     EventsController,
     SuiteControlController,
     // The framework-route boot variants serve a route outside the contract.
