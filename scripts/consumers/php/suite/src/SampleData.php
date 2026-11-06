@@ -21,6 +21,7 @@ final class SampleData
     private const CREATED_AT = '2026-10-18T09:00:00.000Z';
     public const FIRST_VERSION = 1;
     public const NEW_TASK_ID = '20000000-0000-4000-8000-0000000000ff';
+    private const SEEDED_TASK_ID = '20000000-0000-4000-8000-%012d';
     public const GENERAL_CHANNEL_ID = '10000000-0000-4000-8000-000000000001';
     /** The channel the sample user is not a member of: its scope resolver denies it, so no handler runs for it. */
     public const NON_MEMBER_CHANNEL_ID = '10000000-0000-4000-8000-0000000000ff';
@@ -33,6 +34,22 @@ final class SampleData
     public static function task(string $taskId): Task
     {
         return new Task($taskId, 'Write the slice test', TaskState::Open, null, self::FIRST_VERSION, new \DateTimeImmutable(self::CREATED_AT));
+    }
+
+    /**
+     * The sample tasks whose state is one of `$states`, in seed order: the channel holds one task in each state.
+     *
+     * @param list<TaskState> $states
+     * @return list<Task>
+     */
+    public static function tasksInStates(array $states): array
+    {
+        $seeded = [];
+        foreach (TaskState::cases() as $index => $state) {
+            $seeded[] = new Task(sprintf(self::SEEDED_TASK_ID, $index + 1), 'Write the slice test', $state, null, self::FIRST_VERSION, new \DateTimeImmutable(self::CREATED_AT));
+        }
+
+        return array_values(array_filter($seeded, static fn (Task $task): bool => in_array($task->state, $states, true)));
     }
 
     public static function serviceTask(string $taskId): ServiceTask
