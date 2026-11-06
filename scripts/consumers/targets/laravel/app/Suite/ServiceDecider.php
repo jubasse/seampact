@@ -6,6 +6,7 @@ namespace App\Suite;
 
 use App\Generated\TasksService\Laravel\ServicePrincipal;
 use App\Generated\TasksService\Schemas\ApiForbiddenParams;
+use App\Generated\TasksService\Schemas\CallerServiceParams;
 use Seampact\Codegen\Runtime\Decider;
 use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\DecisionPurpose;
@@ -42,8 +43,8 @@ final class ServiceDecider implements Decider
     private static function callerAllowed(RequirementRequest $request): bool
     {
         $principal = $request->principal();
-        $allowed = $request->params()->allowed ?? [];
+        $params = $request->params();
 
-        return $principal instanceof ServicePrincipal && is_array($allowed) && in_array($principal->service->value, $allowed, true);
+        return $principal instanceof ServicePrincipal && $params instanceof CallerServiceParams && in_array($principal->service, $params->allowed, true);
     }
 }
