@@ -2216,7 +2216,29 @@
               }
             }
           ],
-          "query": [],
+          "query": [
+            {
+              "name": "state",
+              "type": {
+                "kind": "array",
+                "items": {
+                  "kind": "enum",
+                  "enum": "TaskState"
+                }
+              },
+              "required": false,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/query/state?"
+              },
+              "wire": {
+                "kind": "list",
+                "style": "form",
+                "explode": true,
+                "brackets": false
+              }
+            }
+          ],
           "header": []
         },
         "unknownQuery": {
