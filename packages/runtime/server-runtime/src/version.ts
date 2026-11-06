@@ -3,4 +3,4 @@
 // read this constant, never the package manifest. It imports nothing, so a check can load it alone.
 
 /** The version of this runtime; unreleased, the development version the generators of the same checkout stamp. */
-export const SERVER_RUNTIME_VERSION = "0.0.0";
+export const SERVER_RUNTIME_VERSION = "1.0.0";

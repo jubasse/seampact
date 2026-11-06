@@ -1,5 +1,5 @@
 # JSON:API resource objects, page[number] paging and the errors array.
-pack: { name: '@seampact/pack-jsonapi', version: 0.0.0, extends: [] }
+pack: { name: '@seampact/pack-jsonapi', version: 1.0.0, extends: [] }
 
 formats:
   jsonapi:

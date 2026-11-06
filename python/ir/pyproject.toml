@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seampact-ir"
-version = "0.0.0"
+version = "1.0.0"
 description = "The seampact IR model, naming and reader for Python generators."
 readme = "README.md"
 license = "MIT"
@@ -20,7 +20,7 @@ classifiers = [
 [project.optional-dependencies]
 # The compiler binary of this platform, for a `path` source or the OpenAPI documents of an app config; a bundle-only
 # app with `openapi: none` never needs it.
-compiler = ["seampact-compiler==0.0.0"]
+compiler = ["seampact-compiler==1.0.0"]
 
 # PEP 420: `seampact` is a namespace shared by every seampact distribution, so it has no `__init__.py`.
 [project.scripts]

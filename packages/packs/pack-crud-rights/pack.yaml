@@ -1,5 +1,5 @@
 # Derives a <resource>.<op> right for every list, get, create, update, delete and batch route and requires it first.
-pack: { name: '@seampact/pack-crud-rights', version: 0.0.0, extends: [] }
+pack: { name: '@seampact/pack-crud-rights', version: 1.0.0, extends: [] }
 
 derive:
   - entry: crud

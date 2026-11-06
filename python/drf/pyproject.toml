@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seampact-drf"
-version = "0.0.0"
+version = "1.0.0"
 description = "The seampact Django REST Framework target: its generator and the runtime of the code it generates."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
-dependencies = ["djangorestframework>=3.18", "seampact-django==0.0.0"]
+dependencies = ["djangorestframework>=3.18", "seampact-django==1.0.0"]
 classifiers = [
     "Framework :: Django",
     "Framework :: Django :: 5.2",
@@ -23,7 +23,7 @@ classifiers = [
 
 [project.optional-dependencies]
 # What the generator needs; a production install of an app leaves it out.
-generate = ["seampact-django[generate]==0.0.0"]
+generate = ["seampact-django[generate]==1.0.0"]
 
 # The target `use: pypi:seampact-drf` names; `seampact generate` finds it through this group.
 [project.entry-points."seampact.generators"]

@@ -1,6 +1,6 @@
 {
   "name": "@seampact/pack-jsonapi",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -10,7 +10,6 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
-  "private": true,
   "description": "JSON:API resource objects, page[number] paging and the errors array.",
   "seampact": {
     "role": "pack",
