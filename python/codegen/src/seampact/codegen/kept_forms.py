@@ -386,7 +386,7 @@ class _KeptForms:
 
         self.refusals.waiting(
             f"param.{part}.structured",
-            f"A {part} parameter that is not a scalar or an enum",
+            f"A {part} parameter that is not a scalar, an enum or a list of them in the form style",
             at.below("type"),
             Delivery.CONSUMER,
         )
