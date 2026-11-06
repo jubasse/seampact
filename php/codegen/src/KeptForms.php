@@ -136,6 +136,8 @@ final class KeptForms
             $this->readOperation($operation, IrPlace::ofOperation($index, $operation->id));
         }
 
+        HandlerForms::refuseResponseHeaders($ir, $refusals);
+
         ksort($this->objects);
         ksort($this->enums);
         ksort($this->errors);
