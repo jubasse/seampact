@@ -5,12 +5,16 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse } from "yaml";
-import { parseSuiteCase } from "../../packages/tools/http-suite/src/suite-case.ts";
+import {
+  outsideTargetsReason,
+  parseSuiteCase,
+} from "../../packages/tools/http-suite/src/suite-case.ts";
 import {
   type CaseResult,
+  type SuiteReport,
   suiteReportOf,
 } from "../../packages/tools/http-suite/src/suite-report.ts";
-import { caseHeader } from "../../packages/tools/http-suite/src/suite-runner.ts";
+import { caseHeader, refusedResult } from "../../packages/tools/http-suite/src/suite-runner.ts";
 import type { CheckOptions } from "./check.ts";
 import { check } from "./check.ts";
 import { buildIds, exportFromDir, privateTerms } from "./export-ids.ts";
@@ -610,6 +614,163 @@ describe("checklist release scope", () => {
     expect(out).toContain(
       "scripts/checklist/release-scope.ts: CHK-001: proven for target nestjs: drop it from the after-1.0 list",
     );
+  });
+
+  describe("a whole-suite id with refused cases", () => {
+    const target = "fastify";
+    const caseOf = (id: string) =>
+      parseSuiteCase(
+        JSON.parse(readFileSync(join(REPO, `packages/tools/http-suite/cases/${id}.json`), "utf8")),
+        id,
+      );
+    const passedCase = (id: string, checks: string[]): CaseResult => ({
+      id,
+      title: id,
+      checks,
+      outcome: "passed",
+      failures: [],
+    });
+
+    /**
+     * The gate over the repository with one hand-written run of [runTarget] (CHK-098 covers every case) of [cases];
+     * [edit] may rewrite the report before it is written.
+     */
+    function handWrittenRun(
+      cases: CaseResult[],
+      runTarget = target,
+      edit: (report: SuiteReport) => unknown = (report) => report,
+    ): string[] {
+      const directory = mkdtempSync(join(tmpdir(), "checklist-whole-suite-"));
+
+      mkdirSync(join(directory, runTarget));
+      writeFileSync(
+        join(directory, runTarget, "http-suite-hand-written.json"),
+        JSON.stringify(edit(suiteReportOf({ target: runTarget, profile: "hand-written" }, cases))),
+      );
+
+      return gateOver(directory, { itemsAfter1_0: ITEMS_AFTER_1_0 }, REPO);
+    }
+
+    it("passes when each refused case cites only ids deferred for the target", () => {
+      const absoluteUrls = caseOf("absolute-urls-from-public-origin");
+      const out = handWrittenRun([
+        passedCase("plain-case", ["CHK-130"]),
+        refusedResult(absoluteUrls, "the Node servers refuse this form, after 1.0", target),
+      ]);
+
+      expect(out).not.toContainEqual(expect.stringContaining(noTest("CHK-098", target)));
+      // The refused case cites CHK-130 itself, so its passed sibling does not prove the deferred pair.
+      expect(out).not.toContainEqual(
+        expect.stringContaining(`CHK-130: proven for target ${target}`),
+      );
+    });
+
+    it("passes when a refused case does not apply to the target", () => {
+      const mountMismatch = caseOf("mount-mismatch-refused-at-first-request");
+      const reason = outsideTargetsReason(mountMismatch, target);
+
+      if (reason === undefined)
+        throw new Error("mount-mismatch-refused-at-first-request applies to every target");
+
+      const out = handWrittenRun([
+        passedCase("plain-case", []),
+        refusedResult(mountMismatch, reason, target),
+      ]);
+
+      expect(out).not.toContainEqual(expect.stringContaining(noTest("CHK-098", target)));
+    });
+
+    it("stays refused when a refused case cites an id the release scope does not defer", () => {
+      const out = handWrittenRun([
+        passedCase("plain-case", []),
+        refusedResult(
+          caseOf("mount-mismatch-fails-boot"),
+          "the sample app does not serve it",
+          target,
+        ),
+      ]);
+
+      expect(out).toContain(`${noTest("CHK-098", target)} (its suite run refused the id)`);
+    });
+
+    it("stays refused when a case of the id failed, whatever its checks entry says", () => {
+      const absoluteUrls = caseOf("absolute-urls-from-public-origin");
+      const failedCase: CaseResult = {
+        ...passedCase("failing-case", ["CHK-098"]),
+        outcome: "failed",
+        failures: ["step 1"],
+      };
+      const out = handWrittenRun(
+        [
+          passedCase("plain-case", []),
+          failedCase,
+          refusedResult(absoluteUrls, "the Node servers refuse this form, after 1.0", target),
+        ],
+        target,
+        (report) => ({
+          ...report,
+          checks: {
+            ...report.checks,
+            "CHK-098": {
+              outcome: "refused",
+              cases: ["plain-case", "absolute-urls-from-public-origin"],
+            },
+          },
+        }),
+      );
+
+      expect(out).toContain(`${noTest("CHK-098", target)} (its suite run refused the id)`);
+    });
+
+    it("stays refused when the cited id is deferred only on another target", () => {
+      const out = handWrittenRun(
+        [
+          passedCase("plain-case", []),
+          refusedResult(
+            caseOf("absolute-urls-from-public-origin"),
+            "the native servers write them",
+            "laravel",
+          ),
+        ],
+        "laravel",
+      );
+
+      expect(out).toContain(`${noTest("CHK-098", "laravel")} (its suite run refused the id)`);
+    });
+
+    it("stays refused when the run passed no case", () => {
+      const out = handWrittenRun([
+        refusedResult(
+          caseOf("mount-mismatch-fails-boot"),
+          "the sample app does not serve it",
+          target,
+        ),
+      ]);
+
+      expect(out).toContain(`${noTest("CHK-098", target)} (its suite run refused the id)`);
+    });
+
+    describe("the not-applicable reason", () => {
+      const refusedWith = (reason: string) =>
+        handWrittenRun([
+          passedCase("plain-case", []),
+          refusedResult(caseOf("mount-mismatch-fails-boot"), reason, target),
+        ]);
+      const refusedId = `${noTest("CHK-098", target)} (its suite run refused the id)`;
+
+      it("is accepted for known target names", () => {
+        expect(refusedWith("the case applies only to express, adonis")).not.toContain(refusedId);
+      });
+
+      it.each([
+        ["a trailing space", "the case applies only to express, adonis "],
+        ["an unknown name", "the case applies only to express, nowhere"],
+        ["free text", "the case applies only to express because it must"],
+        ["the report's own target", `the case applies only to express, ${target}`],
+      ])("is refused with %s", (_name, reason) => {
+        expect(refusedWith(reason)).toContain(refusedId);
+      });
+    });
   });
 
   it("an expected consumer without a report fails", () => {
