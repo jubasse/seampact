@@ -9,6 +9,7 @@ import {
   clientAddressesTheHookSees,
   describeDebugExceptions,
   describeHandlerAccess,
+  describeRepeatedQueryList,
   describeResponseHeaders,
   describeTwoApiHandlerAccess,
   emitProject,
@@ -18,6 +19,7 @@ import {
   type RawReply,
   type ReferenceIrChange,
   referenceChanges,
+  referenceRepeatedQueryList,
   referenceResponseHeaders,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
@@ -192,7 +194,7 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       PROJECT,
       nestjsTarget,
       { bodyValidation: true, reply },
-      referenceChanges(throttledGetTask, referenceResponseHeaders),
+      referenceChanges(throttledGetTask, referenceResponseHeaders, referenceRepeatedQueryList),
     );
 
     expect(emitProject(PROJECT, files, BUILD)).toEqual([]);
@@ -210,6 +212,13 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
   beforeEach(() => {
     app.resetScenario();
     vi.restoreAllMocks();
+  });
+
+  describe("a list query param in the default form", () => {
+    describeRepeatedQueryList(() => ({
+      app,
+      send: (method, path, headers) => send(method, path, { headers }),
+    }));
   });
 
   describe("what a handler reads of its caller", () => {

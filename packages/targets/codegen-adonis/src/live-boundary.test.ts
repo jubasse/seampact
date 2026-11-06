@@ -8,10 +8,13 @@ import {
   clientAddressesTheHookSees,
   describeDebugExceptions,
   describeHandlerAccess,
+  describeRepeatedQueryList,
   describeResponseHeaders,
   emitProject,
   problemBody,
   projectDirectory,
+  referenceChanges,
+  referenceRepeatedQueryList,
   referenceResponseHeaders,
 } from "@seampact/codegen-core/node-server/test-support";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -155,7 +158,7 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
       project,
       major,
       { bodyValidation: true },
-      referenceResponseHeaders,
+      referenceChanges(referenceResponseHeaders, referenceRepeatedQueryList),
     );
 
     expect(emitProject(project, files, build)).toEqual([]);
@@ -176,6 +179,13 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
   beforeEach(() => {
     app.resetScenario();
     vi.restoreAllMocks();
+  });
+
+  describe("a list query param in the default form", () => {
+    describeRepeatedQueryList(() => ({
+      app,
+      send: (method, path, headers) => send(method, path, { headers }),
+    }));
   });
 
   describe("what a handler reads of its caller", () => {

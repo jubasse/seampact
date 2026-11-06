@@ -7,6 +7,7 @@ import {
   describeCompressedVersionTag,
   describeDebugExceptions,
   describeHandlerAccess,
+  describeRepeatedQueryList,
   describeResponseHeaders,
   describeTwoApiHandlerAccess,
   emitProject,
@@ -17,6 +18,7 @@ import {
   referenceChanges,
   referenceNoStoreCode,
   referenceNoStoreOperation,
+  referenceRepeatedQueryList,
   referenceResponseHeaders,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
@@ -116,6 +118,7 @@ beforeAll(async () => {
       referenceNoStoreCode(NO_STORE_CODE),
       referenceNoStoreOperation("getPreferences"),
       referenceResponseHeaders,
+      referenceRepeatedQueryList,
     ),
   );
 
@@ -132,6 +135,13 @@ afterAll(async () => {
 beforeEach(() => {
   app.resetScenario();
   vi.restoreAllMocks();
+});
+
+describe("a list query param in the default form", () => {
+  describeRepeatedQueryList(() => ({
+    app,
+    send: (method, path, headers) => send(method, path, { headers }),
+  }));
 });
 
 describe("what a handler reads of its caller", () => {

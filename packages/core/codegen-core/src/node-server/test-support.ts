@@ -8,6 +8,7 @@ export * from "./ir-reading.test-support.js";
 export * from "./live-debug-exceptions.test-support.js";
 export * from "./live-handler-access.test-support.js";
 export * from "./live-pages.test-support.js";
+export * from "./live-query-lists.test-support.js";
 export * from "./live-request.test-support.js";
 export * from "./live-response-headers.test-support.js";
 export * from "./native-docs-agreement.test-support.js";

@@ -91,20 +91,20 @@ final class InputStep {
     }
 
     private static ObjectNode queryParams(SeampactBoundary boundary, JsonNode operation, String rawQuery, List<InputIssue> issues) {
-        Map<String, List<String>> members = WireDecoding.queryMembers(rawQuery);
+        Map<String, List<String>> members = WireDecoding.rawQueryMembers(rawQuery);
         ObjectNode values = NODES.objectNode();
 
         for (JsonNode param : operation.path("params").path("query")) {
             String name = param.path("name").asString();
-            List<String> sent = members.remove(name);
+            List<String> rawValues = members.remove(name);
             String pointer = InputIssue.below("", name);
 
-            if (sent == null) {
+            if (rawValues == null) {
                 if (param.path("required").asBoolean(false)) issues.add(new InputIssue("query", pointer, "required"));
                 continue;
             }
 
-            JsonNode value = queryValue(sent, param.path("type"));
+            JsonNode value = queryValue(WireDecoding.queryItems(rawValues, param.path("wire")), param.path("type"));
             boundary.validator().check(value, param.path("type"), "query", pointer, issues);
             values.set(name, value);
         }

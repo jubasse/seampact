@@ -4,6 +4,9 @@ import { decodeQueryMembers, type ParamRule, withQueryMember } from "./wire-deco
 const RULES: readonly ParamRule[] = [
   { name: "sort", decoding: "list" },
   { name: "limit", decoding: "number" },
+  { name: "tag", decoding: "repeatedList" },
+  { name: "score", decoding: "repeatedList", items: "number" },
+  { name: "flags", decoding: "list", items: "boolean" },
 ];
 
 describe("query decoding", () => {
@@ -29,6 +32,27 @@ describe("query decoding", () => {
 
   test("an empty list is no item, a repeated member is the list of its values", () => {
     expect(decodeQueryMembers(RULES, "sort=&limit=1&limit=2")).toEqual({ sort: [], limit: [1, 2] });
+  });
+
+  test("a repeated list is the list of its values, one item per key, even when sent once", () => {
+    expect(decodeQueryMembers(RULES, "tag=a&tag=b")).toEqual({ tag: ["a", "b"] });
+    expect(decodeQueryMembers(RULES, "tag=a")).toEqual({ tag: ["a"] });
+    expect(decodeQueryMembers(RULES, "limit=1")).toEqual({ limit: 1 });
+  });
+
+  test("a repeated list keeps commas inside its items and decodes each as a form", () => {
+    expect(decodeQueryMembers(RULES, "tag=a,b&tag=c+d%2Ce&tag=")).toEqual({
+      tag: ["a,b", "c d,e", ""],
+    });
+  });
+
+  test("each list item is decoded by its type, and one that does not decode stays text", () => {
+    expect(decodeQueryMembers(RULES, "score=1&score=2.5&score=ten&flags=true,false,maybe")).toEqual(
+      {
+        score: [1, 2.5, "ten"],
+        flags: [true, false, "maybe"],
+      },
+    );
   });
 
   test("the next page link keeps every other member as received", () => {

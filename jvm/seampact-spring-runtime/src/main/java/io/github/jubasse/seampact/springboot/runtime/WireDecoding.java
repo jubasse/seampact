@@ -48,8 +48,11 @@ final class WireDecoding {
         return NODES.numberNode(new BigDecimal(text));
     }
 
-    /** The members of a raw query string, form-decoded (`+` is a space), each name with its values in order. */
-    static Map<String, List<String>> queryMembers(String rawQuery) {
+    /**
+     * The members of a raw query string, each form-decoded name (`+` is a space) with its values in order, kept as sent:
+     * {@link #queryItems} decodes them once it knows the wire form.
+     */
+    static Map<String, List<String>> rawQueryMembers(String rawQuery) {
         Map<String, List<String>> members = new LinkedHashMap<>();
         if (rawQuery == null || rawQuery.isEmpty()) return members;
 
@@ -57,11 +60,27 @@ final class WireDecoding {
             if (pair.isEmpty()) continue;
             int equals = pair.indexOf('=');
             String name = formDecoded(equals < 0 ? pair : pair.substring(0, equals));
-            String value = equals < 0 ? "" : formDecoded(pair.substring(equals + 1));
-            members.computeIfAbsent(name, key -> new ArrayList<>()).add(value);
+            String rawValue = equals < 0 ? "" : pair.substring(equals + 1);
+            members.computeIfAbsent(name, key -> new ArrayList<>()).add(rawValue);
         }
 
         return members;
+    }
+
+    /**
+     * A parameter's raw values, form-decoded: a list written with `explode: false` is one comma-separated value
+     * (`sort=a,-b`), split on its raw commas only, so an encoded `%2C` is data within one item.
+     */
+    static List<String> queryItems(List<String> rawValues, JsonNode wire) {
+        boolean unexploded = "list".equals(wire.path("kind").asString()) && !wire.path("explode").asBoolean(true);
+        List<String> items = new ArrayList<>();
+
+        for (String rawValue : rawValues) {
+            List<String> rawItems = unexploded ? List.of(rawValue.split(",", -1)) : List.of(rawValue);
+            rawItems.forEach(rawItem -> items.add(formDecoded(rawItem)));
+        }
+
+        return items;
     }
 
     /** The raw query with the member [name] set to [value], every other pair kept as received, made link-safe. */

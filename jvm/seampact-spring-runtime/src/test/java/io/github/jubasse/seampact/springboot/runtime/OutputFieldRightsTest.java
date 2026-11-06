@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.github.jubasse.seampact.hooks.Decision;
 import io.github.jubasse.seampact.hooks.Purpose;
 import io.github.jubasse.seampact.hooks.RequestView;
-import jakarta.servlet.http.HttpServletResponse;
-import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,21 +52,13 @@ class OutputFieldRightsTest {
         SeampactBoundary boundary = new SeampactBoundary(TABLE, new TasksTestBinding(Map.of("roles", RolesParams.class)), beans, new StandardEnvironment());
         ContractRoute route = boundary.table().routes().stream().filter(candidate -> candidate.id().equals(operationId)).findFirst().orElseThrow();
         BoundaryExchange exchange = new BoundaryExchange(new ContractTable.RouteMatch(route, Map.of()), "/tasks",
-                new CheckingResponse(unusedResponse(), false));
+                new CheckingResponse(TestServletProxies.unusedResponse(), false));
         JsonNode task = MAPPER.readTree("{\"taskId\": \"t1\", \"effort\": 3, \"title\": \"Write\"}");
 
         OutputFieldRights.apply(boundary, exchange, new RequestView("GET", "/tasks", Map.of(), Optional.empty()),
                 MAPPER.readTree("{\"body\": {\"schema\": \"Task\"}, \"shape\": \"object\"}"), task);
 
         return task;
-    }
-
-    // The exchange's response wrapper needs a response; the output step never writes to it.
-    private static HttpServletResponse unusedResponse() {
-        return HttpServletResponse.class.cast(Proxy.newProxyInstance(OutputFieldRightsTest.class.getClassLoader(),
-                new Class<?>[] {HttpServletResponse.class}, (proxy, method, arguments) -> {
-                    throw new UnsupportedOperationException("the output field step writes no response: " + method.getName());
-                }));
     }
 
     /** Allows `roles` when its params let an editor in. */
