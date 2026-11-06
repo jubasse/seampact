@@ -54,7 +54,7 @@
       "column": 13,
       "endColumn": 32,
       "endLine": 16,
-      "file": ".packs/@seampact/pack-spring@0.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-spring@1.0.0/pack.yaml",
       "line": 16
     },
     "shared#/conventions/batch/bodyLimit": {
