@@ -88,7 +88,8 @@ const task = (taskId: string, title = "Write the slice test") => ({
 
 const PAGE_QUERY_KEYS = ["cursor", "limit"];
 const SORT_VALUES = ["createdAt", "-createdAt"];
-const LIST_TASKS_QUERY_KEYS = [...PAGE_QUERY_KEYS, "sort"];
+// `state` is read by the shared list-query cases, which the stub refuses; the fetch client test may still send it.
+const LIST_TASKS_QUERY_KEYS = [...PAGE_QUERY_KEYS, "sort", "state"];
 const API_ID = "tasks";
 const HTTP_ERROR_FLOOR = 400;
 
