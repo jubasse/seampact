@@ -11,10 +11,12 @@ use App\Generated\Tasks\Symfony\TasksRouteLoader;
 use App\Generated\Tasks\Symfony\TasksSeampactBundle;
 use App\Generated\TasksAbsoluteUrls\Symfony\TasksAbsoluteUrlsRouteLoader;
 use App\Generated\TasksAbsoluteUrls\Symfony\TasksAbsoluteUrlsSeampactBundle;
+use App\Generated\TasksAbsoluteUrls\Symfony\UserAuthenticateHook as AbsoluteUrlsUserAuthenticateHook;
 use App\Generated\TasksDevices\Symfony\TasksDevicesRouteLoader;
 use App\Generated\TasksDevices\Symfony\TasksDevicesSeampactBundle;
 use App\Generated\TasksOptionalAuth\Symfony\TasksOptionalAuthRouteLoader;
 use App\Generated\TasksOptionalAuth\Symfony\TasksOptionalAuthSeampactBundle;
+use App\Generated\TasksOptionalAuth\Symfony\UserAuthenticateHook as OptionalAuthUserAuthenticateHook;
 use App\Generated\TasksService\Symfony\TasksServiceRouteLoader;
 use App\Generated\TasksService\Symfony\TasksServiceSeampactBundle;
 use App\Generated\TasksServiceWrites\Symfony\TasksServiceWritesRouteLoader;
@@ -27,10 +29,12 @@ use App\Suite\UserHook;
 use Seampact\ConsumerSuite\BootVariant;
 use Seampact\ConsumerSuite\FileIdempotencyStore;
 use Seampact\ConsumerSuite\SuiteFiles;
+use Seampact\Symfony\Runtime\Hooks;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Bundle\SecurityBundle\SecurityBundle;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Symfony\Component\DependencyInjection\Loader\Configurator\DefaultsConfigurator;
 use Symfony\Component\HttpFoundation\ChainRequestMatcher;
 use Symfony\Component\HttpFoundation\RequestMatcher\HeaderRequestMatcher;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
@@ -70,6 +74,11 @@ final class Kernel extends BaseKernel
         'missing-decider' => TasksDecider::class,
         'missing-scope-resolver' => ChannelResolver::class,
         'missing-handler' => AppController::class,
+    ];
+    // The user hook's generated interfaces outside the tasks api, keyed by api id.
+    private const USER_HOOKS_OUTSIDE_TASKS = [
+        'tasksOptionalAuth' => OptionalAuthUserAuthenticateHook::class,
+        'tasksAbsoluteUrls' => AbsoluteUrlsUserAuthenticateHook::class,
     ];
 
     public function registerBundles(): iterable
@@ -136,6 +145,9 @@ final class Kernel extends BaseKernel
         // The generated tree is loaded with the app's classes, as the skeleton's services.yaml loads it.
         $services->load('App\\', __DIR__ . '/')
             ->exclude([__DIR__ . '/Kernel.php', ...array_map(self::sourceFileOf(...), self::leftOutClasses())]);
+        if (BootVariant::leavesOutAuthenticateHook()) {
+            self::registerUserHookOutsideTasks($services);
+        }
         $services->set('logger', SuiteLogger::class);
         $services->set(TasksSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
         $services->set(TasksServiceWritesSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
@@ -182,10 +194,22 @@ final class Kernel extends BaseKernel
      */
     private static function leftOutClasses(): array
     {
-        $leftOut = BootVariant::leavesOutAuthenticateHook() ? [UserHook::class] : [];
         $byVariant = self::LEFT_OUT_BY_VARIANT[BootVariant::current() ?? ''] ?? null;
 
-        return $byVariant === null ? $leftOut : [...$leftOut, $byVariant];
+        return $byVariant === null ? [] : [$byVariant];
+    }
+
+    /**
+     * Leaves the `tasks` api without an authenticate hook for the identity `user` and keeps it on the other apis, as
+     * the Laravel app unbinds only the tasks api's interface: `UserHook` implements all three, so autoconfiguration
+     * would tag it for each.
+     */
+    private static function registerUserHookOutsideTasks(DefaultsConfigurator $services): void
+    {
+        $hook = $services->set(UserHook::class)->autoconfigure(false);
+        foreach (self::USER_HOOKS_OUTSIDE_TASKS as $api => $interface) {
+            $hook->tag(Hooks::tag($api, Hooks::AUTHENTICATE_TAG_SUFFIX), [Hooks::HOOK_ATTRIBUTE => $interface]);
+        }
     }
 
     /** @param class-string $class */
