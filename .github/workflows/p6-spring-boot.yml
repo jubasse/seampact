@@ -4,8 +4,9 @@ name: Spring Boot target
 # Spring Boot 4 and its redaction checked, on Java 21 and 25 (A13). The consumer is then built by the Gradle plugin
 # and by the Maven plugin with Node removed from the runner, from the reference contract's bundle served over HTTPS
 # on Java 21 and 25 and from the local YAML on Java 25, and the shared http suite runs against each jar ("The consumer
-# and the proof"). A pull request builds and suites the consumer on (Gradle, Java 21) and (Maven, Java 25) from the
-# bundle; a push to develop adds the other four rows.
+# and the proof"). A pull request to develop runs the golden tests on Java 21 and builds and suites the consumer on
+# (Gradle, Java 21) from the bundle; a push to develop adds Java 25, (Maven, Java 25) and
+# the other four rows.
 # On a pull request or a push it runs only when the change touches the JVM modules, the reference contract, the consumer, the
 # binary, the http suite or this workflow; `spring-boot` is the one check to require.
 
@@ -35,7 +36,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: spring-boot-${{ github.event_name }}-${{ github.ref }}
+  group: spring-boot-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -44,6 +45,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       spring-boot: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -85,8 +87,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-jdk: [21, 25]
-    steps:
+        test-jdk: [21]
+    steps: &golden-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -101,15 +103,26 @@ jobs:
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
-          # dependency set per job. The other rows restore that entry; the post-merge and drift copies, which write
+          # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
           # none, restore the latest entry of the runner's OS.
           cache-read-only: >-
             ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
-            || endsWith(github.job, '-drift') }}
+            || endsWith(github.job, '-queue') || endsWith(github.job, '-drift') }}
       - uses: ./.github/actions/gradle-retry
       - name: Generate, compare and compile the golden tree on Java ${{ matrix.test-jdk }}
         working-directory: jvm
         run: ./gradlew :seampact-spring-runtime:check :seampact-spring-boot:check -PtestJdk=${{ matrix.test-jdk }}
+
+  golden-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [25]
+    steps: *golden-steps
 
   binary:
     name: binary (linux x64)
@@ -134,7 +147,8 @@ jobs:
   # contract with @seampact/pack-spring applied (the pack:spring profile) and from the contract with
   # @seampact/pack-laravel applied, whose format wraps every success body (the pack:laravel profile). A `bundle` row fetches each contract as
   # a release asset from a loopback HTTPS server; a `local-yaml` row compiles the `path` source.
-  # The PR rows; the post-merge job below runs the same steps on the other rows, and http-suite pairs with each.
+  # The PR row; the queue and post-merge jobs below run the same steps on the other rows, and http-suite pairs with
+  # each.
   build:
     name: &build-name build (${{ matrix.build-tool }}, Java ${{ matrix.jdk }}, ${{ matrix.contract }})
     needs: [changes, binary]
@@ -146,7 +160,6 @@ jobs:
       matrix:
         include:
           - { build-tool: gradle, jdk: 21, contract: bundle }
-          - { build-tool: maven, jdk: 25, contract: bundle }
     steps: &build-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -175,11 +188,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
-          # dependency set per job. The other rows restore that entry; the post-merge and drift copies, which write
+          # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
           # none, restore the latest entry of the runner's OS.
           cache-read-only: >-
             ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
-            || endsWith(github.job, '-drift') }}
+            || endsWith(github.job, '-queue') || endsWith(github.job, '-drift') }}
       - uses: ./.github/actions/gradle-retry
       - name: Restore the Maven downloads
         if: matrix.build-tool == 'maven'
@@ -257,6 +270,19 @@ jobs:
           retention-days: 3
           if-no-files-found: error
 
+  build-queue:
+    name: *build-name
+    needs: [changes, binary]
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy: &consumer-queue-rows
+      fail-fast: false
+      matrix:
+        include:
+          - { build-tool: maven, jdk: 25, contract: bundle }
+    steps: *build-steps
+
   build-post-merge:
     name: *build-name
     needs: [changes, binary]
@@ -314,6 +340,15 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+  http-suite-queue:
+    name: *http-suite-name
+    needs: [changes, build-queue]
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy: *consumer-queue-rows
+    steps: *http-suite-steps
+
   http-suite-post-merge:
     name: *http-suite-name
     needs: [changes, build-post-merge]
@@ -326,7 +361,17 @@ jobs:
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   spring-boot:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, golden, binary, build, build-post-merge, http-suite, http-suite-post-merge]
+    needs:
+      - changes
+      - golden
+      - golden-queue
+      - binary
+      - build
+      - build-queue
+      - build-post-merge
+      - http-suite
+      - http-suite-queue
+      - http-suite-post-merge
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

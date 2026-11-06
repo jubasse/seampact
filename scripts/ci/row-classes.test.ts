@@ -17,11 +17,13 @@ const ROW_CLASSES_SCRIPT = join(REPO_ROOT, ".github/actions/lane-changes/row-cla
 const LANE_AGGREGATE_ACTION = "./.github/actions/lane-aggregate";
 
 // The suffix of a job that holds the rows of a class; a job without one holds the PR rows.
-const ROW_CLASS_SUFFIXES = ["post-merge", "drift"] as const;
+const ROW_CLASS_SUFFIXES = ["queue", "post-merge", "drift"] as const;
 
 // The Spring Boot consumer rows: each build row has its http-suite row.
 const SPRING_CONSUMER_PR_ROWS: readonly MatrixRow[] = [
   { "build-tool": "gradle", jdk: 21, contract: "bundle" },
+];
+const SPRING_CONSUMER_QUEUE_ROWS: readonly MatrixRow[] = [
   { "build-tool": "maven", jdk: 25, contract: "bundle" },
 ];
 const SPRING_CONSUMER_POST_MERGE_ROWS: readonly MatrixRow[] = [
@@ -35,10 +37,8 @@ const SPRING_CONSUMER_POST_MERGE_ROWS: readonly MatrixRow[] = [
 // only on its failure history: it fails here until the table moves with it.
 const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly MatrixRow[]>>>> = {
   "p2-golden.yml": {
-    determinism: [
-      { os: "ubuntu-latest", tz: "Pacific/Kiritimati", lang: "tr_TR.UTF-8" },
-      { os: "windows-latest", tz: "Pacific/Auckland", lang: "tr_TR.UTF-8" },
-    ],
+    determinism: [{ os: "ubuntu-latest", tz: "Pacific/Kiritimati", lang: "tr_TR.UTF-8" }],
+    "determinism-queue": [{ os: "windows-latest", tz: "Pacific/Auckland", lang: "tr_TR.UTF-8" }],
     "determinism-post-merge": [
       { os: "ubuntu-latest", tz: "UTC", lang: "en_US.UTF-8" },
       { os: "windows-latest", tz: "UTC", lang: "en_US.UTF-8" },
@@ -49,10 +49,8 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     ],
   },
   "p3-dist.yml": {
-    tarball: [
-      { os: "ubuntu-latest", tz: "UTC", lang: "en_US.UTF-8" },
-      { os: "windows-latest", tz: "Pacific/Auckland", lang: "en_US.UTF-8" },
-    ],
+    tarball: [{ os: "ubuntu-latest", tz: "UTC", lang: "en_US.UTF-8" }],
+    "tarball-queue": [{ os: "windows-latest", tz: "Pacific/Auckland", lang: "en_US.UTF-8" }],
     "tarball-drift": [{ os: "macos-latest", tz: "Asia/Kolkata", lang: "tr_TR.UTF-8" }],
   },
   "p3-binary.yml": {
@@ -69,24 +67,24 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     ],
   },
   "p6-jvm-plugins.yml": {
-    "gradle-plugin": [
-      { "test-jdk": 21, "test-gradle": "8.14" },
-      { "test-jdk": 25, "test-gradle": "wrapper" },
-    ],
+    "gradle-plugin": [{ "test-jdk": 21, "test-gradle": "8.14" }],
+    "gradle-plugin-queue": [{ "test-jdk": 25, "test-gradle": "wrapper" }],
     "gradle-plugin-post-merge": [{ "test-jdk": 21, "test-gradle": "wrapper" }],
-    "maven-plugin": [
-      { "test-jdk": 21, "test-maven": "3.9.16" },
-      { "test-jdk": 25, "test-maven": "3.9.16" },
-    ],
+    "maven-plugin": [{ "test-jdk": 21, "test-maven": "3.9.16" }],
+    "maven-plugin-queue": [{ "test-jdk": 25, "test-maven": "3.9.16" }],
     "maven-plugin-drift": [
       { "test-jdk": 21, "test-maven": "4.0.0-rc-7" },
       { "test-jdk": 25, "test-maven": "4.0.0-rc-7" },
     ],
   },
   "p6-spring-boot.yml": {
+    golden: [{ "test-jdk": 21 }],
+    "golden-queue": [{ "test-jdk": 25 }],
     build: SPRING_CONSUMER_PR_ROWS,
+    "build-queue": SPRING_CONSUMER_QUEUE_ROWS,
     "build-post-merge": SPRING_CONSUMER_POST_MERGE_ROWS,
     "http-suite": SPRING_CONSUMER_PR_ROWS,
+    "http-suite-queue": SPRING_CONSUMER_QUEUE_ROWS,
     "http-suite-post-merge": SPRING_CONSUMER_POST_MERGE_ROWS,
   },
   "p6-php-core.yml": {
@@ -106,8 +104,8 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     "own-validators-consumer-vinejs-drift": [{ target: "adonis6", validators: "vinejs" }],
   },
   "p5-fastify-express.yml": {
-    consumer: [
-      { target: "express", validators: "zod" },
+    consumer: [{ target: "express", validators: "zod" }],
+    "consumer-queue": [
       { target: "express4", validators: "yup" },
       { target: "fastify", validators: "zod" },
     ],
@@ -122,9 +120,9 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     "consumer-post-merge": [{ target: "hono", validators: "yup" }],
   },
   "p5-nestjs.yml": {
-    "nestjs-consumer": [
+    "nestjs-consumer": [{ target: "nestjs", validators: "zod", reply: "interceptor" }],
+    "nestjs-consumer-queue": [
       { target: "nestjs", validators: "class-validator", reply: "handler" },
-      { target: "nestjs", validators: "zod", reply: "interceptor" },
       { target: "nestjs-cjs", validators: "zod", reply: "handler" },
     ],
     "nestjs-consumer-post-merge": [
@@ -156,33 +154,54 @@ function aggregateJobs(document: WorkflowDocument): [string, WorkflowJob][] {
   );
 }
 
-function rowClassesFor(event: string, laneRun: string): { status: number | null; output: string } {
-  const run = spawnSync("bash", [ROW_CLASSES_SCRIPT, event, laneRun], { encoding: "utf8" });
+function rowClassesFor(
+  event: string,
+  laneRun: string,
+  pullRequestBase: string,
+): { status: number | null; output: string } {
+  const run = spawnSync("bash", [ROW_CLASSES_SCRIPT, event, laneRun, pullRequestBase], {
+    encoding: "utf8",
+  });
 
   return { status: run.status, output: `${run.stdout}${run.stderr}`.trim() };
 }
 
+function classLines(queue: boolean, postMerge: boolean, drift: boolean): string {
+  return `queue=${queue}\npost-merge=${postMerge}\ndrift=${drift}`;
+}
+
 describe("the row classes of an event", () => {
   it.each([
-    ["pull_request", "post-merge=false\ndrift=false"],
-    ["merge_group", "post-merge=false\ndrift=false"],
-    ["push", "post-merge=true\ndrift=false"],
-    ["schedule", "post-merge=true\ndrift=true"],
-    ["workflow_dispatch", "post-merge=true\ndrift=true"],
-    ["release", "post-merge=true\ndrift=true"],
-  ])("on %s", (event, expectedClasses) => {
-    expect(rowClassesFor(event, "true")).toEqual({ status: 0, output: expectedClasses });
-  });
-
-  it("holds no class when the lane has nothing to test", () => {
-    expect(rowClassesFor("schedule", "false")).toEqual({
+    ["pull_request", "develop", classLines(false, false, false)],
+    ["pull_request", "main", classLines(true, false, false)],
+    ["merge_group", "", classLines(true, false, false)],
+    ["push", "", classLines(true, true, false)],
+    ["schedule", "", classLines(true, true, true)],
+    ["workflow_dispatch", "", classLines(true, true, true)],
+    ["release", "", classLines(true, true, true)],
+  ])("on %s to '%s'", (event, pullRequestBase, expectedClasses) => {
+    expect(rowClassesFor(event, "true", pullRequestBase)).toEqual({
       status: 0,
-      output: "post-merge=false\ndrift=false",
+      output: expectedClasses,
     });
   });
 
+  it("holds no class when the lane has nothing to test", () => {
+    expect(rowClassesFor("schedule", "false", "")).toEqual({
+      status: 0,
+      output: classLines(false, false, false),
+    });
+  });
+
+  it("refuses a pull request without its base branch", () => {
+    const refusal = rowClassesFor("pull_request", "true", "");
+
+    expect(refusal.status).toBe(1);
+    expect(refusal.output).toContain("The pull request's base branch is empty");
+  });
+
   it("refuses an event no class is defined for", () => {
-    const refusal = rowClassesFor("pull_request_target", "true");
+    const refusal = rowClassesFor("pull_request_target", "true", "");
 
     expect(refusal.status).toBe(1);
     expect(refusal.output).toContain("No row class is defined for the 'pull_request_target' event");

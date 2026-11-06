@@ -5,7 +5,8 @@ name: Generation determinism
 # the output trees compared byte for byte (CHK-103). The matrix runs it on Linux, macOS and Windows with the rows of
 # the golden IR job, and Windows converts the reference sources to CRLF first. Its own workflow, not a job of the
 # golden one: it needs the target packages and runs the CLI, so a failure here must not hide the golden verdict.
-# A pull request runs one Linux and one Windows row, a push to develop the other two, and the nightly the macOS rows.
+# A pull request runs one Linux row, a push to develop one Windows row and the other two, and the nightly
+# the macOS rows.
 # `generation-determinism` is the check to require.
 
 on:
@@ -25,7 +26,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: determinism-${{ github.event_name }}-${{ github.ref }}
+  group: determinism-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -34,6 +35,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
       drift: ${{ steps.detect.outputs.drift }}
     steps:
@@ -49,11 +51,21 @@ jobs:
         id: detect
         uses: ./.github/actions/lane-changes
         with:
-          # Every path: only a change to documentation no test reads skips this lane.
+          # The packages `scripts/determinism` generates with, the fixtures, its scripts and the pins.
           watched-paths: |
-            .
+            ^packages/
+            ^fixtures/
+            ^scripts/determinism/
+            ^scripts/(golden|ir-models)/
+            ^\.github/actions/
+            ^\.github/workflows/p8-determinism\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^tsconfig(\.base)?\.json$
+            ^\.nvmrc$
 
-  # The PR rows; the post-merge and drift jobs below run the same steps on the other rows.
+  # The PR row; the queue, post-merge and drift jobs below run the same steps on the other rows.
   determinism:
     name: &determinism-name determinism (${{ matrix.os }}, ${{ matrix.tz }}, ${{ matrix.lang }})
     needs: changes
@@ -65,7 +77,6 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, tz: Pacific/Kiritimati, lang: tr_TR.UTF-8 }
-          - { os: windows-latest, tz: Pacific/Auckland, lang: tr_TR.UTF-8 }
     env: &determinism-env
       TZ: ${{ matrix.tz }}
       LANG: ${{ matrix.lang }}
@@ -102,6 +113,20 @@ jobs:
       - name: Check the generation of every Node target
         run: pnpm vitest run scripts/determinism
 
+  determinism-queue:
+    name: *determinism-name
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, tz: Pacific/Auckland, lang: tr_TR.UTF-8 }
+    env: *determinism-env
+    steps: *determinism-steps
+
   determinism-post-merge:
     name: *determinism-name
     needs: changes
@@ -134,7 +159,7 @@ jobs:
     steps: *determinism-steps
 
   generation-determinism:
-    needs: [changes, determinism, determinism-post-merge, determinism-drift]
+    needs: [changes, determinism, determinism-queue, determinism-post-merge, determinism-drift]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

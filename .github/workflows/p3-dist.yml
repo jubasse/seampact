@@ -3,7 +3,8 @@ name: Contract bundles
 # Writes the reference contract's bundle tarball on Linux, macOS and Windows, under other time zones and locales,
 # and checks the three SHA-256 values are one (ADR 0011: the same sources and compiler give the same tarball bytes
 # on every machine). The checkout keeps LF line endings on Windows, so the job measures the writer, not autocrlf.
-# A pull request and a push compare Linux and Windows; the nightly adds macOS.
+# A pull request to develop builds the Linux tarball, a push to develop compares it with Windows; the nightly adds
+# macOS.
 # `channel-smoke` serves a bundle of the reference contract through a loopback npm registry, a loopback HTTPS
 # server and a local bare git repository, and runs the Node CLI against each (ADR 0011 "Channel smoke tests").
 # `bundle-determinism` and `channel-smoke` are the checks to require.
@@ -44,7 +45,7 @@ permissions:
 # A call takes the caller's event and ref: its own group keeps it from cancelling, or being cancelled by, a run of
 # this workflow on the same pull request.
 concurrency:
-  group: p3-dist-${{ inputs.release-call && github.run_id || format('{0}-{1}', github.event_name, github.ref) }}
+  group: p3-dist-${{ inputs.release-call && github.run_id || format('{0}-{1}', github.event_name, github.event_name == 'push' && github.sha || github.ref) }}
   cancel-in-progress: ${{ !inputs.release-call && github.event_name == 'pull_request' }}
 
 jobs:
@@ -53,6 +54,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
       drift: ${{ steps.detect.outputs.drift }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -67,24 +69,37 @@ jobs:
         id: lane
         uses: ./.github/actions/lane-changes
         with:
-          # Every path: only a change to documentation no test reads skips this lane.
+          # The packages the reference tarball is built from and the channel smoke installs, the reference contract,
+          # the channel imports and the reference IR, the tarball, channel and release scripts and the pins.
           watched-paths: |
-            .
+            ^packages/(core|packs)/
+            ^packages/targets/codegen-ts/
+            ^fixtures/reference/
+            ^fixtures/(bundle-channels|golden/reference)/
+            ^scripts/(golden|ir-models|dist-smoke|release)/
+            ^\.github/actions/
+            ^\.github/workflows/p3-dist\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^tsconfig(\.base)?\.json$
+            ^\.nvmrc$
       # A call checks what the release attaches: every row, whatever the change.
       - name: Run every row on a release call
         id: detect
         env:
           RELEASE_CALL: ${{ inputs.release-call == true }}
           LANE_RUN: ${{ steps.lane.outputs.run }}
+          LANE_QUEUE: ${{ steps.lane.outputs.queue }}
           LANE_DRIFT: ${{ steps.lane.outputs.drift }}
         run: |
           if [ "$RELEASE_CALL" = true ]; then
-            printf 'run=true\ndrift=true\n' >> "$GITHUB_OUTPUT"
+            printf 'run=true\nqueue=true\ndrift=true\n' >> "$GITHUB_OUTPUT"
           else
-            printf 'run=%s\ndrift=%s\n' "$LANE_RUN" "$LANE_DRIFT" >> "$GITHUB_OUTPUT"
+            printf 'run=%s\nqueue=%s\ndrift=%s\n' "$LANE_RUN" "$LANE_QUEUE" "$LANE_DRIFT" >> "$GITHUB_OUTPUT"
           fi
 
-  # The PR rows; the drift job below runs the same steps on macOS.
+  # The PR row; the queue job below runs the same steps on Windows, the drift job on macOS.
   tarball:
     name: &tarball-name tarball (${{ matrix.os }}, ${{ matrix.tz }})
     needs: changes
@@ -96,7 +111,6 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, tz: UTC, lang: en_US.UTF-8 }
-          - { os: windows-latest, tz: Pacific/Auckland, lang: en_US.UTF-8 }
     env: &tarball-env
       TZ: ${{ matrix.tz }}
       LANG: ${{ matrix.lang }}
@@ -127,6 +141,20 @@ jobs:
           name: tarball-${{ runner.os }}
           path: out
 
+  tarball-queue:
+    name: *tarball-name
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, tz: Pacific/Auckland, lang: en_US.UTF-8 }
+    env: *tarball-env
+    steps: *tarball-steps
+
   tarball-drift:
     name: *tarball-name
     needs: changes
@@ -143,7 +171,7 @@ jobs:
     steps: *tarball-steps
 
   bundle-determinism:
-    needs: [changes, tarball, tarball-drift]
+    needs: [changes, tarball, tarball-queue, tarball-drift]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -159,15 +187,16 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.run }}
-      # A documentation-only change built no tarball: the check passes on the verdict above.
-      - if: needs.changes.outputs.run == 'true'
+      # A documentation-only change built no tarball, and a pull request to develop builds the Linux one only: the
+      # comparison is a queue step, and the check passes on the verdict above.
+      - if: needs.changes.outputs.queue == 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: tarball-*
           path: tarballs
       - name: One SHA-256 on every OS that ran
         id: determinism
-        if: needs.changes.outputs.run == 'true'
+        if: needs.changes.outputs.queue == 'true'
         env:
           # Linux and Windows, and macOS when the drift row ran.
           EXPECTED_TARBALL_COUNT: ${{ needs.changes.outputs.drift == 'true' && 3 || 2 }}

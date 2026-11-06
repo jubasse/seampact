@@ -1,1 +1,1 @@
-# CI helpers: the matrix row reader and the tests of the shared GitHub Actions (change filter, change range, row classes, lane aggregate) and of the workflows' row classes, merge queue triggers and `ci-watch` list.
+# CI helpers: the matrix row reader, the merge group pull request reader of `ci-watch`, and the tests of the shared GitHub Actions (change filter, change range, row classes, lane aggregate) and of the workflows' row classes, two tiers, merge queue triggers and `ci-watch` list.

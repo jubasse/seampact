@@ -29,7 +29,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: php-core-${{ github.event_name }}-${{ github.ref }}
+  group: php-core-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -38,9 +38,13 @@ jobs:
     timeout-minutes: 5
     outputs:
       php-core: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
       drift: ${{ steps.detect.outputs.drift }}
       # The binary rows build the compiler and install Laravel: on a pull request they run only when what they prove changes.
-      binary-rows: ${{ steps.detect.outputs.post-merge == 'true' || steps.binary-rows.outputs.run == 'true' }}
+      # Queue rows, which run only when the binary path changes, and which a push and the drift events always run.
+      binary-rows: >-
+        ${{ steps.detect.outputs.post-merge == 'true'
+        || (steps.detect.outputs.queue == 'true' && steps.binary-rows.outputs.run == 'true') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -96,9 +100,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.3", "8.5"]
+        php-version: ["8.5"]
         package: [hooks, signed-webhooks]
-    steps:
+    steps: &packages-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -125,6 +129,18 @@ jobs:
       - name: Analyse ${{ matrix.package }}
         working-directory: php/${{ matrix.package }}
         run: vendor/bin/phpstan analyse --no-progress
+
+  packages-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ["8.3"]
+        package: [hooks, signed-webhooks]
+    steps: *packages-steps
 
   # The PR row; the drift job below runs the same steps on PHP 8.5.
   split:
@@ -533,7 +549,7 @@ jobs:
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   php-core:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, packages, split, split-drift, binary, local-yaml, bundle-hand-over, channel-smoke]
+    needs: [changes, packages, packages-queue, split, split-drift, binary, local-yaml, bundle-hand-over, channel-smoke]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

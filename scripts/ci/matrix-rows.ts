@@ -23,6 +23,7 @@ export interface WorkflowJob {
   readonly name?: string;
   readonly needs?: string | readonly string[];
   readonly if?: string;
+  readonly "runs-on"?: string;
   readonly outputs?: Readonly<Record<string, string>>;
   readonly strategy?: { readonly matrix: WorkflowMatrix };
   readonly steps?: readonly WorkflowStep[];

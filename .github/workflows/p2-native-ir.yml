@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: native-ir-${{ github.event_name }}-${{ github.ref }}
+  group: native-ir-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -32,6 +32,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       native-ir: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -87,8 +88,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-jdk: [21, 25]
-    steps:
+        test-jdk: [21]
+    steps: &kotlin-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -103,15 +104,26 @@ jobs:
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
-          # dependency set per job. The other rows restore that entry; the post-merge and drift copies, which write
+          # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
           # none, restore the latest entry of the runner's OS.
           cache-read-only: >-
             ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
-            || endsWith(github.job, '-drift') }}
+            || endsWith(github.job, '-queue') || endsWith(github.job, '-drift') }}
       - uses: ./.github/actions/gradle-retry
       - name: Test the Kotlin model on Java ${{ matrix.test-jdk }}
         working-directory: jvm
         run: ./gradlew check -PtestJdk=${{ matrix.test-jdk }}
+
+  kotlin-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [25]
+    steps: *kotlin-steps
 
   php:
     needs: changes
@@ -122,15 +134,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - php-version: "8.3"
-            yaml: "7.4"
-          - php-version: "8.5"
-            yaml: "7.4"
           # seampact/ir admits symfony/yaml 8, which Symfony 8 apps hold; the reader is proven on it too.
           - php-version: "8.5"
             yaml: "8"
     name: php (PHP ${{ matrix.php-version }}, symfony/yaml ${{ matrix.yaml }})
-    steps:
+    steps: &php-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -161,10 +169,26 @@ jobs:
         working-directory: php/ir
         run: vendor/bin/phpstan analyse --no-progress
 
+  php-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php-version: "8.3"
+            yaml: "7.4"
+          - php-version: "8.5"
+            yaml: "7.4"
+    name: php (PHP ${{ matrix.php-version }}, symfony/yaml ${{ matrix.yaml }})
+    steps: *php-steps
+
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   native-ir:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, regenerate, kotlin, php]
+    needs: [changes, regenerate, kotlin, kotlin-queue, php, php-queue]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

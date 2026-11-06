@@ -9,15 +9,21 @@ if [ "$#" -ne 1 ] || [ -z "$1" ]; then
 fi
 watched_pattern=$1
 
-# Documentation no lane test reads: Markdown outside the packages and fixtures, anything under docs/ but the
-# grammar, the IR and the conformance checklist, and the docs site package, which only its own lane builds. The `ci`
-# workflow, which always runs, also reads docs/adr/.
+# Documentation no lane test reads, and package tests: Markdown outside the packages and fixtures, anything under
+# docs/ but the grammar, the IR and the conformance checklist, and the docs site package, which only its own lane
+# builds. The `ci` workflow, which always runs, also reads docs/adr/.
 documentation_pattern='^docs/|\.md$'
 read_by_tests_pattern='^(packages|fixtures|docs/grammar|docs/ir|docs/conformance)/'
 docs_site_pattern='^packages/tools/docs-site/'
+# Package tests and their support files: only the `ci` workflow, which always runs, runs them; no package build
+# includes them.
+package_test_pattern='^packages/.*(\.test\.ts|\.test-support\.ts|/test-support\.ts)$'
+# Package tests a lane runs itself: the hooks tests (p4-hooks-native) and the reference tarball writer (p3-dist).
+lane_test_pattern='^packages/runtime/hooks/|^packages/core/compiler/src/bundle/reference-tarball\.test-support\.ts$'
 
 is_documentation() {
   [[ "$1" =~ $docs_site_pattern ]] && return 0
+  [[ "$1" =~ $package_test_pattern ]] && ! [[ "$1" =~ $lane_test_pattern ]] && return 0
 
   [[ "$1" =~ $documentation_pattern ]] && ! [[ "$1" =~ $read_by_tests_pattern ]]
 }

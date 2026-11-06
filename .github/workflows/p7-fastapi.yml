@@ -19,12 +19,15 @@ on:
     types: [checks_requested]
     branches: [main, develop]
   workflow_dispatch:
+  # The nightly run has no base, so it runs every row whatever the change: the net under the narrowed paths.
+  schedule:
+    - cron: "30 0 * * *"
 
 permissions:
   contents: read
 
 concurrency:
-  group: fastapi-${{ github.event_name }}-${{ github.ref }}
+  group: fastapi-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -33,6 +36,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       fastapi: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -75,16 +79,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - row: floor
-            python-version: "3.12"
-            floor: true
           - row: latest
             python-version: "3.x"
             floor: false
     defaults:
       run:
         working-directory: python
-    steps:
+    steps: &golden-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -119,6 +120,24 @@ jobs:
         env:
           PYTEST_ADDOPTS: ${{ matrix.row == 'floor' && '-W "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning"' || '' }}
         run: uv run --no-sync pytest fastapi/fastapi_tests codegen/tests
+
+  golden-queue:
+    name: golden (${{ matrix.row }})
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - row: floor
+            python-version: "3.12"
+            floor: true
+    defaults:
+      run:
+        working-directory: python
+    steps: *golden-steps
 
   # The reference contract bundled once by the compiler binary, so the consumer jobs fetch it without Node.
   contract-bundle:
@@ -161,15 +180,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - row: floor
-            python-version: "3.12"
-            pins: python/fastapi/ci/floor-requirements.txt
           - row: latest
             python-version: "3.x"
             pins: ""
     env:
       WORK: ${{ github.workspace }}/../fastapi-consumer
-    steps:
+    steps: &e2e-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -249,13 +265,30 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+  e2e-queue:
+    name: e2e (${{ matrix.row }})
+    needs: [changes, contract-bundle]
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - row: floor
+            python-version: "3.12"
+            pins: python/fastapi/ci/floor-requirements.txt
+    env:
+      WORK: ${{ github.workspace }}/../fastapi-consumer
+    steps: *e2e-steps
+
   # The target generated and checked from the reference contract's local YAML (a `path` source) through the pinned
   # compiler binary, with no bundle and Node removed from the runner for the install and the generation: the entry's
   # files and the api's OpenAPI documents are written and checked.
   local-yaml:
     name: local YAML (fastapi)
     needs: [changes, contract-bundle]
-    if: needs.changes.outputs.fastapi == 'true'
+    if: needs.changes.outputs.queue == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -304,7 +337,7 @@ jobs:
 
   fastapi:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, golden, contract-bundle, e2e, local-yaml]
+    needs: [changes, golden, golden-queue, contract-bundle, e2e, e2e-queue, local-yaml]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -317,3 +350,5 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.fastapi }}
+          # Queue rows: a pull request to develop runs without them.
+          allow-skip: ${{ needs.changes.outputs.queue == 'false' && 'local-yaml' || '' }}

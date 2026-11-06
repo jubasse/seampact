@@ -18,8 +18,9 @@ interface AggregateRun {
   readonly allowSkip?: string;
 }
 
-const PULL_REQUEST_CLASSES = { "post-merge": "false", drift: "false" };
-const SCHEDULE_CLASSES = { "post-merge": "true", drift: "true" };
+const PULL_REQUEST_CLASSES = { queue: "false", "post-merge": "false", drift: "false" };
+const PUSH_CLASSES = { queue: "true", "post-merge": "true", drift: "false" };
+const SCHEDULE_CLASSES = { queue: "true", "post-merge": "true", drift: "true" };
 
 function aggregate(run: AggregateRun): { status: number | null; output: string } {
   const result = spawnSync("bash", [AGGREGATE_SCRIPT], {
@@ -90,6 +91,56 @@ describe("the lane aggregate", () => {
 
     expect(verdict.status).toBe(1);
     expect(verdict.output).toContain("these jobs were skipped: smoke-drift");
+  });
+
+  it("passes a queue job skipped on a pull request to develop", () => {
+    const verdict = aggregate({
+      needs: {
+        changes: { result: "success", outputs: PULL_REQUEST_CLASSES },
+        smoke: { result: "success" },
+        "smoke-queue": { result: "skipped" },
+      },
+      shouldRun: "true",
+    });
+
+    expect(verdict.status).toBe(0);
+  });
+
+  it("fails a queue job skipped on a push to develop", () => {
+    const verdict = aggregate({
+      needs: {
+        changes: { result: "success", outputs: PUSH_CLASSES },
+        smoke: { result: "success" },
+        "smoke-queue": { result: "skipped" },
+      },
+      shouldRun: "true",
+    });
+
+    expect(verdict.status).toBe(1);
+    expect(verdict.output).toContain("these jobs were skipped: smoke-queue");
+  });
+
+  it("fails a queue job when the changes job gives no queue output", () => {
+    const verdict = aggregate({
+      needs: { changes: { result: "success" }, "smoke-queue": { result: "skipped" } },
+      shouldRun: "true",
+    });
+
+    expect(verdict.status).toBe(1);
+    expect(verdict.output).toContain("the changes job gives no 'queue' output");
+  });
+
+  it("fails a PR job skipped on a pull request", () => {
+    const verdict = aggregate({
+      needs: {
+        changes: { result: "success", outputs: PULL_REQUEST_CLASSES },
+        smoke: { result: "skipped" },
+      },
+      shouldRun: "true",
+    });
+
+    expect(verdict.status).toBe(1);
+    expect(verdict.output).toContain("these jobs were skipped: smoke");
   });
 
   it("fails a class job when the changes job gives no output for its class", () => {

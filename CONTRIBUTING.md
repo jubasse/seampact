@@ -40,7 +40,7 @@ It runs typecheck, lint, the format check and the tests, and fails on any error.
 
 ## Conventions
 
-- Git flow: never commit directly on `develop` or `main`; both are protected. A pull request to `develop` joins the merge queue once its required checks pass: `ci`, `checklist`, and one check per lane (for example `native-ir`, `laravel`, `fastapi`). The queue runs the same checks again on `develop` plus the pull requests grouped with it, two groups at once and up to five pull requests per group, and merges the group when they pass.
+- Git flow: never commit directly on `develop` or `main`; both are protected. A pull request to `develop` merges once its required checks pass on top of the current `develop`: `ci`, `checklist`, and one check per lane (for example `native-ir`, `laravel`, `fastapi`). When `develop` moved, update the branch first; the fast tier makes that rerun short.
 - Dependencies are pinned to exact versions; GitHub Actions are pinned by commit SHA with the version in a comment.
 - Add a changeset (`pnpm changeset`) for a change that affects a package's version. Releases are cut from `release/<version>`.
 - Toolchain choices are recorded in `docs/adr/0001-toolchain.md`.
@@ -67,11 +67,13 @@ It runs typecheck, lint, the format check and the tests, and fails on any error.
 ## CI
 
 - Each lane has its own workflow. A job first checks what the pull request changed; jobs it does not touch are skipped in seconds. The lane's last job is its required check.
-- Rows that are slow or rarely break run after the merge, on `develop` (post-merge rows), or every night (drift rows, which test against the latest releases). When one of them fails, `ci-watch` opens an issue. A failed nightly is first rerun once, so a registry outage does not open one.
-- `develop` merges through GitHub's merge queue. The queue tests each pull request on top of the ones ahead of it (a merge group) and merges it when every required check passes, so nobody updates a branch by hand. A merge group runs like a pull request: it compares with the group's base and runs the pull-request rows only, and `release` stays a dry run. A workflow that reports a required check also runs `on: merge_group`; `scripts/ci/merge-queue.test.ts` holds the list of required checks and fails when one is missing.
+- CI runs in two tiers. A pull request to `develop` gets the fast tier: `ci`, `checklist`, and for each lane the change really touches, its unit jobs on one version and one consumer per family (Express, React, FastAPI, Laravel, Spring Boot) on Linux. The other members of a family run on a pull request only when their own code changes.
+- The push to `develop` after the merge runs the full tier: the fast rows, the queue rows (jobs named `-queue`: Windows, floor versions, the other consumers, the five-platform binaries), the `release` dry run, and the post-merge rows (slow rows that rarely break). A queue job skipped on a pull request passes its required check. Each push to `develop` runs in its own concurrency group: a newer push never replaces a pending one, whose diff no other run would test. To run the full tier before review, use "Run workflow" on your branch.
+- Drift rows run every night against the latest releases, and the nightly also runs every row of every lane. When a run on `develop` fails, `ci-watch` opens an issue, and the next pull request fixes it forward. A failed nightly is first rerun once, so a registry outage does not open one.
+- Every workflow that reports a required check also runs `on: merge_group`, ready for a merge queue (GitHub offers it to organizations only); a merge group would run the full tier. `scripts/ci/merge-queue.test.ts` holds the list of required checks and fails when one is missing.
 - `checklist` lints every workflow with actionlint.
 - A new workflow reuses the shared actions in `.github/actions/`: `lane-changes` and `lane-aggregate` for the change filter and the required check, `compiler-binary` for the compiler binary, `gradle-retry`, `composer-cache` and `maven-cache` for downloads.
-- Caches are saved by pushes to `develop`, the nightly and manual runs; pull requests only read them. The repository has a 10 GB cache limit, and an entry a pull request saved would serve only that pull request. To refresh the caches without waiting for the night, run the workflow by hand on `develop`.
+- Caches are saved by pushes to `develop`, the nightly and manual runs; pull requests and merge groups only read them. The repository has a 10 GB cache limit, and an entry a pull request saved would serve only that pull request. To refresh the caches without waiting for the night, run the workflow by hand on `develop`.
 
 ## Dependencies
 

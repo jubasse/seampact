@@ -14,12 +14,15 @@ on:
     types: [checks_requested]
     branches: [main, develop]
   workflow_dispatch:
+  # The nightly run has no base, so it runs every row whatever the change: the net under the narrowed paths.
+  schedule:
+    - cron: "30 0 * * *"
 
 permissions:
   contents: read
 
 concurrency:
-  group: angular-consumers-${{ github.event_name }}-${{ github.ref }}
+  group: angular-consumers-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -28,6 +31,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       front: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,11 +45,15 @@ jobs:
         id: detect
         uses: ./.github/actions/lane-changes
         with:
-          # The packed packages, the consumer harness, the reference contract, the workspace and toolchain pins and
-          # this workflow.
+          # The packages a front consumer installs (core, packs, runtime, the TypeScript, fetch, validator, Hono and front
+          # targets), the http suite its tests read, the consumer harness and its overlays, the reference contract and the pins.
           watched-paths: |
-            ^packages/
-            ^scripts/consumers/
+            ^packages/(core|packs|runtime)/
+            ^packages/targets/codegen-(ts|fetch|zod|yup|class-validator|hono|react|vue|angular|msw)/
+            ^packages/tools/http-suite/
+            ^scripts/consumers/(cli|build-and-pack|consumer-project|install-into|ignore-vendor|packed-packages|run-step|served-app|validator-choice)\.ts$
+            ^scripts/consumers/template/
+            ^scripts/consumers/targets/(front|vite|hono|angular)
             ^scripts/golden/
             ^fixtures/reference/
             ^\.github/actions/
@@ -55,6 +63,11 @@ jobs:
             ^package\.json$
             ^tsconfig\.base\.json$
             ^\.nvmrc$
+          # The fast tier: a pull request to develop runs this lane only for its own code.
+          pull-request-paths: |
+            ^packages/targets/codegen-angular/
+            ^scripts/consumers/targets/angular
+            ^\.github/workflows/p6-angular\.yml$
 
   consumer:
     needs: changes
@@ -64,9 +77,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [angular-fetch, angular-ngrx, angular-ngrx-signals]
+        target: [angular-fetch]
         validators: [zod]
-    steps:
+    steps: &consumer-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -91,10 +104,22 @@ jobs:
       - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} from packed tarballs
         run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
 
+  consumer-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [angular-ngrx, angular-ngrx-signals]
+        validators: [zod]
+    steps: *consumer-steps
+
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   p6-angular:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, consumer]
+    needs: [changes, consumer, consumer-queue]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

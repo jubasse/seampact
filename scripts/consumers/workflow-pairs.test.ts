@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { matrixRows, readWorkflow, type WorkflowJob } from "../ci/matrix-rows.ts";
 
 // The workflows that run a consumer per target, each job a matrix whose rows hold a `target` and a `validators`;
-// the PR rows and the post-merge rows of a workflow together run every pair.
+// the PR, queue and post-merge rows of a workflow together run every pair.
 const CONSUMER_WORKFLOWS = [
   "p5-nestjs.yml",
   "p5-fastify-express.yml",
