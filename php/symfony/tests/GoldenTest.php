@@ -6,6 +6,7 @@ namespace Seampact\Symfony\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\GoldenTree;
+use Seampact\Codegen\Tests\Support\OtherTimeZone;
 use Seampact\Codegen\Tests\Support\PhpLint;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Ir\Config\ConfigProblem;
@@ -78,6 +79,15 @@ final class GoldenTest extends TestCase
         $api->wire->urls = 'absolute';
 
         return $document;
+    }
+
+    public function testASecondRunUnderAnotherTimeZoneWritesTheSameTree(): void
+    {
+        $generate = static fn (): array => GoldenTree::flattened([
+            'Tasks' => (new SymfonyGenerator())->generate(ReferenceContract::core(new SymfonyGenerator()), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'Seampact\\Golden\\Tasks')),
+        ]);
+
+        self::assertSame($generate(), OtherTimeZone::run($generate));
     }
 
     public function testBothApisOfTheFullReferenceContractGenerate(): void
