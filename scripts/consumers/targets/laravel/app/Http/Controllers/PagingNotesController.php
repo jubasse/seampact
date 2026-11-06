@@ -11,7 +11,10 @@ use App\Generated\TasksPaging\ListNotesResult;
 use App\Generated\TasksPaging\NotesEndpoints;
 use App\Generated\TasksPaging\Schemas\Note;
 
-/** The `tasksPaging` api's Stripe-style list: the first note with more to come, then the second one, the last. */
+/**
+ * The `tasksPaging` api's Stripe-style list: the first note with more to come, then the second one, the last, and the
+ * first one again before the second.
+ */
 final class PagingNotesController implements NotesEndpoints
 {
     private const FIRST_NOTE_ID = '30000000-0000-4000-8000-000000000001';
@@ -19,6 +22,10 @@ final class PagingNotesController implements NotesEndpoints
 
     public function listNotes(ListNotesRequest $request): ListNotesResult
     {
+        if ($request->contractInput()->query->endingBefore === self::SECOND_NOTE_ID) {
+            return new ListNotesResponse200(new ListNotesPage([new Note(self::FIRST_NOTE_ID, 'Before the second note')], false));
+        }
+
         if ($request->contractInput()->query->startingAfter === self::FIRST_NOTE_ID) {
             return new ListNotesResponse200(new ListNotesPage([new Note(self::SECOND_NOTE_ID, 'Second note')], false));
         }

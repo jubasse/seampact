@@ -29,9 +29,15 @@ def _paging_note(note_id: str, text: str) -> paging_schemas.Note:
 
 
 class PagingNotesHandlers:
-    """The `tasksPaging` api's Stripe-style list: the first note with more to come, then the second one, the last."""
+    """The `tasksPaging` api's Stripe-style list: the first note with more to come, then the second one, the last, and
+    the first one again before the second."""
 
     def list_notes(self, request: paging.ListNotesRequest) -> paging.ListNotesResult:
+        if request.input.query.ending_before == SECOND_NOTE_ID:
+            return paging.ListNotesResponse200(
+                body=paging.ListNotesPage(items=[_paging_note(FIRST_NOTE_ID, "Before the second note")], more=False)
+            )
+
         if request.input.query.starting_after == FIRST_NOTE_ID:
             return paging.ListNotesResponse200(
                 body=paging.ListNotesPage(items=[_paging_note(SECOND_NOTE_ID, "Second note")], more=False)

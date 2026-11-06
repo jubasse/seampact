@@ -30,6 +30,13 @@ from handler_factories import (
 )
 from hook_doubles import CALLER_SERVICE_RIGHT, OVERRIDDEN_RIGHT
 from ninja import NinjaAPI
+from paging_factories import (
+    paging_capped_handlers,
+    paging_notes_handlers,
+    paging_unexpected_errors,
+    paging_user_hook,
+    split_sort_notes_handlers,
+)
 from seampact_consumer_suite.boot_variant import (
     MISMATCHED_MOUNT,
     BootVariant,
@@ -37,13 +44,6 @@ from seampact_consumer_suite.boot_variant import (
     leaves_out_authenticate_hook,
     leaves_out_health_handler,
     mounts_under_mismatched_prefix,
-)
-from paging_factories import (
-    paging_capped_handlers,
-    paging_notes_handlers,
-    paging_unexpected_errors,
-    paging_user_hook,
-    split_sort_notes_handlers,
 )
 
 import seampact.ninja.runtime as seampact_ninja

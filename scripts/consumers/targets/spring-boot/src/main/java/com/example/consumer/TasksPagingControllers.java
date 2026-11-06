@@ -43,6 +43,10 @@ final class TasksPagingControllers implements NotesEndpoints, ChangesEndpoints, 
     @Override
     @ListNotes
     public ListNotesResult listNotes(ListNotesInput input) {
+        if (input.query().endingBefore().equals(Optional.of(SECOND_NOTE_ID.toString()))) {
+            return new ListNotesResult.Status200(new ListNotesPage(List.of(new Note(FIRST_NOTE_ID, "Before the second note")), false));
+        }
+
         if (input.query().startingAfter().equals(Optional.of(FIRST_NOTE_ID.toString()))) {
             return new ListNotesResult.Status200(new ListNotesPage(List.of(new Note(SECOND_NOTE_ID, "Second note")), false));
         }

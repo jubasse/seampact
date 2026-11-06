@@ -1,6 +1,6 @@
 {
   "id": "stripe-list-more-and-exclusive-cursors",
-  "title": "A Stripe-style list writes its more flag, pages after a cursor, and refuses both cursors at once",
+  "title": "A Stripe-style list writes its more flag, pages after and before a cursor, and refuses both cursors at once",
   "checks": ["CHK-128"],
   "profiles": ["default"],
   "apis": ["tasksPaging"],
@@ -48,6 +48,31 @@
             {
               "noteId": "30000000-0000-4000-8000-000000000002",
               "text": "Second note"
+            }
+          ],
+          "has_more": false
+        }
+      }
+    },
+    {
+      "title": "the page before the second note, the first one",
+      "request": {
+        "method": "GET",
+        "path": "/paging/v1/notes",
+        "query": {
+          "ending_before": "30000000-0000-4000-8000-000000000002"
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "data": [
+            {
+              "noteId": "30000000-0000-4000-8000-000000000001",
+              "text": "Before the second note"
             }
           ],
           "has_more": false

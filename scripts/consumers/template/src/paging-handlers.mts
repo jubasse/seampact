@@ -16,6 +16,13 @@ const STALE_TOKEN = { status: 410, code: "api.cursor_too_old" } as const;
 /** The `tasksPaging` api's handlers, by operation. */
 export const tasksPagingHandlers = {
   listNotes(input: TasksPaging.ListNotesInput): TasksPaging.ListNotesOutput {
+    if (input.query.ending_before === SECOND_NOTE_ID) {
+      return {
+        status: 200,
+        body: { items: [{ noteId: FIRST_NOTE_ID, text: "Before the second note" }], more: false },
+      };
+    }
+
     if (input.query.starting_after === FIRST_NOTE_ID) {
       return {
         status: 200,
