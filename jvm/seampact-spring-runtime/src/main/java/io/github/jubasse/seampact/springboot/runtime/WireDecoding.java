@@ -20,6 +20,7 @@ final class WireDecoding {
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final String COMPONENT_SAFE = ALPHANUMERIC + "-_.!~*'()";
+    private static final String UNRESERVED = ALPHANUMERIC + "-._~";
     private static final String QUERY_SAFE = ALPHANUMERIC + "-._~!$&'()*+,;=:@/?";
 
     private WireDecoding() {}
@@ -107,10 +108,19 @@ final class WireDecoding {
 
     // `encodeURIComponent`: every byte outside the unreserved set and `!*'()` is percent-encoded.
     static String componentEncoded(String text) {
+        return percentEncoded(text, COMPONENT_SAFE);
+    }
+
+    /** One path segment: every byte outside RFC 3986 `unreserved` percent-encoded, as the Node servers encode it. */
+    static String segmentEncoded(String text) {
+        return percentEncoded(text, UNRESERVED);
+    }
+
+    private static String percentEncoded(String text, String safeCharacters) {
         StringBuilder encoded = new StringBuilder();
         for (byte value : text.getBytes(StandardCharsets.UTF_8)) {
             char character = (char) (value & 0xFF);
-            if (COMPONENT_SAFE.indexOf(character) >= 0) encoded.append(character);
+            if (safeCharacters.indexOf(character) >= 0) encoded.append(character);
             else encoded.append(String.format("%%%02X", value & 0xFF));
         }
 

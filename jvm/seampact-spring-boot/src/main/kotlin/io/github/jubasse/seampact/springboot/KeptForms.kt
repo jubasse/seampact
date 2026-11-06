@@ -52,6 +52,7 @@ private const val OUTPUT_DIRECTION = "output"
 private val TOP_LEVEL_POINTER = Regex("^/[^/]+$")
 private const val PATH_SOURCE = "path"
 private const val BODY_SOURCE = "body"
+internal const val HEADER_SOURCE = "header"
 private val BUCKET_KEY_SOURCES = setOf(PATH_SOURCE, "scope", "principal")
 private val PAYLOAD_SHAPES = listOf(ResponseShape.ITEM, ResponseShape.TABLE, ResponseShape.LIST, ResponseShape.PAGE)
 
@@ -69,6 +70,8 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
     /** The params schema of each asked right and rule that declares one: its decide request carries it typed. */
     val rightParams = LinkedHashMap<String, SchemaId>()
     val ruleParams = LinkedHashMap<String, SchemaId>()
+    /** The response headers the boundary writes from each response's own IR headers. */
+    val responseHeaders = ResponseHeaderEntries(ir, refusals)
     private val readAccessDeclarationKeys = HashSet<String>()
 
     init {
@@ -139,6 +142,12 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
 
     private fun checkOperationForms(operation: Operation, at: IrPlace) {
         checkPaging(ir, operation, at, refusals)
+
+        // The boundary reads a header version before the input, so a missing one answers 428 (grammar section 6).
+        val version = operation.concurrency?.version
+        if (version?.in_?.value == HEADER_SOURCE && version.name == null) {
+            refusals.inconsistent("ir.concurrency.version.name", "A header version without its header name", at.below("concurrency", "version"))
+        }
 
         when (val idempotency = operation.idempotency) {
             null, is ExemptIdempotency -> Unit
@@ -248,6 +257,8 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
                 refusals.waiting("response.shape", "A '${response.shape.value}' response", responseAt.below("shape"), Delivery.CONSUMER)
             is ResponseShape.Unknown -> refusals.unknownValue(responseAt.below("shape"), response.shape.value)
         }
+
+        responseHeaders.read(operation, response, responseAt)
 
         // A derived header is the boundary's; one the route writes itself has no member in the handler result yet.
         response.headers.forEachIndexed { headerIndex, header ->

@@ -3,12 +3,14 @@ package io.github.jubasse.seampact.springboot.runtime;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import tools.jackson.databind.JsonNode;
 
 /**
  * The cache headers of a success the boundary writes (ADR 0012 step 10): `Cache-Control` by caller kind, `Vary`, and
  * the strong ETag over the body bytes, with its 304 when `If-None-Match` names it. The ETag is the SHA-256 base64url of
- * the body as on the Node targets, so a client's tag stays valid across them.
+ * the body as on the Node targets, so a client's tag stays valid across them; on an item versioned by `If-Match` it
+ * is the version's tag instead (grammar section 6), which the reply path writes.
  */
 final class CacheHeaders {
     static final String NO_STORE_DIRECTIVE = "no-store";
@@ -23,8 +25,11 @@ final class CacheHeaders {
 
     private CacheHeaders() {}
 
-    /** Writes the cache headers of [body]; true when the reply is the ETag's 304, which has no body. */
-    static boolean write(BoundaryExchange exchange, HttpServletRequest request, CheckingResponse response, byte[] body) {
+    /**
+     * Writes the cache headers of [body]; true when the reply is the ETag's 304, which has no body. [versionTag] is the
+     * item's version tag the reply already wrote, the ETag `cache.etag` compares then.
+     */
+    static boolean write(BoundaryExchange exchange, HttpServletRequest request, CheckingResponse response, byte[] body, Optional<String> versionTag) {
         JsonNode cache = exchange.route().operation().path("cache");
         if (!cache.isObject()) return false;
 
@@ -36,6 +41,8 @@ final class CacheHeaders {
         if (!vary.isEmpty()) response.setHeader("Vary", String.join(", ", vary));
 
         if (!cache.path("etag").asBoolean(false)) return false;
+
+        if (versionTag.isPresent()) return ifNoneMatchHolds(request.getHeader(IF_NONE_MATCH_HEADER), versionTag.get());
 
         String etag = "\"" + Digests.base64UrlOf(body) + "\"";
         response.setBoundaryHeader(ETAG_HEADER, etag);

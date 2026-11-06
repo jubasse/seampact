@@ -11,17 +11,28 @@ import org.springframework.beans.factory.ListableBeanFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** The binding of a hand-written `tasks` contract table: only its right params types, no hook and no handler. */
+/**
+ * The binding of a hand-written `tasks` contract table: its right params types, the input records and success arms a
+ * test hands it, no hook and no handler.
+ */
 final class TasksTestBinding implements ApiBinding {
     private final Map<String, Class<?>> rightParamsTypes;
+    private final Map<String, Class<?>> inputTypes;
+    private final Map<Class<?>, Integer> successArms;
 
     TasksTestBinding(Map<String, Class<?>> rightParamsTypes) {
+        this(rightParamsTypes, Map.of(), Map.of());
+    }
+
+    TasksTestBinding(Map<String, Class<?>> rightParamsTypes, Map<String, Class<?>> inputTypes, Map<Class<?>, Integer> successArms) {
         this.rightParamsTypes = Map.copyOf(rightParamsTypes);
+        this.inputTypes = Map.copyOf(inputTypes);
+        this.successArms = Map.copyOf(successArms);
     }
 
     @Override
     public Map<String, Class<?>> inputTypes() {
-        return Map.of();
+        return inputTypes;
     }
 
     @Override
@@ -31,7 +42,7 @@ final class TasksTestBinding implements ApiBinding {
 
     @Override
     public Map<Class<?>, Integer> successArms() {
-        return Map.of();
+        return successArms;
     }
 
     @Override
