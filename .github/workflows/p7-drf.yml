@@ -18,6 +18,9 @@ on:
     types: [checks_requested]
     branches: [main, develop]
   workflow_dispatch:
+  # The nightly run has no base, so it runs every row whatever the change: the net under the narrowed paths.
+  schedule:
+    - cron: "30 0 * * *"
 
 permissions:
   contents: read
@@ -32,6 +35,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       drf: ${{ steps.detect.outputs.run }}
+      pr-rows: ${{ steps.detect.outputs.pr-rows }}
+      queue: ${{ steps.detect.outputs.queue }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -61,19 +66,20 @@ jobs:
             ^pnpm-lock\.yaml$
             ^\.github/actions/
             ^\.github/workflows/p7-drf\.yml$
+          # The fast tier: a pull request to develop runs this lane only for its own code.
+          pull-request-paths: |
+            ^python/drf/
+            ^scripts/consumers/targets/drf/
+            ^\.github/workflows/p7-drf\.yml$
   golden:
     needs: changes
-    if: needs.changes.outputs.drf == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         include:
-          # The floor: Python 3.12, Django 5.2 LTS and DRF 3.18.0, installed by hash over the lock.
-          - python-version: "3.12"
-            django: "5.2"
-            floor-requirements: drf/ci/django-floor.txt
           # The latest Python with the locked Django 6.x and DRF.
           - python-version: "3.x"
             django: "6"
@@ -82,7 +88,7 @@ jobs:
     defaults:
       run:
         working-directory: python
-    steps:
+    steps: &golden-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -117,9 +123,29 @@ jobs:
         run: uv run --no-sync mypy django/src django/django_tests drf/src drf/drf_tests
       - name: Test on Python ${{ matrix.python-version }} and Django ${{ matrix.django }}
         run: uv run --no-sync pytest django/django_tests drf/drf_tests
+
+  golden-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The floor: Python 3.12, Django 5.2 LTS and DRF 3.18.0, installed by hash over the lock.
+          - python-version: "3.12"
+            django: "5.2"
+            floor-requirements: drf/ci/django-floor.txt
+    name: golden (Python ${{ matrix.python-version }}, Django ${{ matrix.django }})
+    defaults:
+      run:
+        working-directory: python
+    steps: *golden-steps
+
   contract-bundle:
     needs: changes
-    if: needs.changes.outputs.drf == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -150,18 +176,13 @@ jobs:
   e2e:
     name: e2e (${{ matrix.row }})
     needs: [changes, contract-bundle]
-    if: needs.changes.outputs.drf == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
-          - row: floor
-            python-version: "3.12"
-            django: "5.2"
-            server: gunicorn
-            pins: python/drf/ci/django-floor.txt
           - row: latest
             python-version: "3.x"
             django: "6"
@@ -169,7 +190,7 @@ jobs:
             pins: ""
     env:
       WORK: ${{ github.workspace }}/../drf-consumer
-    steps:
+    steps: &e2e-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -246,13 +267,32 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+  e2e-queue:
+    name: e2e (${{ matrix.row }})
+    needs: [changes, contract-bundle]
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - row: floor
+            python-version: "3.12"
+            django: "5.2"
+            server: gunicorn
+            pins: python/drf/ci/django-floor.txt
+    env:
+      WORK: ${{ github.workspace }}/../drf-consumer
+    steps: *e2e-steps
+
   # The target generated and checked from the reference contract's local YAML (a `path` source) through the pinned
   # compiler binary, with no bundle and Node removed from the runner for the install and the generation: the entry's
   # files and the api's OpenAPI documents are written and checked.
   local-yaml:
     name: local YAML (drf)
     needs: [changes, contract-bundle]
-    if: needs.changes.outputs.drf == 'true'
+    if: needs.changes.outputs.queue == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -301,7 +341,7 @@ jobs:
 
   drf:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, golden, contract-bundle, e2e, local-yaml]
+    needs: [changes, golden, golden-queue, contract-bundle, e2e, e2e-queue, local-yaml]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -314,3 +354,5 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.drf }}
+          # Queue rows: a pull request to develop runs without them.
+          allow-skip: ${{ needs.changes.outputs.queue == 'false' && 'local-yaml' || '' }}

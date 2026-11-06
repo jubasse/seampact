@@ -17,6 +17,9 @@ on:
     types: [checks_requested]
     branches: [main, develop]
   workflow_dispatch:
+  # The nightly run has no base, so it runs every row whatever the change: the net under the narrowed paths.
+  schedule:
+    - cron: "30 0 * * *"
 
 permissions:
   contents: read
@@ -31,6 +34,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       symfony: ${{ steps.detect.outputs.run }}
+      pr-rows: ${{ steps.detect.outputs.pr-rows }}
+      queue: ${{ steps.detect.outputs.queue }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -56,23 +61,24 @@ jobs:
             ^pnpm-lock\.yaml$
             ^\.github/actions/
             ^\.github/workflows/p6-symfony\.yml$
+          # The fast tier: a pull request to develop runs this lane only for its own code.
+          pull-request-paths: |
+            ^php/symfony/
+            ^scripts/consumers/targets/symfony/
+            ^\.github/workflows/p6-symfony\.yml$
 
   generator:
     needs: changes
-    if: needs.changes.outputs.symfony == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         include:
-          - php-version: "8.3"
-            symfony: "7.4"
-          - php-version: "8.5"
-            symfony: "7.4"
           - php-version: "8.5"
             symfony: "8"
-    steps:
+    steps: &generator-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -123,10 +129,25 @@ jobs:
         working-directory: php/symfony
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G
 
+  generator-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php-version: "8.3"
+            symfony: "7.4"
+          - php-version: "8.5"
+            symfony: "7.4"
+    steps: *generator-steps
+
   # The reference contract bundled once by the compiler binary, so the consumer jobs fetch it without Node.
   contract-bundle:
     needs: changes
-    if: needs.changes.outputs.symfony == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -149,20 +170,18 @@ jobs:
   e2e:
     name: e2e (PHP ${{ matrix.php-version }}, Symfony ${{ matrix.symfony }})
     needs: [changes, contract-bundle]
-    if: needs.changes.outputs.symfony == 'true'
+    if: needs.changes.outputs.pr-rows == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
-          - php-version: "8.3"
-            symfony: "7.4"
           - php-version: "8.5"
             symfony: "8"
     env:
       WORK: ${{ github.workspace }}/../symfony-consumer
-    steps:
+    steps: &e2e-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -227,10 +246,26 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+  e2e-queue:
+    name: e2e (PHP ${{ matrix.php-version }}, Symfony ${{ matrix.symfony }})
+    needs: [changes, contract-bundle]
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php-version: "8.3"
+            symfony: "7.4"
+    env:
+      WORK: ${{ github.workspace }}/../symfony-consumer
+    steps: *e2e-steps
+
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   symfony:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, generator, contract-bundle, e2e]
+    needs: [changes, generator, generator-queue, contract-bundle, e2e, e2e-queue]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
