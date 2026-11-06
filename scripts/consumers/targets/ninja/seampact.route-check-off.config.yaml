@@ -47,3 +47,10 @@ targets:
     options: { views: sync }
     artefacts:
       bootCheck: { frameworkRoutes: false }
+  - id: tasksResponses
+    out: tasks_responses
+    use: pypi:seampact-ninja
+    api: tasksResponses
+    options: { views: sync }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }

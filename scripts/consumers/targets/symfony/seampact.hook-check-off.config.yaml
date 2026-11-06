@@ -44,3 +44,9 @@ targets:
     api: tasksAbsoluteUrls
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksResponses
+    out: TasksResponses
+    use: seampact/symfony
+    api: tasksResponses
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
