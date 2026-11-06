@@ -88,6 +88,9 @@ def test_a_list_of_objects_or_of_lists_stays_refused_by_name(repository_root: Pa
         refusals.raise_if_any()
 
     assert [problem.code for problem in refused.value.problems] == ["param.query.structured.unsupported"]
+    assert refused.value.problems[0].message.startswith(
+        "A query parameter that is not a scalar, an enum or a list of them in the form style is not"
+    )
 
 
 def test_a_list_in_brackets_form_stays_refused_by_name(repository_root: Path) -> None:
@@ -147,3 +150,4 @@ def test_a_list_header_stays_refused_by_name(repository_root: Path) -> None:
         refusals.raise_if_any()
 
     assert [problem.code for problem in refused.value.problems] == ["param.header.structured.unsupported"]
+    assert refused.value.problems[0].message.startswith("A header parameter that is not a scalar or an enum is not")

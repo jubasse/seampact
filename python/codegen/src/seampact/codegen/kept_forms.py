@@ -384,9 +384,15 @@ class _KeptForms:
         if param.derived_from is not None and param.derived_from.derivation == _PAGING_PARAMS_DERIVATION:
             return
 
+        # Only a query parameter may be a list, so only its text names lists.
+        description = (
+            "A query parameter that is not a scalar, an enum or a list of them in the form style"
+            if part == _QUERY_PART
+            else f"A {part} parameter that is not a scalar or an enum"
+        )
         self.refusals.waiting(
             f"param.{part}.structured",
-            f"A {part} parameter that is not a scalar, an enum or a list of them in the form style",
+            description,
             at.below("type"),
             Delivery.CONSUMER,
         )
