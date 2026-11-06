@@ -216,6 +216,18 @@ final class KeptFormsTest extends TestCase
         self::assertSame(['param.query.structured.unsupported'], array_keys(self::refused($document, null)));
     }
 
+    public function testAQueryListInAStyleOtherThanFormIsRefusedByName(): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document(), ['getTask']);
+        $operation = is_array($document->operations) ? $document->operations[0] : null;
+        self::assertInstanceOf(\stdClass::class, $operation);
+        self::assertInstanceOf(\stdClass::class, $operation->params);
+        $spaceDelimited = ['kind' => 'list', 'style' => 'spaceDelimited', 'explode' => false, 'brackets' => false];
+        $operation->params->query = [self::queryParam('tags', ['kind' => 'scalar', 'type' => 'integer', 'refinements' => new \stdClass()], $spaceDelimited)];
+
+        self::assertSame(['param.query.structured.unsupported'], array_keys(self::refused($document, null)));
+    }
+
     /**
      * @param array<string, mixed> $items
      * @param array<string, mixed> $wire

@@ -25,6 +25,7 @@ use Seampact\Ir\Model\PagingPosition;
 use Seampact\Ir\Model\Param;
 use Seampact\Ir\Model\ProofPlacement;
 use Seampact\Ir\Model\QueryScheme;
+use Seampact\Ir\Model\QueryStyle;
 use Seampact\Ir\Model\QueryWireKind;
 use Seampact\Ir\Model\RefTypeUse;
 use Seampact\Ir\Model\RequirementUnknown;
@@ -790,7 +791,7 @@ final class KeptForms
         }
 
         // A query list of scalars or enums is decoded item by item, in its repeat or comma form.
-        if ($part === self::QUERY_PART && self::isScalarList($param->type)) {
+        if ($part === self::QUERY_PART && self::isFormScalarList($param)) {
             $this->readType($param->type, $at->below('type'));
 
             return;
@@ -799,9 +800,14 @@ final class KeptForms
         $this->refusals->waiting("param.{$part}.structured", $description, $at->below('type'), Delivery::Consumer);
     }
 
-    private static function isScalarList(TypeUse $type): bool
+    private static function isFormScalarList(Param $param): bool
     {
-        return $type instanceof ArrayTypeUse && ($type->items instanceof ScalarTypeUse || $type->items instanceof EnumTypeUse);
+        $wire = $param->wire;
+        if ($wire === null || $wire->kind->value !== QueryWireKind::List || $wire->style->value !== QueryStyle::Form) {
+            return false;
+        }
+
+        return $param->type instanceof ArrayTypeUse && ($param->type->items instanceof ScalarTypeUse || $param->type->items instanceof EnumTypeUse);
     }
 
     private function readResponse(Response $response, IrPlace $at): void
