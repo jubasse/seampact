@@ -115,20 +115,30 @@ final class Replies
 
         $declared = self::declaredResponse($contract, $operationId, $status);
         if (Ir::string($declared, 'shape') === 'empty' || $status === self::NO_CONTENT) {
-            return $state->author(new Response('', $status));
+            return $state->author(ResponseHeaders::writeSuccessHeaders($state, $status, new Response('', $status)));
         }
 
         $media = Ir::string($declared, 'media') ?? Ir::string($contract->format($operationId), 'media') ?? self::JSON_MEDIA;
         if (Ir::string($declared, 'shape') === self::PAGE_SHAPE) {
-            return $state->author(CacheHeaders::written($request, $state, self::page($request, $state, $declared, self::member($result, 'body'), $status, $media)));
+            return $state->author(self::successHeadersWritten($state, $status, CacheHeaders::written($request, $state, self::page($request, $state, $declared, self::member($result, 'body'), $status, $media))));
         }
 
-        $body = WireCodec::encodeBody($contract, $declared, self::member($result, 'body'));
-        $body = self::enveloped($request, $state, Ir::string($declared, 'shape') ?? '', FieldRights::output($state, $declared, $body), $status);
+        $encoded = WireCodec::encodeBody($contract, $declared, self::member($result, 'body'));
+        $entityTag = ResponseHeaders::entityTag($state, $status, $encoded);
+        $body = self::enveloped($request, $state, Ir::string($declared, 'shape') ?? '', FieldRights::output($state, $declared, $encoded), $status);
 
         $reply = new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media]);
+        if ($entityTag !== null) {
+            $reply->headers->set($entityTag[0], $entityTag[1]);
+        }
 
-        return $state->author(CacheHeaders::written($request, $state, $reply));
+        return $state->author(self::successHeadersWritten($state, $status, CacheHeaders::written($request, $state, $reply, $entityTag[1] ?? null)));
+    }
+
+    // A 304 is no success: it carries no deprecation header (ADR 0004 section 7).
+    private static function successHeadersWritten(BoundaryState $state, int $status, Response $reply): Response
+    {
+        return $reply->getStatusCode() === CacheHeaders::NOT_MODIFIED ? $reply : ResponseHeaders::writeSuccessHeaders($state, $status, $reply);
     }
 
     private static function enveloped(Request $request, BoundaryState $state, string $shape, mixed $payload, int $status): mixed

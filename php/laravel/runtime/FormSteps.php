@@ -13,6 +13,7 @@ use Seampact\Codegen\Runtime\Ir;
 use Seampact\Codegen\Runtime\IdempotencyStep;
 use Seampact\Codegen\Runtime\PageReply;
 use Seampact\Codegen\Runtime\TypedInput;
+use Seampact\Codegen\Runtime\VersionHeader;
 
 /**
  * The FormRequest's side of the check order: a failed validation becomes the operation's `schemaInvalid` 400 with
@@ -33,6 +34,9 @@ final class FormSteps
     public static function failed(Request $request, string $api, Validator $validator, array $nativeRuleNames): ContractRefusal
     {
         $state = BoundaryState::required($request, $api);
+        // A version header is read first, so its absence answers 428, never a schema issue.
+        VersionHeader::sent($request, $state);
+
         $issues = [];
         foreach (InputTree::of($request, $api)->issues() as $issue) {
             $issues[] = ['in' => $issue->in, 'pointer' => $issue->pointer, 'rule' => $issue->rule];
@@ -66,6 +70,9 @@ final class FormSteps
     public static function passed(Request $request, string $api): object
     {
         $state = BoundaryState::required($request, $api);
+        // A version header is read first, so its absence answers 428, never a cursor issue.
+        $version = VersionHeader::sent($request, $state);
+
         $cursorIssues = self::cursorIssues($state, $request, $api);
         if ($cursorIssues !== []) {
             throw AccessSteps::schemaInvalid($state, $cursorIssues);
@@ -73,6 +80,8 @@ final class FormSteps
 
         $parts = InputTree::of($request, $api)->parts();
         $parts['query'] = PageReply::withFilledLimit($state, self::queryOf($parts));
+        $headers = $parts['headers'] ?? new \stdClass();
+        $parts['headers'] = VersionHeader::handedOver($state, $version, $headers instanceof \stdClass ? $headers : new \stdClass());
         $input = TypedInput::build($state, $parts);
 
         $replayed = IdempotencyStep::begin($state, $parts);

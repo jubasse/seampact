@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\BoundaryFailure;
 use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\HookLookup;
 use Seampact\Codegen\Runtime\PageReply;
@@ -57,6 +58,25 @@ final class PageReplyTest extends TestCase
     private static function stateOf(string $operationId): BoundaryState
     {
         return new BoundaryState(ApiContract::of(PagesContract::class), $operationId, [], new RequestView('GET', '/v1/list', []), self::lookup());
+    }
+
+    public function testAPageHeaderWritesAScalarAsText(): void
+    {
+        $state = new BoundaryState(ApiContract::of(PagesContract::class), 'listChannels', [], new RequestView('GET', '/v1/channels', []), self::lookup());
+
+        [, $headers] = PageReply::render($state, 'per_page=2', '/v1/channels', [], ['total' => 3], 200);
+
+        self::assertSame('true', $headers['X-Paged'] ?? null);
+        self::assertSame('2', $headers['X-Total-Pages'] ?? null);
+    }
+
+    public function testAPageHeaderThatRendersAListIsTheBoundarysFailureNotADroppedHeader(): void
+    {
+        $state = new BoundaryState(ApiContract::of(PagesContract::class), 'listItemsHeader', [], new RequestView('GET', '/v1/items', []), self::lookup());
+
+        $this->expectException(BoundaryFailure::class);
+
+        PageReply::render($state, 'per_page=2', '/v1/items', [['id' => 'a']], ['total' => 1], 200);
     }
 
     private static function lookup(): HookLookup

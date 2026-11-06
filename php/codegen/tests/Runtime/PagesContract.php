@@ -7,8 +7,9 @@ namespace Seampact\Codegen\Tests\Runtime;
 use Seampact\Codegen\Runtime\RuntimeVersion;
 
 /**
- * A generated contract class with one list on a page style that counts its pages and links the last one, and one on a
- * Stripe-style pair of cursors.
+ * A generated contract class with one list on a page style that counts its pages, links the last one and writes a flag
+ * header, one on a Stripe-style pair of cursors, and one on a style whose header renders the items, which generation
+ * refuses.
  */
 final class PagesContract
 {
@@ -19,6 +20,7 @@ final class PagesContract
         'operations' => [
             ['id' => 'listChannels', 'paging' => ['style' => 'pages', 'defaultLimit' => 2, 'maxLimit' => 100, 'overLimit' => 'clamp']],
             ['id' => 'listCharges', 'paging' => ['style' => 'stripe', 'defaultLimit' => 10, 'maxLimit' => 100, 'overLimit' => 'reject']],
+            ['id' => 'listItemsHeader', 'paging' => ['style' => 'itemsHeader', 'defaultLimit' => 2, 'maxLimit' => 100, 'overLimit' => 'clamp']],
         ],
         'pagings' => [
             'pages' => [
@@ -39,7 +41,26 @@ final class PagesContract
                         ],
                     ],
                     'meta' => [],
-                    'headers' => [],
+                    'headers' => [
+                        ['name' => 'X-Paged', 'value' => ['kind' => 'literal', 'value' => true]],
+                        ['name' => 'X-Total-Pages', 'value' => ['kind' => 'slot', 'slot' => 'totalPages', 'path' => []]],
+                    ],
+                    'links' => [],
+                ],
+                'handlerResult' => ['total'],
+            ],
+            'itemsHeader' => [
+                'id' => 'itemsHeader',
+                'position' => 'page',
+                'absent' => 'omit',
+                'request' => [
+                    ['role' => 'page', 'in' => 'query', 'name' => 'page', 'base' => 1],
+                    ['role' => 'limit', 'in' => 'query', 'name' => 'per_page'],
+                ],
+                'response' => [
+                    'body' => ['kind' => 'slot', 'slot' => 'items', 'path' => []],
+                    'meta' => [],
+                    'headers' => [['name' => 'X-Items', 'value' => ['kind' => 'slot', 'slot' => 'items', 'path' => []]]],
                     'links' => [],
                 ],
                 'handlerResult' => ['total'],

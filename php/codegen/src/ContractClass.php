@@ -136,6 +136,10 @@ final class ContractClass
                 'errors' => $names->errors,
                 ...$this->names->operationClasses($operation->id),
             ];
+            $responseHeaders = $this->kept->responseHeaders($operation->id);
+            if ($responseHeaders !== []) {
+                $types[$operation->id]['responseHeaders'] = $responseHeaders;
+            }
         }
 
         return $types;

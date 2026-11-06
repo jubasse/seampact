@@ -63,6 +63,8 @@ final class KeptForms
     // The slots an item, table or list envelope may write that the boundary fills.
     private const PAYLOAD_SLOT = 'payload';
     private const ENVELOPE_SLOTS = [self::PAYLOAD_SLOT, 'status', 'path', 'meta'];
+    // The page slots that hold an object or a list, which no header can carry.
+    private const STRUCTURED_PAGE_SLOTS = ['items', 'meta'];
     private const BUCKET_KEY_SOURCES = [ValueSourceIn::Path, ValueSourceIn::Scope, ValueSourceIn::Principal];
 
     // Header params the boundary consumes itself: the credentials and the CSRF token never reach the handler.
@@ -88,6 +90,11 @@ final class KeptForms
     /** @var array<string, true> */
     private array $identities = [];
 
+    /** @var array<string, array<int, list<array<string, string>>>> the headers each response writes, by operation and status */
+    private array $responseHeaders = [];
+
+    private readonly ResponseHeaderEntries $responseHeaderEntries;
+
     /** @var array<string, true> the formats already read */
     private array $formats = [];
 
@@ -99,6 +106,8 @@ final class KeptForms
 
     public function __construct(private readonly ContractIR $ir, private readonly Refusals $refusals, private readonly FormReleases $releases)
     {
+        $this->responseHeaderEntries = new ResponseHeaderEntries($ir, $refusals);
+
         if ($ir->api->wire->urls->value === UrlForm::Absolute) {
             $this->pending(PendingForm::AbsoluteUrls, 'urls.absolute', 'Absolute URLs (`api.wire.urls: absolute`)', IrPlace::root()->below('api', 'wire', 'urls'));
         }
@@ -121,6 +130,16 @@ final class KeptForms
     public function operations(): array
     {
         return $this->operations;
+    }
+
+    /**
+     * The headers each response of the operation writes from its own IR headers, by status (`ResponseHeaderEntries`).
+     *
+     * @return array<int, list<array<string, string>>>
+     */
+    public function responseHeaders(string $operationId): array
+    {
+        return $this->responseHeaders[$operationId] ?? [];
     }
 
     /** @return array<string, ObjectSchema> */
@@ -199,6 +218,13 @@ final class KeptForms
 
         foreach ($operation->responses as $responseIndex => $response) {
             $this->readResponse($response, $at->below('responses', $responseIndex));
+            $headers = $this->responseHeaderEntries->of($operation, $response, $at->below('responses', $responseIndex));
+            if ($headers !== []) {
+                $this->responseHeaders[$operation->id][$response->status] = $headers;
+            }
+            if ($response->shape->value === ResponseShape::Page) {
+                $this->readPageHeaders($operation);
+            }
             if ($response->body !== null) {
                 $this->readSuccessShape($operation->format, $response->shape->value);
             }
@@ -411,6 +437,32 @@ final class KeptForms
         }
 
         return null;
+    }
+
+    // A page header is written as text: a template that renders an object or an array has no header value.
+    private function readPageHeaders(Operation $operation): void
+    {
+        $styleId = $operation->paging?->style;
+        $style = $styleId === null ? null : ($this->ir->pagings[$styleId] ?? null);
+        if ($styleId === null || $style === null) {
+            return;
+        }
+
+        foreach ($style->response->headers as $index => $header) {
+            if (!self::isScalarTemplate($header->value->toJson())) {
+                $this->refusals->waiting('paging.response.header', "The header '{$header->name}' of the paging style '{$styleId}', written from an object or an array,", IrPlace::root()->below('pagings', $styleId, 'response', 'headers', $index, 'value'), Delivery::AfterOneZero);
+            }
+        }
+    }
+
+    private static function isScalarTemplate(\stdClass $template): bool
+    {
+        return match ($template->kind ?? null) {
+            'text' => true,
+            'literal' => !is_array($template->value ?? null) && !(($template->value ?? null) instanceof \stdClass),
+            'slot' => ($template->path ?? []) !== [] || !in_array($template->slot ?? null, self::STRUCTURED_PAGE_SLOTS, true),
+            default => false,
+        };
     }
 
     /** @return list<string> the slot names a template writes, at any depth */

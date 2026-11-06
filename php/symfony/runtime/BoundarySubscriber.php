@@ -21,6 +21,7 @@ use Seampact\Codegen\Runtime\RawTarget;
 use Seampact\Codegen\Runtime\Replies;
 use Seampact\Codegen\Runtime\ReplyVerdict;
 use Seampact\Codegen\Runtime\TypedInput;
+use Seampact\Codegen\Runtime\VersionHeader;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -487,6 +488,9 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
             $tree->body = $state->body;
         }
 
+        // A version header is read first, so its absence answers 428, never a schema issue.
+        $version = VersionHeader::sent($request, $state);
+
         $issues = [];
         foreach ($this->validator->validate($tree, $this->inputConstraint($state->operationId)) as $violation) {
             $issues[] = self::issueOf($violation->getPropertyPath(), Issue::ruleOf($violation));
@@ -496,7 +500,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
             throw AccessSteps::schemaInvalid($state, array_slice(array_values(array_unique($issues, SORT_REGULAR)), 0, self::MAX_RENDERED_ISSUES));
         }
 
-        $parts = ['path' => $tree->path, 'query' => PageReply::withFilledLimit($state, $tree->query), 'headers' => $tree->header];
+        $parts = ['path' => $tree->path, 'query' => PageReply::withFilledLimit($state, $tree->query), 'headers' => VersionHeader::handedOver($state, $version, $tree->header)];
         $input = TypedInput::build($state, $parts);
         if ($state->body !== null) {
             $parts['body'] = $state->body;

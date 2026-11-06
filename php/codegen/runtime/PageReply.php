@@ -117,7 +117,7 @@ final class PageReply
 
         $body = Templates::render(self::pageBody($state, $style), $slots, $writeNulls);
 
-        return [$body->present ? $body->value : new \stdClass(), self::headers($style, $slots)];
+        return [$body->present ? $body->value : new \stdClass(), self::headers($state, $style, $slots)];
     }
 
     /** @return array<array-key, mixed> the paging style of the operation */
@@ -166,18 +166,28 @@ final class PageReply
     }
 
     /**
+     * The style's headers, each a rendered scalar as text; one that renders an object or a list is a 500, as generation
+     * refuses such a template (`paging.response.header`).
+     *
      * @param array<array-key, mixed> $style
      * @param array<string, mixed> $slots
      * @return array<string, string>
      */
-    private static function headers(array $style, array $slots): array
+    private static function headers(BoundaryState $state, array $style, array $slots): array
     {
         $headers = [];
         foreach (Ir::maps(Ir::map($style, 'response'), 'headers') as $header) {
             $value = Templates::render($header['value'] ?? null, $slots, false);
-            if ($value->present && (is_string($value->value) || is_int($value->value))) {
-                $headers[Ir::string($header, 'name') ?? ''] = (string) $value->value;
+            if (!$value->present || $value->value === null) {
+                continue;
             }
+
+            $name = Ir::string($header, 'name') ?? '';
+            $headers[$name] = match (true) {
+                is_bool($value->value) => $value->value ? 'true' : 'false',
+                is_string($value->value), is_int($value->value), is_float($value->value) => (string) $value->value,
+                default => throw new BoundaryFailure(new \LogicException("seampact: the page header '{$name}' of operation '{$state->operationId}' is not a text value; regenerate the code, whose generation refuses a header template that renders an object or a list.")),
+            };
         }
 
         $relations = [];
