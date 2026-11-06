@@ -5,10 +5,8 @@
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import type { ContractIR } from "../../../../../packages/core/spec/src/ir/index.ts";
 import {
   loadSuiteCases,
-  packProfileOf,
   refusalsOf,
   reportFileOf,
   runBootSuite,
@@ -21,6 +19,7 @@ import {
   testEachCase,
   writeSuiteReport,
 } from "../../../../../packages/tools/http-suite/src/index.ts";
+import { goldenPackProfile } from "../../../golden-pack-profile.ts";
 import { type RunningApp, startLaravelApp } from "./laravel-app.ts";
 import { LARAVEL_SUITE_REFUSALS } from "./suite-refusals.ts";
 
@@ -36,11 +35,6 @@ const TARGET_PROFILES: readonly SuiteProfile[] = [
   "pack:laravel",
 ];
 const BOOT_ROUTES_CACHE = "boot-routes.php";
-const LARAVEL_PACK = "@seampact/pack-laravel";
-const PACK_LARAVEL_GOLDEN = join(
-  import.meta.dirname,
-  "../../../../../fixtures/golden/pack-laravel",
-);
 
 const app = requiredEnvironment("SEAMPACT_LARAVEL_APP");
 const allowListedApp = requiredEnvironment("SEAMPACT_LARAVEL_ALLOW_LISTED_APP");
@@ -413,15 +407,11 @@ describe("a handler exception under responses: warn with APP_DEBUG on", () => {
 describeHttpProfile("default");
 describeHttpProfile("hand-written");
 
-function packLaravelIr(contract: string): ContractIR {
-  return JSON.parse(readFileSync(join(PACK_LARAVEL_GOLDEN, `${contract}.ir.json`), "utf8"));
-}
-
 // The pack-laravel app serves the reference contract with `@seampact/pack-laravel` applied, its paged lists answering
 // Laravel's paginators; its profile reads the default cases through the pack's format and paging style, then runs the
 // pack's own cases.
 describe("http suite, pack:laravel profile", () => {
-  const pack = packProfileOf([packLaravelIr("tasks"), packLaravelIr("tasksService")], LARAVEL_PACK);
+  const pack = goldenPackProfile("pack-laravel");
   const refusals = {
     ...pack.refusals,
     ...refusalsOf(pack.cases, LARAVEL_SUITE_REFUSALS),

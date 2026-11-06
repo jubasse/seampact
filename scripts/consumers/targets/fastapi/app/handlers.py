@@ -36,11 +36,9 @@ from generated.tasks.operations import (
     HealthRequest,
     HealthResponse200,
     HealthResult,
-    ListChannelsPage,
     ListChannelsRequest,
     ListChannelsResponse200,
     ListChannelsResult,
-    ListTasksPage,
     ListTasksRequest,
     ListTasksResponse200,
     ListTasksResult,
@@ -69,6 +67,7 @@ from generated.tasks_optional_auth import operations as optional_auth
 from generated.tasks_optional_auth.schemas import Greeting
 from generated.tasks_service import operations as service
 from generated.tasks_service_writes import operations as service_writes
+from paged_lists import channel_page, note_page, sample_task_page, scripted_task_page
 from sample_data import (
     FIRST_NOTE_ID,
     FIRST_VERSION,
@@ -90,7 +89,6 @@ from seampact_consumer_suite.scripted_answers import scripted_answer, text_membe
 
 _OK: int = 200
 _HEALTHY: str = "ok"
-_NEXT_CURSOR: str = "page-2"
 _DEFAULT_LOCALE: str = "en"
 _NOT_FOUND: str = "api.not_found"
 _SERVICE_API: str = "tasksService"
@@ -114,12 +112,9 @@ def _service_task_reply_of(body: dict[str, object]) -> service.GetTaskResult:
 
 def _page_of(body: dict[str, object]) -> ListTasksResult:
     items = body.get("items")
-    next_cursor = body.get("nextCursor")
     tasks = [task_of(item) for item in items if isinstance(item, dict)] if isinstance(items, list) else []
 
-    return ListTasksResponse200(
-        ListTasksPage(items=tasks, next_cursor=next_cursor if isinstance(next_cursor, str) else None)
-    )
+    return ListTasksResponse200(scripted_task_page(tasks, body))
 
 
 class AppHandlers:
@@ -136,7 +131,7 @@ class ChannelsHandlers:
         )
 
     def list_channels(self, request: ListChannelsRequest) -> ListChannelsResult:
-        return ListChannelsResponse200(ListChannelsPage(items=[channel(GENERAL_CHANNEL_ID)]))
+        return ListChannelsResponse200(channel_page([channel(GENERAL_CHANNEL_ID)]))
 
 
 class DraftsHandlers:
@@ -201,12 +196,9 @@ class TasksHandlers:
     def purge_task(self, request: PurgeTaskRequest) -> PurgeTaskResult:
         return PurgeTaskResponse204()
 
-    # The first page links a second one; the second is the last.
     def list_tasks(self, request: ListTasksRequest) -> ListTasksResult:
-        next_cursor = _NEXT_CURSOR if request.input.query.cursor is None else None
-
         return scripted_answer("listTasks", _OK, _page_of) or ListTasksResponse200(
-            ListTasksPage(items=[task(NEW_TASK_ID)], next_cursor=next_cursor)
+            sample_task_page([task(NEW_TASK_ID)], request.input)
         )
 
     def search_tasks(self, request: SearchTasksRequest) -> SearchTasksResult:
@@ -258,11 +250,7 @@ class NotesHandlers:
     """The `tasksAbsoluteUrls` api's handlers; the boundary writes their page links from the public origin."""
 
     def list_notes(self, request: absolute_urls.ListNotesRequest) -> absolute_urls.ListNotesResult:
-        next_cursor = _NEXT_CURSOR if request.input.query.cursor is None else None
-
-        return absolute_urls.ListNotesResponse200(
-            absolute_urls.ListNotesPage(items=[note(FIRST_NOTE_ID)], next_cursor=next_cursor)
-        )
+        return absolute_urls.ListNotesResponse200(note_page([note(FIRST_NOTE_ID)], request.input))
 
     def get_note(self, request: absolute_urls.GetNoteRequest) -> absolute_urls.GetNoteResult:
         return absolute_urls.GetNoteResponse200(note(str(request.input.path.note_id)))

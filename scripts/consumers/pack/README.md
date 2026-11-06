@@ -1,0 +1,1 @@
+The pack overlay of a Node server consumer (`cli.ts --pack <name>`): copied last over the target's overlays, it answers the paged lists with their items and total for a page-number pack (pack-laravel) and runs the pack's suite profile in place of the `default`, `hand-written` and `boot` profiles.

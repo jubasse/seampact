@@ -10,6 +10,7 @@ use Seampact\Codegen\FormArrival;
 use Seampact\Codegen\KeptForms;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\Tests\Support\FixedReleases;
+use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Codegen\Tests\Support\ReferenceIr;
 use Seampact\Ir\Run\GenerationRefusedException;
 
@@ -72,6 +73,30 @@ final class KeptFormsTest extends TestCase
         self::assertArrayHasKey('bindings.unsupported', $messages);
         self::assertArrayHasKey('scope.source.unsupported', $messages);
         self::assertArrayHasKey('principal.variants.unsupported', $messages);
+    }
+
+    // HAL's page names its `_embedded` member by `$collection` and links each item by `$itemSelf`, which the page reply
+    // does not fill: the boundary would drop them, so the style is refused by name.
+    public function testAPageBodyWritingSlotsThePageReplyDoesNotFillIsRefusedByName(): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document(), ['listTasks']);
+        $halPages = self::member(self::member(ReferenceContract::document('tasks.ir.json', 'pack-hal'), 'pagings'), 'halPages');
+        self::member(self::member(self::member($document, 'pagings'), 'cursor'), 'response')->body = self::member(self::member($halPages, 'response'), 'body');
+
+        $messages = self::refused($document, null);
+
+        self::assertStringContainsString("The page slots '\$collection', '\$itemSelf' of the paging style 'cursor'", $messages['paging.response.slot.unsupported'] ?? '');
+    }
+
+    // The page reply fills `$page` for a page-number style only: an offset style's page number has no declared base.
+    public function testAPageNumberSlotUnderAnOffsetStyleIsRefusedByName(): void
+    {
+        $document = ReferenceContract::document('tasks.ir.json', 'pack-laravel');
+        self::member(self::member($document, 'pagings'), 'laravelPages')->position = 'offset';
+
+        $messages = self::refused($document, null);
+
+        self::assertStringContainsString("The page slots '\$page' of the paging style 'laravelPages'", $messages['paging.response.slot.unsupported'] ?? '');
     }
 
     /** @return iterable<string, array{array<string, string>, string}> */
@@ -168,6 +193,14 @@ final class KeptFormsTest extends TestCase
 
         self::assertNotSame([], $ir->operations[0]->params->header);
         self::assertSame([], KeptForms::handlerHeaders($ir->operations[0]));
+    }
+
+    private static function member(\stdClass $object, string $name): \stdClass
+    {
+        $member = $object->{$name} ?? null;
+        self::assertInstanceOf(\stdClass::class, $member);
+
+        return $member;
     }
 
     /** @return array<string, string> each refusal code and its first message */

@@ -1,7 +1,7 @@
-// Runs the shared http suite's `default`, `hand-written` and `boot` profiles against the assembled Symfony consumer
-// (ADR 0015 "Suite profiles") served by PHP's built-in server, and writes one report per profile. The app
-// directories and the report directory come from the environment: SEAMPACT_SYMFONY_APP,
-// SEAMPACT_SYMFONY_ALLOW_LISTED_APP and SEAMPACT_SYMFONY_REPORTS.
+// Runs the shared http suite's `default`, `hand-written`, `boot` and `pack:laravel` profiles against the assembled
+// Symfony consumer (ADR 0015 "Suite profiles") served by PHP's built-in server, and writes one report per profile.
+// The app directories and the report directory come from the environment: SEAMPACT_SYMFONY_APP,
+// SEAMPACT_SYMFONY_ALLOW_LISTED_APP, SEAMPACT_SYMFONY_PACK_APP and SEAMPACT_SYMFONY_REPORTS.
 import { randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,6 +21,7 @@ import {
   testEachCase,
   writeSuiteReport,
 } from "../../../../../packages/tools/http-suite/src/index.ts";
+import { goldenPackProfile } from "../../../golden-pack-profile.ts";
 import { SYMFONY_SUITE_REFUSALS } from "./suite-refusals.ts";
 import { type RunningApp, startSymfonyApp } from "./symfony-app.ts";
 
@@ -29,10 +30,16 @@ const ALLOW_LISTED_CASE = "allow-listed-framework-route-boots";
 const ALLOW_LISTED_ELSEWHERE = "Runs on the app built with the route allow-listed.";
 const SUITE_TIMEOUT_MS = 600_000;
 const BOOT_TIMEOUT_MS = 120_000;
-const TARGET_PROFILES: readonly SuiteProfile[] = ["default", "hand-written", "boot"];
+const TARGET_PROFILES: readonly SuiteProfile[] = [
+  "default",
+  "hand-written",
+  "boot",
+  "pack:laravel",
+];
 
 const app = requiredEnvironment("SEAMPACT_SYMFONY_APP");
 const allowListedApp = requiredEnvironment("SEAMPACT_SYMFONY_ALLOW_LISTED_APP");
+const packApp = requiredEnvironment("SEAMPACT_SYMFONY_PACK_APP");
 const reportDirectory = requiredEnvironment("SEAMPACT_SYMFONY_REPORTS");
 const credentials = readCredentials();
 
@@ -528,6 +535,38 @@ describeServed(
 
 describeHttpProfile("default");
 describeHttpProfile("hand-written");
+
+// The pack-laravel app serves the reference contract with `@seampact/pack-laravel` applied; its profile reads the
+// default cases through the pack's format and paging style, then runs the pack's own cases.
+describe("http suite, pack:laravel profile", () => {
+  const pack = goldenPackProfile("pack-laravel");
+  const refusals = {
+    ...pack.refusals,
+    ...refusalsOf(pack.cases, SYMFONY_SUITE_REFUSALS),
+  };
+  let running: RunningApp | undefined;
+  let report: SuiteReport | undefined;
+
+  beforeAll(async () => {
+    running = await startSymfonyApp(packApp);
+    report = await runSuite({
+      baseUrl: running.baseUrl,
+      target: TARGET,
+      profile: pack.profile,
+      credentials,
+      cases: pack.cases,
+      reader: pack.reader,
+      refusals,
+    });
+    writeSuiteReport(report, reportFileOf(reportDirectory, pack.profile));
+  }, SUITE_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await running?.close();
+  });
+
+  testEachCase(pack.cases, () => report, refusals, test);
+});
 
 describe("http suite, boot profile", () => {
   const cases = loadSuiteCases("boot");

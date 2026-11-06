@@ -1,7 +1,7 @@
-// Runs the shared http suite's `default`, `hand-written` and `boot` profiles against an assembled Python consumer
-// (ADR 0015 "Suite profiles") and writes one report per profile. The app directories, the virtual environment they
-// run in and the report directory come from the environment, `<prefix>_APP`, `<prefix>_ALLOW_LISTED_APP`,
-// `<prefix>_VENV` and `<prefix>_REPORTS`; the target gives how its app is served and booted.
+// Runs the shared http suite's `default`, `hand-written`, `boot` and `pack:laravel` profiles against an assembled Python
+// consumer (ADR 0015 "Suite profiles") and writes one report per profile. The app directories, the virtual environment
+// they run in and the report directory come from the environment, `<prefix>_APP`, `<prefix>_ALLOW_LISTED_APP`,
+// `<prefix>_PACK_APP`, `<prefix>_VENV` and `<prefix>_REPORTS`; the target gives how its app is served and booted.
 import { mkdirSync, readFileSync } from "node:fs";
 import { connect } from "node:net";
 import { join } from "node:path";
@@ -20,6 +20,7 @@ import {
   testEachCase,
   writeSuiteReport,
 } from "../../../packages/tools/http-suite/src/index.ts";
+import { goldenPackProfile } from "../golden-pack-profile.ts";
 import { type PythonApp, pythonOf, type RunningApp } from "./python-app.ts";
 
 /** What a Python target's suite run needs: its app, how it is served, and how one boot case starts it. */
@@ -38,7 +39,12 @@ const ALLOW_LISTED_CASE = "allow-listed-framework-route-boots";
 const ALLOW_LISTED_ELSEWHERE = "Runs on the app built with the route allow-listed.";
 const SUITE_TIMEOUT_MS = 600_000;
 const BOOT_TIMEOUT_MS = 120_000;
-const TARGET_PROFILES: readonly SuiteProfile[] = ["default", "hand-written", "boot"];
+const TARGET_PROFILES: readonly SuiteProfile[] = [
+  "default",
+  "hand-written",
+  "boot",
+  "pack:laravel",
+];
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name];
@@ -98,6 +104,7 @@ export function describePythonHttpSuite(suiteTarget: PythonSuiteTarget): void {
     requiredEnvironment(`${environmentPrefix}_ALLOW_LISTED_APP`),
     venv,
   );
+  const packApp = suiteTarget.appOf(requiredEnvironment(`${environmentPrefix}_PACK_APP`), venv);
   const reportDirectory = requiredEnvironment(`${environmentPrefix}_REPORTS`);
   const credentials = readCredentials();
 
@@ -192,6 +199,35 @@ export function describePythonHttpSuite(suiteTarget: PythonSuiteTarget): void {
 
   describeHttpProfile("default");
   describeHttpProfile("hand-written");
+
+  // The pack-laravel app serves the reference contract with `@seampact/pack-laravel` applied; its profile reads the
+  // default cases through the pack's format and paging style, then runs the pack's own cases.
+  describe("http suite, pack:laravel profile", () => {
+    const pack = goldenPackProfile("pack-laravel");
+    const packRefusals = { ...pack.refusals, ...refusalsOf(pack.cases, refusals) };
+    let running: RunningApp | undefined;
+    let report: SuiteReport | undefined;
+
+    beforeAll(async () => {
+      running = await suiteTarget.start(packApp);
+      report = await runSuite({
+        baseUrl: running.baseUrl,
+        target,
+        profile: pack.profile,
+        credentials,
+        cases: pack.cases,
+        reader: pack.reader,
+        refusals: packRefusals,
+      });
+      writeSuiteReport(report, reportFileOf(reportDirectory, pack.profile));
+    }, SUITE_TIMEOUT_MS);
+
+    afterAll(async () => {
+      await running?.close();
+    });
+
+    testEachCase(pack.cases, () => report, packRefusals, test);
+  });
 
   describe("http suite, boot profile", () => {
     const cases = loadSuiteCases("boot");

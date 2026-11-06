@@ -6,11 +6,11 @@ import type * as TasksDevices from "../generated/types/tasksDevices/index.js";
 import type * as TasksService from "../generated/types/tasksService/index.js";
 import type * as TasksServiceWrites from "../generated/types/tasksServiceWrites/index.js";
 import { DEVICE_ID } from "../test/credentials.mjs";
+import { listChannelsPage, listTasksPage } from "./paged-lists.mjs";
 import { scriptedAnswer } from "./suite-control.mjs";
 
 const CREATED_AT = "2026-10-18T09:00:00.000Z";
 const NEW_TASK_ID = "20000000-0000-4000-8000-0000000000ff";
-const NEXT_CURSOR = "page-2";
 const GENERAL_CHANNEL_ID = "10000000-0000-4000-8000-000000000001";
 const FIRST_VERSION = 1;
 
@@ -66,7 +66,10 @@ export const tasksHandlers = scripted("tasks", {
   },
 
   listChannels(_input: Tasks.ListChannelsInput): Tasks.ListChannelsOutput {
-    return { status: 200, body: { items: [{ channelId: GENERAL_CHANNEL_ID, name: "General" }] } };
+    return {
+      status: 200,
+      body: listChannelsPage([{ channelId: GENERAL_CHANNEL_ID, name: "General" }]),
+    };
   },
 
   getChannel(input: Tasks.GetChannelInput & ChannelCaller): Tasks.GetChannelOutput {
@@ -81,12 +84,7 @@ export const tasksHandlers = scripted("tasks", {
   },
 
   listTasks(input: Tasks.ListTasksInput): Tasks.ListTasksOutput {
-    const items = [task(NEW_TASK_ID)];
-
-    return {
-      status: 200,
-      body: input.query.cursor === undefined ? { items, nextCursor: NEXT_CURSOR } : { items },
-    };
+    return { status: 200, body: listTasksPage([task(NEW_TASK_ID)], input) };
   },
 
   createTask(input: Tasks.CreateTaskInput): Tasks.CreateTaskOutput {

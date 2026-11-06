@@ -24,6 +24,7 @@ from seampact.ir.model import (
     ObjectSchema,
     Operation,
     OptionalAccess,
+    PagingPosition,
     Param,
     ProofPlacement,
     QueryScheme,
@@ -50,6 +51,17 @@ _PAGING_PARAMS_DERIVATION: Final = "paging.params"
 _PAYLOAD_SLOT: Final = "payload"
 # The slots a success envelope may write beside the payload, which the boundary fills.
 _ENVELOPE_SLOTS: Final = frozenset({_PAYLOAD_SLOT, "status", "path", "meta"})
+# The slots a page template may write that the page reply fills: the response roles, the request path and status, and
+# the format's `$meta` (ADR 0002 section 14). `$resource`, `$collection` and the item id slots are not yet.
+_PAGE_SLOT: Final = "page"
+_RENDERED_PAGE_SLOTS: Final = frozenset(
+    {
+        "items", "nextCursor", "previousCursor", "more", _PAGE_SLOT, "offset", "limit", "from", "to", "total",
+        "totalPages", "self", "first", "previous", "next", "last", "nextSince", "complete", "path", "status", "meta",
+    }
+)  # fmt: skip
+# The slot `$each` binds to each item inside its `$as` (ADR 0002 section 13): the renderer fills it.
+_EACH_ITEM_SLOT: Final = "item"
 _TOP_LEVEL_POINTER: Final = re.compile(r"/[^/]+")
 _BUCKET_KEY_SOURCES: Final = frozenset({ValueSourceIn.PATH, ValueSourceIn.SCOPE, ValueSourceIn.PRINCIPAL})
 # Header params the boundary consumes itself: the credentials and the CSRF token never reach the handler.
@@ -107,6 +119,7 @@ class _KeptForms:
 
         self._access(operation, at)
         self._format(operation)
+        self._page_templates(operation)
         self._requirements(operation, at)
         self._members_after_v1(operation, at)
         parts = {"path": operation.params.path, "query": operation.params.query, "header": handler_headers(operation)}
@@ -218,6 +231,52 @@ class _KeptForms:
 
             if shape_name is not ResponseShape.PAGE:
                 self._envelope(shape.body.to_json(), shape_at.below("body"))
+
+    def _page_templates(self, operation: Operation) -> None:
+        """The page body (the style's own, or the format's page), the style's meta and headers, each read once: a slot
+        the page reply does not fill would be dropped from the body, so it is refused by name."""
+        style_id = operation.paging.style if operation.paging is not None else None
+        style = None if style_id is None else self.ir.pagings.get(style_id)
+
+        if style_id is None or style is None:
+            return
+
+        templates: list[tuple[JsonValue, IrPlace]] = []
+
+        if self._first_time(f"paging/{style_id}"):
+            response_at = IrPlace(f"/pagings/{style_id}/response")
+
+            if style.response.body is not None:
+                templates.append((style.response.body.to_json(), response_at.below("body")))
+
+            for index, member in enumerate(style.response.meta):
+                templates.append((member.value.to_json(), response_at.below("meta", index, "value")))
+
+            for index, header in enumerate(style.response.headers):
+                templates.append((header.value.to_json(), response_at.below("headers", index, "value")))
+
+        page_format = self.ir.formats.get(operation.format)
+
+        # The format's page is read once per style too: whether `$page` is filled depends on the style's position.
+        format_page_key = f"page/{operation.format}/{style_id}"
+
+        if style.response.body is None and page_format is not None and self._first_time(format_page_key):
+            format_page_at = IrPlace(f"/formats/{operation.format}/success/page/body")
+            templates.append((page_format.success.page.body.to_json(), format_page_at))
+
+        # An offset style has no page number of its own: its base is not declared, so the page reply leaves `$page` out.
+        rendered_slots = (
+            _RENDERED_PAGE_SLOTS - {_PAGE_SLOT} if style.position == PagingPosition.OFFSET else _RENDERED_PAGE_SLOTS
+        )
+
+        for template, template_at in templates:
+            unrendered = sorted(set(_template_slots(template)) - rendered_slots)
+
+            if unrendered:
+                named = ", ".join(f"'${slot}'" for slot in unrendered)
+                self._after_v1(
+                    "paging.response.slot", f"The page slots {named} of the paging style '{style_id}'", template_at
+                )
 
     def _envelope(self, body: JsonValue, at: IrPlace) -> None:
         payload_path = _slot_path(body, _PAYLOAD_SLOT)
@@ -420,7 +479,12 @@ def _slot_path(template: JsonValue, slot: str) -> list[str] | None:
 
 
 def _template_slots(template: JsonValue) -> list[str]:
-    """The slot names a template writes, at any depth."""
+    """The slot names a template writes, at any depth, without the item each `$each` binds."""
+    if isinstance(template, dict) and template.get("kind") == "each":
+        source = template.get("of")
+        bound = [slot for slot in _template_slots(template.get("as")) if slot != _EACH_ITEM_SLOT]
+        return ([source] if isinstance(source, str) else []) + bound
+
     if isinstance(template, list):
         return [slot for value in template for slot in _template_slots(value)]
 

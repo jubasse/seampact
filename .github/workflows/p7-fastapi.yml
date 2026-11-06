@@ -65,6 +65,8 @@ jobs:
             ^scripts/consumers/php/bundle\.sh$
             ^scripts/consumers/targets/spring-boot/(contract-source\.sh|credentials\.json)$
             ^scripts/consumers/served-app\.ts$
+            ^scripts/consumers/golden-pack-profile\.ts$
+            ^packages/packs/pack-laravel/
             ^pnpm-lock\.yaml$
             ^\.github/actions/
             ^\.github/workflows/p7-fastapi\.yml$
@@ -151,12 +153,16 @@ jobs:
           persist-credentials: false
       - name: Restore or build the compiler binary
         uses: ./.github/actions/compiler-binary
-      - name: Bundle the reference contract
-        run: scripts/consumers/php/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundles/reference"
+      - name: Bundle the reference contract and its pack-laravel variant
+        run: |
+          scripts/consumers/php/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundles/reference"
+          scripts/consumers/php/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundles/pack-laravel" fixtures/golden/pack-laravel/contract
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fastapi-contract-bundle
           path: ${{ runner.temp }}/bundles
+          # The pack-laravel bundle keeps its packs under `sources/.packs`, which upload-artifact skips by default.
+          include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
       # `nativeDocs` has the Python runner emit seampact's document through the compiler binary, unpublished until v1.
@@ -223,7 +229,7 @@ jobs:
           set -euo pipefail
           scripts/consumers/python/build-wheels.sh "$WORK/wheels"
           scripts/consumers/python/requirements.sh "$WORK/requirements.txt" seampact-fastapi generate uvicorn
-      - name: Install with pip, then assemble and generate the consumer and its allow-listed variant
+      - name: Install with pip, then assemble and generate the consumer and its allow-listed and pack-laravel variants
         shell: bash
         env:
           SEAMPACT_CONSUMER_BINARY: ${{ runner.temp }}/binary/seampact-linux-x64
@@ -236,8 +242,10 @@ jobs:
           "$WORK/venv/bin/python" -m pip install --no-input --disable-pip-version-check --no-index \
             --find-links "$WORK/wheels" seampact-signed-webhooks
           "$WORK/venv/bin/python" -c "import fastapi, pydantic, starlette; print(fastapi.__version__, starlette.__version__, pydantic.VERSION)"
-          for variant in "" allow-listed; do
-            scripts/consumers/targets/fastapi/assemble.sh "$WORK" "$RUNNER_TEMP/bundles/reference" $variant
+          for variant in "" allow-listed pack-laravel; do
+            bundled="$RUNNER_TEMP/bundles/reference"
+            if [ "$variant" = "pack-laravel" ]; then bundled="$RUNNER_TEMP/bundles/pack-laravel"; fi
+            scripts/consumers/targets/fastapi/assemble.sh "$WORK" "$bundled" $variant
             (cd "$WORK/app${variant:+-$variant}" && "$WORK/venv/bin/seampact" generate)
           done
           if command -v node || command -v npm || command -v npx; then
@@ -250,10 +258,11 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Run the default, hand-written and boot profiles
+      - name: Run the default, hand-written, boot and pack:laravel profiles
         env:
           SEAMPACT_FASTAPI_APP: ${{ env.WORK }}/app
           SEAMPACT_FASTAPI_ALLOW_LISTED_APP: ${{ env.WORK }}/app-allow-listed
+          SEAMPACT_FASTAPI_PACK_APP: ${{ env.WORK }}/app-pack-laravel
           SEAMPACT_FASTAPI_VENV: ${{ env.WORK }}/venv
           SEAMPACT_FASTAPI_REPORTS: ${{ github.workspace }}/reports
         run: pnpm vitest run --config scripts/consumers/targets/fastapi/suite/vitest.config.ts

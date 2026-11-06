@@ -62,6 +62,7 @@ jobs:
             ^scripts/consumers/php/
             ^scripts/consumers/targets/spring-boot/(contract-source\.sh|credentials\.json)$
             ^scripts/consumers/served-app\.ts$
+            ^scripts/consumers/golden-pack-profile\.ts$
             ^pnpm-lock\.yaml$
             ^\.github/actions/
             ^\.github/workflows/p6-laravel\.yml$

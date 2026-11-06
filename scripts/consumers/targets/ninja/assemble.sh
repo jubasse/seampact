@@ -1,8 +1,8 @@
 #!/bin/sh
-# Assembles the Django Ninja consumer in <work>: `assemble.sh <work> <bundled> [allow-listed]`, as the shared Python
-# `assemble.sh` does for this directory, with the views SEAMPACT_NINJA_VIEWS names (`sync` or `async`) in both entries'
-# options. The app takes the FastAPI consumer's handlers and sample data, which read the same Pydantic operations, the
-# DRF consumer's Django control views and the shared reference hook doubles.
+# Assembles the Django Ninja consumer in <work>: `assemble.sh <work> <bundled> [allow-listed|pack-laravel]`, as the
+# shared Python `assemble.sh` does for this directory, with the views SEAMPACT_NINJA_VIEWS names (`sync` or `async`) in
+# both entries' options. The app takes the FastAPI consumer's handlers and sample data, which read the same Pydantic
+# operations, the DRF consumer's Django control views and the shared reference hook doubles.
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)

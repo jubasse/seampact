@@ -17,6 +17,12 @@ export const COMMIT_FILE = ".seampact-commit";
 // The file that names the target a consumer was assembled for, which the http suite's reports carry.
 export const TARGET_FILE = ".seampact-target";
 
+// The file that names the pack a pack consumer's contract applies, which its suite profile reads.
+export const PACK_FILE = ".seampact-pack";
+
+/** A pack name: the `<name>` of `@seampact/pack-<name>`, whose golden case holds the contract with it applied. */
+export const PACK_NAME = /^[a-z0-9-]+$/;
+
 /** A target id names one directory under `targets/`: lowercase letters, digits and dashes. */
 export const TARGET_ID = /^[a-z0-9-]+$/;
 
@@ -37,6 +43,15 @@ const OVERLAY_FILES = [CONFIG_ENTRIES_FILE, PACKAGE_ENTRIES_FILE, OVERLAY_BASE_F
 const CONFIG_FILE = "seampact.config.yaml";
 const PACKAGE_FILE = "package.json";
 const CONTRACT_DIRECTORY = "contract";
+
+// A pack consumer: the overlay copied after the target's, the golden IRs its suite profile reads and the template's
+// profile tests it runs in place of (they read the reference contract's own wire format).
+const PACK_OVERLAY_DIRECTORY = "pack";
+const PACK_IR_DIRECTORY = "pack-ir";
+const PACK_SERVED_APIS = ["tasks", "tasksService"];
+const TEST_DIRECTORY = "test";
+const TEST_FILE = /\.test\.mts$/;
+const PACK_OVERLAY_NOTES = "README.md";
 
 // The template config's `use:` value of its `validators` entry, replaced by the chosen provider package.
 const VALIDATORS_PLACEHOLDER = "{{validators}}";
@@ -121,6 +136,8 @@ export function assembleConsumer(options: {
   readonly commit: string;
   readonly extras?: ConsumerExtras;
   readonly targetOptions?: readonly TargetOption[];
+  /** A pack name: the consumer serves the contract with `@seampact/pack-<pack>` applied and runs its profile. */
+  readonly pack?: string;
 }): void {
   const { consumersRoot, directory } = options;
 
@@ -160,11 +177,61 @@ export function assembleConsumer(options: {
     addDependencies(join(directory, PACKAGE_FILE), options.extras.dependencies);
   }
 
-  cpSync(join(options.repositoryRoot, "fixtures/reference"), join(directory, CONTRACT_DIRECTORY), {
-    recursive: true,
-  });
+  if (options.pack === undefined) {
+    cpSync(
+      join(options.repositoryRoot, "fixtures/reference"),
+      join(directory, CONTRACT_DIRECTORY),
+      {
+        recursive: true,
+      },
+    );
+  } else {
+    usePack(options.pack, options.repositoryRoot, consumersRoot, directory);
+  }
+
   writeFileSync(join(directory, COMMIT_FILE), `${options.commit}\n`);
   writeFileSync(join(directory, TARGET_FILE), `${options.target}\n`);
+}
+
+// The contract with the pack applied and its golden IRs, from the pack's golden case, and the pack overlay, whose
+// profile test replaces the template's and the overlays' tests.
+function usePack(
+  pack: string,
+  repositoryRoot: string,
+  consumersRoot: string,
+  directory: string,
+): void {
+  const goldenCase = join(repositoryRoot, "fixtures/golden", `pack-${pack}`);
+
+  if (!PACK_NAME.test(pack) || !existsSync(join(goldenCase, CONTRACT_DIRECTORY))) {
+    throw new Error(
+      `consumers: pack '${pack}' has no golden case with a contract (fixtures/golden/pack-${pack}/contract); pass the name of a pack the golden cases apply, as hal.`,
+    );
+  }
+
+  cpSync(join(goldenCase, CONTRACT_DIRECTORY), join(directory, CONTRACT_DIRECTORY), {
+    recursive: true,
+  });
+  mkdirSync(join(directory, PACK_IR_DIRECTORY));
+
+  for (const api of PACK_SERVED_APIS) {
+    cpSync(
+      join(goldenCase, `${api}.ir.json`),
+      join(directory, PACK_IR_DIRECTORY, `${api}.ir.json`),
+    );
+  }
+
+  const testDirectory = join(directory, TEST_DIRECTORY);
+
+  for (const entry of readdirSync(testDirectory, { recursive: true, withFileTypes: true })) {
+    if (entry.isFile() && TEST_FILE.test(entry.name)) rmSync(join(entry.parentPath, entry.name));
+  }
+
+  cpSync(join(consumersRoot, PACK_OVERLAY_DIRECTORY), directory, {
+    recursive: true,
+    filter: (source) => !source.endsWith(PACK_OVERLAY_NOTES),
+  });
+  writeFileSync(join(directory, PACK_FILE), `@seampact/pack-${pack}\n`);
 }
 
 function useValidators(choice: ValidatorChoice, directory: string): void {

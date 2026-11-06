@@ -104,6 +104,12 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
       "absolute URLs; the native servers write them from the configured public origin",
     ),
   ],
+  [
+    "CHK-129",
+    refusedOnEveryServer(
+      "a page or an item that writes the `$collection`, `$resource` or item id slots (JSON:API, HAL, JSON-LD)",
+    ),
+  ],
   ["CHK-131", refusedOnEveryServer("a signature scheme verified by the application")],
   ["CHK-132", refusedOnEveryServer("query API key and HTTP Basic schemes")],
   ["CHK-133", refusedOnTheNodeServers("optional authentication; the native servers generate it")],

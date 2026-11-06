@@ -391,6 +391,16 @@ describe("the pack profile", () => {
     });
   });
 
+  test("answers a scripted page's total when the pack's style asks the handler for it", () => {
+    const profile = packProfileOf(contractsOf("laravel"), "@seampact/pack-laravel");
+    const pageCase = profile.cases.find(
+      (suiteCase) => suiteCase.id === "undeclared-member-stripped-from-page-items",
+    );
+    const answer = pageCase?.script?.answers?.["tasks.listTasks"];
+
+    expect(answer).toMatchObject({ status: 200, body: { total: 1 } });
+  });
+
   test("leaves the app's own response to a path outside every surface prefix unread", () => {
     const profile = packProfileOf(contractsOf("spring"), "@seampact/pack-spring");
     const appNotFound = { status: 404, error: "Not Found", path: "/V1/channels/c1/tasks/t1" };

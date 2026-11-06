@@ -1,0 +1,1 @@
+The pack-laravel variant of the Symfony consumer: the files `assemble.sh <work> <bundled> <7.4|8> pack-laravel` copies over the app, whose paged lists answer the page facts of `@seampact/pack-laravel`'s paging style.

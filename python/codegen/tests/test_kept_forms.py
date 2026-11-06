@@ -200,3 +200,32 @@ def test_a_page_header_written_from_an_object_waits_after_1_0(repository_root: P
 
     assert set(refused) == {"paging.response.header.unsupported"}
     assert "'X-Items'" in refused["paging.response.header.unsupported"]
+
+
+def test_a_page_body_writing_slots_the_page_reply_does_not_fill_is_refused_by_name(repository_root: Path) -> None:
+    # HAL's page names its `_embedded` member by `$collection` and links each item by `$itemSelf`, which the page reply
+    # does not fill: the boundary would drop them, so the style is refused by name.
+    ir_json = _ir_json(repository_root, "tasks")
+    hal_json = json.loads((repository_root / "fixtures/golden/pack-hal/tasks.ir.json").read_text("utf-8"))
+    pagings = ir_json["pagings"]
+    assert isinstance(pagings, dict)
+    pagings["cursor"]["response"]["body"] = hal_json["pagings"]["halPages"]["response"]["body"]
+
+    refused = _refused_codes(ir_json)
+
+    assert (
+        "The page slots '$collection', '$itemSelf' of the paging style 'cursor'"
+        in refused["paging.response.slot.unsupported"]
+    )
+
+
+def test_a_page_number_slot_under_an_offset_style_is_refused_by_name(repository_root: Path) -> None:
+    # The page reply fills `$page` for a page-number style only: an offset style's page number has no declared base.
+    ir_json = json.loads((repository_root / "fixtures/golden/pack-laravel/tasks.ir.json").read_text("utf-8"))
+    pagings = ir_json["pagings"]
+    assert isinstance(pagings, dict)
+    pagings["laravelPages"]["position"] = "offset"
+
+    refused = _refused_codes(ir_json)
+
+    assert "The page slots '$page' of the paging style 'laravelPages'" in refused["paging.response.slot.unsupported"]
