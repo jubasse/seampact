@@ -66,10 +66,14 @@ const app = express();
 app.use(NotesExpress.router({ handlers: { NotesEndpoints: notesHandlers } }));
 app.use(NotesExpress.preRoutingErrorHandler);
 
+NotesExpress.checkFrameworkRoutes(app);
+
 app.listen(3000);
 ```
 
 The router parses JSON itself, so bad JSON and unknown routes answer in the contract's error format. `preRoutingErrorHandler` does the same for errors raised by middleware you mount before the router, such as `express.json()` or a rate limiter. If you add such middleware, give a JSON parser `verify: NotesExpress.keepRawBody` and `limit: NotesExpress.LARGEST_BODY_LIMIT`.
+
+`checkFrameworkRoutes` checks the routes you add outside the contract. Express has no start hook, so call it once every route is mounted, before `listen`; it throws and names the route it refuses.
 
 Typecheck.
 
@@ -133,7 +137,7 @@ Check your variables once at start, with your validator, and stop when one is mi
 
 ## Express 4
 
-Install `express@4` and `@types/express@4` instead. The generated code and the handlers are the same.
+Install `express@4` (4.22 or later) and `@types/express@4` instead. The generated code and the handlers are the same.
 
 ## Wiring reference
 
@@ -147,3 +151,9 @@ app.use(TasksExpress.preRoutingErrorHandler);
 ```
 
 Next: [run it](../getting-started/03-generate-and-run.md#run-it).
+
+## Versioned writes and query lists
+
+A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
+
+A query list is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`. The `brackets` form is refused by `generate`.

@@ -21,11 +21,11 @@ Warnings do not fail. An error does: the command exits with 1. `lint` reads sour
 | `seampact/subtree-exception` | A safety exception written above a route, so it reaches every route below. |
 | `seampact/cookie-without-csrf` | A cookie scheme without `csrf`. |
 | `seampact/redundant-maturity` | A `maturity` equal to the one the route already has. |
-| `seampact/field-right-unresolved` | An output field that is always absent on a route. |
 | `seampact/credential-name` | A property named like a credential (`token`, `password`, `apiKey`) and not `sensitive`. |
 | `seampact/unused-declaration` | A declaration that no route, identity or convention uses. |
+| `seampact/not-found-role` | A declared 404 code beside the derived not-found code on a route. |
 
-All are warnings by default.
+All are warnings by default. `seampact/field-right-unresolved` is reserved: you may set its level, but no rule runs yet.
 
 ## Change a rule level
 

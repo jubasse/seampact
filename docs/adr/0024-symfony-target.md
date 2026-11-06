@@ -295,7 +295,7 @@ Under absolute URLs, the pass also requires a `public_origin` key (its value is 
 - a route that the loader did not make whose controller is a contract interface's method or a method of the service implementing one, whatever `frameworkRoutes` allow-lists and whether that check is on; at run time the listener refuses such a request anyway (spike);
 - a contract route whose path differs from `mount` followed by the contract path, `mount` being the one the generator receives through the target entry, or that carries a host, a scheme or a condition the loader did not set.
 
-`artefacts.bootCheck: { frameworkRoutes, hooks }` switches the framework-route check and the hook check apart (ADR 0011); the handler check runs whenever the boot check does. Once both parts pass, neither runs per request, so a php-fpm serve pays nothing for them. While the route part fails, no router cache exists, so the loader and the check run again on every request until it passes. Production apps run `cache:warmup` at deploy or container start.
+`artefacts.bootCheck: { frameworkRoutes, hooks }` switches the framework-route check and the hook check apart (ADR 0011); the handler check runs whenever the boot check does. `{ hooks: warn }` waits for an app that needs it: the generator refuses it by name (`artefacts.bootCheck.hooks.warn.unsupported`). Once both parts pass, neither runs per request, so a php-fpm serve pays nothing for them. While the route part fails, no router cache exists, so the loader and the check run again on every request until it passes. Production apps run `cache:warmup` at deploy or container start.
 
 ### Native security layers
 

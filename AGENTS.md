@@ -13,7 +13,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Git
 
-- Git flow ([A44](docs/decisions.md#a44)): `feat/<feature>` from develop, squash-merged into develop; `release/<version>` and `hotfix/<version>` as A44 and `CONTRIBUTING.md` describe.
+- Git flow ([A44](docs/decisions.md#a44)): `feat/<feature>` from develop, squash-merged into develop; `release/<version>` and `hotfix/<version>` as A44 and `CONTRIBUTING.md` describe; the lead may land ready PRs together on an integration branch merged with a merge commit.
 - Never commit on develop or main, never push, never open a PR, never use `--no-verify`. The lead pushes and merges.
 - Commit each green step on your branch. Message: one imperative English sentence ending with a period, a body only for a reason, then the trailer lines your task prompt gives.
 

@@ -155,7 +155,7 @@ export interface SeampactModuleOptions {
   readonly logger?: RuntimeLogger;
   /** The `responses` mode of the api's routes, the generated target option when absent; `responses()` on a route wins. */
   readonly responses?: ResponsesMode;
-  /** Whether request bodies are validated, the generated target option when absent. */
+  /** Whether the success bodies written outside the handler result are validated, the generated target option when absent. */
   readonly bodyValidation?: boolean;
   /**
    * What the boot check does with a contract operation no controller method binds: `error` (the default) stops the

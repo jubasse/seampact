@@ -12,10 +12,10 @@ npx seampact compile --editor-schemas
 
 It writes schemas to `.seampact/schemas` in the workspace root (set `workspace.editorSchemas` to change it). Add that folder to `.gitignore`.
 
-Point each file at its schema on its first line, with a path relative to the file:
+Point each file at its schema on its first line, with a path relative to the file. For `contract/api.yaml`:
 
 ```yaml
-# yaml-language-server: $schema=.seampact/schemas/api.schema.json
+# yaml-language-server: $schema=../.seampact/schemas/api.schema.json
 ```
 
 VS Code needs the YAML extension (Red Hat).

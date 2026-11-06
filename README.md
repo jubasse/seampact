@@ -28,7 +28,7 @@ From one YAML contract:
 |---|---|
 | Types | One TypeScript type per schema, request and reply. |
 | Validators | zod, yup, class-validator, VineJS or Ajv schemas that check every input. |
-| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS, Hono, FastAPI, Django REST Framework or Django Ninja. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
+| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS, Hono, Spring Boot, Laravel, Symfony, FastAPI, Django REST Framework or Django Ninja. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
 | Built-in rules | Paging, rate limits, idempotency keys, ETags, CSRF, signed requests and field rights, declared in the contract and enforced at the boundary. You plug in the stores and decisions. |
 | Errors | One error format, RFC 9457 `problem+json` by default, with typed error codes per route. |
 | Clients | A typed `fetch` client, hooks for React (TanStack Query, SWR, RTK Query), composables for Vue (TanStack Query, Pinia Colada), an Angular service with NgRx effects as an option, and MSW mocks to test them with no backend. |
@@ -676,7 +676,8 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] PHP: Laravel 13, with Guards, Sanctum, Gates and Policies
 - [x] Python: FastAPI 0.162 and later, Django REST Framework 3.18, and Django Ninja 1.5.3 and later
 - [ ] PHP: API Platform
-- [ ] Standalone binary (built for five platforms; release downloads next), docs site, 1.0 on npm
+- [x] Documentation site
+- [ ] Standalone binary (built for five platforms; release downloads next), 1.0 on the registries
 - [ ] Example apps per stack pairing, and an `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
 - Later: a client conformance suite, a kit to write new targets, one shared core per language, then Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Go, .NET, Rust ([full list](docs/roadmap.md))
 

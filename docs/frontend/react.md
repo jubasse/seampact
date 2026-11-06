@@ -89,7 +89,7 @@ function NoteList() {
 - There is no infinite hook: a paged list gets its plain hook, with no warning. Change the request to read the next page.
 - `staleTime`, `invalidate`, `infinite`, `keys.root` and the `itemsOf` artefact need a query library: `generate` refuses them with `query: fetch`.
 
-`errors: data` needs a client with `errorStyle: result`, which is the client's default.
+The hooks need a client with `errorStyle: result`, the client's default: `generate` refuses a client with `errorStyle: throw`.
 
 `artefacts: { hooks: false }` keeps the options factories only. `artefacts: { itemsOf: true }` adds `itemsOf`.
 

@@ -6,7 +6,7 @@ A pack is a set of conventions you reuse: a response format, a paging style, or 
 packs: ["@seampact/pack-hal"]
 ```
 
-Write it at the top level of `api.yaml`, or of the shared file to give it to every api. `install-into.ts` installs the packs with the other seampact packages. A pack is data, not code.
+Write it at the top level of `api.yaml`, or of the shared file to give it to every api. `install-into.ts` installs the packs with the other seampact packages: see [Install](../getting-started/01-install.md). A pack is data, not code.
 
 ## What each pack brings
 
@@ -23,14 +23,14 @@ A format or paging pack sets it as the default for the api. You can still choose
 
 ## What generates today
 
-All six packs load. Types, validators and a NestJS server were tried with each one.
+All six packs load. Each of the first three generates on the targets named below.
 
 | Pack | Generates today |
 |---|---|
-| `@seampact/pack-spring` | Yes. A Node server refuses its `pair` sort on a list with `sortable`: `paging.sort.style.unsupported`. |
+| `@seampact/pack-spring` | Yes, on Spring Boot, where a list gets Spring Data's `Page`. Node servers refuse its `pair` sort on a list with `sortable` (`paging.sort.style.unsupported`), and the fetch client refuses it too, since it sends one `sort` per key (`query.list.explode.unsupported`). |
 | `@seampact/pack-crud-rights` | Yes, on routes with an identity. |
-| `@seampact/pack-laravel` | Yes: types, validators, Node servers and the fetch client. |
-| `@seampact/pack-hal` | Loads; code generation planned. `format.success.envelope.unsupported`, `response.media.unsupported`, `paging.response.slot.unsupported`. |
+| `@seampact/pack-laravel` | Yes: types, validators, the fetch client, Node servers, Laravel, Symfony, Spring Boot and the Python servers. |
+| `@seampact/pack-hal` | Loads; code generation planned. `format.success.envelope.unsupported`, `response.media.unsupported`, `paging.response.slot.unsupported`; Node servers refuse its sort (`paging.sort.style.unsupported`) and the fetch client its body (`format.template.unsupported`). |
 | `@seampact/pack-jsonapi` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`. |
 | `@seampact/pack-api-platform` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`, `paging.response.slot.unsupported`. |
 

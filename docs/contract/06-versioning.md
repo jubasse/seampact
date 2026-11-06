@@ -71,6 +71,7 @@ notes:
 
 - Dates are quoted. An unquoted date is refused.
 - `successor` names a route, so it goes on a route and not on a node.
+- `successor` names a route of the same api. A successor in another api is refused by `generate`.
 - Keep the route working until `sunset` has passed.
 
 ## What is next

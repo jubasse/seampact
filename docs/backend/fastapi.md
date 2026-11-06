@@ -191,7 +191,7 @@ def user_hook(token: Annotated[str | None, Security(bearer)]) -> UserHook:
 
 - `auto_error=False` hands `None` to the factory, so a caller with another credential of the identity (a session cookie) still reaches the hook. The credentials the contract declares are in `request.credentials`.
 - A scheme that raises `HTTPException` 401 or 403 answers the contract's `unauthenticated` or `forbidden` error.
-- A decider has `decide(request)` and returns `decision.Allowed()` or `decision.Denied(deny=ErrorCodeWithParams(code=...))`. A scope resolver has `resolve_scope(request)` and returns `scope_resolution.Resolved(resolved=ResolvedScope(...))` or `scope_resolution.Denied(deny=...)`. They come from `seampact.hooks`.
+- A decider has `decide(request)` and returns `decision.Allowed()` or `decision.Denied(deny=ErrorCodeWithParams(code=...))`. A scope resolver has `resolve_scope(request)` and returns `scope_resolution.Resolved(resolved=ResolvedScope(...))` or `scope_resolution.Denied(deny=...)`. They come from `seampact.hooks`. The `params` of a right or rule in the request is an instance of its generated params class (a Pydantic model), not a dict: for a right declared with `params: { allowed: [...] }`, read `request.params.allowed`.
 - An idempotency store is a factory for an object with `begin`, `complete` and `abandon` (`seampact.hooks.IdempotencyStore`). Pass it as `idempotency_store=`. Use it when an operation is idempotent.
 - The unexpected-error listener has `on_unexpected_error(failure)`. It hears each 500 the api answers.
 - FastAPI has no CSRF layer. The boundary checks the contract's CSRF header for a caller with a cookie only.
@@ -281,6 +281,12 @@ So keeping Starlette current is your project's job. Run `pip install -U starlett
 - Run a server that gives the raw request path. uvicorn does. Where the server gives none, the boundary matches the decoded path and logs which rules it cannot apply.
 - An ASGI wrapper around the app object (`app = CORSMiddleware(FastAPI())`, an error tracker) runs before the boundary and is not seen. Add middleware with `app.add_middleware()`.
 - The outgoing check cannot read a `br` error body: it is a violation.
-- `generate` refuses by name: form, multipart, file, download and redirect bodies, `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
+- `generate` refuses by name: form, multipart, file, download and redirect bodies, query lists in every form (`tag=a&tag=b`, `tag=a,b` or `tag[]=a`), `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
 - FastAPI older than 0.162 is refused.
 - DRF and Ninja are separate targets: see [Django REST Framework](drf.md).
+
+## Versioned writes and query lists
+
+A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
+
+A query list is refused by `generate` for now, in the `repeat` and `comma` forms alike (`param.query.structured.unsupported`). Use a scalar param, or leave the operation out of the entry's `operations` filter.

@@ -1,19 +1,19 @@
 # Expo and React Native
 
-An Expo or React Native app calls your API with the generated `fetch` client, and with the React hooks over it (TanStack Query, SWR or RTK Query). Both are written for Hermes, and need React Native 0.84 or later (earlier versions lack `URLSearchParams.get`, which paging reads; `createClient` refuses to start without it).
+An Expo or React Native app calls your API with the generated `fetch` client, and with the React hooks over it (TanStack Query, SWR or RTK Query). Both are written for Hermes, and need React Native 0.84 or later (earlier versions lack `URLSearchParams.get`, which reading a cursor from a `Link` header needs; `createClient` refuses to start without it when your contract has such paging).
 
 Capacitor and Ionic apps are web apps: use the React, Angular or Vue targets.
 
 ## Generate
 
-Add `@seampact/codegen-ts`, `@seampact/codegen-fetch` and, for hooks, `@seampact/codegen-react` to the targets of your `seampact.config.yaml`, then run `seampact generate`. The client has no runtime dependency.
+Add `@seampact/codegen-ts`, `@seampact/codegen-fetch` and, for hooks, `@seampact/codegen-react` to the targets of your `seampact.config.yaml`, as on the [React page](react.md), then run `npx seampact generate`. The examples below use its target ids, `client` and `queries`. The client has no runtime dependency.
 
 ## Create the client
 
 Read the API address from `EXPO_PUBLIC_API_URL` in `.env`. Expo inlines it at build time.
 
 ```ts
-import * as NotesClient from "./generated/notes/client";
+import * as NotesClient from "./__generated__/client/notes";
 
 export const client = NotesClient.createClient({
   baseUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
@@ -47,14 +47,14 @@ The hooks work as on the web. With TanStack Query:
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createNotesHooks } from "./generated/notes/hooks";
+import { createNotesHooks } from "./__generated__/queries/notes";
 import { client } from "./client";
 
 const Notes = createNotesHooks(client, { idempotencyKey: randomUUID });
 const queryClient = new QueryClient();
 
 function NoteList() {
-  const notes = Notes.useListNotes();
+  const notes = Notes.useListNotes({});
 
   return notes.data ? <Text>{notes.data.body.items.length} notes</Text> : null;
 }
@@ -77,7 +77,7 @@ SWR and RTK Query hooks are used the same way, with their own provider.
 | `fetch`, `Headers`, `Response`, `AbortController` | provided by React Native | used; a missing `fetch` is refused at creation, pass `fetch` |
 | `crypto.randomUUID` | missing | refused at creation, pass `idempotencyKey` |
 | `AbortSignal.timeout`, `AbortSignal.any` | missing | an `AbortController` stands in |
-| `URLSearchParams.get` | React Native 0.84 and later | needed for paging; refused at creation otherwise |
+| `URLSearchParams.get` | React Native 0.84 and later | needed for a cursor in a `Link` header; refused at creation otherwise |
 | `URL.canParse` | missing | not used |
 | `TextEncoder`, `FormData`, `Blob`, `structuredClone`, `ReadableStream` | not needed | not used |
 
