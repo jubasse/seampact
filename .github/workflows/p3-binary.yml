@@ -1,8 +1,9 @@
 # The standalone compiler binary (ADR 0010): five binaries built on one Linux job, the macOS ones re-signed ad hoc
 # on macOS runners, a SHA-256 manifest of the final files, the pins written from it, one `seampact-compiler` wheel
 # per binary, and a smoke on each platform's own runner (the binary, then its wheel in a clean venv). On a pull
-# request or a push the jobs run only when the change touches a watched path. A pull request smokes linux-x64 and
-# win32-x64 on unsigned binaries, a push to develop adds linux-arm64, and the nightly and a manual run sign the macOS
+# request or a push the jobs run only when the change touches a watched path. A pull request to develop builds the
+# five binaries; the merge queue adds the manifest, the pins, the wheels and the linux-x64 and win32-x64 smokes on
+# unsigned binaries, a push to develop the linux-arm64 smoke, and the nightly and a manual run sign the macOS
 # binaries and smoke them too (an unsigned binary does not run on Apple Silicon); `binary` is the one check to require.
 # The release workflow calls this one: a call runs every row, embeds the packs as npm packed them, and attests the
 # binaries and the wheels only when it asks. Nothing here uploads to a release or a registry.
@@ -92,6 +93,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       binary: ${{ steps.detect.outputs.run }}
+      pr-rows: ${{ steps.detect.outputs.pr-rows }}
+      queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
       drift: ${{ steps.detect.outputs.drift }}
       version: ${{ steps.version.outputs.version }}
@@ -137,9 +140,13 @@ jobs:
         id: lane
         uses: ./.github/actions/lane-changes
         with:
+          # The compiler binary cache key's roots (the CLI's dependency closure and the binary package) and the
+          # fixtures the smoke apps read.
           watched-paths: |
-            ^packages/
-            ^fixtures/
+            ^packages/(core|packs)/
+            ^packages/tools/binary/
+            ^fixtures/reference/
+            ^fixtures/golden/pack-[^/]+/contract/
             ^\.github/actions/
             ^\.github/workflows/p3-binary\.yml$
             ^python/compiler/
@@ -147,6 +154,8 @@ jobs:
             ^pnpm-lock\.yaml$
             ^pnpm-workspace\.yaml$
             ^package\.json$
+            ^\.npmrc$
+            ^tsconfig(\.base)?\.json$
             ^\.nvmrc$
       # A call builds what the release ships: every row, whatever the change.
       - name: Run every row on a release call
@@ -154,13 +163,16 @@ jobs:
         env:
           RELEASE_CALL: ${{ inputs.release-call == true }}
           LANE_RUN: ${{ steps.lane.outputs.run }}
+          LANE_PR_ROWS: ${{ steps.lane.outputs.pr-rows }}
+          LANE_QUEUE: ${{ steps.lane.outputs.queue }}
           LANE_POST_MERGE: ${{ steps.lane.outputs.post-merge }}
           LANE_DRIFT: ${{ steps.lane.outputs.drift }}
         run: |
           if [ "$RELEASE_CALL" = true ]; then
-            printf 'run=true\npost-merge=true\ndrift=true\n' >> "$GITHUB_OUTPUT"
+            printf 'run=true\npr-rows=true\nqueue=true\npost-merge=true\ndrift=true\n' >> "$GITHUB_OUTPUT"
           else
-            printf 'run=%s\npost-merge=%s\ndrift=%s\n' "$LANE_RUN" "$LANE_POST_MERGE" "$LANE_DRIFT" >> "$GITHUB_OUTPUT"
+            printf 'run=%s\npr-rows=%s\nqueue=%s\npost-merge=%s\ndrift=%s\n' \
+              "$LANE_RUN" "$LANE_PR_ROWS" "$LANE_QUEUE" "$LANE_POST_MERGE" "$LANE_DRIFT" >> "$GITHUB_OUTPUT"
           fi
 
   build:
@@ -266,9 +278,11 @@ jobs:
     name: manifest (hash after signing)
     # Runs on the build alone when signing does not run, so the smoke still tests the unsigned binaries; a failed
     # or cancelled signing stops it, and in a call signing must have succeeded; the aggregate fails on that job.
-    needs: [build, sign-macos]
+    # A queue row, which a push also runs for its arm64 smoke.
+    needs: [changes, build, sign-macos]
     if: >-
       ${{ !cancelled() && needs.build.result == 'success'
+      && (needs.changes.outputs.queue == 'true' || needs.changes.outputs.post-merge == 'true')
       && (needs.sign-macos.result == 'success'
       || (needs.sign-macos.result == 'skipped' && !inputs.release-call)) }}
     runs-on: ubuntu-24.04
@@ -310,7 +324,7 @@ jobs:
   pins:
     name: pins (from SHA256SUMS)
     needs: [changes, manifest]
-    if: ${{ !cancelled() && needs.manifest.result == 'success' }}
+    if: ${{ !cancelled() && needs.manifest.result == 'success' && needs.changes.outputs.queue == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -409,7 +423,9 @@ jobs:
   smoke:
     name: &smoke-name smoke (${{ matrix.id }})
     needs: [changes, sign-macos, manifest, wheels]
-    if: ${{ !cancelled() && needs.manifest.result == 'success' && needs.wheels.result == 'success' }}
+    if: >-
+      ${{ !cancelled() && needs.manifest.result == 'success' && needs.wheels.result == 'success'
+      && needs.changes.outputs.queue == 'true' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     strategy:
@@ -556,8 +572,11 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.binary }}
-          # Signing is a drift row: a pull request and a push smoke unsigned binaries.
-          allow-skip: ${{ needs.changes.outputs.drift == 'false' && 'sign-macos' || '' }}
+          # Signing is a drift row: a pull request and a push smoke unsigned binaries. The manifest, the pins, the
+          # wheels and the smokes are queue rows: a pull request to develop builds the binaries only.
+          allow-skip: >-
+            ${{ format('{0} {1}', needs.changes.outputs.drift == 'false' && 'sign-macos' || '',
+            needs.changes.outputs.queue == 'false' && 'manifest pins wheels smoke' || '') }}
 
   attest:
     name: attest (when the caller asks)

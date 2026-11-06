@@ -22,6 +22,8 @@ const ROW_CLASS_SUFFIXES = ["queue", "post-merge", "drift"] as const;
 // The Spring Boot consumer rows: each build row has its http-suite row.
 const SPRING_CONSUMER_PR_ROWS: readonly MatrixRow[] = [
   { "build-tool": "gradle", jdk: 21, contract: "bundle" },
+];
+const SPRING_CONSUMER_QUEUE_ROWS: readonly MatrixRow[] = [
   { "build-tool": "maven", jdk: 25, contract: "bundle" },
 ];
 const SPRING_CONSUMER_POST_MERGE_ROWS: readonly MatrixRow[] = [
@@ -80,9 +82,13 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     ],
   },
   "p6-spring-boot.yml": {
+    golden: [{ "test-jdk": 21 }],
+    "golden-queue": [{ "test-jdk": 25 }],
     build: SPRING_CONSUMER_PR_ROWS,
+    "build-queue": SPRING_CONSUMER_QUEUE_ROWS,
     "build-post-merge": SPRING_CONSUMER_POST_MERGE_ROWS,
     "http-suite": SPRING_CONSUMER_PR_ROWS,
+    "http-suite-queue": SPRING_CONSUMER_QUEUE_ROWS,
     "http-suite-post-merge": SPRING_CONSUMER_POST_MERGE_ROWS,
   },
   "p6-php-core.yml": {
