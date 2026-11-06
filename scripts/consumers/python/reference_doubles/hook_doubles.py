@@ -245,12 +245,16 @@ class ServiceDecider:
 
 
 def _caller_listed(request: RequirementRequest) -> bool:
-    allowed = (request.params or {}).get("allowed")
+    # The decider receives the right's generated params class, whose `allowed` holds Service members.
+    allowed = getattr(request.params, "allowed", None)
     principal = request.principal
 
     service = principal.service if isinstance(principal, ServicePrincipal | WritesServicePrincipal) else None
 
-    return service is not None and isinstance(allowed, list) and service in allowed
+    if service is None or not isinstance(allowed, list):
+        return False
+
+    return str(service) in {str(getattr(member, "value", member)) for member in allowed}
 
 
 def _spends_throttled_bucket(request: RequirementRequest) -> bool:
