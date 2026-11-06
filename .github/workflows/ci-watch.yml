@@ -7,7 +7,8 @@ name: CI watch
 # after a pause), since most drift failures are a registry or runner fault; only a failed rerun opens the issue. A
 # cancelled run (superseded by a newer push) opens nothing,
 # and a green run closes nothing: a run whose path filter skipped every job proves nothing. Every workflow that runs
-# on a push or the schedule is listed below; a test keeps the list complete.
+# on a push or the schedule is listed below; a test keeps the list complete. A failed merge group opens no issue: it
+# comments on the pull request it ejected from develop's merge queue, which its author fixes and queues again.
 
 on:
   workflow_run:
@@ -44,12 +45,15 @@ on:
       - Docs site
       - Conformance release gate
     types: [completed]
-    branches: [develop]
+    # A merge group runs on the queue's own branch.
+    branches: [develop, "gh-readonly-queue/develop/**"]
 
 permissions:
   # Lists the failed jobs of the run it reports, and reruns a failed nightly once.
   actions: write
   issues: write
+  # Comments on the pull request a failed merge group ejected.
+  pull-requests: write
 
 jobs:
   report:
@@ -131,3 +135,46 @@ jobs:
           else
             gh issue create --title "$title" --label ci-watch --body-file "$body_file"
           fi
+
+  merge-group:
+    if: >-
+      contains(fromJSON('["failure", "timed_out", "startup_failure"]'), github.event.workflow_run.conclusion)
+      && github.event.workflow_run.event == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts/ci
+          persist-credentials: false
+      # Every value from the run goes through the environment, never into the script.
+      - name: Comment on the pull request the merge group ejected
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          GROUP_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          pull_request=$(bash scripts/ci/queue-pull-request.sh "$GROUP_BRANCH")
+
+          if failed_jobs=$(gh api --paginate "repos/$GH_REPO/actions/runs/$RUN_ID/jobs" \
+            --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "cancelled") | "- [\(.name)](\(.html_url))"' 2>&1); then
+            if [ -z "$failed_jobs" ]; then failed_jobs="- none listed as failed; see the run"; fi
+          else
+            failed_jobs="- not listed: the jobs API refused ($failed_jobs); see the run"
+          fi
+
+          body_file="$RUNNER_TEMP/merge-group-body.md"
+          {
+            echo "**$WORKFLOW_NAME** failed in develop's merge queue: $RUN_URL"
+            echo
+            echo "Failed jobs:"
+            echo "$failed_jobs"
+            echo
+            echo "Fix and re-queue."
+          } > "$body_file"
+
+          gh pr comment "$pull_request" --body-file "$body_file"
