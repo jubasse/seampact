@@ -44,6 +44,7 @@ public object SpringBootTarget {
 
         val refusals = Refusals()
         val kept = KeptForms(ir, refusals)
+        refuseIdentityResponseHeaders(ir, refusals)
         val layout = JavaLayout(ir, options.packageName, kept, refusals)
         refusals.throwIfAny()
 
