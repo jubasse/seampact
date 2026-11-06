@@ -7,14 +7,14 @@ In [Install](../getting-started/01-install.md), use these dependencies in `packa
 ```json
   "dependencies": {
     "@hono/node-server": "2.1.5",
-    "hono": "4.13.13",
+    "hono": "4.13.14",
     "zod": "4.6.7"
   },
 ```
 
 Keep `@seampact/server-runtime`, which Install put in `dependencies`: the generated code imports it. Keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`.
 
-In [Generate](../getting-started/03-generate-and-run.md), the `server` target uses `@seampact/codegen-hono`. It has no `bodyValidation` option.
+In [Generate](../getting-started/03-generate-and-run.md), the `server` target uses `@seampact/codegen-hono`.
 
 ```yaml
   - id: server

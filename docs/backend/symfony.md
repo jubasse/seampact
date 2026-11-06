@@ -161,7 +161,7 @@ Each api has its own interfaces in `App\Generated\<Api>\Symfony`: `Decider`, `Sc
 The firewall runs before the contract's access steps. So:
 
 - Your authenticate hook reads the firewall's user from the token storage (`Security::getUser()`, as above).
-- Your decider asks your voters with `isGranted`. The subject carries the request params and the scopes. A refusal throws `AccessDeniedException`, and the api answers the operation's first denial code.
+- Your decider asks your voters with `isGranted`. The subject, here a class of yours (`DecisionSubject`), carries the request params and the scopes. A refusal throws `AccessDeniedException`, and the api answers the operation's first denial code.
 
 ```php
 if (!$this->authorization->isGranted($request->name(), new DecisionSubject($request->params(), $request->scopes()))) {
@@ -319,7 +319,7 @@ Find each message in [Troubleshooting](../troubleshooting/boot.md).
 
 ## What is not served yet
 
-`generate` refuses these by name, until an app needs them: multipart and file values, form bodies, download and redirect responses, query lists in brackets form (`tag[]=a`) and in the default `repeat` form, and `artefacts: { accessHooks: false }`. Remove the operation from the entry's `operations` filter to generate the rest. See [Troubleshooting](../troubleshooting/generate.md).
+`generate` refuses these by name, until an app needs them: multipart and file values, form bodies, download and redirect responses, query lists in every form (`tag=a&tag=b`, `tag=a,b` or `tag[]=a`), and `artefacts: { accessHooks: false }`. Remove the operation from the entry's `operations` filter to generate the rest. See [Troubleshooting](../troubleshooting/generate.md).
 
 Serve the app with php-fpm. A worker runtime (FrankenPHP worker, RoadRunner, Swoole) is refused with `runtime.worker.unsupported`.
 
@@ -331,6 +331,6 @@ Symfony 7.4 and 8 are tested. The CI runs Symfony 7.4 on PHP 8.3 and 8.5, and Sy
 
 A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
 
-A query list in the default `repeat` form (`tag=a&tag=b`) is refused by `generate` for now (`param.query.structured.unsupported`): set `conventions.query.lists` to `comma`.
+A query list is refused by `generate` for now, in the `repeat` and `comma` forms alike (`param.query.structured.unsupported`). Use a scalar param, or leave the operation out of the entry's `operations` filter.
 
 The `params` of a right or rule in a decider request are an instance of the generated class, not an array.

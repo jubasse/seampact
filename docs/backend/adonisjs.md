@@ -20,7 +20,7 @@ node ~/src/seampact/scripts/consumers/install-into.ts ~/src/notes-app
 cd ~/src/notes-app
 ```
 
-You see `install-into: 21 packages in .../vendor/seampact`.
+You see `install-into: 32 packages and packs in .../vendor/seampact, listed in package.json. Run pnpm install.`
 
 `install-into` rewrites `pnpm-workspace.yaml` and drops the starter's `allowBuilds`. Open the file and add these two lines under `allowBuilds:`, then install.
 
@@ -129,7 +129,7 @@ Types come from `types/notes`. The routes come from `server/notes`.
 
 ## Register the routes
 
-The starter's own routes (`/`, signup, login) are not in the contract, and the boot check refuses them. Replace `start/routes.ts`. A public api needs no hooks.
+Replace `start/routes.ts`. A public api needs no hooks. A route you keep beside the contract's must stay off the api's paths (`/v1`): the boot check refuses one there unless `frameworkRoutes` allow-lists it.
 
 ```ts
 import router from '@adonisjs/core/services/router'

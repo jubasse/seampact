@@ -115,7 +115,7 @@ When an operation takes a version, the boundary checks its format only. Compare 
 if (input.body().expectedVersion() != task.version()) return new UpdateTaskErrors.StateConflict();
 ```
 
-With `If-Match`, the handler gets the version unquoted and returns the `preconditionFailed` error (412) on a mismatch.
+With `If-Match`, a missing or empty header (or `*`) answers 428 before the handler runs. A weak tag (`W/"7"`) is accepted. The handler gets the version unquoted (`7`) and returns the `preconditionFailed` error (412) on a mismatch.
 
 With `@seampact/pack-spring`, a list in the `springPage` style gets a `Pageable` in its input and returns Spring Data's `Page`. Add `org.springframework.data:spring-data-commons`; the Spring Boot BOM gives its version.
 
