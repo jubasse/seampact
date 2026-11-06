@@ -1,7 +1,7 @@
 // Runs one binary on the smoke apps and compares it with the reference the Node CLI produced on Linux: the IR
 // files, each app's bundle and its editor schemas, the native app's OpenAPI documents, and every file of each `init`
 // run, byte for byte, and the answers of the commands both carry. The apps are copied outside the repository,
-// so a pack can only come from the packs embedded in the binary.
+// so a pack can only come from the packs embedded in the binary, and the binary runs with no Node.js on its PATH.
 // Usage: node scripts/smoke.mjs <binary> <reference-dir> [--label <name>]
 // Env: SMOKE_ENV='{"TZ":"Asia/Kolkata","LOG_TOKENS":"1"}' extra environment for the binary.
 import { spawnSync } from "node:child_process";
@@ -17,7 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { delimiter, join, resolve } from "node:path";
 import {
   EDITOR_SCHEMAS_PREFIX,
   INIT_RUNS,
@@ -41,11 +41,35 @@ if (!binaryArgument || !referenceArgument) {
 
 const binary = resolve(binaryArgument);
 const referenceDirectory = resolve(referenceArgument);
-const environment = { ...process.env, ...JSON.parse(process.env.SMOKE_ENV ?? "{}") };
+const NODE_EXECUTABLES = ["node", "node.exe"];
+
+// The environment without the PATH directories that hold a Node.js executable, so a contract repository of another
+// language is proven to need none. Windows names the variable `Path`.
+function withoutNodeOnPath(baseEnvironment) {
+  const pathKey = Object.keys(baseEnvironment).find((key) => key.toUpperCase() === "PATH");
+
+  if (pathKey === undefined) return baseEnvironment;
+
+  const directoriesWithoutNode = baseEnvironment[pathKey]
+    .split(delimiter)
+    .filter((directory) => !NODE_EXECUTABLES.some((name) => existsSync(join(directory, name))));
+
+  return { ...baseEnvironment, [pathKey]: directoriesWithoutNode.join(delimiter) };
+}
+
+const environment = withoutNodeOnPath({
+  ...process.env,
+  ...JSON.parse(process.env.SMOKE_ENV ?? "{}"),
+});
 const failures = [];
 const check = (condition, message) => {
   if (!condition) failures.push(message);
 };
+
+check(
+  spawnSync("node", ["--version"], { env: environment }).error?.code === "ENOENT",
+  "node is still found on the PATH the binary runs with",
+);
 
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "seampact-smoke-")));
 
