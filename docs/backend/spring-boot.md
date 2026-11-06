@@ -43,7 +43,7 @@ The plugin also adds `io.github.jubasse:seampact-spring-runtime` at its own vers
 
 ### With Maven
 
-Add the runtime and the plugin to `pom.xml`, next to `seampact-hooks`, at the same version:
+Add the runtime and the plugin to `pom.xml`, next to `seampact-hooks`, at the same version. Set it once in `<properties>`: `<seampact.version>1.0.0</seampact.version>`.
 
 ```xml
 <dependency>
