@@ -157,7 +157,7 @@ export class NotesPage {
 
 `staleTime`, `invalidate`, `infinite` and `keys.root` need a query library: `generate` refuses them.
 
-`errors: data` needs a client with `errorStyle: result`, which is the client's default.
+The service needs a client with `errorStyle: result`, the client's default: `generate` refuses a client with `errorStyle: throw`.
 
 `artefacts: { service: false }` keeps the plain fetchers only.
 

@@ -196,7 +196,7 @@ def user_hook(request: HttpRequest) -> UserHook:
     return UserHook(getattr(request, "user", None))
 ```
 
-- A decider has `decide(request)` and returns `decision.Allowed()` or `decision.Denied(deny=ErrorCodeWithParams(code=...))`. A scope resolver has `resolve_scope(request)` and returns `scope_resolution.Resolved(resolved=ResolvedScope(...))` or `scope_resolution.Denied(deny=...)`. They come from `seampact.hooks`.
+- A decider has `decide(request)` and returns `decision.Allowed()` or `decision.Denied(deny=ErrorCodeWithParams(code=...))`. A scope resolver has `resolve_scope(request)` and returns `scope_resolution.Resolved(resolved=ResolvedScope(...))` or `scope_resolution.Denied(deny=...)`. They come from `seampact.hooks`. The `params` of a right or rule in the request is an instance of its generated params class (a Pydantic model), not a dict: for a right declared with `params: { allowed: [...] }`, read `request.params.allowed`.
 - An idempotency store has `begin`, `complete` and `abandon` (`seampact.hooks.IdempotencyStore`). Name its factory in `idempotency_store`. Use it when an operation is idempotent. With the ORM, it runs in the thread of the sync views, also under ASGI.
 - The unexpected-error listener has `on_unexpected_error(failure)`. It hears each 500 the api answers.
 - To verify a signed webhook, call `seampact-signed-webhooks` in the authenticate hook. The raw body is `request.signature.raw_body`; `request.signature` is `None` on an unsigned route. `TemplateSignatureVerifier` checks a template signature. A signature your application verifies is refused (`signature.application.unsupported`).
@@ -279,7 +279,13 @@ Django 5.2 and 6, and DRF 3.18, are tested. An older version fails with `config.
 - Under ASGI, Django reads the whole body before the first middleware. Bound it at your proxy or server.
 - A WSGI or ASGI wrapper around the application object (an error tracker, `WhiteNoise(application)`) runs before the boundary and is not seen.
 - A middleware before the boundary in `MIDDLEWARE` is refused at boot.
-- `generate` refuses by name: form, multipart, file, download and redirect bodies, `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
+- `generate` refuses by name: form, multipart, file, download and redirect bodies, query lists in brackets form (`tag[]=a`) and in the default `repeat` form, `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
 - `bodyValidation` (and `body_validation` in `SEAMPACT`) is not served on DRF yet: the boot check refuses it. Use FastAPI for it.
 - Django REST Framework older than 3.18 and Django older than 5.2 are refused.
 - FastAPI is a separate target: see [FastAPI](fastapi.md).
+
+## Versioned writes and query lists
+
+A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
+
+A query list in the default `repeat` form (`tag=a&tag=b`) is refused by `generate` for now (`param.query.structured.unsupported`): set `conventions.query.lists` to `comma`.

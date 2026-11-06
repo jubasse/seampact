@@ -50,6 +50,16 @@ pagings:
 
 The body is `{ "items": [...], "page": 2, "totalPages": 3 }`.
 
+A style can take its cursor in two parameters, as Stripe does:
+
+```yaml
+    request:
+      after: { query: starting_after }
+      before: { query: ending_before }
+```
+
+A request sends one of the two. Both answer `400`.
+
 ## Use it on a list
 
 ```yaml
@@ -63,7 +73,7 @@ notes:
       sortable: [createdAt, title]
 ```
 
-- `maxLimit` is required for a style with a `limit`. A larger `limit` answers `400`.
+- `maxLimit` is required for a style with a `limit`. A larger `limit` answers `400`. With `overLimit: clamp` it is served as `maxLimit` instead.
 - `defaultLimit` is the page size when the client sends none.
 - `sortable` lists the fields a client may sort by: `?sort=-createdAt,title`. It needs a `sort` in the style.
 
@@ -86,6 +96,21 @@ ops:
 ## Use `item`, not `output`
 
 On a route that is not an `op`, write `item: Note` to make it a list. `output` is always the whole body. An array `output` on a `GET` is refused with this fix.
+
+## A list in a query parameter
+
+A query parameter that is a list, such as `state?: TaskState[]`, travels as repeated keys by default: `?state=open&state=done`. Choose another form once for the api:
+
+```yaml
+conventions:
+  query: { lists: comma }
+```
+
+- `repeat` (default): `?state=open&state=done`. Node servers and Spring Boot read it.
+- `comma`: `?state=open,done`. Every server and client reads it.
+- `brackets`: `?state[]=open&state[]=done`. No target reads it yet.
+
+If a target refuses the form, `generate` says which and how to fix it: see [Target option errors](../troubleshooting/generate.md).
 
 ## Ready-made styles
 
