@@ -2,21 +2,16 @@ package io.github.jubasse.seampact.springboot.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.Decision;
-import io.github.jubasse.seampact.hooks.OperationRef;
 import io.github.jubasse.seampact.hooks.Purpose;
 import io.github.jubasse.seampact.hooks.RequestView;
-import io.github.jubasse.seampact.hooks.SignedTemplateRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.core.env.StandardEnvironment;
 import tools.jackson.databind.JsonNode;
@@ -56,7 +51,7 @@ class OutputFieldRightsTest {
     private static JsonNode visibleTask(String operationId, Decider decider) {
         StaticListableBeanFactory beans = new StaticListableBeanFactory();
         beans.addBean("decider", decider);
-        SeampactBoundary boundary = new SeampactBoundary(TABLE, new RolesBinding(), beans, new StandardEnvironment());
+        SeampactBoundary boundary = new SeampactBoundary(TABLE, new TasksTestBinding(Map.of("roles", RolesParams.class)), beans, new StandardEnvironment());
         ContractRoute route = boundary.table().routes().stream().filter(candidate -> candidate.id().equals(operationId)).findFirst().orElseThrow();
         BoundaryExchange exchange = new BoundaryExchange(new ContractTable.RouteMatch(route, Map.of()), "/tasks",
                 new CheckingResponse(unusedResponse(), false));
@@ -104,80 +99,6 @@ class OutputFieldRightsTest {
             boolean titleField = call.purpose() instanceof Purpose.Field field && field.pointer().equals("/title");
 
             return titleField ? new Decision.Allowed<>() : new Decision.Denied<>(Denial.of("api.forbidden"));
-        }
-    }
-
-    /** The binding of the `tasks` api above: only its decider type and the params record of `roles`. */
-    private static final class RolesBinding implements ApiBinding {
-        @Override
-        public Map<String, Class<?>> inputTypes() {
-            return Map.of();
-        }
-
-        @Override
-        public Map<String, Class<? extends Annotation>> annotations() {
-            return Map.of();
-        }
-
-        @Override
-        public Map<Class<?>, Integer> successArms() {
-            return Map.of();
-        }
-
-        @Override
-        public Map<Class<?>, String> errorArms() {
-            return Map.of();
-        }
-
-        @Override
-        public Optional<String> contractCode(Throwable exception) {
-            return Optional.empty();
-        }
-
-        @Override
-        public Map<String, Class<?>> authenticateHooks() {
-            return Map.of();
-        }
-
-        @Override
-        public Map<String, Class<?>> rightParamsTypes() {
-            return Map.of("roles", RolesParams.class);
-        }
-
-        @Override
-        public Map<String, Class<?>> ruleParamsTypes() {
-            return Map.of();
-        }
-
-        @Override
-        public Class<? extends Decider> deciderType() {
-            return Decider.class;
-        }
-
-        @Override
-        public Class<? extends ScopeResolver> scopeResolverType() {
-            return ScopeResolver.class;
-        }
-
-        @Override
-        public Class<? extends UnexpectedErrorListener> unexpectedErrorListenerType() {
-            return UnexpectedErrorListener.class;
-        }
-
-        @Override
-        public String apiId() {
-            return "tasks";
-        }
-
-        @Override
-        public String generatorVersion() {
-            return SeampactRuntimeVersion.VERSION;
-        }
-
-        @Override
-        public AuthenticateResult<?, Denial> authenticate(String identity, ListableBeanFactory beans, JsonMapper mapper, JsonNode credentials,
-                Optional<String> csrfToken, Optional<SignedTemplateRequest> signature, RequestView request, OperationRef operation) {
-            throw new UnsupportedOperationException("the output field step authenticates no one");
         }
     }
 }

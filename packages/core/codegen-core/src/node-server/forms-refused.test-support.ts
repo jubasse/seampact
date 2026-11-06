@@ -37,6 +37,37 @@ function replaceBearerScheme(
   ir.schemes[BEARER_SCHEME] = { id: BEARER_SCHEME, ...scheme, origin: bearer.origin };
 }
 
+// The operation of the tasks api with [id], which the golden tasks api must hold.
+function operationOf(ir: ContractIR, id: string): Operation {
+  const operation = ir.operations.find((candidate) => candidate.id === id);
+
+  if (operation === undefined) throw new Error(`the golden tasks api has no operation '${id}'`);
+
+  return operation;
+}
+
+// createTask's JSON body, sent with another media type.
+function sendCreateTaskBodyAs(ir: ContractIR, media: string): void {
+  const { input } = operationOf(ir, "createTask");
+
+  if (input === undefined) throw new Error("the golden createTask has no body");
+
+  input.media = media;
+}
+
+// getTask's success answered with [shape] and no body, as a file download or a redirect is.
+function answerGetTaskWith(ir: ContractIR, shape: string, media: string | undefined): void {
+  const [success] = operationOf(ir, "getTask").responses;
+
+  if (success === undefined) throw new Error("the golden getTask has no response");
+
+  success.shape = shape;
+  delete success.body;
+
+  if (media === undefined) delete success.media;
+  else success.media = media;
+}
+
 function identityAccessOf(operation: Operation): IdentityAccess {
   const { access } = operation;
 
@@ -136,6 +167,40 @@ export const FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedForm[] = [
     change: (ir) => {
       ir.api.wire.urls = "absolute";
     },
+  },
+  {
+    title: "a form body",
+    code: "input.media.unsupported",
+    change: (ir) => sendCreateTaskBodyAs(ir, "application/x-www-form-urlencoded"),
+  },
+  {
+    title: "a multipart body",
+    code: "input.media.unsupported",
+    change: (ir) => sendCreateTaskBodyAs(ir, "multipart/form-data"),
+  },
+  {
+    title: "a query list in brackets form",
+    code: "query.list.brackets.unsupported",
+    change: (ir) => {
+      const [sort] = operationOf(ir, "listTasks").params.query.filter(
+        (param) => param.wire?.kind === "list",
+      );
+
+      if (sort?.wire === undefined) throw new Error("the golden listTasks has no list query param");
+
+      sort.wire.explode = true;
+      sort.wire.brackets = true;
+    },
+  },
+  {
+    title: "a file download",
+    code: "response.shape.unsupported",
+    change: (ir) => answerGetTaskWith(ir, "binary", "application/pdf"),
+  },
+  {
+    title: "a redirect response",
+    code: "response.shape.unsupported",
+    change: (ir) => answerGetTaskWith(ir, "redirect", undefined),
   },
 ];
 

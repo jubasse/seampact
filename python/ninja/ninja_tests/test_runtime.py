@@ -1,7 +1,7 @@
 """The Ninja placement at run time, on the reference contract's golden package: the boot check reads the handlers
 and hooks from `bind_<api>()`, the route names reverse under the NinjaAPI's namespace, the contract views carry the
-marks the boundary sets, Ninja still calls the wrapped `on_exception`, Pydantic 1 is refused at boot, and the values
-of `bind_<api>()` the runtime cannot serve are refused by name."""
+marks the boundary sets, Ninja still calls the wrapped `on_exception` and its auth refusal answers the operation's
+code, Pydantic 1 is refused at boot, and the values of `bind_<api>()` the runtime cannot serve are refused by name."""
 
 import importlib
 import json
@@ -285,3 +285,26 @@ def test_an_auth_or_throttle_on_a_kind_whose_operation_declares_no_401_or_429_is
         "declares no code for the role 'rateLimited' nor a single code of status 429; declare one, or remove the "
         "throttle."
     ) in problems
+
+
+def test_ninjas_auth_refusal_on_a_contract_route_answers_the_operations_unauthenticated_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    refused_tokens: list[str] = []
+
+    class Refusing(HttpBearer):
+        def authenticate(self, request: object, token: str) -> None:
+            refused_tokens.append(token)
+            return None
+
+    monkeypatch.setattr(_golden("django").TasksBoundary, "boot_check", False)
+    access = {"identity": AccessSettings(auth=[Refusing()])}
+
+    with _served(monkeypatch, NinjaAPI(urls_namespace="seampact-auth-role"), access=access):
+        response = Client(raise_request_exception=False).get(
+            "/v1/me/preferences", headers={"Authorization": "Bearer unknown"}
+        )
+
+    assert refused_tokens == ["unknown"]
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert json.loads(response.content)["code"] == "api.unauthenticated"

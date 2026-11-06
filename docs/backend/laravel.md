@@ -344,5 +344,5 @@ Octane is not supported yet.
 - Run the app with php-fpm. Octane fails with `runtime.octane.unsupported`.
 - The web server's body limit and `post_max_size` must be at least the largest route limit of the contract.
 - Run `php artisan route:cache` and `config:cache` in production. The boot check then runs once, at build time.
-- Form, multipart, file, download and redirect bodies, and `accessHooks: false`, are refused by `generate` by name: they wait for an app that needs them. See [Target option errors](../troubleshooting/generate.md).
+- Form, multipart, file, download and redirect bodies, query lists in brackets form (`tag[]=a`), and `accessHooks: false`, are refused by `generate` by name: they wait for an app that needs them. See [Target option errors](../troubleshooting/generate.md).
 - Laravel 12 and older are refused. Symfony and API Platform are separate targets.

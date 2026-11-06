@@ -14,6 +14,7 @@ import {
   refuseNotGeneratedYet,
   refuseUnknownValueAt,
 } from "../located-refusals.js";
+import { refuseBracketsQueryList, refuseResponseShape } from "../not-generated-forms.js";
 import type { Refusal } from "../refusal.js";
 import { type PageFact, pageReaderOf, payloadPathOf } from "./success-reader.js";
 
@@ -66,7 +67,6 @@ const NOT_MODIFIED = 304;
 const FORM_STYLE = "form";
 const KNOWN_QUERY_STYLES: readonly string[] = ["form", "deepObject"];
 const NOT_GENERATED_QUERY_WIRES: readonly string[] = ["boolean", "object"];
-const NOT_GENERATED_SHAPES: readonly string[] = ["binary", "redirect"];
 const PAGING_DERIVATION = "paging.params";
 const KNOWN_POSITIONS: readonly string[] = ["cursor", "page", "offset", "since"];
 
@@ -210,15 +210,7 @@ function queryPlan(
     );
   }
 
-  if (wire.kind === "list" && wire.brackets) {
-    refusals.push(
-      refuseNotGeneratedYet(
-        "query.list.brackets",
-        "A list sent as 'name[]'",
-        below(wireLocation, "brackets"),
-      ),
-    );
-  }
+  if (wire.kind === "list" && wire.brackets) refusals.push(refuseBracketsQueryList(wireLocation));
 
   if (refusals.length > before) return [];
 
@@ -358,11 +350,7 @@ function successPlan(
       : pagePlan(response, operation, ir, format, location, refusals);
   }
 
-  refusals.push(
-    NOT_GENERATED_SHAPES.includes(shape)
-      ? refuseNotGeneratedYet("response.shape", `A '${shape}' response`, below(location, "shape"))
-      : refuseUnknownValueAt(below(location, "shape"), shape),
-  );
+  refusals.push(refuseResponseShape(shape, below(location, "shape")));
 
   return [];
 }

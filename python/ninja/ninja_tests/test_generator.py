@@ -143,6 +143,43 @@ def test_contract_forms_the_target_does_not_serve_are_refused_by_name(repository
     assert _refusal_codes(ir_json) == {"input.media.unsupported"}
 
 
+def test_a_form_body_is_refused_by_name(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root)
+    create_task_input = _operation(ir_json, "createTask")["input"]
+    assert isinstance(create_task_input, dict)
+    create_task_input["media"] = "application/x-www-form-urlencoded"
+
+    assert _refusal_codes(ir_json) == {"input.media.unsupported"}
+
+
+def test_a_file_download_is_refused_by_name(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root)
+    responses = _operation(ir_json, "getTask")["responses"]
+    assert isinstance(responses, list)
+    download = responses[0]
+    assert isinstance(download, dict)
+    download["shape"] = "binary"
+    download["body"] = {"kind": "file", "media": ["application/pdf"]}
+    del download["media"]
+
+    assert "response.binary.unsupported" in _refusal_codes(ir_json)
+
+
+def test_a_query_list_in_brackets_form_is_refused_by_name(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root)
+    query_params = _operation(ir_json, "listTasks")["params"]
+    assert isinstance(query_params, dict)
+    query = query_params["query"]
+    assert isinstance(query, list)
+    sort = next(param for param in query if isinstance(param, dict) and param["name"] == "sort")
+    list_wire = sort["wire"]
+    assert isinstance(list_wire, dict)
+    list_wire["explode"] = True
+    list_wire["brackets"] = True
+
+    assert _refusal_codes(ir_json) == {"query.list.brackets.unsupported"}
+
+
 def test_the_forms_no_python_target_serves_are_refused_by_name(repository_root: Path) -> None:
     ir_json = _ir_json(repository_root)
     _operation(ir_json, "getTask")["upstream"] = ["billing"]

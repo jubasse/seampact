@@ -20,12 +20,14 @@ import {
   refuseNotGeneratedYet,
   refuseUnknownValueAt,
 } from "../located-refusals.js";
+import { refuseBracketsQueryList } from "../not-generated-forms.js";
 import type { Refusal } from "../refusal.js";
 import { askedRequirements } from "./asked-requirements.js";
 import { fingerprintHeaderNames } from "./fingerprint-headers.js";
 import type { CompressionOption, FrameworkEtagMode } from "./options.js";
 import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
 import { encodedSegmentRefusals } from "./path-segment-refusals.js";
+import { servedResponseShape } from "./response-shape.js";
 import { compareRouteSpecificity } from "./route-order.js";
 import {
   isSlot,
@@ -274,7 +276,9 @@ function routeEntry(
     }),
     params: {
       path: operation.params.path.map(pathParamRule),
-      query: operation.params.query.map((param) => queryRule(param, location, refusals)),
+      query: operation.params.query.map((param, index) =>
+        queryRule(param, location, below(location, "params", "query", index, "wire"), refusals),
+      ),
       headers: operation.params.header.map((param) => paramRule(param, param.name.toLowerCase())),
     },
     input: inputEntry(operation, location, refusals),
@@ -285,7 +289,11 @@ function routeEntry(
     idempotency: idempotencyEntry(operation, location, refusals),
     responses: operation.responses.map((response, index) => ({
       status: response.status,
-      shape: response.shape,
+      shape: servedResponseShape(
+        response.shape,
+        below(location, "responses", String(index)),
+        refusals,
+      ),
       body:
         response.body === undefined
           ? undefined
@@ -884,12 +892,19 @@ function scalarDecoding(type: TypeUse): string {
   return "text";
 }
 
-function queryRule(param: Param, location: IrLocation, refusals: Refusal[]): SourceValue {
+function queryRule(
+  param: Param,
+  location: IrLocation,
+  wireLocation: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
   const wire = param.wire;
 
   if (wire === undefined) return paramRule(param, param.name);
 
-  if (wire.style !== "form" || (wire.kind === "list" && (wire.explode || wire.brackets))) {
+  if (wire.kind === "list" && wire.brackets) {
+    refusals.push(refuseBracketsQueryList(wireLocation));
+  } else if (wire.style !== "form" || (wire.kind === "list" && wire.explode)) {
     refusals.push(
       refuseNotGeneratedYet(
         "query.wire",

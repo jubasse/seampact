@@ -42,6 +42,20 @@ const VARIANTS_FORM =
 // The servers whose generators read the IR without Node: the JVM and PHP targets.
 const JVM_AND_PHP_SERVERS: readonly string[] = ["spring-boot", "laravel", "symfony"];
 
+// The targets whose generators refuse the body and query forms below by name, each with a refusal test.
+const BODY_AND_QUERY_FORMS_REFUSED_ON: readonly string[] = [
+  "fetch",
+  ...NODE_SERVERS,
+  ...JVM_AND_PHP_SERVERS,
+  ...PYTHON_SERVERS,
+];
+
+const refusedForm = (form: string, targets: readonly string[]): ItemAfter1_0 => ({
+  targets,
+  refusedOn: targets,
+  reason: `1.0 refuses ${form} by name at generation on ${targets.join(", ")}`,
+});
+
 const refusedOnEveryServer = (form: string): ItemAfter1_0 => ({
   targets: SERVERS_FOR_1_0,
   refusedOn: SERVERS_FOR_1_0,
@@ -95,6 +109,10 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ["CHK-133", refusedOnTheNodeServers("optional authentication; the native servers generate it")],
   ["CHK-020", refusedOnEveryServer("a principal binding")],
   ["CHK-094", refusedOnEveryServer("a scope resolved by the application")],
+  ["CHK-150", refusedForm("a form body", BODY_AND_QUERY_FORMS_REFUSED_ON)],
+  ["CHK-151", refusedForm("a multipart body", BODY_AND_QUERY_FORMS_REFUSED_ON)],
+  ["CHK-152", refusedForm("a file download", BODY_AND_QUERY_FORMS_REFUSED_ON)],
+  ["CHK-160", refusedForm("a query list in brackets form", BODY_AND_QUERY_FORMS_REFUSED_ON)],
   ...["CHK-074", "CHK-077", "CHK-078", "CHK-103"].map((id): [string, ItemAfter1_0] => [
     id,
     { targets: ADAPTERS, reason: ADAPTERS_IN_1_1 },
@@ -159,6 +177,14 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
       targets: [...NODE_SERVERS, ...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
       reason:
         "the Node, JVM, PHP and Python servers serve no dev docs: an additive artefact a later release can add",
+    },
+  ],
+  [
+    "CHK-162",
+    {
+      targets: ["express", "fastify", "hono", "fastapi"],
+      reason:
+        "express, fastify, hono and fastapi generate no native access export, and express, fastify and hono map no framework security refusals, since those frameworks ship none of their own and the app's middleware owns them: additive artefacts a later release can add",
     },
   ],
   [

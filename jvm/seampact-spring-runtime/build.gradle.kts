@@ -24,6 +24,8 @@ dependencies {
 
     testImplementation(platform(libs.spring.boot.dependencies))
     testImplementation(libs.spring.boot.starter.webmvc)
+    testImplementation(libs.spring.boot.starter.security)
+    testImplementation(libs.spring.test)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

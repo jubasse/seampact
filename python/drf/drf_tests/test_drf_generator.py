@@ -208,6 +208,59 @@ def test_options_and_artefacts_the_target_does_not_take_are_refused_by_name(
     assert [problem.code for problem in refused.value.problems] == [code]
 
 
+def _refused_codes(ir_json: dict[str, JsonValue]) -> set[str]:
+    with pytest.raises(GenerationRefusedError) as refused:
+        generated_files(contract(ir_json))
+
+    return {problem.code for problem in refused.value.problems}
+
+
+def _operation(ir_json: dict[str, JsonValue], operation_id: str) -> dict[str, JsonValue]:
+    operations = ir_json["operations"]
+    assert isinstance(operations, list)
+    found = next(item for item in operations if isinstance(item, dict) and item["id"] == operation_id)
+    assert isinstance(found, dict)
+    return found
+
+
+@pytest.mark.parametrize("media", ["application/x-www-form-urlencoded", "multipart/form-data"])
+def test_a_form_or_multipart_body_is_refused_by_name(repository_root: Path, media: str) -> None:
+    ir_json = reference_ir(repository_root, "tasks")
+    create_task_input = _operation(ir_json, "createTask")["input"]
+    assert isinstance(create_task_input, dict)
+    create_task_input["media"] = media
+
+    assert _refused_codes(ir_json) == {"input.media.unsupported"}
+
+
+def test_a_file_download_is_refused_by_name(repository_root: Path) -> None:
+    ir_json = reference_ir(repository_root, "tasks")
+    responses = _operation(ir_json, "getTask")["responses"]
+    assert isinstance(responses, list)
+    download = responses[0]
+    assert isinstance(download, dict)
+    download["shape"] = "binary"
+    download["body"] = {"kind": "file", "media": ["application/pdf"]}
+    del download["media"]
+
+    assert "response.binary.unsupported" in _refused_codes(ir_json)
+
+
+def test_a_query_list_in_brackets_form_is_refused_by_name(repository_root: Path) -> None:
+    ir_json = reference_ir(repository_root, "tasks")
+    query_params = _operation(ir_json, "listTasks")["params"]
+    assert isinstance(query_params, dict)
+    query = query_params["query"]
+    assert isinstance(query, list)
+    sort = next(param for param in query if isinstance(param, dict) and param["name"] == "sort")
+    list_wire = sort["wire"]
+    assert isinstance(list_wire, dict)
+    list_wire["explode"] = True
+    list_wire["brackets"] = True
+
+    assert _refused_codes(ir_json) == {"query.list.brackets.unsupported"}
+
+
 def test_a_union_schema_is_refused_by_name_and_no_file_is_written(repository_root: Path) -> None:
     ir = reference_ir(repository_root, "tasks")
     schemas = ir["schemas"]
