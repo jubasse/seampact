@@ -38,6 +38,27 @@ final class PageReplyTest extends TestCase
         self::assertEquals((object) ['lastPage' => 0, 'first' => $first, 'last' => $first], $body);
     }
 
+    public function testBothStripeCursorsAreOneExclusiveCursorsIssueAtTheBeforeParameter(): void
+    {
+        $state = self::stateOf('listCharges');
+
+        $issues = PageReply::cursorIssues($state, (object) ['starting_after' => 'ch_1', 'ending_before' => 'ch_9']);
+
+        self::assertSame([['in' => 'query', 'pointer' => '/ending_before', 'rule' => 'exclusiveCursors']], $issues);
+    }
+
+    public function testOneStripeCursorOrAStyleWithoutThePairHasNoCursorIssue(): void
+    {
+        self::assertSame([], PageReply::cursorIssues(self::stateOf('listCharges'), (object) ['starting_after' => 'ch_1']));
+        self::assertSame([], PageReply::cursorIssues(self::stateOf('listCharges'), (object) ['ending_before' => 'ch_9']));
+        self::assertSame([], PageReply::cursorIssues(self::stateOf('listChannels'), (object) ['page' => 2]));
+    }
+
+    private static function stateOf(string $operationId): BoundaryState
+    {
+        return new BoundaryState(ApiContract::of(PagesContract::class), $operationId, [], new RequestView('GET', '/v1/list', []), self::lookup());
+    }
+
     private static function lookup(): HookLookup
     {
         return new class () implements HookLookup {

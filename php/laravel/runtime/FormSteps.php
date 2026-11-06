@@ -48,6 +48,8 @@ final class FormSteps
             }
         }
 
+        $issues = [...$issues, ...self::cursorIssues($state, $request, $api)];
+
         // A stable sort: within a part, the issues keep the order they were found in.
         usort($issues, static fn (array $first, array $second): int => (self::ISSUE_PART_ORDER[$first['in']] ?? count(self::ISSUE_PART_ORDER)) <=> (self::ISSUE_PART_ORDER[$second['in']] ?? count(self::ISSUE_PART_ORDER)));
 
@@ -56,16 +58,21 @@ final class FormSteps
 
     /**
      * Step 7, the typed input of the operation with a paged list's limit filled in, then the idempotency claim: a replayed reply is thrown, so the handler
-     * never runs.
+     * never runs. Both cursors of a Stripe-style pair, which every Laravel rule passes, are refused first.
      *
      * @throws ReplayedReply
+     * @throws ContractRefusal
      */
     public static function passed(Request $request, string $api): object
     {
         $state = BoundaryState::required($request, $api);
+        $cursorIssues = self::cursorIssues($state, $request, $api);
+        if ($cursorIssues !== []) {
+            throw AccessSteps::schemaInvalid($state, $cursorIssues);
+        }
+
         $parts = InputTree::of($request, $api)->parts();
-        $query = $parts['query'] ?? new \stdClass();
-        $parts['query'] = PageReply::withFilledLimit($state, $query instanceof \stdClass ? $query : new \stdClass());
+        $parts['query'] = PageReply::withFilledLimit($state, self::queryOf($parts));
         $input = TypedInput::build($state, $parts);
 
         $replayed = IdempotencyStep::begin($state, $parts);
@@ -74,6 +81,25 @@ final class FormSteps
         }
 
         return $input;
+    }
+
+    /**
+     * The issue of a request sending both cursors of a Stripe-style pair, which no Laravel rule sees: listed with the
+     * failed rules' issues, or alone when every rule passed.
+     *
+     * @return list<array{in: string, pointer: string, rule: string}>
+     */
+    private static function cursorIssues(BoundaryState $state, Request $request, string $api): array
+    {
+        return PageReply::cursorIssues($state, self::queryOf(InputTree::of($request, $api)->parts()));
+    }
+
+    /** @param array<string, mixed> $parts */
+    private static function queryOf(array $parts): \stdClass
+    {
+        $query = $parts['query'] ?? null;
+
+        return $query instanceof \stdClass ? $query : new \stdClass();
     }
 
     /** @param array<string, array<string, string>> $nativeRuleNames */

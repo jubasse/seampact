@@ -7,8 +7,9 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final, TypeGuard
 
-from seampact.codegen.runtime.contract import ApiContract
+from seampact.codegen.runtime.contract import QUERY_PART, ApiContract
 from seampact.codegen.runtime.failures import BoundaryFailureError
+from seampact.codegen.runtime.input_decoding import Issue
 from seampact.codegen.runtime.ir_view import IrMap, ir_int, ir_map, ir_maps, ir_string, ir_strings
 from seampact.codegen.runtime.public_origin import writes_absolute_urls
 from seampact.codegen.runtime.templates import render
@@ -20,6 +21,7 @@ _LIMIT_ROLE: Final = "limit"
 _BEFORE_ROLE: Final = "before"
 _AFTER_ROLE: Final = "after"
 _CLAMP: Final = "clamp"
+_EXCLUSIVE_CURSORS_RULE: Final = "exclusiveCursors"
 _NULL_ABSENT: Final = "null"
 _PAGE: Final = "page"
 _OFFSET: Final = "offset"
@@ -73,6 +75,22 @@ def filled_page_query(contract: ApiContract, operation_id: str, query: Mapping[s
         filled[limit_param] = limit
 
     return filled
+
+
+def cursor_issues(contract: ApiContract, operation_id: str, query: Mapping[str, object]) -> list[Issue]:
+    """A style whose cursors travel in an `after` and a `before` parameter takes one of them: both sent is one
+    `exclusiveCursors` issue at the `before` parameter, reported with the other input issues."""
+    style = _style(contract, operation_id)
+    after_param = _role_name(style, _AFTER_ROLE)
+    before_param = _role_name(style, _BEFORE_ROLE)
+
+    if after_param is None or before_param is None:
+        return []
+
+    if after_param not in query or before_param not in query:
+        return []
+
+    return [Issue(QUERY_PART, f"/{before_param}", _EXCLUSIVE_CURSORS_RULE)]
 
 
 def page_parts(

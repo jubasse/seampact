@@ -340,7 +340,7 @@ class _Emission:
         fact_type = _PAGE_FACT_TYPES.get(member) if isinstance(member, HandlerResultMember) else None
 
         if fact_type is None:
-            self.refusals.waiting("paging.handlerResult", f"The page fact '{member}'", at, Delivery.AFTER_V1)
+            self.refusals.waiting("paging.handlerResult", f"The page fact '{member}'", at, Delivery.LATER_THAN_V1)
             return []
 
         attribute = member_identifier(str(member))

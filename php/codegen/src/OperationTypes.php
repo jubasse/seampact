@@ -205,7 +205,7 @@ final class OperationTypes
         foreach ($style->handlerResult as $member) {
             $type = self::PAGE_FACT_TYPES[$member->value] ?? null;
             if ($type === null) {
-                $this->refusals->waiting('paging.handlerResult', "The page fact '{$member->value}'", $at->below('paging', 'style'), Delivery::AfterOneZero);
+                $this->refusals->waiting('paging.handlerResult', "The page fact '{$member->value}'", $at->below('paging', 'style'), Delivery::LaterThanOneZero);
                 continue;
             }
             $constructor->addPromotedParameter($member->value)->setType($type)->setNullable()->setDefaultValue(null);

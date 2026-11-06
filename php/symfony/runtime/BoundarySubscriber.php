@@ -491,6 +491,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         foreach ($this->validator->validate($tree, $this->inputConstraint($state->operationId)) as $violation) {
             $issues[] = self::issueOf($violation->getPropertyPath(), Issue::ruleOf($violation));
         }
+        $issues = [...$issues, ...PageReply::cursorIssues($state, $tree->query)];
         if ($issues !== []) {
             throw AccessSteps::schemaInvalid($state, array_slice(array_values(array_unique($issues, SORT_REGULAR)), 0, self::MAX_RENDERED_ISSUES));
         }

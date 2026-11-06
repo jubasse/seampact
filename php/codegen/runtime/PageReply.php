@@ -14,6 +14,8 @@ final class PageReply
     private const BEFORE_ROLE = 'before';
     private const AFTER_ROLE = 'after';
     private const CLAMP = 'clamp';
+    private const QUERY_PART = 'query';
+    private const EXCLUSIVE_CURSORS_RULE = 'exclusiveCursors';
     private const NULL_ABSENT = 'null';
     private const PAGE = 'page';
     private const OFFSET = 'offset';
@@ -46,6 +48,28 @@ final class PageReply
         }
 
         return $filled;
+    }
+
+    /**
+     * A style whose cursors travel in an `after` and a `before` parameter takes one of them: both sent is one
+     * `exclusiveCursors` issue at the `before` parameter, reported with the other input issues.
+     *
+     * @return list<array{in: string, pointer: string, rule: string}>
+     */
+    public static function cursorIssues(BoundaryState $state, \stdClass $query): array
+    {
+        $style = self::style($state);
+        $afterParam = self::roleName($style, self::AFTER_ROLE);
+        $beforeParam = self::roleName($style, self::BEFORE_ROLE);
+        if ($afterParam === null || $beforeParam === null) {
+            return [];
+        }
+
+        if (!property_exists($query, $afterParam) || !property_exists($query, $beforeParam)) {
+            return [];
+        }
+
+        return [['in' => self::QUERY_PART, 'pointer' => '/' . $beforeParam, 'rule' => self::EXCLUSIVE_CURSORS_RULE]];
     }
 
     /**

@@ -6,7 +6,10 @@ namespace Seampact\Codegen\Tests\Runtime;
 
 use Seampact\Codegen\Runtime\RuntimeVersion;
 
-/** A generated contract class with one list on a page style that counts its pages and links the last one. */
+/**
+ * A generated contract class with one list on a page style that counts its pages and links the last one, and one on a
+ * Stripe-style pair of cursors.
+ */
 final class PagesContract
 {
     public const API = 'tasks';
@@ -15,6 +18,7 @@ final class PagesContract
         'api' => ['id' => 'tasks', 'wire' => ['urls' => 'relative']],
         'operations' => [
             ['id' => 'listChannels', 'paging' => ['style' => 'pages', 'defaultLimit' => 2, 'maxLimit' => 100, 'overLimit' => 'clamp']],
+            ['id' => 'listCharges', 'paging' => ['style' => 'stripe', 'defaultLimit' => 10, 'maxLimit' => 100, 'overLimit' => 'reject']],
         ],
         'pagings' => [
             'pages' => [
@@ -39,6 +43,18 @@ final class PagesContract
                     'links' => [],
                 ],
                 'handlerResult' => ['total'],
+            ],
+            'stripe' => [
+                'id' => 'stripe',
+                'position' => 'cursor',
+                'absent' => 'omit',
+                'request' => [
+                    ['role' => 'after', 'in' => 'query', 'name' => 'starting_after'],
+                    ['role' => 'before', 'in' => 'query', 'name' => 'ending_before'],
+                    ['role' => 'limit', 'in' => 'query', 'name' => 'limit'],
+                ],
+                'response' => ['meta' => [], 'headers' => [], 'links' => []],
+                'handlerResult' => ['more'],
             ],
         ],
     ];

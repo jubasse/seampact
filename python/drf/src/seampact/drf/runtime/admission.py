@@ -27,7 +27,7 @@ from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefu
 from seampact.codegen.runtime.field_rights import checked_input_fields, visible_output
 from seampact.codegen.runtime.input_decoding import DecodedInput, schema_invalid
 from seampact.codegen.runtime.ir_view import ir_int, ir_map, ir_maps, ir_string, ir_strings
-from seampact.codegen.runtime.page_reply import filled_page_query, page_parts
+from seampact.codegen.runtime.page_reply import cursor_issues, filled_page_query, page_parts
 from seampact.codegen.runtime.public_origin import configured_origin
 from seampact.codegen.runtime.replies import CONTENT_TYPE, JSON_MEDIA, Reply, error_reply, json_bytes, success_body
 from seampact.codegen.runtime.sync_driver import call_without_suspension, run_without_suspension
@@ -163,6 +163,7 @@ class ContractAdmission:
         typed = {(issue.in_, issue.pointer) for issue in parts.issues}
         rules = [] if valid else serializer_issues(contract, operation_id, validating.errors)
         issues = parts.issues + [issue for issue in rules if (issue.in_, issue.pointer) not in typed]
+        issues += cursor_issues(contract, operation_id, decoded.query)
 
         if issues:
             raise schema_invalid(contract, operation_id, rendered(issues))
