@@ -15,6 +15,7 @@ import {
 } from "@seampact/http-suite";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import {
+  DEVICE_TOKEN,
   FOREIGN_SERVICE_JWT,
   SERVICE_JWT,
   STRIPE_SECRET,
@@ -72,6 +73,7 @@ export function describeHttpProfile(profile: SuiteProfile): void {
         stripeSecret: STRIPE_SECRET,
         throttleRetryAfterMs: THROTTLE_RETRY_AFTER_MS,
         foreignServiceJwt: FOREIGN_SERVICE_JWT,
+        deviceToken: DEVICE_TOKEN,
       },
       cases,
       refusals: refusalsOf(cases),

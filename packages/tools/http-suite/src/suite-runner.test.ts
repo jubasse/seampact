@@ -15,6 +15,7 @@ const CREDENTIALS: SuiteCredentials = {
   stripeSecret: "whsec_test",
   throttleRetryAfterMs: 1500,
   foreignServiceJwt: "foreign-service-jwt",
+  deviceToken: "device-token",
 };
 const NEXT_CURSOR = "c%2B2";
 const HOOK_CALLS = [{ hook: "authenticate", operation: "getTask" }];
@@ -83,6 +84,14 @@ async function answer(request: IncomingMessage, response: ServerResponse): Promi
       authorization: request.headers.authorization,
       key: request.headers["idempotency-key"],
     });
+  } else if (url.pathname === "/host") {
+    json(
+      200,
+      { host: request.headers.host, forwardedHost: request.headers["x-forwarded-host"] },
+      {
+        link: '<https://origin.example/host>; rel="self"',
+      },
+    );
   } else if (url.pathname === "/raw") {
     json(200, { text: body, signatureAgeSeconds: signatureAgeSeconds(request) });
   } else if (url.pathname === "/signed") {
@@ -430,6 +439,29 @@ describe("runSuite", () => {
       expect(report.cases[0]).toMatchObject({ outcome: "passed", failures: [] });
     },
   );
+
+  test("sends a forged Host header as written", async () => {
+    const forged = suiteCase("forged-host", {
+      steps: [
+        {
+          request: {
+            method: "GET",
+            path: "/host",
+            headers: { host: "attacker.example", "x-forwarded-host": "attacker.example" },
+          },
+          expect: {
+            status: 200,
+            headers: { link: { contains: ["<https://origin.example/"] } },
+            body: { host: "attacker.example", forwardedHost: "attacker.example" },
+          },
+        },
+      ],
+    });
+
+    const report = await run([forged]);
+
+    expect(report.cases[0]?.failures).toEqual([]);
+  });
 
   test("appends a step's query to a filled path that already holds one", async () => {
     const report = await run([

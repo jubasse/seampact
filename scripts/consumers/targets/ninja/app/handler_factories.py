@@ -1,4 +1,4 @@
-"""The handler factories `bind_tasks()` and `bind_tasks_service()` take: each builds the shared handlers of
+"""The handler factories the `bind_*()` functions take: each builds the shared handlers of
 `handlers.py` per request. The drafts handlers answer `getDraft` with a plain `def`, which sync views require."""
 
 from django.http import HttpRequest
@@ -6,11 +6,15 @@ from generated.tasks.operations import GetDraftRequest, GetDraftResponse200, Get
 from handlers import (
     AppHandlers,
     ChannelsHandlers,
+    DevicesHandlers,
     DraftsHandlers,
     HooksHandlers,
     InternalHandlers,
+    InternalWritesHandlers,
+    NotesHandlers,
     PreferencesHandlers,
     TasksHandlers,
+    WelcomeHandlers,
 )
 from sample_data import draft
 
@@ -46,3 +50,19 @@ def tasks_handlers(request: HttpRequest) -> TasksHandlers:
 
 def internal_handlers(request: HttpRequest) -> InternalHandlers:
     return InternalHandlers()
+
+
+def internal_writes_handlers(request: HttpRequest) -> InternalWritesHandlers:
+    return InternalWritesHandlers()
+
+
+def devices_handlers(request: HttpRequest) -> DevicesHandlers:
+    return DevicesHandlers()
+
+
+def welcome_handlers(request: HttpRequest) -> WelcomeHandlers:
+    return WelcomeHandlers()
+
+
+def notes_handlers(request: HttpRequest) -> NotesHandlers:
+    return NotesHandlers()

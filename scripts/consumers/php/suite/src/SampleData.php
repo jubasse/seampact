@@ -8,8 +8,11 @@ use App\Generated\Tasks\Schemas\Channel;
 use App\Generated\Tasks\Schemas\Draft;
 use App\Generated\Tasks\Schemas\Task;
 use App\Generated\Tasks\Schemas\TaskState;
+use App\Generated\TasksAbsoluteUrls\Schemas\Note;
 use App\Generated\TasksService\Schemas\Task as ServiceTask;
 use App\Generated\TasksService\Schemas\TaskState as ServiceTaskState;
+use App\Generated\TasksServiceWrites\Schemas\Task as RelayedTask;
+use App\Generated\TasksServiceWrites\Schemas\TaskState as RelayedTaskState;
 use Seampact\Hooks\ResolvedScope;
 
 /** The values the handlers answer without a script, and the scripted bodies read into the generated types. */
@@ -21,6 +24,7 @@ final class SampleData
     public const GENERAL_CHANNEL_ID = '10000000-0000-4000-8000-000000000001';
     /** The channel the sample user is not a member of: its scope resolver denies it, so no handler runs for it. */
     public const NON_MEMBER_CHANNEL_ID = '10000000-0000-4000-8000-0000000000ff';
+    public const FIRST_NOTE_ID = '40000000-0000-4000-8000-000000000001';
 
     private function __construct()
     {
@@ -34,6 +38,17 @@ final class SampleData
     public static function serviceTask(string $taskId): ServiceTask
     {
         return new ServiceTask($taskId, 'Write the slice test', ServiceTaskState::Open, null, self::FIRST_VERSION, new \DateTimeImmutable(self::CREATED_AT));
+    }
+
+    /** The task a service's relayed write creates, as the `tasksServiceWrites` api types it. */
+    public static function relayedTask(string $title, ?int $effort): RelayedTask
+    {
+        return new RelayedTask(self::NEW_TASK_ID, $title, RelayedTaskState::Open, $effort, self::FIRST_VERSION, new \DateTimeImmutable(self::CREATED_AT));
+    }
+
+    public static function note(string $noteId): Note
+    {
+        return new Note($noteId, 'Read the slice notes');
     }
 
     /** @param array<mixed> $body */

@@ -2,10 +2,19 @@
 // generated operation decorators and delegates to the shared handlers.
 import { Controller } from "@nestjs/common";
 import * as TasksNest from "../generated/server/tasks/index.js";
+import * as TasksDevicesNest from "../generated/server/tasksDevices/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
+import * as TasksServiceWritesNest from "../generated/server/tasksServiceWrites/index.js";
 import type * as Tasks from "../generated/types/tasks/index.js";
+import type * as TasksDevices from "../generated/types/tasksDevices/index.js";
 import type * as TasksService from "../generated/types/tasksService/index.js";
-import { tasksHandlers, tasksServiceHandlers } from "./handlers.mjs";
+import type * as TasksServiceWrites from "../generated/types/tasksServiceWrites/index.js";
+import {
+  tasksDevicesHandlers,
+  tasksHandlers,
+  tasksServiceHandlers,
+  tasksServiceWritesHandlers,
+} from "./handlers.mjs";
 
 @Controller()
 export class AppController implements TasksNest.AppEndpoints {
@@ -124,5 +133,21 @@ export class InternalController implements TasksServiceNest.InternalEndpoints {
   @TasksServiceNest.getTask()
   getTask(@TasksServiceNest.getTask.input() input: TasksService.GetTaskInput) {
     return tasksServiceHandlers.getTask(input);
+  }
+}
+
+@Controller()
+export class InternalWritesController implements TasksServiceWritesNest.InternalWritesEndpoints {
+  @TasksServiceWritesNest.createTask()
+  createTask(@TasksServiceWritesNest.createTask.input() input: TasksServiceWrites.CreateTaskInput) {
+    return tasksServiceWritesHandlers.createTask(input);
+  }
+}
+
+@Controller()
+export class DevicesController implements TasksDevicesNest.DevicesEndpoints {
+  @TasksDevicesNest.status()
+  status(@TasksDevicesNest.status.input() input: TasksDevices.StatusInput) {
+    return tasksDevicesHandlers.status(input);
   }
 }

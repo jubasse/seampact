@@ -1,0 +1,84 @@
+{
+  "id": "service-write-without-actor-surface",
+  "title": "A service write without its actor surface header, or with a value outside its enum, answers 400",
+  "checks": ["CHK-012"],
+  "profiles": ["default", "hand-written"],
+  "apis": ["tasksServiceWrites"],
+  "steps": [
+    {
+      "title": "no actor surface header",
+      "request": {
+        "method": "POST",
+        "path": "/internal-writes/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{serviceJwt}}",
+          "x-deadline": "{{deadline:5000}}",
+          "idempotency-key": "{{uuid:missing}}"
+        },
+        "body": {
+          "title": "Relayed write"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/x-actor-surface"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "a surface outside the enum",
+      "request": {
+        "method": "POST",
+        "path": "/internal-writes/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{serviceJwt}}",
+          "x-deadline": "{{deadline:5000}}",
+          "idempotency-key": "{{uuid:outside}}",
+          "x-actor-surface": "kiosk"
+        },
+        "body": {
+          "title": "Relayed write"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/x-actor-surface"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "a declared surface",
+      "request": {
+        "method": "POST",
+        "path": "/internal-writes/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{serviceJwt}}",
+          "x-deadline": "{{deadline:5000}}",
+          "idempotency-key": "{{uuid:declared}}",
+          "x-actor-surface": "studio"
+        },
+        "body": {
+          "title": "Relayed write"
+        }
+      },
+      "expect": {
+        "status": 201,
+        "body": {
+          "title": "Relayed write"
+        }
+      }
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-// Registers both apis' generated routes on a Hono app served by `@hono/node-server`, after `hono/cors`,
+// Registers each api's generated routes on a Hono app served by `@hono/node-server`, after `hono/cors`,
 // `hono/compress` and the http suite's control routes, with an `onError` that answers the refusals app middleware
 // raises before them in each api's format; runs the framework-route check and listens on a free local port.
 import { type ServerType, serve } from "@hono/node-server";
@@ -8,14 +8,26 @@ import { type Context, Hono } from "hono";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import * as TasksHono from "../generated/server/tasks/index.js";
+import * as TasksDevicesHono from "../generated/server/tasksDevices/index.js";
 import * as TasksServiceHono from "../generated/server/tasksService/index.js";
+import * as TasksServiceWritesHono from "../generated/server/tasksServiceWrites/index.js";
 import {
   servesUnlistedRoute,
   UNLISTED_ROUTE,
   withoutMissingHandler,
 } from "../src/boot-variant.mjs";
-import { tasksHandlers, tasksServiceHandlers } from "../src/handlers.mjs";
-import { tasksHooks, tasksServiceHooks } from "../src/hooks.mjs";
+import {
+  tasksDevicesHandlers,
+  tasksHandlers,
+  tasksServiceHandlers,
+  tasksServiceWritesHandlers,
+} from "../src/handlers.mjs";
+import {
+  tasksDevicesHooks,
+  tasksHooks,
+  tasksServiceHooks,
+  tasksServiceWritesHooks,
+} from "../src/hooks.mjs";
 import {
   type ControlReply,
   hookCallsReply,
@@ -39,7 +51,9 @@ function clientAddress(c: Context): string | undefined {
 async function renderedByAnApi(c: Context, error: Error): Promise<Response | undefined> {
   return (
     (await TasksHono.renderPreRoutingError(c, error)) ??
-    (await TasksServiceHono.renderPreRoutingError(c, error))
+    (await TasksServiceHono.renderPreRoutingError(c, error)) ??
+    (await TasksServiceWritesHono.renderPreRoutingError(c, error)) ??
+    (await TasksDevicesHono.renderPreRoutingError(c, error))
   );
 }
 
@@ -75,8 +89,20 @@ export async function startServer(): Promise<RunningServer> {
     hooks: tasksServiceHooks(),
     clientAddress,
   });
+  TasksServiceWritesHono.registerRoutes(app, {
+    handlers: { InternalWritesEndpoints: tasksServiceWritesHandlers },
+    hooks: tasksServiceWritesHooks(),
+    clientAddress,
+  });
+  TasksDevicesHono.registerRoutes(app, {
+    handlers: { DevicesEndpoints: tasksDevicesHandlers },
+    hooks: tasksDevicesHooks(),
+    clientAddress,
+  });
   TasksHono.checkFrameworkRoutes(app);
   TasksServiceHono.checkFrameworkRoutes(app);
+  TasksServiceWritesHono.checkFrameworkRoutes(app);
+  TasksDevicesHono.checkFrameworkRoutes(app);
 
   const { server, port } = await listening(app);
 

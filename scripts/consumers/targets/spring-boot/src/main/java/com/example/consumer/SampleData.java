@@ -3,6 +3,7 @@ package com.example.consumer;
 import com.example.tasks.api.schemas.Channel;
 import com.example.tasks.api.schemas.Task;
 import com.example.tasks.api.schemas.TaskState;
+import com.example.tasksabsoluteurls.api.schemas.Note;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,6 +14,7 @@ final class SampleData {
     static final UUID NEW_TASK_ID = UUID.fromString("20000000-0000-4000-8000-0000000000ff");
     static final long FIRST_VERSION = 1;
     static final UUID GENERAL_CHANNEL_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
+    static final UUID FIRST_NOTE_ID = UUID.fromString("40000000-0000-4000-8000-000000000001");
 
     private SampleData() {}
 
@@ -22,6 +24,10 @@ final class SampleData {
 
     static Channel generalChannel() {
         return new Channel(GENERAL_CHANNEL_ID, "General");
+    }
+
+    static Note note(UUID noteId) {
+        return new Note(noteId, "Read the slice notes");
     }
 
     static com.example.tasksservice.api.schemas.Task serviceTask(UUID taskId) {

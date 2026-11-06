@@ -1,5 +1,5 @@
 """The FastAPI consumer of the http suite: the `tasks` api bound with the developer's handlers and the hook doubles,
-less what the boot variant (`SEAMPACT_SUITE_BOOT_VARIANT`) leaves out, and the `tasksService` api of its relays,
+less what the boot variant (`SEAMPACT_SUITE_BOOT_VARIANT`) leaves out, and the other apis of the reference contract,
 beside the suite's control routes."""
 
 import logging
@@ -10,20 +10,29 @@ from control import control_router
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from generated.tasks.fastapi import TasksHandlerFactories, bind_tasks
+from generated.tasks_absolute_urls.fastapi import TasksAbsoluteUrlsHandlerFactories, bind_tasks_absolute_urls
+from generated.tasks_devices.fastapi import TasksDevicesHandlerFactories, bind_tasks_devices
+from generated.tasks_optional_auth.fastapi import TasksOptionalAuthHandlerFactories, bind_tasks_optional_auth
 from generated.tasks_service.fastapi import TasksServiceHandlerFactories, bind_tasks_service
+from generated.tasks_service_writes.fastapi import TasksServiceWritesHandlerFactories, bind_tasks_service_writes
 from handlers import (
     AppHandlers,
     ChannelsHandlers,
+    DevicesHandlers,
     DraftsHandlers,
     HooksHandlers,
     InternalHandlers,
+    InternalWritesHandlers,
+    NotesHandlers,
     PreferencesHandlers,
     TasksHandlers,
+    WelcomeHandlers,
 )
 from hook_doubles import (
     CALLER_SERVICE_RIGHT,
     OVERRIDDEN_RIGHT,
     ChannelResolver,
+    DeviceHook,
     OverriddenRightDecider,
     ServiceDecider,
     StripeHook,
@@ -45,6 +54,9 @@ UNLISTED_PATH: Final = "/v1/unlisted"
 USER_IDENTITY: Final = "user"
 STRIPE_IDENTITY: Final = "stripe"
 SERVICE_IDENTITY: Final = "service"
+DEVICE_IDENTITY: Final = "device"
+# The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
+PUBLIC_ORIGIN: Final = "https://api.seampact.test"
 # Every right and rule the tasks api's operations ask a decider for.
 DECIDED_NAMES: Final = ("tasks.read", "tasks.update", "tasks.seeEffort", "roles", "throttle", "recentAuth")
 CHANNEL_SCOPE: Final = "channel"
@@ -107,8 +119,40 @@ def create_app() -> FastAPI:
         deciders={CALLER_SERVICE_RIGHT: ServiceDecider},
         on_unexpected_error=TasksUnexpectedErrors,
     )
+    _bind_security_apis(app)
 
     return app
+
+
+def _bind_security_apis(app: FastAPI) -> None:
+    """The apis of the security cases: service writes, a device identity, optional auth and absolute URLs."""
+    bind_tasks_service_writes(
+        app,
+        handlers=TasksServiceWritesHandlerFactories(internal_writes=InternalWritesHandlers),
+        authenticate={SERVICE_IDENTITY: service_hook},
+        deciders={CALLER_SERVICE_RIGHT: ServiceDecider},
+        idempotency_store=_idempotency_store,
+        on_unexpected_error=TasksUnexpectedErrors,
+    )
+    bind_tasks_devices(
+        app,
+        handlers=TasksDevicesHandlerFactories(devices=DevicesHandlers),
+        authenticate={DEVICE_IDENTITY: DeviceHook},
+        on_unexpected_error=TasksUnexpectedErrors,
+    )
+    bind_tasks_optional_auth(
+        app,
+        handlers=TasksOptionalAuthHandlerFactories(welcome=WelcomeHandlers),
+        authenticate={USER_IDENTITY: user_hook},
+        on_unexpected_error=TasksUnexpectedErrors,
+    )
+    bind_tasks_absolute_urls(
+        app,
+        handlers=TasksAbsoluteUrlsHandlerFactories(notes=NotesHandlers),
+        authenticate={USER_IDENTITY: user_hook},
+        on_unexpected_error=TasksUnexpectedErrors,
+        public_origin=PUBLIC_ORIGIN,
+    )
 
 
 app = create_app()

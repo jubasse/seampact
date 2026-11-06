@@ -1,7 +1,7 @@
 """The consumer's NinjaAPI: the `tasks` api bound with the shared handlers, the hook doubles and Ninja's own bearer
 authentication for the `identity` access kind, less what the boot variant (`SEAMPACT_SUITE_BOOT_VARIANT`) leaves out,
-and the `tasksService` api beside it. The app-wide `auth=` would refuse every request: it never reaches a contract
-route."""
+and the other apis of the reference contract beside it. The app-wide `auth=` would refuse every request: it never
+reaches a contract route."""
 
 from typing import Final
 
@@ -9,15 +9,23 @@ import hooks
 from auth import suite_token_auth
 from django.http import HttpRequest
 from generated.tasks.ninja import TasksHandlerFactories, bind_tasks
+from generated.tasks_absolute_urls.ninja import TasksAbsoluteUrlsHandlerFactories, bind_tasks_absolute_urls
+from generated.tasks_devices.ninja import TasksDevicesHandlerFactories, bind_tasks_devices
+from generated.tasks_optional_auth.ninja import TasksOptionalAuthHandlerFactories, bind_tasks_optional_auth
 from generated.tasks_service.ninja import TasksServiceHandlerFactories, bind_tasks_service
+from generated.tasks_service_writes.ninja import TasksServiceWritesHandlerFactories, bind_tasks_service_writes
 from handler_factories import (
     app_handlers,
     channels_handlers,
+    devices_handlers,
     drafts_handlers,
     hooks_handlers,
     internal_handlers,
+    internal_writes_handlers,
+    notes_handlers,
     preferences_handlers,
     tasks_handlers,
+    welcome_handlers,
 )
 from hook_doubles import CALLER_SERVICE_RIGHT, OVERRIDDEN_RIGHT
 from ninja import NinjaAPI
@@ -28,8 +36,11 @@ import seampact.ninja.runtime as seampact_ninja
 USER_IDENTITY: Final = "user"
 STRIPE_IDENTITY: Final = "stripe"
 SERVICE_IDENTITY: Final = "service"
+DEVICE_IDENTITY: Final = "device"
 CHANNEL_SCOPE: Final = "channel"
 IDENTITY_ACCESS: Final = "identity"
+# The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
+PUBLIC_ORIGIN: Final = "https://api.seampact.test"
 # Every right and rule the tasks api's operations ask a decider for.
 DECIDED_NAMES: Final = ("tasks.read", "tasks.update", "tasks.seeEffort", "roles", "throttle", "recentAuth")
 # The right the `missing-decider` boot variant leaves without a decider, as the suite's case names it.
@@ -90,8 +101,45 @@ def create_api() -> NinjaAPI:
         deciders={CALLER_SERVICE_RIGHT: hooks.service_decider},
         on_unexpected_error=hooks.unexpected_errors,
     )
+    _bind_security_apis(api)
 
     return api
+
+
+def _bind_security_apis(api: NinjaAPI) -> None:
+    """The apis of the security cases: service writes, a device identity, optional auth and absolute URLs."""
+    bind_tasks_service_writes(
+        api,
+        prefix="",
+        handlers=TasksServiceWritesHandlerFactories(internal_writes=internal_writes_handlers),
+        authenticate={SERVICE_IDENTITY: hooks.service_hook},
+        deciders={CALLER_SERVICE_RIGHT: hooks.service_decider},
+        idempotency_store=hooks.idempotency_store,
+        on_unexpected_error=hooks.unexpected_errors,
+    )
+    bind_tasks_devices(
+        api,
+        prefix="",
+        handlers=TasksDevicesHandlerFactories(devices=devices_handlers),
+        authenticate={DEVICE_IDENTITY: hooks.device_hook},
+        on_unexpected_error=hooks.unexpected_errors,
+    )
+    bind_tasks_optional_auth(
+        api,
+        prefix="",
+        handlers=TasksOptionalAuthHandlerFactories(welcome=welcome_handlers),
+        authenticate={USER_IDENTITY: hooks.optional_user_hook},
+        on_unexpected_error=hooks.unexpected_errors,
+    )
+    bind_tasks_absolute_urls(
+        api,
+        prefix="",
+        handlers=TasksAbsoluteUrlsHandlerFactories(notes=notes_handlers),
+        authenticate={USER_IDENTITY: hooks.user_hook},
+        on_unexpected_error=hooks.unexpected_errors,
+        access={IDENTITY_ACCESS: seampact_ninja.AccessSettings(auth=suite_token_auth)},
+        public_origin=PUBLIC_ORIGIN,
+    )
 
 
 api = create_api()

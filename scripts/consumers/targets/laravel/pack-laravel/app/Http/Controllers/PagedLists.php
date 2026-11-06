@@ -10,6 +10,9 @@ use App\Generated\Tasks\ListChannelsResponse200;
 use App\Generated\Tasks\ListChannelsResult;
 use App\Generated\Tasks\ListTasksResponse200;
 use App\Generated\Tasks\ListTasksResult;
+use App\Generated\TasksAbsoluteUrls\ListNotesRequest;
+use App\Generated\TasksAbsoluteUrls\ListNotesResponse200;
+use App\Generated\TasksAbsoluteUrls\ListNotesResult;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\ScriptedAnswers;
@@ -50,5 +53,13 @@ final class PagedLists
                 return new ListTasksResponse200(new LengthAwarePaginator($items, is_int($body['total'] ?? null) ? $body['total'] : count($items), $perPage, $page));
             },
         ) ?? new ListTasksResponse200(new LengthAwarePaginator([SampleData::task(SampleData::NEW_TASK_ID)], self::SAMPLE_TOTAL, $perPage, $page));
+    }
+
+    public static function listNotes(ListNotesRequest $request): ListNotesResult
+    {
+        $query = $request->contractInput()->query;
+        $notes = [SampleData::note(SampleData::FIRST_NOTE_ID)];
+
+        return new ListNotesResponse200(new LengthAwarePaginator($notes, count($notes), $query->perPage ?? count($notes), $query->page ?? self::FIRST_PAGE));
     }
 }

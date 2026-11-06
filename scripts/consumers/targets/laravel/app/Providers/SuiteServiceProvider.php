@@ -18,14 +18,32 @@ use App\Generated\TasksService\InternalEndpoints;
 use App\Generated\TasksService\Laravel\ServiceAuthenticateHook;
 use App\Generated\TasksService\Laravel\TasksServiceSeampactServiceProvider;
 use App\Generated\TasksService\Laravel\UnexpectedErrorListener as ServiceUnexpectedErrorListener;
+use App\Generated\TasksAbsoluteUrls\Laravel\UnexpectedErrorListener as AbsoluteUrlsUnexpectedErrorListener;
+use App\Generated\TasksAbsoluteUrls\Laravel\UserAuthenticateHook as AbsoluteUrlsUserAuthenticateHook;
+use App\Generated\TasksAbsoluteUrls\NotesEndpoints;
+use App\Generated\TasksDevices\DevicesEndpoints;
+use App\Generated\TasksDevices\Laravel\DeviceAuthenticateHook;
+use App\Generated\TasksDevices\Laravel\UnexpectedErrorListener as DevicesUnexpectedErrorListener;
+use App\Generated\TasksOptionalAuth\Laravel\UnexpectedErrorListener as OptionalAuthUnexpectedErrorListener;
+use App\Generated\TasksOptionalAuth\Laravel\UserAuthenticateHook as OptionalAuthUserAuthenticateHook;
+use App\Generated\TasksOptionalAuth\WelcomeEndpoints;
+use App\Generated\TasksServiceWrites\InternalWritesEndpoints;
+use App\Generated\TasksServiceWrites\Laravel\ServiceAuthenticateHook as WritesServiceAuthenticateHook;
+use App\Generated\TasksServiceWrites\Laravel\TasksServiceWritesSeampactServiceProvider;
+use App\Generated\TasksServiceWrites\Laravel\UnexpectedErrorListener as ServiceWritesUnexpectedErrorListener;
 use App\Http\Controllers\AppController;
 use App\Http\Controllers\ChannelsController;
+use App\Http\Controllers\DevicesController;
 use App\Http\Controllers\DraftsController;
 use App\Http\Controllers\HooksController;
 use App\Http\Controllers\InternalController;
+use App\Http\Controllers\InternalWritesController;
+use App\Http\Controllers\NotesController;
 use App\Http\Controllers\PreferencesController;
 use App\Http\Controllers\TasksController;
+use App\Http\Controllers\WelcomeController;
 use App\Suite\ChannelResolver;
+use App\Suite\DeviceHook;
 use App\Suite\OverriddenRightDecider;
 use App\Suite\ServiceDecider;
 use App\Suite\ServiceHook;
@@ -42,7 +60,7 @@ use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\ConsumerSuite\SuiteFiles;
 
 /**
- * Binds the handlers and the hook doubles of the `tasks` and `tasksService` apis, less what the boot variant leaves out, and takes the
+ * Binds the handlers and the hook doubles of every api, less what the boot variant leaves out, and takes the
  * api's `responses` mode from `SEAMPACT_SUITE_RESPONSES` and `app.debug` from `SEAMPACT_SUITE_APP_DEBUG` when they
  * are set, at run time so a config cache keeps them.
  */
@@ -97,6 +115,24 @@ final class SuiteServiceProvider extends ServiceProvider
         $this->app->bind(ServiceAuthenticateHook::class, ServiceHook::class);
         $this->app->tag([ServiceDecider::class], TasksServiceSeampactServiceProvider::DECIDERS_TAG);
         $this->app->bind(ServiceUnexpectedErrorListener::class, TasksUnexpectedErrors::class);
+
+        $this->app->bind(InternalWritesEndpoints::class, InternalWritesController::class);
+        $this->app->bind(WritesServiceAuthenticateHook::class, ServiceHook::class);
+        $this->app->tag([ServiceDecider::class], TasksServiceWritesSeampactServiceProvider::DECIDERS_TAG);
+        $this->app->bind(TasksServiceWritesSeampactServiceProvider::IDEMPOTENCY_STORE_KEY, FileIdempotencyStore::class);
+        $this->app->bind(ServiceWritesUnexpectedErrorListener::class, TasksUnexpectedErrors::class);
+
+        $this->app->bind(DevicesEndpoints::class, DevicesController::class);
+        $this->app->bind(DeviceAuthenticateHook::class, DeviceHook::class);
+        $this->app->bind(DevicesUnexpectedErrorListener::class, TasksUnexpectedErrors::class);
+
+        $this->app->bind(WelcomeEndpoints::class, WelcomeController::class);
+        $this->app->bind(OptionalAuthUserAuthenticateHook::class, UserHook::class);
+        $this->app->bind(OptionalAuthUnexpectedErrorListener::class, TasksUnexpectedErrors::class);
+
+        $this->app->bind(NotesEndpoints::class, NotesController::class);
+        $this->app->bind(AbsoluteUrlsUserAuthenticateHook::class, UserHook::class);
+        $this->app->bind(AbsoluteUrlsUnexpectedErrorListener::class, TasksUnexpectedErrors::class);
     }
 
     public function boot(): void

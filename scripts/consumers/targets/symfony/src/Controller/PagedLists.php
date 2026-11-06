@@ -12,6 +12,10 @@ use App\Generated\Tasks\ListChannelsResult;
 use App\Generated\Tasks\ListTasksPage;
 use App\Generated\Tasks\ListTasksResponse200;
 use App\Generated\Tasks\ListTasksResult;
+use App\Generated\TasksAbsoluteUrls\ListNotesInput;
+use App\Generated\TasksAbsoluteUrls\ListNotesPage;
+use App\Generated\TasksAbsoluteUrls\ListNotesResponse200;
+use App\Generated\TasksAbsoluteUrls\ListNotesResult;
 use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\ScriptedAnswers;
 
@@ -41,5 +45,12 @@ final class PagedLists
                 is_string($body['nextCursor'] ?? null) ? $body['nextCursor'] : null,
             )),
         ) ?? new ListTasksResponse200(new ListTasksPage([SampleData::task(SampleData::NEW_TASK_ID)], $nextCursor));
+    }
+
+    public static function listNotes(ListNotesInput $input): ListNotesResult
+    {
+        $nextCursor = $input->query->cursor === null ? self::NEXT_CURSOR : null;
+
+        return new ListNotesResponse200(new ListNotesPage([SampleData::note(SampleData::FIRST_NOTE_ID)], $nextCursor));
     }
 }

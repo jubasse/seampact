@@ -1,4 +1,4 @@
-# The consumer's app config: the reference contract's tasks and tasksService apis through seampact-fastapi, every
+# The consumer's app config: the reference contract's apis through seampact-fastapi, every
 # operation; the suite's control routes sit outside the api's base path. The tasks routes join FastAPI's document
 # (`nativeDocs`), which the suite compares with seampact's `full` document written beside it.
 outDir: generated
@@ -17,3 +17,19 @@ targets:
     out: tasks_service
     use: pypi:seampact-fastapi
     api: tasksService
+  - id: tasksServiceWrites
+    out: tasks_service_writes
+    use: pypi:seampact-fastapi
+    api: tasksServiceWrites
+  - id: tasksDevices
+    out: tasks_devices
+    use: pypi:seampact-fastapi
+    api: tasksDevices
+  - id: tasksOptionalAuth
+    out: tasks_optional_auth
+    use: pypi:seampact-fastapi
+    api: tasksOptionalAuth
+  - id: tasksAbsoluteUrls
+    out: tasks_absolute_urls
+    use: pypi:seampact-fastapi
+    api: tasksAbsoluteUrls

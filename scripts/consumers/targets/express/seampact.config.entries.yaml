@@ -1,6 +1,6 @@
   - id: server
     use: "@seampact/codegen-express"
-    apis: [tasks, tasksService]
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices]
     options:
       bodyValidation: true
     link:
@@ -12,7 +12,7 @@
   # variant loads in place of the one above.
   - id: server-allow-listed
     use: "@seampact/codegen-express"
-    apis: [tasks, tasksService]
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices]
     options:
       bodyValidation: true
     link:

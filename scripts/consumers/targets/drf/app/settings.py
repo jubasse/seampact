@@ -1,4 +1,4 @@
-"""The Django settings of the DRF consumer: the `tasks` and `tasksService` apis' boundaries first in MIDDLEWARE, their
+"""The Django settings of the DRF consumer: the boundaries of the reference contract's apis first in MIDDLEWARE, their
 handlers, hook doubles, idempotency store and the DRF token authentication of the `identity` access kind in SEAMPACT,
 less what the boot variant (`SEAMPACT_SUITE_BOOT_VARIANT`) leaves out, and DRF defaults that refuse every request."""
 
@@ -16,6 +16,7 @@ CREDENTIALS_FILE: Final = "credentials.json"
 USER_IDENTITY: Final = "user"
 STRIPE_IDENTITY: Final = "stripe"
 SERVICE_IDENTITY: Final = "service"
+DEVICE_IDENTITY: Final = "device"
 CHANNEL_SCOPE: Final = "channel"
 OVERRIDDEN_RIGHT: Final = "tasks.update"
 # The right the `missing-decider` boot variant leaves without a decider, as the suite's case names it.
@@ -23,6 +24,10 @@ MISSING_DECIDER_RIGHT: Final = "roles"
 # Every right and rule of the `tasks` api reaches the generic decider, but the overridden one.
 TASKS_DECIDED: Final = ("tasks.read", "tasks.seeEffort", "recentAuth", "roles", "throttle")
 SERVICE_DECIDED: Final = ("callerService",)
+# The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
+PUBLIC_ORIGIN: Final = "https://api.seampact.test"
+# The consumer's DRF token authentication, which signs in the `user` hook's caller.
+_SUITE_TOKEN_AUTHENTICATION: Final = {"authentication_classes": ["drf_auth.SuiteTokenAuthentication"]}
 
 configure_suite_files(SuiteFiles(str(APP_DIRECTORY / CONTROL_STATE_FILE), str(APP_DIRECTORY / CREDENTIALS_FILE)))
 logging.getLogger().addHandler(SuiteLogHandler())
@@ -33,7 +38,10 @@ _variant = current_boot_variant()
 # A throwaway key: the consumer signs nothing and keeps no session.
 SECRET_KEY = "seampact-consumer-suite"
 DEBUG = False
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+# The absolute-URLs case's forged Host is accepted, so the case proves the boundary writes its links from the
+# public origin, never from a Host the app accepts.
+FORGED_HOST: Final = "attacker.example"
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", FORGED_HOST]
 ROOT_URLCONF = "urls"
 USE_TZ = True
 DATABASES: dict[str, object] = {}
@@ -41,6 +49,10 @@ INSTALLED_APPS = ["django.contrib.contenttypes", "django.contrib.auth", "rest_fr
 MIDDLEWARE = [
     "generated.tasks.django.TasksBoundary",
     "generated.tasks_service.django.TasksServiceBoundary",
+    "generated.tasks_service_writes.django.TasksServiceWritesBoundary",
+    "generated.tasks_devices.django.TasksDevicesBoundary",
+    "generated.tasks_optional_auth.django.TasksOptionalAuthBoundary",
+    "generated.tasks_absolute_urls.django.TasksAbsoluteUrlsBoundary",
     "django.middleware.common.CommonMiddleware",
 ]
 
@@ -81,12 +93,37 @@ SEAMPACT = {
         ),
         "idempotency_store": "hooks.idempotency_store",
         "on_unexpected_error": "hooks.unexpected_errors",
-        "access": {"identity": {"authentication_classes": ["drf_auth.SuiteTokenAuthentication"]}},
+        "access": {"identity": _SUITE_TOKEN_AUTHENTICATION},
     },
     "tasksService": {
         "handlers": {"internal": "handlers.internal_handlers"},
         "authenticate": {SERVICE_IDENTITY: "hooks.service_hook"},
         "deciders": {name: "hooks.service_decider" for name in SERVICE_DECIDED},
         "on_unexpected_error": "hooks.unexpected_errors",
+    },
+    "tasksServiceWrites": {
+        "handlers": {"internal_writes": "handlers.internal_writes_handlers"},
+        "authenticate": {SERVICE_IDENTITY: "hooks.service_hook"},
+        "deciders": {name: "hooks.service_decider" for name in SERVICE_DECIDED},
+        "idempotency_store": "hooks.idempotency_store",
+        "on_unexpected_error": "hooks.unexpected_errors",
+    },
+    "tasksDevices": {
+        "handlers": {"devices": "handlers.devices_handlers"},
+        "authenticate": {DEVICE_IDENTITY: "hooks.device_hook"},
+        "on_unexpected_error": "hooks.unexpected_errors",
+    },
+    "tasksOptionalAuth": {
+        "handlers": {"welcome": "handlers.welcome_handlers"},
+        "authenticate": {USER_IDENTITY: "hooks.user_hook"},
+        "on_unexpected_error": "hooks.unexpected_errors",
+        "access": {"optional": _SUITE_TOKEN_AUTHENTICATION},
+    },
+    "tasksAbsoluteUrls": {
+        "handlers": {"notes": "handlers.notes_handlers"},
+        "authenticate": {USER_IDENTITY: "hooks.user_hook"},
+        "on_unexpected_error": "hooks.unexpected_errors",
+        "public_origin": PUBLIC_ORIGIN,
+        "access": {"identity": _SUITE_TOKEN_AUTHENTICATION},
     },
 }

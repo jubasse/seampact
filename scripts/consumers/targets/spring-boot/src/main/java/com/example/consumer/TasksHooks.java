@@ -18,7 +18,6 @@ import io.github.jubasse.seampact.springboot.runtime.ScopeCall;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /** The `tasks` api's hook doubles: they record each call and answer what the loaded script says. */
@@ -31,20 +30,13 @@ final class TasksHooks {
     @Component
     @SkippedUnder("missing-authenticate-hook")
     static final class UserHook implements UserAuthenticateHook {
-        private static final Map<String, String> USER_IDS = Map.of(
-                Credentials.text("userToken"), Credentials.text("userId"),
-                Credentials.text("throttledUserToken"), Credentials.text("throttledUserId"));
-
         @Override
         public AuthenticateResult<UserPrincipal, Denial> authenticate(UserAuthenticateRequest request) {
             SuiteControl.recordHookCall("authenticate:user", API, request.operation().id());
 
-            String token = request.credentials().bearer().or(() -> request.credentials().sessionCookie()).orElse("");
-            String userId = USER_IDS.get(token);
-
-            return userId == null
-                    ? new AuthenticateResult.Denied<>(Denial.of("api.unauthenticated"))
-                    : new AuthenticateResult.Authenticated<>(new UserPrincipal(UUID.fromString(userId)));
+            return UserTokens.userIdOf(request.credentials().bearer(), request.credentials().sessionCookie())
+                    .<AuthenticateResult<UserPrincipal, Denial>>map(userId -> new AuthenticateResult.Authenticated<>(new UserPrincipal(userId)))
+                    .orElseGet(() -> new AuthenticateResult.Denied<>(Denial.of("api.unauthenticated")));
         }
     }
 

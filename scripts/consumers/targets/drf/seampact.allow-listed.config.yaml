@@ -15,3 +15,19 @@ targets:
     out: tasks_service
     use: pypi:seampact-drf
     api: tasksService
+  - id: tasksServiceWrites
+    out: tasks_service_writes
+    use: pypi:seampact-drf
+    api: tasksServiceWrites
+  - id: tasksDevices
+    out: tasks_devices
+    use: pypi:seampact-drf
+    api: tasksDevices
+  - id: tasksOptionalAuth
+    out: tasks_optional_auth
+    use: pypi:seampact-drf
+    api: tasksOptionalAuth
+  - id: tasksAbsoluteUrls
+    out: tasks_absolute_urls
+    use: pypi:seampact-drf
+    api: tasksAbsoluteUrls

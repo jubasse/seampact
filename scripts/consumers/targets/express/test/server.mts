@@ -1,4 +1,4 @@
-// Mounts both apis' generated routers at the root of an Express app, after the http suite's control routes and
+// Mounts each api's generated routers at the root of an Express app, after the http suite's control routes and
 // with the exported error middleware for refusals raised before them, runs the framework-route check, and listens
 // on a free local port. The `express4` overlay
 // runs the same app on Express 4.
@@ -7,14 +7,26 @@ import type { AddressInfo } from "node:net";
 import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
 import express, { type Response } from "express";
 import * as TasksExpress from "../generated/server/tasks/index.js";
+import * as TasksDevicesExpress from "../generated/server/tasksDevices/index.js";
 import * as TasksServiceExpress from "../generated/server/tasksService/index.js";
+import * as TasksServiceWritesExpress from "../generated/server/tasksServiceWrites/index.js";
 import {
   servesUnlistedRoute,
   UNLISTED_ROUTE,
   withoutMissingHandler,
 } from "../src/boot-variant.mjs";
-import { tasksHandlers, tasksServiceHandlers } from "../src/handlers.mjs";
-import { tasksHooks, tasksServiceHooks } from "../src/hooks.mjs";
+import {
+  tasksDevicesHandlers,
+  tasksHandlers,
+  tasksServiceHandlers,
+  tasksServiceWritesHandlers,
+} from "../src/handlers.mjs";
+import {
+  tasksDevicesHooks,
+  tasksHooks,
+  tasksServiceHooks,
+  tasksServiceWritesHooks,
+} from "../src/hooks.mjs";
 import {
   type ControlReply,
   hookCallsReply,
@@ -60,10 +72,26 @@ export async function startServer(): Promise<RunningServer> {
       hooks: tasksServiceHooks(),
     }),
   );
+  app.use(
+    TasksServiceWritesExpress.router({
+      handlers: { InternalWritesEndpoints: tasksServiceWritesHandlers },
+      hooks: tasksServiceWritesHooks(),
+    }),
+  );
+  app.use(
+    TasksDevicesExpress.router({
+      handlers: { DevicesEndpoints: tasksDevicesHandlers },
+      hooks: tasksDevicesHooks(),
+    }),
+  );
   app.use(TasksExpress.preRoutingErrorHandler);
   app.use(TasksServiceExpress.preRoutingErrorHandler);
+  app.use(TasksServiceWritesExpress.preRoutingErrorHandler);
+  app.use(TasksDevicesExpress.preRoutingErrorHandler);
   TasksExpress.checkFrameworkRoutes(app);
   TasksServiceExpress.checkFrameworkRoutes(app);
+  TasksServiceWritesExpress.checkFrameworkRoutes(app);
+  TasksDevicesExpress.checkFrameworkRoutes(app);
 
   const server = app.listen(0, HOST);
 

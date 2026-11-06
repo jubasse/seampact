@@ -1,4 +1,4 @@
-"""The framework-free hook doubles of the `tasks` and `tasksService` apis, answering from the loaded script and the
+"""The framework-free hook doubles of every api of the reference contract, answering from the loaded script and the
 suite's credentials. The app builds them per request; its own `user` hook factory hands `UserHook` the caller its
 framework's bearer authentication signed in, so the suite fails if a contract route skipped that authentication."""
 
@@ -9,8 +9,17 @@ from typing import Final
 
 from generated.tasks.operations import StripeCredentials, UserCredentials
 from generated.tasks.schemas import UserPrincipal, WebhookCaller
+from generated.tasks_absolute_urls.operations import UserCredentials as AbsoluteUrlsUserCredentials
+from generated.tasks_absolute_urls.schemas import UserPrincipal as AbsoluteUrlsUserPrincipal
+from generated.tasks_devices.operations import DeviceCredentials
+from generated.tasks_devices.schemas import DevicePrincipal
+from generated.tasks_optional_auth.operations import UserCredentials as OptionalAuthUserCredentials
+from generated.tasks_optional_auth.schemas import UserPrincipal as OptionalAuthUserPrincipal
 from generated.tasks_service.operations import ServiceCredentials
 from generated.tasks_service.schemas import Service, ServicePrincipal
+from generated.tasks_service_writes.operations import ServiceCredentials as WritesServiceCredentials
+from generated.tasks_service_writes.schemas import Service as WritesService
+from generated.tasks_service_writes.schemas import ServicePrincipal as WritesServicePrincipal
 from sample_data import channel
 from seampact_consumer_suite.control_state import record_hook_call
 from seampact_consumer_suite.credentials import credential_number, credential_text
@@ -65,9 +74,13 @@ def user_id_of(token: str) -> str | None:
     return user_ids.get(token)
 
 
+_USER_CREDENTIALS: Final = (UserCredentials, OptionalAuthUserCredentials, AbsoluteUrlsUserCredentials)
+_SERVICE_CREDENTIALS: Final = (ServiceCredentials, WritesServiceCredentials)
+
+
 class UserHook:
-    """The `user` identity: a bearer token the framework's authentication signed in, or a token of the credentials
-    as the session cookie."""
+    """The `user` identity of the `tasks`, `tasksOptionalAuth` and `tasksAbsoluteUrls` apis: a bearer token the
+    framework's authentication signed in, or a token of the credentials as the session cookie."""
 
     def __init__(self, signed_in: object) -> None:
         self._signed_in = signed_in
@@ -75,20 +88,50 @@ class UserHook:
     def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
         record_hook_call("authenticate:user", request.operation.api, request.operation.id)
         credentials = request.credentials
-        user_id = self._user_id(credentials) if isinstance(credentials, UserCredentials) else None
+
+        if not isinstance(credentials, _USER_CREDENTIALS):
+            return authenticate_result.Denied(deny=ErrorCodeWithParams(code=UNAUTHENTICATED))
+
+        user_id = self._user_id(credentials.bearer, credentials.session_cookie)
 
         if user_id is None:
             return authenticate_result.Denied(deny=ErrorCodeWithParams(code=UNAUTHENTICATED))
 
-        return authenticate_result.Authenticated(principal=UserPrincipal(user_id=uuid.UUID(user_id)))
+        return authenticate_result.Authenticated(principal=_user_principal(credentials, uuid.UUID(user_id)))
 
-    def _user_id(self, credentials: UserCredentials) -> str | None:
-        if credentials.bearer is not None:
+    def _user_id(self, bearer: str | None, session_cookie: str | None) -> str | None:
+        if bearer is not None:
             user = self._signed_in
-            signed_in = isinstance(user, TokenUser) and user.token == credentials.bearer
-            return user.user_id if signed_in else None
+            return user.user_id if isinstance(user, TokenUser) and user.token == bearer else None
 
-        return None if credentials.session_cookie is None else user_id_of(credentials.session_cookie)
+        return None if session_cookie is None else user_id_of(session_cookie)
+
+
+def _user_principal(credentials: object, user_id: uuid.UUID) -> object:
+    """The principal of the api whose credentials the request presents."""
+    if isinstance(credentials, OptionalAuthUserCredentials):
+        return OptionalAuthUserPrincipal(user_id=user_id)
+
+    if isinstance(credentials, AbsoluteUrlsUserCredentials):
+        return AbsoluteUrlsUserPrincipal(user_id=user_id)
+
+    return UserPrincipal(user_id=user_id)
+
+
+class DeviceHook:
+    """The `tasksDevices` api's `device` identity: the paired device's token, accepted as is."""
+
+    def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
+        record_hook_call("authenticate:device", request.operation.api, request.operation.id)
+        credentials = request.credentials
+        device_token = credentials.device_token if isinstance(credentials, DeviceCredentials) else None
+
+        if device_token is None or device_token != credential_text("deviceToken"):
+            return authenticate_result.Denied(deny=ErrorCodeWithParams(code=UNAUTHENTICATED))
+
+        device_id = uuid.UUID(credential_text("deviceId"))
+
+        return authenticate_result.Authenticated(principal=DevicePrincipal(device_id=device_id))
 
 
 class ChannelResolver:
@@ -153,7 +196,8 @@ class OverriddenRightDecider:
 
 
 class ServiceHook:
-    """The `tasksService` api's `service` identity: one of the fixed service JWTs, accepted as is."""
+    """The `service` identity of the `tasksService` and `tasksServiceWrites` apis: one of the fixed service JWTs,
+    accepted as is."""
 
     def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
         record_hook_call("authenticate:service", request.operation.api, request.operation.id)
@@ -167,7 +211,12 @@ class ServiceHook:
         if service is None:
             return authenticate_result.Denied(deny=ErrorCodeWithParams(code=UNAUTHENTICATED))
 
-        principal = ServicePrincipal(service=Service(service), user_id=uuid.UUID(credential_text("userId")))
+        user_id = uuid.UUID(credential_text("userId"))
+        principal: object = (
+            WritesServicePrincipal(service=WritesService(service), user_id=user_id)
+            if isinstance(request.credentials, WritesServiceCredentials)
+            else ServicePrincipal(service=Service(service), user_id=user_id)
+        )
 
         return authenticate_result.Authenticated(principal=principal)
 
@@ -175,12 +224,12 @@ class ServiceHook:
         """The service token of the request's credentials; an app reading it through its framework overrides this."""
         credentials = request.credentials
 
-        return credentials.internal_token if isinstance(credentials, ServiceCredentials) else None
+        return credentials.internal_token if isinstance(credentials, _SERVICE_CREDENTIALS) else None
 
 
 class ServiceDecider:
-    """The `tasksService` api's decider: denies what the script denies, else `callerService` for a service its
-    params do not list."""
+    """The decider of the `tasksService` and `tasksServiceWrites` apis: denies what the script denies, else
+    `callerService` for a service its params do not list."""
 
     def decide(self, request: RequirementRequest) -> Decision:
         record_hook_call(f"decide:{request.name}", request.operation.api, request.operation.id)
@@ -199,7 +248,9 @@ def _caller_listed(request: RequirementRequest) -> bool:
     allowed = (request.params or {}).get("allowed")
     principal = request.principal
 
-    return isinstance(principal, ServicePrincipal) and isinstance(allowed, list) and principal.service in allowed
+    service = principal.service if isinstance(principal, ServicePrincipal | WritesServicePrincipal) else None
+
+    return service is not None and isinstance(allowed, list) and service in allowed
 
 
 def _spends_throttled_bucket(request: RequirementRequest) -> bool:

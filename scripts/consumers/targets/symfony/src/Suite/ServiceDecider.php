@@ -8,14 +8,18 @@ use App\Generated\TasksService\Schemas\ApiForbiddenParams;
 use App\Generated\TasksService\Schemas\CallerServiceParams;
 use App\Generated\TasksService\Symfony\Decider;
 use App\Generated\TasksService\Symfony\ServicePrincipal;
+use App\Generated\TasksServiceWrites\Schemas\ApiForbiddenParams as WritesApiForbiddenParams;
+use App\Generated\TasksServiceWrites\Schemas\CallerServiceParams as WritesCallerServiceParams;
+use App\Generated\TasksServiceWrites\Symfony\Decider as WritesDecider;
+use App\Generated\TasksServiceWrites\Symfony\ServicePrincipal as WritesServicePrincipal;
 use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\DecisionPurpose;
 use Seampact\ConsumerSuite\SuiteControl;
 use Seampact\Hooks\Decision;
 use Seampact\Hooks\RequirementRequest;
 
-/** The `tasksService` api's decide double: denies what the script denies, else `callerService` for a service its params do not list. */
-final class ServiceDecider implements Decider
+/** The decide double of the `tasksService` and `tasksServiceWrites` apis: denies what the script denies, else `callerService` for a service its params do not list. */
+final class ServiceDecider implements Decider, WritesDecider
 {
     private const CALLER_SERVICE_RIGHT = 'callerService';
 
@@ -34,7 +38,9 @@ final class ServiceDecider implements Decider
         }
 
         if ($request->name() === self::CALLER_SERVICE_RIGHT && !self::callerAllowed($request)) {
-            return new Decision\Denied(new Denial('api.forbidden', new ApiForbiddenParams(null)));
+            $params = $request->principal() instanceof WritesServicePrincipal ? new WritesApiForbiddenParams(null) : new ApiForbiddenParams(null);
+
+            return new Decision\Denied(new Denial('api.forbidden', $params));
         }
 
         return new Decision\Allowed();
@@ -44,6 +50,10 @@ final class ServiceDecider implements Decider
     {
         $principal = $request->principal();
         $params = $request->params();
+
+        if ($principal instanceof WritesServicePrincipal) {
+            return $params instanceof WritesCallerServiceParams && in_array($principal->service, $params->allowed, true);
+        }
 
         return $principal instanceof ServicePrincipal && $params instanceof CallerServiceParams && in_array($principal->service, $params->allowed, true);
     }

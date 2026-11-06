@@ -67,6 +67,7 @@ function readCredentials(): SuiteCredentials {
     stripeSecret: shared.stripeSecret,
     throttleRetryAfterMs: shared.throttleRetryAfterMs,
     foreignServiceJwt: shared.foreignServiceJwt,
+    deviceToken: shared.deviceToken,
   };
 }
 

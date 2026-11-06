@@ -1,8 +1,15 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
-import { loadSuiteCases } from "./load-cases.js";
-import { parseSuiteCase, SuiteCaseError } from "./suite-case.js";
+import { parse } from "yaml";
+import { CASES_DIRECTORY, loadSuiteCases } from "./load-cases.js";
+import { parseSuiteCase, type SuiteCase, SuiteCaseError } from "./suite-case.js";
 
 const SOURCE = "case.json";
+const REFERENCE_WORKSPACE = fileURLToPath(
+  new URL("../../../../fixtures/reference/workspace.yaml", import.meta.url),
+);
 
 function minimalCase(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -118,6 +125,8 @@ describe("parseSuiteCase", () => {
     ],
     ["an unknown profile", minimalCase({ profiles: ["fast"] }), "at '/profiles/0'"],
     ["no step", minimalCase({ steps: [] }), "at '/steps': a case has at least one step"],
+    ["an empty api list", minimalCase({ apis: [] }), "at '/apis': `apis` names at least one api"],
+    ["an api of another form", minimalCase({ apis: ["tasks-devices"] }), "at '/apis/0'"],
     [
       "a relative path",
       minimalCase({ steps: [{ request: { method: "GET", path: "v1" }, expect: { status: 200 } }] }),
@@ -248,4 +257,39 @@ describe("loadSuiteCases", () => {
     expect(cases.length).toBeGreaterThan(0);
     expect(new Set(cases.map((suiteCase) => suiteCase.id)).size).toBe(cases.length);
   });
+
+  // A typo in `apis` would make a pack profile refuse the case as an api its app does not serve.
+  test("names in each shipped case's apis only apis of the reference workspace", () => {
+    const referenceApis = new Set(referenceWorkspaceApis());
+    const unknownApis = shippedCases().flatMap((suiteCase) =>
+      (suiteCase.apis ?? [])
+        .filter((api) => !referenceApis.has(api))
+        .map((api) => `${suiteCase.id}: '${api}' is not an api of the reference workspace`),
+    );
+
+    expect(referenceApis.size).toBeGreaterThan(0);
+    expect(unknownApis).toEqual([]);
+  });
 });
+
+function shippedCases(): SuiteCase[] {
+  return readdirSync(CASES_DIRECTORY)
+    .sort()
+    .map((file) =>
+      parseSuiteCase(JSON.parse(readFileSync(join(CASES_DIRECTORY, file), "utf8")), file),
+    );
+}
+
+function referenceWorkspaceApis(): string[] {
+  const workspace: unknown = parse(readFileSync(REFERENCE_WORKSPACE, "utf8"));
+  const apis =
+    isRecord(workspace) && isRecord(workspace.workspace) ? workspace.workspace.apis : undefined;
+
+  if (!isRecord(apis)) throw new Error(`${REFERENCE_WORKSPACE} has no workspace.apis map`);
+
+  return Object.keys(apis);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}

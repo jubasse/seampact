@@ -51,6 +51,7 @@ final class BootCheckPass implements CompilerPassInterface
      * @param string $boundaryService the ids of the bundle's boundary, input resolver and settings services
      * @param bool $checksHandlers the `handlers` switch of `artefacts.bootCheck`
      * @param string $operationAttribute the api's generated `SeampactOperation` attribute
+     * @param class-string $settingsClass the api's generated settings class
      */
     public function __construct(
         private readonly string $contractClass,
@@ -87,8 +88,7 @@ final class BootCheckPass implements CompilerPassInterface
      */
     private function publicOrigin(ContainerBuilder $container, ApiContract $contract): array
     {
-        $arguments = $container->hasDefinition($this->settingsService) ? $container->getDefinition($this->settingsService)->getArguments() : [];
-        $placeholder = $arguments[ContractSettings::PUBLIC_ORIGIN_ARGUMENT] ?? null;
+        $placeholder = $this->publicOriginArgument($container);
         if (PublicOrigin::writesAbsoluteUrls($contract) && EnvValue::isPlaceholder($container, $placeholder)) {
             return [];
         }
@@ -104,6 +104,36 @@ final class BootCheckPass implements CompilerPassInterface
         $problem = PublicOrigin::bootProblem($contract, "{$alias}.public_origin", $configured);
 
         return $problem === null ? [] : [$problem];
+    }
+
+    /**
+     * The settings service's `public_origin` argument. The bundle passes it by name, but Symfony's
+     * ResolveNamedArgumentsPass, which runs before this pass, turns it into the settings constructor's position.
+     */
+    private function publicOriginArgument(ContainerBuilder $container): mixed
+    {
+        if (!$container->hasDefinition($this->settingsService)) {
+            return null;
+        }
+
+        $arguments = $container->getDefinition($this->settingsService)->getArguments();
+        if (array_key_exists(ContractSettings::PUBLIC_ORIGIN_ARGUMENT, $arguments)) {
+            return $arguments[ContractSettings::PUBLIC_ORIGIN_ARGUMENT];
+        }
+
+        return $arguments[$this->publicOriginPosition()] ?? null;
+    }
+
+    private function publicOriginPosition(): int
+    {
+        $parameters = (new \ReflectionClass($this->settingsClass))->getConstructor()?->getParameters() ?? [];
+        foreach ($parameters as $parameter) {
+            if ('$' . $parameter->getName() === ContractSettings::PUBLIC_ORIGIN_ARGUMENT) {
+                return $parameter->getPosition();
+            }
+        }
+
+        throw new \LogicException("seampact: the generated settings class {$this->settingsClass} takes no " . ContractSettings::PUBLIC_ORIGIN_ARGUMENT . ' argument; regenerate the code.');
     }
 
     /** @return list<string> */

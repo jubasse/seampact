@@ -1,12 +1,14 @@
-"""The hook factories `bind_tasks()` and `bind_tasks_service()` take: each builds its shared hook double per request,
+"""The hook factories the `bind_*()` functions take: each builds its shared hook double per request,
 the `user` hook from the caller Ninja's `auth=` signed in, and the file idempotency store."""
 
 from pathlib import Path
 from typing import Final
 
+from auth import suite_token_auth
 from django.http import HttpRequest
 from hook_doubles import (
     ChannelResolver,
+    DeviceHook,
     OverriddenRightDecider,
     ServiceDecider,
     ServiceHook,
@@ -22,6 +24,16 @@ _IDEMPOTENCY_STORE_FILE: Final = Path(__file__).parent / "suite-idempotency.json
 
 def user_hook(request: HttpRequest) -> UserHook:
     return UserHook(getattr(request, "auth", None))
+
+
+def device_hook(request: HttpRequest) -> DeviceHook:
+    return DeviceHook()
+
+
+def optional_user_hook(request: HttpRequest) -> UserHook:
+    """The `user` hook of the optional-auth api: Ninja refuses an `auth=` on its routes, which declare no 401, so the
+    factory reads the bearer token as that authentication does."""
+    return UserHook(suite_token_auth(request))
 
 
 def channel_resolver(request: HttpRequest) -> ChannelResolver:

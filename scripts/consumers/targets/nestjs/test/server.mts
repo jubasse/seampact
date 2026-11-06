@@ -1,4 +1,4 @@
-// Boots the NestJS app on Express around the generated boundaries of both apis, as the docs' setup with
+// Boots the NestJS app on Express around the generated boundaries of each api, as the docs' setup with
 // `rawBody: true` shows, on a free local port.
 import "reflect-metadata";
 import type { AddressInfo } from "node:net";
@@ -6,7 +6,9 @@ import { type ArgumentsHost, Catch } from "@nestjs/common";
 import { BaseExceptionFilter, NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import * as TasksNest from "../generated/server/tasks/index.js";
+import * as TasksDevicesNest from "../generated/server/tasksDevices/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
+import * as TasksServiceWritesNest from "../generated/server/tasksServiceWrites/index.js";
 import { useBenchAppInterceptor } from "../src/bench-app-interceptor.mjs";
 import { ConsumerModule } from "../src/consumer-module.mjs";
 
@@ -17,13 +19,17 @@ export interface RunningServer {
 
 const HOST = "127.0.0.1";
 
-// One global filter for the two apis: each api's helper first, then NestJS's default for the app's own routes.
+// One global filter for every api: each api's helper first, then NestJS's default for the app's own routes.
 @Catch()
 class PreRoutingFilter extends BaseExceptionFilter {
   override catch(exception: unknown, host: ArgumentsHost): void {
     if (TasksNest.renderPreRoutingError(exception, host)) return;
 
     if (TasksServiceNest.renderPreRoutingError(exception, host)) return;
+
+    if (TasksServiceWritesNest.renderPreRoutingError(exception, host)) return;
+
+    if (TasksDevicesNest.renderPreRoutingError(exception, host)) return;
 
     super.catch(exception, host);
   }
@@ -37,7 +43,12 @@ export async function startServer(): Promise<RunningServer> {
 
   app.useBodyParser("json", {
     strict: false,
-    limit: Math.max(TasksNest.LARGEST_BODY_LIMIT, TasksServiceNest.LARGEST_BODY_LIMIT),
+    limit: Math.max(
+      TasksNest.LARGEST_BODY_LIMIT,
+      TasksServiceNest.LARGEST_BODY_LIMIT,
+      TasksServiceWritesNest.LARGEST_BODY_LIMIT,
+      TasksDevicesNest.LARGEST_BODY_LIMIT,
+    ),
   });
   app.useGlobalFilters(new PreRoutingFilter(app.getHttpAdapter()));
   useBenchAppInterceptor(app);
