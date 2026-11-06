@@ -82,6 +82,8 @@ Optional runtime helpers (ADR 0009) are hand-written, semver-versioned and unit-
 - **Boot tests.** Misconfigured variants of the sample app (a missing authenticate hook, decider, scope resolver or handler, an unlisted framework route) run as separate processes and must refuse to start with the named diagnostic.
 - **Report.** Every case is tagged with the checklist ids it proves; a tag may name the targets it counts for, when the item is scoped to some targets. A case may also list the targets that show its behaviour (`targets`), when servers meet one fact in different ways (a mount mismatch refused at boot on most servers, at the first request on Express and AdonisJS); it then runs only on those, and the report reads it as refused, naming why, on the others. The suite writes a JSON report keyed by id, which the checklist script reads (FR-18). A proof file may also cite a CI job as `<target>: ci: <workflow file>#<job id>`: the release gate counts it proven when the newest develop run of that job passed.
 
+Amendment 2026-11-06: the release gate reads only the items in the checklist's 1.0 scope list and only the targets and profiles a tag or a proof names; an item after 1.0 is left out of it. It runs in the `release` workflow: blocking in a manual release run, which reads the reports of that commit and fails on a gap, a failed cited CI job or a consumer without a report, and report-only (the step may fail without failing the workflow) on a push, a pull request or a merge group, where it reads `develop`'s newest reports.
+
 Running the suite needs Node.js on the CI machine of the test consumer. The application under test does not: a Java or PHP sample app runs without Node.js, and only the test runner beside it uses Node.
 
 ### Suite profiles
