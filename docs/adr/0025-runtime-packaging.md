@@ -199,6 +199,10 @@ The remaining generated tree is still scanned by the app's tools, so `seampact c
 - A copy mode, `runtime: vendored`, only on a user's request.
 - A separate PHP `-runtime` package, if the generator in production `vendor/` becomes a problem for users.
 
+### Amendment 2026-11-06: the publication pipelines exist
+
+The statements at "Publication" and in the delivery table that the publication pipelines do not exist yet are replaced: the `release` workflow now publishes every package, including `@seampact/server-runtime` and `io.github.jubasse:seampact-spring-runtime`, to npm, Maven Central, the Gradle Plugin Portal, PyPI and the PHP mirrors, and proves the installs from local registries in its dry run and from the real registries after a release with `post-release.yml`. Publication itself stays gated by [A3](../decisions.md#a3): a real run starts by hand from `main`, behind one approval of the `release` environment.
+
 ## Traceability
 
 - Amendments: A3 (publication at 1.0), A19 (Composer mirrors), A40 (`hooks: vendored`, the model for a copy mode), A47 (no mode a consumer does not need).
