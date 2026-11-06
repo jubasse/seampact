@@ -21,6 +21,12 @@ inputs:
       which keeps watched-paths everywhere.
     required: false
     default: ""
+  release-gate:
+    description: >-
+      `true` on a run the release starts for its conformance gate: no drift row runs, since drift rows test newer
+      dependencies, not the release.
+    required: false
+    default: "false"
 
 outputs:
   run:
@@ -74,6 +80,13 @@ runs:
         EVENT: ${{ github.event_name }}
         LANE_RUN: ${{ steps.decide.outputs.run }}
         PR_BASE: ${{ github.base_ref }}
+        RELEASE_GATE: ${{ inputs.release-gate }}
       run: |
         set -euo pipefail
-        bash "$GITHUB_ACTION_PATH/row-classes.sh" "$EVENT" "$LANE_RUN" "$PR_BASE" | tee -a "$GITHUB_OUTPUT"
+        classes=$(bash "$GITHUB_ACTION_PATH/row-classes.sh" "$EVENT" "$LANE_RUN" "$PR_BASE")
+
+        if [ "$RELEASE_GATE" = "true" ]; then
+          classes=$(printf '%s\n' "$classes" | sed 's/^drift=.*/drift=false/')
+        fi
+
+        printf '%s\n' "$classes" | tee -a "$GITHUB_OUTPUT"

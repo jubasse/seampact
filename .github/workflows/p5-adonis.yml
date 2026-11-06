@@ -13,6 +13,12 @@ on:
     types: [checks_requested]
     branches: [main, develop]
   workflow_dispatch:
+    inputs:
+      release-gate:
+        description: A run the release starts for its conformance gate; it skips the drift rows, which test newer dependencies, not the release.
+        required: false
+        type: boolean
+        default: false
   # The nightly run holds the drift row (AdonisJS 6 on yup).
   schedule:
     - cron: "30 0 * * *"
@@ -46,6 +52,8 @@ jobs:
         id: detect
         uses: ./.github/actions/lane-changes
         with:
+          # A release gate run holds no drift row.
+          release-gate: ${{ inputs.release-gate == true }}
           # The packages a Node server consumer installs (core, packs, runtime, the TypeScript, fetch and validator
           # targets, its own), the http suite, the consumer harness and its overlays, the reference contract and the pins.
           watched-paths: |

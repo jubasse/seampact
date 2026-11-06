@@ -19,6 +19,7 @@ import type { Problem } from "./model.ts";
 import { formatProblem } from "./model.ts";
 import { ITEMS_AFTER_1_0, indexItemsAfter1_0, TARGETS_AFTER_1_0 } from "./release-scope.ts";
 import { parseResults, renderReport, shares, testPassed } from "./report.ts";
+import { SUITE_CONSUMERS, suiteConsumerProblems } from "./suite-consumers.ts";
 import { SERVER_TARGETS } from "./targets.ts";
 import { VARIANT_ROW_SETS } from "./variant-rows.ts";
 
@@ -355,10 +356,23 @@ describe("checklist release gate with suite reports", () => {
 const hasJq = spawnSync("jq", ["--version"]).status === 0;
 
 describe.skipIf(!hasJq)("suite report fetcher filters", () => {
-  const filter = (file: string, input: unknown, commit = ""): string =>
+  const filter = (file: string, input: unknown, commit = "", runs = ""): string =>
     execFileSync(
       "jq",
-      ["-r", "--arg", "branch", "develop", "--arg", "commit", commit, "-f", join(HERE, file)],
+      [
+        "-r",
+        "--arg",
+        "branch",
+        "develop",
+        "--arg",
+        "commit",
+        commit,
+        "--arg",
+        "runs",
+        runs,
+        "-f",
+        join(HERE, file),
+      ],
       { encoding: "utf8", input: JSON.stringify(input) },
     ).trim();
 
@@ -433,6 +447,22 @@ describe.skipIf(!hasJq)("suite report fetcher filters", () => {
   it("keeps only the runs of the asked commit", () => {
     expect(filter("suite-run.jq", run({}), "abc123")).toBe("abc123");
     expect(filter("suite-run.jq", run({}), "def456")).toBe("");
+  });
+
+  it("with the runs the release started, trusts those manual runs only", () => {
+    const manual = run({ event: "workflow_dispatch", id: 5 });
+    const workflowRuns = (...runs: Record<string, unknown>[]) => ({
+      workflow_runs: runs.map((r) => ({ ...r, status: "completed" })),
+    });
+
+    expect(filter("suite-run.jq", manual, "abc123", "4 5")).toBe("abc123");
+    expect(filter("suite-run.jq", manual, "abc123", "4 55")).toBe("");
+    expect(filter("suite-run.jq", manual, "abc123")).toBe("");
+    expect(filter("suite-run.jq", run({ id: 5 }), "abc123", "5")).toBe("");
+    expect(filter("ci-runs.jq", workflowRuns(manual, run({ id: 6 })), "abc123", "5")).toBe(
+      "5 abc123",
+    );
+    expect(filter("ci-runs.jq", workflowRuns(manual), "abc123")).toBe("");
   });
 
   it("trusts a successful push or schedule run of this repository and names its commit", () => {
@@ -580,6 +610,61 @@ describe("checklist release scope", () => {
     expect(out).toContain(
       "scripts/checklist/release-scope.ts: CHK-001: proven for target nestjs: drop it from the after-1.0 list",
     );
+  });
+
+  it("an expected consumer without a report fails", () => {
+    const suiteConsumers = new Map([
+      ["nestjs", "p5-nestjs.yml"],
+      ["laravel", "p6-laravel.yml"],
+    ]);
+    const out = gateOver(
+      artefacts({ nestjs: { target: "nestjs", checks: { "CHK-001": passed } } }),
+      { suiteConsumers },
+    );
+
+    expect(out).toContain(
+      "scripts/checklist/suite-consumers.ts: -: release gate: no http-suite report for target laravel (from a successful p6-laravel.yml run)",
+    );
+    expect(out).not.toContainEqual(expect.stringContaining("report for target nestjs"));
+  });
+
+  it("a variant's report or an empty report is not the consumer's report", () => {
+    const suiteConsumers = new Map([
+      ["express", "p5-fastify-express.yml"],
+      ["nestjs", "p5-nestjs.yml"],
+    ]);
+    const out = gateOver(
+      artefacts({
+        "express-http-suite-express4": { target: "express4", checks: { "CHK-001": passed } },
+        "nestjs-http-suite-empty": { target: "nestjs", checks: {} },
+      }),
+      { suiteConsumers },
+    );
+    const missing = (target: string, workflow: string) =>
+      `scripts/checklist/suite-consumers.ts: -: release gate: no http-suite report for target ${target} (from a successful ${workflow} run)`;
+
+    expect(out).toContain(missing("express", "p5-fastify-express.yml"));
+    expect(out).toContain(missing("nestjs", "p5-nestjs.yml"));
+  });
+
+  it("the repository names a consumer workflow for every server the gate requires", () => {
+    expect(suiteConsumerProblems(REPO, SUITE_CONSUMERS)).toEqual([]);
+    expect([...SUITE_CONSUMERS.keys()].sort()).toEqual(
+      SERVER_TARGETS.filter((t) => !TARGETS_AFTER_1_0.includes(t)).sort(),
+    );
+  });
+
+  it("refuses a consumer table with a missing workflow, a missing server or a deferred one", () => {
+    const suiteConsumers = new Map([...SUITE_CONSUMERS, ["api-platform", "p6-symfony.yml"]]);
+
+    suiteConsumers.delete("drf");
+    suiteConsumers.set("ninja", "p7-gone.yml");
+
+    expect(lines(suiteConsumerProblems(REPO, suiteConsumers))).toEqual([
+      "scripts/checklist/suite-consumers.ts: -: server target drf has no consumer workflow: name the one that runs its http suite",
+      "scripts/checklist/suite-consumers.ts: -: consumer workflow of ninja does not exist: p7-gone.yml",
+      "scripts/checklist/suite-consumers.ts: -: consumer workflow for api-platform, not a server target the release gate requires",
+    ]);
   });
 
   describe("a deferral for a form generation refuses by name", () => {
@@ -762,6 +847,59 @@ describe("checklist ci references", () => {
     expect(out.join("\n")).not.toContain("\n::error::");
     expect(out.some((line) => line.startsWith("::"))).toBe(false);
     expect(gateWithCiJobs([good])).not.toContain(noTest("CHK-002", "nestjs"));
+  });
+
+  it("names an unnamed matrix job by its id and its rows' matrix values", () => {
+    const root = rootCiting("w.yml#build");
+
+    try {
+      writeFileSync(
+        join(root, ".github/workflows/w.yml"),
+        ["jobs:", "  build:", "    strategy:", "      matrix:", "        jdk: [21, 25]", ""].join(
+          "\n",
+        ),
+      );
+
+      expect(lines(check({ root }))).toEqual([]);
+      expect(
+        execFileSync("node", [join(HERE, "cli.ts"), "ci-jobs", "--root", root], {
+          encoding: "utf8",
+        }),
+      ).toBe("w.yml\tbuild\tbuild (\tprefix\n");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("gate-workflows refuses a cited workflow the release cannot start and names its release-gate input", () => {
+    const root = rootCiting("w.yml#build");
+    const gateWorkflows = () =>
+      spawnSync("node", [join(HERE, "cli.ts"), "gate-workflows", "--root", root], {
+        encoding: "utf8",
+      });
+
+    try {
+      const refused = gateWorkflows();
+
+      expect(refused.status).toBe(1);
+      expect(refused.stderr).toContain(
+        "w.yml: the release cannot start it at its commit: add a workflow_dispatch trigger",
+      );
+
+      writeFileSync(
+        join(root, ".github/workflows/w.yml"),
+        "on:\n  workflow_dispatch:\njobs:\n  build:\n    name: build\n",
+      );
+      expect(gateWorkflows().stdout).toBe("w.yml\n");
+
+      writeFileSync(
+        join(root, ".github/workflows/w.yml"),
+        "on:\n  workflow_dispatch:\n    inputs:\n      release-gate:\n        type: boolean\njobs:\n  build:\n    name: build\n",
+      );
+      expect(gateWorkflows().stdout).toBe("w.yml\trelease-gate\n");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("refuses a ci job whose name starts with an expression", () => {
@@ -955,6 +1093,17 @@ describe("checklist cli", () => {
   it("check and report run on the repository", () => {
     expect(run("check")).toBe("");
     expect(run("report")).toContain("| Target | Live items |");
+  });
+
+  it("gate-workflows names every consumer workflow and every workflow a proof cites", () => {
+    const lines = run("gate-workflows").trim().split("\n");
+    const workflows = lines.map((line) => line.split("\t")[0]);
+
+    for (const workflow of SUITE_CONSUMERS.values()) expect(workflows).toContain(workflow);
+    expect(workflows).toContain("p6-jvm-core.yml");
+    expect(workflows).toEqual([...new Set(workflows)].sort());
+    expect(lines).toContain("p5-adonis.yml\trelease-gate");
+    expect(lines).toContain("p6-jvm-core.yml");
   });
 
   it("check exits non-zero and names the problem", () => {

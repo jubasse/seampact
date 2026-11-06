@@ -7,7 +7,7 @@ import {
   CI_SUCCESS,
   ciJobKey,
   loadCiJobResults,
-  startsWithExpression,
+  matchesEveryJob,
   workflowJobs,
 } from "./ci-jobs.ts";
 import { loadModel } from "./load.ts";
@@ -16,6 +16,7 @@ import { CHECKLIST_FILE, chkNumber } from "./model.ts";
 import type { ItemAfter1_0 } from "./release-scope.ts";
 import { releaseGateTargets, releaseScopeProblems } from "./release-scope.ts";
 import { shown } from "./shown.ts";
+import { missingReportProblems, suiteConsumerProblems } from "./suite-consumers.ts";
 import type { SuiteProof } from "./suite-reports.ts";
 import { loadSuiteReports } from "./suite-reports.ts";
 import { expandTargets } from "./targets.ts";
@@ -37,6 +38,11 @@ export interface CheckOptions {
   itemsAfter1_0?: ReadonlyMap<string, ItemAfter1_0>;
   /** The items a target proves across several CI rows (variant-rows.ts); none when absent. */
   variantRowSets?: ReadonlyMap<string, VariantRowSet>;
+  /**
+   * The consumer workflow of each server target (suite-consumers.ts); none when absent. With the release gate and
+   * suite reports, a server target named here without a report fails.
+   */
+  suiteConsumers?: ReadonlyMap<string, string>;
 }
 
 export const CONSUMER_PREFIX = "test-seampact-";
@@ -84,11 +90,11 @@ export function checkModel(
       if (t.kind === "ci") {
         const jobs = workflowJobs(o.root, t.path);
 
-        const displayName = jobs?.get(t.name);
+        const match = jobs?.get(t.name);
 
         if (jobs === undefined) at(`CI workflow does not exist: ${t.path}`);
-        else if (displayName === undefined) at(`CI job does not exist: ${t.name} in ${t.path}`);
-        else if (startsWithExpression(displayName))
+        else if (match === undefined) at(`CI job does not exist: ${t.name} in ${t.path}`);
+        else if (matchesEveryJob(match))
           at(
             `CI job name starts with an expression: ${t.name} in ${t.path} (it would match every job of a run)`,
           );
@@ -100,6 +106,9 @@ export function checkModel(
   }
 
   if (o.base !== undefined) problems.push(...checkAgainstBase(model, o.root, o.base));
+
+  if (o.suiteConsumers !== undefined)
+    problems.push(...suiteConsumerProblems(o.root, o.suiteConsumers));
 
   const scope: GateScope = {
     itemsAfter1_0: o.itemsAfter1_0 ?? new Map(),
@@ -351,12 +360,15 @@ function checkAgainstBase(model: Model, root: string, base: string): Problem[] {
 export function check(o: CheckOptions): Problem[] {
   const problems: Problem[] = [];
   const model = loadModel(o.root, problems);
-  const suiteProofs =
-    o.suiteReports === undefined ? [] : loadSuiteReports(o.suiteReports, problems);
+  const suiteReports =
+    o.suiteReports === undefined ? undefined : loadSuiteReports(o.suiteReports, problems);
   const ciJobResults =
     o.suiteReports === undefined ? new Map() : loadCiJobResults(o.suiteReports, problems);
 
-  problems.push(...checkModel(model, o, suiteProofs, ciJobResults));
+  problems.push(...checkModel(model, o, suiteReports?.proofs ?? [], ciJobResults));
+
+  if (o.releaseGate && suiteReports !== undefined && o.suiteConsumers !== undefined)
+    problems.push(...missingReportProblems(o.suiteConsumers, suiteReports.targets));
 
   return problems;
 }
