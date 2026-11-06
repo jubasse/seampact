@@ -457,6 +457,24 @@ export const ListTasksInputSchema = standardSchemaOf(
       .defined(),
     query: yup
       .object({
+        state: yup
+          .array()
+          .of(
+            yup
+              .mixed()
+              .nullable()
+              .test({
+                name: "enum",
+                message: "Expected one of the declared values.",
+                test: (value) =>
+                  value === undefined ||
+                  (["open", "done", "archived"] as readonly unknown[]).includes(
+                    value,
+                  ),
+              })
+              .defined(),
+          )
+          .optional(),
         cursor: yup.string().strict().optional(),
         limit: yup
           .number()
