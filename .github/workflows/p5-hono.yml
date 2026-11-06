@@ -163,3 +163,5 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.run }}
+          # Queue rows: a pull request to develop runs without them.
+          allow-skip: ${{ needs.changes.outputs.queue == 'false' && 'pack-consumer' || '' }}
