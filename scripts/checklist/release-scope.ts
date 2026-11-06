@@ -164,9 +164,9 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   [
     "CHK-090",
     {
-      targets: ["nestjs"],
-      refusedOn: ["nestjs"],
-      reason: "1.0 refuses a right's custom metadata by name at generation on NestJS",
+      targets: ["nestjs", "laravel"],
+      refusedOn: ["nestjs", "laravel"],
+      reason: "1.0 refuses a right's custom metadata by name at generation on NestJS and Laravel",
     },
   ],
   [

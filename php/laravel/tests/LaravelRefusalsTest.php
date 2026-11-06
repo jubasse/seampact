@@ -194,6 +194,18 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString('no reference contract carries it', self::refused($document)['degradable.unsupported'] ?? '');
     }
 
+    public function testARightsCustomMetadataIsRefusedByNameNotDropped(): void
+    {
+        $document = ReferenceContract::withOperation('assignTask', static function (\stdClass $operation, \stdClass $document): void {
+            self::object(self::object($document->rights)->roles)->extensions = (object) ['acme' => (object) ['audit' => 'roles']];
+        });
+
+        $refused = self::refused($document)['right.extensions.unsupported'] ?? '';
+
+        self::assertStringContainsString("An extension value of the right 'roles'", $refused);
+        self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused);
+    }
+
     public function testASuccessEnvelopeSlotTheBoundaryDoesNotFillIsRefused(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
