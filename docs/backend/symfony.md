@@ -319,7 +319,7 @@ Find each message in [Troubleshooting](../troubleshooting/boot.md).
 
 ## What is not served yet
 
-`generate` refuses these by name, until an app needs them: multipart and file values, form bodies, download and redirect responses, query lists in `brackets` form (`tag[]=a`), lists of lists and object query params, and `artefacts: { accessHooks: false }`. Remove the operation from the entry's `operations` filter to generate the rest. See [Troubleshooting](../troubleshooting/generate.md).
+`generate` refuses these by name, until an app needs them: multipart and file values, form bodies, download and redirect responses, query lists in `brackets` form (`tag[]=a`), lists of lists and object query params, an identity header written on a response (a `versionToken` header, or one declared `in: response`), and `artefacts: { accessHooks: false }`. Remove the operation from the entry's `operations` filter to generate the rest. See [Troubleshooting](../troubleshooting/generate.md).
 
 Serve the app with php-fpm. A worker runtime (FrankenPHP worker, RoadRunner, Swoole) is refused with `runtime.worker.unsupported`.
 

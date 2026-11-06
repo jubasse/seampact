@@ -26,6 +26,7 @@ import { queryListWireOf } from "../query-list-wire.js";
 import type { Refusal } from "../refusal.js";
 import { askedRequirements } from "./asked-requirements.js";
 import { fingerprintHeaderNames } from "./fingerprint-headers.js";
+import { identityResponseHeaderRefusals, operationIdentityHeaders } from "./identity-headers.js";
 import type { CompressionOption, FrameworkEtagMode } from "./options.js";
 import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
 import { encodedSegmentRefusals } from "./path-segment-refusals.js";
@@ -114,7 +115,10 @@ export function routeTableSource(
   refusals.push(...accessExtensionRefusals(ir));
 
   ir.operations.forEach((operation, index) => {
-    warnings.push(...handlerForms(ir, operation, operationLocation(index, operation.id)));
+    const location = operationLocation(index, operation.id);
+
+    warnings.push(...handlerForms(ir, operation, location));
+    refusals.push(...identityResponseHeaderRefusals(ir, operation));
   });
 
   const routes = ir.operations
@@ -353,14 +357,7 @@ function handlerForms(
   operation: Operation,
   location: IrLocation,
 ): GenerateWarning[] {
-  const access = operation.access;
-  const identityId =
-    isKnownVariant("Access", access) && access.kind !== "public" ? access.identity : undefined;
-  const identity = identityId === undefined ? undefined : ir.identities[identityId];
-  const identityHeaders =
-    identity !== undefined && isKnownVariant("Identity", identity) && "headers" in identity
-      ? identity.headers.length
-      : 0;
+  const identityHeaders = operationIdentityHeaders(ir, operation);
   const forms: [
     form: string,
     description: string,
@@ -398,8 +395,8 @@ function handlerForms(
     ],
     [
       "identity.headers",
-      `The headers of the identity '${identityId ?? ""}'`,
-      identityHeaders > 0,
+      `The headers of the identity '${identityHeaders?.identityId ?? ""}'`,
+      (identityHeaders?.requestSideUses ?? 0) > 0,
       "access",
       "Read the identity headers the boundary validated in the handler.",
     ],

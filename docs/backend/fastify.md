@@ -184,3 +184,5 @@ Next: [run it](../getting-started/03-generate-and-run.md#run-it).
 A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
 
 A query list is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`. The `brackets` form is refused by `generate`.
+
+An identity header written on a response (a `versionToken` header, or one declared `in: response`) is refused by `generate` (`identity.response.header.unsupported`): no handler can write it yet.

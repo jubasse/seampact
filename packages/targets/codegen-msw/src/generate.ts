@@ -13,7 +13,11 @@ import {
   refuseNotGeneratedYet,
   withoutRepeats,
 } from "@seampact/codegen-core";
-import { mixedSegmentRefusals, operationIdentifier } from "@seampact/codegen-core/node-server";
+import {
+  identityResponseHeaderRefusals,
+  mixedSegmentRefusals,
+  operationIdentifier,
+} from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
 import { unescapableSegmentRefusals } from "./mock-path.js";
 import { errorWritingsOf, mockPlanOf, refuseMissingTypes } from "./mock-plan.js";
@@ -133,6 +137,9 @@ function mockedOperations(
     const member = operationIdentifier(operation);
     const types = Object.hasOwn(typeExports, operation.id) ? typeExports[operation.id] : undefined;
     const planned = planOperation(operation, ir, location, refusals);
+
+    refusals.push(...identityResponseHeaderRefusals(ir, operation));
+
     const plan = mockPlanOf(operation, member, planned, ir, location, refusals);
 
     if (member === HANDLERS_MEMBER) {
