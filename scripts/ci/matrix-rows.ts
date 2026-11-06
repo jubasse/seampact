@@ -13,6 +13,7 @@ export type WorkflowMatrix = Readonly<Record<string, readonly unknown[] | undefi
 
 export interface WorkflowStep {
   readonly name?: string;
+  readonly if?: string;
   readonly run?: string;
   readonly uses?: string;
   readonly with?: Readonly<Record<string, string>>;
@@ -27,9 +28,15 @@ export interface WorkflowJob {
   readonly steps?: readonly WorkflowStep[];
 }
 
+export interface WorkflowConcurrency {
+  readonly group: string;
+  readonly "cancel-in-progress"?: string | boolean;
+}
+
 export interface WorkflowDocument {
   readonly name: string;
   readonly on: Readonly<Record<string, unknown>>;
+  readonly concurrency?: WorkflowConcurrency;
   readonly jobs: Readonly<Record<string, WorkflowJob>>;
 }
 

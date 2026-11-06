@@ -49,10 +49,13 @@ runs:
       working-directory: packages/tools/binary
       run: pnpm build
 
-    # Only pushes and nightly runs save: a pull request's entry would count against the repository's cache limit for
-    # that pull request alone. Parallel lanes of one run may all miss; the first save wins and the others only warn.
+    # Only pushes and nightly runs save: a pull request's or a merge group's entry would count against the
+    # repository's cache limit for that ref alone. Parallel lanes of one run may all miss; the first save wins and the
+    # others only warn.
     - name: Save the binary
-      if: steps.restore.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+      if: >-
+        steps.restore.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+        && github.event_name != 'merge_group'
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: packages/tools/binary/dist/bin/seampact-linux-x64

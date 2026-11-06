@@ -10,6 +10,9 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
@@ -40,14 +43,14 @@ jobs:
           EVENT: ${{ github.event_name }}
           PR_BASE: ${{ github.base_ref }}
           PUSH_BEFORE: ${{ github.event.before }}
+          MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
-          base=""
-          if [ "$EVENT" = "pull_request" ]; then
-            base="origin/$PR_BASE"
-          elif git cat-file -e "${PUSH_BEFORE}^{commit}" 2>/dev/null; then
-            # A new branch (all-zero sha) or a force push whose old tip is gone has no base.
-            base="$PUSH_BEFORE"
-          fi
+          set -euo pipefail
+          range=$(bash .github/actions/lane-changes/change-range.sh)
+          # The base is the range's left side: the pull request's base branch, the merge group's base or the push's
+          # old tip.
+          base="${range%%..*}"
           if [ -n "$base" ]; then
             node scripts/checklist/cli.ts check --base "$base"
           else

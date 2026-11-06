@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Says which row classes a run holds, from the event that started it and the lane's run verdict. PR rows run on every
-# run of the lane; post-merge rows on a push and on the drift events; drift rows (pre-releases, dependency drift,
+# run of the lane, a merge group's included; post-merge rows on a push and on the drift events; drift rows (pre-releases, dependency drift,
 # macOS) on the nightly schedule, a manual run and a release only. Prints `post-merge=<bool>` and `drift=<bool>`.
 set -euo pipefail
 
@@ -20,7 +20,7 @@ case "$lane_run" in
 esac
 
 case "$event" in
-  pull_request)
+  pull_request | merge_group)
     post_merge_rows=false
     drift_rows=false
     ;;

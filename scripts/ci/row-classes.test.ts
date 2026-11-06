@@ -165,6 +165,7 @@ function rowClassesFor(event: string, laneRun: string): { status: number | null;
 describe("the row classes of an event", () => {
   it.each([
     ["pull_request", "post-merge=false\ndrift=false"],
+    ["merge_group", "post-merge=false\ndrift=false"],
     ["push", "post-merge=true\ndrift=false"],
     ["schedule", "post-merge=true\ndrift=true"],
     ["workflow_dispatch", "post-merge=true\ndrift=true"],
@@ -181,10 +182,10 @@ describe("the row classes of an event", () => {
   });
 
   it("refuses an event no class is defined for", () => {
-    const refusal = rowClassesFor("merge_group", "true");
+    const refusal = rowClassesFor("pull_request_target", "true");
 
     expect(refusal.status).toBe(1);
-    expect(refusal.output).toContain("No row class is defined for the 'merge_group' event");
+    expect(refusal.output).toContain("No row class is defined for the 'pull_request_target' event");
   });
 });
 

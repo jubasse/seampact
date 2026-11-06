@@ -16,6 +16,9 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
   workflow_dispatch:
   # The nightly and manual runs are the only ones that write the Gradle caches, from the first row of each pull request job;
   # every other run and row reads them.
@@ -185,7 +188,7 @@ jobs:
           if [ "$TEST_GRADLE" != "wrapper" ]; then gradle_flag=("-PtestGradle=$TEST_GRADLE"); fi
           ./gradlew :seampact-gradle-plugin:check -PtestJdk="$TEST_JDK" "${gradle_flag[@]}"
       - name: Save the TestKit downloads
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.event_name != 'merge_group'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: *testkit-cache-paths

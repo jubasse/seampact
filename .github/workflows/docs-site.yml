@@ -8,6 +8,9 @@ on:
     branches: [develop]
   pull_request:
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
@@ -43,18 +46,26 @@ jobs:
       # The shared filter counts docs/ and the site package as documentation no lane reads; this lane reads both.
       - name: Detect a change to docs/ or the site package
         id: decide
+        # Only a pull request and a merge group may skip: a push to develop deploys the site.
         env:
           EVENT: ${{ github.event_name }}
           PR_BASE: ${{ github.base_ref }}
+          MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.sha }}
           PACKAGE_CHANGED: ${{ steps.detect.outputs.run }}
         run: |
           set -euo pipefail
-          if [ "$EVENT" != "pull_request" ] || [ "$PACKAGE_CHANGED" = "true" ]; then
+          range=""
+          if [ "$EVENT" = "pull_request" ] || [ "$EVENT" = "merge_group" ]; then
+            range=$(bash .github/actions/lane-changes/change-range.sh)
+          fi
+
+          if [ -z "$range" ] || [ "$PACKAGE_CHANGED" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if [ -z "$(git diff --name-only "origin/$PR_BASE...HEAD" -- docs packages/tools/docs-site)" ]; then
+          if [ -z "$(git diff --name-only "$range" -- docs packages/tools/docs-site)" ]; then
             echo "Neither docs/ nor the site package changed: the lane skips."
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
