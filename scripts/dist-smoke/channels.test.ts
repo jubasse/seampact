@@ -330,7 +330,9 @@ test(
     expect(absentApi.exitCode).toBe(1);
     expect(absentApi.stderr).toContain("bundle.import-api-missing");
     expect(absentApi.stderr).toContain("'billing'");
-    expect(absentApi.stderr).toContain("'tasks', 'tasksService'");
+    expect(absentApi.stderr).toContain(
+      "'tasks', 'tasksAbsoluteUrls', 'tasksDevices', 'tasksOptionalAuth', 'tasksService', 'tasksServiceWrites'",
+    );
   },
   SMOKE_TEST_TIMEOUT_MILLISECONDS,
 );

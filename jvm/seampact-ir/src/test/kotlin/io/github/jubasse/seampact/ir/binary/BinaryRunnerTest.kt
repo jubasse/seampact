@@ -14,7 +14,14 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 @EnabledIfSystemProperty(named = "seampact.binary", matches = ".+")
 class BinaryRunnerTest {
     private val repositoryRoot = Path.of(System.getProperty("seampact.repositoryRoot"))
-    private val apis = listOf("tasks", "tasksService")
+    private val apis = listOf(
+        "tasks",
+        "tasksService",
+        "tasksServiceWrites",
+        "tasksDevices",
+        "tasksOptionalAuth",
+        "tasksAbsoluteUrls",
+    )
 
     // The app config of the binary smoke (`packages/tools/binary/scripts/smoke-apps.mjs`): `compile` reads the
     // sources the targets use and never loads the target package.

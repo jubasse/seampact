@@ -11,7 +11,7 @@ import {
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
-import { REFERENCE, temporaryDirectory } from "./bundle.test-support.js";
+import { REFERENCE, REFERENCE_BUNDLE_APIS, temporaryDirectory } from "./bundle.test-support.js";
 import { referenceTarball } from "./reference-tarball.test-support.js";
 import { readBundleTarball } from "./tarball-read.js";
 
@@ -87,8 +87,7 @@ test(
     const read = readBundleTarball(tarball);
 
     expect(read.ok && read.entries.map((entry) => entry.path)).toEqual([
-      "ir/tasks.json",
-      "ir/tasksService.json",
+      ...REFERENCE_BUNDLE_APIS.map((api) => `ir/${api}.json`),
       "seampact-bundle.json",
       ...readdirSync(REFERENCE, { recursive: true, withFileTypes: true })
         .filter((entry) => entry.isFile())

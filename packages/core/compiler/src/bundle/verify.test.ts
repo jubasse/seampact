@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { IR_REVISION } from "@seampact/spec/ir";
 import { afterAll, beforeAll, expect, test } from "vitest";
-import { referenceBuildOptions, temporaryDirectory } from "./bundle.test-support.js";
+import {
+  REFERENCE_BUNDLE_APIS,
+  referenceBuildOptions,
+  temporaryDirectory,
+} from "./bundle.test-support.js";
 import { resealBundle } from "./reseal.test-support.js";
 import { extractBundleTarball } from "./tarball-read.js";
 import { verifyBundle } from "./verify.js";
@@ -46,7 +50,7 @@ function flipFirstByte(file: string): void {
 test("pinned check refuses each tamper", () => {
   const untouched = verifyBundle(pristine, pin);
 
-  expect(untouched.ok && [...untouched.irs.keys()]).toEqual(["tasks", "tasksService"]);
+  expect(untouched.ok && [...untouched.irs.keys()]).toEqual(REFERENCE_BUNDLE_APIS);
 
   // Step 1: each file against the manifest.
   expect(

@@ -19,6 +19,15 @@ export const REFERENCE_CONTRACT = {
   name: "@seampact-fixtures/reference",
   version: "1.0.0",
 } as const;
+/** The reference contract's apis, sorted by name as a bundle lists them. */
+export const REFERENCE_BUNDLE_APIS = [
+  "tasks",
+  "tasksAbsoluteUrls",
+  "tasksDevices",
+  "tasksOptionalAuth",
+  "tasksService",
+  "tasksServiceWrites",
+];
 
 const temporaryDirectories: string[] = [];
 

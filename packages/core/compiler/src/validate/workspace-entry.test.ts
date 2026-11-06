@@ -27,6 +27,10 @@ test("reference contract loads and validates", () => {
   expect(validated.apis.map((a) => [a.api, a.diagnostics])).toEqual([
     ["tasks", []],
     ["tasksService", []],
+    ["tasksServiceWrites", []],
+    ["tasksDevices", []],
+    ["tasksOptionalAuth", []],
+    ["tasksAbsoluteUrls", []],
   ]);
 });
 

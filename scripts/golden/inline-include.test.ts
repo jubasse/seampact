@@ -20,8 +20,19 @@ const REFERENCE_FILES = [
   "shared/schemas.yaml",
   "tasks/api.yaml",
   "tasks-service/api.yaml",
+  "tasks-service-writes/api.yaml",
+  "tasks-devices/api.yaml",
+  "tasks-optional-auth/api.yaml",
+  "tasks-absolute-urls/api.yaml",
 ];
-const GOLDEN_APIS = ["tasks", "tasksService"];
+const GOLDEN_APIS = [
+  "tasks",
+  "tasksService",
+  "tasksServiceWrites",
+  "tasksDevices",
+  "tasksOptionalAuth",
+  "tasksAbsoluteUrls",
+];
 const VARIANT_COUNT = 60;
 const MINIMUM_MOVING_VARIANTS = 50;
 

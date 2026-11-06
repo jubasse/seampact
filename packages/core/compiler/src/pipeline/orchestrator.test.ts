@@ -328,6 +328,10 @@ describe("stop rule", () => {
       expect(result.apis.map((r) => [r.api, r.diagnostics, r.ir?.irRevision])).toEqual([
         ["tasks", [], IR_REVISION],
         ["tasksService", [], IR_REVISION],
+        ["tasksServiceWrites", [], IR_REVISION],
+        ["tasksDevices", [], IR_REVISION],
+        ["tasksOptionalAuth", [], IR_REVISION],
+        ["tasksAbsoluteUrls", [], IR_REVISION],
       ]);
       expect(Object.keys(result.locations).length).toBeGreaterThan(0);
       expect(result.files).toContain("workspace.yaml");

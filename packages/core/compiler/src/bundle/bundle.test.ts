@@ -15,6 +15,7 @@ import {
   GOLDEN_REFERENCE,
   PACK_CONTRACT,
   REFERENCE,
+  REFERENCE_BUNDLE_APIS,
   REFERENCE_CONTRACT,
   referenceBuildOptions,
   temporaryDirectory,
@@ -36,7 +37,7 @@ test("bundle of the reference contract", () => {
   expect(written.ok).toBe(true);
 
   // The IR of each api, byte for byte the golden IR, and no side table.
-  for (const api of ["tasks", "tasksService"])
+  for (const api of REFERENCE_BUNDLE_APIS)
     expect(readFileSync(join(output, "ir", `${api}.json`), "utf8")).toBe(
       readFileSync(join(GOLDEN_REFERENCE, `${api}.ir.json`), "utf8"),
     );
@@ -45,7 +46,11 @@ test("bundle of the reference contract", () => {
   const sources = filesUnder(REFERENCE).map((file) => `sources/${file}`);
 
   expect(filesUnder(output)).toEqual(
-    ["ir/tasks.json", "ir/tasksService.json", "seampact-bundle.json", ...sources].sort(),
+    [
+      ...REFERENCE_BUNDLE_APIS.map((api) => `ir/${api}.json`),
+      "seampact-bundle.json",
+      ...sources,
+    ].sort(),
   );
 
   for (const file of filesUnder(REFERENCE))
@@ -56,7 +61,7 @@ test("bundle of the reference contract", () => {
   const manifest = JSON.parse(readFileSync(join(output, "seampact-bundle.json"), "utf8"));
 
   expect(manifest.contract).toEqual(REFERENCE_CONTRACT);
-  expect(manifest.apis.map((api: { name: string }) => api.name)).toEqual(["tasks", "tasksService"]);
+  expect(manifest.apis.map((api: { name: string }) => api.name)).toEqual(REFERENCE_BUNDLE_APIS);
   expect(manifest.integrity).toMatch(/^sha256-[A-Za-z0-9+/]{43}=$/u);
 });
 

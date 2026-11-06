@@ -9,7 +9,14 @@ import { compileWorkspace } from "../pipeline/orchestrator.js";
 
 const GOLDEN = fileURLToPath(new URL("../../../../../fixtures/golden/", import.meta.url));
 const PUBLISHED_FORMAT_PACKS = ["hal", "laravel", "spring"] as const;
-const REFERENCE_APIS = ["tasks", "tasksService"];
+const REFERENCE_APIS = [
+  "tasks",
+  "tasksService",
+  "tasksServiceWrites",
+  "tasksDevices",
+  "tasksOptionalAuth",
+  "tasksAbsoluteUrls",
+];
 
 describe("the reference contract with a published format pack", () => {
   test.each(PUBLISHED_FORMAT_PACKS)("compiles with pack-%s and records it in each IR", (pack) => {
