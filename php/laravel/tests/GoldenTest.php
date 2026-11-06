@@ -6,6 +6,7 @@ namespace Seampact\Laravel\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\GoldenTree;
+use Seampact\Codegen\Tests\Support\OtherTimeZone;
 use Seampact\Codegen\Tests\Support\PhpLint;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Ir\Run\FrameworkRoute;
@@ -73,6 +74,15 @@ final class GoldenTest extends TestCase
         $title->sensitive = true;
 
         return $document;
+    }
+
+    public function testASecondRunUnderAnotherTimeZoneWritesTheSameTree(): void
+    {
+        $generate = static fn (): array => GoldenTree::flattened([
+            'Tasks' => (new LaravelGenerator())->generate(ReferenceContract::core(new LaravelGenerator()), ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'Seampact\\Golden\\Tasks')),
+        ]);
+
+        self::assertSame($generate(), OtherTimeZone::run($generate));
     }
 
     public function testBothApisOfTheFullReferenceContractGenerate(): void

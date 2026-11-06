@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { writeGeneratedFiles } from "@seampact/codegen-core";
 import { type ContractIR, isKnownVariant } from "@seampact/spec/ir";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import type { z } from "zod";
 import { target } from "./index.js";
 
 const GOLDEN_IR = new URL("../../../../fixtures/golden/reference/tasks.ir.json", import.meta.url);
@@ -14,17 +15,21 @@ interface SafeParser {
 }
 
 interface ObjectValidator extends SafeParser {
-  shape: Record<string, SafeParser>;
+  shape: Record<string, z.ZodType>;
+  pick(mask: Record<string, true>): ObjectValidator;
+  omit(mask: Record<string, true>): ObjectValidator;
 }
 
 const temporaryRoot = mkdtempSync(join(tmpdir(), "seampact-codegen-zod-run-"));
 
 let operationInputs: Record<string, SafeParser>;
 let outputSchemas: Record<string, ObjectValidator>;
+let inputSchemas: Record<string, ObjectValidator>;
 
 interface GeneratedValidators {
   operationInputs: Record<string, SafeParser>;
   outputSchemas: Record<string, ObjectValidator>;
+  inputSchemas: Record<string, ObjectValidator>;
 }
 
 // Generates the reference validators of one rules mode into the project, which resolves `zod` to this package's copy,
@@ -48,6 +53,7 @@ async function generatedValidators(rules: string): Promise<GeneratedValidators> 
   return {
     operationInputs: await import(join(outDir, "operations/input.ts")),
     outputSchemas: await import(join(outDir, "schemas/output.ts")),
+    inputSchemas: await import(join(outDir, "schemas/input.ts")),
   };
 }
 
@@ -57,7 +63,8 @@ beforeAll(async () => {
   symlinkSync(ZOD_PACKAGE, join(temporaryRoot, "node_modules", "zod"), "dir");
   writeFileSync(join(temporaryRoot, "package.json"), '{ "type": "module" }\n');
 
-  ({ operationInputs, outputSchemas } = await generatedValidators("seampact-consistent"));
+  ({ operationInputs, outputSchemas, inputSchemas } =
+    await generatedValidators("seampact-consistent"));
 });
 
 afterAll(() => rmSync(temporaryRoot, { recursive: true, force: true }));
@@ -205,5 +212,64 @@ describe("native rules", () => {
       false,
     );
     expect(inputValidator("GetChannelInputSchema").safeParse(versionZero).success).toBe(true);
+  });
+});
+
+describe("enums are strict on input and open on output", () => {
+  const CHANNEL_ID = "12345678-1234-1234-1234-123456789abc";
+  const searchWith = (states: string[]) => ({
+    path: { channelId: CHANNEL_ID },
+    query: {},
+    headers: {},
+    body: { text: "t", states },
+  });
+
+  test("a state outside the enum is refused in a request and read back in a response", () => {
+    const search = inputValidator("SearchTasksInputSchema");
+    const state = outputSchemas.TaskSchema?.shape.state;
+
+    expect(search.safeParse(searchWith(["open"])).success).toBe(true);
+    expect(search.safeParse(searchWith(["frozen"])).success).toBe(false);
+    expect(state?.safeParse("open").success).toBe(true);
+    expect(state?.safeParse("frozen").success).toBe(true);
+    expect(state?.safeParse(5).success).toBe(false);
+  });
+});
+
+describe("the schema generated from a compiled pick keeps the kept members and none of the others", () => {
+  function memberNames(exportName: string): string[] {
+    const schema = inputSchemas[exportName];
+
+    if (schema === undefined) throw new Error(`no generated ${exportName}`);
+
+    return Object.keys(schema.shape);
+  }
+
+  test("a picked schema has the picked members and none of the source's others", () => {
+    expect(memberNames("CreateTaskSchema")).toEqual(["title", "effort"]);
+    expect(memberNames("UpdateTaskSchema")).toEqual([
+      "title",
+      "state",
+      "effort",
+      "expectedVersion",
+    ]);
+
+    for (const name of ["CreateTaskSchema", "UpdateTaskSchema"]) {
+      for (const dropped of ["taskId", "version", "createdAt"]) {
+        expect(memberNames(name), `${name}.${dropped}`).not.toContain(dropped);
+      }
+    }
+  });
+
+  test("a picked schema keeps the refinements and the strictness of the source", () => {
+    const create = inputSchemas.CreateTaskSchema;
+
+    if (create === undefined) throw new Error("no generated CreateTaskSchema");
+
+    expect(create.safeParse({ title: "T" }).success).toBe(true);
+    expect(create.safeParse({ title: "" }).success).toBe(false);
+    expect(create.safeParse({ title: "x".repeat(201) }).success).toBe(false);
+    expect(create.safeParse({ title: "T", taskId: "t1" }).success).toBe(false);
+    expect(create.safeParse({}).success).toBe(false);
   });
 });

@@ -3,4 +3,8 @@ workspace:
   apis:
     tasks: ./tasks/api.yaml
     tasksService: ./tasks-service/api.yaml
+    tasksServiceWrites: ./tasks-service-writes/api.yaml
+    tasksDevices: ./tasks-devices/api.yaml
+    tasksOptionalAuth: ./tasks-optional-auth/api.yaml
+    tasksAbsoluteUrls: ./tasks-absolute-urls/api.yaml
   shared: ./shared/base.yaml

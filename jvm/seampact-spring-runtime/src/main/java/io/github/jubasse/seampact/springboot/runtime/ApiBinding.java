@@ -33,6 +33,12 @@ public interface ApiBinding {
     /** The authenticate hook interface of each identity the kept operations authenticate with. */
     Map<String, Class<?>> authenticateHooks();
 
+    /** The generated params record of each right the kept operations ask that declares params. */
+    Map<String, Class<?>> rightParamsTypes();
+
+    /** The generated params record of each rule the kept operations ask that declares params. */
+    Map<String, Class<?>> ruleParamsTypes();
+
     /** The api's decider interface: the boundary calls the decider beans implementing it, never another api's. */
     Class<? extends Decider> deciderType();
 

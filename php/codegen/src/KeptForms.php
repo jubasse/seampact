@@ -93,6 +93,9 @@ final class KeptForms
     /** @var array<string, true> the success shapes already read, by format and shape */
     private array $formatShapes = [];
 
+    /** @var array<string, true> the rights, rules and scopes already read, by member and name */
+    private array $accessDeclarations = [];
+
     public function __construct(private readonly ContractIR $ir, private readonly Refusals $refusals, private readonly FormReleases $releases)
     {
         if ($ir->api->wire->urls->value === UrlForm::Absolute) {
@@ -180,6 +183,7 @@ final class KeptForms
         $this->readFormat($operation->format);
         $this->readWaitingMembers($operation, $at);
         $this->readRequirements($operation, $at);
+        $this->readAccessDeclarations($operation);
         $this->readAfterOneZeroMembers($operation, $at);
 
         foreach (['path' => $operation->params->path, 'query' => $operation->params->query, 'header' => self::handlerHeaders($operation)] as $part => $params) {
@@ -495,6 +499,65 @@ final class KeptForms
                 $this->refusals->waiting('rule.proof.placement', "A rule proof in '{$proof->in->value}'", IrPlace::root()->below('rules', $requirement->rule, 'proof', 'in'), Delivery::AfterOneZero);
             }
         }
+    }
+
+    /**
+     * The rights, rules and scopes an operation asks: a declared params schema is generated, since the decide request
+     * carries it typed, and an extension value is refused once, since no hook request carries it yet.
+     */
+    private function readAccessDeclarations(Operation $operation): void
+    {
+        foreach ($operation->requires as $requirement) {
+            if ($requirement instanceof RightRequirement) {
+                $this->readRequirementDeclaration('right', 'rights', $requirement->right);
+            } elseif ($requirement instanceof RuleRequirement) {
+                $this->readRequirementDeclaration('rule', 'rules', $requirement->rule);
+            }
+        }
+
+        foreach ($operation->fieldRights as $fieldRight) {
+            $this->readRequirementDeclaration('right', 'rights', $fieldRight->right);
+        }
+
+        foreach ($operation->scopes as $scope) {
+            $declared = $this->ir->scopes[$scope->scope] ?? null;
+            if ($declared !== null && $this->firstReadOf('scopes', $scope->scope)) {
+                $this->readDeclarationExtensions('scope', 'scopes', $scope->scope, $declared->extensions());
+            }
+        }
+    }
+
+    private function readRequirementDeclaration(string $kind, string $member, string $name): void
+    {
+        $declared = $member === 'rights' ? $this->ir->rights[$name] ?? null : $this->ir->rules[$name] ?? null;
+        if ($declared === null || !$this->firstReadOf($member, $name)) {
+            return;
+        }
+
+        if ($declared->params !== null) {
+            $this->readType(new RefTypeUse($declared->params), IrPlace::root()->below($member, $name, 'params'));
+        }
+
+        $this->readDeclarationExtensions($kind, $member, $name, $declared->extensions());
+    }
+
+    private function readDeclarationExtensions(string $kind, string $member, string $name, \stdClass $extensions): void
+    {
+        if (get_object_vars($extensions) !== []) {
+            $this->refusals->waiting("{$kind}.extensions", "An extension value of the {$kind} '{$name}'", IrPlace::root()->below($member, $name, 'extensions'), Delivery::AfterOneZero);
+        }
+    }
+
+    private function firstReadOf(string $member, string $name): bool
+    {
+        $key = "{$member}/{$name}";
+        if (isset($this->accessDeclarations[$key])) {
+            return false;
+        }
+
+        $this->accessDeclarations[$key] = true;
+
+        return true;
     }
 
     // A throttle rule's bucket: its key reads the request's path, a resolved scope or the principal.

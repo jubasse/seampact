@@ -70,6 +70,16 @@ describe("validator agreement runner", () => {
     expect([...notRun].sort()).toEqual(Object.keys(NOT_RUN_YET).sort());
   });
 
+  it("zod, yup and class-validator accept and reject exactly the same payloads of the table", async () => {
+    expect(rows.length).toBeGreaterThan(0);
+
+    for (const row of rows) {
+      const verdicts = (await verdictsOf(row)).map((result) => result.verdict);
+
+      expect(verdicts, row.id).toEqual(verdicts.map(() => row.expected));
+    }
+  });
+
   it.each(rows)(
     "$id: the providers give one verdict and name the same contract rules",
     async (row) => {

@@ -14,7 +14,8 @@ import tools.jackson.databind.module.SimpleModule;
 
 /**
  * The boundary's own Jackson 3 mapper, never the app's bean (ADR 0012 "Each target places the steps"): a date-time
- * keeps the offset it was sent with and is written with its seconds (RFC 3339), and a number never binds to a string.
+ * keeps the offset it was sent with and is written with its seconds (RFC 3339), a number never binds to a string, and
+ * an optional nullable member keeps its three states ({@link FieldMembers}).
  */
 final class BoundaryMapper {
     private static final DateTimeFormatter RFC_3339 = new DateTimeFormatterBuilder()
@@ -33,12 +34,14 @@ final class BoundaryMapper {
         SimpleModule dateTimes = new SimpleModule("seampact-date-times");
         dateTimes.addSerializer(OffsetDateTime.class, new OffsetDateTimeWriter());
 
-        return JsonMapper.builder()
+        JsonMapper.Builder builder = JsonMapper.builder()
                 .disable(DateTimeFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
                 .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
                 .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                .addModule(dateTimes)
-                .build();
+                .addModule(dateTimes);
+        FieldMembers.register(builder);
+
+        return builder.build();
     }
 
     private static final class OffsetDateTimeWriter extends ValueSerializer<OffsetDateTime> {

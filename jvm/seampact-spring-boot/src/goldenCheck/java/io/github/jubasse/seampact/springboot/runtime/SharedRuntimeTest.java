@@ -155,6 +155,16 @@ class SharedRuntimeTest {
         }
 
         @Override
+        public Map<String, Class<?>> rightParamsTypes() {
+            return binding.rightParamsTypes();
+        }
+
+        @Override
+        public Map<String, Class<?>> ruleParamsTypes() {
+            return binding.ruleParamsTypes();
+        }
+
+        @Override
         public Class<? extends Decider> deciderType() {
             return binding.deciderType();
         }

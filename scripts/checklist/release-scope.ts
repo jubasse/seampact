@@ -20,6 +20,12 @@ const SCALE_CAPACITY =
   "generated code at scale: no behaviour a fix would change; scripts/golden/scale.test.ts proves the core pair";
 const API_PLATFORM_AFTER_V1 = "API Platform comes after v1";
 
+const ADAPTERS: readonly string[] = ["nestjs-casl", "laravel-spatie"];
+const ADAPTERS_IN_1_1 = "the CASL and spatie adapters ship in 1.1 (A24 amended)";
+const VALIDATORS: readonly string[] = ["zod", "yup", "class-validator"];
+const UNKNOWN_KEYS_POLICIES =
+  "1.0 refuses the unknown keys policies ignore and keep of an operation input by name at generation, on the validators targets";
+
 // The servers the gate requires: every generator refuses the access forms below by name, so each of them is deferred
 // with its refusal tested.
 const SERVERS_FOR_1_0: readonly string[] = SERVER_TARGETS.filter(
@@ -28,8 +34,13 @@ const SERVERS_FOR_1_0: readonly string[] = SERVER_TARGETS.filter(
 
 const NODE_SERVERS: readonly string[] = ["nestjs", "fastify", "express", "adonis", "hono"];
 
+const PYTHON_SERVERS: readonly string[] = ["fastapi", "drf", "ninja"];
+
 const VARIANTS_FORM =
   "a principal with variants (viewer_or_device) and, on the Node servers, optional authentication";
+
+// The servers whose generators read the IR without Node: the JVM and PHP targets.
+const JVM_AND_PHP_SERVERS: readonly string[] = ["spring-boot", "laravel", "symfony"];
 
 const refusedOnEveryServer = (form: string): ItemAfter1_0 => ({
   targets: SERVERS_FOR_1_0,
@@ -37,7 +48,28 @@ const refusedOnEveryServer = (form: string): ItemAfter1_0 => ({
   reason: `1.0 refuses ${form} by name at generation`,
 });
 
-export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
+const refusedOnTheNodeServers = (form: string): ItemAfter1_0 => ({
+  targets: NODE_SERVERS,
+  refusedOn: NODE_SERVERS,
+  reason: `1.0 refuses ${form} by name at generation on the Node servers`,
+});
+
+/** The after-1.0 list from its entries; an id listed twice is refused by name, as a Map would keep the last one. */
+export function indexItemsAfter1_0(
+  entries: readonly (readonly [string, ItemAfter1_0])[],
+): ReadonlyMap<string, ItemAfter1_0> {
+  const index = new Map<string, ItemAfter1_0>();
+
+  for (const [id, deferred] of entries) {
+    if (index.has(id)) throw new Error(`release-scope.ts lists ${id} twice; merge its entries.`);
+
+    index.set(id, deferred);
+  }
+
+  return index;
+}
+
+export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfter1_0([
   ["CHK-001", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
   ["CHK-002", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
   ["CHK-003", { targets: ["fetch"], reason: SCALE_CAPACITY }],
@@ -52,8 +84,92 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = new Map([
     },
   ],
   ["CHK-019", refusedOnEveryServer("a principal requirement")],
+  [
+    "CHK-130",
+    refusedOnTheNodeServers(
+      "absolute URLs; the native servers write them from the configured public origin",
+    ),
+  ],
+  ["CHK-131", refusedOnEveryServer("a signature scheme verified by the application")],
+  ["CHK-132", refusedOnEveryServer("query API key and HTTP Basic schemes")],
+  ["CHK-133", refusedOnTheNodeServers("optional authentication; the native servers generate it")],
   ["CHK-020", refusedOnEveryServer("a principal binding")],
   ["CHK-094", refusedOnEveryServer("a scope resolved by the application")],
+  ...["CHK-074", "CHK-077", "CHK-078", "CHK-103"].map((id): [string, ItemAfter1_0] => [
+    id,
+    { targets: ADAPTERS, reason: ADAPTERS_IN_1_1 },
+  ]),
+  ["CHK-096", { targets: ["nestjs-casl"], reason: ADAPTERS_IN_1_1 }],
+  ["CHK-097", { targets: ["laravel-spatie"], reason: ADAPTERS_IN_1_1 }],
+  [
+    "CHK-048",
+    {
+      targets: ["fetch"],
+      refusedOn: ["fetch"],
+      reason:
+        "1.0 refuses an open enum's fallback by name at generation, in the types the fetch client is generated beside",
+    },
+  ],
+  [
+    "CHK-125",
+    {
+      targets: ["fetch"],
+      reason:
+        "the generated fetch client carries no retry rule taken from the base nature of a code; the front targets retry a rejection and never a declared error, so a rule by nature is additive",
+    },
+  ],
+  [
+    "CHK-126",
+    {
+      targets: ["fetch"],
+      refusedOn: ["fetch"],
+      reason:
+        "1.0 refuses an error format that writes the code only inside a text template by name at generation, so the client does not recover a code from a template",
+    },
+  ],
+  ["CHK-134", { targets: VALIDATORS, refusedOn: VALIDATORS, reason: UNKNOWN_KEYS_POLICIES }],
+  ["CHK-135", { targets: VALIDATORS, refusedOn: VALIDATORS, reason: UNKNOWN_KEYS_POLICIES }],
+  [
+    "CHK-169",
+    {
+      targets: ["angular"],
+      reason:
+        "the generated Angular service does not configure HttpClient's XSRF header; the app sets withXsrfConfiguration to the contract's CSRF header, as the angular guide says, and generating it is additive",
+    },
+  ],
+  [
+    "CHK-060",
+    {
+      targets: [...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
+      reason:
+        "the JVM, PHP and Python servers generate no test helper: an additive artefact a later release can add",
+    },
+  ],
+  [
+    "CHK-066",
+    {
+      targets: [...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
+      reason:
+        "the JVM and PHP servers ship the IdempotencyStore interface and the Python servers the IdempotencyStore protocol, but no reference store: an additive package a later release can add",
+    },
+  ],
+  [
+    "CHK-068",
+    {
+      targets: [...JVM_AND_PHP_SERVERS, ...PYTHON_SERVERS],
+      reason:
+        "the JVM, PHP and Python servers serve no dev docs: an additive artefact a later release can add",
+    },
+  ],
+  [
+    "CHK-146",
+    {
+      targets: ["spring-boot", "laravel"],
+      refusedOn: ["spring-boot", "laravel"],
+      reason:
+        "1.0 refuses the suffixes option and handlers perOperation by name at generation; codeName is served",
+    },
+  ],
   [
     "CHK-072",
     { reason: "internal installs before publication (A3), gone once the packages are published" },

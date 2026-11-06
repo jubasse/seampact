@@ -5,6 +5,7 @@ import com.example.tasks.api.TasksScopeResolver;
 import com.example.tasks.api.TasksUnexpectedErrorListener;
 import com.example.tasks.api.UserAuthenticateHook;
 import com.example.tasks.api.UserAuthenticateRequest;
+import com.example.tasks.api.schemas.RolesParams;
 import com.example.tasks.api.schemas.UserPrincipal;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
 import io.github.jubasse.seampact.hooks.Decision;
@@ -83,7 +84,8 @@ final class TasksHooks {
         private static void assertRolesRequestComplete(RequirementCall request) {
             if (!ROLES_RIGHT.equals(request.name())) return;
 
-            boolean hasAllowed = request.params().map(params -> params.path("allowed").isArray()).orElse(false);
+            boolean hasAllowed = request.params().filter(RolesParams.class::isInstance).map(RolesParams.class::cast)
+                    .map(params -> params.allowed() != null).orElse(false);
             if (!hasAllowed || request.subject().isEmpty()) {
                 throw new IllegalStateException("the '" + ROLES_RIGHT + "' decide request lacks its 'allowed' param or its scope subject: the boundary dropped them");
             }

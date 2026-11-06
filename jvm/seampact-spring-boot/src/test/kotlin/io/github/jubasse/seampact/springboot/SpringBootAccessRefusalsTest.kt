@@ -1,5 +1,6 @@
 package io.github.jubasse.seampact.springboot
 
+import io.github.jubasse.seampact.ir.model.ApplicationSignature
 import io.github.jubasse.seampact.ir.model.Binding
 import io.github.jubasse.seampact.ir.model.ContractIR
 import io.github.jubasse.seampact.ir.model.CredentialIdentity
@@ -7,6 +8,7 @@ import io.github.jubasse.seampact.ir.model.IdentityAccess
 import io.github.jubasse.seampact.ir.model.Operation
 import io.github.jubasse.seampact.ir.model.Origin
 import io.github.jubasse.seampact.ir.model.PrincipalRequirement
+import io.github.jubasse.seampact.ir.model.SignatureScheme
 import io.github.jubasse.seampact.ir.model.ValueSource
 import io.github.jubasse.seampact.ir.model.ValueSourceIn
 import io.github.jubasse.seampact.ir.model.VariantsPrincipal
@@ -14,28 +16,37 @@ import io.github.jubasse.seampact.ir.read.IrReader
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-// The access forms 1.0 refuses by name (CHK-006, 019, 020, 094): a contract that uses one fails at generation with
+// The access forms 1.0 refuses by name (CHK-006, 019, 020, 094, 131): a contract that uses one fails at generation with
 // the form's code.
 class SpringBootAccessRefusalsTest {
     private val repositoryRoot: Path = Path.of(System.getProperty("seampact.repositoryRoot"))
     private val origin = Origin(layer = "api", pointer = "/access")
 
-    private fun getTaskIr(): ContractIR {
+    private fun tasksIrWith(operationId: String): ContractIR {
         val text = Files.readString(repositoryRoot.resolve("fixtures/golden/reference/tasks.ir.json"))
         val ir = IrReader.read(text, SpringBootTarget.IR_SUPPORT)
 
-        return ir.copy(operations = ir.operations.filter { it.id == "getTask" })
+        return ir.copy(operations = ir.operations.filter { it.id == operationId })
     }
+
+    private fun getTaskIr(): ContractIR = tasksIrWith("getTask")
 
     private fun refusedCodes(ir: ContractIR): List<String> {
         val entry = SpringBootEntry(id = "server", options = JsonObject(mapOf("package" to JsonPrimitive("com.acme.tasks"))))
 
         return assertFailsWith<SpringBootRefusedException> { SpringBootTarget.generate(ir, entry) }.refusals.map { it.code }
+    }
+
+    private fun referenceIr(vararg operationIds: String): ContractIR {
+        val ir = IrReader.read(Files.readString(repositoryRoot.resolve("fixtures/golden/reference/tasks.ir.json")), SpringBootTarget.IR_SUPPORT)
+
+        return ir.copy(operations = ir.operations.filter { it.id in operationIds })
     }
 
     private fun ContractIR.withGetTask(change: (Operation) -> Operation): ContractIR = copy(operations = operations.map(change))
@@ -73,5 +84,40 @@ class SpringBootAccessRefusalsTest {
         val ir = base.copy(identities = base.identities + (identityId to variants))
 
         assertTrue("principal.variants.unsupported" in refusedCodes(ir))
+    }
+
+    @Test
+    fun refusesOnceTheExtensionValuesOfAnAskedRightRuleOrScope() {
+        val base = referenceIr("assignTask", "createTask")
+        val extensions = JsonObject(mapOf("acme" to JsonObject(mapOf("audit" to JsonPrimitive("on")))))
+        val ir = base.copy(
+            rights = base.rights + ("roles" to base.rights.getValue("roles").copy(extensions = extensions)),
+            rules = base.rules + ("throttle" to base.rules.getValue("throttle").copy(extensions = extensions)),
+            scopes = base.scopes + ("channel" to base.scopes.getValue("channel").copy(extensions = extensions)),
+        )
+
+        val extensionCodes = refusedCodes(ir).filter { it.endsWith(".extensions.unsupported") }
+
+        assertEquals(listOf("right.extensions.unsupported", "rule.extensions.unsupported", "scope.extensions.unsupported"), extensionCodes.sorted())
+    }
+
+    @Test
+    fun bindsTheParamsRecordOfEachAskedRightThatDeclaresParams() {
+        val entry = SpringBootEntry(id = "server", options = JsonObject(mapOf("package" to JsonPrimitive("com.acme.tasks"))))
+        val files = SpringBootTarget.generate(referenceIr("assignTask", "searchTasks"), entry)
+
+        val binding = files.single { it.path.endsWith("SeampactBinding.java") }.contents
+        assertTrue(files.any { it.path.endsWith("/RolesParams.java") }, "the params record of 'roles' is generated")
+        assertTrue(Regex("""rightParamsTypes\(\) \{\s+return Map\.ofEntries\(\s+Map\.entry\("roles", RolesParams\.class\)\);""") in binding, binding)
+    }
+
+    @Test
+    fun refusesASignatureVerifiedByTheApplication() {
+        val base = tasksIrWith("payments")
+        val scheme = base.schemes.getValue("stripeSignature") as SignatureScheme
+        val applicationVerified = scheme.copy(signature = ApplicationSignature(headers = listOf("Stripe-Signature")))
+        val ir = base.copy(schemes = base.schemes + ("stripeSignature" to applicationVerified))
+
+        assertTrue("signature.application.unsupported" in refusedCodes(ir))
     }
 }

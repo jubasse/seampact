@@ -4,6 +4,7 @@ import com.example.tasksservice.api.ServiceAuthenticateHook;
 import com.example.tasksservice.api.ServiceAuthenticateRequest;
 import com.example.tasksservice.api.TasksServiceDecider;
 import com.example.tasksservice.api.TasksServiceUnexpectedErrorListener;
+import com.example.tasksservice.api.schemas.CallerServiceParams;
 import com.example.tasksservice.api.schemas.Service;
 import com.example.tasksservice.api.schemas.ServicePrincipal;
 import io.github.jubasse.seampact.hooks.AuthenticateResult;
@@ -15,7 +16,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.JsonNode;
 
 /** The `tasksService` api's hook doubles. */
 final class TasksServiceHooks {
@@ -68,11 +68,8 @@ final class TasksServiceHooks {
         private static boolean callerAllowed(RequirementCall request) {
             if (!(request.principal() instanceof ServicePrincipal principal)) return false;
 
-            for (JsonNode allowed : request.params().map(params -> params.path("allowed")).orElse(tools.jackson.databind.node.MissingNode.getInstance())) {
-                if (allowed.asString().equals(principal.service().toString().toLowerCase(java.util.Locale.ROOT))) return true;
-            }
-
-            return false;
+            return request.params().filter(CallerServiceParams.class::isInstance).map(CallerServiceParams.class::cast)
+                    .map(params -> params.allowed().contains(principal.service())).orElse(false);
         }
     }
 

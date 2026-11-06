@@ -72,6 +72,33 @@ final class ReferenceContract
         return new TargetEntry('server', $package, $api, null, (object) $options, (object) $artefacts, '/app/generated', $namespace, $frameworkRoutes, $mount);
     }
 
+    /**
+     * [$document] with members added to its GetTasksBatchInput body, each as [name, optional, nullable, type].
+     *
+     * @param list<array{string, bool, bool, array<string, mixed>}> $added
+     */
+    public static function withBatchInputMembers(\stdClass $document, array $added): \stdClass
+    {
+        $schemas = get_object_vars($document)['schemas'] ?? null;
+        $schema = $schemas instanceof \stdClass ? (get_object_vars($schemas)['GetTasksBatchInput'] ?? null) : null;
+        if (!$schema instanceof \stdClass || !is_array($schema->properties) || !$schema->properties[0] instanceof \stdClass) {
+            throw new \LogicException('The reference IR has no GetTasksBatchInput object schema.');
+        }
+
+        $template = $schema->properties[0];
+        foreach ($added as [$name, $optional, $nullable, $type]) {
+            $property = clone $template;
+            unset($property->derivedFrom);
+            $property->name = $name;
+            $property->optional = $optional;
+            $property->nullable = $nullable;
+            $property->type = json_decode(json_encode($type, JSON_THROW_ON_ERROR), false, 512, JSON_THROW_ON_ERROR);
+            $schema->properties[] = $property;
+        }
+
+        return $document;
+    }
+
     /** The one operation `$operationId` of the reference tasks IR, which `$change` edits in place. */
     public static function withOperation(string $operationId, \Closure $change): \stdClass
     {

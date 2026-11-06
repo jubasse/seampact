@@ -33,6 +33,16 @@ final class WireCodecTest extends TestCase
         self::assertSame($written, WireCodec::encode(ApiContract::of(ThrottledContract::class), $type, new \DateTimeImmutable($held)));
     }
 
+    public function testAnEmptyTableAndAnEmptyObjectAreWrittenAsBracesAndAnEmptyListAsBrackets(): void
+    {
+        $contract = ApiContract::of(OpaqueMembersContract::class);
+        $json = static fn (mixed $written): string => json_encode($written, JSON_THROW_ON_ERROR);
+
+        self::assertSame('{}', $json(WireCodec::encodeBody($contract, ['shape' => 'table', 'body' => self::OPAQUE], [])));
+        self::assertSame('[]', $json(WireCodec::encodeBody($contract, ['shape' => 'list', 'body' => self::OPAQUE], [])));
+        self::assertSame('{"payload":null,"meta":{}}', $json(WireCodec::encode($contract, ['kind' => 'ref', 'schema' => 'event'], new OpaqueMembersEvent(null, new \stdClass()))));
+    }
+
     public function testANullOpaqueValueThatIsNotNullableIsABoundaryFailure(): void
     {
         $this->expectException(BoundaryFailure::class);
