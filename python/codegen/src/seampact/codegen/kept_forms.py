@@ -28,6 +28,7 @@ from seampact.ir.model import (
     Param,
     ProofPlacement,
     QueryScheme,
+    QueryStyle,
     QueryWireKind,
     RefTypeUse,
     RequirementUnknown,
@@ -376,7 +377,7 @@ class _KeptForms:
             self._type(param.type, at.below("type"))
             return
 
-        if part == _QUERY_PART and _is_scalar_list(param.type):
+        if part == _QUERY_PART and _is_form_scalar_list(param):
             self._type(param.type, at.below("type"))
             return
 
@@ -502,6 +503,12 @@ def _template_slots(template: JsonValue) -> list[str]:
     return slots + [slot for value in template.values() for slot in _template_slots(value)]
 
 
-def _is_scalar_list(type_use: TypeUse) -> bool:
-    """A query list every target decodes: repeated keys or one comma-separated value, each item a scalar or an enum."""
-    return isinstance(type_use, ArrayTypeUse) and isinstance(type_use.items, ScalarTypeUse | EnumTypeUse)
+def _is_form_scalar_list(param: Param) -> bool:
+    """A query list every target decodes: a `list` wire in `form` style (repeated keys or one comma-separated value),
+    each item a scalar or an enum."""
+    wire = param.wire
+
+    if wire is None or wire.kind is not QueryWireKind.LIST or wire.style is not QueryStyle.FORM:
+        return False
+
+    return isinstance(param.type, ArrayTypeUse) and isinstance(param.type.items, ScalarTypeUse | EnumTypeUse)

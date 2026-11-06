@@ -123,3 +123,27 @@ def test_an_invalid_item_is_one_issue_at_its_index() -> None:
     issues = part_issues("query", {"state": "state", "score": "score"}, refused.value)
 
     assert issues == [Issue("query", "/state/1", "enum"), Issue("query", "/score/1", "type")]
+
+
+def test_a_list_in_a_style_other_than_form_stays_refused_by_name(repository_root: Path) -> None:
+    space_delimited = {**_COMMA, "style": "spaceDelimited"}
+    refusals = _refusals_of(_with_list_tasks_query(repository_root, _list_param("tags", _INTEGER, space_delimited)))
+
+    with pytest.raises(GenerationRefusedError) as refused:
+        refusals.raise_if_any()
+
+    assert [problem.code for problem in refused.value.problems] == ["param.query.structured.unsupported"]
+
+
+def test_a_list_header_stays_refused_by_name(repository_root: Path) -> None:
+    ir_json = _with_list_tasks_query(repository_root)
+    operations = ir_json["operations"]
+    assert isinstance(operations, list)
+    list_tasks = next(operation for operation in operations if operation["id"] == "listTasks")
+    list_tasks["params"]["header"].append(_list_param("X-Scores", _INTEGER, _COMMA))
+    refusals = _refusals_of(ir_json)
+
+    with pytest.raises(GenerationRefusedError) as refused:
+        refusals.raise_if_any()
+
+    assert [problem.code for problem in refused.value.problems] == ["param.header.structured.unsupported"]
