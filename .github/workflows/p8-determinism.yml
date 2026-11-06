@@ -124,10 +124,7 @@ jobs:
       matrix:
         include:
           - { os: windows-latest, tz: Pacific/Auckland, lang: tr_TR.UTF-8 }
-    env: &determinism-env
-      TZ: ${{ matrix.tz }}
-      LANG: ${{ matrix.lang }}
-      LC_ALL: ${{ matrix.lang }}
+    env: *determinism-env
     steps: *determinism-steps
 
   determinism-post-merge:

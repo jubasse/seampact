@@ -212,6 +212,61 @@ describe("the fast tier", () => {
   );
 });
 
+// The artefact names a job uploads, as patterns: an expression in a name may be any text.
+function uploadedNamePatterns(job: WorkflowJob): RegExp[] {
+  return (job.steps ?? [])
+    .filter((step) => step.uses?.startsWith("actions/upload-artifact@") === true)
+    .map((step) => step.with?.name ?? "")
+    .map(
+      (name) =>
+        new RegExp(
+          `^${name
+            .split(/\$\{\{[^}]*\}\}/)
+            .map((part) => part.replace(/[.*+?^()|[\]\\]/g, "\\$&"))
+            .join(".*")}$`,
+        ),
+    );
+}
+
+// A step that downloads several rows' artefacts by pattern compares rows: when a queue job is one of them, the
+// fast tier holds one row only, so the step runs under the queue output.
+describe("the comparisons of rows", () => {
+  it.each(laneWorkflows())(
+    "in %s run only in the tier that holds every row they compare",
+    (file) => {
+      const document = readWorkflow(file);
+
+      for (const [jobId, job] of Object.entries(document.jobs)) {
+        if (jobId.endsWith("-queue")) continue;
+
+        for (const step of job.steps ?? []) {
+          const pattern = step.with?.pattern;
+
+          if (
+            step.uses?.startsWith("actions/download-artifact@") !== true ||
+            pattern === undefined
+          ) {
+            continue;
+          }
+
+          const queueProducers = Object.entries(document.jobs).filter(
+            ([producerId, producer]) =>
+              producerId.endsWith("-queue") &&
+              uploadedNamePatterns(producer).some((name) => name.test(pattern.replace(/\*/g, "x"))),
+          );
+
+          if (queueProducers.length === 0) continue;
+
+          expect(
+            `${job.if ?? ""} ${step.if ?? ""}`,
+            `${file} job '${jobId}' downloads ${pattern}`,
+          ).toContain("needs.changes.outputs.queue == 'true'");
+        }
+      }
+    },
+  );
+});
+
 describe("the watched paths", () => {
   it("of p3-binary are the compiler binary cache key's roots and the smoke fixtures", () => {
     const watched = pathLines(laneStep("p3-binary.yml").with?.["watched-paths"]).map(

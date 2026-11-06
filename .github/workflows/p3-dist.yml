@@ -3,7 +3,8 @@ name: Contract bundles
 # Writes the reference contract's bundle tarball on Linux, macOS and Windows, under other time zones and locales,
 # and checks the three SHA-256 values are one (ADR 0011: the same sources and compiler give the same tarball bytes
 # on every machine). The checkout keeps LF line endings on Windows, so the job measures the writer, not autocrlf.
-# A pull request builds the Linux tarball, a push to develop compares it with Windows; the nightly adds macOS.
+# A pull request to develop builds the Linux tarball, a push to develop compares it with Windows; the nightly adds
+# macOS.
 # `channel-smoke` serves a bundle of the reference contract through a loopback npm registry, a loopback HTTPS
 # server and a local bare git repository, and runs the Node CLI against each (ADR 0011 "Channel smoke tests").
 # `bundle-determinism` and `channel-smoke` are the checks to require.
@@ -151,10 +152,7 @@ jobs:
       matrix:
         include:
           - { os: windows-latest, tz: Pacific/Auckland, lang: en_US.UTF-8 }
-    env: &tarball-env
-      TZ: ${{ matrix.tz }}
-      LANG: ${{ matrix.lang }}
-      LC_ALL: ${{ matrix.lang }}
+    env: *tarball-env
     steps: *tarball-steps
 
   tarball-drift:
@@ -189,19 +187,19 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.run }}
-      # A documentation-only change built no tarball: the check passes on the verdict above.
-      - if: needs.changes.outputs.run == 'true'
+      # A documentation-only change built no tarball, and a pull request to develop builds the Linux one only: the
+      # comparison is a queue step, and the check passes on the verdict above.
+      - if: needs.changes.outputs.queue == 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: tarball-*
           path: tarballs
       - name: One SHA-256 on every OS that ran
         id: determinism
-        if: needs.changes.outputs.run == 'true'
+        if: needs.changes.outputs.queue == 'true'
         env:
-          # Linux, Windows when the queue row ran, and macOS when the drift row ran (drift runs imply queue runs).
-          EXPECTED_TARBALL_COUNT: >-
-            ${{ needs.changes.outputs.drift == 'true' && 3 || needs.changes.outputs.queue == 'true' && 2 || 1 }}
+          # Linux and Windows, and macOS when the drift row ran.
+          EXPECTED_TARBALL_COUNT: ${{ needs.changes.outputs.drift == 'true' && 3 || 2 }}
         run: |
           test "$(ls tarballs | wc -l)" = "$EXPECTED_TARBALL_COUNT"
           cat tarballs/*/*.sha256
