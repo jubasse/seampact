@@ -13,6 +13,12 @@ on:
     types: [checks_requested]
     branches: [main, develop]
   workflow_dispatch:
+    inputs:
+      release-gate:
+        description: A run the release starts for its conformance gate; it skips the drift rows, which test newer dependencies, not the release.
+        required: false
+        type: boolean
+        default: false
   # The nightly run holds the drift row (AdonisJS 6 on yup).
   schedule:
     - cron: "30 0 * * *"
@@ -32,7 +38,8 @@ jobs:
       run: ${{ steps.detect.outputs.run }}
       queue: ${{ steps.detect.outputs.queue }}
       post-merge: ${{ steps.detect.outputs.post-merge }}
-      drift: ${{ steps.detect.outputs.drift }}
+      # A release gate run holds no drift row.
+      drift: ${{ inputs.release-gate != true && steps.detect.outputs.drift || 'false' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

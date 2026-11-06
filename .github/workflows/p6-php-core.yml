@@ -21,6 +21,12 @@ on:
     types: [checks_requested]
     branches: [main, develop]
   workflow_dispatch:
+    inputs:
+      release-gate:
+        description: A run the release starts for its conformance gate; it skips the drift rows, which test newer dependencies, not the release.
+        required: false
+        type: boolean
+        default: false
   # The nightly run holds the drift row (the split on PHP 8.5).
   schedule:
     - cron: "30 0 * * *"
@@ -39,7 +45,8 @@ jobs:
     outputs:
       php-core: ${{ steps.detect.outputs.run }}
       queue: ${{ steps.detect.outputs.queue }}
-      drift: ${{ steps.detect.outputs.drift }}
+      # A release gate run holds no drift row.
+      drift: ${{ inputs.release-gate != true && steps.detect.outputs.drift || 'false' }}
       # The binary rows build the compiler and install Laravel: on a pull request they run only when what they prove changes.
       # Queue rows, which run only when the binary path changes, and which a push and the drift events always run.
       binary-rows: >-

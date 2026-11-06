@@ -24,6 +24,15 @@ export interface SuiteProof {
   outcome: CaseOutcome;
 }
 
+/**
+ * The proofs of every report under a directory, and the server targets that have a report of their own: a valid
+ * report that names the target itself, not one of its variants, and holds at least one check.
+ */
+export interface SuiteReports {
+  proofs: SuiteProof[];
+  targets: ReadonlySet<string>;
+}
+
 type Rec = Record<string, unknown>;
 
 const isRec = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -36,8 +45,9 @@ const isStringList = (v: unknown): v is string[] =>
  * other files (logs, generated sources, other JSON an artefact also holds) are out of scope. A directory without any
  * report is a problem.
  */
-export function loadSuiteReports(directory: string, problems: Problem[]): SuiteProof[] {
+export function loadSuiteReports(directory: string, problems: Problem[]): SuiteReports {
   const files = reportFilesUnder(directory);
+  const targets = new Set<string>();
 
   if (files.length === 0) {
     problems.push({
@@ -45,14 +55,21 @@ export function loadSuiteReports(directory: string, problems: Problem[]): SuiteP
       message: "no http-suite report (http-suite-*.json) under the directory",
     });
 
-    return [];
+    return { proofs: [], targets };
   }
 
-  return files.flatMap((file) =>
-    suiteProofsOf(file, readReport(file, problems), problems).map((proof) =>
-      withArtefact(proof, directory),
-    ),
-  );
+  const proofs = files.flatMap((file) => {
+    const report = validReportOf(file, readReport(file, problems), problems);
+
+    if (report === undefined) return [];
+
+    if (report.reportTarget === report.target && Object.keys(report.checks).length > 0)
+      targets.add(report.target);
+
+    return suiteProofsOf(file, report, problems).map((proof) => withArtefact(proof, directory));
+  });
+
+  return { proofs, targets };
 }
 
 function withArtefact(proof: SuiteProof, directory: string): SuiteProof {
@@ -80,8 +97,21 @@ function readReport(file: string, problems: Problem[]): unknown {
   }
 }
 
-function suiteProofsOf(file: string, report: unknown, problems: Problem[]): SuiteProof[] {
-  if (report === undefined) return [];
+/** A report's server target and its `checks`, when the file is an http-suite report of a server target. */
+interface ValidReport {
+  /** The target the report names, a variant such as `express4` included. */
+  reportTarget: string;
+  /** The server target it proves, a variant mapped to its target. */
+  target: string;
+  checks: Rec;
+}
+
+function validReportOf(
+  file: string,
+  report: unknown,
+  problems: Problem[],
+): ValidReport | undefined {
+  if (report === undefined) return undefined;
 
   if (!isRec(report) || report.format !== SUITE_REPORT_FORMAT) {
     problems.push({
@@ -89,19 +119,19 @@ function suiteProofsOf(file: string, report: unknown, problems: Problem[]): Suit
       message: `not an http-suite report (expected format ${SUITE_REPORT_FORMAT})`,
     });
 
-    return [];
+    return undefined;
   }
 
   const reportTarget = report.target;
   const target = typeof reportTarget === "string" ? reportTargetOf(reportTarget) : undefined;
 
-  if (target === undefined) {
+  if (typeof reportTarget !== "string" || target === undefined) {
     problems.push({
       file,
       message: `suite report of an unknown server target ${shown(reportTarget)} (expected one of ${[...SERVER_TARGETS, ...TARGET_VARIANTS.keys()].join(", ")})`,
     });
 
-    return [];
+    return undefined;
   }
 
   if (!isRec(report.checks)) {
@@ -110,9 +140,13 @@ function suiteProofsOf(file: string, report: unknown, problems: Problem[]): Suit
       message: "malformed suite report: `checks` must map checklist ids to results",
     });
 
-    return [];
+    return undefined;
   }
 
+  return { reportTarget, target, checks: report.checks };
+}
+
+function suiteProofsOf(file: string, report: ValidReport, problems: Problem[]): SuiteProof[] {
   const proofs: SuiteProof[] = [];
 
   for (const [id, result] of Object.entries(report.checks)) {
@@ -128,7 +162,7 @@ function suiteProofsOf(file: string, report: unknown, problems: Problem[]): Suit
       continue;
     }
 
-    proofs.push({ file, target, id, outcome });
+    proofs.push({ file, target: report.target, id, outcome });
   }
 
   return proofs;

@@ -28,7 +28,7 @@ const UNKNOWN_KEYS_POLICIES =
 
 // The servers the gate requires: every generator refuses the access forms below by name, so each of them is deferred
 // with its refusal tested.
-const SERVERS_FOR_1_0: readonly string[] = SERVER_TARGETS.filter(
+export const SERVERS_FOR_1_0: readonly string[] = SERVER_TARGETS.filter(
   (target) => !TARGETS_AFTER_1_0.includes(target),
 );
 

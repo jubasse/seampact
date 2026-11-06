@@ -2,9 +2,9 @@ name: Conformance release gate
 
 # The checklist's release gate over every proof: the proof files and the http-suite reports the consumer workflows
 # uploaded on develop (kept 90 days): the newest of each artefact from a successful push or scheduled run of this
-# repository. It names each live id that has no fixture, or no test for a target it lists; API Platform pairs are out
-# until after v1. Report-only until RELEASE_GATE_BLOCKING is set to "true" below: then a missing report fails the job;
-# while report-only, a missing report is a warning and the gate does not run.
+# repository. It names each live id that has no fixture, or no test for a target it lists, and each server consumer
+# without a report; API Platform pairs are out until after v1. Report-only: a gap or a failed download is a warning.
+# The blocking gate runs in release.yml, on the reports of the release commit.
 
 on:
   # Weekly, Mondays 06:00 UTC.
@@ -19,9 +19,6 @@ permissions:
 concurrency:
   group: p8-conformance-${{ github.ref }}
   cancel-in-progress: true
-
-env:
-  RELEASE_GATE_BLOCKING: "false"
 
 jobs:
   release-gate:
@@ -39,7 +36,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Download the consumers' http-suite reports
         id: download
-        continue-on-error: ${{ env.RELEASE_GATE_BLOCKING != 'true' }}
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -49,7 +46,7 @@ jobs:
             tee "$RUNNER_TEMP/suite-reports.txt"
       - name: Run the release gate
         if: steps.download.outcome == 'success'
-        continue-on-error: ${{ env.RELEASE_GATE_BLOCKING != 'true' }}
+        continue-on-error: true
         run: |
           set -o pipefail
           node scripts/checklist/cli.ts check --release-gate --suite-reports "$RUNNER_TEMP/suite-reports" 2>&1 |
@@ -59,8 +56,6 @@ jobs:
         run: |
           {
             echo "## Conformance release gate"
-            echo
-            echo "Blocking: $RELEASE_GATE_BLOCKING"
             echo
             echo "Reports (the run and commit each one comes from):"
             echo

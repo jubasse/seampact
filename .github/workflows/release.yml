@@ -4,7 +4,10 @@
 # tarballs to a local registry, the JVM bundles, signed with a throwaway key, to a local Central Portal, the Python
 # distributions to a local index and the PHP commits to bare mirrors, and install from them, then, in a real run only,
 # a draft GitHub release, the npm, Maven Central (signed after the approval), Gradle Plugin Portal, PyPI and PHP
-# mirror publishes and the release itself, published last.
+# mirror publishes and the release itself, published last. A manual run, dry or real, also runs every workflow the
+# conformance release gate reads at its commit, then the gate over that commit's results: a gap or a consumer without
+# a report fails the run before anything is published. A push, a pull request and a merge group run the gate
+# report-only on develop's newest reports.
 # A real run starts by hand from main with dry-run off; one approval of the `release` environment covers the publish
 # jobs. A pull request to develop runs nothing: the push to develop runs the dry run. A dry run, the default of a
 # manual run and the only mode of a push, a pull request and a merge group, publishes nothing and needs no secret: it
@@ -240,6 +243,142 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/p3-dist.yml
+
+  # The workflows the conformance gate reads: each server consumer's and each one a proof file cites, with the
+  # `release-gate` input where a workflow takes it. Listing them loads third-party code (the YAML parser), so this
+  # job holds no token beyond reading the checkout.
+  gate-workflows:
+    needs: prepare
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      list: ${{ steps.list.outputs.list }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - name: List the workflows the gate reads
+        id: list
+        run: |
+          list="$(node scripts/checklist/cli.ts gate-workflows)"
+          printf '%s\n' "$list"
+          { echo "list<<GATE_WORKFLOWS"; printf '%s\n' "$list"; echo "GATE_WORKFLOWS"; } >>"$GITHUB_OUTPUT"
+
+  # Those workflows run at this commit, on a manual run only, dry or real; a push or a pull request leaves them to
+  # their own triggers. A workflow that takes the `release-gate` input gets it, so its drift rows, which test newer
+  # dependencies, do not run. The token starts runs and reads them; the job installs nothing and runs `gh` alone.
+  gate-runs:
+    needs: [prepare, gate-workflows]
+    runs-on: ubuntu-24.04
+    # Above the script's own deadline, which names the runs still going.
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      actions: write
+    outputs:
+      # The ids of the runs this job started, space-separated: the gate reads these runs only.
+      runs: ${{ steps.runs.outputs.runs }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts/release
+          persist-credentials: false
+      - name: Run every workflow the gate reads at the release commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REF: ${{ github.ref_name }}
+          GATE_WORKFLOWS: ${{ needs.gate-workflows.outputs.list }}
+        run: |
+          printf '%s\n' "$GATE_WORKFLOWS" >"$RUNNER_TEMP/gate-workflows.txt"
+          bash scripts/release/run-gate-workflows.sh "$REF" "$GITHUB_SHA" \
+            "$RUNNER_TEMP/gate-workflows.txt" "$RUNNER_TEMP/gate-runs.txt"
+      - name: The runs started, for the gate
+        id: runs
+        if: always()
+        run: |
+          runs=""
+          if [ -f "$RUNNER_TEMP/gate-runs.txt" ]; then
+            runs="$(paste -s -d ' ' "$RUNNER_TEMP/gate-runs.txt")"
+          fi
+          echo "runs=$runs" | tee -a "$GITHUB_OUTPUT"
+
+  # The checklist's release gate over the http-suite reports and the cited CI jobs. In a manual run it reads only the
+  # runs gate-runs started at this commit and blocks: an open id or a consumer without a report fails it, and a real
+  # run publishes nothing. A push, a pull request and a merge group run it report-only on develop's newest reports, as the weekly
+  # p8-conformance run does, so their check stays green while ids are open.
+  conformance-gate:
+    needs: [prepare, gate-runs]
+    # It still runs when a gate run failed, to name every gap; release-draft needs both jobs.
+    if: always() && needs.prepare.result == 'success' && needs.gate-runs.result != 'cancelled'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    env:
+      BLOCKING: ${{ github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - name: Download the http-suite reports and the CI job results
+        id: download
+        continue-on-error: ${{ env.BLOCKING != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SUITE_REPORTS_BRANCH: ${{ env.BLOCKING == 'true' && github.ref_name || 'develop' }}
+          SUITE_REPORTS_COMMIT: ${{ env.BLOCKING == 'true' && github.sha || '' }}
+          SUITE_REPORTS_RUNS: ${{ env.BLOCKING == 'true' && needs.gate-runs.outputs.runs || '' }}
+        run: |
+          set -o pipefail
+          if [ "$BLOCKING" = true ] && [ -z "$SUITE_REPORTS_RUNS" ]; then
+            echo "gate-runs started no run, so the gate has nothing of this commit to read: see that job." | tee "$RUNNER_TEMP/suite-reports.txt"
+            exit 1
+          fi
+          bash scripts/checklist/fetch-suite-reports.sh "$RUNNER_TEMP/suite-reports" 2>&1 |
+            tee "$RUNNER_TEMP/suite-reports.txt"
+      - name: Run the release gate
+        if: steps.download.outcome == 'success'
+        continue-on-error: ${{ env.BLOCKING != 'true' }}
+        run: |
+          set -o pipefail
+          node scripts/checklist/cli.ts check --release-gate --suite-reports "$RUNNER_TEMP/suite-reports" 2>&1 |
+            tee "$RUNNER_TEMP/release-gate.txt"
+      - name: Write the gaps to the job summary
+        if: always()
+        run: |
+          {
+            echo "## Conformance release gate"
+            echo
+            echo "Blocking: $BLOCKING"
+            echo
+            echo "Reports (the run and commit each one comes from):"
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/suite-reports.txt" 2>/dev/null || echo "No report was downloaded."
+            echo '```'
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/release-gate.txt" 2>/dev/null || echo "The gate did not run: see the download step."
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
 
   # A last job of a dry run, and a gate of a real run's publish: the binaries are the ones the call hashed, and
   # the tarballs publish to a local registry, publish again as a no-op, and install from it. The registry and the
@@ -811,7 +950,17 @@ jobs:
           cmp "$RUNNER_TEMP/binaries.json" "$RUNNER_TEMP/projects/seampact/ir/vendor/seampact/ir/resources/binaries.json"
 
   release-draft:
-    needs: [prepare, binary, reference-tarball, rehearse, rehearse-jvm, rehearse-python, rehearse-php]
+    needs:
+      - prepare
+      - binary
+      - reference-tarball
+      - rehearse
+      - rehearse-jvm
+      - rehearse-python
+      - rehearse-php
+      - gate-workflows
+      - gate-runs
+      - conformance-gate
     if: needs.prepare.outputs.dry-run == 'false' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -1165,6 +1314,9 @@ jobs:
       - pack-npm
       - binary
       - reference-tarball
+      - gate-workflows
+      - gate-runs
+      - conformance-gate
       - rehearse
       - build-jvm
       - rehearse-jvm
@@ -1193,8 +1345,10 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           should-run: ${{ needs.changes.outputs.run }}
-          # A dry run ends with the rehearsals.
+          # A dry run ends with the rehearsals and the gate; only a manual run starts the gate's runs.
           allow-skip: >-
-            ${{ needs.prepare.outputs.dry-run != 'false'
-              && 'release-draft publish-npm publish-maven-central publish-plugin-portal publish-pypi publish-php-mirrors release-publish'
-              || '' }}
+            ${{ format('{0} {1}',
+              needs.prepare.outputs.dry-run != 'false'
+                && 'release-draft publish-npm publish-maven-central publish-plugin-portal publish-pypi publish-php-mirrors release-publish'
+                || '',
+              github.event_name != 'workflow_dispatch' && 'gate-workflows gate-runs' || '') }}
