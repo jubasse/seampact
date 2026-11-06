@@ -5,6 +5,7 @@ import com.example.tasks.api.schemas.Task;
 import com.example.tasks.api.schemas.TaskState;
 import com.example.tasksabsoluteurls.api.schemas.Note;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,10 +17,20 @@ final class SampleData {
     static final UUID GENERAL_CHANNEL_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     static final UUID FIRST_NOTE_ID = UUID.fromString("40000000-0000-4000-8000-000000000001");
 
+    // The sample task a state filter on listTasks answers for each state it lists, in the order it lists them.
+    private static final Map<TaskState, UUID> SAMPLE_TASK_ID_BY_STATE = Map.of(
+            TaskState.OPEN, NEW_TASK_ID,
+            TaskState.DONE, UUID.fromString("20000000-0000-4000-8000-0000000000fe"),
+            TaskState.ARCHIVED, UUID.fromString("20000000-0000-4000-8000-0000000000fd"));
+
     private SampleData() {}
 
     static Task task(UUID taskId) {
         return new Task(taskId, "Write the slice test", TaskState.OPEN, Optional.empty(), FIRST_VERSION, CREATED_AT);
+    }
+
+    static Task taskInState(TaskState state) {
+        return new Task(SAMPLE_TASK_ID_BY_STATE.get(state), "Write the slice test", state, Optional.empty(), FIRST_VERSION, CREATED_AT);
     }
 
     static Channel generalChannel() {
