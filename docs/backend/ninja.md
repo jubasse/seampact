@@ -306,7 +306,7 @@ Django 5.2 and 6, and Django Ninja 1.5 and 1.7, are tested. An older version fai
 - Under ASGI, Django reads the whole body before the first middleware. Bound it at your proxy or server.
 - A WSGI or ASGI wrapper around the application object (an error tracker, `WhiteNoise(application)`) runs before the boundary and is not seen.
 - A middleware before the boundary in `MIDDLEWARE` is refused at boot.
-- `generate` refuses by name: form, multipart, file, download and redirect bodies, query lists in brackets form (`tag[]=a`) and in the default `repeat` form, `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
+- `generate` refuses by name: form, multipart, file, download and redirect bodies, query lists in every form (`tag=a&tag=b`, `tag=a,b` or `tag[]=a`), `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
 - `bodyValidation` (and `body_validation` in `bind_shop()`) is not served on Ninja yet: the boot check refuses it. Use FastAPI for it.
 - Django Ninja older than 1.5.3 and Django older than 5.2 are refused.
 - DRF and FastAPI are separate targets: see [Django REST Framework](drf.md) and [FastAPI](fastapi.md).
@@ -315,4 +315,4 @@ Django 5.2 and 6, and Django Ninja 1.5 and 1.7, are tested. An older version fai
 
 A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
 
-A query list in the default `repeat` form (`tag=a&tag=b`) is refused by `generate` for now (`param.query.structured.unsupported`): set `conventions.query.lists` to `comma`.
+A query list is refused by `generate` for now, in the `repeat` and `comma` forms alike (`param.query.structured.unsupported`). Use a scalar param, or leave the operation out of the entry's `operations` filter.
