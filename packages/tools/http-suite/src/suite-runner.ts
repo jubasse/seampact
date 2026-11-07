@@ -7,6 +7,7 @@ import { loadScript, readHookCalls, readLogLines } from "./control-routes.js";
 import type { FormatReader } from "./format-reader.js";
 import { checkLogLines } from "./log-lines-check.js";
 import type { SentRequest } from "./operation-match.js";
+import type { RecordedHookCall } from "./recorded-hook-call.js";
 import { signRequestBody } from "./request-signature.js";
 import { checkResponse, type ReceivedResponse, readPointer } from "./response-check.js";
 import { checkIdsForTarget } from "./scoped-check.js";
@@ -15,7 +16,6 @@ import {
   isScriptStep,
   type JsonValue,
   outsideTargetsReason,
-  type RecordedHookCall,
   runsInProfile,
   type SuiteCase,
   type SuiteProfile,

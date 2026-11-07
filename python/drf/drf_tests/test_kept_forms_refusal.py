@@ -1,13 +1,14 @@
 """The generator itself refuses the access, credential and signature forms 1.0 leaves out, each by name: the shared
 kept-forms check is wired into `generate`."""
 
+import json
 from pathlib import Path
 
 import pytest
 
 from seampact.ir.run.generator import GenerationRefusedError
 
-from .test_drf_generator import contract, generated_files, reference_ir
+from .test_drf_generator import contract, generated_files
 
 _REFUSED_CODES = {
     "bindings.unsupported",
@@ -21,7 +22,8 @@ _REFUSED_CODES = {
 
 
 def test_the_forms_1_0_leaves_out_are_refused_by_name_through_the_generator(repository_root: Path) -> None:
-    ir_json = reference_ir(repository_root, "tasks")
+    # Read untyped, as the other targets' refusal tests do: the test edits nested members by key.
+    ir_json = json.loads((repository_root / "fixtures/golden/reference/tasks.ir.json").read_text(encoding="utf-8"))
     get_task = next(operation for operation in ir_json["operations"] if operation["id"] == "getTask")
     get_task["upstream"] = ["billing"]
     get_task["principalRequires"] = [
