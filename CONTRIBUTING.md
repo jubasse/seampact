@@ -103,6 +103,7 @@ Two repository checks run in the `checklist` job, and you run them before a PR: 
 - `checklist` lints every workflow with actionlint.
 - A new workflow reuses the shared actions in `.github/actions/`: `lane-changes` and `lane-aggregate` for the change filter and the required check, `compiler-binary` for the compiler binary, `gradle-retry`, `composer-cache` and `maven-cache` for downloads.
 - Caches are saved by pushes to `develop`, the nightly and manual runs; pull requests and merge groups only read them. The repository has a 10 GB cache limit, and an entry a pull request saved would serve only that pull request. To refresh the caches without waiting for the night, run the workflow by hand on `develop`.
+- Coverage: the pull request row of each language's unit job measures coverage per package (vitest in `ci`, JaCoCo, pytest-cov, PHPUnit with pcov) and fails when a package falls under its floor in `scripts/coverage-floors/floors.json`, naming the package, the metric, the value and the floor; the job uploads the summary as a `coverage-*` artifact. When coverage rises, raise the floor by hand to the new value minus 1 point, rounded down: the check prints each package's value (`node scripts/coverage-floors/check.ts --format <vitest|coverage-py|cobertura> --summary <file>`; JaCoCo's HTML report for the JVM). A floor never goes down without the reason in the pull request.
 
 ## Dependencies
 
