@@ -40,7 +40,7 @@
           "title": "cut before its end"
         },
         "compress": "gzip",
-        "cutCompressedBytes": 12
+        "cutCompressedBytes": 8
       },
       "expect": {
         "status": 400,
@@ -53,7 +53,7 @@
           "code": "api.schema_invalid"
         }
       },
-      "title": "a gzip stream cut before its end and trailer"
+      "title": "a gzip stream without its 8-byte trailer (CRC32 and size), the JSON inside intact"
     }
   ]
 }
