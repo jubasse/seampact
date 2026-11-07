@@ -1222,12 +1222,39 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: node scripts/release/jvm/publish-plugin.ts "$RUNNER_TEMP/assets" --version "$VERSION"
 
-  publish-pypi:
+  # The publish jobs' one approval of the `release` environment, for PyPI: the per-distribution environments below have
+  # no reviewer, since PyPI's trusted publishing needs one environment per project.
+  pypi-approval:
     needs: [prepare, build-python, release-draft]
     if: needs.prepare.outputs.dry-run == 'false' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 5
     environment: release
+    permissions: {}
+    steps:
+      - run: echo "The release approval covers the PyPI publish."
+
+  # One job per distribution, each from its own environment `pypi-<distribution>`: PyPI takes one pending publisher per
+  # repository, workflow and environment, so the projects cannot share one. A job that fails does not cancel the others.
+  publish-pypi:
+    needs: [prepare, build-python, release-draft, pypi-approval]
+    if: needs.prepare.outputs.dry-run == 'false' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        distribution:
+          - seampact-ir
+          - seampact-compiler
+          - seampact-hooks
+          - seampact-codegen
+          - seampact-signed-webhooks
+          - seampact-django
+          - seampact-fastapi
+          - seampact-drf
+          - seampact-ninja
+    environment: pypi-${{ matrix.distribution }}
     permissions:
       contents: read
       # Trusted publishing and the PEP 740 attestations of each file, and the provenance of the compiler wheels.
@@ -1246,19 +1273,24 @@ jobs:
           name: ${{ needs.build-python.outputs.artifact }}
           path: ${{ runner.temp }}/python-distributions
       # The distributions are checked against build-python's manifest, a job output the artefact cannot change.
-      - name: The files PyPI lacks, each checked against the manifest
+      - name: The files of the distribution PyPI lacks, each checked against the manifest
         id: plan
         env:
           MANIFEST: ${{ needs.build-python.outputs.manifest }}
           VERSION: ${{ needs.prepare.outputs.version }}
+          DISTRIBUTION: ${{ matrix.distribution }}
         run: |
           printf '%s\n' "$MANIFEST" > "$RUNNER_TEMP/python-manifest.json"
           node scripts/release/python/pypi-plan.ts "$RUNNER_TEMP/python-distributions" --manifest "$RUNNER_TEMP/python-manifest.json" \
-            --version "$VERSION" --index https://pypi.org --out pypi-upload
+            --version "$VERSION" --index https://pypi.org --distribution "$DISTRIBUTION" --out pypi-upload
           echo "upload=$([ -n "$(ls -A pypi-upload)" ] && echo true || echo false)" | tee -a "$GITHUB_OUTPUT"
-          jq -r '.[] | select(.name == "seampact-compiler") | "\(.sha256)  \(.file)"' "$RUNNER_TEMP/python-manifest.json" > "$RUNNER_TEMP/wheel-subjects.txt"
       # The compiler wheels' provenance, signed only now that the release is approved.
-      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+      - name: The subjects of the compiler wheels
+        if: matrix.distribution == 'seampact-compiler'
+        run: |
+          jq -r '.[] | select(.name == "seampact-compiler") | "\(.sha256)  \(.file)"' "$RUNNER_TEMP/python-manifest.json" > "$RUNNER_TEMP/wheel-subjects.txt"
+      - if: matrix.distribution == 'seampact-compiler'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-checksums: ${{ runner.temp }}/wheel-subjects.txt
       # PyPA's publish client, the one way to PyPI's trusted publishing and PEP 740 attestations; it runs nothing else.
@@ -1387,6 +1419,7 @@ jobs:
       - publish-npm
       - publish-maven-central
       - publish-plugin-portal
+      - pypi-approval
       - publish-pypi
       - publish-php-mirrors
       - release-publish
@@ -1408,6 +1441,6 @@ jobs:
           allow-skip: >-
             ${{ format('{0} {1}',
               needs.prepare.outputs.dry-run != 'false'
-                && 'release-draft publish-npm publish-maven-central publish-plugin-portal publish-pypi publish-php-mirrors release-publish'
+                && 'release-draft publish-npm publish-maven-central publish-plugin-portal pypi-approval publish-pypi publish-php-mirrors release-publish'
                 || '',
               github.event_name != 'workflow_dispatch' && 'gate-workflows gate-runs' || '') }}
