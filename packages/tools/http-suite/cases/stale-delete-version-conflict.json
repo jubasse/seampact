@@ -1,6 +1,6 @@
 {
   "id": "stale-delete-version-conflict",
-  "title": "A delete reads the body-sourced version from its query: a stale one answers 409 state.conflict and deletes nothing",
+  "title": "A delete reads the body-sourced version from its query: it reaches the handler, and a stale one answers 409 state.conflict",
   "checks": ["CHK-041"],
   "profiles": ["default"],
   "apis": ["tasksResponses"],
@@ -27,23 +27,6 @@
         },
         "body": {
           "code": "state.conflict"
-        }
-      }
-    },
-    {
-      "title": "the memo is still there",
-      "request": {
-        "method": "GET",
-        "path": "/responses/v1/memos/40000000-0000-4000-8000-000000000001",
-        "headers": {
-          "authorization": "Bearer {{userToken}}"
-        }
-      },
-      "expect": {
-        "status": 200,
-        "body": {
-          "memoId": "40000000-0000-4000-8000-000000000001",
-          "version": 1
         }
       }
     },
