@@ -30,7 +30,7 @@ final class TasksDecider implements Decider
 
     public function decide(RequirementRequest $request): Decision
     {
-        SuiteControl::recordHookCall("decide:{$request->name()}", $request->operation()->api, $request->operation()->id);
+        SuiteControl::recordHookCall("decide:{$request->name()}", $request->operation()->api, $request->operation()->id, $request->bucket());
 
         $denied = SuiteControl::scriptedDecision($request->name(), DecisionPurpose::name($request->purpose()));
         if ($denied === null && $request->name() === self::THROTTLE_RULE && $request->bucket() !== null && self::isThrottledUser($request->principal())) {

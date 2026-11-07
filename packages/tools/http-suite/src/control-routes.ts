@@ -1,8 +1,9 @@
 // The test-only routes a sample app serves beside the contract, so a case loads the doubles' script and reads what
 // the hooks recorded and what the app logged (ADR 0015 "Control routes"). Every sample app, in any language,
 // serves them with these paths and JSON bodies.
+
+import { type RecordedHookCall, readRecordedHookCall } from "./recorded-hook-call.js";
 import type { SampleAppScript } from "./sample-app-script.js";
-import type { RecordedHookCall } from "./suite-case.js";
 
 /** The path prefix of the control routes; the sample app allow-lists it as framework routes outside the contract. */
 export const CONTROL_ROUTE_PREFIX = "/__seampact";
@@ -16,7 +17,7 @@ export const SCRIPT_ROUTE = `${CONTROL_ROUTE_PREFIX}/script`;
 /**
  * `GET`: answers 200 with `{ "calls": RecordedHookCall[] }`, in call order since the last script load: each
  * authenticate and decide call, named as `authenticateHookName` and `decideHookName` name them, with the
- * operation's `operationKey`.
+ * operation's `operationKey`, and for a decide call that received a throttle bucket, that bucket.
  */
 export const HOOK_CALLS_ROUTE = `${CONTROL_ROUTE_PREFIX}/hook-calls`;
 
@@ -52,11 +53,19 @@ export async function readHookCalls(
   const body = await readControlRoute(baseUrl, HOOK_CALLS_ROUTE, signal);
   const calls = isRecord(body) ? body.calls : undefined;
 
-  if (!Array.isArray(calls) || !calls.every(isRecordedHookCall)) {
+  if (!Array.isArray(calls)) {
     throw new Error(`GET ${HOOK_CALLS_ROUTE} answered no '{ "calls": [{ "hook", "operation" }] }'`);
   }
 
-  return calls.map((call) => ({ hook: call.hook, operation: call.operation }));
+  const reader = {
+    fail: (pointer: string, problem: string): never => {
+      throw new Error(
+        `GET ${HOOK_CALLS_ROUTE} answered a call that is not one at '${pointer}': ${problem}`,
+      );
+    },
+  };
+
+  return calls.map((call, index) => readRecordedHookCall(reader, call, `/calls/${index}`));
 }
 
 export async function readLogLines(baseUrl: string, signal: AbortSignal): Promise<string[]> {
@@ -86,8 +95,4 @@ async function readControlRoute(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isRecordedHookCall(value: unknown): value is RecordedHookCall {
-  return isRecord(value) && typeof value.hook === "string" && typeof value.operation === "string";
 }

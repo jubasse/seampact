@@ -33,6 +33,7 @@ from sample_data import (
     task_of,
     with_next_version,
 )
+from seampact_consumer_suite.log_lines import log_trace_context
 from seampact_consumer_suite.scripted_answers import scripted_answer, text_member
 
 _OK: int = 200
@@ -146,6 +147,7 @@ class InternalHandlers:
     """The `tasksService` api's handlers; the boundary refuses a request whose deadline has passed."""
 
     def get_task(self, request: service.GetTaskRequest) -> service.GetTaskResult:
+        log_trace_context(request.input.headers.traceparent)
         reply = scripted_answer("getTask", _OK, _service_task_reply_of, api=_SERVICE_API)
 
         return reply or service.GetTaskResponse200(body=service_task(request.input.path.task_id))
