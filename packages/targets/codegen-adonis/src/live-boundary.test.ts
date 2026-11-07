@@ -569,6 +569,17 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
       expect(app.calls.handled).toEqual([]);
     });
 
+    test("a gzip body under the route limit as sent but over it once inflated answers 413", async () => {
+      const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: { ...writeHeaders(), "content-encoding": "gzip" },
+        body: gzipSync(JSON.stringify({ title: "x".repeat(ONE_MEBIBYTE + 1) })),
+      });
+
+      expect(reply.status).toBe(413);
+      expect(JSON.parse(reply.text).code).toBe("api.payload_too_large");
+      expect(app.calls.handled).toEqual([]);
+    });
+
     test("a body announced as gzip that is not a gzip stream, or a gzip stream cut before its end, answers 400", async () => {
       const whole = gzipSync(JSON.stringify({ title: "Plan" }));
       const notGzip = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {

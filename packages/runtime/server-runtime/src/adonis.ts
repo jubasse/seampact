@@ -140,6 +140,8 @@ const STRICT_JSON_REFUSAL = 422;
 const UNSUPPORTED_MEDIA_ROLE = "unsupportedMediaType";
 // The codes of a zlib or brotli stream that cannot inflate the body: corrupt, or cut before its end.
 const CORRUPT_CODING_CODE_PREFIXES: readonly string[] = ["Z_", "ERR__ERROR_"];
+// raw-body's refusal of a body whose byte count differs from the expected length.
+const SIZE_MISMATCH_TYPE = "request.size.invalid";
 const CSRF_INVALID_ROLE = "csrfInvalid";
 const HEAD_METHOD = "HEAD";
 const GET_METHOD = "get";
@@ -177,6 +179,23 @@ function isCorruptCodingError(error: unknown): boolean {
   return (
     typeof code === "string" &&
     CORRUPT_CODING_CODE_PREFIXES.some((prefix) => code.startsWith(prefix))
+  );
+}
+
+// The bodyparser of AdonisJS 6 expects 0 bytes of any compressed body, so raw-body refuses the inflated body as a
+// size mismatch with a 400 instead of its limit; the inflated byte count it reports still shows a body over the route
+// limit.
+function isInflatedBodyOverLimit(route: ContractRoute, error: unknown): boolean {
+  const limitBytes = route.input?.limitBytes;
+
+  if (!(error instanceof Error) || limitBytes === undefined) return false;
+
+  const receivedBytes = Reflect.get(error, "received");
+
+  return (
+    Reflect.get(error, "type") === SIZE_MISMATCH_TYPE &&
+    typeof receivedBytes === "number" &&
+    receivedBytes > limitBytes
   );
 }
 
@@ -219,7 +238,7 @@ function preRoutingError(
 
   if (isClaimed(error)) return asContractError(route, error, ctx);
 
-  if (errorCode(error) === ENTITY_TOO_LARGE_CODE) {
+  if (errorCode(error) === ENTITY_TOO_LARGE_CODE || isInflatedBodyOverLimit(route, error)) {
     return roleError(route, PAYLOAD_TOO_LARGE_ROLE, { limitBytes: route.input?.limitBytes });
   }
 
