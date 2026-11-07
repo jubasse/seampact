@@ -34,14 +34,15 @@ export default defineConfig({
       description: SITE_DESCRIPTION,
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/jubasse/seampact" }],
       logo: {
-        light: "./site/assets/logo-light.svg",
-        dark: "./site/assets/logo-dark.svg",
+        src: "./site/assets/logo.svg",
+        // The site title beside it already says the name.
         alt: "",
       },
       favicon: "/favicon.svg",
       customCss: ["./site/custom.css"],
       lastUpdated: true,
       head: [
+        { tag: "link", attrs: { rel: "icon", href: `${SITE_BASE}favicon.ico`, sizes: "any" } },
         { tag: "meta", attrs: { property: "og:image", content: SHARE_CARD_URL } },
         { tag: "meta", attrs: { property: "og:image:width", content: "1200" } },
         { tag: "meta", attrs: { property: "og:image:height", content: "630" } },

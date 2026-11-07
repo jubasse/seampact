@@ -1,5 +1,84 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <title>seampact</title>
-  <path d="M6 14a8 8 0 0 1 8-8h14v52H14a8 8 0 0 1-8-8z" fill="#3d50f5"/>
-  <path d="M36 6h14a8 8 0 0 1 8 8v36a8 8 0 0 1-8 8H36z" fill="#3d50f5" fill-opacity=".5"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1248" height="1248" viewBox="0 0 1248 1248" role="img" aria-labelledby="title desc">
+  <title id="title">Seampact: a layered contract forming an abstract S</title>
+  <desc id="desc">An abstract S made of an API document, a ribbon and a layer of code, in three sage greens on a transparent background.</desc>
+
+  <!-- Three solid sage greens, plus negative-space ivory. No raster images, gradients, filters or shadows. -->
+  <!-- Bottom layer: generated code -->
+  <path id="base-code" fill="#315B45" d="M 482 752
+    L 273 863
+    C 251 875 242 891 242 914
+    C 242 930 249 943 265 954
+    L 552 1117
+    C 584 1135 614 1138 643 1121
+    L 967 940
+    C 991 926 1005 903 1005 873
+    L 1005 709
+    L 767 587
+    Z"/>
+
+  <!-- Right edge of middle sheet, flattened dark side panel -->
+  <path id="sheet-side" fill="#315B45" d="M 966 656
+    C 988 668 1005 687 1005 715
+    L 1005 873
+    C 1005 899 992 922 968 938
+    L 967 766
+    Z"/>
+
+  <!-- Intermediate layer: the long, gently bent ribbon creates the spine of the abstract S -->
+  <path id="middle-sheet" fill="#547D61" d="M 254 569
+    L 340 518
+    C 365 503 385 504 408 513
+    L 589 605
+    C 618 620 638 619 662 607
+    L 758 550
+    L 963 652
+    C 998 671 1006 699 982 730
+    C 977 738 971 744 959 751
+    L 744 838
+    C 706 857 683 856 653 841
+    L 276 652
+    C 246 637 232 615 244 586
+    C 247 579 249 573 254 569
+    Z"/>
+
+  <!-- Top contract: intentionally overlays intermediate sheet and turns the stack into an S -->
+  <path id="api-contract" fill="#F6F7F3" d="M 235 435
+    C 235 387 255 357 302 326
+    L 574 156
+    C 607 135 643 141 673 159
+    L 948 356
+    C 978 378 980 402 972 420
+    C 969 429 962 435 952 441
+    L 665 600
+    C 641 615 622 619 593 604
+    L 418 516
+    C 386 501 370 506 341 522
+    L 268 566
+    C 244 581 233 598 235 618
+    Z"/>
+
+  <!-- Folded corner: flat light-sage cutout -->
+  <path id="folded-corner" fill="#8EAC89" d="M 755 213
+    L 947 358
+    C 951 361 953 363 955 365
+    L 809 365
+    C 777 365 755 347 755 317
+    Z"/>
+
+  <!-- Three precisely spaced rows inside the document -->
+  <g id="contract-fields" fill="#315B45">
+    <circle cx="443" cy="321" r="18"/>
+    <rect x="484" y="306" width="206" height="31" rx="15.5"/>
+    <circle cx="443" cy="381" r="18"/>
+    <rect x="484" y="365" width="272" height="32" rx="16"/>
+    <circle cx="443" cy="443" r="18"/>
+    <rect x="484" y="427" width="171" height="32" rx="16"/>
+  </g>
+
+  <!-- Crisp editable code symbol; kept clear of the layer edges -->
+  <g id="code-glyph" fill="none" stroke="#F6F7F3" stroke-width="31" stroke-linecap="round" stroke-linejoin="round">
+    <path id="bracket-left" d="M 550 887 L 479 944 L 534 990"/>
+    <path id="slash" d="M 637 877 L 580 1019"/>
+    <path id="bracket-right" d="M 688 902 L 738 945 L 671 994"/>
+  </g>
 </svg>
