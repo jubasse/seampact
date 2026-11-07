@@ -1,4 +1,4 @@
-import { lstat, readdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
+import { lstat, readdir, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, printProblems } from "../cli-io.js";
@@ -93,11 +93,19 @@ export async function agentsInstallCommand(
       `Installed ${skillNames.length} skills in ${portablePath(relative(io.cwd, target))}.\n`,
     );
 
-  await writeFile(`${agentsFile}${TEMPORARY_SUFFIX}`, merge.text);
-  await rename(`${agentsFile}${TEMPORARY_SUFFIX}`, agentsFile);
+  await replaceAgentsFile(agentsFile, merge.text);
   io.stdout(`${agentsFileReport(existing, merge.previousVersion, version)}\n`);
 
   return EXIT_SUCCESS;
+}
+
+// Written beside the file and renamed over it; `wx` refuses to follow a link left at the temporary path.
+async function replaceAgentsFile(agentsFile: string, text: string): Promise<void> {
+  const temporary = `${agentsFile}${TEMPORARY_SUFFIX}`;
+
+  await rm(temporary, { force: true });
+  await writeFile(temporary, text, { flag: "wx" });
+  await rename(temporary, agentsFile);
 }
 
 function agentsFileReport(
