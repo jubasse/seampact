@@ -4,8 +4,10 @@
 # per line, followed, tab-separated, by `release-gate` when the workflow takes that input (it skips the drift rows).
 # Each run id is appended to <runs-file> as soon as the run starts, so the gate reads those runs only. Prints one
 # line per run; fails when a run is at another commit than <commit> (the branch moved), did not succeed, or still runs
-# after the deadline. A failed read of a run's state is retried after a doubling pause; the wait fails only when every
-# attempt failed. Runs `gh` alone: it needs `gh` signed in with `actions: write` (GH_TOKEN in CI) and the repository
+# after the deadline. A run that failed on a registry error (registry-failure.sh reads its failed jobs' log) has its
+# failed jobs rerun once, and the wait reads that new attempt; any other failure, or a second one, fails as it is. A
+# failed read of a run's state is retried after a doubling pause; the wait fails only when every attempt failed. Runs
+# `gh` alone: it needs `gh` signed in with `actions: write` (GH_TOKEN in CI) and the repository
 # as the current directory or GH_REPO.
 set -euo pipefail
 
@@ -20,15 +22,16 @@ workflow_list_file="$3"
 runs_file="$4"
 poll_seconds=60
 # Under the calling job's timeout by more than one read's retries, so the runs still going are named before the job
-# is killed.
-deadline_seconds=$((170 * 60))
+# is killed; it leaves time for a run whose failed jobs are rerun once.
+deadline_seconds=$((230 * 60))
 # A run's state is read up to this many times, the pause doubling after each failed read.
 state_read_attempts=5
 first_retry_pause_seconds=10
 # The API version whose workflow dispatch answers with the run it created.
 dispatch_api_version="2026-03-10"
+registry_failure="$(dirname "${BASH_SOURCE[0]}")/registry-failure.sh"
 
-# The status, conclusion and commit of a run, on one line; a failed read is retried, and only the last failure fails.
+# The status, conclusion, commit and attempt number of a run, on one line; a failed read is retried, and only the last failure fails.
 run_state_of() {
   local run_id=$1
   local pause=$first_retry_pause_seconds
@@ -36,7 +39,7 @@ run_state_of() {
 
   for ((attempt = 1; attempt <= state_read_attempts; attempt++)); do
     if state="$(gh api "repos/{owner}/{repo}/actions/runs/$run_id" \
-      --jq '"\(.status) \(.conclusion // "none") \(.head_sha)"')"; then
+      --jq '"\(.status) \(.conclusion // "none") \(.head_sha) \(.run_attempt)"')"; then
       printf '%s\n' "$state"
       return 0
     fi
@@ -52,6 +55,28 @@ run_state_of() {
   return 1
 }
 
+# Reruns the failed jobs of a failed run when their log names a registry error; fails, saying why, otherwise.
+rerun_on_registry_failure() {
+  local workflow=$1 run_id=$2
+  local failed_log matched_line
+
+  if ! failed_log="$(gh run view "$run_id" --log-failed)"; then
+    echo "run-gate-workflows: the failed jobs' log of $workflow run $run_id could not be read, so it is not rerun" >&2
+    return 1
+  fi
+
+  if ! matched_line="$(printf '%s\n' "$failed_log" | bash "$registry_failure")"; then
+    return 1
+  fi
+
+  echo "run-gate-workflows: $workflow run $run_id failed on a registry error, its failed jobs run once more: $matched_line"
+
+  if ! gh run rerun "$run_id" --failed; then
+    echo "run-gate-workflows: rerunning the failed jobs of $workflow run $run_id failed" >&2
+    return 1
+  fi
+}
+
 if [[ ! -s "$workflow_list_file" ]]; then
   echo "run-gate-workflows: $workflow_list_file names no workflow for the release gate" >&2
   exit 1
@@ -59,6 +84,8 @@ fi
 
 : >"$runs_file"
 declare -A run_of=()
+# Per workflow, the attempt whose failed jobs were rerun: a run is rerun once, and read again once a new attempt starts.
+declare -A rerun_attempt_of=()
 workflows=()
 
 while IFS=$'\t' read -r workflow release_gate_input; do
@@ -103,12 +130,16 @@ while true; do
     fi
 
     run_state="$(run_state_of "$run_id")"
-    read -r status conclusion head_sha <<<"$run_state"
+    read -r status conclusion head_sha attempt <<<"$run_state"
 
     if [[ "$head_sha" != "$commit" ]]; then
       echo "run-gate-workflows: $workflow run $run_id is at $head_sha, not $commit: $ref moved, start the release again" >&2
       failed=1
-    elif [[ "$status" != completed ]]; then
+    elif [[ "$status" != completed || "$attempt" == "${rerun_attempt_of[$workflow]:-}" ]]; then
+      still_running+=("$workflow")
+    elif [[ "$conclusion" != success && -z "${rerun_attempt_of[$workflow]:-}" ]] &&
+      rerun_on_registry_failure "$workflow" "$run_id"; then
+      rerun_attempt_of[$workflow]="$attempt"
       still_running+=("$workflow")
     else
       echo "run-gate-workflows: $workflow run $run_id at $commit concluded $conclusion"
