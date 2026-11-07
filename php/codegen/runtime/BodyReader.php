@@ -71,6 +71,11 @@ final class BodyReader
                 return BodyRead::refused(self::TOO_LARGE);
             }
         }
+        // A stream cut before its end would hand a truncated body on as if it were whole.
+        if ($inflate !== null && $received > 0 && inflate_get_status($inflate) !== ZLIB_STREAM_END) {
+            return BodyRead::refused(self::CORRUPT);
+        }
+
         return BodyRead::bytes($bytes);
     }
 }
