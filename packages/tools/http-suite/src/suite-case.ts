@@ -12,6 +12,7 @@ import {
   stringAt,
   stringMapAt,
 } from "./json-reader.js";
+import { type RecordedHookCall, readRecordedHookCall } from "./recorded-hook-call.js";
 import { readSampleAppScript, type SampleAppScript } from "./sample-app-script.js";
 import type { ScopedCheck } from "./scoped-check.js";
 import { baseTargetOf } from "./target-variant.js";
@@ -151,12 +152,6 @@ export interface SuiteCase {
   readonly boot?: BootExpectation;
 }
 
-/** One hook call the sample app records: the hook's name and the operation it ran for. */
-export interface RecordedHookCall {
-  readonly hook: string;
-  readonly operation: string;
-}
-
 /** Whether a case runs in a profile: a pack profile also runs the `default` cases, read through the pack's format. */
 export function runsInProfile(suiteCase: SuiteCase, profile: SuiteProfile): boolean {
   if (suiteCase.profiles.includes(profile)) return true;
@@ -219,7 +214,6 @@ const BODY_CAPTURE_MEMBERS = ["body"];
 const HEADER_CAPTURE_MEMBERS = ["header", "pattern"];
 const HEADER_EXPECTATION_MEMBERS = ["equals", "contains", "excludes", "absent"];
 const LOG_LINES_MEMBERS = ["contains", "excludes"];
-const HOOK_CALL_MEMBERS = ["hook", "operation"];
 
 /** A case file that does not follow the format, named by its source and the JSON pointer of the fault. */
 export class SuiteCaseError extends Error {
@@ -387,15 +381,9 @@ function readApis(reader: JsonReader, value: unknown): string[] {
 }
 
 function readHookCalls(reader: JsonReader, value: unknown): RecordedHookCall[] {
-  return arrayAt(reader, value, "/hookCalls").map((call, index) => {
-    const pointer = `/hookCalls/${index}`;
-    const object = objectAt(reader, call, pointer, HOOK_CALL_MEMBERS);
-
-    return {
-      hook: stringAt(reader, object.hook, `${pointer}/hook`),
-      operation: stringAt(reader, object.operation, `${pointer}/operation`),
-    };
-  });
+  return arrayAt(reader, value, "/hookCalls").map((call, index) =>
+    readRecordedHookCall(reader, call, `/hookCalls/${index}`),
+  );
 }
 
 function readStep(reader: JsonReader, value: unknown, pointer: string): SuiteStep {

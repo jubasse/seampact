@@ -43,6 +43,7 @@ export {
   reportFileOf,
   testEachCase,
 } from "./profile-run.js";
+export type { RecordedBucket, RecordedHookCall } from "./recorded-hook-call.js";
 export { STRIPE_V1_SCHEME, signRequestBody } from "./request-signature.js";
 export {
   authenticateHookName,
@@ -68,7 +69,6 @@ export {
   type LogLinesExpectation,
   outsideTargetsReason,
   parseSuiteCase,
-  type RecordedHookCall,
   type RequestSignature,
   runsInProfile,
   type StepExpectation,
