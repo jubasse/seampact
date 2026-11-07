@@ -1,6 +1,6 @@
 # Java records
 
-The Spring Boot plugin writes a Java record for each schema of your contract, with the Bean Validation annotations whose meaning matches the contract. A generated structural validator checks the rest.
+The Spring Boot plugin writes a Java record for each schema of your contract, with the Bean Validation annotations whose meaning matches the contract, for your own `@Valid` calls. The boundary checks the request with a generated structural validator.
 
 Used by: [Spring Boot](../backend/spring-boot.md).
 

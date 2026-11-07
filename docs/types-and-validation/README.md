@@ -1,6 +1,6 @@
 # Types and validation
 
-Use these pages to see what each stack gets from the schemas of your contract: the types you code against and the validators that refuse a bad request before your handler runs. They all show the same schema, `CreateTask`, trimmed here to what the examples need.
+These pages show what each stack gets from your contract: the types you code against and the validators that refuse a bad request before your handler runs. They all use the same schema, `CreateTask`, trimmed here.
 
 ```yaml
 # contract/api.yaml, under schemas
@@ -22,7 +22,7 @@ Each schema becomes one type and one validator per direction: input (what a clie
 | Express, Hono | [TypeScript types](typescript-types.md) | [zod](zod.md) or [yup](yup.md) | Yes, with the `validators` entry |
 | Fastify | [TypeScript types](typescript-types.md) | [zod](zod.md) or [yup](yup.md), or [Ajv](ajv.md) when you link none | Yes |
 | AdonisJS | [TypeScript types](typescript-types.md) | [zod](zod.md) or [yup](yup.md), or [VineJS](vinejs.md) when you link none | Yes |
-| Spring Boot | [Java records](java-records.md) | Bean Validation, plus a generated check for strings | No |
+| Spring Boot | [Java records](java-records.md) | A generated structural validator | No |
 | Laravel | PHP classes | [Laravel rules](laravel-rules.md) | `rules` only |
 | Symfony | PHP classes | [Symfony constraints](symfony-constraints.md) | `rules` only |
 | FastAPI, Django Ninja | [Pydantic](pydantic.md) models | Pydantic | `rules` only |

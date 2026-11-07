@@ -263,13 +263,7 @@ A route signed by a provider reads the raw body. Your authenticate hook gets it 
 
 ## Validate your own objects
 
-The generated schema classes carry Symfony Validator attributes, such as `#[Assert\Length(min: 1, max: 200)]` on a title. Validate an object you build before you send it elsewhere:
-
-```php
-$violations = $validator->validate(new Task(taskId: $id, title: $title));
-```
-
-The boundary does not use these attributes: it checks the raw JSON with the generated constraint. A `uuid` format, a length or pattern on a `date-time` member, and a member both optional and nullable have no attribute.
+The generated schema classes carry Symfony Validator attributes, so you can validate an object you build with `$validator->validate()`. The boundary does not use them: see [Symfony constraints](../types-and-validation/symfony-constraints.md).
 
 ## Test your routes
 

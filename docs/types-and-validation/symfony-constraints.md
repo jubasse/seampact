@@ -29,11 +29,11 @@ A schema is a readonly class with `#[Assert]` attributes. For the `CreateTask` s
     public ?int $effort,
 ```
 
-A `uuid` format, a pattern and a few other checks have no attribute, so these attributes are not the whole contract.
+A pattern is an `Assert\Regex`, but a `uuid` or `date-time` format has no attribute, so these attributes are not the whole contract.
 
 ## Which checks run on a request
 
-The request is not checked by these attributes. For each operation, `Symfony/<Operation>InputConstraintValidator.php` lists the members of the input as the contract declares them, and the bundle checks the raw JSON against that list:
+The request is not checked by these attributes. For each operation, `Symfony/<Operation>InputConstraintValidator.php` lists the members of the input as the contract declares them, and the bundle checks the decoded request against that list. This excerpt is from `rules: seampact-consistent`:
 
 <!-- excerpt: php/symfony/tests/golden/TasksConsistent/Symfony/CreateTaskInputConstraintValidator.php -->
 ```php

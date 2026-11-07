@@ -1,6 +1,6 @@
 # class-validator
 
-`@seampact/codegen-class-validator` writes a decorated DTO class for each input schema of your contract, and NestJS uses them to refuse a bad request before your handler runs.
+`@seampact/codegen-class-validator` writes a decorated DTO class for each schema of your contract, input and output, and NestJS uses the input ones to refuse a bad request before your handler runs.
 
 Used by: [NestJS](../backend/nestjs.md) only.
 
@@ -13,6 +13,14 @@ Install `class-validator` and `class-transformer` in your app, and set `experime
   - id: validators
     use: "@seampact/codegen-class-validator"
     apis: [notes]
+```
+
+Link it from your server entry, next to `types`:
+
+```yaml
+    link:
+      types: types
+      validators: validators
 ```
 
 Run `npx seampact generate`. The classes land in `dtos/` under the `validators/<api>/` folder of your `outDir`.

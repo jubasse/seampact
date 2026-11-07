@@ -15,6 +15,14 @@ Install `yup` in your app, then point the `validators` entry at this package.
     apis: [notes]
 ```
 
+Link it from your server entry, next to `types`:
+
+```yaml
+    link:
+      types: types
+      validators: validators
+```
+
 Run `npx seampact generate`. The files land in `validators/<api>/` under your `outDir`, with the same layout as [zod](zod.md) plus a `yup-support.ts`.
 
 ## What you get
@@ -32,7 +40,25 @@ export const CreateTaskSchema = yup
       .max(200, "Expected at most 200 characters.")
       .defined(),
     effort: yup
-// ...
+      .number()
+      .strict()
+      .integer()
+      .test({
+        name: "minimum",
+        message: "Expected at least -9007199254740991.",
+        test: (value) =>
+          value === undefined ||
+          !Number.isInteger(value) ||
+          value >= -Number.MAX_SAFE_INTEGER,
+      })
+      .test({
+        name: "maximum",
+        message: "Expected at most 9007199254740991.",
+        test: (value) =>
+          value === undefined ||
+          !Number.isInteger(value) ||
+          value <= Number.MAX_SAFE_INTEGER,
+      })
       .min(0, "Expected at least 0.")
       .optional(),
   })

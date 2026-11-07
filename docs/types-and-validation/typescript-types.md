@@ -34,7 +34,7 @@ An enum is a union of its values:
 export type TaskState = "open" | "done" | "archived";
 ```
 
-Each operation has an input type over `path`, `headers`, `query` and `body`, in `operations/input.ts`:
+Each operation has an input type over the parts it declares among `path`, `headers`, `query` and `body`, in `operations/input.ts`:
 
 <!-- excerpt: packages/targets/codegen-ts/types-snapshots/operations/input.ts.snap -->
 ```ts

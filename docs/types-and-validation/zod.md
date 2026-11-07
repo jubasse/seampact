@@ -15,6 +15,14 @@ Add the target and link it from your server entry. Install `zod` (version 4) in 
     apis: [notes]
 ```
 
+Link it from your server entry, next to `types`:
+
+```yaml
+    link:
+      types: types
+      validators: validators
+```
+
 Run `npx seampact generate`. The files land in `validators/<api>/` under your `outDir`.
 
 ## What you get

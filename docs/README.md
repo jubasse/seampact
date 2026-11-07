@@ -43,7 +43,7 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 - [class-validator](types-and-validation/class-validator.md): decorated DTO classes for NestJS.
 - [Ajv](types-and-validation/ajv.md): Fastify's own validators, when you link none.
 - [VineJS](types-and-validation/vinejs.md): AdonisJS's own validators, when you link none.
-- [Java records](types-and-validation/java-records.md): records with Bean Validation on Spring Boot.
+- [Java records](types-and-validation/java-records.md): records and a generated structural validator on Spring Boot.
 - [Laravel rules](types-and-validation/laravel-rules.md): `FormRequest` rules on Laravel.
 - [Symfony constraints](types-and-validation/symfony-constraints.md): classes and constraints on Symfony.
 - [Pydantic](types-and-validation/pydantic.md): Pydantic 2 models on FastAPI and Django Ninja.
