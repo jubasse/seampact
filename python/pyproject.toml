@@ -172,17 +172,18 @@ addopts = ["--import-mode=importlib", "--strict-markers", "--strict-config", "-r
 xfail_strict = true
 filterwarnings = ["error"]
 
-# Read by `pytest --cov` in CI; each member's `src` is one package of `scripts/coverage-floors/floors.json`.
+# Read by `pytest --cov` in CI. Each entry is the package directory of one member of `scripts/coverage-floors/floors.json`:
+# coverage.py lists every file of a directory path, so a module no test imports reports 0%. Naming `src` instead would
+# skip such a module, because `seampact/` is a namespace directory. `compiler` has no executable source and is not listed.
 [tool.coverage.run]
 branch = true
-source_dirs = [
-    "codegen/src",
-    "compiler/src",
-    "django/src",
-    "drf/src",
-    "fastapi/src",
-    "hooks/src",
-    "ir/src",
-    "ninja/src",
-    "signed-webhooks/src",
+source = [
+    "codegen/src/seampact/codegen",
+    "django/src/seampact/django",
+    "drf/src/seampact/drf",
+    "fastapi/src/seampact/fastapi",
+    "hooks/src/seampact/hooks",
+    "ir/src/seampact/ir",
+    "ninja/src/seampact/ninja",
+    "signed-webhooks/src/seampact/signed_webhooks",
 ]

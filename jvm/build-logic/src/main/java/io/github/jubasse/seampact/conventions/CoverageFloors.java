@@ -40,6 +40,8 @@ final class CoverageFloors {
     private static final String LINE_COUNTER = "LINE";
     private static final String BRANCH_COUNTER = "BRANCH";
     private static final String COVERED_RATIO = "COVEREDRATIO";
+    private static final String TOTAL_COUNT = "TOTALCOUNT";
+    private static final BigDecimal AT_LEAST_ONE_LINE = BigDecimal.ONE;
     private static final int PERCENT_SCALE = 2;
 
     private CoverageFloors() {
@@ -94,12 +96,19 @@ final class CoverageFloors {
     }
 
     private static void verifyFloors(Project project, Map<?, ?> floors) {
-        project.getTasks().named(VERIFICATION_TASK, JacocoCoverageVerification.class, verification ->
+        project.getTasks().named(VERIFICATION_TASK, JacocoCoverageVerification.class, verification -> {
+            // A report with no line counted would pass every ratio rule; a module that measured nothing fails.
+            verification.getViolationRules().rule(rule -> rule.limit(limit -> {
+                limit.setCounter(LINE_COUNTER);
+                limit.setValue(TOTAL_COUNT);
+                limit.setMinimum(AT_LEAST_ONE_LINE);
+            }));
             verification.getViolationRules().rule(rule -> {
                 addLimit(rule, LINE_COUNTER, floors, LINES_KEY, project.getName());
                 // A tool without branch counts has no branch floor; JaCoCo has them, so the floor file states both.
                 addLimit(rule, BRANCH_COUNTER, floors, BRANCHES_KEY, project.getName());
-            }));
+            });
+        });
         project.getTasks().named(CHECK_TASK, check -> check.dependsOn(VERIFICATION_TASK));
     }
 

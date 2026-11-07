@@ -3,6 +3,7 @@ import {
   type Counts,
   type CoverageByPackage,
   CoverageInputError,
+  PERCENT,
   parseJsonObject,
   percentOf,
 } from "./summaries.ts";
@@ -39,7 +40,6 @@ export interface FloorCheck {
 export const FLOOR_METRICS = ["lines", "branches"] as const;
 export type FloorMetric = (typeof FLOOR_METRICS)[number];
 
-const PERCENT = 100;
 const SHOWN_DECIMALS = 2;
 
 export function parseFloorsFile(floorsText: string, floorsName: string): FloorsFile {
@@ -97,6 +97,11 @@ export function checkFloors(
       continue;
     }
 
+    if (coverage.lines.total === 0) {
+      problems.push(measuredNothingProblem(packageDirectory));
+      continue;
+    }
+
     for (const metric of FLOOR_METRICS) {
       const floor = floors[metric];
 
@@ -131,6 +136,11 @@ export function formatResult(result: MetricResult): string {
 
 function belowFloorProblem(result: MetricResult): string {
   return `${result.packageDirectory}: ${result.metric} coverage ${formatPercent(result.percent)} is under its floor of ${result.floor}%; add tests for the code this change leaves uncovered, or lower the floor in scripts/coverage-floors/floors.json with the reason in the pull request.`;
+}
+
+// A run that counted no line proves nothing: it would read as fully covered, so a floored package must not pass on it.
+function measuredNothingProblem(packageDirectory: string): string {
+  return `${packageDirectory}: the summary counts no lines, so nothing was measured; fix the coverage run (does the test run import the package's sources?) or, if it has no executable source, move it to notMeasured in scripts/coverage-floors/floors.json with the reason.`;
 }
 
 function missingFloorProblem(packageDirectory: string, floorsFile: FloorsFile): string {

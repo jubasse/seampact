@@ -31,7 +31,9 @@ export const PYTHON_WORKSPACE_DIRECTORY = "python";
 const PYTHON_PACKAGE_DEPTH = 2;
 
 const VITEST_TOTAL_KEY = "total";
-const PERCENT = 100;
+
+/** A whole coverage, and the top of a floor. */
+export const PERCENT = 100;
 
 /** Thrown when a summary or the floors file does not have its stated shape; the message names the file and the field. */
 export class CoverageInputError extends Error {}

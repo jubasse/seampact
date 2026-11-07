@@ -164,6 +164,42 @@ describe("the floors check", () => {
     expect(checkFloors(measured, floors).problems).toEqual([]);
   });
 
+  it("fails a floored package whose summary counts no line, in every format, unless it is not measured", () => {
+    const emptyCobertura = readCoberturaReport(
+      '<coverage lines-covered="0" lines-valid="0" branches-covered="0" branches-valid="0">',
+      "coverage.xml",
+      "php/hooks",
+    );
+    const emptyVitest = readVitestSummary(
+      vitestSummary({ "packages/core/cli/src/a.ts": { lines: [0, 0], branches: [0, 0] } }),
+      "coverage-summary.json",
+      REPO_ROOT,
+    );
+    const emptyCoveragePy = readCoveragePyReport(
+      JSON.stringify({
+        files: { "ir/src/seampact/ir/a.py": { summary: { covered_lines: 0, num_statements: 0 } } },
+      }),
+      "coverage.json",
+    );
+    const floors = floorsOf({
+      "php/hooks": { lines: 90 },
+      "packages/core/cli": { lines: 90 },
+      "python/ir": { lines: 90 },
+    });
+
+    for (const emptySummary of [emptyCobertura, emptyVitest, emptyCoveragePy]) {
+      expect(checkFloors(emptySummary, floors).problems).toEqual([
+        expect.stringMatching(/: the summary counts no lines, so nothing was measured/u),
+      ]);
+    }
+
+    const notMeasuredFloors = floorsOf({}, { "php/hooks": "No source." });
+
+    expect(checkFloors(emptyCobertura, notMeasuredFloors).problems).toEqual([
+      expect.stringMatching(/^php\/hooks is measured but listed under notMeasured/u),
+    ]);
+  });
+
   it("fails a branch floor when the tool counts no branches", () => {
     const linesOnly = new Map([["php/hooks", { lines: { covered: 1, total: 1 } }]]);
 
@@ -251,5 +287,15 @@ describe("the coverage check command", () => {
     expect(result.stderr).toMatch(
       /^php\/hooks: lines coverage 70\.00% is under its floor of 71%; /u,
     );
+  });
+
+  it("exits 1 on a report that counts no line, which would otherwise read as fully covered", () => {
+    const result = runCheck(
+      { packages: { "php/hooks": { lines: 70 } }, notMeasured: {} },
+      '<coverage lines-covered="0" lines-valid="0" branches-covered="0" branches-valid="0">',
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/^php\/hooks: the summary counts no lines/u);
   });
 });
