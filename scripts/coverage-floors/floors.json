@@ -1,0 +1,184 @@
+{
+  "packages": {
+    "jvm/seampact-ir": {
+      "lines": 66,
+      "branches": 65
+    },
+    "jvm/seampact-runner": {
+      "lines": 27,
+      "branches": 25
+    },
+    "jvm/seampact-signed-webhooks": {
+      "lines": 95,
+      "branches": 86
+    },
+    "jvm/seampact-spring-boot": {
+      "lines": 91,
+      "branches": 72
+    },
+    "jvm/seampact-spring-runtime": {
+      "lines": 73,
+      "branches": 63
+    },
+    "packages/core/cli": {
+      "lines": 91,
+      "branches": 78
+    },
+    "packages/core/codegen-core": {
+      "lines": 88,
+      "branches": 77
+    },
+    "packages/core/compiler": {
+      "lines": 93,
+      "branches": 85
+    },
+    "packages/core/diff": {
+      "lines": 90,
+      "branches": 79
+    },
+    "packages/core/lint": {
+      "lines": 95,
+      "branches": 88
+    },
+    "packages/core/openapi": {
+      "lines": 89,
+      "branches": 78
+    },
+    "packages/core/spec": {
+      "lines": 97,
+      "branches": 91
+    },
+    "packages/runtime/idempotency-memory": {
+      "lines": 99,
+      "branches": 99
+    },
+    "packages/runtime/server-runtime": {
+      "lines": 89,
+      "branches": 77
+    },
+    "packages/runtime/signed-webhooks": {
+      "lines": 99,
+      "branches": 85
+    },
+    "packages/targets/codegen-adonis": {
+      "lines": 92,
+      "branches": 82
+    },
+    "packages/targets/codegen-angular": {
+      "lines": 97,
+      "branches": 67
+    },
+    "packages/targets/codegen-class-validator": {
+      "lines": 89,
+      "branches": 78
+    },
+    "packages/targets/codegen-express": {
+      "lines": 99,
+      "branches": 99
+    },
+    "packages/targets/codegen-fastify": {
+      "lines": 93,
+      "branches": 88
+    },
+    "packages/targets/codegen-fetch": {
+      "lines": 90,
+      "branches": 78
+    },
+    "packages/targets/codegen-hono": {
+      "lines": 99,
+      "branches": 99
+    },
+    "packages/targets/codegen-msw": {
+      "lines": 94,
+      "branches": 85
+    },
+    "packages/targets/codegen-nestjs": {
+      "lines": 93,
+      "branches": 79
+    },
+    "packages/targets/codegen-react": {
+      "lines": 98,
+      "branches": 64
+    },
+    "packages/targets/codegen-ts": {
+      "lines": 88,
+      "branches": 73
+    },
+    "packages/targets/codegen-vue": {
+      "lines": 98,
+      "branches": 61
+    },
+    "packages/targets/codegen-yup": {
+      "lines": 95,
+      "branches": 87
+    },
+    "packages/targets/codegen-zod": {
+      "lines": 96,
+      "branches": 88
+    },
+    "packages/tools/binary": {
+      "lines": 84,
+      "branches": 84
+    },
+    "packages/tools/http-suite": {
+      "lines": 90,
+      "branches": 81
+    },
+    "php/codegen": {
+      "lines": 61
+    },
+    "php/hooks": {
+      "lines": 69
+    },
+    "php/laravel": {
+      "lines": 87
+    },
+    "php/signed-webhooks": {
+      "lines": 96
+    },
+    "php/symfony": {
+      "lines": 86
+    },
+    "python/codegen": {
+      "lines": 90,
+      "branches": 80
+    },
+    "python/django": {
+      "lines": 89,
+      "branches": 80
+    },
+    "python/drf": {
+      "lines": 91,
+      "branches": 79
+    },
+    "python/fastapi": {
+      "lines": 90,
+      "branches": 73
+    },
+    "python/hooks": {
+      "lines": 99,
+      "branches": 99
+    },
+    "python/ir": {
+      "lines": 89,
+      "branches": 72
+    },
+    "python/ninja": {
+      "lines": 89,
+      "branches": 68
+    },
+    "python/signed-webhooks": {
+      "lines": 98,
+      "branches": 96
+    }
+  },
+  "notMeasured": {
+    "jvm/seampact-compiler": "No source: the module publishes the compiler binaries.",
+    "jvm/seampact-gradle-plugin": "Its tests run in the jvm-plugins lane, which measures no coverage yet.",
+    "jvm/seampact-hooks": "Its tests run in the hooks-native lane, which measures no coverage yet.",
+    "jvm/seampact-maven-plugin": "Its tests run in the jvm-plugins lane, which measures no coverage yet.",
+    "packages/runtime/hooks": "Types only: the package exports interfaces and type aliases, with no executable line to measure.",
+    "php/ir": "Its tests run in the native-ir lane, which measures no coverage yet.",
+    "python/compiler": "No executable source: the wheel carries the compiler binary."
+  }
+}

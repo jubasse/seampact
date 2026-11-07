@@ -21,6 +21,8 @@ maven-plugin-annotations = "3.15.2"
 javax-inject = "1"
 # The Gradle Plugin Portal publisher of the Gradle plugin.
 gradle-plugin-publish = "2.2.1"
+# The coverage agent and reports of `-PseampactCoverage`, which CI checks against scripts/coverage-floors/floors.json.
+jacoco = "0.8.16"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }

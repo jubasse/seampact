@@ -68,6 +68,8 @@ dev = [
     "httpx2==2.16.0",
     # The build hook of the seampact-compiler wheels, for mypy; the same pin as the build constraints above.
     "hatchling==1.33.0",
+    # Coverage of the test run, which CI checks against `scripts/coverage-floors/floors.json`.
+    "pytest-cov==7.1.0",
 ]
 # The servers the consumer tests run a generated app under: uvicorn for ASGI, gunicorn for WSGI (and ASGI through
 # uvicorn's worker). Installed by those tests only, never by a workspace sync.
@@ -169,3 +171,19 @@ pythonpath = ["compiler"]
 addopts = ["--import-mode=importlib", "--strict-markers", "--strict-config", "-ra"]
 xfail_strict = true
 filterwarnings = ["error"]
+
+# Read by `pytest --cov` in CI. Each entry is the package directory of one member of `scripts/coverage-floors/floors.json`:
+# coverage.py lists every file of a directory path, so a module no test imports reports 0%. Naming `src` instead would
+# skip such a module, because `seampact/` is a namespace directory. `compiler` has no executable source and is not listed.
+[tool.coverage.run]
+branch = true
+source = [
+    "codegen/src/seampact/codegen",
+    "django/src/seampact/django",
+    "drf/src/seampact/drf",
+    "fastapi/src/seampact/fastapi",
+    "hooks/src/seampact/hooks",
+    "ir/src/seampact/ir",
+    "ninja/src/seampact/ninja",
+    "signed-webhooks/src/seampact/signed_webhooks",
+]

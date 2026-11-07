@@ -11,4 +11,11 @@
       <directory>tests</directory>
     </testsuite>
   </testsuites>
+  <!-- The code CI measures with pcov and checks against scripts/coverage-floors/floors.json. -->
+  <source>
+    <include>
+      <directory>src</directory>
+      <directory>runtime</directory>
+    </include>
+  </source>
 </phpunit>
