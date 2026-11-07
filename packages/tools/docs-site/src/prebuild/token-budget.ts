@@ -7,7 +7,7 @@ export function estimateTokens(text: string): number {
 
 /** The most tokens each kind of agent file may hold, with room for growth over today's size. */
 export const TOKEN_BUDGETS = {
-  llmsIndex: 2_800,
+  llmsIndex: 3_400,
   stackFile: 6_000,
   llmsFull: 190_000,
 } as const;

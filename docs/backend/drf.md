@@ -40,6 +40,8 @@ targets:
     options: { rules: seampact-consistent }
 ```
 
+The request is checked by [DRF serializers](../types-and-validation/drf-serializers.md); see [Types and validation](../types-and-validation/README.md).
+
 Then generate:
 
 ```sh
@@ -214,7 +216,7 @@ Set under `options:` on the target entry.
 
 | Option | Default | What it does |
 |---|---|---|
-| `rules` | `native` | `native` uses DRF's own field arguments (`min_length`, `max_length`, `min_value`, `max_value`). `seampact-consistent` gives the contract's exact checks, equal on every target. |
+| `rules` | `native` | `native` uses DRF's own field arguments (`min_length`, `max_length`, `min_value`, `max_value`). `seampact-consistent` gives the contract's exact checks, equal on every target. See [DRF serializers](../types-and-validation/drf-serializers.md#native-or-consistent-rules). |
 | `responses` | `strict` | `strict` answers 500 when your reply breaks the contract. `warn` logs it and sends the reply. |
 | `frameworkEtag` | `strip` | Drops an ETag or a 304 that the boundary did not write. `keep` leaves them. |
 | `catchAll` | `true` | Unknown paths under the api's base path answer the contract's 404. |

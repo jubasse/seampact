@@ -100,6 +100,8 @@ const GOLDEN_SOURCES: Record<string, string> = {
       "codegen-class-validator/rules-snapshots/native/index.ts.snap",
       "codegen-yup/rules-snapshots/native/index.ts.snap",
       "codegen-zod/rules-snapshots/native/index.ts.snap",
+      "codegen-ts/types-snapshots/index.ts.snap",
+      "codegen-fastify/own-validators-snapshots/validators/index.ts.snap",
       "codegen-angular/golden/fetch/service.ts.golden",
       "codegen-msw/golden/tasks/index.ts.golden",
       "codegen-vue/golden/fetch/queries.ts.golden",
