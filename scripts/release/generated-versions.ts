@@ -106,6 +106,17 @@ export const GOLDEN_TREES: readonly GoldenTree[] = [
     form: NODE_SNAPSHOT_HEADER,
     regenerate: `pnpm vitest run packages/targets/${target}/src/rules-modes.test.ts -u`,
   })),
+  {
+    directory: "packages/targets/codegen-ts/types-snapshots",
+    form: NODE_SNAPSHOT_HEADER,
+    regenerate: "pnpm vitest run packages/targets/codegen-ts/src/types-snapshot.test.ts -u",
+  },
+  {
+    directory: "packages/targets/codegen-fastify/own-validators-snapshots",
+    form: NODE_SNAPSHOT_HEADER,
+    regenerate:
+      "pnpm vitest run packages/targets/codegen-fastify/src/reference-boundary.test.ts -u",
+  },
   ...["codegen-angular", "codegen-msw", "codegen-vue"].map((target) => ({
     directory: `packages/targets/${target}/golden`,
     form: NODE_GOLDEN_HEADER,

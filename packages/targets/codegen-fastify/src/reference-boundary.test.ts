@@ -132,6 +132,15 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ]),
     );
     expect(routes).toContain('from "./validators/operations/input.js"');
+
+    // Kept as a reviewed snapshot that the user docs excerpt.
+    for (const file of outcome.files.filter((candidate) =>
+      candidate.path.startsWith("validators/"),
+    )) {
+      await expect(file.contents).toMatchFileSnapshot(
+        `../own-validators-snapshots/${file.path}.snap`,
+      );
+    }
   });
 
   test("writes no validators file when a validators link is given", async () => {

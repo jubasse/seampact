@@ -1,6 +1,6 @@
 # Fetch client
 
-The fetch client is a typed function per operation of your contract, sent with the platform `fetch`. The React, Vue, Angular, MSW and mobile pages all build on it.
+The fetch client is a typed function per operation of your contract, sent with the platform `fetch`. The React, Vue, Angular, MSW and mobile pages all build on it. The types come from [TypeScript types](../types-and-validation/typescript-types.md).
 
 ## Add the target
 
