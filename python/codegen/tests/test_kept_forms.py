@@ -136,7 +136,8 @@ def test_a_scope_id_read_from_a_source_other_than_the_path_is_refused_by_name_at
 
     scope_source_problems = [problem for problem in refused.value.problems if problem.code.startswith("scope.source")]
     assert [problem.code for problem in scope_source_problems] == ["scope.source.unsupported"]
-    assert f"/operations/{operations.index(get_task)}/scopes/0/source" in (scope_source_problems[0].where or "")
+    source_pointer = f"/operations/{operations.index(get_task)}/scopes/0/source"
+    assert scope_source_problems[0].where == f"entry 'server' {source_pointer} (operation 'getTask')"
 
 
 def test_a_signature_verified_by_the_application_is_refused_by_name(repository_root: Path) -> None:

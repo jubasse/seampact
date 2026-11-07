@@ -106,7 +106,7 @@ final class KeptFormsTest extends TestCase
 
                 self::assertCount(1, $scopeSourceProblems, "the scope source '{$source->in}'");
                 self::assertSame('scope.source.unsupported', $scopeSourceProblems[0]->code);
-                self::assertStringContainsString('/operations/0/scopes/0/source', (string) $scopeSourceProblems[0]->where);
+                self::assertSame("entry 'server' /operations/0/scopes/0/source (operation 'getTask')", $scopeSourceProblems[0]->where);
             }
         }
     }
