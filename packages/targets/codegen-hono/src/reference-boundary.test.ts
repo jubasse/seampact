@@ -14,6 +14,7 @@ import {
   readGoldenIr,
   referenceLinks,
   referenceServerOutput,
+  refusalOf,
   TYPE_CHECK_TIMEOUT_MILLISECONDS,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
@@ -215,7 +216,7 @@ describe("the forms 1.0 refuses", () => {
 
     expect(outcome).toMatchObject({
       status: "refused",
-      refusals: expect.arrayContaining([expect.objectContaining({ code: form.code })]),
+      refusals: expect.arrayContaining([expect.objectContaining(refusalOf(form))]),
     });
   });
 });

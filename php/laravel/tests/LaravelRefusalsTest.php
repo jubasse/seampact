@@ -105,6 +105,29 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused['scope.source.unsupported'] ?? '');
     }
 
+    public function testTheFormsOneZeroLeavesOutAreRefusedByNameThroughTheGenerator(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
+            $operation->upstream = ['billing'];
+            $operation->principalRequires = [(object) ['field' => 'verified', 'origin' => (object) ['layer' => 'api', 'pointer' => '/principalRequires/0']]];
+            $operation->bindings = [(object) [
+                'from' => (object) ['in' => 'body', 'name' => 'ownerId'],
+                'to' => (object) ['in' => 'principal', 'name' => 'profileId'],
+                'origin' => (object) ['layer' => 'api', 'pointer' => '/bindings/0'],
+            ]];
+            self::firstOf($operation->scopes)->source = (object) ['in' => 'resolver'];
+            self::object(self::object($document->identities)->user)->principal = (object) ['kind' => 'variants', 'variants' => (object) ['viewer' => 'UserPrincipal']];
+            $schemes = self::object($document->schemes);
+            $schemes->bearer = (object) ['id' => 'bearer', 'kind' => 'basic', 'origin' => self::object($schemes->bearer)->origin];
+        });
+
+        $refused = self::refused($document);
+
+        foreach (['upstream', 'principalRequires', 'bindings', 'scope.source', 'principal.variants', 'scheme.basic'] as $form) {
+            self::assertArrayHasKey("{$form}.unsupported", $refused);
+        }
+    }
+
     public function testAListResponseWaitsForAConsumerAfterOneZero(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {

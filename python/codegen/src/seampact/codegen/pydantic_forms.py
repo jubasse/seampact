@@ -4,6 +4,7 @@ than those the page class carries, and a sort key restricted by a right. The for
 by `seampact.codegen.kept_forms`, and unions and other schema forms by the shared Pydantic emitter."""
 
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
+from seampact.codegen.restricted_sort_keys import refuse_restricted_sort_keys
 from seampact.ir.model import (
     ContractIR,
     IdentityAccess,
@@ -49,12 +50,4 @@ def refuse_unserved_forms(ir: ContractIR, refusals: Refusals) -> None:
                 Delivery.CONSUMER,
             )
 
-        if operation.paging is not None:
-            for position, sort_key in enumerate(operation.paging.sort_keys):
-                if sort_key.right is not None:
-                    refusals.waiting(
-                        "paging.sortKey.right",
-                        f"The sort key '{sort_key.key}', restricted by a right",
-                        at.below("paging", "sortKeys", position),
-                        Delivery.CONSUMER,
-                    )
+        refuse_restricted_sort_keys(operation, at, refusals)

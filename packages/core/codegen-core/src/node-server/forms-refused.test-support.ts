@@ -7,6 +7,8 @@ import { readGoldenIr } from "./reference-project.test-support.js";
 export interface RefusedForm {
   readonly title: string;
   readonly code: string;
+  /** Where the refusal points, when the test asserts it: the operation and the IR pointer of the member. */
+  readonly at?: { readonly operation: string; readonly member: string };
   readonly change: (ir: ContractIR) => void;
 }
 
@@ -82,8 +84,40 @@ function identityAccessOf(operation: Operation): IdentityAccess {
   return access;
 }
 
+/** What a refusal of [form] holds: its code, and its operation and member when the form states them. */
+export function refusalOf(form: RefusedForm): Record<string, string> {
+  return { code: form.code, ...form.at };
+}
+
 /** The forms the Node servers refuse by name: each fails generation of the golden tasks api. */
 export const FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedForm[] = [
+  {
+    title: "a sort key restricted by a right",
+    code: "paging.sortKey.restricted.unsupported",
+    at: { operation: "listTasks", member: "/operations/11/paging" },
+    change: (ir) => {
+      const [sortKey] = operationOf(ir, "listTasks").paging?.sortKeys ?? [];
+
+      if (sortKey === undefined) throw new Error("the golden listTasks has no sort key");
+
+      sortKey.right = "tasks.read";
+    },
+  },
+  {
+    title: "an input field right below the top level",
+    code: "fieldRight.nestedPointer.unsupported",
+    at: { operation: "createTask", member: "/operations/2/fieldRights/2/pointer" },
+    change: (ir) => {
+      operationOf(ir, "createTask").fieldRights.push({
+        schema: "CreateTask",
+        pointer: "/details/budget",
+        right: "tasks.read",
+        direction: "input",
+        inputPolicy: "reject",
+        derivedFrom: { derivation: "fieldRight.restricted", from: [ACCESS_ORIGIN] },
+      });
+    },
+  },
   {
     title: "a principal requirement",
     code: "principalRequires.unsupported",
