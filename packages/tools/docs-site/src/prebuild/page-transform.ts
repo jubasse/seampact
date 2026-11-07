@@ -17,6 +17,8 @@ export interface BrokenLink {
 export interface TransformedPage {
   title: string;
   markdown: string;
+  /** The page without frontmatter or title heading, links rewritten. */
+  body: string;
   description: string | undefined;
   brokenLinks: BrokenLink[];
 }
@@ -92,9 +94,12 @@ export function transformPage(
     editUrl: `${REPOSITORY_URL}/edit/${REPOSITORY_BRANCH}/${sourceName}`,
   });
 
+  const body = applyEdits(source, edits);
+
   return {
     title: heading.title,
-    markdown: `${frontmatter}${applyEdits(source, edits)}`,
+    markdown: `${frontmatter}${body}`,
+    body,
     description,
     brokenLinks,
   };

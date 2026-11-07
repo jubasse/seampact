@@ -2,3 +2,6 @@
 site/content/docs/
 site/generated/
 .astro/
+# The agent files the prebuild writes: llms.txt, the stack files, the raw Markdown twins.
+public/llms*.txt
+public/md/

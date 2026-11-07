@@ -1,7 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { join, posix } from "node:path";
-import { DOCS_INDEX_SLUG, movedPageFor } from "./page-policy.ts";
-import { repositoryLink, SITE_BASE } from "./site-layout.ts";
+import { DOCS_INDEX_SLUG, isContributorPage, movedPageFor } from "./page-policy.ts";
+import { MARKDOWN_TWIN_URL, repositoryLink, SITE_BASE } from "./site-layout.ts";
 import type { SourcePage } from "./source-pages.ts";
 
 const URL_SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
@@ -19,6 +19,8 @@ export interface LinkContext {
   pagesByDocsPath: ReadonlyMap<string, SourcePage>;
   /** The docs/ folders served at their own route, with a README or a written index page. */
   indexedFolders: ReadonlySet<string>;
+  /** Links to published pages point at their raw Markdown twin instead of their site route. */
+  toMarkdownTwins?: boolean;
 }
 
 /**
@@ -72,7 +74,23 @@ export function resolveLinkTarget(
     : undefined;
 
   // A moved page is not served: a link to it goes straight to the page that holds the content.
-  if (moved !== undefined) return { kind: "rewritten", url: movedPageUrl(moved.target, hash) };
+  if (moved !== undefined) {
+    return {
+      kind: "rewritten",
+      url: context.toMarkdownTwins
+        ? movedPageTwinUrl(moved.target, hash)
+        : movedPageUrl(moved.target, hash),
+    };
+  }
+
+  if (context.toMarkdownTwins) {
+    const twinPath = markdownTwinPathFor(repositoryPath, isFolder, context);
+
+    if (twinPath !== undefined)
+      return { kind: "rewritten", url: `${MARKDOWN_TWIN_URL}${twinPath}${hash}` };
+
+    return { kind: "rewritten", url: `${repositoryLink(repositoryPath, isFolder)}${hash}` };
+  }
 
   const siteSlug = siteSlugFor(repositoryPath, isFolder, context);
 
@@ -107,6 +125,32 @@ function siteSlugFor(
   return context.pagesByDocsPath.get(docsPath)?.slug;
 }
 
+/**
+ * The twin path of a published user page or folder index; a contributor page has no twin. A folder
+ * without a README is written as `<folder>/index.md`.
+ */
+function markdownTwinPathFor(
+  repositoryPath: string,
+  isFolder: boolean,
+  context: LinkContext,
+): string | undefined {
+  if (repositoryPath === "docs") return "README.md";
+
+  if (!repositoryPath.startsWith(DOCS_FOLDER_PREFIX)) return undefined;
+
+  const docsPath = repositoryPath.slice(DOCS_FOLDER_PREFIX.length);
+
+  if (isContributorPage(isFolder ? `${docsPath}/` : docsPath)) return undefined;
+
+  if (!isFolder) return context.pagesByDocsPath.has(docsPath) ? docsPath : undefined;
+
+  if (!context.indexedFolders.has(docsPath)) return undefined;
+
+  const readme = posix.join(docsPath, "README.md");
+
+  return context.pagesByDocsPath.has(readme) ? readme : posix.join(docsPath, "index.md");
+}
+
 /** The absolute route of a page under the site base: `/seampact/backend/hono/`. */
 export function siteRoute(slug: string): string {
   return slug === "" ? SITE_BASE : `${SITE_BASE}${slug}/`;
@@ -117,4 +161,12 @@ function movedPageUrl(target: string, linkHash: string): string {
   const targetWithoutHash = target.replace(/#.*$/, "");
 
   return `${SITE_BASE}${linkHash === "" ? target : `${targetWithoutHash}${linkHash}`}`;
+}
+
+/** The twin of a moved page's target; an anchor the link wrote wins over the target's own. */
+function movedPageTwinUrl(target: string, linkHash: string): string {
+  const targetPath = target.replace(/#.*$/, "").replace(/\/$/, "");
+  const targetHash = target.slice(target.indexOf("#") === -1 ? target.length : target.indexOf("#"));
+
+  return `${MARKDOWN_TWIN_URL}${targetPath}.md${linkHash === "" ? targetHash : linkHash}`;
 }

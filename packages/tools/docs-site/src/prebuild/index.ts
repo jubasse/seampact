@@ -1,6 +1,7 @@
 // The prebuild of the docs site: copies docs/ into Starlight's content folder, adds the site-only home page, takes each page's title from its first heading, rewrites relative links to site routes or GitHub links, and writes the sidebar from the docs index.
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
+import { buildAgentFiles, writeAgentFiles } from "./agent-files.ts";
 import { folderIndexMarkdown, type ListedPage, pagesDirectlyIn } from "./folder-index.ts";
 import { lastCommitDate } from "./last-commit-date.ts";
 import type { LinkContext } from "./link-target.ts";
@@ -10,7 +11,7 @@ import { buildSidebar, type SidebarEntry } from "./sidebar.ts";
 import { type SiteLayout, siteLayoutFrom } from "./site-layout.ts";
 import { folderIndexDocsPath, listSourcePages } from "./source-pages.ts";
 
-export { LLMS_EXCLUDED_DOC_IDS, movedPageRedirects } from "./page-policy.ts";
+export { movedPageRedirects } from "./page-policy.ts";
 export type { SidebarEntry } from "./sidebar.ts";
 export { SITE_BASE, SITE_URL } from "./site-layout.ts";
 
@@ -21,6 +22,8 @@ export interface SiteContentSummary {
   pageCount: number;
   writtenFolderIndexes: string[];
   pagesOutsideSidebar: string[];
+  /** The agent files written to the static folder: llms.txt, the stack files, the twins. */
+  agentFileCount: number;
 }
 
 /** Regenerates the content folder and the sidebar from docs/; stops on any link the site cannot serve. */
@@ -86,9 +89,14 @@ export function buildSiteContent(packageRoot: string): SiteContentSummary {
 
   writeSiteContent(layout, writtenPages, sidebar.entries);
 
+  const agentFiles = buildAgentFiles(layout);
+
+  writeAgentFiles(layout, agentFiles);
+
   return {
     pageCount: writtenPages.size,
     writtenFolderIndexes: [...foldersWithoutReadme].sort(),
+    agentFileCount: agentFiles.size,
     pagesOutsideSidebar: listedPages
       .map((page) => page.slug)
       .filter(

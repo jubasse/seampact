@@ -3,6 +3,8 @@ import { join } from "node:path";
 /** Where the site lives on GitHub Pages and where links out of the site point. */
 export const SITE_URL = "https://jubasse.github.io";
 export const SITE_BASE = "/seampact/";
+/** Where the raw Markdown twin of every user page is served: `<twin url><docs path>`. */
+export const MARKDOWN_TWIN_URL = `${SITE_URL}${SITE_BASE}md/`;
 export const REPOSITORY_URL = "https://github.com/jubasse/seampact";
 export const REPOSITORY_BRANCH = "develop";
 
@@ -15,6 +17,8 @@ export interface SiteLayout {
   docsRoot: string;
   contentRoot: string;
   sidebarFile: string;
+  /** The site's static files: the prebuild writes the agent files here, beside the committed ones. */
+  publicRoot: string;
   /** The site-only home page, written by hand, not taken from docs/. */
   homePageFile: string;
 }
@@ -26,6 +30,7 @@ export function siteLayoutFrom(packageRoot: string): SiteLayout {
     repositoryRoot,
     docsRoot: join(repositoryRoot, "docs"),
     contentRoot: join(packageRoot, "site", "content", "docs"),
+    publicRoot: join(packageRoot, "public"),
     sidebarFile: join(packageRoot, "site", "generated", "sidebar.json"),
     homePageFile: join(packageRoot, "home", "index.mdx"),
   };
