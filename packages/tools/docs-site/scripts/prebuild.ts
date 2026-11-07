@@ -7,7 +7,7 @@ const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const summary = buildSiteContent(packageRoot);
 
 console.log(
-  `docs-site: ${summary.pageCount} pages written, folder indexes for ${summary.writtenFolderIndexes.join(", ")}.`,
+  `docs-site: ${summary.pageCount} pages written, folder indexes for ${summary.writtenFolderIndexes.join(", ")}, ${summary.agentFileCount} agent files.`,
 );
 
 if (summary.pagesOutsideSidebar.length > 0) {

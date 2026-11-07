@@ -15,6 +15,8 @@ const REPOSITORY_FILES = [
   "docs/getting-started/README.md",
   "docs/getting-started/01-install.md",
   "docs/grammar/07-routes.md",
+  "docs/adr/0001-x.md",
+  "docs/decisions.md",
 ];
 
 let repositoryRoot = "";
@@ -34,6 +36,7 @@ beforeAll(() => {
     repositoryRoot,
     pagesByDocsPath,
     indexedFolders: new Set(["backend", "getting-started", "grammar"]),
+    linkStyle: "site",
   };
 });
 
@@ -172,5 +175,38 @@ describe("transformPage", () => {
     expect(page.markdown).toContain("pagefind: false");
     expect(page.markdown).toContain("next: false");
     expect(page.markdown).toContain("(/seampact/features/check-in-ci/#set-the-levels)");
+  });
+});
+
+describe("transformPage for markdown twins", () => {
+  const twinContext = (): LinkContext => ({ ...context, linkStyle: "markdownTwin" });
+
+  it("points page, folder, moved page and docs root links at twins, anchors kept", () => {
+    const source = [
+      "# Hono",
+      "",
+      "[Install](../getting-started/01-install.md#node), [start](../getting-started/README.md),",
+      "[grammar](../grammar/), [home](../README.md), [checks](../configuration/checks.md#levels).",
+      "",
+    ].join("\n");
+
+    const body = transformPage(source, "backend/hono.md", twinContext()).body;
+
+    expect(body).toContain(
+      "(https://jubasse.github.io/seampact/md/getting-started/01-install.md#node)",
+    );
+    expect(body).toContain("(https://jubasse.github.io/seampact/md/getting-started/README.md)");
+    expect(body).toContain("(https://jubasse.github.io/seampact/md/grammar/index.md)");
+    expect(body).toContain("(https://jubasse.github.io/seampact/md/README.md)");
+    expect(body).toContain(
+      "(https://jubasse.github.io/seampact/md/features/check-in-ci.md#levels)",
+    );
+  });
+
+  it("keeps the text of a link to a contributor page and drops the link", () => {
+    const source = "# Hono\n\nSee the [ADRs](../adr/) and [decisions](../decisions.md).\n";
+    const body = transformPage(source, "backend/hono.md", twinContext()).body;
+
+    expect(body).toBe("See the ADRs and decisions.\n");
   });
 });

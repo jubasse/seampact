@@ -3,9 +3,8 @@ import { visit } from "unist-util-visit";
 import { type LinkContext, resolveLinkTarget } from "./link-target.ts";
 import { plainText } from "./markdown-tree.ts";
 import { DOCS_INDEX_SLUG } from "./page-policy.ts";
-import { SITE_BASE } from "./site-layout.ts";
+import { INDEX_DOCS_PATH, SITE_BASE } from "./site-layout.ts";
 
-const INDEX_DOCS_PATH = "README.md";
 const OPEN_SECTION_LABEL = "Getting started";
 const CONTRIBUTOR_SECTION_LABEL = "Design";
 const CONTRIBUTOR_SECTION_SIDEBAR_LABEL = "Design (for contributors)";
@@ -132,8 +131,8 @@ function sidebarEntryFor(
   if (target.kind === "broken")
     throw new Error(`docs/${INDEX_DOCS_PATH}:${link.line}: ${target.reason}.`);
 
-  if (target.kind === "unchanged" || !target.url.startsWith(SITE_BASE)) {
-    return { label: link.label, link: target.kind === "unchanged" ? link.url : target.url };
+  if (target.kind !== "rewritten" || !target.url.startsWith(SITE_BASE)) {
+    return { label: link.label, link: target.kind === "rewritten" ? target.url : link.url };
   }
 
   const slug = target.url.slice(SITE_BASE.length).replace(/#.*$/, "").replace(/\/$/, "");
