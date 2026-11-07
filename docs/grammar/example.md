@@ -441,7 +441,7 @@ api:
   version: 1
   kind: product
   maturity: provisional
-  summary: Notes whose routes answer several successes, cache directives, a sensitive field, a deprecation and If-Match.
+  summary: Notes whose routes answer several successes, cache directives, a sensitive field, a deprecation and If-Match, and memos deleted with a body-sourced version.
 
 conventions:
   cache:
@@ -469,6 +469,14 @@ schemas:
     required: [text]
     properties:
       text: { type: string, minLength: 1, maxLength: 500 }
+  MemoId: { type: string, format: uuid }
+  Memo:
+    type: object
+    required: [memoId, text, version]
+    properties:
+      memoId: MemoId
+      text: { type: string, minLength: 1, maxLength: 500 }
+      version: { type: integer, minimum: 1 }
   NoteKey:
     type: object
     required: [noteId, secret]
@@ -509,6 +517,14 @@ surfaces:
               method: get
               output: Note
               deprecated: { since: '2026-12-31', sunset: '2027-06-30', successor: getNote }
+      memos:
+        kind: collection
+        id: { memoId: MemoId }
+        item: Memo
+        concurrency: { version: body.expectedVersion, field: version }
+        ops:
+          get: {}
+          delete: {}
 ```
 
 ```yaml
