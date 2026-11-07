@@ -580,6 +580,35 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
       expect(app.calls.handled).toEqual([]);
     });
 
+    test.runIf(major === 7)(
+      "a gzip body under the route limit reaches the handler inflated",
+      async () => {
+        const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+          headers: { ...writeHeaders(), "content-encoding": "gzip" },
+          body: gzipSync(JSON.stringify({ title: "Plan" })),
+        });
+
+        expect(reply.status).toBe(201);
+        expect(app.calls.handled).toEqual(["createTask"]);
+      },
+    );
+
+    test.runIf(major === 6)(
+      "a gzip body under the route limit answers 415 and names the AdonisJS 6 limit",
+      async () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+          headers: { ...writeHeaders(), "content-encoding": "gzip" },
+          body: gzipSync(JSON.stringify({ title: "Plan" })),
+        });
+
+        expect(reply.status).toBe(415);
+        expect(JSON.parse(reply.text).code).toBe("api.unsupported_media_type");
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("AdonisJS 6 does not support"));
+        expect(app.calls.handled).toEqual([]);
+      },
+    );
+
     test("a body announced as gzip that is not a gzip stream, or a gzip stream cut before its end, answers 400", async () => {
       const whole = gzipSync(JSON.stringify({ title: "Plan" }));
       const notGzip = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {

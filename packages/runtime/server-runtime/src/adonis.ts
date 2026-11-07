@@ -153,6 +153,8 @@ const BODYPARSER_FIX =
   "Register @adonisjs/core/bodyparser_middleware as router middleware in start/kernel.ts and list the route's media type in the bodyparser config's json.types.";
 const ADONIS_FIXES: PlatformFixes = { rawBody: BODYPARSER_FIX, bodySize: BODYPARSER_FIX };
 const NO_RAW_BODY = new Uint8Array();
+// The routes already warned that AdonisJS 6 refuses their compressed bodies: one warning per route, not per request.
+const warnedCompressedBodyRoutes = new WeakSet<ContractRoute>();
 // The apis registered per router, so a second registration of one api in one app stops the boot.
 const registeredApis = new WeakMap<Router, Set<string>>();
 
@@ -183,20 +185,32 @@ function isCorruptCodingError(error: unknown): boolean {
 }
 
 // The bodyparser of AdonisJS 6 expects 0 bytes of any compressed body, so raw-body refuses the inflated body as a
-// size mismatch with a 400 instead of its limit; the inflated byte count it reports still shows a body over the route
-// limit.
-function isInflatedBodyOverLimit(route: ContractRoute, error: unknown): boolean {
+// size mismatch and drops it; only its inflated byte count is left. An uncompressed body has the expected length.
+function isAdonis6CompressedBodyRefusal(error: unknown): error is Error {
+  return (
+    error instanceof Error &&
+    Reflect.get(error, "type") === SIZE_MISMATCH_TYPE &&
+    Reflect.get(error, "expected") === 0
+  );
+}
+
+// Over the route limit once inflated, the body answers 413; under it, AdonisJS 6 cannot hand it on, so it answers 415.
+function adonis6CompressedBodyError(route: ContractRoute, error: Error): ContractError {
   const limitBytes = route.input?.limitBytes;
-
-  if (!(error instanceof Error) || limitBytes === undefined) return false;
-
   const receivedBytes = Reflect.get(error, "received");
 
-  return (
-    Reflect.get(error, "type") === SIZE_MISMATCH_TYPE &&
-    typeof receivedBytes === "number" &&
-    receivedBytes > limitBytes
-  );
+  if (limitBytes !== undefined && typeof receivedBytes === "number" && receivedBytes > limitBytes) {
+    return roleError(route, PAYLOAD_TOO_LARGE_ROLE, { limitBytes });
+  }
+
+  if (!warnedCompressedBodyRoutes.has(route)) {
+    warnedCompressedBodyRoutes.add(route);
+    runtimeLog.warn(
+      `seampact: '${route.id}' got a compressed request body, which AdonisJS 6 does not support, and answered 415; send the body uncompressed, or use AdonisJS 7.`,
+    );
+  }
+
+  return roleError(route, UNSUPPORTED_MEDIA_ROLE);
 }
 
 function isFrameworkDenial(error: unknown): boolean {
@@ -238,7 +252,9 @@ function preRoutingError(
 
   if (isClaimed(error)) return asContractError(route, error, ctx);
 
-  if (errorCode(error) === ENTITY_TOO_LARGE_CODE || isInflatedBodyOverLimit(route, error)) {
+  if (isAdonis6CompressedBodyRefusal(error)) return adonis6CompressedBodyError(route, error);
+
+  if (errorCode(error) === ENTITY_TOO_LARGE_CODE) {
     return roleError(route, PAYLOAD_TOO_LARGE_ROLE, { limitBytes: route.input?.limitBytes });
   }
 
