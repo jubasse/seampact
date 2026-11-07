@@ -53,3 +53,16 @@ With `@seampact/pack-spring`, a list in the `springPage` style gets a `Pageable`
 
 - A sort key reaches the `Pageable` as the item's Java member name: `sort=created_at,desc` sorts by `createdAt`. Name your entity's properties like the generated record's members.
 - A page number past Spring Data's range (a page index above 2147483647) gets a 400 at the page parameter.
+
+## Wire it in
+
+The plugin generates a configuration class, `NotesSeampactConfiguration`, in `<package>.spring`. Spring finds it by component scan when `package` sits under your application's package. Otherwise import it:
+
+```java
+@SpringBootApplication
+@Import(NotesSeampactConfiguration.class)
+class NotesApplication {
+}
+```
+
+Your controller and hook beans are found as usual. Your own routes stay beside the contract's. To serve the api under a prefix inside the app, set `mount: /api` on the target entry (see [Deploy](https://jubasse.github.io/seampact/backend/spring-boot/#deploy)).

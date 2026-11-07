@@ -82,3 +82,52 @@ return new ListNotesResponse200(new LengthAwarePaginator($notes->items(), $notes
 ```
 
 The page and the limit in the reply are the request's, never the paginator's own. Cursor paging answers a `CursorPaginator` the same way. Without the pack, a list returns the generated `<Operation>Page` class.
+
+## Wire it in
+
+List the generated provider in `bootstrap/providers.php`, and call the route macro once, in `bootstrap/app.php`:
+
+```php
+// bootstrap/providers.php
+return [
+    App\Generated\Notes\Laravel\NotesSeampactServiceProvider::class,
+];
+
+// bootstrap/app.php, with use Illuminate\Support\Facades\Route;
+->withRouting(
+    web: __DIR__.'/../routes/web.php',
+    then: fn () => Route::seampact('notes'),
+)
+```
+
+The provider puts the boundary first in the global middleware, before every other one. Do not prepend another global middleware.
+
+`Route::seampact('notes')` declares one route per operation, with the contract's method and path. Call it once, outside any route prefix. To serve the api under a prefix, set `mount: /api` on the target entry.
+
+- Avoid `routes/web.php`: its group adds sessions and cookies that an API client does not need. One exception: when the contract's cookie credential is Laravel's session (the `web` guard, a Sanctum SPA), call it inside the `web` group. That group starts the session and checks CSRF.
+- In `routes/api.php`, set `apiPrefix: ''` in `withRouting()`, since the contract's paths already hold their prefix.
+- Your own routes stay beside the contract's. The boot check refuses one that is not in the contract unless `frameworkRoutes` allow-lists it.
+
+### Route names and URLs
+
+Each route is named `seampact.<api>.<operation>`. Its parameters take the names of the input properties:
+
+```php
+route('seampact.notes.getNote', ['noteId' => $note->id]);
+```
+
+Each api also gets `NotesRouteNames`, one constant per route name, and `NotesUrls`, one method per operation that builds its path from typed parameters. `NotesUrls` returns the contract's path, encoded as the generated clients encode it:
+
+```php
+use App\Generated\Notes\Laravel\NotesRouteNames;
+use App\Generated\Notes\Laravel\NotesUrls;
+
+route(NotesRouteNames::GET_NOTE, ['noteId' => $note->id]);
+NotesUrls::getNote($note->id); // '/v1/notes/42'
+```
+
+`artefacts: { routeHelpers: false }` leaves both classes out.
+
+`$request->route('noteId')` works too. Each parameter matches one whole segment, whatever `Route::pattern()` your app sets. `Route::bind('noteId', ...)` needs the `SubstituteBindings` middleware. Routes declared in `withRouting(then:)` do not run it: add `Illuminate\Routing\Middleware\SubstituteBindings::class` to `middleware.<kind>` in the config.
+
+A parameter name over 32 characters gets a positional name instead (`{p2}` for the second parameter), since Laravel's router refuses longer ones.

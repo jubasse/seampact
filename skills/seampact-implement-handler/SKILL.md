@@ -13,7 +13,7 @@ The generated code fixes the interface. The handler is yours: it receives a chec
 3. Read the generated types of the operation in the generated folder (`outDir` in the config). Copy the names and signatures you find there; do not guess them. For one operation whole, with the file and line each part comes from, run `seampact explain <api>.<operationId>`.
 4. Write the handler beside your own code, not in the generated folder. Return one arm of the generated result, or a declared error. Never write a status code or a content type.
 5. Map your own models to the contract's type before you return them. A reply that breaks the contract answers 500.
-6. Check your work with the compiler of your language: `npx tsc -p .` on Node, `./gradlew build` on Spring Boot, `php -l` or PHPStan on PHP, mypy or pyright on Python. Fix your code until it passes. A new route may also need wiring: the reference shows it.
+6. Check your work with the compiler of your language: `npx tsc -p .` on Node, `./gradlew build` on Spring Boot, `php -l` or PHPStan on PHP, mypy or pyright on Python. Fix your code until it passes. A new resource, right or scope also needs wiring: the reference's "Wire it in" section shows it.
 
 ## Rules that save a round trip
 

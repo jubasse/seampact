@@ -1,6 +1,6 @@
 {
   "name": "@seampact/cli",
-  "description": "The seampact command: init, compile, check, lint, diff, generate, bundle and explain.",
+  "description": "The seampact command: init, compile, check, lint, diff, generate, bundle, explain and agents.",
   "version": "1.0.0",
   "repository": {
     "type": "git",

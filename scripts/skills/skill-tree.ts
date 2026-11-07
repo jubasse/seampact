@@ -4,7 +4,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { docsLinkRewriter } from "./docs-links.ts";
-import { hasSection, pageBody, pageTitle, sectionOf } from "./markdown-sections.ts";
+import { pageBody, pageTitle, sectionOf } from "./markdown-sections.ts";
 import { type ReferenceFile, type ReferenceSource, SKILL_REFERENCES } from "./references.ts";
 
 export const SKILLS_DIRECTORY = "skills";
@@ -52,14 +52,10 @@ function sourceText(
 ): string {
   const markdown = readFileSync(join(repositoryRoot, "docs", source.docsPath), "utf8");
   const title = pageTitle(markdown);
-  const wanted = [
-    ...(source.sections ?? []),
-    ...(source.optionalSections ?? []).filter((section) => hasSection(markdown, section)),
-  ];
   const body =
     source.sections === undefined
       ? pageBody(markdown)
-      : wanted.map((section) => sectionOf(markdown, section)).join("\n\n");
+      : source.sections.map((section) => sectionOf(markdown, section)).join("\n\n");
 
   return `# ${title}\n\nPage: ${rewriter.pageUrl(source.docsPath)}\n\n${rewriter.rewrite(body, source.docsPath)}`;
 }

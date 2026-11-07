@@ -7,7 +7,7 @@ description: Fix a seampact error or a failed seampact command. Use when output 
 
 Every error starts with a code and ends with `Fix:`. Read the message and its `Fix:` first.
 
-1. Copy the code. Search for it in this skill's references: `grep -rn "<code>" references/`. One table row gives the cause and the fix for your stack. The row is a table cell, so read the whole line.
+1. Copy the code. Search for it in the `references/` folder beside this SKILL.md, from the project root: `grep -rn "<code>" .agents/skills/seampact-fix-error/references/` (or the skills folder your tool uses). One table row gives the cause and the fix for your stack. The row is a table cell, so read the whole line.
 2. Sort the fix into one of three classes before you act.
    - Class A: the fix edits only YAML syntax, a typo in the config, or your own handler code. Apply it.
    - Class B: the fix removes an operation, a member, a header or an option, or changes what the API answers. Stop and ask the user: that changes what the API does, and a header or member you drop may carry real behavior, such as a version token.

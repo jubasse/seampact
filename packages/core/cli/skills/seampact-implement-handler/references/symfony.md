@@ -64,3 +64,46 @@ A field the contract does not declare never leaves the boundary, so an extra col
 ## Paging
 
 A paged list gets its page parameters in `$input->query` and a generated `<Operation>Page` class to return.
+
+## Wire it in
+
+List the api's bundle for every environment, and import its routes:
+
+```php
+// config/bundles.php
+App\Generated\Tasks\Symfony\TasksSeampactBundle::class => ['all' => true],
+```
+
+```yaml
+# config/routes/seampact.yaml
+seampact_tasks:
+    resource: tasks
+    type: seampact
+```
+
+The resource is the api key, the snake case of the api name (`tasks_service` for `tasksService`). Two apis are two bundles and two imports.
+
+The loader declares one route per operation, with the contract's method and path. Do not set a `prefix`, a `host`, `schemes` or a `condition` on the import: the boot check refuses them. To serve the api under a prefix, set `mount: /api` on the target entry.
+
+Your own routes stay beside the contract's. The boot check refuses one that is not in the contract unless `frameworkRoutes` allow-lists it.
+
+### Route names and URLs
+
+Each route is named `seampact.<api>.<operation>`. Its parameters take the names of the input properties, so the router builds a URL by name:
+
+```php
+// $urls is Symfony's UrlGeneratorInterface
+$urls->generate('seampact.tasks.getTask', ['taskId' => $task->id]);
+```
+
+Each api also gets `TasksRouteNames`, one constant per route name, and `TasksUrls`, one method per operation that builds its path from typed parameters. `TasksUrls` returns the contract's path, encoded as the generated clients encode it:
+
+```php
+use App\Generated\Tasks\Symfony\TasksRouteNames;
+use App\Generated\Tasks\Symfony\TasksUrls;
+
+$urls->generate(TasksRouteNames::GET_TASK, ['taskId' => $task->id]);
+TasksUrls::getTask($task->id); // '/v1/tasks/42'
+```
+
+`artefacts: { routeHelpers: false }` leaves both classes out. A parameter name over 32 characters gets a positional name instead (`{p2}` for the second parameter).

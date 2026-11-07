@@ -1,11 +1,9 @@
-import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import { docsLinkRewriter } from "./docs-links.ts";
 import { hasSection, pageBody, sectionOf } from "./markdown-sections.ts";
 import {
-  AGENTS_BLOCK_FILE,
   CLI_SKILLS_DIRECTORY,
   expectedSkillTree,
   GENERATE_COMMAND,
@@ -23,17 +21,6 @@ test.each([SKILLS_DIRECTORY, CLI_SKILLS_DIRECTORY])(
     expect(problems, `run \`${GENERATE_COMMAND}\``).toEqual([]);
   },
 );
-
-test("the agent page shows the AGENTS block the install command writes on Node", () => {
-  const template = readFileSync(join(REPO_ROOT, SKILLS_DIRECTORY, AGENTS_BLOCK_FILE), "utf8");
-  const block = template
-    .trim()
-    .replaceAll("{{seampact}}", "npx seampact")
-    .replaceAll("{{skillsDirectory}}", ".agents/skills");
-  const page = readFileSync(join(REPO_ROOT, "docs/getting-started/06-ai-agents.md"), "utf8");
-
-  expect(page).toContain(block);
-});
 
 test("a section runs to the next heading of the same level and ignores headings in code fences", () => {
   const markdown =

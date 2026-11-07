@@ -5,8 +5,6 @@ export interface ReferenceSource {
   readonly docsPath: string;
   /** Headings to copy, in order; the whole page body when absent. */
   readonly sections?: readonly string[];
-  /** Headings copied when the page has them. */
-  readonly optionalSections?: readonly string[];
 }
 
 export interface ReferenceFile {
@@ -77,11 +75,7 @@ export const SKILL_REFERENCES: readonly SkillReferences[] = [
     files: BACKEND_STACKS.map((stack) => ({
       path: `references/${stack}.md`,
       sources: [
-        {
-          docsPath: `backend/${stack}.md`,
-          sections: ["Write a handler"],
-          optionalSections: ["Paging"],
-        },
+        { docsPath: `backend/${stack}.md`, sections: ["Write a handler", "Paging", "Wire it in"] },
       ],
     })),
   },

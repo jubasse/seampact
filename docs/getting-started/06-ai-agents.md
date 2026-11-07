@@ -15,7 +15,7 @@ This does two things:
 
 Add `--claude` to copy the skills into `.claude/skills/` too, for Claude Code. Add `--skills-directory <dir>` to choose another folder.
 
-Run it again after you upgrade seampact. It rewrites only the block and the seampact skills.
+Run it again after you upgrade seampact. It rewrites only the block and the `seampact-` skill folders, so a skill an older version shipped goes away. It refuses to write through a symbolic link.
 
 ## Install them on other stacks
 
@@ -23,9 +23,11 @@ Run it again after you upgrade seampact. It rewrites only the block and the seam
 
 1. Copy the block below into `AGENTS.md`.
 2. Replace `npx seampact` with the line for your stack: see [commands per stack](../features/commands-per-stack.md). The compiler binary has no `generate` or `check`; use the build command of your stack there.
-3. Copy the [skills folder](https://github.com/jubasse/seampact/tree/develop/skills) into `.agents/skills/` (`.claude/skills/` for Claude Code, `.cursor/skills/` for Cursor).
+3. Copy the [skills folder](https://github.com/jubasse/seampact/tree/develop/skills) into `.agents/skills/`: Codex and Cursor read it. Claude Code reads `.claude/skills/`, so copy them there too.
 
 Each skill has a `references/` folder. You only need the file of your own stack. Delete the others if you like.
+
+An agent that reads the web can start from [llms.txt](https://jubasse.github.io/seampact/llms.txt): it lists the docs by task and links one file per stack, such as [llms-fastapi.txt](https://jubasse.github.io/seampact/llms-fastapi.txt).
 
 ## The block
 

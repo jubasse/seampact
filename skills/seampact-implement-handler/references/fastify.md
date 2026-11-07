@@ -61,3 +61,44 @@ A public operation has no `principal`, and an operation in no scope has no `scop
 ## Paging
 
 A list handler returns the items and the page facts your paging style names, for example `{ items, nextCursor }`. Read the client's cursor in `input.query.cursor`. See [Lists](https://jubasse.github.io/seampact/contract/05-lists/).
+
+## Wire it in
+
+Create `src/main.ts`.
+
+```ts
+import Fastify from "fastify";
+import * as NotesFastify from "./__generated__/server/notes/index.js";
+import { notesHandlers } from "./notes-handlers.js";
+import { notesHooks } from "./notes-hooks.js";
+
+const app = Fastify();
+
+NotesFastify.collectFrameworkRoutes(app);
+
+await app.register(NotesFastify.plugin, {
+  handlers: { NotesEndpoints: notesHandlers },
+  hooks: notesHooks(),
+});
+
+app.setNotFoundHandler((request, reply) => {
+  if (NotesFastify.renderPreRoutingError(request, reply)) return;
+
+  reply.code(404).send({ message: "not found" });
+});
+
+await app.listen({ port: 3000 });
+```
+
+- `collectFrameworkRoutes` must come right after `Fastify()`. The plugin uses it at start to find the routes you add outside the contract.
+- Register the plugin without a prefix. Another prefix is refused at boot.
+- The not-found handler answers unknown routes in the contract's error format.
+- For a public api, leave `hooks` out.
+
+Check the types.
+
+```sh
+npx tsc -p .
+```
+
+You see no output.

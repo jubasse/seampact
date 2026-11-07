@@ -61,9 +61,9 @@ Neither is part of the input, and the client cannot set them. Both print as `[re
 
 ## Paging
 
-A paged list reads its page parameters in `request.input.query`: for the `cursor` style, `request.input.query.cursor` and `request.input.query.limit`. An absent cursor is `None`. When the client sends no limit, the boundary fills in the style's `defaultLimit`; a limit above `maxLimit` is a 400 before your handler runs.
+A paged list reads `request.input.query.cursor` (`None` when absent) and `request.input.query.limit` for the `cursor` style. The boundary fills in `defaultLimit` and answers 400 to a limit above `maxLimit` (`overLimit: clamp` serves `maxLimit`). `query.limit` stays typed `int | None`: narrow it with `assert query.limit is not None`.
 
-Return the generated `<Operation>Page`. It holds `items`, the list of the contract's item type, and one attribute per page fact the style's response names, in snake case (`next_cursor` for the fact `nextCursor`). The boundary writes the body, the headers and the `Link` relations from them. Never build them yourself.
+Return the generated `<Operation>Page`: `items`, plus one snake-case attribute per page fact (`next_cursor` for `nextCursor`). The boundary writes the body, the headers and the `Link` relations.
 
 ```python
 async def list_notes(self, request: ListNotesRequest) -> ListNotesResult:
@@ -74,3 +74,33 @@ async def list_notes(self, request: ListNotesRequest) -> ListNotesResult:
 ```
 
 Import `ListNotesPage` from `generated.notes.operations` with the other generated names. See [Lists](https://jubasse.github.io/seampact/contract/05-lists/).
+
+## Wire it in
+
+`bind_notes()` is the one call your app makes. Make it last, after your own middleware and exception handlers.
+
+```python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from generated.notes.fastapi import NotesHandlerFactories, bind_notes
+
+app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["https://app.example.com"])
+
+bind_notes(
+    app,
+    handlers=NotesHandlerFactories(notes=notes_endpoints),
+    authenticate={"user": user_hook},
+    deciders={"notes.update": NotesDecider},
+    scope_resolvers={"workspace": WorkspaceResolver},
+    on_unexpected_error=NotesErrors,
+)
+```
+
+- It adds the contract's routes, the exception handlers and the boundary. The boundary is the outermost middleware of the app.
+- `handlers` has one factory per resource. `authenticate` has one hook factory per identity, `deciders` one per right or rule, `scope_resolvers` one per scope. Keys are the contract's names.
+- Add `CORSMiddleware` before `bind_notes()`. A preflight request passes the boundary and reaches it.
+- With two apis, call `bind_<api>()` twice.
+- To use an `APIRouter`, pass it as the first argument and add `app=app`. Call `bind_notes()` before `app.include_router(router)`. A prefix on that router is refused: use `mount` on the entry.
+
+Each route is named `seampact.<api>.<operationId>`, and its parameters take the input property names. `NotesRouteNames` holds the names and `NotesUrls` builds the paths. `artefacts: { routeHelpers: false }` leaves both out.

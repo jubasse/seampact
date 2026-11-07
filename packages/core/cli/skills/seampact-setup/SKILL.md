@@ -16,4 +16,4 @@ description: Install seampact, add a server or client target, add a new api, or 
 ## Stop and ask the user
 
 - before you replace a route that clients already call;
-- before you pick the framework, the validator or the paging style for a repo that gives no hint;
+- before you pick the framework, the validator or the paging style for a repo that gives no hint.

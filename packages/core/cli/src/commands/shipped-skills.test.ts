@@ -6,6 +6,7 @@ import { parse, stringify } from "yaml";
 import { type CliIo, EXIT_SUCCESS } from "../cli-io.js";
 import { isRecord } from "../is-record.js";
 import { runCli } from "../run-cli.js";
+import { renderAgentsBlock } from "./agents-block.js";
 import { removeTemporaryDirectories, trackTemporaryDirectory } from "./fake-app.test-support.js";
 
 // The skills and the AGENTS block the package ships must stay true: sized for a small context, naming commands and
@@ -15,6 +16,7 @@ afterEach(removeTemporaryDirectories);
 
 const SKILLS_ROOT = new URL("../../skills/", import.meta.url);
 const TROUBLESHOOTING_ROOT = new URL("../../../../../docs/troubleshooting/", import.meta.url);
+const AGENTS_PAGE = new URL("../../../../../docs/getting-started/06-ai-agents.md", import.meta.url);
 const BYTES_PER_TOKEN = 4;
 const SKILL_TOKEN_RANGE = { min: 500, max: 900 };
 const AGENTS_BLOCK_MAX_LINES = 30;
@@ -80,19 +82,40 @@ test("every reference a skill names exists in its folder", () => {
   }
 });
 
-test("every seampact command a skill names is a command of the CLI", async () => {
+test("the agent page shows the AGENTS block the install command writes on Node", () => {
+  const block = renderAgentsBlock(agentsBlock, {
+    seampact: "npx seampact",
+    skillsDirectory: ".agents/skills",
+  });
+
+  expect(readFileSync(AGENTS_PAGE, "utf8")).toContain(block);
+});
+
+// A command span: `npx seampact diff --against <baseline>`, or an unprefixed `diff --against x` once `diff` is known.
+const PREFIXED_COMMAND = /`(?:npx seampact|\{\{seampact\}\}|seampact) (\w+)([^`]*)`/g;
+const UNPREFIXED_COMMAND = /`(\w+)( --[^`]*)`/g;
+
+test("every seampact command and flag a skill names is in the CLI usage", async () => {
   const usage = (await run(tmpdir(), ["help"])).out;
-  const commands = new Set([...usage.matchAll(/^ {2}(\w+) /gm)].map((match) => match[1]));
-  const named = everyShippedText.flatMap((text) =>
-    [...text.matchAll(/`(?:npx seampact|\{\{seampact\}\}|seampact) (\w+)/g)].map(
-      (match) => match[1],
-    ),
+  const usageLineOf = new Map(
+    [...usage.matchAll(/^ {2}(\w+) (.*)$/gm)].map((match) => [match[1], match[2] ?? ""]),
   );
-  const commandWords = named;
+  const prefixed = everyShippedText.flatMap((text) => [...text.matchAll(PREFIXED_COMMAND)]);
+  const unprefixed = everyShippedText
+    .flatMap((text) => [...text.matchAll(UNPREFIXED_COMMAND)])
+    .filter((match) => usageLineOf.has(match[1] ?? ""));
+  const named = [...prefixed, ...unprefixed];
 
-  expect(commandWords.length).toBeGreaterThan(5);
+  expect(prefixed.length).toBeGreaterThan(5);
+  expect(unprefixed.length).toBeGreaterThan(0);
 
-  for (const word of commandWords) expect(commands.has(word)).toBe(true);
+  for (const [span, command = "", rest = ""] of named) {
+    const usageLine = usageLineOf.get(command);
+
+    expect(usageLine, span).toBeDefined();
+
+    for (const [flag] of rest.matchAll(/--[\w-]+/g)) expect(usageLine, span).toContain(flag);
+  }
 });
 
 test("every error code a skill names is in the troubleshooting pages", () => {

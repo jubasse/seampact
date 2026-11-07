@@ -61,9 +61,9 @@ Neither is part of the input, and the client cannot set them. Both print as `[re
 
 ## Paging
 
-A paged list reads its page parameters in `request.input.query`: for the `cursor` style, `request.input.query.cursor` and `request.input.query.limit`. An absent cursor is `None`. When the client sends no limit, the boundary fills in the style's `defaultLimit`; a limit above `maxLimit` is a 400 before your handler runs.
+A paged list reads `request.input.query.cursor` (`None` when absent) and `request.input.query.limit` for the `cursor` style. The boundary fills in `defaultLimit` and answers 400 to a limit above `maxLimit` (`overLimit: clamp` serves `maxLimit`). `query.limit` stays typed `int | None`: narrow it with `assert query.limit is not None`.
 
-Return the generated `<Operation>Page`. It holds `items`, the list of the contract's item type, and one attribute per page fact the style's response names, in snake case (`next_cursor` for the fact `nextCursor`). The boundary writes the body, the headers and the `Link` relations from them. Never build them yourself.
+Return the generated `<Operation>Page`: `items`, plus one snake-case attribute per page fact (`next_cursor` for `nextCursor`). The boundary writes the body, the headers and the `Link` relations.
 
 ```python
 def list_products(self, request: ListProductsRequest) -> ListProductsResult:
@@ -74,3 +74,51 @@ def list_products(self, request: ListProductsRequest) -> ListProductsResult:
 ```
 
 Import `ListProductsPage` from `generated.shop.operations` with the other generated names. See [Lists](https://jubasse.github.io/seampact/contract/05-lists/).
+
+## Wire it in
+
+Two files of your Django project.
+
+```python
+# settings.py
+INSTALLED_APPS = [
+    "django.contrib.contenttypes",
+    "django.contrib.auth",
+    "rest_framework",
+    "seampact.django",
+]
+
+MIDDLEWARE = [
+    "generated.shop.django.ShopBoundary",
+    "django.middleware.common.CommonMiddleware",
+]
+
+SEAMPACT = {
+    "shop": {
+        "handlers": {"products": "shop.api.products_handlers"},
+        "authenticate": {"user": "shop.hooks.user_hook"},
+        "deciders": {"products.update": "shop.hooks.product_decider"},
+        "scope_resolvers": {"store": "shop.hooks.store_resolver"},
+        "on_unexpected_error": "shop.hooks.unexpected_errors",
+    },
+}
+```
+
+```python
+# urls.py
+urlpatterns = [
+    path("", include("generated.shop.urls")),
+    path("admin/", admin.site.urls),
+]
+```
+
+- The boundary goes first in `MIDDLEWARE`. Another seampact boundary may sit before it, for a second api.
+- `handlers` has one entry per resource. `authenticate` has one per identity, `deciders` one per right or rule, `scope_resolvers` one per scope. Keys are the contract's names. Values are dotted paths to a factory.
+- A factory is called once per request with the Django `HttpRequest`. Its return value is your handler class or hook object.
+- Other keys: `idempotency_store`, `public_origin`, `responses`, `access` and `operations` (per operation, `responses`). A key that is not listed is refused at boot.
+- Include the patterns at `""`, outside any `include()` prefix and `i18n_patterns()`. To serve the api under a prefix, set `mount` on the entry.
+- With two apis, add two boundaries, two includes and two keys of `SEAMPACT`.
+
+Each route is named `seampact.<api>.<operationId>` after the first operation of its path. `ShopRouteNames` and `ShopUrls` build the names and the paths. `artefacts: { routeHelpers: false }` leaves both out.
+
+A trailing slash on a contract path answers the contract's 404, so `APPEND_SLASH` never redirects a contract request.

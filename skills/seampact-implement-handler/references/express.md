@@ -61,3 +61,35 @@ A public operation has no `principal`, and an operation in no scope has no `scop
 ## Paging
 
 A list handler returns the items and the page facts your paging style names, for example `{ items, nextCursor }`. Read the client's cursor in `input.query.cursor`. See [Lists](https://jubasse.github.io/seampact/contract/05-lists/).
+
+## Wire it in
+
+Create `src/main.ts`. Mount the router at the root of the app, without a path: the contract paths already start with `/v1`.
+
+```ts
+import express from "express";
+import * as NotesExpress from "./__generated__/server/notes/index.js";
+import { notesHandlers } from "./notes-handlers.js";
+import { notesHooks } from "./notes-hooks.js";
+
+const app = express();
+
+app.use(NotesExpress.router({ handlers: { NotesEndpoints: notesHandlers }, hooks: notesHooks() }));
+app.use(NotesExpress.preRoutingErrorHandler);
+
+NotesExpress.checkFrameworkRoutes(app);
+
+app.listen(3000);
+```
+
+- `router` parses JSON itself, so bad JSON and unknown routes answer in the contract's error format. For a public api, leave `hooks` out.
+- `preRoutingErrorHandler` does the same for errors raised by middleware you mount before the router, such as `express.json()` or a rate limiter. A JSON parser you mount before the router needs `verify: NotesExpress.keepRawBody` and `limit: NotesExpress.LARGEST_BODY_LIMIT`.
+- `checkFrameworkRoutes` checks the routes you add outside the contract. Express has no start hook: call it once every route is mounted, before `listen`. It throws and names the route it refuses.
+
+Check the types.
+
+```sh
+npx tsc -p .
+```
+
+You see no output.
