@@ -21,7 +21,7 @@ def read_boot_check_hooks(value: JsonValue, at: IrPlace, refusals: Refusals) -> 
         return True
 
     if value == _HOOKS_WARN:
-        refusals.waiting(
+        refusals.waiting_artefact_switch(
             f"artefacts.{_NAME}.{_HOOKS_WARN}",
             "'bootCheck.hooks: warn' (start with hooks missing)",
             at,

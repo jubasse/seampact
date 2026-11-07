@@ -10,9 +10,10 @@ const TROUBLESHOOTING_DIRECTORY = join(REPOSITORY_ROOT, "docs/troubleshooting");
 const GENERATE_PAGE = "generate.md";
 const UNSUPPORTED_SUFFIX = ".unsupported";
 
-// The sources whose refusals reach `generate`: codegen-core and every Node target.
+// The sources whose refusals reach `generate`: codegen-core, the OpenAPI emitter and every Node target.
 const REFUSING_SOURCE_DIRECTORIES = [
   join(REPOSITORY_ROOT, "packages/core/codegen-core/src"),
+  join(REPOSITORY_ROOT, "packages/core/openapi/src"),
   ...readdirSync(join(REPOSITORY_ROOT, "packages/targets")).map((target) =>
     join(REPOSITORY_ROOT, "packages/targets", target, "src"),
   ),
@@ -23,6 +24,9 @@ const GENERATED_CODE_ISSUE_CODES = new Set(["custom"]);
 
 const LITERAL_CODE = /code: "([^"]+)"/g;
 const INCONSISTENT_IR_CODE = /refuseInconsistentIr\(\s*"([^"]+)"/g;
+// The OpenAPI emitter names its inconsistent-IR codes without their `openapi.` prefix.
+const OPENAPI_INCONSISTENT_IR_CODE = /refuseInconsistent\(\s*context,\s*"([^"]+)"/g;
+const OPENAPI_CODE_PREFIX = "openapi.";
 const ROW_CODE = /`([^`]+)`/g;
 
 interface TroubleshootingRow {
@@ -123,9 +127,15 @@ function emittedLiteralCodes(): string[] {
     sourceFiles(directory).flatMap((file) => {
       const source = readFileSync(file, "utf8");
 
-      return [...source.matchAll(LITERAL_CODE), ...source.matchAll(INCONSISTENT_IR_CODE)].map(
-        (match) => match[1] ?? "",
+      const wholeCodes = [
+        ...source.matchAll(LITERAL_CODE),
+        ...source.matchAll(INCONSISTENT_IR_CODE),
+      ].map((match) => match[1] ?? "");
+      const openapiCodes = [...source.matchAll(OPENAPI_INCONSISTENT_IR_CODE)].map(
+        (match) => `${OPENAPI_CODE_PREFIX}${match[1] ?? ""}`,
       );
+
+      return [...wholeCodes, ...openapiCodes];
     }),
   );
 

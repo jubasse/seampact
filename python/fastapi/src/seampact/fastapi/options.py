@@ -236,6 +236,8 @@ def _read_artefacts(artefacts: Mapping[str, JsonValue], refusals: Refusals) -> b
                 at,
             )
         elif key == _ACCESS_HOOKS and value is False:
-            refusals.waiting("artefacts.accessHooks", "The artefact switch 'accessHooks: false'", at, Delivery.CONSUMER)
+            refusals.waiting_artefact_switch(
+                "artefacts.accessHooks", "The artefact switch 'accessHooks: false'", at, Delivery.CONSUMER
+            )
 
     return artefacts.get(_ROUTE_HELPERS, True) is not False

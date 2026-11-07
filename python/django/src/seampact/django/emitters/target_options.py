@@ -132,7 +132,7 @@ def _artefacts(
         at = IrPlace(f"/artefacts/{key}")
 
         if key == _ACCESS_HOOKS and value is False:
-            refusals.waiting(
+            refusals.waiting_artefact_switch(
                 "artefacts.accessHooks", "Native access instead of hooks ('accessHooks: false')", at, Delivery.CONSUMER
             )
         elif key not in (_ROUTE_HELPERS, _BOOT_CHECK, _ACCESS_HOOKS) or not _is_switch(key, value):

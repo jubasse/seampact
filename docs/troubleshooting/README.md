@@ -13,7 +13,7 @@ api.yaml:5:13: error seampact/load/yaml-boolean: ...
 A `generate` refusal starts with the contract line when it has one, and ends with the docs section of its code:
 
 ```text
-api.yaml:42: paging.sort.style.unsupported: entry 'server', api 'notes': ... Fix: Ask the user first: ... Docs: https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers
+api.yaml:10: paging.sort.style.unsupported: entry 'server', api 'notes': ... Fix: Ask the user first: ... Docs: https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers
 ```
 
 A fix that starts with "Ask the user first:" changes the api: ask before you apply it.

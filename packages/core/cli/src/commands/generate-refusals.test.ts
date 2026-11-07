@@ -319,3 +319,35 @@ test("prints a target's refusal at its contract file and line, with its docs", a
     "options.unknown: entry 'server', api 'tasks': The option 'x' is unknown. Fix: Remove 'x'. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/",
   );
 });
+
+test("prints a refusal of a bundle source with its IR member and no contract line", async () => {
+  const app = makeApp(
+    "sources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks }\n",
+    [
+      {
+        name: "fake-server",
+        refusals: [
+          {
+            code: "access.optional.unsupported",
+            message: "Optional authentication is not generated yet.",
+            fix: "Ask the user first: make the access required or public.",
+            member: "/operations/0/access",
+          },
+        ],
+      },
+    ],
+  );
+  const integrity = installReferenceBundle(app);
+
+  writeFileSync(
+    join(app, "seampact.config.yaml"),
+    `sources:\n  contract: { package: '${REFERENCE_BUNDLE.name}', version: ${REFERENCE_BUNDLE.version}, integrity: '${integrity}' }\ntargets:\n  - { id: server, use: fake-server, api: tasks }\n`,
+  );
+
+  const { exitCode, output } = await generateErrors(app);
+
+  expect(exitCode).toBe(EXIT_REFUSED);
+  expect(output.trimEnd()).toMatch(
+    /^access\.optional\.unsupported: entry 'server', api 'tasks': Optional authentication is not generated yet\. \(IR member '\/operations\/0\/access'\) Fix: /,
+  );
+});

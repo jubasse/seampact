@@ -52,7 +52,7 @@ export const NOT_GENERATED_FIXES = {
   },
   "property.codeName": {
     section: everyNodeTarget,
-    fix: "Remove the property's `codeName`: the generated name then follows the wire name.",
+    fix: "Ask the user first: remove the property's `codeName`. The generated name then follows the wire name, which renames the code a Spring Boot, PHP or Python target generates from the same contract.",
   },
   "property.restrictedTo.required": {
     section: everyNodeTarget,
@@ -60,7 +60,7 @@ export const NOT_GENERATED_FIXES = {
   },
   "enum.codeNames": {
     section: everyNodeTarget,
-    fix: "Remove the enum's `codeNames`: the generated names then follow the values.",
+    fix: "Ask the user first: remove the enum's `codeNames`. The generated names then follow the values, which renames the code a Spring Boot, PHP or Python target generates from the same contract.",
   },
   "enum.fallback": {
     section: everyNodeTarget,
@@ -96,7 +96,7 @@ export const NOT_GENERATED_FIXES = {
   },
   "scalar.bound.inexact": {
     section: everyNodeTarget,
-    fix: "Ask the user first: write the bound as a number JavaScript holds exactly, or remove the operations that use it from `operations`.",
+    fix: "Ask the user first: use 0 or a bound of at least 0.000001 in magnitude (change the unit if needed), or remove the operations that use it from `operations`.",
   },
   "param.default": {
     section: everyNodeTarget,
@@ -124,7 +124,7 @@ export const NOT_GENERATED_FIXES = {
   },
   "wire.outputEnums.open": {
     section: everyNodeTarget,
-    fix: "Ask the user first: set `conventions.wire.outputEnums` to `enum`, or use another target.",
+    fix: "Ask the user first: set `conventions.outputEnums` to `enum`, or use another target.",
   },
   "wire.urls.absolute": {
     section: everyNodeTarget,
@@ -146,7 +146,7 @@ export const NOT_GENERATED_FIXES = {
   },
   "input.union.headerTag": {
     section: clients,
-    fix: "Ask the user first: tag the body's variants with a body member instead of a header, or remove the operation from `operations`.",
+    fix: "Remove the operation from the client entry's `operations`: no Node target generates a union yet.",
   },
   "error.params.shape": {
     section: clients,
@@ -212,7 +212,7 @@ export const NOT_GENERATED_FIXES = {
   },
   "paging.sort.style": {
     section: nodeServers,
-    fix: "Ask the user first: set the paging style's sort to `style: signed`, drop `sortable` from the list, or remove the operation from `operations`.",
+    fix: "Ask the user first: set the paging style's sort to `style: signed`, or remove the operations that use the style from `operations`.",
   },
   "paging.sort.in": {
     section: nodeServers,
@@ -248,7 +248,7 @@ export const NOT_GENERATED_FIXES = {
   },
   "output.schema": {
     section: nodeServers,
-    fix: "Ask the user first: make the output schema an object or an enum, or remove the operations that return it from `operations`.",
+    fix: "Ask the user first: make the output schema an object, or remove the operations that return it from `operations`.",
   },
   "format.several": {
     section: nodeServers,
@@ -296,7 +296,7 @@ export const NOT_GENERATED_FIXES = {
   },
   principalRequires: {
     section: nodeServers,
-    fix: "Ask the user first: remove the operation's `principalRequires`, or the operation from `operations`.",
+    fix: "Ask the user first: remove the operation's `principal: { requires: [...] }`, or the operation from `operations`.",
   },
   bindings: {
     section: nodeServers,
@@ -308,7 +308,7 @@ export const NOT_GENERATED_FIXES = {
   },
   features: {
     section: nodeServers,
-    fix: "Ask the user first: remove the operation's `features`, or the operation from `operations`.",
+    fix: "Compile the contract with the seampact release this target reads: a newer compiler wrote this IR.",
   },
   extensions: {
     section: nodeServers,
@@ -378,7 +378,7 @@ export const NOT_GENERATED_FIXES = {
   },
   "identity.response.header": {
     section: everyServer,
-    fix: "Ask the user first: declare a deadline, trace or actor header `in: request`. A `versionToken` has no other fix than removing it, which drops optimistic concurrency.",
+    fix: "Ask the user first: remove the operations under that identity from `operations`. For a header other than a `versionToken`, you may instead declare it `in: request`.",
   },
   "right.extensions": {
     section: everyServer,
@@ -436,7 +436,7 @@ export const NOT_GENERATED_FIXES = {
   },
   "openapi.example.request": {
     section: openapiDocuments,
-    fix: "Remove the request example, or give the operation an input: the example changes only the document.",
+    fix: "Remove the request example: it changes only the document.",
   },
   "openapi.input.brackets": {
     section: openapiDocuments,
@@ -448,23 +448,23 @@ export const NOT_GENERATED_FIXES = {
   },
   "openapi.template.array": {
     section: openapiDocuments,
-    fix: "Ask the user first: use a format whose templates the OpenAPI document can describe, or turn the OpenAPI document off for this api.",
+    fix: "Ask the user first: write the list with `$each` instead of an `array` template, or leave the api out of the app's `openapi` map (`openapi: none` writes no document).",
   },
   "openapi.template.each": {
     section: openapiDocuments,
-    fix: "Ask the user first: use a format whose templates the OpenAPI document can describe, or turn the OpenAPI document off for this api.",
+    fix: "Ask the user first: make `$each` read a list slot and write its `$as`, or leave the api out of the app's `openapi` map (`openapi: none` writes no document).",
   },
   "openapi.template.slot-path": {
     section: openapiDocuments,
-    fix: "Ask the user first: use a format whose templates the OpenAPI document can describe, or turn the OpenAPI document off for this api.",
+    fix: "Ask the user first: write the whole slot (`$x`) instead of one of its members (`$x.y`), or leave the api out of the app's `openapi` map (`openapi: none` writes no document).",
   },
   "openapi.template.slot": {
     section: openapiDocuments,
-    fix: "Ask the user first: use a format whose templates the OpenAPI document can describe, or turn the OpenAPI document off for this api.",
+    fix: "Ask the user first: use a slot the format defines in that place, or leave the api out of the app's `openapi` map (`openapi: none` writes no document).",
   },
   "openapi.template.member-name": {
     section: openapiDocuments,
-    fix: "Ask the user first: use a format whose templates the OpenAPI document can describe, or turn the OpenAPI document off for this api.",
+    fix: "Ask the user first: give the member a fixed name instead of a slot, or leave the api out of the app's `openapi` map (`openapi: none` writes no document).",
   },
   "openapi.template.member-repeated": {
     section: openapiDocuments,
