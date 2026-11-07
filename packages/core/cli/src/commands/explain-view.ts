@@ -1,5 +1,6 @@
 import type { ContractIR, Operation, SourceMap } from "@seampact/spec/ir";
 import { isRecord } from "../is-record.js";
+import { originPosition } from "./contract-position.js";
 
 // The text `seampact explain` prints (ADR 0002 section 16): one operation of the IR as YAML in the grammar's words,
 // each line commented with the derivation that produced it and the file and line of the declaration that caused
@@ -436,9 +437,9 @@ function originText(origin: unknown, locations: Locations): string {
   if (origin.layer === "core") return "built in";
 
   const key = `${String(origin.layer)}#${String(origin.pointer)}`;
-  const location = origin.api === undefined ? locations[key] : undefined;
+  const position = originPosition(origin, locations);
 
-  if (location !== undefined) return `${location.file}:${location.line}`;
+  if (position !== undefined) return position;
 
   return origin.api === undefined ? key : `api ${String(origin.api)}, ${key}`;
 }

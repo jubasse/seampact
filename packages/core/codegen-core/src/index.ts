@@ -120,6 +120,15 @@ export type {
 } from "./native-docs-document.js";
 export { type NoOptions, parseNoOptions } from "./no-options.js";
 export {
+  GENERATE_TROUBLESHOOTING_SECTIONS,
+  GENERATE_TROUBLESHOOTING_URL,
+  type GenerateTroubleshootingSection,
+  LINK_TROUBLESHOOTING_URL,
+  NOT_GENERATED_FIXES,
+  type NotGeneratedForm,
+  troubleshootingUrl,
+} from "./not-generated-fixes.js";
+export {
   declaredTypeIdentifier,
   ExportNames,
   requireName,

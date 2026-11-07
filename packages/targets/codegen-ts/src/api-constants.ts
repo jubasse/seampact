@@ -99,7 +99,7 @@ function statusWithoutReasonPhrase(status: number, location: IrLocation | undefi
   return {
     code: "status.reasonPhrase.unknown",
     message: `The status ${status} of ${location?.member ?? "the api"} has no reason phrase in the IANA HTTP status code registry, so the Status constant cannot name it.`,
-    fix: "Answer with a registered HTTP status.",
+    fix: "Ask the user first: answer with a registered HTTP status.",
     member: location?.member ?? "",
     ...(location?.operation === undefined ? {} : { operation: location.operation }),
   };
@@ -144,7 +144,7 @@ function errorCodeKeyClash(
   return {
     code: "errorCode.key.duplicate",
     message: `The error codes '${clashingCode}' and '${code}' both give the key '${key}' of the ErrorCode constant.`,
-    fix: "Rename one of the two codes so that their words differ.",
+    fix: "Ask the user first: rename one of the two codes so that their words differ.",
     member: location.member,
   };
 }

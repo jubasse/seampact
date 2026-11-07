@@ -40,7 +40,7 @@ export function nativeDocsDocumentOf(
   if (emitted.status === "refused") {
     return {
       status: "refused",
-      problems: emitted.refusals.map((refusal) => problemFromRefusal(refusal, where)),
+      problems: emitted.refusals.map((refusal) => problemFromRefusal(refusal, where, plannedApi)),
     };
   }
 

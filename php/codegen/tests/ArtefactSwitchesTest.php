@@ -52,6 +52,22 @@ final class ArtefactSwitchesTest extends TestCase
         self::assertStringContainsString('it waits for an app that needs it', $refused['artefacts.bootCheck.hooks.warn.unsupported'] ?? '');
     }
 
+    public function testAWaitingSwitchIsFixedInTheEntryArtefactsNotItsOperations(): void
+    {
+        $refusals = new Refusals('server', 'laravel', 'seampact/laravel');
+        (new ArtefactSwitches('laravel', null, 'laravel-4'))->read((object) ['bootCheck' => (object) ['hooks' => 'warn']], $refusals);
+
+        try {
+            $refusals->throwIfAny();
+        } catch (GenerationRefusedException $refused) {
+            self::assertSame([Refusals::ARTEFACT_SWITCH_FIX], array_map(static fn (ConfigProblem $problem): string => $problem->fix, $refused->problems));
+
+            return;
+        }
+
+        self::fail('Nothing was refused.');
+    }
+
     public function testTheBootCheckSwitchesFollowTheEntry(): void
     {
         self::assertSame(['hooks' => true, 'handlers' => true, 'frameworkRoutes' => true], BootCheckSwitches::of(new \stdClass())?->toArray());

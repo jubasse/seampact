@@ -59,19 +59,25 @@ final readonly class ArtefactSwitches
         $release = $artefact === self::ACCESS_HOOKS && $value === false ? $this->nativeAccessRelease : $this->boundaryRelease;
         $switch = "The artefact switch '{$artefact}: " . json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "'";
         if ($release instanceof Delivery) {
-            $refusals->waiting("artefacts.{$artefact}", $switch, $at, $release);
+            $refusals->waitingWithFix("artefacts.{$artefact}", $switch, $at, $release, Refusals::ARTEFACT_SWITCH_FIX);
 
             return;
         }
 
         if ($release !== null) {
-            $refusals->waitingForRelease("artefacts.{$artefact}", $switch, $at, $release);
+            $refusals->waitingForRelease("artefacts.{$artefact}", $switch, $at, $release, Refusals::ARTEFACT_SWITCH_FIX);
 
             return;
         }
 
         if ($artefact === self::BOOT_CHECK && $value instanceof \stdClass && ($value->hooks ?? null) === self::HOOKS_WARN) {
-            $refusals->waiting('artefacts.bootCheck.hooks.warn', "'bootCheck.hooks: warn' (start with hooks missing)", $at->below('hooks'), Delivery::Consumer);
+            $refusals->waitingWithFix(
+                'artefacts.bootCheck.hooks.warn',
+                "'bootCheck.hooks: warn' (start with hooks missing)",
+                $at->below('hooks'),
+                Delivery::Consumer,
+                Refusals::ARTEFACT_SWITCH_FIX,
+            );
         }
     }
 }

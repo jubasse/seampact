@@ -12,6 +12,7 @@ import {
   refuseNotGeneratedYet,
   refuseUnknownValueAt,
 } from "../located-refusals.js";
+import type { NotGeneratedForm } from "../not-generated-fixes.js";
 import type { Refusal } from "../refusal.js";
 
 // Where the client finds a success payload or a page fact: a member path in the JSON body, a response header, a
@@ -272,7 +273,7 @@ function headerFact(
     return;
   }
 
-  const unreadForm = isOnlySlot
+  const unreadForm: { form: NotGeneratedForm; description: string } = isOnlySlot
     ? { form: "paging.response.headers.member", description: "with a member of its role's slot" }
     : { form: "paging.response.headers.text", description: "with text around its role" };
 

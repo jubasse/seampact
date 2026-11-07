@@ -1,4 +1,4 @@
-import type { IrLocation, Refusal } from "@seampact/codegen-core";
+import type { IrLocation, NotGeneratedForm, Refusal } from "@seampact/codegen-core";
 import {
   refuseInconsistentIr,
   refuseNotGeneratedYet,
@@ -103,9 +103,14 @@ export function refuseUnknown(context: EmitContext, location: IrLocation, value:
   context.refusals.push(refuseUnknownValueAt(location, value));
 }
 
+// A form the OpenAPI emitter refuses, without the `openapi.` its code starts with.
+type OpenApiForm = {
+  [Form in NotGeneratedForm]: Form extends `openapi.${infer Emitted}` ? Emitted : never;
+}[NotGeneratedForm];
+
 export function refuseNotEmitted(
   context: EmitContext,
-  form: string,
+  form: OpenApiForm,
   description: string,
   location: IrLocation,
 ): void {

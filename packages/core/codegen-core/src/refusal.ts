@@ -8,6 +8,8 @@ export interface Refusal {
   operation?: OperationId;
   // A JSON Pointer into the IR, or into the target options for `parseOptions`.
   member?: string;
+  // The URL of the troubleshooting section that holds the code's row.
+  docs?: string;
 }
 
 export interface Refused {
