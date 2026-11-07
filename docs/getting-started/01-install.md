@@ -1,6 +1,6 @@
 # Install
 
-Install seampact from npm and start a project. This page is for a Node.js server. For Spring Boot, Laravel, Symfony or Python, go to [install in other ecosystems](install-other-ecosystems.md).
+Install the `seampact` command from npm and start a project. This page is for a Node.js app. For Spring Boot, Laravel, Symfony or Python, go to [install in other ecosystems](install-other-ecosystems.md); [commands per stack](../features/commands-per-stack.md) shows how each runs the commands.
 
 You need Node.js 24 or later and npm.
 
@@ -16,11 +16,10 @@ npm pkg set type=module
 ## Install seampact
 
 ```sh
-npm install @seampact/server-runtime @seampact/hooks
-npm install --save-dev @seampact/cli @seampact/codegen-ts @seampact/codegen-zod @seampact/codegen-nestjs
+npm install --save-dev @seampact/cli
 ```
 
-These are the packages for a NestJS server with zod validators. Another server or a client takes other generators: [the package map](../concepts/packages.md) lists them.
+This is the `seampact` command. The generators and the runtime of your server or client come with its guide, in [Your first API](your-first-api.md) for a server: [the package map](../concepts/packages.md) lists them all.
 
 Keep every `@seampact/*` package at the same version.
 

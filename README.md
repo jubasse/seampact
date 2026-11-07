@@ -647,7 +647,7 @@ When a version is supported, and when it is dropped: see [Supported versions](do
 ## Get started
 
 - [Getting started](docs/getting-started/README.md): a notes API on NestJS, in four steps.
-- [Server guides](docs/README.md#backend): one page per framework, from setup to tests, including [FastAPI](docs/backend/fastapi.md), [Django REST Framework](docs/backend/drf.md) and [Django Ninja](docs/backend/ninja.md).
+- [Server guides](docs/README.md#server-guides): one page per framework, from setup to tests, including [FastAPI](docs/backend/fastapi.md), [Django REST Framework](docs/backend/drf.md) and [Django Ninja](docs/backend/ninja.md).
 - [Configuration](docs/configuration/config-file.md): every key of `seampact.config.yaml`.
 - [Troubleshooting](docs/troubleshooting/README.md).
 
@@ -661,7 +661,7 @@ composer require seampact/laravel seampact/hooks
 pip install "seampact-fastapi[generate]"
 ```
 
-Gradle, Maven and the compiler binary are in [Install](docs/getting-started/01-install.md). The [1.0.0 release notes](docs/release-notes/1.0.0.md) list what 1.0 refuses by name. See the [roadmap](docs/roadmap.md).
+Gradle, Maven and the compiler binary are in [Install in other ecosystems](docs/getting-started/install-other-ecosystems.md). The [1.0.0 release notes](docs/release-notes/1.0.0.md) list what 1.0 refuses by name. See the [roadmap](docs/roadmap.md).
 
 ## More docs
 

@@ -1,6 +1,6 @@
 # Diff a contract change
 
-Use `seampact diff` to see what a contract edit breaks before you ship it. A change is additive if existing clients still work, and breaking if one can fail. Run the commands in the app folder.
+Use `seampact diff` to see what a contract edit breaks before you ship it. A change is additive if existing clients still work, and breaking if one can fail. Run the commands in the app folder. Without Node, run it with the compiler binary: see [commands per stack](commands-per-stack.md). The lines below use `npx` for Node.
 
 Save the current contract as a baseline, then edit the contract.
 
@@ -24,4 +24,4 @@ Undo the demo edit (remove `author`) so the next page's `check` starts clean.
 
 ## Next
 
-Next: [check in CI](check-in-ci.md).
+[check in CI](check-in-ci.md).

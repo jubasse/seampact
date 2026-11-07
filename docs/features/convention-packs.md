@@ -7,7 +7,7 @@ Use a pack to reuse conventions: a response format, a paging style, or rules for
 packs: ["@seampact/pack-spring"]
 ```
 
-Write it at the top level of `api.yaml`, or of the shared file to give it to every api. The packs are npm packages: install them with the other seampact packages. A pack is data, not code.
+Write it at the top level of `api.yaml`, or of the shared file to give it to every api. The packs are npm packages: on Node, install them with the other seampact packages. A pack is data, not code.
 
 ## What each pack brings
 
@@ -36,4 +36,4 @@ A pack that is not installed gives `seampact/load/pack-not-found`. See [Contract
 
 ## Next
 
-Next: [Lists](../contract/05-lists.md) shows how a paging style is used, or go to [Diff](diff.md).
+[Lists](../contract/05-lists.md) shows how a paging style is used, or go to [Diff](diff.md).

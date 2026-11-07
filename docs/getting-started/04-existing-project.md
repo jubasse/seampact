@@ -1,19 +1,10 @@
-# Add seampact to an existing NestJS app
+# Add seampact to an existing app
 
 You keep your routes. seampact takes over the ones you put in the contract, and the rest stay yours.
 
-You need Node.js 24 or later, pnpm, and a NestJS 12 app that compiles with `experimentalDecorators`. The generated code needs nothing more. Your own DTOs need `emitDecoratorMetadata` too, for the class-validator `ValidationPipe`. Run the app from compiled output: `tsx` does not emit decorator metadata, so validation of your DTOs would silently do nothing. Keep the app in a git repo, to see what changes.
+You need a working app on one of the supported servers, kept in a git repo to see what changes. The server-specific steps are in the section of your server (the section "Add it to your server"); the rest is the same for every stack.
 
 The examples use a `shop` app with `GET /health`, `POST /auth/login` and a products controller.
-
-## Install
-
-Run this in the app folder.
-
-```sh
-npm install @seampact/server-runtime @seampact/hooks
-npm install --save-dev @seampact/cli @seampact/codegen-ts @seampact/codegen-zod @seampact/codegen-nestjs
-```
 
 ## Describe the routes you move
 
@@ -65,12 +56,26 @@ surfaces:
 - `paging: none` keeps the list a bare array, as your clients expect.
 
 ```sh
-npx seampact lint
+seampact lint
 ```
 
 You see `Linted 1 api(s): 0 error(s)`.
 
-## Generate with your validator
+## Add it to your server
+
+Open the section of your server. NestJS shows the full path with the shop app; the other servers list what differs and link their guide.
+
+<details>
+<summary>Node: NestJS</summary>
+
+Install the packages, in the app folder.
+
+```sh
+npm install @seampact/server-runtime @seampact/hooks
+npm install --save-dev @seampact/cli @seampact/codegen-ts @seampact/codegen-zod @seampact/codegen-nestjs
+```
+
+The app needs NestJS 12 and `experimentalDecorators`. Your own DTOs need `emitDecoratorMetadata` too, for the class-validator `ValidationPipe`. Run the app from compiled output: `tsx` does not emit decorator metadata, so validation of your DTOs would silently do nothing.
 
 Create `seampact.config.yaml`. This one keeps class-validator; `@seampact/codegen-zod` and `@seampact/codegen-yup` work too.
 
@@ -102,7 +107,7 @@ npx seampact generate
 
 You see one line per target, and the files in `src/__generated__` and `openapi/shop.yaml`. Commit them.
 
-## Move one controller
+**Move one controller**
 
 Delete the DTO classes: the generated class-validator classes replace them. Implement the generated interface and swap the route decorators.
 
@@ -134,7 +139,7 @@ npx tsc -p .
 
 You see no output.
 
-## Wire the module and the app
+**Wire the module and the app**
 
 In `AppModule`, import the generated module.
 
@@ -148,11 +153,123 @@ In `main.ts`, add this line before `app.listen`. It sets up the JSON parser and 
 ShopNest.configureApp(app);
 ```
 
-Start the app. You see it refuse to start: `2 framework routes are outside the contract`. The boot check lists your other routes, here `/auth/login` and the Swagger routes.
+Start the app. You see it refuse to start: `2 framework routes are outside the contract`. The boot check lists your other routes, here `/auth/login` and the Swagger routes. Allow them as in "Keep your other routes" below.
+
+</details>
+
+<details>
+<summary>Node: Express</summary>
+
+Follow [Set up](../backend/express.md#set-up) of the Express guide to install it, then add to `seampact.config.yaml`: the three Node targets (`@seampact/codegen-ts`, `@seampact/codegen-zod`, `@seampact/codegen-express`) with `apis: [shop]`.
+
+Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/express.md#write-a-handler). Mount the router in your existing app, without a path, before the routes you keep ([Wire it in](../backend/express.md#wire-it-in)).
+
+The app refuses to start while a route outside the contract is not allowed: `checkFrameworkRoutes` throws and names it. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
+
+</details>
+
+<details>
+<summary>Node: Fastify</summary>
+
+Follow [Set up](../backend/fastify.md#set-up) of the Fastify guide to install it, then add to `seampact.config.yaml`: `@seampact/codegen-ts` and `@seampact/codegen-fastify` with `apis: [shop]`.
+
+Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/fastify.md#write-a-handler). Register the plugin without a prefix ([Wire it in](../backend/fastify.md#wire-it-in)).
+
+The plugin refuses to start while a route outside the contract is not allowed. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
+
+</details>
+
+<details>
+<summary>Node: Hono</summary>
+
+Follow [Set up](../backend/hono.md#set-up) of the Hono guide to install it, then add to `seampact.config.yaml`: `@seampact/codegen-ts`, `@seampact/codegen-zod` and `@seampact/codegen-hono` with `apis: [shop]`.
+
+Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/hono.md#write-a-handler). Call `registerRoutes` on your existing app ([Wire it in](../backend/hono.md#wire-it-in)).
+
+`checkFrameworkRoutes` throws at start while a route outside the contract is not allowed. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
+
+</details>
+
+<details>
+<summary>Node: AdonisJS</summary>
+
+Follow [Set up](../backend/adonisjs.md#set-up) of the AdonisJS guide to install it, then add to `seampact.config.yaml`: `@seampact/codegen-ts` and `@seampact/codegen-adonis` with `apis: [shop]`.
+
+Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/adonisjs.md#write-a-handler). Call `registerRoutes` in `start/routes.ts` outside any prefixed group ([Wire it in](../backend/adonisjs.md#wire-it-in)).
+
+The app refuses to start while a route outside the contract is not allowed. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
+
+</details>
+
+<details>
+<summary>Java: Spring Boot</summary>
+
+Follow [Set up](../backend/spring-boot.md#set-up) of the Spring Boot guide to install it, then add to `seampact.config.yaml`: the plugin to your build and one entry with `use: io.github.jubasse:seampact-spring-boot` and `api: shop`.
+
+Build to generate (the build writes the files, so you do not commit them). Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/spring-boot.md#write-a-handler). Keep your `@RestController`: implement the generated interface and the mapping annotations replace yours; Spring finds the generated configuration class by component scan ([Wire it in](../backend/spring-boot.md#wire-it-in)).
+
+The Spring context fails to start, and the build log lists every problem. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
+
+</details>
+
+<details>
+<summary>PHP: Laravel</summary>
+
+Follow [Set up](../backend/laravel.md#set-up) of the Laravel guide to install it, then add to `seampact.config.yaml`: `composer require seampact/laravel` and one entry with `use: seampact/laravel` and `api: shop`.
+
+Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/laravel.md#write-a-handler). List the generated provider and call `Route::seampact('shop')` once ([Wire it in](../backend/laravel.md#wire-it-in)).
+
+The app refuses to boot, and the message lists every problem. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
+
+</details>
+
+<details>
+<summary>PHP: Symfony</summary>
+
+Follow [Set up](../backend/symfony.md#set-up) of the Symfony guide to install it, then add to `seampact.config.yaml`: `composer require seampact/symfony` and one entry with `use: seampact/symfony` and `api: shop`.
+
+Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/symfony.md#write-a-handler). List the api's bundle and import its routes ([Wire it in](../backend/symfony.md#wire-it-in)).
+
+The app refuses to boot, and the message lists every problem. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
+
+</details>
+
+<details>
+<summary>Python: FastAPI</summary>
+
+Follow [Set up](../backend/fastapi.md#set-up) of the FastAPI guide to install it, then add to `seampact.config.yaml`: `use: pypi:seampact-fastapi`, `api: shop`.
+
+Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/fastapi.md#write-a-handler). Call `bind_shop()` last in your existing app ([Wire it in](../backend/fastapi.md#wire-it-in)).
+
+The app refuses to start: uvicorn exits with `Application startup failed. Exiting.`. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
+
+</details>
+
+<details>
+<summary>Python: Django REST Framework</summary>
+
+Follow [Set up](../backend/drf.md#set-up) of the Django REST Framework guide to install it, then add to `seampact.config.yaml`: `use: pypi:seampact-drf`, `api: shop`.
+
+Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/drf.md#write-a-handler). Add the boundary to `MIDDLEWARE`, the settings and the urls ([Wire it in](../backend/drf.md#wire-it-in)).
+
+The app refuses to start: gunicorn stops with `Worker failed to boot.`, and a Django system check reports it. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
+
+</details>
+
+<details>
+<summary>Python: Django Ninja</summary>
+
+Follow [Set up](../backend/ninja.md#set-up) of the Django Ninja guide to install it, then add to `seampact.config.yaml`: `use: pypi:seampact-ninja`, `api: shop`.
+
+Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/ninja.md#write-a-handler). Call `bind_shop()` on your `NinjaAPI` ([Wire it in](../backend/ninja.md#wire-it-in)).
+
+The app refuses to start: gunicorn stops with `Worker failed to boot.`, and a Django system check reports it. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
+
+</details>
 
 ## Keep your other routes
 
-List them under `frameworkRoutes` of the `server` target, then run `npx seampact generate`.
+Routes of yours that are not in the contract stay as they are. The boot check lists them and refuses to start until each one is allowed. List them under `frameworkRoutes` of the server entry, then generate again. A NestJS example:
 
 ```yaml
     artefacts:
@@ -166,15 +283,15 @@ List them under `frameworkRoutes` of the `server` target, then run `npx seampact
       - { path: "/docs-yaml", reason: "Swagger document." }
 ```
 
-The shop api serves its routes at the root, so the boot check reads every route, Swagger's included. `nativeDocs` and the `main.ts` lines for Swagger are in [OpenAPI and docs](../configuration/openapi-and-docs.md). You see `/docs` and your old routes working, and `/docs-json` listing both.
+The shop api serves its routes at the root, so the boot check reads every route, the docs routes included. `nativeDocs` and the lines for the docs are in [OpenAPI and docs](../configuration/openapi-and-docs.md). You see your old routes working.
 
 ## Check it
 
 ```sh
-npx seampact check
+seampact check
 ```
 
-You see `check: the generated files and documents match the committed ones.` Run `git diff --stat` to see what the adoption touched outside `src/__generated__`.
+You see `check: the generated files and documents match the committed ones.` Run `git diff --stat` to see what the adoption touched. On Spring Boot, the build runs `check`; the other stacks type the command from [commands per stack](../features/commands-per-stack.md).
 
 ## Move the next route
 
@@ -184,7 +301,7 @@ Add the route to the contract, under `routes:` of the `app` surface.
       health: { method: get, path: health, output: Health }
 ```
 
-Add a `Health` schema with a `status` string. Move the handler: `implements ShopNest.AppEndpoints` and `@ShopNest.health()`. Delete the `/health` line from `frameworkRoutes`, then run `npx seampact generate`.
+Add a `Health` schema with a `status` string. Move the handler to the generated interface. Delete the `/health` line from `frameworkRoutes`, then generate again.
 
 You see `GET /health` served by the generated route.
 
@@ -192,16 +309,12 @@ You see `GET /health` served by the generated route.
 
 On the routes you move:
 
-- Errors become `application/problem+json`, not Nest's `{ message, error, statusCode }`.
+- Errors become `application/problem+json`, not your framework's default error body (for example Nest's `{ message, error, statusCode }`).
 - An id typed `uuid` that is malformed answers 400, not 404.
 - Query keys the contract does not declare are refused with 400.
 - A list gains the optional `cursor` and `limit` query params.
 
 Routes you did not move keep their own behaviour.
-
-## On a Python app
-
-The same way works on a FastAPI, Django REST Framework or Django Ninja app: the routes you put in the contract move, the others stay yours. Add the target entry, generate, then bind it in your app. The boot check lists any route of yours under the api's paths that you did not allow-list. Follow [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md) or [Django Ninja](../backend/ninja.md).
 
 Something fails? See [troubleshooting](../troubleshooting/README.md). Every config key: [the config reference](../configuration/reference.md).
 

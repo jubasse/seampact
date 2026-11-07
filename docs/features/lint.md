@@ -1,6 +1,6 @@
 # Lint
 
-Lint reads your contract and warns about things that compile but look wrong. Run it in the app folder.
+Lint reads your contract and warns about things that compile but look wrong. Run it in the app folder. Without Node, run it with the compiler binary: see [commands per stack](commands-per-stack.md). The lines below use `npx` for Node.
 
 ```sh
 npx seampact lint
@@ -62,4 +62,4 @@ Errors: [Troubleshooting](../troubleshooting/README.md).
 
 ## Next
 
-Next: [Check it in CI](check-in-ci.md). The rules in full: [Grammar 12](../grammar/12-enums-examples-docs-extensions.md).
+[Check it in CI](check-in-ci.md). The rules in full: [Grammar 12](../grammar/12-enums-examples-docs-extensions.md).

@@ -16,6 +16,22 @@ openapi:
 
 `openapi: none` writes no document.
 
+## Which server serves docs
+
+`nativeDocs` keeps your framework's own Swagger in line with the contract. Servers with no `nativeDocs` serve the generated OpenAPI document from a file or a route you add yourself.
+
+| Server | `nativeDocs` | Where the setup is |
+|---|---|---|
+| NestJS | yes | [NestJS](../backend/nestjs.md#docs-and-openapi) |
+| Fastify | yes | [Fastify](../backend/fastify.md#docs-and-openapi) |
+| Spring Boot | yes (springdoc) | [Spring Boot](../backend/spring-boot.md#docs-and-openapi) |
+| FastAPI | yes | [FastAPI](../backend/fastapi.md#docs) |
+| Django Ninja | yes | [Django Ninja](../backend/ninja.md#docs) |
+| Django REST Framework | no | [Django REST Framework](../backend/drf.md#docs-and-openapi) |
+| Express, Hono, AdonisJS, Laravel, Symfony | no | Serve `openapi/<api>.yaml` yourself |
+
+The docs routes are routes outside the contract: allow-list them with `frameworkRoutes` ([the boot check](reference.md#boot-check)). The examples for NestJS and Fastify follow.
+
 ## Serve Swagger on Fastify
 
 `nativeDocs` also puts the contract's routes in `@fastify/swagger`. The setup, with the generated `contractSwaggerTransformObject`, is in [Fastify](../backend/fastify.md#docs-and-openapi).
@@ -28,7 +44,7 @@ openapi:
 npm install @nestjs/swagger@12.0.2
 ```
 
-Add it to the server target, then run `npx seampact generate`.
+Add it to the server target, then run `seampact generate` ([commands per stack](../features/commands-per-stack.md)).
 
 ```yaml
     artefacts:
@@ -73,7 +89,7 @@ The boot check reads only the routes under the api's paths. When the api serves 
 
 Run `seampact generate`. It writes `native_docs.json` beside the code, and `bind_<api>()` adds it to `app.openapi()`.
 
-- It needs the compiler, which writes the document. Install `seampact-ir[compiler]` or the compiler binary: see [Install](../getting-started/01-install.md).
+- It needs the compiler, which writes the document. Install `seampact-ir[compiler]` or the compiler binary: see [install the compiler](../getting-started/install-other-ecosystems.md#the-compiler-binary).
 - Name the document with `document` on the entry when the api declares several. One of them must hold every operation the entry generates (`nativeDocs.document.ambiguous`, `artefacts.nativeDocs.operation-missing`: see [Generate errors](../troubleshooting/generate.md)).
 - `frameworkDocs: off` removes FastAPI's own `/openapi.json`, `/docs` and `/redoc`.
 

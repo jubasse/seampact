@@ -8,14 +8,14 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 
 - [What is seampact](concepts/what-is-seampact.md): what it does, in two paragraphs.
 - [What you get and what you write](concepts/what-you-get.md): what seampact generates, what is yours and what it does not do.
-- [Supported stacks](../README.md#supported-stacks): every framework and its versions.
+- [Supported versions](supported-versions.md): every framework and its versions.
 - [Glossary](concepts/glossary.md): the words these docs use, one meaning each.
 - [Packages](concepts/packages.md): the package map.
 
 ## Getting started
 
 - [Install](getting-started/01-install.md): install seampact from npm and start a project.
-- [Your first API](getting-started/your-first-api.md): a notes API on NestJS, step by step.
+- [Your first API](getting-started/your-first-api.md): a notes API on the server of your choice, step by step.
 - [Call it from React](getting-started/call-it-from-react.md): a typed client and hooks.
 - [Check it in CI](features/check-in-ci.md): fail the build on drift.
 - [Add to an existing app](getting-started/04-existing-project.md): move routes one at a time.
@@ -61,10 +61,11 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 
 ## Workflow
 
+- [Commands per stack](features/commands-per-stack.md): how to run each command on Node, Gradle, Maven, PHP and Python.
 - [Diff](features/diff.md): see what a contract edit breaks.
 - [Check in CI](features/check-in-ci.md): fail the build on drift.
 - [Sharing contracts](features/sharing-contracts.md): publish a contract to other repositories.
-- [Lint](features/lint.md): run lint, change a rule level, allow a case, write a rule.
+- [Lint](features/lint.md): run lint, change a rule level, allow a case.
 - [Convention packs](features/convention-packs.md): add a pack, what each brings.
 - [Editor support](features/editor-support.md): checks and completion in your editor.
 

@@ -8,8 +8,7 @@ From one YAML contract:
 
 | Output | What you get |
 |---|---|
-| Types | One TypeScript type per schema, per request and per reply. |
-| Validators | zod, yup, class-validator, VineJS or Ajv schemas that check every input. |
+| Types and validators | One type per schema, per request and per reply, with checks on every input. TypeScript with zod, yup, class-validator, VineJS or Ajv on Node. Java records with Bean Validation on Spring Boot. PHP classes with the Laravel or Symfony validator. Python Pydantic models, or DRF fields. The Node choices are in [validators](../configuration/validators.md). |
 | Server boundary | Routes for NestJS, Express, Fastify, AdonisJS, Hono, Spring Boot, Laravel, Symfony, FastAPI, Django REST Framework and Django Ninja. They check the input, call your access hooks and check each reply against the contract. |
 | Built-in rules | Paging, rate limits, idempotency keys, ETags, CSRF, signed requests and field rights, declared in the contract and enforced at the boundary. You plug in the stores and decisions. |
 | Errors | One error format, RFC 9457 `problem+json` by default, with typed error codes per route. |
@@ -22,7 +21,7 @@ Every guide lists the options of its target: [server guides](../backend/nestjs.m
 ## What you write
 
 - The handlers: what each route does, and where your data lives.
-- The access decisions: how a credential is checked and how a right is decided. You answer three generated hooks: authenticate, decide and resolve scope. Use the library you already have (Passport, Clerk, Laravel Gates, Spring Security) or your own code.
+- The access decisions: how a credential is checked and how a right is decided. You answer three generated hooks: authenticate, decide and resolve scope. Use the library you already have (Passport, Clerk, Laravel Gates, Spring Security) or your own code. A hook is an object on Node, an interface on Spring Boot, a class on Laravel and Symfony, and a function or class on Python.
 - Your app: its config, its secrets and its database. Generated code takes the backend URL and every setting as an argument.
 
 The app refuses to start while an identity, a right, a rule or a scope has no hook, or while a route has no handler.
@@ -37,10 +36,12 @@ The app refuses to start while an identity, a right, a rule or a scope has no ho
 
 ## The commands
 
+The same commands run on every stack. How you type each one is in [commands per stack](../features/commands-per-stack.md): `npx seampact` on Node, a Gradle task or the Maven build on the JVM, `vendor/bin/seampact` on PHP and `seampact` on Python.
+
 | Command | What it does |
 |---|---|
-| `seampact init` | Starts a project: a config and an example contract. |
-| `seampact generate` | Writes the code above into `__generated__`. |
+| `seampact init` | Starts a project: a config and an example contract. Node only. |
+| `seampact generate` | Writes the code above into the generated folder (`outDir`). |
 | `seampact check` | Fails CI when generated files or documents differ from the contract. |
 | `seampact diff` | Classifies the changes between two versions and tells which are breaking. |
 | `seampact lint` | Reports contract mistakes before you generate. |

@@ -1,6 +1,6 @@
 # Install in other ecosystems
 
-Every package is on its ecosystem's registry, at the same version. Pick yours. For a Node.js server, see [Install](01-install.md).
+Every package is on its ecosystem's registry, at the same version. Pick yours. For a Node.js server, see [Install](01-install.md). To type the commands on each stack, see [commands per stack](../features/commands-per-stack.md).
 
 ## npm
 
@@ -28,6 +28,8 @@ pluginManagement {
     }
 }
 ```
+
+The Gradle Plugin Portal is still reviewing the plugin. Until it approves, Gradle loads the plugin from Maven Central, which `mavenCentral()` above already adds.
 
 Maven, in `pom.xml`:
 

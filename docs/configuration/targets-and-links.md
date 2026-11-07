@@ -1,6 +1,6 @@
 # Targets and links
 
-Use this page to add targets and to link them. A target is one entry of `targets`: one package that writes one kind of code. A `link` tells it which other entry supplies a part it needs, such as the validators of a server. `link` names the other entry's `id`: `link: { validators: validators }` for a server, `link: { client: client }` for React or Vue.
+Use this page to add targets and to link them (see the [glossary](../concepts/glossary.md)). A target is one entry of `targets`: one package that writes one kind of code. A `link` tells it which other entry supplies a part it needs, such as the validators of a server. `link` names the other entry's `id`: `link: { validators: validators }` for a server, `link: { client: client }` for React or Vue. A target of a Java, PHP or Python server has no `link`.
 
 ## Add a target
 
@@ -43,7 +43,53 @@ Every generator handles every format and paging style your contract declares. Wh
 | `pypi:seampact-drf` | views, serializers, a boundary middleware and an exception handler around your handlers | nothing |
 | `pypi:seampact-ninja` | a bind function that adds a Ninja router, with a boundary middleware and Pydantic models, around your handlers | nothing |
 
-Guides: [React](../frontend/react.md), [Vue](../frontend/vue.md), [Angular](../frontend/angular.md), [NestJS](../backend/nestjs.md), [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [FastAPI](../backend/fastapi.md). Their options are in [Per-target options](reference.md#per-target-options).
+Guides: [React](../frontend/react.md), [Vue](../frontend/vue.md), [Angular](../frontend/angular.md), [NestJS](../backend/nestjs.md), [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md), [Django Ninja](../backend/ninja.md). Their options are in [Per-target options](reference.md#per-target-options).
+
+## The entry of each stack
+
+A Node entry writes `apis: [notes]`. Every other entry writes `api: notes`, once. Do not mix the two in one entry.
+
+<details>
+<summary>Node</summary>
+
+```yaml
+  - id: server
+    use: "@seampact/codegen-nestjs"
+    apis: [notes]
+    link: { types: types, validators: validators }
+```
+
+</details>
+
+<details>
+<summary>Java</summary>
+
+```yaml
+  - id: notes
+    use: io.github.jubasse:seampact-spring-boot
+    api: notes
+```
+
+</details>
+
+<details>
+<summary>PHP</summary>
+
+```yaml
+  - id: notes
+    out: Notes
+    use: seampact/laravel   # or seampact/symfony
+    api: notes
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+See the next section.
+
+</details>
 
 ## Python targets
 
@@ -62,7 +108,7 @@ The Python targets take `rules`, `responses`, `frameworkEtag`, `catchAll`, and `
 
 Versions: FastAPI 0.162 or later is named by minor (`allowUntested: [fastapi@0.163]`). Django, DRF and Ninja are named by major (`allowUntested: [django@7]`, `allowUntested: [django-ninja@2]`). The guides list what is tested: [FastAPI](../backend/fastapi.md#versions), [Django REST Framework](../backend/drf.md#versions), [Django Ninja](../backend/ninja.md#versions).
 
-A `path` source and the OpenAPI documents need the compiler: install `seampact-ir[compiler]` or the binary, see [Install](../getting-started/01-install.md).
+A `path` source and the OpenAPI documents need the compiler: install `seampact-ir[compiler]` or the binary, see [install the compiler](../getting-started/install-other-ecosystems.md#the-compiler-binary) and [PyPI](../getting-started/install-other-ecosystems.md#pypi).
 
 ## Next
 

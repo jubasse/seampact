@@ -1,6 +1,6 @@
 # Call it from React
 
-The same contract generates a typed client for your frontend. Here a React app lists and creates notes through TanStack Query hooks. You need the notes API from [Your first API](your-first-api.md), running on port 3000.
+The same contract generates a typed client for your frontend. Here a React app lists and creates notes through TanStack Query hooks. You need the notes API from [Your first API](your-first-api.md), running on port 3000. The client reads only the contract folder, so the server behind it can be any of the eleven. The commands use `npx` for Node: see [commands per stack](../features/commands-per-stack.md). For Vue, Angular or Expo, follow the same steps with [Vue](../frontend/vue.md), [Angular](../frontend/angular.md) or [Expo](../frontend/mobile.md).
 
 ## 1. Create the React app
 

@@ -7,10 +7,12 @@ The generated server code checks every request and every reply against the contr
 The flow is short:
 
 1. Write the contract in YAML.
-2. Run `npx seampact generate`.
+2. Run `seampact generate`.
 3. Write your handlers, and call the API from your client.
-4. Run `npx seampact check` in CI.
+4. Run `seampact check` in CI.
 
-seampact works with Node.js, Spring Boot, Laravel, Symfony and Python servers, and with React, Vue, Angular and mobile clients. [Supported stacks](../../README.md#supported-stacks) lists every framework and version.
+On Node you type `npx seampact generate`. Gradle and Maven run it in the build, and PHP and Python have their own `seampact` command: see [commands per stack](../features/commands-per-stack.md).
+
+seampact works with Node.js 24, Spring Boot on Java 21, Laravel and Symfony on PHP 8.3, and FastAPI and Django on Python 3.12, and with React, Vue, Angular and mobile clients. [Supported versions](../supported-versions.md) lists every framework and version.
 
 Next: [what you get and what you write](what-you-get.md), or start with [Install](../getting-started/01-install.md).
