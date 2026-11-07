@@ -54,6 +54,7 @@ export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "service-write-without-actor-surface": STUB_REASON,
   "several-success-statuses": STUB_REASON,
   "stale-body-version-conflict": STUB_REASON,
+  "stale-delete-version-conflict": STUB_REASON,
   "stripe-list-more-and-exclusive-cursors": STUB_REASON,
   "undeclared-handler-error-answers-internal-error": STUB_REASON,
   "undeclared-member-stripped-from-page-items": STUB_REASON,

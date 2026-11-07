@@ -12,7 +12,7 @@ from generated.tasks_devices.schemas import DeviceStatus
 from generated.tasks_optional_auth import operations as optional_auth
 from generated.tasks_optional_auth.schemas import Greeting
 from generated.tasks_responses import operations as notes
-from generated.tasks_responses.schemas import Note, NoteKey
+from generated.tasks_responses.schemas import Memo, Note, NoteKey
 from generated.tasks_service import operations as service
 from generated.tasks_service_writes import operations as service_writes
 from paged_lists import channel_page, note_page, sample_task_page, scripted_task_page
@@ -43,6 +43,8 @@ _DEFAULT_DIGEST: bool = False
 _RESPONSES_API: str = "tasksResponses"
 _NOTE_ID: uuid.UUID = uuid.UUID("30000000-0000-4000-8000-000000000001")
 _FIRST_REVISION: int = 1
+_FIRST_MEMO_VERSION: int = 1
+_FIRST_MEMO_TEXT: str = "The first memo"
 _FIRST_NOTE_TEXT: str = "The first note"
 _NOTE_SECRET: str = "note-secret"
 
@@ -231,6 +233,22 @@ class ResponsesHandlers:
         return notes.DigestResponse200(body=_first_note(_NOTE_ID, "Today's digest"))
 
 
+class ResponsesMemosHandlers:
+    """The `tasksResponses` api's memos: one memo at its first version, which a delete with another expected version
+    leaves."""
+
+    def get_memo(self, request: notes.GetMemoRequest) -> notes.GetMemoResult:
+        memo_id = request.input.path.memo_id
+
+        return notes.GetMemoResponse200(body=Memo(memo_id=memo_id, text=_FIRST_MEMO_TEXT, version=_FIRST_MEMO_VERSION))
+
+    def delete_memo(self, request: notes.DeleteMemoRequest) -> notes.DeleteMemoResult:
+        if request.input.query.expected_version != _FIRST_MEMO_VERSION:
+            return notes.DeleteMemoErrors.state_conflict()
+
+        return notes.DeleteMemoResponse204()
+
+
 class ResponsesNotesHandlers:
     """The `tasksResponses` api's notes: one note at its first revision, saved as 200 when it exists and 201
     otherwise, and the If-Match comparison the boundary leaves to the handler."""
@@ -262,6 +280,8 @@ class ResponsesNotesHandlers:
 
     def legacy_note(self, request: notes.LegacyNoteRequest) -> notes.LegacyNoteResult:
         return notes.LegacyNoteResponse200(body=_first_note(request.input.path.note_id))
+
+
 def channels_handlers(request: HttpRequest) -> ChannelsHandlers:
     return ChannelsHandlers()
 
@@ -308,3 +328,7 @@ def responses_handlers(request: HttpRequest) -> ResponsesHandlers:
 
 def responses_notes_handlers(request: HttpRequest) -> ResponsesNotesHandlers:
     return ResponsesNotesHandlers()
+
+
+def responses_memos_handlers(request: HttpRequest) -> ResponsesMemosHandlers:
+    return ResponsesMemosHandlers()

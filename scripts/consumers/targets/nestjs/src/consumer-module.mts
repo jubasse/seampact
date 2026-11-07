@@ -35,7 +35,11 @@ import {
   PagingNotesController,
 } from "./paging-controllers.mjs";
 import { tasksPagingHooks } from "./paging-handlers.mjs";
-import { ResponsesController, ResponsesNotesController } from "./responses-controllers.mjs";
+import {
+  ResponsesController,
+  ResponsesMemosController,
+  ResponsesNotesController,
+} from "./responses-controllers.mjs";
 import { tasksResponsesHooks } from "./responses-handlers.mjs";
 import {
   PatternedRouteController,
@@ -70,6 +74,7 @@ const healthControllers = leavesOutHealthHandler()
     DevicesController,
     ResponsesController,
     ResponsesNotesController,
+    ResponsesMemosController,
     PagingNotesController,
     ChangesController,
     CappedController,

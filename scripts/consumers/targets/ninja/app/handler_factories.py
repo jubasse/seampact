@@ -15,6 +15,7 @@ from handlers import (
     TasksHandlers,
     WelcomeHandlers,
 )
+from responses_handlers import MemosHandlers as ResponsesMemosHandlers
 from responses_handlers import NotesHandlers as ResponsesNotesHandlers
 from responses_handlers import ResponsesHandlers
 from sample_data import draft
@@ -71,3 +72,7 @@ def responses_handlers(request: HttpRequest) -> ResponsesHandlers:
 
 def responses_notes_handlers(request: HttpRequest) -> ResponsesNotesHandlers:
     return ResponsesNotesHandlers()
+
+
+def responses_memos_handlers(request: HttpRequest) -> ResponsesMemosHandlers:
+    return ResponsesMemosHandlers()

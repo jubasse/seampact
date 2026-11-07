@@ -1,23 +1,32 @@
 package com.example.consumer;
 
 import com.example.tasksresponses.api.ApiPreconditionFailedError;
+import com.example.tasksresponses.api.DeleteMemoErrors;
+import com.example.tasksresponses.api.DeleteMemoInput;
+import com.example.tasksresponses.api.DeleteMemoResult;
 import com.example.tasksresponses.api.DigestInput;
 import com.example.tasksresponses.api.DigestResult;
+import com.example.tasksresponses.api.GetMemoInput;
+import com.example.tasksresponses.api.GetMemoResult;
 import com.example.tasksresponses.api.GetNoteInput;
 import com.example.tasksresponses.api.GetNoteResult;
 import com.example.tasksresponses.api.KeyNoteInput;
 import com.example.tasksresponses.api.KeyNoteResult;
 import com.example.tasksresponses.api.LegacyNoteInput;
 import com.example.tasksresponses.api.LegacyNoteResult;
+import com.example.tasksresponses.api.MemosEndpoints;
 import com.example.tasksresponses.api.NotesEndpoints;
 import com.example.tasksresponses.api.ResponsesEndpoints;
 import com.example.tasksresponses.api.SaveNoteInput;
 import com.example.tasksresponses.api.SaveNoteResult;
 import com.example.tasksresponses.api.UpdateNoteInput;
 import com.example.tasksresponses.api.UpdateNoteResult;
+import com.example.tasksresponses.api.schemas.Memo;
 import com.example.tasksresponses.api.schemas.Note;
 import com.example.tasksresponses.api.schemas.NoteKey;
+import com.example.tasksresponses.api.spring.DeleteMemo;
 import com.example.tasksresponses.api.spring.Digest;
+import com.example.tasksresponses.api.spring.GetMemo;
 import com.example.tasksresponses.api.spring.GetNote;
 import com.example.tasksresponses.api.spring.KeyNote;
 import com.example.tasksresponses.api.spring.LegacyNote;
@@ -30,7 +39,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * The `tasksResponses` api's controllers: one note at its first revision, saved as 200 when it exists and 201
- * otherwise, and the If-Match comparison the boundary leaves to the handler.
+ * otherwise, and the If-Match comparison the boundary leaves to the handler; one memo at its first version, which a
+ * delete with another expected version leaves.
  */
 final class TasksResponsesControllers {
     private static final String API = "tasksResponses";
@@ -38,6 +48,7 @@ final class TasksResponsesControllers {
     private static final long FIRST_REVISION = 1;
     private static final String FIRST_NOTE_TEXT = "The first note";
     private static final String NOTE_SECRET = "note-secret";
+    private static final long FIRST_MEMO_VERSION = 1;
 
     private TasksResponsesControllers() {}
 
@@ -92,6 +103,23 @@ final class TasksResponsesControllers {
         @LegacyNote
         public LegacyNoteResult legacyNote(LegacyNoteInput input) {
             return new LegacyNoteResult.Status200(new Note(input.path().noteId(), FIRST_NOTE_TEXT, FIRST_REVISION));
+        }
+    }
+
+    @RestController
+    static final class Memos implements MemosEndpoints {
+        @Override
+        @GetMemo
+        public GetMemoResult getMemo(GetMemoInput input) {
+            return new GetMemoResult.Status200(new Memo(input.path().memoId(), "The first memo", FIRST_MEMO_VERSION));
+        }
+
+        @Override
+        @DeleteMemo
+        public DeleteMemoResult deleteMemo(DeleteMemoInput input) {
+            if (input.query().expectedVersion() != FIRST_MEMO_VERSION) return new DeleteMemoErrors.StateConflict();
+
+            return new DeleteMemoResult.Status204();
         }
     }
 }

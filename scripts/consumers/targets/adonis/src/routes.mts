@@ -82,6 +82,7 @@ export function registerContractRoutes(router: Router): void {
         default: (await responsesControllers()).ResponsesController,
       }),
       NotesEndpoints: async () => ({ default: (await responsesControllers()).NotesController }),
+      MemosEndpoints: async () => ({ default: (await responsesControllers()).MemosController }),
     },
     hooks: tasksResponsesHooks(),
   });

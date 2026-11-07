@@ -39,6 +39,7 @@ from hook_doubles import (
     TasksDecider,
     TasksUnexpectedErrors,
 )
+from responses_handlers import MemosHandlers as ResponsesMemosHandlers
 from responses_handlers import NotesHandlers as ResponsesNotesHandlers
 from responses_handlers import ResponsesHandlers
 from hooks import service_hook, user_hook
@@ -158,7 +159,9 @@ def create_app() -> FastAPI:
     _bind_security_apis(app)
     bind_tasks_responses(
         app,
-        handlers=TasksResponsesHandlerFactories(responses=ResponsesHandlers, notes=ResponsesNotesHandlers),
+        handlers=TasksResponsesHandlerFactories(
+            responses=ResponsesHandlers, notes=ResponsesNotesHandlers, memos=ResponsesMemosHandlers
+        ),
         authenticate={USER_IDENTITY: user_hook},
         idempotency_store=_idempotency_store,
         on_unexpected_error=TasksUnexpectedErrors,
