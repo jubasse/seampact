@@ -7,7 +7,7 @@ import type * as TasksService from "../generated/types/tasksService/index.js";
 import type * as TasksServiceWrites from "../generated/types/tasksServiceWrites/index.js";
 import { DEVICE_ID } from "../test/credentials.mjs";
 import { listChannelsPage, listTasksPage } from "./paged-lists.mjs";
-import { scriptedAnswer } from "./suite-control.mjs";
+import { isHeld, scriptedAnswer, waitForRelease, writeLogLine } from "./suite-control.mjs";
 
 const CREATED_AT = "2026-10-18T09:00:00.000Z";
 const NEW_TASK_ID = "20000000-0000-4000-8000-0000000000ff";
@@ -43,9 +43,15 @@ const STALE_VERSION = { status: 409, code: "state.conflict" } as const;
 // The boundary validates the deadline header; stopping the work once it has passed is the handler's part.
 const DEADLINE_EXCEEDED = { status: 504, code: "api.deadline_exceeded" } as const;
 
+// The trace context reaches the handler as sent, never refused, so the handler can relay it on its own calls.
+function logTraceContext(traceContext: string | undefined): void {
+  if (traceContext !== undefined) writeLogLine(`trace context ${traceContext}`);
+}
+
 /**
  * The handlers of one api, each answering what the loaded script gives its operation, as is, in place of its own
- * result: the script tests the boundary with results the handler types do not allow.
+ * result: the script tests the boundary with results the handler types do not allow. A held handler answers once
+ * released, from the script loaded then.
  */
 export function scripted<Handlers extends object>(api: string, handlers: Handlers): Handlers {
   return new Proxy(handlers, {
@@ -54,14 +60,20 @@ export function scripted<Handlers extends object>(api: string, handlers: Handler
 
       if (typeof handler !== "function" || typeof property !== "string") return handler;
 
+      const answer = (input: unknown[]): unknown => {
+        const scripted = scriptedAnswer(api, property);
+
+        if (scripted === undefined) return Reflect.apply(handler, target, input);
+
+        if ("throws" in scripted) throw new Error(scripted.throws);
+
+        return scripted;
+      };
+
       return (...input: unknown[]) => {
-        const answer = scriptedAnswer(api, property);
+        if (!isHeld(api, property)) return answer(input);
 
-        if (answer === undefined) return Reflect.apply(handler, target, input);
-
-        if ("throws" in answer) throw new Error(answer.throws);
-
-        return answer;
+        return waitForRelease(api, property).then(() => answer(input));
       };
     },
   });
@@ -166,6 +178,8 @@ export const tasksHandlers = scripted("tasks", {
 /** The `tasksService` api's handlers, by operation. */
 export const tasksServiceHandlers = scripted("tasksService", {
   getTask(input: TasksService.GetTaskInput): TasksService.GetTaskOutput | typeof DEADLINE_EXCEEDED {
+    logTraceContext(input.headers.traceparent);
+
     if (Date.parse(input.headers["x-deadline"]) <= Date.now()) return DEADLINE_EXCEEDED;
 
     return { status: 200, body: task(input.path.taskId) };

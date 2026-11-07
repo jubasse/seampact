@@ -119,6 +119,24 @@ final class SampleData
         );
     }
 
+    /**
+     * A batch read's id-keyed table of scripted tasks.
+     *
+     * @param array<mixed> $body
+     * @return array<string, Task>
+     */
+    public static function taskTableOf(array $body): array
+    {
+        $tasks = [];
+        foreach ($body as $taskId => $entry) {
+            if (is_array($entry)) {
+                $tasks[(string) $taskId] = self::taskOf($entry);
+            }
+        }
+
+        return $tasks;
+    }
+
     /** @param array<mixed> $body */
     public static function channelOf(array $body): Channel
     {

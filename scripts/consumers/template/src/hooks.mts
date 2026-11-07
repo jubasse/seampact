@@ -135,7 +135,7 @@ export const stripeAuthenticateHook = {
 /** The `tasks` api's decider: denies what the script denies, else the throttle rule for the throttled user. */
 export const tasksDeciderHook = {
   decide(request: RequirementRequest): Decision<TasksDenial> {
-    recordHookCall(decideHookName(request.name), request.operation);
+    recordHookCall(decideHookName(request.name), request.operation, request.bucket);
 
     assertRolesRequestComplete(request);
 
@@ -159,7 +159,7 @@ export const tasksDeciderHook = {
  */
 export const overriddenRightDeciderHook = {
   decide(request: RequirementRequest): Decision<TasksDenial> {
-    recordHookCall(overriddenDecideHookName(request.name), request.operation);
+    recordHookCall(overriddenDecideHookName(request.name), request.operation, request.bucket);
 
     const scripted = scriptedDecision(request.name, request.purpose.kind);
 
@@ -170,7 +170,7 @@ export const overriddenRightDeciderHook = {
 /** The `tasksService` api's decider: denies what the script denies, else `callerService` for an unlisted service. */
 export const serviceDeciderHook = {
   decide(request: RequirementRequest): Decision<Forbidden> {
-    recordHookCall(decideHookName(request.name), request.operation);
+    recordHookCall(decideHookName(request.name), request.operation, request.bucket);
 
     const scripted = scriptedDecision(request.name, request.purpose.kind);
 

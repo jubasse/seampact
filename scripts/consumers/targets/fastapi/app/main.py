@@ -39,6 +39,7 @@ from hook_doubles import (
     TasksDecider,
     TasksUnexpectedErrors,
 )
+from responses_handlers import MemosHandlers as ResponsesMemosHandlers
 from responses_handlers import NotesHandlers as ResponsesNotesHandlers
 from responses_handlers import ResponsesHandlers
 from hooks import service_hook, user_hook
@@ -71,7 +72,15 @@ DEVICE_IDENTITY: Final = "device"
 # The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
 PUBLIC_ORIGIN: Final = "https://api.seampact.test"
 # Every right and rule the tasks api's operations ask a decider for.
-DECIDED_NAMES: Final = ("tasks.read", "tasks.update", "tasks.seeEffort", "roles", "throttle", "recentAuth")
+DECIDED_NAMES: Final = (
+    "tasks.read",
+    "tasks.update",
+    "tasks.seeEffort",
+    "preferences.digest",
+    "roles",
+    "throttle",
+    "recentAuth",
+)
 CHANNEL_SCOPE: Final = "channel"
 
 
@@ -158,7 +167,9 @@ def create_app() -> FastAPI:
     _bind_security_apis(app)
     bind_tasks_responses(
         app,
-        handlers=TasksResponsesHandlerFactories(responses=ResponsesHandlers, notes=ResponsesNotesHandlers),
+        handlers=TasksResponsesHandlerFactories(
+            responses=ResponsesHandlers, notes=ResponsesNotesHandlers, memos=ResponsesMemosHandlers
+        ),
         authenticate={USER_IDENTITY: user_hook},
         idempotency_store=_idempotency_store,
         on_unexpected_error=TasksUnexpectedErrors,

@@ -52,13 +52,22 @@ export type ScriptedAnswer =
 
 /**
  * The script of one case. `answers` is keyed by `<api>.<operationId>`, the operation as the hooks receive it in
- * `OperationRef`. Every member is optional; an empty script only resets the recorded calls and log lines.
+ * `OperationRef`. The handler of an operation `holds` names records a `hold` call (`HOLD_HOOK_NAME`) and waits, at
+ * most `HOLD_LIMIT_MS`, until a script that no longer holds it is loaded, then answers from that script. Every member
+ * is optional; an empty script only resets the recorded calls and log lines.
  */
 export interface SampleAppScript {
   readonly decisions?: readonly ScriptedDecision[];
   readonly scopes?: Readonly<Record<string, ScriptedScope>>;
   readonly answers?: Readonly<Record<string, ScriptedAnswer>>;
+  readonly holds?: readonly string[];
 }
+
+/** The hook name a held handler records when it starts waiting, so a case sends its next request then. */
+export const HOLD_HOOK_NAME = "hold";
+
+/** How long a held handler waits for its release before it answers anyway; below the runner's request timeout. */
+export const HOLD_LIMIT_MS = 5000;
 
 /** The hook name an authenticate double records: `authenticate:<identity>`. */
 export function authenticateHookName(identity: string): string {
@@ -94,7 +103,7 @@ export class SampleAppScriptError extends Error {
   }
 }
 
-const SCRIPT_MEMBERS = ["decisions", "scopes", "answers"];
+const SCRIPT_MEMBERS = ["decisions", "scopes", "answers", "holds"];
 const DECISION_MEMBERS = ["name", "purpose", "deny"];
 const SCOPE_MEMBERS = ["deny"];
 const DENIAL_MEMBERS = ["code", "params"];
@@ -138,6 +147,13 @@ export function readSampleAppScript(
     ...(object.answers === undefined
       ? {}
       : { answers: readAnswers(reader, object.answers, `${pointer}/answers`) }),
+    ...(object.holds === undefined
+      ? {}
+      : {
+          holds: arrayAt(reader, object.holds, `${pointer}/holds`).map((held, index) =>
+            patternAt(reader, held, `${pointer}/holds/${index}`, OPERATION_KEY),
+          ),
+        }),
   };
 }
 

@@ -12,6 +12,7 @@ use App\Generated\Tasks\AssignTaskInput;
 use App\Generated\Tasks\AssignTaskResponse200;
 use App\Generated\Tasks\AssignTaskResult;
 use App\Generated\Tasks\CreateTaskInput;
+use App\Generated\Tasks\CreateTaskErrors;
 use App\Generated\Tasks\CreateTaskResponse201;
 use App\Generated\Tasks\CreateTaskResult;
 use App\Generated\Tasks\GetTaskErrors;
@@ -67,6 +68,11 @@ final class TasksController implements TasksEndpoints
     #[SeampactOperation('getTasksBatch')]
     public function getTasksBatch(GetTasksBatchInput $input): GetTasksBatchResult
     {
+        $scripted = static fn (array $body): GetTasksBatchResult => new GetTasksBatchResponse200(SampleData::taskTableOf($body));
+        if (($answer = ScriptedAnswers::answer('getTasksBatch', 200, $scripted)) !== null) {
+            return $answer;
+        }
+
         $tasks = [];
         foreach ($input->body->ids as $taskId) {
             $tasks[$taskId] = SampleData::task($taskId);
@@ -80,7 +86,12 @@ final class TasksController implements TasksEndpoints
     {
         $created = SampleData::task(SampleData::NEW_TASK_ID);
 
-        return new CreateTaskResponse201(new Task($created->taskId, $input->body->title, $created->state, $created->effort, $created->version, $created->createdAt));
+        return ScriptedAnswers::answer(
+            'createTask',
+            201,
+            static fn (array $body): CreateTaskResult => new CreateTaskResponse201(SampleData::taskOf($body)),
+            ['api.not_found' => static fn (): CreateTaskResult => CreateTaskErrors::apiNotFound()],
+        ) ?? new CreateTaskResponse201(new Task($created->taskId, $input->body->title, $created->state, $created->effort, $created->version, $created->createdAt));
     }
 
     #[SeampactOperation('updateTask')]

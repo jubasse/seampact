@@ -159,3 +159,5 @@ A write versioned with `header.If-Match` answers 428 when the header is missing 
 A query list is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`. The `brackets` form is refused by `generate`.
 
 An identity header written on a response (a `versionToken` header, or one declared `in: response`) is refused by `generate` (`identity.response.header.unsupported`): no handler can write it yet.
+
+A sort key restricted by a right (`paging.sortKey.restricted.unsupported`) and an input field right below the top level of the input (`fieldRight.nestedPointer.unsupported`) are refused by `generate`. Leave the key out of `sortable`, and put the field at the top level.

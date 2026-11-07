@@ -27,7 +27,7 @@ OVERRIDDEN_RIGHT: Final = "tasks.update"
 # The right the `missing-decider` boot variant leaves without a decider, as the suite's case names it.
 MISSING_DECIDER_RIGHT: Final = "roles"
 # Every right and rule of the `tasks` api reaches the generic decider, but the overridden one.
-TASKS_DECIDED: Final = ("tasks.read", "tasks.seeEffort", "recentAuth", "roles", "throttle")
+TASKS_DECIDED: Final = ("tasks.read", "tasks.seeEffort", "preferences.digest", "recentAuth", "roles", "throttle")
 SERVICE_DECIDED: Final = ("callerService",)
 # The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
 PUBLIC_ORIGIN: Final = "https://api.seampact.test"
@@ -80,7 +80,9 @@ _handlers = {
     "tasks": "handlers.tasks_handlers",
 }
 _authenticate = {USER_IDENTITY: "hooks.user_hook", STRIPE_IDENTITY: "hooks.stripe_hook"}
-_deciders = {name: "hooks.tasks_decider" for name in TASKS_DECIDED} | {OVERRIDDEN_RIGHT: "hooks.overridden_right_decider"}
+_deciders = {name: "hooks.tasks_decider" for name in TASKS_DECIDED} | {
+    OVERRIDDEN_RIGHT: "hooks.overridden_right_decider"
+}
 
 if leaves_out_health_handler():
     del _handlers["app"]
@@ -135,7 +137,11 @@ SEAMPACT = {
         "access": {"identity": _SUITE_TOKEN_AUTHENTICATION},
     },
     "tasksResponses": {
-        "handlers": {"responses": "handlers.responses_handlers", "notes": "handlers.responses_notes_handlers"},
+        "handlers": {
+            "responses": "handlers.responses_handlers",
+            "notes": "handlers.responses_notes_handlers",
+            "memos": "handlers.responses_memos_handlers",
+        },
         "authenticate": {USER_IDENTITY: "hooks.user_hook"},
         "idempotency_store": "hooks.idempotency_store",
         "on_unexpected_error": "hooks.unexpected_errors",

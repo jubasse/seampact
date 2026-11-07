@@ -1,12 +1,22 @@
-import { type ContractIR, type IdentityAccess, isKnownVariant } from "@seampact/spec/ir";
+import {
+  type ContractIR,
+  type IdentityAccess,
+  isKnownVariant,
+  type ValueSource,
+} from "@seampact/spec/ir";
 import type { GenerateOutcome, GenerateRequest, Target } from "../target.js";
 import { packIr } from "./live-pages.test-support.js";
 import { readGoldenIr } from "./reference-project.test-support.js";
 
-/** A form 1.0 refuses by name: how to put it in the golden tasks api, and the code the refusal carries. */
+/**
+ * A form 1.0 refuses by name: how to put it in the golden tasks api, the code the refusal carries and, when named, the
+ * IR member it points at.
+ */
 export interface RefusedForm {
   readonly title: string;
   readonly code: string;
+  /** Where the refusal points, when the test asserts it: the operation and the IR pointer of the member. */
+  readonly at?: { readonly operation: string; readonly member: string };
   readonly change: (ir: ContractIR) => void;
 }
 
@@ -82,8 +92,40 @@ function identityAccessOf(operation: Operation): IdentityAccess {
   return access;
 }
 
+/** What a refusal of [form] holds: its code, and its operation and member when the form states them. */
+export function refusalOf(form: RefusedForm): Record<string, string> {
+  return { code: form.code, ...form.at };
+}
+
 /** The forms the Node servers refuse by name: each fails generation of the golden tasks api. */
 export const FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedForm[] = [
+  {
+    title: "a sort key restricted by a right",
+    code: "paging.sortKey.restricted.unsupported",
+    at: { operation: "listTasks", member: "/operations/11/paging" },
+    change: (ir) => {
+      const [sortKey] = operationOf(ir, "listTasks").paging?.sortKeys ?? [];
+
+      if (sortKey === undefined) throw new Error("the golden listTasks has no sort key");
+
+      sortKey.right = "tasks.read";
+    },
+  },
+  {
+    title: "an input field right below the top level",
+    code: "fieldRight.nestedPointer.unsupported",
+    at: { operation: "createTask", member: "/operations/2/fieldRights/2/pointer" },
+    change: (ir) => {
+      operationOf(ir, "createTask").fieldRights.push({
+        schema: "CreateTask",
+        pointer: "/details/budget",
+        right: "tasks.read",
+        direction: "input",
+        inputPolicy: "reject",
+        derivedFrom: { derivation: "fieldRight.restricted", from: [ACCESS_ORIGIN] },
+      });
+    },
+  },
   {
     title: "a principal requirement",
     code: "principalRequires.unsupported",
@@ -246,6 +288,23 @@ export const FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedForm[] = [
       sort.direction = SPLIT_SORT_DIRECTION;
     },
   },
+  {
+    title: "idempotency enforced by none",
+    code: "idempotency.enforce.unsupported",
+    at: { operation: "createTask", member: "/operations/2/idempotency" },
+    change: (ir) => {
+      const { idempotency } = operationOf(ir, "createTask");
+
+      if (
+        idempotency === undefined ||
+        !isKnownVariant("Idempotency", idempotency) ||
+        idempotency.kind === "exempt"
+      )
+        throw new Error("the golden createTask has no enforced idempotency");
+
+      idempotency.enforce = "none";
+    },
+  },
 ];
 
 /** The outcome of generating the golden tasks api with [form] in it. */
@@ -265,4 +324,77 @@ export async function generateWithRefusedForm(
     outputDirectory: where.outputDirectory,
     artefacts: new Set(["boundary", "index"]),
   });
+}
+
+/** Each scope id source other than the path, as the IR writes it: no Node server generates one yet. */
+const NON_PATH_SCOPE_SOURCES: readonly ValueSource[] = [
+  { in: "query", name: "channelId" },
+  { in: "header", name: "X-Channel-Id" },
+  { in: "host" },
+  { in: "subdomain" },
+  { in: "principal", name: "userId" },
+];
+
+const SCOPE_SOURCE_REFUSAL = "scope.source.unsupported";
+
+/** One generation of the golden tasks api with its first scope read from [source], and what it refused there. */
+export interface ScopeSourceRefusal {
+  readonly source: string;
+  readonly code: string;
+  readonly member: string | undefined;
+}
+
+/**
+ * Generates the golden tasks api once per non-path scope source, the first scoped operation's first scope read from
+ * it, and lists each `scope.source` refusal with the IR member it points at.
+ */
+export async function nonPathScopeSourceRefusals(
+  serverTarget: Target,
+  where: { readonly links: GenerateRequest["links"]; readonly outputDirectory: string },
+): Promise<ScopeSourceRefusal[]> {
+  const listed: ScopeSourceRefusal[] = [];
+
+  for (const source of NON_PATH_SCOPE_SOURCES) {
+    const ir = readGoldenIr("tasks");
+    const [scope] = scopedOperationOf(ir).scopes;
+
+    if (scope === undefined)
+      throw new Error("the golden tasks api's scoped operation has no scope");
+
+    scope.source = { ...source };
+
+    const outcome = await serverTarget.generate({
+      ir,
+      options: {},
+      links: where.links,
+      outputDirectory: where.outputDirectory,
+      artefacts: new Set(["boundary", "index"]),
+    });
+    const refusals = outcome.status === "refused" ? outcome.refusals : [];
+
+    for (const refusal of refusals.filter((candidate) => candidate.code.startsWith("scope.source")))
+      listed.push({ source: source.in, code: refusal.code, member: refusal.member });
+  }
+
+  return listed;
+}
+
+/** What [nonPathScopeSourceRefusals] lists when every source is refused once, by name, at the scope's source. */
+export function expectedNonPathScopeSourceRefusals(): ScopeSourceRefusal[] {
+  const ir = readGoldenIr("tasks");
+  const member = `/operations/${ir.operations.indexOf(scopedOperationOf(ir))}/scopes/0/source`;
+
+  return NON_PATH_SCOPE_SOURCES.map((source) => ({
+    source: source.in,
+    code: SCOPE_SOURCE_REFUSAL,
+    member,
+  }));
+}
+
+function scopedOperationOf(ir: ContractIR): Operation {
+  const operation = ir.operations.find((candidate) => candidate.scopes.length > 0);
+
+  if (operation === undefined) throw new Error("the golden tasks api has no scoped operation");
+
+  return operation;
 }

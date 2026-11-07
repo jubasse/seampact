@@ -31,3 +31,13 @@ export class NotesController implements TasksResponsesAdonis.NotesEndpoints {
     return tasksResponsesHandlers.legacyNote(input);
   }
 }
+
+export class MemosController implements TasksResponsesAdonis.MemosEndpoints {
+  getMemo(input: TasksResponses.GetMemoInput) {
+    return tasksResponsesHandlers.getMemo(input);
+  }
+
+  deleteMemo(input: TasksResponses.DeleteMemoInput) {
+    return tasksResponsesHandlers.deleteMemo(input);
+  }
+}

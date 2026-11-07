@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: tasksResponses
   version: "1"
-  summary: Notes whose routes answer several successes, cache directives, a sensitive field, a deprecation and If-Match.
+  summary: Notes whose routes answer several successes, cache directives, a sensitive field, a deprecation and If-Match, and memos deleted with a body-sourced version.
 x-seampact-api:
   kind: product
 x-seampact-format: bare
@@ -46,6 +46,183 @@ paths:
       security: []
       x-seampact-access:
         public: The digest is the same for every reader.
+      x-seampact-maturity:
+        level: provisional
+        source: api
+  /responses/v1/memos/{memoId}:
+    get:
+      operationId: getMemo
+      parameters:
+        - name: memoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Memo"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "404":
+          description: api.not_found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.not_found"
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+        - sessionCookie: []
+      x-seampact-access:
+        identity: user
+      x-seampact-maturity:
+        level: provisional
+        source: api
+    delete:
+      operationId: deleteMemo
+      parameters:
+        - name: memoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: expectedVersion
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Success.
+          headers:
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.csrf_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.csrf_invalid"
+          x-seampact-errors:
+            - code: api.csrf_invalid
+              derivedFrom: csrf.cookieWrite
+        "404":
+          description: api.not_found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.not_found"
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+        "409":
+          description: api.idempotency_in_progress, state.conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.idempotency_in_progress"
+                  - $ref: "#/components/schemas/state.conflict"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.idempotency_in_progress
+              derivedFrom: idempotency.write
+            - code: state.conflict
+              derivedFrom: concurrency.version
+        "422":
+          description: api.idempotency_key_reused
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.idempotency_key_reused"
+          x-seampact-errors:
+            - code: api.idempotency_key_reused
+              derivedFrom: idempotency.write
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+        - sessionCookie: []
+          csrfToken: []
+      x-seampact-access:
+        identity: user
+      x-seampact-concurrency:
+        version: query.expectedVersion
+        field: version
+      x-seampact-idempotency:
+        header: Idempotency-Key
+        replayHeader: Idempotency-Replayed
+        lifetimeMs: 86400000
+        required: true
+        enforce: boundary
       x-seampact-maturity:
         level: provisional
         source: api
@@ -620,6 +797,23 @@ components:
       required:
         - pointer
         - rule
+    Memo:
+      type: object
+      properties:
+        memoId:
+          type: string
+          format: uuid
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        version:
+          type: integer
+          minimum: 1
+      required:
+        - memoId
+        - text
+        - version
     Note:
       type: object
       properties:
@@ -939,6 +1133,33 @@ components:
         code:
           type: string
           const: api.unsupported_media_type
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    state.conflict:
+      type: object
+      properties:
+        type:
+          type: string
+          const: state.conflict
+        status:
+          type: integer
+          const: 409
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: state.conflict
         nature:
           type: string
         traceId:

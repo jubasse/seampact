@@ -7026,7 +7026,24 @@
       "examples": {},
       "extensions": {},
       "features": [],
-      "fieldRights": [],
+      "fieldRights": [
+        {
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/UpdatePreferences/properties/digest/restrictedTo"
+              }
+            ]
+          },
+          "direction": "input",
+          "inputPolicy": "strip",
+          "pointer": "/digest",
+          "right": "preferences.digest",
+          "schema": "UpdatePreferences"
+        }
+      ],
       "format": "bare",
       "id": "updatePreferences",
       "idempotency": {
@@ -7901,6 +7918,23 @@
     }
   },
   "rights": {
+    "preferences.digest": {
+      "docs": {
+        "summary": "Lets the caller turn on the email digest."
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "preferences.digest",
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/preferences.digest"
+      },
+      "subject": {
+        "kind": "none"
+      }
+    },
     "roles": {
       "docs": {},
       "errors": [
@@ -9311,6 +9345,14 @@
           "origin": {
             "layer": "api",
             "pointer": "/schemas/Preferences/properties/digest"
+          },
+          "restrictedTo": {
+            "inputPolicy": "strip",
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/UpdatePreferences/properties/digest/restrictedTo"
+            },
+            "right": "preferences.digest"
           },
           "sensitive": false,
           "type": {

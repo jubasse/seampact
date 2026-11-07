@@ -115,6 +115,7 @@ export async function startServer(): Promise<RunningServer> {
     handlers: {
       ResponsesEndpoints: tasksResponsesHandlers,
       NotesEndpoints: tasksResponsesHandlers,
+      MemosEndpoints: tasksResponsesHandlers,
     },
     hooks: tasksResponsesHooks(),
     clientAddress,

@@ -6,6 +6,7 @@ import com.example.tasks.api.ArchiveTaskResult;
 import com.example.tasks.api.AssignTaskInput;
 import com.example.tasks.api.AssignTaskResult;
 import com.example.tasks.api.ChannelsEndpoints;
+import com.example.tasks.api.CreateTaskErrors;
 import com.example.tasks.api.CreateTaskInput;
 import com.example.tasks.api.CreateTaskResult;
 import com.example.tasks.api.DeleteDraftInput;
@@ -163,7 +164,9 @@ final class TasksControllers {
         public CreateTaskResult createTask(CreateTaskInput input) {
             Task created = SampleData.task(UUID.randomUUID());
 
-            return new CreateTaskResult.Status201(new Task(created.taskId(), input.body().title(), created.state(), created.effort(), created.version(), created.createdAt()));
+            return answers.answer(API, "createTask", 201, Task.class, CreateTaskResult.Status201::new,
+                            Map.<String, java.util.function.Supplier<CreateTaskResult>>of("api.not_found", CreateTaskErrors.ApiNotFound::new))
+                    .orElseGet(() -> new CreateTaskResult.Status201(new Task(created.taskId(), input.body().title(), created.state(), created.effort(), created.version(), created.createdAt())));
         }
 
         @Override
@@ -212,10 +215,21 @@ final class TasksControllers {
         @Override
         @GetTasksBatch
         public GetTasksBatchResult getTasksBatch(GetTasksBatchInput input) {
+            return answers.answer(API, "getTasksBatch", 200, TaskTable.class, GetTasksBatchResult.Status200::new,
+                            Map.<String, java.util.function.Supplier<GetTasksBatchResult>>of())
+                    .orElseGet(() -> sampleBatch(input));
+        }
+
+        private static GetTasksBatchResult sampleBatch(GetTasksBatchInput input) {
             Map<String, Task> tasks = new LinkedHashMap<>();
             for (UUID taskId : input.body().ids()) tasks.put(taskId.toString(), SampleData.task(taskId));
 
             return new GetTasksBatchResult.Status200(tasks);
+        }
+
+        /** A batch read's id-keyed table, a concrete type the app's mapper binds a scripted body to. */
+        static final class TaskTable extends LinkedHashMap<String, Task> {
+            private static final long serialVersionUID = 1L;
         }
 
         @Override

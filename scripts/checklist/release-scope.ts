@@ -107,6 +107,8 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
     },
   ],
   ["CHK-019", refusedOnEveryServer("a principal requirement")],
+  ["CHK-033", refusedOnEveryServer("a sort key restricted by a right")],
+  ["CHK-187", refusedOnTheNodeServers("an input field right below the top level of the input")],
   [
     "CHK-130",
     refusedOnTheNodeServers(
@@ -124,11 +126,26 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ["CHK-133", refusedOnTheNodeServers("optional authentication; the native servers generate it")],
   ["CHK-128", refusedOnTheNodeServers("the split sort style")],
   [
+    "CHK-189",
+    {
+      targets: SERVERS_FOR_1_0,
+      refusedOn: NODE_SERVERS,
+      reason:
+        "1.0 refuses `idempotency.enforce: none` by name at generation on the Node servers; Spring Boot, Laravel, Symfony, FastAPI, DRF and Ninja generate it, not covered by the 1.0 suite",
+    },
+  ],
+  [
     "CHK-032",
     refusedForm("the complete page fact of a changes-since style", PHP_AND_PYTHON_SERVERS),
   ],
   ["CHK-020", refusedOnEveryServer("a principal binding")],
   ["CHK-094", refusedOnEveryServer("a scope resolved by the application")],
+  [
+    "CHK-188",
+    refusedOnEveryServer(
+      "a scope id read from a query, header, host or subdomain, or principal-field source",
+    ),
+  ],
   ["CHK-150", refusedForm("a form body", BODY_AND_QUERY_FORMS_REFUSED_ON)],
   ["CHK-151", refusedForm("a multipart body", BODY_AND_QUERY_FORMS_REFUSED_ON)],
   ["CHK-152", refusedForm("a file download", BODY_AND_QUERY_FORMS_REFUSED_ON)],

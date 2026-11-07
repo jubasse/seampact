@@ -30,6 +30,7 @@ use App\Generated\TasksOptionalAuth\WelcomeEndpoints;
 use App\Generated\TasksResponses\Laravel\TasksResponsesSeampactServiceProvider;
 use App\Generated\TasksResponses\Laravel\UnexpectedErrorListener as ResponsesUnexpectedErrorListener;
 use App\Generated\TasksResponses\Laravel\UserAuthenticateHook as ResponsesUserAuthenticateHook;
+use App\Generated\TasksResponses\MemosEndpoints as ResponsesMemosEndpoints;
 use App\Generated\TasksResponses\NotesEndpoints as ResponsesNotesEndpoints;
 use App\Generated\TasksResponses\ResponsesEndpoints;
 use App\Generated\TasksServiceWrites\InternalWritesEndpoints;
@@ -46,6 +47,7 @@ use App\Http\Controllers\InternalWritesController;
 use App\Http\Controllers\NotesController;
 use App\Http\Controllers\PreferencesController;
 use App\Http\Controllers\ResponsesController;
+use App\Http\Controllers\ResponsesMemosController;
 use App\Http\Controllers\ResponsesNotesController;
 use App\Http\Controllers\TasksController;
 use App\Http\Controllers\WelcomeController;
@@ -143,6 +145,7 @@ final class SuiteServiceProvider extends ServiceProvider
 
         $this->app->bind(ResponsesEndpoints::class, ResponsesController::class);
         $this->app->bind(ResponsesNotesEndpoints::class, ResponsesNotesController::class);
+        $this->app->bind(ResponsesMemosEndpoints::class, ResponsesMemosController::class);
         $this->app->bind(ResponsesUserAuthenticateHook::class, UserHook::class);
         $this->app->bind(TasksResponsesSeampactServiceProvider::IDEMPOTENCY_STORE_KEY, FileIdempotencyStore::class);
         $this->app->bind(ResponsesUnexpectedErrorListener::class, TasksUnexpectedErrors::class);

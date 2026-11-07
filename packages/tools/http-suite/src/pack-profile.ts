@@ -5,14 +5,15 @@ import { type FormatReader, FormatReaderError, formatReaderOf } from "./format-r
 import { CASES_DIRECTORY, loadSuiteCases } from "./load-cases.js";
 import { isJsonObject } from "./response-check.js";
 import type { SampleAppScript, ScriptedAnswer } from "./sample-app-script.js";
-import type {
-  HeaderExpectation,
-  JsonValue,
-  StepExpectation,
-  StepRequest,
-  SuiteCase,
-  SuiteProfile,
-  SuiteStep,
+import {
+  type HeaderExpectation,
+  isScriptStep,
+  type JsonValue,
+  type StepExpectation,
+  type StepRequest,
+  type SuiteCase,
+  type SuiteProfile,
+  type SuiteStep,
 } from "./suite-case.js";
 
 const PACK_PACKAGE_NAME = /^@[^/]+\/pack-(.+)$/;
@@ -195,7 +196,8 @@ function namesParameter(suiteCase: SuiteCase, name: string): boolean {
   const inPath = new RegExp(`[?&]${name}=`);
 
   return suiteCase.steps.some(
-    (step) => name in (step.request.query ?? {}) || inPath.test(step.request.path),
+    (step) =>
+      !isScriptStep(step) && (name in (step.request.query ?? {}) || inPath.test(step.request.path)),
   );
 }
 
@@ -210,7 +212,11 @@ function adaptCase(
     ...(suiteCase.script === undefined
       ? {}
       : { script: withPageTotals(suiteCase.script, totalAskingOperations) }),
-    steps: suiteCase.steps.map((step) => adaptStep(step, limitParameter, reader)),
+    steps: suiteCase.steps.map((step) =>
+      isScriptStep(step)
+        ? { ...step, script: withPageTotals(step.script, totalAskingOperations) }
+        : adaptStep(step, limitParameter, reader),
+    ),
   };
 }
 

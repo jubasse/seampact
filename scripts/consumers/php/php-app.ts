@@ -5,7 +5,14 @@ import { type RunningApp, startServedApp } from "../served-app.ts";
 
 export type { RunningApp } from "../served-app.ts";
 
-/** Serves the app in [appDirectory] through its `public/index.php`, with [env] added to its environment. */
+// Several workers, so a request a case holds in its handler does not keep the next one waiting; PHP shares nothing
+// between requests, so the app's state already lives in files.
+const SERVER_WORKERS = "4";
+
+/**
+ * Serves the app in [appDirectory] through its `public/index.php` with several workers, with [env] added to its
+ * environment.
+ */
 export function startPhpApp(
   label: string,
   appDirectory: string,
@@ -16,6 +23,6 @@ export function startPhpApp(
     command: "php",
     args: (port) => ["-S", `127.0.0.1:${port}`, "-t", "public", join("public", "index.php")],
     cwd: appDirectory,
-    env,
+    env: { PHP_CLI_SERVER_WORKERS: SERVER_WORKERS, ...env },
   });
 }

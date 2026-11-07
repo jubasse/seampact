@@ -11,6 +11,7 @@ from generated.tasks.operations import (
     AssignTaskRequest,
     AssignTaskResponse200,
     AssignTaskResult,
+    CreateTaskErrors,
     CreateTaskRequest,
     CreateTaskResponse201,
     CreateTaskResult,
@@ -83,9 +84,11 @@ from sample_data import (
     task_of,
     with_next_version,
 )
+from seampact_consumer_suite.log_lines import log_trace_context
 from seampact_consumer_suite.scripted_answers import scripted_answer
 
 _OK: int = 200
+_CREATED: int = 201
 _DEFAULT_LOCALE: str = "en"
 _NOT_FOUND: str = "api.not_found"
 _SERVICE_API: str = "tasksService"
@@ -93,6 +96,10 @@ _SERVICE_API: str = "tasksService"
 
 def _channel_reply_of(body: dict[str, object]) -> GetChannelResult:
     return GetChannelResponse200(channel_of(body))
+
+
+def _created_task_reply_of(body: dict[str, object]) -> CreateTaskResult:
+    return CreateTaskResponse201(task_of(body))
 
 
 def _task_reply_of(body: dict[str, object]) -> GetTaskResult:
@@ -103,11 +110,25 @@ def _service_task_reply_of(body: dict[str, object]) -> service.GetTaskResult:
     return service.GetTaskResponse200(service_task_of(body))
 
 
+def _batch_of(body: dict[str, object]) -> GetTasksBatchResult:
+    return GetTasksBatchResponse200(
+        {task_id: task_of(entry) for task_id, entry in body.items() if isinstance(entry, dict)}
+    )
+
+
 def _page_of(body: dict[str, object]) -> ListTasksResult:
     items = body.get("items")
     tasks = [task_of(item) for item in items if isinstance(item, dict)] if isinstance(items, list) else []
 
     return ListTasksResponse200(scripted_task_page(tasks, body))
+
+
+def _updated_preferences(locale: str | None, digest: bool | None) -> Preferences:
+    # A digest the boundary stripped, or the caller left out, stays out of the answer.
+    if digest is None:
+        return Preferences(locale=locale or _DEFAULT_LOCALE)
+
+    return Preferences(locale=locale or _DEFAULT_LOCALE, digest=digest)
 
 
 class ChannelsHandlers:
@@ -137,7 +158,7 @@ class PreferencesHandlers:
     def update_preferences(self, request: UpdatePreferencesRequest) -> UpdatePreferencesResult:
         body = request.input.body
 
-        return UpdatePreferencesResponse200(Preferences(locale=body.locale or _DEFAULT_LOCALE, digest=body.digest))
+        return UpdatePreferencesResponse200(_updated_preferences(body.locale, body.digest))
 
 
 class HooksHandlers:
@@ -152,12 +173,17 @@ class TasksHandlers:
         ) or GetTaskResponse200(task(str(request.input.path.task_id)))
 
     def get_tasks_batch(self, request: GetTasksBatchRequest) -> GetTasksBatchResult:
-        return GetTasksBatchResponse200({str(task_id): task(str(task_id)) for task_id in request.input.body.ids})
+        return scripted_answer("getTasksBatch", _OK, _batch_of) or GetTasksBatchResponse200(
+            {str(task_id): task(str(task_id)) for task_id in request.input.body.ids}
+        )
 
     def create_task(self, request: CreateTaskRequest) -> CreateTaskResult:
         created = task(NEW_TASK_ID).model_copy(update={"title": request.input.body.title})
+        reply = scripted_answer(
+            "createTask", _CREATED, _created_task_reply_of, {_NOT_FOUND: CreateTaskErrors.api_not_found}
+        )
 
-        return CreateTaskResponse201(created)
+        return reply or CreateTaskResponse201(created)
 
     def update_task(self, request: UpdateTaskRequest) -> UpdateTaskResult:
         body = request.input.body
@@ -198,6 +224,7 @@ class InternalHandlers:
     refuses one that passes while it works."""
 
     def get_task(self, request: service.GetTaskRequest) -> service.GetTaskResult:
+        log_trace_context(request.input.headers.traceparent)
         deadline = request.deadline
 
         if deadline is not None and deadline.has_passed(datetime.now(UTC)):

@@ -103,8 +103,8 @@ describe("parseSuiteCase", () => {
 
     body.title = "changed";
 
-    expect(parsed.steps[0]?.request.body).toEqual({ title: "Write" });
-    expect(parsed.steps[0]?.capture).toEqual({
+    expect(parsed.steps[0]).toHaveProperty("request.body", { title: "Write" });
+    expect(parsed.steps[0]).toHaveProperty("capture", {
       taskId: { body: "/taskId" },
       cursor: { header: "link", pattern: "cursor=([^&>]+)" },
     });

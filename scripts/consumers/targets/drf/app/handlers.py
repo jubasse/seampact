@@ -12,7 +12,7 @@ from generated.tasks_devices.schemas import DeviceStatus
 from generated.tasks_optional_auth import operations as optional_auth
 from generated.tasks_optional_auth.schemas import Greeting
 from generated.tasks_responses import operations as notes
-from generated.tasks_responses.schemas import Note, NoteKey
+from generated.tasks_responses.schemas import Memo, Note, NoteKey
 from generated.tasks_service import operations as service
 from generated.tasks_service_writes import operations as service_writes
 from paged_lists import channel_page, note_page, sample_task_page, scripted_task_page
@@ -33,17 +33,29 @@ from sample_data import (
     task_of,
     with_next_version,
 )
+from seampact_consumer_suite.log_lines import log_trace_context
 from seampact_consumer_suite.scripted_answers import scripted_answer, text_member
 
 _OK: int = 200
+_CREATED: int = 201
 _SERVICE_API: str = "tasksService"
 _DEFAULT_LOCALE: str = "en"
 _DEFAULT_DIGEST: bool = False
 _RESPONSES_API: str = "tasksResponses"
 _NOTE_ID: uuid.UUID = uuid.UUID("30000000-0000-4000-8000-000000000001")
 _FIRST_REVISION: int = 1
+_FIRST_MEMO_VERSION: int = 1
+_FIRST_MEMO_TEXT: str = "The first memo"
 _FIRST_NOTE_TEXT: str = "The first note"
 _NOTE_SECRET: str = "note-secret"
+
+
+def _updated_preferences(locale: str | None, digest: bool | None) -> Preferences:
+    # A digest the boundary stripped, or the caller left out, stays out of the answer.
+    if digest is None:
+        return Preferences(locale=locale or _DEFAULT_LOCALE)
+
+    return Preferences(locale=locale or _DEFAULT_LOCALE, digest=digest)
 
 
 class ChannelsHandlers:
@@ -77,7 +89,7 @@ class PreferencesHandlers:
 
     def update_preferences(self, request: tasks.UpdatePreferencesRequest) -> tasks.UpdatePreferencesResult:
         body = request.input.body
-        preferences = Preferences(locale=body.locale or _DEFAULT_LOCALE, digest=body.digest)
+        preferences = _updated_preferences(body.locale, body.digest)
 
         return tasks.UpdatePreferencesResponse200(body=preferences)
 
@@ -91,12 +103,16 @@ class TasksHandlers:
         )
 
     def get_tasks_batch(self, request: tasks.GetTasksBatchRequest) -> tasks.GetTasksBatchResult:
-        return tasks.GetTasksBatchResponse200(body={str(task_id): task(task_id) for task_id in request.input.body.ids})
+        listed = {str(task_id): task(task_id) for task_id in request.input.body.ids}
+
+        return scripted_answer("getTasksBatch", _OK, _batch_of) or tasks.GetTasksBatchResponse200(body=listed)
 
     def create_task(self, request: tasks.CreateTaskRequest) -> tasks.CreateTaskResult:
         created = task(NEW_TASK_ID)
+        not_found = {"api.not_found": tasks.CreateTaskErrors.api_not_found}
+        reply = scripted_answer("createTask", _CREATED, _created_task_reply_of, not_found)
 
-        return tasks.CreateTaskResponse201(body=_retitled(created, request.input.body.title))
+        return reply or tasks.CreateTaskResponse201(body=_retitled(created, request.input.body.title))
 
     def update_task(self, request: tasks.UpdateTaskRequest) -> tasks.UpdateTaskResult:
         body = request.input.body
@@ -136,6 +152,7 @@ class InternalHandlers:
     """The `tasksService` api's handlers; the boundary refuses a request whose deadline has passed."""
 
     def get_task(self, request: service.GetTaskRequest) -> service.GetTaskResult:
+        log_trace_context(request.input.headers.traceparent)
         reply = scripted_answer("getTask", _OK, _service_task_reply_of, api=_SERVICE_API)
 
         return reply or service.GetTaskResponse200(body=service_task(request.input.path.task_id))
@@ -181,12 +198,22 @@ def _channel_reply_of(body: dict[str, object]) -> tasks.GetChannelResult:
     return tasks.GetChannelResponse200(body=channel_of(body))
 
 
+def _created_task_reply_of(body: dict[str, object]) -> tasks.CreateTaskResult:
+    return tasks.CreateTaskResponse201(body=task_of(body))
+
+
 def _task_reply_of(body: dict[str, object]) -> tasks.GetTaskResult:
     return tasks.GetTaskResponse200(body=task_of(body))
 
 
 def _service_task_reply_of(body: dict[str, object]) -> service.GetTaskResult:
     return service.GetTaskResponse200(body=service_task_of(body))
+
+
+def _batch_of(body: dict[str, object]) -> tasks.GetTasksBatchResult:
+    return tasks.GetTasksBatchResponse200(
+        body={task_id: task_of(entry) for task_id, entry in body.items() if isinstance(entry, dict)}
+    )
 
 
 def _task_page_of(body: dict[str, object]) -> tasks.ListTasksResult:
@@ -224,6 +251,22 @@ class ResponsesHandlers:
         return notes.DigestResponse200(body=_first_note(_NOTE_ID, "Today's digest"))
 
 
+class ResponsesMemosHandlers:
+    """The `tasksResponses` api's memos: one memo at its first version, which a delete with another expected version
+    leaves."""
+
+    def get_memo(self, request: notes.GetMemoRequest) -> notes.GetMemoResult:
+        memo_id = request.input.path.memo_id
+
+        return notes.GetMemoResponse200(body=Memo(memo_id=memo_id, text=_FIRST_MEMO_TEXT, version=_FIRST_MEMO_VERSION))
+
+    def delete_memo(self, request: notes.DeleteMemoRequest) -> notes.DeleteMemoResult:
+        if request.input.query.expected_version != _FIRST_MEMO_VERSION:
+            return notes.DeleteMemoErrors.state_conflict()
+
+        return notes.DeleteMemoResponse204()
+
+
 class ResponsesNotesHandlers:
     """The `tasksResponses` api's notes: one note at its first revision, saved as 200 when it exists and 201
     otherwise, and the If-Match comparison the boundary leaves to the handler."""
@@ -255,6 +298,8 @@ class ResponsesNotesHandlers:
 
     def legacy_note(self, request: notes.LegacyNoteRequest) -> notes.LegacyNoteResult:
         return notes.LegacyNoteResponse200(body=_first_note(request.input.path.note_id))
+
+
 def channels_handlers(request: HttpRequest) -> ChannelsHandlers:
     return ChannelsHandlers()
 
@@ -301,3 +346,7 @@ def responses_handlers(request: HttpRequest) -> ResponsesHandlers:
 
 def responses_notes_handlers(request: HttpRequest) -> ResponsesNotesHandlers:
     return ResponsesNotesHandlers()
+
+
+def responses_memos_handlers(request: HttpRequest) -> ResponsesMemosHandlers:
+    return ResponsesMemosHandlers()

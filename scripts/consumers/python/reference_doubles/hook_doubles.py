@@ -185,7 +185,7 @@ class TasksDecider:
     script denies and allows the rest."""
 
     def decide(self, request: RequirementRequest) -> Decision:
-        record_hook_call(f"decide:{request.name}", request.operation.api, request.operation.id)
+        record_hook_call(f"decide:{request.name}", request.operation.api, request.operation.id, request.bucket)
         denied = scripted_decision(request.name, request.purpose)
 
         if denied is None and _spends_throttled_bucket(request):
@@ -200,7 +200,7 @@ class OverriddenRightDecider:
     the script denies, while every other right and rule reaches the generic decider."""
 
     def decide(self, request: RequirementRequest) -> Decision:
-        record_hook_call(f"decide-override:{request.name}", request.operation.api, request.operation.id)
+        record_hook_call(f"decide-override:{request.name}", request.operation.api, request.operation.id, request.bucket)
         denied = scripted_decision(request.name, request.purpose)
 
         return decision.Allowed() if denied is None else decision.Denied(deny=ErrorCodeWithParams(code=denied))
@@ -243,7 +243,7 @@ class ServiceDecider:
     `callerService` for a service its params do not list."""
 
     def decide(self, request: RequirementRequest) -> Decision:
-        record_hook_call(f"decide:{request.name}", request.operation.api, request.operation.id)
+        record_hook_call(f"decide:{request.name}", request.operation.api, request.operation.id, request.bucket)
         denied = scripted_decision(request.name, request.purpose)
 
         if denied is not None:

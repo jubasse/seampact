@@ -1,16 +1,19 @@
 // Runs cases against a sample app at a base URL, one step after another, and answers the suite report.
 import { request as httpRequest, type IncomingMessage } from "node:http";
 import { request as httpsRequest } from "node:https";
+import { setTimeout } from "node:timers/promises";
 import { BOOT_PROFILE } from "./boot-variant.js";
 import { loadScript, readHookCalls, readLogLines } from "./control-routes.js";
 import type { FormatReader } from "./format-reader.js";
 import { checkLogLines } from "./log-lines-check.js";
 import type { SentRequest } from "./operation-match.js";
+import type { RecordedHookCall } from "./recorded-hook-call.js";
 import { signRequestBody } from "./request-signature.js";
 import { checkResponse, type ReceivedResponse, readPointer } from "./response-check.js";
 import { checkIdsForTarget } from "./scoped-check.js";
 import {
   type CaptureSource,
+  isScriptStep,
   type JsonValue,
   outsideTargetsReason,
   runsInProfile,
@@ -174,18 +177,31 @@ async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseR
   const captureTargets = new Map<string, string>();
   const failures: string[] = [];
   const reader = suiteCase.profiles.includes("default") ? context.reader : undefined;
+  // A background request runs beside the later steps; its failures are reported once every step has run.
+  const backgroundRuns: Promise<string[]>[] = [];
 
   try {
     await loadScript(context.baseUrl, suiteCase.script ?? {}, timeoutSignal(context));
 
     for (const [index, step] of suiteCase.steps.entries()) {
-      const label = `step ${index} (${step.title ?? `${step.request.method} ${step.request.path}`})`;
+      if (isScriptStep(step)) {
+        await loadScript(context.baseUrl, step.script, timeoutSignal(context));
+        continue;
+      }
 
-      failures.push(
-        ...(await runStep(step, scope, captureTargets, context, reader)).map(
+      const label = `step ${index} (${step.title ?? `${step.request.method} ${step.request.path}`})`;
+      const labelled = async (): Promise<string[]> =>
+        (await runStepAfterItsHookCall(step, scope, captureTargets, context, reader)).map(
           (failure) => `${label}: ${failure}`,
-        ),
-      );
+        );
+
+      if (step.background === true) backgroundRuns.push(labelled().catch(failureOf(label)));
+      else failures.push(...(await labelled()));
+    }
+
+    // Taken out of the list once awaited, so a later throw does not release or report them twice.
+    for (const backgroundFailures of await Promise.all(backgroundRuns.splice(0))) {
+      failures.push(...backgroundFailures);
     }
 
     if (suiteCase.hookCalls !== undefined) {
@@ -193,6 +209,7 @@ async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseR
     }
   } catch (error) {
     failures.push(error instanceof Error ? error.message : String(error));
+    failures.push(...(await releaseBackgroundRuns(backgroundRuns, context)));
   }
 
   return {
@@ -200,6 +217,70 @@ async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseR
     outcome: failures.length === 0 ? "passed" : "failed",
     failures,
   };
+}
+
+// A step threw before the case released what it holds: an empty script releases a held request, so none outlives its
+// case and answers from the next case's script.
+async function releaseBackgroundRuns(
+  backgroundRuns: readonly Promise<string[]>[],
+  context: RunContext,
+): Promise<string[]> {
+  if (backgroundRuns.length === 0) return [];
+
+  const failures: string[] = [];
+
+  try {
+    await loadScript(context.baseUrl, {}, timeoutSignal(context));
+  } catch (error) {
+    failures.push(
+      `releasing the background requests: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  for (const backgroundFailures of await Promise.all(backgroundRuns))
+    failures.push(...backgroundFailures);
+
+  return failures;
+}
+
+function failureOf(label: string): (error: unknown) => string[] {
+  return (error) => [`${label}: ${error instanceof Error ? error.message : String(error)}`];
+}
+
+const HOOK_CALL_POLL_MS = 25;
+
+async function runStepAfterItsHookCall(
+  step: SuiteStep,
+  scope: TemplateScope,
+  captureTargets: Map<string, string>,
+  context: RunContext,
+  reader: FormatReader | undefined,
+): Promise<string[]> {
+  const awaited = step.waitForHookCall;
+
+  if (awaited !== undefined && !(await hookCallRecorded(awaited, context))) {
+    return [
+      `the sample app recorded no hook call ${JSON.stringify(awaited)} within ${context.requestTimeoutMs} ms, so the request was not sent`,
+    ];
+  }
+
+  return runStep(step, scope, captureTargets, context, reader);
+}
+
+async function hookCallRecorded(awaited: RecordedHookCall, context: RunContext): Promise<boolean> {
+  const deadline = Date.now() + context.requestTimeoutMs;
+
+  while (Date.now() < deadline) {
+    const calls = await readHookCalls(context.baseUrl, timeoutSignal(context));
+
+    if (calls.some((call) => call.hook === awaited.hook && call.operation === awaited.operation)) {
+      return true;
+    }
+
+    await setTimeout(HOOK_CALL_POLL_MS);
+  }
+
+  return false;
 }
 
 async function checkHookCalls(suiteCase: SuiteCase, context: RunContext): Promise<string[]> {
@@ -298,6 +379,8 @@ function readThroughFormat(
 }
 
 function capturedValue(source: CaptureSource, response: ReceivedResponse): JsonValue | undefined {
+  if ("bodyText" in source) return response.text;
+
   if ("body" in source) {
     return response.json === undefined ? undefined : readPointer(response.json, source.body);
   }

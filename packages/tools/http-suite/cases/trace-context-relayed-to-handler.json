@@ -1,0 +1,44 @@
+{
+  "id": "trace-context-relayed-to-handler",
+  "title": "A service call's trace context reaches the handler as sent, a malformed one too, never refused",
+  "checks": ["CHK-011"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "title": "a W3C trace context",
+      "request": {
+        "method": "GET",
+        "path": "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{serviceJwt}}",
+          "x-deadline": "{{deadline:60000}}",
+          "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "logLines": {
+          "contains": ["trace context 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"]
+        }
+      }
+    },
+    {
+      "title": "a malformed trace context",
+      "request": {
+        "method": "GET",
+        "path": "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{serviceJwt}}",
+          "x-deadline": "{{deadline:60000}}",
+          "traceparent": "not-a-trace-context"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "logLines": {
+          "contains": ["trace context not-a-trace-context"]
+        }
+      }
+    }
+  ]
+}

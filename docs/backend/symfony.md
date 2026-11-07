@@ -320,6 +320,8 @@ Find each message in [Troubleshooting](../troubleshooting/boot.md).
 
 `generate` refuses these by name, until an app needs them: multipart and file values, form bodies, download and redirect responses, query lists in `brackets` form (`tag[]=a`), lists of lists and object query params, an identity header written on a response (a `versionToken` header, or one declared `in: response`), and `artefacts: { accessHooks: false }`. Remove the operation from the entry's `operations` filter to generate the rest. See [Troubleshooting](../troubleshooting/generate.md).
 
+A sort key restricted by a right is refused too (`paging.sortKey.right.unsupported`). Leave the key out of `sortable`.
+
 Serve the app with php-fpm. A worker runtime (FrankenPHP worker, RoadRunner, Swoole) is refused with `runtime.worker.unsupported`.
 
 ## Versions

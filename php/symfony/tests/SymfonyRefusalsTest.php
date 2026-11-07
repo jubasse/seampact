@@ -32,6 +32,16 @@ final class SymfonyRefusalsTest extends TestCase
         }
     }
 
+    public function testASortKeyRestrictedByARightWaitsForAConsumer(): void
+    {
+        $document = ReferenceContract::withOperation('listTasks', static function (\stdClass $operation): void {
+            $sortKey = self::firstOf(self::object($operation->paging)->sortKeys);
+            $sortKey->right = 'tasks.seeEffort';
+        });
+
+        self::assertStringContainsString("The sort key 'createdAt' restricted by the right 'tasks.seeEffort'", self::refused($document)['paging.sortKey.right.unsupported'] ?? '');
+    }
+
     public function testTwoParametersWithOnePhpNameAreRefusedAsACollision(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
@@ -79,6 +89,29 @@ final class SymfonyRefusalsTest extends TestCase
 
         self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused['upstream.unsupported'] ?? '');
         self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused['scope.source.unsupported'] ?? '');
+    }
+
+    public function testTheFormsOneZeroLeavesOutAreRefusedByNameThroughTheGenerator(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
+            $operation->upstream = ['billing'];
+            $operation->principalRequires = [(object) ['field' => 'verified', 'origin' => (object) ['layer' => 'api', 'pointer' => '/principalRequires/0']]];
+            $operation->bindings = [(object) [
+                'from' => (object) ['in' => 'body', 'name' => 'ownerId'],
+                'to' => (object) ['in' => 'principal', 'name' => 'profileId'],
+                'origin' => (object) ['layer' => 'api', 'pointer' => '/bindings/0'],
+            ]];
+            self::firstOf($operation->scopes)->source = (object) ['in' => 'resolver'];
+            self::object(self::object($document->identities)->user)->principal = (object) ['kind' => 'variants', 'variants' => (object) ['viewer' => 'UserPrincipal']];
+            $schemes = self::object($document->schemes);
+            $schemes->bearer = (object) ['id' => 'bearer', 'kind' => 'basic', 'origin' => self::object($schemes->bearer)->origin];
+        });
+
+        $refused = self::refused($document);
+
+        foreach (['upstream', 'principalRequires', 'bindings', 'scope.source', 'principal.variants', 'scheme.basic'] as $form) {
+            self::assertArrayHasKey("{$form}.unsupported", $refused);
+        }
     }
 
     public function testAListResponseWaitsForAConsumerAfterOneZero(): void

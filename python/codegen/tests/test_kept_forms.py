@@ -110,6 +110,36 @@ def test_access_forms_that_1_0_refuses_are_refused_by_name(repository_root: Path
     }
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        {"in": "query", "name": "channelId"},
+        {"in": "header", "name": "X-Channel-Id"},
+        {"in": "host"},
+        {"in": "subdomain"},
+        {"in": "principal", "name": "userId"},
+    ],
+)
+def test_a_scope_id_read_from_a_source_other_than_the_path_is_refused_by_name_at_its_source(
+    repository_root: Path, source: dict[str, str]
+) -> None:
+    ir_json = _ir_json(repository_root, "tasks")
+    operations = ir_json["operations"]
+    assert isinstance(operations, list)
+    get_task = _operation(ir_json, "getTask")
+    scopes = get_task["scopes"]
+    assert isinstance(scopes, list)
+    scopes[0]["source"] = source
+
+    with pytest.raises(GenerationRefusedError) as refused:
+        _refusals_of(read_ir(json.dumps(ir_json), _SUPPORT)).raise_if_any()
+
+    scope_source_problems = [problem for problem in refused.value.problems if problem.code.startswith("scope.source")]
+    assert [problem.code for problem in scope_source_problems] == ["scope.source.unsupported"]
+    source_pointer = f"/operations/{operations.index(get_task)}/scopes/0/source"
+    assert scope_source_problems[0].where == f"entry 'server' {source_pointer} (operation 'getTask')"
+
+
 def test_a_signature_verified_by_the_application_is_refused_by_name(repository_root: Path) -> None:
     ir_json = _ir_json(repository_root, "tasks")
     schemes = ir_json["schemes"]
