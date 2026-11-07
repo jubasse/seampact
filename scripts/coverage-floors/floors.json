@@ -48,10 +48,6 @@
       "lines": 97,
       "branches": 91
     },
-    "packages/runtime/hooks": {
-      "lines": 99,
-      "branches": 99
-    },
     "packages/runtime/idempotency-memory": {
       "lines": 99,
       "branches": 99
@@ -178,9 +174,10 @@
   },
   "notMeasured": {
     "jvm/seampact-compiler": "No source: the module publishes the compiler binaries.",
-    "jvm/seampact-hooks": "Its tests run in the hooks-native lane, which measures no coverage yet.",
     "jvm/seampact-gradle-plugin": "Its tests run in the jvm-plugins lane, which measures no coverage yet.",
+    "jvm/seampact-hooks": "Its tests run in the hooks-native lane, which measures no coverage yet.",
     "jvm/seampact-maven-plugin": "Its tests run in the jvm-plugins lane, which measures no coverage yet.",
+    "packages/runtime/hooks": "Types only: the package exports interfaces and type aliases, with no executable line to measure.",
     "php/ir": "Its tests run in the native-ir lane, which measures no coverage yet.",
     "python/compiler": "No executable source: the wheel carries the compiler binary."
   }
