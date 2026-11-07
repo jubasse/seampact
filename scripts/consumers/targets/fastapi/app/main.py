@@ -71,7 +71,15 @@ DEVICE_IDENTITY: Final = "device"
 # The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
 PUBLIC_ORIGIN: Final = "https://api.seampact.test"
 # Every right and rule the tasks api's operations ask a decider for.
-DECIDED_NAMES: Final = ("tasks.read", "tasks.update", "tasks.seeEffort", "roles", "throttle", "recentAuth")
+DECIDED_NAMES: Final = (
+    "tasks.read",
+    "tasks.update",
+    "tasks.seeEffort",
+    "preferences.digest",
+    "roles",
+    "throttle",
+    "recentAuth",
+)
 CHANNEL_SCOPE: Final = "channel"
 
 

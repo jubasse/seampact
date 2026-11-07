@@ -60,7 +60,15 @@ IDENTITY_ACCESS: Final = "identity"
 # The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
 PUBLIC_ORIGIN: Final = "https://api.seampact.test"
 # Every right and rule the tasks api's operations ask a decider for.
-DECIDED_NAMES: Final = ("tasks.read", "tasks.update", "tasks.seeEffort", "roles", "throttle", "recentAuth")
+DECIDED_NAMES: Final = (
+    "tasks.read",
+    "tasks.update",
+    "tasks.seeEffort",
+    "preferences.digest",
+    "roles",
+    "throttle",
+    "recentAuth",
+)
 # The right the `missing-decider` boot variant leaves without a decider, as the suite's case names it.
 MISSING_DECIDER_RIGHT: Final = "roles"
 

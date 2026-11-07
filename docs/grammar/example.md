@@ -171,7 +171,7 @@ Task:
 ReauthToken: { type: string, minLength: 1, maxLength: 512 }
 ```
 
-`tasks/schemas.yaml` (not shown) declares the api's own schemas in the same way: `Health`, `Channel`, `CreateTask` and `UpdateTask` (picked from `Task`, ADR 0003 section 2; `CreateTask` overlays `effort` with `restrictedTo: { right: roles, params: { allowed: [owner] } }`, a scope right, since a create has no member id for `tasks.seeEffort`, section 6 of ADR 0003), `ArchiveTask` (its reason; `concurrency` adds `expectedVersion` to it and to `UpdateTask`), `Preferences`, `UpdatePreferences`, `DraftId`, `Draft`, `PaymentEvent`, `TaskQuery` and `TaskSearchResult`.
+`tasks/schemas.yaml` (not shown) declares the api's own schemas in the same way: `Health`, `Channel`, `CreateTask` and `UpdateTask` (picked from `Task`, ADR 0003 section 2; `CreateTask` overlays `effort` with `restrictedTo: { right: roles, params: { allowed: [owner] } }`, a scope right, since a create has no member id for `tasks.seeEffort`, section 6 of ADR 0003), `ArchiveTask` (its reason; `concurrency` adds `expectedVersion` to it and to `UpdateTask`), `Preferences`, `UpdatePreferences` (its `digest` overlaid with `restrictedTo: { right: preferences.digest, input: strip }`, so a caller without the right has it dropped, not refused), `DraftId`, `Draft`, `PaymentEvent`, `TaskQuery` and `TaskSearchResult`.
 
 ```yaml
 # tasks/api.yaml
@@ -280,6 +280,10 @@ surfaces:
         input: PaymentEvent
         responses:
           204: {}
+
+rights:
+  preferences.digest:
+    summary: Lets the caller turn on the email digest.
 ```
 
 ```yaml

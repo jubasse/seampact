@@ -340,6 +340,14 @@ final class TasksContract
       ],
     ],
     'rights' => [
+      'preferences.digest' => [
+        'id' => 'preferences.digest',
+        'subject' => ['kind' => 'none'],
+        'errors' => ['api.forbidden'],
+        'docs' => ['summary' => 'Lets the caller turn on the email digest.'],
+        'extensions' => [],
+        'origin' => ['layer' => 'api', 'pointer' => '/rights/preferences.digest'],
+      ],
       'roles' => [
         'id' => 'roles',
         'params' => 'RolesParams',
@@ -1193,6 +1201,14 @@ final class TasksContract
             'optional' => true,
             'nullable' => false,
             'sensitive' => false,
+            'restrictedTo' => [
+              'right' => 'preferences.digest',
+              'inputPolicy' => 'strip',
+              'origin' => [
+                'layer' => 'api',
+                'pointer' => '/schemas/UpdatePreferences/properties/digest/restrictedTo',
+              ],
+            ],
             'deprecated' => false,
             'docs' => [],
             'extensions' => [],

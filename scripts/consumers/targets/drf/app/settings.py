@@ -27,7 +27,7 @@ OVERRIDDEN_RIGHT: Final = "tasks.update"
 # The right the `missing-decider` boot variant leaves without a decider, as the suite's case names it.
 MISSING_DECIDER_RIGHT: Final = "roles"
 # Every right and rule of the `tasks` api reaches the generic decider, but the overridden one.
-TASKS_DECIDED: Final = ("tasks.read", "tasks.seeEffort", "recentAuth", "roles", "throttle")
+TASKS_DECIDED: Final = ("tasks.read", "tasks.seeEffort", "preferences.digest", "recentAuth", "roles", "throttle")
 SERVICE_DECIDED: Final = ("callerService",)
 # The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
 PUBLIC_ORIGIN: Final = "https://api.seampact.test"

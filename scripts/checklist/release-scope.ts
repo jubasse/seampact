@@ -130,6 +130,12 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ],
   ["CHK-020", refusedOnEveryServer("a principal binding")],
   ["CHK-094", refusedOnEveryServer("a scope resolved by the application")],
+  [
+    "CHK-188",
+    refusedOnEveryServer(
+      "a scope id read from a query, header, host or subdomain, or principal-field source",
+    ),
+  ],
   ["CHK-150", refusedForm("a form body", BODY_AND_QUERY_FORMS_REFUSED_ON)],
   ["CHK-151", refusedForm("a multipart body", BODY_AND_QUERY_FORMS_REFUSED_ON)],
   ["CHK-152", refusedForm("a file download", BODY_AND_QUERY_FORMS_REFUSED_ON)],

@@ -1948,6 +1948,12 @@ paths:
         identity: user
       x-seampact-requires:
         - right: preferences.update
+      x-seampact-restricted-to:
+        - schema: UpdatePreferences
+          pointer: /digest
+          right: preferences.digest
+          direction: input
+          input: strip
       x-seampact-idempotency:
         header: Idempotency-Key
         replayHeader: Idempotency-Replayed

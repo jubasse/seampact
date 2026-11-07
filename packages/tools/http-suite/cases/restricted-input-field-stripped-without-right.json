@@ -1,0 +1,40 @@
+{
+  "id": "restricted-input-field-stripped-without-right",
+  "title": "A restricted input field under strip, sent without its right, is dropped before the handler instead of refused",
+  "checks": ["CHK-092"],
+  "profiles": ["default", "hand-written"],
+  "script": {
+    "decisions": [
+      {
+        "name": "preferences.digest",
+        "purpose": "field",
+        "deny": {
+          "code": "api.forbidden"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/me/preferences",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:strip}}"
+        },
+        "body": {
+          "locale": "fr",
+          "digest": true
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "locale": "fr"
+        },
+        "absent": ["/digest"]
+      }
+    }
+  ]
+}

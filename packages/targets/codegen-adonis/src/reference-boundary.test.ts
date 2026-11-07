@@ -2,11 +2,13 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { LinkSet } from "@seampact/codegen-core";
 import {
+  expectedNonPathScopeSourceRefusals,
   FORMS_REFUSED_BY_ONE_ZERO,
   GENERATE_TIMEOUT_MILLISECONDS,
   generateWithRefusedForm,
   generateWithRightsVersionHeader,
   hooksRequirementErrors,
+  nonPathScopeSourceRefusals,
   projectDirectory,
   publicTasksApi,
   REFERENCE_COMPILER_OPTIONS,
@@ -293,6 +295,15 @@ describe("an api with only public operations asks for no hooks", () => {
 
 // The forms 1.0 refuses by name (`FORMS_REFUSED_BY_ONE_ZERO`): generation refuses, it does not warn.
 describe("the forms 1.0 refuses", () => {
+  test("a scope id read from a source other than the path is refused by name at its source", async () => {
+    const refusals = await nonPathScopeSourceRefusals(adonisTarget, {
+      links: await referenceLinks(INDEX_PROJECT, "tasks"),
+      outputDirectory: referenceServerOutput(INDEX_PROJECT, "tasks"),
+    });
+
+    expect(refusals).toEqual(expectedNonPathScopeSourceRefusals());
+  });
+
   test.each(FORMS_REFUSED_BY_ONE_ZERO)("$title is refused by name", async (form) => {
     const outcome = await generateWithRefusedForm(adonisTarget, form, {
       links: await referenceLinks(INDEX_PROJECT, "tasks"),
