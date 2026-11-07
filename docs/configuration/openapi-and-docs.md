@@ -1,6 +1,6 @@
 # OpenAPI and docs
 
-Write OpenAPI documents, and complete the one your framework serves.
+Use this page to write OpenAPI documents and to add the contract to the one your framework serves. Every key is in the [Config reference](reference.md#openapi).
 
 ## Write OpenAPI documents
 
@@ -16,32 +16,12 @@ openapi:
 
 `openapi: none` writes no document.
 
-## Serve the contract in FastAPI's docs
-
-`nativeDocs` puts the contract's routes in FastAPI's own `/openapi.json` and `/docs`.
-
-```yaml
-    use: pypi:seampact-fastapi
-    artefacts:
-      nativeDocs: true
-```
-
-Run `seampact generate`. It writes `native_docs.json` beside the code, and `bind_<api>()` adds it to `app.openapi()`.
-
-- It needs the compiler binary, since the binary writes the document. The binary is not published yet: set `[tool.seampact.binary]` with a `path` and its `sha256` in your root `pyproject.toml`.
-- Name the document with `document` on the entry when the api declares several. One of them must hold every operation the entry generates (`nativeDocs.document.ambiguous`, `artefacts.nativeDocs.operation-missing`).
-- `frameworkDocs: off` removes FastAPI's own `/openapi.json`, `/docs` and `/redoc`.
-
-Django Ninja takes `nativeDocs` the same way: `bind_<api>()` adds the routes to the document Ninja builds, at `/openapi.json` and `/docs`. `frameworkDocs: off` is refused there: build the api with `NinjaAPI(docs_url=None, openapi_url=None)` instead. See [Django Ninja](../backend/ninja.md#docs).
-
-Django REST Framework has no `nativeDocs`. See [FastAPI](../backend/fastapi.md#docs).
-
 ## Serve Swagger on NestJS
 
 `nativeDocs` makes the generated routes visible to `@nestjs/swagger`.
 
 ```sh
-pnpm add @nestjs/swagger@12.0.2
+npm install @nestjs/swagger@12.0.2
 ```
 
 Add it to the server target, then run `npx seampact generate`.
@@ -51,10 +31,11 @@ Add it to the server target, then run `npx seampact generate`.
       nativeDocs: true
 ```
 
-In `src/main.ts`, add the import and, before `app.listen`, these lines.
+In `src/main.ts`, add the imports and, before `app.listen`, these lines.
 
 ```ts
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import * as NotesNest from "./__generated__/server/notes/index.js";
 
 const config = new DocumentBuilder().setTitle("Notes").setVersion("1").build();
 const document = NotesNest.createContractDocument(app, config);
@@ -62,7 +43,7 @@ const document = NotesNest.createContractDocument(app, config);
 SwaggerModule.setup("docs", app, document);
 ```
 
-`createContractDocument` adds the contract schemas to the document, writes OpenAPI 3.1.0 and leaves out NestJS's controller tags. It stops the app if one of your classes has the same name as a contract schema, instead of letting it replace the schema in the document. It also stops it if you set another OpenAPI version or `autoTagControllers: true`.
+`createContractDocument` adds the contract schemas to the document, writes OpenAPI 3.1.0 and leaves out NestJS's controller tags. It stops the app on a clash, with a message that says what to rename.
 
 You see the Swagger page at `localhost:3000/docs`.
 
@@ -75,3 +56,28 @@ The boot check reads only the routes under the api's paths. When the api serves 
       - { path: "/docs-json", reason: "Swagger document." }
       - { path: "/docs-yaml", reason: "Swagger document." }
 ```
+
+## Serve the contract in FastAPI's docs
+
+`nativeDocs` puts the contract's routes in FastAPI's own `/openapi.json` and `/docs`.
+
+```yaml
+    use: pypi:seampact-fastapi
+    artefacts:
+      nativeDocs: true
+```
+
+Run `seampact generate`. It writes `native_docs.json` beside the code, and `bind_<api>()` adds it to `app.openapi()`.
+
+- It needs the compiler, which writes the document. Install `seampact-ir[compiler]` or the compiler binary: see [Install](../getting-started/01-install.md).
+- Name the document with `document` on the entry when the api declares several. One of them must hold every operation the entry generates (`nativeDocs.document.ambiguous`, `artefacts.nativeDocs.operation-missing`: see [Generate errors](../troubleshooting/generate.md)).
+- `frameworkDocs: off` removes FastAPI's own `/openapi.json`, `/docs` and `/redoc`.
+
+Django Ninja takes `nativeDocs` the same way: `bind_<api>()` adds the routes to the document Ninja builds, at `/openapi.json` and `/docs`. `frameworkDocs: off` is refused there: build the api with `NinjaAPI(docs_url=None, openapi_url=None)` instead. See [Django Ninja](../backend/ninja.md#docs).
+
+Django REST Framework has no `nativeDocs`. See [FastAPI](../backend/fastapi.md#docs).
+
+## Next
+
+- Next: [Monorepo](monorepo.md), or [Check it in CI](../features/check-in-ci.md).
+- Every OpenAPI key: [Config reference](reference.md#openapi).

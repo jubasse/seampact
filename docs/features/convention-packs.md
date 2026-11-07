@@ -1,40 +1,28 @@
 # Convention packs
 
-A pack is a set of conventions you reuse: a response format, a paging style, or rules for rights. Add one to your contract with one line.
+Use a pack to reuse conventions: a response format, a paging style, or rules for rights. Add one to your contract with one line.
 
 ```yaml
-packs: ["@seampact/pack-hal"]
+# top of contract/api.yaml
+packs: ["@seampact/pack-spring"]
 ```
 
 Write it at the top level of `api.yaml`, or of the shared file to give it to every api. The packs are npm packages: install them with the other seampact packages. A pack is data, not code.
 
 ## What each pack brings
 
-| Pack | Brings |
-|---|---|
-| `@seampact/pack-hal` | The `hal` format and `halPages` paging: `_links` and `_embedded`. |
-| `@seampact/pack-jsonapi` | The `jsonapi` format and `jsonapiPages` paging: resource objects and an `errors` array. |
-| `@seampact/pack-api-platform` | JSON-LD items, Hydra collections and the `iri-reference` format. |
-| `@seampact/pack-laravel` | The `laravel` format, with `data` wrapping, and its two paging styles. |
-| `@seampact/pack-spring` | The `springPage` paging style. |
-| `@seampact/pack-crud-rights` | A right `<resource>.<op>` for every list, get, create, update, delete and batch route, required first. Use it on routes with an identity: a public route has no caller to hold the right. |
+Only `pack-spring`, `pack-crud-rights` and `pack-laravel` generate code today. The others load, and a target refuses what it cannot generate, by name. Nothing is generated half way.
 
-A format or paging pack sets it as the default for the api. You can still choose another on a route.
+| Pack | Brings | Generates today |
+|---|---|---|
+| `@seampact/pack-spring` | The `springPage` paging style. | Yes, on Spring Boot, where a list gets Spring Data's `Page`. Node servers refuse its `pair` sort on a list with `sortable` (`paging.sort.style.unsupported`). |
+| `@seampact/pack-crud-rights` | A right `<resource>.<op>` for every list, get, create, update, delete and batch route. Use it on routes with an identity. | Yes, on routes with an identity. |
+| `@seampact/pack-laravel` | The `laravel` format, with `data` wrapping, and its two paging styles. | Yes: types, validators, the fetch client, Node servers, Laravel, Symfony, Spring Boot and the Python servers. |
+| `@seampact/pack-hal` | The `hal` format and `halPages` paging: `_links` and `_embedded`. | Planned. |
+| `@seampact/pack-jsonapi` | The `jsonapi` format and `jsonapiPages` paging: resource objects and an `errors` array. | Planned. |
+| `@seampact/pack-api-platform` | JSON-LD items, Hydra collections and the `iri-reference` format. | Planned, after 1.0. |
 
-## What generates today
-
-All six packs load. Each of the first three generates on the targets named below.
-
-| Pack | Generates today |
-|---|---|
-| `@seampact/pack-spring` | Yes, on Spring Boot, where a list gets Spring Data's `Page`. Node servers refuse its `pair` sort on a list with `sortable` (`paging.sort.style.unsupported`); the fetch client sends it as one `sort` per key. |
-| `@seampact/pack-crud-rights` | Yes, on routes with an identity. |
-| `@seampact/pack-laravel` | Yes: types, validators, the fetch client, Node servers, Laravel, Symfony, Spring Boot and the Python servers. |
-| `@seampact/pack-hal` | Loads; code generation planned. `format.success.envelope.unsupported`, `response.media.unsupported`, `paging.response.slot.unsupported`; Node servers refuse its sort (`paging.sort.style.unsupported`) and the fetch client its body (`format.template.unsupported`). |
-| `@seampact/pack-jsonapi` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`. |
-| `@seampact/pack-api-platform` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`, `paging.response.slot.unsupported`. |
-
-The refusal names the form and how to fix it. Nothing is generated half way.
+A format or paging pack sets it as the default for the api. You can still choose another on a route. The refusal a planned pack gives names the form and the fix: see [Generate errors](../troubleshooting/generate.md).
 
 ## Your own pack
 
@@ -45,3 +33,7 @@ A pack file in your contract works the same way. See [Grammar 2](../grammar/02-c
 The formats and paging styles of the packs, written in the grammar: [Grammar 15](../grammar/15-first-party-pack-presets.md).
 
 A pack that is not installed gives `seampact/load/pack-not-found`. See [Contract file errors](../troubleshooting/load.md).
+
+## Next
+
+Next: [Lists](../contract/05-lists.md) shows how a paging style is used, or go to [Diff](diff.md).

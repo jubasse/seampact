@@ -1,10 +1,11 @@
 # Types and references
 
-Every body, query field and id is a schema. Schemas live under `schemas` and are used by name.
+Use this page to describe your data. Every body, query field and id is a schema. Schemas live under `schemas` and are used by name.
 
 ## Write a schema
 
 ```yaml
+# contract/api.yaml, top level
 schemas:
   NoteId: { type: string, format: uuid }
   Color: { enum: Palette }
@@ -27,11 +28,11 @@ enums:
 - A property is optional unless it is in `required`. In `query`, `headers` and `id`, a name ending with `?` is optional.
 - `nullable: true` lets the value be `null`. Optional and nullable are two different things.
 - A schema name starts with a capital letter. Use the name wherever a schema fits: `item: Note`, `input: CreateNote`, `noteId: NoteId`.
-- An enum needs a `reason`. It says why the values are local.
+- An enum needs a `reason`: one sentence a reviewer reads, such as why this api owns its list of values.
 
-## Refuse what you cannot trust
+## Unsupported schema forms
 
-A schema holds only what every server and client library can check. `anyOf` and type arrays such as `[string, "null"]` are refused. Use `nullable`, or `oneOf` with a discriminator.
+A schema holds only what every server and client library can check. `anyOf` and type arrays such as `[string, "null"]` are refused. Use `nullable`, or `oneOf` with a discriminator ([schema language](../grammar/04-scalars-names-and-value.md)).
 
 ## Split a contract into files
 
@@ -53,17 +54,11 @@ Note:
     noteId: NoteId
 ```
 
-`$include` pastes the file in place. Paths are relative to the file that holds them and stay inside the workspace root (the folder of `workspace.yaml`, or of the api file when there is none).
+`$include` pastes the file in place. Paths are relative to the file that holds them and stay inside the folder that holds your contract.
 
-Share one base between several apis with `extends`.
+To share one base between several apis, use `extends`: see [Advanced](07-advanced.md#share-a-base-between-apis).
 
-```yaml
-extends: ./base.yaml
-```
+## Next
 
-A name defined in both files is an error. Remove the copy.
-
-## What is next
-
-- Errors: [Errors](03-errors.md).
-- The schema language: [ADR 0003](../adr/0003-schema-language.md). Files and references: [Composition](../grammar/02-composition-extends-packs-include.md).
+- Next: [Errors](03-errors.md).
+- In depth: [Composition](../grammar/02-composition-extends-packs-include.md).

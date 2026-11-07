@@ -1,12 +1,19 @@
 # Sharing a contract between repositories
 
-A contract repository publishes a bundle: the YAML sources, the compiled IR and an integrity hash, as an npm package, a release asset or a git tag. Each consumer pins a version and its hash in its `seampact.config.yaml`, generates the code it needs and commits the result. `seampact check` fails when the pinned bundle was altered, and your CI can refuse local contract sources on shared branches with `SEAMPACT_ALLOW_LOCAL=false` (or `allowLocal: false`).
+Use this page to share one contract with several repositories. The contract repository publishes a package (a bundle: the YAML sources and an integrity hash). Each app pins a version and its hash. `seampact check` fails if the pinned bundle was altered.
 
 In the contract repository, `npx seampact bundle --tarball contract.tgz` writes the bundle and prints its integrity. `--npm-package <dir>` writes an npm package to publish, and `--out <dir>` writes a plain folder. The name and version come from the contract folder's `package.json`, or from `--name` and `--version`.
 
-Line endings are stored as LF, so a Windows and a Linux checkout give the same bundle.
-
 The pin goes in `sources`: see [the config file](../configuration/config-file.md).
+
+## Repository layouts
+
+Layouts mix freely, and each app picks its own stack.
+
+- **One monorepo** with services, frontends and contracts: a root config lists the apps, each reads its contract as a `path` source. See [monorepo](../configuration/monorepo.md).
+- **Services in a monorepo, frontends apart:** the monorepo publishes bundles; each frontend repository pins one with a `package`, `git` or `release` source.
+- **One repository per app:** see below.
+- **A shared core contract:** pin it as a bundle (npm package, git tag, release URL, or Maven for the JVM plugins), or add it as a git submodule read as a `path` source. A `path` may point anywhere; it is a local source, so `allowLocal: false` refuses it.
 
 ## One repository per app
 
@@ -59,3 +66,12 @@ targets:
   - { id: types, use: "@seampact/codegen-ts", apis: [orders, notes] }
   - { id: client, use: "@seampact/codegen-fetch", apis: [notes], link: { types: types } }
 ```
+
+## Good to know
+
+- To refuse local contract sources on shared branches, set `allowLocal: false` or `SEAMPACT_ALLOW_LOCAL=false` in CI.
+- Line endings are stored as LF, so a Windows and a Linux checkout give the same bundle.
+
+## Next
+
+Next: [Diff](diff.md), then [Check it in CI](check-in-ci.md).

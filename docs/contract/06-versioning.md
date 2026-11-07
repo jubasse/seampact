@@ -1,12 +1,13 @@
 # Versioning and change
 
-Three things move over time: the version in the path, how stable a route is, and a route you want to retire.
+Use this page to version an api, say how stable a route is, and retire a route. Three things move over time: the version in the path, how stable a route is, and a route you want to retire.
 
 ## The path version
 
 `api.version` is an integer. It fills `{version}` in the surface prefix.
 
 ```yaml
+# contract/api.yaml, top level
 api:
   name: notes
   version: 2
@@ -21,9 +22,10 @@ An api versioned by a header or a date uses `pathVersion: none` on the surface a
 
 ## How stable is it
 
-`maturity` is `experimental`, `provisional` or `stable`. Set it on the api for all routes, and on a route to override.
+`maturity` is `experimental`, `provisional` or `stable`. Set it on the api for all routes, and on a route to override (it flows down, see [Settings flow down the tree](01-basics.md#settings-flow-down-the-tree)). It matters because `diff` does not fail on a breaking change to an `experimental` route ([Diff](../features/diff.md)).
 
 ```yaml
+# contract/api.yaml, top level
 api:
   name: notes
   version: 1
@@ -31,6 +33,7 @@ api:
 ```
 
 ```yaml
+# under a route, for example surfaces.app.routes.export
 export:
   method: post
   maturity: experimental
@@ -40,9 +43,10 @@ A route that states nothing is `experimental`: the least promise.
 
 ## Refuse breaking changes
 
-`compat` makes `seampact diff` fail on a change that breaks existing clients.
+`compat` makes `seampact diff` fail on a change that breaks existing clients. A change is additive if existing clients still work, and breaking if one can fail.
 
 ```yaml
+# contract/api.yaml, top level
 api:
   name: notes
   version: 1
@@ -56,6 +60,7 @@ Run `diff` against a saved baseline: see [Diff](../features/diff.md).
 Mark it deprecated. Generated servers send the `Deprecation` and `Sunset` headers and a `Link` to the successor.
 
 ```yaml
+# contract/api.yaml, under surfaces.app.routes
 notes:
   kind: collection
   id: { noteId: NoteId }
@@ -70,11 +75,10 @@ notes:
 ```
 
 - Dates are quoted. An unquoted date is refused.
-- `successor` names a route, so it goes on a route and not on a node.
-- `successor` names a route of the same api. A successor in another api is refused by `generate`.
+- `successor` names a route of the same api, and goes on a route, not on a node. A successor in another api is refused by `generate`.
 - Keep the route working until `sunset` has passed.
 
-## What is next
+## Next
 
-- Settings that carry the lifecycle: [Lists, cache and lifecycle](../grammar/10-lists-cache-and-lifecycle.md).
-- The api file: [The api file](../grammar/05-the-api-file.md).
+- Next: [Advanced](07-advanced.md).
+- In depth: [The api file](../grammar/05-the-api-file.md) and [Lists, cache and lifecycle](../grammar/10-lists-cache-and-lifecycle.md).

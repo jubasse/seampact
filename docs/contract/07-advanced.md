@@ -1,6 +1,6 @@
 # Advanced
 
-Each section is one feature. Add it only when you need it.
+Use this page for uploads, downloads, lost updates, cache and shared bases. Each section is one feature. Add it only when you need it. Each snippet goes under a route of a surface (`surfaces.app.routes`) unless it says otherwise.
 
 ## Upload a file
 
@@ -34,7 +34,7 @@ export:
 
 ## Catch lost updates
 
-Ask the client for the version it read. A stale write answers `409`.
+Ask the client for the version it read. With the version in the body, a stale write answers `409`; with `If-Match`, `412` (below).
 
 ```yaml
 notes:
@@ -46,7 +46,7 @@ notes:
     update: { input: UpdateNote }
 ```
 
-`field` is the property of `Note` the version is compared with. Seampact adds `expectedVersion` to the input: do not declare it in `UpdateNote`.
+`field` is the property of `Note` the version is compared with. seampact adds `expectedVersion` to the input: do not declare it in `UpdateNote`.
 
 Every response that carries a note writes its `ETag` from `field`.
 
@@ -63,15 +63,17 @@ concurrency: { version: header.If-Match, field: version }
 ## Cache a read
 
 ```yaml
+# contract/api.yaml, top level
 conventions:
   cache: { families: { minute: 60s } }
 ```
 
 ```yaml
+# on a GET route, or on a node above it
 cache: { freshness: minute, etag: true }
 ```
 
-`freshness` names a family from `conventions.cache.families`. `etag: true` adds conditional `GET`. Write `cache` on a `GET` route or on a node above it.
+A family is a named freshness, such as `minute: 60s`, that routes reuse. `freshness` names a family from `conventions.cache.families`. `etag: true` adds conditional `GET`. Write `cache` on a `GET` route or on a node above it.
 
 ## Several success statuses
 
@@ -87,15 +89,16 @@ export:
 
 ## Share a base between apis
 
-Put what several apis share (schemes, identities, errors, conventions) in a base file and extend it.
+Put what several apis share (schemes, identities, errors, conventions) in a base file. `extends` copies its parts into this api. A name defined in both files is an error.
 
 ```yaml
+# top of contract/api.yaml
 extends: ./base.yaml
 ```
 
-A pack is a set of conventions you reuse, such as a JSON:API format. Add it with `packs:`. See [Convention packs](../grammar/15-first-party-pack-presets.md).
+A pack is a set of conventions you reuse, such as a paging style. Add it with `packs:`. See [Convention packs](../features/convention-packs.md).
 
-## What is next
+## Next
 
-- Everything above, in full: [Routes](../grammar/07-routes.md), [Inherited settings](../grammar/08-inherited-settings.md) and [Lists, cache and lifecycle](../grammar/10-lists-cache-and-lifecycle.md).
-- A full contract with every feature: [Worked example](../grammar/example.md).
+- Next: [Check it in CI](../features/check-in-ci.md), or go back to the [contract pages](README.md).
+- In depth: [Routes](../grammar/07-routes.md), [Inherited settings](../grammar/08-inherited-settings.md), [Lists, cache and lifecycle](../grammar/10-lists-cache-and-lifecycle.md) and the [worked example](../grammar/example.md).

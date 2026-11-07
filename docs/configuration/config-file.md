@@ -1,6 +1,6 @@
 # The config file
 
-`seampact.config.yaml` tells seampact where your contracts are, what to generate and what to check. Run the commands in the app folder.
+Use `seampact.config.yaml` to tell seampact where your contracts are, what to generate and what to check. Run the commands in the app folder. This page shows the three keys you set first; every key is in the [Config reference](reference.md).
 
 ## Where the config lives
 
@@ -26,6 +26,8 @@ sources:
     path: ./contract
 ```
 
+`notes` here is the name of the source. A target's `apis` lists api names, the `name:` under `api:` in the contract. In this guide both are `notes`.
+
 A contract published by another team, pinned to a version (see [sharing contracts](../features/sharing-contracts.md)). `integrity` is optional and starts with `sha256-`.
 
 ```yaml
@@ -36,4 +38,20 @@ sources:
     integrity: sha256-...
 ```
 
-Other pages: [targets and links](targets-and-links.md), [validators](validators.md), [OpenAPI and docs](openapi-and-docs.md), [checks](checks.md), [monorepo](monorepo.md).
+## A full example
+
+```yaml
+outDir: src/__generated__
+sources:
+  notes:
+    path: ./contract
+targets:
+  - { id: server, use: "@seampact/codegen-nestjs", apis: [notes] }
+checks:
+  generated: error
+```
+
+## Next
+
+- Next: [Targets and links](targets-and-links.md).
+- Every key: [Config reference](reference.md). Also: [validators](validators.md), [OpenAPI and docs](openapi-and-docs.md), [checks](../features/check-in-ci.md), [monorepo](monorepo.md).
