@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seampact-compiler"
-version = "0.0.0"
+version = "1.0.0"
 description = "The seampact compiler binary for one platform, run by seampact-ir."
 readme = "README.md"
 license = "MIT"

@@ -1,7 +1,7 @@
 {
   "name": "@seampact/codegen-msw",
   "description": "Generates Mock Service Worker 2 handlers per operation that answer the contract's examples, or the typed success or error a test gives, in the api's wire format.",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -11,7 +11,6 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
-  "private": true,
   "type": "module",
   "files": [
     "dist",

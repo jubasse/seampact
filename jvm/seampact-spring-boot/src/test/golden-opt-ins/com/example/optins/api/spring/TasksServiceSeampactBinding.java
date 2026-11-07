@@ -139,7 +139,7 @@ public final class TasksServiceSeampactBinding implements ApiBinding {
 
     @Override
     public String generatorVersion() {
-        return "0.0.0";
+        return "1.0.0";
     }
 
     @Override

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seampact-fastapi"
-version = "0.0.0"
+version = "1.0.0"
 description = "The FastAPI target of seampact: its generator and the placement runtime of the generated code."
 readme = "README.md"
 license = "MIT"
@@ -14,8 +14,8 @@ requires-python = ">=3.12"
 # config allows it. Starlette and Pydantic come through FastAPI's own ranges; Pydantic 2.9 is FastAPI 0.162's floor.
 dependencies = [
     "fastapi>=0.162",
-    "seampact-codegen[pydantic]==0.0.0",
-    "seampact-hooks==0.0.0",
+    "seampact-codegen[pydantic]==1.0.0",
+    "seampact-hooks==1.0.0",
 ]
 classifiers = [
     "Framework :: FastAPI",
@@ -26,7 +26,7 @@ classifiers = [
 
 [project.optional-dependencies]
 # What the generator itself needs; a production install of an app leaves it out.
-generate = ["seampact-codegen[generate]==0.0.0", "seampact-ir==0.0.0"]
+generate = ["seampact-codegen[generate]==1.0.0", "seampact-ir==1.0.0"]
 
 [project.entry-points."seampact.generators"]
 fastapi = "seampact.fastapi.generator:FastApiGenerator"

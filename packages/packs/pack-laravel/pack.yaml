@@ -1,5 +1,5 @@
 # Laravel API Resources and paginators: data wrapping, length-aware and cursor pages.
-pack: { name: '@seampact/pack-laravel', version: 0.0.0, extends: [] }
+pack: { name: '@seampact/pack-laravel', version: 1.0.0, extends: [] }
 
 formats:
   laravel:

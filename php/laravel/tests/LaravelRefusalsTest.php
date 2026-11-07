@@ -7,6 +7,7 @@ namespace Seampact\Laravel\Tests;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Codegen\Tests\Support\ResponseForms;
+use Seampact\Ir\Config\ConfigProblem;
 use Seampact\Ir\Run\GenerationRefusedException;
 use Seampact\Codegen\IrPlace;
 use Seampact\Codegen\KeptForms;
@@ -200,6 +201,17 @@ final class LaravelRefusalsTest extends TestCase
         self::assertStringContainsString("The sort key 'createdAt' restricted by the right 'tasks.seeEffort'", self::refused($document)['paging.sortKey.right.unsupported'] ?? '');
     }
 
+    public function testAnInputFieldRightBelowTheTopLevelWaitsForAConsumer(): void
+    {
+        $document = ReferenceContract::withOperation('createTask', static function (\stdClass $operation): void {
+            self::firstOf($operation->fieldRights)->pointer = '/details/effort';
+        });
+        $problem = self::refusedProblem($document, 'fieldRight.nestedPointer.unsupported');
+
+        self::assertStringContainsString('An input field right below the top level', $problem->message);
+        self::assertStringContainsString('/fieldRights/0/pointer', $problem->where ?? '');
+    }
+
     public function testAPrincipalWithoutMembersIsRefusedByName(): void
     {
         $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
@@ -327,6 +339,23 @@ final class LaravelRefusalsTest extends TestCase
             }
 
             return $messages;
+        }
+
+        self::fail('The contract was generated, but a form in it should be refused.');
+    }
+
+    private static function refusedProblem(\stdClass $document, string $code): ConfigProblem
+    {
+        try {
+            (new LaravelGenerator())->generate(ReferenceContract::read(new LaravelGenerator(), $document), ReferenceContract::entry(LaravelGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+        } catch (GenerationRefusedException $refused) {
+            foreach ($refused->problems as $problem) {
+                if ($problem->code === $code) {
+                    return $problem;
+                }
+            }
+
+            self::fail("The generation was refused, but not with '{$code}'.");
         }
 
         self::fail('The contract was generated, but a form in it should be refused.');

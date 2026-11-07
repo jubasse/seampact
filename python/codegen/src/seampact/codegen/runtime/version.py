@@ -6,7 +6,7 @@ development version, which matches only itself."""
 import re
 from typing import Final
 
-RUNTIME_VERSION: Final = "0.0.0-dev"
+RUNTIME_VERSION: Final = "1.0.0"
 GENERATED_FOR_OTHER_VERSION: Final = "runtime.generated-for-other-version"
 
 _VERSION: Final = re.compile(r"(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?")

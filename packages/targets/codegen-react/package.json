@@ -1,7 +1,7 @@
 {
   "name": "@seampact/codegen-react",
   "description": "Generates TanStack Query or SWR options and React hooks, an RTK Query api, or plain fetch hooks with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract.",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -11,7 +11,6 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
-  "private": true,
   "type": "module",
   "files": [
     "dist"

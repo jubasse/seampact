@@ -1,9 +1,11 @@
 // The idempotent side of the PyPI publish: exactly the distributions of build-python's manifest, checked against it,
 // then each file the index already holds with the same SHA-256 is skipped, and every other one is copied to the
 // upload directory the publish action reads. A file the index holds with other bytes, or a file of the version the
-// run did not build, fails by name before anything is uploaded, since a published file never changes.
+// run did not build, fails by name before anything is uploaded, since a published file never changes. With
+// `--distribution`, the whole manifest is still checked, then only that distribution's files are planned: each
+// distribution is published by its own job, from its own trusted publisher.
 //   node scripts/release/python/pypi-plan.ts <dist-dir> --manifest <file> --version <version> --index <url>
-//     --out <upload-dir> [--root <dir>]
+//     --out <upload-dir> [--distribution <name>] [--root <dir>]
 // `--index` is the base of the PyPI JSON API (`<index>/pypi/<name>/<version>/json`): https://pypi.org, or the
 // rehearsal's local index.
 import { copyFileSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
@@ -124,7 +126,24 @@ async function fetchRelease(url: string, name: string): Promise<Response> {
 
 const USAGE =
   "node scripts/release/python/pypi-plan.ts <dist-dir> --manifest <file> --version <version> --index <url> " +
-  "--out <upload-dir> [--root <dir>]";
+  "--out <upload-dir> [--distribution <name>] [--root <dir>]";
+
+/** The entries of one release distribution, or all of them without a name; an unknown name is refused. */
+export function distributionsToPlan(
+  distributions: readonly DistributionManifestEntry[],
+  releaseNames: readonly string[],
+  distribution: string | undefined,
+): DistributionManifestEntry[] {
+  if (distribution === undefined) return [...distributions];
+
+  if (!releaseNames.includes(distribution))
+    throw new ReleaseError(
+      `--distribution ${distribution} is not a distribution of the release (${releaseNames.join(", ")}): ` +
+        "give the PEP 503 name of a python/* project",
+    );
+
+  return distributions.filter((entry) => entry.name === distribution);
+}
 
 if (import.meta.main)
   await runReleaseCommand("pypi-plan", async () => {
@@ -135,6 +154,7 @@ if (import.meta.main)
         version: { type: "string" },
         index: { type: "string" },
         out: { type: "string" },
+        distribution: { type: "string" },
       },
       USAGE,
     );
@@ -154,11 +174,15 @@ if (import.meta.main)
       readFileSync(values.manifest, "utf8"),
       values.manifest,
     );
+    const releaseNames = releaseDistributionNames(repositoryRoot(values.root));
     const distributions = manifestDistributions(resolve(directory), manifest, {
       version: releaseVersion(values.version),
-      names: releaseDistributionNames(repositoryRoot(values.root)),
+      names: releaseNames,
     });
-    const plan = await uploadPlan(values.index, distributions);
+    const plan = await uploadPlan(
+      values.index,
+      distributionsToPlan(distributions, releaseNames, values.distribution),
+    );
 
     mkdirSync(values.out, { recursive: true });
 
