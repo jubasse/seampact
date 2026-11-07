@@ -20,6 +20,8 @@ const HTTP_NOT_FOUND = 404;
 const HTTP_TOO_MANY_REQUESTS = 429;
 // npm prints `npm error code E429` and `429 Too Many Requests` when it refuses a publish for its rate.
 const NPM_RATE_LIMITED = /\bE429\b|\b429 Too Many Requests\b/;
+// npm's output is read whole: far above the 1 MiB default of spawnSync, which would end npm with ENOBUFS.
+const NPM_OUTPUT_MAX_BYTES = 64 * 1024 * 1024;
 // The pauses on a 429 double from the first; their total stays well under the publish job's 20-minute timeout.
 const FIRST_RATE_LIMIT_PAUSE_MILLISECONDS = 30_000;
 const TOTAL_RATE_LIMIT_WAIT_MILLISECONDS = 8 * 60_000;
@@ -231,7 +233,11 @@ function publish(
   console.log(`\n> ${NPM} ${args.join(" ")}`);
 
   // npm's output is read for a 429, then shown as it came.
-  const result = spawnSync(NPM, args, { stdio: ["inherit", "pipe", "pipe"], encoding: "utf8" });
+  const result = spawnSync(NPM, args, {
+    stdio: ["inherit", "pipe", "pipe"],
+    encoding: "utf8",
+    maxBuffer: NPM_OUTPUT_MAX_BYTES,
+  });
 
   process.stdout.write(result.stdout ?? "");
   process.stderr.write(result.stderr ?? "");

@@ -27,6 +27,7 @@ deadline_seconds=$((230 * 60))
 # A run's state is read up to this many times, the pause doubling after each failed read.
 state_read_attempts=5
 first_retry_pause_seconds=10
+matched_line_max_characters=300
 # The API version whose workflow dispatch answers with the run it created.
 dispatch_api_version="2026-03-10"
 registry_failure="$(dirname "${BASH_SOURCE[0]}")/registry-failure.sh"
@@ -55,12 +56,33 @@ run_state_of() {
   return 1
 }
 
+# The failed jobs' log of a completed run, which can lag the run: an unreadable or empty log is read again after a doubling pause.
+failed_log_of() {
+  local run_id=$1
+  local pause=$first_retry_pause_seconds
+  local attempt log
+
+  for ((attempt = 1; attempt <= state_read_attempts; attempt++)); do
+    if log="$(gh run view "$run_id" --log-failed)" && [[ -n "$log" ]]; then
+      printf '%s\n' "$log"
+      return 0
+    fi
+
+    if ((attempt < state_read_attempts)); then
+      sleep "$pause"
+      pause=$((pause * 2))
+    fi
+  done
+
+  return 1
+}
+
 # Reruns the failed jobs of a failed run when their log names a registry error; fails, saying why, otherwise.
 rerun_on_registry_failure() {
   local workflow=$1 run_id=$2
   local failed_log matched_line
 
-  if ! failed_log="$(gh run view "$run_id" --log-failed)"; then
+  if ! failed_log="$(failed_log_of "$run_id")"; then
     echo "run-gate-workflows: the failed jobs' log of $workflow run $run_id could not be read, so it is not rerun" >&2
     return 1
   fi
@@ -68,6 +90,9 @@ rerun_on_registry_failure() {
   if ! matched_line="$(printf '%s\n' "$failed_log" | bash "$registry_failure")"; then
     return 1
   fi
+
+  # The line comes from a job log: control characters are dropped and its length capped before it is echoed.
+  matched_line="$(printf '%s' "$matched_line" | tr -d '\000-\010\013-\037\177' | cut -c 1-"$matched_line_max_characters")"
 
   echo "run-gate-workflows: $workflow run $run_id failed on a registry error, its failed jobs run once more: $matched_line"
 
@@ -135,7 +160,7 @@ while true; do
     if [[ "$head_sha" != "$commit" ]]; then
       echo "run-gate-workflows: $workflow run $run_id is at $head_sha, not $commit: $ref moved, start the release again" >&2
       failed=1
-    elif [[ "$status" != completed || "$attempt" == "${rerun_attempt_of[$workflow]:-}" ]]; then
+    elif [[ "$status" != completed || -n "${rerun_attempt_of[$workflow]:-}" && "$attempt" == "${rerun_attempt_of[$workflow]}" ]]; then
       still_running+=("$workflow")
     elif [[ "$conclusion" != success && -z "${rerun_attempt_of[$workflow]:-}" ]] &&
       rerun_on_registry_failure "$workflow" "$run_id"; then

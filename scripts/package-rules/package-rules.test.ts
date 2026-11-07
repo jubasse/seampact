@@ -240,12 +240,18 @@ describe("package rules", () => {
     const fail = fixture("metadata", "fail");
 
     expect(fixture("metadata", "pass")).toEqual([]);
-    expect(fail).toHaveLength(6);
+    expect(fail).toHaveLength(8);
     expect(fail.join("\n")).toContain(
       "php/hooks/composer.json: metadata: needs a `homepage` on the docs site, https://jubasse.github.io/seampact/",
     );
     expect(fail.join("\n")).toContain(
       'php/hooks/composer.json: metadata: needs `support.docs` "https://jubasse.github.io/seampact/"',
+    );
+    expect(fail.join("\n")).toContain(
+      "python/hooks/pyproject.toml: metadata: needs a `Homepage` in [project.urls] on the docs site",
+    );
+    expect(fail.join("\n")).toContain(
+      'python/hooks/pyproject.toml: metadata: needs `Documentation` "https://jubasse.github.io/seampact/" in [project.urls]',
     );
     expect(fail.join("\n")).toContain("needs `repository`");
     expect(fail.join("\n")).toContain("needs a `homepage`");
