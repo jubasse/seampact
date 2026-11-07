@@ -1,7 +1,7 @@
 import type { Definition, Link, Nodes, Root } from "mdast";
 import { visit } from "unist-util-visit";
 import { type LinkContext, resolveLinkTarget } from "./link-target.ts";
-import { parseMarkdown, sourceRange } from "./markdown-tree.ts";
+import { parseMarkdown, plainText, sourceRange } from "./markdown-tree.ts";
 import { type PageHeading, readPageDescription, readPageHeading } from "./page-heading.ts";
 import { placementFrontmatter } from "./page-policy.ts";
 import { REPOSITORY_BRANCH, REPOSITORY_URL } from "./site-layout.ts";
@@ -17,6 +17,8 @@ export interface BrokenLink {
 export interface TransformedPage {
   title: string;
   markdown: string;
+  /** The page without frontmatter or title heading, links rewritten. */
+  body: string;
   description: string | undefined;
   brokenLinks: BrokenLink[];
 }
@@ -78,6 +80,12 @@ export function transformPage(
       return;
     }
 
+    if (target.kind === "textOnly" && node.type === "link") {
+      edits.push({ ...sourceRange(node, sourceName), replacement: plainText(node) });
+
+      return;
+    }
+
     if (target.kind === "rewritten") {
       edits.push({ ...linkDestinationRange(source, node, sourceName), replacement: target.url });
     }
@@ -92,9 +100,12 @@ export function transformPage(
     editUrl: `${REPOSITORY_URL}/edit/${REPOSITORY_BRANCH}/${sourceName}`,
   });
 
+  const body = applyEdits(source, edits);
+
   return {
     title: heading.title,
-    markdown: `${frontmatter}${applyEdits(source, edits)}`,
+    markdown: `${frontmatter}${body}`,
+    body,
     description,
     brokenLinks,
   };

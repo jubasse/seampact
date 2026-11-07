@@ -31,6 +31,8 @@ targets:
     api: tasks
 ```
 
+The request is checked by generated [Symfony constraints](../types-and-validation/symfony-constraints.md); see [Types and validation](../types-and-validation/README.md).
+
 `out` names the PHP namespace folder under `outDir`. Map `outDir` in `composer.json` (`"App\\": "src/"` covers `src/Generated`).
 
 The skeleton's `config/services.yaml` loads all of `src/`, so it loads `src/Generated` too. That works as is: the bundle registers its own services, and the classes it registers carry `#[Exclude]`. You do not need an `exclude` line.
@@ -227,7 +229,7 @@ Set under `options:` on the target entry.
 | Option | Default | What it does |
 |---|---|---|
 | `indent` | `4` | Spaces per indent in the generated code, from 1 to 8. |
-| `rules` | `native` | `native` uses Symfony Validator's own constraints. `seampact-consistent` gives the contract's exact checks, equal on every target. |
+| `rules` | `native` | `native` uses Symfony Validator's own constraints. `seampact-consistent` gives the contract's exact checks, equal on every target. See [Symfony constraints](../types-and-validation/symfony-constraints.md#native-or-consistent-rules). |
 | `responses` | `strict` | `strict` answers 500 when your reply breaks the contract. `warn` logs it and sends the reply. |
 | `bodyValidation` | `false` | Checks success bodies against the contract. |
 | `frameworkEtag` | `strip` | Drops an ETag or a 304 that the boundary did not write. `keep` leaves them. |
@@ -261,13 +263,7 @@ A route signed by a provider reads the raw body. Your authenticate hook gets it 
 
 ## Validate your own objects
 
-The generated schema classes carry Symfony Validator attributes, such as `#[Assert\Length(min: 1, max: 200)]` on a title. Validate an object you build before you send it elsewhere:
-
-```php
-$violations = $validator->validate(new Task(taskId: $id, title: $title));
-```
-
-The boundary does not use these attributes: it checks the raw JSON with the generated constraint. A `uuid` format, a length or pattern on a `date-time` member, and a member both optional and nullable have no attribute.
+The generated schema classes carry Symfony Validator attributes, so you can validate an object you build with `$validator->validate()`. The boundary does not use them: see [Symfony constraints](../types-and-validation/symfony-constraints.md).
 
 ## Test your routes
 

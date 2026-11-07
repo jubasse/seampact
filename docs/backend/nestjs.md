@@ -18,7 +18,7 @@ npm install @nestjs/common @nestjs/core @nestjs/platform-express reflect-metadat
 npm install --save-dev @seampact/cli @seampact/codegen-ts @seampact/codegen-zod @seampact/codegen-nestjs
 ```
 
-In `seampact.config.yaml`, add the targets. To use yup or class-validator instead of zod, see [Validators](../configuration/validators.md).
+In `seampact.config.yaml`, add the targets. To use yup or class-validator instead of zod, see [Switch the validator](../configuration/validators.md).
 
 ```yaml
 outDir: src/__generated__
@@ -41,6 +41,8 @@ targets:
       types: types
       validators: validators
 ```
+
+The request is checked with [zod](../types-and-validation/zod.md) by default, and the types come from [TypeScript types](../types-and-validation/typescript-types.md). [yup](../types-and-validation/yup.md) and [class-validator](../types-and-validation/class-validator.md) also work: see [Types and validation](../types-and-validation/README.md).
 
 Generate, then commit the files: `seampact check` fails later if they drift from the contract.
 

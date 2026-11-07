@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="packages/tools/docs-site/site/assets/logo.svg" alt="seampact logo: an abstract S made of an API document, a ribbon and a layer of code" width="160">
+</p>
+
 # seampact
 
 **Declare your API once in YAML. Get typed handlers, validators, OpenAPI and clients for your own framework.**

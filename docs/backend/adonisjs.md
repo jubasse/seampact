@@ -60,6 +60,8 @@ targets:
       types: types
 ```
 
+With no `validators` entry, the request is checked with [VineJS](../types-and-validation/vinejs.md); [zod](../types-and-validation/zod.md) and [yup](../types-and-validation/yup.md) also work. The types come from [TypeScript types](../types-and-validation/typescript-types.md): see [Types and validation](../types-and-validation/README.md).
+
 Generate, then commit the files: `seampact check` fails later if they drift from the contract.
 
 ```sh
@@ -188,7 +190,7 @@ Set these in `options:` of the `server` entry.
 | `bodyValidation` | `false` | Check the success bodies your code writes outside the handler result. A handler result is typed already. |
 | `frameworkEtag` | `strip` | `strip` removes an ETag AdonisJS adds to a reply written outside the contract. `keep` leaves it. |
 | `catchAll` | `true` | Answer the api's 404 for a path under its base path that no route serves, or a method it does not serve. `false` leaves those requests to your app. |
-| `rules` | `native` | The checks of the generated VineJS validators. `native` uses VineJS's own rules. `seampact-consistent` gives the contract's exact checks; see [Validators](../configuration/validators.md#vinejs). |
+| `rules` | `native` | The checks of the generated VineJS validators. `native` uses VineJS's own rules. `seampact-consistent` gives the contract's exact checks; see [VineJS](../types-and-validation/vinejs.md#native-or-consistent-rules). |
 
 Every option of this target is in the [config reference](../configuration/reference.md#codegen-adonis). Entry keys shared by the Node servers: [`mount`](../configuration/reference.md#mount), [`frameworkRoutes`](../configuration/reference.md#framework-routes) and the [boot check](../configuration/reference.md#boot-check).
 
@@ -254,6 +256,7 @@ The server also checks itself at start. Fix the lines it prints, then start agai
 - A query list in the `brackets` form is refused by `generate`.
 - An identity header written on a response is refused (`identity.response.header.unsupported`).
 - A sort key or a nested input field restricted by a right is refused (`paging.sortKey.restricted.unsupported`, `fieldRight.nestedPointer.unsupported`).
+- On AdonisJS 6, a compressed request body (gzip, deflate, br) answers 415, or 413 when it is over the route limit once inflated. Send it uncompressed, or use AdonisJS 7.
 
 Every refusal and its fix: [Node servers](../troubleshooting/generate.md#node-servers) and [every server](../troubleshooting/generate.md#every-server). For 428 and 412 on versioned writes, see [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
 
