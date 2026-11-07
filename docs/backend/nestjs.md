@@ -1,8 +1,58 @@
-# Write the handlers (NestJS)
+# NestJS
 
-The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. Create `src/notes-controller.ts`.
+`@seampact/codegen-nestjs` generates decorators, a module and a filter around your NestJS controllers, and checks access, input and replies for every route of the contract. You write the controller methods and the [hooks](node-hooks.md). NestJS 12 on the Express platform is supported; see [Supported versions](../supported-versions.md). The step-by-step first project is in [Your first API](../getting-started/your-first-api.md).
 
-The generated server imports `@seampact/server-runtime`, which you installed in `dependencies`; keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`.
+## Set up
+
+You need:
+
+- Node.js 24 or later;
+- a contract, as in [Your first API](../getting-started/your-first-api.md);
+- `experimentalDecorators` set in `tsconfig.json`;
+- every `@seampact/*` package at the same version. Yarn Plug'n'Play is not supported.
+
+Install NestJS and seampact. The Fastify platform is refused at boot.
+
+```sh
+npm install @nestjs/common @nestjs/core @nestjs/platform-express reflect-metadata rxjs zod @seampact/server-runtime @seampact/hooks
+npm install --save-dev @seampact/cli @seampact/codegen-ts @seampact/codegen-zod @seampact/codegen-nestjs
+```
+
+In `seampact.config.yaml`, add the targets. To use yup or class-validator instead of zod, see [Validators](../configuration/validators.md).
+
+```yaml
+outDir: src/__generated__
+sources:
+  notes:
+    path: ./contract
+targets:
+  - id: types
+    use: "@seampact/codegen-ts"
+    apis: [notes]
+  - id: validators
+    use: "@seampact/codegen-zod"
+    apis: [notes]
+  - id: server
+    use: "@seampact/codegen-nestjs"
+    apis: [notes]
+    options:
+      bodyValidation: true
+    link:
+      types: types
+      validators: validators
+```
+
+Generate, then commit the files: `seampact check` fails later if they drift from the contract.
+
+```sh
+npx seampact generate
+```
+
+You see one line per target, and the files appear in `src/__generated__`. Types come from `types/notes`. Decorators and the module come from `server/notes`.
+
+## Write a handler
+
+The generated `NotesEndpoints` interface has one method per operation. Each returns a status and the body the contract allows for it. `Notes.Status` names the statuses, and `Notes.ErrorCode` the error codes: `ApiNotFound` is the built-in `api.not_found`. Create `src/notes-controller.ts`.
 
 ```ts
 import { randomUUID } from "node:crypto";
@@ -48,31 +98,57 @@ export class NotesController implements NotesNest.NotesEndpoints {
 }
 ```
 
-`listNotes` returns every note; a real app reads `input.query.cursor` to page through them.
+Rules for a contract method:
 
-A service can also throw. `throw new NotFoundException()` answers the operation's 404 code, when it declares one. For any declared code, throw `new NotesNest.ContractException(code, params)`: it is typed with the api's codes and their params. A code with required params needs it: a plain `HttpException` of that status answers 500.
+- Keep `@Controller()` without a path, and do not add `@HttpCode` or `@Header`. The contract sets paths, statuses and headers, and the app refuses to start otherwise.
+- A service can also throw. `throw new NotFoundException()` answers the operation's 404 code, when it declares one. For any declared code, throw `new NotesNest.ContractException(code, params)`: it is typed with the api's codes and their params. A plain `HttpException` for a code that needs params answers 500.
+- seampact's filter catches these exceptions before your global filters, so a global `@Catch(NotFoundException)` filter does not see them on a contract route.
 
-On a contract route, seampact's filter catches these exceptions before your global filters, so a global `@Catch(NotFoundException)` filter does not see them there.
+### Who is calling
 
-Keep `@Controller()` without a path, and do not add `@HttpCode` or `@Header` to a contract method: the contract sets the paths, statuses and headers, and the app refuses to start otherwise.
+`@<operation>.principal()` gives the caller: what your authenticate hook returned, typed with the identity's principal schema. `@<operation>.scopes()` gives one entry per scope, as your resolver returned it. A public operation has no `principal()`, and an operation in no scope has no `scopes()`.
 
-Types come from `types/notes`. Decorators and handlers come from `server/notes`.
+```ts
+@NotesNest.getNote()
+getNote(
+  @NotesNest.getNote.input() input: NotesNest.HandlerInputs["getNote"],
+  @NotesNest.getNote.principal() principal: NotesNest.OperationAccess["getNote"]["principal"],
+) {
+  const ownerId = principal.userId;
+```
 
-Create `src/app-module.ts`. A public api needs no hooks.
+The input typed with `HandlerInputs` carries the same `principal` and `scopes`, read-only. Spreading or serialising it leaves them out. The scope's `value` is `unknown`: narrow it.
+
+### Read one part of the input
+
+Instead of the whole input, take the parts you use: `@<operation>.path()`, `.query()`, `.headers()` and `.body()`. Each exists when the operation declares that part. The request is checked once, whichever parts you take.
+
+```ts
+@NotesNest.getNote()
+getNote(@NotesNest.getNote.path() path: Notes.GetNoteInput["path"]) {
+  const note = notes.get(path.noteId);
+```
+
+## Wire it in
+
+Create `src/app-module.ts`. Pass your hooks to `forRoot`.
 
 ```ts
 import { Module } from "@nestjs/common";
 import * as NotesNest from "./__generated__/server/notes/index.js";
 import { NotesController } from "./notes-controller.js";
+import { notesHooks } from "./notes-hooks.js";
 
 @Module({
-  imports: [NotesNest.SeampactModule.forRoot()],
+  imports: [NotesNest.SeampactModule.forRoot(notesHooks())],
   controllers: [NotesController],
 })
 export class AppModule {}
 ```
 
-Create `src/main.ts`. `configureApp` installs the JSON parser of the contract routes and the filter that make bad JSON and unknown routes answer in the contract's error format. Your own routes keep NestJS's default JSON parser.
+For a public api, write `forRoot()`. Import `forRoot` once per api.
+
+Create `src/main.ts`. `configureApp` installs the JSON parser of the contract routes and the filter that make bad JSON and unknown routes answer in the contract's error format. Call it before `listen`.
 
 ```ts
 import "reflect-metadata";
@@ -88,7 +164,7 @@ NotesNest.configureApp(app);
 await app.listen(3000);
 ```
 
-Typecheck.
+Check the types.
 
 ```sh
 npx tsc -p .
@@ -96,38 +172,75 @@ npx tsc -p .
 
 You see no output.
 
-A throttler's 429 works out of the box with `@nestjs/throttler`. When the operation's `rateLimited` code requires `retryAfterMs`, seampact fills it from the throttler's `Retry-After` (seconds or an HTTP date), read from the reply or from the exception. Without a usable `Retry-After`, the reply is a logged 500 (with an optional `retryAfterMs`, the code is answered without it): throw `new NotesNest.ContractException(code, params)` instead.
+### Hooks that need providers
 
-## Who is calling
-
-When an operation declares an identity, take its caller with `@<operation>.principal()`: what your authenticate hook returned, typed with the identity's principal schema. A public operation has no `principal()` decorator.
-
-When an operation runs in a scope, `@<operation>.scopes()` gives one entry per scope, as your resolver returned it. An operation in no scope has no `scopes()` decorator.
+When your hooks need NestJS providers, build them with `forRootAsync`.
 
 ```ts
-@NotesNest.getNote()
-getNote(
-  @NotesNest.getNote.input() input: NotesNest.HandlerInputs["getNote"],
-  @NotesNest.getNote.principal() principal: NotesNest.OperationAccess["getNote"]["principal"],
-) {
-  const ownerId = principal.userId;
+NotesNest.SeampactModule.forRootAsync({
+  imports: [UsersModule],
+  inject: [UsersService],
+  useFactory: (users: UsersService) => notesHooks(users),
+});
 ```
 
-The input typed with `HandlerInputs` carries the same `principal` and `scopes`, read-only. Spreading or serialising it leaves them out. The scope's `value` is `unknown`: narrow it before use.
+### Your own JSON parser and filters
 
-## Read one part of the input
+On the contract routes, `configureApp` reads JSON bodies at each route's limit, accepts a plain value such as `"text"` (the contract then checks it) and keeps the bytes of signed routes. Your own routes keep NestJS's default JSON parser: strict, 100 KB. To change it, pass its options: `configureApp(app, { appJsonParser: { limit: "5mb" } })`.
 
-Instead of the whole input, take only the parts you use: `@<operation>.path()`, `.query()`, `.headers()` and `.body()`. Each exists when the operation declares that part. The request is checked once, whichever parts you take.
+- Do not add a JSON parser of your own: the app refuses to start, because it would read the contract bodies first, or never run.
+- With two apis, call each api's `configureApp`, and pass `appJsonParser` to the first call only.
+- With a global filter of your own, do the steps yourself: `app.useBodyParser("json", { limit, strict: false, verify: NotesNest.keepRawBody })`, then call the api's `renderPreRoutingError` from your filter. A contract body that no parser read answers 500, with a log naming `configureApp`.
+
+## Write the hooks
+
+Authenticate, decide, scope resolver, idempotency store and unexpected-error listener are the same on every Node server. [Hooks for Node servers](node-hooks.md) shows each one and a complete `src/notes-hooks.ts`. Pass the object to `forRoot`, as in `app-module.ts` above.
+
+### Use NestJS's own auth
+
+Call your guard logic from a decide hook and let it throw `UnauthorizedException` or `ForbiddenException`: seampact answers the right's first declared denial code. See [Use your framework's own auth](node-hooks.md#use-your-frameworks-own-auth).
+
+## Options
+
+Set these in `options:` of the `server` entry.
+
+| Option | Default | What it does |
+|---|---|---|
+| `responses` | `strict` | What happens when a handler answers something the contract does not declare. `strict` replaces the reply with the api's 500. `warn` lets it through and logs it. |
+| `bodyValidation` | `false` | Check the success bodies your code writes outside the handler result. Needs the validators target. A handler result is typed already. |
+| `frameworkEtag` | `strip` | `strip` removes an ETag the framework adds to a reply written outside the contract. `keep` leaves it. |
+| `catchAll` | `true` | Answer the api's 404 for a path under its base path that no route serves, or a method it does not serve. `false` leaves those requests to your app. |
+| `reply` | `handler` | `handler`: seampact writes the reply when your handler returns. `interceptor`: your global interceptors (`app.useGlobalInterceptors(...)`, `APP_INTERCEPTOR`) map the result first, and seampact checks the mapped value against the contract. |
+
+Every option of this target is in the [config reference](../configuration/reference.md#codegen-nestjs). Entry keys shared by the Node servers: [`mount`](../configuration/reference.md#mount), [`frameworkRoutes`](../configuration/reference.md#framework-routes) and the [boot check](../configuration/reference.md#boot-check).
+
+`forRoot(hooks, { logger, responses, bodyValidation, unboundOperations })` changes some of these at startup, for example `forRoot(notesHooks(), { bodyValidation: process.env.NODE_ENV !== "production" })`. A `responses()` decorator on a controller or a method still wins. A wrong value stops the app at boot.
+
+- `logger` takes `warn` and `error` functions. By default seampact writes through NestJS's `Logger` under the context `Seampact:<api>`, so `app.useLogger(...)` applies.
+- `bodyValidation: true` needs the validators generated with the target option `bodyValidation: true`.
+- `unboundOperations: "warn"` is for tests (below).
+
+## Rate limits
+
+A 429 from `@nestjs/throttler` works as is. If the operation's `rateLimited` code requires `retryAfterMs`, seampact fills it from the throttler's `Retry-After` (seconds or an HTTP date), read from the reply or from the exception. Without a usable header, the client gets a logged 500: throw `new NotesNest.ContractException(code, params)` instead.
+
+## Paging
+
+A list handler returns the items and the page facts your paging style names, for example `{ items, nextCursor }`. Read the client's cursor in `input.query.cursor`. See [Lists](../contract/05-lists.md).
+
+## Docs and OpenAPI
+
+To show the contract in `@nestjs/swagger`, set `artefacts: { nativeDocs: true }` on the `server` entry, generate again, and build the document with one call. It adds the contract schemas and stops the app if one of your classes replaces one.
 
 ```ts
-@NotesNest.getNote()
-getNote(@NotesNest.getNote.path() path: Notes.GetNoteInput["path"]) {
-  const note = notes.get(path.noteId);
+const document = NotesNest.createContractDocument(app, config);
 ```
+
+The full setup is in [OpenAPI and docs](../configuration/openapi-and-docs.md#serve-swagger-on-nestjs).
 
 ## Test your routes
 
-Build a testing module, set the app up with `configureApp`, as `main.ts` does, and send requests with `supertest`. Send the credential header your authenticate hook reads.
+Build a testing module, set the app up with `configureApp` as `main.ts` does, and send requests with `supertest`. Send the credential your authenticate hook reads.
 
 ```ts
 const moduleRef = await Test.createTestingModule({
@@ -142,7 +255,8 @@ await app.init();
 const reply = await request(app.getHttpServer()).get(`/v1/notes/${noteId}`).set("authorization", "Bearer test-user");
 ```
 
-`unboundOperations: "warn"` lets a testing module hold only some controllers. The app starts, logs the operations no controller serves, and their routes answer the api's 404. Leave it out of your app module: there, a missing operation stops the boot.
+- `unboundOperations: "warn"` lets a testing module hold only some controllers. The app starts, logs the operations no controller serves, and their routes answer the api's 404. Leave it out of your app module: there, a missing operation stops the boot.
+- To replace your hooks in an existing module, use `overrideProvider(NotesNest.SEAMPACT_HOOKS).useValue(testHooks)`.
 
 To test a controller method without HTTP, call it with a plain input and the caller. Nothing checks them on a direct call.
 
@@ -150,13 +264,13 @@ To test a controller method without HTTP, call it with a plain input and the cal
 const reply = await new NotesController().getNote({ path: { noteId } }, { userId });
 ```
 
-To replace your hooks in a test, use `overrideProvider(NotesNest.SEAMPACT_HOOKS).useValue(testHooks)`.
+### Debug locally
 
-With `NODE_ENV=development`, an exception your handler throws goes to NestJS's exception filters, which log its stack. seampact logs its message and the file and line it came from. Outside development, under the default `responses: strict` the client gets the api's 500; under `responses: warn` the framework's reply goes out as written and the violation is logged.
+With `NODE_ENV=development`, an exception your handler throws goes to NestJS's exception filters, which log its stack. seampact logs its message and the file and line it came from. Otherwise, under `responses: strict` the client gets the api's 500. Under `responses: warn` the framework's reply goes out as written and the violation is logged.
 
-## Behind a reverse proxy and in Docker
+## Deploy
 
-Trust only your proxy's addresses on the Express platform, so `req.ip` is the caller's:
+Behind a proxy, trust only your proxy's addresses on the Express platform, so `req.ip` is the caller's. Your hooks get `req.ip` as the client address.
 
 ```ts
 const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -164,59 +278,33 @@ const app = await NestFactory.create<NestExpressApplication>(AppModule);
 app.set("trust proxy", ["loopback", "10.0.0.0/8"]);
 ```
 
-The client address your hooks get is Express's `req.ip`, so it follows this setting.
+The proxy forwards the contract's paths as they are (`/v1/notes`). Strip only a prefix you added in front, such as `/api`. To serve the api under a prefix, set `mount: /api` on the target entry instead of `setGlobalPrefix`. If you keep a global prefix, exclude the contract routes; a `RouterModule` path on the controller's module is refused the same way.
 
-The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. With `setGlobalPrefix`, exclude the contract routes: the app refuses to start when a contract route is under the prefix. The same goes for a `RouterModule` path on the controller's module. To serve the api under a prefix, set `mount: /api` on the target entry instead.
+Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix.
 
-Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
+In Docker, keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files. Check your variables at boot with `ConfigModule.forRoot({ validate })`.
 
-Check your variables at boot with `ConfigModule.forRoot({ validate })`. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
+The server also checks itself at start. Fix the lines it prints, then start again. 
 
-## Wiring reference
+| Fault | Fix |
+|---|---|
+| a hook is missing (`no authenticate hook ...`, `no decider ...`) | Add it. See the [boot check of the hooks](node-hooks.md#boot-check). |
+| `no JSON parser read the body of '<operation>'` (a 500 at run time) | Call `configureApp(app)` before `listen`. |
+| `setGlobalPrefix('<prefix>') prefixes <route>` | Exclude the contract routes in `setGlobalPrefix`, or use `mount`. |
+| `@Controller('<path>') on <Controller> prefixes the contract route` | Use `@Controller()` without a path. |
+| `the NestJS platform is '<x>'` | Use `@nestjs/platform-express`. |
 
-Every server target takes four options: `bodyValidation` (check the success bodies your code writes outside the handler result, off by default; a handler result is typed already), `frameworkEtag` (`strip` by default removes an ETag the framework adds to a reply your code wrote outside the contract; `keep` leaves it), `catchAll` (`true` by default answers the api's 404 for a path under its base path that no route serves, or a method it does not serve; `false` leaves those requests to your app) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it.
+Every other start message: [NestJS boot errors](../troubleshooting/boot.md#nestjs).
 
-The NestJS target also takes `reply`. With `handler` (the default), seampact writes the reply when your handler returns. With `interceptor`, your global interceptors (`app.useGlobalInterceptors(...)` or `APP_INTERCEPTOR`) map the result first, and seampact checks the mapped value against the contract.
+## Limits
 
-seampact writes its warnings through NestJS's `Logger`, under the context `Seampact:<api>`, so `app.useLogger(...)` applies to them. Pass `{ logger }` as the second argument of `forRoot` to send them elsewhere: `TasksNest.SeampactModule.forRoot(tasksHooks(), { logger })`. It needs `warn` and `error` functions.
+- A query list in the `brackets` form is refused by `generate`.
+- An identity header written on a response is refused (`identity.response.header.unsupported`).
+- A sort key or a nested input field restricted by a right is refused (`paging.sortKey.restricted.unsupported`, `fieldRight.nestedPointer.unsupported`).
 
-The same argument takes `responses` and `bodyValidation`, to change the generated values at startup, for example from your config: `forRoot(tasksHooks(), { bodyValidation: process.env.NODE_ENV !== "production" })`. A `responses()` decorator on a controller or a method still wins. `bodyValidation: true` here needs the validators generated, with the target option `bodyValidation: true`. A wrong value stops the app at boot.
+Every refusal and its fix: [Node servers](../troubleshooting/generate.md#node-servers) and [every server](../troubleshooting/generate.md#every-server). For 428 and 412 on versioned writes, see [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
 
-When your hooks need providers, build them with `forRootAsync`. In a test, replace them with `overrideProvider(TasksNest.SEAMPACT_HOOKS).useValue(testHooks)`.
+## Next
 
-```ts
-TasksNest.SeampactModule.forRootAsync({
-  imports: [UsersModule],
-  inject: [UsersService],
-  useFactory: (users: UsersService) => tasksHooks(users),
-});
-```
-
-Install `@nestjs/platform-express` (the Fastify platform is refused at boot), `reflect-metadata` and `rxjs`, and set `experimentalDecorators` in `tsconfig.json`. Import the generated module with your hooks and call `configureApp(app)` before `listen`. On the contract routes, it reads JSON bodies at each route's limit, accepts a plain value such as `"text"` (the contract then checks it), and keeps the bytes of signed routes. Your own routes get NestJS's default JSON parser: strict, 100 KB, and the raw body only with `rawBody: true`. To change it, pass its options: `configureApp(app, { appJsonParser: { limit: "5mb" } })`. Do not add a JSON parser of your own: the app refuses to start, because that parser would read the contract bodies first, or never run. With two apis, call each api's `configureApp`, and pass `appJsonParser` to the first call only. `configureApp` also registers `preRoutingFilter`. Without the filter, malformed JSON and unknown routes under the api's prefix answer with NestJS's own error body instead of the contract's format. With a global filter of your own, write these steps yourself: `app.useBodyParser("json", { limit, strict: false, verify: TasksNest.keepRawBody })`, then call each api's `renderPreRoutingError` from your filter. A contract body no parser read answers 500, with a log naming `configureApp`.
-
-```ts
-@Module({ imports: [TasksNest.SeampactModule.forRoot(tasksHooks())], controllers: [TasksController] })
-export class AppModule {}
-
-const app = await NestFactory.create<NestExpressApplication>(AppModule);
-
-TasksNest.configureApp(app);
-```
-
-For `@nestjs/swagger`, write the document with one call. It adds the contract schemas and stops the app if one of your classes replaces one. The setup is in [OpenAPI and docs](../configuration/openapi-and-docs.md).
-
-```ts
-const document = TasksNest.createContractDocument(app, config, { autoTagControllers: false });
-```
-
-Next: [run it](../getting-started/03-generate-and-run.md#run-it).
-
-## Versioned writes and query lists
-
-A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
-
-A query list is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`. The `brackets` form is refused by `generate`.
-
-An identity header written on a response (a `versionToken` header, or one declared `in: response`) is refused by `generate` (`identity.response.header.unsupported`): no handler can write it yet.
-
-A sort key restricted by a right (`paging.sortKey.restricted.unsupported`) and an input field right below the top level of the input (`fieldRight.nestedPointer.unsupported`) are refused by `generate`. Leave the key out of `sortable`, and put the field at the top level.
+- [Hooks for Node servers](node-hooks.md): write the hooks your contract asks for.
+- [Call it from React](../frontend/react.md): use the same contract from the browser.

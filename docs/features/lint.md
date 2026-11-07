@@ -1,6 +1,6 @@
 # Lint
 
-Lint reads your contract and warns about things that compile but look wrong. Run it in the app folder.
+Lint reads your contract and warns about things that compile but look wrong. Run it in the app folder. Without Node, run it with the compiler binary: see [commands per stack](commands-per-stack.md). The lines below use `npx` for Node.
 
 ```sh
 npx seampact lint
@@ -25,7 +25,7 @@ Warnings do not fail. An error does: the command exits with 1. `lint` reads sour
 | `seampact/unused-declaration` | A declaration that no route, identity or convention uses. |
 | `seampact/not-found-role` | A declared 404 code beside the derived not-found code on a route. |
 
-All are warnings by default. `seampact/field-right-unresolved` is reserved: you may set its level, but no rule runs yet.
+All are warnings by default.
 
 ## Change a rule level
 
@@ -52,10 +52,14 @@ token:
       seampact/credential-name: "A public share token, not a secret."
 ```
 
-On a route, the allow reaches every route below it. Each rule's fix says where its allow goes.
+On a route, the allow reaches every route below it ([Settings flow down the tree](../contract/01-basics.md#settings-flow-down-the-tree)). Each rule's fix says where its allow goes.
 
 ## Your own rules
 
-House rules are planned. `seampact lint` does not load plugins yet, so a level set for a rule no plugin owns prints `seampact/lint/unclaimed-rule` and is ignored.
+`seampact lint` does not load plugins yet. A level set for a rule that does not exist prints `seampact/lint/unclaimed-rule` and is ignored.
 
-Errors: [Troubleshooting](../troubleshooting/README.md). The rules in full: [Grammar 12](../grammar/12-enums-examples-docs-extensions.md).
+Errors: [Troubleshooting](../troubleshooting/README.md).
+
+## Next
+
+[Check it in CI](check-in-ci.md). The rules in full: [Grammar 12](../grammar/12-enums-examples-docs-extensions.md).

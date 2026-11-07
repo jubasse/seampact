@@ -1,7 +1,8 @@
-// The prebuild of the docs site: copies docs/ into Starlight's content folder, takes each page's title from its first heading, rewrites relative links to site routes or GitHub links, and writes the sidebar from the docs index.
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+// The prebuild of the docs site: copies docs/ into Starlight's content folder, adds the site-only home page, takes each page's title from its first heading, rewrites relative links to site routes or GitHub links, and writes the sidebar from the docs index.
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import { folderIndexMarkdown, type ListedPage, pagesDirectlyIn } from "./folder-index.ts";
+import { lastCommitDate } from "./last-commit-date.ts";
 import type { LinkContext } from "./link-target.ts";
 import { parseMarkdown } from "./markdown-tree.ts";
 import { type BrokenLink, transformPage } from "./page-transform.ts";
@@ -9,6 +10,7 @@ import { buildSidebar, type SidebarEntry } from "./sidebar.ts";
 import { type SiteLayout, siteLayoutFrom } from "./site-layout.ts";
 import { folderIndexDocsPath, listSourcePages } from "./source-pages.ts";
 
+export { LLMS_EXCLUDED_DOC_IDS, movedPageRedirects } from "./page-policy.ts";
 export type { SidebarEntry } from "./sidebar.ts";
 export { SITE_BASE, SITE_URL } from "./site-layout.ts";
 
@@ -42,13 +44,20 @@ export function buildSiteContent(packageRoot: string): SiteContentSummary {
   const writtenPages = new Map<string, string>();
   const listedPages: ListedPage[] = [];
   const brokenLinks: BrokenLink[] = [];
+  const takenDescriptions = new Set<string>();
 
   for (const page of pagesByDocsPath.values()) {
     const transformed = transformPage(
       readFileSync(join(layout.docsRoot, page.docsPath), "utf8"),
       page.docsPath,
       context,
+      {
+        lastUpdated: lastCommitDate(layout.repositoryRoot, `docs/${page.docsPath}`),
+        takenDescriptions,
+      },
     );
+
+    if (transformed.description !== undefined) takenDescriptions.add(transformed.description);
 
     writtenPages.set(page.contentPath, transformed.markdown);
     listedPages.push({ slug: page.slug, title: transformed.title });
@@ -71,7 +80,7 @@ export function buildSiteContent(packageRoot: string): SiteContentSummary {
 
     writtenPages.set(
       posix.join(folder, "index.md"),
-      folderIndexMarkdown(folderTitle, pagesDirectlyIn(folder, listedPages)),
+      folderIndexMarkdown(folder, folderTitle, pagesDirectlyIn(folder, listedPages)),
     );
   }
 
@@ -84,9 +93,7 @@ export function buildSiteContent(packageRoot: string): SiteContentSummary {
       .map((page) => page.slug)
       .filter(
         (slug) =>
-          slug !== "" &&
-          !sidebar.coveredSlugs.has(slug) &&
-          !sidebar.coveredSlugs.has(`${posix.dirname(slug)}/`),
+          !sidebar.coveredSlugs.has(slug) && !sidebar.coveredSlugs.has(`${posix.dirname(slug)}/`),
       ),
   };
 }
@@ -104,6 +111,8 @@ function writeSiteContent(
     mkdirSync(dirname(pageFile), { recursive: true });
     writeFileSync(pageFile, markdown);
   }
+
+  copyFileSync(layout.homePageFile, join(layout.contentRoot, "index.mdx"));
 
   mkdirSync(dirname(layout.sidebarFile), { recursive: true });
   writeFileSync(layout.sidebarFile, `${JSON.stringify(sidebarEntries, null, 2)}\n`);

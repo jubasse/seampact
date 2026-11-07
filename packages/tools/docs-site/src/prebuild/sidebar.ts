@@ -2,9 +2,14 @@ import type { Link, List, ListItem, Root } from "mdast";
 import { visit } from "unist-util-visit";
 import { type LinkContext, resolveLinkTarget } from "./link-target.ts";
 import { plainText } from "./markdown-tree.ts";
+import { DOCS_INDEX_SLUG } from "./page-policy.ts";
 import { SITE_BASE } from "./site-layout.ts";
 
 const INDEX_DOCS_PATH = "README.md";
+const OPEN_SECTION_LABEL = "Getting started";
+const CONTRIBUTOR_SECTION_LABEL = "Design";
+const CONTRIBUTOR_SECTION_SIDEBAR_LABEL = "Design (for contributors)";
+const DOCS_INDEX_SIDEBAR_LABEL = "Documentation index";
 
 /** A Starlight sidebar entry, as `starlight({ sidebar })` reads it. */
 export type SidebarEntry =
@@ -39,14 +44,18 @@ export function buildSidebar(
 ): SiteSidebar {
   const coveredSlugs = new Set<string>();
   const folderTitles = new Map<string, string>();
-  const entries: SidebarEntry[] = [];
+  const entries: SidebarEntry[] = [{ label: DOCS_INDEX_SIDEBAR_LABEL, slug: DOCS_INDEX_SLUG }];
+
+  coveredSlugs.add(DOCS_INDEX_SLUG);
 
   for (const section of readIndexSections(indexTree)) {
-    const items = section.links.map((link) =>
-      sidebarEntryFor(link, foldersWithoutReadme, context, coveredSlugs, folderTitles),
-    );
+    const items = section.links
+      .map((link) =>
+        sidebarEntryFor(link, foldersWithoutReadme, context, coveredSlugs, folderTitles),
+      )
+      .filter((entry): entry is SidebarEntry => entry !== undefined);
 
-    entries.push({ label: section.label, items });
+    if (items.length > 0) entries.push(sectionEntry(section.label, items));
 
     const sectionFolder = commonFolder(items);
 
@@ -55,6 +64,15 @@ export function buildSidebar(
   }
 
   return { entries, coveredSlugs, folderTitles };
+}
+
+/** Every group starts closed except the first steps; the contributor group says who it is for. */
+function sectionEntry(label: string, items: SidebarEntry[]): SidebarEntry {
+  return {
+    label: label === CONTRIBUTOR_SECTION_LABEL ? CONTRIBUTOR_SECTION_SIDEBAR_LABEL : label,
+    collapsed: label !== OPEN_SECTION_LABEL,
+    items,
+  };
 }
 
 function readIndexSections(indexTree: Root): IndexSection[] {
@@ -108,7 +126,7 @@ function sidebarEntryFor(
   context: LinkContext,
   coveredSlugs: Set<string>,
   folderTitles: Map<string, string>,
-): SidebarEntry {
+): SidebarEntry | undefined {
   const target = resolveLinkTarget(link.url, INDEX_DOCS_PATH, context);
 
   if (target.kind === "broken")
@@ -126,6 +144,9 @@ function sidebarEntryFor(
 
     return { label: link.label, collapsed: true, items: [{ autogenerate: { directory: slug } }] };
   }
+
+  // A page the index lists twice (or reaches through a moved page) stays where it came first.
+  if (coveredSlugs.has(slug)) return undefined;
 
   coveredSlugs.add(slug);
 

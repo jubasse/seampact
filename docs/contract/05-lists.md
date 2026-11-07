@@ -6,6 +6,23 @@ A list is a route that returns many records. It needs a paging style, so a clien
 
 A style says which query parameters a client sends and how the page comes back. It lives under `pagings`. seampact imposes no shape: you write the body your clients expect. A list without a style fails to compile, and the error shows an example.
 
+A cursor, with the next page in a `Link` header. Add it as a top-level `pagings` block of `contract/api.yaml`:
+
+```yaml
+pagings:
+  cursor:
+    request:
+      cursor: { query: cursor }
+      limit: { query: limit }
+    response:
+      body: $items
+      links: { next: $next }
+```
+
+`$items` is where the records go. `$next` is the link to the next page. The client sends `?cursor=...&limit=20`, and the body is the array of records.
+
+## More styles
+
 Page numbers, with the page facts under a `meta` key:
 
 ```yaml
@@ -20,49 +37,14 @@ pagings:
 
 The client sends `?page=2&limit=20` and gets `{ "items": [...], "meta": { "page": 2, "limit": 20, "total": 57 } }`.
 
-A cursor, with the next page in a `Link` header:
+Page facts as flat members beside the items use `$page` and `$totalPages`: `body: { items: $items, page: $page, totalPages: $totalPages }`.
 
-```yaml
-pagings:
-  cursor:
-    request:
-      cursor: { query: cursor }
-      limit: { query: limit }
-      sort: { query: sort, style: signed }
-    response:
-      body: $items
-      links: { next: $next }
-```
-
-The client sends `?cursor=...&limit=20`, and the body is the array of records.
-
-Page facts as flat members beside the items:
-
-```yaml
-pagings:
-  flatPages:
-    request:
-      page: { query: page }
-      limit: { query: limit }
-    response:
-      body: { items: $items, page: $page, totalPages: $totalPages }
-```
-
-The body is `{ "items": [...], "page": 2, "totalPages": 3 }`.
-
-A style can take its cursor in two parameters, as Stripe does:
-
-```yaml
-    request:
-      after: { query: starting_after }
-      before: { query: ending_before }
-```
-
-A request sends one of the two. Both answer `400`.
+A style can take its cursor in two parameters, as Stripe does (`after` and `before`). A request sends one of the two. Both answer `400`. See [Paging styles](../grammar/14-paging-styles.md) for every role.
 
 ## Use it on a list
 
 ```yaml
+# contract/api.yaml, under surfaces.app.routes
 notes:
   kind: collection
   id: { noteId: NoteId }
@@ -75,11 +57,12 @@ notes:
 
 - `maxLimit` is required for a style with a `limit`. A larger `limit` answers `400`. With `overLimit: clamp` it is served as `maxLimit` instead.
 - `defaultLimit` is the page size when the client sends none.
-- `sortable` lists the fields a client may sort by: `?sort=-createdAt,title`. It needs a `sort` in the style.
+- `sortable` lists the fields a client may sort by: `?sort=-createdAt,title`. It needs a `sort` in the style: add `sort: { query: sort, style: signed }` to `request`. `signed` means a `-` before a field sorts it downward.
 
 To use one style on every list, set it once. Then a list writes no `paging`.
 
 ```yaml
+# contract/api.yaml, top level
 conventions:
   paging: { default: cursor, maxLimit: 50 }
 ```
@@ -89,19 +72,21 @@ conventions:
 For a short list that never grows, skip paging.
 
 ```yaml
+# under a collection node
 ops:
   list: { paging: none }
 ```
 
 ## Use `item`, not `output`
 
-On a route that is not an `op`, write `item: Note` to make it a list. `output` is always the whole body. An array `output` on a `GET` is refused with this fix.
+On a custom route that returns many records, write `item: Note`. `output` is always the whole body. An array `output` on a `GET` is refused.
 
 ## A list in a query parameter
 
-A query parameter that is a list, such as `state?: TaskState[]`, travels as repeated keys by default: `?state=open&state=done`. Choose another form once for the api:
+A query parameter that is a list, such as `state?: { type: array, items: TaskState }`, travels as repeated keys by default: `?state=open&state=done`. Choose another form once for the api:
 
 ```yaml
+# contract/api.yaml, top level
 conventions:
   query: { lists: comma }
 ```
@@ -112,11 +97,15 @@ conventions:
 
 If a target refuses the form, `generate` says which and how to fix it: see [Target option errors](../troubleshooting/generate.md).
 
+## Read the page in a handler
+
+The handler reads the position and the limit the style names, and returns the items. The server writes the rest. Each server guide has a Paging section: [Express](../backend/express.md#paging), [Fastify](../backend/fastify.md#paging), [Hono](../backend/hono.md#paging), [NestJS](../backend/nestjs.md#paging), [AdonisJS](../backend/adonisjs.md#paging), [Spring Boot](../backend/spring-boot.md#paging), [Laravel](../backend/laravel.md#paging) and [Symfony](../backend/symfony.md#paging).
+
 ## Ready-made styles
 
-Format packs bring styles for JSON:API, HAL, Laravel, Spring and API Platform. Add one under `packs` instead of writing your own. See [Convention packs](../grammar/15-first-party-pack-presets.md).
+A convention pack brings a ready-made paging style. Add one under `packs` instead of writing your own. See [Convention packs](../features/convention-packs.md) for the packs that generate code today.
 
-## What is next
+## Next
 
-- Every paging role and example: [Paging styles](../grammar/14-paging-styles.md).
-- List settings (`cache`, `filteredBy`, `budget`): [Lists, cache and lifecycle](../grammar/10-lists-cache-and-lifecycle.md).
+- Next: [Versioning and change](06-versioning.md).
+- In depth: [Paging styles](../grammar/14-paging-styles.md) and [Lists, cache and lifecycle](../grammar/10-lists-cache-and-lifecycle.md) (`cache`, `filteredBy`, `budget`).

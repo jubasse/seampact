@@ -11,6 +11,7 @@ const REPOSITORY_FILES = [
   "packages/core/cli/src/index.ts",
   "docs/README.md",
   "docs/backend/hono.md",
+  "docs/configuration/checks.md",
   "docs/getting-started/README.md",
   "docs/getting-started/01-install.md",
   "docs/grammar/07-routes.md",
@@ -79,7 +80,7 @@ describe("transformPage", () => {
     expect(body).toBe(
       [
         "[Install](/seampact/getting-started/01-install/#node), [start](/seampact/getting-started/),",
-        "[grammar](/seampact/grammar/), [home](/seampact/), [here](#top) and [ref][install].",
+        "[grammar](/seampact/grammar/), [home](/seampact/documentation/), [here](#top) and [ref][install].",
         "",
         "[install]: /seampact/getting-started/01-install/",
         "",
@@ -137,5 +138,39 @@ describe("transformPage", () => {
 
     expect(page.brokenLinks).toHaveLength(1);
     expect(page.brokenLinks[0]?.reason).toContain("bad%zz.md");
+  });
+
+  it("moves the headings up with a title that opened below h1", () => {
+    const page = transformPage(
+      "### 7. Routes\n\nText.\n\n#### Verbs\n\n##### Detail\n",
+      "grammar/07-routes.md",
+      context,
+    );
+
+    expect(bodyOf(page.markdown)).toBe("Text.\n\n## Verbs\n\n### Detail\n");
+  });
+
+  it("describes a page by its first real sentence, never a status line, and never twice", () => {
+    const source =
+      "# ADR 1: T\n\nStatus: accepted\n\nFirst sentence here. Second one.\n\nOther paragraph.\n";
+    const first = transformPage(source, "adr/0001-t.md", context);
+    const second = transformPage(source, "adr/0002-t.md", context, {
+      takenDescriptions: new Set([first.description ?? ""]),
+    });
+
+    expect(first.description).toBe("First sentence here. Second one.");
+    expect(second.description).toBe("Other paragraph.");
+  });
+
+  it("keeps contributor pages out of search and reading order, and sends a moved page's links to its target", () => {
+    const page = transformPage(
+      "# D\n\nSee [old](../configuration/checks.md).\n",
+      "adr/0001-t.md",
+      context,
+    );
+
+    expect(page.markdown).toContain("pagefind: false");
+    expect(page.markdown).toContain("next: false");
+    expect(page.markdown).toContain("(/seampact/features/check-in-ci/#set-the-levels)");
   });
 });
