@@ -407,6 +407,20 @@ class SpringBootGoldenTest {
     }
 
     @Test
+    fun refusesAnInputFieldRightBelowTheTopLevel() {
+        val ir = coreView(apis.first())
+        val nested = ir.copy(operations = ir.operations.map { operation ->
+            if (operation.id != "createTask") return@map operation
+            operation.copy(fieldRights = operation.fieldRights.mapIndexed { index, right -> if (index == 0) right.copy(pointer = "/details/effort") else right })
+        })
+
+        val refusal = refusalsOf(nested).single { it.code == "fieldRight.nestedPointer.unsupported" }
+        assertTrue(refusal.message.contains("An input field right below the top level"), refusal.message)
+        assertEquals("createTask", refusal.operation)
+        assertTrue(refusal.member.endsWith("/fieldRights/0/pointer"), refusal.member)
+    }
+
+    @Test
     fun refusesASuccessEnvelopeThatNeverWritesThePayload() {
         val ir = coreView(apis.first())
         val bare = ir.formats.getValue("bare")
