@@ -1,0 +1,125 @@
+---
+title: seampact
+description: Declare your API once in YAML. Get typed handlers, validators, OpenAPI and clients for your own framework.
+template: splash
+editUrl: false
+head:
+  - tag: title
+    content: "seampact: one YAML contract for typed servers, clients and OpenAPI"
+hero:
+  tagline: Declare your API once in YAML. Get typed handlers, validators, OpenAPI and clients for your own framework.
+  actions:
+    - text: Your first API
+      link: /seampact/getting-started/your-first-api/
+      icon: right-arrow
+    - text: Glossary
+      link: /seampact/concepts/glossary/
+      variant: minimal
+---
+
+import { Badge, CardGrid, LinkCard, TabItem, Tabs } from "@astrojs/starlight/components";
+
+<Badge text="v1.0" variant="tip" size="large" />
+
+## Install
+
+The command line and the generators come from your ecosystem's registry, at the same version.
+
+<Tabs syncKey="ecosystem">
+  <TabItem label="npm">
+    ```sh
+    npm install --save-dev @seampact/cli @seampact/codegen-ts
+    ```
+  </TabItem>
+  <TabItem label="Gradle">
+    ```kotlin
+    // build.gradle.kts
+    plugins {
+        id("io.github.jubasse.seampact") version "1.0.0"
+    }
+    ```
+  </TabItem>
+  <TabItem label="Maven">
+    ```xml
+    <!-- pom.xml -->
+    <plugin>
+      <groupId>io.github.jubasse</groupId>
+      <artifactId>seampact-maven-plugin</artifactId>
+      <version>1.0.0</version>
+    </plugin>
+    ```
+  </TabItem>
+  <TabItem label="Composer">
+    ```sh
+    composer require seampact/laravel seampact/hooks
+    # Symfony: composer require seampact/symfony
+    ```
+  </TabItem>
+  <TabItem label="pip">
+    ```sh
+    pip install "seampact-fastapi[generate]"
+    # Django REST Framework: seampact-drf, Django Ninja: seampact-ninja
+    ```
+  </TabItem>
+</Tabs>
+
+Each ecosystem has its own steps: [Install in other ecosystems](/seampact/getting-started/install-other-ecosystems/).
+
+## Server guides
+
+Eleven servers, one contract. Pick yours.
+
+### Node.js
+
+<CardGrid>
+  <LinkCard title="NestJS" description="Decorators and a module." href="/seampact/backend/nestjs/" />
+  <LinkCard title="Express" description="Express 4 and 5." href="/seampact/backend/express/" />
+  <LinkCard title="Fastify" description="Fastify 5 with route hooks." href="/seampact/backend/fastify/" />
+  <LinkCard title="AdonisJS" description="AdonisJS 7 and 6." href="/seampact/backend/adonisjs/" />
+  <LinkCard title="Hono" description="Hono 4 on any Web-standard runtime." href="/seampact/backend/hono/" />
+</CardGrid>
+
+### Java
+
+<CardGrid>
+  <LinkCard title="Spring Boot" description="The Gradle or Maven plugin, controllers and hooks." href="/seampact/backend/spring-boot/" />
+</CardGrid>
+
+### PHP
+
+<CardGrid>
+  <LinkCard title="Laravel" description="Composer, controllers, hooks and Laravel's own auth." href="/seampact/backend/laravel/" />
+  <LinkCard title="Symfony" description="The bundle, controllers, hooks and SecurityBundle." href="/seampact/backend/symfony/" />
+</CardGrid>
+
+### Python
+
+<CardGrid>
+  <LinkCard title="FastAPI" description="The wheels, bind functions, handlers and hooks." href="/seampact/backend/fastapi/" />
+  <LinkCard title="Django REST Framework" description="Settings, URLconf, handlers and hooks." href="/seampact/backend/drf/" />
+  <LinkCard title="Django Ninja" description="Handlers, hooks and Ninja's own auth." href="/seampact/backend/ninja/" />
+</CardGrid>
+
+## Client guides
+
+The client reads the contract only, so any server can sit behind it.
+
+### TypeScript
+
+<CardGrid>
+  <LinkCard title="Fetch client" description="The typed fetch client every other client builds on." href="/seampact/frontend/fetch-client/" />
+  <LinkCard title="React" description="TanStack Query, SWR or RTK Query hooks." href="/seampact/frontend/react/" />
+  <LinkCard title="Vue" description="TanStack Query, Pinia Colada or plain fetch composables." href="/seampact/frontend/vue/" />
+  <LinkCard title="Angular" description="An HttpClient service with signals." href="/seampact/frontend/angular/" />
+  <LinkCard title="MSW mocks" description="Typed mock handlers to test with no backend." href="/seampact/frontend/msw/" />
+  <LinkCard title="Expo and React Native" description="The client and the React hooks on a phone." href="/seampact/frontend/mobile/" />
+  <LinkCard title="Point the client at your backend" description="The backend URL per environment." href="/seampact/frontend/backend-url/" />
+</CardGrid>
+
+## Start here
+
+<CardGrid>
+  <LinkCard title="Your first API" description="A notes API on the server of your choice, step by step." href="/seampact/getting-started/your-first-api/" />
+  <LinkCard title="Glossary" description="The words these docs use, one meaning each." href="/seampact/concepts/glossary/" />
+  <LinkCard title="All the documentation" description="The full index, page by page." href="/seampact/documentation/" />
+</CardGrid>

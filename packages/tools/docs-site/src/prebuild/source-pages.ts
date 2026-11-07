@@ -1,5 +1,6 @@
 import { readdirSync } from "node:fs";
 import { join, posix, relative, sep } from "node:path";
+import { DOCS_INDEX_SLUG, movedPageFor } from "./page-policy.ts";
 import { FOLDERS_LEFT_OUT } from "./site-layout.ts";
 
 const MARKDOWN_EXTENSION = ".md";
@@ -9,7 +10,7 @@ const FOLDER_INDEX_NAME = "README.md";
 export interface SourcePage {
   /** Path from docs/, with forward slashes: `backend/hono.md`. */
   docsPath: string;
-  /** Route from the site base, without slashes around it: `backend/hono`, or `` for the home page. */
+  /** Route from the site base, without slashes around it: `backend/hono`. */
   slug: string;
   /** Path of the written page from the content folder: `backend/hono.md`, `index.md`. */
   contentPath: string;
@@ -20,6 +21,8 @@ export function listSourcePages(docsRoot: string): Map<string, SourcePage> {
   const pagesByDocsPath = new Map<string, SourcePage>();
 
   for (const docsPath of listMarkdownFiles(docsRoot, docsRoot).sort()) {
+    if (movedPageFor(docsPath) !== undefined) continue;
+
     pagesByDocsPath.set(docsPath, sourcePageFor(docsPath));
   }
 
@@ -49,6 +52,15 @@ function isFolderLeftOut(docsPath: string): boolean {
 /** A folder's README is its index page: `getting-started/README.md` is served at `getting-started/`. */
 export function sourcePageFor(docsPath: string): SourcePage {
   const folder = posix.dirname(docsPath) === "." ? "" : posix.dirname(docsPath);
+
+  // The home page is site-only, so the docs index gets its own route.
+  if (docsPath === FOLDER_INDEX_NAME) {
+    return {
+      docsPath,
+      slug: DOCS_INDEX_SLUG,
+      contentPath: `${DOCS_INDEX_SLUG}${MARKDOWN_EXTENSION}`,
+    };
+  }
 
   if (posix.basename(docsPath) === FOLDER_INDEX_NAME) {
     return { docsPath, slug: folder, contentPath: posix.join(folder, "index.md") };

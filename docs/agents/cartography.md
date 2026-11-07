@@ -232,7 +232,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/docs-site`
 
-- `packages/tools/docs-site/src/prebuild`: The prebuild of the docs site: copies docs/ into Starlight's content folder, takes each page's title from its first heading, rewrites relative links to site routes or GitHub links, and writes the sidebar from the docs index.
+- `packages/tools/docs-site/src/prebuild`: The prebuild of the docs site: copies docs/ into Starlight's content folder, adds the site-only home page, takes each page's title from its first heading, rewrites relative links to site routes or GitHub links, and writes the sidebar from the docs index.
 
 ### `@seampact/http-suite`
 
