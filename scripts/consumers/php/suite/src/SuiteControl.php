@@ -4,14 +4,23 @@ declare(strict_types=1);
 
 namespace Seampact\ConsumerSuite;
 
+use Seampact\Hooks\ThrottleBucket;
+
 /**
  * The sample app's side of the suite's control routes (ADR 0015 "The shared black-box HTTP suite"): the script a case
  * loads, the hook calls the doubles record and the log lines the app writes. PHP's built-in server runs each request
  * in a fresh state, so all three live in one JSON file the app names, read and written under a lock.
+ *
+ * @phpstan-type RecordedBucket array{id: string, values: list<mixed>, limit?: int, windowMs?: int}
+ * @phpstan-type HookCall array{hook: string, operation: string, bucket?: RecordedBucket}
  */
 final class SuiteControl
 {
-    private const SCRIPT_MEMBERS = ['decisions', 'scopes', 'answers'];
+    private const SCRIPT_MEMBERS = ['decisions', 'scopes', 'answers', 'holds'];
+    private const HOLD_HOOK = 'hold';
+    // Below the suite's request timeout, so a hold the suite never releases still answers.
+    private const HOLD_LIMIT_MICROSECONDS = 5_000_000;
+    private const HOLD_POLL_MICROSECONDS = 10_000;
 
     private function __construct()
     {
@@ -38,7 +47,7 @@ final class SuiteControl
         return null;
     }
 
-    /** @return list<array{hook: string, operation: string}> */
+    /** @return list<HookCall> */
     public static function hookCalls(): array
     {
         return self::read()['hookCalls'];
@@ -50,15 +59,35 @@ final class SuiteControl
         return self::read()['logLines'];
     }
 
-    public static function recordHookCall(string $hook, string $api, string $operation): void
+    /** Records a hook call, and the bucket a decide call received, its key digest left out. */
+    public static function recordHookCall(string $hook, string $api, string $operation, ?ThrottleBucket $bucket = null): void
     {
-        self::update(static function (array $state) use ($hook, $api, $operation): array {
+        $call = ['hook' => $hook, 'operation' => "{$api}.{$operation}"];
+        if ($bucket !== null) {
+            $call['bucket'] = self::recordedBucket($bucket);
+        }
+
+        self::update(static function (array $state) use ($call): array {
             if ($state['recording']) {
-                $state['hookCalls'][] = ['hook' => $hook, 'operation' => "{$api}.{$operation}"];
+                $state['hookCalls'][] = $call;
             }
 
             return $state;
         });
+    }
+
+    /** @return RecordedBucket */
+    private static function recordedBucket(ThrottleBucket $bucket): array
+    {
+        $recorded = ['id' => $bucket->id, 'values' => array_values($bucket->values)];
+        if ($bucket->limit !== null) {
+            $recorded['limit'] = $bucket->limit;
+        }
+        if ($bucket->windowMs !== null) {
+            $recorded['windowMs'] = $bucket->windowMs;
+        }
+
+        return $recorded;
     }
 
     public static function writeLogLine(string $line): void
@@ -104,6 +133,25 @@ final class SuiteControl
         return is_array($answer) ? $answer : null;
     }
 
+    /** Whether the script holds the operation's handler until a script that does not is loaded. */
+    public static function isHeld(string $api, string $operation): bool
+    {
+        $holds = self::read()['script']['holds'] ?? [];
+
+        return is_array($holds) && in_array("{$api}.{$operation}", $holds, true);
+    }
+
+    /** Records the hold, then waits until the operation is released or the hold limit has passed. */
+    public static function waitForRelease(string $api, string $operation): void
+    {
+        self::recordHookCall(self::HOLD_HOOK, $api, $operation);
+
+        $deadline = hrtime(true) / 1000 + self::HOLD_LIMIT_MICROSECONDS;
+        while (self::isHeld($api, $operation) && hrtime(true) / 1000 < $deadline) {
+            usleep(self::HOLD_POLL_MICROSECONDS);
+        }
+    }
+
     /** @return list<array<mixed>> */
     private static function scriptList(string $member): array
     {
@@ -124,13 +172,13 @@ final class SuiteControl
         return $code;
     }
 
-    /** @return array{script: array<string, mixed>, recording: bool, hookCalls: list<array{hook: string, operation: string}>, logLines: list<string>} */
+    /** @return array{script: array<string, mixed>, recording: bool, hookCalls: list<HookCall>, logLines: list<string>} */
     private static function read(): array
     {
         return self::locked(LOCK_SH, static fn ($handle): array => self::decode($handle));
     }
 
-    /** @param \Closure(array{script: array<string, mixed>, recording: bool, hookCalls: list<array{hook: string, operation: string}>, logLines: list<string>}): array<string, mixed> $change */
+    /** @param \Closure(array{script: array<string, mixed>, recording: bool, hookCalls: list<HookCall>, logLines: list<string>}): array<string, mixed> $change */
     private static function update(\Closure $change): void
     {
         self::locked(LOCK_EX, static function ($handle) use ($change): array {
@@ -167,7 +215,7 @@ final class SuiteControl
 
     /**
      * @param resource $handle
-     * @return array{script: array<string, mixed>, recording: bool, hookCalls: list<array{hook: string, operation: string}>, logLines: list<string>}
+     * @return array{script: array<string, mixed>, recording: bool, hookCalls: list<HookCall>, logLines: list<string>}
      */
     private static function decode($handle): array
     {
@@ -176,7 +224,7 @@ final class SuiteControl
             return ['script' => [], 'recording' => false, 'hookCalls' => [], 'logLines' => []];
         }
 
-        /** @var array{script: array<string, mixed>, recording: bool, hookCalls: list<array{hook: string, operation: string}>, logLines: list<string>} */
+        /** @var array{script: array<string, mixed>, recording: bool, hookCalls: list<HookCall>, logLines: list<string>} */
         return json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
     }
 }

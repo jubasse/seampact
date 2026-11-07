@@ -30,6 +30,8 @@ Preferences:
 UpdatePreferences:
   pick: { from: Preferences, fields: [locale, digest] }
   required: []
+  properties:
+    digest: { restrictedTo: { right: preferences.digest, input: strip } }
 DraftId: { type: string, format: uuid }
 Draft:
   type: object

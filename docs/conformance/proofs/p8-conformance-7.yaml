@@ -22,6 +22,9 @@ proofs:
       - 'fastapi: python/codegen/tests/test_kept_forms.py#test_a_signature_verified_by_the_application_is_refused_by_name'
       - 'drf: python/codegen/tests/test_kept_forms.py#test_a_signature_verified_by_the_application_is_refused_by_name'
       - 'ninja: python/codegen/tests/test_kept_forms.py#test_a_signature_verified_by_the_application_is_refused_by_name'
+      - 'fastapi: python/fastapi/fastapi_tests/test_kept_forms_refusal.py#test_the_forms_1_0_leaves_out_are_refused_by_name_through_the_generator'
+      - 'drf: python/drf/drf_tests/test_kept_forms_refusal.py#test_the_forms_1_0_leaves_out_are_refused_by_name_through_the_generator'
+      - 'ninja: python/ninja/ninja_tests/test_kept_forms_refusal.py#test_the_forms_1_0_leaves_out_are_refused_by_name_through_the_generator'
   - id: CHK-132
     refusals:
       - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a query API key scheme is refused by name'
@@ -40,6 +43,11 @@ proofs:
       - 'fastapi: python/codegen/tests/test_kept_forms.py#test_a_query_or_basic_credential_scheme_is_refused_by_name'
       - 'drf: python/codegen/tests/test_kept_forms.py#test_a_query_or_basic_credential_scheme_is_refused_by_name'
       - 'ninja: python/codegen/tests/test_kept_forms.py#test_a_query_or_basic_credential_scheme_is_refused_by_name'
+      - 'laravel: php/laravel/tests/LaravelRefusalsTest.php#testTheFormsOneZeroLeavesOutAreRefusedByNameThroughTheGenerator'
+      - 'symfony: php/symfony/tests/SymfonyRefusalsTest.php#testTheFormsOneZeroLeavesOutAreRefusedByNameThroughTheGenerator'
+      - 'fastapi: python/fastapi/fastapi_tests/test_kept_forms_refusal.py#test_the_forms_1_0_leaves_out_are_refused_by_name_through_the_generator'
+      - 'drf: python/drf/drf_tests/test_kept_forms_refusal.py#test_the_forms_1_0_leaves_out_are_refused_by_name_through_the_generator'
+      - 'ninja: python/ninja/ninja_tests/test_kept_forms_refusal.py#test_the_forms_1_0_leaves_out_are_refused_by_name_through_the_generator'
   - id: CHK-133
     refusals:
       - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#optional authentication is refused by name'

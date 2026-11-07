@@ -294,6 +294,7 @@ Django 5.2 and 6, and Django Ninja 1.5 and 1.7, are tested. An older version fai
 - A WSGI or ASGI wrapper around the application object (an error tracker, `WhiteNoise(application)`) runs before the boundary and is not seen.
 - A middleware before the boundary in `MIDDLEWARE` is refused at boot.
 - `generate` refuses by name: form, multipart, file, download and redirect bodies, query lists in `brackets` form (`tag[]=a`), lists of lists and object query params, `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, an identity header written on a response (a `versionToken` header, or one declared `in: response`), and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
+- A sort key restricted by a right is refused by `generate` (`paging.sortKey.right.unsupported`). Leave the key out of `sortable`.
 - `bodyValidation` (and `body_validation` in `bind_shop()`) is not served on Ninja yet: the boot check refuses it. Use FastAPI for it.
 - Django Ninja older than 1.5.3 and Django older than 5.2 are refused.
 - DRF and FastAPI are separate targets: see [Django REST Framework](drf.md) and [FastAPI](fastapi.md).

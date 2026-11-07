@@ -27,6 +27,7 @@ from handler_factories import (
     notes_handlers,
     preferences_handlers,
     responses_handlers,
+    responses_memos_handlers,
     responses_notes_handlers,
     tasks_handlers,
     welcome_handlers,
@@ -60,7 +61,15 @@ IDENTITY_ACCESS: Final = "identity"
 # The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
 PUBLIC_ORIGIN: Final = "https://api.seampact.test"
 # Every right and rule the tasks api's operations ask a decider for.
-DECIDED_NAMES: Final = ("tasks.read", "tasks.update", "tasks.seeEffort", "roles", "throttle", "recentAuth")
+DECIDED_NAMES: Final = (
+    "tasks.read",
+    "tasks.update",
+    "tasks.seeEffort",
+    "preferences.digest",
+    "roles",
+    "throttle",
+    "recentAuth",
+)
 # The right the `missing-decider` boot variant leaves without a decider, as the suite's case names it.
 MISSING_DECIDER_RIGHT: Final = "roles"
 
@@ -137,7 +146,9 @@ def create_api() -> NinjaAPI:
     bind_tasks_responses(
         api,
         prefix="",
-        handlers=TasksResponsesHandlerFactories(responses=responses_handlers, notes=responses_notes_handlers),
+        handlers=TasksResponsesHandlerFactories(
+            responses=responses_handlers, notes=responses_notes_handlers, memos=responses_memos_handlers
+        ),
         authenticate={USER_IDENTITY: hooks.user_hook},
         idempotency_store=hooks.idempotency_store,
         on_unexpected_error=hooks.unexpected_errors,

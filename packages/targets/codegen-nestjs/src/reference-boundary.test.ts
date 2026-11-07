@@ -1,10 +1,12 @@
 import {
+  expectedNonPathScopeSourceRefusals,
   FORMS_REFUSED_BY_ONE_ZERO,
   GENERATE_TIMEOUT_MILLISECONDS,
   generateReferenceProject,
   generateWithRefusedForm,
   generateWithRightsVersionHeader,
   hooksRequirementErrors,
+  nonPathScopeSourceRefusals,
   projectDirectory,
   publicTasksApi,
   REFERENCE_COMPILER_OPTIONS,
@@ -12,6 +14,7 @@ import {
   readGoldenIr,
   referenceLinks,
   referenceServerOutput,
+  refusalOf,
   TYPE_CHECK_TIMEOUT_MILLISECONDS,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
@@ -90,20 +93,6 @@ describe("the generated reference boundary compiles", () => {
     expect(await reportedForms(api)).toContainEqual(expect.objectContaining({ code, operation }));
   });
 
-  test("a sort key restricted to a right is refused by name until the boundary checks it", async () => {
-    const ir = readGoldenIr("tasks");
-    const listTasks = ir.operations.find((operation) => operation.id === "listTasks");
-    const [sortKey] = listTasks?.paging?.sortKeys ?? [];
-
-    if (sortKey === undefined) throw new Error("the golden listTasks has no sort key");
-
-    sortKey.right = "tasks.read";
-
-    expect(await reportedForms("tasks", ir)).toContainEqual(
-      expect.objectContaining({ code: "paging.sortKey.restricted.unsupported" }),
-    );
-  });
-
   test("a scope id read from a query param is refused once, by name", async () => {
     const ir = readGoldenIr("tasks");
     const scopedOperation = ir.operations.find((operation) => operation.scopes.length > 0);
@@ -120,6 +109,15 @@ describe("the generated reference boundary compiles", () => {
   });
 
   // The forms 1.0 refuses by name (`FORMS_REFUSED_BY_ONE_ZERO`): generation refuses, it does not warn.
+  test("a scope id read from a source other than the path is refused by name at its source", async () => {
+    const refusals = await nonPathScopeSourceRefusals(nestjsTarget, {
+      links: await referenceLinks(PROJECT, "tasks"),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
+    });
+
+    expect(refusals).toEqual(expectedNonPathScopeSourceRefusals());
+  });
+
   test.each(FORMS_REFUSED_BY_ONE_ZERO)("$title is refused by name", async (form) => {
     const outcome = await generateWithRefusedForm(nestjsTarget, form, {
       links: await referenceLinks(PROJECT, "tasks"),
@@ -128,7 +126,7 @@ describe("the generated reference boundary compiles", () => {
 
     expect(outcome).toMatchObject({
       status: "refused",
-      refusals: expect.arrayContaining([expect.objectContaining({ code: form.code })]),
+      refusals: expect.arrayContaining([expect.objectContaining(refusalOf(form))]),
     });
   });
 

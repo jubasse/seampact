@@ -91,11 +91,6 @@ proofs:
   - id: CHK-154
     fixtures: [fixtures/golden/reference]
     tests:
-      - 'nestjs: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
-      - 'fastify: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
-      - 'express: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
-      - 'adonis: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
-      - 'hono: packages/core/cli/src/commands/check-command.test.ts#generate and check on a root config run each app, then write and check the merged documents'
       - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#no framework controller is generated: the developer implements the generated handler interface'
       - 'nestjs: packages/targets/codegen-nestjs/src/generation-proofs.test.ts#every generated path stays below the output directory'
       - 'fastify: packages/targets/codegen-fastify/src/generation-proofs.test.ts#no framework controller is generated: the developer implements the generated handler interface'

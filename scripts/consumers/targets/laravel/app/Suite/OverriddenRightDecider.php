@@ -26,7 +26,7 @@ final class OverriddenRightDecider implements Decider
 
     public function decide(RequirementRequest $request): Decision
     {
-        SuiteControl::recordHookCall("decide-override:{$request->name()}", $request->operation()->api, $request->operation()->id);
+        SuiteControl::recordHookCall("decide-override:{$request->name()}", $request->operation()->api, $request->operation()->id, $request->bucket());
         $denied = SuiteControl::scriptedDecision($request->name(), DecisionPurpose::name($request->purpose()));
 
         return $denied === null ? new Decision\Allowed() : new Decision\Denied(new Denial($denied));

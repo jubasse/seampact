@@ -269,6 +269,7 @@ So keeping Starlette current is your project's job. Run `pip install -U starlett
 - An ASGI wrapper around the app object (`app = CORSMiddleware(FastAPI())`, an error tracker) runs before the boundary and is not seen. Add middleware with `app.add_middleware()`.
 - The outgoing check cannot read a `br` error body: it is a violation.
 - `generate` refuses by name: form, multipart, file, download and redirect bodies, query lists in `brackets` form (`tag[]=a`), lists of lists and object query params, `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, an identity header written on a response (a `versionToken` header, or one declared `in: response`), and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
+- A sort key restricted by a right is refused by `generate` (`paging.sortKey.right.unsupported`). Leave the key out of `sortable`.
 - FastAPI older than 0.162 is refused.
 - DRF and Ninja are separate targets: see [Django REST Framework](drf.md).
 

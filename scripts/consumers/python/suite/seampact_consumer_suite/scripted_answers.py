@@ -1,14 +1,20 @@
 """What the loaded script tells the doubles: the denial a scope gets, and the answer a handler gives
 in place of its own (its success built from the script's body, a declared error arm, a raised exception, or a reply the
-result type cannot hold, raised as ScriptedReply for the app to write itself)."""
+result type cannot hold, raised as ScriptedReply for the app to write itself). A held handler answers once released,
+from the script loaded then."""
 
+import time
 from collections.abc import Callable, Mapping
 from typing import Final
 
-from seampact_consumer_suite.control_state import loaded_script
+from seampact_consumer_suite.control_state import loaded_script, record_hook_call
 
 DEFAULT_API: Final = "tasks"
 _SCRIPTED_FAILURE: Final = "scripted failure"
+_HOLD_HOOK: Final = "hold"
+# Below the suite's request timeout, so a hold the suite never releases still answers.
+_HOLD_LIMIT_SECONDS: Final = 5.0
+_HOLD_POLL_SECONDS: Final = 0.01
 
 
 class ScriptedReply(Exception):  # noqa: N818 - a reply the app writes, not an error
@@ -42,6 +48,9 @@ def scripted_answer[Result](
     api: str = DEFAULT_API,
 ) -> Result | None:
     """None when the script gives the operation no answer."""
+    if is_held(api, operation):
+        wait_for_release(api, operation)
+
     answers = loaded_script().get("answers")
     answer = answers.get(f"{api}.{operation}") if isinstance(answers, dict) else None
 
@@ -66,6 +75,22 @@ def scripted_answer[Result](
         return success(body)
 
     raise ScriptedReply(status, code, body)
+
+
+def is_held(api: str, operation: str) -> bool:
+    """Whether the script holds the operation's handler until a script that does not is loaded."""
+    holds = loaded_script().get("holds")
+
+    return isinstance(holds, list) and f"{api}.{operation}" in holds
+
+
+def wait_for_release(api: str, operation: str) -> None:
+    """Records the hold, then waits until the operation is released or the hold limit has passed."""
+    record_hook_call(_HOLD_HOOK, api, operation)
+    deadline = time.monotonic() + _HOLD_LIMIT_SECONDS
+
+    while is_held(api, operation) and time.monotonic() < deadline:
+        time.sleep(_HOLD_POLL_SECONDS)
 
 
 def text_member(body: Mapping[str, object], member: str) -> str:

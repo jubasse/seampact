@@ -1,0 +1,79 @@
+{
+  "id": "throttle-bucket-reaches-decide-hook",
+  "title": "The throttle rule's bucket reaches the decide hook with the caller's key values, its limit and its window",
+  "checks": ["CHK-015"],
+  "profiles": ["default", "hand-written"],
+  "steps": [
+    {
+      "title": "a caller whose bucket has room",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:first}}"
+        },
+        "body": {
+          "title": "Counted"
+        }
+      },
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "title": "the throttled caller",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{throttledUserToken}}",
+          "idempotency-key": "{{uuid:second}}"
+        },
+        "body": {
+          "title": "Counted too"
+        }
+      },
+      "expect": {
+        "status": 429,
+        "body": {
+          "code": "api.rate_limited"
+        }
+      }
+    }
+  ],
+  "hookCalls": [
+    {
+      "hook": "authenticate:user",
+      "operation": "tasks.createTask"
+    },
+    {
+      "hook": "decide:throttle",
+      "operation": "tasks.createTask",
+      "bucket": {
+        "id": "write",
+        "values": ["00000000-0000-4000-8000-000000000001"],
+        "limit": 60,
+        "windowMs": 60000
+      }
+    },
+    {
+      "hook": "decide:roles",
+      "operation": "tasks.createTask"
+    },
+    {
+      "hook": "authenticate:user",
+      "operation": "tasks.createTask"
+    },
+    {
+      "hook": "decide:throttle",
+      "operation": "tasks.createTask",
+      "bucket": {
+        "id": "write",
+        "values": ["00000000-0000-4000-8000-000000000002"],
+        "limit": 60,
+        "windowMs": 60000
+      }
+    }
+  ]
+}

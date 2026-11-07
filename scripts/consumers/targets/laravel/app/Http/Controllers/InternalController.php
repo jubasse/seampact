@@ -9,6 +9,7 @@ use App\Generated\TasksService\GetTaskResponse200;
 use App\Generated\TasksService\GetTaskResult;
 use App\Generated\TasksService\InternalEndpoints;
 use App\Generated\TasksService\GetTaskRequest;
+use Psr\Log\LoggerInterface;
 use Seampact\ConsumerSuite\SampleData;
 use Seampact\ConsumerSuite\ScriptedAnswers;
 
@@ -17,9 +18,15 @@ final class InternalController implements InternalEndpoints
 {
     private const API = 'tasksService';
 
+    public function __construct(private readonly LoggerInterface $logger)
+    {
+    }
+
     public function getTask(GetTaskRequest $request): GetTaskResult
     {
         $input = $request->contractInput();
+        $this->logTraceContext($input->headers->traceparent);
+
         // An unparseable deadline is no deadline, as the Node sample handler reads it, never a 500.
         $deadline = date_create_immutable($input->headers->xDeadline);
         if ($deadline !== false && $deadline <= new \DateTimeImmutable()) {
@@ -33,5 +40,13 @@ final class InternalController implements InternalEndpoints
             [],
             self::API,
         ) ?? new GetTaskResponse200(SampleData::serviceTask($input->path->taskId));
+    }
+
+    // The trace context reaches the handler as sent, never refused, so the handler can relay it on its own calls.
+    private function logTraceContext(?string $traceContext): void
+    {
+        if ($traceContext !== null) {
+            $this->logger->info("trace context {$traceContext}");
+        }
     }
 }

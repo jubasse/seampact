@@ -1,0 +1,18 @@
+# docs/conformance/proofs/audit-rights-cases.yaml
+# A scope id read from a source other than the path is refused by name at generation on every server: the tests that
+# generation refuses it at the scope's source, not the item's proof.
+lane: audit-rights-cases
+proofs:
+  - id: CHK-188
+    refusals:
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a scope id read from a source other than the path is refused by name at its source'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a scope id read from a source other than the path is refused by name at its source'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a scope id read from a source other than the path is refused by name at its source'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a scope id read from a source other than the path is refused by name at its source'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a scope id read from a source other than the path is refused by name at its source'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootAccessRefusalsTest.kt#refusesAScopeIdReadFromASourceOtherThanThePathAtItsSource'
+      - 'laravel: php/codegen/tests/KeptFormsTest.php#testAScopeIdReadFromASourceOtherThanThePathIsRefusedByNameAtItsSource'
+      - 'symfony: php/codegen/tests/KeptFormsTest.php#testAScopeIdReadFromASourceOtherThanThePathIsRefusedByNameAtItsSource'
+      - 'fastapi: python/codegen/tests/test_kept_forms.py#test_a_scope_id_read_from_a_source_other_than_the_path_is_refused_by_name_at_its_source'
+      - 'drf: python/codegen/tests/test_kept_forms.py#test_a_scope_id_read_from_a_source_other_than_the_path_is_refused_by_name_at_its_source'
+      - 'ninja: python/codegen/tests/test_kept_forms.py#test_a_scope_id_read_from_a_source_other_than_the_path_is_refused_by_name_at_its_source'

@@ -13,6 +13,7 @@ from seampact.codegen.matrix_row import refuse_missing_matrix_row
 from seampact.codegen.names import api_names
 from seampact.codegen.printer import PythonModule
 from seampact.codegen.refusals import Delivery, IrPlace, Refusals
+from seampact.codegen.restricted_sort_keys import refuse_restricted_sort_keys
 from seampact.codegen.route_helpers import route_helpers_module
 from seampact.codegen.routes import route_table
 from seampact.codegen.runtime.version import RUNTIME_VERSION
@@ -70,6 +71,7 @@ class DrfGenerator:
         routes = route_table(ir, entry.mount or "", refusals)
         paths = contract_paths(routes, [operation.id for operation in ir.operations])
         _refuse_input_media(ir, refusals)
+        _refuse_restricted_sort_keys(ir, refusals)
 
         resources = [owner.key for owner in layout.owners.values()]
         files = {
@@ -125,3 +127,8 @@ def _refuse_input_media(ir: ContractIR, refusals: Refusals) -> None:
             refusals.unknown_value(media.raw, at)
         elif media is not InputMediaType.APPLICATION_JSON:
             refusals.waiting("input.media", f"A '{media.value}' request body", at, Delivery.CONSUMER)
+
+
+def _refuse_restricted_sort_keys(ir: ContractIR, refusals: Refusals) -> None:
+    for index, operation in enumerate(ir.operations):
+        refuse_restricted_sort_keys(operation, IrPlace(f"/operations/{index}", operation.id), refusals)

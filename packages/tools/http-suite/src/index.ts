@@ -43,11 +43,14 @@ export {
   reportFileOf,
   testEachCase,
 } from "./profile-run.js";
+export type { RecordedBucket, RecordedHookCall } from "./recorded-hook-call.js";
 export { STRIPE_V1_SCHEME, signRequestBody } from "./request-signature.js";
 export {
   authenticateHookName,
   type DecidePurpose,
   decideHookName,
+  HOLD_HOOK_NAME,
+  HOLD_LIMIT_MS,
   OVERRIDDEN_RIGHT,
   operationKey,
   overriddenDecideHookName,
@@ -63,14 +66,16 @@ export type { ScopedCheck } from "./scoped-check.js";
 export {
   type BootExpectation,
   type CaptureSource,
+  type CaseStep,
   type HeaderExpectation,
+  isScriptStep,
   type JsonValue,
   type LogLinesExpectation,
   outsideTargetsReason,
   parseSuiteCase,
-  type RecordedHookCall,
   type RequestSignature,
   runsInProfile,
+  type ScriptStep,
   type StepExpectation,
   type StepRequest,
   type SuiteCase,

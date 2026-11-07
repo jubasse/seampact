@@ -4,7 +4,7 @@
       "policy": "none"
     },
     "docs": {
-      "summary": "Notes whose routes answer several successes, cache directives, a sensitive field, a deprecation and If-Match."
+      "summary": "Notes whose routes answer several successes, cache directives, a sensitive field, a deprecation and If-Match, and memos deleted with a body-sourced version."
     },
     "documents": {},
     "extensions": {},
@@ -416,6 +416,20 @@
         "layer": "core",
         "pointer": "/errors/api.unsupported_media_type"
       }
+    },
+    "state.conflict": {
+      "code": "state.conflict",
+      "default": "stateConflict",
+      "docs": {},
+      "family": "state",
+      "http": {
+        "status": 409
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/state.conflict"
+      }
     }
   },
   "extensionKeys": {},
@@ -712,6 +726,502 @@
   "operations": [
     {
       "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/responses/identity"
+        },
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "concurrency": {
+        "derivedFrom": {
+          "derivation": "concurrency.version",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/responses/routes/memos/concurrency"
+            }
+          ]
+        },
+        "field": "version",
+        "version": {
+          "in": "query",
+          "name": "expectedVersion"
+        }
+      },
+      "csrf": {
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        },
+        "header": "X-Csrf-Token",
+        "kind": "derived"
+      },
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/idempotency"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/responses/routes/memos/ops/delete"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "rule"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/responses/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.csrf_invalid",
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "csrfInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.forbidden",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "pack:@seampact/pack-crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/responses/routes/memos/ops/delete"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ]
+        },
+        {
+          "code": "api.idempotency_in_progress",
+          "derivedFrom": {
+            "derivation": "idempotency.write",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/idempotency"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "idempotencyInProgress"
+            }
+          ]
+        },
+        {
+          "code": "state.conflict",
+          "derivedFrom": {
+            "derivation": "concurrency.version",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/responses/routes/memos/concurrency"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "stateConflict"
+            }
+          ]
+        },
+        {
+          "code": "api.idempotency_key_reused",
+          "derivedFrom": {
+            "derivation": "idempotency.write",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/idempotency"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "idempotencyKeyReused"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/every/0"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/responses/routes/memos/ops/delete"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "deleteMemo",
+      "idempotency": {
+        "derivedFrom": {
+          "derivation": "idempotency.write",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/conventions/idempotency"
+            }
+          ]
+        },
+        "enforce": "boundary",
+        "header": "Idempotency-Key",
+        "kind": "derived",
+        "lifetimeMs": 86400000,
+        "replayHeader": "Idempotency-Replayed",
+        "required": true
+      },
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "provisional",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        },
+        "source": "api"
+      },
+      "method": "delete",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "delete",
+          "memo"
+        ]
+      },
+      "op": "delete",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/responses/routes/memos/ops/delete"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/responses/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": false,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          },
+          {
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            },
+            "name": "X-Csrf-Token",
+            "required": false,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          },
+          {
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            },
+            "name": "Idempotency-Key",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "memoId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/responses/routes/memos/id/memoId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": [
+          {
+            "derivedFrom": {
+              "derivation": "concurrency.version",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/responses/routes/memos/concurrency"
+                }
+              ]
+            },
+            "name": "expectedVersion",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {
+                "minimum": "1"
+              },
+              "type": "integer"
+            },
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "number",
+              "style": "form"
+            }
+          }
+        ]
+      },
+      "path": "/responses/v1/memos/{memoId}",
+      "principalRequires": [],
+      "requires": [
+        {
+          "derivedFrom": {
+            "derivation": "pack.@seampact/pack-crud-rights.crud",
+            "from": [
+              {
+                "layer": "pack:@seampact/pack-crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          },
+          "kind": "right",
+          "right": "memos.delete",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "path",
+              "name": "memoId"
+            }
+          }
+        }
+      ],
+      "resource": {
+        "idParam": "memoId",
+        "idProperty": "memoId",
+        "type": "memos"
+      },
+      "responses": [
+        {
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [
+            {
+              "derivedFrom": {
+                "derivation": "idempotency.write",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/idempotency"
+                  }
+                ]
+              },
+              "name": "Idempotency-Replayed",
+              "required": false,
+              "type": {
+                "kind": "scalar",
+                "refinements": {},
+                "type": "boolean"
+              }
+            }
+          ],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/memos/ops/delete"
+          },
+          "shape": "empty",
+          "status": 204
+        }
+      ],
+      "safe": false,
+      "scopes": [],
+      "surface": "responses",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
         "kind": "public",
         "origin": {
           "layer": "api",
@@ -908,6 +1418,295 @@
           "origin": {
             "layer": "api",
             "pointer": "/surfaces/responses/routes/digest/output"
+          },
+          "shape": "item",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [],
+      "surface": "responses",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/responses/identity"
+        },
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/responses/routes/memos/ops/get"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "rule"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/responses/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.forbidden",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "pack:@seampact/pack-crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/responses/routes/memos/ops/get"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/every/0"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/responses/routes/memos/ops/get"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "getMemo",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "provisional",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "get",
+          "memo"
+        ]
+      },
+      "op": "get",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/responses/routes/memos/ops/get"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/responses/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": false,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "memoId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/responses/routes/memos/id/memoId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/responses/v1/memos/{memoId}",
+      "principalRequires": [],
+      "requires": [
+        {
+          "derivedFrom": {
+            "derivation": "pack.@seampact/pack-crud-rights.crud",
+            "from": [
+              {
+                "layer": "pack:@seampact/pack-crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          },
+          "kind": "right",
+          "right": "memos.get",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "path",
+              "name": "memoId"
+            }
+          }
+        }
+      ],
+      "resource": {
+        "idParam": "memoId",
+        "idProperty": "memoId",
+        "type": "memos"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Memo"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/memos/item"
           },
           "shape": "item",
           "status": 200
@@ -3045,6 +3844,86 @@
   ],
   "pagings": {},
   "rights": {
+    "memos.delete": {
+      "derivedFrom": {
+        "derivation": "pack.@seampact/pack-crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:@seampact/pack-crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/memos/ops/delete"
+          }
+        ]
+      },
+      "docs": {},
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "memos.delete",
+      "origin": {
+        "layer": "pack:@seampact/pack-crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "subject": {
+        "idSchema": {
+          "format": "uuid",
+          "kind": "scalar",
+          "refinements": {},
+          "type": "string"
+        },
+        "kind": "resource",
+        "type": {
+          "role": "schema",
+          "segments": [
+            "memo"
+          ]
+        }
+      }
+    },
+    "memos.get": {
+      "derivedFrom": {
+        "derivation": "pack.@seampact/pack-crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:@seampact/pack-crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/memos/ops/get"
+          }
+        ]
+      },
+      "docs": {},
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "memos.get",
+      "origin": {
+        "layer": "pack:@seampact/pack-crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "subject": {
+        "idSchema": {
+          "format": "uuid",
+          "kind": "scalar",
+          "refinements": {},
+          "type": "string"
+        },
+        "kind": "resource",
+        "type": {
+          "role": "schema",
+          "segments": [
+            "memo"
+          ]
+        }
+      }
+    },
     "notes.get": {
       "derivedFrom": {
         "derivation": "pack.@seampact/pack-crud-rights.crud",
@@ -3357,6 +4236,88 @@
             "kind": "scalar",
             "refinements": {},
             "type": "string"
+          }
+        }
+      ]
+    },
+    "Memo": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "Memo",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "memo"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Memo"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "memoId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Memo/properties/memoId"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "uuid",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "text",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Memo/properties/text"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "maxLength": 500,
+              "minLength": 1
+            },
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "version",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Memo/properties/version"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "minimum": "1"
+            },
+            "type": "integer"
           }
         }
       ]

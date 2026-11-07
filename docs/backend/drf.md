@@ -267,6 +267,7 @@ Django 5.2 and 6, and DRF 3.18, are tested. An older version fails with `config.
 - A WSGI or ASGI wrapper around the application object (an error tracker, `WhiteNoise(application)`) runs before the boundary and is not seen.
 - A middleware before the boundary in `MIDDLEWARE` is refused at boot.
 - `generate` refuses by name: form, multipart, file, download and redirect bodies, query lists in `brackets` form (`tag[]=a`), lists of lists and object query params, `oneOf` unions, `handlers: perOperation`, `indent` other than 4, the naming options and `layout`, `accessHooks: false`, an identity header written on a response (a `versionToken` header, or one declared `in: response`), and a link on the entry. See [Target option errors](../troubleshooting/generate.md).
+- A sort key restricted by a right is refused by `generate` (`paging.sortKey.right.unsupported`). Leave the key out of `sortable`.
 - `bodyValidation` (and `body_validation` in `SEAMPACT`) is not served on DRF yet: the boot check refuses it. Use FastAPI for it.
 - Django REST Framework older than 3.18 and Django older than 5.2 are refused.
 - FastAPI is a separate target: see [FastAPI](fastapi.md).

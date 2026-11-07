@@ -18,13 +18,30 @@ const CREDENTIALS: SuiteCredentials = {
   deviceToken: "device-token",
 };
 const NEXT_CURSOR = "c%2B2";
-const HOOK_CALLS = [{ hook: "authenticate", operation: "getTask" }];
+const BUCKET = { id: "write", values: ["user-1"], limit: 60, windowMs: 60000 };
+const HOOK_CALLS = [
+  { hook: "authenticate", operation: "getTask" },
+  { hook: "decide:throttle", operation: "getTask", bucket: BUCKET },
+];
+// The calls as a sample app may write them, members in another order.
+const RECORDED_HOOK_CALLS = [
+  { operation: "getTask", hook: "authenticate" },
+  {
+    bucket: { windowMs: 60000, limit: 60, values: ["user-1"], id: "write" },
+    operation: "getTask",
+    hook: "decide:throttle",
+  },
+];
 
 // A sample app double: pages, echoes, a signed route, a route that logs its body, and the control routes.
 let server: Server;
 let baseUrl: string;
 let loadedScripts: unknown[];
 const logLines: string[] = [];
+// The double's held request: its hook call while it waits, and its release, the next script load.
+const HOLD_CALL = { hook: "hold", operation: "tasks.createTask" };
+let holdCalls: (typeof HOLD_CALL)[] = [];
+let releaseHeld: (() => void) | undefined;
 
 beforeAll(async () => {
   loadedScripts = [];
@@ -61,9 +78,22 @@ async function answer(request: IncomingMessage, response: ServerResponse): Promi
   if (url.pathname === SCRIPT_ROUTE) {
     loadedScripts.push(JSON.parse(body));
     logLines.length = 0;
+    holdCalls = [];
+    releaseHeld?.();
     response.writeHead(204).end();
   } else if (url.pathname === HOOK_CALLS_ROUTE) {
-    json(200, { calls: HOOK_CALLS });
+    json(200, { calls: [...RECORDED_HOOK_CALLS, ...holdCalls] });
+  } else if (url.pathname === "/held" && releaseHeld !== undefined) {
+    json(409, { code: "api.idempotency_in_progress" });
+  } else if (url.pathname === "/held") {
+    await new Promise<void>((resolve) => {
+      releaseHeld = resolve;
+      holdCalls.push(HOLD_CALL);
+    });
+    releaseHeld = undefined;
+    json(201, { text: body });
+  } else if (url.pathname === "/dropped") {
+    request.socket.destroy();
   } else if (url.pathname === LOG_LINES_ROUTE) {
     json(200, { lines: logLines });
   } else if (url.pathname === "/log") {
@@ -269,7 +299,7 @@ describe("runSuite", () => {
     ]);
   });
 
-  test("loads each case's script, an empty one by default, and compares the recorded hook calls", async () => {
+  test("loads each case's script, an empty one by default, and compares the recorded hook calls and buckets", async () => {
     const step = { request: { method: "GET", path: "/missing" }, expect: { status: 404 } };
 
     loadedScripts.length = 0;
@@ -281,13 +311,134 @@ describe("runSuite", () => {
         hookCalls: HOOK_CALLS,
       }),
       suiteCase("other-calls", { steps: [step], hookCalls: [] }),
+      suiteCase("other-bucket-values", {
+        steps: [step],
+        hookCalls: [HOOK_CALLS[0], { ...HOOK_CALLS[1], bucket: { ...BUCKET, values: ["user-2"] } }],
+      }),
     ]);
 
     expect(loadedScripts).toEqual([
       { decisions: [{ name: "roles", deny: { code: "api.forbidden" } }] },
       {},
+      {},
     ]);
-    expect(report.cases.map((result) => result.outcome)).toEqual(["passed", "failed"]);
+    expect(report.cases.map((result) => result.outcome)).toEqual(["passed", "failed", "failed"]);
+  });
+
+  test("runs a background request beside the steps after it and checks it once they have run", async () => {
+    const report = await run([
+      suiteCase("held", {
+        steps: [
+          {
+            request: { method: "POST", path: "/held", body: { title: "first" } },
+            background: true,
+            expect: { status: 201, bodyText: '{"text":"{\\"title\\":\\"first\\"}"}' },
+          },
+          {
+            waitForHookCall: HOLD_CALL,
+            request: { method: "POST", path: "/held" },
+            capture: { refusal: { bodyText: true } },
+            expect: { status: 409, bodyText: '{"code":"api.idempotency_in_progress"}' },
+          },
+          { script: {} },
+          {
+            request: { method: "GET", path: "/missing" },
+            expect: { status: 404 },
+          },
+        ],
+      }),
+    ]);
+
+    expect(report.cases[0]?.failures).toEqual([]);
+    expect(loadedScripts.at(-1)).toEqual({});
+  });
+
+  test("releases a held background request when a later step throws", async () => {
+    const report = await run([
+      suiteCase("held-then-dropped", {
+        steps: [
+          {
+            request: { method: "POST", path: "/held", body: { title: "first" } },
+            background: true,
+            expect: { status: 201 },
+          },
+          {
+            waitForHookCall: HOLD_CALL,
+            request: { method: "GET", path: "/dropped" },
+            expect: { status: 200 },
+          },
+        ],
+      }),
+    ]);
+    const stillHeld = releaseHeld !== undefined;
+
+    releaseHeld?.();
+
+    expect(stillHeld).toBe(false);
+    expect(report.cases[0]?.outcome).toBe("failed");
+    expect(loadedScripts.at(-1)).toEqual({});
+  });
+
+  test("reports a background request that fails once the later steps have run", async () => {
+    const report = await run([
+      suiteCase("background-fails", {
+        steps: [
+          {
+            request: { method: "GET", path: "/missing" },
+            background: true,
+            expect: { status: 200 },
+          },
+          { request: { method: "GET", path: "/missing" }, expect: { status: 404 } },
+        ],
+      }),
+    ]);
+
+    expect(report.cases[0]?.outcome).toBe("failed");
+    expect(report.cases[0]?.failures).toEqual([
+      expect.stringMatching(/^step 0 \(GET \/missing\): .*404/),
+    ]);
+  });
+
+  test("sends no request when the awaited hook call is not recorded in time", async () => {
+    const awaited = { hook: "never", operation: "tasks.createTask" };
+    const report = await runSuite({
+      baseUrl,
+      target: TARGET,
+      profile: "default",
+      credentials: CREDENTIALS,
+      requestTimeoutMs: 100,
+      cases: [
+        suiteCase("never-recorded", {
+          steps: [
+            {
+              waitForHookCall: awaited,
+              request: { method: "POST", path: "/log", body: { text: "sent" } },
+              expect: { status: 202 },
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(report.cases[0]?.failures).toEqual([
+      `step 0 (POST /log): the sample app recorded no hook call ${JSON.stringify(awaited)} within 100 ms, so the request was not sent`,
+    ]);
+    expect(logLines).toEqual([]);
+  });
+
+  test("refuses a background step that captures", () => {
+    expect(() =>
+      suiteCase("background-capture", {
+        steps: [
+          {
+            request: { method: "GET", path: "/missing" },
+            background: true,
+            capture: { code: { body: "/code" } },
+            expect: { status: 404 },
+          },
+        ],
+      }),
+    ).toThrow("a background step captures nothing");
   });
 
   test("checks only the lines the app logged while the step ran", async () => {
