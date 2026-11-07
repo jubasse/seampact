@@ -5,11 +5,10 @@ import { buildLlmsIndex } from "./llms-index.ts";
 import { parseMarkdown } from "./markdown-tree.ts";
 import { isContributorPage } from "./page-policy.ts";
 import { transformPage } from "./page-transform.ts";
-import { MARKDOWN_TWIN_URL, type SiteLayout } from "./site-layout.ts";
+import { INDEX_DOCS_PATH, MARKDOWN_TWIN_URL, type SiteLayout } from "./site-layout.ts";
 import { folderIndexDocsPath, listSourcePages } from "./source-pages.ts";
 import { buildStackFile, STACK_FILES, stackFileName } from "./stack-files.ts";
 
-const INDEX_DOCS_PATH = "README.md";
 const MARKDOWN_TWIN_FOLDER = "md";
 const FULL_FILE_NAME = "llms-full.txt";
 const INDEX_FILE_NAME = "llms.txt";
@@ -40,7 +39,7 @@ export function buildAgentFiles(layout: SiteLayout): AgentFiles {
     repositoryRoot: layout.repositoryRoot,
     pagesByDocsPath,
     indexedFolders: folders,
-    toMarkdownTwins: true,
+    linkStyle: "markdownTwin",
   };
   const userPages = [...pagesByDocsPath.keys()]
     .filter((docsPath) => !isContributorPage(docsPath))
@@ -76,10 +75,10 @@ function userPageOf(layout: SiteLayout, docsPath: string, context: LinkContext):
     context,
   );
 
-  if (page.brokenLinks.length > 0) {
-    const first = page.brokenLinks[0];
+  const [first] = page.brokenLinks;
 
-    throw new Error(`docs/${docsPath}:${first?.line}: ${first?.reason}.`);
+  if (first !== undefined) {
+    throw new Error(`docs/${docsPath}:${first.line}: ${first.reason}.`);
   }
 
   return { docsPath, title: page.title, markdown: `# ${page.title}\n\n${page.body}` };

@@ -40,12 +40,14 @@ function introductionOf(markdown: string, headings: Heading[]): string | undefin
   return markdown.slice(start, end).trim();
 }
 
-/** The section with every link reduced to its text, so it reads on its own. */
-export function withoutLinks(markdown: string): string {
+/** The section with the links to its own page reduced to their text; links to other pages keep their URL. */
+export function withoutPageAnchors(markdown: string): string {
   const tree = parseMarkdown(markdown);
   const edits: { start: number; end: number; text: string }[] = [];
 
   visit(tree, "link", (link) => {
+    if (!link.url.startsWith("#")) return;
+
     const { start, end } = sourceRange(link, "section");
 
     edits.push({ start, end, text: link.children.map((child) => plainText(child)).join("") });

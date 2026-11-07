@@ -11,7 +11,12 @@ const DOCS_FOLDER_PREFIX = "docs/";
 export type LinkTarget =
   | { kind: "unchanged" }
   | { kind: "rewritten"; url: string }
+  /** Only for the markdown twins: the link goes, its text stays (a page for contributors). */
+  | { kind: "textOnly" }
   | { kind: "broken"; reason: string };
+
+/** Where the links of a page point: the site routes, or the raw Markdown twins for agents. */
+export type LinkStyle = "site" | "markdownTwin";
 
 /** What the prebuild knows when it resolves a link. */
 export interface LinkContext {
@@ -19,8 +24,7 @@ export interface LinkContext {
   pagesByDocsPath: ReadonlyMap<string, SourcePage>;
   /** The docs/ folders served at their own route, with a README or a written index page. */
   indexedFolders: ReadonlySet<string>;
-  /** Links to published pages point at their raw Markdown twin instead of their site route. */
-  toMarkdownTwins?: boolean;
+  linkStyle: LinkStyle;
 }
 
 /**
@@ -77,13 +81,16 @@ export function resolveLinkTarget(
   if (moved !== undefined) {
     return {
       kind: "rewritten",
-      url: context.toMarkdownTwins
-        ? movedPageTwinUrl(moved.target, hash)
-        : movedPageUrl(moved.target, hash),
+      url:
+        context.linkStyle === "markdownTwin"
+          ? movedPageTwinUrl(moved.target, hash)
+          : movedPageUrl(moved.target, hash),
     };
   }
 
-  if (context.toMarkdownTwins) {
+  if (context.linkStyle === "markdownTwin") {
+    if (isContributorTarget(repositoryPath, isFolder)) return { kind: "textOnly" };
+
     const twinPath = markdownTwinPathFor(repositoryPath, isFolder, context);
 
     if (twinPath !== undefined)
@@ -125,8 +132,16 @@ function siteSlugFor(
   return context.pagesByDocsPath.get(docsPath)?.slug;
 }
 
+function isContributorTarget(repositoryPath: string, isFolder: boolean): boolean {
+  if (!repositoryPath.startsWith(DOCS_FOLDER_PREFIX)) return false;
+
+  const docsPath = repositoryPath.slice(DOCS_FOLDER_PREFIX.length);
+
+  return isContributorPage(isFolder ? `${docsPath}/` : docsPath);
+}
+
 /**
- * The twin path of a published user page or folder index; a contributor page has no twin. A folder
+ * The twin path of a published user page or folder index. A folder
  * without a README is written as `<folder>/index.md`.
  */
 function markdownTwinPathFor(
@@ -139,8 +154,6 @@ function markdownTwinPathFor(
   if (!repositoryPath.startsWith(DOCS_FOLDER_PREFIX)) return undefined;
 
   const docsPath = repositoryPath.slice(DOCS_FOLDER_PREFIX.length);
-
-  if (isContributorPage(isFolder ? `${docsPath}/` : docsPath)) return undefined;
 
   if (!isFolder) return context.pagesByDocsPath.has(docsPath) ? docsPath : undefined;
 

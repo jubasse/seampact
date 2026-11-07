@@ -5,6 +5,8 @@ export const SITE_URL = "https://jubasse.github.io";
 export const SITE_BASE = "/seampact/";
 /** Where the raw Markdown twin of every user page is served: `<twin url><docs path>`. */
 export const MARKDOWN_TWIN_URL = `${SITE_URL}${SITE_BASE}md/`;
+/** The docs index page, from docs/. */
+export const INDEX_DOCS_PATH = "README.md";
 export const REPOSITORY_URL = "https://github.com/jubasse/seampact";
 export const REPOSITORY_BRANCH = "develop";
 

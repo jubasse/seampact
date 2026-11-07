@@ -1,7 +1,7 @@
 import type { Definition, Link, Nodes, Root } from "mdast";
 import { visit } from "unist-util-visit";
 import { type LinkContext, resolveLinkTarget } from "./link-target.ts";
-import { parseMarkdown, sourceRange } from "./markdown-tree.ts";
+import { parseMarkdown, plainText, sourceRange } from "./markdown-tree.ts";
 import { type PageHeading, readPageDescription, readPageHeading } from "./page-heading.ts";
 import { placementFrontmatter } from "./page-policy.ts";
 import { REPOSITORY_BRANCH, REPOSITORY_URL } from "./site-layout.ts";
@@ -76,6 +76,12 @@ export function transformPage(
 
     if (target.kind === "broken") {
       brokenLinks.push({ docsPath, line: node.position?.start.line ?? 0, reason: target.reason });
+
+      return;
+    }
+
+    if (target.kind === "textOnly" && node.type === "link") {
+      edits.push({ ...sourceRange(node, sourceName), replacement: plainText(node) });
 
       return;
     }

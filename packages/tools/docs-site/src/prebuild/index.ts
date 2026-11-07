@@ -8,14 +8,12 @@ import type { LinkContext } from "./link-target.ts";
 import { parseMarkdown } from "./markdown-tree.ts";
 import { type BrokenLink, transformPage } from "./page-transform.ts";
 import { buildSidebar, type SidebarEntry } from "./sidebar.ts";
-import { type SiteLayout, siteLayoutFrom } from "./site-layout.ts";
+import { INDEX_DOCS_PATH, type SiteLayout, siteLayoutFrom } from "./site-layout.ts";
 import { folderIndexDocsPath, listSourcePages } from "./source-pages.ts";
 
 export { movedPageRedirects } from "./page-policy.ts";
 export type { SidebarEntry } from "./sidebar.ts";
 export { SITE_BASE, SITE_URL } from "./site-layout.ts";
-
-const INDEX_DOCS_PATH = "README.md";
 
 /** What the prebuild wrote, for its summary line. */
 export interface SiteContentSummary {
@@ -42,6 +40,7 @@ export function buildSiteContent(packageRoot: string): SiteContentSummary {
     repositoryRoot: layout.repositoryRoot,
     pagesByDocsPath,
     indexedFolders: folders,
+    linkStyle: "site",
   };
 
   const writtenPages = new Map<string, string>();

@@ -2,10 +2,8 @@ import type { Link, List, Root } from "mdast";
 import { visit } from "unist-util-visit";
 import { type LinkContext, resolveLinkTarget } from "./link-target.ts";
 import { plainText } from "./markdown-tree.ts";
-import { MARKDOWN_TWIN_URL, SITE_BASE, SITE_URL } from "./site-layout.ts";
+import { INDEX_DOCS_PATH, MARKDOWN_TWIN_URL, SITE_BASE, SITE_URL } from "./site-layout.ts";
 import { type StackFile, stackFileUrl } from "./stack-files.ts";
-
-const INDEX_DOCS_PATH = "README.md";
 
 /** Sections of the docs index that are for contributors, not users. */
 const SECTIONS_LEFT_OUT = new Set(["Design"]);
@@ -26,7 +24,7 @@ const START_LINES = [
 ];
 
 const LINKS_NOTE =
-  "Each link is the raw Markdown of one page; read the page your task needs. The stack files hold one stack's guide, validators, contract essentials and error table in one file.";
+  "Start with the stack file of your server or clients: one file holds the commands, the contract essentials, the guide, the validators and the error tables of that stack. Every other link is the raw Markdown of one page; read the page your task needs.";
 
 interface IndexEntry {
   title: string;
@@ -55,15 +53,27 @@ export function buildLlmsIndex(
       sections.push(`## ${section.label}\n${entries.map(entryLine).join("\n")}`);
   }
 
-  const stackLines = stacks.map((stack) => `- [${stack.title}](${stackFileUrl(stack)})`);
+  const stackLines = stacks.map(
+    (stack) => `- [${capitalized(stack.title)}](${stackFileUrl(stack)}): ${stackKind(stack)}`,
+  );
   const head = [
     "# seampact",
     `> ${SUMMARY}`,
     START_LINES.map((line) => `- ${line}`).join("\n"),
     LINKS_NOTE,
+    `## Stack files\n${stackLines.join("\n")}`,
   ];
 
-  return `${[...head, ...sections, `## Stack files\n${stackLines.join("\n")}`, optionalSection()].join("\n\n")}\n`;
+  return `${[...head, ...sections, optionalSection()].join("\n\n")}\n`;
+}
+
+/** The summary up to its first colon: "Node server", "PHP server". */
+function stackKind(stack: StackFile): string {
+  return stack.summary.split(":")[0] ?? stack.summary;
+}
+
+function capitalized(text: string): string {
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 }
 
 function optionalSection(): string {

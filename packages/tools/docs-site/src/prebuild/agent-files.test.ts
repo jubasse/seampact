@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { type AgentFiles, buildAgentFiles } from "./agent-files.ts";
+import { sectionOf } from "./markdown-sections.ts";
 import { MARKDOWN_TWIN_URL, siteLayoutFrom } from "./site-layout.ts";
 import { STACK_FILES, stackFileName } from "./stack-files.ts";
 import { estimateTokens, TOKEN_BUDGETS } from "./token-budget.ts";
@@ -30,6 +31,15 @@ function textOf(name: string): string {
   if (text === undefined) throw new Error(`${name} was not generated.`);
 
   return text;
+}
+
+/** The codes in the first column of the error table under one `##` heading. */
+function refusalCodesOf(generateErrors: string, family: string): string[] {
+  const section = sectionOf(generateErrors, family) ?? "";
+
+  return [...section.matchAll(/^\| ((?:`[^`]+`(?:, )?)+) \|/gm)].flatMap((row) =>
+    [...(row[1] ?? "").matchAll(/`([^`]+)`/g)].map((code) => code[1] ?? ""),
+  );
 }
 
 function expectWithinBudget(name: string, budget: number): void {
@@ -121,7 +131,37 @@ describe("agent files content", () => {
 
     expect(fastapi).toContain("## Write a handler");
     expect(fastapi).toContain("| Code | Cause and fix |");
-    expect(fastapi).not.toContain("](");
+  });
+
+  it("keeps the links to other pages in a stack file and drops the ones to its own page", () => {
+    const laravel = textOf("llms-laravel.txt");
+
+    expect(laravel).toMatch(/\]\(https:\/\/jubasse\.github\.io\/seampact\/md\/[^)]+\.md/);
+    expect(laravel).not.toContain("](#");
+  });
+
+  it("holds every refusal code a stack can meet in its file", () => {
+    const generateErrors = textOf("md/troubleshooting/generate.md");
+
+    for (const stack of STACK_FILES) {
+      const file = textOf(stackFileName(stack));
+      const missing = stack.troubleshootingFamilies
+        .flatMap((family) => refusalCodesOf(generateErrors, family))
+        .filter((code) => !file.includes(`\`${code}\``));
+
+      expect(missing, `${stackFileName(stack)} lacks codes of its error tables`).toEqual([]);
+    }
+
+    expect(textOf("llms-nestjs.txt")).toContain("`identity.response.header.unsupported`");
+    expect(textOf("llms-laravel.txt")).toContain("`principal.variants.unsupported`");
+  });
+
+  it("links no contributor page from the docs index twin or llms-full.txt", () => {
+    for (const name of ["md/README.md", "llms-full.txt"]) {
+      expect(textOf(name), `${name} links a contributor page`).not.toMatch(
+        /\]\([^)]*\/(adr|ir)\/\)|\]\([^)]*\/(decisions|design-decisions|roadmap)\.md/,
+      );
+    }
   });
 
   it(

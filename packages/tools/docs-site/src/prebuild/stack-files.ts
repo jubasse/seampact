@@ -1,4 +1,4 @@
-import { PAGE_INTRODUCTION, sectionOf, withoutLinks } from "./markdown-sections.ts";
+import { PAGE_INTRODUCTION, sectionOf, withoutPageAnchors } from "./markdown-sections.ts";
 import { parseMarkdown, plainText } from "./markdown-tree.ts";
 import { MARKDOWN_TWIN_URL, SITE_BASE, SITE_URL } from "./site-layout.ts";
 
@@ -9,6 +9,8 @@ interface PageSelection {
   sections: string[];
   /** Headings taken when the page has them; a page that gains one is picked up without an edit here. */
   optionalSections?: string[];
+  /** Written before the first heading taken, so a repeated heading says which page it is from. */
+  headingPrefix?: string;
 }
 
 /** One stack file: the pages by heading that an agent needs to work on one stack. */
@@ -21,14 +23,19 @@ export interface StackFile {
   commandColumns: string[];
   guide: PageSelection[];
   validator?: PageSelection;
-  /** The `##` heading of docs/troubleshooting/generate.md that holds the stack's error table. */
-  troubleshootingFamily: string;
+  /** The `##` headings of docs/troubleshooting/generate.md whose error tables the stack can meet. */
+  troubleshootingFamilies: string[];
 }
 
 const SERVER_GUIDE_SECTIONS = ["Set up", "Write a handler", "Wire it in", "Limits"];
 const PAGING_SECTION = ["Paging"];
 const NODE_VALIDATOR_SECTIONS = [PAGE_INTRODUCTION];
-const OTHER_SERVERS_VALIDATOR_SECTIONS = ["Other servers"];
+
+const OTHER_SERVERS_VALIDATOR: PageSelection = {
+  docsPath: "configuration/validators.md",
+  sections: ["Other servers"],
+  headingPrefix: "Validators",
+};
 
 /** The contract pages every stack shares, by heading: the file layout and a list with paging. */
 const CONTRACT_ESSENTIALS: PageSelection[] = [
@@ -50,7 +57,14 @@ function nodeValidator(extraSections: string[] = []): PageSelection {
 }
 
 const NODE_COLUMNS = ["Node (npm)"];
-const NODE_FAMILY = "Node servers";
+const SHARED_FAMILY = "Spring Boot, PHP and Python";
+const EVERY_SERVER_FAMILY = "Every server";
+const NODE_FAMILIES = ["Node servers", EVERY_SERVER_FAMILY];
+
+function otherServerFamilies(family: string): string[] {
+  return [family, SHARED_FAMILY, EVERY_SERVER_FAMILY];
+}
+
 const SUMMARY_NODE =
   "Node server: the generated code validates every request and reply; you write the handlers and the hooks.";
 
@@ -62,7 +76,7 @@ export const STACK_FILES: readonly StackFile[] = [
     summary: SUMMARY_NODE,
     guide: serverGuide("backend/nestjs.md"),
     validator: nodeValidator(["class-validator"]),
-    troubleshootingFamily: NODE_FAMILY,
+    troubleshootingFamilies: NODE_FAMILIES,
   },
   {
     id: "express",
@@ -71,7 +85,7 @@ export const STACK_FILES: readonly StackFile[] = [
     summary: SUMMARY_NODE,
     guide: serverGuide("backend/express.md"),
     validator: nodeValidator(),
-    troubleshootingFamily: NODE_FAMILY,
+    troubleshootingFamilies: NODE_FAMILIES,
   },
   {
     id: "fastify",
@@ -80,7 +94,7 @@ export const STACK_FILES: readonly StackFile[] = [
     summary: SUMMARY_NODE,
     guide: serverGuide("backend/fastify.md"),
     validator: nodeValidator(),
-    troubleshootingFamily: NODE_FAMILY,
+    troubleshootingFamilies: NODE_FAMILIES,
   },
   {
     id: "hono",
@@ -89,7 +103,7 @@ export const STACK_FILES: readonly StackFile[] = [
     summary: SUMMARY_NODE,
     guide: serverGuide("backend/hono.md"),
     validator: nodeValidator(),
-    troubleshootingFamily: NODE_FAMILY,
+    troubleshootingFamilies: NODE_FAMILIES,
   },
   {
     id: "adonisjs",
@@ -98,7 +112,7 @@ export const STACK_FILES: readonly StackFile[] = [
     summary: SUMMARY_NODE,
     guide: serverGuide("backend/adonisjs.md"),
     validator: nodeValidator(["VineJS"]),
-    troubleshootingFamily: NODE_FAMILY,
+    troubleshootingFamilies: NODE_FAMILIES,
   },
   {
     id: "spring-boot",
@@ -107,11 +121,8 @@ export const STACK_FILES: readonly StackFile[] = [
     summary:
       "Java and Kotlin server: a Gradle or Maven plugin generates controllers and hooks; you write the handlers.",
     guide: serverGuide("backend/spring-boot.md"),
-    validator: {
-      docsPath: "configuration/validators.md",
-      sections: OTHER_SERVERS_VALIDATOR_SECTIONS,
-    },
-    troubleshootingFamily: "Spring Boot",
+    validator: OTHER_SERVERS_VALIDATOR,
+    troubleshootingFamilies: otherServerFamilies("Spring Boot"),
   },
   {
     id: "laravel",
@@ -120,11 +131,8 @@ export const STACK_FILES: readonly StackFile[] = [
     summary:
       "PHP server: a Composer package generates controllers and hooks; you write the handlers.",
     guide: serverGuide("backend/laravel.md"),
-    validator: {
-      docsPath: "configuration/validators.md",
-      sections: OTHER_SERVERS_VALIDATOR_SECTIONS,
-    },
-    troubleshootingFamily: "PHP",
+    validator: OTHER_SERVERS_VALIDATOR,
+    troubleshootingFamilies: otherServerFamilies("PHP"),
   },
   {
     id: "symfony",
@@ -133,11 +141,8 @@ export const STACK_FILES: readonly StackFile[] = [
     summary:
       "PHP server: a Composer package and a bundle generate controllers and hooks; you write the handlers.",
     guide: serverGuide("backend/symfony.md"),
-    validator: {
-      docsPath: "configuration/validators.md",
-      sections: OTHER_SERVERS_VALIDATOR_SECTIONS,
-    },
-    troubleshootingFamily: "PHP",
+    validator: OTHER_SERVERS_VALIDATOR,
+    troubleshootingFamilies: otherServerFamilies("PHP"),
   },
   {
     id: "fastapi",
@@ -146,11 +151,8 @@ export const STACK_FILES: readonly StackFile[] = [
     summary:
       "Python server: the generated Python package binds the routes; you write the handlers and the hooks.",
     guide: serverGuide("backend/fastapi.md"),
-    validator: {
-      docsPath: "configuration/validators.md",
-      sections: OTHER_SERVERS_VALIDATOR_SECTIONS,
-    },
-    troubleshootingFamily: "Python",
+    validator: OTHER_SERVERS_VALIDATOR,
+    troubleshootingFamilies: otherServerFamilies("Python"),
   },
   {
     id: "drf",
@@ -159,11 +161,8 @@ export const STACK_FILES: readonly StackFile[] = [
     summary:
       "Python server: the generated Python package fills your URLconf; you write the handlers and the hooks.",
     guide: serverGuide("backend/drf.md"),
-    validator: {
-      docsPath: "configuration/validators.md",
-      sections: OTHER_SERVERS_VALIDATOR_SECTIONS,
-    },
-    troubleshootingFamily: "Python",
+    validator: OTHER_SERVERS_VALIDATOR,
+    troubleshootingFamilies: otherServerFamilies("Python"),
   },
   {
     id: "ninja",
@@ -172,11 +171,8 @@ export const STACK_FILES: readonly StackFile[] = [
     summary:
       "Python server: the generated Python package binds the routes; you write the handlers and the hooks.",
     guide: serverGuide("backend/ninja.md"),
-    validator: {
-      docsPath: "configuration/validators.md",
-      sections: OTHER_SERVERS_VALIDATOR_SECTIONS,
-    },
-    troubleshootingFamily: "Python",
+    validator: OTHER_SERVERS_VALIDATOR,
+    troubleshootingFamilies: otherServerFamilies("Python"),
   },
   {
     id: "clients",
@@ -189,11 +185,23 @@ export const STACK_FILES: readonly StackFile[] = [
         docsPath: "frontend/fetch-client.md",
         sections: ["Add the target", "Create and call it", "ContractError"],
       },
-      { docsPath: "frontend/react.md", sections: ["Add the targets", "Use the hooks"] },
-      { docsPath: "frontend/vue.md", sections: ["Add the targets", "Use the composables"] },
-      { docsPath: "frontend/angular.md", sections: ["Add the targets", "Provide the service"] },
+      {
+        docsPath: "frontend/react.md",
+        headingPrefix: "React",
+        sections: ["Add the targets", "Use the hooks"],
+      },
+      {
+        docsPath: "frontend/vue.md",
+        headingPrefix: "Vue",
+        sections: ["Add the targets", "Use the composables"],
+      },
+      {
+        docsPath: "frontend/angular.md",
+        headingPrefix: "Angular",
+        sections: ["Add the targets", "Provide the service"],
+      },
     ],
-    troubleshootingFamily: "Clients",
+    troubleshootingFamilies: ["Clients"],
   },
 ];
 
@@ -208,7 +216,7 @@ export function stackFileUrl(stack: StackFile): string {
   return `${SITE_URL}${SITE_BASE}${stackFileName(stack)}`;
 }
 
-/** The text of `llms-<stack>.txt`: plain text with `##` headings, links reduced to their text. */
+/** The text of `llms-<stack>.txt`: plain text with `##` headings; links to other pages keep their URL. */
 export function buildStackFile(stack: StackFile, twins: TwinPages): string {
   const groups: PageSelection[] = [
     ...CONTRACT_ESSENTIALS,
@@ -247,7 +255,11 @@ function selectionText(selection: PageSelection, twins: TwinPages): string {
       );
     }
 
-    if (text !== undefined) texts.push(withoutLinks(text));
+    if (text !== undefined) texts.push(withoutPageAnchors(text));
+  }
+
+  if (selection.headingPrefix !== undefined && texts[0] !== undefined) {
+    texts[0] = texts[0].replace(/^(#+ )/, `$1${selection.headingPrefix}: `);
   }
 
   return `Source: ${MARKDOWN_TWIN_URL}${selection.docsPath}\n\n${texts.join("\n\n")}`;
@@ -257,15 +269,19 @@ const TROUBLESHOOTING_PAGE = "troubleshooting/generate.md";
 
 function troubleshootingText(stack: StackFile, twins: TwinPages): string {
   const page = twins.get(TROUBLESHOOTING_PAGE);
-  const family = page === undefined ? undefined : sectionOf(page, stack.troubleshootingFamily);
+  const tables = stack.troubleshootingFamilies.map((heading) => {
+    const family = page === undefined ? undefined : sectionOf(page, heading);
 
-  if (family === undefined) {
-    throw new Error(
-      `Stack file: docs/${TROUBLESHOOTING_PAGE} has no heading "${stack.troubleshootingFamily}". Restore it or fix the family of ${stack.id} in stack-files.ts.`,
-    );
-  }
+    if (family === undefined) {
+      throw new Error(
+        `Stack file: docs/${TROUBLESHOOTING_PAGE} has no heading "${heading}". Restore it or fix the families of ${stack.id} in stack-files.ts.`,
+      );
+    }
 
-  return `Source: ${MARKDOWN_TWIN_URL}${TROUBLESHOOTING_PAGE}\n\nWhen \`generate\` refuses a form, its code is in this table (every code has a Fix).\n\n${withoutLinks(family)}`;
+    return withoutPageAnchors(family);
+  });
+
+  return `Source: ${MARKDOWN_TWIN_URL}${TROUBLESHOOTING_PAGE}\n\nWhen \`generate\` refuses a form, its code is in one of these tables (every code has a Fix).\n\n${tables.join("\n\n")}`;
 }
 
 /** The commands of the stack, read from the table of commands-per-stack.md by column. */
