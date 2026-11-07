@@ -5,12 +5,6 @@ const CONTRIBUTOR_FOLDERS = ["adr", "ir"] as const;
 const CONTRIBUTOR_FILES = ["decisions.md", "design-decisions.md", "roadmap.md"] as const;
 const RELEASE_NOTES_FOLDER = "release-notes";
 
-/** Doc ids the llms.txt files leave out: the contributor pages, which are not guides. */
-export const LLMS_EXCLUDED_DOC_IDS = [
-  ...CONTRIBUTOR_FOLDERS.map((folder) => `${folder}/**`),
-  ...CONTRIBUTOR_FILES.map((file) => file.replace(/\.md$/, "")),
-];
-
 /** The route of the docs index page: the home page is site-only, so the index sits beside it. */
 export const DOCS_INDEX_SLUG = "documentation";
 
