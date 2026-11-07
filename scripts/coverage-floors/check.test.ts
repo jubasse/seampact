@@ -193,11 +193,10 @@ describe("the floors check", () => {
       ]);
     }
 
+    // A not-measured package that still shows up with no counted line, like a types-only package, passes.
     const notMeasuredFloors = floorsOf({}, { "php/hooks": "No source." });
 
-    expect(checkFloors(emptyCobertura, notMeasuredFloors).problems).toEqual([
-      expect.stringMatching(/^php\/hooks is measured but listed under notMeasured/u),
-    ]);
+    expect(checkFloors(emptyCobertura, notMeasuredFloors).problems).toEqual([]);
   });
 
   it("fails a branch floor when the tool counts no branches", () => {
