@@ -8,5 +8,5 @@ The documentation website, built with Starlight from the repository's `docs/` fo
 - `docs/agents/` and `docs/conformance/` stay out of the site: they are for contributors.
 - Edit the pages in `docs/`, never in `site/content/docs/`.
 - The home page is `home/index.mdx`, site-only; `docs/README.md` is the first sidebar entry, at `/documentation/`. Contributor pages (`adr/`, `ir/`, `decisions`, `design-decisions`, `roadmap`) are out of search; the three moved pages are redirects (`MOVED_PAGES` in `src/prebuild/page-policy.ts`).
-- The logo and favicon are plain placeholder SVG marks (`site/assets/logo-*.svg`, `public/favicon.svg`); `public/og.png` is rendered from `site/assets/og-card.svg`. Replace the files to rebrand.
+- The logo is `site/assets/logo.svg`, copied to `public/favicon.svg` (with `public/favicon.ico`); `public/og.png` is rendered from `site/assets/og-card.svg` with headless Chrome. Replace the files to rebrand.
 - Search Console and Bing verification: add the token at the commented hook in `astro.config.ts`.
