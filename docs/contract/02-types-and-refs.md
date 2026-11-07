@@ -26,7 +26,7 @@ enums:
 
 - Types are `string`, `integer`, `number`, `boolean`, `object` and `array`.
 - A property is optional unless it is in `required`. In `query`, `headers` and `id`, a name ending with `?` is optional.
-- `nullable: true` lets the value be `null`. Optional and nullable are two different things.
+- `nullable: true` lets the value be `null`. Optional and nullable are two different things. Spring Boot, Laravel, Symfony, FastAPI, Django REST Framework and Django Ninja accept it. The Node servers and the TypeScript types refuse it on anything but an opaque value, and `generate` stops with `type.nullable.unsupported` ([Generate fails](../troubleshooting/generate.md#node-servers)).
 - A schema name starts with a capital letter. Use the name wherever a schema fits: `item: Note`, `input: CreateNote`, `noteId: NoteId`.
 - An enum needs a `reason`: one sentence a reviewer reads, such as why this api owns its list of values.
 
@@ -62,3 +62,4 @@ To share one base between several apis, use `extends`: see [Advanced](07-advance
 
 - Next: [Errors](03-errors.md).
 - In depth: [Composition](../grammar/02-composition-extends-packs-include.md).
+- What each stack generates from these schemas: [Types and validation](../types-and-validation/README.md).

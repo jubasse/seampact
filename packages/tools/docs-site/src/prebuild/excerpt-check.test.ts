@@ -1,7 +1,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkPageExcerpts, listPageExcerpts, missingExcerptLines } from "./excerpt-check.ts";
+import {
+  checkPageExcerpts,
+  listPageExcerpts,
+  missingExcerptLines,
+  type PageExcerpt,
+} from "./excerpt-check.ts";
 
 const REPOSITORY_ROOT = join(import.meta.dirname, "../../../../..");
 const DOCS_ROOT = join(REPOSITORY_ROOT, "docs");
@@ -18,6 +23,14 @@ function fenceOf(...lines: string[]): string {
   return ["<!-- excerpt: golden.ts -->", "```ts", ...lines, "```", ""].join("\n");
 }
 
+function onlyExcerptOf(lines: string[]): PageExcerpt {
+  const [excerpt, ...others] = listPageExcerpts(fenceOf(...lines), "page.md");
+
+  if (excerpt === undefined || others.length > 0) throw new Error("expected exactly one excerpt");
+
+  return excerpt;
+}
+
 describe("excerpt check", () => {
   it("reads the golden path and the lines of the fence after a marker", () => {
     const excerpts = listPageExcerpts(fenceOf("export const A = z.object({", "});"), "page.md");
@@ -28,19 +41,13 @@ describe("excerpt check", () => {
   });
 
   it("accepts lines in order, with an elision line standing for skipped lines", () => {
-    const [excerpt] = listPageExcerpts(
-      fenceOf("export const A = z.object({", "  ...", "});"),
-      "page.md",
-    );
+    const excerpt = onlyExcerptOf(["export const A = z.object({", "  ...", "});"]);
 
     expect(missingExcerptLines(excerpt, GOLDEN)).toEqual([]);
   });
 
   it("names the first line the golden does not show in order", () => {
-    const [excerpt] = listPageExcerpts(
-      fenceOf("  effort: z.int(),", "  title: z.string(),"),
-      "page.md",
-    );
+    const excerpt = onlyExcerptOf(["  effort: z.int(),", "  title: z.string(),"]);
 
     expect(missingExcerptLines(excerpt, GOLDEN)).toEqual(["  title: z.string(),"]);
   });
