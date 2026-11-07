@@ -49,6 +49,14 @@ function publishedEnvironments(): string[] {
     .sort();
 }
 
+const STATUS_FUNCTIONS = ["always()", "failure()", "cancelled()", "success()"];
+
+function statusFunctionsIn(condition: string | undefined): string[] {
+  if (condition === undefined) throw new Error("the job has no if condition");
+
+  return STATUS_FUNCTIONS.filter((statusFunction) => condition.includes(statusFunction));
+}
+
 const entry = (file: string, name: string): DistributionManifestEntry => ({
   file,
   name,
@@ -85,6 +93,18 @@ describe("the PyPI publish", () => {
   it("waits for the release approval", () => {
     expect(publishJob().needs).toContain("pypi-approval");
     expect(releaseWorkflow.jobs["pypi-approval"]?.environment).toBe("release");
+  });
+
+  it("has no status function in the condition of a leg or of the approval", () => {
+    expect(statusFunctionsIn(publishJob().if)).toEqual([]);
+    expect(statusFunctionsIn(releaseWorkflow.jobs["pypi-approval"]?.if)).toEqual([]);
+  });
+
+  it("finds a status function in a condition", () => {
+    expect(statusFunctionsIn("always() && needs.prepare.outputs.dry-run == 'false'")).toEqual([
+      "always()",
+    ]);
+    expect(statusFunctionsIn("needs.prepare.outputs.dry-run == 'false'")).toEqual([]);
   });
 
   it("plans one distribution's files, or all of them without a name", () => {

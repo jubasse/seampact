@@ -1284,8 +1284,11 @@ jobs:
           node scripts/release/python/pypi-plan.ts "$RUNNER_TEMP/python-distributions" --manifest "$RUNNER_TEMP/python-manifest.json" \
             --version "$VERSION" --index https://pypi.org --distribution "$DISTRIBUTION" --out pypi-upload
           echo "upload=$([ -n "$(ls -A pypi-upload)" ] && echo true || echo false)" | tee -a "$GITHUB_OUTPUT"
-          jq -r '.[] | select(.name == "seampact-compiler") | "\(.sha256)  \(.file)"' "$RUNNER_TEMP/python-manifest.json" > "$RUNNER_TEMP/wheel-subjects.txt"
       # The compiler wheels' provenance, signed only now that the release is approved.
+      - name: The subjects of the compiler wheels
+        if: matrix.distribution == 'seampact-compiler'
+        run: |
+          jq -r '.[] | select(.name == "seampact-compiler") | "\(.sha256)  \(.file)"' "$RUNNER_TEMP/python-manifest.json" > "$RUNNER_TEMP/wheel-subjects.txt"
       - if: matrix.distribution == 'seampact-compiler'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
