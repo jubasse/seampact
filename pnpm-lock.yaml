@@ -503,6 +503,9 @@ importers:
         specifier: 3.9.10
         version: 3.9.10
     devDependencies:
+      '@fastify/compress':
+        specifier: 9.2.2
+        version: 9.2.2
       '@fastify/swagger':
         specifier: 9.9.2
         version: 9.9.2(supports-color@10.2.2)
@@ -1603,8 +1606,14 @@ packages:
   '@expressive-code/plugin-text-markers@0.44.3':
     resolution: {integrity: sha512-4Ae2xRSDV5kdWPsi40xWbOtoihbzM0zLVjQKkDAnD5KzFXl+6/kd+VhuWOlTRVaJ5cqGk++vCbAaf0MR1XbZlw==}
 
+  '@fastify/accept-negotiator@2.1.2':
+    resolution: {integrity: sha512-LV7MZqTwXTEt3GxBT6BU8ACztWnv++hSkMEsP3usIHiI0tA4F5EO4THhDCOr5J/ginM9DCnLCmZ6u3JLA9x8Iw==}
+
   '@fastify/ajv-compiler@4.0.7':
     resolution: {integrity: sha512-VP0yIfwlc1ohj733keYDqyHm1VWeP9VQxYomunhr90jkC4aNNibbkrRiaNgPgqj1ORxUenILR4qzA/ppYBNAtQ==}
+
+  '@fastify/compress@9.2.2':
+    resolution: {integrity: sha512-FF1CSw1ED4f2lZmYDXmpHgDJLj752JBr7Tdv6Z5SYkZmbvwzlagWwKvF3OGWPzbL7pRFgoki6rNyh/yu8tb92w==}
 
   '@fastify/deepmerge@3.2.2':
     resolution: {integrity: sha512-155eqA/WMQdN6gUD4RrhS2K0Pcz2Ou9pQ86L0sipOpP9ONbTA6oYw/hW4VdBjR4egcDHqmWUK9x80oUX7S1mDQ==}
@@ -5989,11 +5998,19 @@ snapshots:
     dependencies:
       '@expressive-code/core': 0.44.3
 
+  '@fastify/accept-negotiator@2.1.2': {}
+
   '@fastify/ajv-compiler@4.0.7':
     dependencies:
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       fast-uri: 4.2.3
+
+  '@fastify/compress@9.2.2':
+    dependencies:
+      '@fastify/accept-negotiator': 2.1.2
+      fastify-plugin: 6.0.1
+      mime-db: 1.54.0
 
   '@fastify/deepmerge@3.2.2': {}
 

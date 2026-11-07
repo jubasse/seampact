@@ -3,6 +3,7 @@ import { copyFileSync, mkdirSync } from "node:fs";
 import { request as httpRequest, type IncomingHttpHeaders } from "node:http";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { gzipSync } from "node:zlib";
 import {
   CLIENT_ADDRESS_CASES,
   clientAddressesTheHookSees,
@@ -26,6 +27,8 @@ import { type AdonisMajor, generateAdonisProject } from "./adonis-major.test-sup
 const APP_SOURCE = new URL("../test-app/reference-app.js", import.meta.url);
 const MAJORS: readonly AdonisMajor[] = [7, 6];
 const REPLY_TIMEOUT_MILLISECONDS = 3000;
+// The bytes cut off the end of a gzip body: its 8-byte trailer and part of the deflate data.
+const CUT_GZIP_BYTES = 12;
 // Generating and compiling both apis outruns vitest's default 10 s hook limit on a loaded machine.
 const SETUP_TIMEOUT_MILLISECONDS = 60_000;
 
@@ -552,6 +555,34 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
       });
 
       expect(reply.status).toBe(413);
+      expect(app.calls.handled).toEqual([]);
+    });
+
+    test("a body in an unknown content coding answers the route's 415", async () => {
+      const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: { ...writeHeaders(), "content-encoding": "x-custom" },
+        body: JSON.stringify({ title: "Plan" }),
+      });
+
+      expect(reply.status).toBe(415);
+      expect(JSON.parse(reply.text).code).toBe("api.unsupported_media_type");
+      expect(app.calls.handled).toEqual([]);
+    });
+
+    test("a body announced as gzip that is not a gzip stream, or a gzip stream cut before its end, answers 400", async () => {
+      const whole = gzipSync(JSON.stringify({ title: "Plan" }));
+      const notGzip = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: { ...writeHeaders(), "content-encoding": "gzip" },
+        body: JSON.stringify({ title: "Plan" }),
+      });
+      const cut = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: { ...writeHeaders(), "content-encoding": "gzip" },
+        body: whole.subarray(0, whole.byteLength - CUT_GZIP_BYTES),
+      });
+
+      expect([notGzip.status, cut.status]).toEqual([400, 400]);
+      expect(JSON.parse(notGzip.text).code).toBe("api.schema_invalid");
+      expect(JSON.parse(cut.text).code).toBe("api.schema_invalid");
       expect(app.calls.handled).toEqual([]);
     });
 

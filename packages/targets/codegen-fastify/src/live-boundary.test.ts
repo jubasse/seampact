@@ -41,6 +41,8 @@ const USER = "55555555-5555-4555-8555-555555555555";
 const BEARER = { authorization: `Bearer user-${USER}` };
 const PROBLEM_MEDIA = "application/problem+json";
 const TOO_LARGE_BODY_BYTES = 1_048_577;
+// The bytes cut off the end of a gzip body: its 8-byte trailer and part of the deflate data.
+const CUT_GZIP_BYTES = 12;
 const LONGER_THAN_MAX_PARAM_LENGTH = 101;
 const BASE_PATH = "/v1";
 
@@ -74,6 +76,7 @@ interface ReferenceAppModule {
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startPrefixedApp(prefix: string): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startCompressingApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startCompressPluginApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
 }
 
@@ -316,24 +319,22 @@ describe("the request body", () => {
     expect(app.calls.handled).toEqual([]);
   });
 
-  test("a gzip request body is inflated before it is parsed", async () => {
-    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
-      headers: { ...writeHeaders(), "content-encoding": "gzip" },
-      body: gzipSync(JSON.stringify({ title: "Plan" })),
+  describeCompressedBodies(send);
+
+  describe("on an app that registers @fastify/compress", () => {
+    let compressPlugin: Awaited<ReturnType<ReferenceAppModule["startCompressPluginApp"]>>;
+
+    beforeAll(async () => {
+      compressPlugin = await app.startCompressPluginApp();
     });
 
-    expect(reply.status).toBe(201);
-    expect(app.calls.handled).toEqual(["createTask"]);
-  });
-
-  test("a body in an unknown content coding answers the 415", async () => {
-    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
-      headers: { ...writeHeaders(), "content-encoding": "x-custom" },
-      body: JSON.stringify({ title: "Plan" }),
+    afterAll(async () => {
+      await compressPlugin?.close();
     });
 
-    expect(reply.status).toBe(415);
-    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    describeCompressedBodies((method, path, options) =>
+      sendRawRequest(compressPlugin, method, path, options),
+    );
   });
 
   test("a scalar JSON body is a step 6 issue, not a malformed body", async () => {
@@ -346,6 +347,65 @@ describe("the request body", () => {
     expect(JSON.parse(reply.text).issues).toBeDefined();
   });
 });
+
+// The boundary decodes a compressed body itself, so the codings it answers do not depend on the app's plugins.
+function describeCompressedBodies(sendTo: typeof send): void {
+  const path = `/v1/channels/${CHANNEL}/tasks`;
+
+  test("a gzip body is inflated before it is parsed", async () => {
+    const reply = await sendTo("POST", path, {
+      headers: { ...writeHeaders(), "content-encoding": "gzip" },
+      body: gzipSync(JSON.stringify({ title: "Plan" })),
+    });
+
+    expect(reply.status).toBe(201);
+    expect(app.calls.handled).toEqual(["createTask"]);
+  });
+
+  test("a body in an unknown content coding answers the 415", async () => {
+    const reply = await sendTo("POST", path, {
+      headers: { ...writeHeaders(), "content-encoding": "x-custom" },
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(415);
+    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    expect(JSON.parse(reply.text).code).toBe("api.unsupported_media_type");
+  });
+
+  test("a gzip body under the limit as sent but over it once inflated answers the 413", async () => {
+    const reply = await sendTo("POST", path, {
+      headers: { ...writeHeaders(), "content-encoding": "gzip" },
+      body: gzipSync(JSON.stringify({ title: "x".repeat(TOO_LARGE_BODY_BYTES) })),
+    });
+
+    expect(reply.status).toBe(413);
+    expect(JSON.parse(reply.text).code).toBe("api.payload_too_large");
+    expect(app.calls.handled).toEqual([]);
+  });
+
+  test("a body announced as gzip that is not a gzip stream answers the 400", async () => {
+    const reply = await sendTo("POST", path, {
+      headers: { ...writeHeaders(), "content-encoding": "gzip" },
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(400);
+    expect(JSON.parse(reply.text).code).toBe("api.schema_invalid");
+  });
+
+  test("a gzip body cut before its end answers the 400", async () => {
+    const whole = gzipSync(JSON.stringify({ title: "Plan" }));
+    const reply = await sendTo("POST", path, {
+      headers: { ...writeHeaders(), "content-encoding": "gzip" },
+      body: whole.subarray(0, whole.byteLength - CUT_GZIP_BYTES),
+    });
+
+    expect(reply.status).toBe(400);
+    expect(JSON.parse(reply.text).code).toBe("api.schema_invalid");
+    expect(app.calls.handled).toEqual([]);
+  });
+}
 
 describe("requests the contract does not serve as sent", () => {
   test.each(["DELETE", "OPTIONS"])(

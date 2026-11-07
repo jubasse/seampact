@@ -1,0 +1,135 @@
+{
+  "id": "restricted-output-field-absent-in-nested-array",
+  "title": "A restricted output field is absent from each item of an array nested in the response for a caller without its right, and present with it",
+  "checks": ["CHK-025"],
+  "profiles": ["default", "hand-written"],
+  "script": {
+    "decisions": [
+      {
+        "name": "tasks.seeEffort",
+        "purpose": "field",
+        "deny": {
+          "code": "api.forbidden"
+        }
+      }
+    ],
+    "answers": {
+      "tasks.searchTasks": {
+        "status": 200,
+        "body": {
+          "items": [
+            {
+              "taskId": "20000000-0000-4000-8000-000000000001",
+              "title": "Estimate the slice",
+              "state": "open",
+              "effort": 5,
+              "version": 1,
+              "createdAt": "2026-10-18T09:00:00.000Z"
+            },
+            {
+              "taskId": "20000000-0000-4000-8000-000000000002",
+              "title": "Ship the slice",
+              "state": "open",
+              "effort": 3,
+              "version": 1,
+              "createdAt": "2026-10-18T09:00:00.000Z"
+            }
+          ],
+          "total": 2
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "title": "without the right",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/search",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        },
+        "body": {
+          "text": "slice"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "items": [
+            {
+              "taskId": "20000000-0000-4000-8000-000000000001",
+              "title": "Estimate the slice"
+            },
+            {
+              "taskId": "20000000-0000-4000-8000-000000000002",
+              "title": "Ship the slice"
+            }
+          ],
+          "total": 2
+        },
+        "absent": ["/items/0/effort", "/items/1/effort"]
+      }
+    },
+    {
+      "title": "the decider allows the right",
+      "script": {
+        "answers": {
+          "tasks.searchTasks": {
+            "status": 200,
+            "body": {
+              "items": [
+                {
+                  "taskId": "20000000-0000-4000-8000-000000000001",
+                  "title": "Estimate the slice",
+                  "state": "open",
+                  "effort": 5,
+                  "version": 1,
+                  "createdAt": "2026-10-18T09:00:00.000Z"
+                },
+                {
+                  "taskId": "20000000-0000-4000-8000-000000000002",
+                  "title": "Ship the slice",
+                  "state": "open",
+                  "effort": 3,
+                  "version": 1,
+                  "createdAt": "2026-10-18T09:00:00.000Z"
+                }
+              ],
+              "total": 2
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "with the right",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/search",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        },
+        "body": {
+          "text": "slice"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "items": [
+            {
+              "taskId": "20000000-0000-4000-8000-000000000001",
+              "effort": 5
+            },
+            {
+              "taskId": "20000000-0000-4000-8000-000000000002",
+              "effort": 3
+            }
+          ],
+          "total": 2
+        }
+      }
+    }
+  ]
+}

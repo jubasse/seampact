@@ -134,7 +134,12 @@ const BAD_CSRF_TOKEN = { code: "E_BAD_CSRF_TOKEN", status: 403 } as const;
 const ROUTE_NOT_FOUND_CODE = "E_ROUTE_NOT_FOUND";
 const ENTITY_TOO_LARGE_CODE = "E_REQUEST_ENTITY_TOO_LARGE";
 const BAD_REQUEST = 400;
+// The bodyparser's refusal of a content coding or a charset it does not know.
+const UNSUPPORTED_MEDIA = 415;
 const STRICT_JSON_REFUSAL = 422;
+const UNSUPPORTED_MEDIA_ROLE = "unsupportedMediaType";
+// The codes of a zlib or brotli stream that cannot inflate the body: corrupt, or cut before its end.
+const CORRUPT_CODING_CODE_PREFIXES: readonly string[] = ["Z_", "ERR__ERROR_"];
 const CSRF_INVALID_ROLE = "csrfInvalid";
 const HEAD_METHOD = "HEAD";
 const GET_METHOD = "get";
@@ -164,6 +169,15 @@ function errorCode(error: unknown): unknown {
 
 function errorStatus(error: unknown): unknown {
   return error instanceof Error ? Reflect.get(error, "status") : undefined;
+}
+
+function isCorruptCodingError(error: unknown): boolean {
+  const code = errorCode(error);
+
+  return (
+    typeof code === "string" &&
+    CORRUPT_CODING_CODE_PREFIXES.some((prefix) => code.startsWith(prefix))
+  );
 }
 
 function isFrameworkDenial(error: unknown): boolean {
@@ -211,7 +225,9 @@ function preRoutingError(
 
   const status = errorStatus(error);
 
-  if (status === BAD_REQUEST || status === STRICT_JSON_REFUSAL) {
+  if (status === UNSUPPORTED_MEDIA) return roleError(route, UNSUPPORTED_MEDIA_ROLE);
+
+  if (status === BAD_REQUEST || status === STRICT_JSON_REFUSAL || isCorruptCodingError(error)) {
     const code = codeOfStatus(route, BAD_REQUEST);
 
     return code === undefined ? unexpectedError(route, error) : new ContractError(code);

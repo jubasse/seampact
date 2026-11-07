@@ -7,6 +7,7 @@ namespace Seampact\ConsumerSuite;
 use App\Generated\Tasks\Schemas\Channel;
 use App\Generated\Tasks\Schemas\Draft;
 use App\Generated\Tasks\Schemas\Task;
+use App\Generated\Tasks\Schemas\TaskSearchResult;
 use App\Generated\Tasks\Schemas\TaskState;
 use App\Generated\TasksAbsoluteUrls\Schemas\Note;
 use App\Generated\TasksService\Schemas\Task as ServiceTask;
@@ -135,6 +136,22 @@ final class SampleData
         }
 
         return $tasks;
+    }
+
+    /**
+     * A search's scripted result: its tasks, and its total when the script gives one.
+     *
+     * @param array<mixed> $body
+     */
+    public static function searchResultOf(array $body): TaskSearchResult
+    {
+        $items = is_array($body['items'] ?? null) ? $body['items'] : [];
+        $total = $body['total'] ?? null;
+
+        return new TaskSearchResult(
+            array_values(array_map(self::taskOf(...), array_filter($items, is_array(...)))),
+            is_int($total) ? $total : null,
+        );
     }
 
     /** @param array<mixed> $body */

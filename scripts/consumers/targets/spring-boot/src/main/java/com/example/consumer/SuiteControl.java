@@ -16,7 +16,7 @@ import tools.jackson.databind.node.ObjectNode;
  * and the log lines the app writes (ADR 0015 "The shared black-box HTTP suite").
  */
 final class SuiteControl {
-    private static final Set<String> SCRIPT_MEMBERS = Set.of("decisions", "scopes", "answers", "holds");
+    private static final Set<String> SCRIPT_MEMBERS = Set.of("decisions", "scopes", "answers", "holds", "hookFailures");
     private static final String HOLD_HOOK = "hold";
     // Below the suite's request timeout, so a hold the suite never releases still answers.
     private static final long HOLD_LIMIT_MS = 5000;
@@ -105,6 +105,13 @@ final class SuiteControl {
         }
 
         return Optional.empty();
+    }
+
+    /** Throws the exception the script gives the hook double named [hook], if any, in place of its answer. */
+    static synchronized void throwScriptedHookFailure(String hook) {
+        JsonNode message = script.path("hookFailures").path(hook);
+
+        if (message.isString()) throw new IllegalStateException(message.asString());
     }
 
     static synchronized Optional<String> scriptedScopeDenial(String scope) {

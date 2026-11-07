@@ -22,6 +22,7 @@ final class PagingUserHook implements PagingUserAuthenticateHook, SplitSortUserA
     public function authenticate(AuthenticateRequest $request): AuthenticateResult
     {
         SuiteControl::recordHookCall('authenticate:user', $request->operation()->api, $request->operation()->id);
+        SuiteControl::throwScriptedHookFailure('authenticate:user');
 
         $credentials = $request->credentials();
         $isUserCredentials = $credentials instanceof PagingUserCredentials || $credentials instanceof SplitSortUserCredentials;

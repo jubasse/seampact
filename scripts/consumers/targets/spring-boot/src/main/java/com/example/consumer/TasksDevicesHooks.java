@@ -21,6 +21,7 @@ final class TasksDevicesHooks {
         @Override
         public AuthenticateResult<DevicePrincipal, Denial> authenticate(DeviceAuthenticateRequest request) {
             SuiteControl.recordHookCall("authenticate:device", API, request.operation().id());
+            SuiteControl.throwScriptedHookFailure("authenticate:device");
 
             boolean paired = request.credentials().deviceToken().orElse("").equals(Credentials.text("deviceToken"));
 

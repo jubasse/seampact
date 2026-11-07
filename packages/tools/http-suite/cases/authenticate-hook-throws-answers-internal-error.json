@@ -1,0 +1,40 @@
+{
+  "id": "authenticate-hook-throws-answers-internal-error",
+  "title": "An authenticate hook that throws answers 500 api.internal and never runs the handler",
+  "checks": ["CHK-157"],
+  "profiles": ["default", "hand-written"],
+  "script": {
+    "hookFailures": {
+      "authenticate:user": "the session store is down"
+    },
+    "holds": ["tasks.getChannel"]
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 500,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        },
+        "body": {
+          "code": "api.internal"
+        }
+      }
+    }
+  ],
+  "hookCalls": [
+    {
+      "hook": "authenticate:user",
+      "operation": "tasks.getChannel"
+    }
+  ]
+}

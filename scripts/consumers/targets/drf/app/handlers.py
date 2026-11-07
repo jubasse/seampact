@@ -27,6 +27,7 @@ from sample_data import (
     loaded_channel,
     note,
     relayed_task,
+    scripted_search_result,
     service_task,
     service_task_of,
     task,
@@ -145,7 +146,9 @@ class TasksHandlers:
         return scripted_answer("listTasks", _OK, _task_page_of) or tasks.ListTasksResponse200(body=page)
 
     def search_tasks(self, request: tasks.SearchTasksRequest) -> tasks.SearchTasksResult:
-        return tasks.SearchTasksResponse200(body=TaskSearchResult(items=[task(NEW_TASK_ID)], total=1))
+        return scripted_answer("searchTasks", _OK, _search_result_of) or tasks.SearchTasksResponse200(
+            body=TaskSearchResult(items=[task(NEW_TASK_ID)], total=1)
+        )
 
 
 class InternalHandlers:
@@ -214,6 +217,10 @@ def _batch_of(body: dict[str, object]) -> tasks.GetTasksBatchResult:
     return tasks.GetTasksBatchResponse200(
         body={task_id: task_of(entry) for task_id, entry in body.items() if isinstance(entry, dict)}
     )
+
+
+def _search_result_of(body: dict[str, object]) -> tasks.SearchTasksResult:
+    return tasks.SearchTasksResponse200(body=scripted_search_result(body))
 
 
 def _task_page_of(body: dict[str, object]) -> tasks.ListTasksResult:

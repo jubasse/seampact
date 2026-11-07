@@ -69,4 +69,11 @@ export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "unlisted-framework-route-fails-boot": STUB_REASON,
   "framework-route-check-off-keeps-hook-check": STUB_REASON,
   "hook-check-off-keeps-framework-route-check": STUB_REASON,
+  "authenticate-hook-throws-answers-internal-error": STUB_REASON,
+  "corrupt-gzip-body-answers-bad-request": STUB_REASON,
+  "decide-hook-throws-answers-internal-error": STUB_REASON,
+  "gzip-body-above-limit-once-inflated": STUB_REASON,
+  "restricted-output-field-absent-in-nested-array": STUB_REASON,
+  "scope-resolver-throws-answers-internal-error": STUB_REASON,
+  "unknown-content-encoding-unsupported": STUB_REASON,
 };

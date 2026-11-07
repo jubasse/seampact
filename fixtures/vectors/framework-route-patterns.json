@@ -1,0 +1,107 @@
+{
+  "description": "The `frameworkRoutes` allow-list rule every server target shares (ADR 0011 \"The app config\"): whether the entry `allowed` (`*` one segment, `**` any number, a `*` inside a segment any characters but `/`, empty segments dropped) takes a framework route written `route`, where `{name}` is a one-segment param and `{*name}` a catch-all segment that only `**` takes. Each target writes the route in its framework's own syntax before it checks it.",
+  "vectors": [
+    {
+      "name": "a literal path",
+      "allowed": "/metrics",
+      "route": "/metrics",
+      "allows": true
+    },
+    {
+      "name": "another literal path",
+      "allowed": "/metrics",
+      "route": "/health",
+      "allows": false
+    },
+    {
+      "name": "'*' over one literal segment",
+      "allowed": "/admin/*",
+      "route": "/admin/queues",
+      "allows": true
+    },
+    {
+      "name": "'*' over a param",
+      "allowed": "/orders/*",
+      "route": "/orders/{id}",
+      "allows": true
+    },
+    {
+      "name": "'*' over two segments",
+      "allowed": "/admin/*",
+      "route": "/admin/queues/jobs",
+      "allows": false
+    },
+    {
+      "name": "'*' over a catch-all",
+      "allowed": "/files/*",
+      "route": "/files/{*rest}",
+      "allows": false
+    },
+    {
+      "name": "'**' over zero segments",
+      "allowed": "/actuator/**",
+      "route": "/actuator",
+      "allows": true
+    },
+    {
+      "name": "'**' over several segments",
+      "allowed": "/actuator/**",
+      "route": "/actuator/health/{id}",
+      "allows": true
+    },
+    {
+      "name": "'**' over a catch-all",
+      "allowed": "/files/**",
+      "route": "/files/{*rest}",
+      "allows": true
+    },
+    {
+      "name": "'**' stops at a segment boundary",
+      "allowed": "/actuator/**",
+      "route": "/actuatorX",
+      "allows": false
+    },
+    {
+      "name": "'**' between segments over zero segments",
+      "allowed": "/a/**/z",
+      "route": "/a/z",
+      "allows": true
+    },
+    {
+      "name": "'**' between segments over several",
+      "allowed": "/a/**/z",
+      "route": "/a/b/c/z",
+      "allows": true
+    },
+    {
+      "name": "'*' inside a segment",
+      "allowed": "/livewire-*/**",
+      "route": "/livewire-3f9a/upload-file",
+      "allows": true
+    },
+    {
+      "name": "'*' inside a segment keeps its literal parts",
+      "allowed": "/report-*.csv",
+      "route": "/report-2026.csv",
+      "allows": true
+    },
+    {
+      "name": "'*' inside a segment needs its literal parts",
+      "allowed": "/report-*.csv",
+      "route": "/report.txt",
+      "allows": false
+    },
+    {
+      "name": "empty segments dropped on both sides",
+      "allowed": "//admin//health/",
+      "route": "/admin/health",
+      "allows": true
+    },
+    {
+      "name": "a param taken by a literal pattern segment",
+      "allowed": "/orders/latest",
+      "route": "/orders/{id}",
+      "allows": false
+    }
+  ]
+}

@@ -28,6 +28,8 @@ final class ChannelResolver implements ScopeResolver
             throw new \LogicException("the consumer resolves declared scope ids only, not those of '{$request->scope()}'");
         }
 
+        SuiteControl::throwScriptedHookFailure("resolve-scope:{$request->scope()}");
+
         $denied = SuiteControl::scriptedScopeDenial($request->scope());
         if ($denied !== null) {
             return new ScopeResolution\Denied(new Denial($denied));

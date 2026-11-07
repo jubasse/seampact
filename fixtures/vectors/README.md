@@ -1,0 +1,1 @@
+Cross-language test vectors: JSON files every target's tests read, so the digests, the framework route allow-list and the runtime version guard give the same answer in TypeScript, Java, PHP and Python.

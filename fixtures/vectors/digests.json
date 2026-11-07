@@ -1,0 +1,123 @@
+{
+  "description": "The SHA-256 digests of the boundary, the same on every server target: canonical holds the parts of an idempotency or throttle key, their text as JSON.stringify writes it with object members sorted (array-index names first), its SHA-256 as lowercase hex and as unpadded base64url; bodies holds response bodies and the base64url SHA-256 of their UTF-8 bytes, the strong ETag.",
+  "canonical": [
+    {
+      "name": "idempotency key parts",
+      "parts": ["tasks", "createTask", "user", "", "key-1"],
+      "text": "[\"tasks\",\"createTask\",\"user\",\"\",\"key-1\"]",
+      "hex": "0e9711dfe19de9076c70514c7d5204e8816596cd427904fc6d562b0bbbc20cb4",
+      "base64Url": "DpcR3-Gd6QdscFFMfVIE6IFlls1CeQT8bVYrC7vCDLQ"
+    },
+    {
+      "name": "members sorted, numbers and escapes as JavaScript writes them",
+      "parts": [
+        {
+          "b": 1.5,
+          "a": [1e21, 1e-7, 0.000001, -2, 100],
+          "é": "line\nbreak\u0001\"q\"",
+          "Z": true,
+          "_": null
+        }
+      ],
+      "text": "[{\"Z\":true,\"_\":null,\"a\":[1e+21,1e-7,0.000001,-2,100],\"b\":1.5,\"é\":\"line\\nbreak\\u0001\\\"q\\\"\"}]",
+      "hex": "8418156b997e15c2cacd6ae3aa6e1a0bc3a66cfae86c8eca7147160fce9bc420",
+      "base64Url": "hBgVa5l-FcLKzWrjqm4aC8OmbProbI7KcUcWD86bxCA"
+    },
+    {
+      "name": "index-like member names first, in numeric order",
+      "parts": [
+        {
+          "9": 2,
+          "10": 1,
+          "4294967294": 6,
+          "b": 3,
+          "4294967295": 4,
+          "01": 5,
+          "-1": 7
+        }
+      ],
+      "text": "[{\"9\":2,\"10\":1,\"4294967294\":6,\"-1\":7,\"01\":5,\"4294967295\":4,\"b\":3}]",
+      "hex": "c7792be0e4e3e7cc71460895bde011d733bcbb0c495cbb3fd0540a551aff078b",
+      "base64Url": "x3kr4OTj58xxRgiVveAR1zO8uwxJXLs_0FQKVRr_B4s"
+    },
+    {
+      "name": "fractions and large integral floats written plain",
+      "parts": [0.5, -0.25, 123456.789, 1e300, 2.5e-9, -0.0],
+      "text": "[0.5,-0.25,123456.789,1e+300,2.5e-9,0]",
+      "hex": "ee79859dc47c9756561ead72e62f1a464233496ea48fffa2cc2dd631389133e1",
+      "base64Url": "7nmFncR8l1ZWHq1y5i8aRkIzSW6kj_-izC3WMTiRM-E"
+    },
+    {
+      "name": "integral floats written as integers",
+      "parts": [1.0, 100.0, 1e20, 1.5e-6, 1e-6, 2e-7],
+      "text": "[1,100,100000000000000000000,0.0000015,0.000001,2e-7]",
+      "hex": "cfe721707ddc7abbb1bced01858fa601c9022bcbbf2e5a4760f2867d9d564dd7",
+      "base64Url": "z-chcH3ceruxvO0BhY-mAckCK8u_LlpHYPKGfZ1WTdc"
+    },
+    {
+      "name": "integers past 2^53 and from 1e21 written as their double",
+      "parts": [
+        9007199254740993, 1000000000000000000000, 123456789012345678901234, -9007199254740993
+      ],
+      "text": "[9007199254740992,1e+21,1.2345678901234569e+23,-9007199254740992]",
+      "hex": "8d2b6f1d72a7d5a333eae3ef05539879431cbf91b6c6ca834979a712ae0b1f56",
+      "base64Url": "jStvHXKn1aMz6uPvBVOYeUMcv5G2xsqDSXmnEq4LH1Y"
+    },
+    {
+      "name": "names sorted by UTF-16 code units, not code points",
+      "parts": [
+        {
+          "｡": 1,
+          "😀": 2,
+          "a": 3,
+          "B": 4
+        }
+      ],
+      "text": "[{\"B\":4,\"a\":3,\"😀\":2,\"｡\":1}]",
+      "hex": "a8e445259c774d72aab1bdba0fa5f030416de2f44e4b1a08cfb5cd22df669a43",
+      "base64Url": "qORFJZx3TXKqsb26D6XwMEFt4vROSxoIz7XNIt9mmkM"
+    },
+    {
+      "name": "characters outside ASCII written as is, control characters escaped",
+      "parts": ["é😀 ", "\b\f\n\r\t\u001f\\/"],
+      "text": "[\"é😀 \",\"\\b\\f\\n\\r\\t\\u001f\\\\/\"]",
+      "hex": "240e5181c45bbd4ee6f73d86b0e28c16b4a355aef3ba19969776a1b6e6ebde84",
+      "base64Url": "JA5RgcRbvU7m9z2GsOKMFrSjVa7zuhmWl3ahtubr3oQ"
+    },
+    {
+      "name": "empty and nested containers",
+      "parts": [
+        {},
+        [],
+        {
+          "a": {
+            "b": [{}]
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "text": "[{},[],{\"a\":{\"b\":[{}]}},null,true,false]",
+      "hex": "729f16d11d29994e67b430fcfc8521b1218c4712d27c579621b7f02e5b05db81",
+      "base64Url": "cp8W0R0pmU5ntDD8_IUhsSGMRxLSfFeWIbfwLlsF24E"
+    }
+  ],
+  "bodies": [
+    {
+      "name": "empty body",
+      "body": "",
+      "base64Url": "47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU"
+    },
+    {
+      "name": "JSON body",
+      "body": "{\"taskId\":\"t1\",\"title\":\"Plan\"}",
+      "base64Url": "s-i-owjP7Wt2erOj3EZnNGYKhlHaeHff49JZrz81JrY"
+    },
+    {
+      "name": "body outside ASCII",
+      "body": "é😀",
+      "base64Url": "EYTR9ggVjuoJ0pdWVXWJIjFVDEA6qpEwCNhnqXz9XHY"
+    }
+  ]
+}
