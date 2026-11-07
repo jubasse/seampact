@@ -102,6 +102,19 @@ final class BodyReaderTest extends TestCase
         yield 'gzip body sent as deflate' => ['deflate', Compressed::gzip(self::BODY)];
         yield 'gzip cut before its trailer' => ['gzip', substr(Compressed::gzip(self::BODY), 0, -8)];
         yield 'deflate cut before its checksum' => ['deflate', substr(Compressed::deflate(self::BODY), 0, -4)];
+        yield 'gzip followed by bytes that start no member' => ['gzip', Compressed::gzip(self::BODY) . 'xx'];
+        yield 'gzip followed by a member cut before its end' => ['gzip', Compressed::gzip(self::BODY) . "\x1f"];
+        yield 'deflate followed by more bytes' => ['deflate', Compressed::deflate(self::BODY) . 'xx'];
+    }
+
+    public function testAGzipBodyOfSeveralMembersIsReadWhole(): void
+    {
+        $members = Compressed::gzip('{"title":') . Compressed::gzip('"write the tests"}');
+
+        $read = BodyReader::read(self::request($members, 'gzip'), self::LIMIT_BYTES);
+
+        self::assertNull($read->refusedRole);
+        self::assertSame(self::BODY, $read->bytes);
     }
 
     #[DataProvider('corruptStreams')]

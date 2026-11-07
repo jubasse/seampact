@@ -21,11 +21,12 @@ import pytest
 from django.core.cache import cache
 from django.http import HttpRequest, HttpResponse
 from django.test import Client, RequestFactory, override_settings
-from django.urls import URLPattern, clear_url_caches, get_resolver, path, reverse
+from django.urls import URLPattern, clear_url_caches, get_resolver, path, re_path, reverse
 from ninja import NinjaAPI
 from ninja.security import HttpBearer
 from ninja.throttling import AnonRateThrottle, AuthRateThrottle
 
+from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
 from seampact.codegen.runtime.framework_versions import framework_version_problems
 from seampact.codegen.runtime.hook_check import hook_needs
 from seampact.django.runtime.boot_check import boot_problems
@@ -267,6 +268,31 @@ def test_an_include_prefix_off_the_mount_gets_ninjas_own_fix(monkeypatch: pytest
         "operation 'health': no URL pattern serves /v1/health (its pattern sits at /api/v1/health); include the "
         "NinjaAPI's urls at a prefix that, followed by bind_tasks(prefix=...), equals the entry's mount."
     ) in problems
+
+
+def test_a_single_star_never_allow_lists_a_catch_all_pattern(monkeypatch: pytest.MonkeyPatch) -> None:
+    boundary = _golden("django").TasksBoundary
+    single_stars = ("/v1/channels/*", "/v1/channels/*/*")
+    problems_by_rules = {}
+
+    with _served(monkeypatch, NinjaAPI(urls_namespace="seampact-catch-all")):
+        sys.modules[_URLCONF].urlpatterns += [  # type: ignore[attr-defined]
+            path("v1/channels/files/<path:rest>", lambda request: HttpResponse()),
+            re_path(r"^v1/channels/blobs/(?P<rest>.*)$", lambda request: HttpResponse()),
+        ]
+        clear_url_caches()
+
+        for patterns in (single_stars, ("/v1/channels/**",)):
+            rules = tuple(FrameworkRouteRule(path=pattern, method=None, reason="files") for pattern in patterns)
+            monkeypatch.setattr(boundary, "framework_routes", rules)
+            problems_by_rules[patterns] = [problem for problem in boot_problems(boundary) if "{*}" in problem]
+
+    assert problems_by_rules[single_stars] == [
+        f"the app pattern '{route}' sits under the api's base path '/v1' and is not a contract route; remove it, "
+        "or allow-list it in the entry's frameworkRoutes with a reason and no method."
+        for route in ("/v1/channels/files/{*}", "/v1/channels/blobs/{*}")
+    ]
+    assert problems_by_rules[("/v1/channels/**",)] == []
 
 
 def test_a_second_bind_on_the_same_ninja_api_is_refused_by_name(monkeypatch: pytest.MonkeyPatch) -> None:

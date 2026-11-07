@@ -946,6 +946,33 @@ def test_the_boot_check_refuses_the_urlconf_versions_and_async_methods_the_views
     assert not any("/v1/channels/feed" in problem for problem in allow_listed)
 
 
+def test_a_single_star_never_allow_lists_a_catch_all_pattern(monkeypatch: pytest.MonkeyPatch) -> None:
+    root = ModuleType("seampact_drf_boundary_catch_all_patterns")
+    root.__dict__["urlpatterns"] = [
+        path("v1/channels/files/<path:rest>", lambda request: HttpResponse()),
+        re_path(r"^v1/channels/blobs/(?P<rest>.*)$", lambda request: HttpResponse()),
+        re_path(r"^v1/channels/feed.*$", lambda request: HttpResponse()),
+        path("", include(f"{_PACKAGE}.urls")),
+    ]
+    sys.modules[root.__name__] = root
+    boundary = _module("django").TasksBoundary
+    single_stars = ("/v1/channels/*", "/v1/channels/*/*")
+    problems_by_rules = {}
+
+    with override_settings(ROOT_URLCONF=root.__name__, SEAMPACT={"tasks": _settings()}):
+        for patterns in (single_stars, ("/v1/channels/**",)):
+            rules = tuple(FrameworkRouteRule(path=pattern, method=None, reason="files") for pattern in patterns)
+            monkeypatch.setattr(boundary, "framework_routes", rules)
+            problems_by_rules[patterns] = [problem for problem in boot_problems(boundary) if "app pattern" in problem]
+
+    assert problems_by_rules[single_stars] == [
+        f"the app pattern '{route}' sits under the api's base path '/v1' and is not a contract route; remove it, "
+        "or allow-list it in the entry's frameworkRoutes with a reason and no method."
+        for route in ("/v1/channels/files/{*}", "/v1/channels/blobs/{*}", "/v1/channels/{*}")
+    ]
+    assert problems_by_rules[("/v1/channels/**",)] == []
+
+
 def test_the_boot_check_names_the_prefixed_path_of_urls_included_off_the_mount() -> None:
     root = ModuleType("seampact_drf_boundary_off_the_mount")
     root.__dict__["urlpatterns"] = [path("mounted/", include(f"{_PACKAGE}.urls"))]
