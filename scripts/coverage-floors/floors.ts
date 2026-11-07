@@ -94,7 +94,8 @@ export function checkFloors(
 
     if (floors === undefined) {
       // A notMeasured package may still appear with no counted line (a types-only package): nothing to check then.
-      const listedAndEmpty = floorsFile.notMeasured.has(packageDirectory) && coverage.lines.total === 0;
+      const listedAndEmpty =
+        floorsFile.notMeasured.has(packageDirectory) && coverage.lines.total === 0;
 
       if (!listedAndEmpty) problems.push(missingFloorProblem(packageDirectory, floorsFile));
       continue;
