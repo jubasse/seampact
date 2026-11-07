@@ -1,6 +1,7 @@
 import type { ContractIR } from "@seampact/spec/ir";
 import { type IrLocation, operationLocation, schemaLocation } from "../ir-location.js";
 import { refuseNotGeneratedYet } from "../located-refusals.js";
+import type { NotGeneratedForm } from "../not-generated-fixes.js";
 import { type Refusal, type Refused, withoutRepeats } from "../refusal.js";
 import type { FieldPlan, ObjectPlan } from "./type-plan.js";
 import { planValidatorsCollectingRefusals, type ValidatorsPlan } from "./validators-plan.js";
@@ -9,7 +10,7 @@ import { planValidatorsCollectingRefusals, type ValidatorsPlan } from "./validat
 // path: `unsafe` matches such a name, `form` names the refusal and `description` words it for one name.
 export interface WireNameLimit {
   readonly unsafe: RegExp;
-  readonly form: string;
+  readonly form: NotGeneratedForm;
   description(wireName: string): string;
 }
 

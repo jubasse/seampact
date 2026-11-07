@@ -21,6 +21,7 @@ import {
   refuseNotGeneratedYet,
   refuseUnknownValueAt,
 } from "../located-refusals.js";
+import type { NotGeneratedForm } from "../not-generated-fixes.js";
 import { refuseBracketsQueryList } from "../not-generated-forms.js";
 import { queryListWireOf } from "../query-list-wire.js";
 import type { Refusal } from "../refusal.js";
@@ -434,19 +435,19 @@ function accessExtensionRefusals(ir: ContractIR): Refusal[] {
 
   const declarations = [
     ...Object.entries(ir.rights).map(([name, right]) => ({
-      kind: "right",
+      kind: "right" as const,
       member: "rights",
       name,
       extensions: right.extensions,
     })),
     ...Object.entries(ir.rules).map(([name, rule]) => ({
-      kind: "rule",
+      kind: "rule" as const,
       member: "rules",
       name,
       extensions: rule.extensions,
     })),
     ...Object.entries(ir.scopes).map(([name, scope]) => ({
-      kind: "scope",
+      kind: "scope" as const,
       member: "scopes",
       name,
       extensions: scope.extensions,
@@ -473,7 +474,12 @@ function refuseOperationForms(
   location: IrLocation,
   refusals: Refusal[],
 ): void {
-  const absentForms: [form: string, description: string, present: boolean, member: string][] = [
+  const absentForms: [
+    form: NotGeneratedForm,
+    description: string,
+    present: boolean,
+    member: string,
+  ][] = [
     [
       "principalRequires",
       "A principal requirement",
